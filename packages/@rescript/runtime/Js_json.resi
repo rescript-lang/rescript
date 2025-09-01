@@ -44,6 +44,7 @@ type rec t = Stdlib_JSON.t =
   | Object(dict<t>)
   | Array(array<t>)
 
+@deprecated("This functionality has been deprecated and will be removed in v13.")
 module Kind: {
   type json = t
   /** Underlying type of a JSON value */
@@ -56,6 +57,7 @@ module Kind: {
     | Null: t<Js_types.null_val>
 }
 
+@deprecated("This functionality has been deprecated and will be removed in v13.")
 type tagged_t =
   | JSONFalse
   | JSONTrue
@@ -67,48 +69,67 @@ type tagged_t =
 
 /* ## Accessors */
 
+@deprecated("This functionality has been deprecated and will be removed in v13.")
 let classify: t => tagged_t
 
 /**
 `test(v, kind)` returns `true` if `v` is of `kind`.
 */
+@deprecated("This functionality has been deprecated and will be removed in v13.")
 let test: ('a, Kind.t<'b>) => bool
 
 /**
 `decodeString(json)` returns `Some(s)` if `json` is a `string`, `None` otherwise.
 */
 @deprecated({
-  reason: "Use pattern matching instead.",
-  migrate: switch %insert.unlabelledArgument(0) {
-  | JSON.String(str) => Some(str)
-  | _ => None
-  },
+  reason: "Use `JSON.Decode.string` instead.",
+  migrate: JSON.Decode.string(),
 })
 let decodeString: t => option<Js_string.t>
 
 /**
 `decodeNumber(json)` returns `Some(n)` if `json` is a `number`, `None` otherwise.
 */
+@deprecated({
+  reason: "Use `JSON.Decode.float` instead.",
+  migrate: JSON.Decode.float(),
+})
 let decodeNumber: t => option<float>
 
 /**
 `decodeObject(json)` returns `Some(o)` if `json` is an `object`, `None` otherwise.
 */
+@deprecated({
+  reason: "Use `JSON.Decode.object` instead.",
+  migrate: JSON.Decode.object(),
+})
 let decodeObject: t => option<dict<t>>
 
 /**
 `decodeArray(json)` returns `Some(a)` if `json` is an `array`, `None` otherwise.
 */
+@deprecated({
+  reason: "Use `JSON.Decode.array` instead.",
+  migrate: JSON.Decode.array(),
+})
 let decodeArray: t => option<array<t>>
 
 /**
 `decodeBoolean(json)` returns `Some(b)` if `json` is a `boolean`, `None` otherwise.
 */
+@deprecated({
+  reason: "Use `JSON.Decode.bool` instead.",
+  migrate: JSON.Decode.bool(),
+})
 let decodeBoolean: t => option<bool>
 
 /**
 `decodeNull(json)` returns `Some(null)` if `json` is a `null`, `None` otherwise.
 */
+@deprecated({
+  reason: "Use JSON.Decode.null instead.",
+  migrate: JSON.Decode.null(),
+})
 let decodeNull: t => option<Js_null.t<'a>>
 
 /* ## Constructors */
@@ -119,22 +140,46 @@ let decodeNull: t => option<Js_null.t<'a>>
 */
 
 /** `null` is the singleton null JSON value. */
+@deprecated({
+  reason: "Use `JSON.Encode.null` instead.",
+  migrate: JSON.Encode.null,
+})
 @val
 external null: t = "null"
 
 /** `string(s)` makes a JSON string of the `string` `s`. */
+@deprecated({
+  reason: "Use `JSON.Encode.string` instead.",
+  migrate: JSON.Encode.string(),
+})
 external string: string => t = "%identity"
 
 /** `number(n)` makes a JSON number of the `float` `n`. */
+@deprecated({
+  reason: "Use `JSON.Encode.float` instead.",
+  migrate: JSON.Encode.float(),
+})
 external number: float => t = "%identity"
 
 /** `boolean(b)` makes a JSON boolean of the `bool` `b`. */
+@deprecated({
+  reason: "Use `JSON.Encode.bool` instead.",
+  migrate: JSON.Encode.bool(),
+})
 external boolean: bool => t = "%identity"
 
 /** `object_(dict)` makes a JSON object of the `dict`. */
+@deprecated({
+  reason: "Use `JSON.Encode.object` instead.",
+  migrate: JSON.Encode.object(),
+})
 external object_: dict<t> => t = "%identity"
 
 /** `array_(a)` makes a JSON array of the `Js.Json.t` array `a`. */
+@deprecated({
+  reason: "Use `JSON.Encode.array` instead.",
+  migrate: JSON.Encode.array(),
+})
 external array: array<t> => t = "%identity"
 
 /*
@@ -144,15 +189,31 @@ external array: array<t> => t = "%identity"
 */
 
 /** `stringArray(a)` makes a JSON array of the `string` array `a`. */
+@deprecated({
+  reason: "Use `JSON.Encode.stringArray` instead.",
+  migrate: JSON.Encode.stringArray(),
+})
 external stringArray: array<string> => t = "%identity"
 
 /** `numberArray(a)` makes a JSON array of the `float` array `a`. */
+@deprecated({
+  reason: "Use `JSON.Encode.floatArray` instead.",
+  migrate: JSON.Encode.floatArray(),
+})
 external numberArray: array<float> => t = "%identity"
 
 /** `booleanArray(a)` makes a JSON array of the `bool` array `a`. */
+@deprecated({
+  reason: "Use `JSON.Encode.boolArray` instead.",
+  migrate: JSON.Encode.boolArray(),
+})
 external booleanArray: array<bool> => t = "%identity"
 
 /** `objectArray(a) makes a JSON array of the `JsDict.t` array `a`. */
+@deprecated({
+  reason: "Use `JSON.Encode.objectArray` instead.",
+  migrate: JSON.Encode.objectArray(),
+})
 external objectArray: array<dict<t>> => t = "%identity"
 
 /* ## String conversion */
@@ -207,7 +268,12 @@ let getIds = s => {
 Js.log(getIds(` { "ids" : [1, 2, 3 ] } `))
 ```
 */
-@val @scope("JSON")
+@deprecated({
+  reason: "Use `JSON.parseOrThrow` instead.",
+  migrate: JSON.parseOrThrow(),
+})
+@val
+@scope("JSON")
 external parseExn: string => t = "parse"
 
 /**
@@ -229,7 +295,12 @@ Js.Dict.set(dict, "likes", Js.Json.stringArray(["ReScript", "ocaml", "js"]))
 Js.log(Js.Json.stringify(Js.Json.object_(dict)))
 ```
 */
-@val @scope("JSON")
+@deprecated({
+  reason: "Use `JSON.stringify` instead.",
+  migrate: JSON.stringify(),
+})
+@val
+@scope("JSON")
 external stringify: t => string = "stringify"
 
 /**
@@ -251,7 +322,12 @@ Js.Dict.set(dict, "likes", Js.Json.stringArray(["ReScript", "ocaml", "js"]))
 Js.log(Js.Json.stringifyWithSpace(Js.Json.object_(dict), 2))
 ```
 */
-@val @scope("JSON")
+@deprecated({
+  reason: "Use `JSON.stringify` with optional `~space` instead.",
+  migrate: JSON.stringify(~space=%insert.unlabelledArgument(2)),
+})
+@val
+@scope("JSON")
 external stringifyWithSpace: (t, @as(json`null`) _, int) => string = "stringify"
 
 /**
@@ -264,7 +340,12 @@ external stringifyWithSpace: (t, @as(json`null`) _, int) => string = "stringify"
 Js.log(Js.Json.stringifyAny(["hello", "world"]))
 ```
 */
-@val @scope("JSON")
+@deprecated({
+  reason: "Use `JSON.stringifyAny` instead.",
+  migrate: JSON.stringifyAny(),
+})
+@val
+@scope("JSON")
 external stringifyAny: 'a => option<string> = "stringify"
 
 /**
@@ -275,6 +356,7 @@ It is unsafe in two aspects
 - It may throw during  parsing
 - when you cast it to a specific type, it may have a type mismatch
 */
+@deprecated("This functionality has been deprecated and will be removed in v13.")
 let deserializeUnsafe: string => 'a
 
 /**
@@ -283,4 +365,5 @@ It will throw in such situations:
 - There are cycles
 - Some JS engines can not stringify deeply nested json objects
 */
+@deprecated("This functionality has been deprecated and will be removed in v13.")
 let serializeExn: 'a => string

@@ -654,7 +654,7 @@ module Classify: {
 
 module Encode: {
   /**
-  Returns a boolean as a JSON object.
+  Returns a boolean as JSON.
 
   ## Examples
   ```rescript
@@ -664,7 +664,7 @@ module Encode: {
   external bool: bool => t = "%identity"
 
   /**
-  Returns null as a JSON object.
+  Returns null as a JSON value.
 
   ## Examples
   ```rescript
@@ -674,7 +674,7 @@ module Encode: {
   external null: t = "#null"
 
   /**
-  Returns a string as a JSON object.
+  Returns a string as JSON.
 
   ## Examples
   ```rescript
@@ -684,7 +684,7 @@ module Encode: {
   external string: string => t = "%identity"
 
   /**
-  Returns an int as a JSON object.
+  Returns an int as JSON.
 
   ## Examples
   ```rescript
@@ -694,7 +694,7 @@ module Encode: {
   external int: int => t = "%identity"
 
   /**
-  Returns a float as a JSON object.
+  Returns a float as JSON.
 
   ## Examples
   ```rescript
@@ -719,7 +719,7 @@ module Encode: {
   external object: dict<t> => t = "%identity"
 
   /**
-  Returns an array as a JSON object.
+  Returns an array as JSON.
 
   ## Examples
   ```rescript
@@ -729,6 +729,31 @@ module Encode: {
   ```
   */
   external array: array<t> => t = "%identity"
+
+  /**
+  Returns an array of strings as a JSON object.
+  */
+  external stringArray: array<string> => t = "%identity"
+
+  /**
+  Returns an array of floats as a JSON object.
+  */
+  external floatArray: array<float> => t = "%identity"
+
+  /**
+  Returns an array of integers as a JSON object.
+  */
+  external intArray: array<int> => t = "%identity"
+
+  /**
+  Returns an array of booleans as a JSON object.
+  */
+  external boolArray: array<bool> => t = "%identity"
+
+  /**
+  Returns an array of objects as a JSON object.
+  */
+  external objectArray: array<dict<t>> => t = "%identity"
 }
 
 module Decode: {
