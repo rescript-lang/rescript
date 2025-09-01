@@ -9,6 +9,7 @@
     "cli/bsc.js",
     "cli/bstracing.js",
     "cli/common/bins.js",
+    "cli/common/runtime.js",
     "cli/rescript-legacy.js",
     "cli/rescript-legacy/args.js",
     "cli/rescript-legacy/bsb.js",
