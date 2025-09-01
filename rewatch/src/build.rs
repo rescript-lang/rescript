@@ -90,7 +90,13 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         PathBuf::from(&interface_filename).exists()
     };
 
-    let runtime_path = helpers::get_runtime_path(&project_context).ok();
+    let runtime_path = match helpers::get_runtime_path(&project_context) {
+        Ok(path) => Some(path),
+        Err(_) => {
+            println!("Warning: could not determine runtime path");
+            None
+        }
+    };
 
     let compiler_args = compile::compiler_args(
         &project_context.current_config,
@@ -160,7 +166,13 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let runtime_path = helpers::get_runtime_path(&project_context).ok();
+    let runtime_path = match helpers::get_runtime_path(&project_context) {
+        Ok(path) => Some(path),
+        Err(_) => {
+            println!("Warning: could not determine runtime path");
+            None
+        }
+    };
 
     let mut build_state = BuildState::new(project_context, packages, bsc_path, runtime_path);
     packages::parse_packages(&mut build_state);
