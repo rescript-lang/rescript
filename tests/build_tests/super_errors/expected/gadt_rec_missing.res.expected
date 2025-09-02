@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/gadt_rec_missing.res[0m:[2m4:1-8:27[0m
+
+  2 [2m│[0m type daylight
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m [1;31mtype timezone<_> =[0m
+  [1;31m5[0m [2m│[0m [1;31m  | EST: timezone<standard>[0m
+  [1;31m6[0m [2m│[0m [1;31m  | EDT: timezone<daylight>[0m
+  [1;31m7[0m [2m│[0m [1;31m  | CST: timezone<standard>[0m
+  [1;31m8[0m [2m│[0m [1;31m  | CDT: timezone<daylight>[0m
+  9 [2m│[0m 
+
+  GADTs require recursive type syntax.
+Please define your type using `type rec` instead of `type`.
+Example: type rec t = ...
