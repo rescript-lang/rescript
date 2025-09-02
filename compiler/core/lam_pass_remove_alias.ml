@@ -45,17 +45,23 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
   let rec simpl (lam : Lam.t) : Lam.t =
     match lam with
     | Lvar _ -> lam
+    (* 7432: prevent optimization in JSX preserve mode *)
+    | Lprim
+        {
+          primitive = Pjs_call {prim_name = "jsx" | "jsxs"} as primitive;
+          args = (Lprim {primitive = Pfield (_, _)} as field_arg) :: rest;
+          loc;
+        }
+      when !Js_config.jsx_preserve ->
+      Lam.prim ~primitive ~args:(field_arg :: Ext_list.map rest simpl) loc
     | Lprim {primitive = Pfield (i, info) as primitive; args = [arg]; loc} -> (
       (* ATTENTION:
          Main use case, we should detect inline all immutable block .. *)
       match simpl arg with
       | Lvar v as l ->
-        (* Preserve module qualification when JSX preserve mode is enabled
-           This ensures component names like X.make are not flattened to just make
-           in JSX preserve mode *)
-        let prim = Lam.prim ~primitive ~args:[l] loc in
-        if !Js_config.jsx_preserve then prim
-        else Lam_util.field_flatten_get (fun _ -> prim) v i info meta.ident_tbl
+        Lam_util.field_flatten_get
+          (fun _ -> Lam.prim ~primitive ~args:[l] loc)
+          v i info meta.ident_tbl
       | l -> Lam.prim ~primitive ~args:[l] loc)
     | Lprim
         {
