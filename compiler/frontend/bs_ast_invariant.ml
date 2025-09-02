@@ -85,7 +85,9 @@ let emit_external_warnings : iterator =
             ( Nonrecursive,
               [{ptype_kind = Ptype_variant ({pcd_res = Some _} :: _)}] ) ->
           Location.raise_errorf ~loc:str_item.pstr_loc
-            "GADT has to be recursive types, please try `type rec'"
+            "GADTs require recursive type syntax.\n\
+             Please define your type using `type rec` instead of `type`.\n\
+             Example: type rec t = ..."
         | _ -> super.structure_item self str_item);
     expr =
       (fun self ({pexp_loc = loc} as a) ->
@@ -95,7 +97,8 @@ let emit_external_warnings : iterator =
           try ignore (Ext_string.hash_number_as_i32_exn s : int32)
           with _ ->
             Location.raise_errorf ~loc
-              "This number is too large to cause int overlow")
+              "Integer literal exceeds int32 range. Use float or BigInt if \
+               larger values are required.")
         | _ -> super.expr self a);
     label_declaration =
       (fun self lbl ->
