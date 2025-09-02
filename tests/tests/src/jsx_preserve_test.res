@@ -129,17 +129,6 @@ let _optional_props = <ComponentWithOptionalProps i=1 s="test" element={<div />}
 
 let _props_with_hyphen = <label ariaLabel={"close sidebar"} dataTestId="test" />
 
-module React = {
-  type component<'props> = Jsx.component<'props>
-  type element = Jsx.element
-
-  external jsx: (component<'props>, 'props) => element = "jsx"
-
-  type fragmentProps = {children?: element}
-
-  external jsxFragment: component<fragmentProps> = "Fragment"
-}
-
 let _fragment = <> {Jsx.string("Hello, world!")} </>
 
 let _youtube_iframe =
@@ -153,3 +142,32 @@ let _youtube_iframe =
     allowFullScreen={true}
   >
   </iframe>
+
+module X = {
+  type props = {}
+  let make = (_props: props) => React.null
+}
+
+let _ = <X />
+
+module Y = {
+  let x = 42
+
+  @react.component
+  let make = () => React.null
+
+  let make = React.memo(make)
+}
+
+let _ = <Y />
+
+let context = React.createContext(0)
+
+module ContextProvider = {
+  let make = React.Context.provider(context)
+}
+
+@react.component
+let make = (~children) => {
+  <ContextProvider value=42> {children} </ContextProvider>
+}
