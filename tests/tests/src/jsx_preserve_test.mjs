@@ -20,7 +20,7 @@ let _multiple_element_children = <div>
   <h1>
     {"Hello, world!"}
   </h1>
-  <Jsx_preserve_test$Icon />
+  <Icon.make />
 </div>;
 
 let _single_element_fragment = <>
@@ -141,7 +141,7 @@ let B = {
 
 let _external_component_with_children = <QueryClientProvider>
   <strong />
-  <Jsx_preserve_test$B />
+  <B.make />
 </QueryClientProvider>;
 
 function Jsx_preserve_test$MyWeirdComponent(props) {
@@ -155,7 +155,7 @@ let MyWeirdComponent = {
   make: Jsx_preserve_test$MyWeirdComponent
 };
 
-let _escaped_jsx_prop = <Jsx_preserve_test$MyWeirdComponent
+let _escaped_jsx_prop = <MyWeirdComponent.make
   MyWeirdProp={"bar"}
 />;
 
@@ -197,7 +197,7 @@ let ComponentWithOptionalProps = {
   make: Jsx_preserve_test$ComponentWithOptionalProps
 };
 
-let _optional_props = <Jsx_preserve_test$ComponentWithOptionalProps
+let _optional_props = <ComponentWithOptionalProps.make
   i={1}
   s={"test"}
   element={<div />}

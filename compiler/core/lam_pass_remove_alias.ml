@@ -50,9 +50,12 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
          Main use case, we should detect inline all immutable block .. *)
       match simpl arg with
       | Lvar v as l ->
-        Lam_util.field_flatten_get
-          (fun _ -> Lam.prim ~primitive ~args:[l] loc)
-          v i info meta.ident_tbl
+        (* Preserve module qualification when JSX preserve mode is enabled
+           This ensures component names like X.make are not flattened to just make
+           in JSX preserve mode *)
+        let prim = Lam.prim ~primitive ~args:[l] loc in
+        if !Js_config.jsx_preserve then prim
+        else Lam_util.field_flatten_get (fun _ -> prim) v i info meta.ident_tbl
       | l -> Lam.prim ~primitive ~args:[l] loc)
     | Lprim
         {
