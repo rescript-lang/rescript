@@ -696,7 +696,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
             comma_sp f;
             expression ~level:1 cxt f el))
   | Tagged_template (call_expr, string_args, value_args) ->
-    let cxt = expression cxt ~level f call_expr in
+    (* Check if this is an untagged template literal (marked with empty string) *)
+    let is_untagged = match call_expr.expression_desc with
+      | Str {txt = ""; _} -> true
+      | _ -> false
+    in
+    
+    let cxt = 
+      if is_untagged then cxt  (* Don't print the call expression for untagged literals *)
+      else expression cxt ~level f call_expr  (* Print the function call for tagged literals *)
+    in
     P.string f "`";
     let rec aux cxt xs ys =
       match (xs, ys) with

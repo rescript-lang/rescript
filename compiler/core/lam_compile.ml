@@ -231,6 +231,54 @@ type initialization = J.block
       non-toplevel, it will explode code very quickly
 *)
 
+(* Try to extract template literal pattern from Lambda IR.
+   Returns Some (strings, values) if the pattern looks like a template literal,
+   None otherwise. *)
+let rec try_extract_template_literal_from_lam (lam : Lam.t) : (Lam.t list * Lam.t list) option =
+  let rec collect_parts lam acc_strings acc_values =
+    match lam with
+    | Lprim {primitive = Pstringadd; args = [left; right]; _} ->
+      (* Handle string concatenation *)
+      (match (left, right) with
+      | Lconst (Lam_constant.Const_string {s; _}), _ ->
+        (* Left is string, right is expression *)
+        collect_parts right (left :: acc_strings) (acc_values @ [right])
+      | _, Lconst (Lam_constant.Const_string {s; _}) ->
+        (* Right is string, left is expression *)
+        Some (acc_strings @ [right], acc_values @ [left])
+      | Lprim {primitive = Pstringadd; _}, _ ->
+        (* Left is another concatenation, recurse *)
+        (match collect_parts left acc_strings acc_values with
+        | Some (strings, values) ->
+          (* Now handle the right side *)
+          (match right with
+          | Lconst (Lam_constant.Const_string {s; _}) ->
+            Some (strings @ [right], values)
+          | _ ->
+            Some (strings, values @ [right]))
+        | None -> None)
+      | _, Lprim {primitive = Pstringadd; _} ->
+        (* Right is another concatenation, this is unusual but handle it *)
+        None
+      | _ ->
+        (* Both sides are expressions, not a template literal pattern *)
+        None)
+    | Lconst (Lam_constant.Const_string {s; _}) ->
+      (* Just a string *)
+      Some (acc_strings @ [lam], acc_values)
+    | _ ->
+      (* Just an expression *)
+      Some (acc_strings, acc_values @ [lam])
+  in
+  
+  match collect_parts lam [] [] with
+  | Some (strings, values) when List.length strings > 0 && List.length values > 0 ->
+    (* Check if this looks like a template literal pattern *)
+    if List.length strings = List.length values + 1 || List.length strings = List.length values then
+      Some (strings, values)
+    else None
+  | _ -> None
+
 let compile output_prefix =
   let rec compile_external_field (* Like [List.empty]*)
       ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
@@ -1810,7 +1858,26 @@ let compile output_prefix =
       *)
       Js_output.output_of_block_and_expression lambda_cxt.continuation []
         (E.ml_module_as_var ~dynamic_import i)
-    | Lprim prim_info -> compile_prim prim_info lambda_cxt
+    | Lprim prim_info -> 
+      (* Check for template literal patterns before general primitive compilation *)
+      (match prim_info with
+      | {primitive = Pstringadd; args = [a; b]; _} ->
+        (* Try to detect template literal patterns in string concatenation chains *)
+        (match try_extract_template_literal_from_lam (Lprim prim_info) with
+        | Some (strings, values) ->
+          (* Generate template literal syntax *)
+          let strings_expr = List.map (compile_lambda {lambda_cxt with continuation = NeedValue Not_tail}) strings in
+          let values_expr = List.map (compile_lambda {lambda_cxt with continuation = NeedValue Not_tail}) values in
+          let strings_js = List.map (fun output -> match output.value with Some v -> v | None -> assert false) strings_expr in
+          let values_js = List.map (fun output -> match output.value with Some v -> v | None -> assert false) values_expr in
+          let all_blocks = List.concat (List.map (fun output -> output.block) (strings_expr @ values_expr)) in
+          let template_expr = E.tagged_template (E.str "") strings_js values_js in
+          Js_output.output_of_block_and_expression lambda_cxt.continuation all_blocks template_expr
+        | None ->
+          (* Fall back to regular primitive compilation *)
+          compile_prim prim_info lambda_cxt)
+      | _ ->
+        compile_prim prim_info lambda_cxt)
     | Lsequence (l1, l2) ->
       let output_l1 =
         compile_lambda {lambda_cxt with continuation = EffectCall Not_tail} l1
