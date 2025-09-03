@@ -1537,11 +1537,13 @@ let compile output_prefix =
               {expression_desc = Array (strings, _); _};
               {expression_desc = Array (values, _); _};
             ] ->
-            (* This looks like a template literal call: fn(["str1", "str2"], [val1, val2])
-               Convert it to use template literal syntax: fn`str1${val1}str2` *)
+            (* This matches the template literal pattern: fn(["str1", "str2"], [val1, val2])
+               which is generated from: fn`str1${val1}str2`
+               Convert it to use JavaScript template literal syntax for consistency
+               with external @taggedTemplate functions *)
             E.tagged_template fn_code strings values
           | _ ->
-            (* Regular function call *)
+            (* Regular function call - keep existing behavior *)
             E.call
               ~info:
                 (call_info_of_ap_status appinfo.ap_transformed_jsx
