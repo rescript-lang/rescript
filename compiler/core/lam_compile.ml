@@ -235,49 +235,37 @@ type initialization = J.block
    Returns Some (strings, values) if the pattern looks like a template literal,
    None otherwise. *)
 let rec try_extract_template_literal_from_lam (lam : Lam.t) : (Lam.t list * Lam.t list) option =
-  let rec collect_parts lam acc_strings acc_values =
+  (* First, collect all parts of the concatenation chain in order *)
+  let rec collect_all_parts lam acc =
     match lam with
     | Lprim {primitive = Pstringadd; args = [left; right]; _} ->
-      (* Handle string concatenation *)
-      (match (left, right) with
-      | Lconst (Lam_constant.Const_string {s; _}), _ ->
-        (* Left is string, right is expression *)
-        collect_parts right (left :: acc_strings) (acc_values @ [right])
-      | _, Lconst (Lam_constant.Const_string {s; _}) ->
-        (* Right is string, left is expression *)
-        Some (acc_strings @ [right], acc_values @ [left])
-      | Lprim {primitive = Pstringadd; _}, _ ->
-        (* Left is another concatenation, recurse *)
-        (match collect_parts left acc_strings acc_values with
-        | Some (strings, values) ->
-          (* Now handle the right side *)
-          (match right with
-          | Lconst (Lam_constant.Const_string {s; _}) ->
-            Some (strings @ [right], values)
-          | _ ->
-            Some (strings, values @ [right]))
-        | None -> None)
-      | _, Lprim {primitive = Pstringadd; _} ->
-        (* Right is another concatenation, this is unusual but handle it *)
-        None
-      | _ ->
-        (* Both sides are expressions, not a template literal pattern *)
-        None)
-    | Lconst (Lam_constant.Const_string {s; _}) ->
-      (* Just a string *)
-      Some (acc_strings @ [lam], acc_values)
-    | _ ->
-      (* Just an expression *)
-      Some (acc_strings, acc_values @ [lam])
+      (* Concatenation is right-associative, so we need to collect left first, then right *)
+      collect_all_parts left (collect_all_parts right acc)
+    | _ -> lam :: acc
   in
   
-  match collect_parts lam [] [] with
-  | Some (strings, values) when List.length strings > 0 && List.length values > 0 ->
-    (* Check if this looks like a template literal pattern *)
-    if List.length strings = List.length values + 1 || List.length strings = List.length values then
-      Some (strings, values)
-    else None
-  | _ -> None
+  let all_parts = collect_all_parts lam [] in
+  
+  (* Check if this follows the template literal pattern:
+     string, expr, string, expr, ..., string *)
+  let rec check_and_extract_pattern parts strings values expecting_string =
+    match parts with
+    | [] -> 
+      if expecting_string then None  (* Should end with a string *)
+      else Some (List.rev strings, List.rev values)
+    | (Lconst (Lam_constant.Const_string _) as str_part) :: rest ->
+      if expecting_string then
+        check_and_extract_pattern rest (str_part :: strings) values false
+      else None  (* Two strings in a row, not a template literal *)
+    | expr :: rest ->
+      if not expecting_string then
+        check_and_extract_pattern rest strings (expr :: values) true
+      else None  (* Two expressions in a row, not a template literal *)
+  in
+  
+  match all_parts with
+  | [] | [_] -> None  (* Need at least 2 parts *)
+  | _ -> check_and_extract_pattern all_parts [] [] true  (* Start expecting a string *)
 
 let compile output_prefix =
   let rec compile_external_field (* Like [List.empty]*)
