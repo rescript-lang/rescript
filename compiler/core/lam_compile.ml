@@ -231,42 +231,6 @@ type initialization = J.block
       non-toplevel, it will explode code very quickly
 *)
 
-(* Try to extract template literal pattern from Lambda IR.
-   Returns Some (strings, values) if the pattern looks like a template literal,
-   None otherwise. *)
-let rec try_extract_template_literal_from_lam (lam : Lam.t) : (Lam.t list * Lam.t list) option =
-  (* First, collect all parts of the concatenation chain in order *)
-  let rec collect_all_parts lam acc =
-    match lam with
-    | Lprim {primitive = Pstringadd; args = [left; right]; _} ->
-      (* Concatenation is right-associative, so we need to collect left first, then right *)
-      collect_all_parts left (collect_all_parts right acc)
-    | _ -> lam :: acc
-  in
-  
-  let all_parts = collect_all_parts lam [] in
-  
-  (* Check if this follows the template literal pattern:
-     string, expr, string, expr, ..., string *)
-  let rec check_and_extract_pattern parts strings values expecting_string =
-    match parts with
-    | [] -> 
-      if expecting_string then None  (* Should end with a string *)
-      else Some (List.rev strings, List.rev values)
-    | (Lconst (Lam_constant.Const_string _) as str_part) :: rest ->
-      if expecting_string then
-        check_and_extract_pattern rest (str_part :: strings) values false
-      else None  (* Two strings in a row, not a template literal *)
-    | expr :: rest ->
-      if not expecting_string then
-        check_and_extract_pattern rest strings (expr :: values) true
-      else None  (* Two expressions in a row, not a template literal *)
-  in
-  
-  match all_parts with
-  | [] | [_] -> None  (* Need at least 2 parts *)
-  | _ -> check_and_extract_pattern all_parts [] [] true  (* Start expecting a string *)
-
 let compile output_prefix =
   let rec compile_external_field (* Like [List.empty]*)
       ?(dynamic_import = false) (lamba_cxt : Lam_compile_context.t)
@@ -1566,28 +1530,13 @@ let compile output_prefix =
         (* Note true and continue needed to be handled together*)
         Js_output.make ~output_finished:True (Ext_list.append args_code block)
       | _ ->
-        (* Check if this is a template literal call (two array arguments) *)
-        let call_expr = 
-          match args with
-          | [
-              {expression_desc = Array (strings, _); _};
-              {expression_desc = Array (values, _); _};
-            ] ->
-            (* This matches the template literal pattern: fn(["str1", "str2"], [val1, val2])
-               which is generated from: fn`str1${val1}str2`
-               Convert it to use JavaScript template literal syntax for consistency
-               with external @taggedTemplate functions *)
-            E.tagged_template fn_code strings values
-          | _ ->
-            (* Regular function call - keep existing behavior *)
-            E.call
-              ~info:
-                (call_info_of_ap_status appinfo.ap_transformed_jsx
-                   appinfo.ap_info.ap_status)
-              fn_code args
-        in
         Js_output.output_of_block_and_expression lambda_cxt.continuation
-          args_code call_expr
+          args_code
+          (E.call
+             ~info:
+               (call_info_of_ap_status appinfo.ap_transformed_jsx
+                  appinfo.ap_info.ap_status)
+             fn_code args))
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
     match prim_info with
@@ -1846,26 +1795,7 @@ let compile output_prefix =
       *)
       Js_output.output_of_block_and_expression lambda_cxt.continuation []
         (E.ml_module_as_var ~dynamic_import i)
-    | Lprim prim_info -> 
-      (* Check for template literal patterns before general primitive compilation *)
-      (match prim_info with
-      | {primitive = Pstringadd; args = [a; b]; _} ->
-        (* Try to detect template literal patterns in string concatenation chains *)
-        (match try_extract_template_literal_from_lam (Lprim prim_info) with
-        | Some (strings, values) ->
-          (* Generate template literal syntax *)
-          let strings_expr = List.map (compile_lambda {lambda_cxt with continuation = NeedValue Not_tail}) strings in
-          let values_expr = List.map (compile_lambda {lambda_cxt with continuation = NeedValue Not_tail}) values in
-          let strings_js = List.map (fun output -> match output.value with Some v -> v | None -> assert false) strings_expr in
-          let values_js = List.map (fun output -> match output.value with Some v -> v | None -> assert false) values_expr in
-          let all_blocks = List.concat (List.map (fun output -> output.block) (strings_expr @ values_expr)) in
-          let template_expr = E.tagged_template (E.str "") strings_js values_js in
-          Js_output.output_of_block_and_expression lambda_cxt.continuation all_blocks template_expr
-        | None ->
-          (* Fall back to regular primitive compilation *)
-          compile_prim prim_info lambda_cxt)
-      | _ ->
-        compile_prim prim_info lambda_cxt)
+    | Lprim prim_info -> compile_prim prim_info lambda_cxt
     | Lsequence (l1, l2) ->
       let output_l1 =
         compile_lambda {lambda_cxt with continuation = EffectCall Not_tail} l1
