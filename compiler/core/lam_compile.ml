@@ -1737,6 +1737,52 @@ let compile output_prefix =
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         exp
 
+(* Check if a Pstringadd chain looks like a template literal *)
+let rec is_template_literal_pattern (lam : Lam.t) : bool =
+  let rec has_template_strings lam =
+    match lam with
+    | Lprim {primitive = Pstringadd; args = [left; right]; _} ->
+      (match right with
+      | Lconst (Const_string {template = true; _}) -> true
+      | _ -> has_template_strings left || has_template_strings right)
+    | Lconst (Const_string {template = true; _}) -> true
+    | _ -> false
+  in
+  has_template_strings lam
+
+(* Extract and compile a template literal from a Pstringadd chain *)
+let rec compile_template_literal (lam : Lam.t) (lambda_cxt : Lam_compile_context.t) : Js_output.t =
+  let rec extract_parts acc_strings acc_exprs current =
+    match current with
+    | Lprim {primitive = Pstringadd; args = [left; right]; _} ->
+      (match right with
+      | Lconst (Const_string {s; _}) ->
+        extract_parts (s :: acc_strings) acc_exprs left
+      | _ ->
+        extract_parts acc_strings (right :: acc_exprs) left)
+    | Lconst (Const_string {s; _}) ->
+      (s :: acc_strings, acc_exprs)
+    | _ ->
+      (acc_strings, current :: acc_exprs)
+  in
+  
+  let (strings, expressions) = extract_parts [] [] lam in
+  let string_exprs = List.rev_map (fun s -> E.str s) strings in
+  
+  (* Compile expressions *)
+  let compile_expr expr =
+    match compile_lambda {lambda_cxt with continuation = NeedValue Not_tail} expr with
+    | {block; value = Some v} -> (v, block)
+    | {value = None} -> assert false
+  in
+  let (value_exprs, expr_blocks) = List.split (List.rev_map compile_expr expressions) in
+  let all_blocks = List.concat expr_blocks in
+  
+  (* Generate template literal *)
+  let call_expr = E.str "" in  (* Empty string marks untagged template literal *)
+  let template_expr = E.tagged_template call_expr string_exprs value_exprs in
+  Js_output.output_of_block_and_expression lambda_cxt.continuation all_blocks template_expr
+
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
       Js_output.t =
     match cur_lam with
@@ -1796,7 +1842,17 @@ let compile output_prefix =
       *)
       Js_output.output_of_block_and_expression lambda_cxt.continuation []
         (E.ml_module_as_var ~dynamic_import i)
-    | Lprim prim_info -> compile_prim prim_info lambda_cxt
+    | Lprim prim_info -> (
+      (* Special handling for potential template literals *)
+      match prim_info with
+      | {primitive = Pstringadd; args = [left; right]; _} ->
+        (* Check if this looks like a template literal pattern *)
+        if is_template_literal_pattern (Lprim prim_info) then
+          compile_template_literal (Lprim prim_info) lambda_cxt
+        else
+          compile_prim prim_info lambda_cxt
+      | _ ->
+        compile_prim prim_info lambda_cxt)
     | Lsequence (l1, l2) ->
       let output_l1 =
         compile_lambda {lambda_cxt with continuation = EffectCall Not_tail} l1
