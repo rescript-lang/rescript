@@ -1117,6 +1117,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cookie-es@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "cookie-es@npm:2.0.0"
+  checksum: 10c0/3b2459030a5ad2bc715aeb27a32f274340670bfc5031ac29e1fba804212517411bb617880d3fe66ace2b64dfb28f3049e2d1ff40d4bec342154ccdd124deaeaa
+  languageName: node
+  linkType: hard
+
 "cross-spawn@npm:^7.0.0, cross-spawn@npm:^7.0.3, cross-spawn@npm:^7.0.6":
   version: 7.0.6
   resolution: "cross-spawn@npm:7.0.6"
@@ -1277,6 +1284,13 @@ __metadata:
   version: 3.1.2
   resolution: "exponential-backoff@npm:3.1.2"
   checksum: 10c0/d9d3e1eafa21b78464297df91f1776f7fbaa3d5e3f7f0995648ca5b89c069d17055033817348d9f4a43d1c20b0eab84f75af6991751e839df53e4dfd6f22e844
+  languageName: node
+  linkType: hard
+
+"fetchdts@npm:^0.1.6":
+  version: 0.1.7
+  resolution: "fetchdts@npm:0.1.7"
+  checksum: 10c0/7497671ee28b3e7cc49d037a7c11e6f98e53e6e2abd85f26e8fac3fae4142c3c0d91352dc46198530f73b16480585605c63e3d112c34210ff2c75be1199668a0
   languageName: node
   linkType: hard
 
@@ -1498,6 +1512,23 @@ __metadata:
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: 10c0/386d011a553e02bc594ac2ca0bd6d9e4c22d7fa8cfbfc448a6d148c59ea881b092db9dbe3547ae4b88e55f1b01f7c4a2ecc53b310c042793e63aa44cf6c257f2
+  languageName: node
+  linkType: hard
+
+"h3@npm:2.0.0-beta.4":
+  version: 2.0.0-beta.4
+  resolution: "h3@npm:2.0.0-beta.4"
+  dependencies:
+    cookie-es: "npm:^2.0.0"
+    fetchdts: "npm:^0.1.6"
+    rou3: "npm:^0.7.3"
+    srvx: "npm:^0.8.7"
+  peerDependencies:
+    crossws: ^0.4.1
+  peerDependenciesMeta:
+    crossws:
+      optional: true
+  checksum: 10c0/ac40213784bab18a96509048d82338763484dddab303763ab549c1fc2e41c8c83a00013154fd9861042b9016f91dc0be3e6c12e553e7450910dc692c17e59403
   languageName: node
   linkType: hard
 
@@ -2412,6 +2443,7 @@ __metadata:
     "@rescript/react": "npm:^0.13.1"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
     glob: "npm:^11.0.1"
+    h3: "npm:2.0.0-beta.4"
     rescript: "workspace:^"
     rollup: "npm:^4.32.0"
   languageName: unknown
@@ -2680,6 +2712,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"rou3@npm:^0.7.3":
+  version: 0.7.3
+  resolution: "rou3@npm:0.7.3"
+  checksum: 10c0/f20224a724838c8a0cbdd8b37462ad684b59f87a8314aa7e6a1a892f96d806bcf504bcb9108f9d812cdb6194e1a347adc15f2c379238bfbc3b723e33dc71ca46
+  languageName: node
+  linkType: hard
+
 "safe-buffer@npm:^5.1.0":
   version: 5.2.1
   resolution: "safe-buffer@npm:5.2.1"
@@ -2836,6 +2875,17 @@ __metadata:
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
   checksum: 10c0/ecadcfe4c771890140da5023d43e190b7566d9cf8b2d238600f31bec0fc653f328da4450eb04bd59a431771a8e9cc0e118f0aa3974b683a4981b4e07abc2a5bb
+  languageName: node
+  linkType: hard
+
+"srvx@npm:^0.8.7":
+  version: 0.8.7
+  resolution: "srvx@npm:0.8.7"
+  dependencies:
+    cookie-es: "npm:^2.0.0"
+  bin:
+    srvx: bin/srvx.mjs
+  checksum: 10c0/67b0b0acbb660df966dd0486e93eba456535190b38a8817f45afbfc4a8892146d69bf8183cdc270bfbbc360169df26f4b636d29ca6b28a4c5eec20d3432ab317
   languageName: node
   linkType: hard
 
