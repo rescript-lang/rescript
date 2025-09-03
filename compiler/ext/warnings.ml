@@ -423,11 +423,11 @@ let message = function
   | Unused_rec_flag -> "unused rec flag."
   | Ambiguous_name ([s], tl, false) ->
     s ^ " belongs to several types: " ^ String.concat " " tl
-    ^ "\nThe first one was selected. Please disambiguate if this is wrong."
+    ^ "\nThe first one was selected. Disambiguate if this is wrong."
   | Ambiguous_name (_, _, false) -> assert false
   | Ambiguous_name (_slist, tl, true) ->
     "these field labels belong to several types: " ^ String.concat " " tl
-    ^ "\nThe first one was selected. Please disambiguate if this is wrong."
+    ^ "\nThe first one was selected. Disambiguate if this is wrong."
   | Nonoptional_label s -> "the label " ^ s ^ " is not optional."
   | Open_shadow_identifier (kind, s) ->
     Printf.sprintf

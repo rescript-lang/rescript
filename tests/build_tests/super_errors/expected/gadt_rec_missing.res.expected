@@ -12,5 +12,5 @@
   9 [2m│[0m 
 
   GADTs require recursive type syntax.
-Please define your type using `type rec` instead of `type`.
+Define your type using `type rec` instead of `type`.
 Example: type rec t = ...

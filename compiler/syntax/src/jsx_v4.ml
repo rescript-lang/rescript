@@ -809,8 +809,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
             | Pexp_fun {arg_label = Labelled _ | Optional _} ->
               Location.raise_errorf ~loc:expr.pexp_loc
                 "Components using React.forwardRef cannot use \
-                 @react.componentWithProps. Please use @react.component \
-                 instead."
+                 @react.componentWithProps. Use @react.component instead."
             | Pexp_fun {arg_label = Nolabel; rhs = body} ->
               check_invalid_forward_ref body
             | _ -> ()

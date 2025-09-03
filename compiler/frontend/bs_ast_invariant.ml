@@ -86,7 +86,7 @@ let emit_external_warnings : iterator =
               [{ptype_kind = Ptype_variant ({pcd_res = Some _} :: _)}] ) ->
           Location.raise_errorf ~loc:str_item.pstr_loc
             "GADTs require recursive type syntax.\n\
-             Please define your type using `type rec` instead of `type`.\n\
+             Define your type using `type rec` instead of `type`.\n\
              Example: type rec t = ..."
         | _ -> super.structure_item self str_item);
     expr =

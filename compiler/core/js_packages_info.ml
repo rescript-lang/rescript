@@ -183,7 +183,7 @@ let get_output_dir (info : t) ~package_dir module_system =
 
 let add_npm_package_path (packages_info : t) (s : string) : t =
   if is_empty packages_info then
-    Bsc_args.bad_arg "please set package name first using -bs-package-name "
+    Bsc_args.bad_arg "Set package name first using -bs-package-name"
   else
     let handle_module_system module_system =
       match module_system_of_string module_system with

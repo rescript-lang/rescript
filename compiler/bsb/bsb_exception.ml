@@ -52,7 +52,7 @@ let print (fmt : Format.formatter) (x : error) =
         "File \"rescript.json\", line 1\n\
          @{<error>Error:@} package @{<error>%s@} is not found\n\
          It's the basic, required package. If you have it installed globally,\n\
-         Please run `npm link rescript` to make it available"
+         Run `npm link rescript` to make it available."
         name
     else
       Format.fprintf fmt
@@ -64,7 +64,7 @@ let print (fmt : Format.formatter) (x : error) =
     Format.fprintf fmt
       "File %S, line %d:\n\
        @{<error>Error:@} %s \n\
-       For more details, please check out the schema at \
+       For more details, check out the schema at \
        https://rescript-lang.org/docs/manual/latest/build-configuration-schema"
       pos.pos_fname pos.pos_lnum s
   | Invalid_spec s ->
