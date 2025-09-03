@@ -50,3 +50,32 @@ let numberTest2 = sqlReScript`number: ${42}`
 
 let stringTest1 = sqlExternal`string: ${"test"}`  
 let stringTest2 = sqlReScript`string: ${"test"}`
+
+// NEW: Test regular template literals (the main issue)
+// These should generate template literal syntax instead of string concatenation
+
+let name = "World"
+let count = 42
+
+// Basic template literal with one interpolation
+let basicTemplate = `Hello ${name}!`
+
+// Template literal with multiple interpolations  
+let multiTemplate = `Hello ${name}, you have ${count} messages`
+
+// Template literal with number interpolation
+let numberTemplate = `Count: ${count}`
+
+// Template literal with mixed types
+let mixedTemplate = `User: ${name} (${count} years old)`
+
+// Template literals with empty strings
+let emptyStart = `${name} is here`
+let emptyEnd = `Welcome ${name}`
+let emptyMiddle = `${name}${count}`
+
+// Template literal with just interpolation (edge case)
+let justInterpolation = `${name}`
+
+// Nested template expressions
+let nested = `Outer: ${`Inner: ${name}`}`
