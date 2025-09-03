@@ -286,6 +286,17 @@ $ node
 
 Run `yarn workspace playground test` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
+You can test the bundle within the playground by running a web server and playground locally.
+
+```sh
+# Serve playground bundles locally
+yarn workspace playground serve-bundle
+
+# And run the website with "PLAYGROUND_BUNDLE_ENDPOINT"
+cd path/to/rescript-lang.org
+PLAYGROUND_BUNDLE_ENDPOINT=http://localhost:8888 npm run dev
+```
+
 ### Working on the Playground JS API
 
 Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_playground_main.ml` file, you'll need to rebuild the source and recreate the JS bundle.
