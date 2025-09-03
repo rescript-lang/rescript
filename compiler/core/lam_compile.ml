@@ -1530,13 +1530,26 @@ let compile output_prefix =
         (* Note true and continue needed to be handled together*)
         Js_output.make ~output_finished:True (Ext_list.append args_code block)
       | _ ->
+        (* Check if this is a template literal call (two array arguments) *)
+        let call_expr = 
+          match args with
+          | [
+              {expression_desc = Array (strings, _); _};
+              {expression_desc = Array (values, _); _};
+            ] ->
+            (* This looks like a template literal call: fn(["str1", "str2"], [val1, val2])
+               Convert it to use template literal syntax: fn`str1${val1}str2` *)
+            E.tagged_template fn_code strings values
+          | _ ->
+            (* Regular function call *)
+            E.call
+              ~info:
+                (call_info_of_ap_status appinfo.ap_transformed_jsx
+                   appinfo.ap_info.ap_status)
+              fn_code args
+        in
         Js_output.output_of_block_and_expression lambda_cxt.continuation
-          args_code
-          (E.call
-             ~info:
-               (call_info_of_ap_status appinfo.ap_transformed_jsx
-                  appinfo.ap_info.ap_status)
-             fn_code args))
+          args_code call_expr
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =
     match prim_info with
