@@ -1736,6 +1736,7 @@ let compile output_prefix =
       in
       Js_output.output_of_block_and_expression lambda_cxt.continuation args_code
         exp
+
   and compile_lambda (lambda_cxt : Lam_compile_context.t) (cur_lam : Lam.t) :
       Js_output.t =
     match cur_lam with

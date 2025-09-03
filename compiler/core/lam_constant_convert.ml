@@ -32,7 +32,12 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
       | Some opt -> Ast_utf8_string_interp.is_unicode_string opt
       | _ -> false
     in
-    Const_string {s; unicode}
+    let template =
+      match opt with
+      | Some "" -> true  (* Template literal marker *)
+      | _ -> false
+    in
+    Const_string {s; unicode; template}
   | Const_base (Const_float i) -> Const_float i
   | Const_base (Const_int32 i) -> Const_int {i; comment = None}
   | Const_base (Const_int64 _) -> assert false
