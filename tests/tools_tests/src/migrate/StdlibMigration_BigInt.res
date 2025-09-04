@@ -3,6 +3,7 @@ let fromStringExn2 = Js.BigInt.fromStringExn("123")
 
 let land1 = 7n->Js.BigInt.land(4n)
 let land2 = Js.BigInt.land(7n, 4n)
+let land3 = 7n->Js.BigInt.toString->Js.BigInt.fromStringExn->Js.BigInt.land(4n)
 
 let lor1 = 7n->Js.BigInt.lor(4n)
 let lor2 = Js.BigInt.lor(7n, 4n)
