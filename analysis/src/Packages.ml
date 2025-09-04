@@ -204,7 +204,10 @@ let findRoot ~uri packagesByRoot =
   let path = Uri.toPath uri in
   let rec loop path =
     if path = "/" then None
-    else if Hashtbl.mem packagesByRoot path then Some (`Root path)
+    else if
+      SharedTypes.StateSync.with_lock (fun () ->
+          Hashtbl.mem packagesByRoot path)
+    then Some (`Root path)
     else if
       Files.exists (Filename.concat path "rescript.json")
       || Files.exists (Filename.concat path "bsconfig.json")
@@ -217,21 +220,28 @@ let findRoot ~uri packagesByRoot =
 
 let getPackage ~uri =
   let open SharedTypes in
-  if Hashtbl.mem state.rootForUri uri then
-    Some (Hashtbl.find state.packagesByRoot (Hashtbl.find state.rootForUri uri))
-  else
+  match
+    SharedTypes.StateSync.with_lock (fun () ->
+        if Hashtbl.mem state.rootForUri uri then
+          let root = Hashtbl.find state.rootForUri uri in
+          Some (Hashtbl.find state.packagesByRoot root)
+        else None)
+  with
+  | Some pkg -> Some pkg
+  | None -> (
     match findRoot ~uri state.packagesByRoot with
     | None ->
       Log.log "No root directory found";
       None
     | Some (`Root rootPath) ->
-      Hashtbl.replace state.rootForUri uri rootPath;
-      Some
-        (Hashtbl.find state.packagesByRoot (Hashtbl.find state.rootForUri uri))
+      SharedTypes.StateSync.with_lock (fun () ->
+          Hashtbl.replace state.rootForUri uri rootPath;
+          Some (Hashtbl.find state.packagesByRoot rootPath))
     | Some (`Bs rootPath) -> (
       match newBsPackage ~rootPath with
       | None -> None
       | Some package ->
-        Hashtbl.replace state.rootForUri uri package.rootPath;
-        Hashtbl.replace state.packagesByRoot package.rootPath package;
-        Some package)
+        SharedTypes.StateSync.with_lock (fun () ->
+            Hashtbl.replace state.rootForUri uri package.rootPath;
+            Hashtbl.replace state.packagesByRoot package.rootPath package;
+            Some package)))
