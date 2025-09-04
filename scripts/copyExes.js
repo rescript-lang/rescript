@@ -59,6 +59,11 @@ function copyExe(dir, exe, renamed) {
   const src = path.join(dir, exe + ext);
   const dest = path.join(binDir, `${renamed ?? exe}.exe`);
 
+  // Skip if the source binary was not built (e.g., skipped in a profile).
+  if (!fs.existsSync(src)) {
+    return;
+  }
+
   // For some reason, the copy operation fails in Windows CI if the file already exists.
   if (process.platform === "win32" && fs.existsSync(dest)) {
     fs.rmSync(dest);

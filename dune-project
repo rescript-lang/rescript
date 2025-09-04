@@ -16,7 +16,8 @@
 
 (package
  (name rescript)
- (synopsis "ReScript compiler"))
+ (synopsis "ReScript compiler")
+ (depends (ocaml (>= 5.3))))
 
 (package
  (name analysis)

@@ -21,7 +21,7 @@ build: [
   ]
 ]
 depends: [
-  "ocaml" {>= "4.14"}
+  "ocaml" {>= "5.3"}
   "cppo" {= "1.8.0"}
   "dune" {>= "3.17"}
   "flow_parser" {= "0.267.0"}
