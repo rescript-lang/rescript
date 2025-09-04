@@ -1,9 +1,10 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/dict_coercion.res[0m:[2m1:12-21[0m
+  [36m/.../fixtures/dict_coercion.res[0m:[2m7:10-30[0m
 
-  [1;31m1[0m [2m│[0m let dict = [1;31mDict.empty[0m()
-  2 [2m│[0m dict->Dict.set("someKey1", 1)
-  3 [2m│[0m dict->Dict.set("someKey2", 2)
+  5 [2m│[0m type fakeDict<'t> = {dictValuesType?: 't}
+  6 [2m│[0m 
+  [1;31m7[0m [2m│[0m let d = ([1;31mdict :> fakeDict<int>[0m)
+  8 [2m│[0m 
 
-  The value empty can't be found in Dict
+  Type dict<int> is not a subtype of fakeDict<int>
