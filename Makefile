@@ -42,6 +42,7 @@ test-syntax-roundtrip:
 
 test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
+	make -C tests/gentype_tests/stdlib-no-shims clean test
 
 test-rewatch:
 	./rewatch/tests/suite-ci.sh
@@ -80,6 +81,7 @@ checkformat:
 
 clean-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean
+	make -C tests/gentype_tests/stdlib-no-shims clean
 
 clean-rewatch:
 	cargo clean --manifest-path rewatch/Cargo.toml && rm -f rewatch/rewatch

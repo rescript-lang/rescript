@@ -675,6 +675,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/gentype-stdlib-no-shims@workspace:tests/gentype_tests/stdlib-no-shims":
+  version: 0.0.0-use.local
+  resolution: "@tests/gentype-stdlib-no-shims@workspace:tests/gentype_tests/stdlib-no-shims"
+  dependencies:
+    rescript: "workspace:^"
+    typescript: "npm:5.8.2"
+  languageName: unknown
+  linkType: soft
+
 "@tests/incremental-typechecking@workspace:tests/analysis_tests/tests-incremental-typechecking":
   version: 0.0.0-use.local
   resolution: "@tests/incremental-typechecking@workspace:tests/analysis_tests/tests-incremental-typechecking"
