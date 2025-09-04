@@ -62,7 +62,11 @@ let extractDocFromFile = async file => {
   }
 }
 
-let batchSize = OS.cpus()->Array.length
+// Some environments may report 0 CPUs; clamp to at least 1 to avoid zero-sized batches
+let batchSize = switch OS.cpus()->Array.length {
+| n if n > 0 => n
+| _ => 1
+}
 
 let runtimePath = Path.join(["packages", "@rescript", "runtime"])
 
