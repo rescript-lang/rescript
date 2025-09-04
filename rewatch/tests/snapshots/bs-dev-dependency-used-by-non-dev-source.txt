@@ -1,6 +1,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 0/428
 Parsed 2 source files
 Compiled 2 modules
@@ -9,6 +10,10 @@ Compiled 2 modules
 >>>>>>> 91e157ad8 (Revert "make parsing of @deprecated with migration info an experimental feature")
 Cleaned 0/113
 Parsed 4 source files
+=======
+Cleaned 0/114
+Parsed 3 source files
+>>>>>>> 4e80e1ed4 (remove)
 Compiled 3 modules
 
   [1;33mWarning number 3[0m
@@ -65,6 +70,7 @@ Compiled 3 modules
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 434a19184 (migrate wip)
 =======
 Cleaned 0/115
@@ -85,6 +91,8 @@ Compiled 2 modules
 
 
 >>>>>>> f7c06c67b (more fixtures)
+=======
+>>>>>>> 4e80e1ed4 (remove)
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.

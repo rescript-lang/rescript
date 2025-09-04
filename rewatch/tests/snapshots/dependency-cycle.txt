@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 0/428
 Parsed 1 source files
 Compiled 0 modules
@@ -16,6 +17,11 @@ Compiled 2 modules
   deprecated: Js.log
   Use `Console.log` instead.
 
+=======
+Cleaned 0/111
+Parsed 5 source files
+Compiled 1 modules
+>>>>>>> 4e80e1ed4 (remove)
 
   [1;33mWarning number 3[0m
   [36m/packages/dep02/src/Array.res[0m:[2m6:16-33[0m

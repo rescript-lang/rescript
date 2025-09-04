@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 2/428
 Parsed 2 source files
 Compiled 2 modules
@@ -6,6 +7,11 @@ Compiled 2 modules
 Cleaned 1/110
 Parsed 6 source files
 Compiled 8 modules
+=======
+Cleaned 1/111
+Parsed 5 source files
+Compiled 5 modules
+>>>>>>> 4e80e1ed4 (remove)
 
   [1;33mWarning number 3[0m
   [36m/packages/dep02/src/Array.res[0m:[2m6:16-33[0m
@@ -57,16 +63,6 @@ Compiled 8 modules
 
   deprecated: Js.Array2.joinWith
   Use `Array.joinUnsafe` instead.
-
-
-  [1;33mWarning number 3[0m
-  [36m/packages/new-namespace/src/Other_module.res[0m:[2m1:17-22[0m
-
-  [1;33m1[0m [2m│[0m let bla = () => [1;33mJs.log[0m("bla")
-  2 [2m│[0m 
-
-  deprecated: Js.log
-  Use `Console.log` instead.
 
 
   [1;33mWarning number 3[0m
