@@ -6,7 +6,7 @@ let shift2 = Array.shift([1, 2, 3])
 let slice1 = [1, 2, 3]->Array.slice(~start=1, ~end=2)
 let slice2 = Array.slice([1, 2, 3], ~start=1, ~end=2)
 
-external someArrayLike: Js_array2.array_like<string> = "whatever"
+external someArrayLike: Array.arrayLike<string> = "whatever"
 
 let from1 = someArrayLike->Array.fromArrayLike
 let from2 = Array.fromArrayLike(someArrayLike)
