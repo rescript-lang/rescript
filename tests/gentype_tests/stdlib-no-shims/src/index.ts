@@ -86,8 +86,11 @@ const sym: symbol = S.idSymbol(Symbol("x"));
 
 // Iterator / AsyncIterator / Ordering
 const it: Iterator<number> = S.idIterator([1, 2, 3].values());
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ait: AsyncIterator<number> = S.idAsyncIterator({} as any);
+const ait: AsyncIterator<number> = S.idAsyncIterator({
+  next(): Promise<IteratorResult<number>> {
+    return Promise.resolve({ done: true, value: undefined });
+  },
+});
 const ord: number = S.idOrdering(0);
 
 // Intl family
