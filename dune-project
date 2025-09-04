@@ -23,9 +23,10 @@
  (synopsis "ReScript Analysis")
  (depends
   (ocaml
-   (>= 4.14))
+   (>= 5.3))
   (cppo
    (= 1.8.0))
+  eio
   dune))
 
 (package
@@ -33,7 +34,7 @@
  (synopsis "ReScript Tools")
  (depends
   (ocaml
-   (>= 4.14))
+   (>= 5.3))
   (cmarkit
    (>= 0.3.0))
   (cppo
