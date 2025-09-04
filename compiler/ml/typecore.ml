@@ -3028,8 +3028,8 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
          try Some (Ctype.extract_concrete_typedecl env ty')
          with Not_found -> None )
      with
-    | Some (_p_src, _p_src_conc, src_decl), Some (_p_tgt, p_tgt_conc, tgt_decl)
-      -> (
+    | Some (_p_src, _p_src_conc, src_decl),
+      Some (p_tgt, p_tgt_conc, tgt_decl) -> (
       match (src_decl.type_kind, tgt_decl.type_kind) with
       | Type_variant src_cons, Type_variant tgt_cons ->
         let src_names =
@@ -3038,14 +3038,29 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
             src_cons
         in
         let has_src name = List.exists (fun n -> n = name) src_names in
-        let tgt_ty_name = Path.last p_tgt_conc in
+        let tgt_ty_name_conc = Path.last p_tgt_conc in
+        (* Mark usage for the concrete target decl (implementation view). *)
         List.iter
           (fun (c : Types.constructor_declaration) ->
             let cname = Ident.name c.cd_id in
             if has_src cname then
-              Env.mark_constructor_used Env.Positive env tgt_ty_name tgt_decl
-                cname)
-          tgt_cons
+              Env.mark_constructor_used Env.Positive env tgt_ty_name_conc
+                tgt_decl cname)
+          tgt_cons;
+        (* If the target type path differs from its concrete decl (e.g.,
+           when a signature exposes a private or abstract alias), also mark
+           usage on the exposed target declaration so scheduled warnings
+           attached to that declaration are cleared. *)
+        if not (Path.same p_tgt p_tgt_conc) then (
+          let exposed_ty_name = Path.last p_tgt in
+          let exposed_decl = Env.find_type p_tgt env in
+          List.iter
+            (fun (c : Types.constructor_declaration) ->
+              let cname = Ident.name c.cd_id in
+              if has_src cname then
+                Env.mark_constructor_used Env.Positive env exposed_ty_name
+                  exposed_decl cname)
+            tgt_cons)
       | _ -> ())
     | _ -> ());
     rue

@@ -2,11 +2,14 @@
 // This should compile cleanly without warnings when coercing from a -> b.
 
 type a = A | B
+module DoNotWarn: {
+  let log: a => unit
+} = {
+  type b =
+    | ...a
+    | C
 
-type b =
-  | ...a
-  | C
+  let log = (x: a) => Js.log((x :> b))
+}
 
-let upcast = (x: a): b => (x :> b)
-
-let _ = upcast(A)
+let _ = DoNotWarn.log(A)
