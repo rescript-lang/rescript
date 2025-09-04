@@ -703,19 +703,8 @@ let migrate ~entryPointFile ~outputMode =
       let {Res_driver.parsetree = signature; comments; source} =
         parser ~filename:path
       in
-      (* Load cmti/cmt info to obtain deprecation migration templates, just like .res *)
-      match
-        (* Prefer implementation cmt info when available, since cmti may not
-            record deprecated usages. Fallback to cmti if needed. *)
-        let impl_path =
-          if Filename.check_suffix path ".resi" then
-            Filename.chop_suffix path ".resi" ^ ".res"
-          else path
-        in
-        match Cmt.loadCmtInfosFromPath ~path:impl_path with
-        | Some infos -> Some infos
-        | None -> Cmt.loadCmtInfosFromPath ~path
-      with
+
+      match Cmt.loadCmtInfosFromPath ~path with
       | None ->
         Error
           (Printf.sprintf
