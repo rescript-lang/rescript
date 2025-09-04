@@ -23,11 +23,13 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Expect repeated string-list style: presence of -enable-experimental and LetUnwrap entries
-echo "$stdout" | grep -q '"-enable-experimental"' && echo "$stdout" | grep -q '"LetUnwrap"'
-if [ $? -ne 0 ]; then
+# Expect repeated string-list style: two "-enable-experimental" entries and "LetUnwrap" present
+enable_count=$(echo "$stdout" | grep -o '"-enable-experimental"' | wc -l | xargs)
+echo "$stdout" | grep -q '"LetUnwrap"'
+letunwrap_ok=$?
+if [ "$enable_count" -ne 2 ] || [ $letunwrap_ok -ne 0 ]; then
   mv rescript.json.bak rescript.json
-  error "-enable-experimental / LetUnwrap not found in compiler-args output"
+  error "Expected two occurrences of -enable-experimental and presence of LetUnwrap in compiler-args output"
   echo "$stdout"
   exit 1
 fi
@@ -35,4 +37,4 @@ fi
 # Restore original rescript.json
 mv rescript.json.bak rescript.json
 
-success "experimentalFeatures emits -enable-experimental as string list"
+success "experimentalFeatures emits -enable-experimental twice as string list"
