@@ -95,7 +95,7 @@ console.info("JSON");
 
 console.info("---");
 
-let json = JSON.parse("{\"foo\": \"bar\"}");
+let json = JSON.parse(`{"foo": "bar"}`);
 
 let json$1 = Stdlib_JSON.Classify.classify(json);
 

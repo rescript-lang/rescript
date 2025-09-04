@@ -19,23 +19,23 @@ let H = Inline_const.N1({});
 
 let f = "hello";
 
-let f1 = "a";
+let f1 = `a`;
 
-let f2 = "中文";
+let f2 = `中文`;
 
-let f3 = "中文";
+let f3 = `中文`;
 
-let f4 = "中文";
+let f4 = `中文`;
 
 eq("File \"inline_const_test.res\", line 13, characters 5-12", f, "hello");
 
 eq("File \"inline_const_test.res\", line 14, characters 5-12", f1, "a");
 
-eq("File \"inline_const_test.res\", line 15, characters 5-12", f2, "中文");
+eq("File \"inline_const_test.res\", line 15, characters 5-12", f2, `中文`);
 
-eq("File \"inline_const_test.res\", line 16, characters 5-12", f3, "中文");
+eq("File \"inline_const_test.res\", line 16, characters 5-12", f3, `中文`);
 
-eq("File \"inline_const_test.res\", line 17, characters 5-12", f4, "中文");
+eq("File \"inline_const_test.res\", line 17, characters 5-12", f4, `中文`);
 
 eq("File \"inline_const_test.res\", line 18, characters 5-12", true, true);
 

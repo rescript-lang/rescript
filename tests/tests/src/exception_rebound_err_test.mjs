@@ -34,7 +34,7 @@ let C = /* @__PURE__ */Primitive_exceptions.create("Exception_rebound_err_test.C
 
 function test_js_error4() {
   try {
-    JSON.parse(" {\"x\"}");
+    JSON.parse(` {"x"}`);
     return 1;
   } catch (raw_e) {
     let e = Primitive_exceptions.internalToException(raw_e);

@@ -54,7 +54,7 @@ let $$URIError$1 = {
 };
 
 function panic(msg) {
-  throw new Error("Panic! " + msg);
+  throw new Error(`Panic! ` + msg);
 }
 
 exports.$$EvalError = $$EvalError$1;

@@ -50,7 +50,7 @@ function true_(loc) {
   }));
 }
 
-let v = JSON.parse(" { \"x\" : [1, 2, 3 ] } ");
+let v = JSON.parse(` { "x" : [1, 2, 3 ] } `);
 
 add_test("File \"js_json_test.res\", line 23, characters 11-18", () => {
   let ty = Js_json.classify(v);
@@ -564,7 +564,7 @@ eq("File \"js_json_test.res\", line 290, characters 2-9", JSON.stringify({
   baz: {
     baaz: 10
   }
-}), "{\"foo\":1,\"bar\":\"hello\",\"baz\":{\"baaz\":10}}");
+}), `{"foo":1,"bar":"hello","baz":{"baaz":10}}`);
 
 eq("File \"js_json_test.res\", line 295, characters 12-19", JSON.stringify(null), "null");
 

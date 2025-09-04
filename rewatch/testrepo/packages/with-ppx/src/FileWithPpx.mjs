@@ -6,7 +6,7 @@ let schema = S.schema(s => ({
   foo: s.m(S.string)
 }));
 
-let foo = S.parseOrThrow("{ \"foo\": \"bar\" }", schema);
+let foo = S.parseOrThrow(`{ "foo": "bar" }`, schema);
 
 console.log(foo);
 

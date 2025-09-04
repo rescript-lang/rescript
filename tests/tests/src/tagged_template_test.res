@@ -11,7 +11,8 @@ let id = "5"
 let queryWithModule = Pg.sql`SELECT * FROM ${table} WHERE id = ${id}`
 
 open Pg
-let query = sql`SELECT * FROM ${table} WHERE id = ${id}`
+let query = sql`
+" SELECT * FROM ${table} WHERE id = ${id}`
 
 @module("./tagged_template_lib.js") @taggedTemplate
 external length: (array<string>, array<int>) => int = "length"
@@ -35,7 +36,11 @@ Mt.from_pair_suites(
   list{
     (
       "with externals, it should return a string with the correct interpolations",
-      () => Eq(query, "SELECT * FROM 'users' WHERE id = '5'"),
+      () => Eq(
+        query,
+        `
+" SELECT * FROM 'users' WHERE id = '5'`,
+      ),
     ),
     (
       "with module scoped externals, it should also return a string with the correct interpolations",

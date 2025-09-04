@@ -23,7 +23,7 @@ let $$TypeError = {};
 let $$URIError = {};
 
 function panic(msg) {
-  throw new Error("Panic! " + msg);
+  throw new Error(`Panic! ` + msg);
 }
 
 export {

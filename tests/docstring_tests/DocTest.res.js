@@ -61,7 +61,7 @@ async function extractDocFromFile(file) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {
       console.error(e._1);
-      return Stdlib_JsError.panic("Failed to extract code blocks from " + file);
+      return Stdlib_JsError.panic(`Failed to extract code blocks from ` + file);
     }
     throw e;
   }
@@ -84,7 +84,7 @@ async function extractExamples() {
       return false;
     }
   });
-  console.log("Extracting examples from " + docFiles.length.toString() + " runtime files...");
+  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime files...`);
   let examples = [];
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
     let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
@@ -120,25 +120,35 @@ async function main() {
         }
       });
       if (ignoreExample) {
-        console.warn("Ignoring " + example.id + " tests. Not supported by Node " + nodeVersion.toString());
+        console.warn(`Ignoring ` + example.id + ` tests. Not supported by Node ` + nodeVersion.toString());
         return;
       }
       let code = example.code;
       if (code.length === 0) {
         return;
       } else {
-        return "test(\"" + example.name + "\", () => {\n  module Test = {\n    " + code + "\n  }\n  ()\n})";
+        return `test("` + example.name + `", () => {
+  module Test = {
+    ` + code + `
+  }
+  ()
+})`;
       }
     });
     if (codeExamples.length <= 0) {
       return;
     }
-    let content = "describe(\"" + key + "\", () => {\n" + codeExamples.join("\n") + "\n })";
+    let content = `describe("` + key + `", () => {
+` + codeExamples.join("\n") + `
+ })`;
     output.push(content);
   });
   let dirname = Nodepath.dirname(Nodeurl.fileURLToPath(import.meta.url));
   let filepath = Nodepath.join(dirname, "generated_mocha_test.res");
-  let fileContent = "open Mocha\n@@warning(\"-32-34-60-37-109-3-44\")\n\n" + output.join("\n");
+  let fileContent = `open Mocha
+@@warning("-32-34-60-37-109-3-44")
+
+` + output.join("\n");
   return await Promises.writeFile(filepath, fileContent);
 }
 

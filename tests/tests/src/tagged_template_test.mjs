@@ -18,7 +18,8 @@ let id = "5";
 
 let queryWithModule = Tagged_template_libJs.sql`SELECT * FROM ${table} WHERE id = ${id}`;
 
-let query = Tagged_template_libJs.sql`SELECT * FROM ${table} WHERE id = ${id}`;
+let query = Tagged_template_libJs.sql`
+" SELECT * FROM ${table} WHERE id = ${id}`;
 
 let length = Tagged_template_libJs.length`hello ${10} what's the total length? Is it ${3}?`;
 
@@ -32,8 +33,8 @@ function foo(strings, values) {
 }
 
 let res = foo([
-  "| 5 × 10 = ",
-  " |"
+  `| 5 × 10 = `,
+  ` |`
 ], [5]);
 
 Mt.from_pair_suites("tagged templates", {
@@ -42,7 +43,8 @@ Mt.from_pair_suites("tagged templates", {
     () => ({
       TAG: "Eq",
       _0: query,
-      _1: "SELECT * FROM 'users' WHERE id = '5'"
+      _1: `
+" SELECT * FROM 'users' WHERE id = '5'`
     })
   ],
   tl: {
@@ -86,7 +88,7 @@ Mt.from_pair_suites("tagged templates", {
               "a regular string interpolation should continue working",
               () => ({
                 TAG: "Eq",
-                _0: "some random string interpolation",
+                _0: `some random ` + "string" + ` interpolation`,
                 _1: "some random string interpolation"
               })
             ],

@@ -428,7 +428,7 @@ function assignOverwritesTarget(title, source) {
       22,
       39
     ],
-    "assign " + title
+    `assign ` + title
   ], Object.assign({
     a: 1
   }, sourceObj), eq, sourceObj);
@@ -439,7 +439,7 @@ function assignOverwritesTarget(title, source) {
       22,
       39
     ],
-    "assign " + title
+    `assign ` + title
   ], Object.assign({
     a: undefined
   }, sourceObj), eq, sourceObj);
@@ -450,7 +450,7 @@ function assignOverwritesTarget(title, source) {
       22,
       39
     ],
-    "assign " + title
+    `assign ` + title
   ], Object.assign({
     a: null
   }, sourceObj), eq, sourceObj);
@@ -472,7 +472,7 @@ function runGetTest(i) {
       22,
       46
     ],
-    "Object.get: " + i.title
+    `Object.get: ` + i.title
   ], i.get(i.source()), eq, i.expected);
 }
 
@@ -555,7 +555,7 @@ function getSymbolTestWhenExists() {
       15,
       63
     ],
-    "Object.getSymbol when exists return it as Some"
+    `Object.getSymbol when exists return it as Some`
   ], retrieved, eq, "banana");
 }
 
@@ -568,7 +568,7 @@ Test.run([
     13,
     65
   ],
-  "Object.getSymbol when not exists return it as None"
+  `Object.getSymbol when not exists return it as None`
 ], ({})[Symbol("fruit")], eq, undefined);
 
 Test.run([
@@ -578,7 +578,7 @@ Test.run([
     13,
     46
   ],
-  "Object.create clones properties"
+  `Object.create clones properties`
 ], Object.create({
     a: 1
   })["a"], eq, 1);
@@ -590,7 +590,7 @@ Test.run([
     13,
     46
   ],
-  "Object.create clones properties"
+  `Object.create clones properties`
 ], Object.create({
     a: 1
   })["b"], eq, undefined);

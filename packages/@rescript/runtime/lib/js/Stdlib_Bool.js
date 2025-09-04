@@ -29,7 +29,7 @@ function fromStringOrThrow(param) {
     default:
       throw {
         RE_EXN_ID: "Invalid_argument",
-        _1: "Bool.fromStringOrThrow: value is neither \"true\" nor \"false\"",
+        _1: `Bool.fromStringOrThrow: value is neither "true" nor "false"`,
         Error: new Error()
       };
   }

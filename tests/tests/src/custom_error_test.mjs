@@ -6,7 +6,7 @@ import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_excep
 function test_js_error() {
   let e;
   try {
-    e = JSON.parse(" {\"x\" : }");
+    e = JSON.parse(` {"x" : }`);
   } catch (raw_err) {
     let err = Primitive_exceptions.internalToException(raw_err);
     if (err.RE_EXN_ID === Stdlib_Exn.$$Error) {
@@ -20,7 +20,7 @@ function test_js_error() {
 
 function test_js_error2() {
   try {
-    return JSON.parse(" {\"x\" : }");
+    return JSON.parse(` {"x" : }`);
   } catch (raw_e) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === Stdlib_Exn.$$Error) {
@@ -34,7 +34,7 @@ function test_js_error2() {
 function example1() {
   let v;
   try {
-    v = JSON.parse(" {\"x\"  }");
+    v = JSON.parse(` {"x"  }`);
   } catch (raw_err) {
     let err = Primitive_exceptions.internalToException(raw_err);
     if (err.RE_EXN_ID === Stdlib_Exn.$$Error) {
@@ -48,7 +48,7 @@ function example1() {
 
 function example2() {
   try {
-    return JSON.parse(" {\"x\"}");
+    return JSON.parse(` {"x"}`);
   } catch (raw_exn) {
     let exn = Primitive_exceptions.internalToException(raw_exn);
     if (exn.RE_EXN_ID === Stdlib_Exn.$$Error) {

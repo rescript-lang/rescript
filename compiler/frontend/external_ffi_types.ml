@@ -273,12 +273,8 @@ let () =
       | _ -> false
 let inline_string_primitive (s : string) (op : string option) : string list =
   let lam : Lam_constant.t =
-    let unicode =
-      match op with
-      | Some op -> Ast_utf8_string_interp.is_unicode_string op
-      | None -> false
-    in
-    Const_string {s; unicode}
+    let delim = Ast_utf8_string_interp.parse_processed_delim op in
+    Const_string {s; delim}
   in
   [""; to_string (Ffi_inline_const lam)]
 

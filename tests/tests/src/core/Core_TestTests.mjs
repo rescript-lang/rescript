@@ -90,7 +90,7 @@ Test.run([
     34
   ],
   "print string"
-], Test.print("foo"), eq, "\"foo\"");
+], Test.print("foo"), eq, `"foo"`);
 
 Test.run([
   [
@@ -112,7 +112,7 @@ Test.run([
   "print object"
 ], Test.print({
   x: 42
-}), eq, "{ x: 42 }");
+}), eq, `{ x: 42 }`);
 
 Test.run([
   [

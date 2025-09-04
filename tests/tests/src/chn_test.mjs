@@ -26,9 +26,10 @@ function eq(loc, x, y) {
   };
 }
 
-console.log("你好，\n世界");
+console.log(`你好，
+世界`);
 
-console.log("\x3f\u003f\b\t\n\v\f\r\0\"'");
+console.log(`\x3f\u003f\b\t\n\v\f\r\0"'`);
 
 function convert(s) {
   return Belt_List.fromArray(Array.from(s, x => {
@@ -48,9 +49,10 @@ function convert(s) {
   }));
 }
 
-eq("File \"chn_test.res\", line 32, characters 4-11", "你好，\n世界", "你好，\n世界");
+eq("File \"chn_test.res\", line 32, characters 4-11", `你好，
+世界`, `你好，\n世界`);
 
-eq("File \"chn_test.res\", line 38, characters 4-11", convert("汉字是世界上最美丽的character"), {
+eq("File \"chn_test.res\", line 38, characters 4-11", convert(`汉字是世界上最美丽的character`), {
   hd: 27721,
   tl: {
     hd: 23383,
@@ -109,7 +111,7 @@ eq("File \"chn_test.res\", line 38, characters 4-11", convert("汉字是世界�
   }
 });
 
-eq("File \"chn_test.res\", line 62, characters 5-12", convert("\x3f\x3fa"), {
+eq("File \"chn_test.res\", line 62, characters 5-12", convert(`\x3f\x3fa`), {
   hd: 63,
   tl: {
     hd: 63,
@@ -120,7 +122,7 @@ eq("File \"chn_test.res\", line 62, characters 5-12", convert("\x3f\x3fa"), {
   }
 });
 
-eq("File \"chn_test.res\", line 63, characters 5-12", convert("??a"), {
+eq("File \"chn_test.res\", line 63, characters 5-12", convert(`??a`), {
   hd: 63,
   tl: {
     hd: 63,
@@ -131,7 +133,7 @@ eq("File \"chn_test.res\", line 63, characters 5-12", convert("??a"), {
   }
 });
 
-eq("File \"chn_test.res\", line 64, characters 5-12", convert("\u003f\x3fa"), {
+eq("File \"chn_test.res\", line 64, characters 5-12", convert(`\u003f\x3fa`), {
   hd: 63,
   tl: {
     hd: 63,
@@ -142,7 +144,7 @@ eq("File \"chn_test.res\", line 64, characters 5-12", convert("\u003f\x3fa"), {
   }
 });
 
-eq("File \"chn_test.res\", line 65, characters 5-12", convert("🚀🚀a"), {
+eq("File \"chn_test.res\", line 65, characters 5-12", convert(`🚀🚀a`), {
   hd: 128640,
   tl: {
     hd: 128640,
@@ -153,7 +155,7 @@ eq("File \"chn_test.res\", line 65, characters 5-12", convert("🚀🚀a"), {
   }
 });
 
-eq("File \"chn_test.res\", line 66, characters 5-12", convert("\uD83D\uDE80a"), {
+eq("File \"chn_test.res\", line 66, characters 5-12", convert(`\uD83D\uDE80a`), {
   hd: 128640,
   tl: {
     hd: 97,
@@ -161,7 +163,7 @@ eq("File \"chn_test.res\", line 66, characters 5-12", convert("\uD83D\uDE80a"), 
   }
 });
 
-eq("File \"chn_test.res\", line 67, characters 5-12", convert("\uD83D\uDE80\x3f"), {
+eq("File \"chn_test.res\", line 67, characters 5-12", convert(`\uD83D\uDE80\x3f`), {
   hd: 128640,
   tl: {
     hd: 63,
@@ -169,7 +171,7 @@ eq("File \"chn_test.res\", line 67, characters 5-12", convert("\uD83D\uDE80\x3f"
   }
 });
 
-eq("File \"chn_test.res\", line 71, characters 5-12", convert("\uD83D\uDE80\uD83D\uDE80a"), {
+eq("File \"chn_test.res\", line 71, characters 5-12", convert(`\uD83D\uDE80\uD83D\uDE80a`), {
   hd: 128640,
   tl: {
     hd: 128640,
@@ -180,18 +182,18 @@ eq("File \"chn_test.res\", line 71, characters 5-12", convert("\uD83D\uDE80\uD83
   }
 });
 
-eq("No inline string length", "\uD83D\uDE80\0".length, 3);
+eq("No inline string length", `\uD83D\uDE80\0`.length, 3);
 
-eq("File \"chn_test.res\", line 78, characters 4-11", "\uD83D\uDE80\0".codePointAt(0), 128640);
+eq("File \"chn_test.res\", line 78, characters 4-11", `\uD83D\uDE80\0`.codePointAt(0), 128640);
 
-eq("File \"chn_test.res\", line 83, characters 5-12", "🚀".codePointAt(0), 128640);
+eq("File \"chn_test.res\", line 83, characters 5-12", `🚀`.codePointAt(0), 128640);
 
-eq("File \"chn_test.res\", line 88, characters 5-12", convert("\uD83D\uDE80"), {
+eq("File \"chn_test.res\", line 88, characters 5-12", convert(`\uD83D\uDE80`), {
   hd: 128640,
   tl: /* [] */0
 });
 
-eq("File \"chn_test.res\", line 89, characters 5-12", convert("\uD83D\uDE80\uD83D\uDE80"), {
+eq("File \"chn_test.res\", line 89, characters 5-12", convert(`\uD83D\uDE80\uD83D\uDE80`), {
   hd: 128640,
   tl: {
     hd: 128640,
@@ -199,7 +201,7 @@ eq("File \"chn_test.res\", line 89, characters 5-12", convert("\uD83D\uDE80\uD83
   }
 });
 
-eq("File \"chn_test.res\", line 90, characters 5-12", convert(" \b\t\n\v\f\ra"), {
+eq("File \"chn_test.res\", line 90, characters 5-12", convert(` \b\t\n\v\f\ra`), {
   hd: 32,
   tl: {
     hd: 8,
@@ -225,7 +227,7 @@ eq("File \"chn_test.res\", line 90, characters 5-12", convert(" \b\t\n\v\f\ra"),
   }
 });
 
-eq("File \"chn_test.res\", line 96, characters 5-12", convert(" \b\t\n\v\f\r\"'\\\0a"), {
+eq("File \"chn_test.res\", line 96, characters 5-12", convert(` \b\t\n\v\f\r"'\\\0a`), {
   hd: 32,
   tl: {
     hd: 8,

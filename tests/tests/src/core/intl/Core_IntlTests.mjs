@@ -66,7 +66,7 @@ try {
       exit = 1;
     }
     if (exit === 1) {
-      console.warn("Unexpected error message: \"" + message + "\"");
+      console.warn(`Unexpected error message: "` + message + `"`);
       throw e$3;
     }
     

@@ -729,6 +729,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
       | DNoQuotes -> P.string f txt
       | DNone -> Js_dump_string.pp_string f txt
+      | DBackQuotes -> P.string f ("`" ^ txt ^ "`")
     in
     cxt
   | Raw_js_code {code = s; code_info = info} -> (

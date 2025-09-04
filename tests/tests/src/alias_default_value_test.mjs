@@ -75,7 +75,7 @@ function Alias_default_value_test$C7(props) {
       count !== 2 ? String(count) + " times" : "twice"
     ) : "once";
   let name = username !== undefined && username !== "" ? username : "Anonymous";
-  return "Hello " + name + ", you clicked me " + times;
+  return `Hello ` + name + `, you clicked me ` + times;
 }
 
 let C7 = {

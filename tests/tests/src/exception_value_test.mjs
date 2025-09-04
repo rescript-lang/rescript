@@ -57,7 +57,7 @@ function test_not_found(f, param) {
 
 function test_js_error2() {
   try {
-    return JSON.parse(" {\"x\" : }");
+    return JSON.parse(` {"x" : }`);
   } catch (raw_e) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === Stdlib_Exn.$$Error) {
@@ -70,7 +70,7 @@ function test_js_error2() {
 
 function test_js_error3() {
   try {
-    JSON.parse(" {\"x\"}");
+    JSON.parse(` {"x"}`);
     return 1;
   } catch (e) {
     return 0;

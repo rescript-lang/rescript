@@ -52,7 +52,7 @@ let exit = 0;
 let e;
 
 try {
-  e = JSON.parse(" {\"x\"}");
+  e = JSON.parse(` {"x"}`);
   exit = 1;
 } catch (raw_x) {
   let x = Primitive_exceptions.internalToException(raw_x);
