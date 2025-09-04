@@ -25,6 +25,7 @@
 - Fix generation of interfaces for module types containing multiple type constraints. https://github.com/rescript-lang/rescript/pull/7825
 - JSX preserve mode: fix "make is not a valid component name". https://github.com/rescript-lang/rescript/pull/7831
 - Rewatch: include parser arguments of experimental features. https://github.com/rescript-lang/rescript/pull/7836
+- Suppress spurious “constructor … is never used” warnings when constructors are introduced via variant coercions; still warn for constructors only present on the target side. https://github.com/rescript-lang/rescript/pull/7839
 
 #### :memo: Documentation
 
