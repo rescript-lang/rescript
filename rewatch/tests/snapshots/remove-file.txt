@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 1/428
 Parsed 0 source files
 Compiled 1 modules
@@ -112,6 +113,11 @@ Compiled 3 modules
 
 
 >>>>>>> 7dae73e0f (update test fixtures)
+=======
+Cleaned 1/114
+Parsed 1 source files
+Compiled 1 modules
+>>>>>>> 914e839de (more)
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.
@@ -126,7 +132,11 @@ Use 'compiler-flags' instead.
   [36m/packages/dep01/src/Dep01.res[0m:[2m3:9-17[0m
 
   1 [2m│[0m let log = () => {
+<<<<<<< HEAD
   2 [2m│[0m         Js.log("02")
+=======
+  2 [2m│[0m         Console.log("02")
+>>>>>>> 914e839de (more)
   [1;31m3[0m [2m│[0m         [1;31mDep02.log[0m()
   4 [2m│[0m }
   5 [2m│[0m 
@@ -138,5 +148,9 @@ Use 'compiler-flags' instead.
   
 
 
+<<<<<<< HEAD
 Incremental build failed. Error: [2K
   Failed to Compile. See Errors Above
+=======
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
+>>>>>>> 914e839de (more)

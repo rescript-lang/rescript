@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 2/428
 Parsed 2 source files
 Compiled 2 modules
@@ -102,6 +103,11 @@ Compiled 5 modules
 
 
 >>>>>>> f7c06c67b (more fixtures)
+=======
+Cleaned 1/114
+Parsed 2 source files
+Compiled 2 modules
+>>>>>>> 914e839de (more)
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.

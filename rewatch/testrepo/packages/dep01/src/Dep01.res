@@ -1,4 +1,4 @@
 let log = () => {
-        Js.log("02")
+        Console.log("02")
         Dep02.log()
 }
