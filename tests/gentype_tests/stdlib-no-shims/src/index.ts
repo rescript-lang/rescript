@@ -26,7 +26,9 @@ const dict: { [id: string]: number } = S.idDict({ a: 1, b: 2 });
 
 // Map / WeakMap
 const m: Map<string, number> = S.idMap(new Map<string, number>());
-const wm: WeakMap<number[], number> = S.idWeakMap(new WeakMap<number[], number>());
+const wm: WeakMap<number[], number> = S.idWeakMap(
+  new WeakMap<number[], number>()
+);
 
 // Set / WeakSet
 const set: Set<string> = S.idSet(new Set<string>());
@@ -34,7 +36,7 @@ const wset: WeakSet<number[]> = S.idWeakSet(new WeakSet<number[]>());
 
 // undefined / null / nullable
 const u: undefined | number = S.idUndefined(undefined);
-const n: null | number = S.idNull(null as any);
+const n: null | number = S.idNull(null);
 const nu: null | undefined | number = S.idNullable(undefined);
 
 // option
@@ -90,15 +92,20 @@ const ord: number = S.idOrdering(0);
 
 // Intl family
 const _coll: Intl.Collator = S.idIntlCollator(new Intl.Collator());
-const _dtf: Intl.DateTimeFormat = S.idIntlDateTimeFormat(new Intl.DateTimeFormat());
+const _dtf: Intl.DateTimeFormat = S.idIntlDateTimeFormat(
+  new Intl.DateTimeFormat()
+);
 const _lf: Intl.ListFormat = S.idIntlListFormat(new Intl.ListFormat());
-const _loc: Intl.Locale = S.idIntlLocale(new (Intl as any).Locale("en-US"));
+const _loc: Intl.Locale = S.idIntlLocale(new Intl.Locale("en-US"));
 const _nf: Intl.NumberFormat = S.idIntlNumberFormat(new Intl.NumberFormat());
 const _pr: Intl.PluralRules = S.idIntlPluralRules(new Intl.PluralRules());
-const _rtf: Intl.RelativeTimeFormat = S.idIntlRelativeTimeFormat(new Intl.RelativeTimeFormat());
-const _seg: Intl.Segmenter = S.idIntlSegmenter(new (Intl as any).Segmenter());
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _segs: Intl.Segments = S.idIntlSegments((new (Intl as any).Segmenter()).segment("hello") as any);
+const _rtf: Intl.RelativeTimeFormat = S.idIntlRelativeTimeFormat(
+  new Intl.RelativeTimeFormat()
+);
+const _seg: Intl.Segmenter = S.idIntlSegmenter(new Intl.Segmenter());
+const _segs: Intl.Segments = S.idIntlSegments(
+  new Intl.Segmenter().segment("hello")
+);
 
 // Errors (use JsError only)
 const _jserr: Error = S.idJsError(new Error("x"));
@@ -108,4 +115,3 @@ const _obj: {} = S.idObj({ a: 1, b: "x" });
 
 // Tuple
 const _tup: [number, string, number] = S.idTuple([1, "x", 1.5]);
-
