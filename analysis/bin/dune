@@ -8,4 +8,4 @@
  (package analysis)
  (modes byte exe)
  (name main)
- (libraries analysis))
+ (libraries analysis eio_main))

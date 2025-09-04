@@ -1,6 +1,6 @@
 open SharedTypes
 
-let debugReferences = ref true
+let debugReferences = ref false
 let maybeLog m = if !debugReferences then Log.log ("[ref] " ^ m)
 
 let checkPos (line, char)
@@ -433,7 +433,34 @@ type references = {
   locOpt: Location.t option; (* None: reference to a toplevel module *)
 }
 
-let forLocalStamp ~full:{file; extra; package} stamp (tip : Tip.t) =
+(* Single helper for parallel work distribution over a list. *)
+let parallel_map ~domain_mgr ~items ~f =
+  let len = List.length items in
+  let doms = Domain.recommended_domain_count () in
+  let chunk_size = max 1 (if doms <= 1 then len else (len + doms - 1) / doms) in
+  let rec chunks_of size lst =
+    if size <= 0 then [lst]
+    else
+      match lst with
+      | [] -> []
+      | _ ->
+        let rec take n acc rest =
+          if n = 0 then (List.rev acc, rest)
+          else
+            match rest with
+            | [] -> (List.rev acc, [])
+            | x :: xs -> take (n - 1) (x :: acc) xs
+        in
+        let chunk, rest = take size [] lst in
+        chunk :: chunks_of size rest
+  in
+  let chunks = chunks_of chunk_size items in
+  Eio.Fiber.List.map
+    (fun chunk -> Eio.Domain_manager.run domain_mgr (fun () -> f chunk))
+    chunks
+  |> List.concat
+
+let forLocalStamp ~domain_mgr ~full:{file; extra; package} stamp (tip : Tip.t) =
   let env = QueryEnv.fromFile file in
   match
     match tip with
@@ -485,30 +512,34 @@ let forLocalStamp ~full:{file; extra; package} stamp (tip : Tip.t) =
             in
             maybeLog ("Now checking path " ^ pathToString path);
             let thisModuleName = file.moduleName in
-            let externals =
+            let names =
               package.projectFiles |> FileSet.elements
               |> List.filter (fun name -> name <> file.moduleName)
-              |> List.map (fun moduleName ->
-                     Cmt.fullsFromModule ~package ~moduleName
-                     |> List.map (fun {file; extra} ->
-                            match
-                              Hashtbl.find_opt extra.externalReferences
-                                thisModuleName
-                            with
-                            | None -> []
-                            | Some refs ->
-                              let locs =
-                                refs
-                                |> Utils.filterMap (fun (p, t, locs) ->
-                                       if p = path && t = tip then Some locs
-                                       else None)
-                              in
-                              locs
-                              |> List.map (fun loc ->
-                                     {uri = file.uri; locOpt = Some loc})))
-              |> List.concat |> List.concat
             in
-            alternativeReferences @ externals)
+            let results =
+              parallel_map ~domain_mgr ~items:names ~f:(fun chunk ->
+                  let process_module moduleName =
+                    Cmt.fullsFromModule ~package ~moduleName
+                    |> List.map (fun {file; extra} ->
+                           match
+                             Hashtbl.find_opt extra.externalReferences
+                               thisModuleName
+                           with
+                           | None -> []
+                           | Some refs ->
+                             let locs =
+                               refs
+                               |> Utils.filterMap (fun (p, t, locs) ->
+                                      if p = path && t = tip then Some locs
+                                      else None)
+                             in
+                             locs
+                             |> List.map (fun loc ->
+                                    {uri = file.uri; locOpt = Some loc}))
+                  in
+                  chunk |> List.map process_module |> List.concat |> List.concat)
+            in
+            alternativeReferences @ results)
           else (
             maybeLog "Not visible";
             [])
@@ -517,26 +548,36 @@ let forLocalStamp ~full:{file; extra; package} stamp (tip : Tip.t) =
         (locs |> List.map (fun loc -> {uri = file.uri; locOpt = Some loc}))
         externals)
 
-let allReferencesForLocItem ~full:({file; package} as full) locItem =
+let allReferencesForLocItem ~domain_mgr ~full:({file; package} as full) locItem
+    =
   match locItem.locType with
   | TopLevelModule moduleName ->
     let otherModulesReferences =
-      package.projectFiles |> FileSet.elements
-      |> Utils.filterMap (fun name ->
-             match ProcessCmt.fileForModule ~package name with
-             | None -> None
-             | Some file -> Cmt.fullFromUri ~uri:file.uri)
-      |> List.map (fun full ->
-             match Hashtbl.find_opt full.extra.fileReferences moduleName with
-             | None -> []
-             | Some locs ->
-               locs |> LocationSet.elements
-               |> List.map (fun loc ->
-                      {
-                        uri = Uri.fromPath loc.Location.loc_start.pos_fname;
-                        locOpt = Some loc;
-                      }))
-      |> List.flatten
+      let names = package.projectFiles |> FileSet.elements in
+      let per_chunk =
+        parallel_map ~domain_mgr ~items:names ~f:(fun chunk ->
+            let process_name name =
+              match ProcessCmt.fileForModule ~package name with
+              | None -> []
+              | Some file -> (
+                match Cmt.fullFromUri ~uri:file.uri with
+                | None -> []
+                | Some full -> (
+                  match
+                    Hashtbl.find_opt full.extra.fileReferences moduleName
+                  with
+                  | None -> []
+                  | Some locs ->
+                    locs |> LocationSet.elements
+                    |> List.map (fun loc ->
+                           {
+                             uri = Uri.fromPath loc.Location.loc_start.pos_fname;
+                             locOpt = Some loc;
+                           })))
+            in
+            chunk |> List.map process_name |> List.concat)
+      in
+      per_chunk
     in
     let targetModuleReferences =
       match Hashtbl.find_opt package.pathsForModule moduleName with
@@ -547,13 +588,13 @@ let allReferencesForLocItem ~full:({file; package} as full) locItem =
     in
     List.append targetModuleReferences otherModulesReferences
   | Typed (_, _, NotFound) | LModule NotFound | Constant _ -> []
-  | TypeDefinition (_, _, stamp) -> forLocalStamp ~full stamp Type
+  | TypeDefinition (_, _, stamp) -> forLocalStamp ~domain_mgr ~full stamp Type
   | Typed (_, _, (LocalReference (stamp, tip) | Definition (stamp, tip)))
   | LModule (LocalReference (stamp, tip) | Definition (stamp, tip)) ->
     maybeLog
       ("Finding references for " ^ Uri.toString file.uri ^ " and stamp "
      ^ string_of_int stamp ^ " and tip " ^ Tip.toString tip);
-    forLocalStamp ~full stamp tip
+    forLocalStamp ~domain_mgr ~full stamp tip
   | LModule (GlobalReference (moduleName, path, tip))
   | Typed (_, _, GlobalReference (moduleName, path, tip)) -> (
     match ProcessCmt.fileForModule ~package moduleName with
@@ -570,4 +611,4 @@ let allReferencesForLocItem ~full:({file; package} as full) locItem =
             ("Finding references for (global) " ^ Uri.toString env.file.uri
            ^ " and stamp " ^ string_of_int stamp ^ " and tip "
            ^ Tip.toString tip);
-          forLocalStamp ~full stamp tip)))
+          forLocalStamp ~domain_mgr ~full stamp tip)))
