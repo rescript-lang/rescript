@@ -109,4 +109,3 @@ const _obj: {} = S.idObj({ a: 1, b: "x" });
 // Tuple
 const _tup: [number, string, number] = S.idTuple([1, "x", 1.5]);
 
-// No exports needed; existence and types are checked by TS.

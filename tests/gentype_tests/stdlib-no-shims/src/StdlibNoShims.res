@@ -67,7 +67,7 @@ let idResultAlias = (x: result<int, string>) => x
 let idRef = (x: ref<int>) => x
 
 @genType
-let returnsUnit = () : unit => ()
+let returnsUnit = (): unit => ()
 @genType
 let idTuple = (x: (int, string, float)) => x
 
