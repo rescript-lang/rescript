@@ -5,6 +5,7 @@ let fromStringExn2 = BigInt.fromStringOrThrow("123")
 
 let land1 = 7n & 4n
 let land2 = 7n & 4n
+let land3 = 7n->BigInt.toString->BigInt.fromStringOrThrow->BigInt.bitwiseAnd(4n)
 
 let lor1 = 7n->BigInt.bitwiseOr(4n)
 let lor2 = BigInt.bitwiseOr(7n, 4n)
