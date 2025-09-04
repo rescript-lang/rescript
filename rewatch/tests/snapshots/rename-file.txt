@@ -1,6 +1,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 1/428
 Parsed 1 source files
 Compiled 1 modules
@@ -103,10 +104,14 @@ Compiled 4 modules
 
 =======
 Cleaned 0/114
+=======
+Cleaned 1/115
+>>>>>>> debe9dbf3 (more)
 Parsed 1 source files
 Compiled 1 modules
 >>>>>>> 914e839de (more)
 
+<<<<<<< HEAD
   [1;33mWarning number 3[0m
   [36m/packages/main/src/Main2.res[0m:[2m1:1-6[0m
 
@@ -133,6 +138,8 @@ Compiled 1 modules
 
 >>>>>>> 7dae73e0f (update test fixtures)
 
+=======
+>>>>>>> debe9dbf3 (more)
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.
 

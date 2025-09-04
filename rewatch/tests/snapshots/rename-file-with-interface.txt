@@ -6,10 +6,11 @@ Parsed 1 source files
 Compiled 2 modules
 =======
 [2K No implementation file found for interface file (skipping): src/ModuleWithInterface.resi
-Cleaned 2/114
-Parsed 2 source files
+Cleaned 2/115
+Parsed 1 source files
 Compiled 2 modules
 
+<<<<<<< HEAD
   [1;33mWarning number 3[0m
   [36m/packages/main/src/Main.res[0m:[2m1:1-6[0m
 
@@ -36,6 +37,8 @@ Compiled 2 modules
 
 >>>>>>> f7c06c67b (more fixtures)
 
+=======
+>>>>>>> debe9dbf3 (more)
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.
 
