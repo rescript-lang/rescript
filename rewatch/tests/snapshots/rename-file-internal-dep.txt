@@ -1,6 +1,111 @@
+<<<<<<< HEAD
 Cleaned 2/428
 Parsed 2 source files
 Compiled 2 modules
+=======
+Cleaned 1/110
+Parsed 6 source files
+Compiled 8 modules
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m6:16-33[0m
+
+  4 [2m│[0m let at = get
+  5 [2m│[0m 
+  [1;33m6[0m [2m│[0m let includes = [1;33mJs.Array2.includes[0m
+  7 [2m│[0m 
+  8 [2m│[0m let head = t => t->get(0)
+
+  deprecated: Js.Array2.includes
+  Use `Array.includes` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m24:12-25[0m
+
+  22 [2m│[0m let flatMap = (t, fn) => t->map(fn)->concatMany
+  23 [2m│[0m 
+  [1;33m24[0m [2m│[0m let mapi = [1;33mJs.Array2.mapi[0m
+  25 [2m│[0m 
+  26 [2m│[0m let flatten = t => t->flatMap(x => x)
+
+  deprecated: Js.Array2.mapi
+  Use `Array.mapWithIndex` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m32:14-29[0m
+
+  30 [2m│[0m let findIndex = (t, fn) => Js.Array.findIndex(fn, t)
+  31 [2m│[0m 
+  [1;33m32[0m [2m│[0m let filter = [1;33mJs.Array2.filter[0m
+  33 [2m│[0m 
+  34 [2m│[0m let reject = (t, fn) => t->filter(el => !fn(el))
+
+  deprecated: Js.Array2.filter
+  Use `Array.filter` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m48:18-35[0m
+
+  46 [2m│[0m 
+  47 [2m│[0m module String = {
+  [1;33m48[0m [2m│[0m   let joinWith = [1;33mJs.Array2.joinWith[0m
+  49 [2m│[0m   let join = joinWith(_, "")
+  50 [2m│[0m }
+
+  deprecated: Js.Array2.joinWith
+  Use `Array.joinUnsafe` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/new-namespace/src/Other_module.res[0m:[2m1:17-22[0m
+
+  [1;33m1[0m [2m│[0m let bla = () => [1;33mJs.log[0m("bla")
+  2 [2m│[0m 
+
+  deprecated: Js.log
+  Use `Console.log` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Dep02.res[0m:[2m2:37-42[0m
+
+  1 [2m│[0m open Array
+  [1;33m2[0m [2m│[0m let log = () => ["a", "b"]->forEach([1;33mJs.log[0m)
+  3 [2m│[0m Js.log(NS.Alias.hello_world())
+  4 [2m│[0m 
+
+  deprecated: Js.log
+  Use `Console.log` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Dep02.res[0m:[2m3:1-6[0m
+
+  1 [2m│[0m open Array
+  2 [2m│[0m let log = () => ["a", "b"]->forEach(Js.log)
+  [1;33m3[0m [2m│[0m [1;33mJs.log[0m(NS.Alias.hello_world())
+  4 [2m│[0m 
+
+  deprecated: Js.log
+  Use `Console.log` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep01/src/Dep01.res[0m:[2m2:9-14[0m
+
+  1 [2m│[0m let log = () => {
+  [1;33m2[0m [2m│[0m         [1;33mJs.log[0m("02")
+  3 [2m│[0m         Dep02.log()
+  4 [2m│[0m }
+
+  deprecated: Js.log
+  Use `Console.log` instead.
+
+
+>>>>>>> f7c06c67b (more fixtures)
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.
