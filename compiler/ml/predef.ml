@@ -61,6 +61,10 @@ and ident_unknown = ident_create "unknown"
 
 and ident_promise = ident_create "promise"
 
+and ident_runtime_array = ident_create "$runtime.array"
+
+and ident_runtime_object = ident_create "$runtime.object"
+
 type test = For_sure_yes | For_sure_no | NA
 
 let type_is_builtin_path_but_option (p : Path.t) : test =
@@ -103,6 +107,10 @@ and path_unkonwn = Pident ident_unknown
 and path_extension_constructor = Pident ident_extension_constructor
 
 and path_promise = Pident ident_promise
+
+and path_runtime_array = Pident ident_runtime_array
+
+and path_runtime_object = Pident ident_runtime_object
 
 let type_int = newgenty (Tconstr (path_int, [], ref Mnil))
 
@@ -334,6 +342,22 @@ let common_initial_env add_type add_extension empty_env =
       type_arity = 1;
       type_variance = [Variance.covariant];
     }
+  and decl_array_or_tuple =
+    let tvar = newgenvar () in
+    {
+      decl_abstr with
+      type_params = [tvar];
+      type_arity = 1;
+      type_variance = [Variance.covariant];
+    }
+  and decl_runtime_object =
+    let tvar = newgenvar () in
+    {
+      decl_abstr with
+      type_params = [tvar];
+      type_arity = 1;
+      type_variance = [Variance.covariant];
+    }
   in
 
   let add_exception id l =
@@ -368,6 +392,8 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_option decl_option
   |> add_type ident_result decl_result
   |> add_type ident_promise decl_promise
+  |> add_type ident_runtime_array decl_array_or_tuple
+  |> add_type ident_runtime_object decl_runtime_object
   |> add_type ident_array decl_array
   |> add_type ident_list decl_list
   |> add_type ident_dict decl_dict

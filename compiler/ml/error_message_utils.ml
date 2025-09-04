@@ -505,6 +505,36 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       (match suggested_rewrite with
       | Some rewrite -> rewrite
       | None -> "")
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, other)
+    when Path.same p1 Predef.path_runtime_array -> (
+    match other with
+    | {Types.desc = Ttuple _} -> ()
+    | {Types.desc = Tconstr (p2, _, _)} when Path.same p2 Predef.path_array ->
+      ()
+    | _ ->
+      fprintf ppf
+        "\n\n  Expected @{<info>array@} or @{<info>tuple@}. Tuples are written like \
+         @{<info>(1, \"a\")@} and compile to JavaScript arrays." )
+  | _, Some (other, {Types.desc = Tconstr (p2, _, _)})
+    when Path.same p2 Predef.path_runtime_array -> (
+    match other with
+    | {Types.desc = Ttuple _} -> ()
+    | {Types.desc = Tconstr (p1, _, _)} when Path.same p1 Predef.path_array ->
+      ()
+    | _ ->
+      fprintf ppf
+        "\n\n  Expected @{<info>array@} or @{<info>tuple@}. Tuples are written like \
+         @{<info>(1, \"a\")@} and compile to JavaScript arrays." )
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
+    when Path.same p1 Predef.path_runtime_object ->
+    fprintf ppf
+      "\n\n  Expected a @{<info>record@} or a @{<info>ReScript object@}.\n\
+       Records are written like @{<info>{a: 1, b: 2}@} and objects like @{<info>{. \"a\": 1 .}@}."
+  | _, Some (_, {Types.desc = Tconstr (p2, _, _)})
+    when Path.same p2 Predef.path_runtime_object ->
+    fprintf ppf
+      "\n\n  Expected a @{<info>record@} or a @{<info>ReScript object@}.\n\
+       Records are written like @{<info>{a: 1, b: 2}@} and objects like @{<info>{. \"a\": 1 .}@}."
   | ( _,
       Some
         ( {desc = Tconstr (p, type_params, _)},

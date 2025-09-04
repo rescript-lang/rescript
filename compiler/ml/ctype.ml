@@ -2231,6 +2231,26 @@ let unify1_var env t1 t2 =
     t1.desc <- d1;
     raise e
 
+(* ---- Helpers for $runtime.* wrapper unification ---- *)
+
+let is_runtime_array_shape (_env : Env.t ref) (t : type_expr) : bool =
+  match (repr t).desc with
+  | Ttuple _ -> true
+  | Tconstr (p, _, _) when Path.same p Predef.path_array -> true
+  | _ -> false
+
+let is_record_decl (env : Env.t ref) (p : Path.t) : bool =
+  match Env.find_type p !env with
+  | {type_kind = Type_record _; _} -> true
+  | _ -> false
+  | exception Not_found -> false
+
+let is_runtime_object_shape (env : Env.t ref) (t : type_expr) : bool =
+  match (repr t).desc with
+  | Tobject _ -> true
+  | Tconstr (p, _, _) -> is_record_decl env p
+  | _ -> false
+
 let rec unify (env : Env.t ref) t1 t2 =
   (* First step: special cases (optimizations) *)
   if t1 == t2 then ()
@@ -2328,6 +2348,29 @@ and unify3 env t1 t1' t2 t2' =
     occur !env t2' t1;
     occur_univar !env t1;
     link_type t2' t1
+  (* Special magic types: $runtime.* wrappers constrain acceptable runtime shapes. *)
+  (* $runtime.array<'t> *)
+  | Tconstr (p1, [tparam1], _), Tconstr (p2, [tparam2], _)
+    when Path.same p1 Predef.path_runtime_array
+         && Path.same p2 Predef.path_runtime_array ->
+    unify env tparam1 tparam2
+  | Tconstr (p, [tparam], _), _ when Path.same p Predef.path_runtime_array ->
+    if is_runtime_array_shape env t2' then unify env tparam t2'
+    else raise (Unify [])
+  | _, Tconstr (p, [tparam], _) when Path.same p Predef.path_runtime_array ->
+    if is_runtime_array_shape env t1' then unify env t1' tparam
+    else raise (Unify [])
+  (* $runtime.object<'t>: records and objects at runtime *)
+  | Tconstr (p1, [tparam1], _), Tconstr (p2, [tparam2], _)
+    when Path.same p1 Predef.path_runtime_object
+         && Path.same p2 Predef.path_runtime_object ->
+    unify env tparam1 tparam2
+  | Tconstr (p, [tparam], _), _ when Path.same p Predef.path_runtime_object ->
+    if is_runtime_object_shape env t2' then unify env tparam t2'
+    else raise (Unify [])
+  | _, Tconstr (p, [tparam], _) when Path.same p Predef.path_runtime_object ->
+    if is_runtime_object_shape env t1' then unify env t1' tparam
+    else raise (Unify [])
   | Tfield _, Tfield _ ->
     (* special case for GADTs *)
     unify_fields env t1' t2'

@@ -49,6 +49,8 @@ val path_dict : Path.t
 val path_bigint : Path.t
 val path_extension_constructor : Path.t
 val path_promise : Path.t
+val path_runtime_array : Path.t
+val path_runtime_object : Path.t
 
 val path_match_failure : Path.t
 val path_assert_failure : Path.t
