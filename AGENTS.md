@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Shared guidance for code agents (Claude, Gemini, Codex, etc.) working in this repository. The files `CLAUDE.md` and `GEMINI.md` are symlinks to this document. For Codex‑specific workflow details also see `CODEX.md`.
 
 ## Project Overview
 
@@ -137,3 +137,23 @@ The compiler is designed for fast feedback loops and scales to large codebases. 
 - Maintain readable JavaScript output
 - Consider compilation speed impact
 - Use appropriate optimization passes in the Lambda and JS IRs
+
+## Agent Notes and Gotchas
+
+- **Node version features:** Runtime docstring tests conditionally enable features by Node major version:
+  - 20+: array `toReversed`/`toSorted`
+  - 22+: new `Set` APIs and `Promise.withResolvers`
+  - 24+: `RegExp.escape`
+  Tests auto‑skip unsupported features based on `process.version`.
+- **CPU count in sandboxes:** Some CI/sandboxed environments report `os.cpus().length === 0`.
+  - Clamp concurrency/batch size to at least 1 when using `os.cpus()`.
+  - This pattern is used in `tests/docstring_tests/DocTest.res` and `cli/rescript-legacy/format.js`.
+- **Formatting in tests:** `make test` checks formatting (OCaml, ReScript, JS, Rust). If it fails locally, run `make format` and re‑run tests.
+- **Executables location:** Build copies platform binaries into `packages/@rescript/<platform>/bin/` and convenience folders like `darwinarm64/`.
+- **Direct dune usage:** You can use `dune build`/`dune build -w`, but prefer `make` targets which also copy executables.
+
+## References
+
+- `CODEX.md`: detailed setup, build, testing, and workflows for agented development
+- `README.md`: high‑level repo overview and usage
+- `Makefile`: authoritative list of build/test targets

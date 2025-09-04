@@ -67,7 +67,9 @@ async function extractDocFromFile(file) {
   }
 }
 
-let batchSize = Nodeos.cpus().length;
+let n = Nodeos.cpus().length;
+
+let batchSize = n > 0 ? n : 1;
 
 let runtimePath = Nodepath.join("packages", "@rescript", "runtime");
 
