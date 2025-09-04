@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Support mapping more standard library types automatically to TS types via `gentype`, without requiring shims. https://github.com/rescript-lang/rescript/pull/7842
+
 #### :bug: Bug fix
 
 - Show `Stdlib.TypedArray` completions for typed arrays. https://github.com/rescript-lang/rescript/pull/7827
