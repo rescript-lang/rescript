@@ -3,7 +3,7 @@
 module V4A1 = {
   type props = sharedProps<string>
 
-  let make = ({x, y, _}: props) => React.string(x ++ y)
+  let make = ({x, y, _}: props): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A1" = props => make(props)
 
@@ -14,7 +14,7 @@ module V4A1 = {
 module V4A2 = {
   type props<'a> = sharedProps<'a>
 
-  let make = ({x, y, _}: props<_>) => React.string(x ++ y)
+  let make = ({x, y, _}: props<_>): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A2" = (props: props<_>) => make(props)
 
@@ -25,7 +25,7 @@ module V4A2 = {
 module V4A3 = {
   type props<'a> = sharedProps<string, 'a>
 
-  let make = ({x, y, _}: props<_>) => React.string(x ++ y)
+  let make = ({x, y, _}: props<_>): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A3" = (props: props<_>) => make(props)
 
@@ -36,7 +36,7 @@ module V4A3 = {
 module V4A4 = {
   type props = sharedProps
 
-  let make = ({x, y, _}: props) => React.string(x ++ y)
+  let make = ({x, y, _}: props): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A4" = props => make(props)
 

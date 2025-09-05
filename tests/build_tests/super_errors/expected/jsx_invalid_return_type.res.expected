@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/jsx_invalid_return_type.res[0m:[2m14:5-6[0m
+
+  12 [2m│[0m   @react.component
+  13 [2m│[0m   let make = () => {
+  [1;31m14[0m [2m│[0m     [1;31m42[0m // This should be an error - returning int instead of React.elem
+     [2m│[0m [1;31ment[0m
+  15 [2m│[0m   }
+  16 [2m│[0m }
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33mReact.element[0m [2m(defined as[0m [1;33mJsx.element[0m[2m)[0m
+  
+  In JSX, all content must be JSX elements. You can convert int to a JSX element with [1;33mReact.int[0m.
