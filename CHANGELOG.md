@@ -38,6 +38,8 @@
 
 #### :house: Internal
 
+- Add a `prepareRename` command the LSP can use for faster renames. https://github.com/rescript-lang/rescript/pull/7847
+
 # 12.0.0-beta.9
 
 #### :boom: Breaking Change
