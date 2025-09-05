@@ -1235,8 +1235,8 @@ Path fnTakingPolyVariant
   }]
 
 Complete src/CompletionExpressions.res 281:24
-posCursor:[281:24] posNoWhite:[281:23] Found expr:[281:3->290:18]
-Pexp_apply ...[281:3->281:22] (...[281:23->281:25], ...[290:0->290:16])
+posCursor:[281:24] posNoWhite:[281:23] Found expr:[281:3->302:1]
+Pexp_apply ...[281:3->281:22] (...[281:23->281:25], ...[290:0->290:16], ...[292:2->301:20])
 Completable: Cexpression CArgument Value[fnTakingPolyVariant]($0)=#
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
