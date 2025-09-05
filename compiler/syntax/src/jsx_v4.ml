@@ -733,6 +733,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | _ -> Pat.record (List.rev patterns_with_label) Open
     in
     let expression =
+      (* Shape internal implementation to match wrapper: uncurried when using forwardRef. *)
       Exp.fun_ ~arity:(Some 1) ~async:is_async Nolabel None
         (Pat.constraint_ record_pattern
            (Typ.constr ~loc:empty_loc
@@ -747,6 +748,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
                 | [] -> []
                 | _ -> [Typ.any ()]))))
         expression
+    in
+    let expression =
+      if has_forward_ref then expression |> Ast_uncurried.uncurried_fun ~arity:2
+      else expression
     in
     let expression =
       (* Add new tupes (type a,b,c) to make's definition *)
