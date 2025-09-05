@@ -1,6 +1,7 @@
 SHELL = /bin/bash
 
 test:
+	yarn workspaces focus @tests/gentype-react-example
 	yarn build
 	yarn check
 	yarn typecheck
@@ -9,6 +10,7 @@ test:
 		|| exit 1
 
 clean:
+	yarn workspaces focus @tests/gentype-react-example
 	yarn clean
 
 .DEFAULT_GOAL := test

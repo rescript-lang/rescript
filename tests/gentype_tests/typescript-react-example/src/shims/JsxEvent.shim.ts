@@ -14,6 +14,9 @@ export abstract class Focus_t {
   protected opaque: unknown;
 }
 
+// Alias used by genType wrapper when referring to ReactEvent.Focus.t as a TS symbol
+export type ReactEvent_Focus_t = Focus_t;
+
 export abstract class Form_t {
   protected opaque: unknown;
 }
@@ -54,7 +57,7 @@ export abstract class Wheel_t {
   protected opaque: unknown;
 }
 
-export type inputFocusEvent = React.FocusEvent<HTMLInputElement>;
+export type inputFocusEvent = ReactEvent_Focus_t;
 
 export abstract class Mouse_t {
   protected opaque: unknown;

@@ -1,0 +1,16 @@
+{
+  "name": "@tests/gentype-genimport-single",
+  "private": true,
+  "scripts": {
+    "build": "rescript legacy build",
+    "clean": "rescript clean",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "rescript": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "5.8.2"
+  }
+}
+
