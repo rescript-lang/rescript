@@ -10,6 +10,7 @@ depends: [
   "ocaml" {>= "5.3"}
   "cppo" {= "1.8.0"}
   "eio"
+  "eio_main"
   "dune" {>= "3.17"}
   "odoc" {with-doc}
 ]

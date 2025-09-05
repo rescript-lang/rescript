@@ -17,7 +17,9 @@
 (package
  (name rescript)
  (synopsis "ReScript compiler")
- (depends (ocaml (>= 5.3))))
+ (depends
+  (ocaml
+   (>= 5.3))))
 
 (package
  (name analysis)
@@ -28,6 +30,7 @@
   (cppo
    (= 1.8.0))
   eio
+  eio_main
   dune))
 
 (package

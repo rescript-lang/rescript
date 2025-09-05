@@ -178,19 +178,18 @@ let typeDefinition ~path ~pos ~debug =
     | Some location -> location |> Protocol.stringifyLocation)
 
 (* Shared helper: collect references in parallel using Eio, like 'references'. *)
-let collect_all_references_parallel ~path ~pos ~debug =
-  Eio_main.run (fun env ->
-      match Cmt.loadFullCmtFromPath ~path with
-      | None -> []
-      | Some full -> (
-        match References.getLocItem ~full ~pos ~debug with
-        | None -> []
-        | Some locItem ->
-          References.allReferencesForLocItem ~domain_mgr:env#domain_mgr ~full
-            locItem))
+let collect_all_references_parallel ~env ~path ~pos ~debug =
+  match Cmt.loadFullCmtFromPath ~path with
+  | None -> []
+  | Some full -> (
+    match References.getLocItem ~full ~pos ~debug with
+    | None -> []
+    | Some locItem ->
+      References.allReferencesForLocItem ~domain_mgr:env#domain_mgr ~full
+        locItem)
 
-let references ~path ~pos ~debug =
-  let allRefs = collect_all_references_parallel ~path ~pos ~debug in
+let references ~env ~path ~pos ~debug =
+  let allRefs = collect_all_references_parallel ~env ~path ~pos ~debug in
   let allLocs =
     allRefs
     |> List.fold_left
@@ -209,8 +208,8 @@ let references ~path ~pos ~debug =
     (if allLocs = [] then Protocol.null
      else "[\n" ^ (allLocs |> String.concat ",\n") ^ "\n]")
 
-let rename ~path ~pos ~newName ~debug =
-  let allReferences = collect_all_references_parallel ~path ~pos ~debug in
+let rename ~env ~path ~pos ~newName ~debug =
+  let allReferences = collect_all_references_parallel ~env ~path ~pos ~debug in
   let referencesToToplevelModules =
     allReferences
     |> Utils.filterMap (fun {References.uri = uri2; locOpt} ->
@@ -289,7 +288,7 @@ let format ~path =
 let diagnosticSyntax ~path =
   print_endline (Diagnostics.document_syntax ~path |> Protocol.array)
 
-let test ~path =
+let test ~env ~path =
   Uri.stripPath := true;
   match Files.readFile path with
   | None -> assert false
@@ -409,7 +408,7 @@ let test ~path =
             print_endline
               ("References " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            references ~path ~pos:(line, col) ~debug:true
+            references ~env ~path ~pos:(line, col) ~debug:true
           | "ren" ->
             let newName = String.sub rest 4 (len - mlen - 4) in
             let () =
@@ -417,7 +416,7 @@ let test ~path =
                 ("Rename " ^ path ^ " " ^ string_of_int line ^ ":"
                ^ string_of_int col ^ " " ^ newName)
             in
-            rename ~path ~pos:(line, col) ~newName ~debug:true
+            rename ~env ~path ~pos:(line, col) ~newName ~debug:true
           | "typ" ->
             print_endline
               ("TypeDefinition " ^ path ^ " " ^ string_of_int line ^ ":"
