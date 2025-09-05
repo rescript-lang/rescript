@@ -660,6 +660,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/gentype-genimport-single@workspace:tests/gentype_tests/genimport-single":
+  version: 0.0.0-use.local
+  resolution: "@tests/gentype-genimport-single@workspace:tests/gentype_tests/genimport-single"
+  dependencies:
+    rescript: "workspace:^"
+    typescript: "npm:5.8.2"
+  languageName: unknown
+  linkType: soft
+
 "@tests/gentype-react-example@workspace:tests/gentype_tests/typescript-react-example":
   version: 0.0.0-use.local
   resolution: "@tests/gentype-react-example@workspace:tests/gentype_tests/typescript-react-example"
