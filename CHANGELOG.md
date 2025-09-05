@@ -28,6 +28,7 @@
 - JSX preserve mode: fix "make is not a valid component name". https://github.com/rescript-lang/rescript/pull/7831
 - Rewatch: include parser arguments of experimental features. https://github.com/rescript-lang/rescript/pull/7836
 - Stop mangling tagged templates and backquoted strings. https://github.com/rescript-lang/rescript/pull/7841
+- JSX v4: fix arity mismatch for `@react.component` with `React.forwardRef`. https://github.com/rescript-lang/rescript/pull/7845
 
 #### :memo: Documentation
 
