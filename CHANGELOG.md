@@ -10,11 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.10 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
+# 12.0.0-beta.10
 
 #### :rocket: New Feature
 
@@ -30,14 +26,10 @@
 - Stop mangling tagged templates and backquoted strings. https://github.com/rescript-lang/rescript/pull/7841
 - JSX v4: fix arity mismatch for `@react.component` with `React.forwardRef`. https://github.com/rescript-lang/rescript/pull/7845
 
-#### :memo: Documentation
-
 #### :nail_care: Polish
 
 - Improve error message for trying to define a type inside a function. https://github.com/rescript-lang/rescript/pull/7843
 - Refactor CLI to use spawn for better signal handling in watch mode. https://github.com/rescript-lang/rescript/pull/7844
-
-#### :house: Internal
 
 # 12.0.0-beta.9
 
