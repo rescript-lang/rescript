@@ -175,7 +175,13 @@ jobs:
 
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        run: opam install . --deps-only --with-test
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+            C_INCLUDE_PATH="/usr/include/$arch" opam install . --deps-only --with-test
+          else
+            opam install . --deps-only --with-test
+          fi
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -257,11 +263,8 @@ jobs:
       - name: Build compiler (Linux static)
         if: runner.os == 'Linux'
         run: |
-          # ocaml-option-static sets CC=musl-gcc. On Ubuntu multiarch, Linux UAPI headers
-          # live under /usr/include/$(dpkg-architecture -qDEB_HOST_MULTIARCH), which musl-gcc
-          # doesn't search by default. Inject that include dir only for this build via CC.
           arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
-          CC="musl-gcc -idirafter /usr/include/$arch" opam exec -- dune build --display quiet --profile static
+          C_INCLUDE_PATH="/usr/include/$arch" opam exec -- dune build --display quiet --profile static
 
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
