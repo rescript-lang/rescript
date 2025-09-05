@@ -11,6 +11,7 @@ API examples:
   ./rescript-editor-analysis.exe documentSymbol src/Foo.res
   ./rescript-editor-analysis.exe hover src/MyFile.res 10 2 true
   ./rescript-editor-analysis.exe references src/MyFile.res 10 2
+  ./rescript-editor-analysis.exe prepareRename src/MyFile.res 10 2
   ./rescript-editor-analysis.exe rename src/MyFile.res 10 2 foo
   ./rescript-editor-analysis.exe diagnosticSyntax src/MyFile.res
   ./rescript-editor-analysis.exe inlayHint src/MyFile.res 0 3 25
@@ -48,6 +49,10 @@ Options:
   references: get all references to item in MyFile.res at line 10 column 2:
 
     ./rescript-editor-analysis.exe references src/MyFile.res 10 2
+
+  prepareRename: quickly compute the identifier range (and placeholder) for item at line 10 column 2 without scanning references:
+
+    ./rescript-editor-analysis.exe prepareRename src/MyFile.res 10 2
 
   rename: rename all appearances of item in MyFile.res at line 10 column 2 with foo:
 
@@ -195,6 +200,10 @@ let main () =
     Reanalyze.cli ()
   | [_; "references"; path; line; col] ->
     Commands.references ~path
+      ~pos:(int_of_string line, int_of_string col)
+      ~debug
+  | [_; "prepareRename"; path; line; col] ->
+    Commands.prepareRename ~path
       ~pos:(int_of_string line, int_of_string col)
       ~debug
   | [_; "rename"; path; line; col; newName] ->
