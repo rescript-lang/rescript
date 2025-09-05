@@ -184,6 +184,10 @@ module ErrorMessages = struct
     ^ "_`)\n  If you need the field to be \"" ^ keyword_txt
     ^ "\" at runtime, annotate the field: `@as(\"" ^ keyword_txt ^ "\") "
     ^ keyword_txt ^ "_ : ...`"
+
+  let type_definition_in_function =
+    "Type definitions are not allowed inside functions.\n"
+    ^ "  Move this `type` declaration to the top level or into a module."
 end
 
 module InExternal = struct
@@ -3479,6 +3483,16 @@ and parse_expr_block_item p =
     in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Exp.let_ ~loc rec_flag let_bindings next
+  | Typ ->
+    (* Parse to be able to give a good *)
+    let type_start = start_pos in
+    Parser.begin_region p;
+    let _ = parse_type_definition_or_extension ~attrs p in
+    Parser.end_region p;
+    Parser.err ~start_pos:type_start ~end_pos:p.prev_end_pos p
+      (Diagnostics.message ErrorMessages.type_definition_in_function);
+    parse_newline_or_semicolon_expr_block p;
+    parse_expr_block p
   | _ ->
     let e1 =
       let expr = parse_expr p in
