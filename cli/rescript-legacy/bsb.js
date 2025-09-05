@@ -51,7 +51,7 @@ function acquireBuild(args, options) {
     return null;
   }
 
-  if (!args.includes("-runtime-path")) {
+  if (args[0] === "build" && !args.includes("-runtime-path")) {
     args.push("-runtime-path", runtimePath);
   }
 
