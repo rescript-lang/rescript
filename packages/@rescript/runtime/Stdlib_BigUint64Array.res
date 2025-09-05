@@ -27,14 +27,29 @@ external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) 
 
 **Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
 */
-@deprecated("Use `fromBuffer` instead") @new
+@deprecated({
+  reason: "Use `fromBuffer` instead",
+  migrate: BigUint64Array.fromBuffer(
+    %insert.unlabelledArgument(0),
+    ~byteOffset=%insert.labelledArgument("byteOffset"),
+  ),
+})
+@new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "BigUint64Array"
 
 /** `fromBufferWithRange` creates a `BigUint64Array` from an `ArrayBuffer.t`, starting at a particular offset and consuming `length` **bytes**. See [TypedArray constructor on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array/BigUint64Array)
 
 **Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
 */
-@deprecated("Use `fromBuffer` instead") @new
+@deprecated({
+  reason: "Use `fromBuffer` instead",
+  migrate: BigUint64Array.fromBuffer(
+    %insert.unlabelledArgument(0),
+    ~byteOffset=%insert.labelledArgument("byteOffset"),
+    ~length=%insert.labelledArgument("length"),
+  ),
+})
+@new
 external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =
   "BigUint64Array"
 
@@ -52,7 +67,14 @@ external fromArrayLikeOrIterable: ('a, ~map: ('b, int) => bigint=?) => t = "BigU
 
 /** `fromArrayLikeOrIterableWithMap` creates a `BigUint64Array` from an array-like or iterable object and applies the mapping function to each item. The mapping function expects (value, index). See [TypedArray.from on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/from)
 */
-@deprecated("Use `fromArrayLikeOrIterable` instead") @val
+@deprecated({
+  reason: "Use `fromArrayLikeOrIterable` instead",
+  migrate: BigUint64Array.fromArrayLikeOrIterable(
+    %insert.unlabelledArgument(0),
+    ~map=%insert.unlabelledArgument(1),
+  ),
+})
+@val
 external fromArrayLikeOrIterableWithMap: ('a, ('b, int) => bigint) => t = "BigUint64Array.from"
 
 /**

@@ -1,0 +1,8 @@
+let arr1 = Int8Array.fromArray([1, 2, 3])
+
+let len = arr1->TypedArray.length
+
+let bytes = Int8Array.Constants.bytesPerElement
+let off = Int8Array.fromBufferToEnd(ArrayBuffer.make(8), ~byteOffset=2)
+let range = Int8Array.fromBufferWithRange(ArrayBuffer.make(8), ~byteOffset=2, ~length=2)
+

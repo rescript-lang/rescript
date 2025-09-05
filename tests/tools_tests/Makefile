@@ -5,6 +5,7 @@ build:
 
 test: build
 	./test.sh
+	yarn build
 
 clean:
 	yarn clean

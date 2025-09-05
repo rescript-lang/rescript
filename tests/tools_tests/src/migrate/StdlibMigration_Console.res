@@ -1,0 +1,28 @@
+let log = Js_console.log("Hello, World!")
+let log2 = Js_console.log2("Hello", "World")
+let log3 = Js_console.log3("Hello", "World", "!")
+let log4 = Js_console.log4("Hello", "World", "!", "!")
+let logMany = Js_console.logMany(["Hello", "World"])
+
+let info = Js_console.info("Hello, World!")
+let info2 = Js_console.info2("Hello", "World")
+let info3 = Js_console.info3("Hello", "World", "!")
+let info4 = Js_console.info4("Hello", "World", "!", "!")
+let infoMany = Js_console.infoMany(["Hello", "World"])
+
+let warn = Js_console.warn("Hello, World!")
+let warn2 = Js_console.warn2("Hello", "World")
+let warn3 = Js_console.warn3("Hello", "World", "!")
+let warn4 = Js_console.warn4("Hello", "World", "!", "!")
+let warnMany = Js_console.warnMany(["Hello", "World"])
+
+let error = Js_console.error("Hello, World!")
+let error2 = Js_console.error2("Hello", "World")
+let error3 = Js_console.error3("Hello", "World", "!")
+let error4 = Js_console.error4("Hello", "World", "!", "!")
+let errorMany = Js_console.errorMany(["Hello", "World"])
+
+let trace = Js_console.trace()
+let timeStart = Js_console.timeStart("Hello, World!")
+let timeEnd = Js_console.timeEnd("Hello, World!")
+let table = Js_console.table(["Hello", "World"])
