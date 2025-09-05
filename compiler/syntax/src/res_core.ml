@@ -3484,7 +3484,7 @@ and parse_expr_block_item p =
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Exp.let_ ~loc rec_flag let_bindings next
   | Typ ->
-    (* Parse to be able to give a good *)
+    (* Parse to be able to give a good error message. *)
     let type_start = start_pos in
     Parser.begin_region p;
     let _ = parse_type_definition_or_extension ~attrs p in
