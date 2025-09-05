@@ -23,6 +23,7 @@
 - Add support for ArrayBuffer and typed arrays to `@unboxed`. https://github.com/rescript-lang/rescript/pull/7788
 - Experimental: Add `let?` syntax for unwrapping and propagating errors/none as early returns for option/result types. https://github.com/rescript-lang/rescript/pull/7582
 - Add support for shipping features as experimental, including configuring what experimental features are enabled in `rescript.json`. https://github.com/rescript-lang/rescript/pull/7582
+- Use multicore OCaml with Eio to speed up the `rename` and `find all references` commands. https://github.com/rescript-lang/rescript/pull/7840
 
 #### :bug: Bug fix
 
