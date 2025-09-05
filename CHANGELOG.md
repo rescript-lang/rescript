@@ -33,6 +33,8 @@
 
 #### :nail_care: Polish
 
+- Improve error message for trying to define a type inside a function. https://github.com/rescript-lang/rescript/pull/7843
+
 #### :house: Internal
 
 # 12.0.0-beta.9
