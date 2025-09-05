@@ -34,6 +34,7 @@
 #### :nail_care: Polish
 
 - Improve error message for trying to define a type inside a function. https://github.com/rescript-lang/rescript/pull/7843
+- Refactor CLI to use spawn for better signal handling in watch mode. https://github.com/rescript-lang/rescript/pull/7844
 
 #### :house: Internal
 
