@@ -151,24 +151,61 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       | Some as_string -> (as_string, "$$" ^ name_with_module_path)
       | None -> (name_with_module_path, "$$" ^ name_with_module_path)
     in
-    let import_types =
-      [
-        {
-          CodeItem.type_name;
-          as_type_name = Some as_type_name;
-          import_path = import_string |> ImportPath.from_string_unsafe;
-        };
-      ]
+    let import_path = import_string |> ImportPath.from_string_unsafe in
+    let base_import =
+      {CodeItem.type_name; as_type_name = Some as_type_name; import_path}
     in
+    (* If the declaration has a manifest type, capture its full translation
+       so we can both build the Expected type and import its dependencies. *)
+    let expected_translation_opt =
+      match declaration_kind with
+      | GeneralDeclaration (Some core_type) ->
+        Some
+          (core_type |> TranslateCoreType.translate_core_type ~config ~type_env)
+      | GeneralDeclarationFromTypes (Some type_expr) ->
+        Some
+          (type_expr
+          |> TranslateTypeExprFromTypes.translate_type_expr_from_types ~config
+               ~type_env)
+      | _ -> None
+    in
+
+    (* Import any referenced non-builtin identifiers from the same module as
+       the base imported type. This ensures shims work (e.g. mapping ReactEvent
+       types to a local shim module), matching previous behavior. *)
+    let extra_type_imports =
+      match expected_translation_opt with
+      | Some tr ->
+        GentypeTypeFold.fold
+          (fun acc (t : GenTypeCommon.type_) ->
+            match t with
+            | Ident {builtin = false; name; _} -> name :: acc
+            | _ -> acc)
+          [] tr.type_
+        |> List.sort_uniq String.compare
+        |> List.filter (fun n -> n <> type_name)
+        |> List.map (fun n ->
+               {CodeItem.type_name = n; as_type_name = None; import_path})
+      | None -> []
+    in
+    let import_types = base_import :: extra_type_imports in
     let export_from_type_declaration =
       (* Make the imported type usable from other modules by exporting it too. *)
+      let imported_ident =
+        as_type_name
+        |> ident ~type_args:(type_vars |> List.map (fun s -> TypeVar s))
+      in
+      let export_type_body =
+        match expected_translation_opt with
+        | Some tr ->
+          (* $GenTypeImport<Expected, Imported> *)
+          ident GentypeImportHelper.name ~type_args:[tr.type_; imported_ident]
+        | None -> imported_ident
+      in
       typeName_
       |> create_export_type_from_type_declaration ~doc_string
            ~annotation:GenType ~loc ~name_as:None ~opaque:(Some false)
-           ~type_:
-             (as_type_name
-             |> ident ~type_args:(type_vars |> List.map (fun s -> TypeVar s)))
-           ~type_env ~type_vars
+           ~type_:export_type_body ~type_env ~type_vars
     in
     [{CodeItem.import_types; export_from_type_declaration}]
   | (GeneralDeclarationFromTypes None | GeneralDeclaration None), None ->

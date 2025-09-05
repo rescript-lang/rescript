@@ -75,6 +75,8 @@ export const defaultTypeChecked: number = defaultNotChecked as any;
 // Export '$$default' early to allow circular import from the '.bs.js' file.
 export const $$default: unknown = defaultTypeChecked as number as any;
 
+type $GenTypeImport<Expected, T extends Expected> = T;
+
 const ImportJsValueJS = require('./ImportJsValue.res.js');
 
 import type {AbsoluteValue as $$AbsoluteValue_t} from './MyMath';
@@ -93,7 +95,7 @@ export type point = { readonly x: number; readonly y: (undefined | number) };
 
 export type numberOrString = $$numberOrString;
 
-export type AbsoluteValue_t = $$AbsoluteValue_t;
+export type AbsoluteValue_t = $GenTypeImport<{ readonly getAbs: () => number },$$AbsoluteValue_t>;
 
 export type stringFunction = $$stringFunction;
 
