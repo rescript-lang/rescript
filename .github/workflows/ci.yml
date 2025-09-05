@@ -173,15 +173,17 @@ jobs:
             await fs.writeFile('.opam-path', opamPath, 'utf-8');
             console.log('stored path to .opam-path');
 
+      - name: Configure Linux include paths
+        if: runner.os == 'Linux'
+        run: |
+          arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+          echo "C_INCLUDE_PATH=/usr/include:/usr/include/$arch" >> "$GITHUB_ENV"
+          echo "CPATH=/usr/include:/usr/include/$arch" >> "$GITHUB_ENV"
+
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then
-            arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
-            C_INCLUDE_PATH="/usr/include:/usr/include/$arch" CPATH="/usr/include:/usr/include/$arch" opam install . --deps-only --with-test
-          else
-            opam install . --deps-only --with-test
-          fi
+          opam install . --deps-only --with-test
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -262,9 +264,7 @@ jobs:
 
       - name: Build compiler (Linux static)
         if: runner.os == 'Linux'
-        run: |
-          arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
-          C_INCLUDE_PATH="/usr/include:/usr/include/$arch" CPATH="/usr/include:/usr/include/$arch" opam exec -- dune build --display quiet --profile static
+        run: opam exec -- dune build --display quiet --profile static
 
       - name: Delete stable compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
