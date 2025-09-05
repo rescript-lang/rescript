@@ -182,8 +182,7 @@ jobs:
 
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        run: |
-          opam install . --deps-only --with-test
+        run: opam install . --deps-only --with-test
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
