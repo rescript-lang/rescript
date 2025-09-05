@@ -3031,12 +3031,14 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
        in
        match (src_decl.type_kind, tgt_decl.type_kind) with
        | Type_variant src_cons, Type_variant tgt_cons ->
-         let src_names =
-           List.map
-             (fun (c : Types.constructor_declaration) -> Ident.name c.cd_id)
-             src_cons
+         let module StringSet = Set.Make (String) in
+         let src_set =
+           List.fold_left
+             (fun acc (c : Types.constructor_declaration) ->
+               StringSet.add (Ident.name c.cd_id) acc)
+             StringSet.empty src_cons
          in
-         let has_src name = List.exists (fun n -> n = name) src_names in
+         let has_src name = StringSet.mem name src_set in
          let tgt_ty_name_conc = Path.last p_tgt_conc in
          (* Mark usage for the concrete target decl (implementation view). *)
          List.iter
