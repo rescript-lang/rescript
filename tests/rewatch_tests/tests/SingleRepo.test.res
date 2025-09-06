@@ -8,11 +8,21 @@ let repo = Path.resolve(
 let commands = Setup.commands(repo)
 
 describe("A single ReScript project using npm as package manager", () => {
-  beforeEach(commands.npm.install)
+  before(async () => {
+    await commands.npm.install()
+  })
+
+  beforeEach(async () => {
+    await commands.git.checkout()
+  })
 
   test("should always pass", async () => {
     Console.log(repo)
     ()
+  })
+
+  test("should clean", async () => {
+    await commands.rescript.clean()
   })
 
   test("should build", async () => {

@@ -10,10 +10,12 @@ let repo = Nodepath.resolve(Nodepath.dirname(Nodeurl.fileURLToPath(import.meta.u
 let commands = Setup.commands(repo);
 
 Nodetest.describe("A single ReScript project using npm as package manager", () => {
-  Nodetest.beforeEach(commands.npm.install);
+  Nodetest.before(async () => await commands.npm.install());
+  Nodetest.beforeEach(async () => await commands.git.checkout());
   Nodetest.test("should always pass", async () => {
     console.log(repo);
   });
+  Nodetest.test("should clean", async () => await commands.rescript.clean());
   Nodetest.test("should build", async () => await commands.rescript.build());
 });
 

@@ -16,6 +16,9 @@ module Test = {
   external describe: (string, unit => unit) => unit = "describe"
 
   @module("node:test")
+  external before: (unit => promise<unit>) => unit = "before"
+
+  @module("node:test")
   external beforeEach: (unit => promise<unit>) => unit = "beforeEach"
 
   @module("node:test")

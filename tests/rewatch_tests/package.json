@@ -3,7 +3,6 @@
   "type": "module",
   "packageManager": "yarn@4.9.1",
   "dependencies": {
-    "dax-sh": "0.43.2",
     "rescript": "workspace:^"
   },
   "scripts": {
