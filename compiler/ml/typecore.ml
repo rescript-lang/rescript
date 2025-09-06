@@ -3026,9 +3026,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
        let _p_src, _p_src_conc, src_decl =
          Ctype.extract_concrete_typedecl env arg.exp_type
        in
-       let p_tgt, p_tgt_conc, tgt_decl =
-         Ctype.extract_concrete_typedecl env ty'
-       in
+       let _, p_tgt_conc, tgt_decl = Ctype.extract_concrete_typedecl env ty' in
        match (src_decl.type_kind, tgt_decl.type_kind) with
        | Type_variant src_cons, Type_variant tgt_cons ->
          let module StringSet = Set.Make (String) in
@@ -3047,21 +3045,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
              if has_src cname then
                Env.mark_constructor_used Env.Positive env tgt_ty_name_conc
                  tgt_decl cname)
-           tgt_cons;
-         (* If the target type path differs from its concrete decl (e.g.,
-            when a signature exposes a private or abstract alias), also mark
-            usage on the exposed target declaration so scheduled warnings
-            attached to that declaration are cleared. *)
-         if not (Path.same p_tgt p_tgt_conc) then
-           let exposed_ty_name = Path.last p_tgt in
-           let exposed_decl = Env.find_type p_tgt env in
-           List.iter
-             (fun (c : Types.constructor_declaration) ->
-               let cname = Ident.name c.cd_id in
-               if has_src cname then
-                 Env.mark_constructor_used Env.Positive env exposed_ty_name
-                   exposed_decl cname)
-             tgt_cons
+           tgt_cons
        | _ -> ()
      with Not_found -> ());
     rue
