@@ -60,4 +60,4 @@ val transform_exp :
 val transform_pat : Parsetree.pattern -> string -> string -> Parsetree.pattern
 val is_unicode_string : string -> bool
 val is_unescaped : string -> bool
-val parse_processed_delim : string option -> External_arg_spec.delim option
+val parse_processed_delim : string option -> String_kind.t option

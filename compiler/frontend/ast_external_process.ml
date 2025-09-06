@@ -89,7 +89,7 @@ let refine_arg_type ~(nolabel : bool) (ptyp : Ast_core_type.t) :
       | Int i ->
         (* This type is used in obj only to construct obj type*)
         Arg_cst (External_arg_spec.cst_int i)
-      | Str (i, delim) -> Arg_cst (External_arg_spec.cst_string i delim))
+      | Str (i, kind) -> Arg_cst (External_arg_spec.cst_string i kind))
   else (* ([`a|`b] [@string]) *)
     spec_of_ptyp nolabel ptyp
 

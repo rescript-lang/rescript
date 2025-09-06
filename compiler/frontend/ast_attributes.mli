@@ -50,7 +50,7 @@ val has_unwrap_attr : t -> bool
 
 val iter_process_bs_int_as : t -> int option
 
-type as_const_payload = Int of int | Str of string * External_arg_spec.delim
+type as_const_payload = Int of int | Str of string * String_kind.t
 val iter_process_bs_string_or_int_as : t -> as_const_payload option
 
 val process_derive_type : t -> derive_attr * t

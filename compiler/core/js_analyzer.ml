@@ -201,9 +201,9 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
     | Bin (op1, a1, b1) ->
       op0 = op1 && eq_expression a0 a1 && eq_expression b0 b1
     | _ -> false)
-  | Str {delim = a0; txt = b0} -> (
+  | Str {kind = a0; txt = b0} -> (
     match y0 with
-    | Str {delim = a1; txt = b1} -> a0 = a1 && b0 = b1
+    | Str {kind = a1; txt = b1} -> a0 = a1 && b0 = b1
     | _ -> false)
   | Static_index (e0, p0, off0) -> (
     match y0 with

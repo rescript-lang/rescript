@@ -272,10 +272,10 @@ let transform_test s =
 
 module Delim = struct
   let parse_processed = function
-    | None -> Some External_arg_spec.DNone
-    | Some "json" -> Some DNoQuotes
-    | Some "*j" -> Some DStarJ
-    | Some "bq" -> Some DBackQuotes
+    | None -> Some String_kind.Standard
+    | Some "json" -> Some RawJs
+    | Some "*j" -> Some Verbatim
+    | Some "bq" -> Some Template
     | _ -> None
 
   type interpolation =

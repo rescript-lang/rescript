@@ -27,8 +27,8 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
   | Const_base (Const_int i) -> Const_int {i = Int32.of_int i; comment = None}
   | Const_base (Const_char i) -> Const_char i
   | Const_base (Const_string (s, opt)) ->
-    let delim = Ast_utf8_string_interp.parse_processed_delim opt in
-    Const_string {s; delim}
+    let kind = Ast_utf8_string_interp.parse_processed_delim opt in
+    Const_string {s; kind = Option.value ~default:Standard kind}
   | Const_base (Const_float i) -> Const_float i
   | Const_base (Const_int32 i) -> Const_int {i; comment = None}
   | Const_base (Const_int64 _) -> assert false
@@ -59,7 +59,7 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
       if Ext_string.is_valid_hash_number name then
         Const_int {i = Ext_string.hash_number_as_i32_exn name; comment = None}
       else Const_pointer name)
-  | Const_immstring s -> Const_string {s; delim = None}
+  | Const_immstring s -> Const_string {s; kind = Standard}
   | Const_block (t, xs) -> (
     let tag = Lambda.tag_of_tag_info t in
     match t with
@@ -76,7 +76,7 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
         let tag_val : Lam_constant.t =
           if Ext_string.is_valid_hash_number s then
             Const_int {i = Ext_string.hash_number_as_i32_exn s; comment = None}
-          else Const_string {s; delim = None}
+          else Const_string {s; kind = Standard}
         in
         Const_block (tag, t, [tag_val; convert_constant value])
       | _ -> assert false))

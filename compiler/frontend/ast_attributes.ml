@@ -220,7 +220,7 @@ let iter_process_bs_int_as (attrs : t) =
       | _ -> ());
   !st
 
-type as_const_payload = Int of int | Str of string * External_arg_spec.delim
+type as_const_payload = Int of int | Str of string * String_kind.t
 
 let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
   let st = ref None in
@@ -248,13 +248,13 @@ let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
                 ]
               when Ast_utf8_string_interp.parse_processed_delim delim_ <> None
               -> (
-              let delim =
+              let kind =
                 match Ast_utf8_string_interp.parse_processed_delim delim_ with
                 | None -> assert false
-                | Some delim -> delim
+                | Some kind -> kind
               in
-              st := Some (Str (s, delim));
-              if delim = DNoQuotes then
+              st := Some (Str (s, kind));
+              if kind = RawJs then
                 (* check that it is a valid object literal *)
                 match
                   Classify_function.classify
