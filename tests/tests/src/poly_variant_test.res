@@ -177,4 +177,11 @@ let hey = x =>
     Js.log(v)
   }
 
+type t = [#"🚀" | #"🔥"]
+
+let () = {
+  eq(__LOC__, "🚀", (#"🚀": t :> string))
+  eq(__LOC__, "🔥", (#"🔥": t :> string))
+}
+
 let () = Mt.from_pair_suites(__MODULE__, suites.contents)
