@@ -59,7 +59,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     | false -> None
     (* one means don't know *)
   in
-  let import_string_opt, name_as =
+  let import_string_opt, name_as, import_exact_opt, remote_export_name_opt =
     type_attributes |> Annotation.get_attribute_import_renaming
   in
   let unboxed_annotation =
@@ -83,7 +83,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       |> Translation.translate_dependencies ~config ~output_file_relative
            ~resolver
     in
-    {CodeItem.import_types; export_from_type_declaration}
+    {CodeItem.import_types; export_from_type_declaration; expected_type = None}
   in
   let translate_label_declarations ?(inline = false) label_declarations =
     let field_translations =
@@ -146,11 +146,15 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     let name_with_module_path =
       typeName_ |> TypeEnv.add_module_path ~type_env |> ResolvedName.to_string
     in
-    let type_name, as_type_name =
-      match name_as with
-      | Some as_string -> (as_string, "$$" ^ name_with_module_path)
-      | None -> (name_with_module_path, "$$" ^ name_with_module_path)
+    (* Use the remote export name (if provided) to build the import and alias.
+       Preserve casing from the TS source exactly. *)
+    let remote_type_name =
+      match remote_export_name_opt with
+      | Some s -> s
+      | None -> name_with_module_path
     in
+    let type_name = remote_type_name in
+    let as_type_name = remote_type_name ^ "$TypeScript" in
     let import_path = import_string |> ImportPath.from_string_unsafe in
     let base_import =
       {CodeItem.type_name; as_type_name = Some as_type_name; import_path}
@@ -167,6 +171,59 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
           (type_expr
           |> TranslateTypeExprFromTypes.translate_type_expr_from_types ~config
                ~type_env)
+      | RecordDeclarationFromTypes label_declarations ->
+        Some (label_declarations |> translate_label_declarations)
+      | VariantDeclarationFromTypes constructor_declarations ->
+        let variants =
+          constructor_declarations
+          |> List.map (fun constructor_declaration ->
+                 let constructor_args = constructor_declaration.Types.cd_args in
+                 let attributes = constructor_declaration.cd_attributes in
+                 let name = constructor_declaration.cd_id |> Ident.name in
+                 let args_translation =
+                   match constructor_args with
+                   | Cstr_tuple type_exprs ->
+                     type_exprs
+                     |> TranslateTypeExprFromTypes
+                        .translate_type_exprs_from_types ~config ~type_env
+                   | Cstr_record label_declarations ->
+                     [
+                       label_declarations
+                       |> translate_label_declarations ~inline:true;
+                     ]
+                 in
+                 let arg_types =
+                   args_translation
+                   |> List.map (fun {TranslateTypeExprFromTypes.type_} -> type_)
+                 in
+                 (name, attributes, arg_types))
+        in
+        let variants_no_payload, variants_with_payload =
+          variants |> List.partition (fun (_, _, arg_types) -> arg_types = [])
+        in
+        let no_payloads =
+          variants_no_payload
+          |> List.map (fun (name, attributes, _argTypes) ->
+                 (name, attributes) |> create_case ~poly:false)
+        in
+        let payloads =
+          variants_with_payload
+          |> List.map (fun (name, attributes, arg_types) ->
+                 let type_ =
+                   match arg_types with
+                   | [type_] -> type_
+                   | _ -> Tuple arg_types
+                 in
+                 {
+                   case = (name, attributes) |> create_case ~poly:false;
+                   t = type_;
+                 })
+        in
+        let variant_typ =
+          create_variant ~inherits:[] ~no_payloads ~payloads ~polymorphic:false
+            ~tag:tag_annotation ~unboxed:unboxed_annotation
+        in
+        Some {TranslateTypeExprFromTypes.dependencies = []; type_ = variant_typ}
       | _ -> None
     in
 
@@ -197,9 +254,21 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       in
       let export_type_body =
         match expected_translation_opt with
-        | Some tr ->
-          (* $GenTypeImport<Expected, Imported> *)
-          ident GentypeImportHelper.name ~type_args:[tr.type_; imported_ident]
+        | Some tr -> (
+          let expected_for_wrapper =
+            if GentypeImportHelper.should_inline_expected tr.type_ then tr.type_
+            else
+              name_with_module_path ^ "$ReScript"
+              |> ident ~builtin:false
+                   ~type_args:(type_vars |> List.map (fun s -> TypeVar s))
+          in
+          match import_exact_opt with
+          | Some true ->
+            ident GentypeImportHelper.strict_name
+              ~type_args:[imported_ident; expected_for_wrapper]
+          | _ ->
+            ident GentypeImportHelper.name
+              ~type_args:[expected_for_wrapper; imported_ident])
         | None -> imported_ident
       in
       typeName_
@@ -207,7 +276,16 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
            ~annotation:GenType ~loc ~name_as:None ~opaque:(Some false)
            ~type_:export_type_body ~type_env ~type_vars
     in
-    [{CodeItem.import_types; export_from_type_declaration}]
+    [
+      {
+        CodeItem.import_types;
+        export_from_type_declaration;
+        expected_type =
+          (match expected_translation_opt with
+          | Some tr -> Some tr.type_
+          | None -> None);
+      };
+    ]
   | (GeneralDeclarationFromTypes None | GeneralDeclaration None), None ->
     {
       CodeItem.import_types = [];
@@ -215,6 +293,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
         type_name
         |> create_export_type_from_type_declaration ~doc_string ~annotation ~loc
              ~name_as ~opaque:(Some true) ~type_:unknown ~type_env ~type_vars;
+      expected_type = None;
     }
     |> return_type_declaration
   | GeneralDeclarationFromTypes (Some type_expr), None ->
@@ -270,6 +349,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
         type_name
         |> create_export_type_from_type_declaration ~doc_string ~annotation ~loc
              ~name_as ~opaque ~type_ ~type_env ~type_vars;
+      expected_type = None;
     }
     |> return_type_declaration
   | VariantDeclarationFromTypes constructor_declarations, None ->
@@ -348,7 +428,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       |> List.map (fun (_, _, _, import_types) -> import_types)
       |> List.concat
     in
-    {CodeItem.export_from_type_declaration; import_types}
+    {CodeItem.export_from_type_declaration; import_types; expected_type = None}
     |> return_type_declaration
   | NoDeclaration, None -> []
 
