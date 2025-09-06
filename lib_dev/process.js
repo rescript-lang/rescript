@@ -57,6 +57,7 @@ export function setup(cwd = process.cwd()) {
       cwd,
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, ...options.env },
       ...options,
     });
 
