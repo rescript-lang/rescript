@@ -75,7 +75,7 @@ and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
 and length_object = Js_op.length_object
-and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
+and string_kind = String_kind.t = Standard | Verbatim | RawJs | Template
 
 and expression_desc =
   | Length of expression * length_object
@@ -139,7 +139,7 @@ and expression_desc =
       async: bool;
       directive: string option;
     }
-  | Str of {delim: delim; txt: string}
+  | Str of {kind: string_kind; txt: string}
   (* A string is UTF-8 encoded, and may contain
      escape sequences.
   *)

@@ -61,8 +61,8 @@ and translate (x : Lam_constant.t) : J.expression =
   | Const_char i -> Js_of_lam_string.const_char i
   | Const_bigint (sign, i) -> E.bigint sign i
   | Const_float f -> E.float f (* TODO: preserve float *)
-  | Const_string {s; delim = None | Some DNoQuotes} -> E.str s
-  | Const_string {s; delim = Some delim} -> E.str ~delim s
+  | Const_string {s; kind = RawJs} -> E.str s
+  | Const_string {s; kind} -> E.str ~kind s
   | Const_pointer name -> E.str name
   | Const_block (tag, tag_info, xs) ->
     Js_of_lam_block.make_block NA tag_info (E.small_int tag)
@@ -79,4 +79,4 @@ and translate (x : Lam_constant.t) : J.expression =
 let translate_arg_cst (cst : External_arg_spec.cst) =
   match cst with
   | Arg_int_lit i -> E.int (Int32.of_int i)
-  | Arg_string_lit (s, delim) -> E.str s ~delim
+  | Arg_string_lit (s, kind) -> E.str s ~kind
