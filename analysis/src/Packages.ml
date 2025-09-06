@@ -1,5 +1,17 @@
 open SharedTypes
 
+(* Domain-local caches for packages and URI->root mapping. *)
+module LocalCache = struct
+  let packages_key : (string, package) Hashtbl.t Domain.DLS.key =
+    AnalysisCache.make_hashtbl 1
+
+  let roots_key : (Uri.t, string) Hashtbl.t Domain.DLS.key =
+    AnalysisCache.make_hashtbl 30
+
+  let packages () = AnalysisCache.get_hashtbl packages_key
+  let roots () = AnalysisCache.get_hashtbl roots_key
+end
+
 (* Creates the `pathsForModule` hashtbl, which maps a `moduleName` to it's `paths` (the ml/re, mli/rei, cmt, and cmti files) *)
 let makePathsForModule ~projectFilesAndPaths ~dependenciesFilesAndPaths =
   let pathsForModule = Hashtbl.create 30 in
@@ -200,14 +212,11 @@ let newBsPackage ~rootPath =
       Log.log ("Unable to read " ^ bsconfigJson);
       None)
 
-let findRoot ~uri packagesByRoot =
+let findRoot ~uri =
   let path = Uri.toPath uri in
   let rec loop path =
     if path = "/" then None
-    else if
-      SharedTypes.StateSync.with_lock (fun () ->
-          Hashtbl.mem packagesByRoot path)
-    then Some (`Root path)
+    else if Hashtbl.mem (LocalCache.packages ()) path then Some (`Root path)
     else if
       Files.exists (Filename.concat path "rescript.json")
       || Files.exists (Filename.concat path "bsconfig.json")
@@ -219,29 +228,29 @@ let findRoot ~uri packagesByRoot =
   loop (if Sys.is_directory path then path else Filename.dirname path)
 
 let getPackage ~uri =
-  let open SharedTypes in
-  match
-    SharedTypes.StateSync.with_lock (fun () ->
-        if Hashtbl.mem state.rootForUri uri then
-          let root = Hashtbl.find state.rootForUri uri in
-          Some (Hashtbl.find state.packagesByRoot root)
-        else None)
-  with
-  | Some pkg -> Some pkg
+  let roots = LocalCache.roots () in
+  let packages = LocalCache.packages () in
+  match Hashtbl.find_opt roots uri with
+  | Some root -> Hashtbl.find_opt packages root
   | None -> (
-    match findRoot ~uri state.packagesByRoot with
+    match findRoot ~uri with
     | None ->
       Log.log "No root directory found";
       None
-    | Some (`Root rootPath) ->
-      SharedTypes.StateSync.with_lock (fun () ->
-          Hashtbl.replace state.rootForUri uri rootPath;
-          Some (Hashtbl.find state.packagesByRoot rootPath))
+    | Some (`Root rootPath) -> (
+      Hashtbl.replace roots uri rootPath;
+      match Hashtbl.find_opt packages rootPath with
+      | Some pkg -> Some pkg
+      | None -> (
+        match newBsPackage ~rootPath with
+        | Some pkg ->
+          Hashtbl.replace packages rootPath pkg;
+          Some pkg
+        | None -> None))
     | Some (`Bs rootPath) -> (
       match newBsPackage ~rootPath with
       | None -> None
       | Some package ->
-        SharedTypes.StateSync.with_lock (fun () ->
-            Hashtbl.replace state.rootForUri uri package.rootPath;
-            Hashtbl.replace state.packagesByRoot package.rootPath package;
-            Some package)))
+        Hashtbl.replace roots uri package.rootPath;
+        Hashtbl.replace packages package.rootPath package;
+        Some package))

@@ -537,33 +537,14 @@ let initExtra () =
     locItems = [];
   }
 
-type state = {
-  packagesByRoot: (string, package) Hashtbl.t;
-  rootForUri: (Uri.t, string) Hashtbl.t;
-  cmtCache: (filePath, File.t) Hashtbl.t;
-}
+module CmtCache = struct
+  let key : (filePath, File.t) Hashtbl.t Domain.DLS.key =
+    AnalysisCache.make_hashtbl 30
 
-(* There's only one state, so it can as well be global *)
-let state =
-  {
-    packagesByRoot = Hashtbl.create 1;
-    rootForUri = Hashtbl.create 30;
-    cmtCache = Hashtbl.create 30;
-  }
-
-module StateSync = struct
-  let mutex : Mutex.t = Mutex.create ()
-
-  let with_lock f =
-    Mutex.lock mutex;
-    match f () with
-    | v ->
-      Mutex.unlock mutex;
-      v
-    | exception exn ->
-      Mutex.unlock mutex;
-      raise exn
+  let get () : (filePath, File.t) Hashtbl.t = AnalysisCache.get_hashtbl key
 end
+
+module StringMap = Map.Make (String)
 
 let locKindToString = function
   | LocalReference (_, tip) -> "(LocalReference " ^ Tip.toString tip ^ ")"

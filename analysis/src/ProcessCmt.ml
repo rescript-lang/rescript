@@ -773,27 +773,16 @@ let fileForCmtInfos ~moduleName ~uri
   | _ -> File.create moduleName uri
 
 let fileForCmt ~moduleName ~cmt ~uri =
-  (* Double-checked locking: fast path under lock; if missing, compute without
-     holding the lock, then insert under lock if still absent. *)
-  match
-    SharedTypes.StateSync.with_lock (fun () ->
-        Hashtbl.find_opt state.cmtCache cmt)
-  with
+  let local = SharedTypes.CmtCache.get () in
+  match Hashtbl.find_opt local cmt with
   | Some file -> Some file
   | None -> (
     match Shared.tryReadCmt cmt with
     | None -> None
     | Some infos ->
       let file = fileForCmtInfos ~moduleName ~uri infos in
-      let cached =
-        SharedTypes.StateSync.with_lock (fun () ->
-            match Hashtbl.find_opt state.cmtCache cmt with
-            | Some f -> Some f
-            | None ->
-              Hashtbl.replace state.cmtCache cmt file;
-              Some file)
-      in
-      cached)
+      Hashtbl.replace local cmt file;
+      Some file)
 
 let fileForModule moduleName ~package =
   match Hashtbl.find_opt package.pathsForModule moduleName with

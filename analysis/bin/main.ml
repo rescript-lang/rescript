@@ -119,7 +119,7 @@ let main () =
   | [_; "cache-delete"; rootPath] -> (
     Cfg.readProjectConfigCache := false;
     let uri = Uri.fromPath rootPath in
-    match Packages.findRoot ~uri (Hashtbl.create 0) with
+    match Packages.findRoot ~uri with
     | Some (`Bs rootPath) -> (
       match BuildSystem.getLibBs rootPath with
       | None -> print_endline "\"ERR\""

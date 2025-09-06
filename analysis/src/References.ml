@@ -219,7 +219,9 @@ let alternateDeclared ~(file : File.t) ~package (declared : _ Declared.t) tip =
       maybeLog
         ("alternateDeclared for " ^ file.moduleName ^ " has both resi and res");
       let alternateUri = if Uri.isInterface file.uri then res else resi in
-      match Cmt.fullFromUri ~uri:(Uri.fromPath alternateUri) with
+      match
+        Cmt.fullFromUriWithPackage ~package ~uri:(Uri.fromPath alternateUri)
+      with
       | None -> None
       | Some {file; extra} -> (
         let env = QueryEnv.fromFile file in
@@ -568,7 +570,7 @@ let allReferencesForLocItem ~domain_mgr ~full:({file; package} as full) locItem
               match ProcessCmt.fileForModule ~package name with
               | None -> []
               | Some file -> (
-                match Cmt.fullFromUri ~uri:file.uri with
+                match Cmt.fullFromUriWithPackage ~package ~uri:file.uri with
                 | None -> []
                 | Some full -> (
                   match
@@ -612,7 +614,7 @@ let allReferencesForLocItem ~domain_mgr ~full:({file; package} as full) locItem
       match exportedForTip ~env ~path ~package ~tip with
       | None -> []
       | Some (env, _name, stamp) -> (
-        match Cmt.fullFromUri ~uri:env.file.uri with
+        match Cmt.fullFromUriWithPackage ~package ~uri:env.file.uri with
         | None -> []
         | Some full ->
           maybeLog
