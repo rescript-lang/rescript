@@ -156,8 +156,8 @@ let pure_runtime_call module_name fn_name args =
 
 let runtime_ref module_name fn_name = runtime_var_dot module_name fn_name
 
-let str ?(delim = J.DNone) ?comment txt : t =
-  {expression_desc = Str {txt; delim}; comment}
+let str ?(kind = J.Standard) ?comment txt : t =
+  {expression_desc = Str {txt; kind}; comment}
 
 let raw_js_code ?comment info s : t =
   {
@@ -209,7 +209,7 @@ let instanceof ?comment (e0 : t) (e1 : t) : t =
   {expression_desc = Bin (InstanceOf, e0, e1); comment}
 
 let is_array (e0 : t) : t =
-  let f = str "Array.isArray" ~delim:DNoQuotes in
+  let f = str "Array.isArray" ~kind:RawJs in
   {expression_desc = Call (f, [e0], Js_call_info.ml_full_call); comment = None}
 
 let new_ ?comment e0 args : t = {expression_desc = New (e0, Some args); comment}
@@ -548,7 +548,8 @@ let array_length ?comment (e : t) : t =
 
 let string_length ?comment (e : t) : t =
   match e.expression_desc with
-  | Str {txt; delim = DNone} -> int ?comment (Int32.of_int (String.length txt))
+  | Str {txt; kind = Standard} ->
+    int ?comment (Int32.of_int (String.length txt))
   (* No optimization for {j||j}*)
   | _ -> {expression_desc = Length (e, String); comment}
 
@@ -566,31 +567,31 @@ let function_length ?comment (e : t) : t =
 *)
 
 let rec string_append ?comment (e : t) (el : t) : t =
-  let concat a b ~delim = {e with expression_desc = Str {txt = a ^ b; delim}} in
+  let concat a b ~kind = {e with expression_desc = Str {txt = a ^ b; kind}} in
   match (e.expression_desc, el.expression_desc) with
   | Str {txt = ""}, _ -> el
   | _, Str {txt = ""} -> e
-  | ( Str {txt = a; delim},
-      String_append ({expression_desc = Str {txt = b; delim = delim_}}, c) )
-    when delim = delim_ ->
-    string_append ?comment (concat a b ~delim) c
-  | ( String_append (c, {expression_desc = Str {txt = b; delim}}),
-      Str {txt = a; delim = delim_} )
-    when delim = delim_ ->
-    string_append ?comment c (concat b a ~delim)
-  | ( String_append (a, {expression_desc = Str {txt = b; delim}}),
-      String_append ({expression_desc = Str {txt = c; delim = delim_}}, d) )
-    when delim = delim_ ->
-    string_append ?comment (string_append a (concat b c ~delim)) d
-  | Str {txt = a; delim}, Str {txt = b; delim = delim_} when delim = delim_ ->
-    {(concat a b ~delim) with comment}
+  | ( Str {txt = a; kind},
+      String_append ({expression_desc = Str {txt = b; kind = kind_}}, c) )
+    when kind = kind_ ->
+    string_append ?comment (concat a b ~kind) c
+  | ( String_append (c, {expression_desc = Str {txt = b; kind}}),
+      Str {txt = a; kind = kind_} )
+    when kind = kind_ ->
+    string_append ?comment c (concat b a ~kind)
+  | ( String_append (a, {expression_desc = Str {txt = b; kind}}),
+      String_append ({expression_desc = Str {txt = c; kind = kind_}}, d) )
+    when kind = kind_ ->
+    string_append ?comment (string_append a (concat b c ~kind)) d
+  | Str {txt = a; kind}, Str {txt = b; kind = kind_} when kind = kind_ ->
+    {(concat a b ~kind) with comment}
   | _, _ -> {comment; expression_desc = String_append (e, el)}
 
 let obj ?comment ?dup properties : t =
   {expression_desc = Object (dup, properties); comment}
 
-let str_equal (txt0 : string) (delim0 : External_arg_spec.delim) txt1 delim1 =
-  if delim0 = delim1 then
+let str_equal (txt0 : string) (kind0 : String_kind.t) txt1 kind1 =
+  if kind0 = kind1 then
     if Ext_string.equal txt0 txt1 then Some true
     else if
       Ast_utf8_string.simple_comparison txt0
@@ -1242,7 +1243,7 @@ let rec float_equal ?comment (e0 : t) (e1 : t) : t =
 let int_equal = float_equal
 
 let tag_type = function
-  | Ast_untagged_variants.String s -> str s ~delim:DStarJ
+  | Ast_untagged_variants.String s -> str s ~kind:Verbatim
   | Int i -> small_int i
   | Float f -> float f
   | BigInt i ->
@@ -1258,7 +1259,7 @@ let tag_type = function
   | Untagged FunctionType -> str "function"
   | Untagged StringType -> str "string"
   | Untagged (InstanceType i) ->
-    str (Ast_untagged_variants.Instance.to_string i) ~delim:DNoQuotes
+    str (Ast_untagged_variants.Instance.to_string i) ~kind:RawJs
   | Untagged ObjectType -> str "object"
   | Untagged UnknownType ->
     (* TODO: this should not happen *)
@@ -1280,7 +1281,7 @@ let rec emit_check (check : t Ast_untagged_variants.DynamicChecks.t) =
   | IsInstanceOf (Array, x) -> is_array (emit_check x)
   | IsInstanceOf (instance, x) ->
     let instance_name = Ast_untagged_variants.Instance.to_string instance in
-    instanceof (emit_check x) (str instance_name ~delim:DNoQuotes)
+    instanceof (emit_check x) (str instance_name ~kind:RawJs)
   | Not x -> not (emit_check x)
   | Expr x -> x
 
@@ -1343,8 +1344,8 @@ let to_int32 ?comment (e : J.expression) : J.expression =
 
 let string_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
   match (e0.expression_desc, e1.expression_desc) with
-  | Str {txt = a0; delim = d0}, Str {txt = a1; delim = d1} -> (
-    match (cmp, str_equal a0 d0 a1 d1) with
+  | Str {txt = a0; kind = k0}, Str {txt = a1; kind = k1} -> (
+    match (cmp, str_equal a0 k0 a1 k1) with
     | Ceq, Some b -> bool b
     | Cneq, Some b -> bool (b = false)
     | _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1)

@@ -95,7 +95,7 @@ val pure_runtime_call :
 
 val runtime_ref : string -> string -> t
 
-val str : ?delim:J.delim -> ?comment:string -> string -> t
+val str : ?kind:J.string_kind -> ?comment:string -> string -> t
 
 val ocaml_fun :
   ?comment:string ->
