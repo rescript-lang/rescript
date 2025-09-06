@@ -97,6 +97,7 @@ pub struct BuildState {
     pub module_names: AHashSet<String>,
     pub deleted_modules: AHashSet<String>,
     pub bsc_path: PathBuf,
+    pub runtime_path: Option<PathBuf>,
     pub deps_initialized: bool,
 }
 
@@ -112,6 +113,7 @@ impl BuildState {
         project_context: ProjectContext,
         packages: AHashMap<String, Package>,
         bsc_path: PathBuf,
+        runtime_path: Option<PathBuf>,
     ) -> Self {
         Self {
             project_context,
@@ -120,6 +122,7 @@ impl BuildState {
             packages,
             deleted_modules: AHashSet::new(),
             bsc_path,
+            runtime_path,
             deps_initialized: false,
         }
     }

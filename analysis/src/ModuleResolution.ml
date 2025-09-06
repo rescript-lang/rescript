@@ -3,7 +3,7 @@ let ( /+ ) = Filename.concat
 let rec resolveNodeModulePath ~startPath name =
   if name = "@rescript/runtime" then
     (* Hack: we need a reliable way to resolve modules in monorepos. *)
-    Some Config.runtime_module_path
+    Some !Runtime_package.path
   else
     let scope = Filename.dirname name in
     let name = Filename.basename name in

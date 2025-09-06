@@ -89,6 +89,15 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         interface_filename.push('i');
         PathBuf::from(&interface_filename).exists()
     };
+
+    let runtime_path = match helpers::get_runtime_path(&project_context) {
+        Ok(path) => Some(path),
+        Err(_) => {
+            println!("Warning: could not determine runtime path");
+            None
+        }
+    };
+
     let compiler_args = compile::compiler_args(
         &project_context.current_config,
         &ast_path,
@@ -99,6 +108,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         &None,
         is_type_dev,
         true,
+        &runtime_path,
     );
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -156,7 +166,15 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(project_context, packages, bsc_path);
+    let runtime_path = match helpers::get_runtime_path(&project_context) {
+        Ok(path) => Some(path),
+        Err(_) => {
+            println!("Warning: could not determine runtime path");
+            None
+        }
+    };
+
+    let mut build_state = BuildState::new(project_context, packages, bsc_path, runtime_path);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
@@ -550,23 +568,17 @@ pub fn build(
     }
 }
 
-pub fn pass_through_legacy(mut args: Vec<OsString>) -> i32 {
+pub fn pass_through_legacy(mut args: Vec<OsString>) -> anyhow::Result<i32> {
     let project_root = helpers::get_abs_path(Path::new("."));
-    let project_context = ProjectContext::new(&project_root).unwrap();
-    let rescript_legacy_path = helpers::get_rescript_legacy(&project_context);
+    let project_context = ProjectContext::new(&project_root)?;
+    let rescript_legacy_path = helpers::get_rescript_legacy_path(&project_context)?;
 
     args.insert(0, rescript_legacy_path.into());
     let status = std::process::Command::new("node")
         .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
-        .status();
+        .status()?;
 
-    match status {
-        Ok(s) => s.code().unwrap_or(0),
-        Err(err) => {
-            eprintln!("Error running the legacy build system: {err}");
-            1
-        }
-    }
+    Ok(status.code().unwrap_or(0))
 }

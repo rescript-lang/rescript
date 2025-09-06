@@ -15,12 +15,6 @@
 
 (* System configuration *)
 
-(* The directory containing the runtime module (@rescript/runtime) *)
-val runtime_module_path : string
-
-(* The directory containing the runtime artifacts (@rescript/runtime/lib/ocaml) *)
-val standard_library : string
-
 (* Directories in the search path for .cmi and .cmo files *)
 val load_path : string list ref
 

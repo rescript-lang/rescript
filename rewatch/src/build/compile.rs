@@ -15,6 +15,7 @@ use console::style;
 use log::{debug, trace};
 use rayon::prelude::*;
 use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -349,6 +350,7 @@ pub fn compiler_args(
     // Is the file listed as "type":"dev"?
     is_type_dev: bool,
     is_local_dep: bool,
+    runtime_path: &Option<PathBuf>,
 ) -> Vec<String> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -431,6 +433,11 @@ pub fn compiler_args(
             .collect()
     };
 
+    let runtime_path_args = match runtime_path {
+        Some(path) => vec!["-runtime-path".to_string(), path.to_string_lossy().to_string()],
+        None => vec![],
+    };
+
     vec![
         namespace_args,
         read_cmi_args,
@@ -459,6 +466,7 @@ pub fn compiler_args(
         //     abs_node_modules_path.to_string() + "/rescript/ocaml",
         // ],
         vec![ast_path.to_string_lossy().to_string()],
+        runtime_path_args,
     ]
     .concat()
 }
@@ -560,6 +568,7 @@ fn compile_file(
         packages,
         project_context,
         bsc_path,
+        runtime_path,
         ..
     } = build_state;
     let root_config = build_state.get_root_config();
@@ -588,6 +597,7 @@ fn compile_file(
         &Some(packages),
         is_type_dev,
         package.is_local_dep,
+        runtime_path,
     );
 
     let to_mjs = Command::new(bsc_path)

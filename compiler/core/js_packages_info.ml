@@ -48,7 +48,7 @@ let runtime_dir_of_module_system (ms : module_system) =
   | Esmodule | Es6_global -> "es6"
 
 let runtime_package_path (ms : module_system) js_file =
-  Bs_version.package_name // "lib" // runtime_dir_of_module_system ms // js_file
+  Runtime_package.name // "lib" // runtime_dir_of_module_system ms // js_file
 
 type t = {name: package_name; module_systems: package_info list}
 
@@ -85,8 +85,8 @@ let map (x : t) cb = Ext_list.map x.module_systems cb
 
 (* we don't want force people to use package *)
 
-(** 
-   TODO: not allowing user to provide such specific package name 
+(**
+   TODO: not allowing user to provide such specific package name
    For empty package, [-bs-package-output] does not make sense
    it is only allowed to generate commonjs file in the same directory
 *)
@@ -163,7 +163,7 @@ let query_package_infos ({name; module_systems} : t)
     with
     | Some k ->
       let rel_path = k.path in
-      let pkg_rel_path = Bs_version.package_name // rel_path in
+      let pkg_rel_path = Runtime_package.name // rel_path in
       Package_found {rel_path; pkg_rel_path; suffix = k.suffix}
     | None -> Package_not_found)
 

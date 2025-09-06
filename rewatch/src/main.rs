@@ -87,10 +87,13 @@ fn main() -> Result<()> {
                 dev.dev,
             )
         }
-        cli::Command::Legacy { legacy_args } => {
-            let code = build::pass_through_legacy(legacy_args);
-            std::process::exit(code);
-        }
+        cli::Command::Legacy { legacy_args } => match build::pass_through_legacy(legacy_args) {
+            Ok(code) => std::process::exit(code),
+            Err(e) => {
+                println!("{e}");
+                std::process::exit(1)
+            }
+        },
         cli::Command::Format {
             stdin,
             check,

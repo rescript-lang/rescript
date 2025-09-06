@@ -110,6 +110,8 @@ let install_target () =
   let eid = Bsb_unix.run_command_execv install_command in
   if eid <> 0 then Bsb_unix.command_fatal_error install_command eid
 
+let setup_runtime_path path = Runtime_package.path := path
+
 let build_subcommand ~start argv argv_len =
   let i = Ext_array.rfind_with_index argv Ext_string.equal separator in
 
@@ -141,6 +143,9 @@ let build_subcommand ~start argv argv_len =
         unit_set_spec no_deps_mode,
         "*internal* Needed for watcher to build without dependencies on file \
          change" );
+      ( "-runtime-path",
+        string_call setup_runtime_path,
+        "*internal* Set the path of the runtime package (@rescript/runtime)" );
       ( "-warn-error",
         string_call (fun s -> warning_as_error := Some s),
         "Warning numbers and whether to turn them into errors, e.g., \
