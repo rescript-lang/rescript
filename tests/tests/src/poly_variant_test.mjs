@@ -96,6 +96,10 @@ eq("File \"poly_variant_test.res\", line 161, characters 5-12", 3, p_is_int_test
   VAL: 2
 }));
 
+eq("File \"poly_variant_test.res\", line 183, characters 5-12", "🚀", "🚀");
+
+eq("File \"poly_variant_test.res\", line 184, characters 5-12", "🔥", "🔥");
+
 Mt.from_pair_suites("Poly_variant_test", suites.contents);
 
 /*  Not a pure module */
