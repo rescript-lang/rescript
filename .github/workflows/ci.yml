@@ -91,6 +91,11 @@ jobs:
           cache: yarn
           node-version-file: .nvmrc
 
+      - name: Ensure npm is available
+        run: |
+          which npm || echo "npm not found"
+          npm --version || echo "npm version check failed"
+
       - name: Install npm packages
         run: yarn install
 
