@@ -635,16 +635,56 @@ let emit_translation_as_string ~(config : Config.t) ~file_name
     |> List.map (fun (type_declaration : CodeItem.type_declaration) ->
            type_declaration.export_from_type_declaration)
   in
-  (* Determine if we need to emit the helper alias for $GenTypeImport. *)
-  let needs_gentype_import_helper =
+  (* Emit a named alias for the ReScript-side expected shape to improve TS errors. *)
+  let emitters =
+    let type_name_is_interface =
+      type_name_is_interface ~export_type_map
+        ~export_type_map_from_other_files:
+          initial_env.export_type_map_from_other_files
+    in
+    annotated_type_declarations
+    |> List.fold_left
+         (fun emitters (td : CodeItem.type_declaration) ->
+           match td.expected_type with
+           | None -> emitters
+           | Some expected
+             when GentypeImportHelper.should_inline_expected expected ->
+             emitters
+           | Some expected ->
+             let ({CodeItem.export_type}
+                   : CodeItem.export_from_type_declaration) =
+               td.export_from_type_declaration
+             in
+             let alias_name =
+               (export_type.resolved_type_name |> ResolvedName.to_string)
+               ^ "$ReScript"
+             in
+             let type_params_string =
+               EmitText.generics_string ~type_vars:export_type.type_vars
+             in
+             let expected_string =
+               EmitType.type_to_string ~config ~type_name_is_interface expected
+             in
+             Emitters.export_early ~emitters
+               ("type " ^ alias_name ^ type_params_string ^ " = "
+              ^ expected_string ^ ";"))
+         Emitters.initial
+  in
+  (* Determine if we need to emit the helper alias(es) for $GenTypeImport. *)
+  let needs_gentype_import_helper, needs_gentype_import_strict_helper =
     export_from_type_declarations
-    |> List.exists
-         (fun
-           ({CodeItem.export_type} : CodeItem.export_from_type_declaration) ->
+    |> List.fold_left
+         (fun (need_std, need_strict)
+              ({CodeItem.export_type} : CodeItem.export_from_type_declaration)
+            ->
            match export_type.type_ with
            | Ident {name; _} when String.equal name GentypeImportHelper.name ->
-             true
-           | _ -> false)
+             (true, need_strict)
+           | Ident {name; _}
+             when String.equal name GentypeImportHelper.strict_name ->
+             (need_std, true)
+           | _ -> (need_std, need_strict))
+         (false, false)
   in
   let type_name_is_interface ~env =
     type_name_is_interface ~export_type_map
@@ -654,7 +694,7 @@ let emit_translation_as_string ~(config : Config.t) ~file_name
     try export_type_map |> StringMap.find s
     with Not_found -> env.export_type_map_from_other_files |> StringMap.find s
   in
-  let emitters = Emitters.initial
+  let emitters = emitters
   and module_items_emitter = ExportModule.create_module_items_emitter ()
   and env = initial_env in
   let env, emitters =
@@ -738,10 +778,15 @@ let emit_translation_as_string ~(config : Config.t) ~file_name
     module_items_emitter
     |> ExportModule.emit_all_module_items ~config ~emitters ~file_name
   in
-  (* If we used the $GenTypeImport wrapper, emit its helper alias early. *)
+  (* If we used the $GenTypeImport wrapper(s), emit helper alias(es) early. *)
   let emitters =
-    if needs_gentype_import_helper then
-      Emitters.export_early ~emitters GentypeImportHelper.alias
+    let emitters =
+      if needs_gentype_import_helper then
+        Emitters.export_early ~emitters GentypeImportHelper.alias
+      else emitters
+    in
+    if needs_gentype_import_strict_helper then
+      Emitters.export_early ~emitters GentypeImportHelper.strict_alias
     else emitters
   in
   emitters

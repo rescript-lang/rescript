@@ -7,29 +7,19 @@ type $GenTypeImport<Expected, T extends Expected> = T;
 
 import * as GenTypeImportExpectedErrorsJS from './GenTypeImportExpectedErrors.res.js';
 
-import type {Type as $$arrayT} from 'external-module';
+import type {Type as Type$TypeScript} from 'external-module';
 
-import type {Type as $$nestedArrayT} from 'external-module';
+export type numberT = $GenTypeImport<number,Type$TypeScript>;
 
-import type {Type as $$numberT} from 'external-module';
+export type tupleT = $GenTypeImport<[number, string],Type$TypeScript>;
 
-import type {Type as $$promiseT} from 'external-module';
+export type arrayT = $GenTypeImport<number[],Type$TypeScript>;
 
-import type {Type as $$stringT} from 'external-module';
+export type promiseT = $GenTypeImport<Promise<number>,Type$TypeScript>;
 
-import type {Type as $$tupleT} from 'external-module';
+export type nestedArrayT = $GenTypeImport<Array<number[]>,Type$TypeScript>;
 
-export type numberT = $GenTypeImport<number,$$numberT>;
-
-export type tupleT = $GenTypeImport<[number, string],$$tupleT>;
-
-export type arrayT = $GenTypeImport<number[],$$arrayT>;
-
-export type promiseT = $GenTypeImport<Promise<number>,$$promiseT>;
-
-export type nestedArrayT = $GenTypeImport<Array<number[]>,$$nestedArrayT>;
-
-export type stringT = $GenTypeImport<string,$$stringT>;
+export type stringT = $GenTypeImport<string,Type$TypeScript>;
 
 export const useNumber: (x:numberT) => numberT = GenTypeImportExpectedErrorsJS.useNumber as any;
 
