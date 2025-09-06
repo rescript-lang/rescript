@@ -194,13 +194,15 @@ let main () =
     Sys.argv.(len - 1) <- "";
     Reanalyze.cli ()
   | [_; "references"; path; line; col] ->
-    Commands.references ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~debug
+    Eio_main.run (fun env ->
+        Commands.references ~env ~path
+          ~pos:(int_of_string line, int_of_string col)
+          ~debug)
   | [_; "rename"; path; line; col; newName] ->
-    Commands.rename ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~newName ~debug
+    Eio_main.run (fun env ->
+        Commands.rename ~env ~path
+          ~pos:(int_of_string line, int_of_string col)
+          ~newName ~debug)
   | [_; "semanticTokens"; currentFile] ->
     SemanticTokens.semanticTokens ~currentFile
   | [_; "createInterface"; path; cmiFile] ->
@@ -208,7 +210,7 @@ let main () =
       (Json.escape (CreateInterface.command ~path ~cmiFile))
   | [_; "format"; path] ->
     Printf.printf "\"%s\"" (Json.escape (Commands.format ~path))
-  | [_; "test"; path] -> Commands.test ~path
+  | [_; "test"; path] -> Eio_main.run (fun env -> Commands.test ~env ~path)
   | [_; "cmt"; rescript_json; cmt_path] -> CmtViewer.dump rescript_json cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->

@@ -58,12 +58,6 @@ jobs:
             node-target: win32-x64
             rust-target: x86_64-pc-windows-gnu
 
-          # Verify that the compiler still builds with the oldest OCaml version we support.
-          - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.4.14.2+options,ocaml-option-static
-            node-target: linux-x64
-            rust-target: x86_64-unknown-linux-musl
-
     runs-on: ${{matrix.os}}
 
     env:
@@ -102,7 +96,7 @@ jobs:
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
         with:
           # See https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/unix.ts#L9
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync
+          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync linux-libc-dev dpkg-dev
           version: v3
 
       - name: Restore rewatch build cache
@@ -178,6 +172,13 @@ jobs:
             const fs = require('fs/promises');
             await fs.writeFile('.opam-path', opamPath, 'utf-8');
             console.log('stored path to .opam-path');
+
+      - name: Configure Linux include paths
+        if: runner.os == 'Linux'
+        run: |
+          arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+          echo "C_INCLUDE_PATH=/usr/include:/usr/include/$arch" >> "$GITHUB_ENV"
+          echo "CPATH=/usr/include:/usr/include/$arch" >> "$GITHUB_ENV"
 
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'

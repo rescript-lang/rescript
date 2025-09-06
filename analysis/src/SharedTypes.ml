@@ -551,6 +551,20 @@ let state =
     cmtCache = Hashtbl.create 30;
   }
 
+module StateSync = struct
+  let mutex : Mutex.t = Mutex.create ()
+
+  let with_lock f =
+    Mutex.lock mutex;
+    match f () with
+    | v ->
+      Mutex.unlock mutex;
+      v
+    | exception exn ->
+      Mutex.unlock mutex;
+      raise exn
+end
+
 let locKindToString = function
   | LocalReference (_, tip) -> "(LocalReference " ^ Tip.toString tip ^ ")"
   | GlobalReference _ -> "GlobalReference"

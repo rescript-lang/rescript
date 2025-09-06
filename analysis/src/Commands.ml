@@ -177,101 +177,95 @@ let typeDefinition ~path ~pos ~debug =
     | None -> Protocol.null
     | Some location -> location |> Protocol.stringifyLocation)
 
-let references ~path ~pos ~debug =
-  let allLocs =
-    match Cmt.loadFullCmtFromPath ~path with
+(* Shared helper: collect references in parallel using Eio, like 'references'. *)
+let collect_all_references_parallel ~env ~path ~pos ~debug =
+  match Cmt.loadFullCmtFromPath ~path with
+  | None -> []
+  | Some full -> (
+    match References.getLocItem ~full ~pos ~debug with
     | None -> []
-    | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
-      | None -> []
-      | Some locItem ->
-        let allReferences = References.allReferencesForLocItem ~full locItem in
-        allReferences
-        |> List.fold_left
-             (fun acc {References.uri = uri2; locOpt} ->
-               let loc =
-                 match locOpt with
-                 | Some loc -> loc
-                 | None -> Uri.toTopLevelLoc uri2
-               in
-               Protocol.stringifyLocation
-                 {uri = Uri.toString uri2; range = Utils.cmtLocToRange loc}
-               :: acc)
-             [])
+    | Some locItem ->
+      References.allReferencesForLocItem ~domain_mgr:env#domain_mgr ~full
+        locItem)
+
+let references ~env ~path ~pos ~debug =
+  let allRefs = collect_all_references_parallel ~env ~path ~pos ~debug in
+  let allLocs =
+    allRefs
+    |> List.fold_left
+         (fun acc {References.uri = uri2; locOpt} ->
+           let loc =
+             match locOpt with
+             | Some loc -> loc
+             | None -> Uri.toTopLevelLoc uri2
+           in
+           Protocol.stringifyLocation
+             {uri = Uri.toString uri2; range = Utils.cmtLocToRange loc}
+           :: acc)
+         []
   in
   print_endline
     (if allLocs = [] then Protocol.null
      else "[\n" ^ (allLocs |> String.concat ",\n") ^ "\n]")
 
-let rename ~path ~pos ~newName ~debug =
+let rename ~env ~path ~pos ~newName ~debug =
+  let allReferences = collect_all_references_parallel ~env ~path ~pos ~debug in
+  let referencesToToplevelModules =
+    allReferences
+    |> Utils.filterMap (fun {References.uri = uri2; locOpt} ->
+           if locOpt = None then Some uri2 else None)
+  in
+  let referencesToItems =
+    allReferences
+    |> Utils.filterMap (function
+         | {References.uri = uri2; locOpt = Some loc} -> Some (uri2, loc)
+         | {locOpt = None} -> None)
+  in
+  let fileRenames =
+    referencesToToplevelModules
+    |> List.map (fun uri ->
+           let path = Uri.toPath uri in
+           let dir = Filename.dirname path in
+           let newPath =
+             Filename.concat dir (newName ^ Filename.extension path)
+           in
+           let newUri = Uri.fromPath newPath in
+           Protocol.
+             {oldUri = uri |> Uri.toString; newUri = newUri |> Uri.toString})
+  in
+  let textDocumentEdits =
+    let module StringMap = Misc.StringMap in
+    let textEditsByUri =
+      referencesToItems
+      |> List.map (fun (uri, loc) -> (Uri.toString uri, loc))
+      |> List.fold_left
+           (fun acc (uri, loc) ->
+             let textEdit =
+               Protocol.{range = Utils.cmtLocToRange loc; newText = newName}
+             in
+             match StringMap.find_opt uri acc with
+             | None -> StringMap.add uri [textEdit] acc
+             | Some prevEdits -> StringMap.add uri (textEdit :: prevEdits) acc)
+           StringMap.empty
+    in
+    StringMap.fold
+      (fun uri edits acc ->
+        let textDocumentEdit =
+          Protocol.{textDocument = {uri; version = None}; edits}
+        in
+        textDocumentEdit :: acc)
+      textEditsByUri []
+  in
+  let fileRenamesString =
+    fileRenames |> List.map Protocol.stringifyRenameFile
+  in
+  let textDocumentEditsString =
+    textDocumentEdits |> List.map Protocol.stringifyTextDocumentEdit
+  in
   let result =
-    match Cmt.loadFullCmtFromPath ~path with
-    | None -> Protocol.null
-    | Some full -> (
-      match References.getLocItem ~full ~pos ~debug with
-      | None -> Protocol.null
-      | Some locItem ->
-        let allReferences = References.allReferencesForLocItem ~full locItem in
-        let referencesToToplevelModules =
-          allReferences
-          |> Utils.filterMap (fun {References.uri = uri2; locOpt} ->
-                 if locOpt = None then Some uri2 else None)
-        in
-        let referencesToItems =
-          allReferences
-          |> Utils.filterMap (function
-               | {References.uri = uri2; locOpt = Some loc} -> Some (uri2, loc)
-               | {locOpt = None} -> None)
-        in
-        let fileRenames =
-          referencesToToplevelModules
-          |> List.map (fun uri ->
-                 let path = Uri.toPath uri in
-                 let dir = Filename.dirname path in
-                 let newPath =
-                   Filename.concat dir (newName ^ Filename.extension path)
-                 in
-                 let newUri = Uri.fromPath newPath in
-                 Protocol.
-                   {
-                     oldUri = uri |> Uri.toString;
-                     newUri = newUri |> Uri.toString;
-                   })
-        in
-        let textDocumentEdits =
-          let module StringMap = Misc.StringMap in
-          let textEditsByUri =
-            referencesToItems
-            |> List.map (fun (uri, loc) -> (Uri.toString uri, loc))
-            |> List.fold_left
-                 (fun acc (uri, loc) ->
-                   let textEdit =
-                     Protocol.
-                       {range = Utils.cmtLocToRange loc; newText = newName}
-                   in
-                   match StringMap.find_opt uri acc with
-                   | None -> StringMap.add uri [textEdit] acc
-                   | Some prevEdits ->
-                     StringMap.add uri (textEdit :: prevEdits) acc)
-                 StringMap.empty
-          in
-          StringMap.fold
-            (fun uri edits acc ->
-              let textDocumentEdit =
-                Protocol.{textDocument = {uri; version = None}; edits}
-              in
-              textDocumentEdit :: acc)
-            textEditsByUri []
-        in
-        let fileRenamesString =
-          fileRenames |> List.map Protocol.stringifyRenameFile
-        in
-        let textDocumentEditsString =
-          textDocumentEdits |> List.map Protocol.stringifyTextDocumentEdit
-        in
-        "[\n"
-        ^ (fileRenamesString @ textDocumentEditsString |> String.concat ",\n")
-        ^ "\n]")
+    "[\n"
+    ^ (fileRenamesString @ textDocumentEditsString |> String.concat ",\n")
+    ^ "\n]"
   in
   print_endline result
 
@@ -294,7 +288,7 @@ let format ~path =
 let diagnosticSyntax ~path =
   print_endline (Diagnostics.document_syntax ~path |> Protocol.array)
 
-let test ~path =
+let test ~env ~path =
   Uri.stripPath := true;
   match Files.readFile path with
   | None -> assert false
@@ -414,7 +408,7 @@ let test ~path =
             print_endline
               ("References " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
-            references ~path ~pos:(line, col) ~debug:true
+            references ~env ~path ~pos:(line, col) ~debug:true
           | "ren" ->
             let newName = String.sub rest 4 (len - mlen - 4) in
             let () =
@@ -422,7 +416,7 @@ let test ~path =
                 ("Rename " ^ path ^ " " ^ string_of_int line ^ ":"
                ^ string_of_int col ^ " " ^ newName)
             in
-            rename ~path ~pos:(line, col) ~newName ~debug:true
+            rename ~env ~path ~pos:(line, col) ~newName ~debug:true
           | "typ" ->
             print_endline
               ("TypeDefinition " ^ path ^ " " ^ string_of_int line ^ ":"
