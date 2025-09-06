@@ -91,6 +91,13 @@ jobs:
           cache: yarn
           node-version-file: .nvmrc
 
+      - name: Ensure npm is available
+        run: |
+          # Add Node.js bin directory to PATH for subprocesses
+          echo "$(dirname $(which node))" >> $GITHUB_PATH
+          which npm || echo "npm not found"
+          npm --version || echo "npm version check failed"
+
       - name: Install npm packages
         run: yarn install
 

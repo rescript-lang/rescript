@@ -1,0 +1,15 @@
+{
+  "name": "@tests/rewatch-tests",
+  "type": "module",
+  "packageManager": "yarn@4.9.1",
+  "dependencies": {
+    "rescript": "workspace:^"
+  },
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean",
+    "dev": "rescript -w",
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "fmt": "rescript format"
+  }
+}

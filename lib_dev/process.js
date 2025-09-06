@@ -32,6 +32,9 @@ export const {
   execBin,
   execBuild,
   execClean,
+  rewatch,
+  git,
+  npm,
 } = setup();
 
 /**
@@ -54,6 +57,7 @@ export function setup(cwd = process.cwd()) {
       cwd,
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, ...options.env },
       ...options,
     });
 
@@ -67,6 +71,9 @@ export function setup(cwd = process.cwd()) {
 
     return await new Promise((resolve, reject) => {
       subprocess.once("error", err => {
+        console.error(`Command failed: ${command} ${args.join(" ")}`);
+        console.error(`Working directory: ${options.cwd || cwd}`);
+        console.error("Error:", err);
         reject(err);
       });
 
@@ -81,6 +88,12 @@ export function setup(cwd = process.cwd()) {
         }
 
         if (throwOnFail && code !== 0) {
+          console.error(`Command failed: ${command} ${args.join(" ")}`);
+          console.error(`Working directory: ${options.cwd || cwd}`);
+          console.error(`Exit code: ${code}`);
+          console.error(`Signal: ${signal}`);
+          console.error("Stdout:", stdout);
+          console.error("Stderr:", stderr);
           reject(
             new Error(
               `Command ${command} exited with non-zero status: ${code}`,
@@ -144,7 +157,7 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `rescript` CLI
+     * `rescript` legacy CLI
      *
      * @param {(
      *   | "build"
@@ -162,6 +175,14 @@ export function setup(cwd = process.cwd()) {
         import.meta.dirname,
         "../cli/rescript-legacy.js",
       );
+      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
+    },
+
+    /**
+     * `rescript` CLI
+     */
+    rewatch(command, args = [], options = {}) {
+      const cliPath = path.join(import.meta.dirname, "../cli/rescript.js");
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
 
@@ -210,6 +231,47 @@ export function setup(cwd = process.cwd()) {
     async execBin(bin, args = [], options = {}) {
       const realPath = await fs.realpath(bin);
       return exec(realPath, args, options);
+    },
+
+    /**
+     * Execute Git command
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    git(args = [], options = {}) {
+      return exec("git", args, options);
+    },
+
+    /**
+     * Execute npm command
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    async npm(args = [], options = {}) {
+      // Find the full path to npm using which
+      try {
+        const whichResult = await exec("which", ["npm"], {
+          ...options,
+          throwOnFail: false,
+        });
+        if (whichResult.status === 0) {
+          const npmPath = whichResult.stdout.trim();
+          console.log(`Found npm at: ${npmPath}`);
+          return exec(npmPath, args, options);
+        }
+        console.log("npm not found in PATH, trying direct execution");
+        return exec("npm", args, options);
+      } catch (err) {
+        console.log(
+          "which command failed, trying direct execution:",
+          err.message,
+        );
+        return exec("npm", args, options);
+      }
     },
   };
 }
