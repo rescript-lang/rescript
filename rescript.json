@@ -13,5 +13,5 @@
   ],
   "suffix": ".res.js",
   "jsx": { "version": 4 },
-  "dependencies": ["@tests/gentype-react-example", "playground", "@tests/rewatch-tests"]
+  "dependencies": ["@tests/gentype-react-example", "playground"]
 }

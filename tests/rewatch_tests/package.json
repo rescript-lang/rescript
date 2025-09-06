@@ -10,6 +10,7 @@
     "build": "rescript build",
     "clean": "rescript clean",
     "dev": "rescript -w",
-    "test": "npx mocha src/*_test.js"
+    "test": "node --test \"tests/**/*.test.mjs\"",
+    "fmt": "rescript format"
   }
 }

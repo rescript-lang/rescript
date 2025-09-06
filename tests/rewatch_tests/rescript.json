@@ -1,6 +1,12 @@
 {
   "name": "@tests/rewatch-tests",
-  "sources": [
-    "src"
-  ]
+  "sources": ["src", "tests"],
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": true
+    }
+  ],
+  "suffix": ".mjs",
+  "dependencies": []
 }

@@ -1,1 +1,1 @@
-# rewatch_tests
+# Rewatch end-to-end tests
