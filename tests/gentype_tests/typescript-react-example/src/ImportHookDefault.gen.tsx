@@ -3,7 +3,7 @@
 /* eslint-disable */
 /* tslint:disable */
 
-import {default as makeNotChecked} from './hookExample';
+import {make as makeNotChecked} from './hookExample';
 
 import {default as defaultNotChecked} from './hookExample';
 

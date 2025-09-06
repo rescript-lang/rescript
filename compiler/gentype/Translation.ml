@@ -138,7 +138,10 @@ let translate_primitive ~config ~output_file_relative ~resolver ~type_env
     value_description.val_desc
     |> TranslateCoreType.translate_core_type ~config ~type_env
   in
-  let attribute_import, attribute_renaming =
+  let ( attribute_import,
+        attribute_renaming,
+        _import_exact_opt,
+        _remote_export_name_opt ) =
     value_description.val_attributes |> Annotation.get_attribute_import_renaming
   in
   match (type_expr_translation.type_, attribute_import) with
@@ -205,6 +208,7 @@ let add_type_declarations_from_module_equations ~type_env (translation : t) =
                             .annotation;
                       };
                     import_types = [];
+                    expected_type = None;
                   }))
     |> List.concat
   in
