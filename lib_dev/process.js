@@ -70,6 +70,9 @@ export function setup(cwd = process.cwd()) {
 
     return await new Promise((resolve, reject) => {
       subprocess.once("error", err => {
+        console.error(`Command failed: ${command} ${args.join(" ")}`);
+        console.error(`Working directory: ${options.cwd || cwd}`);
+        console.error("Error:", err);
         reject(err);
       });
 
@@ -84,6 +87,12 @@ export function setup(cwd = process.cwd()) {
         }
 
         if (throwOnFail && code !== 0) {
+          console.error(`Command failed: ${command} ${args.join(" ")}`);
+          console.error(`Working directory: ${options.cwd || cwd}`);
+          console.error(`Exit code: ${code}`);
+          console.error(`Signal: ${signal}`);
+          console.error("Stdout:", stdout);
+          console.error("Stderr:", stderr);
           reject(
             new Error(
               `Command ${command} exited with non-zero status: ${code}`,
