@@ -254,17 +254,22 @@ export function setup(cwd = process.cwd()) {
     async npm(args = [], options = {}) {
       // Find the full path to npm using which
       try {
-        const whichResult = await exec("which", ["npm"], { ...options, throwOnFail: false });
+        const whichResult = await exec("which", ["npm"], {
+          ...options,
+          throwOnFail: false,
+        });
         if (whichResult.status === 0) {
           const npmPath = whichResult.stdout.trim();
           console.log(`Found npm at: ${npmPath}`);
           return exec(npmPath, args, options);
-        } else {
-          console.log("npm not found in PATH, trying direct execution");
-          return exec("npm", args, options);
         }
+        console.log("npm not found in PATH, trying direct execution");
+        return exec("npm", args, options);
       } catch (err) {
-        console.log("which command failed, trying direct execution:", err.message);
+        console.log(
+          "which command failed, trying direct execution:",
+          err.message,
+        );
         return exec("npm", args, options);
       }
     },
