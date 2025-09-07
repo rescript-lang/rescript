@@ -48,9 +48,9 @@
     "test": "node scripts/test.js -all",
     "test-bsb": "node scripts/test.js -bsb",
     "test-ocaml": "node scripts/test.js -ounit",
-    "check": "biome check --changed --no-errors-on-unmatched .",
+    "check": "biome check --no-errors-on-unmatched .",
     "check:all": "biome check .",
-    "format": "biome check --changed --no-errors-on-unmatched . --fix",
+    "format": "biome check --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc",
     "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"

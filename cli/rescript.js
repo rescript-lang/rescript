@@ -29,7 +29,7 @@ let forwardedSignal = false;
 /**
  * @param {NodeJS.Signals} signal
  */
-const handleSignal = (signal) => {
+const handleSignal = signal => {
   // Intercept the signal in the parent, forward it to the child, and let the
   // child perform its own cleanup. This ensures ordered shutdown in watch mode.
   // Guard against double-forwarding since terminals or OSes can deliver
@@ -85,7 +85,7 @@ child.on("exit", (code, signal) => {
 });
 
 // Surface spawn errors (e.g., executable not found) and exit with failure.
-child.on("error", (err) => {
+child.on("error", err => {
   console.error(err?.message ?? String(err));
   process.exit(1);
 });

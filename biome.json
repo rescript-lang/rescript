@@ -73,7 +73,8 @@
       "*.gen.ts*",
       "*.d.ts",
       "*.exe",
-      "package.json"
+      "package.json",
+      "packages/artifacts.json"
     ]
   }
 }
