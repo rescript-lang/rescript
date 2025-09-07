@@ -37,6 +37,7 @@
 
 - Playground: Add config options for experimental features and jsx preserve mode. https://github.com/rescript-lang/rescript/pull/7865
 - Clean up tests. https://github.com/rescript-lang/rescript/pull/7861 https://github.com/rescript-lang/rescript/pull/7871
+- Clean up string processing (delimiters). https://github.com/rescript-lang/rescript/pull/7852
 
 # 12.0.0-beta.10
 
