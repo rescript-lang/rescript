@@ -2623,7 +2623,25 @@ and parse_let_binding_body ~start_pos ~attrs p =
         Parser.expect Equal p;
         let expr = parse_expr p in
         let loc = mk_loc start_pos p.prev_end_pos in
-        let exp, poly = wrap_type_annotation ~loc newtypes typ expr in
+        (* varify_constructors may raise Syntaxerr.Error when a locally
+           abstract type variable is referenced as a ticked Ptyp_var inside
+           the annotation (e.g., event<'t>).
+           Catch it and surface a friendly diagnostic instead of crashing. *)
+        let exp, poly =
+          try wrap_type_annotation ~loc newtypes typ expr with
+          | Syntaxerr.Error (Syntaxerr.Variable_in_scope (loc', v)) ->
+            let hint =
+              "Locally abstract type `" ^ v
+              ^ "` is already in scope here. Inside `type ... .` annotations,\n"
+              ^ "refer to these type parameters without a leading quote, e.g.\n"
+              ^ "`event<inputStream, callback>` instead of `event<'inputStream, 'callback>`."
+            in
+            Parser.err ~start_pos:loc'.loc_start ~end_pos:loc'.loc_end p
+              (Diagnostics.message hint);
+            (* Fall back to a simple poly type to keep parsing going. *)
+            let poly = Ast_helper.Typ.poly ~loc newtypes typ in
+            (expr, poly)
+        in
         let pat = Ast_helper.Pat.constraint_ ~loc pat poly in
         (pat, exp)
       | _ ->
