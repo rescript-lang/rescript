@@ -62,6 +62,7 @@
       "tests/tests/**/src/**",
       "tests/tools_tests/**/src/**",
       "analysis/examples/**/src/**",
+      "tests/rewatch_tests/**/*.mjs",
       "rewatch/**",
       "lib/es6/**",
       "lib/js/**",
@@ -74,7 +75,8 @@
       "*.d.ts",
       "*.exe",
       "package.json",
-      "packages/artifacts.json"
+      "packages/artifacts.json",
+      ".mypy_cache/**"
     ]
   }
 }
