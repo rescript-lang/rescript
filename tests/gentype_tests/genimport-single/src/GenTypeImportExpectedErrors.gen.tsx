@@ -3,23 +3,21 @@
 /* eslint-disable */
 /* tslint:disable */
 
-type $GenTypeImport<Expected, T extends Expected> = T;
-
 import * as GenTypeImportExpectedErrorsJS from './GenTypeImportExpectedErrors.res.js';
 
 import type {Type as Type$TypeScript} from 'external-module';
 
-export type numberT = $GenTypeImport<number,Type$TypeScript>;
+export type numberT = Type$TypeScript;
 
-export type tupleT = $GenTypeImport<[number, string],Type$TypeScript>;
+export type tupleT = Type$TypeScript;
 
-export type arrayT = $GenTypeImport<number[],Type$TypeScript>;
+export type arrayT = Type$TypeScript;
 
-export type promiseT = $GenTypeImport<Promise<number>,Type$TypeScript>;
+export type promiseT = Type$TypeScript;
 
-export type nestedArrayT = $GenTypeImport<Array<number[]>,Type$TypeScript>;
+export type nestedArrayT = Type$TypeScript;
 
-export type stringT = $GenTypeImport<string,Type$TypeScript>;
+export type stringT = Type$TypeScript;
 
 export const useNumber: (x:numberT) => numberT = GenTypeImportExpectedErrorsJS.useNumber as any;
 

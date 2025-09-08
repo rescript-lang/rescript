@@ -1,5 +1,0 @@
-src/GenTypeImportExpectedErrors.gen.tsx(12,45): error TS2344: Type 'string' does not satisfy the constraint 'number'.
-src/GenTypeImportExpectedErrors.gen.tsx(14,54): error TS2344: Type 'string' does not satisfy the constraint '[number, string]'.
-src/GenTypeImportExpectedErrors.gen.tsx(16,46): error TS2344: Type 'string' does not satisfy the constraint 'number[]'.
-src/GenTypeImportExpectedErrors.gen.tsx(18,55): error TS2344: Type 'string' does not satisfy the constraint 'Promise<number>'.
-src/GenTypeImportExpectedErrors.gen.tsx(20,59): error TS2344: Type 'string' does not satisfy the constraint 'number[][]'.

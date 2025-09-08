@@ -167,24 +167,6 @@ let get_attribute_import_renaming attributes =
       _ ) ->
     (* Tuple form encodes (importPath, remoteExportName). Keep remote name separate. *)
     (Some import_string, gentype_as_renaming, None, Some rename_string)
-  | Some (_, RecordPayload opts), _ ->
-    let import_tuple_opt = List.assoc_opt "importPath" opts in
-    let import_string_opt, rename_string_opt =
-      match import_tuple_opt with
-      | Some (TuplePayload [StringPayload import_string; StringPayload rename])
-        ->
-        (Some import_string, Some rename)
-      | Some (TuplePayload [StringPayload import_string]) ->
-        (Some import_string, None)
-      | _ -> (None, None)
-    in
-    let exact_opt =
-      match List.assoc_opt "exact" opts with
-      | Some (BoolPayload b) -> Some b
-      | _ -> None
-    in
-    (* Keep remote export name separate from local alias (@genType.as) *)
-    (import_string_opt, gentype_as_renaming, exact_opt, rename_string_opt)
   | _ -> (None, gentype_as_renaming, None, None)
 
 let get_tag attributes =

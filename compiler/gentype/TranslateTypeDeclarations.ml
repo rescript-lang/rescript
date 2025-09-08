@@ -59,7 +59,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     | false -> None
     (* one means don't know *)
   in
-  let import_string_opt, name_as, import_exact_opt, remote_export_name_opt =
+  let import_string_opt, name_as, _import_exact_opt, remote_export_name_opt =
     type_attributes |> Annotation.get_attribute_import_renaming
   in
   let unboxed_annotation =
@@ -83,7 +83,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       |> Translation.translate_dependencies ~config ~output_file_relative
            ~resolver
     in
-    {CodeItem.import_types; export_from_type_declaration; expected_type = None}
+    {CodeItem.import_types; export_from_type_declaration}
   in
   let translate_label_declarations ?(inline = false) label_declarations =
     let field_translations =
@@ -159,117 +159,13 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     let base_import =
       {CodeItem.type_name; as_type_name = Some as_type_name; import_path}
     in
-    (* If the declaration has a manifest type, capture its full translation
-       so we can both build the Expected type and import its dependencies. *)
-    let expected_translation_opt =
-      match declaration_kind with
-      | GeneralDeclaration (Some core_type) ->
-        Some
-          (core_type |> TranslateCoreType.translate_core_type ~config ~type_env)
-      | GeneralDeclarationFromTypes (Some type_expr) ->
-        Some
-          (type_expr
-          |> TranslateTypeExprFromTypes.translate_type_expr_from_types ~config
-               ~type_env)
-      | RecordDeclarationFromTypes label_declarations ->
-        Some (label_declarations |> translate_label_declarations)
-      | VariantDeclarationFromTypes constructor_declarations ->
-        let variants =
-          constructor_declarations
-          |> List.map (fun constructor_declaration ->
-                 let constructor_args = constructor_declaration.Types.cd_args in
-                 let attributes = constructor_declaration.cd_attributes in
-                 let name = constructor_declaration.cd_id |> Ident.name in
-                 let args_translation =
-                   match constructor_args with
-                   | Cstr_tuple type_exprs ->
-                     type_exprs
-                     |> TranslateTypeExprFromTypes
-                        .translate_type_exprs_from_types ~config ~type_env
-                   | Cstr_record label_declarations ->
-                     [
-                       label_declarations
-                       |> translate_label_declarations ~inline:true;
-                     ]
-                 in
-                 let arg_types =
-                   args_translation
-                   |> List.map (fun {TranslateTypeExprFromTypes.type_} -> type_)
-                 in
-                 (name, attributes, arg_types))
-        in
-        let variants_no_payload, variants_with_payload =
-          variants |> List.partition (fun (_, _, arg_types) -> arg_types = [])
-        in
-        let no_payloads =
-          variants_no_payload
-          |> List.map (fun (name, attributes, _argTypes) ->
-                 (name, attributes) |> create_case ~poly:false)
-        in
-        let payloads =
-          variants_with_payload
-          |> List.map (fun (name, attributes, arg_types) ->
-                 let type_ =
-                   match arg_types with
-                   | [type_] -> type_
-                   | _ -> Tuple arg_types
-                 in
-                 {
-                   case = (name, attributes) |> create_case ~poly:false;
-                   t = type_;
-                 })
-        in
-        let variant_typ =
-          create_variant ~inherits:[] ~no_payloads ~payloads ~polymorphic:false
-            ~tag:tag_annotation ~unboxed:unboxed_annotation
-        in
-        Some {TranslateTypeExprFromTypes.dependencies = []; type_ = variant_typ}
-      | _ -> None
-    in
-
-    (* Import any referenced non-builtin identifiers from the same module as
-       the base imported type. This ensures shims work (e.g. mapping ReactEvent
-       types to a local shim module), matching previous behavior. *)
-    let extra_type_imports =
-      match expected_translation_opt with
-      | Some tr ->
-        GentypeTypeFold.fold
-          (fun acc (t : GenTypeCommon.type_) ->
-            match t with
-            | Ident {builtin = false; name; _} -> name :: acc
-            | _ -> acc)
-          [] tr.type_
-        |> List.sort_uniq String.compare
-        |> List.filter (fun n -> n <> type_name)
-        |> List.map (fun n ->
-               {CodeItem.type_name = n; as_type_name = None; import_path})
-      | None -> []
-    in
-    let import_types = base_import :: extra_type_imports in
+    (* Only import the aliased TypeScript type; no wrappers or extra aliases. *)
+    let import_types = [base_import] in
     let export_from_type_declaration =
       (* Make the imported type usable from other modules by exporting it too. *)
-      let imported_ident =
+      let export_type_body =
         as_type_name
         |> ident ~type_args:(type_vars |> List.map (fun s -> TypeVar s))
-      in
-      let export_type_body =
-        match expected_translation_opt with
-        | Some tr -> (
-          let expected_for_wrapper =
-            if GentypeImportHelper.should_inline_expected tr.type_ then tr.type_
-            else
-              name_with_module_path ^ "$ReScript"
-              |> ident ~builtin:false
-                   ~type_args:(type_vars |> List.map (fun s -> TypeVar s))
-          in
-          match import_exact_opt with
-          | Some true ->
-            ident GentypeImportHelper.strict_name
-              ~type_args:[imported_ident; expected_for_wrapper]
-          | _ ->
-            ident GentypeImportHelper.name
-              ~type_args:[expected_for_wrapper; imported_ident])
-        | None -> imported_ident
       in
       typeName_
       |> create_export_type_from_type_declaration ~doc_string
@@ -277,14 +173,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
            ~type_:export_type_body ~type_env ~type_vars
     in
     [
-      {
-        CodeItem.import_types;
-        export_from_type_declaration;
-        expected_type =
-          (match expected_translation_opt with
-          | Some tr -> Some tr.type_
-          | None -> None);
-      };
+      {CodeItem.import_types; export_from_type_declaration};
     ]
   | (GeneralDeclarationFromTypes None | GeneralDeclaration None), None ->
     {
@@ -293,7 +182,6 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
         type_name
         |> create_export_type_from_type_declaration ~doc_string ~annotation ~loc
              ~name_as ~opaque:(Some true) ~type_:unknown ~type_env ~type_vars;
-      expected_type = None;
     }
     |> return_type_declaration
   | GeneralDeclarationFromTypes (Some type_expr), None ->
@@ -349,7 +237,6 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
         type_name
         |> create_export_type_from_type_declaration ~doc_string ~annotation ~loc
              ~name_as ~opaque ~type_ ~type_env ~type_vars;
-      expected_type = None;
     }
     |> return_type_declaration
   | VariantDeclarationFromTypes constructor_declarations, None ->
@@ -428,7 +315,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       |> List.map (fun (_, _, _, import_types) -> import_types)
       |> List.concat
     in
-    {CodeItem.export_from_type_declaration; import_types; expected_type = None}
+    {CodeItem.export_from_type_declaration; import_types}
     |> return_type_declaration
   | NoDeclaration, None -> []
 

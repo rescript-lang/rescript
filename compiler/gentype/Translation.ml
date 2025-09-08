@@ -208,7 +208,7 @@ let add_type_declarations_from_module_equations ~type_env (translation : t) =
                             .annotation;
                       };
                     import_types = [];
-                    expected_type = None;
+                    
                   }))
     |> List.concat
   in

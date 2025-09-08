@@ -7,9 +7,9 @@ import * as TestFirstClassModulesJS from './TestFirstClassModules.res.js';
 
 import type {firstClassModule as FirstClassModulesInterface_firstClassModule} from './FirstClassModulesInterface.gen';
 
-import type {record as FirstClassModulesInterface_record} from './FirstClassModulesInterface.gen';
-
 import type {firstClassModule as FirstClassModules_firstClassModule} from './FirstClassModules.gen';
+
+import type {record as FirstClassModulesInterface_record} from './FirstClassModulesInterface.gen';
 
 export type firstClassModuleWithTypeEquations<i,o> = { readonly out: (_1:o) => o; readonly Inner: { readonly inn: (_1:i) => i } };
 

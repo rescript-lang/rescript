@@ -47,7 +47,6 @@ type export_type_map = export_type_item StringMap.t
 type type_declaration = {
   export_from_type_declaration: export_from_type_declaration;
   import_types: import_type list;
-  expected_type: type_ option;
 }
 
 type t = ExportValue of export_value | ImportValue of import_value

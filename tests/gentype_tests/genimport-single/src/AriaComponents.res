@@ -1,4 +1,4 @@
-@genType.import({importPath: ("react-aria-components", "GroupRenderProps"), exact: true})
+@genType.import(("react-aria-components", "GroupRenderProps"))
 type groupRenderProps = {
   isHovered: bool,
   isFocusWithin: bool,
