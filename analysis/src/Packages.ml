@@ -1,6 +1,7 @@
 open SharedTypes
 
-(* Domain-local caches for packages and URI->root mapping. *)
+(* Domain-local caches for packages and URI->root mapping. 
+These work in both Eio contexts and outside, so they should be safe to use as-is. *)
 module LocalCache = struct
   let packages_key : (string, package) Hashtbl.t Domain.DLS.key =
     AnalysisCache.make_hashtbl 1

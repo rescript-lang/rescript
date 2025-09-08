@@ -1,5 +1,6 @@
 open SharedTypes
 
+(* Caches for the `full` type *)
 module FullCache = struct
   let key : (string, full) Hashtbl.t Domain.DLS.key =
     AnalysisCache.make_hashtbl 64
@@ -40,9 +41,8 @@ let fullFromUriWithPackage ~package ~uri =
       | _ -> ".cmt"
     in
     match cached_full incrementalCmtPath with
-    | Some _ as x -> x
+    | Some x -> Some x
     | None -> (
-      (* Fallback to non-incremental *)
       match Hashtbl.find_opt package.pathsForModule moduleName with
       | Some paths ->
         let cmt = getCmtPath ~uri paths in
