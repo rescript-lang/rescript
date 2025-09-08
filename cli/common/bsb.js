@@ -72,8 +72,8 @@ function acquireBuild(args, options) {
  * @param {(code: number) => void} [maybeOnClose]
  */
 function delegate(args, maybeOnClose) {
-  let p;
-  if ((p = acquireBuild(args))) {
+  const p = acquireBuild(args);
+  if (p) {
     p.once("error", e => {
       console.error(String(e));
       releaseBuild();
@@ -376,12 +376,10 @@ Please pick a different one using the \`-ws [host:]port\` flag from bsb.`);
       return;
     }
     dlog(`Rebuilding since ${reasonsToRebuild}`);
-    let p;
-    if (
-      (p = acquireBuild(rescriptWatchBuildArgs, {
-        stdio: ["inherit", "inherit", "pipe"],
-      }))
-    ) {
+    const p = acquireBuild(rescriptWatchBuildArgs, {
+      stdio: ["inherit", "inherit", "pipe"],
+    });
+    if (p) {
       logStartCompiling();
       p.on("data", s => {
         outputError(s, "ninja: error");

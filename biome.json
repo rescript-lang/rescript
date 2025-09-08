@@ -58,7 +58,6 @@
       "tests/analysis_tests/**/src/**",
       "tests/build_tests/**/src/**",
       "tests/docstring_tests/**",
-      "tests/rewatch_tests/**",
       "tests/gentype_tests/**",
       "tests/tests/**/src/**",
       "tests/tools_tests/**/src/**",
@@ -74,7 +73,8 @@
       "*.gen.ts*",
       "*.d.ts",
       "*.exe",
-      "package.json"
+      "package.json",
+      "packages/artifacts.json"
     ]
   }
 }

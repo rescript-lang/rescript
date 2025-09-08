@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix code generation for emojis in polyvars and labels. https://github.com/rescript-lang/rescript/pull/7853
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
