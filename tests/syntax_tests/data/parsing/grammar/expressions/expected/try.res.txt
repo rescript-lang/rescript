@@ -1,0 +1,6 @@
+;;try ((let x = 1 in let y = 2 in dangerousCall (x + y))[@res.braces ])
+  with | Foo -> Js.log {js|catched Foo|js}
+  | Exit -> Js.log {js|catched exit|js}
+;;try myDangerousFn () with | Foo -> Js.log {js|catched Foo|js}[@@attr ]
+let x = ((let y = 1 in try ((apply y)[@res.braces ]) with | _ -> 2)
+  [@res.braces ])

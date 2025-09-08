@@ -1,0 +1,14 @@
+####{BSB GENERATED: NO EDIT
+FLG -ppx '/home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/rescript/linux/bsc.exe -as-ppx -bs-jsx 3'
+S /home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/rescript/lib/ocaml
+B /home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/rescript/lib/ocaml
+FLG -w +a-4-9-20-40-41-42-50-61-102
+S /home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/@rescript/react/lib/ocaml
+B /home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/@rescript/react/lib/ocaml
+S /home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/@glennsl/bs-json/lib/ocaml
+B /home/pedro/Desktop/Projects/rescript-vscode/analysis/examples/larger-project/node_modules/@glennsl/bs-json/lib/ocaml
+S src
+B lib/bs/src
+S src/exception
+B lib/bs/src/exception
+####BSB GENERATED: NO EDIT}

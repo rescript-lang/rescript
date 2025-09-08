@@ -1,0 +1,5 @@
+{
+  "name": "build_warn_as_error",
+  "version": "0.1.0",
+  "sources": ["src"]
+}

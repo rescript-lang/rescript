@@ -1,0 +1,33 @@
+[package]
+name = "rescript"
+version = "12.0.0-beta.11"
+edition = "2024"
+rust-version = "1.85"
+
+[dependencies]
+ahash = "0.8.3"
+anyhow = "1.0.93"
+blake3 = "1.3.3"
+clap = { version = "4.3", features = ["derive"] }
+clap-verbosity-flag = "2.2"
+console = "0.15.5"
+convert_case = "0.6.0"
+ctrlc = "3.4.4"
+env_logger = "0.10"
+futures = "0.3.25"
+futures-timer = "3.0.2"
+indicatif = "0.17.3"
+log = { version = "0.4.17" }
+notify = { version = "5.1.0", features = ["serde"] }
+rayon = "1.6.1"
+num_cpus = "1.17.0"
+regex = "1.7.1"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = { version = "1.0.93" }
+sysinfo = "0.29.10"
+tempfile = "3.10.1"
+
+
+[profile.release]
+codegen-units = 1
+lto = true

@@ -1,0 +1,38 @@
+let () = ()
+let () as x = ()
+let () = ()
+let () as x = ()
+let () as x = ()
+let (() : unit) = ()
+let (() : unit) as x = ()
+let (() : unit) as x = ()
+;;match x with
+  | () -> ()
+  | () as _u -> ()
+  | () -> ()
+  | () as _u -> ()
+  | () as _u -> ()
+  | (() : unit) -> ()
+  | (() : unit) as _u -> ()
+  | (() : unit) as _u -> ()
+;;for () = () to () do () done
+;;for () as _u = () to () do () done
+;;for () = () to () do () done
+;;for () as _u = () to () do () done
+;;for () = () to () do () done
+;;for () as _u = () to () do () done
+;;for () as _u = () to () do () done
+;;for (() : unit) = () to () do () done
+;;for (() : unit) as _u = () to () do () done
+;;for ((() as _u) : unit) = () to () do () done
+;;for (() : unit) as _u = () to () do () done
+let f [arity:1]() = ()
+let f [arity:1]() = ()
+let f [arity:1](() as _u) = ()
+let f [arity:2]() () = ()
+let f [arity:2](() as _u) (() as _u) = ()
+let f [arity:1](() : unit) = ()
+let f [arity:1]((() as _u) : unit) = ()
+let f [arity:1]((() : unit) as _u) = ()
+let f [arity:1](() : unit) = ()
+let f [arity:1]((() : unit) as _u) = ()

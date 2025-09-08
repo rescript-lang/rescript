@@ -1,0 +1,390 @@
+Complete src/CompletionTypeAnnotation.res 9:22
+XXX Not found!
+Completable: Cexpression Type[someRecord]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someRecord]
+Path someRecord
+[{
+    "label": "{}",
+    "kind": 12,
+    "tags": [],
+    "detail": "someRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someRecord = {age: int, name: string}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 12:24
+XXX Not found!
+Completable: Cexpression Type[someRecord]->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someRecord]
+Path someRecord
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, name: string}\n```"}
+  }, {
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {age: int, name: string}\n```"}
+  }]
+
+Complete src/CompletionTypeAnnotation.res 15:23
+XXX Not found!
+Completable: Cexpression Type[someVariant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Two($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 18:25
+XXX Not found!
+Completable: Cexpression Type[someVariant]=O
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "sortText": "A One",
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Option",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Option",
+    "documentation": null
+  }, {
+    "label": "Ordering",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Ordering",
+    "documentation": null
+  }, {
+    "label": "Object",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Object",
+    "documentation": null
+  }, {
+    "label": "Obj",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Obj",
+    "documentation": null,
+    "data": {
+      "modulePath": "Obj",
+      "filePath": "src/CompletionTypeAnnotation.res"
+    }
+  }, {
+    "label": "Objects",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Objects",
+    "documentation": null,
+    "data": {
+      "modulePath": "Objects",
+      "filePath": "src/CompletionTypeAnnotation.res"
+    }
+  }]
+
+Complete src/CompletionTypeAnnotation.res 21:27
+XXX Not found!
+Completable: Cexpression Type[somePolyVariant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[somePolyVariant]
+Path somePolyVariant
+[{
+    "label": "#one",
+    "kind": 4,
+    "tags": [],
+    "detail": "#one",
+    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #two(bool)]\n```"},
+    "insertText": "#one",
+    "insertTextFormat": 2
+  }, {
+    "label": "#two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "#two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #two(bool)]\n```"},
+    "insertText": "#two($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 24:30
+XXX Not found!
+Completable: Cexpression Type[somePolyVariant]=#o
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[somePolyVariant]
+Path somePolyVariant
+[{
+    "label": "#one",
+    "kind": 4,
+    "tags": [],
+    "detail": "#one",
+    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #two(bool)]\n```"},
+    "insertText": "one",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 29:20
+XXX Not found!
+Completable: Cexpression Type[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someFunc]
+Path someFunc
+[{
+    "label": "(v1, v2) => {}",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, string) => bool",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "(${1:v1}, ${2:v2}) => {${0:()}}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 34:21
+XXX Not found!
+Completable: Cexpression Type[someTuple]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someTuple]
+Path someTuple
+[{
+    "label": "(_, _)",
+    "kind": 12,
+    "tags": [],
+    "detail": "(bool, option<bool>)",
+    "documentation": null,
+    "insertText": "(${1:_}, ${2:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 37:28
+XXX Not found!
+Completable: Cexpression Type[someTuple]->tuple($1)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[someTuple]
+Path someTuple
+[{
+    "label": "None",
+    "kind": 12,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "Some(_)",
+    "kind": 12,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null,
+    "insertText": "Some($0)",
+    "insertTextFormat": 2
+  }, {
+    "label": "Some(true)",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "Some(false)",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionTypeAnnotation.res 40:31
+XXX Not found!
+Completable: Cexpression option<Type[someVariant]>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath option<Type[someVariant]>
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "None",
+    "kind": 12,
+    "tags": [],
+    "detail": "someVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool)\n```"}
+  }, {
+    "label": "Some(_)",
+    "kind": 12,
+    "tags": [],
+    "detail": "someVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Some($0)",
+    "insertTextFormat": 2
+  }, {
+    "label": "Some(One)",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Some(One)",
+    "insertTextFormat": 2
+  }, {
+    "label": "Some(Two(_))",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Some(Two($0))",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 43:37
+XXX Not found!
+Completable: Cexpression option<Type[someVariant]>->variantPayload::Some($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath option<Type[someVariant]>
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Two($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 46:30
+XXX Not found!
+Completable: Cexpression array<Type[someVariant]>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[someVariant]>
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "[]",
+    "kind": 12,
+    "tags": [],
+    "detail": "someVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "sortText": "A",
+    "insertText": "[$0]",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 49:32
+XXX Not found!
+Completable: Cexpression array<Type[someVariant]>->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<Type[someVariant]>
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Two($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 52:38
+XXX Not found!
+Completable: Cexpression array<option<Type[someVariant]>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath array<option<Type[someVariant]>>
+ContextPath option<Type[someVariant]>
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "[]",
+    "kind": 12,
+    "tags": [],
+    "detail": "option<someVariant>",
+    "documentation": {"kind": "markdown", "value": "```rescript\noption<someVariant>\n```"},
+    "sortText": "A",
+    "insertText": "[$0]",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionTypeAnnotation.res 55:45
+XXX Not found!
+Completable: Cexpression option<array<Type[someVariant]>>->variantPayload::Some($0), array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath option<array<Type[someVariant]>>
+ContextPath array<Type[someVariant]>
+ContextPath Type[someVariant]
+Path someVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool)\n```"},
+    "insertText": "Two($0)",
+    "insertTextFormat": 2
+  }]
+

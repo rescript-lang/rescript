@@ -1,0 +1,7 @@
+module type Signature  =
+  sig
+    module Tree = Btree
+    module Tree = Ns.Btree
+    module Tree = Btree[@@attr ]
+    module Tree = Ns.Btree[@@attr ]
+  end

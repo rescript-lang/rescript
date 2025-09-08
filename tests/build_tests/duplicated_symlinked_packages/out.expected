@@ -1,0 +1,2 @@
+Duplicated package: z ./node_modules/z (chosen) vs ./node_modules/a/node_modules/z in ./node_modules/a 
+Duplicated package: z ./node_modules/z (chosen) vs ./node_modules/a/node_modules/z in ./node_modules/a

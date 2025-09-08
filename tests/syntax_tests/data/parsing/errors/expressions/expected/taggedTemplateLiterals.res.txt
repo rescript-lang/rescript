@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/taggedTemplateLiterals.res:1:1-5
+
+  1 │ foo()`null`
+  2 │ 
+
+  Tagged template literals are currently restricted to names like: myTagFunction`foo ${bar}`.
+
+;;(({js|null|js})[@res.template ])

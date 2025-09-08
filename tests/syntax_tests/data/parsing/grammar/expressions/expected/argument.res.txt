@@ -1,0 +1,9 @@
+let foo [arity:1]~a  = (a ()) +. 1.
+let a [arity:1]() = 2
+let bar = foo ~a
+let comparisonResult = compare currentNode.value ~targetValue
+;;callback firstNode ~y
+;;document.createElementWithOptions {js|div|js}
+    (elementProps ~onClick:(fun [arity:1]_ -> Js.log {js|hello world|js}))
+;;resolve ()
+;;resolve ()

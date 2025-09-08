@@ -1,0 +1,3 @@
+Hover src/PolyRec.res 12:10
+{"contents": {"kind": "markdown", "value": "```rescript\n([#Leaf | #Node(int, 'a, 'a)] as 'a)\n```"}}
+

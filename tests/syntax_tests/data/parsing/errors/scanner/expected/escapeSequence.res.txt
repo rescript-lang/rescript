@@ -1,0 +1,2 @@
+let x = {js|\x37|js}
+let x = {js|\x7b|js}

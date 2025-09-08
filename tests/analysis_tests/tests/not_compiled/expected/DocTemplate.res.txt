@@ -1,0 +1,134 @@
+Xform not_compiled/DocTemplate.res 3:3
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 3, "character": 0}, "end": {"line": 5, "character": 9}}
+newText:
+<--here
+/**
+
+*/
+type rec t = A | B
+// ^xfm
+and e = C
+
+Xform not_compiled/DocTemplate.res 6:15
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 6, "character": 0}, "end": {"line": 6, "character": 33}}
+newText:
+<--here
+/**
+
+*/
+@unboxed type name = Name(string)
+
+Xform not_compiled/DocTemplate.res 8:4
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 8, "character": 0}, "end": {"line": 8, "character": 9}}
+newText:
+<--here
+/**
+
+*/
+let a = 1
+
+Xform not_compiled/DocTemplate.res 10:4
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 10, "character": 0}, "end": {"line": 10, "character": 20}}
+newText:
+<--here
+/**
+
+*/
+let inc = x => x + 1
+
+Xform not_compiled/DocTemplate.res 12:7
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+newText:
+<--here
+/**
+
+*/
+module T = {
+  //   ^xfm
+  let b = 1
+  //  ^xfm
+}
+Hit: Extract local module "T" to file "T.res"
+
+CreateFile: T.res
+
+TextDocumentEdit: T.res
+{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}
+newText:
+<--here
+//   ^xfm
+let b = 1
+//  ^xfm
+
+
+TextDocumentEdit: not_compiled/DocTemplate.res
+{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+newText:
+<--here
+
+
+Xform not_compiled/DocTemplate.res 14:6
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 14, "character": 2}, "end": {"line": 14, "character": 11}}
+newText:
+  <--here
+  /**
+  
+  */
+  let b = 1
+Hit: Extract local module "T" to file "T.res"
+
+CreateFile: T.res
+
+TextDocumentEdit: T.res
+{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}
+newText:
+<--here
+//   ^xfm
+let b = 1
+//  ^xfm
+
+
+TextDocumentEdit: not_compiled/DocTemplate.res
+{"start": {"line": 12, "character": 0}, "end": {"line": 16, "character": 1}}
+newText:
+<--here
+
+
+Xform not_compiled/DocTemplate.res 18:2
+can't find module DocTemplate
+Hit: Add Documentation template
+
+TextDocumentEdit: DocTemplate.res
+{"start": {"line": 17, "character": 0}, "end": {"line": 18, "character": 46}}
+newText:
+<--here
+/**
+
+*/
+@module("path")
+external dirname: string => string = "dirname"
+

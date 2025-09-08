@@ -1,0 +1,19 @@
+{
+  "name": "large-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "rescript build -w",
+    "build": "rescript build",
+    "clean": "rescript clean"
+  },
+  "devDependencies": {
+    "react": "^16.13.1",
+    "react-dom": "^16.8.6",
+    "rescript": "^9.1.4"
+  },
+  "dependencies": {
+    "@glennsl/bs-json": "^5.0.4",
+    "@rescript/react": "^0.10.3"
+  }
+}

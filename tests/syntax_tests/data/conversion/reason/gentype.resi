@@ -1,0 +1,2 @@
+@genType
+let x: int

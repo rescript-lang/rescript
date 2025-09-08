@@ -1,0 +1,8 @@
+module type Signature  =
+  sig
+    type nonrec t
+    type nonrec ('a, 'b) t = ('a, 'b) node
+    type nonrec t[@@attr ]
+    type nonrec t = s[@@onFirst ]
+    and s = string[@@onSecond ]
+  end

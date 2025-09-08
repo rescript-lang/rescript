@@ -1,0 +1,15 @@
+
+  [1;33mWarning number 26[0m
+  [36m/.../fixtures/unused_variable.res[0m:[2m2:7[0m
+
+  1 [2m│[0m let x = {
+  [1;33m2[0m [2m│[0m   let [1;33mf[0m = 12
+  3 [2m│[0m   13
+  4 [2m│[0m }
+
+  unused variable f.
+
+Fix this by:
+- Deleting the variable if it's not used anymore.
+- Prepending the variable name with `_` (like `_f`) to ignore that the variable is unused.
+- Using the variable somewhere.

@@ -1,0 +1,20 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/math_operator_float.res[0m:[2m3:9-11[0m
+
+  1 [2m│[0m let num = 0
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let x = [1;31mnum[0m +. 12.
+  4 [2m│[0m 
+
+  This has type: [1;31mint[0m
+  But it's being used with the [1;33m+.[0m operator, which works on: [1;33mfloat[0m
+
+  Floats and ints have their own mathematical operators. This means you cannot add a float and an int without converting between the two.
+
+  Possible solutions:
+  - Ensure all values in this calculation have the type [1;33mfloat[0m. You can convert between floats and ints via [1;33mFloat.toInt[0m and [1;33mInt.fromFloat[0m.
+  - Change the operator to [1;33m+[0m, which works on [1;33mint[0m
+  
+  You can convert [1;33mint[0m to [1;33mfloat[0m with [1;33mInt.toFloat[0m.
+  If this is a literal, try a number with a trailing dot (e.g. [1;33m20.[0m).

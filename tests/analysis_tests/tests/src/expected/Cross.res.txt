@@ -1,0 +1,108 @@
+References src/Cross.res 0:17
+[
+{"uri": "Cross.res", "range": {"start": {"line": 0, "character": 15}, "end": {"line": 0, "character": 25}}},
+{"uri": "Cross.res", "range": {"start": {"line": 3, "character": 16}, "end": {"line": 3, "character": 26}}},
+{"uri": "Cross.res", "range": {"start": {"line": 5, "character": 13}, "end": {"line": 5, "character": 23}}},
+{"uri": "Cross.res", "range": {"start": {"line": 7, "character": 16}, "end": {"line": 7, "character": 26}}},
+{"uri": "References.res", "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}}
+]
+
+References src/Cross.res 9:31
+[
+{"uri": "Cross.res", "range": {"start": {"line": 9, "character": 28}, "end": {"line": 9, "character": 51}}},
+{"uri": "Cross.res", "range": {"start": {"line": 12, "character": 29}, "end": {"line": 12, "character": 52}}},
+{"uri": "Cross.res", "range": {"start": {"line": 14, "character": 26}, "end": {"line": 14, "character": 49}}},
+{"uri": "Cross.res", "range": {"start": {"line": 16, "character": 29}, "end": {"line": 16, "character": 52}}},
+{"uri": "ReferencesWithInterface.res", "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}},
+{"uri": "ReferencesWithInterface.resi", "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}}
+]
+
+Rename src/Cross.res 18:13 RenameWithInterfacePrime
+[
+{
+  "kind": "rename",
+  "oldUri": "RenameWithInterface.resi",
+  "newUri": "RenameWithInterfacePrime.resi"
+},
+{
+  "kind": "rename",
+  "oldUri": "RenameWithInterface.res",
+  "newUri": "RenameWithInterfacePrime.res"
+},
+{
+  "textDocument": {
+  "version": null,
+  "uri": "Cross.res"
+  },
+  "edits": [{
+      "range": {"start": {"line": 18, "character": 8}, "end": {"line": 18, "character": 27}},
+      "newText": "RenameWithInterfacePrime"
+      }, {
+      "range": {"start": {"line": 21, "character": 8}, "end": {"line": 21, "character": 27}},
+      "newText": "RenameWithInterfacePrime"
+      }]
+  }
+]
+
+Rename src/Cross.res 21:28 xPrime
+[
+{
+  "textDocument": {
+  "version": null,
+  "uri": "RenameWithInterface.resi"
+  },
+  "edits": [{
+      "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}},
+      "newText": "xPrime"
+      }]
+  },
+{
+  "textDocument": {
+  "version": null,
+  "uri": "RenameWithInterface.res"
+  },
+  "edits": [{
+      "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}},
+      "newText": "xPrime"
+      }]
+  },
+{
+  "textDocument": {
+  "version": null,
+  "uri": "Cross.res"
+  },
+  "edits": [{
+      "range": {"start": {"line": 18, "character": 28}, "end": {"line": 18, "character": 29}},
+      "newText": "xPrime"
+      }, {
+      "range": {"start": {"line": 21, "character": 28}, "end": {"line": 21, "character": 29}},
+      "newText": "xPrime"
+      }]
+  }
+]
+
+TypeDefinition src/Cross.res 24:5
+{"uri": "TypeDefinition.res", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 28}}}
+
+Definition src/Cross.res 27:32
+{"uri": "DefinitionWithInterface.res", "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}}}
+
+Definition src/Cross.res 30:36
+{"uri": "DefinitionWithInterface.res", "range": {"start": {"line": 3, "character": 5}, "end": {"line": 3, "character": 6}}}
+
+TypeDefinition src/Cross.res 33:37
+{"uri": "DefinitionWithInterface.resi", "range": {"start": {"line": 3, "character": 0}, "end": {"line": 3, "character": 6}}}
+
+Complete src/Cross.res 36:28
+posCursor:[36:28] posNoWhite:[36:27] Found expr:[36:3->36:28]
+Pexp_ident DefinitionWithInterface.a:[36:3->36:28]
+Completable: Cpath Value[DefinitionWithInterface, a]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[DefinitionWithInterface, a]
+Path DefinitionWithInterface.a
+[]
+
+Definition src/Cross.res 39:39
+{"uri": "DefinitionWithInterface.res", "range": {"start": {"line": 9, "character": 6}, "end": {"line": 9, "character": 7}}}
+

@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitives6.res[0m:[2m3:7-8[0m
+
+  1 [2m│[0m /* Wrong constructor argument */
+  2 [2m│[0m type x = X(int, float)
+  [1;31m3[0m [2m│[0m X(10, [1;31m10[0m)->ignore
+  4 [2m│[0m 
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33mfloat[0m
+  
+  You can convert [1;33mint[0m to [1;33mfloat[0m with [1;33mInt.toFloat[0m.
+  If this is a literal, try a number with a trailing dot (e.g. [1;33m20.[0m).

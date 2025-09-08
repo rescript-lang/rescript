@@ -1,0 +1,10 @@
+{
+  "name": "ns",
+  "version": "0.1.0",
+  "sources": ["src"],
+  "package-specs": {
+    "module": "commonjs",
+    "in-source": true
+  },
+  "namespace": true
+}

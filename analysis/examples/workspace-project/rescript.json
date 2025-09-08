@@ -1,0 +1,11 @@
+{
+  "name": "workspace-project",
+  "version": "0.1.0",
+  "sources": [],
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "dependencies": ["common", "myplugin", "app"]
+}

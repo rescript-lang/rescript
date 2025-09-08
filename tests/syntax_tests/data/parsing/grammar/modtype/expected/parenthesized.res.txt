@@ -1,0 +1,14 @@
+module type Bt  = Btree
+module type Bt  = Std.Btree
+module type Bt  = ((Btree)[@attrIdent ][@attrParens ])
+module type MyHash  =
+  sig
+    include module type of struct include Hashtbl end
+    val replace : ('a, 'b) t -> 'a -> 'b -> unit (a:3)
+  end
+module type MyHash  =
+  sig
+    include
+      ((module type of struct include Hashtbl end)[@onModTypeOf ][@onParens ])
+    val replace : ('a, 'b) t -> 'a -> 'b -> unit (a:3)
+  end

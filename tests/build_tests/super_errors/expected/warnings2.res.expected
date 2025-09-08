@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/warnings2.res[0m:[2m2:3-4[0m
+
+  1 [2m│[0m let z = () => {
+  [1;31m2[0m [2m│[0m   [1;31m10[0m
+  3 [2m│[0m   10
+  4 [2m│[0m }
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33munit[0m
+
+  - Did you mean to assign this to a variable?
+  - If you don't care about the result of this expression, you can assign it to [1;33m_[0m via [1;33mlet _ = ...[0m or pipe it to [1;33mignore[0m via [1;33mexpression->ignore[0m

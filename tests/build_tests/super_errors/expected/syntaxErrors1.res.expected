@@ -1,0 +1,8 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/syntaxErrors1.res[0m:[2m1:12[0m
+
+  [1;31m1[0m [2m│[0m let b = fo;[1;31m;[0m;;;;;;;;;;;;;;
+  2 [2m│[0m 
+
+  I'm not sure what to parse here when looking at ";".

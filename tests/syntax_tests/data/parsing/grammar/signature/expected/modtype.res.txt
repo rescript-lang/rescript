@@ -1,0 +1,9 @@
+module type Signature  =
+  sig
+    module type Belt
+    module type Belt[@@onModTypeDecl ]
+    module type Belt  = sig module type Array module type List end
+    module type Belt  = sig module type Array module type List end[@@onModTypeDecl
+                                                                    ]
+  end
+module type my_module_type  = sig  end

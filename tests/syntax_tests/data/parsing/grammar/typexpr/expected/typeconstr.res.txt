@@ -1,0 +1,64 @@
+type nonrec t = string
+type nonrec t = Parser.t
+type nonrec t = Lang.Parser.t
+type nonrec t = string option
+type nonrec t = string option
+type nonrec t = string Option.t
+type nonrec t = string Option.t
+type nonrec t = (a, b, c) Mod.Sub.t
+type nonrec t = (a, b, c) Mod.Sub.t
+type nonrec t = list
+type nonrec t = string list
+type nonrec t = < age: int   >  list
+type nonrec t = (< age: int   > , < name: string   > ) list
+type nonrec t = < .. > 
+type nonrec t = < .. >  list
+type nonrec t = < age: int   ;.. > 
+type nonrec t = < age: int   ;.. >  list
+type nonrec t = < age: int [@attr ]  ;.. > 
+type nonrec t = < age: int [@attr ]  ;.. >  list
+type nonrec t = < age: int [@attr ] ;name: string [@attr ]  ;.. > 
+type nonrec t = < age: int [@attr ] ;name: string [@attr ]  ;.. >  list
+type nonrec t = < age: int   ;.. > 
+type nonrec t = < age: int   ;.. >  list
+type nonrec t = < age: int  ;name: string   ;.. > 
+type nonrec t = < age: int  ;name: string   ;.. >  list
+let (t : string) = x
+let (t : Parser.t) = x
+let (t : Lang.Parser.t) = x
+let (t : string option) = x
+let (t : string option) = x
+let (t : string Option.t) = x
+let (t : string Option.t) = x
+let (t : (a, b, c) Mod.Sub.t) = x
+let (t : (a, b, c) Mod.Sub.t) = x
+let (t : list) = x
+let (t : string list) = x
+let (t : < age: int   >  list) = x
+let (t : < age: int   >  list) = x
+let (t : < age: int [@attr ]  >  list) = x
+let (t : < age: int [@attr ]  >  list) = x
+let (t : < age: int [@attr ] ;name: string [@attr ]  >  list) = x
+let (t : (< age: int   > , < name: string   > ) list) = x
+let (t : (< age: int [@attr ]  > , < name: string [@attr ]  > ) list) = x
+let (t :
+  (< age: int [@attr ] ;name: string [@attr ]  > ,
+    < name: string [@attr ] ;age: int [@attr ]  > ) list)
+  = x
+let (t : < .. >  list) = x
+let (t : <  >  list) = x
+let (t : < age: int   ;.. >  list) = x
+let (t : < age: int   >  list) = x
+let (t : < age: int   ;.. >  list) = x
+let (t : < age: int [@attr ]  ;.. >  list) = x
+let (t : < age: int [@attr ]  >  list) = x
+let (t : < age: int [@attr ]  ;.. >  list) = x
+let (t : < age: int  ;name: string   ;.. >  list) = x
+let (t : < age: int [@attr ] ;name: string [@attr ]  ;.. >  list) = x
+let (t : string list) = x
+type nonrec ('T, 'E) id_6 =
+  | Ok of 'T 
+  | Err of {
+  payload: 'E } 
+let foo [arity:1](x : int as 'X) = x
+module type A  = (Foo with type  t =  'X constraint 'X = int)

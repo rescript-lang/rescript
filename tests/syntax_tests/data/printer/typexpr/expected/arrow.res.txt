@@ -1,0 +1,227 @@
+type t = (string, string) => string
+type t = (~firstName: string, ~lastName: string) => string
+type t = (~firstName: string=?, ~lastName: string=?) => string
+
+type t = (
+  string,
+  string,
+  superLongIdentifierHere,
+  superLongIdentifierHere,
+  superLongIdentifierHere,
+) => okok
+
+type t = (
+  ~firstName: string,
+  ~lastName: string,
+  ~long: superLongIdentifierHere=?,
+  ~long2: superLongIdentifierHere=?,
+  ~long3: superLongIdentifierHere=?,
+) => string
+
+type t = (_, typeConstr<'a, state, 'foo>, 'x as 'y, module(S), %extension) => string
+
+external c_binding: (
+  string,
+  string,
+  superLongIdentifierHere,
+  superLongIdentifierHere,
+  superLongIdentifierHere,
+) => okok = "c_binding_external_primitive"
+
+external c_binding: (
+  ~any: _,
+  string,
+  ~firstClassModule: module(Hashmap with
+    type key = string
+    and type value = int
+    and type superLongThingHere = definitelyLineBreak
+  )=?,
+  ~typeConstr: typeConstr<
+    superLongIdentifierHere,
+    superLongIdentifierHere,
+    superLongIdentifierHere,
+  >,
+  ~subArrow: (
+    ~subArrow: 'a1,
+    ~subArrowParameter: 'a2,
+    ~subArrowParameter3: loooooooongTypExpr,
+  ) => (foo, bar, baz),
+  ~subArrow2: (
+    ~subArrow: 'a1,
+    ~subArrowParameter: 'a2,
+    ~subArrowParameter3: loooooooongTypExpr,
+  ) => (
+    foo,
+    bar,
+    baz,
+    veryLooooooooooooooooongTupleTypeHere,
+    veryLooooooooooooooooongTupleTypeHere,
+    shoulBreakThatLine,
+  ),
+  ~jsObject: {
+    "name": string,
+    "otherLongName": evenLongerType,
+    "woooooooooooooo": excitingTypeHereBecauseItWillBreakthatLine,
+  }=?,
+) => okok = "c_binding_external_primitive"
+
+type t = (
+  ~firstName: string,
+  ~lastName: string,
+) => {
+  "name": string,
+  "age": int,
+  "moreProps": superLongIdentifierHere,
+  "moreProps2": superLongIdentifierHere2,
+  "moreProps3": superLongIdentifierHere3,
+  "moreProps4": superLongIdentifierHere4,
+}
+
+type t = (
+  ~firstName: string,
+  ~lastName: string,
+) => (
+  name,
+  string,
+  age,
+  int,
+  moreProps,
+  superLongIdentifierHere,
+  moreProps2,
+  superLongIdentifierHere2,
+  moreProps3,
+  superLongIdentifierHere3,
+  moreProps4,
+  superLongIdentifierHere4,
+)
+
+type t = (
+  ~firstName: string,
+  ~lastName: string,
+) => typeConstr<
+  name,
+  string,
+  age,
+  int,
+  moreProps,
+  superLongIdentifierHere,
+  moreProps2,
+  superLongIdentifierHere2,
+  moreProps3,
+  superLongIdentifierHere3,
+  moreProps4,
+  superLongIdentifierHere4,
+>
+
+type t = (
+  ~firstName: string,
+  ~lastName: string,
+) => module(Hashmap with
+  type key = string
+  and type value = int
+  and type superLongThingHere = definitelyLineBreak
+)
+
+type t = (@attr string, @attr float) => unit
+type t = (@attr @attr2 string, @attr @attr2 float, @attr3 int) => unit
+
+type t = @attr (string => unit)
+type t = @attr (foo, bar, baz) => unit
+type t = @attr (foo, @attr2 ~f: bar, @attr3 ~f: baz) => unit
+
+type t = @attr (string => @attr (int => unit))
+type t = @attr (string, int) => @attr (int, float) => unit
+type t = @attr (int => @attr (int, float) => @attr (unit => unit => unit))
+type t = @attr (@attr2 ~f: int, @attr3 ~g: float) => unit
+
+type f = (
+  @attr @attr @attr @attr @attr @attr @attr @attr @attr ~f: superLong,
+  @attr2
+  @superLongAttributeNameSuperLongsuperLongAttributeName
+  @attr2
+  @superLongAttributeNameSuperLongsuperLongAttributeName
+  ~g: wowwwThisisLonggggg,
+  @attr3 ~h: ccccrazysldkfjslkdjflksdjkf=?,
+) => unit
+
+type t = @attr (
+  stringWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong => @attr2 (
+    floatWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong => @attr3 (
+      intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong => unitWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong
+    )
+  )
+)
+
+type t = @attr (
+  fooWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  barWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  bazWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+) => @attr2 (
+  stringWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  floatWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+) => unit
+
+type t = @attr
+@attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong
+@attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong (
+  fooWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  barWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  bazWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+) => @attr2
+@attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong
+@attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong (
+  stringWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  floatWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+) => unit
+
+external debounce: (int, unit) => unit = "debounce"
+
+external debounce: int => unit => unit = "debounce"
+
+external debounce: (int, unit => unit) => unit => unit = "debounce"
+
+external debounce: (int, unit => unit, unit => unit) => unit => unit = "debounce"
+
+external debounce: (int, unit => unit, unit => unit => unit) => unit => unit = "debounce"
+
+type returnTyp = (int, int) => @magic float
+type returnTyp = (
+  intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+) => @magic float
+type returnTyp = (
+  intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+  intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
+) => @magic
+@magicWithSuperLongIdentiefierNameLoooooooooooooooooooooooong
+@magicWithSuperLongIdentiefierNameLoooooooooooooooooooooooong
+float
+
+// uncurried
+type t = int => int
+type t = (int, int) => int
+type t = (int, int) => int
+type t = (int, int, int, int) => int
+
+type t = @attr int => unit
+type t = (@attr int, @attr2 int) => unit
+type t = (@attrOnInt int, @attrOnInt int, @attrOnInt int, @attrOnInt int) => int
+type t = (@attr ~x: int, ~y: int, @attr ~z: int, @attr ~omega: int) => unit
+
+@val external requestAnimationFrame: (float => unit) => unit = "requestAnimationFrame"
+@val external requestAnimationFrame: @attr ((float => unit) => unit) = "requestAnimationFrame"
+
+type arrows = (int, (float => unit) => unit, float) => unit
+
+// tuple as single parameter
+let prepare_expansion: ((type_expr, type_expr)) => (type_expr, type_expr) = f
+
+type getInitialPropsFn<'a> = {
+  "query": dict<string>,
+  "req": Js.Nullable.t<Js.t<'a>>,
+} => Js.Promise.t<Js.t<'a>>
+
+// keep parens
+external fromPoly: ([> ] as 'a) => t = "%identity"
+
+external fromPoly: ([> ] as 'a, [> ] as 'b) => t = "%identity"

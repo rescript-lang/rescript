@@ -1,0 +1,15 @@
+Hover src/DocComments.res 9:9
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n  Doc comment with a triple-backquote example\\n  \\n  ```res example\\n    let a = 10\\n    /*\\n     * stuff\\n     */\\n  ```\\n"}}
+
+Hover src/DocComments.res 22:6
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n\n  Doc comment with a triple-backquote example\n  \n  ```res example\n    let a = 10\n    /*\n     * stuff\n     */\n  ```\n"}}
+
+Hover src/DocComments.res 33:9
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n  Doc comment with a triple-backquote example\\n  \\n  ```res example\\n    let a = 10\\n    let b = 20\\n  ```\\n"}}
+
+Hover src/DocComments.res 44:6
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n\n  Doc comment with a triple-backquote example\n  \n  ```res example\n    let a = 10\n    let b = 20\n  ```\n"}}
+
+Hover src/DocComments.res 48:5
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\nNew doc comment format"}}
+

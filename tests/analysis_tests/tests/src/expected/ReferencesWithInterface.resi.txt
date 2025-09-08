@@ -1,0 +1,9 @@
+References src/ReferencesWithInterface.resi 0:4
+[
+{"uri": "Cross.res", "range": {"start": {"line": 9, "character": 52}, "end": {"line": 9, "character": 53}}},
+{"uri": "Cross.res", "range": {"start": {"line": 12, "character": 53}, "end": {"line": 12, "character": 54}}},
+{"uri": "Cross.res", "range": {"start": {"line": 16, "character": 53}, "end": {"line": 16, "character": 54}}},
+{"uri": "ReferencesWithInterface.res", "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}}},
+{"uri": "ReferencesWithInterface.resi", "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}}}
+]
+

@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_inline_records.res[0m:[2m4:16-30[0m
+
+  2 [2m│[0m type b = | ...a | Three
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m let b: b = One([1;31m{name: "hello"}[0m)
+  5 [2m│[0m 
+
+  Some required record fields are missing: age.

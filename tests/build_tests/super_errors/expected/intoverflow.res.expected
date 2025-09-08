@@ -1,0 +1,57 @@
+
+  [1;33mWarning number 107[0m
+  [36m/.../fixtures/intoverflow.res[0m:[2m2:15-27[0m
+
+  1 [2m│[0m let v1: int = 2_147_483_647 // max int
+  [1;33m2[0m [2m│[0m let v2: int = [1;33m2_147_483_648[0m // overflow
+  3 [2m│[0m let v3: int = 2_147_483_649 // overflow
+  4 [2m│[0m let v4: int = -2_147_483_647
+
+  Integer literal exceeds the range of representable integers of type int
+
+
+  [1;33mWarning number 107[0m
+  [36m/.../fixtures/intoverflow.res[0m:[2m3:15-27[0m
+
+  1 [2m│[0m let v1: int = 2_147_483_647 // max int
+  2 [2m│[0m let v2: int = 2_147_483_648 // overflow
+  [1;33m3[0m [2m│[0m let v3: int = [1;33m2_147_483_649[0m // overflow
+  4 [2m│[0m let v4: int = -2_147_483_647
+  5 [2m│[0m let v5: int = -2_147_483_648 // min int
+
+  Integer literal exceeds the range of representable integers of type int
+
+
+  [1;33mWarning number 107[0m
+  [36m/.../fixtures/intoverflow.res[0m:[2m6:16-28[0m
+
+  4 [2m│[0m let v4: int = -2_147_483_647
+  5 [2m│[0m let v5: int = -2_147_483_648 // min int
+  [1;33m6[0m [2m│[0m let v6: int = -[1;33m2_147_483_649[0m // underflow
+  7 [2m│[0m 
+  8 [2m│[0m // hex
+
+  Integer literal exceeds the range of representable integers of type int
+
+
+  [1;33mWarning number 107[0m
+  [36m/.../fixtures/intoverflow.res[0m:[2m11:15-27[0m
+
+   9 [2m│[0m let v7: int = 0xFFFF_FFFF // -1
+  10 [2m│[0m let v8: int = -0xFFFF_FFFF // 1
+  [1;33m11[0m [2m│[0m let v9: int = [1;33m0x1_0000_0000[0m // overflow
+  12 [2m│[0m let v10: int = -0x1_0000_0000 // underflow
+  13 [2m│[0m 
+
+  Integer literal exceeds the range of representable integers of type int
+
+
+  [1;33mWarning number 107[0m
+  [36m/.../fixtures/intoverflow.res[0m:[2m12:17-29[0m
+
+  10 [2m│[0m let v8: int = -0xFFFF_FFFF // 1
+  11 [2m│[0m let v9: int = 0x1_0000_0000 // overflow
+  [1;33m12[0m [2m│[0m let v10: int = -[1;33m0x1_0000_0000[0m // underflow
+  13 [2m│[0m 
+
+  Integer literal exceeds the range of representable integers of type int

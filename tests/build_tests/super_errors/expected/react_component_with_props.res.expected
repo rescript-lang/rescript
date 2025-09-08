@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/react_component_with_props.res[0m:[2m3:31-13:10[0m
+
+   1 [2m│[0m module V4C7 = {
+   2 [2m│[0m   @react.componentWithProps
+   [1;31m3[0m [2m│[0m   let make = React.forwardRef([1;31m([0m
+   [1;31m4[0m [2m│[0m [1;31m    ~className=?,[0m
+   [2m.[0m [2m│[0m [2m...[0m
+  [1;31m12[0m [2m│[0m [1;31m      children[0m
+  [1;31m13[0m [2m│[0m [1;31m    </div>[0m
+  14 [2m│[0m   )
+  15 [2m│[0m }
+
+  Components using React.forwardRef cannot use @react.componentWithProps. Use @react.component instead.

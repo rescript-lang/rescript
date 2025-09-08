@@ -1,0 +1,79 @@
+let f [arity:1]x = x + 1
+let f [arity:1]_ = Js.log {js|test|js}
+let f [arity:1]() = Js.log {js|unit|js}
+let f [arity:1](Reducer (inst, comp)) = inst.render comp
+let f [arity:1](Instance) = ()
+let f [arity:2]a b = a + b
+let f [arity:2]1 2 = ()
+let f [arity:1]{js|stringPattern|js} = ()
+let f [arity:2]{js|stringPattern|js} {js|stringPattern|js} = ()
+let f [arity:1]() = ()
+let f [arity:2](a : int) (b : int) = a + b
+let f [arity:2]_ _ = ()
+let f [arity:2][|a;b|] [|c;d|] = ((a + b) + c) + d
+let f [arity:1]{ a } = a + 1
+let f [arity:2]{ a; b } { c; d } = ((a + b) + c) + d
+let f [arity:1](a, b) = a + b
+let f [arity:2](a, b) (c, d) = ((a + b) + c) + d
+let f [arity:1]exception Terminate = ()
+let f [arity:2]exception Terminate exception Exit = ()
+let f [arity:1][] = ()
+let f [arity:1](x::xs) = x + (xs -> Belt.List.length)
+let f [arity:2](x : int) (y : int) = x + y
+let f [arity:2]~a  ~b  = a + b
+let f [arity:2]~a:x  ~b:y  = x + y
+let f [arity:2]~a:(x : int)  ~b:(y : int)  = x + y
+let f [arity:3]?(a= 1)  ?(b= 2)  c = (a + b) + c
+let f [arity:3]?a:(x= 1)  ?b:(y= 2)  c = (x + y) + c
+let f [arity:3]?a:((x : int)= 1)  ?b:((y : int)= 2)  c = (x + y) + c
+let f [arity:3]?a  ?b  c =
+  match (a, b) with | (Some a, Some b) -> (a + b) + c | _ -> 3
+let f [arity:3]?a:x  ?b:y  c =
+  match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3
+let f [arity:3]?a:(x : int option)  ?b:(y : int option)  c =
+  match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3
+let f [arity:2]a b = a + b
+let f [arity:1]() = ()
+let f [arity:1]() = ()
+let f [arity:3]a b c = ()
+let f [arity:4]a b c d = ()
+let f [arity:3]a b c = ()
+let f [arity:4]~a:((a)[@attr ])  b ~c:((c)[@attr ])  d = ()
+let f [arity:4]~a:((a)[@attr ])  ((b)[@attrOnB ]) ~c:((c)[@attr ]) 
+  ((d)[@attrOnD ]) = ()
+let f [arity:1]list = list ()
+;;match colour with
+  | Red when
+      (l == l') ||
+        (Clflags.classic.contents &&
+           ((l == Nolabel) && (not (is_optional l'))))
+      -> (t1, t2)
+  | _ -> ()
+let arr =
+  [|((fun [arity:1]_ -> doThings ()));((fun [arity:1]_ -> doThings ()));((
+    fun [arity:1]_ -> doThings ()))|]
+let list =
+  [(fun [arity:1]_ -> doThings ());
+  (fun [arity:1]_ -> doThings ());
+  (fun [arity:1]_ -> doThings ())]
+let tuple =
+  ((fun [arity:1]_ -> doThings ()), (fun [arity:1]_ -> doThings ()),
+    (fun [arity:1]_ -> doThings ()))
+;;fun [arity:1]_ -> doThings ()
+let x =
+  Constructore
+    ((fun [arity:1]_ -> copyChecklistItemCB ()),
+      (fun [arity:1]_ -> copyChecklistItemCB ()))
+let y =
+  `Constructore
+    ((fun [arity:1]_ -> copyChecklistItemCB ()),
+      (fun [arity:1]_ -> copyChecklistItemCB ()))
+let f [arity:1]list = list + 1
+let foo = (() : unit)
+type nonrec u = unit
+let un = (() : u)
+type nonrec ('a, 'b) d = ('a * 'b)
+let c [arity:1]() = ((1, 2) : ('a, 'b) d)
+let fn [arity:1]f = f
+type nonrec f = int -> unit (a:1)
+let a = fn (fun [arity:1]_ -> () : f)

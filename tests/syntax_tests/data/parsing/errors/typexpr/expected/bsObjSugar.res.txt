@@ -1,0 +1,151 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:2:8-3:13
+
+  1 │ type state = {
+  2 │   "url"
+  3 │   "protocols": array<string>
+  4 │ }
+  5 │ 
+
+  Did you forget a `:` here? It signals the start of a type
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:7:14-8:13
+
+   5 │ 
+   6 │ type state = {
+   7 │   @attr "url"
+   8 │   "protocols": array<string>
+   9 │ }
+  10 │ 
+
+  Did you forget a `:` here? It signals the start of a type
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:13:14-14:13
+
+  11 │ type state = {
+  12 │   "url": string,
+  13 │   "protocols"
+  14 │   "websocket": Websocket.t,
+  15 │ }
+  16 │ 
+
+  Did you forget a `:` here? It signals the start of a type
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:19:14-20:1
+
+  17 │ type state = {
+  18 │   "url": string,
+  19 │   "protocols"
+  20 │ }
+  21 │ 
+  22 │ type state = {
+
+  Did you forget a `:` here? It signals the start of a type
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:24:1
+
+  22 │ type state = {
+  23 │   "send": string =>
+  24 │ }
+  25 │ 
+  26 │ type state = {
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:27:10
+
+  25 │ 
+  26 │ type state = {
+  27 │   "age": ,
+  28 │   "name": string
+  29 │ }
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:32:15
+
+  30 │ 
+  31 │ type state = {
+  32 │   @set "age": ,
+  33 │   "name": string
+  34 │ }
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:36:25
+
+  34 │ }
+  35 │ 
+  36 │ type state = {.. "age": }
+  37 │ type state = {
+  38 │   ..
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:39:8-40:8
+
+  37 │ type state = {
+  38 │   ..
+  39 │   "age" 
+  40 │   "name": string
+  41 │ }
+  42 │ 
+
+  Did you forget a `:` here? It signals the start of a type
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:45:3-11
+
+  43 │ type websocket = {
+  44 │   "id":
+  45 │   "channel": channelTyp
+  46 │ }
+  47 │ 
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:49:7-50:0
+
+  47 │ 
+  48 │ type websocket = {
+  49 │   "id"
+  50 │ 
+
+  Did you forget a `:` here? It signals the start of a type
+
+type nonrec state =
+  < url: [%rescript.typehole ]  ;protocols: string array   > 
+type nonrec state =
+  < url: [%rescript.typehole ] [@attr ] ;protocols: string array   > 
+type nonrec state =
+  < url: string  ;protocols: [%rescript.typehole ]  ;websocket: Websocket.t  
+    > 
+type nonrec state = < url: string  ;protocols: [%rescript.typehole ]   > 
+type nonrec state = < send: string -> [%rescript.typehole ] (a:1)   > 
+type nonrec state = < age: [%rescript.typehole ]  ;name: string   > 
+type nonrec state = < age: [%rescript.typehole ] [@set ] ;name: string   > 
+type nonrec state = < age: [%rescript.typehole ]   ;.. > 
+type nonrec state = < age: [%rescript.typehole ]  ;name: string   ;.. > 
+type nonrec websocket =
+  < id: [%rescript.typehole ]  ;channel: channelTyp   > 
+type nonrec websocket = < id: [%rescript.typehole ]   > 

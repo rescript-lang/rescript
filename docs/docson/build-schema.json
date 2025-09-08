@@ -1,0 +1,502 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "definitions": {
+    "module-format": {
+      "enum": ["esmodule", "commonjs", "es6", "es6-global"],
+      "description": "es6 and es6-global are deprecated. Default: commonjs."
+    },
+    "suffix-spec": {
+      "type": "string",
+      "description": "Suffix of generated js files. Default: .js. May contain letters, digits, \"-\", \"_\" and \".\" and must end with .js, .mjs or .cjs."
+    },
+    "module-format-object": {
+      "type": "object",
+      "properties": {
+        "module": {
+          "$ref": "#/definitions/module-format"
+        },
+        "in-source": {
+          "type": "boolean",
+          "description": "Default: false."
+        },
+        "suffix": {
+          "$ref": "#/definitions/suffix-spec"
+        }
+      },
+      "required": ["module"]
+    },
+    "package-spec": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/module-format"
+        },
+        {
+          "$ref": "#/definitions/module-format-object"
+        }
+      ]
+    },
+    "namespace-spec": {
+      "oneOf": [
+        {
+          "type": "boolean",
+          "description": "true to use the package name as namespace, false to not use"
+        },
+        {
+          "type": "string",
+          "description": "provide customized namespace name"
+        }
+      ]
+    },
+    "package-specs": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/package-spec"
+          }
+        },
+        {
+          "$ref": "#/definitions/package-spec"
+        }
+      ]
+    },
+    "reanalyze": {
+      "type": "object",
+      "properties": {
+        "analysis": {
+          "type": "array",
+          "items": {
+            "enum": ["dce", "exception", "termination"]
+          },
+          "description": "The types of analysis to activate. `dce` means dead code analysis, `exception` means exception analysis, and `termination` is to check for infinite loops."
+        },
+        "suppress": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths for any folders you'd like to exclude from analysis. Useful for bindings and similar. Example: `[\"src/bindings\"]`."
+        },
+        "unsuppress": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Any specific paths inside suppressed folders that you want to unsuppress. Example: [\"src/bindings/SomeBinding.res\"]."
+        },
+        "transitive": {
+          "type": "boolean",
+          "description": "specify whether transitively dead items should be reported (default: false)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ppx-specs": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "pp-specs": {
+      "type": "string"
+    },
+    "bs-dependency": {
+      "type": "string",
+      "title": "dependency"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/bs-dependency"
+      }
+    },
+    "js-post-build": {
+      "type": "object",
+      "properties": {
+        "cmd": {
+          "type": "string"
+        }
+      }
+    },
+    "rule-generator": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
+      },
+      "description": "The shell command is running in *dev* time, and you generated could should be checked in, the depedency is tracked properly during dev time,example: `{ \"name\" : \"ocamllex\", \"command\" : \"ocamllex.opt $in -o $out\"}`"
+    },
+    "build-generator": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "edge": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Note that we will add the directory path accordingly"
+    },
+    "sourceItem": {
+      "title": "sourceItem",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "dir": {
+              "type": "string",
+              "description": "name of the directory"
+            },
+
+            "type": {
+              "enum": ["dev"]
+            },
+            "files": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "if files are empty, the build system will populate it automatically. Useful for initial build"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "slow-re": {
+                      "type": "string",
+                      "description": "Regex to glob the patterns, syntax is documented [here](http://caml.inria.fr/pub/docs/manual-ocaml/libref/Str.html), for better incremental build performance, we'd suggest listing files explicitly"
+                    },
+                    "excludes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Files to be excluded"
+                    }
+                  }
+                }
+              ]
+            },
+            "generators": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/build-generator"
+              },
+              "description": "(WIP) Files generated in dev time"
+            },
+            "public": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Selected modules, for example, [Module_a, Module_b] "
+                },
+                {
+                  "enum": ["all"]
+                }
+              ],
+              "description": "Default: export all modules. It is recommended for library developers to hide some files/interfaces"
+            },
+            "resources": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subdirs": {
+              "title": "Sub directories",
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/sources",
+                  "description": "More source directories"
+                },
+                {
+                  "type": "boolean",
+                  "description": "true means traverse to all subdirs"
+                }
+              ]
+            },
+            "group": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "description": "A _unique_ name for each directory to refer as an internal dependency later"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "hierachy": {
+                      "type": "boolean",
+                      "description": "When true, all subdirs are considered as a whole as dependency"
+                    }
+                  }
+                }
+              ],
+              "description": "Not implemented yet"
+            },
+            "internal-depends": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "internal dependencies, if unspecified, all existing listed source files are considered potential dependencies"
+              }
+            }
+          },
+          "required": ["dir"]
+        },
+        {
+          "title": "Single non-nested directory",
+          "type": "string"
+        }
+      ]
+    },
+    "sources": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sourceItem"
+          },
+          "description": "A list of source items"
+        },
+        {
+          "$ref": "#/definitions/sourceItem",
+          "description": "A single source item"
+        }
+      ],
+      "description": "Example: `\"src\"` or `[\"src\", \"test\"]` or `[{\"dir\": \"src\", \"subdirs\": [...]}]`"
+    },
+    "gentype-specs": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        }
+      },
+      "description": "path to gentype, path resolution is similar to ReScript"
+    },
+    "jsx-specs": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "enum": [4],
+          "description": "Whether to apply the specific version of JSX PPX transformation"
+        },
+        "module": {
+          "type": "string",
+          "description": "JSX module. Either \"react\" for React, or (since v11.1) any valid module name to apply a generic JSX transform."
+        },
+        "preserve": {
+          "type": "boolean",
+          "description": "Whether to preserve the JSX in the output. Requires `version` to be set."
+        }
+      },
+      "additionalProperties": false
+    },
+    "bsc-flags": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Default: `[\"-no-alias-deps\"]`"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": ["reset", "prefix", "append"]
+            },
+            "flags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "(Not implemented yet)"
+        }
+      ]
+    },
+    "editor": {
+      "type": "object",
+      "properties": {
+        "autocomplete": {
+          "type": "object",
+          "description": "A mapping to extend the autocompletion for a given type with an array of modules. E.g. `{ \"int\": [\"IntUtils\", \"IntExt\"] }` will extend the autocompletion of the `int` type with the values from `IntUtils` and `IntExt` modules.",
+          "patternProperties": {
+            "^[a-zA-Z0-9_.]+$": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "title": "ReScript build configuration",
+  "description": "All paths are required to be in **Unix format** (foo/bar), the build system normalizes them for other platforms internally",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "The semantic version of the ReScript library"
+    },
+    "name": {
+      "type": "string",
+      "description": "Package name"
+    },
+    "namespace": {
+      "$ref": "#/definitions/namespace-spec",
+      "description": "can be true/false or a customized name"
+    },
+    "sources": {
+      "$ref": "#/definitions/sources",
+      "description": "Source code location"
+    },
+    "ignored-dirs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "a list of directories that bsb will not look into"
+    },
+    "bs-dependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`"
+    },
+    "bs-dev-dependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`"
+    },
+    "generators": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/rule-generator"
+      },
+      "description": "(WIP) Pre defined rules"
+    },
+    "cut-generators": {
+      "type": "boolean",
+      "description": "Ignore generators, cut the dependency on generator tools"
+    },
+    "jsx": {
+      "$ref": "#/definitions/jsx-specs",
+      "description": "Configuration for the JSX transformation."
+    },
+    "uncurried": {
+      "type": "boolean",
+      "description": "Configuration for the uncurried mode."
+    },
+    "gentypeconfig": {
+      "$ref": "#/definitions/gentype-specs",
+      "description": "gentype config, see cristianoc/genType for more details"
+    },
+    "bsc-flags": {
+      "$ref": "#/definitions/bsc-flags",
+      "description": "Flags passed to bsc.exe"
+    },
+    "warnings": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string",
+          "description": "Default: \"+a-4-9-20-41-50-102\". Go [here](https://rescript-lang.org/docs/manual/latest/warning-numbers) for the meanings of the warning flags"
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "boolean",
+              "description": "True means warn is error(default)"
+            },
+            {
+              "type": "string",
+              "description": "Same as warning number but different set"
+            }
+          ]
+        }
+      },
+      "description": "warning numbers and whether to turn it into error or not"
+    },
+    "ppx-flags": {
+      "$ref": "#/definitions/ppx-specs",
+      "description": "PPX macros to pass to compiler. The syntax is package_name/binary, for example: `rescript-relay/ppx`. Currenly searches in `node_modules`"
+    },
+    "pp-flags": {
+      "$ref": "#/definitions/pp-specs",
+      "description": "preprocessors to pass to compiler. The syntax is package_name/binary, for example: `pp/syntax.exe`. Currenly searches in `node_modules`"
+    },
+    "js-post-build": {
+      "$ref": "#/definitions/js-post-build",
+      "description": "(Experimental) post-processing hook. bsb will invoke `cmd ${file}` whenever a `${file}` is changed"
+    },
+    "package-specs": {
+      "$ref": "#/definitions/package-specs",
+      "description": "ReScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
+    },
+    "external-stdlib": {
+      "type": "string",
+      "description": "Use the external stdlib library instead of the one shipped with the compiler package"
+    },
+    "bs-external-includes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "(Not needed usually) external include directories, which will be applied `-I` to all compilation units"
+    },
+    "suffix": {
+      "$ref": "#/definitions/suffix-spec"
+    },
+    "reanalyze": {
+      "$ref": "#/definitions/reanalyze",
+      "description": "Configure reanalyze, a static code analysis tool for ReScript."
+    },
+    "editor": {
+      "$ref": "#/definitions/editor",
+      "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
+    },
+    "experimentalFeatures": {
+      "type": "object",
+      "description": "Enable experimental compiler features.",
+      "properties": {
+        "LetUnwrap": {
+          "type": "boolean",
+          "description": "Enable `let?` syntax."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "required": ["name", "sources"]
+}

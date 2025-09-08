@@ -1,0 +1,62 @@
+type t +=  
+  | Foo 
+type Foo.Bar.t +=  
+  | Foo 
+type ('a,'b) t +=  
+  | Foo of 'a 
+type ('a,'b) Foo.Bar.t +=  
+  | Foo of 'a 
+type t += private  
+  | Foo 
+type t += private  
+  | Foo 
+  | Bar 
+type t += private  
+  | Foo 
+type t += private  
+  | Foo 
+  | Bar 
+type t +=  
+  | Circle of string * int 
+  | Point of {
+  x: int ;
+  y: int } 
+type t +=  
+  | Circle of string * int 
+  | Point of {
+  x: int ;
+  y: int } 
+type t +=  
+  | Foo = Bar
+type t +=  
+  | Foo = Bar
+  | Circle = Circle2
+type t +=  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t += private  
+  | Foo = Bar
+type t += private  
+  | Foo = Bar
+  | Circle = Circle2
+type t += private  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t +=  
+  | Foo = Bar
+type t +=  
+  | Foo = Bar
+  | Circle = Circle2
+type t +=  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t += private  
+  | Foo = Bar
+type t += private  
+  | Foo = Bar
+  | Circle = Circle2
+type t += private  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t +=  
+  | Foo = Geo.Metry.Bar

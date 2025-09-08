@@ -1,0 +1,3 @@
+type a = ..
+
+type a

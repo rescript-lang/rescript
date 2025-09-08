@@ -1,0 +1,6 @@
+open Belt
+open! Belt
+open Belt[@@onOpen ]
+open Belt.Array
+open! Belt.Array
+open! Belt.Array[@@onOpen ]

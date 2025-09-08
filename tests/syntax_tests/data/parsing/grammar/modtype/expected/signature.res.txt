@@ -1,0 +1,4 @@
+module type BT  = sig val x : int end
+module type BT  = sig val x : int val y : int end
+module type BT  = ((sig val x : int end)[@attr ])
+module type BT  = ((sig val x : int val y : int end)[@attr1 ][@attr2 ])

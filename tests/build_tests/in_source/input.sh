@@ -1,0 +1,1 @@
+rescript build -regen

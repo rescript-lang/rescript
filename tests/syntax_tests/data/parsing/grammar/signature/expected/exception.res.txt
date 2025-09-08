@@ -1,0 +1,15 @@
+module type Signature  =
+  sig
+    exception Exit 
+    exception Exit of int 
+    exception Exit of int * string 
+    exception Exit of int * string 
+    exception Terminate of {
+      time: int ;
+      status: int } 
+    exception Terminate of {
+      time: int ;
+      status: int } 
+    exception Exit [@attr ]
+    exception Exit of int [@attr ]
+  end

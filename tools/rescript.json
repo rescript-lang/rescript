@@ -1,0 +1,14 @@
+{
+  "name": "@rescript/tools",
+  "version": "0.6.4",
+  "sources": [
+    {
+      "dir": "npm"
+    }
+  ],
+  "suffix": ".res.js",
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": false
+  }
+}

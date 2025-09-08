@@ -1,0 +1,80 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "defaultBranch": "master",
+    "useIgnoreFile": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useTemplate": "off"
+      },
+      "nursery": {
+        "noCommonJs": "error"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "warn"
+      },
+      "correctness": {
+        "useImportExtensions": "error",
+        "noUndeclaredDependencies": "error",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "warn"
+      }
+    }
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 80,
+    "attributePosition": "auto"
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "asNeeded",
+      "bracketSpacing": true,
+      "bracketSameLine": false,
+      "quoteStyle": "double",
+      "attributePosition": "auto"
+    }
+  },
+  "files": {
+    "ignore": [
+      ".yarn/**",
+      "tests/analysis_tests/**/src/**",
+      "tests/build_tests/**/src/**",
+      "tests/docstring_tests/**",
+      "tests/rewatch_tests/**",
+      "tests/gentype_tests/**",
+      "tests/tests/**/src/**",
+      "tests/tools_tests/**/src/**",
+      "analysis/examples/**/src/**",
+      "rewatch/**",
+      "lib/es6/**",
+      "lib/js/**",
+      "ninja/**",
+      "playground/**",
+      "*.bs.js",
+      "*.res.js",
+      "*.res.mjs",
+      "*.gen.ts*",
+      "*.d.ts",
+      "*.exe",
+      "package.json"
+    ]
+  }
+}

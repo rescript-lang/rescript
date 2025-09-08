@@ -1,0 +1,41 @@
+let r = { a = expr }
+let r = { a = expr }
+let r = { Parsetree.pexp_attributes = [||]; Parsetree.loc = loc }
+let r = { a; b; c }
+let r = { A.a = a; b }
+let r = { A.a = a; b; C.c = c }
+let r = { Parsetree.pexp_attributes = pexp_attributes; Parsetree.loc = loc }
+let r = { Parsetree.pexp_attributes = pexp_attributes; Parsetree.loc = loc }
+let r = { a = (expr : int); b = (x : string) }
+let r = { expr with pexp_attributes = [||] }
+let r = { expr with pexp_attributes = [||]; pexp_loc = loc }
+let r = { expr with pexp_attributes = [||] }
+let r = { (make () : myRecord) with foo = bar }
+let r = { (make () : myRecord) with foo = bar }
+let r = { x = ?None; y = ?None; z = ?(None : tt) }
+let z [arity:1]name = { name?; x = 3 }
+let z [arity:1]name = { name?; x = 3 }
+let z [arity:1]name = { name; x? }
+let zz [arity:1]name = { name; x? }
+let _ =
+  match z with
+  | { x? = None; y? = None; z? = (None : tt) } -> 11
+  | { name?; x = 3 } -> 42
+  | { name?; x = 3 } -> 4242
+  | { x? = None; y? = None; z? = (None : tt) } -> 11
+  | { name?; x = 3 } -> 42
+  | { name?; x = 3 } -> 4242
+type nonrec tt = {
+  x: int ;
+  y: string [@ns.opttinal ]}
+type nonrec ttt = {
+  x: int ;
+  y?: string }
+type nonrec multipleWithAttrs = {
+  x: int ;
+  y?: string [@attr ]}
+type nonrec singleWithAttrs = {
+  y?: string [@attr ]}
+type nonrec inlineWithAttrs =
+  | A of {
+  value: string [@as {js|VALUE|js}]} 

@@ -1,0 +1,9 @@
+(library
+ (name core)
+ (wrapped false)
+ (preprocess
+  (action
+   (run %{bin:cppo} %{env:CPPO_FLAGS=} %{input-file})))
+ (flags
+  (:standard -w +a-4-9-27-30-40-41-42-48-70))
+ (libraries depends ext flow_parser frontend gentype))

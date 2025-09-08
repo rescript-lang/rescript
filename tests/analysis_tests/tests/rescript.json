@@ -1,0 +1,22 @@
+{
+  "name": "test",
+  "reanalyze": {
+    "analysis": ["dce"]
+  },
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "compiler-flags": ["-w -33-44-8"],
+  "dependencies": ["@rescript/react"],
+  "jsx": { "version": 4 },
+  "suffix": ".res.js",
+  "editor": {
+    "autocomplete": {
+      "array": ["ArrayUtils"],
+      "Fastify.t": ["FastifyExt"]
+    }
+  }
+}

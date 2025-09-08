@@ -1,0 +1,14 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(executable
+ (name bsb_helper_main)
+ (public_name bsb_helper)
+ (package rescript)
+ (enabled_if
+  (<> %{profile} browser))
+ (flags
+  (:standard -w +a-9-40-42))
+ (libraries bsb_helper))

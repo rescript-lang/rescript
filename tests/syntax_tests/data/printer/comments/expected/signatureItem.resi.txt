@@ -1,0 +1,65 @@
+// Psig_value
+/* c0 */ external /* c1 */ force_gc /* c2 */: /* c3 */ unit /* c4 */ => /* c5 */ unit /* c6 */ =
+  "gc" // trailing
+
+// Psig_type
+/* c0 */ type /* c1 */ t /* c2 */ = /* c3 */ string /* c4 */
+
+/* c0 */ type /* c1 */ t /* c2 */ = /* c4 */ string /* c5 */
+// above
+and /* c6 */ s /* c7 */ = /* c8 */ int /* c9 */
+
+// Pstr_typext
+/* c0 */ type /* c1 */ Foo.Bar.t /* c2 */ +=
+  | /* before Foo */ Foo // after Foo
+  | /* before Bar */ Bar // after Bar
+
+/* c0 */ type /* c1 */ Foo.Bar.t /* c2 */</* c1.1 */ 'x /* c2.2 */> +=
+  | /* before Foo */ Foo // after Foo
+  | /* before Bar */ Bar // after Bar
+
+/* c0 */ type /* c1 */ Foo.Bar.t /* c2 */ += /* c3 */ Bar /* c4 */
+
+/* c0 */ type /* c1 */ t /* c2 */ +=
+  | /* c3 */ Foo /* c4 */ = /* c5 */ Bar /* c6 */
+
+// Pstr_exception
+/* c0 */ exception /* c1 */ Exit /* c2 */ = /* c3 */ Terminate /* c4 */
+
+/* c0 */ exception /* c1 */ ExitEarly /* c2 */(/* c4 */ int /* c5 */, /* c6 */ int /* c7 */) // after
+
+/* c0 */ exception /* c1 */ ExitEarly /* c2 */(
+  /* c4 */ int /* c5 */,
+  /* c6 */ int /* c7 */,
+): /* c8 */ gadt // after
+
+/* c0 */ exception /* c1 */ ExitEarly /* c2 */({
+  /* c4 */ code /* inside */: /* inside2 */ int /* c5 */,
+  /* c6 */ timeout /* inside */: /* inside2 */ int /* c7 */,
+}): /* c8 */ gadt // after
+
+// Psig_module
+/* c0 */ module /* c1 */ X /* c2 */: /* c3 */ MT /* c4 */
+
+// Psig_module
+/* c0 */ module rec /* c1 */ X1 /* c2 */: /* c3 */ MT1
+// above
+and /* c4 */ Xn /* c5 */: /* c6 */ MTn /* c7 */
+
+// Psig_modtype
+/* c0 */ module type /* c1 */ S /* c2 */ = /* c3 */ MT /* c4 */
+/* c0 */ module type /* c1 */ S /* c2 */
+
+// Psig_open
+/* c0 */ open /* c1 */ Belt /* c2 */
+
+// Psig_include
+/* c0 */ include /* c1 */ {
+  let a /* inside */: int
+} // after
+
+// Psig_attribute
+/* c0 */ @@attr(/* c1 */ payload /* c2 */) /* c3 */
+
+// Psig_extension
+/* c0 */ @@extension(/* c1 */ payload /* c2 */) /* c3 */

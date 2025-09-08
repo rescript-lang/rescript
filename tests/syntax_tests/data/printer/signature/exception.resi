@@ -1,0 +1,8 @@
+exception Exit
+
+@onConstructor
+exception ExitEarly
+
+exception Exit = Terminate 
+exception Exit = Lib.Terminate 
+exception Exit = Ns.Lib.Terminate 

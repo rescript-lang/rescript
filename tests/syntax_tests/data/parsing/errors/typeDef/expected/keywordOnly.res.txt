@@ -1,0 +1,9 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/keywordOnly.res:1:5
+
+  1 │ type
+
+  I'm not sure what to parse here when looking at "eof".
+
+type nonrec _

@@ -1,0 +1,30 @@
+Cleaned 2/115
+Parsed 2 source files
+Compiled 3 modules
+
+The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dependencies' instead.
+
+The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+
+The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'compiler-flags' instead.
+
+  [1;31mWe've found a bug for you![0m
+  [36m/packages/new-namespace/src/NS_alias.res[0m:[2m2:1-16[0m
+
+  1 [2m│[0m let hello_world = () => "Hello world"
+  [1;31m2[0m [2m│[0m [1;31mOther_module.bla[0m()
+  3 [2m│[0m 
+
+  [1;33mThe module or file Other_module can't be found.[0m
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
+  
+  
+  [1;33mHint: Did you mean Other_module2?[0m
+
+
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above

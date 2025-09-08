@@ -1,0 +1,36 @@
+%%raw("define(x.y, 'userAgent', {value: 'USER_AGENT_STRING'})")
+
+%%raw("define(x.y, 'userAgent', {value: 'USER_AGENT_STRING'})")
+
+let x = `This is a long string with a slash and line break \\
+carriage return`
+
+let x = "\""
+let y = "\n"
+
+<> {"\n"->React.string} </>
+
+// The `//` should not result into an extra comment
+let x = `https://www.apple.com`
+let x = `https://www.apple.com`
+let x = `https://www.apple.com`
+let x = `https://www.apple.com`
+let x = sql`https://www.apple.com`
+
+// /* */ should not result in an extra comments
+let x = `/* https://www.apple.com */`
+let x = `/* https://www.apple.com*/`
+let x = `/*https://www.apple.com*/`
+let x = `/*https://www.apple.com*/`
+let x = sql`/*https://www.apple.com*/`
+
+let x = `\`https://\${appleWebsite}\``
+
+let var1 = "three"
+let var2 = "a string"
+
+switch (var1, var2) {
+| (`3`, `a string`) => Js.log("worked")
+| (` test with \` \${here} \``, _) => Js.log("escapes ` and ${")
+| _ => Js.log("didn't match")
+}

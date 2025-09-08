@@ -1,0 +1,10 @@
+{
+  "name": "common",
+  "namespace": true,
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ]
+}

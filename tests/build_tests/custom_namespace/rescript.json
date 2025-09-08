@@ -1,0 +1,19 @@
+{
+  "name": "namespace",
+  "version": "0.1.0",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "namespace": "Foo_bar",
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".res.js"
+  },
+  "compiler-flags": ["-bs-no-version-header"],
+  "warnings": {
+    "number": "-40+6+7",
+    "error": true
+  }
+}

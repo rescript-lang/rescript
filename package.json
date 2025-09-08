@@ -1,0 +1,109 @@
+{
+  "name": "rescript",
+  "version": "12.0.0-beta.11",
+  "description": "ReScript toolchain",
+  "type": "module",
+  "keywords": [
+    "ReScript",
+    "Compiler",
+    "Types",
+    "JavaScript",
+    "Language"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://rescript-lang.org",
+  "bugs": "https://github.com/rescript-lang/rescript/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript.git"
+  },
+  "author": {
+    "name": "Hongbo Zhang",
+    "email": "bobzhang1988@gmail.com"
+  },
+  "maintainers": [
+    "Christoph Knittel (https://github.com/cknitt)",
+    "Cristiano Calcagno (https://github.com/cristianoc)",
+    "Dmitry Zakharov (https://github.com/DZakh)",
+    "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+    "Gabriel Nordeborn (https://github.com/zth)",
+    "Hyeseong Kim (https://github.com/cometkim)",
+    "Jaap Frolich (https://github.com/jfrolich)",
+    "Matthias Le Brun (https://github.com/bloodyowl)",
+    "Patrick Ecker (https://github.com/ryyppy)",
+    "Paul Tsnobiladzé (https://github.com/tsnobip)",
+    "Woonki Moon (https://github.com/mununki)"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "bin": {
+    "bsc": "cli/bsc.js",
+    "bstracing": "cli/bstracing.js",
+    "rescript": "cli/rescript.js",
+    "rescript-legacy": "cli/rescript-legacy.js",
+    "rescript-tools": "cli/rescript-tools.js"
+  },
+  "scripts": {
+    "test": "node scripts/test.js -all",
+    "test-bsb": "node scripts/test.js -bsb",
+    "test-ocaml": "node scripts/test.js -ounit",
+    "check": "biome check --changed --no-errors-on-unmatched .",
+    "check:all": "biome check .",
+    "format": "biome check --changed --no-errors-on-unmatched . --fix",
+    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
+    "typecheck": "tsc",
+    "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "COPYING",
+    "COPYING.LESSER",
+    "CREDITS.md",
+    "ninja.COPYING",
+    "docs/docson/build-schema.json",
+    "cli"
+  ],
+  "exports": {
+    "./lib/es6/*": "./lib/es6/*",
+    "./lib/js/*": "./lib/js/*",
+    "./package.json": "./package.json"
+  },
+  "imports": {
+    "#cli/*": "./cli/common/*.js",
+    "#dev/*": "./lib_dev/*.js"
+  },
+  "dependencies": {
+    "@rescript/runtime": "workspace:packages/@rescript/runtime"
+  },
+  "optionalDependencies": {
+    "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64",
+    "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64",
+    "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64",
+    "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64",
+    "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "^20.14.9",
+    "@types/semver": "^7.7.0",
+    "@yarnpkg/types": "^4.0.1",
+    "mocha": "11.7.1",
+    "nyc": "15.0.0",
+    "semver": "^7.7.2",
+    "typescript": "5.8.2"
+  },
+  "workspaces": [
+    "packages/playground",
+    "packages/@rescript/*",
+    "tests/dependencies/**",
+    "tests/analysis_tests/**",
+    "tests/docstring_tests",
+    "tests/gentype_tests/**",
+    "tests/tools_tests",
+    "tests/rewatch_tests",
+    "scripts/res"
+  ],
+  "packageManager": "yarn@4.9.1",
+  "preferUnplugged": true
+}

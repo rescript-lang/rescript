@@ -1,0 +1,24 @@
+module type IntSum = {
+  let x: int
+  let y: int
+
+  let add: (int, int) => int
+}
+
+module type LinkedList = module type of List
+
+module type Functoria = (X: Int, Y: Float) => Float
+
+module type Ext = %extension
+
+module type MyInt = Int
+
+module type X = A with type t = string
+
+module type LongNaaaaame = MyModule
+  with module X.Bar = Belt.Array
+  and module X.Bar = Belt.Array
+  and module X.Bar = Belt.Array
+
+@attr
+module type LinkedList = module type of List

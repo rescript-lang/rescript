@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "reason-react": "^0.9.1",
+    "rescript": "^9.1.2"
+  },
+  "scripts": {
+    "build": "rescript",
+    "start": "rescript build -w",
+    "clean": "rescript clean"
+  }
+}

@@ -1,0 +1,169 @@
+Complete src/RxjsCompletion.res 26:29
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[10:17->38:1]
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[11:2->32:78]
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[12:4->26:29]
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[14:4->26:29]
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[20:4->26:29]
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[26:7->26:29]
+Pexp_field [26:7->26:28] _:[30:2->26:29]
+Completable: Cpath Value[merge](Nolabel, Nolabel).""
+Raw opens: 1 Rxjs.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib Rxjs
+ContextPath Value[merge](Nolabel, Nolabel).""
+ContextPath Value[merge](Nolabel, Nolabel)
+ContextPath Value[merge]
+Path merge
+ContextPath Value[merge](Nolabel, Nolabel, Nolabel)->
+ContextPath Value[merge](Nolabel, Nolabel, Nolabel)
+ContextPath Value[merge]
+Path merge
+CPPipe pathFromEnv:Observable found:true
+Path Rxjs.Observable.
+Path Rxjs.
+Path 
+[{
+    "label": "->Observable.subscribe",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'t>, 't => unit) => subscription",
+    "documentation": null,
+    "sortText": "subscribe",
+    "insertText": "->Observable.subscribe",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->pipe",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Observable.t<'t>, operation<'t, 'u>) => Observable.t<'u>",
+    "documentation": null,
+    "sortText": "pipe",
+    "insertText": "->pipe",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->combineLatest",
+    "kind": 12,
+    "tags": [],
+    "detail": "(\n  Observable.t<'a>,\n  Observable.t<'b>,\n) => Observable.t<('a, 'b)>",
+    "documentation": null,
+    "sortText": "combineLatest",
+    "insertText": "->combineLatest",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->merge",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Observable.t<'t>, Observable.t<'t>) => Observable.t<'t>",
+    "documentation": null,
+    "sortText": "merge",
+    "insertText": "->merge",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->pipe2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(\n  Observable.t<'t>,\n  operation<'t, 'u>,\n  operation<'u, 'i>,\n) => Observable.t<'i>",
+    "documentation": null,
+    "sortText": "pipe2",
+    "insertText": "->pipe2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 26, "character": 28}, "end": {"line": 26, "character": 29}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/RxjsCompletion.res 34:30
+posCursor:[34:30] posNoWhite:[34:29] Found expr:[10:17->38:1]
+posCursor:[34:30] posNoWhite:[34:29] Found expr:[11:2->34:30]
+posCursor:[34:30] posNoWhite:[34:29] Found expr:[32:2->34:30]
+posCursor:[34:30] posNoWhite:[34:29] Found expr:[34:5->34:30]
+Pexp_field [34:5->34:29] _:[38:0->34:30]
+Completable: Cpath Value[Rxjs, combineLatest](Nolabel, Nolabel).""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel).""
+ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel)
+ContextPath Value[Rxjs, combineLatest]
+Path Rxjs.combineLatest
+ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel, Nolabel)->
+ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel, Nolabel)
+ContextPath Value[Rxjs, combineLatest]
+Path Rxjs.combineLatest
+CPPipe pathFromEnv:Observable found:true
+Path Rxjs.Observable.
+Path Rxjs.
+Path 
+[{
+    "label": "->Rxjs.Observable.subscribe",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'t>, 't => unit) => subscription",
+    "documentation": null,
+    "sortText": "subscribe",
+    "insertText": "->Rxjs.Observable.subscribe",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Rxjs.pipe",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Observable.t<'t>, operation<'t, 'u>) => Observable.t<'u>",
+    "documentation": null,
+    "sortText": "pipe",
+    "insertText": "->Rxjs.pipe",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Rxjs.combineLatest",
+    "kind": 12,
+    "tags": [],
+    "detail": "(\n  Observable.t<'a>,\n  Observable.t<'b>,\n) => Observable.t<('a, 'b)>",
+    "documentation": null,
+    "sortText": "combineLatest",
+    "insertText": "->Rxjs.combineLatest",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Rxjs.merge",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Observable.t<'t>, Observable.t<'t>) => Observable.t<'t>",
+    "documentation": null,
+    "sortText": "merge",
+    "insertText": "->Rxjs.merge",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Rxjs.pipe2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(\n  Observable.t<'t>,\n  operation<'t, 'u>,\n  operation<'u, 'i>,\n) => Observable.t<'i>",
+    "documentation": null,
+    "sortText": "pipe2",
+    "insertText": "->Rxjs.pipe2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 34, "character": 29}, "end": {"line": 34, "character": 30}},
+      "newText": ""
+      }]
+  }]
+

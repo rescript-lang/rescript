@@ -1,0 +1,56 @@
+open React
+
+module Range = {
+  /* This library's API requires that props be spread on the elements for thumb */
+  /* and track. Not great, but it's what we have. */
+  /* See https://github.com/reasonml/reason-react/blob/master/docs/clone-element.md */
+  /* We'll need to spread both the style inside the props, and the props object itself using ReasonReact.cloneElement. */
+  type rec propsThatNeedSpreading = {style: ReactDOMRe.Style.t}
+  type rec renderTrackParams = {
+    props: propsThatNeedSpreading,
+    children: React.element,
+  }
+  
+  @module("react-range") @react.component
+  external make: (
+    ~min: int,
+    ~max: int,
+    ~values: array<int>,
+    ~onChange: array<int> => unit,
+    ~renderTrack: renderTrackParams => React.element,
+    ~renderThumb: renderTrackParams => React.element,
+  ) => React.element = "Range"
+}
+
+@react.component
+let make = (~min=50, ~max=250, ~meterSuffix=?) => {
+  let (values, values_set) = React.useState(_ => [min])
+  
+  <div className="w-full flex flex-col items-center">
+    <div className="outer bg-gray-200 rounded-full w-full py-2 px-10">
+      <Range
+        min
+        max
+        values
+        onChange={v => values_set(_ => v)}
+        renderTrack={({props, children}) => {
+          let element = <div className="h-16" style=props.style> children </div>
+          
+          ReasonReact.cloneElement(element, ~props=Obj.magic(props), [children])
+        }}
+        renderThumb={({props}) => {
+          let element =
+            <div
+              className="finger h-16 w-16 rounded-full bg-gray-700 cursor-pointer focus:outline-none focus:shadow-outline"
+              style=props.style
+            />
+          
+          ReasonReact.cloneElement(element, ~props=Obj.magic(props), [])
+        }}
+      />
+    </div>
+    <div className="meter text-4xl font-bold text-gray-600 mt-4">
+      {values[0]->Js.Int.toString->string} {meterSuffix->Belt.Option.getWithDefault(null)}
+    </div>
+  </div>
+}

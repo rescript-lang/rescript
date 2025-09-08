@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_recursive.res[0m:[2m1:65[0m
+
+  [1;31m1[0m [2m│[0m type rec a = One | Two | Three and b = Four | Five and c = | ...[1;31ma[0m | ...b
+  2 [2m│[0m 
+
+  This type could not be found. It's only possible to spread variants that are known as the spread happens. This means for example that you can't spread variants in recursive definitions.

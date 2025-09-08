@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/comments/eof.res:2:1-3:0
+
+  1 │ let x = 1
+  2 │ /* eof
+  3 │ 
+
+  This comment seems to be missing a closing `*/`
+
+let x = 1

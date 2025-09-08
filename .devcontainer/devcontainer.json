@@ -1,0 +1,33 @@
+{
+  "name": "ReScript Compiler",
+  "build": {
+    "context": ".",
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USER_UID": "${localEnv:UID}",
+      "USER_GID": "${localEnv:GID}"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true,
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ocamllabs.ocaml-platform",
+        "chenglou92.rescript-vscode",
+        "biomejs.biome",
+        "rust-lang.rust-analyzer"
+      ]
+    }
+  },
+  "postCreateCommand": ".devcontainer/postCreate.sh",
+  "remoteUser": "vscode",
+  "containerUser": "vscode"
+}

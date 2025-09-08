@@ -1,0 +1,231 @@
+Complete src/Reprod.res 7:53
+posCursor:[7:53] posNoWhite:[7:52] Found expr:[7:11->7:56]
+Pexp_apply ...[7:11->7:20] (~variables7:22->7:31=...[7:32->7:55])
+Completable: Cexpression CArgument Value[Query, use](~variables)->recordField(location), variantPayload::ByAddress($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[Query, use](~variables)
+ContextPath Value[Query, use]
+Path Query.use
+[{
+    "label": "{}",
+    "kind": 12,
+    "tags": [],
+    "detail": "input_ByAddress",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype input_ByAddress = {city: string}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Reprod.res 33:28
+posCursor:[33:28] posNoWhite:[33:27] Found pattern:[33:21->33:31]
+Completable: Cpattern Value[record]->recordField(first)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[record]
+Path record
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Two(${1:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "Three(_, _)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Three(someRecord, bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nThree(someRecord, bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Three(${1:_}, ${2:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Reprod.res 36:29
+posCursor:[36:29] posNoWhite:[36:28] Found pattern:[36:21->36:32]
+Completable: Cpattern Value[record]->recordField(second)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[record]
+Path record
+[{
+    "label": "{}",
+    "kind": 22,
+    "tags": [],
+    "detail": "SchemaAssets.input_ByAddress",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype SchemaAssets.input_ByAddress = {city: string}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Reprod.res 43:21
+posCursor:[43:21] posNoWhite:[43:20] Found pattern:[43:18->43:22]
+Ppat_construct Ok:[43:18->43:20]
+posCursor:[43:21] posNoWhite:[43:20] Found pattern:[43:20->43:22]
+Ppat_construct ():[43:20->43:22]
+Completable: Cpattern Value[res]->variantPayload::Ok($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Two(${1:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "Three(_, _)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Three(someRecord, bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nThree(someRecord, bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Three(${1:_}, ${2:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Reprod.res 46:24
+posCursor:[46:24] posNoWhite:[46:23] Found pattern:[46:18->46:25]
+Ppat_construct Error:[46:18->46:23]
+posCursor:[46:24] posNoWhite:[46:23] Found pattern:[46:23->46:25]
+Ppat_construct ():[46:23->46:25]
+Completable: Cpattern Value[res]->variantPayload::Error($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+[{
+    "label": "#one",
+    "kind": 4,
+    "tags": [],
+    "detail": "#one",
+    "documentation": {"kind": "markdown", "value": "```rescript\n#one\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "insertText": "#one",
+    "insertTextFormat": 2
+  }, {
+    "label": "#three(_, _)",
+    "kind": 4,
+    "tags": [],
+    "detail": "#three(someRecord, bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\n#three(someRecord, bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "insertText": "#three(${1:_}, ${2:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "#two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "#two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\n#two(bool)\n```\n\n```rescript\n[#one | #three(someRecord, bool) | #two(bool)]\n```"},
+    "insertText": "#two(${1:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Reprod.res 51:24
+posCursor:[51:24] posNoWhite:[51:23] Found pattern:[51:21->51:25]
+Ppat_construct Ok:[51:21->51:23]
+posCursor:[51:24] posNoWhite:[51:23] Found pattern:[51:23->51:25]
+Ppat_construct ():[51:23->51:25]
+Completable: Cpattern Value[resOpt]->variantPayload::Ok($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[resOpt]
+Path resOpt
+[{
+    "label": "None",
+    "kind": 12,
+    "tags": [],
+    "detail": "someVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"}
+  }, {
+    "label": "Some(_)",
+    "kind": 12,
+    "tags": [],
+    "detail": "someVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Some(${1:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "Some(One)",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Some(One)",
+    "insertTextFormat": 2
+  }, {
+    "label": "Some(Two(_))",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Some(Two(${1:_}))",
+    "insertTextFormat": 2
+  }, {
+    "label": "Some(Three(_, _))",
+    "kind": 4,
+    "tags": [],
+    "detail": "Three(someRecord, bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nThree(someRecord, bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Some(Three(${1:_}, ${2:_}))",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Reprod.res 54:29
+posCursor:[54:29] posNoWhite:[54:28] Found pattern:[54:21->54:31]
+Ppat_construct Ok:[54:21->54:23]
+posCursor:[54:29] posNoWhite:[54:28] Found pattern:[54:24->54:30]
+Ppat_construct Some:[54:24->54:28]
+posCursor:[54:29] posNoWhite:[54:28] Found pattern:[54:28->54:30]
+Ppat_construct ():[54:28->54:30]
+Completable: Cpattern Value[resOpt]->variantPayload::Ok($0), variantPayload::Some($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[resOpt]
+Path resOpt
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two(bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo(bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Two(${1:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "Three(_, _)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Three(someRecord, bool)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nThree(someRecord, bool)\n```\n\n```rescript\ntype someVariant = One | Two(bool) | Three(someRecord, bool)\n```"},
+    "insertText": "Three(${1:_}, ${2:_})",
+    "insertTextFormat": 2
+  }]
+

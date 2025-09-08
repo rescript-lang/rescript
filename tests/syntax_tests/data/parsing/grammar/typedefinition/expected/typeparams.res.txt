@@ -1,0 +1,5 @@
+type nonrec 'a t
+type nonrec ('a, 'b) t
+type nonrec ('a, 'b, 'c) t
+type nonrec (+'a, -'b, +_, -_) t
+type nonrec _ t

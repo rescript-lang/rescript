@@ -1,0 +1,1 @@
+module Foo2 = {}

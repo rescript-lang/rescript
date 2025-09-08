@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/arrow.res:1:52
+
+  1 │ Object.keys(providers).reduce((elements, providerId] => {
+  2 │   let x = 1
+  3 │   let b = 2
+
+  Did you forget a `,` here?
+
+;;(Object.keys providers).reduce
+    (fun [arity:2]elements ->
+       fun providerId -> ((let x = 1 in let b = 2 in x + b)[@res.braces ]))

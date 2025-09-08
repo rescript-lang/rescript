@@ -1,0 +1,24 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/infiniteLoops/templateEof.res:1:3-6
+
+  1 │ et foo = x =>
+  2 │   switch x {
+  3 │   | `${
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+
+  Syntax error!
+  syntax_tests/data/parsing/infiniteLoops/templateEof.res:3:5-7
+
+  1 │ et foo = x =>
+  2 │   switch x {
+  3 │   | `${
+
+  String interpolation is not supported in pattern matching.
+
+;;et
+;;foo =
+    (fun [arity:1]x ->
+       match x with | (("")[@res.template ]) -> [%rescript.exprhole ])

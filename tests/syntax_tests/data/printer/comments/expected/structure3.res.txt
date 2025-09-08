@@ -1,0 +1,13 @@
+node.left->peekMinNode
+// same as the above
+node.left->peekMinNode
+
+// field access has higher precedence than unary -
+let x = -a.bar
+
+let a = 1
+
+/* test */
+let b = 2
+// a
+// b

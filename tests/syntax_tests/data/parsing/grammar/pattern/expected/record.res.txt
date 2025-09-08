@@ -1,0 +1,83 @@
+let { a } = x
+let { a } as p = x
+let { a } = x
+let { a; b } = x
+let { a = p1; b = p2 } = x
+let { a; b } = x
+let { ReasonReact.state = state } = x
+let { ReasonReact.state = (state as prevState) } = x
+let { ReasonReact.state = theState } = x
+let { a = u } = x
+let { a = (u : int) } = x
+let { a = ((u as p) : int) } = x
+let { a = { x; y } } = x
+let { a = { x = p1; y = p2 } } = x
+let { a;_} = x
+let { a;_} = x
+let ({ a } : myRecord) = x
+;;match x with
+  | { a } -> ()
+  | { a } as r -> ()
+  | { a } -> ()
+  | { a; b } -> ()
+  | { a; b } -> ()
+  | { ReasonReact.state = state } -> ()
+  | { ReasonReact.state = (state as prevState) } -> ()
+  | { ReasonReact.state = theState } -> ()
+  | { a = u } -> ()
+  | { a = (u : int) } -> ()
+  | { a = (((u as p) : int) as p2) } as p3 -> ()
+  | { a = { x; y } } -> ()
+  | { a = ({ x = p1; y = p2 } as p3) } -> ()
+  | { a;_} -> ()
+  | { a;_} -> ()
+  | ({ a } : myRecord) -> ()
+let f [arity:1]{ a } = ()
+let f [arity:1]({ a } as r) = ()
+let f [arity:1]{ a } = ()
+let f [arity:1]{ a; b } = ()
+let f [arity:1]{ a; b } = ()
+let f [arity:1]{ ReasonReact.state = state } = ()
+let f [arity:1]{ ReasonReact.state = (state as prevState) } = ()
+let f [arity:1]{ ReasonReact.state = theState } = ()
+let f [arity:1]{ a = u } = ()
+let f [arity:1]{ a = (u : int) } = ()
+let f [arity:1]{ a = (((u as x) : int) as r) } = ()
+let f [arity:1]{ a = { x; y } } = ()
+let f [arity:1]{ a = { x = r; y = r2 } } = ()
+let f [arity:1]{ a;_} = ()
+let f [arity:1]{ a;_} = ()
+let f [arity:1]({ a } : myRecord) = ()
+let f [arity:1]({ a } : myRecord) = ()
+let f [arity:1](({ a } : myRecord) as p) = ()
+;;for { a } = 0 to 10 do () done
+;;for { a } as p = 0 to 10 do () done
+;;for { a } = 0 to 10 do () done
+;;for { a } as p = 0 to 10 do () done
+;;for { a } = 0 to 10 do () done
+;;for { a } as p = 0 to 10 do () done
+;;for { ReasonReact.state = state } = 0 to 10 do () done
+;;for { ReasonReact.state = state } = 0 to 10 do () done
+;;for { ReasonReact.state = state } = 0 to 10 do () done
+;;for { ReasonReact.state = (state as prevState) } = 0 to 10 do () done
+;;for { ReasonReact.state = (state as prevState) } = 0 to 10 do () done
+;;for { ReasonReact.state = (state as prevState) } = 0 to 10 do () done
+;;for { ReasonReact.state = theState } = 0 to 10 do () done
+;;for { ReasonReact.state = theState } = 0 to 10 do () done
+;;for { ReasonReact.state = theState } = 0 to 10 do () done
+;;for { a = u } = 0 to 10 do () done
+;;for { a = u } = 0 to 10 do () done
+;;for { a = u } = 0 to 10 do () done
+;;for { a = (u : int) } = 0 to 10 do () done
+;;for { a = (((u as sp) : int) as p) } = 0 to 10 do () done
+;;for { a = (u : int) } = 0 to 10 do () done
+;;for { a = (u : int) } = 0 to 10 do () done
+;;for { a = { x; y } } = 0 to 10 do () done
+;;for { a = ({ x = p1; y = p2 } as p3) } = 0 to 10 do () done
+;;for { a = { x; y } } = 0 to 10 do () done
+;;for { a = { x; y } } as p as p2 = 0 to 10 do () done
+;;for { a = { x; y } } = 0 to 10 do () done
+;;for { a;_} = 0 to 10 do () done
+;;for { a;_} = 0 to 10 do () done
+;;for { a;_} = 0 to 10 do () done
+;;for ({ a } : myRecord) = 0 to 10 do () done

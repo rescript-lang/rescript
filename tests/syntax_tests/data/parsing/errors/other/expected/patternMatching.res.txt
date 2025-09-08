@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/patternMatching.res:1:14-2:1
+
+  1 │ switch expr {
+  2 │ }
+  3 │ 
+
+  Pattern matching needs at least one case
+
+;;match expr with

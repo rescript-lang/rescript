@@ -1,0 +1,71 @@
+let [] = ()
+let [] as l = ()
+let x::[] = ()
+let (x as p1)::[] as l = ()
+let x::xs = ()
+let x::(xs as tail) = ()
+let x::y::tail = ()
+let x::y::[] = ()
+let (x as p1)::(y as p2)::[] = ()
+let x::y::[] = ()
+let x::xs = ()
+let x::y::tail = ()
+let x::(y::ys)::xs = ()
+let (x as p1)::((y as p2)::(ys as tail1) as l2)::(xs as tail2) = ()
+let (x : int)::((y : int)::(ys : int list))::xs = ()
+let ((x::xs) : int list) = ()
+let (x::xs : int list) as constrainedList = ()
+let (x::xs : int list) as clist = ()
+let ((x::xs : int list) : int list) = ()
+;;match x with
+  | [] -> ()
+  | [] as l -> ()
+  | (x as p1)::[] -> ()
+  | (x : int)::[] -> ()
+  | x::xs -> ()
+  | ((x : int)::(xs : int list) : int list) -> ()
+  | (x as p1)::(xs as p2) as l -> ()
+  | x::y::tail -> ()
+  | x::y::[] -> ()
+  | x::y::[] -> ()
+  | x::xs -> ()
+  | x::y::tail -> ()
+  | x::(y::ys)::xs -> ()
+  | (x as p1)::((y as p2)::(ys as tail1))::(xs as tail2) as l -> ()
+  | (x::xs : int list) -> ()
+let f [arity:1][] = ()
+let f [arity:1]([] as p) = ()
+let f [arity:1](x::[]) = ()
+let f [arity:1](((x : int) as p)::[]) = ()
+let f [arity:1]((x as p)::[] as p2) = ()
+let f [arity:1](x::xs) = ()
+let f [arity:1](x::(xs as tail)) = ()
+let f [arity:1](x::y::tail) = ()
+let f [arity:1](x::y::[]) = ()
+let f [arity:1](x::y::[]) = ()
+let f [arity:1](x::xs) = ()
+let f [arity:1](x::y::tail) = ()
+let f [arity:1](x::(y::ys)::xs) = ()
+let f [arity:1]((x as p1)::((y as p2)::(ys as tail1))::(xs as tail2) as l) =
+  ()
+let f [arity:1](x::xs : int list) = ()
+;;for [] = x to y do () done
+;;for [] as l = x to y do () done
+;;for [] = x to y do () done
+;;for [] as l = x to y do () done
+;;for [] = x to y do () done
+;;for [] as l = x to y do () done
+;;for [] as l = x to y do () done
+;;for x::[] = x to y do () done
+;;for (x as p)::[] = x to y do () done
+;;for ((x : int) as p)::[] = x to y do () done
+;;for ((x as p) : int)::[] = x to y do () done
+;;for x::[] = x to y do () done
+;;for x::[] = x to y do () done
+;;for x::xs = x to y do () done
+;;for x::xs = x to y do () done
+;;for x::xs = x to y do () done
+;;for (x as p1)::((y as p2)::(ys as tail1))::(xs as tail2) as l = x to y do
+    ()
+  done
+;;for (x::xs : int list) = x to y do () done

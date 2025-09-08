@@ -1,0 +1,13 @@
+{
+  "output": "src/Serde.ml",
+  "engine": "rex-json",
+  "entries": [
+    {
+      "file": "src/Hello.re",
+      "type": "lockfile"
+    }
+  ],
+  "custom": [
+    { "module": "Belt_HashMapInt", "path": [], "name": "t", "args": 1 }
+  ]
+}

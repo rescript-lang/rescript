@@ -1,0 +1,34 @@
+{
+  "gentypeconfig": {
+    "language": "typescript",
+    "module": "esmodule",
+    "importPath": "relative",
+    "shims": {
+      "Js": "Js",
+      "Jsx": "Jsx",
+      "JsxEvent": "JsxEvent",
+      "Belt": "Belt",
+      "RescriptPervasives": "RescriptPervasives"
+    },
+    "debug": {
+      "all": false
+    },
+    "exportInterfaces": false
+  },
+  "name": "@tests/gentype-react-example",
+  "compiler-flags": [],
+  "jsx": { "version": 4 },
+  "dependencies": ["@rescript/react"],
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "uncurried": true,
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".res.js"
+}

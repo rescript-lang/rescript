@@ -1,0 +1,26 @@
+{
+  "name": "workspace-project",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "clean": "rescript clean",
+    "build": "rescript build -with-deps",
+    "start": "node app/src/App.mjs",
+    "watch": "rescript build -w"
+  },
+  "keywords": [
+    "ReScript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "rescript": "^10.0.0-beta.3"
+  },
+  "workspaces": {
+    "packages": [
+      "app",
+      "common",
+      "myplugin"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "duplicated-symlinked-packages",
+  "version": "0.1.0",
+  "sources": ["src"],
+  "dependencies": ["a", "b", "z"]
+}

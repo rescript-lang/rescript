@@ -1,0 +1,11 @@
+{
+  "name": "@tests/docstring-tests",
+  "sources": {
+    "dir": "."
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".res.js"
+}

@@ -1,0 +1,32 @@
+;;if (color === Black) && ((sibling === None) || (parent === None)) then ()
+;;if
+    ((color === Black) && ((!==) color Red)) &&
+      ((sibling === None) || (parent === None))
+  then ()
+;;match (color === Black) && ((sibling === None) || (parent === None)) with
+  | _ -> ()
+;;match ((color === Black) && ((!==) color Red)) &&
+          ((sibling === None) || (parent === None))
+  with
+  | _ -> ()
+;;try (color === Black) && ((sibling === None) || (parent === None))
+  with | _ -> ()
+;;try
+    ((color === Black) && (color === Red)) &&
+      ((sibling === None) || (parent === None))
+  with | _ -> ()
+;;while (color === Black) && ((sibling === None) || (parent === None)) do ()
+    done
+;;while
+    ((color === Black) && (color === Red)) &&
+      ((sibling === None) || (parent === None))
+    do () done
+;;<div onClick=((fun [arity:1]event ->
+                   ((match videoContainerRect with
+                     | Some videoContainerRect ->
+                         let newChapter =
+                           ({ startTime = (percent *. duration) } : Video.chapter) in
+                         { a; b } -> onChange
+                     | _ -> ())
+                   [@res.braces ]))[@res.braces ]) />
+;;if inclusions.(index) <- (uid, url) then onChange inclusions

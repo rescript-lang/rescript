@@ -1,0 +1,12 @@
+{
+  "name": "post-build",
+  "version": "0.1.0",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "js-post-build": { "cmd": "cat" },
+  "warnings": {
+    "error": "+101"
+  }
+}

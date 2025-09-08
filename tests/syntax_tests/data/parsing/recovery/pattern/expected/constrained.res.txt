@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/constrained.res:2:17-4:1
+
+  1 │ switch x {
+  2 │ | (a : int => ()
+  3 │   // note that this is not ideal: | (a: int => unit) => exprhole
+  4 │ }
+  5 │ 
+
+  Did you forget a `)` here?
+
+;;match x with | (a : int -> unit (a:1)) -> [%rescript.exprhole ]

@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UncurriedArgsNotApplied.res[0m:[2m3:15-21[0m
+
+  1 [2m│[0m let apply = (fn: unit => option<int>) => fn()
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let _ = apply([1;31mSome(1)[0m)
+  4 [2m│[0m 
+
+  This value might need to be [1;33mwrapped in a function that takes an extra
+  parameter[0m of type unit
+  
+  [1;33mHere's the original error message[0m
+  This has type: [1;31moption<'a>[0m
+  But it's expected to have type: [1;33munit => option<int>[0m

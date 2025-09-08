@@ -1,0 +1,6 @@
+type nonrec t = [%typ ]
+type nonrec t = [%raw.typ ]
+type nonrec t = [%raw.typ {js|existential|js}]
+let (t : [%typ ]) = x
+let (t : [%raw.typ ]) = x
+let (t : [%raw.typ {js|ex|js}]) = x

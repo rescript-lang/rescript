@@ -1,0 +1,9 @@
+type nonrec t = < age: int   > 
+type nonrec t = < age: int   > 
+type nonrec t = < age: int  ;name: string   > 
+type nonrec t = < age: int  ;name: string   > 
+type nonrec t =
+  < age: int [@attr ] ;name: ((string)[@onTypeString ]) [@attr2 ]  > 
+type nonrec t = <  > 
+type nonrec t = private <  > 
+type nonrec t = < .. > 

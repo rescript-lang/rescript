@@ -1,0 +1,59 @@
+Complete src/TypeAtPosCompletion.res 7:17
+posCursor:[7:17] posNoWhite:[7:15] Found expr:[6:16->9:1]
+Completable: Cexpression CTypeAtPos()->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage?: int\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
+  }, {
+    "label": "online",
+    "kind": 5,
+    "tags": [],
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\nonline?: bool\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
+  }]
+
+Complete src/TypeAtPosCompletion.res 16:18
+posCursor:[16:18] posNoWhite:[16:16] Found expr:[13:8->19:1]
+Pexp_construct One:[13:8->13:11] [13:11->19:1]
+posCursor:[16:18] posNoWhite:[16:16] Found expr:[15:2->18:3]
+Completable: Cexpression CTypeAtPos()->variantPayload::One($1), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage?: int\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
+  }, {
+    "label": "online",
+    "kind": 5,
+    "tags": [],
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\nonline?: bool\n```\n\n```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"}
+  }]
+
+Complete src/TypeAtPosCompletion.res 22:12
+posCursor:[22:12] posNoWhite:[22:11] Found expr:[21:10->24:1]
+Completable: Cexpression CTypeAtPos()->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CTypeAtPos()
+[{
+    "label": "{}",
+    "kind": 12,
+    "tags": [],
+    "detail": "optRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype optRecord = {name: string, age: option<int>, online: option<bool>}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+

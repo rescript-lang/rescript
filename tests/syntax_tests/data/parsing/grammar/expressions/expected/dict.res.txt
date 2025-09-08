@@ -1,0 +1,7 @@
+let x = Primitive_dict.make [||]
+let x = Primitive_dict.make [|("foo", {js|bar|js})|]
+let x = Primitive_dict.make [|("foo", {js|bar|js});("bar", {js|baz|js})|]
+let baz = {js|foo|js}
+let x =
+  Primitive_dict.make
+    [|("foo", {js|bar|js});("bar", {js|baz|js});("baz", baz)|]

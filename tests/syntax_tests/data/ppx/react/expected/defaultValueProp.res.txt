@@ -1,0 +1,80 @@
+module C0 = {
+  @res.jsxComponentProps
+  type props<'a, 'b> = {a?: 'a, b?: 'b}
+  let make = ({a: ?__a, b: ?__b, _}: props<_, _>) => {
+    let a = switch __a {
+    | Some(a) => a
+    | None => 2
+    }
+    let b = switch __b {
+    | Some(b) => b
+    | None => a * 2
+    }
+
+    React.int(a + b)
+  }
+  let make = {
+    let \"DefaultValueProp$C0" = (props: props<_>) => make(props)
+    \"DefaultValueProp$C0"
+  }
+}
+
+module C1 = {
+  @res.jsxComponentProps
+  type props<'a, 'b> = {a?: 'a, b: 'b}
+
+  let make = ({a: ?__a, b, _}: props<_, _>) => {
+    let a = switch __a {
+    | Some(a) => a
+    | None => 2
+    }
+
+    React.int(a + b)
+  }
+  let make = {
+    let \"DefaultValueProp$C1" = (props: props<_>) => make(props)
+
+    \"DefaultValueProp$C1"
+  }
+}
+
+module C2 = {
+  let a = "foo"
+  @res.jsxComponentProps
+  type props<'a> = {a?: 'a}
+
+  let make = ({a: ?__a, _}: props<_>) => {
+    let a = switch __a {
+    | Some(a) => a
+    | None => a
+    }
+
+    React.string(a)
+  }
+  let make = {
+    let \"DefaultValueProp$C2" = (props: props<_>) => make(props)
+
+    \"DefaultValueProp$C2"
+  }
+}
+
+module C3 = {
+  @res.jsxComponentProps
+  type props<'disabled> = {disabled?: 'disabled}
+
+  let make = ({disabled: ?__everythingDisabled, _}: props<bool>) => {
+    let everythingDisabled = switch __everythingDisabled {
+    | Some(disabled) => disabled
+    | None => false
+    }
+
+    {
+      React.string(everythingDisabled ? "true" : "false")
+    }
+  }
+  let make = {
+    let \"DefaultValueProp$C3" = (props: props<_>) => make(props)
+
+    \"DefaultValueProp$C3"
+  }
+}

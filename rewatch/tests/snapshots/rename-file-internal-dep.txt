@@ -1,0 +1,30 @@
+Cleaned 2/115
+Parsed 2 source files
+Compiled 2 modules
+
+The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dependencies' instead.
+
+The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+
+The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'compiler-flags' instead.
+
+  [1;31mWe've found a bug for you![0m
+  [36m/packages/main/src/Main.res[0m:[2m4:8-24[0m
+
+  2 [2m│[0m Dep01.log()
+  3 [2m│[0m 
+  [1;31m4[0m [2m│[0m Js.log([1;31mInternalDep.value[0m)
+  5 [2m│[0m 
+  6 [2m│[0m module Array = Belt.Array
+
+  [1;33mThe module or file InternalDep can't be found.[0m
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
+  
+
+
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above

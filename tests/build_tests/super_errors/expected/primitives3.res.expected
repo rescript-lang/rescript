@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitives3.res[0m:[2m3:1[0m
+
+  1 [2m│[0m /* Too many arguments */
+  2 [2m│[0m let x = a => a + 2
+  [1;31m3[0m [2m│[0m [1;31mx[0m(2, 4)
+  4 [2m│[0m 
+
+  This function call is incorrect.
+  The function has type:
+  int => int
+  
+  - The function takes [1;33mjust 1[0m unlabelled argument, but is called with [1;31m2[0m

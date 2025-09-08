@@ -1,0 +1,9 @@
+module type Signature  =
+  sig
+    module Tree : sig val x : int end
+    module Functor : functor () -> sig val x : int end
+    module Functor : Tree -> Map -> sig val x : int end
+    module Functor : Foo -> Bar -> sig val x : int end
+    module Functor : Foo -> Bar -> sig val x : int end[@@attr ]
+    module Tree : sig val x : int end[@@attr ]
+  end

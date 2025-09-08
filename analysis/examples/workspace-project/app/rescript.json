@@ -1,0 +1,11 @@
+{
+  "name": "app",
+  "compiler-flags": ["-open Common"],
+  "dependencies": ["common", "myplugin"],
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ]
+}

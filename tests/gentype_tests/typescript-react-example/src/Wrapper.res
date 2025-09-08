@@ -1,0 +1,2 @@
+@genType
+module MyModuleAlias = MyModule

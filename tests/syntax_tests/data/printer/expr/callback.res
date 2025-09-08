@@ -1,0 +1,390 @@
+array->Js.Array2.forEach(((value, height)) =>
+  add(rbt, value, ~height)->ignore
+)
+someArray->Js.Array2.forEach(((value, height)) =>  add(rbt, value, ~height)->ignore)
+someArraaaaaaayWithAVeryLooooooooooooooooooooooooooooooooooooooongName->Js.Array2.forEach(((value, height)) =>  add(rbt, value, ~height)->ignore)
+
+let make = (arr, ~compare) => {
+  let rbt = make(~compare)
+  array->Js.Array2.forEach(((value, height)) => add(rbt,value, ~height)->ignore)
+  rbt
+}
+
+
+Thing.map(foo,(arg1, arg2) => MyModuleBlah.toList(argument))
+Thing.map(foo, bar, baz, (aaaaaaaaaaarg1, aaaaarg2) => MyModuleBlah.toList(argument))
+Thing.map(fooooooooooooooooooo, bar, baz, (abc, z) => MyModuleBlah.toList(argument))
+Thing.map(fooooooooooooooooooo, baaaaaaaaaaaaaaaaaar, baaaaaaaaaaaaaaaaaaaaaaaaaz, (abc, z) => MyModuleBlah.toList(argument))
+Fooooooooooooooooooo.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(
+  baaaz, quuuuux =>
+  something(here)
+);
+
+
+Fooooooooooooooooooo.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(
+  baaaz, quuuuux => {
+    let a = 1
+    let b = 2
+    a + b
+  }
+);
+
+let make = (arr, ~compare) => {
+  let rbt = make(~compare)
+  array->Js.Array2.forEach(((value, height)) => add(rbt, value, ~height)->ignore
+  )
+  rbt
+}
+
+let tbl = data->Js.Array2.reduce(
+        (map, curr) => {
+          let (website, user) = curr
+          if map->Belt.Map.String.has(website) {
+            let set =
+              map->Belt.Map.String.getExn(website)->Belt.Set.Int.add(user)
+            map->Belt.Map.String.set(website, set)
+          } else {
+            let set = Belt.Set.Int.empty->Belt.Set.Int.add(user)
+            map->Belt.Map.String.set(website, set)
+          }
+        },
+        Belt.Map.String.empty,
+      )
+
+let _ = {
+  let similarity = (a, b) => {
+      // nbr of users in common/number of users who have visited either in total
+      let tbl =
+        data->Js.Array2.reduce(
+          (map, curr) => {
+            let (website, user) = curr
+            if map->Belt.Map.String.has(website) {
+              let set = map->Belt.Map.String.getExn(website)->Belt.Set.Int.add(user)
+              map->Belt.Map.String.set(website, set)
+            } else {
+              let set = Belt.Set.Int.empty->Belt.Set.Int.add(user)
+              map->Belt.Map.String.set(website, set)
+            }
+          },
+          Belt.Map.String.empty,
+        )
+      ()
+    }
+    ()
+  }
+
+let trees = possibilities->Belt.Array.mapU((. combination) =>
+  combination->Belt.Array.reduceU(Nil, (. tree, curr) => tree->insert(curr))
+)
+
+let set = mapThatHasAVeryLongName->Belt.Map.String.getExn(website)->Belt.Set.Int.add(user)
+
+let add = (y: coll, e: key) =>
+  if (List.exists(x => eq(x, e), y)) {
+    y;
+  } else {
+    list{e, ...y};
+  };
+
+let add2 = (y: coll, e: key) =>
+  if (List.exists(y, x => eq(x, e) )) {
+    y;
+  } else {
+    list{e, ...y};
+  };
+
+
+let add2 = (y: coll, e: key) =>
+  if possibilities->Belt.Array.mapU((. combination) =>
+  combination->Belt.Array.reduceU(Nil, (. tree, curr) => tree->insert(curr))
+) {
+    y;
+  } else {
+    list{e, ...y};
+  };
+
+let test =
+moduleTypeDeclaration->TranslateSignature.translateModuleTypeDeclaration(
+         ~config,
+         ~outputFileRelative,
+         ~resolver,
+         ~typeEnv,
+       )->doStuff(~x, ~y)
+
+// labelled arguments
+// callback in last position
+// case 1
+Thing.map(foo, ~fn=(arg1, arg2) => MyModuleBlah.toList(argument))
+Thing.map(foo, ~fn=?(arg1, arg2) => MyModuleBlah.toList(argument))
+
+// case 2
+Thing.map(longArgument, veryLooooongArgument, ~fn=(arg1, arg2) =>
+  MyModuleBlah.toList(argument)
+)
+Thing.map(longArgument, veryLooooongArgument, ~fn=?(arg1, arg2) =>
+  MyModuleBlah.toList(argument)
+)
+
+// case 3
+Thing.map(
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg1,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg2,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg3,
+  ~fn=(param1, parm2) => doStuff(param1, parm2)
+)
+Thing.map(
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg1,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg2,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg3,
+  ~fn=?(param1, parm2) => doStuff(param1, parm2)
+)
+
+// callback in first position
+// case 1
+Thing.map(~fn=(arg1, arg2) => MyModuleBlah.toList(argument), foo)
+Thing.map(~fn=?(arg1, arg2) => MyModuleBlah.toList(argument), foo)
+
+// case 2
+Thing.map(~fn=(arg1, arg2) => {
+  MyModuleBlah.toList(argument)
+}, longArgument, veryLooooongArgument)
+Thing.map(~fn=?(arg1, arg2) => {
+  MyModuleBlah.toList(argument)
+}, longArgument, veryLooooongArgument)
+
+// case 3
+Thing.map(
+  ~fn=(param1, parm2) => doStuff(param1, parm2),
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg2,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg3,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg4,
+)
+Thing.map(
+  ~fn=?(param1, parm2) => doStuff(param1, parm2),
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg2,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg3,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaarg4,
+)
+
+List.iter(x => switch x {
+| ({txt: Lident(name)}, x) => field(name, x)
+| _ => ()
+}, fields)
+
+foo(key => {
+  switch bla {
+  // cancellation =D
+  | None => true
+  }
+})
+
+foo(_ => {
+  switch bar {
+    | None => ()
+    | Some(_) =>
+      a := b
+      Js.log("hi")
+  }
+})
+
+foo(list => list())
+foo(\"switch" => \"switch"())
+
+// the [] of the array should break
+[
+  fn(x => {
+    let _ = x
+  }),
+  fn(y => {
+    let _ = y
+  }),
+  fn(z => {
+    let _ = z
+  })
+]
+
+// similar, the jsx tree should be broken over multiple lines
+let f = () => {
+  <div>
+    {switch user.commited {
+    | NotAsked => React.null
+    | Loading => "Loading ..."->React.string
+    | Done(Error(_)) => "Error"->React.string
+    | Done(Ok(users)) => <> <ul> {users->Array.map(user => {
+            <li key=user.id> {user.username->React.string} </li>
+          })->React.array} </ul> {reloadableUser.last->AsyncData.isLoading
+          ? "Loading next page"->React.string
+          : React.null} <button onClick={_ => setPage(x => x + 1)}>
+          {"Load next page"->React.string}
+        </button> </>
+    }}
+  </div>
+}
+
+myPromise->Js.Promise.then_(value => {
+  Js.log(value)
+  Js.Promise.resolve(value + 2)
+}, _)->Js.Promise.then_(value => {
+  Js.log(value)
+  Js.Promise.resolve(value + 3)
+}, _)->Js.Promise.catch(err => {
+  Js.log2("Failure!!", err)
+  Js.Promise.resolve(-2)
+}, _)
+
+let decoratorTags =
+    items->Js.Array2.filter(items => {items.category === Decorators})->Belt.Array.map(item => {
+      <span className="mr-2" key=item.name> <Tag text={item.name} /> </span>
+})
+
+// Comments should still be printed here (callback in last position)
+let makeEntryJobsForJournal = (journalId: string, userId: string) => {
+  let promises = Belt.MutableQueue.make()
+  // We'll return a promise from this function so that the caller can know
+  // whether we've successfully finished creating jobs or not.
+  let (pom, resolve, reject) = Pom.make()
+  _getEntries(
+    ~journalId,
+    ~authHeader=MercuryService.makeAuthToken(userId),
+    // This has got to add a promise to a mutable queue of promises or something.
+    ~onData=onEntryData,
+    ~onComplete=_ => {
+      // When the request is done, we should wait on the queue of promises to be all finished, then we can resolve.
+      resolve()
+    },
+  )
+
+  pom
+}
+
+let make = fn(
+  (
+    ~a: option<string>=?,
+    ~b: option<string>=?,
+    ~c: option<string>=?,
+    ~d: option<string>=?,
+    ~e: option<string>=?,
+    x
+  ) => {
+    Js.log()
+  }
+)
+
+let make = fn(
+  (
+    ~a: option<string>,
+    ~b: option<string>,
+    ~c: option<string>,
+    ~d: option<string>,
+    ~e: option<string>,
+    x
+  ) => {
+    Js.log()
+  }
+)
+
+let make = fn(
+  (
+    ~a: optionstring,
+    ~b: optionstring,
+    ~c: optionstring,
+    ~d: optionstring,
+    ~e: optionstring,
+    x
+  ) => {
+    Js.log()
+  }
+)
+
+let make = fn(
+  (
+     aoptionstring,
+     boptionstring,
+     coptionstring,
+     doptionstring,
+     eoptionstring,
+     foptionstring,
+    x
+  ) => {
+    Js.log()
+  }
+)
+
+// comments should not disappear on the pattern 
+let /* a */ decoratorTags /* b */ = items
+  ->Js.Array2.filter(items => {items.category === Decorators})
+
+let /* a */ decoratorTags /* b */ = items->Js.Array2.filter(items => {
+  items.category === Decorators
+  || items.category === ChristmasLighting
+  || items.category === Unknown
+})
+
+// callback in last position
+showDialog(
+  `
+  Do you really want to leave this workspace?
+  Some more text with detailed explanations...
+  `,
+  ~danger=true,
+  ~confirmText="Yes, I am sure!",
+  ~onConfirm={() => ()},
+)
+
+// callback in first position
+showDialog(
+  ~onConfirm={() => ()},
+  ~danger=true,
+  ~confirmText="Yes, I am sure!",
+  `
+  Do you really want to leave this workspace?
+  Some more text with detailed explanations...
+  `,
+)
+
+// callback in last position, with comment in between args
+showDialog(dialogMessage,
+// comment
+ ~danger=true, ~confirmText="Yes, I am sure!", ~onConfirm=() => ())
+ 
+// callback in last position, with comment in between args
+showDialog(
+  dialogMessage,
+ ~danger=true, 
+ /* comment below */
+ ~confirmText="Yes, I am sure!",
+ ~onConfirm=() => ())
+
+// callback in first position, with single line comment in between args
+showDialog(
+  ~onConfirm=() => (),
+  dialogMessage,
+  // comment
+  ~danger=true,
+  ~confirmText="Yes, I am sure!"
+ )
+ 
+// callback in first position, with comment in between args
+showDialog(
+  ~onConfirm=() => (),
+  dialogMessage,
+  ~danger=true, 
+  /* comment below */
+  ~confirmText="Yes, I am sure!",
+)
+
+React.useEffect5((
+  context.activate,
+  context.chainId,
+  dispatch,
+  setTriedLoginAlready,
+  triedLoginAlready,
+),
+() => {
+  doThings()
+  None
+}, // intentionally only running on mount (make sure it's only mounted once :))
+)
+
+apply(a, b, c, /* before */ () => () /* after */)
+apply(/* before */ () => () /* after */, a, b, c)

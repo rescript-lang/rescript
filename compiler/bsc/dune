@@ -1,0 +1,12 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(executable
+ (name rescript_compiler_main)
+ (public_name bsc)
+ (package rescript)
+ (flags
+  (:standard -w +a-4-9-30-40-41-42-48-70))
+ (libraries common core depends flow_parser gentype syntax))

@@ -1,0 +1,13 @@
+@@jsxConfig({version: 4})
+
+module V4C = {
+  @res.jsxComponentProps @live
+  type props<'x, 'ref> = {
+    x: 'x,
+    ref?: 'ref,
+  }
+
+  @module("componentForwardRef")
+  external make: React.componentLike<props<string, ReactDOM.Ref.currentDomRef>, React.element> =
+    "component"
+}

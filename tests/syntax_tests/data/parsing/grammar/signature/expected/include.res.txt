@@ -1,0 +1,20 @@
+module type Sig  =
+  sig
+    include BtreeType
+    include Ns.BtreeType
+    include ((BtreeType)[@onModType ])[@@onInclude ]
+    include BtreeType
+    include ((BtreeType)[@onModType ])[@@onInclude ]
+    include functor (S : SetLike) -> sig val s : S.t end
+    include SetLike -> sig val s : int end
+    include sig val s : string val y : int end
+    include ((sig val s : string val y : int end)[@onSignature ])[@@onInclude
+                                                                   ]
+    include [%extension ]
+    include [%extension.with.args {js|foo|js}]
+    include (([%extension ])[@onExtension ])[@@onInclude ]
+    include (Foo with type  t =  string)
+    include (((Foo)[@onModType ]) with type  t =  string)[@@onInclude ]
+    include module type of String
+    include ((module type of String)[@onModtype ])[@@onInclude ]
+  end

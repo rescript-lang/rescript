@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_coercion_open_polyvariant.res[0m:[2m5:19-30[0m
+
+  3 [2m│[0m let p = #One
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m let v: variant = ([1;31mp :> variant[0m)
+  6 [2m│[0m 
+
+  Type [> #One] is not a subtype of variant

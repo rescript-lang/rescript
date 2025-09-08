@@ -1,0 +1,11 @@
+{
+  "name": "weird_names",
+  "version": "0.1.0",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule"
+  }
+}

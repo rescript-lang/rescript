@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unbound_record_field.res[0m:[2m3:6-21[0m
+
+  1 [2m│[0m let foo = x =>
+  2 [2m│[0m   switch x {
+  [1;31m3[0m [2m│[0m   | {[1;31msomeUnknownField[0m: 123} => ()
+  4 [2m│[0m   }
+  5 [2m│[0m 
+
+  [1;33msomeUnknownField[0m refers to a record field, but no corresponding record type is in scope.
+  
+  If it's defined in another module or file, bring it into scope by:
+  - Prefixing the field name with the module name: [1;33mTheModule.someUnknownField[0m
+  - Or specifying the record type explicitly:
+  [1;33mlet theValue: TheModule.theType = {someUnknownField: VALUE}[0m

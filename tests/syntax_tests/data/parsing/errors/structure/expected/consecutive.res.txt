@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/consecutive.res:1:9-18
+
+  1 │ open Foo exception Bar
+  2 │ 
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+open Foo
+exception Bar 

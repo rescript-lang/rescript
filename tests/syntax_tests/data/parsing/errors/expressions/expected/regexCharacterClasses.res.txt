@@ -1,0 +1,20 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/regexCharacterClasses.res:1:14
+
+  1 │ let re = /[]/]/
+  2 │ 
+
+  I'm not sure what to parse here when looking at "]".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/regexCharacterClasses.res:1:16
+
+  1 │ let re = /[]/]/
+  2 │ 
+
+  unterminated regex
+
+let re = [%re {js|/[]/|js}]
+;;[%re {js|//|js}]

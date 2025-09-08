@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+*.ml linguist-language=OCaml
+*.mli linguist-language=OCaml
+*.res linguist-language=ReScript
+*.resi linguist-language=ReScript
+
+.yarn/releases/* binary linguist-vendored

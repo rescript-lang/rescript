@@ -1,0 +1,12 @@
+Code Lens src/CodeLens.res
+[{
+        "range": {"start": {"line": 4, "character": 4}, "end": {"line": 4, "character": 6}},
+        "command": {"title": "(~opt1: int=?, ~a: int, ~b: int, unit, ~opt2: int=?, unit, ~c: int) => int", "command": ""}
+    }, {
+        "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 7}},
+        "command": {"title": "(~age: int, ~name: string) => string", "command": ""}
+    }, {
+        "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 7}},
+        "command": {"title": "(int, int) => int", "command": ""}
+    }]
+

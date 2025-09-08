@@ -1,0 +1,39 @@
+@attr(: int)
+let x = 1
+
+@attr(? var)
+let x = 1
+
+@attr(? var if x === 1)
+let x = 1
+
+%ext(: let x: int)
+%ext(:
+  let x: int
+  let y: float
+)
+
+%%ext(
+  "A"
+  "B"
+)
+
+@@superPrivate(@module("./logo.svg") external logo: string = "default")
+
+@inlinePrivate(@module("./logo.svg") external logo: string = "default")
+let x = 1
+
+@obj external ff: (~x: int, ~g: int, ~h: int) => _ = ""
+
+@obj external ff: (~x: int, ~g: int, ~h: @as(3) _) => _ = ""
+
+@obj external ff: (~x: int) => (~h: @as(3) _) => _ = ""
+
+@obj
+external ff: (~lo: @as(3) _, ~mid: @as(3) _, ~hi: int) => _ = ""
+
+@obj
+external ff: (~hi: int, ~lo: @as(3) _) => _ = ""
+
+@obj
+external ff: (~hi: int, ~mid: @as(3) _, ~lo: @as(3) _) => _ = ""

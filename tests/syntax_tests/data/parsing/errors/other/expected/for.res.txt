@@ -1,0 +1,12 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/for.res:1:6-2:0
+
+  1 │ for x
+  2 │ 
+
+  Did you forget a `in` here?
+
+;;for x = [%rescript.exprhole ] to [%rescript.exprhole ] do
+    [%rescript.exprhole ]
+  done

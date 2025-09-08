@@ -1,0 +1,10 @@
+type nonrec t
+type nonrec t
+and s
+type nonrec 'a t
+type nonrec 'a t
+and 'a s
+type nonrec ('a, 'b) t
+and ('a, 'b) s
+type nonrec 'a t = 'a node
+and 'b s = 'b edge

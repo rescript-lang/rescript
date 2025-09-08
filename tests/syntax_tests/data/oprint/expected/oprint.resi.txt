@@ -1,0 +1,244 @@
+module Set: {
+  module type OrderedType = {
+    type rec t
+    let compare: (t, t) => int
+  }
+  module type S = {
+    type rec elt
+    type rec t
+    let empty: t
+    let compare: (t, t) => int
+  }
+  module Make: (Ord: OrderedType) => {
+    type rec elt = Ord.t
+    type rec t
+    let empty: t
+    let compare: (t, t) => int
+  }
+}
+module Hashtbl: {
+  type t<'a, 'b>
+  let create: int => t<'a, 'b>
+}
+let name: string
+let x: int
+let pi: float
+let numbersArray: array<int>
+let numbersTuple: (int, int, int, int, int)
+let numbersList: list<int>
+let add: (int, int) => int
+type s = string
+type user = {name: string, age: int}
+type user2 = {
+  naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaame: string,
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaage: int,
+  emaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaail: string,
+}
+module Diff: {
+  let string: (string, string) => bool
+}
+module Diff2 = Diff
+type rec tree<'value> = Nil | Node(tree<'value>, 'value, tree<'value>)
+type intTree = tree<int>
+type rec tree2<'value> =
+  | Niiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiil2
+  | Noooooooooooooooooooooooooooooooooooode2(
+      tree2<'value>,
+      'value,
+      tree2<'value>,
+    )
+type rec tree3<'value> =
+  | Nil3
+  | Node3({left: tree3<'value>, value: 'value, right: tree3<'value>})
+type rec tree4<'value> =
+  | Nil4
+  | Node4({
+      leeeeeeeeeeeeeeeeeeeeeeeeeeeeft: tree3<'value>,
+      vaaaaaaaaaaaaaaaaaaaaalue: 'value,
+      riiiiiiiiiiiiiiiiiiiiiiight: tree3<'value>,
+    })
+type color = ..
+type color += Blue
+type color += Red | Green
+type color +=
+  | Blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaack
+  | Oraaaaaaaaaaaaaaaaaaaaaaaaaaaaaaange
+  | Reeeeeeeeeeeeeeeeeeeed
+module Expr: {
+  type attr = ..
+  type attr += private Str(string)
+  type attr += Int(int) | Float(float)
+}
+module User: {
+  type t = {name: string, age: int}
+}
+type userT = User.t = {name: string, age: int}
+type veeeeeeeeeeeeeeeeeeeeeeeeryLongTypeAlias = string
+type rgb = [#Blue | #Green | #Red]
+type longRgb = [
+  | #Blueeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+  | #Greeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeen
+  | #Reeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeed
+  | #Rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrgb(float, float, float)
+  | #Rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrgb2(
+      veeeeeeeeeeeeeeeeeeeeeeeeryLongTypeAlias,
+      veeeeeeeeeeeeeeeeeeeeeeeeryLongTypeAlias,
+      veeeeeeeeeeeeeeeeeeeeeeeeryLongTypeAlias,
+    )
+]
+let red: [> #Red]
+let red2: rgb
+let int: [> #Int(int)]
+let int2: [> #Int(string, bool)]
+let int3: [> #Int(float, float, float)]
+type customRgb = [#Rbg(float, float, float)]
+let color: [> #Rbg(float, float, float)]
+let tupleAsSingleArg: [> #tuple(float, float)]
+let oneArg: [> #One(string)]
+type redColor = [#Red]
+type greenColor = [#Green]
+type blueColor = [#Blue]
+type rgbColor = [#Blue | #Green | #Red]
+module M: {
+  type data = [#IntData(int) | #StrData(string)]
+  let stringOfData: data => string
+}
+let y: string
+type rgbw = [#Blue | #Green | #Red | #White]
+let id: ([> #Blue | #Green | #Red] as 'a) => 'a
+let id: ([> rgb] as 'a) => 'a
+type point = [#Point(float, float)]
+type shape = [#Circle(point, float) | #Rectangle(point, point)]
+let pi: float
+let computeArea: shape => float
+let shoelaceFormula: (
+  [< #Point(float, float)],
+  [< #Point(float, float)],
+  [< #Point(float, float)],
+) => float
+type shapePlus = [
+  | #Circle(point, float)
+  | #Rectangle(point, point)
+  | #Triangle(point, point, point)
+]
+let computeAreaPlus: shapePlus => float
+let computeAreaExotic: [<
+  | #Circle(point, float)
+  | #"R-Triangle+"('a, 'b, 'c)
+  | #Rectangle(point, point)
+] => unit
+let top: [> #Point(float, float)]
+let left: [> #Point(float, float)]
+let right: [> #Point(float, float)]
+let circ: [> #Circle([> #Point(float, float)], float)]
+let tri: [>
+  | #Triangle(
+      [> #Point(float, float)],
+      [> #Point(float, float)],
+      [> #Point(float, float)],
+    )
+]
+let x: float
+let y: float
+let basic_color_to_int: [<
+  | #Black
+  | #Blue
+  | #Cyan
+  | #Green
+  | #Magenta
+  | #Red
+  | #White
+  | #Yellow
+] => int
+let color_to_int: [<
+  | #Basic(
+      [< #Black | #Blue | #Cyan | #Green | #Magenta | #Red | #White | #Yellow],
+      [< #Bold | #Regular],
+    )
+  | #Gray(int)
+  | #RGB(int, int, int)
+] => int
+module type Conjunctive = {
+  type u1 = [#A | #B]
+  type u2 = [#A | #B | #C]
+  let f: [< #T([< u2]) & ([< u2]) & ([< u1])] => unit
+  let g: [< #S & ([< u2]) & ([< u2]) & ([< u1])] => unit
+}
+type t20 = [#"type"]
+type t21 = [#"va r ia nt"]
+type t22 = [#"Variant ⛰"]
+type \"let" = int
+type \"type" = [#"Point🗿"(\"let", float)]
+type t23 = [#1 | #"10space" | #123]
+type exoticUser = {\"let": string, \"type": float, \"Upper": int}
+type arity1a = unit => int
+type arity1b = int => int
+type arity2 = (int, int) => int
+type obj1<'a> = option<{"a": int}>
+type obj2 = {"a": int}
+type obj3 = {"a": int}
+type obj4 = {"a": int}
+type obj5<'a> = 'a
+  constraint 'a = {..}
+type obj6 = {"a": int}
+type obj7 = {"a": int}
+type obj8<'a> = 'a
+  constraint 'a = {.."a": int}
+type obj9 = {"A": int}
+type objUser = {"age": int, "name": string}
+type objUserWithLongFields = {
+  "age": int,
+  "anoooooooooooooooootherLongFiiiiiieeeeeeeldName": int,
+  "looooooongFiiiiiiiieeeeeeeldName": string,
+  "name": string,
+  "x": int,
+}
+type objUserWithUppsercaseKeys = {"AGE": int, "NAME": string}
+type objectCoordinate = {"x": float, "y": float}
+type threeDimensionalCoordinate = {"x": float, "y": float, "z": float}
+type differentSpreadedCoordinate = {
+  "alpha": int,
+  "x": float,
+  "y": float,
+  "z": float,
+}
+type multiSpreadedCoordinate = {
+  "a": int,
+  "alpha": int,
+  "b": int,
+  "x": float,
+  "y": float,
+  "z": float,
+}
+type dotdotObjectCoordinate<'a> = 'a
+  constraint 'a = {..
+    "suuuuuuuuuuuperLooooooooooooongFieldNaaaaaaaaaaaame": float,
+    "suuuuuuuuuuuperLooooooooooooongFieldNaaaaaaaaaaaame2222222222222": float,
+  }
+type permissions = [#644 | #777]
+type numericPolyVarWithPayload = [#1(string) | #2(int, string)]
+let numericPolyVarMatch: [> #1(string) | #2(int, string)]
+let sort: (module(Set.S with type elt = 'a), list<'a>) => list<'a>
+let make_set: (('a, 'a) => int) => module(Set.S with type elt = 'a)
+type picture = string
+module type DEVICE = {
+  let draw: picture => unit
+}
+let devices: Hashtbl.t<string, module(DEVICE)>
+module rec A: {
+  type t = Leaf(string) | Node(ASet.t)
+  let compare: (t, t) => int
+}
+and ASet: {
+  type rec elt = A.t
+  type rec t
+  let empty: t
+  let compare: (t, t) => int
+}
+type emptyObject = {.}
+let f: (~x: 'a=?, ~y: 'b) => option<'a>
+type call = CleanStart
+let f: (~a: int=?, unit) => int
+type opt = {x: int, y?: option<string>}
+let secondOrder: (unit => 'a) => 'a
+let thirdOrder: ((unit => unit) => 'a) => 'a

@@ -1,0 +1,12 @@
+
+  [1;33mWarning number 110[0m
+  [36m/.../fixtures/todo_with_payload.res[0m:[2m1:38-85[0m
+
+  [1;33m1[0m [2m│[0m let implementMeLater = (): string => [1;33m%todo("This should return a string [0m
+    [2m│[0m [1;33meventually.")[0m
+  2 [2m│[0m 
+  3 [2m│[0m let x = implementMeLater()
+
+  Todo found: This should return a string eventually.
+
+  This code is not implemented yet and will crash at runtime. Make sure you implement this before running the code.

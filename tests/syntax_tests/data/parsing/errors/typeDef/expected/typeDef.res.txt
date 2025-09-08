@@ -1,0 +1,162 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:1:15-2:3
+
+  1 │ type rec stack
+  2 │   | Empty
+  3 │ 
+  4 │ // name cannot contain module access paths
+
+  Did you forget a `=` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:5:6-12
+
+  3 │ 
+  4 │ // name cannot contain module access paths
+  5 │ type Foo.bar = string
+  6 │ 
+  7 │ // missing type
+
+  A type declaration's name cannot contain a module access. Did you mean `bar`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:11:1-4
+
+   9 │ 
+  10 │ // missing type
+  11 │ type state =
+  12 │ 
+  13 │ // prevent last error
+
+  Missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:14:1
+
+  12 │ 
+  13 │ // prevent last error
+  14 │ ;
+  15 │ 
+  16 │ // The name must start with a lowercase
+
+  I'm not sure what to parse here when looking at ";".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:17:6-7
+
+  15 │ 
+  16 │ // The name must start with a lowercase
+  17 │ type T1 = D1
+  18 │ 
+  19 │ type M.T2 += D2
+
+  Did you mean `t1` instead of `T1`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:19:8-9
+
+  17 │ type T1 = D1
+  18 │ 
+  19 │ type M.T2 += D2
+  20 │ 
+  21 │ type M1.M2.T3 += D3
+
+  Did you mean `t2` instead of `T2`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:21:12-13
+
+  19 │ type M.T2 += D2
+  20 │ 
+  21 │ type M1.M2.T3 += D3
+  22 │ 
+  23 │ type T3 += Tid: Tid.t<t>
+
+  Did you mean `t3` instead of `T3`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:23:6-7
+
+  21 │ type M1.M2.T3 += D3
+  22 │ 
+  23 │ type T3 += Tid: Tid.t<t>
+  24 │ 
+  25 │ type T4<_> = D4
+
+  Did you mean `t3` instead of `T3`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:23:15
+
+  21 │ type M1.M2.T3 += D3
+  22 │ 
+  23 │ type T3 += Tid: Tid.t<t>
+  24 │ 
+  25 │ type T4<_> = D4
+
+  I'm not sure what to parse here when looking at ":".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:25:6-7
+
+  23 │ type T3 += Tid: Tid.t<t>
+  24 │ 
+  25 │ type T4<_> = D4
+  26 │ 
+  27 │ type M1.M2.T5<_> += D5
+
+  Did you mean `t4` instead of `T4`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:27:12-13
+
+  25 │ type T4<_> = D4
+  26 │ 
+  27 │ type M1.M2.T5<_> += D5
+  28 │ 
+  29 │ type X.Y z += D6
+
+  Did you mean `t5` instead of `T5`?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeDef.res:29:8
+
+  27 │ type M1.M2.T5<_> += D5
+  28 │ 
+  29 │ type X.Y z += D6
+  30 │ 
+
+  Did you mean `y` instead of `Y`?
+
+type stack =
+  | Empty 
+type nonrec bar = string
+type nonrec t = [%rescript.typehole ]
+type nonrec state = [%rescript.typehole ]
+type nonrec T1
+;;D1
+type nonrec T2
+;;D2
+type nonrec T3
+;;D3
+type nonrec T3
+;;Tid
+;;(Tid.t < t) > ([%rescript.exprhole ])
+type nonrec T4
+;;([%rescript.exprhole ]) > D4
+type nonrec T5
+;;([%rescript.exprhole ]) > D5
+type X.Y +=  
+  | D6 

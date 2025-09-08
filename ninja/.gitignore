@@ -1,0 +1,40 @@
+*.pyc
+*.obj
+*.exe
+*.pdb
+*.ilk
+TAGS
+/build
+/build.ninja
+/ninja
+/ninja.bootstrap
+/build_log_perftest
+/canon_perftest
+/clparser_perftest
+/depfile_parser_perftest
+/hash_collision_bench
+/ninja_test
+/manifest_parser_perftest
+/graph.png
+/doc/manual.html
+/doc/doxygen
+/gtest-1.6.0
+*.patch
+
+# Eclipse project files
+.project
+.cproject
+
+# SublimeText project files
+*.sublime-project
+*.sublime-workspace
+
+# Ninja output
+.ninja_deps
+.ninja_log
+
+# Visual Studio Code project files
+/.vscode/
+/.ccls-cache/
+*.tar.gz
+.vs/

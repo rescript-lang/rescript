@@ -1,0 +1,153 @@
+Highlight src/Highlight.res
+structure items:39 diagnostics:0 
+Lident: M 0:7 Namespace
+Lident: C 1:9 Namespace
+Lident: Component 1:13 Namespace
+Variable: _c [4:4->4:6]
+JsxTag <: 4:9
+Lident: Component 4:10 Namespace
+JsxTag />: 4:20
+Variable: _mc [6:4->6:7]
+JsxTag <: 6:10
+Ldot: M 6:11 Namespace
+Lident: C 6:13 Namespace
+JsxTag />: 6:15
+Variable: _d [8:4->8:6]
+JsxTag <: 8:9
+Lident: div 8:10 JsxLowercase
+JsxTag />: 8:14
+Variable: _d2 [10:4->10:7]
+JsxTag <: 11:2
+Lident: div 11:3 JsxLowercase
+JsxTag >: 11:6
+Ldot: React 12:5 Namespace
+Lident: string 12:11 Variable
+JsxTag <: 13:4
+Lident: div 13:5 JsxLowercase
+JsxTag >: 13:8
+Ldot: React 13:11 Namespace
+Lident: string 13:17 Variable
+JsxTag </: 13:32
+Lident: div 13:34 JsxLowercase
+JsxTag >: 13:37
+Ldot: React 14:5 Namespace
+Lident: string 14:11 Variable
+Ldot: React 15:5 Namespace
+Lident: string 15:11 Variable
+JsxTag </: 16:2
+Lident: div 16:4 JsxLowercase
+JsxTag >: 16:7
+Lident: pair 18:5 Type
+Lident: looooooooooooooooooooooooooooooooooooooong_int 20:5 Type
+Lident: int 20:54 Type
+Lident: looooooooooooooooooooooooooooooooooooooong_string 22:5 Type
+Lident: string 22:57 Type
+Lident: pairIntString 24:5 Type
+Lident: list 24:21 Type
+TypeArg: [25:2->28:3]
+Lident: pair 25:2 Type
+TypeArg: [26:4->26:50]
+TypeArg: [27:4->27:53]
+Lident: looooooooooooooooooooooooooooooooooooooong_int 26:4 Type
+Lident: looooooooooooooooooooooooooooooooooooooong_string 27:4 Type
+Binary operator < [31:12->31:13]
+Binary operator > [31:22->31:23]
+Lident: MT 33:12 Type
+Lident: DDF 34:9 Namespace
+Lident: DDF 39:7 Namespace
+Lident: DDF 40:9 Namespace
+Lident: MT 39:12 Type
+Lident: XX 45:7 Namespace
+Lident: YY 46:9 Namespace
+Lident: t 47:9 Type
+Lident: int 47:13 Type
+Ldot: XX 51:5 Namespace
+Lident: YY 51:8 Namespace
+Lident: tt 53:5 Type
+Lident: t 53:10 Type
+Lident: T 57:7 Namespace
+Lident: someRecord 58:7 Type
+Lident: someField 59:4 Property
+Lident: int 59:15 Type
+Lident: someOtherField 60:4 Property
+Lident: string 60:20 Type
+Lident: theParam 61:4 Property
+Lident: someEnum 64:7 Type
+Lident: A 64:18 EnumMember
+Lident: B 64:22 EnumMember
+Lident: C 64:26 EnumMember
+Variable: foo [67:4->67:7]
+Variable: x [67:10->67:11]
+Ldot: T 67:17 Namespace
+Lident: someField 67:19 Property
+Lident: x 67:15 Variable
+Variable: add [69:4->69:7]
+Variable: x [69:21->69:22]
+Variable: world [69:24->69:30]
+Lident: x 69:35 Variable
+Lident: world 69:39 Variable
+Lident: add 71:8 Variable
+JsxTag <: 73:8
+Lident: div 73:9 JsxLowercase
+JsxTag >: 73:24
+JsxTag <: 73:26
+Lident: div 73:27 JsxLowercase
+JsxTag />: 73:31
+JsxTag </: 73:34
+Lident: div 73:36 JsxLowercase
+JsxTag >: 73:39
+Lident: SomeComponent 75:7 Namespace
+Lident: Nested 76:9 Namespace
+Variable: make [78:8->78:12]
+Variable: children [78:16->78:25]
+Lident: children 79:10 Variable
+JsxTag <: 84:8
+Ldot: SomeComponent 84:9 Namespace
+Lident: Nested 84:23 Namespace
+JsxTag >: 84:29
+JsxTag <: 84:31
+Lident: div 84:32 JsxLowercase
+JsxTag />: 84:36
+JsxTag </: 84:39
+Ldot: SomeComponent 84:41 Namespace
+Lident: Nested 84:55 Namespace
+JsxTag >: 84:61
+Variable: toAs [90:4->90:8]
+Variable: x [90:19->90:20]
+Lident: x 90:25 Variable
+Variable: _toEquals [91:4->91:13]
+Lident: toAs 91:16 Variable
+Variable: to [93:4->93:6]
+Lident: to 94:9 Variable
+Lident: to 94:14 Variable
+Lident: to 94:20 Variable
+Lident: to 94:25 Variable
+Lident: ToAsProp 98:7 Namespace
+Variable: make [100:6->100:10]
+Variable: to [100:14->100:17]
+Ldot: React 101:8 Namespace
+Lident: int 101:14 Variable
+Lident: to 101:18 Variable
+JsxTag <: 104:8
+Lident: ToAsProp 104:9 Namespace
+JsxTag />: 104:23
+Variable: true [107:4->107:11]
+Lident: true 108:8->108:15 Variable
+Variable: enumInModule [110:4->110:16]
+Ldot: T 110:19 Namespace
+Lident: A 110:21 EnumMember
+Lident: typeInModule 112:5 Type
+Ldot: XX 112:20 Namespace
+Ldot: YY 112:23 Namespace
+Lident: t 112:26 Type
+Lident: QQ 114:7 Namespace
+Lident: somePolyEnumType 115:7 Type
+Lident: list 118:29 Type
+TypeArg: [118:34->118:37]
+Lident: int 118:34 Type
+Variable: x [123:8->123:9]
+Lident: x 124:9 Variable
+Ldot: QQ 126:8 Namespace
+Lident: somePolyEnumType 126:11 Type
+Lident: abc 133:9->133:14 Property
+

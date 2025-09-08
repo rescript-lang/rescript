@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/non_function_uncurried_apply.res[0m:[2m2:9-14[0m
+
+  1 [2m│[0m let nonfun = 2
+  [1;31m2[0m [2m│[0m let _ = [1;31mnonfun[0m(3)
+  3 [2m│[0m 
+
+  This can't be called, it's not a function.
+  The function has type: int

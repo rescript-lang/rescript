@@ -1,0 +1,26 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/record.res:2:15-17
+
+  1 │ switch x {
+  2 │ | {a, b: {x, y => ()
+  3 │ | {...x, y} => ()
+  4 │ | {a, _, b} => ()
+
+  Did you forget a `}` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/record.res:3:7-14
+
+  1 │ switch x {
+  2 │ | {a, b: {x, y => ()
+  3 │ | {...x, y} => ()
+  4 │ | {a, _, b} => ()
+  5 │ }
+
+  Record spread (`...`) is not supported in pattern matches.
+Explanation: you can't collect a subset of a record's field into its own record, since a record needs an explicit declaration and that subset wouldn't have one.
+Solution: you need to pull out each field you want explicitly.
+
+;;match x with | { a; b = { x; y } } -> () | { x; y } -> () | { a; b } -> ()

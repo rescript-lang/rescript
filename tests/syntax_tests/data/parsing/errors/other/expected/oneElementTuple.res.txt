@@ -1,0 +1,36 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/oneElementTuple.res:1:19-23
+
+  1 │ let faultyTuple = (a, )
+  2 │ 
+  3 │ switch faultyTuple {
+
+  A tuple needs at least two elements
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/oneElementTuple.res:4:3-7
+
+  2 │ 
+  3 │ switch faultyTuple {
+  4 │ | (a, ) => ()
+  5 │ | _ => ()
+  6 │ }
+
+  A tuple needs at least two elements
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/oneElementTuple.res:8:20-29
+
+  6 │ }
+  7 │ 
+  8 │ type faultyTuple = (string, )
+  9 │ 
+
+  A tuple needs at least two elements
+
+let faultyTuple = (a)
+;;match faultyTuple with | (a) -> () | _ -> ()
+type nonrec faultyTuple = (string)

@@ -1,0 +1,17 @@
+[{
+  "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 6}},
+  "message": "consecutive statements on a line must be separated by ';' or a newline",
+  "severity": 1,
+  "source": "ReScript"
+}, {
+  "range": {"start": {"line": 1, "character": 9}, "end": {"line": 1, "character": 11}},
+  "message": "This let-binding misses an expression",
+  "severity": 1,
+  "source": "ReScript"
+}, {
+  "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}},
+  "message": "I was expecting a name for this let-binding. Example: `let message = \"hello\"`",
+  "severity": 1,
+  "source": "ReScript"
+}]
+

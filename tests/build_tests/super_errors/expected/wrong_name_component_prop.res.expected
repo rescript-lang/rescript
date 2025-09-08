@@ -1,0 +1,23 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/wrong_name_component_prop.res[0m:[2m32:28-38[0m
+
+  30 [2m│[0m }
+  31 [2m│[0m 
+  [1;31m32[0m [2m│[0m let dddd = Component.make({[1;31mnonExistant[0m: "hello"})
+  33 [2m│[0m 
+
+  The field [1;31mnonExistant[0m does not belong to type [1;33mComponent.props[0m
+  
+  This record expression is expected to have type
+    [1;33mComponent.props<
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+>[0m

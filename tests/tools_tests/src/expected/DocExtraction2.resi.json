@@ -1,0 +1,95 @@
+
+{
+  "name": "DocExtraction2",
+  "docstrings": ["Module level doc here."],
+  "source": {
+    "filepath": "src/DocExtraction2.resi",
+    "line": 1,
+    "col": 1
+  },
+  "items": [
+  {
+    "id": "DocExtraction2.t",
+    "kind": "type",
+    "name": "t",
+    "signature": "type t",
+    "docstrings": ["Type t is pretty cool."],
+    "source": {
+      "filepath": "src/DocExtraction2.resi",
+      "line": 4,
+      "col": 1
+    }
+  }, 
+  {
+    "id": "DocExtraction2.make",
+    "kind": "value",
+    "name": "make",
+    "signature": "let make: unit => t",
+    "docstrings": ["Makerz of stuffz."],
+    "source": {
+      "filepath": "src/DocExtraction2.resi",
+      "line": 7,
+      "col": 1
+    },
+    "detail": 
+    {
+      "kind": "signature",
+      "details": {
+      "parameters": [{
+          "path": "unit"
+        }],
+      "returnType": {
+        "path": "t"
+      }
+    }
+    }
+  }, 
+  {
+    "id": "DocExtraction2.InnerModule",
+    "name": "InnerModule",
+    "kind": "module",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtraction2.resi",
+      "line": 9,
+      "col": 8
+    },
+    "items": [
+    {
+      "id": "DocExtraction2.InnerModule.t",
+      "kind": "type",
+      "name": "t",
+      "signature": "type t",
+      "docstrings": ["This type is also t."],
+      "source": {
+        "filepath": "src/DocExtraction2.resi",
+        "line": 13,
+        "col": 3
+      }
+    }, 
+    {
+      "id": "DocExtraction2.InnerModule.make",
+      "kind": "value",
+      "name": "make",
+      "signature": "let make: unit => t",
+      "docstrings": ["Maker of tea."],
+      "source": {
+        "filepath": "src/DocExtraction2.resi",
+        "line": 15,
+        "col": 3
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "parameters": [{
+            "path": "unit"
+          }],
+        "returnType": {
+          "path": "t"
+        }
+      }
+      }
+    }]
+  }]
+}

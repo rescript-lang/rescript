@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "chenglou92.rescript-vscode",
+    "ocamllabs.ocaml-platform",
+    "rust-lang.rust-analyzer"
+  ],
+  "unwantedRecommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode"
+  ]
+}

@@ -1,0 +1,187 @@
+Documentation extraction src/DocExtractionRes.res
+extracting docs for src/DocExtractionRes.res
+
+{
+  "name": "DocExtractionRes",
+  "docstrings": ["Module level documentation goes here."],
+  "items": [
+  {
+    "id": "DocExtractionRes.t",
+    "kind": "type",
+    "name": "t",
+    "signature": "type t = {name: string, online: bool}",
+    "docstrings": ["This type represents stuff."],
+    "detail": 
+    {
+      "kind": "record",
+      "items": [{
+        "name": "name",
+        "optional": false,
+        "docstrings": ["The name of the stuff."],
+        "signature": "string"
+      }, {
+        "name": "online",
+        "optional": false,
+        "docstrings": ["Whether stuff is online."],
+        "signature": "bool"
+      }]
+    }
+  }, 
+  {
+    "id": "DocExtractionRes.make",
+    "kind": "value",
+    "name": "make",
+    "signature": "let make: string => t",
+    "docstrings": ["Create stuff.\n\n```rescript example\nlet stuff = make(\"My name\")\n```"]
+  }, 
+  {
+    "id": "DocExtractionRes.asOffline",
+    "kind": "value",
+    "name": "asOffline",
+    "signature": "let asOffline: t => t",
+    "docstrings": ["Stuff goes offline."]
+  }, 
+  {
+    "id": "DocExtractionRes.SomeConstant\\",
+    "kind": "value",
+    "name": "SomeConstant\\",
+    "signature": "let SomeConstant\\: int",
+    "docstrings": ["exotic identifier"]
+  }, 
+  {
+    "id": "DocExtractionRes.SomeInnerModule",
+    "name": "SomeInnerModule",
+    "kind": "module",
+    "docstrings": ["Another module level docstring here."],
+    "items": [
+    {
+      "id": "DocExtractionRes.SomeInnerModule.status",
+      "kind": "type",
+      "name": "status",
+      "signature": "type status = Started(t) | Stopped | Idle",
+      "docstrings": [],
+      "detail": 
+      {
+        "kind": "variant",
+        "items": [
+        {
+          "name": "Started",
+          "docstrings": ["If this is started or not"],
+          "signature": "Started(t)"
+        }, 
+        {
+          "name": "Stopped",
+          "docstrings": ["Stopped?"],
+          "signature": "Stopped"
+        }, 
+        {
+          "name": "Idle",
+          "docstrings": ["Now idle."],
+          "signature": "Idle"
+        }]
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.SomeInnerModule.validInputs",
+      "kind": "type",
+      "name": "validInputs",
+      "signature": "type validInputs = [\n  | #\"needs-escaping\"\n  | #something\n  | #status(status)\n  | #withPayload(int)\n]",
+      "docstrings": ["These are all the valid inputs."]
+    }, 
+    {
+      "id": "DocExtractionRes.SomeInnerModule.callback",
+      "kind": "type",
+      "name": "callback",
+      "signature": "type callback = (t, ~status: status) => unit",
+      "docstrings": []
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.AnotherModule",
+    "name": "AnotherModule",
+    "kind": "module",
+    "docstrings": ["Mighty fine module here too!"],
+    "items": [
+    {
+      "id": "DocExtractionRes.LinkedModule",
+      "kind": "moduleAlias",
+      "name": "LinkedModule",
+      "docstrings": ["This links another module. Neat."],
+      "items": []
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.callback",
+      "kind": "type",
+      "name": "callback",
+      "signature": "type callback = SomeInnerModule.status => unit",
+      "docstrings": ["Testing what this looks like."]
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.isGoodStatus",
+      "kind": "value",
+      "name": "isGoodStatus",
+      "signature": "let isGoodStatus: SomeInnerModule.status => bool",
+      "docstrings": []
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.someVariantWithInlineRecords",
+      "kind": "type",
+      "name": "someVariantWithInlineRecords",
+      "signature": "type someVariantWithInlineRecords =\n  | SomeStuff({offline: bool, online?: bool})",
+      "docstrings": ["Trying how it looks with an inline record in a variant."],
+      "detail": 
+      {
+        "kind": "variant",
+        "items": [
+        {
+          "name": "SomeStuff",
+          "docstrings": ["This has inline records..."],
+          "signature": "SomeStuff({offline: bool, online?: bool})",
+          "payload": {
+            "kind": "inlineRecord",
+            "fields": [{
+              "name": "offline",
+              "optional": false,
+              "docstrings": [],
+              "signature": "bool"
+            }, {
+              "name": "online",
+              "optional": true,
+              "docstrings": ["Is the user online?"],
+              "signature": "option<bool>"
+            }]
+          }
+        }]
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.domRoot",
+      "kind": "type",
+      "name": "domRoot",
+      "signature": "type domRoot = unit => ReactDOM.Client.Root.t",
+      "docstrings": ["Callback to get the DOM root..."]
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported",
+    "name": "ModuleWithThingsThatShouldNotBeExported",
+    "kind": "module",
+    "docstrings": [],
+    "items": [
+    {
+      "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported.t",
+      "kind": "type",
+      "name": "t",
+      "signature": "type t",
+      "docstrings": ["The type t is stuff."]
+    }, 
+    {
+      "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported.make",
+      "kind": "value",
+      "name": "make",
+      "signature": "let make: unit => t",
+      "docstrings": ["The maker of stuff!"]
+    }]
+  }]
+}
+

@@ -1,0 +1,10 @@
+module A = ParenthesizedModule
+module A = DoubleParenthesizedModule
+module A = ((ParenthesizedModule)[@attr ])
+module F(A:X) = A
+module A = struct let a = 1 end
+module A = (ModApply)(MyMod)
+module A : X = A 
+include ParenthesizedModule
+include ((ParenthesizedModule)[@attr ])
+module A = ((ParenthesizedModule)[@attr2 ][@attr ])

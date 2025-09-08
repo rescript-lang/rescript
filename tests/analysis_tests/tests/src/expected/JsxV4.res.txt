@@ -1,0 +1,35 @@
+Definition src/JsxV4.res 8:9
+{"uri": "JsxV4.res", "range": {"start": {"line": 5, "character": 6}, "end": {"line": 5, "character": 10}}}
+
+Complete src/JsxV4.res 11:20
+posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:3->11:20]
+JSX <M4:[11:4->11:6] first[11:7->11:12]=...[11:13->11:18] f[11:19->11:20]=...[11:19->11:20]> _children:None
+Completable: Cjsx([M4], f, [first, f])
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Path M4.make
+[{
+    "label": "fun",
+    "kind": 4,
+    "tags": [],
+    "detail": "option<string>",
+    "documentation": null
+  }]
+
+Hover src/JsxV4.res 14:9
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.component<M4.props<string, string, string>>\n```\n---\n Doc Comment For M4 \n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C12%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype M4.props<'first, 'fun, 'second> = {\n  first: 'first,\n  fun?: 'fun,\n  second?: 'second,\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22JsxV4.res%22%2C3%2C2%5D)\n"}}
+
+Create Interface src/JsxV4.res
+module M4: {
+  @react.component
+  let make: (~first: string, ~fun: string=?, ~second: string=?) => React.element
+}
+module MM: {
+  @react.component
+  let make: unit => React.element
+}
+module Other: {
+  @react.component
+  let make: (~name: string) => React.element
+}
+

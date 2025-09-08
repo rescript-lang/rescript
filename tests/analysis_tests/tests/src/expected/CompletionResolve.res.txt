@@ -1,0 +1,6 @@
+Completion resolve: Belt_Array
+"\nUtilities for `Array` functions.\n"
+
+Completion resolve: ModuleStuff
+" This is a top level module doc. "
+

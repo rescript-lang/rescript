@@ -1,0 +1,9 @@
+(library
+ (name ml)
+ (wrapped false)
+ (preprocess
+  (action
+   (run %{bin:cppo} %{env:CPPO_FLAGS=} %{input-file})))
+ (flags
+  (:standard -w +a-4-42-40-41-44-45-9-48-67-70))
+ (libraries ext flow_parser))

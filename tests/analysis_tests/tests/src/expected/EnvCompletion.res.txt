@@ -1,0 +1,380 @@
+Complete src/EnvCompletion.res 10:17
+XXX Not found!
+Completable: Cpattern Value[res]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+[{
+    "label": "Okay(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Okay('a)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOkay('a)\n```\n\n```rescript\ntype someResult<'a, 'b> = Okay('a) | Failure('b)\n```"},
+    "insertText": "Okay(${1:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "Failure(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Failure('b)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFailure('b)\n```\n\n```rescript\ntype someResult<'a, 'b> = Okay('a) | Failure('b)\n```"},
+    "insertText": "Failure(${1:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 13:23
+posCursor:[13:23] posNoWhite:[13:22] Found pattern:[13:18->13:24]
+Ppat_construct Okay:[13:18->13:22]
+posCursor:[13:23] posNoWhite:[13:22] Found pattern:[13:22->13:24]
+Ppat_construct ():[13:22->13:24]
+Completable: Cpattern Value[res]->variantPayload::Okay($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype things = One | Two\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype things = One | Two\n```"},
+    "insertText": "Two",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 16:26
+posCursor:[16:26] posNoWhite:[16:25] Found pattern:[16:18->16:27]
+Ppat_construct Failure:[16:18->16:25]
+posCursor:[16:26] posNoWhite:[16:25] Found pattern:[16:25->16:27]
+Ppat_construct ():[16:25->16:27]
+Completable: Cpattern Value[res]->variantPayload::Failure($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+[{
+    "label": "\"\"",
+    "kind": 12,
+    "tags": [],
+    "detail": "string",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "\"$0\"",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 19:19
+XXX Not found!
+Completable: Cpattern Value[use](Nolabel)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "{}",
+    "kind": 22,
+    "tags": [],
+    "detail": "EnvCompletionOtherFile.response",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype EnvCompletionOtherFile.response = {stuff: theVariant, res: someResult<theVariant, string>}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 22:21
+posCursor:[22:21] posNoWhite:[22:20] Found pattern:[22:20->22:22]
+Completable: Cpattern Value[use](Nolabel)->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "stuff",
+    "kind": 5,
+    "tags": [],
+    "detail": "theVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\nstuff: theVariant\n```\n\n```rescript\ntype EnvCompletionOtherFile.response = {stuff: theVariant, res: someResult<theVariant, string>}\n```"}
+  }, {
+    "label": "res",
+    "kind": 5,
+    "tags": [],
+    "detail": "someResult<theVariant, string>",
+    "documentation": {"kind": "markdown", "value": "```rescript\nres: someResult<theVariant, string>\n```\n\n```rescript\ntype EnvCompletionOtherFile.response = {stuff: theVariant, res: someResult<theVariant, string>}\n```"}
+  }]
+
+Complete src/EnvCompletion.res 25:27
+posCursor:[25:27] posNoWhite:[25:26] Found pattern:[25:20->25:31]
+Completable: Cpattern Value[use](Nolabel)->recordField(stuff)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "First",
+    "kind": 4,
+    "tags": [],
+    "detail": "First",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFirst\n```\n\n```rescript\ntype theVariant = First | Second(r1)\n```"},
+    "insertText": "First",
+    "insertTextFormat": 2
+  }, {
+    "label": "Second(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Second(r1)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nSecond(r1)\n```\n\n```rescript\ntype theVariant = First | Second(r1)\n```"},
+    "insertText": "Second(${1:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 28:35
+posCursor:[28:35] posNoWhite:[28:34] Found pattern:[28:20->28:38]
+posCursor:[28:35] posNoWhite:[28:34] Found pattern:[28:28->28:36]
+Ppat_construct Second:[28:28->28:34]
+posCursor:[28:35] posNoWhite:[28:34] Found pattern:[28:34->28:36]
+Ppat_construct ():[28:34->28:36]
+Completable: Cpattern Value[use](Nolabel)->recordField(stuff), variantPayload::Second($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "{}",
+    "kind": 22,
+    "tags": [],
+    "detail": "r1",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype r1 = {age: int}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 31:36
+posCursor:[31:36] posNoWhite:[31:35] Found pattern:[31:20->31:40]
+posCursor:[31:36] posNoWhite:[31:35] Found pattern:[31:28->31:38]
+Ppat_construct Second:[31:28->31:34]
+posCursor:[31:36] posNoWhite:[31:35] Found pattern:[31:35->31:37]
+Completable: Cpattern Value[use](Nolabel)->recordField(stuff), variantPayload::Second($0), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype r1 = {age: int}\n```"}
+  }]
+
+Complete src/EnvCompletion.res 34:25
+posCursor:[34:25] posNoWhite:[34:24] Found pattern:[34:20->34:29]
+Completable: Cpattern Value[use](Nolabel)->recordField(res)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "Okay(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Okay('a)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOkay('a)\n```\n\n```rescript\ntype someResult<'a, 'b> = Okay('a) | Failure('b)\n```"},
+    "insertText": "Okay(${1:_})",
+    "insertTextFormat": 2
+  }, {
+    "label": "Failure(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Failure('b)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFailure('b)\n```\n\n```rescript\ntype someResult<'a, 'b> = Okay('a) | Failure('b)\n```"},
+    "insertText": "Failure(${1:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 37:31
+posCursor:[37:31] posNoWhite:[37:30] Found pattern:[37:20->37:34]
+posCursor:[37:31] posNoWhite:[37:30] Found pattern:[37:26->37:32]
+Ppat_construct Okay:[37:26->37:30]
+posCursor:[37:31] posNoWhite:[37:30] Found pattern:[37:30->37:32]
+Ppat_construct ():[37:30->37:32]
+Completable: Cpattern Value[use](Nolabel)->recordField(res), variantPayload::Okay($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "First",
+    "kind": 4,
+    "tags": [],
+    "detail": "First",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFirst\n```\n\n```rescript\ntype theVariant = First | Second(r1)\n```"},
+    "insertText": "First",
+    "insertTextFormat": 2
+  }, {
+    "label": "Second(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Second(r1)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nSecond(r1)\n```\n\n```rescript\ntype theVariant = First | Second(r1)\n```"},
+    "insertText": "Second(${1:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 40:38
+posCursor:[40:38] posNoWhite:[40:37] Found pattern:[40:20->40:42]
+posCursor:[40:38] posNoWhite:[40:37] Found pattern:[40:26->40:40]
+Ppat_construct Okay:[40:26->40:30]
+posCursor:[40:38] posNoWhite:[40:37] Found pattern:[40:31->40:39]
+Ppat_construct Second:[40:31->40:37]
+posCursor:[40:38] posNoWhite:[40:37] Found pattern:[40:37->40:39]
+Ppat_construct ():[40:37->40:39]
+Completable: Cpattern Value[use](Nolabel)->recordField(res), variantPayload::Okay($0), variantPayload::Second($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "{}",
+    "kind": 22,
+    "tags": [],
+    "detail": "r1",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype r1 = {age: int}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 43:39
+posCursor:[43:39] posNoWhite:[43:38] Found pattern:[43:20->43:44]
+posCursor:[43:39] posNoWhite:[43:38] Found pattern:[43:26->43:42]
+Ppat_construct Okay:[43:26->43:30]
+posCursor:[43:39] posNoWhite:[43:38] Found pattern:[43:31->43:41]
+Ppat_construct Second:[43:31->43:37]
+posCursor:[43:39] posNoWhite:[43:38] Found pattern:[43:38->43:40]
+Completable: Cpattern Value[use](Nolabel)->recordField(res), variantPayload::Okay($0), variantPayload::Second($0), recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[use](Nolabel)
+ContextPath Value[use]
+Path use
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype r1 = {age: int}\n```"}
+  }]
+
+Complete src/EnvCompletion.res 52:18
+XXX Not found!
+Completable: Cpattern Value[res2]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res2]
+Path res2
+[{
+    "label": "{}",
+    "kind": 22,
+    "tags": [],
+    "detail": "EnvCompletionOtherFile.someRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype EnvCompletionOtherFile.someRecord = {name: string, theThing: 'thing, theVariant: theVariant}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 55:20
+posCursor:[55:20] posNoWhite:[55:19] Found pattern:[55:19->55:21]
+Completable: Cpattern Value[res2]->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res2]
+Path res2
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype EnvCompletionOtherFile.someRecord = {name: string, theThing: 'thing, theVariant: theVariant}\n```"}
+  }, {
+    "label": "theThing",
+    "kind": 5,
+    "tags": [],
+    "detail": "'thing",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntheThing: 'thing\n```\n\n```rescript\ntype EnvCompletionOtherFile.someRecord = {name: string, theThing: 'thing, theVariant: theVariant}\n```"}
+  }, {
+    "label": "theVariant",
+    "kind": 5,
+    "tags": [],
+    "detail": "theVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntheVariant: theVariant\n```\n\n```rescript\ntype EnvCompletionOtherFile.someRecord = {name: string, theThing: 'thing, theVariant: theVariant}\n```"}
+  }]
+
+Complete src/EnvCompletion.res 58:29
+posCursor:[58:29] posNoWhite:[58:28] Found pattern:[58:19->58:33]
+Completable: Cpattern Value[res2]->recordField(theThing)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res2]
+Path res2
+[{
+    "label": "Four",
+    "kind": 4,
+    "tags": [],
+    "detail": "Four",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFour\n```\n\n```rescript\ntype things2 = Four | Five\n```"},
+    "insertText": "Four",
+    "insertTextFormat": 2
+  }, {
+    "label": "Five",
+    "kind": 4,
+    "tags": [],
+    "detail": "Five",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFive\n```\n\n```rescript\ntype things2 = Four | Five\n```"},
+    "insertText": "Five",
+    "insertTextFormat": 2
+  }]
+
+Complete src/EnvCompletion.res 61:31
+posCursor:[61:31] posNoWhite:[61:30] Found pattern:[61:19->61:35]
+Completable: Cpattern Value[res2]->recordField(theVariant)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res2]
+Path res2
+[{
+    "label": "First",
+    "kind": 4,
+    "tags": [],
+    "detail": "First",
+    "documentation": {"kind": "markdown", "value": "```rescript\nFirst\n```\n\n```rescript\ntype theVariant = First | Second(r1)\n```"},
+    "insertText": "First",
+    "insertTextFormat": 2
+  }, {
+    "label": "Second(_)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Second(r1)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nSecond(r1)\n```\n\n```rescript\ntype theVariant = First | Second(r1)\n```"},
+    "insertText": "Second(${1:_})",
+    "insertTextFormat": 2
+  }]
+

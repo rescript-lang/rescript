@@ -1,0 +1,58 @@
+assert(false)
+
+assert(truth)
+
+let x = assert(true)
+let x = assert(12)
+let x = assert(12: int)
+let x = assert(12)
+let x = assert(list{1, 2, ...x})
+let x = assert(module(Foo: Bar))
+let x = assert(module(Foo))
+let x = assert(Rgb(1, 2, 3))
+let x = assert([a, b, c])
+let x = assert({x: 1, y: 3})
+let x = assert((1, 2, 3))
+let x = assert(%extension)
+let x = assert(user.name)
+let x = assert(streets[0])
+let x = assert(apply(arg1, arg2))
+let x = assert(apply(arg1, arg2))
+let x = assert(-1)
+let x = assert(!true)
+let x = assert(x => print(x))
+let x = assert(switch x {
+| Blue => ()
+| Yello => ()
+})
+
+let x = assert(for i in 0 to 10 {
+  print_int(i)
+})
+
+let x = assert(if i < 10 {
+  print_int(i)
+} else {
+  print_int(1000)
+})
+
+let x = assert(while i < 10 {
+  print_int(i)
+})
+
+let x = assert(try sideEffect() catch {
+| Exit => ()
+})
+
+let x = assert(@attr expr)
+
+let x = assert(a + b)
+
+let x = @attr assert(false)
+
+assert(invariant["fatal"])
+assert(invariants[0])
+
+assert(address["street"] = "Brusselsestraat")
+
+assert(true ? 0 : 1)

@@ -1,0 +1,64 @@
+let x = 1
+// trailing first value-binding
+
+// leading snd value-binding
+and y = 2
+/* leading snd value-binding */
+
+let walkList: 'node. unit = comments => {
+  open Location
+  let x /* comment */ = 0
+}
+
+let walkList: 'node. (
+  ~prevLoc: Location.t=?,
+  ~getLoc: 'node => Location.t,
+  ~walkNode: ('node, t, list<Comment.t>) => unit,
+  list<'node>,
+  t,
+  list<Comment.t>,
+) => unit = (~prevLoc=?, ~getLoc, ~walkNode, l, t, comments) => {
+  open Location
+  switch l {
+  | _ if comments == list{} => ()
+  | list{} =>
+    switch prevLoc {
+    | Some(loc) => attach(t.trailing, loc, comments)
+    | None => ()
+    }
+  | list{node, ...rest} =>
+    let currLoc = getLoc(node)
+    let (leading, inside, trailing) = partitionByLoc(comments, currLoc)
+    switch prevLoc {
+    | None =>
+      /* first value binding, all leading comments attach here */
+      attach(t.leading, currLoc, leading)
+    | Some(prevLoc) =>
+      /* Same line */
+      if prevLoc.loc_end.pos_lnum === currLoc.loc_start.pos_lnum {
+        let (afterPrev, beforeCurr) = partitionAdjacentTrailing(prevLoc, leading)
+        let () = attach(t.trailing, prevLoc, afterPrev)
+        attach(t.leading, currLoc, beforeCurr)
+      } else {
+        let (onSameLineAsPrev, afterPrev) = partitionByOnSameLine(prevLoc, leading)
+        let () = attach(t.trailing, prevLoc, onSameLineAsPrev)
+        let (leading, _inside, _trailing) = partitionByLoc(afterPrev, currLoc)
+        attach(t.leading, currLoc, leading)
+      }
+    }
+    walkNode(node, t, inside)
+    walkList(~prevLoc=currLoc, ~getLoc, ~walkNode, rest, t, trailing)
+  }
+}
+
+let /* c0 */ number /* c1 */: /* c2 */ int /* c3 */ = /* c4 */ 123 /* c5 */
+
+// some comment
+
+/* leading 3th value-binding */ /* test */
+and z = 3
+/* cmt a */
+/* cmt b */
+/* cmt c */
+and z2 = 4
+// trailing structure

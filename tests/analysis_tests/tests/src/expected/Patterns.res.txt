@@ -1,0 +1,12 @@
+Definition src/Patterns.res 19:10
+{"uri": "Patterns.res", "range": {"start": {"line": 3, "character": 7}, "end": {"line": 3, "character": 10}}}
+
+Definition src/Patterns.res 24:11
+{"uri": "Patterns.res", "range": {"start": {"line": 9, "character": 7}, "end": {"line": 9, "character": 11}}}
+
+Definition src/Patterns.res 27:11
+{"uri": "Patterns.res", "range": {"start": {"line": 11, "character": 7}, "end": {"line": 11, "character": 8}}}
+
+Definition src/Patterns.res 30:11
+{"uri": "Patterns.res", "range": {"start": {"line": 15, "character": 9}, "end": {"line": 15, "character": 11}}}
+

@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/highlighting6.res[0m:[2m2:9-13[0m
+
+  1 [2m│[0m let aaaaa = 10
+  [1;31m2[0m [2m│[0m let b = [1;31maaaab[0m
+  3 [2m│[0m 
+
+  The value aaaab can't be found
+  
+  [1;33mHint: Did you mean aaaaa?[0m

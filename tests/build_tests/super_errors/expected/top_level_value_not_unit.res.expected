@@ -1,0 +1,14 @@
+
+  [1;31mWarning number 109[0m (configured as error) 
+  [36m/.../fixtures/top_level_value_not_unit.res[0m:[2m1:1-4[0m
+
+  [1;31m1[0m [2m│[0m [1;31m1234[0m
+  2 [2m│[0m 
+
+  This is at the top level and is expected to return `unit`. But it's returning `int`.
+
+  In ReScript, anything at the top level must evaluate to `unit`. You can fix this by assigning the expression to a value, or piping it into the `ignore` function.
+
+  Possible solutions:
+  - Assigning to a value that is then ignored: `let _ = yourExpression`
+  - Piping into the built-in ignore function to ignore the result: `yourExpression->ignore`

@@ -1,0 +1,602 @@
+Signature help src/SignatureHelp.res 16:20
+posCursor:[16:19] posNoWhite:[16:18] Found expr:[16:11->16:20]
+Pexp_apply ...[16:11->16:19] (...[46:0->16:20])
+posCursor:[16:19] posNoWhite:[16:18] Found expr:[16:11->16:19]
+Pexp_ident someFunc:[16:11->16:19]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: unlabelled<0>
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 19:21
+posCursor:[19:19] posNoWhite:[19:18] Found expr:[19:11->19:21]
+Pexp_apply ...[19:11->19:19] (...[19:20->19:21])
+posCursor:[19:19] posNoWhite:[19:18] Found expr:[19:11->19:19]
+Pexp_ident someFunc:[19:11->19:19]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: unlabelled<0>
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 22:29
+posCursor:[22:19] posNoWhite:[22:18] Found expr:[22:11->22:29]
+Pexp_apply ...[22:11->22:19] (...[22:20->22:23], ~two22:26->22:29=...[22:26->22:29])
+posCursor:[22:19] posNoWhite:[22:18] Found expr:[22:11->22:19]
+Pexp_ident someFunc:[22:11->22:19]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: ~two
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 25:33
+posCursor:[25:19] posNoWhite:[25:18] Found expr:[25:11->25:35]
+Pexp_apply ...[25:11->25:19] (...[25:20->25:23], ~two25:26->25:29=...[25:30->25:35])
+posCursor:[25:19] posNoWhite:[25:18] Found expr:[25:11->25:19]
+Pexp_ident someFunc:[25:11->25:19]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: ~two
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 28:38
+posCursor:[28:19] posNoWhite:[28:18] Found expr:[28:11->28:42]
+Pexp_apply ...[28:11->28:19] (...[28:20->28:23], ~two28:26->28:29=...[28:30->28:35], ~four28:38->28:42=...[28:38->28:42])
+posCursor:[28:19] posNoWhite:[28:18] Found expr:[28:11->28:19]
+Pexp_ident someFunc:[28:11->28:19]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: ~four
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 3
+}
+
+Signature help src/SignatureHelp.res 31:42
+posCursor:[31:19] posNoWhite:[31:18] Found expr:[31:11->31:44]
+Pexp_apply ...[31:11->31:19] (...[31:20->31:23], ~two31:26->31:29=...[31:30->31:35], ~four31:38->31:42=...[31:43->31:44])
+posCursor:[31:19] posNoWhite:[31:18] Found expr:[31:11->31:19]
+Pexp_ident someFunc:[31:11->31:19]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: ~four
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 3
+}
+
+Signature help src/SignatureHelp.res 34:21
+posCursor:[34:20] posNoWhite:[34:19] Found expr:[34:11->34:21]
+Pexp_apply ...[34:11->34:20] (...[46:0->34:21])
+posCursor:[34:20] posNoWhite:[34:19] Found expr:[34:11->34:20]
+Pexp_ident otherFunc:[34:11->34:20]
+Completable: Cpath Value[otherFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[otherFunc]
+Path otherFunc
+argAtCursor: unlabelled<0>
+extracted params: 
+[(string, int, float]
+{
+  "signatures": [{
+    "label": "(string, int, float) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [9, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 19], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 37:24
+posCursor:[37:20] posNoWhite:[37:19] Found expr:[37:11->37:26]
+Pexp_apply ...[37:11->37:20] (...[37:21->37:26])
+posCursor:[37:20] posNoWhite:[37:19] Found expr:[37:11->37:20]
+Pexp_ident otherFunc:[37:11->37:20]
+Completable: Cpath Value[otherFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[otherFunc]
+Path otherFunc
+argAtCursor: unlabelled<0>
+extracted params: 
+[(string, int, float]
+{
+  "signatures": [{
+    "label": "(string, int, float) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [9, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 19], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 40:35
+posCursor:[40:20] posNoWhite:[40:19] Found expr:[40:11->40:39]
+Pexp_apply ...[40:11->40:20] (...[40:21->40:26], ...[40:28->40:31], ...[40:33->40:38])
+posCursor:[40:20] posNoWhite:[40:19] Found expr:[40:11->40:20]
+Pexp_ident otherFunc:[40:11->40:20]
+Completable: Cpath Value[otherFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[otherFunc]
+Path otherFunc
+argAtCursor: unlabelled<2>
+extracted params: 
+[(string, int, float]
+{
+  "signatures": [{
+    "label": "(string, int, float) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [9, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 19], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 2
+}
+
+Signature help src/SignatureHelp.res 43:33
+posCursor:[43:29] posNoWhite:[43:28] Found expr:[43:11->43:34]
+Pexp_apply ...[43:11->43:29] (~age43:31->43:34=...[43:31->43:34])
+posCursor:[43:29] posNoWhite:[43:28] Found expr:[43:11->43:29]
+Pexp_ident Completion.Lib.foo:[43:11->43:29]
+Completable: Cpath Value[Completion, Lib, foo]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Completion, Lib, foo]
+Path Completion.Lib.foo
+argAtCursor: ~age
+extracted params: 
+[(~age: int, ~name: string]
+{
+  "signatures": [{
+    "label": "(~age: int, ~name: string) => string",
+    "parameters": [{"label": [0, 10], "documentation": {"kind": "markdown", "value": ""}}, {"label": [12, 25], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 50:24
+posCursor:[50:23] posNoWhite:[50:22] Found expr:[50:11->50:24]
+Pexp_apply ...[50:11->50:23] (...[56:0->50:24])
+posCursor:[50:23] posNoWhite:[50:22] Found expr:[50:11->50:23]
+Pexp_ident iAmSoSpecial:[50:11->50:23]
+Completable: Cpath Value[iAmSoSpecial]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[iAmSoSpecial]
+Path iAmSoSpecial
+argAtCursor: unlabelled<0>
+extracted params: 
+[string]
+{
+  "signatures": [{
+    "label": "string => unit",
+    "parameters": [{"label": [0, 6], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 53:31
+posCursor:[53:29] posNoWhite:[53:28] Found expr:[53:11->53:31]
+posCursor:[53:29] posNoWhite:[53:28] Found expr:[53:20->53:31]
+Pexp_apply ...[53:20->53:29] (...[53:30->53:31])
+posCursor:[53:29] posNoWhite:[53:28] Found expr:[53:20->53:29]
+Pexp_ident otherFunc:[53:20->53:29]
+Completable: Cpath Value[otherFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[otherFunc]
+Path otherFunc
+argAtCursor: unlabelled<1>
+extracted params: 
+[(string, int, float]
+{
+  "signatures": [{
+    "label": "(string, int, float) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [9, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 19], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 62:17
+posCursor:[62:13] posNoWhite:[62:12] Found expr:[62:11->62:19]
+Pexp_apply ...[62:11->62:13] (...[62:14->62:16])
+posCursor:[62:13] posNoWhite:[62:12] Found expr:[62:11->62:13]
+Pexp_ident fn:[62:11->62:13]
+Completable: Cpath Value[fn]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[fn]
+Path fn
+argAtCursor: unlabelled<1>
+extracted params: 
+[(int, string, int]
+{
+  "signatures": [{
+    "label": "(int, string, int) => unit",
+    "parameters": [{"label": [0, 4], "documentation": {"kind": "markdown", "value": ""}}, {"label": [6, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 17], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 65:17
+posCursor:[65:13] posNoWhite:[65:12] Found expr:[65:11->65:25]
+Pexp_apply ...[65:11->65:13] (...[65:14->65:16], ...[65:20->65:24])
+posCursor:[65:13] posNoWhite:[65:12] Found expr:[65:11->65:13]
+Pexp_ident fn:[65:11->65:13]
+Completable: Cpath Value[fn]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[fn]
+Path fn
+argAtCursor: unlabelled<1>
+extracted params: 
+[(int, string, int]
+{
+  "signatures": [{
+    "label": "(int, string, int) => unit",
+    "parameters": [{"label": [0, 4], "documentation": {"kind": "markdown", "value": ""}}, {"label": [6, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 17], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 68:26
+posCursor:[68:13] posNoWhite:[68:12] Found expr:[68:11->68:28]
+Pexp_apply ...[68:11->68:13] (...[68:14->68:16], ...[68:18->68:25])
+posCursor:[68:13] posNoWhite:[68:12] Found expr:[68:11->68:13]
+Pexp_ident fn:[68:11->68:13]
+Completable: Cpath Value[fn]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[fn]
+Path fn
+argAtCursor: unlabelled<2>
+extracted params: 
+[(int, string, int]
+{
+  "signatures": [{
+    "label": "(int, string, int) => unit",
+    "parameters": [{"label": [0, 4], "documentation": {"kind": "markdown", "value": ""}}, {"label": [6, 12], "documentation": {"kind": "markdown", "value": ""}}, {"label": [14, 17], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 2
+}
+
+Signature help src/SignatureHelp.res 71:29
+posCursor:[71:28] posNoWhite:[71:27] Found expr:[71:11->71:33]
+Pexp_apply ...[71:11->71:13] (...[71:16->71:30])
+posCursor:[71:28] posNoWhite:[71:27] Found expr:[71:16->71:30]
+Pexp_apply ...[71:16->71:28] (...[71:29->71:30])
+posCursor:[71:28] posNoWhite:[71:27] Found expr:[71:16->71:28]
+Pexp_ident iAmSoSpecial:[71:16->71:28]
+Completable: Cpath Value[iAmSoSpecial]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[iAmSoSpecial]
+Path iAmSoSpecial
+argAtCursor: unlabelled<0>
+extracted params: 
+[string]
+{
+  "signatures": [{
+    "label": "string => unit",
+    "parameters": [{"label": [0, 6], "documentation": {"kind": "markdown", "value": ""}}]
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 74:40
+posCursor:[74:39] posNoWhite:[74:38] Found expr:[74:11->74:47]
+Pexp_apply ...[74:11->74:13] (...[74:16->74:44])
+posCursor:[74:39] posNoWhite:[74:38] Found expr:[74:16->74:44]
+Pexp_apply ...[74:16->74:28] (...[74:31->74:41])
+posCursor:[74:39] posNoWhite:[74:38] Found expr:[74:31->74:41]
+Pexp_apply ...[74:31->74:39] (...[74:40->74:41])
+posCursor:[74:39] posNoWhite:[74:38] Found expr:[74:31->74:39]
+Pexp_ident someFunc:[74:31->74:39]
+Completable: Cpath Value[someFunc]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someFunc]
+Path someFunc
+argAtCursor: unlabelled<0>
+extracted params: 
+[(
+  int, ~two: string=?, ~three: unit => unit, ~four: someVariant, unit]
+{
+  "signatures": [{
+    "label": "(\n  int,\n  ~two: string=?,\n  ~three: unit => unit,\n  ~four: someVariant,\n  unit,\n) => unit",
+    "parameters": [{"label": [0, 7], "documentation": {"kind": "markdown", "value": ""}}, {"label": [11, 25], "documentation": {"kind": "markdown", "value": ""}}, {"label": [29, 49], "documentation": {"kind": "markdown", "value": ""}}, {"label": [53, 71], "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C0%2C0%5D)"}}, {"label": [75, 79], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Does stuff. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 85:16
+{
+  "signatures": [{
+    "label": "One({miss?: bool, hit?: bool, stuff?: string})",
+    "parameters": [{"label": [0, 0], "documentation": {"kind": "markdown", "value": ""}}, {"label": [5, 16], "documentation": {"kind": "markdown", "value": ""}}, {"label": [18, 28], "documentation": {"kind": "markdown", "value": ""}}, {"label": [30, 44], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " One is cool. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": -1
+}
+
+Signature help src/SignatureHelp.res 88:18
+{
+  "signatures": [{
+    "label": "One({miss?: bool, hit?: bool, stuff?: string})",
+    "parameters": [{"label": [0, 0], "documentation": {"kind": "markdown", "value": ""}}, {"label": [5, 16], "documentation": {"kind": "markdown", "value": ""}}, {"label": [18, 28], "documentation": {"kind": "markdown", "value": ""}}, {"label": [30, 44], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " One is cool. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 91:23
+{
+  "signatures": [{
+    "label": "One({miss?: bool, hit?: bool, stuff?: string})",
+    "parameters": [{"label": [0, 0], "documentation": {"kind": "markdown", "value": ""}}, {"label": [5, 16], "documentation": {"kind": "markdown", "value": ""}}, {"label": [18, 28], "documentation": {"kind": "markdown", "value": ""}}, {"label": [30, 44], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " One is cool. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 2
+}
+
+Signature help src/SignatureHelp.res 94:15
+{
+  "signatures": [{
+    "label": "Two(mySpecialThing)",
+    "parameters": [{"label": [4, 18], "documentation": {"kind": "markdown", "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"}}],
+    "documentation": {"kind": "markdown", "value": " Two is fun! "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 97:19
+{
+  "signatures": [{
+    "label": "Three(mySpecialThing, array<option<string>>)",
+    "parameters": [{"label": [6, 20], "documentation": {"kind": "markdown", "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"}}, {"label": [22, 43], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Three is... three "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 100:24
+{
+  "signatures": [{
+    "label": "Three(mySpecialThing, array<option<string>>)",
+    "parameters": [{"label": [6, 20], "documentation": {"kind": "markdown", "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"}}, {"label": [22, 43], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Three is... three "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 105:9
+{
+  "signatures": [{
+    "label": "One({miss?: bool, hit?: bool, stuff?: string})",
+    "parameters": [{"label": [0, 0], "documentation": {"kind": "markdown", "value": ""}}, {"label": [5, 16], "documentation": {"kind": "markdown", "value": ""}}, {"label": [18, 28], "documentation": {"kind": "markdown", "value": ""}}, {"label": [30, 44], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " One is cool. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": -1
+}
+
+Signature help src/SignatureHelp.res 113:42
+argAtCursor: unlabelled<1>
+extracted params: 
+[(array<int>, int => int]
+{
+  "signatures": [{
+    "label": "(array<int>, int => int) => array<int>",
+    "parameters": [{"label": [0, 11], "documentation": {"kind": "markdown", "value": ""}}, {"label": [13, 23], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 132:18
+argAtCursor: unlabelled<0>
+extracted params: 
+[(x, tt]
+{
+  "signatures": [{
+    "label": "(x, tt) => string",
+    "parameters": [{"label": [0, 2], "documentation": {"kind": "markdown", "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C117%2C0%5D)"}}, {"label": [4, 6], "documentation": {"kind": "markdown", "value": "```rescript\ntype tt = One\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C123%2C0%5D)"}}],
+    "documentation": {"kind": "markdown", "value": " Some stuff "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 135:22
+argAtCursor: unlabelled<1>
+extracted params: 
+[(x, tt]
+{
+  "signatures": [{
+    "label": "(x, tt) => string",
+    "parameters": [{"label": [0, 2], "documentation": {"kind": "markdown", "value": "```rescript\ntype x = {age?: int, name?: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C117%2C0%5D)"}}, {"label": [4, 6], "documentation": {"kind": "markdown", "value": "```rescript\ntype tt = One\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C123%2C0%5D)"}}],
+    "documentation": {"kind": "markdown", "value": " Some stuff "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 139:8
+{
+  "signatures": [{
+    "label": "One({miss?: bool, hit?: bool, stuff?: string})",
+    "parameters": [{"label": [0, 0], "documentation": {"kind": "markdown", "value": ""}}, {"label": [5, 16], "documentation": {"kind": "markdown", "value": ""}}, {"label": [18, 28], "documentation": {"kind": "markdown", "value": ""}}, {"label": [30, 44], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " One is cool. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 2
+}
+
+Signature help src/SignatureHelp.res 141:7
+{
+  "signatures": [{
+    "label": "One({miss?: bool, hit?: bool, stuff?: string})",
+    "parameters": [{"label": [0, 0], "documentation": {"kind": "markdown", "value": ""}}, {"label": [5, 16], "documentation": {"kind": "markdown", "value": ""}}, {"label": [18, 28], "documentation": {"kind": "markdown", "value": ""}}, {"label": [30, 44], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " One is cool. "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 143:7
+{
+  "signatures": [{
+    "label": "Two(mySpecialThing)",
+    "parameters": [{"label": [4, 18], "documentation": {"kind": "markdown", "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"}}],
+    "documentation": {"kind": "markdown", "value": " Two is fun! "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 145:9
+{
+  "signatures": [{
+    "label": "Three(mySpecialThing, array<option<string>>)",
+    "parameters": [{"label": [6, 20], "documentation": {"kind": "markdown", "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"}}, {"label": [22, 43], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Three is... three "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 147:12
+{
+  "signatures": [{
+    "label": "Three(mySpecialThing, array<option<string>>)",
+    "parameters": [{"label": [6, 20], "documentation": {"kind": "markdown", "value": "```rescript\ntype mySpecialThing = string\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22SignatureHelp.res%22%2C78%2C0%5D)"}}, {"label": [22, 43], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": " Three is... three "}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 1
+}
+
+Signature help src/SignatureHelp.res 151:14
+{
+  "signatures": [{
+    "label": "Ok(bool)",
+    "parameters": [{"label": [3, 7], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": "```rescript\nresult<bool, 'a>\n```"}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 154:19
+{
+  "signatures": [{
+    "label": "Error(string)",
+    "parameters": [{"label": [6, 12], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": "```rescript\nresult<'a, string>\n```"}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+
+Signature help src/SignatureHelp.res 157:16
+{
+  "signatures": [{
+    "label": "Some(bool)",
+    "parameters": [{"label": [5, 9], "documentation": {"kind": "markdown", "value": ""}}],
+    "documentation": {"kind": "markdown", "value": "```rescript\noption<bool>\n```"}
+  }],
+  "activeSignature": 0,
+  "activeParameter": 0
+}
+

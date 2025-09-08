@@ -1,0 +1,13 @@
+{
+  "name": "tryit",
+  "sources": "src",
+  "compiler-flags": ["-open Belt"],
+  "warnings": {
+    "number": "-32-26-27-33"
+  },
+  "dependencies": ["reason-react"],
+  "namespace": "my-namespace",
+  "reanalyze": {
+    "analysis": ["dce", "exception"]
+  }
+}

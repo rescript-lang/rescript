@@ -1,0 +1,495 @@
+Complete src/CompletionFunctionArguments.res 10:24
+posCursor:[10:24] posNoWhite:[10:23] Found expr:[10:11->10:25]
+Pexp_apply ...[10:11->10:17] (~isOn10:19->10:23=...__ghost__[0:-1->0:-1])
+Completable: Cexpression CArgument Value[someFn](~isOn)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFn](~isOn)
+ContextPath Value[someFn]
+Path someFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 13:25
+posCursor:[13:25] posNoWhite:[13:24] Found expr:[13:11->13:26]
+Pexp_apply ...[13:11->13:17] (~isOn13:19->13:23=...[13:24->13:25])
+Completable: Cexpression CArgument Value[someFn](~isOn)=t
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFn](~isOn)
+ContextPath Value[someFn]
+Path someFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null,
+    "sortText": "A true"
+  }, {
+    "label": "tLocalVar",
+    "kind": 12,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "typeof",
+    "kind": 12,
+    "tags": [],
+    "detail": "'a => Type.t",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 16:25
+posCursor:[16:25] posNoWhite:[16:24] Found expr:[16:11->16:26]
+Pexp_apply ...[16:11->16:17] (~isOff16:19->16:24=...__ghost__[0:-1->0:-1])
+Completable: Cexpression CArgument Value[someFn](~isOff)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFn](~isOff)
+ContextPath Value[someFn]
+Path someFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 21:27
+posCursor:[21:27] posNoWhite:[21:26] Found expr:[19:8->25:1]
+Pexp_apply ...[19:8->19:14] (~isOn20:3->20:7=...[21:7->23:8])
+posCursor:[21:27] posNoWhite:[21:26] Found expr:[21:7->23:8]
+posCursor:[21:27] posNoWhite:[21:26] Found expr:[21:7->21:28]
+posCursor:[21:27] posNoWhite:[21:26] Found expr:[21:14->21:28]
+Pexp_apply ...[21:14->21:20] (~isOn21:22->21:26=...__ghost__[0:-1->0:-1])
+Completable: Cexpression CArgument Value[someFn](~isOn)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFn](~isOn)
+ContextPath Value[someFn]
+Path someFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 34:24
+posCursor:[34:24] posNoWhite:[34:23] Found expr:[34:11->34:25]
+Pexp_apply ...[34:11->34:22] (...[34:23->34:24])
+Completable: Cexpression CArgument Value[someOtherFn]($0)=f
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someOtherFn]($0)
+ContextPath Value[someOtherFn]
+Path someOtherFn
+[{
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 51:39
+posCursor:[51:39] posNoWhite:[51:38] Found expr:[51:11->51:40]
+Pexp_apply ...[51:11->51:30] (~config51:32->51:38=...__ghost__[0:-1->0:-1])
+Completable: Cexpression CArgument Value[someFnTakingVariant](~config)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFnTakingVariant](~config)
+ContextPath Value[someFnTakingVariant]
+Path someFnTakingVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "Two",
+    "kind": 4,
+    "tags": [],
+    "detail": "Two",
+    "documentation": {"kind": "markdown", "value": "```rescript\nTwo\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "insertText": "Two",
+    "insertTextFormat": 2
+  }, {
+    "label": "Three(_, _)",
+    "kind": 4,
+    "tags": [],
+    "detail": "Three(int, string)",
+    "documentation": {"kind": "markdown", "value": "```rescript\nThree(int, string)\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "insertText": "Three(${1:_}, ${2:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionFunctionArguments.res 54:40
+posCursor:[54:40] posNoWhite:[54:39] Found expr:[54:11->54:41]
+Pexp_apply ...[54:11->54:30] (~config54:32->54:38=...[54:39->54:40])
+Completable: Cexpression CArgument Value[someFnTakingVariant](~config)=O
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFnTakingVariant](~config)
+ContextPath Value[someFnTakingVariant]
+Path someFnTakingVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "sortText": "A One",
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "OIncludeMeInCompletions",
+    "kind": 9,
+    "tags": [],
+    "detail": "module OIncludeMeInCompletions",
+    "documentation": null
+  }, {
+    "label": "Option",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Option",
+    "documentation": null
+  }, {
+    "label": "Ordering",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Ordering",
+    "documentation": null
+  }, {
+    "label": "Object",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Object",
+    "documentation": null
+  }, {
+    "label": "Obj",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Obj",
+    "documentation": null,
+    "data": {
+      "modulePath": "Obj",
+      "filePath": "src/CompletionFunctionArguments.res"
+    }
+  }, {
+    "label": "Objects",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Objects",
+    "documentation": null,
+    "data": {
+      "modulePath": "Objects",
+      "filePath": "src/CompletionFunctionArguments.res"
+    }
+  }]
+
+Complete src/CompletionFunctionArguments.res 57:33
+posCursor:[57:33] posNoWhite:[57:32] Found expr:[57:11->57:34]
+Pexp_apply ...[57:11->57:30] (...[57:31->57:33])
+Completable: Cexpression CArgument Value[someFnTakingVariant]($0)=So
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFnTakingVariant]($0)
+ContextPath Value[someFnTakingVariant]
+Path someFnTakingVariant
+[{
+    "label": "Some(_)",
+    "kind": 12,
+    "tags": [],
+    "detail": "someVariant",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "insertText": "Some($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionFunctionArguments.res 60:44
+posCursor:[60:44] posNoWhite:[60:43] Found expr:[60:11->60:45]
+Pexp_apply ...[60:11->60:30] (~configOpt260:32->60:42=...[60:43->60:44])
+Completable: Cexpression CArgument Value[someFnTakingVariant](~configOpt2)=O
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someFnTakingVariant](~configOpt2)
+ContextPath Value[someFnTakingVariant]
+Path someFnTakingVariant
+[{
+    "label": "One",
+    "kind": 4,
+    "tags": [],
+    "detail": "One",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOne\n```\n\n```rescript\ntype someVariant = One | Two | Three(int, string)\n```"},
+    "sortText": "A One",
+    "insertText": "One",
+    "insertTextFormat": 2
+  }, {
+    "label": "OIncludeMeInCompletions",
+    "kind": 9,
+    "tags": [],
+    "detail": "module OIncludeMeInCompletions",
+    "documentation": null
+  }, {
+    "label": "Option",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Option",
+    "documentation": null
+  }, {
+    "label": "Ordering",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Ordering",
+    "documentation": null
+  }, {
+    "label": "Object",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Object",
+    "documentation": null
+  }, {
+    "label": "Obj",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Obj",
+    "documentation": null,
+    "data": {
+      "modulePath": "Obj",
+      "filePath": "src/CompletionFunctionArguments.res"
+    }
+  }, {
+    "label": "Objects",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Objects",
+    "documentation": null,
+    "data": {
+      "modulePath": "Objects",
+      "filePath": "src/CompletionFunctionArguments.res"
+    }
+  }]
+
+Complete src/CompletionFunctionArguments.res 63:23
+posCursor:[63:23] posNoWhite:[63:22] Found expr:[63:11->63:24]
+Pexp_apply ...[63:11->63:22] (...[63:23->63:24])
+Completable: Cexpression CArgument Value[someOtherFn]($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someOtherFn]($0)
+ContextPath Value[someOtherFn]
+Path someOtherFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 66:28
+posCursor:[66:28] posNoWhite:[66:27] Found expr:[66:11->66:30]
+Pexp_apply ...[66:11->66:22] (...[66:23->66:24], ...[66:26->66:27])
+Completable: Cexpression CArgument Value[someOtherFn]($2)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someOtherFn]($2)
+ContextPath Value[someOtherFn]
+Path someOtherFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 69:30
+posCursor:[69:30] posNoWhite:[69:29] Found expr:[69:11->69:31]
+Completable: Cexpression CArgument Value[someOtherFn]($2)=t
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[someOtherFn]($2)
+ContextPath Value[someOtherFn]
+Path someOtherFn
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null,
+    "sortText": "A true"
+  }, {
+    "label": "tLocalVar",
+    "kind": 12,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "typeof",
+    "kind": 12,
+    "tags": [],
+    "detail": "'a => Type.t",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 76:25
+posCursor:[76:25] posNoWhite:[76:24] Found expr:[76:11->76:26]
+Pexp_apply ...[76:11->76:24] (...[76:25->76:26])
+Completable: Cexpression CArgument Value[fnTakingTuple]($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[fnTakingTuple]($0)
+ContextPath Value[fnTakingTuple]
+Path fnTakingTuple
+[{
+    "label": "(_, _, _)",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int, float)",
+    "documentation": null,
+    "insertText": "(${1:_}, ${2:_}, ${3:_})",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionFunctionArguments.res 89:27
+posCursor:[89:27] posNoWhite:[89:26] Found expr:[89:11->89:29]
+Pexp_apply ...[89:11->89:25] (...[89:26->89:28])
+Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[fnTakingRecord]($0)
+ContextPath Value[fnTakingRecord]
+Path fnTakingRecord
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"}
+  }, {
+    "label": "offline",
+    "kind": 5,
+    "tags": [],
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\noffline: bool\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"}
+  }, {
+    "label": "online",
+    "kind": 5,
+    "tags": [],
+    "detail": "option<bool>",
+    "documentation": {"kind": "markdown", "value": "```rescript\nonline: option<bool>\n```\n\n```rescript\ntype someRecord = {age: int, offline: bool, online: option<bool>}\n```"}
+  }]
+
+Complete src/CompletionFunctionArguments.res 109:29
+posCursor:[109:29] posNoWhite:[109:28] Found expr:[105:2->114:4]
+JSX <div:[105:3->105:6] onMouseDown[106:4->106:15]=...[106:35->113:5]> _children:None
+posCursor:[109:29] posNoWhite:[109:28] Found expr:[106:35->113:5]
+posCursor:[109:29] posNoWhite:[109:28] Found expr:[107:6->109:29]
+posCursor:[109:29] posNoWhite:[109:28] Found expr:[108:6->109:29]
+posCursor:[109:29] posNoWhite:[109:28] Found expr:[109:9->109:29]
+Completable: Cpath Value[thisGetsBrokenLoc]->a <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[thisGetsBrokenLoc]->a <<jsx>>
+ContextPath Value[thisGetsBrokenLoc]
+Path thisGetsBrokenLoc
+CPPipe pathFromEnv:JsxEvent.Mouse found:false
+Path JsxEvent.Mouse.a
+Path a
+[{
+    "label": "JsxEvent.Mouse.altKey",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 111:27
+posCursor:[111:27] posNoWhite:[111:26] Found expr:[105:2->114:4]
+JSX <div:[105:3->105:6] onMouseDown[106:4->106:15]=...[106:35->113:5]> _children:None
+posCursor:[111:27] posNoWhite:[111:26] Found expr:[106:35->113:5]
+posCursor:[111:27] posNoWhite:[111:26] Found expr:[107:6->111:27]
+posCursor:[111:27] posNoWhite:[111:26] Found expr:[108:6->111:27]
+posCursor:[111:27] posNoWhite:[111:26] Found expr:[111:9->111:27]
+Completable: Cpath Value[reassignedWorks]->a <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[reassignedWorks]->a <<jsx>>
+ContextPath Value[reassignedWorks]
+Path reassignedWorks
+CPPipe pathFromEnv:JsxEvent.Mouse found:false
+Path JsxEvent.Mouse.a
+Path a
+[{
+    "label": "JsxEvent.Mouse.altKey",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionFunctionArguments.res 121:57
+posCursor:[121:57] posNoWhite:[121:56] Found expr:[121:3->121:73]
+Pexp_apply ...[121:3->121:11] (~changefreq121:13->121:23=...[121:24->121:31], ~lastmod121:34->121:41=...[121:42->0:-1], ~priority121:60->121:68=...[121:69->121:72])
+posCursor:[121:57] posNoWhite:[121:56] Found expr:[121:42->0:-1]
+posCursor:[121:57] posNoWhite:[121:56] Found expr:[121:42->0:-1]
+Completable: Cpath Value[fineModuleVal]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[fineModuleVal]->
+ContextPath Value[fineModuleVal]
+Path fineModuleVal
+CPPipe pathFromEnv:FineModule found:true
+Path FineModule.
+Path 
+[{
+    "label": "FineModule.setToFalse",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => t",
+    "documentation": null
+  }]
+

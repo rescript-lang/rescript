@@ -1,0 +1,5 @@
+[%%itemExtension ]
+[%%item.extension ]
+[%%item.extension.with.args {js|argument|js}]
+[%%item.extension.with.args fun [arity:1]x -> f x]
+[%%itemExtension ][@@attrOnExtension ]

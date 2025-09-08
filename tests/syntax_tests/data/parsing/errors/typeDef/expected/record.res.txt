@@ -1,0 +1,14 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/record.res:4:1
+
+  2 │   observed: int,
+  3 │   observer:
+  4 │ }
+  5 │ 
+
+  I'm missing a type here
+
+type nonrec observation = {
+  observed: int ;
+  observer: [%rescript.typehole ] }

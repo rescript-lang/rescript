@@ -1,0 +1,14 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/signature/closingBraces.resi:3:1
+
+  1 │ let x: int
+  2 │ 
+  3 │ }}}
+  4 │ 
+  5 │ let y: int
+
+  I'm not sure what to parse here when looking at "}".
+
+val x : int
+val y : int

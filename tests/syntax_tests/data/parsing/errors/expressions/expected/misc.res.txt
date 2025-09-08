@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/misc.res:1:9
+
+  1 │ let x = _ + 1
+  2 │ 
+
+  `_` isn't a valid name.
+
+let x = ([%rescript.exprhole ]) + 1

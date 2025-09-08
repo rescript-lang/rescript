@@ -1,0 +1,9 @@
+external clear : t -> int -> unit (a:2) = "clear"
+external add_nat : nat -> int (a:1) = "add_nat_bytecode"
+external attachShader :
+  t -> program:webGlProgram -> shader:webGlShader -> unit (a:3) =
+    "attachShader"[@@send ]
+external svg : unit -> React.element (a:1) = "svg"
+external svg : unit -> React.element (a:1) = "svg"
+external createDate : unit -> unit -> date (a:2) = "Date"[@@new ]
+let foobar = (createDate ()) ()

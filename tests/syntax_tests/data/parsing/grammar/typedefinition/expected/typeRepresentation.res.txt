@@ -1,0 +1,50 @@
+type nonrec t = ..
+type nonrec t = private ..
+type nonrec t =
+  | Blue 
+type nonrec t =
+  | Blue 
+type nonrec t =
+  | Blue 
+  | Red 
+type nonrec t =
+  | Blue 
+  | Red 
+type nonrec t =
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t =
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t = private
+  | Blue 
+type nonrec t = private
+  | Blue 
+type nonrec t = private
+  | Blue 
+  | Red 
+type nonrec t = private
+  | Blue 
+  | Red 
+type nonrec t = private
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t = private
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t = {
+  x: int ;
+  y: int }
+type nonrec t = private {
+  x: int ;
+  y: int }
+type nonrec t = {
+  x: int }
+type nonrec t = {
+  x: int }
+type nonrec t = ..
+type nonrec t = ..

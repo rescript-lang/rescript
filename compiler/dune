@@ -1,0 +1,36 @@
+(dirs
+ bsb
+ bsb_exe
+ bsb_helper
+ bsb_helper_exe
+ bsc
+ common
+ core
+ depends
+ ext
+ flow_parser
+ frontend
+ gentype
+ jsoo
+ ml
+ syntax)
+
+(env
+ (dev
+  (env-vars
+   (CPPO_FLAGS -U=RELEASE)))
+ (release
+  (env-vars
+   (CPPO_FLAGS -D=RELEASE))
+  (ocamlopt_flags
+   (:standard -O3 -unbox-closures)))
+ (static
+  (env-vars
+   (CPPO_FLAGS -D=RELEASE))
+  (ocamlopt_flags
+   (:standard -O3 -unbox-closures)))
+ (browser
+  (env-vars
+   (CPPO_FLAGS -D=BROWSER))
+  (ocamlopt_flags
+   (:standard -O3 -unbox-closures))))

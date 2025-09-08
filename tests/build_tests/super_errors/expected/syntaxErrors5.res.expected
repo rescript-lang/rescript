@@ -1,0 +1,8 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/syntaxErrors5.res[0m:[2m1:14-2:0[0m
+
+  [1;31m1[0m [2m│[0m let a = (1, 2
+  [1;31m2[0m [2m│[0m 
+
+  Did you forget a `)` here?

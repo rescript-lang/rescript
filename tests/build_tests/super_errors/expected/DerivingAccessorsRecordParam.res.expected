@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/DerivingAccessorsRecordParam.res[0m:[2m2:10-25[0m
+
+  1 [2m│[0m @deriving(accessors)
+  [1;31m2[0m [2m│[0m type t = [1;31mStruct({a: int})[0m
+  3 [2m│[0m 
+
+  @deriving(accessors) from a variant record argument is unsupported. Either define the record type separately from the variant type or use a positional argument.

@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/unclosedComment.res:1:1-3:0
+
+  1 │ /* eof
+  2 │  * reached
+  3 │ 
+
+  This comment seems to be missing a closing `*/`
+

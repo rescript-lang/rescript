@@ -1,0 +1,139 @@
+@@jsxConfig({version: 4})
+
+module C0 = {
+  @res.jsxComponentProps
+  type props<'priority, 'text> = {priority: 'priority, text?: 'text}
+
+  let make = ({priority: _, text: ?__text, _}: props<_, _>) => {
+    let text = switch __text {
+    | Some(text) => text
+    | None => "Test"
+    }
+
+    React.string(text)
+  }
+  let make = {
+    let \"AliasProps$C0" = (props: props<_>) => make(props)
+
+    \"AliasProps$C0"
+  }
+}
+
+module C1 = {
+  @res.jsxComponentProps
+  type props<'priority, 'text> = {priority: 'priority, text?: 'text}
+
+  let make = ({priority: p, text: ?__text, _}: props<_, _>) => {
+    let text = switch __text {
+    | Some(text) => text
+    | None => "Test"
+    }
+
+    React.string(p ++ text)
+  }
+  let make = {
+    let \"AliasProps$C1" = (props: props<_>) => make(props)
+
+    \"AliasProps$C1"
+  }
+}
+
+module C2 = {
+  @res.jsxComponentProps
+  type props<'foo> = {foo?: 'foo}
+
+  let make = ({foo: ?__bar, _}: props<_>) => {
+    let bar = switch __bar {
+    | Some(foo) => foo
+    | None => ""
+    }
+
+    React.string(bar)
+  }
+  let make = {
+    let \"AliasProps$C2" = (props: props<_>) => make(props)
+
+    \"AliasProps$C2"
+  }
+}
+
+module C3 = {
+  @res.jsxComponentProps
+  type props<'foo, 'a, 'b> = {foo?: 'foo, a?: 'a, b: 'b}
+
+  let make = ({foo: ?__bar, a: ?__a, b, _}: props<_, _, _>) => {
+    let bar = switch __bar {
+    | Some(foo) => foo
+    | None => ""
+    }
+    let a = switch __a {
+    | Some(a) => a
+    | None => bar
+    }
+
+    {
+      React.string(bar ++ a ++ b)
+    }
+  }
+  let make = {
+    let \"AliasProps$C3" = (props: props<_>) => make(props)
+
+    \"AliasProps$C3"
+  }
+}
+
+module C4 = {
+  @res.jsxComponentProps
+  type props<'a, 'x> = {a: 'a, x?: 'x}
+
+  let make = ({a: b, x: ?__x, _}: props<_, _>) => {
+    let x = switch __x {
+    | Some(x) => x
+    | None => true
+    }
+
+    ReactDOM.jsx("div", {children: ?ReactDOM.someElement(b)})
+  }
+  let make = {
+    let \"AliasProps$C4" = (props: props<_>) => make(props)
+
+    \"AliasProps$C4"
+  }
+}
+
+module C5 = {
+  @res.jsxComponentProps
+  type props<'a, 'z> = {a: 'a, z?: 'z}
+
+  let make = ({a: (x, y), z: ?__z, _}: props<_, _>) => {
+    let z = switch __z {
+    | Some(z) => z
+    | None => 3
+    }
+
+    x + y + z
+  }
+  let make = {
+    let \"AliasProps$C5" = (props: props<_>) => make(props)
+
+    \"AliasProps$C5"
+  }
+}
+
+module C6 = {
+  module type Comp = {
+    @res.jsxComponentProps
+    type props = {}
+
+    let make: React.componentLike<props, React.element>
+  }
+  @res.jsxComponentProps
+  type props<'comp, 'x> = {comp: 'comp, x: 'x}
+
+  let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>) => React.jsx(Comp.make, {})
+  let make = {
+    let \"AliasProps$C6" = (props: props<_>) => make(props)
+
+    \"AliasProps$C6"
+  }
+}

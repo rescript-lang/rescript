@@ -1,0 +1,19 @@
+{
+  "name": "@testrepo/with-dev-deps",
+  "sources": [
+    {
+      "dir": "src"
+    },
+    {
+      "dir": "test",
+      "type": "dev"
+    }
+  ],
+  "dependencies": ["rescript-nodejs"],
+  "dev-dependencies": ["@rescript/webapi"],
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".res.js"
+}

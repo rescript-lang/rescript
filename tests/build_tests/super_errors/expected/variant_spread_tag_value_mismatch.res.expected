@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_tag_value_mismatch.res[0m:[2m2:28[0m
+
+  1 [2m│[0m @tag("kind") type a = One(int) | Two(string)
+  [1;31m2[0m [2m│[0m @tag("name") type b = | ...[1;31ma[0m | Three(bool)
+  3 [2m│[0m 
+
+  The @tag attribute does not match for this variant and the variant where this is spread. Both variants must have the same @tag attribute configuration, or no @tag attribute at all.

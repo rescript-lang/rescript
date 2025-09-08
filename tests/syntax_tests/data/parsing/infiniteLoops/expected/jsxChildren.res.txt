@@ -1,0 +1,26 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/infiniteLoops/jsxChildren.res:1:22
+
+  1 │ type action = AddUser<string>
+  2 │ 
+  3 │ let a: action = AddUser("test")
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+
+  Syntax error!
+  syntax_tests/data/parsing/infiniteLoops/jsxChildren.res:1:22-29
+
+  1 │ type action = AddUser<string>
+  2 │ 
+  3 │ let a: action = AddUser("test")
+
+  Missing </string>
+
+type nonrec action =
+  | AddUser 
+;;<string>
+let (a : action) = AddUser {js|test|js}
+;;etype
+;;s = { x = ((list < i) > ([%rescript.exprhole ])) }

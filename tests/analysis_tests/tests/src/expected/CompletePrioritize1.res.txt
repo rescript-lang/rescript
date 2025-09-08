@@ -1,0 +1,19 @@
+Complete src/CompletePrioritize1.res 6:6
+posCursor:[6:6] posNoWhite:[6:5] Found expr:[6:3->0:-1]
+Completable: Cpath Value[a]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a]->
+ContextPath Value[a]
+Path a
+CPPipe pathFromEnv:Test found:true
+Path Test.
+Path 
+[{
+    "label": "Test.name",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }]
+

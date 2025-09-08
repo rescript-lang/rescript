@@ -1,0 +1,14 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(executable
+ (name res_test)
+ (public_name syntax_tests)
+ (package rescript)
+ (enabled_if
+  (<> %{profile} browser))
+ (flags
+  (:standard -w +a-40-42-70))
+ (libraries syntax core))

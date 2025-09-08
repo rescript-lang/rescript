@@ -1,0 +1,36 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/tuple.res:2:5-7
+
+  1 │ switch x {
+  2 │ | (a => ()
+  3 │ | (a, (b, c) => ()
+  4 │ | (a, (b, c => ()
+
+  Did you forget a `)` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/tuple.res:3:13-15
+
+  1 │ switch x {
+  2 │ | (a => ()
+  3 │ | (a, (b, c) => ()
+  4 │ | (a, (b, c => ()
+  5 │ }
+
+  Did you forget a `)` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/tuple.res:4:12-14
+
+  2 │ | (a => ()
+  3 │ | (a, (b, c) => ()
+  4 │ | (a, (b, c => ()
+  5 │ }
+  6 │ 
+
+  Did you forget a `)` here?
+
+;;match x with | a -> () | (a, (b, c)) -> () | (a, (b, c)) -> ()

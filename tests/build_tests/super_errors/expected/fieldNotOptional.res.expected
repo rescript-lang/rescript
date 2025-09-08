@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/fieldNotOptional.res[0m:[2m3:19[0m
+
+  1 [2m│[0m type r = {nonopt: int, opt?: string}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let v = {nonopt: ?[1;31m3[0m, opt: ?None}
+  4 [2m│[0m 
+  5 [2m│[0m let f = r =>
+
+  Field [1;33mnonopt[0m is not optional in type r. Use without ?

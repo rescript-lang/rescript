@@ -1,0 +1,2 @@
+module X = struct let a = 1 end
+include struct let b = 2 end

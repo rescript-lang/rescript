@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/type3.res[0m:[2m1:5[0m
+
+  [1;31m1[0m [2m│[0m let [1;31mu[0m = []
+  2 [2m│[0m 
+
+  This expression's type contains type variables that cannot be generalized:
+  [1;31marray<'_weak1>[0m
+  
+  This happens when the type system senses there's a mutation/side-effect,
+  in combination with a polymorphic value.
+  [1;33mUsing or annotating that value usually solves it.[0m

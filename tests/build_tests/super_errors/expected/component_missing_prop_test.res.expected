@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/component_missing_prop_test.res[0m:[2m5:35-39[0m
+
+  3 [2m│[0m   type props<'name> = {name: 'name}
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m   let make = (): props<'name> => {[1;31mnname[0m: "hello"}
+  6 [2m│[0m }
+  7 [2m│[0m 
+
+  The field [1;31mnname[0m does not belong to type [1;33mprops[0m
+  
+  This record expression is expected to have type [1;33mprops<'name>[0m
+Hint: Did you mean name?

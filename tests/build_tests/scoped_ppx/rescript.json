@@ -1,0 +1,11 @@
+{
+  "ppx-flags": [
+    ["@hongbo/ppx1/test.js", "-hello"],
+    ["@hongbo/ppx1/test.js", "-heyy"],
+    "@hongbo/ppx1/test.js"
+  ],
+  "sources": {
+    "dir": "src"
+  },
+  "name": "hello"
+}

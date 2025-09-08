@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/moreArguments4.res[0m:[2m2:9[0m
+
+  1 [2m│[0m let x = (a, ~b, ~c, ~d) => a + b
+  [1;31m2[0m [2m│[0m let y = [1;31mx[0m(2) + 2
+  3 [2m│[0m 
+
+  This function call is incorrect.
+  The function has type:
+  (int, ~b: int, ~c: 'a, ~d: 'b) => int
+  
+  - Missing arguments that must be provided: ~d, ~c, ~b
+  - Hint: Did you want to partially apply the function? You can do that by putting `...` just before the closing parens of the function call. Example: [1;33myourFn(~arg1=someVar, ...)[0m

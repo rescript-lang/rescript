@@ -1,0 +1,10 @@
+{
+  "name": "myplugin",
+  "namespace": true,
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(executable
+ (public_name rescript-tools)
+ (package tools)
+ (modes byte exe)
+ ; The main module that will become the binary.
+ (name main)
+ (libraries tools)
+ (flags
+  (:standard -w "+6+26+27+32+33+39")))

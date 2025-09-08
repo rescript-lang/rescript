@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/math_operator_constant.res[0m:[2m3:15-17[0m
+
+  1 [2m│[0m let num = 0
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let x = num + [1;31m12.[0m
+  4 [2m│[0m 
+
+  This has type: [1;31mfloat[0m
+  But it's expected to have type: [1;33mint[0m
+  
+  You can convert [1;33mfloat[0m to [1;33mint[0m with [1;33mFloat.toInt[0m.
+  If this is a literal, try a number without a trailing dot (e.g. [1;33m20[0m).

@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/feature_letunwrap_not_enabled.res[0m:[2m4:8-13[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let x = {
+  [1;31m4[0m [2m│[0m   let? [1;31mOk(_x)[0m = ok
+  5 [2m│[0m   Ok()
+  6 [2m│[0m }
+
+  Experimental feature not enabled: LetUnwrap. Enable it by setting "LetUnwrap" to true under "experimentalFeatures" in rescript.json.

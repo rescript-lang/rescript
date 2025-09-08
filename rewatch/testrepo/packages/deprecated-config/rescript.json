@@ -1,0 +1,16 @@
+{
+  "name": "@testrepo/deprecated-config",
+  "namespace": true,
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "bs-dependencies": [],
+  "bs-dev-dependencies": [],
+  "bsc-flags": []
+}

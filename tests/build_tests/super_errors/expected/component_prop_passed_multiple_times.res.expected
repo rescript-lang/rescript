@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/component_prop_passed_multiple_times.res[0m:[2m8:5-8[0m
+
+   6 [2m│[0m   let make = (): props<'name> => {
+   7 [2m│[0m     name: "hello",
+   [1;31m8[0m [2m│[0m     [1;31mname[0m: "world",
+   9 [2m│[0m   }
+  10 [2m│[0m }
+
+  The prop [1;33mname[0m has already been passed to the component 
+You can't pass the same prop more than once.

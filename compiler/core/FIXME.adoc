@@ -1,0 +1,79 @@
+
+
+# alias table is not reliable
+
+mario_game.03flattern.lam
+
+[source]
+-----------------
+               with (304 t1/1824 s1/1825 o1/1826 t2/1827 o2/1829)
+                (let (match/2332 =a t1/1824 match/2333 =a t2/1827)
+                  (catch
+                    (catch
+                      (catch
+                        (catch (if (>= match/2332 3) (exit 291) (exit 290))
+                         with (291)
+                          (if (isint match/2333)
+                            (if (!=[int] match/2333 1) (exit 290) (exit 288))
+                            (let (typ/2330 =a (field 0 match/2333))
+                              (exit 289 typ/2330))))
+                       with (290)
+                        (seq
+                          (apply (field 17 Object/1601) o1/1826 t1/1824
+                            s1/1825)
+                          [0: 0a 0a]))
+                     with (288)
+                      (seq (apply (field 16 Object/1601) o2/1829)
+                        (apply (field 18 Object/1601) o1/1826) [0: 0a 0a]))
+                   with (289 typ/1867)
+                    (let
+                      (updated_block/1869 =
+                         (apply (field 15 Object/1601) o2/1829 context/1786)
+                        spawned_item/1870 =
+                          (apply (field 20 Object/1601) (field 6 o1/1826)
+                            o2/1829 typ/1867 context/1786))
+                      (seq
+                        (apply (field 17 Object/1601) o1/1826 t1/1824
+                          s1/1825)
+                        (makeblock 0 (makeblock 0 updated_block/1869)
+                          (makeblock 0 spawned_item/1870)))))))
+-----------------
+
+Here [match/2332] is aliased  [t/1824]
+
+mario_game.04.simplify_exits.lam
+
+[source]
+------------------
+                          (if (>= match/2379 2)
+                            (let
+                              (t1/2571 =a t1/1817
+                                s1/2572 =a s1/1818
+                                o1/2573 =a o1/1819
+                                t2/2574 =a t2/2349
+                                o2/2575 =a o2/2350
+                                match/2332 =a t1/2571
+                                match/2333 =a t2/2574)
+                              (catch
+                                (if (>= match/2332 3)
+                                  (if (isint match/2333)
+                                    (if (!=[int] match/2333 1) (exit 290)
+                                      (seq
+                                        (apply (field 16 Object/1601)
+                                          o2/2575)
+                                        (apply (field 18 Object/1601)
+                                          o1/2573)
+                                        [0: 0a 0a]))
+                                    (let
+
+------------------
+
+Here [match/2332] is aliased  [t/1824]
+
+Here the exit code is inlined, [t/1824] is renamed into [t1/2571]
+(function inlining and renaming), [match/2332] now should be aliased
+to [t1/2571], but since the alias table is not updated, it still point
+to the old one which result in wrong optimizations.
+
+The reaon is that when we do the inlining we refresh the parameters,
+but forgot update the alias table, so the aliases are stale

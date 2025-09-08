@@ -1,0 +1,3 @@
+[@@@standaloneAttribute ]
+[@@@standaloneAttribute {js|with payload|js}]
+[@@@standaloneAttribute fun [arity:1]x -> x + 1]

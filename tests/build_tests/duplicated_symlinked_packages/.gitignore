@@ -1,0 +1,3 @@
+.merlin
+**/lib
+!node_modules

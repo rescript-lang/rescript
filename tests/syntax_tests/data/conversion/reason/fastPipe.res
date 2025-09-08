@@ -1,0 +1,24 @@
+a->f(b, c)->g(d, e)
+
+Element.querySelectorAll(selector, element)
+->NodeList.toArray
+->Array.keepMap(Element.ofNode)
+->Array.getBy(node => node->Element.textContent === content)
+
+let x = @attr (@attr2 a->f(b)->c(d))
+
+5->doStuff(3, _, 7)
+
+(event->target)["value"]
+
+(Route.urlToRoute(url)->ChangeView->self).send
+Route.urlToRoute(url)->ChangeView->self.send
+
+let aggregateTotal = (forecast, ~audienceType) =>
+  Js.Nullable.toOption(forecast["audiences"])
+  ->Option.flatMap(item => Js.Dict.get(item, audienceType))
+  ->Option.map(item => {
+    pages: item["reach"]["pages"],
+    views: item["reach"]["views"],
+    sample: item["reach"]["sample"],
+  })

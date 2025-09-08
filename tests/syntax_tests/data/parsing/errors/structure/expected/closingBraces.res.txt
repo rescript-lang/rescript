@@ -1,0 +1,14 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/closingBraces.res:3:1
+
+  1 │ let x = 1
+  2 │ 
+  3 │ }}}
+  4 │ 
+  5 │ let y = 2
+
+  I'm not sure what to parse here when looking at "}".
+
+let x = 1
+let y = 2

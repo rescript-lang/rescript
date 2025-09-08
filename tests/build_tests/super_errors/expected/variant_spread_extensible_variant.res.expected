@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_extensible_variant.res[0m:[2m2:15[0m
+
+  1 [2m│[0m type a = ..
+  [1;31m2[0m [2m│[0m type b = | ...[1;31ma[0m | Other
+  3 [2m│[0m 
+
+  This type is not a valid type to spread. It's only possible to spread other variants.

@@ -1,0 +1,13 @@
+{
+  "name": "@tests/tools",
+  "private": true,
+  "scripts": {
+    "build": "rescript legacy build",
+    "clean": "rescript clean",
+    "dev": "rescript -w"
+  },
+  "dependencies": {
+    "@rescript/react": "link:../dependencies/rescript-react",
+    "rescript": "workspace:^"
+  }
+}

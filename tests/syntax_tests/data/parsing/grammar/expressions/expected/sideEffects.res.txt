@@ -1,0 +1,13 @@
+;;foo ()
+;;bar ()
+let () = ((foo (); bar ())[@res.braces ])
+let () =
+  ((let x = 1 in
+    sideEffect ();
+    (let y = 2 in sideEffect2 (); (let z = 3 in sideEffect3 ())))
+  [@res.braces ])
+;;while true do
+    sideEffect1 ();
+    (let x = 1 in sideEffect2 (); (let y = 2 in sideEffect3 ())) done
+;;match color with
+  | Blue -> (getResult (); sideEffect (); (let x = 1 in sideEffect2 ()))

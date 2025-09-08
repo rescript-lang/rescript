@@ -1,0 +1,58 @@
+type t = [ `X ]
+type t = [>]
+type t = [> s]
+type t = [< s]
+type t = [ s]
+type t = [> s]
+type t = [< s]
+type t = [ `a ]
+type t = [> `a ]
+type t = [< `a ]
+type t = [ `a ]
+type t = [> `a ]
+type t = [< `a ]
+type t = [ s | t]
+type t = [> `a ]
+type t = [> `a ]
+type t = [< `A of int ]
+type t = [< `A of int ]
+type t = [< `A of int ]
+type t = [< `A of int ]
+type t = [< `A of int ]
+type t = [< `A of int&int  | `B ]
+type t = [< `A of int&int  | `B ]
+type t = [ `a  | `b  | `c ]
+type t =
+  [ `aaaaa  | `bbbbb  | `ccccc  | `ddddd  | `eeeee  | `fffff  | `ggggg 
+  | `hhhhh  | `jjjjj  | `kkkkk ]
+type t =
+  | Aaaaaa 
+  | Bbbbbb 
+  | Cccccc 
+  | Dddddd 
+  | Eeeeee 
+  | Ffffff 
+  | Gggggg 
+  | Hhhhhh 
+  | Jjjjjj 
+  | Kkkkkk 
+type t = [ `a of int ]
+type t =
+  [< `A of int  | `B of (int * int)  | `C of float  | `D of int&string 
+  | `E of (int * int)&(string * string * string)&float  | `F of string ]
+type z = [< `A of string&int  | `B ]
+type nonrec z = [< `A  | `B > `X]
+type nonrec z = [< `A  | `B > `X `Y]
+type 'a vlist = [ `Nil  | `Cons of ('a * 'a vlist) ]
+type nonrec t = [ `x of int [@a ][@b ][@c ]]
+type nonrec t = [ `x of int [@a ][@b ][@c ] | ((foo)[@d ][@e ])]
+type nonrec t = [> ((x)[@a ])]
+type nonrec t = [> ((x)[@a ])]
+type nonrec t = [> `x [@a ]]
+type nonrec t = [> `x [@a ]]
+type nonrec t = [< `x [@a ]]
+type nonrec t = [< `x [@a ]]
+type nonrec t =
+  [< `a of ((int * int) * int) [@one ] | ((int)[@two ])
+  | `b of string [@three ]> `w `x `y]
+let f [arity:1](x : [ `b ]) = x

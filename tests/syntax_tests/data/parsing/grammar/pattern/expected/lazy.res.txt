@@ -1,0 +1,44 @@
+let (lazy x) = ()
+let (lazy x) as l = ()
+let (lazy (x as l)) = ()
+let (lazy x) = ()
+let (lazy x) as l = ()
+let (lazy x) as l = ()
+let (lazy (x as l)) = ()
+let (lazy (x : int)) = ()
+let (lazy (x : int)) = ()
+let ((lazy x) : int Lazy.t) = ()
+let ((lazy x) : int Lazy.t) as l = ()
+let ((lazy (x as l)) : int Lazy.t) = ()
+let (lazy exception x) = ()
+let (lazy exception x) = ()
+;;match x with
+  | (lazy foo) -> ()
+  | (lazy foo) as l -> ()
+  | (lazy (foo as l)) -> ()
+  | ((lazy x) : int Lazy.t) -> ()
+let f (lazy x) = ()
+let f ((lazy x) as l) = ()
+let f (lazy (x as l)) = ()
+let f (lazy x) = ()
+let f ((lazy x) as l) = ()
+let f (lazy (x as l)) = ()
+let f ((lazy x) : int Lazy.t) = ()
+let f (((lazy x) : int Lazy.t) as x) = ()
+let f ((lazy (x : int Lazy.t)) as x) = ()
+let f (lazy ((x : int Lazy.t) as l)) = ()
+let f ((lazy x) : int Lazy.t) = ()
+;;for (lazy x) = z to g do () done
+;;for (lazy x) as l = z to g do () done
+;;for (lazy (x as l)) = z to g do () done
+;;for (lazy x) = z to g do () done
+;;for (lazy x) as l = z to g do () done
+;;for (lazy (x as l)) = z to g do () done
+;;for (lazy x) = z to g do () done
+;;for (lazy x) as l = z to g do () done
+;;for (lazy x) as l = z to g do () done
+;;for (lazy (x as l)) = z to g do () done
+;;for ((lazy x) : int Lazy.t) = z to g do () done
+;;for ((lazy x) : int Lazy.t) as l = z to g do () done
+;;for (lazy (x : int Lazy.t)) as l = z to g do () done
+;;for (lazy ((x : int Lazy.t) as l)) = z to g do () done

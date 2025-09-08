@@ -1,0 +1,6 @@
+let foo [arity:1](x : int) = (x :> int)
+let foo [arity:1]x = ((x : t) :> int)
+let _ = (x : int)
+let foo = ((x : int), (y :> float))
+let foo = ((x : int), (y :> float), (z :> int))
+let foo = ((x : int), y, (z :> int))

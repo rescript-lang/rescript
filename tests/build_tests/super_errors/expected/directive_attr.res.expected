@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/directive_attr.res[0m:[2m1:1-11[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@@directive[0m
+  2 [2m│[0m 
+
+  expect string literal

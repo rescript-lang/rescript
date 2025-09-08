@@ -1,0 +1,5 @@
+;;for p = 0 to 10 do () done
+;;for p = 10 downto 0 do () done
+;;for p = a to b do () done
+;;for p = a to b do let a = 1 in let b = 2 in a + b done
+;;for p = 0 to x + 1 do () done

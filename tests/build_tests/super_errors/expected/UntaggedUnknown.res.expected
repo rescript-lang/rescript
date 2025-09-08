@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedUnknown.res[0m:[2m2:10-26[0m
+
+  1 [2m│[0m @unboxed
+  [1;31m2[0m [2m│[0m type t = [1;31mList(list<float>)[0m | Float(float)
+  3 [2m│[0m 
+
+  This untagged variant definition is invalid: Case List has a payload that is not of one of the recognized shapes (object, array, etc). Then it must be the only case with payloads.

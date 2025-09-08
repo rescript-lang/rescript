@@ -1,0 +1,2 @@
+module type X  = Foo
+module type X  = Foo[@@attr ]

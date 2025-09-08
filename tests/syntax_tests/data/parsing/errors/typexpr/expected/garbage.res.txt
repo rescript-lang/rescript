@@ -1,0 +1,12 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/garbage.res:2:28
+
+  1 │ @module("moduleName")
+  2 │ external printName: (~name:?, unit) => unit = "printName"
+  3 │ 
+
+  I'm not sure what to parse here when looking at "?".
+
+external printName : name:unit -> unit (a:1) = "printName"[@@module
+                                                            {js|moduleName|js}]

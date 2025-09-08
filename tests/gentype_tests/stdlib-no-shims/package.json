@@ -1,0 +1,15 @@
+{
+  "name": "@tests/gentype-stdlib-no-shims",
+  "private": true,
+  "scripts": {
+    "build": "rescript legacy build",
+    "clean": "rescript clean",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "rescript": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "5.8.2"
+  }
+}

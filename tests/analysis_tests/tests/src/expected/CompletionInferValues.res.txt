@@ -1,0 +1,1008 @@
+Complete src/CompletionInferValues.res 15:43
+posCursor:[15:43] posNoWhite:[15:42] Found expr:[15:33->15:43]
+Completable: Cpath Value[aliased]->t
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[aliased]->t
+ContextPath Value[aliased]
+Path aliased
+ContextPath Value[x]
+Path x
+ContextPath int
+Path Stdlib.Int.t
+Path t
+[{
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toExponentialWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Int.toFixedWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+  }, {
+    "label": "Int.toPrecisionWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
+  }, {
+    "label": "Int.toPrecision",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
+  }, {
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toFloat",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => float",
+    "documentation": {"kind": "markdown", "value": "\n`toFloat(n)` return a `float` representing the given value.\n\n## Examples\n\n```rescript\nInt.toFloat(100) == 100.0\nInt.toFloat(2) == 2.0\n```\n"}
+  }, {
+    "label": "Int.toLocaleString",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => string",
+    "documentation": {"kind": "markdown", "value": "\n`toLocaleString(n)` return a `string` with language-sensitive representing the\ngiven value. See [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nInt.toLocaleString(1000) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nInt.toLocaleString(1000) // \"1.000\"\n```\n"}
+  }, {
+    "label": "Int.toExponential",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toExponential(n, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\n\n## Examples\n\n```rescript\nInt.toExponential(1000) // \"1e+3\"\nInt.toExponential(-1000) // \"-1e+3\"\nInt.toExponential(77, ~digits=2) // \"7.70e+1\"\nInt.toExponential(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Int.toFixed",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+  }]
+
+Complete src/CompletionInferValues.res 18:30
+posCursor:[18:30] posNoWhite:[18:29] Found expr:[18:28->18:30]
+Pexp_field [18:28->18:29] _:[33:0->18:30]
+Completable: Cpath Value[x].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x].""
+ContextPath Value[x]
+Path x
+ContextPath Value[getSomeRecord](Nolabel)
+ContextPath Value[getSomeRecord]
+Path getSomeRecord
+ContextPath Value[x]->
+ContextPath Value[x]
+Path x
+ContextPath Value[getSomeRecord](Nolabel)
+ContextPath Value[getSomeRecord]
+Path getSomeRecord
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 21:53
+posCursor:[21:53] posNoWhite:[21:52] Found expr:[21:45->21:53]
+Pexp_field [21:45->21:52] _:[33:0->21:53]
+Completable: Cpath Value[aliased].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[aliased].""
+ContextPath Value[aliased]
+Path aliased
+ContextPath Value[x]
+Path x
+ContextPath Value[getSomeRecord](Nolabel)
+ContextPath Value[getSomeRecord]
+Path getSomeRecord
+ContextPath Value[aliased]->
+ContextPath Value[aliased]
+Path aliased
+ContextPath Value[x]
+Path x
+ContextPath Value[getSomeRecord](Nolabel)
+ContextPath Value[getSomeRecord]
+Path getSomeRecord
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 24:63
+posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:3->24:64]
+Pexp_apply ...[24:3->24:21] (...[24:22->24:63])
+posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:22->24:63]
+posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:36->24:63]
+posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:42->24:63]
+posCursor:[24:63] posNoWhite:[24:62] Found expr:[24:52->24:63]
+Pexp_field [24:52->24:62] _:[24:63->24:63]
+Completable: Cpath Value[someRecord].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someRecord].""
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CArgument CArgument Value[someFnWithCallback]($0)(~someRecord)
+ContextPath CArgument Value[someFnWithCallback]($0)
+ContextPath Value[someFnWithCallback]
+Path someFnWithCallback
+ContextPath Value[someRecord]->
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CArgument CArgument Value[someFnWithCallback]($0)(~someRecord)
+ContextPath CArgument Value[someFnWithCallback]($0)
+ContextPath Value[someFnWithCallback]
+Path someFnWithCallback
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 27:90
+posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:39->27:91]
+Pexp_apply ...[27:39->27:48] (...[27:49->27:90])
+posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:49->27:90]
+posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:56->27:90]
+posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:69->27:90]
+posCursor:[27:90] posNoWhite:[27:89] Found expr:[27:79->27:90]
+Pexp_field [27:79->27:89] _:[27:90->27:90]
+Completable: Cpath Value[someRecord].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someRecord].""
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CArgument CArgument Value[aliasedFn]($0)(~someRecord)
+ContextPath CArgument Value[aliasedFn]($0)
+ContextPath Value[aliasedFn]
+Path aliasedFn
+ContextPath Value[someFnWithCallback]
+Path someFnWithCallback
+ContextPath Value[someRecord]->
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CArgument CArgument Value[aliasedFn]($0)(~someRecord)
+ContextPath CArgument Value[aliasedFn]($0)
+ContextPath Value[aliasedFn]
+Path aliasedFn
+ContextPath Value[someFnWithCallback]
+Path someFnWithCallback
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 30:36
+posCursor:[30:36] posNoWhite:[30:35] Found expr:[30:3->30:39]
+Pexp_apply ...[30:3->30:15] (...[30:16->30:38])
+posCursor:[30:36] posNoWhite:[30:35] Found expr:[30:16->30:38]
+posCursor:[30:36] posNoWhite:[30:35] Found expr:[30:27->30:36]
+Completable: Cpath Value[event]->pr
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[event]->pr
+ContextPath Value[event]
+Path event
+ContextPath CArgument CArgument Value[reactEventFn]($0)($0)
+ContextPath CArgument Value[reactEventFn]($0)
+ContextPath Value[reactEventFn]
+Path reactEventFn
+CPPipe pathFromEnv:ReactEvent.Mouse found:false
+Path ReactEvent.Mouse.pr
+Path pr
+[{
+    "label": "ReactEvent.Mouse.preventDefault",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": null
+  }]
+
+Complete src/CompletionInferValues.res 41:50
+posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:11->41:56]
+JSX <div:[41:12->41:15] onMouseEnter[41:16->41:28]=...[41:36->41:52]> _children:None
+posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:36->41:52]
+posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:41->41:50]
+Completable: Cpath Value[event]->pr <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[event]->pr <<jsx>>
+ContextPath Value[event]
+Path event
+ContextPath CArgument CJsxPropValue [div] onMouseEnter($0)
+ContextPath CJsxPropValue [div] onMouseEnter
+Path ReactDOM.domProps
+Path JsxDOM.domProps
+CPPipe pathFromEnv:JsxEvent.Mouse found:false
+Path JsxEvent.Mouse.pr
+Path pr
+[{
+    "label": "JsxEvent.Mouse.preventDefault",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": null
+  }]
+
+Complete src/CompletionInferValues.res 44:50
+posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:11->44:56]
+JSX <Div:[44:12->44:15] onMouseEnter[44:16->44:28]=...[44:36->44:52]> _children:None
+posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:36->44:52]
+posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:41->44:50]
+Completable: Cpath Value[event]->pr <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[event]->pr <<jsx>>
+ContextPath Value[event]
+Path event
+ContextPath CArgument CJsxPropValue [Div] onMouseEnter($0)
+ContextPath CJsxPropValue [Div] onMouseEnter
+Path Div.make
+CPPipe pathFromEnv:JsxEvent.Mouse found:false
+Path JsxEvent.Mouse.pr
+Path pr
+[{
+    "label": "JsxEvent.Mouse.preventDefault",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": null
+  }]
+
+Complete src/CompletionInferValues.res 47:87
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]
+JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:None
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:36->47:89]
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:41->47:87]
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:81->47:87]
+Completable: Cpath Value[btn]->t <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[btn]->t <<jsx>>
+ContextPath Value[btn]
+Path btn
+ContextPath Value[JsxEvent, Mouse, button](Nolabel)
+ContextPath Value[JsxEvent, Mouse, button]
+Path JsxEvent.Mouse.button
+Path Stdlib.Int.t
+Path t
+[{
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toExponentialWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Int.toFixedWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+  }, {
+    "label": "Int.toPrecisionWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
+  }, {
+    "label": "Int.toPrecision",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
+  }, {
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toFloat",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => float",
+    "documentation": {"kind": "markdown", "value": "\n`toFloat(n)` return a `float` representing the given value.\n\n## Examples\n\n```rescript\nInt.toFloat(100) == 100.0\nInt.toFloat(2) == 2.0\n```\n"}
+  }, {
+    "label": "Int.toLocaleString",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => string",
+    "documentation": {"kind": "markdown", "value": "\n`toLocaleString(n)` return a `string` with language-sensitive representing the\ngiven value. See [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nInt.toLocaleString(1000) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nInt.toLocaleString(1000) // \"1.000\"\n```\n"}
+  }, {
+    "label": "Int.toExponential",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toExponential(n, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\n\n## Examples\n\n```rescript\nInt.toExponential(1000) // \"1e+3\"\nInt.toExponential(-1000) // \"-1e+3\"\nInt.toExponential(77, ~digits=2) // \"7.70e+1\"\nInt.toExponential(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Int.toFixed",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+  }]
+
+Complete src/CompletionInferValues.res 50:103
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:11->50:109]
+JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:None
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:36->50:105]
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:41->50:103]
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:95->50:103]
+Completable: Cpath Value[btn]->spl <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[btn]->spl <<jsx>>
+ContextPath Value[btn]
+Path btn
+ContextPath Value[Int, toString](Nolabel)
+ContextPath Value[Int, toString]
+Path Int.toString
+[]
+
+Complete src/CompletionInferValues.res 53:121
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:11->53:127]
+JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:None
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:36->53:123]
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:41->53:121]
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:114->53:121]
+Completable: Cpath Value[btn]->ma <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[btn]->ma <<jsx>>
+ContextPath Value[btn]
+Path btn
+ContextPath Value[String, split](Nolabel, Nolabel)
+ContextPath Value[String, split]
+Path String.split
+Path Stdlib.Array.ma
+Path ArrayUtils.ma
+Path ma
+[{
+    "label": "Array.map",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
+  }, {
+    "label": "Array.mapWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) => greeting ++ \" at position \" ++ Int.toString(index))\n\nmappedArray == [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"]\n```\n"}
+  }]
+
+Complete src/CompletionInferValues.res 75:78
+posCursor:[75:78] posNoWhite:[75:77] Found expr:[75:70->75:78]
+Pexp_field [75:70->75:77] _:[118:0->75:78]
+Completable: Cpath Value[srecord].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[srecord].""
+ContextPath Value[srecord]
+Path srecord
+ContextPath CPatternPath(Value[x])->recordField(srecord)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+ContextPath Value[srecord]->
+ContextPath Value[srecord]
+Path srecord
+ContextPath CPatternPath(Value[x])->recordField(srecord)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 79:86
+posCursor:[79:86] posNoWhite:[79:85] Found expr:[79:78->79:86]
+Pexp_field [79:78->79:85] _:[118:0->79:86]
+Completable: Cpath Value[aliased].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[aliased].""
+ContextPath Value[aliased]
+Path aliased
+ContextPath CPatternPath(Value[x])->recordField(nested)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+ContextPath Value[aliased]->
+ContextPath Value[aliased]
+Path aliased
+ContextPath CPatternPath(Value[x])->recordField(nested)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "someRecord",
+    "kind": 5,
+    "tags": [],
+    "detail": "someRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\nsomeRecord: someRecord\n```\n\n```rescript\ntype someNestedRecord = {someRecord: someRecord}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 83:103
+posCursor:[83:103] posNoWhite:[83:102] Found expr:[83:92->83:103]
+Pexp_field [83:92->83:102] _:[118:0->83:103]
+Completable: Cpath Value[someRecord].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someRecord].""
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CPatternPath(Value[x])->recordField(nested)->recordField(someRecord)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+ContextPath Value[someRecord]->
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CPatternPath(Value[x])->recordField(nested)->recordField(someRecord)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
+Path 
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 87:81
+posCursor:[87:81] posNoWhite:[87:80] Found expr:[87:69->87:81]
+Completable: Cpath Value[things]->slic
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[things]->slic
+ContextPath Value[things]
+Path things
+ContextPath CPatternPath(Value[x])->recordField(things)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+Path Stdlib.String.slic
+Path slic
+[{
+    "label": "String.slice",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, ~start: int, ~end: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`slice(str, ~start, ~end)` returns the substring of `str` starting at\ncharacter `start` up to but not including `end`.\n- If either `start` or `end` is negative, then it is evaluated as\n  `length(str - start)` or `length(str - end)`.\n- If `end` is greater than the length of `str`, then it is treated as\n  `length(str)`.\n- If `start` is greater than `end`, slice returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.slice(\"abcdefg\", ~start=2, ~end=5) == \"cde\"\nString.slice(\"abcdefg\", ~start=2, ~end=9) == \"cdefg\"\nString.slice(\"abcdefg\", ~start=-4, ~end=-2) == \"de\"\nString.slice(\"abcdefg\", ~start=5, ~end=1) == \"\"\nString.slice(\"abcdefg\", ~start=2) == \"cdefg\"\nString.slice(\"Hello World\", ~start=6) == \"World\"\n```\n"}
+  }, {
+    "label": "String.sliceToEnd",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(string, ~start: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+  }]
+
+Complete src/CompletionInferValues.res 91:82
+posCursor:[91:82] posNoWhite:[91:81] Found expr:[91:70->91:82]
+Completable: Cpath Value[someInt]->toS
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someInt]->toS
+ContextPath Value[someInt]
+Path someInt
+ContextPath CPatternPath(Value[x])->recordField(someInt)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+Path Stdlib.Int.toS
+Path toS
+[{
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }]
+
+Complete src/CompletionInferValues.res 95:109
+posCursor:[95:109] posNoWhite:[95:108] Found expr:[95:97->95:109]
+Completable: Cpath Value[someInt]->toS
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someInt]->toS
+ContextPath Value[someInt]
+Path someInt
+ContextPath CPatternPath(Value[someTuple])->tuple($1)
+ContextPath Value[someTuple]
+Path someTuple
+ContextPath CPatternPath(Value[x])->recordField(someTuple)
+ContextPath Value[x]
+Path x
+ContextPath Type[otherNestedRecord]
+Path otherNestedRecord
+Path Stdlib.Int.toS
+Path toS
+[{
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }]
+
+Complete src/CompletionInferValues.res 99:102
+posCursor:[99:102] posNoWhite:[99:101] Found expr:[99:57->99:102]
+posCursor:[99:102] posNoWhite:[99:101] Found expr:[99:90->99:102]
+Completable: Cpath Value[someInt]->toS
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someInt]->toS
+ContextPath Value[someInt]
+Path someInt
+ContextPath CPatternPath(Value[someTuple])->tuple($1)
+ContextPath Value[someTuple]
+Path someTuple
+ContextPath CPatternPath(Value[x])->recordField(someTuple)
+ContextPath Value[x]
+Path x
+ContextPath Type[otherNestedRecord]
+Path otherNestedRecord
+Path Stdlib.Int.toS
+Path toS
+[{
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }]
+
+Complete src/CompletionInferValues.res 103:88
+posCursor:[103:88] posNoWhite:[103:87] Found expr:[103:79->103:88]
+Completable: Cpath Value[str]->slic
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[str]->slic
+ContextPath Value[str]
+Path str
+ContextPath CPatternPath(Value[x])->recordField(someTuple)->tuple($0)->variantPayload::Three($1)
+ContextPath Value[x]
+Path x
+ContextPath Type[otherNestedRecord]
+Path otherNestedRecord
+Path Stdlib.String.slic
+Path slic
+[{
+    "label": "String.slice",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, ~start: int, ~end: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`slice(str, ~start, ~end)` returns the substring of `str` starting at\ncharacter `start` up to but not including `end`.\n- If either `start` or `end` is negative, then it is evaluated as\n  `length(str - start)` or `length(str - end)`.\n- If `end` is greater than the length of `str`, then it is treated as\n  `length(str)`.\n- If `start` is greater than `end`, slice returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.slice(\"abcdefg\", ~start=2, ~end=5) == \"cde\"\nString.slice(\"abcdefg\", ~start=2, ~end=9) == \"cdefg\"\nString.slice(\"abcdefg\", ~start=-4, ~end=-2) == \"de\"\nString.slice(\"abcdefg\", ~start=5, ~end=1) == \"\"\nString.slice(\"abcdefg\", ~start=2) == \"cdefg\"\nString.slice(\"Hello World\", ~start=6) == \"World\"\n```\n"}
+  }, {
+    "label": "String.sliceToEnd",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(string, ~start: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+  }]
+
+Complete src/CompletionInferValues.res 107:89
+posCursor:[107:89] posNoWhite:[107:88] Found expr:[107:80->107:89]
+Completable: Cpath Value[str]->slic
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[str]->slic
+ContextPath Value[str]
+Path str
+ContextPath CPatternPath(Value[x])->recordField(someTuple)->tuple($2)->polyvariantPayload::three($1)
+ContextPath Value[x]
+Path x
+ContextPath Type[otherNestedRecord]
+Path otherNestedRecord
+Path Stdlib.String.slic
+Path slic
+[{
+    "label": "String.slice",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, ~start: int, ~end: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`slice(str, ~start, ~end)` returns the substring of `str` starting at\ncharacter `start` up to but not including `end`.\n- If either `start` or `end` is negative, then it is evaluated as\n  `length(str - start)` or `length(str - end)`.\n- If `end` is greater than the length of `str`, then it is treated as\n  `length(str)`.\n- If `start` is greater than `end`, slice returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.slice(\"abcdefg\", ~start=2, ~end=5) == \"cde\"\nString.slice(\"abcdefg\", ~start=2, ~end=9) == \"cdefg\"\nString.slice(\"abcdefg\", ~start=-4, ~end=-2) == \"de\"\nString.slice(\"abcdefg\", ~start=5, ~end=1) == \"\"\nString.slice(\"abcdefg\", ~start=2) == \"cdefg\"\nString.slice(\"Hello World\", ~start=6) == \"World\"\n```\n"}
+  }, {
+    "label": "String.sliceToEnd",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(string, ~start: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+  }]
+
+Complete src/CompletionInferValues.res 111:80
+posCursor:[111:80] posNoWhite:[111:79] Found expr:[111:70->111:80]
+Completable: Cpath Value[name]->slic
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[name]->slic
+ContextPath Value[name]
+Path name
+ContextPath CPatternPath(Value[x])->recordField(optRecord)->variantPayload::Some($0)->recordField(name)
+ContextPath Value[x]
+Path x
+ContextPath Type[otherNestedRecord]
+Path otherNestedRecord
+Path Stdlib.String.slic
+Path slic
+[{
+    "label": "String.slice",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, ~start: int, ~end: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`slice(str, ~start, ~end)` returns the substring of `str` starting at\ncharacter `start` up to but not including `end`.\n- If either `start` or `end` is negative, then it is evaluated as\n  `length(str - start)` or `length(str - end)`.\n- If `end` is greater than the length of `str`, then it is treated as\n  `length(str)`.\n- If `start` is greater than `end`, slice returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.slice(\"abcdefg\", ~start=2, ~end=5) == \"cde\"\nString.slice(\"abcdefg\", ~start=2, ~end=9) == \"cdefg\"\nString.slice(\"abcdefg\", ~start=-4, ~end=-2) == \"de\"\nString.slice(\"abcdefg\", ~start=5, ~end=1) == \"\"\nString.slice(\"abcdefg\", ~start=2) == \"cdefg\"\nString.slice(\"Hello World\", ~start=6) == \"World\"\n```\n"}
+  }, {
+    "label": "String.sliceToEnd",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(string, ~start: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+  }]
+
+Complete src/CompletionInferValues.res 115:53
+posCursor:[115:53] posNoWhite:[115:52] Found expr:[115:46->115:53]
+Completable: Cpath Value[v]->toSt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[v]->toSt
+ContextPath Value[v]
+Path v
+ContextPath Value[x]
+Path x
+ContextPath int
+Path Stdlib.Int.toSt
+Path toSt
+[{
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }]
+
+Complete src/CompletionInferValues.res 123:26
+posCursor:[123:26] posNoWhite:[123:25] Found expr:[123:3->123:37]
+Pexp_apply ...[123:3->123:23] (...[123:24->123:36])
+posCursor:[123:26] posNoWhite:[123:25] Found expr:[123:24->123:36]
+posCursor:[123:26] posNoWhite:[123:25] Found pattern:[123:25->123:27]
+posCursor:[123:26] posNoWhite:[123:25] Found pattern:[123:25->123:27]
+Completable: Cpattern CArgument CArgument Value[fnWithRecordCallback]($0)($0)->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument CArgument Value[fnWithRecordCallback]($0)($0)
+ContextPath CArgument Value[fnWithRecordCallback]($0)
+ContextPath Value[fnWithRecordCallback]
+Path fnWithRecordCallback
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }, {
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 130:30
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:3->130:33]
+Pexp_apply ...[130:3->130:6] (~cb130:8->130:10=...[130:11->130:32])
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:11->130:32]
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:24->0:-1]
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:24->0:-1]
+Completable: Cpath Value[root]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[root]->
+ContextPath Value[root]
+Path root
+ContextPath CPatternPath(CArgument CArgument Value[fn2](~cb)($0))->recordField(root)
+ContextPath CArgument CArgument Value[fn2](~cb)($0)
+ContextPath CArgument Value[fn2](~cb)
+ContextPath Value[fn2]
+Path fn2
+CPPipe pathFromEnv:ReactDOM.Client.Root found:false
+Path ReactDOM.Client.Root.
+Path 
+[{
+    "label": "ReactDOM.Client.Root.unmount",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, unit) => unit",
+    "documentation": null
+  }, {
+    "label": "ReactDOM.Client.Root.render",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, React.element) => unit",
+    "documentation": null
+  }]
+
+Complete src/CompletionInferValues.res 139:30
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:3->139:33]
+Pexp_apply ...[139:3->139:6] (~cb139:8->139:10=...[139:11->139:32])
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:11->139:32]
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:24->0:-1]
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:24->0:-1]
+Completable: Cpath Value[root]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[root]->
+ContextPath Value[root]
+Path root
+ContextPath CPatternPath(CArgument CArgument Value[fn3](~cb)($0))->recordField(root)
+ContextPath CArgument CArgument Value[fn3](~cb)($0)
+ContextPath CArgument Value[fn3](~cb)
+ContextPath Value[fn3]
+Path fn3
+CPPipe pathFromEnv:CompletionSupport.Test found:false
+Path CompletionSupport.Test.
+Path 
+[{
+    "label": "CompletionSupport.Test.add",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "CompletionSupport.Test.addSelf",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => t",
+    "documentation": null
+  }]
+
+Complete src/CompletionInferValues.res 143:47
+XXX Not found!
+Completable: Cpattern Value[Belt, Int, toString](Nolabel)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[Belt, Int, toString](Nolabel)
+ContextPath Value[Belt, Int, toString]
+Path Belt.Int.toString
+[{
+    "label": "\"\"",
+    "kind": 12,
+    "tags": [],
+    "detail": "string",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "\"$0\"",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionInferValues.res 147:66
+XXX Not found!
+Completable: Cpattern Value[String, split](Nolabel, Nolabel)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[String, split](Nolabel, Nolabel)
+ContextPath Value[String, split]
+Path String.split
+[{
+    "label": "[]",
+    "kind": 12,
+    "tags": [],
+    "detail": "string",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "[$0]",
+    "insertTextFormat": 2
+  }]
+
+Complete src/CompletionInferValues.res 151:105
+posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:18->151:110]
+Pexp_apply ...[151:18->151:49] (~prepare151:51->151:58=...[151:59->151:72], ~render151:74->151:80=...[151:81->151:106], ...[151:107->151:109])
+posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:81->151:106]
+posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:97->151:105]
+Pexp_field [151:97->151:104] _:[151:105->151:105]
+Completable: Cpath Value[support].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[support].""
+ContextPath Value[support]
+Path support
+ContextPath CPatternPath(CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0))->recordField(support)
+ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0)
+ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
+ContextPath Value[CompletionSupport2, makeRenderer]
+Path CompletionSupport2.makeRenderer
+ContextPath Value[support]->
+ContextPath Value[support]
+Path support
+ContextPath CPatternPath(CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0))->recordField(support)
+ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0)
+ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
+ContextPath Value[CompletionSupport2, makeRenderer]
+Path CompletionSupport2.makeRenderer
+CPPipe pathFromEnv:CompletionSupport.Nested found:false
+Path CompletionSupport.Nested.
+Path 
+[{
+    "label": "root",
+    "kind": 5,
+    "tags": [],
+    "detail": "ReactDOM.Client.Root.t",
+    "documentation": {"kind": "markdown", "value": "```rescript\nroot: ReactDOM.Client.Root.t\n```\n\n```rescript\ntype config = {root: ReactDOM.Client.Root.t}\n```"}
+  }]
+
+Complete src/CompletionInferValues.res 155:110
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:18->155:115]
+Pexp_apply ...[155:18->155:49] (~prepare155:51->155:58=...[155:59->155:72], ~render155:74->155:80=...[155:81->155:111], ...[155:112->155:114])
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:81->155:111]
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:104->0:-1]
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:104->0:-1]
+Completable: Cpath Value[root]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[root]->
+ContextPath Value[root]
+Path root
+ContextPath CPatternPath(CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0))->recordField(support)->recordField(root)
+ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0)
+ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
+ContextPath Value[CompletionSupport2, makeRenderer]
+Path CompletionSupport2.makeRenderer
+CPPipe pathFromEnv:ReactDOM.Client.Root found:false
+Path ReactDOM.Client.Root.
+Path 
+[{
+    "label": "ReactDOM.Client.Root.unmount",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, unit) => unit",
+    "documentation": null
+  }, {
+    "label": "ReactDOM.Client.Root.render",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, React.element) => unit",
+    "documentation": null
+  }]
+
+Hover src/CompletionInferValues.res 160:27
+Nothing at that position. Now trying to use completion.
+posCursor:[160:27] posNoWhite:[160:26] Found expr:[160:25->160:28]
+Pexp_ident res:[160:25->160:28]
+Completable: Cpath Value[res]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[res]
+Path res
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+

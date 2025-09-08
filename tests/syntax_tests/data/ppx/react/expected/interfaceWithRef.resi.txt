@@ -1,0 +1,2 @@
+@res.jsxComponentProps type props<'x, 'ref> = {x: 'x, ref?: 'ref}
+let make: React.componentLike<props<string, ReactDOM.Ref.currentDomRef>, React.element>

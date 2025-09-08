@@ -1,0 +1,24 @@
+/*
+if /* c0 */ let /* c1 */ Some(/* c2 */ x /* c3 */) /* c4 */ = /* c5 */ makeOpt() /* c6 */ {
+  /* c7 */ foo() /* c8 */
+} else {
+  /* c9 */ bar() /* c10 */
+}
+
+let getZ2 = nested =>
+  if let /* c-4 */ Some(point) /* c-3 */ =  /* c-2 */ nested.origin  /* c-1 */ {
+    if let /* c0 */ Some( /* c1 */ z /* c2 */ ) =/* c3 */ point.z /* c4 */ {
+      let pi /* inside */ = 3.13 *. point.z // trailing1
+      let e /* inside1 */= 42.3 // trailing2
+      pi *. e // trailing3
+    } else {
+      let pi /* inside2 */= 3.13 // trailing4
+      let e /* inside3 */= 42.3 // trailing5
+      pi *. e // trailing6
+    }
+  } else {
+    let pi /* inside4 */ = 3.13 // trailing7
+    let e /* inside5 */ = 42.3 // trailing8
+    pi *. e // trailing9
+  }
+ */

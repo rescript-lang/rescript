@@ -1,0 +1,8 @@
+Codemod AddMissingCasessrc/Codemod.res 3:10
+switch (v1, v2) {
+          //      ^c-a (#valid, #valid) | (#invalid, _)
+          | (#valid, #invalid) => ()
+          | (#valid, #valid) => failwith("TODO")
+          | (#invalid, _) => failwith("TODO")
+          }
+

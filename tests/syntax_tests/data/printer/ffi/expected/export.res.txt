@@ -1,0 +1,57 @@
+
+  Syntax error!
+  tests/printer/ffi/export.res:1:7-11
+
+  1 │ export type callback = ReactEvent.Mouse.t => unit
+  2 │ 
+  3 │ export type t = int and export s = string
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+
+  Syntax error!
+  tests/printer/ffi/export.res:3:31-32
+
+  1 │ export type callback = ReactEvent.Mouse.t => unit
+  2 │ 
+  3 │ export type t = int and export s = string
+  4 │ export type t = int and s = string
+  5 │ type t = int and export s = string
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+
+  Syntax error!
+  tests/printer/ffi/export.res:5:24-25
+
+  3 │ export type t = int and export s = string
+  4 │ export type t = int and s = string
+  5 │ type t = int and export s = string
+  6 │ 
+  7 │ export let callback = _ => Js.log("Clicked")
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+
+  Syntax error!
+  tests/printer/ffi/export.res:10:40-41
+
+   8 │ export callback = _ => Js.log("Clicked")
+   9 │ 
+  10 │ export let x = "hello world" and export y = 2
+  11 │ export x = "hello world" and export y = 2
+  12 │ let x = "hello world" and export y = 2
+
+  Did you forget a `=` here?
+
+
+  Syntax error!
+  tests/printer/ffi/export.res:12:33-34
+
+  10 │ export let x = "hello world" and export y = 2
+  11 │ export x = "hello world" and export y = 2
+  12 │ let x = "hello world" and export y = 2
+  13 │ 
+
+  Did you forget a `=` here?
+

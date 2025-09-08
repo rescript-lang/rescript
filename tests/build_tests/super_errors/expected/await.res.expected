@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/await.res[0m:[2m4:9-17[0m
+
+  2 [2m│[0m let foo = async () => {
+  3 [2m│[0m   let _ = ()
+  [1;31m4[0m [2m│[0m   () => [1;31mawait a()[0m
+  5 [2m│[0m }
+  6 [2m│[0m 
+
+  Await on expression not in an async context

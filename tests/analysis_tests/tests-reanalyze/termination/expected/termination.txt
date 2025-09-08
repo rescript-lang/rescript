@@ -1,0 +1,249 @@
+
+  Scanning TestCyberTruck.cmt Source:TestCyberTruck.res
+
+  Function Table
+  1 justReturn: _
+
+  Termination Analysis for justReturn
+
+  Function Table
+  1 alwaysLoop: alwaysLoop
+
+  Termination Analysis for alwaysLoop
+
+  Function Table
+  1 alwaysProgress: +progress; alwaysProgress
+
+  Termination Analysis for alwaysProgress
+
+  Function Table
+  1 alwaysProgressWrongOrder: alwaysProgressWrongOrder; +progress
+
+  Termination Analysis for alwaysProgressWrongOrder
+
+  Function Table
+  1 doNotAlias: _
+
+  Termination Analysis for doNotAlias
+
+  Function Table
+  1 progressOnBothBranches: [+progress || +progress2]; progressOnBothBranches
+
+  Termination Analysis for progressOnBothBranches
+
+  Function Table
+  1 progressOnOneBranch: [+progress || _]; progressOnOneBranch
+
+  Termination Analysis for progressOnOneBranch
+
+  Function Table
+  1 callParseFunction<parseFunction>: parseFunction
+  2 testParametricFunction: [+progress || _]; testParametricFunction2
+  3 testParametricFunction2: callParseFunction<parseFunction:testParametricFunction>
+
+  Termination Analysis for testParametricFunction
+
+  Function Table
+  1 doNothing: _
+  2 testCacheHit: [doNothing; doNothing; +Progress.Nested.f || _]; testCacheHit
+
+  Termination Analysis for testCacheHit
+
+  Function Table
+  1 evalOrderIsNotLeftToRight: {+progress, evalOrderIsNotLeftToRight}; _
+
+  Termination Analysis for evalOrderIsNotLeftToRight
+
+  Function Table
+  1 evalOrderIsNotRightToLeft: {evalOrderIsNotRightToLeft, +progress}; _
+
+  Termination Analysis for evalOrderIsNotRightToLeft
+
+  Function Table
+  1 butFirstArgumentIsAlwaysEvaluated: +progress; butFirstArgumentIsAlwaysEvaluated
+
+  Termination Analysis for butFirstArgumentIsAlwaysEvaluated
+
+  Function Table
+  1 butSecondArgumentIsAlwaysEvaluated: +progress; butSecondArgumentIsAlwaysEvaluated
+
+  Termination Analysis for butSecondArgumentIsAlwaysEvaluated
+
+  Function Table
+  1 parseExpression: [_ || _]; [+Parser.next; parseExpression; parseExpression; _ || _]
+  2 parseList<f>: parseList$loop<f:f>
+  3 parseList$loop<f>: [_ || f; parseList$loop<f:f>; _]
+  4 parseListExpression: _
+  5 parseListExpression2: parseExpression; parseList<f:parseExpression>
+  6 parseListInt: _
+  7 parseListIntTailRecursive: parseListIntTailRecursive$loop
+  8 parseListIntTailRecursive$loop: [_ || parseListIntTailRecursive$loop]
+  9 parseListListInt: parseList<f:parseListInt>
+
+  Termination Analysis for parseListInt
+
+  Termination Analysis for parseListListInt
+
+  Termination Analysis for parseExpression
+
+  Termination Analysis for parseListExpression
+
+  Termination Analysis for parseListExpression2
+
+  Termination Analysis for parseListIntTailRecursive
+
+  Function Table
+  1 loopAfterProgress: loopAfterProgress
+  2 testLoopAfterProgress: +progress; loopAfterProgress
+
+  Termination Analysis for testLoopAfterProgress
+
+  Function Table
+  1 counterCompiled: +initState; [_ || counterCompiled; _]; _
+  2 onClick1: [_ || counterCompiled]
+
+  Termination Analysis for counterCompiled
+
+  Function Table
+  1 countRendersCompiled: [_ || countRendersCompiled; _]; _
+
+  Termination Analysis for countRendersCompiled
+
+  Function Table
+  1 alwaysReturnNone: [+Parser.next; alwaysReturnNone || None]
+  2 parseIntOWrapper: _
+  3 parseListIntO: _
+  4 testAlwaysReturnNone: alwaysReturnNone
+  5 thisMakesNoProgress: None; [_ || +Parser.next; Some]
+
+  Termination Analysis for parseListIntO
+
+  Termination Analysis for testAlwaysReturnNone
+
+  Termination Analysis for parseIntOWrapper
+
+  Termination Analysis for thisMakesNoProgress
+
+  Function Table
+  1 f: [g; _ || _ || +Parser.next; f]
+  2 g: +Parser.next; gParam<g:g>
+  3 gParam<g>: [g; _ || f]
+
+  Termination Analysis for f
+
+  Function Table
+  1 concat<f, g>: switch f {some: switch g {some: Some, none: None}, none: None}
+  2 kleene<f>: switch f {some: kleene<f:f>, none: _}
+  3 one: [+Parser.next; Some || None]
+  4 oneTwo: concat<f:one,g:two>
+  5 oneTwoStar: kleene<f:oneTwo>
+  6 two: [+Parser.next; Some || None]
+
+  Termination Analysis for oneTwoStar
+
+  Function Table
+  1 testTry: [+progress; testTry || +progress; testTry]
+
+  Termination Analysis for testTry
+
+  Termination Analysis Stats
+  Files:1
+  Recursive Blocks:21
+  Functions:45
+  Infinite Loops:12
+  Hygiene Errors:3
+  Cache Hits:4/21
+  
+
+  Error Termination
+  TestCyberTruck.res:29:28-39
+  Possible infinite loop when calling alwaysLoop
+  CallStack:
+    1 alwaysLoop (TestCyberTruck.res 29)
+
+  Error Termination
+  TestCyberTruck.res:40:3-28
+  Possible infinite loop when calling alwaysProgressWrongOrder
+  CallStack:
+    1 alwaysProgressWrongOrder (TestCyberTruck.res 39)
+
+  Error Hygiene
+  TestCyberTruck.res:47:15-24
+  doNotAlias can only be called directly, or passed as labeled argument
+
+  Error Termination
+  TestCyberTruck.res:68:3-24
+  Possible infinite loop when calling progressOnOneBranch
+  CallStack:
+    1 progressOnOneBranch (TestCyberTruck.res 64)
+
+  Error Termination
+  TestCyberTruck.res:80:48-63
+  Possible infinite loop when calling parseFunction which is testParametricFunction
+  CallStack:
+    3 callParseFunction<parseFunction:testParametricFunction> (TestCyberTruck.res 79)
+    2 testParametricFunction2 (TestCyberTruck.res 77)
+    1 testParametricFunction (TestCyberTruck.res 73)
+
+  Error Termination
+  TestCyberTruck.res:89:3-17
+  Possible infinite loop when calling testCacheHit
+  CallStack:
+    1 testCacheHit (TestCyberTruck.res 83)
+
+  Error Termination
+  TestCyberTruck.res:97:31-58
+  Possible infinite loop when calling evalOrderIsNotLeftToRight
+  CallStack:
+    1 evalOrderIsNotLeftToRight (TestCyberTruck.res 95)
+
+  Error Termination
+  TestCyberTruck.res:104:19-46
+  Possible infinite loop when calling evalOrderIsNotRightToLeft
+  CallStack:
+    1 evalOrderIsNotRightToLeft (TestCyberTruck.res 102)
+
+  Error Hygiene
+  TestCyberTruck.res:217:32-73
+  Call must have named argument f
+
+  Error Hygiene
+  TestCyberTruck.res:198:29-53
+  Named argument f must be passed a recursive function
+
+  Error Termination
+  TestCyberTruck.res:180:15-21
+  Possible infinite loop when calling parseList$loop<f:f> which is parseList$loop<f:parseListInt>
+  CallStack:
+    3 parseList$loop<f:parseListInt> (TestCyberTruck.res 183)
+    2 parseList<f:parseListInt> (TestCyberTruck.res 201)
+    1 parseListListInt (TestCyberTruck.res 201)
+
+  Error Termination
+  TestCyberTruck.res:180:15-21
+  Possible infinite loop when calling parseList$loop<f:f> which is parseList$loop<f:parseExpression>
+  CallStack:
+    3 parseList$loop<f:parseExpression> (TestCyberTruck.res 183)
+    2 parseList<f:parseExpression> (TestCyberTruck.res 220)
+    1 parseListExpression2 (TestCyberTruck.res 220)
+
+  Error Termination
+  TestCyberTruck.res:228:7-38
+  Possible infinite loop when calling parseListIntTailRecursive$loop
+  CallStack:
+    2 parseListIntTailRecursive$loop (TestCyberTruck.res 230)
+    1 parseListIntTailRecursive (TestCyberTruck.res 223)
+
+  Error Termination
+  TestCyberTruck.res:238:31-49
+  Possible infinite loop when calling loopAfterProgress
+  CallStack:
+    1 loopAfterProgress (TestCyberTruck.res 236)
+
+  Error Termination
+  TestCyberTruck.res:286:32-61
+  Possible infinite loop when calling countRendersCompiled
+  CallStack:
+    1 countRendersCompiled (TestCyberTruck.res 283)
+  
+  Analysis reported 15 issues (Error Hygiene:3, Error Termination:12)

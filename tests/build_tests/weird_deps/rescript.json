@@ -1,0 +1,21 @@
+{
+  "name": "weird_devdeps",
+  "version": "0.1.0",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    },
+    {
+      "dir": "test",
+      "type": "dev"
+    }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".res.js"
+  },
+  "dependencies": ["weird"],
+  "warnings": { "error": "+101" }
+}

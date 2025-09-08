@@ -1,0 +1,32 @@
+Complete src/DotPipeCompleteFromCurrentModule.res 10:13
+posCursor:[10:13] posNoWhite:[10:12] Found expr:[9:12->13:5]
+posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:11->12:10]
+posCursor:[10:13] posNoWhite:[10:12] Found expr:[10:11->10:13]
+Pexp_field [10:11->10:12] _:[12:8->10:13]
+Completable: Cpath Value[x].""
+Raw opens: 1 X.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib DotPipeCompleteFromCurrentModule
+ContextPath Value[x].""
+ContextPath Value[x]
+Path x
+ContextPath Value[x]->
+ContextPath Value[x]
+Path x
+CPPipe pathFromEnv:X found:true
+Path X.
+Path 
+[{
+    "label": "->z",
+    "kind": 12,
+    "tags": [],
+    "detail": "X.t => string",
+    "documentation": null,
+    "sortText": "z",
+    "insertText": "->z",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
+      "newText": ""
+      }]
+  }]
+

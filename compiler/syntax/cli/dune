@@ -1,0 +1,14 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(executable
+ (name res_cli)
+ (public_name res_parser)
+ (package rescript)
+ (enabled_if
+  (<> %{profile} browser))
+ (flags
+  (:standard -w +a-4-42-40-9-48-70))
+ (libraries syntax))

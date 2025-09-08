@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/typeDef/typeParams.res:1:10-13
+
+  1 │ type node('a) = {
+  2 │   _value: Js.Nullable.value<'a>
+  3 │ }
+
+  Type parameters require angle brackets:
+  node<'a>
+
+type nonrec 'a node = {
+  _value: 'a Js.Nullable.value }

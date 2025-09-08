@@ -1,0 +1,15 @@
+module X = (F)(A)
+module X = (((F)(Arg1))(Arg2))(Arg3)
+module X = (((F)(Arg1))(Arg2))(Arg3)
+module X =
+  (((((((F)[@ident ]))(((Arg1)[@attr ])))(((Arg2)[@attr2 ])))(((Arg3)
+  [@attr3 ])))[@apply ])
+module X = (((F)(Arg1))(Arg2))(Arg3)
+module X = (F)(struct  end)
+module X = ((F)(struct  end))(struct  end)
+module X = ((F)(struct  end))(struct  end)
+module X = (F)((A : SetLike))
+module X = ((F)((A : SetLike)))((B : TreeLike))
+module X = ((F)((A : SetLike)))((B : TreeLike))
+let someFunctorAsFunction [arity:1](x : (module MT)) = ((module
+  (SomeFunctor)((val x))) : (module ResT))

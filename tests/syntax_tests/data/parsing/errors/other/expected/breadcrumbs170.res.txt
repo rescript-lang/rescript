@@ -1,0 +1,29 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/breadcrumbs170.res:9:1
+
+   7 │   }
+   8 │ }
+   9 │ }from now on all syntax is "valid", 
+  10 │ it compiles and will be ignored in js/ removed on format
+  11 │ 
+
+  I'm not sure what to parse here when looking at "}".
+
+let l = (Some [1; 2; 3]) -> Obj.magic
+module M = struct ;;match l with | None -> [] | Some l -> l#prop end
+;;from
+;;now
+;;on
+;;all
+;;syntax
+;;is
+;;{js|valid|js}
+;;it
+;;compiles
+;;will
+;;be
+;;ignored
+;;js / removed
+;;on
+;;format

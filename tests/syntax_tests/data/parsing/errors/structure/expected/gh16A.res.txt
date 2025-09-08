@@ -1,0 +1,14 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/gh16A.res:6:1
+
+  4 │   })
+  5 │ }
+  6 │ )
+  7 │ Js.log("test"); // Is omitted from the compiled JS
+  8 │ 
+
+  I'm not sure what to parse here when looking at ")".
+
+module C = struct module T = (Fun)(struct ;;foo (a + c) (b + d) end) end
+;;Js.log {js|test|js}

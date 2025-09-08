@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_duplicate_constructors.res[0m:[2m3:22[0m
+
+  1 [2m│[0m type a = One | Two
+  2 [2m│[0m type b = Two | Three
+  [1;31m3[0m [2m│[0m type c = | ...a | ...[1;31mb[0m | Four
+  4 [2m│[0m 
+
+  Variant b has a constructor named Two, but a constructor named Two already exists in the variant it's spread into.
+  You cannot spread variants with overlapping constructors.

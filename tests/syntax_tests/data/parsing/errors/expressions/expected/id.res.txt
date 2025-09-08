@@ -1,0 +1,9 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/id.res:1:5
+
+  1 │ n.R.
+
+  I'm not sure what to parse here when looking at "eof".
+
+;;n.R._

@@ -1,0 +1,9 @@
+(dirs compiler-libs-406 src cli)
+
+(env
+ (dev
+  (flags
+   (:standard -w +a-4-42-40-9-48)))
+ (release
+  (flags
+   (:standard -w +a-4-42-40-9-48))))

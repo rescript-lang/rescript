@@ -1,0 +1,24 @@
+let x = []
+let x = [a, b, c]
+let x = [
+  superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+  superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+  superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+]
+
+let x = @attr [a, b, c]
+let x = @attr [@attr a, @attr b, @attr c]
+
+let x =
+  @attr
+  [
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+    @attr superLongIdentiiiiiiiifffffffiiiiieeeeeeeer,
+  ]
+
+let x = [biggerThanZero ? 1 : 0, biggerThanZero ? 1 : 0]

@@ -1,0 +1,102 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:1:6-8
+
+  1 │ type \""
+  2 │ 
+  3 │ type \"" = int
+
+  A quoted identifier can't be empty string.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:3:6-8
+
+  1 │ type \""
+  2 │ 
+  3 │ type \"" = int
+  4 │ 
+  5 │ let \""
+
+  A quoted identifier can't be empty string.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:5:5-7
+
+  3 │ type \"" = int
+  4 │ 
+  5 │ let \""
+  6 │ 
+  7 │ let \"a
+
+  A quoted identifier can't be empty string.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:5:8-7:3
+
+  3 │ type \"" = int
+  4 │ 
+  5 │ let \""
+  6 │ 
+  7 │ let \"a
+  8 │ b
+  9 │ c" = 1
+
+  Did you forget a `=` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:7:5-7
+
+  5 │ let \""
+  6 │ 
+  7 │ let \"a
+  8 │ b
+  9 │ c" = 1
+
+  A quoted identifier can't contain line breaks.
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:8:1
+
+   6 │ 
+   7 │ let \"a
+   8 │ b
+   9 │ c" = 1
+  10 │ 
+
+  Did you forget a `=` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:9:2-10:0
+
+   7 │ let \"a
+   8 │ b
+   9 │ c" = 1
+  10 │ 
+
+  This string is missing a double quote at the end
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/exoticIdent.res:9:2-10:0
+
+   7 │ let \"a
+   8 │ b
+   9 │ c" = 1
+  10 │ 
+
+  consecutive statements on a line must be separated by ';' or a newline
+
+type nonrec \""
+type nonrec \"" = int
+let \"" = [%rescript.exprhole ]
+let \"a
+ = b
+;;c
+;;{js| = 1
+|js}

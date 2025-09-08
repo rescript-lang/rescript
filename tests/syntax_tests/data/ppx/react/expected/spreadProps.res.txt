@@ -1,0 +1,27 @@
+@@jsxConfig({version: 4})
+// Error: spreadProps should be first in order than other props
+// let c0 = <A x="x" {...p} />
+
+// Error: multiple spreadProps not allowed
+// let c0 = <A x="x" {...p0} {...p1} />
+
+// only spread props
+let c1 = React.jsx(A.make, p)
+
+// reversed order
+let c2 = React.jsx(A.make, {...p, x: "x"})
+
+let c3 = ReactDOM.jsx("div", p)
+
+let c4 = ReactDOM.jsxKeyed("div", {...p, x: "x"}, ~key="k", ())
+
+let c5 = ReactDOM.jsxsKeyed(
+  "div",
+  {...p, children: React.array([ReactDOM.jsx("br", {}), ReactDOM.jsx("br", {})])},
+  ~key="k",
+  (),
+)
+
+// both need to be parsed
+let c6 = React.jsx(A.make, params->Obj.magic)
+let c7 = React.jsx(A.make, params->Obj.magic)

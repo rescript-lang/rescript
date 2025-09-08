@@ -1,0 +1,20 @@
+{
+  "name": "@testrepo/with-ppx",
+  "sources": [
+    {
+      "dir": "src"
+    }
+  ],
+  "dependencies": [
+    "rescript-nodejs",
+    "sury"
+  ],
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".res.js",
+  "ppx-flags": [
+    "sury-ppx/bin"
+  ]
+}

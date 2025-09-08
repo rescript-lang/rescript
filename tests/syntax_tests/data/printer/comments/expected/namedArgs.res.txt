@@ -1,0 +1,65 @@
+let wizard = Wizard.make(
+  ~spriteSheet=wizard,
+  ~hp=999999999999999,
+  ~mp=50,
+  //~coordinates={x: 0., y:0. z: 0.},
+  ~coordinates={x: 40, y: 100., z: 0.},
+  /* c0 */ ~gpuCoordinates=/* c1 */ gpuBuffer[10] /* c2 */, // trailing
+)
+
+apply(
+  // above
+  ~aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+  // below
+  ~bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,
+  // here
+  ~cccccccccccccccccccccccccccccccc,
+)
+
+applyOptional(
+  // above
+  ~aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?,
+  // below
+  ~bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb?,
+  // here
+  ~cccccccccccccccccccccccccccccccc?,
+)
+
+foo(
+  // c0
+  ~aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: int,
+  // c1
+  ~bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb: int,
+  // c2
+  ~cccccccccccccccccccccccccccccc: int,
+)
+
+let f = (
+  ~isItemActive=?,
+  // array((name, href))
+  ~headers: array<(string, string)>,
+  ~moduleName: string,
+  // foo
+  ~x,
+  // above
+  /* c0 */ ~d: /* c1 */ e, // end
+  // does it work
+  ~from as hometown,
+) => {
+  let a = 1
+  let b = 2
+  a + b
+}
+
+@react.component
+let make = (
+  ~theme: ColorTheme.t,
+  ~components: Mdx.Components.t,
+  ~sidebarState: (bool, (bool => bool) => unit),
+  // (Sidebar, toggleSidebar) ... for toggling sidebar in mobile view
+  ~sidebar: React.element,
+  ~breadcrumbs: option<list<UrlPath.breadcrumb>>=?,
+  ~children,
+) => {
+  ()
+}

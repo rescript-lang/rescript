@@ -1,0 +1,541 @@
+
+{
+  "name": "DocExtractionRes",
+  "docstrings": ["Module level documentation goes here."],
+  "source": {
+    "filepath": "src/DocExtractionRes.res",
+    "line": 1,
+    "col": 1
+  },
+  "items": [
+  {
+    "id": "DocExtractionRes.t",
+    "kind": "type",
+    "name": "t",
+    "signature": "type t = {name: string, online: bool}",
+    "docstrings": ["This type represents stuff."],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 4,
+      "col": 1
+    },
+    "detail": 
+    {
+      "kind": "record",
+      "items": [{
+        "name": "name",
+        "optional": false,
+        "docstrings": ["The name of the stuff."],
+        "signature": "string"
+      }, {
+        "name": "online",
+        "optional": false,
+        "docstrings": ["Whether stuff is online."],
+        "signature": "bool"
+      }]
+    }
+  }, 
+  {
+    "id": "DocExtractionRes.make",
+    "kind": "value",
+    "name": "make",
+    "signature": "let make: string => t",
+    "docstrings": ["Create stuff.\n\n```rescript example\nlet stuff = make(\"My name\")\n```"],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 17,
+      "col": 5
+    },
+    "detail": 
+    {
+      "kind": "signature",
+      "details": {
+      "parameters": [{
+          "path": "string"
+        }],
+      "returnType": {
+        "path": "t"
+      }
+    }
+    }
+  }, 
+  {
+    "id": "DocExtractionRes.asOffline",
+    "kind": "value",
+    "name": "asOffline",
+    "signature": "let asOffline: t => t",
+    "docstrings": ["Stuff goes offline."],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 23,
+      "col": 5
+    },
+    "detail": 
+    {
+      "kind": "signature",
+      "details": {
+      "parameters": [{
+          "path": "t"
+        }],
+      "returnType": {
+        "path": "t"
+      }
+    }
+    }
+  }, 
+  {
+    "id": "DocExtractionRes.SomeConstant",
+    "kind": "value",
+    "name": "SomeConstant",
+    "signature": "let SomeConstant: int",
+    "docstrings": ["exotic identifier"],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 26,
+      "col": 5
+    },
+    "detail": 
+    {
+      "kind": "signature",
+      "details": {
+      "returnType": {
+        "path": "int"
+      }
+    }
+    }
+  }, 
+  {
+    "id": "DocExtractionRes.SomeInnerModule",
+    "name": "SomeInnerModule",
+    "kind": "module",
+    "docstrings": ["Another module level docstring here."],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 28,
+      "col": 8
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.SomeInnerModule.status",
+      "kind": "type",
+      "name": "status",
+      "signature": "type status = Started(t) | Stopped | Idle",
+      "docstrings": [],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 30,
+        "col": 3
+      },
+      "detail": 
+      {
+        "kind": "variant",
+        "items": [
+        {
+          "name": "Started",
+          "docstrings": ["If this is started or not"],
+          "signature": "Started(t)"
+        }, 
+        {
+          "name": "Stopped",
+          "docstrings": ["Stopped?"],
+          "signature": "Stopped"
+        }, 
+        {
+          "name": "Idle",
+          "docstrings": ["Now idle."],
+          "signature": "Idle"
+        }]
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.SomeInnerModule.validInputs",
+      "kind": "type",
+      "name": "validInputs",
+      "signature": "type validInputs = [\n  | #\"needs-escaping\"\n  | #something\n  | #status(status)\n  | #withPayload(int)\n]",
+      "docstrings": ["These are all the valid inputs."],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 39,
+        "col": 3
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.SomeInnerModule.callback",
+      "kind": "type",
+      "name": "callback",
+      "signature": "type callback = (t, ~status: status) => unit",
+      "docstrings": [],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 41,
+        "col": 3
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.AnotherModule",
+    "name": "AnotherModule",
+    "kind": "module",
+    "docstrings": ["Mighty fine module here too!"],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 44,
+      "col": 8
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.LinkedModule",
+      "kind": "moduleAlias",
+      "name": "LinkedModule",
+      "docstrings": ["This links another module. Neat."],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 48,
+        "col": 10
+      },
+      "items": []
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.callback",
+      "kind": "type",
+      "name": "callback",
+      "signature": "type callback = SomeInnerModule.status => unit",
+      "docstrings": ["Testing what this looks like."],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 52,
+        "col": 3
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.isGoodStatus",
+      "kind": "value",
+      "name": "isGoodStatus",
+      "signature": "let isGoodStatus: SomeInnerModule.status => bool",
+      "docstrings": [],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 54,
+        "col": 7
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "parameters": [{
+            "path": "SomeInnerModule.status"
+          }],
+        "returnType": {
+          "path": "bool"
+        }
+      }
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.someVariantWithInlineRecords",
+      "kind": "type",
+      "name": "someVariantWithInlineRecords",
+      "signature": "type someVariantWithInlineRecords =\n  | SomeStuff({offline: bool, online?: bool})",
+      "docstrings": ["Trying how it looks with an inline record in a variant."],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 57,
+        "col": 3
+      },
+      "detail": 
+      {
+        "kind": "variant",
+        "items": [
+        {
+          "name": "SomeStuff",
+          "docstrings": ["This has inline records..."],
+          "signature": "SomeStuff({offline: bool, online?: bool})",
+          "payload": {
+            "kind": "inlineRecord",
+            "fields": [{
+              "name": "offline",
+              "optional": false,
+              "docstrings": [],
+              "signature": "bool"
+            }, {
+              "name": "online",
+              "optional": true,
+              "docstrings": ["Is the user online?"],
+              "signature": "option<bool>"
+            }]
+          }
+        }]
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.AnotherModule.domRoot",
+      "kind": "type",
+      "name": "domRoot",
+      "signature": "type domRoot = unit => ReactDOM.Client.Root.t",
+      "docstrings": ["Callback to get the DOM root..."],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 68,
+        "col": 3
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported",
+    "name": "ModuleWithThingsThatShouldNotBeExported",
+    "kind": "module",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 1,
+      "col": 1
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported.t",
+      "kind": "type",
+      "name": "t",
+      "signature": "type t",
+      "docstrings": ["The type t is stuff."],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 75,
+        "col": 3
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.ModuleWithThingsThatShouldNotBeExported.make",
+      "kind": "value",
+      "name": "make",
+      "signature": "let make: unit => t",
+      "docstrings": ["The maker of stuff!"],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 77,
+        "col": 3
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "parameters": [{
+            "path": "unit"
+          }],
+        "returnType": {
+          "path": "t"
+        }
+      }
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.Example",
+    "name": "Example",
+    "kind": "moduleType",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 105,
+      "col": 13
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.Example.t",
+      "kind": "type",
+      "name": "t",
+      "signature": "type t",
+      "docstrings": ["main type of this module"],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 113,
+        "col": 3
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.Example.f",
+      "kind": "value",
+      "name": "f",
+      "signature": "let f: t => t",
+      "docstrings": ["function from t to t"],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 115,
+        "col": 3
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "parameters": [{
+            "path": "t"
+          }],
+        "returnType": {
+          "path": "t"
+        }
+      }
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.M",
+    "name": "M",
+    "kind": "module",
+    "moduletypeid": "DocExtractionRes.Example",
+    "docstrings": ["implementation of Example module type"],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 1,
+      "col": 1
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.M.t",
+      "kind": "type",
+      "name": "t",
+      "signature": "type t = int",
+      "docstrings": ["main type"],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 129,
+        "col": 3
+      }
+    }, 
+    {
+      "id": "DocExtractionRes.M.f",
+      "kind": "value",
+      "name": "f",
+      "signature": "let f: int => int",
+      "docstrings": ["identity function"],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 134,
+        "col": 7
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "parameters": [{
+            "path": "int"
+          }],
+        "returnType": {
+          "path": "int"
+        }
+      }
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.MT",
+    "name": "MT",
+    "kind": "moduleType",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 137,
+      "col": 13
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.MT.x",
+      "kind": "value",
+      "name": "x",
+      "signature": "let x: int",
+      "docstrings": [],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 138,
+        "col": 3
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "returnType": {
+          "path": "int"
+        }
+      }
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.A",
+    "name": "A",
+    "kind": "module",
+    "moduletypeid": "DocExtractionRes.MT",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 1,
+      "col": 1
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.A.x",
+      "kind": "value",
+      "name": "x",
+      "signature": "let x: int",
+      "docstrings": [],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 142,
+        "col": 7
+      },
+      "detail": 
+      {
+        "kind": "signature",
+        "details": {
+        "returnType": {
+          "path": "int"
+        }
+      }
+      }
+    }]
+  }, 
+  {
+    "id": "DocExtractionRes.C",
+    "name": "C",
+    "kind": "module",
+    "docstrings": [],
+    "source": {
+      "filepath": "src/DocExtractionRes.res",
+      "line": 145,
+      "col": 8
+    },
+    "items": [
+    {
+      "id": "DocExtractionRes.C.D",
+      "name": "D",
+      "kind": "module",
+      "moduletypeid": "DocExtractionRes.MT",
+      "docstrings": [],
+      "source": {
+        "filepath": "src/DocExtractionRes.res",
+        "line": 1,
+        "col": 1
+      },
+      "items": [
+      {
+        "id": "DocExtractionRes.C.D.x",
+        "kind": "value",
+        "name": "x",
+        "signature": "let x: int",
+        "docstrings": [],
+        "source": {
+          "filepath": "src/DocExtractionRes.res",
+          "line": 147,
+          "col": 9
+        },
+        "detail": 
+        {
+          "kind": "signature",
+          "details": {
+          "returnType": {
+            "path": "int"
+          }
+        }
+        }
+      }]
+    }]
+  }]
+}

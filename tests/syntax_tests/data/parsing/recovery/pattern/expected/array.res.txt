@@ -1,0 +1,24 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/array.res:2:8-10
+
+  1 │ switch x {
+  2 │ | [a, b => ()
+  3 │ | [a, [c, d => ()
+  4 │ }
+
+  Did you forget a `]` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/pattern/array.res:3:12-14
+
+  1 │ switch x {
+  2 │ | [a, b => ()
+  3 │ | [a, [c, d => ()
+  4 │ }
+  5 │ 
+
+  Did you forget a `]` here?
+
+;;match x with | [|a;b|] -> () | [|a;[|c;d|]|] -> ()

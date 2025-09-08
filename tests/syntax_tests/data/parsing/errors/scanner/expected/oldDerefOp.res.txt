@@ -1,0 +1,23 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/oldDerefOp.res:1:51
+
+  1 │ let newVelocity = velocity +. a *. secondPerFrame^;
+  2 │ let newX = x +. newVelocity *. secondPerFrame^;
+  3 │ 
+
+  Did you forget to write an expression here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/oldDerefOp.res:2:47
+
+  1 │ let newVelocity = velocity +. a *. secondPerFrame^;
+  2 │ let newX = x +. newVelocity *. secondPerFrame^;
+  3 │ 
+
+  Did you forget to write an expression here?
+
+let newVelocity =
+  (velocity +. (a *. secondPerFrame)) ^ ([%rescript.exprhole ])
+let newX = (x +. (newVelocity *. secondPerFrame)) ^ ([%rescript.exprhole ])

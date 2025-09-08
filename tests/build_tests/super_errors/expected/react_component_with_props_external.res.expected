@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/react_component_with_props_external.res[0m:[2m1:1-2:40[0m
+
+  [1;31m1[0m [2m│[0m [1;31m@react.componentWithProps[0m
+  [1;31m2[0m [2m│[0m [1;31mexternal make: React.element = "default"[0m
+  3 [2m│[0m 
+
+  Components cannot be defined as externals when using @react.componentWithProps.
+
+If you intended to define an external for a React component using a props type,
+use the type React.component<props> instead.
+Alternatively, use @react.component for an external definition with labeled arguments.

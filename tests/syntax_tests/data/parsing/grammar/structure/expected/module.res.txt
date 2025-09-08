@@ -1,0 +1,2 @@
+module A : Map = struct let m = 2 end 
+module A = struct let m = 2 end

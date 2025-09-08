@@ -1,0 +1,4 @@
+type nonrec t = (string * int)
+type nonrec t = (int option * string option)
+let (t : (string * int)) = x
+let (t : (int option * string option)) = x

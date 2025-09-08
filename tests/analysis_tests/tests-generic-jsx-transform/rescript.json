@@ -1,0 +1,11 @@
+{
+  "name": "test-generic-jsx-transform",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "compiler-flags": ["-w -33-44-8"],
+  "jsx": { "module": "GenericJsx" }
+}

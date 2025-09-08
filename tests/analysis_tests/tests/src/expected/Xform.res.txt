@@ -1,0 +1,360 @@
+Xform src/Xform.res 6:5
+posCursor:[6:3] posNoWhite:[6:1] Found expr:[6:0->11:1]
+Completable: Cpath Value[kind]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[kind]
+Path kind
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Replace with switch
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 6, "character": 0}, "end": {"line": 11, "character": 1}}
+newText:
+<--here
+switch kind {
+| First =>
+  // ^xfm
+  ret("First")
+| _ => ret("Not First")
+}
+
+Xform src/Xform.res 13:15
+Hit: Replace with switch
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 13, "character": 0}, "end": {"line": 13, "character": 79}}
+newText:
+<--here
+switch kind {
+| #kind("First", {name: "abc", age: 3}) => ret("First")
+| _ => ret("Not First")
+}
+
+Xform src/Xform.res 16:5
+Hit: Add type annotation
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 16, "character": 8}, "end": {"line": 16, "character": 8}}
+newText:
+        <--here
+        : string
+Hit: Add Documentation template
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 16, "character": 0}, "end": {"line": 16, "character": 18}}
+newText:
+<--here
+/**
+
+*/
+let name = "hello"
+
+Xform src/Xform.res 19:5
+Hit: Add Documentation template
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 19, "character": 0}, "end": {"line": 19, "character": 23}}
+newText:
+<--here
+/**
+
+*/
+let annotated: int = 34
+
+Xform src/Xform.res 26:10
+Hit: Add type annotation
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 26, "character": 10}, "end": {"line": 26, "character": 11}}
+newText:
+          <--here
+          (x: option<T.r>)
+
+Xform src/Xform.res 30:9
+Hit: Add braces to function
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 26, "character": 0}, "end": {"line": 32, "character": 3}}
+newText:
+<--here
+let foo = x => {
+  //      ^xfm
+  switch x {
+  | None => 33
+  | Some(q) => q.T.a + 1
+  //     ^xfm
+  }
+}
+
+Xform src/Xform.res 34:21
+Hit: Add type annotation
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 34, "character": 24}, "end": {"line": 34, "character": 24}}
+newText:
+                        <--here
+                        : int
+
+Xform src/Xform.res 38:5
+Hit: Add Documentation template
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 37, "character": 0}, "end": {"line": 38, "character": 40}}
+newText:
+<--here
+/**
+
+*/
+@react.component
+let make = (~name) => React.string(name)
+
+Xform src/Xform.res 41:9
+Hit: Add type annotation
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 41, "character": 11}, "end": {"line": 41, "character": 11}}
+newText:
+           <--here
+           : int
+
+Xform src/Xform.res 48:21
+posCursor:[48:21] posNoWhite:[48:19] Found expr:[48:15->48:25]
+Completable: Cpath Value[name]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[name]
+Path name
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Add braces to function
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 48, "character": 0}, "end": {"line": 48, "character": 25}}
+newText:
+<--here
+let noBraces = () => {
+  name
+}
+
+Xform src/Xform.res 52:34
+Hit: Add braces to function
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 51, "character": 0}, "end": {"line": 54, "character": 1}}
+newText:
+<--here
+let nested = () => {
+  let _noBraces = (_x, _y, _z) => {
+    "someNewFunc"
+  }
+  //                              ^xfm
+}
+
+Xform src/Xform.res 62:6
+Hit: Add braces to function
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 58, "character": 4}, "end": {"line": 62, "character": 7}}
+newText:
+    <--here
+    let foo = (_x, y, _z) => {
+      switch y {
+      | #some => 3
+      | #stuff => 4
+      }
+    }
+
+Xform src/Xform.res 72:5
+Hit: Extract local module "ExtractableModule" to file "ExtractableModule.res"
+
+CreateFile: ExtractableModule.res
+
+TextDocumentEdit: ExtractableModule.res
+{"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 0}}
+newText:
+<--here
+/** Doc comment. */
+type t = int
+// A comment here
+let doStuff = a => a + 1
+// ^xfm
+
+
+TextDocumentEdit: src/Xform.res
+{"start": {"line": 68, "character": 0}, "end": {"line": 74, "character": 1}}
+newText:
+<--here
+
+
+Xform src/Xform.res 80:4
+posCursor:[78:16] posNoWhite:[78:14] Found expr:[78:9->82:1]
+Completable: Cpath Value[variant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[variant]
+Path variant
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 80, "character": 2}, "end": {"line": 80, "character": 3}}
+newText:
+  <--here
+  Second | Third | Fourth(_)
+
+Xform src/Xform.res 86:4
+posCursor:[84:16] posNoWhite:[84:14] Found expr:[84:9->88:1]
+Completable: Cpath Value[variant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[variant]
+Path variant
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 86, "character": 2}, "end": {"line": 86, "character": 3}}
+newText:
+  <--here
+  Third | Fourth(_)
+
+Xform src/Xform.res 93:4
+posCursor:[90:16] posNoWhite:[90:14] Found expr:[90:9->95:1]
+Completable: Cpath Value[variant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[variant]
+Path variant
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 93, "character": 2}, "end": {"line": 93, "character": 3}}
+newText:
+  <--here
+  First | Third | Fourth(_)
+
+Xform src/Xform.res 101:4
+posCursor:[99:16] posNoWhite:[99:14] Found expr:[99:9->103:1]
+Completable: Cpath Value[polyvariant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[polyvariant]
+Path polyvariant
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 101, "character": 2}, "end": {"line": 101, "character": 3}}
+newText:
+  <--here
+  #second | #"illegal identifier" | #third(_)
+
+Xform src/Xform.res 107:4
+posCursor:[105:16] posNoWhite:[105:14] Found expr:[105:9->109:1]
+Completable: Cpath Value[polyvariant]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[polyvariant]
+Path polyvariant
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 107, "character": 2}, "end": {"line": 107, "character": 3}}
+newText:
+  <--here
+  #"illegal identifier" | #third(_)
+
+Xform src/Xform.res 115:4
+posCursor:[113:16] posNoWhite:[113:14] Found expr:[113:9->117:1]
+Completable: Cpath Value[variantOpt]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[variantOpt]
+Path variantOpt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 115, "character": 2}, "end": {"line": 115, "character": 3}}
+newText:
+  <--here
+  Some(Second | Third | Fourth(_)) | None
+
+Xform src/Xform.res 121:4
+posCursor:[119:16] posNoWhite:[119:14] Found expr:[119:9->123:1]
+Completable: Cpath Value[variantOpt]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[variantOpt]
+Path variantOpt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 121, "character": 2}, "end": {"line": 121, "character": 3}}
+newText:
+  <--here
+  Some(Third | Fourth(_)) | None
+
+Xform src/Xform.res 127:4
+posCursor:[125:16] posNoWhite:[125:14] Found expr:[125:9->129:1]
+Completable: Cpath Value[variantOpt]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[variantOpt]
+Path variantOpt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 127, "character": 2}, "end": {"line": 127, "character": 3}}
+newText:
+  <--here
+  Some(Third | Fourth(_)) | None
+
+Xform src/Xform.res 136:4
+posCursor:[133:16] posNoWhite:[133:14] Found expr:[133:9->138:1]
+Completable: Cpath Value[polyvariantOpt]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[polyvariantOpt]
+Path polyvariantOpt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 136, "character": 2}, "end": {"line": 136, "character": 3}}
+newText:
+  <--here
+  Some(#"illegal identifier" | #second | #third(_))
+
+Xform src/Xform.res 142:4
+posCursor:[140:16] posNoWhite:[140:14] Found expr:[140:9->144:1]
+Completable: Cpath Value[polyvariantOpt]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[polyvariantOpt]
+Path polyvariantOpt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Expand catch-all
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 142, "character": 2}, "end": {"line": 142, "character": 3}}
+newText:
+  <--here
+  Some(#"illegal identifier" | #third(_)) | None
+

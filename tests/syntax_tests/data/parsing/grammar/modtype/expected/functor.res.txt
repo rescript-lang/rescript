@@ -1,0 +1,16 @@
+module type Functor  = SetLike -> Set
+module type Functor  =
+  functor (S : SetLike) -> functor (B : BtreeLike) -> NeoTree
+module type Functor  = SetLike -> BtreeLike -> NeoTree
+module type Functor  = SetLike -> BtreeLike -> NeoTree
+module type Functor  = SetLike -> BtreeLike -> NeoTree
+module type Functor  =
+  ((SetLike -> ((BtreeLike -> NeoTree)[@attr2 ]))[@attr1 ])
+module type Functor  =
+  ((SetLike -> ((BtreeLike -> NeoTree)[@attr2 ]))[@attr1 ][@attr0 ])
+module type Functor  =
+  ((SetLike -> ((BtreeLike -> ((NeoTree)[@attr3 ]))[@attr2 ]))[@attr1 ])
+module type Functor  =
+  ((SetLike -> ((BtreeLike -> ((NeoTree)[@attr3 ]))[@attr2 ]))[@attr1 ])
+module type Functor  = (SetLike -> Set with type  t =  A.t)
+module type Functor  = SetLike -> (Set with type  t =  A.t)

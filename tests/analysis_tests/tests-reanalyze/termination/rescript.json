@@ -1,0 +1,20 @@
+{
+  "reanalyze": {
+    "analysis": ["termination"],
+    "suppress": [],
+    "unsuppress": []
+  },
+  "name": "arnold",
+  "dependencies": [],
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": false
+  },
+  "suffix": ".res.js"
+}

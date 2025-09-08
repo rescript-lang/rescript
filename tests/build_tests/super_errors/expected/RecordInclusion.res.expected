@@ -1,0 +1,22 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/RecordInclusion.res[0m:[2m3:5-5:1[0m
+
+  1 [2m│[0m module M: {
+  2 [2m│[0m   type t<'a, 'b, 'c> = {x: int, y: list<('a, 'b)>, z: int}
+  [1;31m3[0m [2m│[0m } = [1;31m{[0m
+  [1;31m4[0m [2m│[0m [1;31m  type t<'a, 'b, 'c> = {x: int, y: list<('a, 'c)>, z: int}[0m
+  [1;31m5[0m [2m│[0m [1;31m}[0m
+  6 [2m│[0m 
+
+  Signature mismatch:
+  ...
+  Type declarations do not match:
+    type t<'a, 'b, 'c> = {x: int, y: list<('a, 'c)>, z: int}
+  is not included in
+    type t<'a, 'b, 'c> = {x: int, y: list<('a, 'b)>, z: int}
+  [36m/.../fixtures/RecordInclusion.res[0m:[2m2:3-58[0m:
+    Expected declaration
+  [36m/.../fixtures/RecordInclusion.res[0m:[2m4:3-58[0m:
+    Actual declaration
+  The types for field y are not equal.

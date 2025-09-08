@@ -1,0 +1,8 @@
+let x = 1[@@attr :int]
+let x = 1[@@attr ?var]
+let x = 1[@@attr ?var when x === 1]
+;;[%ext :val x : int]
+;;[%ext :val x : int
+    val y : float]
+[%%ext ;;{js|A|js}
+  ;;{js|B|js}]

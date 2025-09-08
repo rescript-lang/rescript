@@ -1,0 +1,44 @@
+Documentation extraction src/DocExtraction2.resi
+extracting docs for src/DocExtraction2.resi
+
+{
+  "name": "DocExtraction2",
+  "docstrings": ["Module level doc here."],
+  "items": [
+  {
+    "id": "DocExtraction2.t",
+    "kind": "type",
+    "name": "t",
+    "signature": "type t",
+    "docstrings": ["Type t is pretty cool."]
+  }, 
+  {
+    "id": "DocExtraction2.make",
+    "kind": "value",
+    "name": "make",
+    "signature": "let make: unit => t",
+    "docstrings": ["Makerz of stuffz."]
+  }, 
+  {
+    "id": "DocExtraction2.InnerModule",
+    "name": "InnerModule",
+    "kind": "module",
+    "docstrings": [],
+    "items": [
+    {
+      "id": "DocExtraction2.InnerModule.t",
+      "kind": "type",
+      "name": "t",
+      "signature": "type t",
+      "docstrings": ["This type is also t."]
+    }, 
+    {
+      "id": "DocExtraction2.InnerModule.make",
+      "kind": "value",
+      "name": "make",
+      "signature": "let make: unit => t",
+      "docstrings": ["Maker of tea."]
+    }]
+  }]
+}
+

@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/UntaggedNonUnary1.res[0m:[2m2:1-27[0m
+
+  1 [2m│[0m @unboxed
+  [1;31m2[0m [2m│[0m [1;31mtype t = Tuple(int, string)[0m
+  3 [2m│[0m 
+
+  This untagged variant definition is invalid: Constructor Tuple has more than one argument.

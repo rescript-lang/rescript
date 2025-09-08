@@ -1,0 +1,392 @@
+Complete src/CompletionNullNullable.res 2:5
+posCursor:[2:5] posNoWhite:[2:4] Found expr:[2:3->2:5]
+Pexp_field [2:3->2:4] _:[5:0->2:5]
+Completable: Cpath Value[x].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x].""
+ContextPath Value[x]
+Path x
+ContextPath Value[x]->
+ContextPath Value[x]
+Path x
+Path Stdlib.Null.
+Path 
+[{
+    "label": "->Null.equal",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, t<'b>, ('a, 'b) => bool) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`equal(a, b, eq)` checks if `a` and `b` are equal.\nIf both are `Null.Value`, it will use function `eq` to check if the values are equal.\n\n## Examples\n```rescript\nlet a = Null.Value(1)\nlet b = Null.null\nlet c = Null.Value(2)\n\nNull.equal(a, b, Int.equal) == false\nNull.equal(a, c, Int.equal) == false\nNull.equal(Null.null, Null.null, Int.equal) == true\n```\n "},
+    "sortText": "equal",
+    "insertText": "->Null.equal",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.getUnsafe",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(value)` returns `value`.\n\n## Examples\n\n```rescript\nNull.getUnsafe(Null.make(3)) == 3\nNull.getUnsafe(Null.null) // Raises an error\n```\n\n## Important\n\n- This is an unsafe operation, it assumes `value` is not `null`.\n"},
+    "sortText": "getUnsafe",
+    "insertText": "->Null.getUnsafe",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.map",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => 'b) => t<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(value, f)` returns `f(value)` if `value` is not `null`, otherwise returns\n`value` unchanged.\n\n## Examples\n\n```rescript\nNull.map(Null.make(3), x => x * x) // Null.make(9)\nNull.map(Null.null, x => x * x) // null\n```\n"},
+    "sortText": "map",
+    "insertText": "->Null.map",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.getExn",
+    "kind": 12,
+    "tags": [1],
+    "detail": "t<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` raises an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getExn(Null.make(3)) == 3\n\nswitch Null.getExn(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null`\n"},
+    "sortText": "getExn",
+    "insertText": "->Null.getExn",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.compare",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, t<'b>, ('a, 'b) => Ordering.t) => Ordering.t",
+    "documentation": {"kind": "markdown", "value": "\n`compare(a, b, cmp)` compares `a` and `b`.\nIf both are `Null.Value`, it will use function `cmp` to compare the values.\n\n## Examples\n```rescript\nlet a = Null.Value(1)\nlet b = Null.null\nlet c = Null.Value(2)\n\n// A value is greater than null\nNull.compare(a, b, Int.compare) == Stdlib_Ordering.greater\n// A value is less than null\nNull.compare(b, a, Int.compare) == Stdlib_Ordering.less\n// A null is equal to null\nNull.compare(Null.null, Null.null, Int.compare) == Stdlib_Ordering.equal\n// The compare function is used if both are `Null.Value`\nNull.compare(a, c, Int.compare) == Stdlib_Ordering.less\n```\n"},
+    "sortText": "compare",
+    "insertText": "->Null.compare",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(null)` ignores the provided null and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"},
+    "sortText": "ignore",
+    "insertText": "->Null.ignore",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.getOrThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(value)` raises an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getOrThrow(Null.make(3)) == 3\n\nswitch Null.getOrThrow(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getOrThrow(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null`\n"},
+    "sortText": "getOrThrow",
+    "insertText": "->Null.getOrThrow",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.toOption",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => option<'a>",
+    "documentation": {"kind": "markdown", "value": "\nConverts a nullable value into an option, so it can be pattern matched on.\nWill convert `null` to `None`, and a present value to `Some(value)`.\n\n## Examples\n```rescript\nlet nullStr = Null.make(\"Hello\")\n\nswitch nullStr->Null.toOption {\n| Some(str) => Console.log2(\"Got string:\", str)\n| None => Console.log(\"Didn't have a value.\")\n}\n```\n"},
+    "sortText": "toOption",
+    "insertText": "->Null.toOption",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.getOr",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOr(value, default)` returns `value` if not `null`, otherwise return\n`default`.\n\n## Examples\n\n```rescript\nNull.getOr(Null.null, \"Banana\") // Banana\nNull.getOr(Null.make(\"Apple\"), \"Banana\") // Apple\n\nlet greet = (firstName: option<string>) => \"Greetings \" ++ firstName->Option.getOr(\"Anonymous\")\n\nNull.make(\"Jane\")->Null.toOption->greet // \"Greetings Jane\"\nNull.null->Null.toOption->greet // \"Greetings Anonymous\"\n```\n"},
+    "sortText": "getOr",
+    "insertText": "->Null.getOr",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.mapOr",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {"kind": "markdown", "value": "\n`mapOr(value, default, f)` returns `f(value)` if `value` is not `null`,\notherwise returns `default`.\n\n## Examples\n\n```rescript\nlet someValue = Null.make(3)\nsomeValue->Null.mapOr(0, x => x + 5) // 8\n\nlet noneValue = Null.null\nnoneValue->Null.mapOr(0, x => x + 5) // 0\n```\n"},
+    "sortText": "mapOr",
+    "insertText": "->Null.mapOr",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.mapWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use mapOr instead\n\n"},
+    "sortText": "mapWithDefault",
+    "insertText": "->Null.mapWithDefault",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.getWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(t<'a>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use getOr instead\n\n"},
+    "sortText": "getWithDefault",
+    "insertText": "->Null.getWithDefault",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.asNullable",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => Nullable.t<'a>",
+    "documentation": {"kind": "markdown", "value": "\nConverts a `Null.t` into a `Nullable.t`.\n\n## Examples\n```rescript\nlet nullValue = Null.make(\"Hello\")\nlet asNullable = nullValue->Null.asNullable // Nullable.t<string>\n```\n"},
+    "sortText": "asNullable",
+    "insertText": "->Null.asNullable",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.forEach",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => unit) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`forEach(value, f)` call `f` on `value`. if `value` is not `null`, then if calls\n`f`, otherwise returns `unit`.\n\n## Examples\n\n```rescript\nNull.forEach(Null.make(\"thing\"), x => Console.log(x)) // logs \"thing\"\nNull.forEach(Null.null, x => Console.log(x)) // logs nothing\n```\n"},
+    "sortText": "forEach",
+    "insertText": "->Null.forEach",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Null.flatMap",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => t<'b>) => t<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`flatMap(value, f)` returns `f(value)` if `value` is not `null`, otherwise\nreturns `value` unchanged.\n\n## Examples\n\n```rescript\nlet addIfAboveOne = value =>\n  if value > 1 {\n    Null.make(value + 1)\n  } else {\n    Null.null\n  }\n\nNull.flatMap(Null.make(2), addIfAboveOne) // Null.make(3)\nNull.flatMap(Null.make(-4), addIfAboveOne) // null\nNull.flatMap(Null.null, addIfAboveOne) // null\n```\n"},
+    "sortText": "flatMap",
+    "insertText": "->Null.flatMap",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 5}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/CompletionNullNullable.res 7:5
+posCursor:[7:5] posNoWhite:[7:4] Found expr:[7:3->7:5]
+Pexp_field [7:3->7:4] _:[10:0->7:5]
+Completable: Cpath Value[y].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[y].""
+ContextPath Value[y]
+Path y
+ContextPath Value[y]->
+ContextPath Value[y]
+Path y
+Path Stdlib.Nullable.
+Path 
+[{
+    "label": "->Nullable.equal",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, t<'b>, ('a, 'b) => bool) => bool",
+    "documentation": null,
+    "sortText": "equal",
+    "insertText": "->Nullable.equal",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.getUnsafe",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(value)` returns `value`.\n\n## Examples\n\n```rescript\nNullable.getUnsafe(Nullable.make(3)) == 3\nNullable.getUnsafe(Nullable.null) // Raises an error\n```\n\n## Important\n\n- This is an unsafe operation, it assumes `value` is not `null` or `undefined`.\n"},
+    "sortText": "getUnsafe",
+    "insertText": "->Nullable.getUnsafe",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.map",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => 'b) => t<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(value, f)` returns `f(value)` if `value` is not `null` or `undefined`,\notherwise returns `value` unchanged.\n\n## Examples\n\n```rescript\nNullable.map(Nullable.make(3), x => x * x) // Nullable.make(9)\nNullable.map(undefined, x => x * x) // undefined\n```\n"},
+    "sortText": "map",
+    "insertText": "->Nullable.map",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.getExn",
+    "kind": 12,
+    "tags": [1],
+    "detail": "t<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` raises an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getExn(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getExn(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null` or `undefined`\n"},
+    "sortText": "getExn",
+    "insertText": "->Nullable.getExn",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.compare",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, t<'b>, ('a, 'b) => Ordering.t) => Ordering.t",
+    "documentation": null,
+    "sortText": "compare",
+    "insertText": "->Nullable.compare",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(nullable)` ignores the provided nullable and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"},
+    "sortText": "ignore",
+    "insertText": "->Nullable.ignore",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.getOrThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(value)` raises an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getOrThrow(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getOrThrow(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getOrThrow(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null` or `undefined`\n"},
+    "sortText": "getOrThrow",
+    "insertText": "->Nullable.getOrThrow",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.toOption",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => option<'a>",
+    "documentation": {"kind": "markdown", "value": "\nConverts a nullable value into an option, so it can be pattern matched on.\nWill convert both `null` and `undefined` to `None`, and a present value to `Some(value)`.\n\n## Examples\n```rescript\nlet nullableString = Nullable.make(\"Hello\")\n\nswitch nullableString->Nullable.toOption {\n| Some(str) => Console.log2(\"Got string:\", str)\n| None => Console.log(\"Didn't have a value.\")\n}\n```\n"},
+    "sortText": "toOption",
+    "insertText": "->Nullable.toOption",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.getOr",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOr(value, default)` returns `value` if not `null` or `undefined`,\notherwise return `default`.\n\n## Examples\n\n```rescript\nNullable.getOr(Nullable.null, \"Banana\") // Banana\nNullable.getOr(Nullable.make(\"Apple\"), \"Banana\") // Apple\n\nlet greet = (firstName: option<string>) => \"Greetings \" ++ firstName->Option.getOr(\"Anonymous\")\n\nNullable.make(\"Jane\")->Nullable.toOption->greet // \"Greetings Jane\"\nNullable.null->Nullable.toOption->greet // \"Greetings Anonymous\"\n```\n"},
+    "sortText": "getOr",
+    "insertText": "->Nullable.getOr",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.mapOr",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {"kind": "markdown", "value": "\n`mapOr(value, default, f)` returns `f(value)` if `value` is not `null`\nor `undefined`, otherwise returns `default`.\n\n## Examples\n\n```rescript\nlet someValue = Nullable.make(3)\nsomeValue->Nullable.mapOr(0, x => x + 5) // 8\n\nlet noneValue = Nullable.null\nnoneValue->Nullable.mapOr(0, x => x + 5) // 0\n```\n"},
+    "sortText": "mapOr",
+    "insertText": "->Nullable.mapOr",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.mapWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use mapOr instead\n\n"},
+    "sortText": "mapWithDefault",
+    "insertText": "->Nullable.mapWithDefault",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.getWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(t<'a>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use getOr instead\n\n"},
+    "sortText": "getWithDefault",
+    "insertText": "->Nullable.getWithDefault",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.isNullable",
+    "kind": 12,
+    "tags": [],
+    "detail": "t<'a> => bool",
+    "documentation": {"kind": "markdown", "value": "\n`isNullable(a)` returns `true` if `a` is null or undefined, `false` otherwise.\n\n## Examples\n\n```rescript\nlet myStr = \"Hello\"\nlet asNullable = myStr->Nullable.make\n\n// Can't do the below because we're now forced to check for nullability\n// myStr == asNullable\n\n// Check if asNullable is not null or undefined\nswitch asNullable->Nullable.isNullable {\n| true => assert(false)\n| false => assert(true)\n}\n```\n"},
+    "sortText": "isNullable",
+    "insertText": "->Nullable.isNullable",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.forEach",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => unit) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`forEach(value, f)` call `f` on `value`. if `value` is not `null` or `undefined`,\nthen if calls `f`, otherwise returns `unit`.\n\n## Examples\n\n```rescript\nNullable.forEach(Nullable.make(\"thing\"), x => Console.log(x)) // logs \"thing\"\nNullable.forEach(Nullable.null, x => Console.log(x)) // returns ()\nNullable.forEach(undefined, x => Console.log(x)) // returns ()\n```\n"},
+    "sortText": "forEach",
+    "insertText": "->Nullable.forEach",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Nullable.flatMap",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => t<'b>) => t<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`flatMap(value, f)` returns `f(value)` if `value` is not `null` or `undefined`,\notherwise returns `value` unchanged.\n\n## Examples\n\n```rescript\nlet addIfAboveOne = value =>\n  if value > 1 {\n    Nullable.make(value + 1)\n  } else {\n    Nullable.null\n  }\n\nNullable.flatMap(Nullable.make(2), addIfAboveOne) // Nullable.make(3)\nNullable.flatMap(Nullable.make(-4), addIfAboveOne) // undefined\nNullable.flatMap(Nullable.null, addIfAboveOne) // undefined\n```\n"},
+    "sortText": "flatMap",
+    "insertText": "->Nullable.flatMap",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }]
+

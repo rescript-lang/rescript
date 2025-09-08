@@ -1,0 +1,42 @@
+@@jsxConfig({version: 4})
+
+module V4CA = {
+  @res.jsxComponentProps
+  type props = {}
+
+  let make = (_: props) => ReactDOM.jsx("div", {})
+  let make = {
+    let \"NoPropsWithKey$V4CA" = props => make(props)
+
+    \"NoPropsWithKey$V4CA"
+  }
+}
+
+module V4CB = {
+  @res.jsxComponentProps @live
+  type props = {}
+
+  @module("c")
+  external make: React.componentLike<props, React.element> = "component"
+}
+
+module V4C = {
+  @res.jsxComponentProps
+  type props = {}
+
+  let make = (_: props) =>
+    React.jsxs(
+      React.jsxFragment,
+      {
+        children: React.array([
+          React.jsxKeyed(V4CA.make, {}, ~key="k", ()),
+          React.jsxKeyed(V4CB.make, {}, ~key="k", ()),
+        ]),
+      },
+    )
+  let make = {
+    let \"NoPropsWithKey$V4C" = props => make(props)
+
+    \"NoPropsWithKey$V4C"
+  }
+}

@@ -1,0 +1,72 @@
+let x = {
+  module Foo = Bar
+  exception Exit
+  open Belt
+  let a = 1
+  let b = 2
+  sideEffect()
+  sideEffect2()
+  ()
+}
+
+let () = {
+  let () = foo() // don't print unit on the next line
+}
+
+let reifyStyle = (type a, x: 'a): (style<a>, a) => {
+  module Internal = {
+    type rec constructor
+    @val external canvasGradient: constructor = "CanvasGradient" /* internal */
+    @val external canvasPattern: constructor = "CanvasPattern" /* internal */
+    let instanceOf = (
+      %raw(`function(x,y) {return +(x instanceof y)}`): ('a, constructor) => bool
+    ) /* internal */
+  }
+
+  (
+    if Js.typeof(x) == "string" {
+      Obj.magic(String)
+    } else if Internal.instanceOf(x, Internal.canvasGradient) {
+      Obj.magic(Gradient)
+    } else if Internal.instanceOf(x, Internal.canvasPattern) {
+      Obj.magic(Pattern)
+    } else {
+      throw(
+        Invalid_argument(
+          "Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern",
+        ),
+      )
+    },
+    Obj.magic(x),
+  )
+}
+
+React.useEffect0(() => {
+  let watcherId = watchUrl(url => setUrl(_ => url))
+
+  @ocaml.doc(
+    "\n      * check for updates that may have occured between\n      * the initial state and the subscribe above\n      "
+  )
+  let newUrl = dangerouslyGetInitialUrl()
+  if urlNotEqual(newUrl, url) {
+    setUrl(_ => newUrl)
+  }
+
+  Some(() => unwatchUrl(watcherId))
+})
+
+<div
+  onClick={event => {
+    switch videoContainerRect {
+    | Some(videoContainerRect) =>
+      let newChapter = ({startTime: percent *. duration}: Video.chapter)
+      {a, b}->onChange
+    | _ => ()
+    }
+  }}
+/>
+
+let calc_fps = (t0, t1) => {
+  let delta = (t1 -. t0) /. 1000.
+  1. /. delta
+}

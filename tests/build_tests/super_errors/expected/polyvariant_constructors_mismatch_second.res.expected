@@ -1,0 +1,17 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/polyvariant_constructors_mismatch_second.res[0m:[2m7:16-22[0m
+
+  5 [2m│[0m   }
+  6 [2m│[0m 
+  [1;31m7[0m [2m│[0m let _ = handle([1;31m#Resize[0m)
+  8 [2m│[0m 
+
+  This has type: [1;31m[> #Resize][0m
+  But this function argument is expecting: [1;33m[#Click | #KeyDown][0m
+  
+  The second polymorphic variant is [1;33mclosed[0m and doesn't include the constructor: [1;31m#Resize[0m.
+  
+  Possible solutions:
+  - Either make the second variant [1;33mopen[0m so it can accept additional constructors. To do this, make sure the type starts with [1;33m[>[0m instead of [1;33m[[0m
+  - Or add the missing constructor to it.

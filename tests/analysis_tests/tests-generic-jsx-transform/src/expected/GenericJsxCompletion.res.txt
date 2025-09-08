@@ -1,0 +1,130 @@
+Complete src/GenericJsxCompletion.res 0:8
+posCursor:[0:8] posNoWhite:[0:6] Found expr:[0:3->0:7]
+JSX <div:[0:4->0:7] > _children:None
+Completable: Cjsx([div], "", [])
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Path GenericJsx.Elements.props
+[{
+    "label": "testing",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "test2",
+    "kind": 4,
+    "tags": [],
+    "detail": "string",
+    "documentation": null
+  }, {
+    "label": "children",
+    "kind": 4,
+    "tags": [],
+    "detail": "element",
+    "documentation": null
+  }]
+
+Complete src/GenericJsxCompletion.res 3:17
+posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:3->3:18]
+JSX <div:[3:4->3:7] testing[3:8->3:15]=...[3:16->3:18]> _children:None
+Completable: Cexpression CJsxPropValue [div] testing->recordBody
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CJsxPropValue [div] testing
+Path GenericJsx.Elements.props
+[{
+    "label": "true",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }, {
+    "label": "false",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
+
+Complete src/GenericJsxCompletion.res 14:21
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[8:13->23:3]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[9:4->22:10]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[10:4->22:10]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[11:4->22:10]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[12:4->22:10]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[13:4->22:10]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:7->22:10]
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:7->14:21]
+Completable: Cpath Value[someString]->st <<jsx>>
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someString]->st <<jsx>>
+ContextPath Value[someString]
+Path someString
+Path Stdlib.String.st
+Path st
+[{
+    "label": "GenericJsx.string",
+    "kind": 12,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "Turns `string` into a JSX element so it can be used inside of JSX."},
+    "sortText": "A",
+    "insertTextFormat": 2
+  }, {
+    "label": "String.startsWith",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"}
+  }, {
+    "label": "String.startsWithFrom",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, `false` otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWithFrom(\"BuckleScript\", \"kle\", 3) == true\nString.startsWithFrom(\"BuckleScript\", \"\", 3) == true\nString.startsWithFrom(\"JavaScript\", \"Buckle\", 2) == false\n```\n"}
+  }]
+
+Complete src/GenericJsxCompletion.res 20:24
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[8:13->23:3]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[9:4->22:10]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[10:4->22:10]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[11:4->22:10]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[12:4->22:10]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[13:4->22:10]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[16:4->22:10]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:4->22:10]
+JSX <div:[17:5->17:8] > _children:18:7
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->20:24]
+Completable: Cpath Value[someString]->st <<jsx>>
+Raw opens: 1 GenericJsx.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib GenericJsx
+ContextPath Value[someString]->st <<jsx>>
+ContextPath Value[someString]
+Path someString
+Path Stdlib.String.st
+Path st
+[{
+    "label": "string",
+    "kind": 12,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "Turns `string` into a JSX element so it can be used inside of JSX."},
+    "sortText": "A",
+    "insertTextFormat": 2
+  }, {
+    "label": "String.startsWith",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"}
+  }, {
+    "label": "String.startsWithFrom",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, `false` otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWithFrom(\"BuckleScript\", \"kle\", 3) == true\nString.startsWithFrom(\"BuckleScript\", \"\", 3) == true\nString.startsWithFrom(\"JavaScript\", \"Buckle\", 2) == false\n```\n"}
+  }]
+

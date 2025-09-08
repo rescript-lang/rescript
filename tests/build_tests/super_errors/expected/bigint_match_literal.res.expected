@@ -1,0 +1,11 @@
+
+  [1;33mWarning number 11[0m
+  [36m/.../fixtures/bigint_match_literal.res[0m:[2m3:3-4[0m
+
+  1 [2m│[0m let m1 = switch 1n {
+  2 [2m│[0m | 0001n => 1
+  [1;33m3[0m [2m│[0m | [1;33m1n[0m => 1
+  4 [2m│[0m | -0001n => -1
+  5 [2m│[0m | _ => 0
+
+  this match case is unused.

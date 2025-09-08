@@ -1,0 +1,38 @@
+Hover src/Jsx2.resi 1:4
+{"contents": {"kind": "markdown", "value": "```rescript\nprops<string>\n```\n\n---\n\n```\n \n```\n```rescript\ntype props<'first> = {first: 'first}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.resi%22%2C0%2C0%5D)\n"}}
+
+Hover src/Jsx2.resi 4:4
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+
+Complete src/Jsx2.resi 7:19
+posCursor:[7:19] posNoWhite:[7:18] Found type:[7:12->7:19]
+Ptyp_constr React.e:[7:12->7:19]
+Completable: Cpath Type[React, e]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[React, e]
+Path React.e
+[{
+    "label": "element",
+    "kind": 22,
+    "tags": [],
+    "detail": "type element",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype element = Jsx.element\n```"}
+  }]
+
+Complete src/Jsx2.resi 10:18
+posCursor:[10:18] posNoWhite:[10:17] Found type:[10:11->10:18]
+Ptyp_constr React.e:[10:11->10:18]
+Completable: Cpath Type[React, e]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Type[React, e]
+Path React.e
+[{
+    "label": "element",
+    "kind": 22,
+    "tags": [],
+    "detail": "type element",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype element = Jsx.element\n```"}
+  }]
+

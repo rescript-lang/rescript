@@ -1,0 +1,8 @@
+let x = [|1;2;3|]
+let x = [|1;2;3|]
+let x = [|(1 : int);(2 : int);(3 : int)|]
+let x = ((Belt.Array.concatMany)[@res.spread ]) [|[|4;5|];y|]
+let x = ((Belt.Array.concatMany)[@res.spread ]) [|[|4;5|];y;[|7|];y|]
+let x = ((Belt.Array.concatMany)[@res.spread ]) [|[|4;5|];(y : int array)|]
+let x = ((Belt.Array.concatMany)[@res.spread ]) [|[|4;5;k|];y|]
+let x = ((Belt.Array.concatMany)[@res.spread ]) [|y|]

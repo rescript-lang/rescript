@@ -1,0 +1,16 @@
+{
+  "name": "react-ppx-tests",
+  "jsx": {
+    "version": 4
+  },
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".res.js"
+  },
+  "namespace": true
+}

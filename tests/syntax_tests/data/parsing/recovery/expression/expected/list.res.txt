@@ -1,0 +1,51 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/expression/list.res:6:26-28
+
+  4 ┆ let rec loop = (items) => {
+  5 ┆   switch(items) {
+  6 ┆     | ["-pp", _ppFlag, ...rest] => loop(rest)
+  7 ┆     | [x, ...rest] => [x, ...loop(rest)]
+  8 ┆     | [] => []
+
+  Array spread (`...`) is not supported in pattern matches.
+
+Explanation: Allowing `...` here would require creating a new subarray at match time, but for performance reasons pattern matching is guaranteed to never create intermediate data.
+
+Possible solutions:
+- To validate specific elements: Use `if` with length checks and `Array.get`
+- To extract a subarray: Use `Array.slice`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/expression/list.res:7:13-15
+
+  5 ┆ switch(items) {
+  6 ┆   | ["-pp", _ppFlag, ...rest] => loop(rest)
+  7 ┆   | [x, ...rest] => [x, ...loop(rest)]
+  8 ┆   | [] => []
+  9 ┆ }
+
+  Array spread (`...`) is not supported in pattern matches.
+
+Explanation: Allowing `...` here would require creating a new subarray at match time, but for performance reasons pattern matching is guaranteed to never create intermediate data.
+
+Possible solutions:
+- To validate specific elements: Use `if` with length checks and `Array.get`
+- To extract a subarray: Use `Array.slice`
+
+let flags =
+  ((if reasonFormat
+    then
+      ((let parts = Utils.split_on_char ' ' flags in
+        let rec loop [arity:1]items =
+          ((match items with
+            | [|{js|-pp|js};_ppFlag;rest|] -> loop rest
+            | [|x;rest|] ->
+                ((Belt.Array.concatMany)[@res.spread ]) [|[|x|];(loop rest)|]
+            | [||] -> [||])
+          [@res.braces ]) in
+        (loop parts) -> (String.concat {js| |js}))
+      [@res.braces ])
+    else flags)
+  [@res.ternary ])

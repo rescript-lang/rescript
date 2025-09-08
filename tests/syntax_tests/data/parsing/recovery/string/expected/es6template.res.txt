@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/recovery/string/es6template.res:1:30-2:0
+
+  1 │ let x = `this contains ${foo}, missing closing
+  2 │ 
+
+  Did you forget to close this template expression with a backtick?
+
+let x =
+  (((((({js|this contains |js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js|, missing closing|js})[@res.template ]))
+  [@res.template ])

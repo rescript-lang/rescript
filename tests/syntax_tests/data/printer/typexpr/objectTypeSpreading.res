@@ -1,0 +1,45 @@
+type a = {"x": int}
+type u = {...a, "u": int}
+type v = {"v": int, ...a}
+type w = {"j": int, ...a, "k": int, ...v}
+
+
+type t = {...a, "u": int} as 'a 
+type t = {...a, "u": int} => unit
+type t = {...a, "u": int} as 'a => unit
+type t = ({...a, "u": int}, {...a, "v": int}) => unit
+
+type user = {"name": string} 
+
+let steve: {...user, "age": int} = {"name": "Steve", "age": 30}
+let steve = ({"name": "Steve", "age": 30}: {...user, "age": int})
+let steve = {({"name": "Steve", "age": 30}: {...user, "age": int})}
+
+let printFullUser = (steve: {...user, "age": int}) => Js.log(steve)
+let printFullUser = (~user: {...user, "age": int}) => Js.log(steve)
+let printFullUser = (~user: {...user, "age": int}) => Js.log(steve)
+let printFullUser = (~user = steve : {...user, "age": int}) => Js.log(steve)
+
+@val
+external steve: {...user, "age": int} = "steve"
+
+let makeCeoOf30yearsOld = (name) : {...user, "age": int} => {"name": name, "age": 30}
+
+type optionalUser = option<{...user, "age": int}>
+type optionalTupleUser = option<({...user, "age": int}, {...user, "age": int})>
+type constrUser = myTypeConstructor<{...user, "age": int}, {...user, "age": int}>
+
+type taggedUser =
+  | User({...user, "age": int})
+  | Ceo({...user, "age": int, "direction": bool}, {...salary, "taxFraud": bool}) 
+
+type polyTaggedUser = [ #User({...user, "age": int}) ]
+type polyTaggedUser2 = [ 
+  | #User({...user, "age": int}) 
+  | #Ceo({...user, "age": int, "direction": bool}, {...salary, "taxFraud": bool}) 
+]
+
+// notice .. and ..., they should have a space
+type u<'a> = {.. ...hi} as 'a
+type u<'a> = {.. ...hi, "superLongFieldName": string, "superLongFieldName22222222222": int} as 'a
+type u<'a> = {.. ...hi, "superLongFieldName": string, ...hi, "superLongFieldName22222222222": int, ...hi} as 'a

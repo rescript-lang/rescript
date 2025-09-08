@@ -1,0 +1,10 @@
+
+  [1;31mWarning number 3[0m (configured as error) 
+  [36m/.../fixtures/highlighting4.res[0m:[2m5:10[0m
+
+  3 [2m│[0m @deprecated
+  4 [2m│[0m type a = int
+  [1;31m5[0m [2m│[0m type b = [1;31ma[0m
+  6 [2m│[0m 
+
+  deprecated: a

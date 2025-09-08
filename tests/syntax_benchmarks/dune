@@ -1,0 +1,29 @@
+(env
+ (static
+  (flags
+   (:standard -ccopt -static))))
+
+(executable
+ (name benchmark)
+ (public_name syntax_benchmarks)
+ (package rescript)
+ (enabled_if
+  (and
+   (<> %{profile} browser)
+   (>= %{ocaml_version} "4.14.0")
+   (or
+    (= %{system} macosx)
+    ; or one of Linuxes (see https://github.com/ocaml/ocaml/issues/10613)
+    (= %{system} linux)
+    (= %{system} linux_elf)
+    (= %{system} elf)
+    (= %{system} linux_eabihf)
+    (= %{system} linux_eabi))))
+ (flags
+  (:standard -w +a-4-40-42-70))
+ (foreign_stubs
+  (language c)
+  (names time))
+ (libraries syntax yojson))
+
+(data_only_dirs data)

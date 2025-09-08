@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_spread_unboxed_mismatch.res[0m:[2m2:15[0m
+
+  1 [2m│[0m @unboxed type a = One(int) | Two(string)
+  [1;31m2[0m [2m│[0m type b = | ...[1;31ma[0m | Three(bool)
+  3 [2m│[0m 
+
+  This variant is unboxed, but the variant where this is spread is not. Both variants unboxed configuration must match.

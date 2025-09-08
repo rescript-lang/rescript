@@ -1,0 +1,2 @@
+type nonrec t =
+  | Water 

@@ -1,0 +1,27 @@
+Definition src/Debug.res 2:27
+{"uri": "ShadowedBelt.res", "range": {"start": {"line": 1, "character": 6}, "end": {"line": 1, "character": 9}}}
+
+Complete src/Debug.res 11:8
+posCursor:[11:8] posNoWhite:[11:7] Found expr:[11:5->11:8]
+Pexp_ident eqN:[11:5->11:8]
+Completable: Cpath Value[eqN]
+Raw opens: 1 Js.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib Js
+ContextPath Value[eqN]
+Path eqN
+[{
+    "label": "eqNullable",
+    "kind": 12,
+    "tags": [],
+    "detail": "('a, nullable<'a>) => bool",
+    "documentation": null
+  }, {
+    "label": "eqNull",
+    "kind": 12,
+    "tags": [],
+    "detail": "('a, null<'a>) => bool",
+    "documentation": null
+  }]
+
+

@@ -1,0 +1,8 @@
+module type BT  = BTree
+module type BT  = MultiCore.BTree
+module type BT  = Std.MultiCore.BTree
+module type BT  = ((BTree)[@attr ])
+module type BT  = ((MultiCore.BTree)[@attr ][@attr2 ])
+module type BT  = ((Std.MultiCore.BTree)[@attr ][@attr2 ][@attr3 ])
+module type list  = list
+module type t  = s

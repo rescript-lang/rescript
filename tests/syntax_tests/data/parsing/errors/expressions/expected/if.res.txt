@@ -1,0 +1,13 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/if.res:2:11-3:5
+
+  1 │ // missing brace below
+  2 │ if (match)
+  3 │   let a = 1
+  4 │   a + 1
+  5 │ }
+
+  Did you forget a `{` here?
+
+;;if match then let a = 1 in a + 1

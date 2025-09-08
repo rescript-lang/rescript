@@ -1,0 +1,350 @@
+Hover src/Hover.res 0:4
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+
+Hover src/Hover.res 3:5
+{"contents": {"kind": "markdown", "value": "```rescript\ntype t = (int, float)\n```"}}
+
+Hover src/Hover.res 6:7
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule Id: {\n  type x = int\n}\n```"}}
+
+Hover src/Hover.res 19:11
+{"contents": {"kind": "markdown", "value": "\nThis module is commented\n---\n\n```\n \n```\n```rescript\nmodule Dep: {\n  let customDouble: int => int\n}\n```"}}
+
+Hover src/Hover.res 22:11
+{"contents": {"kind": "markdown", "value": "```rescript\nint => int\n```\n---\nSome doc comment"}}
+
+Hover src/Hover.res 26:6
+getLocItem #8: heuristic for JSX with at most one child
+heuristic for: [makeProps, make, createElement], give the loc of `make` 
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+
+Hover src/Hover.res 33:4
+{"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"}}
+
+Hover src/Hover.res 37:13
+{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+
+Hover src/Hover.res 42:15
+{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+
+Hover src/Hover.res 46:10
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+
+Hover src/Hover.res 49:13
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule type Logger = {\n  let log: string => unit\n}\n```"}}
+
+Hover src/Hover.res 54:7
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule type Logger = {\n  let log: string => unit\n}\n```"}}
+
+Definition src/Hover.res 60:14
+{"uri": "Hover.res", "range": {"start": {"line": 49, "character": 12}, "end": {"line": 49, "character": 18}}}
+
+Hover src/Hover.res 63:9
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule IdDefinedTwice: {\n  let y: int\n  let _x: int\n}\n```"}}
+
+Hover src/Hover.res 74:7
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"}}
+
+Hover src/Hover.res 77:7
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"}}
+
+Hover src/Hover.res 91:10
+Nothing at that position. Now trying to use completion.
+posCursor:[91:10] posNoWhite:[91:8] Found expr:[88:2->91:9]
+JSX <Comp:[88:3->88:7] > _children:89:4
+null
+
+Hover src/Hover.res 98:10
+Nothing at that position. Now trying to use completion.
+posCursor:[98:10] posNoWhite:[98:9] Found expr:[95:2->98:10]
+JSX <Comp1:[95:3->95:8] > _children:96:4
+null
+
+Hover src/Hover.res 103:25
+{"contents": {"kind": "markdown", "value": "```rescript\nfloat\n```"}}
+
+Hover src/Hover.res 106:21
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+
+Hover src/Hover.res 116:16
+{"contents": {"kind": "markdown", "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C110%2C2%5D)\n"}}
+
+Hover src/Hover.res 119:25
+{"contents": {"kind": "markdown", "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C110%2C2%5D)\n"}}
+
+Hover src/Hover.res 122:3
+Nothing at that position. Now trying to use completion.
+Attribute id:live:[122:0->122:5] label:live
+Completable: Cdecorator(live)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "The `@live` decorator is for reanalyze, a static analysis tool for ReScript that can do dead code analysis.\n\n`@live` tells the dead code analysis that the value should be considered live, even though it might appear to be dead. This is typically used in case of FFI where there are indirect ways to access values. It can be added to everything that could otherwise be considered unused by the dead code analysis - values, functions, arguments, records, individual record fields, and so on.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#live-decorator).\n\nHint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!"}}
+
+Hover src/Hover.res 125:4
+{"contents": {"kind": "markdown", "value": "```rescript\nunit => unit => int\n```"}}
+
+Hover src/Hover.res 131:4
+{"contents": {"kind": "markdown", "value": "```rescript\n(unit, unit) => int\n```"}}
+
+Hover src/Hover.res 134:4
+{"contents": {"kind": "markdown", "value": "```rescript\n(unit, unit) => int\n```"}}
+
+Hover src/Hover.res 137:5
+{"contents": {"kind": "markdown", "value": "```rescript\nunit => unit => int\n```"}}
+
+Hover src/Hover.res 144:9
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\ndoc comment 1"}}
+
+Hover src/Hover.res 148:6
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n doc comment 2 "}}
+
+Hover src/Hover.res 165:23
+{"contents": {"kind": "markdown", "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C161%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C162%2C2%5D)\n"}}
+
+Hover src/Hover.res 167:22
+{"contents": {"kind": "markdown", "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C163%2C2%5D)\n"}}
+
+Complete src/Hover.res 170:16
+posCursor:[170:16] posNoWhite:[170:15] Found expr:[170:5->170:16]
+Pexp_field [170:5->170:15] _:[176:2->170:16]
+Completable: Cpath Value[x1].content.""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x1].content.""
+ContextPath Value[x1].content
+ContextPath Value[x1]
+Path x1
+ContextPath Value[x1]->content
+ContextPath Value[x1]
+Path x1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+ContextPath Value[x1].content->
+ContextPath Value[x1].content
+ContextPath Value[x1]
+Path x1
+ContextPath Value[x1]->content
+ContextPath Value[x1]
+Path x1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+CPPipe pathFromEnv: found:true
+Path Hover.
+Path 
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype bar = {age: int}\n```"}
+  }]
+
+Complete src/Hover.res 173:16
+posCursor:[173:16] posNoWhite:[173:15] Found expr:[173:5->173:16]
+Pexp_field [173:5->173:15] _:[176:2->173:16]
+Completable: Cpath Value[x2].content.""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x2].content.""
+ContextPath Value[x2].content
+ContextPath Value[x2]
+Path x2
+ContextPath Value[x2]->content
+ContextPath Value[x2]
+Path x2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+ContextPath Value[x2].content->
+ContextPath Value[x2].content
+ContextPath Value[x2]
+Path x2
+ContextPath Value[x2]->content
+ContextPath Value[x2]
+Path x2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+CPPipe pathFromEnv: found:true
+Path Hover.
+Path 
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype bar = {age: int}\n```"}
+  }]
+
+Complete src/Hover.res 182:16
+posCursor:[182:16] posNoWhite:[182:15] Found expr:[182:5->182:16]
+Pexp_field [182:5->182:15] _:[187:0->182:16]
+Completable: Cpath Value[y1].content.""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[y1].content.""
+ContextPath Value[y1].content
+ContextPath Value[y1]
+Path y1
+ContextPath Value[y1]->content
+ContextPath Value[y1]
+Path y1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+ContextPath Value[y1].content->
+ContextPath Value[y1].content
+ContextPath Value[y1]
+Path y1
+ContextPath Value[y1]->content
+ContextPath Value[y1]
+Path y1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+CPPipe pathFromEnv: found:true
+Path Hover.
+Path 
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype bar = {age: int}\n```"}
+  }]
+
+Complete src/Hover.res 185:16
+posCursor:[185:16] posNoWhite:[185:15] Found expr:[185:5->185:16]
+Pexp_field [185:5->185:15] _:[187:0->185:16]
+Completable: Cpath Value[y2].content.""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[y2].content.""
+ContextPath Value[y2].content
+ContextPath Value[y2]
+Path y2
+ContextPath Value[y2]->content
+ContextPath Value[y2]
+Path y2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+ContextPath Value[y2].content->
+ContextPath Value[y2].content
+ContextPath Value[y2]
+Path y2
+ContextPath Value[y2]->content
+ContextPath Value[y2]
+Path y2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+Path content
+CPPipe pathFromEnv: found:true
+Path Hover.
+Path 
+[{
+    "label": "age",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype bar = {age: int}\n```"}
+  }]
+
+Hover src/Hover.res 197:4
+{"contents": {"kind": "markdown", "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"}}
+
+Hover src/Hover.res 202:16
+{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"}}
+
+Hover src/Hover.res 210:13
+Nothing at that position. Now trying to use completion.
+posCursor:[210:13] posNoWhite:[210:12] Found expr:[210:11->210:14]
+Pexp_ident usr:[210:11->210:14]
+Completable: Cpath Value[usr]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[usr]
+Path usr
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"}}
+
+Hover src/Hover.res 230:20
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n More Stuff "}}
+
+Hover src/Hover.res 233:17
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n More Stuff "}}
+
+Hover src/Hover.res 245:6
+Nothing at that position. Now trying to use completion.
+posCursor:[245:6] posNoWhite:[245:5] Found expr:[245:3->245:14]
+Pexp_field [245:3->245:4] someField:[245:5->245:14]
+Completable: Cpath Value[x].someField
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x].someField
+ContextPath Value[x]
+Path x
+ContextPath Value[x]->someField
+ContextPath Value[x]
+Path x
+CPPipe pathFromEnv: found:true
+Path Hover.someField
+Path someField
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
+
+Hover src/Hover.res 248:19
+{"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
+
+Hover src/Hover.res 253:20
+{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
+
+Hover src/Hover.res 258:22
+{"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
+
+Hover src/Hover.res 261:23
+{"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
+
+Hover src/Hover.res 268:42
+{"contents": {"kind": "markdown", "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C265%2C2%5D)\n"}}
+
+Hover src/Hover.res 272:23
+Nothing at that position. Now trying to use completion.
+posCursor:[272:23] posNoWhite:[272:22] Found expr:[272:22->272:25]
+Pexp_ident fff:[272:22->272:25]
+Completable: Cpath Value[fff]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[fff]
+Path fff
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath string
+{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+
+Hover src/Hover.res 275:33
+Nothing at that position. Now trying to use completion.
+posCursor:[275:33] posNoWhite:[275:32] Found expr:[275:31->275:40]
+Pexp_ident someField:[275:31->275:40]
+Completable: Cpath Value[someField]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[someField]
+Path someField
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CPatternPath(Value[x])->recordField(someField)
+ContextPath Value[x]
+Path x
+{"contents": {"kind": "markdown", "value": "```rescript\nbool\n```"}}
+
+Hover src/Hover.res 278:8
+{"contents": {"kind": "markdown", "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n---\n\n```\n \n```\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"}}
+
+Hover src/Hover.res 281:6
+{"contents": {"kind": "markdown", "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
+

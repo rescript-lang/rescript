@@ -1,0 +1,2 @@
+@gentype
+type t = int

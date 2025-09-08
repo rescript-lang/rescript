@@ -1,0 +1,6 @@
+(library
+ (name depends)
+ (wrapped false)
+ (flags
+  (:standard -w +a-4-40-42))
+ (libraries common))

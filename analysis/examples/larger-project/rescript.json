@@ -1,0 +1,20 @@
+{
+  "reanalyze": {
+    "analysis": ["dce"],
+    "suppress": [],
+    "unsuppress": []
+  },
+  "name": "sample-typescript-app",
+  "compiler-flags": ["-w a"],
+  "dependencies": ["@rescript/react", "@glennsl/bs-json"],
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  }
+}

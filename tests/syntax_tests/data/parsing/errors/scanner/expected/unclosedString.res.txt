@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/unclosedString.res:1:9-2:0
+
+  1 │ let z = "eof
+  2 │ 
+
+  This string is missing a double quote at the end
+
+let z = {js|eof
+|js}

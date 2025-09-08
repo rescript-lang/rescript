@@ -1,0 +1,26 @@
+let [||] = ()
+let [|1;2|] = ()
+let [|1;2|] = ()
+let [|(1 : int);(2 : int)|] = ()
+let ([|(1 : int);(2 : int)|] : int array) = ()
+;;match x with
+  | [||] -> ()
+  | [|1;2|] -> ()
+  | [|1;2|] -> ()
+  | [|(1 : int);(2 : int)|] -> ()
+  | ([|(1 : int);(2 : int)|] : int) -> ()
+let f [arity:1][||] = ()
+let f [arity:1][|x|] = ()
+let f [arity:1][|x;y|] = x + y
+let f [arity:1]([|x|] : int) = ()
+let f [arity:1]([|x|] : int) = ()
+;;for [||] = 0 to 10 do () done
+;;for [||] = 0 to 10 do () done
+;;for [||] = 0 to 10 do () done
+;;for [|x|] = 0 to 10 do () done
+;;for [|x|] = 0 to 10 do () done
+;;for [|x|] = 0 to 10 do () done
+;;for [|x;y|] = 0 to 10 do () done
+;;for [|x;y|] = 0 to 10 do () done
+;;for [|x;y|] = 0 to 10 do () done
+;;for ([|x|] : int array) = 0 to 10 do () done

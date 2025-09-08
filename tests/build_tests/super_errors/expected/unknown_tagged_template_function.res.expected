@@ -1,0 +1,8 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/unknown_tagged_template_function.res[0m:[2m1:11-14[0m
+
+  [1;31m1[0m [2m│[0m let res = [1;31mtagg[0m`| 5 × 10 = ${5} |`
+  2 [2m│[0m 
+
+  The value tagg can't be found

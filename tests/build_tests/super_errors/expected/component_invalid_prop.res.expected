@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/component_invalid_prop.res[0m:[2m7:5-8[0m
+
+  5 [2m│[0m 
+  6 [2m│[0m   let make = (): props<'name> => {
+  [1;31m7[0m [2m│[0m     [1;31mtest[0m: false,
+  8 [2m│[0m   }
+  9 [2m│[0m }
+
+  The prop [1;31mtest[0m does not belong to the JSX component

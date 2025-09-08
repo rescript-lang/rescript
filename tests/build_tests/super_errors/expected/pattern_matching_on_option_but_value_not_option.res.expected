@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/pattern_matching_on_option_but_value_not_option.res[0m:[2m4:3-9[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m switch x {
+  [1;31m4[0m [2m│[0m | [1;31mSome(1)[0m => ()
+  5 [2m│[0m }
+  6 [2m│[0m 
+
+  This pattern matches values of type [1;31moption<'a>[0m
+  but a pattern was expected which matches values of type [1;33mint[0m
+  
+  You're expecting the value you're pattern matching on to be an [1;33moption[0m, but the value is actually not an option.
+  Change your pattern match to work on the concrete value (remove [1;31mSome(_)[0m or [1;31mNone[0m from the pattern) to make it work.

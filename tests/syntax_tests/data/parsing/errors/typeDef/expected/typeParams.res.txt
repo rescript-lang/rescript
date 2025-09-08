@@ -1,0 +1,77 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeParams.res:1:10-13
+
+  1 │ type node('a) = {
+  2 │   _value: Js.Nullable.value<'a>
+  3 │ }
+
+  Type parameters require angle brackets:
+  node<'a>
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeParams.res:5:26-28
+
+  3 │ }
+  4 │ 
+  5 │ type derivedNode<'from, 'for> = {
+  6 │   mutable value: 'to_,
+  7 │   updateF: 'from => 'to_,
+
+  `for` is a reserved keyword. Keywords need to be escaped: \"for"
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeParams.res:10:26
+
+   8 │ }
+   9 │ 
+  10 │ type derivedNode<'from, '+> = {
+  11 │   mutable value: 'to_,
+  12 │   updateF: 'from => 'to_,
+
+  A type param consists of a singlequote followed by a name like `'a` or `'A`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeParams.res:15:26
+
+  13 │ }
+  14 │ 
+  15 │ type derivedNode<'from, '_> = {
+  16 │   mutable value: 'to_,
+  17 │   updateF: 'from => 'to_,
+
+  A type param consists of a singlequote followed by a name like `'a` or `'A`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/typeParams.res:21:25-27
+
+  19 │ 
+  20 │ 
+  21 │ type derivedNode<'from, foo> = {
+  22 │   mutable value: 'to_,
+  23 │   updateF: 'from => 'to_,
+
+  Type params start with a singlequote: 'foo
+
+type nonrec 'a node = {
+  _value: 'a Js.Nullable.value }
+type nonrec ('from, 'for) derivedNode =
+  {
+  mutable value: 'to_ ;
+  updateF: 'from -> 'to_ (a:1) }
+type nonrec ('from, ') derivedNode =
+  {
+  mutable value: 'to_ ;
+  updateF: 'from -> 'to_ (a:1) }
+type nonrec ('from, ') derivedNode =
+  {
+  mutable value: 'to_ ;
+  updateF: 'from -> 'to_ (a:1) }
+type nonrec ('from, 'foo) derivedNode =
+  {
+  mutable value: 'to_ ;
+  updateF: 'from -> 'to_ (a:1) }

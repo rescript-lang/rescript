@@ -1,0 +1,117 @@
+type t +=  
+  | Foo 
+type Foo.Bar.t +=  
+  | Foo 
+type ('a,'b) t +=  
+  | Foo of 'a 
+type ('a,'b) Foo.Bar.t +=  
+  | Foo of 'a 
+type t += private  
+  | Foo 
+type t += private  
+  | Foo 
+  | Bar 
+type t += private  
+  | Foo 
+type t += private  
+  | Foo 
+  | Bar 
+type t +=  
+  | Circle of string * int 
+  | Point of {
+  x: int ;
+  y: int } 
+type t +=  
+  | Circle of string * int 
+  | Point of {
+  x: int ;
+  y: int } 
+type t +=  
+  | Foo = Bar
+type t +=  
+  | Foo = Bar
+  | Circle = Circle2
+type t +=  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t += private  
+  | Foo = Bar
+type t += private  
+  | Foo = Bar
+  | Circle = Circle2
+type t += private  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t +=  
+  | Foo = Bar
+type t +=  
+  | Foo = Bar
+  | Circle = Circle2
+type t +=  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t += private  
+  | Foo = Bar
+type t += private  
+  | Foo = Bar
+  | Circle = Circle2
+type t += private  
+  | Foo = Bar
+  | Circle = Geo.Circle2
+type t +=  
+  | Foo = Geo.Metry.Bar
+type t +=  
+  | Foo [@attr1 ][@@attr ]
+type t +=  
+  | Foo [@attr1 ][@@attr ]
+type t +=  
+  | Foo [@attr1 ]
+  | Bar [@attr2 ][@@attr ]
+type t +=  
+  | Foo [@attr1 ]
+  | Bar [@attr2 ][@@attr ]
+type t += private  
+  | Foo [@attr1 ][@@attr ]
+type t += private  
+  | Foo [@attr1 ][@@attr ]
+type t += private  
+  | Foo [@attr1 ]
+  | Bar [@attr2 ][@@attr ]
+type t += private  
+  | Foo [@attr1 ]
+  | Bar [@attr2 ][@@attr ]
+type t +=  
+  | Foo[@attr1 ] = Bar[@@attr ]
+type t +=  
+  | Foo[@attr1 ] = Bar[@@attr ]
+type t +=  
+  | Foo[@attr1 ] = Foo2
+  | Bar[@attr2 ] = Bar2[@@attr ]
+type t +=  
+  | Foo[@attr1 ] = Foo2
+  | Bar[@attr2 ] = Bar2[@@attr ]
+type t += private  
+  | Foo[@attr1 ] = Foo2[@@attr ]
+type t += private  
+  | Foo[@attr1 ] = Foo2[@@attr ]
+type t += private  
+  | Foo[@attr1 ] = Foo2
+  | Bar[@attr2 ] = Bar2[@@attr ]
+type t += private  
+  | Foo[@attr1 ] = Foo2
+  | Bar[@attr2 ] = Bar2[@@attr ]
+module Tid =
+  struct type nonrec _ t = ..
+         type nonrec _ s = ..
+         type nonrec _ u = .. end
+module type Tid  =
+  sig
+    type nonrec t
+    type _ Tid.t +=  
+      | Tid: t Tid.t 
+    type _ Tid.s +=  
+      | Tid: t Tid.s 
+    type _ Tid.u +=  
+      | Uid: t Tid.u 
+      | Uid2: t Tid.u 
+  end

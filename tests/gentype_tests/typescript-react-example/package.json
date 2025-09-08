@@ -1,0 +1,23 @@
+{
+  "name": "@tests/gentype-react-example",
+  "private": true,
+  "scripts": {
+    "start": "rescript legacy build -w",
+    "build": "rescript legacy build",
+    "clean": "rescript clean",
+    "typecheck": "tsc",
+    "check": "biome check --changed --no-errors-on-unmatched ."
+  },
+  "dependencies": {
+    "@rescript/react": "^0.13.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "rescript": "workspace:^"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "5.8.2"
+  }
+}

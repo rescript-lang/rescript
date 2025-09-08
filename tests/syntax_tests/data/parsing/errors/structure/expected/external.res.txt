@@ -1,0 +1,11 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/external.res:2:51
+
+  1 │ // missing JS value name
+  2 │ external setTimeout: (unit => unit, int) => float =
+  3 │ 
+
+  An external requires the name of the JS value you're referring to, like "setTimeout".
+
+external setTimeout : (unit -> unit (a:1)) -> int -> float (a:2)

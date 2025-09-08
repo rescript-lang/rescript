@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/modules3.res[0m:[2m11:11-21[0m
+
+   9 [2m│[0m }
+  10 [2m│[0m 
+  [1;31m11[0m [2m│[0m let asd = [1;31mA.B.C.D.aaa[0m
+  12 [2m│[0m 
+  13 [2m│[0m /* there's another, unrelated test, that we're just gonna paste here. W
+     [2m│[0m e won't
+
+  The value aaa can't be found in A.B.C.D
+  
+  [1;33mHint: Did you mean aaaa?[0m

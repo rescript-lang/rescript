@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/private_without_body.res[0m:[2m1:1-9[0m
+
+  [1;31m1[0m [2m│[0m [1;31m%%private[0m
+  2 [2m│[0m let a = 2
+  3 [2m│[0m 
+
+  %%private extension expects a definition as its argument. Example: %%private(let a = "Hello")
