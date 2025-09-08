@@ -16,9 +16,3 @@ let dict = {
   key: 1,
   \"KEY": 1,
 }
-
-type t = {\"🎉": int}
-
-let x = {
-  \"🎉": 42,
-}

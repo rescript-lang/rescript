@@ -32,6 +32,9 @@ export const {
   execBin,
   execBuild,
   execClean,
+  rewatch,
+  git,
+  npm,
 } = setup();
 
 /**
@@ -144,7 +147,7 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `rescript` CLI
+     * `rescript` legacy CLI
      *
      * @param {(
      *   | "build"
@@ -162,6 +165,14 @@ export function setup(cwd = process.cwd()) {
         import.meta.dirname,
         "../cli/rescript-legacy.js",
       );
+      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
+    },
+
+    /**
+     * `rescript` CLI
+     */
+    rewatch(command, args = [], options = {}) {
+      const cliPath = path.join(import.meta.dirname, "../cli/rescript.js");
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
 
@@ -210,6 +221,28 @@ export function setup(cwd = process.cwd()) {
     async execBin(bin, args = [], options = {}) {
       const realPath = await fs.realpath(bin);
       return exec(realPath, args, options);
+    },
+
+    /**
+     * Execute Git command
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    git(args = [], options = {}) {
+      return exec("git", args, options);
+    },
+
+    /**
+     * Execute npm command
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    npm(args = [], options = {}) {
+      return exec("npm", args, options);
     },
   };
 }

@@ -9,6 +9,7 @@ import {
   docstringTestDir,
   ounitTestBin,
   projectDir,
+  rewatchTestDir,
 } from "#dev/paths";
 
 import {
@@ -19,6 +20,7 @@ import {
   node,
   rescript,
   shell,
+  yarn,
 } from "#dev/process";
 
 let ounitTest = false;
@@ -26,6 +28,7 @@ let mochaTest = false;
 let bsbTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
+let rewatch = false;
 
 if (process.argv.includes("-ounit")) {
   ounitTest = true;
@@ -47,12 +50,17 @@ if (process.argv.includes("-docstrings")) {
   runtimeDocstrings = true;
 }
 
+if (process.argv.includes("-rewatch")) {
+  rewatch = true;
+}
+
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   bsbTest = true;
   formatTest = true;
   runtimeDocstrings = true;
+  rewatch = true;
 }
 
 if (formatTest) {
@@ -194,4 +202,21 @@ if (runtimeDocstrings) {
       stdio: "inherit",
     });
   }
+}
+
+if (rewatch) {
+  await execClean([], {
+    cwd: rewatchTestDir,
+    stdio: "inherit",
+  });
+
+  await execBuild([], {
+    cwd: rewatchTestDir,
+    stdio: "inherit",
+  });
+
+  await yarn("test", [], {
+    cwd: rewatchTestDir,
+    stdio: "inherit",
+  });
 }

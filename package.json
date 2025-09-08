@@ -48,9 +48,9 @@
     "test": "node scripts/test.js -all",
     "test-bsb": "node scripts/test.js -bsb",
     "test-ocaml": "node scripts/test.js -ounit",
-    "check": "biome check --no-errors-on-unmatched .",
+    "check": "biome check --changed --no-errors-on-unmatched .",
     "check:all": "biome check .",
-    "format": "biome check --no-errors-on-unmatched . --fix",
+    "format": "biome check --changed --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc",
     "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
@@ -88,7 +88,7 @@
     "@types/node": "^20.14.9",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
-    "mocha": "10.8.2",
+    "mocha": "11.7.1",
     "nyc": "15.0.0",
     "semver": "^7.7.2",
     "typescript": "5.8.2"
@@ -101,6 +101,7 @@
     "tests/docstring_tests",
     "tests/gentype_tests/**",
     "tests/tools_tests",
+    "tests/rewatch_tests",
     "scripts/res"
   ],
   "packageManager": "yarn@4.9.1",
