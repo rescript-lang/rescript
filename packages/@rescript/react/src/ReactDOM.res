@@ -76,7 +76,7 @@ external createPortal: (React.element, Dom.element) => React.element = "createPo
 
 external domElementToObj: Dom.element => {..} = "%identity"
 
-type style = JsxDOMStyle.t
+type style = ReactDOMStyle.t
 
 type domRef = JsxDOM.domRef
 
@@ -246,4 +246,4 @@ external jsxs: (string, JsxDOM.domProps) => Jsx.element = "jsxs"
 @module("react/jsx-runtime")
 external jsxsKeyed: (string, JsxDOM.domProps, ~key: string=?, @ignore unit) => Jsx.element = "jsxs"
 
-module Style = JsxDOMStyle
+module Style = ReactDOMStyle
