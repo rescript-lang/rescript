@@ -220,12 +220,12 @@ See [`String.charCodeAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 ## Examples
 
 ```rescript
-String.charCodeAt(`😺`, 0) == 0xd83d->Int.toFloat
+String.charCodeAt(`😺`, 0) == 0xd83d
 String.codePointAt(`😺`, 0) == Some(0x1f63a)
 ```
 */
 @send
-external charCodeAt: (string, int) => float = "charCodeAt"
+external charCodeAt: (string, int) => int = "charCodeAt"
 
 /**
 `codePointAt(str, index)` returns the code point at position `index` within
