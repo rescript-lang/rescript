@@ -49,8 +49,10 @@
  `config.uncurried` to the BundleConfig.
  * v4: Added `config.open_modules` to the BundleConfig to enable implicitly opened
  * modules in the playground.
+ * v5: Removed .ml support.
+ * v6: Added `config.experimental_features` and `config.jsx_preserve_mode` to the BundleConfig.
  * *)
-let api_version = "5"
+let api_version = "6"
 
 module Js = Js_of_ocaml.Js
 
@@ -73,6 +75,8 @@ module BundleConfig = struct
     mutable filename: string option;
     mutable warn_flags: string;
     mutable open_modules: string list;
+    mutable experimental_features: string list;
+    mutable jsx_preserve_mode: bool;
   }
 
   let make () =
@@ -81,6 +85,8 @@ module BundleConfig = struct
       filename = None;
       warn_flags = Bsc_warnings.defaults_w;
       open_modules = [];
+      experimental_features = [];
+      jsx_preserve_mode = false;
     }
 
   let default_filename (lang : Lang.t) = "playground." ^ Lang.to_string lang
@@ -467,7 +473,15 @@ module Compile = struct
     Js.array (!acc |> Array.of_list)
 
   let implementation ~(config : BundleConfig.t) ~lang str =
-    let {BundleConfig.module_system; warn_flags; open_modules} = config in
+    let {
+      BundleConfig.module_system;
+      warn_flags;
+      open_modules;
+      experimental_features;
+      jsx_preserve_mode;
+    } =
+      config
+    in
     try
       reset_compiler ();
       Warnings.parse_options false warn_flags;
@@ -485,6 +499,9 @@ module Compile = struct
       (* let finalenv = ref Env.empty in *)
       let types_signature = ref [] in
       Js_config.jsx_version := Some Js_config.Jsx_v4;
+      Js_config.jsx_preserve := jsx_preserve_mode;
+      experimental_features
+      |> List.iter Experimental_features.enable_from_string;
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
@@ -606,6 +623,14 @@ module Export = struct
       config.open_modules <- value;
       true
     in
+    let set_experimental_features value =
+      config.experimental_features <- value;
+      true
+    in
+    let set_jsx_preserve_mode value =
+      config.jsx_preserve_mode <- value;
+      true
+    in
     let convert_syntax ~(from_lang : string) ~(to_lang : string) (src : string)
         =
       let open Lang in
@@ -653,6 +678,17 @@ module Export = struct
                      (set_open_modules
                         (value |> Js.to_array |> Array.map Js.to_string
                        |> Array.to_list))) );
+          ( "setExperimentalFeatures",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                   Js.bool
+                     (set_experimental_features
+                        (value |> Js.to_array |> Array.map Js.to_string
+                       |> Array.to_list))) );
+          ( "setJsxPreserveMode",
+            inject
+            @@ Js.wrap_meth_callback (fun _ value ->
+                   Js.bool (set_jsx_preserve_mode (Js.to_bool value))) );
           ( "getConfig",
             inject
             @@ Js.wrap_meth_callback (fun _ ->
@@ -665,6 +701,12 @@ module Export = struct
                              |> BundleConfig.string_of_module_system
                              |> Js.string) );
                          ("warn_flags", inject @@ Js.string config.warn_flags);
+                         ( "jsx_preserve_mode",
+                           inject @@ (config.jsx_preserve_mode |> Js.bool) );
+                         ( "experimental_features",
+                           inject
+                           @@ (config.experimental_features |> Array.of_list
+                             |> Js.array) );
                          ( "open_modules",
                            inject
                            @@ (config.open_modules |> Array.of_list |> Js.array)
