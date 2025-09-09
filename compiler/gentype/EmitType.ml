@@ -126,24 +126,21 @@ let rec render_type ~(config : Config.t) ?(indent = None)
       | true -> name |> interface_name ~config
       | false -> name
     in
-    if name = "$RescriptTypeSatisfiesTypeScriptType" then
-      match type_args with
-      | [t1; t2] ->
-        let render_arg t =
-          "  "
-          ^ (t
-            |> render_type ~config ~indent:(Some "  ") ~type_name_is_interface
-                 ~in_fun_type)
-        in
-        rendered_name ^ "<\n" ^ render_arg t1 ^ ",\n" ^ render_arg t2 ^ "\n>"
-      | _ ->
-        rendered_name
-        ^ EmitText.generics_string
-            ~type_vars:
-              (type_args
-              |> List.map
-                   (render_type ~config ~indent ~type_name_is_interface
-                      ~in_fun_type))
+    if SatisfiesHelpers.is_helper_ident name then
+      let rendered_type_args_special =
+        type_args
+        |> List.map
+             (render_type ~config ~indent:(Some "  ") ~type_name_is_interface
+                ~in_fun_type)
+      in
+      let rendered_type_args_default =
+        type_args
+        |> List.map
+             (render_type ~config ~indent ~type_name_is_interface ~in_fun_type)
+      in
+      SatisfiesHelpers.render_helper_ident ~rendered_name
+        ~rendered_type_args:rendered_type_args_special
+        ~rendered_type_args_default
     else
       rendered_name
       ^ EmitText.generics_string
@@ -445,15 +442,6 @@ let require ~early =
 
 let emit_import_react ~emitters =
   "import * as React from 'react';" |> require ~early:true ~emitters
-
-let emit_satisfies_helper ~emitters =
-  let alias =
-    "export type $RescriptTypeSatisfiesTypeScriptType<\n\
-     RescriptType,\n\
-     TypeScriptType extends RescriptType\n\
-     > = TypeScriptType;"
-  in
-  Emitters.export_early ~emitters alias
 
 let emit_import_type_as ~emitters ~config ~type_name ~as_type_name
     ~type_name_is_interface ~import_path =

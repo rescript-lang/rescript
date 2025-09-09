@@ -656,7 +656,7 @@ let emit_translation_as_string ~config ~file_name
   in
   let emitters =
     match config.emit_satisfies_helper with
-    | true -> EmitType.emit_satisfies_helper ~emitters
+    | true -> SatisfiesHelpers.emit_helper_alias ~emitters
     | false -> emitters
   in
   let env, emitters =

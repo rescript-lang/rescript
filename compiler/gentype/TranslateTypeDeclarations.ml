@@ -84,7 +84,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       in
       let ts_type = ident ~builtin:true inline_import in
       ident ~builtin:true ~type_args:[type_; ts_type]
-        "$RescriptTypeSatisfiesTypeScriptType"
+        SatisfiesHelpers.helper_type_name
   in
   let unboxed_annotation =
     type_attributes |> Annotation.has_attribute Annotation.tag_is_unboxed
