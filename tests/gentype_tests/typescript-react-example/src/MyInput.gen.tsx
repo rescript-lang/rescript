@@ -11,9 +11,9 @@ export const defaultTypeChecked: React.ComponentType<{ readonly onFocus?: (_1:in
 // Export '$$default' early to allow circular import from the '.bs.js' file.
 export const $$default: unknown = defaultTypeChecked as React.ComponentType<{ readonly onFocus?: (_1:inputFocusEvent) => void }> as any;
 
-import type {inputFocusEvent as $$inputFocusEvent} from './shims/JsxEvent.shim';
+import type {inputFocusEvent as inputFocusEvent$TypeScript} from './shims/JsxEvent.shim';
 
-export type inputFocusEvent = $$inputFocusEvent;
+export type inputFocusEvent = inputFocusEvent$TypeScript;
 
 export type props<onFocus> = { readonly onFocus?: onFocus };
 

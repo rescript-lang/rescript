@@ -77,25 +77,23 @@ export const $$default: unknown = defaultTypeChecked as number as any;
 
 const ImportJsValueJS = require('./ImportJsValue.res.js');
 
-import type {AbsoluteValue as $$AbsoluteValue_t} from './MyMath';
+import type {AbsoluteValue as AbsoluteValue$TypeScript} from './MyMath';
 
-import type {num as $$myNum} from './MyMath';
+import type {num as num$TypeScript} from './MyMath';
 
-import type {num as $$num} from './MyMath';
+import type {numberOrString as numberOrString$TypeScript} from './MyMath';
 
-import type {numberOrString as $$numberOrString} from './MyMath';
+import type {polyType as polyType$TypeScript} from './MyMath';
 
-import type {polyType as $$polyType} from './MyMath';
-
-import type {stringFunction as $$stringFunction} from './MyMath';
+import type {stringFunction as stringFunction$TypeScript} from './MyMath';
 
 export type point = { readonly x: number; readonly y: (undefined | number) };
 
-export type numberOrString = $$numberOrString;
+export type numberOrString = numberOrString$TypeScript;
 
-export type AbsoluteValue_t = $$AbsoluteValue_t;
+export type AbsoluteValue_t = AbsoluteValue$TypeScript;
 
-export type stringFunction = $$stringFunction;
+export type stringFunction = stringFunction$TypeScript;
 
 export type color = "tomato" | "gray";
 
@@ -103,11 +101,11 @@ export type variant =
     { TAG: "I"; _0: number }
   | { TAG: "S"; _0: string };
 
-export type num = $$num;
+export type num = num$TypeScript;
 
-export type myNum = $$myNum;
+export type myNum = num$TypeScript;
 
-export type polyType<a> = $$polyType<a>;
+export type polyType<a> = polyType$TypeScript<a>;
 
 export const roundedNumber: number = ImportJsValueJS.roundedNumber as any;
 

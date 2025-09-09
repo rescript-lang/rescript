@@ -62,6 +62,30 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
   let import_string_opt, name_as, _import_exact_opt, remote_export_name_opt =
     type_attributes |> Annotation.get_attribute_import_renaming
   in
+  let satisfies_opt = type_attributes |> Annotation.get_attribute_satisfies in
+  let annotation_for_export =
+    match satisfies_opt with
+    | Some _ -> Annotation.GenType
+    | None -> annotation
+  in
+  let apply_satisfies_wrapper type_ =
+    match satisfies_opt with
+    | None -> type_
+    | Some (import_str, path) ->
+      (* Ensure we emit the helper once. *)
+      config.emit_satisfies_helper <- true;
+      let import_path = ImportPath.from_string_unsafe import_str in
+      let import_path_str = ImportPath.emit import_path in
+      let inline_import =
+        let base = "import(\"" ^ import_path_str ^ "\")" in
+        match path with
+        | [] -> base
+        | _ -> base ^ "." ^ String.concat "." path
+      in
+      let ts_type = ident ~builtin:true inline_import in
+      ident ~builtin:true ~type_args:[type_; ts_type]
+        "$RescriptTypeSatisfiesTypeScriptType"
+  in
   let unboxed_annotation =
     type_attributes |> Annotation.has_attribute Annotation.tag_is_unboxed
   in
@@ -75,8 +99,11 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       (translation : TranslateTypeExprFromTypes.translation) =
     let export_from_type_declaration =
       type_name
-      |> create_export_type_from_type_declaration ~annotation ~loc ~name_as
-           ~opaque ~type_:translation.type_ ~type_env ~doc_string ~type_vars
+      |> create_export_type_from_type_declaration ~annotation:annotation_for_export
+           ~loc ~name_as
+           ~opaque
+           ~type_:(apply_satisfies_wrapper translation.type_)
+           ~type_env ~doc_string ~type_vars
     in
     let import_types =
       translation.dependencies
@@ -220,7 +247,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
           ~polymorphic:true ~tag:None ~unboxed:false
       | _ -> translation.type_
     in
-    {translation with type_} |> handle_general_declaration
+    {translation with type_ = apply_satisfies_wrapper type_}
+    |> handle_general_declaration
     |> return_type_declaration
   | RecordDeclarationFromTypes label_declarations, None ->
     let {TranslateTypeExprFromTypes.dependencies; type_} =
@@ -235,8 +263,10 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       CodeItem.import_types;
       export_from_type_declaration =
         type_name
-        |> create_export_type_from_type_declaration ~doc_string ~annotation ~loc
-             ~name_as ~opaque ~type_ ~type_env ~type_vars;
+        |> create_export_type_from_type_declaration ~doc_string
+             ~annotation:annotation_for_export ~loc
+             ~name_as ~opaque ~type_:(apply_satisfies_wrapper type_)
+             ~type_env ~type_vars;
     }
     |> return_type_declaration
   | VariantDeclarationFromTypes constructor_declarations, None ->
@@ -302,12 +332,12 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
             loc;
             name_as;
             opaque;
-            type_ = variant_typ;
+            type_ = apply_satisfies_wrapper variant_typ;
             type_vars;
             resolved_type_name;
             doc_string;
           };
-        annotation;
+        annotation = annotation_for_export;
       }
     in
     let import_types =

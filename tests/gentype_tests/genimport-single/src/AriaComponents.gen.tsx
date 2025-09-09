@@ -3,6 +3,12 @@
 /* eslint-disable */
 /* tslint:disable */
 
-import type {GroupRenderProps as GroupRenderProps$TypeScript} from 'react-aria-components';
+export type $RescriptTypeSatisfiesTypeScriptType<RescriptType, TypeScriptType extends RescriptType> = TypeScriptType;
 
-export type groupRenderProps = GroupRenderProps$TypeScript;
+export type groupRenderProps = $RescriptTypeSatisfiesTypeScriptType<{
+  readonly isHovered: boolean; 
+  readonly isFocusWithin: boolean; 
+  readonly isFocusVisible: boolean; 
+  readonly isDisabled: boolean; 
+  readonly isInvalid: boolean
+},import("react-aria-components").GroupRenderProps>;

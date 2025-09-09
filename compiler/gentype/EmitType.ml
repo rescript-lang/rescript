@@ -424,6 +424,12 @@ let require ~early =
 let emit_import_react ~emitters =
   "import * as React from 'react';" |> require ~early:true ~emitters
 
+let emit_satisfies_helper ~emitters =
+  let alias =
+    "export type $RescriptTypeSatisfiesTypeScriptType<RescriptType, TypeScriptType extends RescriptType> = TypeScriptType;"
+  in
+  Emitters.export_early ~emitters alias
+
 let emit_import_type_as ~emitters ~config ~type_name ~as_type_name
     ~type_name_is_interface ~import_path =
   let type_name = sanitize_type_name type_name in

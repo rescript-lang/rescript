@@ -680,6 +680,11 @@ let emit_translation_as_string ~(config : Config.t) ~file_name
          ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
          ~type_name_is_interface
   in
+  let emitters =
+    match config.emit_satisfies_helper with
+    | true -> EmitType.emit_satisfies_helper ~emitters
+    | false -> emitters
+  in
   let env, emitters =
     export_from_type_declarations
     |> emit_export_from_type_declarations ~config ~emitters ~env

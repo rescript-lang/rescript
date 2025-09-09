@@ -180,10 +180,13 @@ let ident ?(builtin = true) ?(type_args = []) name =
   Ident {builtin; name; type_args}
 
 let sanitize_type_name name =
-  name
-  |> String.map (function
-       | '\'' -> '_'
-       | c -> c)
+  (* Preserve TS import("...") expressions intact. *)
+  if String.length name >= 7 && String.sub name 0 7 = "import(" then name
+  else
+    name
+    |> String.map (function
+         | '\'' -> '_'
+         | c -> c)
 let unknown = ident "unknown"
 let bigint_t = ident "BigInt"
 let boolean_t = ident "boolean"

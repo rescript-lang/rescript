@@ -17,6 +17,7 @@ type t = {
   bs_dependencies: string list;
   mutable emit_import_curry: bool;
   mutable emit_import_react: bool;
+  mutable emit_satisfies_helper: bool;
   mutable emit_type_prop_done: bool;
   mutable everything: bool;
   export_interfaces: bool;
@@ -37,6 +38,7 @@ let default =
     bs_dependencies = [];
     emit_import_curry = false;
     emit_import_react = false;
+    emit_satisfies_helper = false;
     emit_type_prop_done = false;
     everything = false;
     export_interfaces = false;
@@ -228,6 +230,7 @@ let read_config ~get_config_file ~namespace =
       suffix;
       emit_import_curry = false;
       emit_import_react = false;
+      emit_satisfies_helper = false;
       emit_type_prop_done = false;
       everything;
       export_interfaces;

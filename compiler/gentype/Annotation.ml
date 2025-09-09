@@ -29,10 +29,14 @@ let tag_is_tag s = s = "tag"
 let tag_is_unboxed s = s = "unboxed" || s = "ocaml.unboxed"
 let tag_is_gentype_import s = s = "genType.import" || s = "gentype.import"
 let tag_is_gentype_opaque s = s = "genType.opaque" || s = "gentype.opaque"
+let tag_is_gentype_satisfies s = s = "genType.satisfies" || s = "gentype.satisfies"
 
 let tag_is_one_of_the_gentype_annotations s =
-  tag_is_gentype s || tag_is_gentype_as s || tag_is_gentype_import s
+  tag_is_gentype s
+  || tag_is_gentype_as s
+  || tag_is_gentype_import s
   || tag_is_gentype_opaque s
+  || tag_is_gentype_satisfies s
 
 let tag_is_gentype_ignore_interface s =
   s = "genType.ignoreInterface" || s = "gentype.ignoreInterface"
@@ -168,6 +172,25 @@ let get_attribute_import_renaming attributes =
     (* Tuple form encodes (importPath, remoteExportName). Keep remote name separate. *)
     (Some import_string, gentype_as_renaming, None, Some rename_string)
   | _ -> (None, gentype_as_renaming, None, None)
+
+let get_attribute_satisfies attributes =
+  match attributes |> get_attribute_payload tag_is_gentype_satisfies with
+  | Some (_loc, TuplePayload payloads) -> (
+    let strings =
+      payloads
+      |> List.fold_left
+           (fun acc p ->
+             match p with
+             | StringPayload s -> s :: acc
+             | _ -> acc)
+           []
+      |> List.rev
+    in
+    match strings with
+    | [] -> None
+    | import_str :: path -> Some (import_str, path))
+  | Some (_loc, StringPayload s) -> Some (s, [])
+  | _ -> None
 
 let get_tag attributes =
   match attributes |> get_attribute_payload tag_is_tag with
