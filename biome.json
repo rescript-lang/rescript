@@ -76,7 +76,8 @@
       "*.exe",
       "package.json",
       "packages/artifacts.json",
-      ".mypy_cache/**"
+      ".mypy_cache/**",
+      ".history/**"
     ]
   }
 }
