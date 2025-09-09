@@ -28,6 +28,7 @@
   ],
   "publishConfig": {
     "access": "public",
+    "provenance": true,
     "executableFiles": [
       "./bin/bsb_helper.exe",
       "./bin/bsc.exe",
