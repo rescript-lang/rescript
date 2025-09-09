@@ -86,6 +86,12 @@ let _ = <Outer inner=<Inner /> />
 
 let _ = <div onClick=onClickHandler> <> "foobar" </> </div>
 
+// Test automatic string wrapping in JSX children
+let _ = <span>hello world</span>
+let _ = <div>simple string</div>  
+let _ = <> fragment string </>
+let _ = <div>first string<span>nested</span>last string</div>
+
 
 let _ =
    <Window
