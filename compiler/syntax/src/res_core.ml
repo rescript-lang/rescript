@@ -4973,7 +4973,7 @@ and parse_constr_decl_args p =
           in
           Parser.expect Rparen p;
           Parsetree.Pcstr_tuple (typ :: more_args)
-        | DotDotDot ->
+        | DotDotDot -> (
           let dotdotdot_start = p.start_pos in
           let dotdotdot_end = p.end_pos in
           (* start of object type spreading, e.g. `User({...a, "u": int})` *)
@@ -4983,7 +4983,7 @@ and parse_constr_decl_args p =
             parse_spread_tail_classified ~start_pos ~spread_typ:typ
               ~grammar:Grammar.FieldDeclarations p
           in
-          (match res with
+          match res with
           | `Record fields ->
             let spread_field_name =
               Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
@@ -5004,7 +5004,6 @@ and parse_constr_decl_args p =
             in
             Parser.expect Rparen p;
             Parsetree.Pcstr_tuple (typ :: more_args))
-        
         | _ -> (
           let attrs = parse_attributes p in
           match p.Parser.token with
@@ -5423,12 +5422,6 @@ and parse_type_equation_or_constr_decl p =
     (* TODO: is this a good idea? *)
     (None, Asttypes.Public, Parsetree.Ptype_abstract)
 
-(* After parsing `{... <spread_typ>`, parse the remainder inside the braces
-   and classify as record tail vs object tail. Returns:
-   - `Record fields`: list of record fields following the spread (may be empty)
-   - `Object typ`: an object type that inherits the spread and includes the tail
-   The caller is responsible for constructing the synthetic spread field when
-   building a record. *)
 and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
     ~start_pos ~spread_typ ~grammar p =
   match p.token with
@@ -5447,12 +5440,13 @@ and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
         p
     in
     Parser.expect Rbrace p;
-    if !found_object_field then (
+    if !found_object_field then
       (* Object-style: build an object type that inherits the spread *)
       let obj_fields =
         let convert (ld : Parsetree.label_declaration) =
-          let ({Parsetree.pld_name; pld_type; pld_attributes; _} :
-                Parsetree.label_declaration) = ld
+          let ({Parsetree.pld_name; pld_type; pld_attributes; _}
+                : Parsetree.label_declaration) =
+            ld
           in
           match pld_name.txt with
           | "..." -> Parsetree.Oinherit pld_type
@@ -5466,7 +5460,7 @@ and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
         |> parse_type_alias p
       in
       let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
-      `Object typ)
+      `Object typ
     else `Record fields
 
 and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p

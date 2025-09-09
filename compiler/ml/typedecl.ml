@@ -259,13 +259,13 @@ let transl_constructor_arguments env closed = function
   | Pcstr_tuple l ->
     let l = List.map (transl_simple_type env closed) l in
     (Types.Cstr_tuple (List.map (fun t -> t.ctyp_type) l), Cstr_tuple l)
-  | Pcstr_record l ->
+  | Pcstr_record l -> (
     let lbls, lbls' = transl_labels env closed l in
     let expanded =
       Record_type_spread.expand_labels_with_type_spreads
         ~return_none_on_failure:true env lbls lbls'
     in
-    (match expanded with
+    match expanded with
     | Some (lbls, lbls') -> (Types.Cstr_record lbls', Cstr_record lbls)
     | None -> (
       (* Ambiguous `{...t}`: if only spread present and it doesn't resolve to a
@@ -274,7 +274,8 @@ let transl_constructor_arguments env closed = function
       | [{pld_name = {txt = "..."}; pld_type = spread_typ; _}] ->
         let obj_ty =
           Ast_helper.Typ.object_ ~loc:spread_typ.ptyp_loc
-            [Parsetree.Oinherit spread_typ] Asttypes.Closed
+            [Parsetree.Oinherit spread_typ]
+            Asttypes.Closed
         in
         let cty = transl_simple_type env closed obj_ty in
         (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])
