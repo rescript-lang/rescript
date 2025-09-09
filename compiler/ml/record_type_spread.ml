@@ -90,12 +90,12 @@ let extract_type_vars (type_params : Types.type_expr list)
            | _ -> None)
   else []
 
-let expand_labels_with_type_spreads ?(return_none_on_failure = false)
-    (env : Env.t) (lbls : Typedtree.label_declaration list)
+let expand_labels_with_type_spreads (env : Env.t)
+    (lbls : Typedtree.label_declaration list)
     (lbls' : Types.label_declaration list) =
   match has_type_spread lbls with
   | false -> Some (lbls, lbls')
-  | true -> (
+  | true ->
     let rec extract (t : Types.type_expr) =
       match t.desc with
       | Tpoly (t, []) -> extract t
@@ -137,6 +137,4 @@ let expand_labels_with_type_spreads ?(return_none_on_failure = false)
         process_lbls (fst acc @ [lbl], snd acc @ [lbl']) rest rest'
       | _ -> Some acc
     in
-    match process_lbls ([], []) lbls lbls' with
-    | Some res -> Some res
-    | None -> if return_none_on_failure then None else Some (lbls, lbls'))
+    process_lbls ([], []) lbls lbls'

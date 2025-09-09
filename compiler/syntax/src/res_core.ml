@@ -4976,34 +4976,54 @@ and parse_constr_decl_args p =
         | DotDotDot -> (
           let dotdotdot_start = p.start_pos in
           let dotdotdot_end = p.end_pos in
-          (* start of object type spreading, e.g. `User({...a, "u": int})` *)
+          (* start of spread, e.g. `User({...a, "u": int})` *)
           Parser.next p;
-          let typ = parse_typ_expr p in
-          let res =
-            parse_spread_tail_classified ~start_pos ~spread_typ:typ
-              ~grammar:Grammar.FieldDeclarations p
-          in
-          match res with
-          | `Record fields ->
+          let spread_typ = parse_typ_expr p in
+          match p.token with
+          | Rbrace ->
+            (* `{...t}` no tail: inline record with single spread *)
+            Parser.next p;
             let spread_field_name =
               Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
             in
-            let spread_field_loc = mk_loc start_pos typ.ptyp_loc.loc_end in
+            let spread_field_loc =
+              mk_loc start_pos spread_typ.ptyp_loc.loc_end
+            in
             let spread_field =
               Ast_helper.Type.field ~attrs:[] ~loc:spread_field_loc
-                ~mut:Asttypes.Immutable spread_field_name typ
+                ~mut:Asttypes.Immutable spread_field_name spread_typ
             in
             Parser.optional p Comma |> ignore;
             Parser.expect Rparen p;
-            Parsetree.Pcstr_record (spread_field :: fields)
-          | `Object typ ->
-            Parser.optional p Comma |> ignore;
-            let more_args =
-              parse_comma_delimited_region ~grammar:Grammar.TypExprList
-                ~closing:Rparen ~f:parse_typ_expr_region p
+            Parsetree.Pcstr_record [spread_field]
+          | _ -> (
+            let res =
+              parse_spread_tail_classified ~start_pos ~spread_typ
+                ~grammar:Grammar.FieldDeclarations p
             in
-            Parser.expect Rparen p;
-            Parsetree.Pcstr_tuple (typ :: more_args))
+            match res with
+            | `Record fields ->
+              let spread_field_name =
+                Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
+              in
+              let spread_field_loc =
+                mk_loc start_pos spread_typ.ptyp_loc.loc_end
+              in
+              let spread_field =
+                Ast_helper.Type.field ~attrs:[] ~loc:spread_field_loc
+                  ~mut:Asttypes.Immutable spread_field_name spread_typ
+              in
+              Parser.optional p Comma |> ignore;
+              Parser.expect Rparen p;
+              Parsetree.Pcstr_record (spread_field :: fields)
+            | `Object typ ->
+              Parser.optional p Comma |> ignore;
+              let more_args =
+                parse_comma_delimited_region ~grammar:Grammar.TypExprList
+                  ~closing:Rparen ~f:parse_typ_expr_region p
+              in
+              Parser.expect Rparen p;
+              Parsetree.Pcstr_tuple (typ :: more_args)))
         | _ -> (
           let attrs = parse_attributes p in
           match p.Parser.token with

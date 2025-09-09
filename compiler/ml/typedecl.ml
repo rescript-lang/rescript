@@ -262,8 +262,7 @@ let transl_constructor_arguments env closed = function
   | Pcstr_record l -> (
     let lbls, lbls' = transl_labels env closed l in
     let expanded =
-      Record_type_spread.expand_labels_with_type_spreads
-        ~return_none_on_failure:true env lbls lbls'
+      Record_type_spread.expand_labels_with_type_spreads env lbls lbls'
     in
     match expanded with
     | Some (lbls, lbls') -> (Types.Cstr_record lbls', Cstr_record lbls)
@@ -600,8 +599,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
         transl_labels ~record_name:sdecl.ptype_name.txt env true lbls
       in
       let lbls_opt =
-        Record_type_spread.expand_labels_with_type_spreads
-          ~return_none_on_failure:true env lbls lbls'
+        Record_type_spread.expand_labels_with_type_spreads env lbls lbls'
       in
       let rec check_duplicates loc (lbls : Typedtree.label_declaration list)
           seen =
@@ -780,6 +778,12 @@ let check_constraints ~type_record_as_object env sdecl (_, decl) =
             styl tyl
         | Cstr_record tyl, Pcstr_record styl ->
           check_constraints_labels env visited tyl styl
+        | ( Cstr_tuple [ty],
+            Pcstr_record [{pld_name = {txt = "..."}; pld_type; _}] ) ->
+          (* Ambiguous `{...t}` parsed as record with a single spread; typer may
+             reinterpret as an object tuple argument. Accept this and check the
+             single tuple arg against the source location of the spread type. *)
+          check_constraints_rec env pld_type.ptyp_loc visited ty
         | _ -> assert false);
         match (pcd_res, cd_res) with
         | Some sr, Some r -> check_constraints_rec env sr.ptyp_loc visited r
