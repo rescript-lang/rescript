@@ -101,8 +101,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       type_name
       |> create_export_type_from_type_declaration
            ~annotation:annotation_for_export ~loc ~name_as ~opaque
-           ~type_:(apply_satisfies_wrapper translation.type_)
-           ~type_env ~doc_string ~type_vars
+           ~type_:translation.type_ ~type_env ~doc_string ~type_vars
     in
     let import_types =
       translation.dependencies
@@ -212,7 +211,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       |> TranslateTypeExprFromTypes.translate_type_expr_from_types ~config
            ~type_env
     in
-    translation |> handle_general_declaration |> return_type_declaration
+    {translation with type_ = apply_satisfies_wrapper translation.type_}
+    |> handle_general_declaration |> return_type_declaration
   | GeneralDeclaration (Some core_type), None ->
     let translation =
       core_type |> TranslateCoreType.translate_core_type ~config ~type_env

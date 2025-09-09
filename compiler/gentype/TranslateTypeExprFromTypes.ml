@@ -118,6 +118,48 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     }
   | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib"; "RegExp"; "t"]), [] ->
     {dependencies = []; type_ = regexp_t}
+  | ["Stdlib"; "ArrayBuffer"; "t"], [] ->
+    {dependencies = []; type_ = ident "ArrayBuffer"}
+  | ["Stdlib"; "DataView"; "t"], [] ->
+    {dependencies = []; type_ = ident "DataView"}
+  | ["Stdlib"; "Int8Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Int8Array"}
+  | ["Stdlib"; "Uint8Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint8Array"}
+  | ["Stdlib"; "Uint8ClampedArray"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint8ClampedArray"}
+  | ["Stdlib"; "Int16Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Int16Array"}
+  | ["Stdlib"; "Uint16Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint16Array"}
+  | ["Stdlib"; "Int32Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Int32Array"}
+  | ["Stdlib"; "Uint32Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Uint32Array"}
+  | ["Stdlib"; "Float32Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Float32Array"}
+  | ["Stdlib"; "Float64Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "Float64Array"}
+  | ["Stdlib"; "BigInt64Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "BigInt64Array"}
+  | ["Stdlib"; "BigUint64Array"; "t"], [] ->
+    {dependencies = []; type_ = ident "BigUint64Array"}
+  | ["Stdlib"; "Symbol"; "t"], [] -> {dependencies = []; type_ = ident "symbol"}
+  | ["Stdlib"; "Intl"; intl_module; "t"], [] ->
+    {dependencies = []; type_ = ident ("Intl." ^ intl_module)}
+  | (["Stdlib"; "Error"; "t"] | ["Stdlib"; "JsError"; "t"]), [] ->
+    {dependencies = []; type_ = ident "Error"}
+  | ["Stdlib"; "Iterator"; "t"], [param_translation] ->
+    {
+      dependencies = param_translation.dependencies;
+      type_ = ident ~type_args:[param_translation.type_] "Iterator";
+    }
+  | ["Stdlib"; "AsyncIterator"; "t"], [param_translation] ->
+    {
+      dependencies = param_translation.dependencies;
+      type_ = ident ~type_args:[param_translation.type_] "AsyncIterator";
+    }
+  | ["Stdlib"; "Ordering"; "t"], [] -> {dependencies = []; type_ = number_t}
   | ["unit"], [] -> {dependencies = []; type_ = unit_t}
   | (["array"] | ["Js"; ("Array" | "Array2"); "t"]), [param_translation] ->
     {param_translation with type_ = Array (param_translation.type_, Mutable)}

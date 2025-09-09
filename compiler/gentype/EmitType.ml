@@ -118,18 +118,40 @@ let rec render_type ~(config : Config.t) ?(indent = None)
          ~type_name_is_interface
   | Ident {builtin; name; type_args} ->
     let name = name |> sanitize_type_name in
-    (match
-       (not builtin) && config.export_interfaces
-       && name |> type_name_is_interface
-     with
-    | true -> name |> interface_name ~config
-    | false -> name)
-    ^ EmitText.generics_string
-        ~type_vars:
-          (type_args
-          |> List.map
-               (render_type ~config ~indent ~type_name_is_interface ~in_fun_type)
-          )
+    let rendered_name =
+      match
+        (not builtin) && config.export_interfaces
+        && name |> type_name_is_interface
+      with
+      | true -> name |> interface_name ~config
+      | false -> name
+    in
+    if name = "$RescriptTypeSatisfiesTypeScriptType" then
+      match type_args with
+      | [t1; t2] ->
+        let render_arg t =
+          "  "
+          ^ (t
+            |> render_type ~config ~indent:(Some "  ") ~type_name_is_interface
+                 ~in_fun_type)
+        in
+        rendered_name ^ "<\n" ^ render_arg t1 ^ ",\n" ^ render_arg t2 ^ "\n>"
+      | _ ->
+        rendered_name
+        ^ EmitText.generics_string
+            ~type_vars:
+              (type_args
+              |> List.map
+                   (render_type ~config ~indent ~type_name_is_interface
+                      ~in_fun_type))
+    else
+      rendered_name
+      ^ EmitText.generics_string
+          ~type_vars:
+            (type_args
+            |> List.map
+                 (render_type ~config ~indent ~type_name_is_interface
+                    ~in_fun_type))
   | Null type_ ->
     "(null | "
     ^ (type_ |> render_type ~config ~indent ~type_name_is_interface ~in_fun_type)
@@ -426,8 +448,10 @@ let emit_import_react ~emitters =
 
 let emit_satisfies_helper ~emitters =
   let alias =
-    "export type $RescriptTypeSatisfiesTypeScriptType<RescriptType, \
-     TypeScriptType extends RescriptType> = TypeScriptType;"
+    "export type $RescriptTypeSatisfiesTypeScriptType<\n\
+     RescriptType,\n\
+     TypeScriptType extends RescriptType\n\
+     > = TypeScriptType;"
   in
   Emitters.export_early ~emitters alias
 

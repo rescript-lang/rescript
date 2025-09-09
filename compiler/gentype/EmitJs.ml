@@ -635,7 +635,6 @@ let emit_translation_as_string ~config ~file_name
     |> List.map (fun (type_declaration : CodeItem.type_declaration) ->
            type_declaration.export_from_type_declaration)
   in
-  let emitters = Emitters.initial in
   let type_name_is_interface ~env =
     type_name_is_interface ~export_type_map
       ~export_type_map_from_other_files:env.export_type_map_from_other_files
@@ -644,7 +643,7 @@ let emit_translation_as_string ~config ~file_name
     try export_type_map |> StringMap.find s
     with Not_found -> env.export_type_map_from_other_files |> StringMap.find s
   in
-  let emitters = emitters
+  let emitters = Emitters.initial
   and module_items_emitter = ExportModule.create_module_items_emitter ()
   and env = initial_env in
   let env, emitters =
