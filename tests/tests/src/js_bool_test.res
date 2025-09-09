@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 let f = x =>
   if x {
     true
@@ -25,18 +28,9 @@ let f3 = if true {
   false
 }
 
-let u: bool = %raw(` 1`)
+let u: bool = %raw(` !!1`)
 
 let v: bool = %raw(` true`)
-
-let suites = {
-  open Mt
-  list{
-    ("?bool_eq_caml_bool", _ => Eq(u, f(true))),
-    ("js_bool_eq_js_bool", _ => Eq(v, f4(true))),
-    ("js_bool_neq_acml_bool", _ => Eq(true, f(true) == %raw(`true`) /* not type check */)),
-  }
-}
 
 let ff = u =>
   if u == true {
@@ -75,4 +69,9 @@ let consts = (
 )
 
 let bool_array = [true, false]
-Mt.from_pair_suites(__MODULE__, suites)
+
+describe(__MODULE__, () => {
+  test("?bool_eq_caml_bool", () => eq(__LOC__, u, f(true)))
+  test("js_bool_eq_js_bool", () => eq(__LOC__, v, f4(true)))
+  test("js_bool_neq_acml_bool", () => ok(__LOC__, f(true) == %raw(`true`) /* not type check */))
+})

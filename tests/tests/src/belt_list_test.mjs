@@ -1371,11 +1371,11 @@ Mocha.describe("Belt_list_test", () => {
       Belt_List.drop(length_10_id, 1)
     ]);
     Test_utils.eq("File \"belt_list_test.res\", line 231, characters 7-14", Belt_List.head(/* [] */0), undefined);
-    Test_utils.$$throw("File \"belt_list_test.res\", line 232, characters 10-17", () => Belt_List.headExn(/* [] */0));
-    Test_utils.$$throw("File \"belt_list_test.res\", line 233, characters 10-17", () => {
+    Test_utils.throws("File \"belt_list_test.res\", line 232, characters 11-18", () => Belt_List.headExn(/* [] */0));
+    Test_utils.throws("File \"belt_list_test.res\", line 233, characters 11-18", () => {
       Belt_List.tailExn(/* [] */0);
     });
-    Test_utils.$$throw("File \"belt_list_test.res\", line 234, characters 10-17", () => {
+    Test_utils.throws("File \"belt_list_test.res\", line 234, characters 11-18", () => {
       Belt_List.getExn({
         hd: 0,
         tl: {
@@ -1384,7 +1384,7 @@ Mocha.describe("Belt_list_test", () => {
         }
       }, -1);
     });
-    Test_utils.$$throw("File \"belt_list_test.res\", line 235, characters 10-17", () => {
+    Test_utils.throws("File \"belt_list_test.res\", line 235, characters 11-18", () => {
       Belt_List.getExn({
         hd: 0,
         tl: {

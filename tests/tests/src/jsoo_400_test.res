@@ -1,7 +1,14 @@
+open Mocha
+open Test_utils
+
 let u = () =>
   switch String.length("123") {
   | n => 3 / 0
   | exception _ => 42
   } /* TODO: could be optimized */
 
-Mt.from_pair_suites(__MODULE__, list{(__LOC__, _ => ThrowAny(_ => ignore(u())))})
+describe(__MODULE__, () => {
+  test("jsoo_400 exception handling test", () => {
+    throws(__LOC__, _ => ignore(u()))
+  })
+})

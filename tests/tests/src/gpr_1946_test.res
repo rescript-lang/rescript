@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 let x = ({"x": 3, "y": 4})["x"]
 
@@ -25,4 +24,12 @@ eq(__LOC__, ({"_5": 3})["_5"], 3)
 eq(__LOC__, (2, 3), (f(h).a, f(h).b))
 Js.log(Obj.tag(Obj.repr({"_5": 3})))
 
-Mt.from_pair_suites(__LOC__, suites.contents)
+describe(__MODULE__, () => {
+  test("test1", () => {
+    eq(__LOC__, ({"_5": 3})["_5"], 3)
+  })
+
+  test("test2", () => {
+    eq(__LOC__, (2, 3), (f(h).a, f(h).b))
+  })
+})

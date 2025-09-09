@@ -1,3 +1,5 @@
+open Mocha
+open Test_utils
 module Array = Ocaml_Array
 
 let a = [0., 1., 2.]
@@ -21,23 +23,21 @@ let h = () => c
      */
 let g = () => {
   f()
-  Mt.Eq((a[0], b[0]), (3.0, 3))
+  eq(__LOC__, (a[0], b[0]), (3.0, 3))
 }
 
-let suites = list{
-  ("const_block_test", g),
-  (
-    "avoid_mutable_inline_test",
-    _ => {
-      let v = h()
-      let v2 = h()
-      let () = {
-        v[0] = 3
-        v2[1] = 4
-      }
-      Eq([3, 4, 2, 3, 4, 5], v)
-    },
-  ),
-}
+describe(__MODULE__, () => {
+  test("const_block_test", () => {
+    g()
+  })
 
-Mt.from_pair_suites(__MODULE__, suites)
+  test("avoid_mutable_inline_test", () => {
+    let v = h()
+    let v2 = h()
+    let () = {
+      v[0] = 3
+      v2[1] = 4
+    }
+    eq(__LOC__, [3, 4, 2, 3, 4, 5], v)
+  })
+})

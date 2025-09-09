@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 module String = Ocaml_String
 
 let generic_basename = (is_dir_sep, current_dir_name, name) => {
@@ -27,9 +30,8 @@ let generic_basename = (is_dir_sep, current_dir_name, name) => {
 
 let basename = generic_basename((s, i) => String.get(s, i) == '/', "", ...)
 
-let suites = {
-  open Mt
-  list{("basename", _ => Eq(basename("b/c/a.b"), "a.b"))}
-}
-
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("basename", () => {
+    eq(__LOC__, basename("b/c/a.b"), "a.b")
+  })
+})

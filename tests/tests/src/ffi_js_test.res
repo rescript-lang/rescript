@@ -9,16 +9,8 @@ let keys: Obj.t => array<string> = %raw(" function (x){return Object.keys(x)}")
 `)
 @val external higher_order: int => (int, int) => int = "$$higher_order"
 
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, (x, y)) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 type rec kind<_> =
   | Int: kind<int>
@@ -29,31 +21,6 @@ type rec kind<_> =
 let int_config = config(~kind=Int, ~hi=3, ~low=32)
 
 let string_config = config(~kind=Str, ~hi=3, ~low="32")
-
-let () = eq(__LOC__, (6, higher_order(1)(2, 3)))
-
-let same_type = (
-  list{int_config, {"hi": 3, "low": 32}},
-  list{string_config, {"hi": 3, "low": "32"}},
-)
-
-let () = {
-  eq(__LOC__, (Belt.Array.length(Js_obj.keys(int_config)), 2))
-  eq(__LOC__, (Belt.Array.length(Js_obj.keys(string_config)), 2))
-}
-
-let u = ref(3)
-
-let side_effect_config = config(
-  ~kind={
-    incr(u)
-    Int
-  },
-  ~hi=3,
-  ~low=32,
-)
-
-let () = eq(__LOC__, (u.contents, 4))
 
 type null_obj
 
@@ -87,21 +54,48 @@ type t
 @set_index
 external setGADTI3: (t, @ignore kind<'a>, @ignore kind<'b>, @as(3) _, ('a, 'b)) => unit = ""
 
-let ffff = x => {
-  setGADT(x, Int, 3)
-  setGADT2(x, Int, Str, (3, "3"))
-  setGADT2(x, Str, Int, ("3", 3))
-  switch getGADTI3(x, Int, Str) {
-  | (cc, dd) => Js.log((cc, dd))
-  }
-  Js.log(getGADT(x, Int))
-  switch getGADT2(x, Int, Str) {
-  | (a: int, b: string) => Js.log2(a, b)
-  }
-  switch getGADTI2(x, Int, Str, 0) {
-  | (a: int, b: string) => Js.log2(a, b)
-  }
-  setGADTI2(x, Int, Str, 0, (1, "x"))
-  setGADTI3(x, Int, Str, (3, "x"))
-}
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("higher_order function", () => eq(__LOC__, 6, higher_order(1)(2, 3)))
+
+  test("config objects", () => {
+    let same_type = (
+      list{int_config, {"hi": 3, "low": 32}},
+      list{string_config, {"hi": 3, "low": "32"}},
+    )
+    eq(__LOC__, Belt.Array.length(Js_obj.keys(int_config)), 2)
+    eq(__LOC__, Belt.Array.length(Js_obj.keys(string_config)), 2)
+  })
+
+  test("side effect config", () => {
+    let u = ref(3)
+    let side_effect_config = config(
+      ~kind={
+        incr(u)
+        Int
+      },
+      ~hi=3,
+      ~low=32,
+    )
+    eq(__LOC__, u.contents, 4)
+  })
+
+  test("GADT operations", () => {
+    let ffff = x => {
+      setGADT(x, Int, 3)
+      setGADT2(x, Int, Str, (3, "3"))
+      setGADT2(x, Str, Int, ("3", 3))
+      switch getGADTI3(x, Int, Str) {
+      | (cc, dd) => Js.log((cc, dd))
+      }
+      Js.log(getGADT(x, Int))
+      switch getGADT2(x, Int, Str) {
+      | (a: int, b: string) => Js.log2(a, b)
+      }
+      switch getGADTI2(x, Int, Str, 0) {
+      | (a: int, b: string) => Js.log2(a, b)
+      }
+      setGADTI2(x, Int, Str, 0, (1, "x"))
+      setGADTI3(x, Int, Str, (3, "x"))
+    }
+  })
+})

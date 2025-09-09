@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 let u = ref(3)
 let v = Lazy.make(() => u := 32)
 
@@ -27,8 +30,6 @@ let u_v = ref(0)
 let u = Lazy.make(() => u_v := 2)
 let () = Lazy.get(u)
 
-/* module Mt = Mock_mt */
-
 let exotic = x =>
   switch x {
   /* Lazy in a pattern. (used in advi) */
@@ -43,7 +44,6 @@ let forward_test = Lazy.make(() => {
   incr(u)
   u.contents
 })
-/* module Mt = Mock_mt */
 
 let f005 = Lazy.make(() => 1 + 2 + 3)
 
@@ -68,32 +68,28 @@ let a6 = Lazy.from_val()
 let a7 = Lazy.get(a5)
 let a8 = Lazy.get(a6)
 
-Mt.from_pair_suites(
-  __MODULE__,
-  {
-    open Mt
-    list{
-      ("simple", _ => Eq(lazy_test(), (3, 32))),
-      // ("lazy_match", _ => Eq(h, 2)),
-      ("lazy_force", _ => Eq(u_v.contents, 2)),
-      ("lazy_from_fun", _ => Eq(Lazy.get(l_from_fun), 3)),
-      ("lazy_from_val", _ => Eq(Lazy.get(Lazy.from_val(3)), 3)),
-      ("lazy_from_val2", _ => Eq(Lazy.get(Lazy.get(Lazy.from_val(Lazy.make(() => 3)))), 3)),
-      (
-        "lazy_from_val3",
-        _ => Eq(
-          {
-            %debugger
-            Lazy.get(Lazy.get(Lazy.make(() => forward_test)))
-          },
-          4,
-        ),
-      ),
-      (__FILE__, _ => Eq(a3, a4)),
-      (__FILE__, _ => Eq(a7, None)),
-      (__FILE__, _ => Eq(a8, ())),
-      (__LOC__, _ => Ok(Lazy.isEvaluated(Lazy.from_val(3)))),
-      (__LOC__, _ => Ok(!Lazy.isEvaluated(Lazy.make(() => throw(Not_found))))),
-    }
-  },
-)
+describe(__MODULE__, () => {
+  test("simple", () => eq(__LOC__, lazy_test(), (3, 32)))
+  // test("lazy_match", () => eq(__LOC__, h, 2))
+  test("lazy_force", () => eq(__LOC__, u_v.contents, 2))
+  test("lazy_from_fun", () => eq(__LOC__, Lazy.get(l_from_fun), 3))
+  test("lazy_from_val", () => eq(__LOC__, Lazy.get(Lazy.from_val(3)), 3))
+  test("lazy_from_val2", () =>
+    eq(__LOC__, Lazy.get(Lazy.get(Lazy.from_val(Lazy.make(() => 3)))), 3)
+  )
+  test("lazy_from_val3", () =>
+    eq(
+      __LOC__,
+      {
+        %debugger
+        Lazy.get(Lazy.get(Lazy.make(() => forward_test)))
+      },
+      4,
+    )
+  )
+  test(__FILE__, () => eq(__LOC__, a3, a4))
+  test(__FILE__, () => eq(__LOC__, a7, None))
+  test(__FILE__, () => eq(__LOC__, a8, ()))
+  test(__LOC__, () => ok(__LOC__, Lazy.isEvaluated(Lazy.from_val(3))))
+  test(__LOC__, () => ok(__LOC__, !Lazy.isEvaluated(Lazy.make(() => throw(Not_found)))))
+})

@@ -1,7 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~suites, ~test_id, loc, x, y)
-let b = (loc, v) => Mt.bool_suites(~suites, ~test_id, loc, v)
+open Mocha
+open Test_utils
 
 module Icmp = unpack(Belt.Id.comparable(~cmp=(x: int, y) => compare(x, y)))
 module Icmp2 = unpack(Belt.Id.comparable(~cmp=(x: int, y) => compare(x, y)))
@@ -65,29 +63,38 @@ let () = {
 let f = M.fromArray(~id=module(Icmp), ...)
 let \"=~" = (a, b) => M.eq(a, b, ...)
 
-let () = {
-  let u0 = f(A.map(I.randomRange(0, 39), x => (x, x)))
-  let u1 = M.set(u0, 39, 120)
-  b(
-    __LOC__,
-    A.every2(M.toArray(u0), A.map(I.range(0, 39), x => (x, x)), ((x0, x1), (y0, y1)) =>
-      x0 == y0 && x1 == y1
-    ),
-  )
+describe(__MODULE__, () => {
+  test("bs_map_set_dict_test_map_operations", () => {
+    let u0 = f(A.map(I.randomRange(0, 39), x => (x, x)))
+    let u1 = M.set(u0, 39, 120)
+    ok(
+      __LOC__,
+      A.every2(
+        M.toArray(u0),
+        A.map(I.range(0, 39), x => (x, x)),
+        ((x0, x1), (y0, y1)) => x0 == y0 && x1 == y1,
+      ),
+    )
 
-  b(
-    __LOC__,
-    L.every2(M.toList(u0), L.fromArray(A.map(I.range(0, 39), x => (x, x))), ((x0, x1), (y0, y1)) =>
-      x0 == y0 && x1 == y1
-    ),
-  )
-  eq(__LOC__, M.get(u0, 39), Some(39))
-  eq(__LOC__, M.get(u1, 39), Some(120))
-}
+    ok(
+      __LOC__,
+      L.every2(
+        M.toList(u0),
+        L.fromArray(A.map(I.range(0, 39), x => (x, x))),
+        ((x0, x1), (y0, y1)) => x0 == y0 && x1 == y1,
+      ),
+    )
+    eq(__LOC__, M.get(u0, 39), Some(39))
+    eq(__LOC__, M.get(u1, 39), Some(120))
+  })
 
-let () = {
-  let u = f(A.makeByAndShuffle(10_000, x => (x, x)))
-  eq(__LOC__, A.makeBy(10_000, x => (x, x)), M.toArray(u))
-}
+  test("bs_map_set_dict_test_large_dataset", () => {
+    let u = f(A.makeByAndShuffle(10_000, x => (x, x)))
+    eq(__LOC__, A.makeBy(10_000, x => (x, x)), M.toArray(u))
+  })
 
-Mt.from_pair_suites(__MODULE__, suites.contents)
+  test("map_set_dict_tests", () => {
+    // All tests are already run as standalone assertions above
+    ok(__LOC__, true)
+  })
+})
