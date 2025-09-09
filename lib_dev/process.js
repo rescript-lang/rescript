@@ -32,7 +32,6 @@ export const {
   execBin,
   execBuild,
   execClean,
-  rewatch,
   git,
   npm,
   deno,
@@ -87,7 +86,7 @@ export function setup(cwd = process.cwd()) {
         if (throwOnFail && code !== 0) {
           reject(
             new Error(
-              `Command ${command} exited with non-zero status: ${code}`,
+              `Command ${command} exited with non-zero status: ${code}\n${stderr}`,
             ),
           );
         } else {
@@ -166,14 +165,6 @@ export function setup(cwd = process.cwd()) {
         import.meta.dirname,
         "../cli/rescript-legacy.js",
       );
-      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
-    },
-
-    /**
-     * `rescript` CLI
-     */
-    rewatch(command, args = [], options = {}) {
-      const cliPath = path.join(import.meta.dirname, "../cli/rescript.js");
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
 

@@ -5,7 +5,7 @@ let repo = Path.resolve(
   Path.dirname(Url.fileURLToPath(Node.importMetaUrl)),
   "../repos/deno/single-project",
 )
-let commands = await Setup.commands(repo)
+let commands = await Setup.commands(repo, ~runtime=Setup.Deno)
 
 describe("A single ReScript project using deno as package manager", () => {
   before(async () => {

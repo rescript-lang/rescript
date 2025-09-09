@@ -2,24 +2,16 @@ open Node
 
 type processOptions = {cwd: string, stdio?: string}
 
-type processUtils = {
-  rescript: (string, array<string>, processOptions) => promise<unit>,
-  rewatch: (string, array<string>, processOptions) => promise<unit>,
-  execBin: (string, array<string>, processOptions) => promise<unit>,
-  shell: (string, array<string>, processOptions) => promise<unit>,
-  node: (string, array<string>, processOptions) => promise<unit>,
-  git: (array<string>, processOptions) => promise<unit>,
-  npm: (array<string>, processOptions) => promise<unit>,
-  deno: (array<string>, processOptions) => promise<unit>,
-}
+@module("../../../lib_dev/process.js")
+external deno: (array<string>, processOptions) => promise<unit> = "deno"
+@module("../../../lib_dev/process.js")
+external node: (string, array<string>, processOptions) => promise<unit> = "node"
+@module("../../../lib_dev/process.js")
+external git: (array<string>, processOptions) => promise<unit> = "git"
+@module("../../../lib_dev/process.js")
+external npm: (array<string>, processOptions) => promise<unit> = "npm"
 
-// Import process utilities (Windows-safe file URL)
-let processUtils: processUtils = {
-  let base = Node.importMetaUrl
-  let rel = "../../../lib_dev/process.js"
-  let fileUrl = Url.make(rel, base)->Url.toString
-  await import_(fileUrl)
-}
+let rescriptJs = Path.resolve(Node.importMetaDirname, "../../../cli/rescript.js")
 
 type commands = {
   rescript: {
@@ -37,8 +29,13 @@ type commands = {
   },
 }
 
+type runtime =
+  | @as("deno") Deno
+  | @as("node") Node
+  | @as("bun") Bun
+
 /// Returns a set of helpers to invoke cli/rescript.js in a working directory
-let commands = async (workingDirectory: string): commands => {
+let commands = async (workingDirectory: string, ~runtime: runtime=Node): commands => {
   // Ensure working directory exists before invoking any process
   let pwdExists = await FsPromises.access(workingDirectory)
   ->Promise.thenResolve(_ => true)
@@ -50,10 +47,33 @@ let commands = async (workingDirectory: string): commands => {
 
   let rescript = {
     let build = async () => {
-      let _ = await processUtils.rewatch("build", [], {cwd: workingDirectory, stdio: "inherit"})
+      switch runtime {
+      | Deno => {
+          let _ = await deno(
+            ["--allow-read", "--allow-env", "--allow-run", rescriptJs],
+            {cwd: workingDirectory, stdio: "inherit"},
+          )
+        }
+      | Node => {
+          let _ = await node(rescriptJs, ["build"], {cwd: workingDirectory, stdio: "inherit"})
+        }
+
+      | Bun => throw(Failure("Bun is not supported yet"))
+      }
     }
     let clean = async () => {
-      let _ = await processUtils.rewatch("clean", [], {cwd: workingDirectory, stdio: "inherit"})
+      switch runtime {
+      | Deno => {
+          let _ = await deno(
+            ["--allow-read", "--allow-env", "--allow-run", rescriptJs, "clean"],
+            {cwd: workingDirectory, stdio: "inherit"},
+          )
+        }
+      | Node => {
+          let _ = await node(rescriptJs, ["clean"], {cwd: workingDirectory, stdio: "inherit"})
+        }
+      | Bun => throw(Failure("Bun is not supported yet"))
+      }
     }
     {build, clean}
   }
@@ -61,7 +81,7 @@ let commands = async (workingDirectory: string): commands => {
   // npm
   let npm: \"commands.npm" = {
     let install = async () => {
-      let _ = await processUtils.npm(["install"], {cwd: workingDirectory, stdio: "inherit"})
+      let _ = await npm(["install"], {cwd: workingDirectory, stdio: "inherit"})
     }
     {install: install}
   }
@@ -69,14 +89,14 @@ let commands = async (workingDirectory: string): commands => {
   // deno
   let deno: \"commands.deno" = {
     let install = async () => {
-      let _ = await processUtils.deno(["install"], {cwd: workingDirectory, stdio: "inherit"})
+      let _ = await deno(["install"], {cwd: workingDirectory, stdio: "inherit"})
     }
     {install: install}
   }
 
   // git
   let checkout = async () => {
-    let _ = await processUtils.git(["checkout", "."], {cwd: workingDirectory, stdio: "inherit"})
+    let _ = await git(["checkout", "."], {cwd: workingDirectory, stdio: "inherit"})
   }
 
   {

@@ -7,7 +7,7 @@ import * as Nodetest from "node:test";
 
 let repo = Nodepath.resolve(Nodepath.dirname(Nodeurl.fileURLToPath(import.meta.url)), "../repos/npm/single-project");
 
-let commands = await Setup.commands(repo);
+let commands = await Setup.commands(repo, undefined);
 
 Nodetest.describe("A single ReScript project using npm as package manager", () => {
   Nodetest.before(async () => await commands.npm.install());

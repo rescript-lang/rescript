@@ -44,4 +44,7 @@ module Test = {
 @scope(("import", "meta"))
 external importMetaUrl: string = "url"
 
+@scope(("import", "meta"))
+external importMetaDirname: string = "dirname"
+
 external import_: string => promise<'t> = "import"
