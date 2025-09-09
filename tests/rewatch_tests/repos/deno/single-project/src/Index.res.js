@@ -3,4 +3,11 @@
 
 console.log(43);
 
+let location = window.location;
+
+console.log(location);
+
+export {
+  location,
+}
 /*  Not a pure module */

@@ -36,7 +36,8 @@ async function commands(workingDirectory) {
   };
   let install = async () => {
     await processUtils.npm(["install"], {
-      cwd: workingDirectory
+      cwd: workingDirectory,
+      stdio: "inherit"
     });
   };
   let npm = {
@@ -44,7 +45,8 @@ async function commands(workingDirectory) {
   };
   let install$1 = async () => {
     await processUtils.deno(["install"], {
-      cwd: workingDirectory
+      cwd: workingDirectory,
+      stdio: "inherit"
     });
   };
   let deno = {
@@ -55,7 +57,8 @@ async function commands(workingDirectory) {
       "checkout",
       "."
     ], {
-      cwd: workingDirectory
+      cwd: workingDirectory,
+      stdio: "inherit"
     });
   };
   return {

@@ -9,5 +9,6 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "compiler-flags": []
+  "compiler-flags": [],
+  "dependencies": ["@rescript/webapi"]
 }
