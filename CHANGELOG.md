@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Fix code generation for emojis in polyvars and labels. https://github.com/rescript-lang/rescript/pull/7853
+- Fix crash with `@get` on external of type `unit => 'a`. https://github.com/rescript-lang/rescript/pull/7866
 
 #### :memo: Documentation
 
