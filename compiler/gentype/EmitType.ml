@@ -426,7 +426,8 @@ let emit_import_react ~emitters =
 
 let emit_satisfies_helper ~emitters =
   let alias =
-    "export type $RescriptTypeSatisfiesTypeScriptType<RescriptType, TypeScriptType extends RescriptType> = TypeScriptType;"
+    "export type $RescriptTypeSatisfiesTypeScriptType<RescriptType, \
+     TypeScriptType extends RescriptType> = TypeScriptType;"
   in
   Emitters.export_early ~emitters alias
 

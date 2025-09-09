@@ -7,7 +7,6 @@ type attribute_payload =
   | IntPayload of string
   | StringPayload of string
   | TuplePayload of attribute_payload list
-  | RecordPayload of (string * attribute_payload) list
   | UnrecognizedPayload
 
 type t = GenType | GenTypeOpaque | NoGenType
@@ -29,14 +28,12 @@ let tag_is_tag s = s = "tag"
 let tag_is_unboxed s = s = "unboxed" || s = "ocaml.unboxed"
 let tag_is_gentype_import s = s = "genType.import" || s = "gentype.import"
 let tag_is_gentype_opaque s = s = "genType.opaque" || s = "gentype.opaque"
-let tag_is_gentype_satisfies s = s = "genType.satisfies" || s = "gentype.satisfies"
+let tag_is_gentype_satisfies s =
+  s = "genType.satisfies" || s = "gentype.satisfies"
 
 let tag_is_one_of_the_gentype_annotations s =
-  tag_is_gentype s
-  || tag_is_gentype_as s
-  || tag_is_gentype_import s
-  || tag_is_gentype_opaque s
-  || tag_is_gentype_satisfies s
+  tag_is_gentype s || tag_is_gentype_as s || tag_is_gentype_import s
+  || tag_is_gentype_opaque s || tag_is_gentype_satisfies s
 
 let tag_is_gentype_ignore_interface s =
   s = "genType.ignoreInterface" || s = "gentype.ignoreInterface"
@@ -68,26 +65,6 @@ let rec get_attribute_payload check_text (attributes : Typedtree.attributes) =
              []
       in
       Some (TuplePayload payloads)
-    | {pexp_desc = Pexp_record (fields, _)} ->
-      let items =
-        fields
-        |> List.fold_left
-             (fun acc
-                  ({Parsetree.lid; x; _} :
-                    Parsetree.expression Parsetree.record_element) ->
-               let key_opt =
-                 match lid.Location.txt with
-                 | Longident.Lident s -> Some s
-                 | Longident.Ldot (_, s) -> Some s
-                 | _ -> None
-               in
-               match (key_opt, from_expr x) with
-               | Some key, Some v -> (key, v) :: acc
-               | _ -> acc)
-             []
-        |> List.rev
-      in
-      Some (RecordPayload items)
     | {pexp_desc = Pexp_ident {txt}} -> Some (IdentPayload txt)
     | _ -> None
   in
@@ -163,15 +140,14 @@ let get_attribute_import_renaming attributes =
   let gentype_as_renaming = attributes |> get_gentype_as_renaming in
   match (attribute_import, gentype_as_renaming) with
   | Some (_, StringPayload import_string), _ ->
-    (Some import_string, gentype_as_renaming, None, None)
+    (Some import_string, gentype_as_renaming)
   | ( Some
         ( _,
           TuplePayload
             [StringPayload import_string; StringPayload rename_string] ),
       _ ) ->
-    (* Tuple form encodes (importPath, remoteExportName). Keep remote name separate. *)
-    (Some import_string, gentype_as_renaming, None, Some rename_string)
-  | _ -> (None, gentype_as_renaming, None, None)
+    (Some import_string, Some rename_string)
+  | _ -> (None, gentype_as_renaming)
 
 let get_attribute_satisfies attributes =
   match attributes |> get_attribute_payload tag_is_gentype_satisfies with

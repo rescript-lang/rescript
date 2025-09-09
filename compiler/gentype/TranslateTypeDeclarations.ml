@@ -59,7 +59,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     | false -> None
     (* one means don't know *)
   in
-  let import_string_opt, name_as, _import_exact_opt, remote_export_name_opt =
+  let import_string_opt, name_as =
     type_attributes |> Annotation.get_attribute_import_renaming
   in
   let satisfies_opt = type_attributes |> Annotation.get_attribute_satisfies in
@@ -99,9 +99,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       (translation : TranslateTypeExprFromTypes.translation) =
     let export_from_type_declaration =
       type_name
-      |> create_export_type_from_type_declaration ~annotation:annotation_for_export
-           ~loc ~name_as
-           ~opaque
+      |> create_export_type_from_type_declaration
+           ~annotation:annotation_for_export ~loc ~name_as ~opaque
            ~type_:(apply_satisfies_wrapper translation.type_)
            ~type_env ~doc_string ~type_vars
     in
@@ -173,35 +172,31 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     let name_with_module_path =
       typeName_ |> TypeEnv.add_module_path ~type_env |> ResolvedName.to_string
     in
-    (* Use the remote export name (if provided) to build the import and alias.
-       Preserve casing from the TS source exactly. *)
-    let remote_type_name =
-      match remote_export_name_opt with
-      | Some s -> s
-      | None -> name_with_module_path
+    let type_name, as_type_name =
+      match name_as with
+      | Some as_string -> (as_string, "$$" ^ name_with_module_path)
+      | None -> (name_with_module_path, "$$" ^ name_with_module_path)
     in
-    let type_name = remote_type_name in
-    let as_type_name = remote_type_name ^ "$TypeScript" in
-    let import_path = import_string |> ImportPath.from_string_unsafe in
-    let base_import =
-      {CodeItem.type_name; as_type_name = Some as_type_name; import_path}
+    let import_types =
+      [
+        {
+          CodeItem.type_name;
+          as_type_name = Some as_type_name;
+          import_path = import_string |> ImportPath.from_string_unsafe;
+        };
+      ]
     in
-    (* Only import the aliased TypeScript type; no wrappers or extra aliases. *)
-    let import_types = [base_import] in
     let export_from_type_declaration =
       (* Make the imported type usable from other modules by exporting it too. *)
-      let export_type_body =
-        as_type_name
-        |> ident ~type_args:(type_vars |> List.map (fun s -> TypeVar s))
-      in
       typeName_
       |> create_export_type_from_type_declaration ~doc_string
            ~annotation:GenType ~loc ~name_as:None ~opaque:(Some false)
-           ~type_:export_type_body ~type_env ~type_vars
+           ~type_:
+             (as_type_name
+             |> ident ~type_args:(type_vars |> List.map (fun s -> TypeVar s)))
+           ~type_env ~type_vars
     in
-    [
-      {CodeItem.import_types; export_from_type_declaration};
-    ]
+    [{CodeItem.import_types; export_from_type_declaration}]
   | (GeneralDeclarationFromTypes None | GeneralDeclaration None), None ->
     {
       CodeItem.import_types = [];
@@ -248,8 +243,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       | _ -> translation.type_
     in
     {translation with type_ = apply_satisfies_wrapper type_}
-    |> handle_general_declaration
-    |> return_type_declaration
+    |> handle_general_declaration |> return_type_declaration
   | RecordDeclarationFromTypes label_declarations, None ->
     let {TranslateTypeExprFromTypes.dependencies; type_} =
       label_declarations |> translate_label_declarations
@@ -264,8 +258,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       export_from_type_declaration =
         type_name
         |> create_export_type_from_type_declaration ~doc_string
-             ~annotation:annotation_for_export ~loc
-             ~name_as ~opaque ~type_:(apply_satisfies_wrapper type_)
+             ~annotation:annotation_for_export ~loc ~name_as ~opaque
+             ~type_:(apply_satisfies_wrapper type_)
              ~type_env ~type_vars;
     }
     |> return_type_declaration

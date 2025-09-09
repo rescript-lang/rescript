@@ -601,7 +601,7 @@ let propagate_annotation_to_sub_types ~code_items
   in
   (new_type_map, !annotated_set)
 
-let emit_translation_as_string ~(config : Config.t) ~file_name
+let emit_translation_as_string ~config ~file_name
     ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
     (translation : Translation.t) =
   let initial_env =
@@ -649,33 +649,8 @@ let emit_translation_as_string ~(config : Config.t) ~file_name
   and env = initial_env in
   let env, emitters =
     (* imports from type declarations go first to build up type tables *)
-    let all_import_types =
-      import_types_from_type_declarations @ translation.import_types
-      |> List.sort_uniq Translation.import_type_compare
-    in
-    (* Prefer direct imports of an alias name over aliased imports from other modules.
-       Use a single pass map: keep first direct (no alias) for a given name,
-       otherwise keep the first seen. *)
-    let chosen_by_name =
-      List.fold_left
-        (fun acc (it : CodeItem.import_type) ->
-          let key =
-            match it.as_type_name with
-            | Some alias -> alias
-            | None -> it.type_name
-          in
-          match StringMap.find key acc with
-          | (prev : CodeItem.import_type) -> (
-            match (prev.as_type_name, it.as_type_name) with
-            | None, Some _ -> acc (* keep direct over aliased *)
-            | _ -> acc)
-          | exception Not_found -> StringMap.add key it acc)
-        StringMap.empty all_import_types
-    in
-    let filtered_import_types =
-      chosen_by_name |> StringMap.to_seq |> Seq.map snd |> List.of_seq
-    in
-    filtered_import_types
+    import_types_from_type_declarations @ translation.import_types
+    |> List.sort_uniq Translation.import_type_compare
     |> emit_import_types ~config ~emitters ~env
          ~input_cmt_translate_type_declarations ~output_file_relative ~resolver
          ~type_name_is_interface

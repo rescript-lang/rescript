@@ -5,17 +5,17 @@
 
 import * as TypesJS from './Types.res.js';
 
-import type {List_t as Belt_List_t} from '../../src/shims/Belt.shim';
-
 import type {Json_t as Js_Json_t} from '../../src/shims/Js.shim';
 
-import type {t as Location_t} from '../../src/location/location.gen';
+import type {List_t as Belt_List_t} from '../../src/shims/Belt.shim';
 
 import type {M_t__ as TypeNameSanitize_M_t__} from '../../src/TypeNameSanitize.gen';
 
+import type {list} from '../../src/shims/RescriptPervasives.shim';
+
 import type {t_ as TypeNameSanitize_t_} from '../../src/TypeNameSanitize.gen';
 
-import type {list} from '../../src/shims/RescriptPervasives.shim';
+import type {t as Location_t} from '../../src/location/location.gen';
 
 export type t = number;
 
