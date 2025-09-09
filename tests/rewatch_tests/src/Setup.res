@@ -10,6 +10,7 @@ type processUtils = {
   node: (string, array<string>, processOptions) => promise<unit>,
   git: (array<string>, processOptions) => promise<unit>,
   npm: (array<string>, processOptions) => promise<unit>,
+  deno: (array<string>, processOptions) => promise<unit>,
 }
 
 // Import process utilities (Windows-safe file URL)
@@ -30,6 +31,9 @@ type commands = {
   },
   git: {
     checkout: unit => promise<unit>,
+  },
+  deno: {
+    install: unit => promise<unit>,
   },
 }
 
@@ -55,8 +59,19 @@ let commands = async (workingDirectory: string): commands => {
   }
 
   // npm
-  let install = async () => {
-    let _ = await processUtils.npm(["install"], {cwd: workingDirectory})
+  let npm: \"commands.npm" = {
+    let install = async () => {
+      let _ = await processUtils.npm(["install"], {cwd: workingDirectory})
+    }
+    {install: install}
+  }
+
+  // deno
+  let deno: \"commands.deno" = {
+    let install = async () => {
+      let _ = await processUtils.deno(["install"], {cwd: workingDirectory})
+    }
+    {install: install}
   }
 
   // git
@@ -66,9 +81,8 @@ let commands = async (workingDirectory: string): commands => {
 
   {
     rescript,
-    npm: {
-      install: install,
-    },
+    npm,
+    deno,
     git: {
       checkout: checkout,
     },

@@ -8,5 +8,8 @@
     }
   ],
   "suffix": ".mjs",
-  "dependencies": []
+  "dependencies": [],
+  "warnings": {
+    "number": "-30"
+  }
 }

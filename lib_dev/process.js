@@ -35,6 +35,7 @@ export const {
   rewatch,
   git,
   npm,
+  deno,
 } = setup();
 
 /**
@@ -243,6 +244,17 @@ export function setup(cwd = process.cwd()) {
      */
     npm(args = [], options = {}) {
       return exec("npm", args, options);
+    },
+
+    /**
+     * Execute deno command
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    deno(args = [], options = {}) {
+      return exec("deno", args, options);
     },
   };
 }

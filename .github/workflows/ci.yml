@@ -90,6 +90,10 @@ jobs:
         with:
           cache: yarn
           node-version-file: .nvmrc
+      # We use Deno for the rewatch tests in node scripts.test.js -rewatch
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
 
       - name: Install npm packages
         run: yarn install

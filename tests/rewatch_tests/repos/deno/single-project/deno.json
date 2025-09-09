@@ -1,0 +1,10 @@
+{
+  "nodeModulesDir": "auto",
+  "lock": false,
+  "tasks": {
+    "build": "rescript"
+  },
+  "imports": {
+    "rescript": "npm:rescript@12.0.0-beta.10"
+  }
+}

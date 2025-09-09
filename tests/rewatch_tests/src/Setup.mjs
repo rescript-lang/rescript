@@ -37,6 +37,17 @@ async function commands(workingDirectory) {
       cwd: workingDirectory
     });
   };
+  let npm = {
+    install: install
+  };
+  let install$1 = async () => {
+    await processUtils.deno(["install"], {
+      cwd: workingDirectory
+    });
+  };
+  let deno = {
+    install: install$1
+  };
   let checkout = async () => {
     await processUtils.git([
       "checkout",
@@ -47,12 +58,11 @@ async function commands(workingDirectory) {
   };
   return {
     rescript: rescript,
-    npm: {
-      install: install
-    },
+    npm: npm,
     git: {
       checkout: checkout
-    }
+    },
+    deno: deno
   };
 }
 
