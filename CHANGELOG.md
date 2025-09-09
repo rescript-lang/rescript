@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Fix return type of `String.charCodeAt`. https://github.com/rescript-lang/rescript/pull/7864
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
