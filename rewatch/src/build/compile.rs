@@ -6,6 +6,7 @@ use super::build_types::*;
 use super::logs;
 use super::packages;
 use crate::config;
+use crate::config::Config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::project_context::ProjectContext;
@@ -335,6 +336,21 @@ pub fn compile(
     Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
 
+fn get_runtime_path_args(package_config: &Config, project_context: &ProjectContext) -> Result<Vec<String>> {
+    match std::env::var("RESCRIPT_RUNTIME") {
+        Ok(runtime_path) => Ok(vec!["-runtime-path".to_string(), runtime_path]),
+        Err(_) => match helpers::try_package_path(package_config, project_context, "@rescript/runtime") {
+            Ok(runtime_path) => Ok(vec![
+                "-runtime-path".to_string(),
+                runtime_path.to_string_lossy().to_string(),
+            ]),
+            Err(err) => Err(anyhow!(
+                "The rescript runtime package could not be found.\nPlease set RESCRIPT_RUNTIME environment variable or make sure the runtime package is installed.\nError: {err}"
+            )),
+        },
+    }
+}
+
 pub fn compiler_args(
     config: &config::Config,
     ast_path: &Path,
@@ -349,7 +365,7 @@ pub fn compiler_args(
     // Is the file listed as "type":"dev"?
     is_type_dev: bool,
     is_local_dep: bool,
-) -> Vec<String> {
+) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
@@ -431,13 +447,16 @@ pub fn compiler_args(
             .collect()
     };
 
-    vec![
+    let runtime_path_args = get_runtime_path_args(config, project_context)?;
+
+    Ok(vec![
         namespace_args,
         read_cmi_args,
         vec![
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
         ],
+        runtime_path_args,
         dependency_paths,
         jsx_args,
         jsx_module_args,
@@ -460,7 +479,7 @@ pub fn compiler_args(
         // ],
         vec![ast_path.to_string_lossy().to_string()],
     ]
-    .concat()
+    .concat())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -588,7 +607,7 @@ fn compile_file(
         &Some(packages),
         is_type_dev,
         package.is_local_dep,
-    );
+    )?;
 
     let to_mjs = Command::new(bsc_path)
         .current_dir(

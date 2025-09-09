@@ -99,7 +99,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         &None,
         is_type_dev,
         true,
-    );
+    )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
         compiler_args,
