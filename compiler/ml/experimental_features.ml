@@ -20,4 +20,6 @@ let enable_from_string (s : string) =
   | Some f -> enabled_features := FeatureSet.add f !enabled_features
   | None -> ()
 
+let reset () = enabled_features := FeatureSet.empty
+
 let is_enabled (f : feature) = FeatureSet.mem f !enabled_features

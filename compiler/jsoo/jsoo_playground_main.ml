@@ -378,6 +378,7 @@ module Compile = struct
   (* Responsible for resetting all compiler state as if it were a new instance *)
   let reset_compiler () =
     warning_infos := [||];
+    Experimental_features.reset ();
     flush_warning_buffer () |> ignore;
     Warnings.reset_fatal ();
     Env.reset_cache_toplevel ()
