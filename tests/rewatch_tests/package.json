@@ -9,7 +9,7 @@
     "build": "rescript build",
     "clean": "rescript clean",
     "dev": "rescript -w",
-    "test": "node --test \"tests/**/*.test.mjs\"",
+    "test": "node --test-concurrency=1 --test \"tests/**/*.test.mjs\"",
     "fmt": "rescript format"
   }
 }
