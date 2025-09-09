@@ -2977,6 +2977,21 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
 and parse_jsx_props p : Parsetree.jsx_prop list =
   parse_region ~grammar:Grammar.JsxAttribute ~f:parse_jsx_prop p
 
+and wrap_jsx_string_literal expr =
+  (* Check if the expression is a string literal and wrap it with Jsx.string() *)
+  match expr.Parsetree.pexp_desc with
+  | Pexp_constant (Pconst_string (s, delimiter)) ->
+    let jsx_string_ident = 
+      Ast_helper.Exp.ident 
+        ~loc:expr.pexp_loc
+        (Location.mkloc (Longident.Ldot (Longident.Lident "Jsx", "string")) expr.pexp_loc)
+    in
+    Ast_helper.Exp.apply 
+      ~loc:expr.pexp_loc
+      jsx_string_ident
+      [(Nolabel, expr)]
+  | _ -> expr
+
 and parse_jsx_children p : Parsetree.jsx_children =
   let rec loop p children =
     match p.Parser.token with
@@ -2991,12 +3006,14 @@ and parse_jsx_children p : Parsetree.jsx_children =
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
-      loop p (child :: children)
+      let wrapped_child = wrap_jsx_string_literal child in
+      loop p (wrapped_child :: children)
     | token when Grammar.is_jsx_child_start token ->
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
-      loop p (child :: children)
+      let wrapped_child = wrap_jsx_string_literal child in
+      loop p (wrapped_child :: children)
     | _ -> children
   in
   let children =
