@@ -261,7 +261,24 @@ let transl_constructor_arguments env closed = function
     (Types.Cstr_tuple (List.map (fun t -> t.ctyp_type) l), Cstr_tuple l)
   | Pcstr_record l ->
     let lbls, lbls' = transl_labels env closed l in
-    (Types.Cstr_record lbls', Cstr_record lbls)
+    let expanded =
+      Record_type_spread.expand_labels_with_type_spreads
+        ~return_none_on_failure:true env lbls lbls'
+    in
+    (match expanded with
+    | Some (lbls, lbls') -> (Types.Cstr_record lbls', Cstr_record lbls)
+    | None -> (
+      (* Ambiguous `{...t}`: if only spread present and it doesn't resolve to a
+         record type, treat it as an object-typed tuple argument. *)
+      match l with
+      | [{pld_name = {txt = "..."}; pld_type = spread_typ; _}] ->
+        let obj_ty =
+          Ast_helper.Typ.object_ ~loc:spread_typ.ptyp_loc
+            [Parsetree.Oinherit spread_typ] Asttypes.Closed
+        in
+        let cty = transl_simple_type env closed obj_ty in
+        (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])
+      | _ -> (Types.Cstr_record lbls', Cstr_record lbls)))
 
 let make_constructor env type_path type_params sargs sret_type =
   match sret_type with
@@ -582,64 +599,8 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
         transl_labels ~record_name:sdecl.ptype_name.txt env true lbls
       in
       let lbls_opt =
-        match Record_type_spread.has_type_spread lbls with
-        | true ->
-          let rec extract t =
-            match t.desc with
-            | Tpoly (t, []) -> extract t
-            | _ -> Ctype.repr t
-          in
-          let mk_lbl (l : Types.label_declaration)
-              (ld_type : Typedtree.core_type)
-              (type_vars : (string * Types.type_expr) list) :
-              Typedtree.label_declaration =
-            {
-              ld_id = l.ld_id;
-              ld_name = {txt = Ident.name l.ld_id; loc = l.ld_loc};
-              ld_mutable = l.ld_mutable;
-              ld_optional = l.ld_optional;
-              ld_type =
-                {
-                  ld_type with
-                  ctyp_type =
-                    Record_type_spread.substitute_type_vars type_vars l.ld_type;
-                };
-              ld_loc = l.ld_loc;
-              ld_attributes = l.ld_attributes;
-            }
-          in
-          let rec process_lbls acc lbls lbls' =
-            match (lbls, lbls') with
-            | {ld_name = {txt = "..."}; ld_type} :: rest, _ :: rest' -> (
-              match
-                Ctype.extract_concrete_typedecl env (extract ld_type.ctyp_type)
-              with
-              | _p0, _p, {type_kind = Type_record (fields, _repr); type_params}
-                ->
-                let type_vars =
-                  Record_type_spread.extract_type_vars type_params
-                    ld_type.ctyp_type
-                in
-                process_lbls
-                  ( fst acc
-                    @ Ext_list.map fields (fun l -> mk_lbl l ld_type type_vars),
-                    snd acc
-                    @ Ext_list.map fields (fun l ->
-                          {
-                            l with
-                            ld_type =
-                              Record_type_spread.substitute_type_vars type_vars
-                                l.ld_type;
-                          }) )
-                  rest rest'
-              | _ -> assert false
-              | exception _ -> None)
-            | lbl :: rest, lbl' :: rest' ->
-              process_lbls (fst acc @ [lbl], snd acc @ [lbl']) rest rest'
-            | _ -> Some acc
-          in
-          process_lbls ([], []) lbls lbls'
-        | false -> Some (lbls, lbls')
+        Record_type_spread.expand_labels_with_type_spreads
+          ~return_none_on_failure:true env lbls lbls'
       in
       let rec check_duplicates loc (lbls : Typedtree.label_declaration list)
           seen =

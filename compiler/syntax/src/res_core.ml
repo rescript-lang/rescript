@@ -149,10 +149,6 @@ module ErrorMessages = struct
   let string_interpolation_in_pattern =
     "String interpolation is not supported in pattern matching."
 
-  let spread_in_record_declaration =
-    "A record type declaration doesn't support the ... spread. Only an object \
-     (with quoted field names) does."
-
   let object_quoted_field_name name =
     "An object type declaration needs quoted field names. Did you mean \""
     ^ name ^ "\"?"
@@ -4983,40 +4979,65 @@ and parse_constr_decl_args p =
           (* start of object type spreading, e.g. `User({...a, "u": int})` *)
           Parser.next p;
           let typ = parse_typ_expr p in
-          let () =
+          let had_no_extra_fields =
             match p.token with
             | Rbrace ->
               (* {...x}, spread without extra fields *)
-              Parser.next p
-            | _ -> Parser.expect Comma p
+              Parser.next p; true
+            | _ -> Parser.expect Comma p; false
           in
-          let () =
+          (* Heuristic: if the next element starts with a string, it's an object field.
+             Otherwise, treat it as a record field start (attributes, mutable,
+             '...', keywords, or identifiers). This also covers cases where fields
+             have attributes or other qualifiers, not just bare Lidents. *)
+          let is_record_after_spread =
             match p.token with
-            | Lident _ ->
-              Parser.err ~start_pos:dotdotdot_start ~end_pos:dotdotdot_end p
-                (Diagnostics.message ErrorMessages.spread_in_record_declaration)
-            | _ -> ()
+            | String _ -> false
+            | _ -> true
           in
-          let fields =
-            Parsetree.Oinherit typ
-            :: parse_comma_delimited_region
-                 ~grammar:Grammar.StringFieldDeclarations ~closing:Rbrace
-                 ~f:parse_string_field_declaration p
-          in
-          Parser.expect Rbrace p;
-          let loc = mk_loc start_pos p.prev_end_pos in
-          let typ =
-            Ast_helper.Typ.object_ ~loc fields Asttypes.Closed
-            |> parse_type_alias p
-          in
-          let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
-          Parser.optional p Comma |> ignore;
-          let more_args =
-            parse_comma_delimited_region ~grammar:Grammar.TypExprList
-              ~closing:Rparen ~f:parse_typ_expr_region p
-          in
-          Parser.expect Rparen p;
-          Parsetree.Pcstr_tuple (typ :: more_args)
+          if is_record_after_spread || had_no_extra_fields then (
+            (* Treat as record-style inline record with a type spread *)
+            let spread_field_name =
+              Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
+            in
+            let spread_field_loc = mk_loc start_pos typ.ptyp_loc.loc_end in
+            let spread_field =
+              Ast_helper.Type.field ~attrs:[] ~loc:spread_field_loc
+                ~mut:Asttypes.Immutable spread_field_name typ
+            in
+            let more_fields =
+              if had_no_extra_fields then []
+              else
+                parse_comma_delimited_region
+                  ~grammar:Grammar.FieldDeclarations ~closing:Rbrace
+                  ~f:parse_field_declaration_region p
+            in
+            if not had_no_extra_fields then Parser.expect Rbrace p;
+            Parser.optional p Comma |> ignore;
+            Parser.expect Rparen p;
+            Parsetree.Pcstr_record (spread_field :: more_fields))
+          else
+            (* Object-style spread, remains a tuple arg of object type *)
+            let fields =
+              Parsetree.Oinherit typ
+              :: parse_comma_delimited_region
+                   ~grammar:Grammar.StringFieldDeclarations ~closing:Rbrace
+                   ~f:parse_string_field_declaration p
+            in
+            Parser.expect Rbrace p;
+            let loc = mk_loc start_pos p.prev_end_pos in
+            let typ =
+              Ast_helper.Typ.object_ ~loc fields Asttypes.Closed
+              |> parse_type_alias p
+            in
+            let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
+            Parser.optional p Comma |> ignore;
+            let more_args =
+              parse_comma_delimited_region ~grammar:Grammar.TypExprList
+                ~closing:Rparen ~f:parse_typ_expr_region p
+            in
+            Parser.expect Rparen p;
+            Parsetree.Pcstr_tuple (typ :: more_args)
         | _ -> (
           let attrs = parse_attributes p in
           match p.Parser.token with
