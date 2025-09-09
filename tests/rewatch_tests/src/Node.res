@@ -22,6 +22,11 @@ module FsPromises = {
   external access: string => promise<unit> = "access"
 }
 
+module Process = {
+  @scope("process")
+  external env: dict<string> = "env"
+}
+
 module Test = {
   @module("node:test")
   external describe: (string, unit => unit) => unit = "describe"

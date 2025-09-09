@@ -20,12 +20,14 @@ async function commands(workingDirectory) {
   }
   let build = async () => {
     await processUtils.rewatch("build", [], {
-      cwd: workingDirectory
+      cwd: workingDirectory,
+      stdio: "inherit"
     });
   };
   let clean = async () => {
     await processUtils.rewatch("clean", [], {
-      cwd: workingDirectory
+      cwd: workingDirectory,
+      stdio: "inherit"
     });
   };
   let rescript = {

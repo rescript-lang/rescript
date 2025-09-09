@@ -7,12 +7,15 @@ let Url = {};
 
 let FsPromises = {};
 
+let Process = {};
+
 let Test = {};
 
 export {
   Path,
   Url,
   FsPromises,
+  Process,
   Test,
 }
 /* No side effect */

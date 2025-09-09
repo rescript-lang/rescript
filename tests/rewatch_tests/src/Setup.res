@@ -1,6 +1,6 @@
 open Node
 
-type processOptions = {cwd: string}
+type processOptions = {cwd: string, stdio?: string}
 
 type processUtils = {
   rescript: (string, array<string>, processOptions) => promise<unit>,
@@ -50,10 +50,10 @@ let commands = async (workingDirectory: string): commands => {
 
   let rescript = {
     let build = async () => {
-      let _ = await processUtils.rewatch("build", [], {cwd: workingDirectory})
+      let _ = await processUtils.rewatch("build", [], {cwd: workingDirectory, stdio: "inherit"})
     }
     let clean = async () => {
-      let _ = await processUtils.rewatch("clean", [], {cwd: workingDirectory})
+      let _ = await processUtils.rewatch("clean", [], {cwd: workingDirectory, stdio: "inherit"})
     }
     {build, clean}
   }
@@ -61,7 +61,7 @@ let commands = async (workingDirectory: string): commands => {
   // npm
   let npm: \"commands.npm" = {
     let install = async () => {
-      let _ = await processUtils.npm(["install"], {cwd: workingDirectory})
+      let _ = await processUtils.npm(["install"], {cwd: workingDirectory, stdio: "inherit"})
     }
     {install: install}
   }
@@ -69,14 +69,14 @@ let commands = async (workingDirectory: string): commands => {
   // deno
   let deno: \"commands.deno" = {
     let install = async () => {
-      let _ = await processUtils.deno(["install"], {cwd: workingDirectory})
+      let _ = await processUtils.deno(["install"], {cwd: workingDirectory, stdio: "inherit"})
     }
     {install: install}
   }
 
   // git
   let checkout = async () => {
-    let _ = await processUtils.git(["checkout", "."], {cwd: workingDirectory})
+    let _ = await processUtils.git(["checkout", "."], {cwd: workingDirectory, stdio: "inherit"})
   }
 
   {

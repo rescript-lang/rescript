@@ -10,5 +10,5 @@
   },
   "suffix": ".res.mjs",
   "bs-dependencies": [],
-  "bsc-flags": []
+  "compiler-flags": ["-nostdlib"]
 }
