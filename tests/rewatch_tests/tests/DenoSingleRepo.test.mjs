@@ -12,8 +12,8 @@ let commands = await Setup.commands(repo);
 Nodetest.describe("A single ReScript project using deno as package manager", () => {
   Nodetest.before(async () => await commands.deno.install());
   Nodetest.beforeEach(async () => await commands.git.checkout());
-  Nodetest.test("should clean", async () => {});
-  Nodetest.test("should build", async () => {});
+  Nodetest.test("should clean", async () => await commands.rescript.clean());
+  Nodetest.test("should build", async () => await commands.rescript.build());
 });
 
 export {
