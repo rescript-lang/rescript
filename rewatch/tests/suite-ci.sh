@@ -15,6 +15,7 @@ fi
 
 export REWATCH_EXECUTABLE
 export RESCRIPT_BSC_EXE
+export RESCRIPT_RUNTIME
 
 source ./utils.sh
 
