@@ -141,16 +141,63 @@ let translate_primitive ~config ~output_file_relative ~resolver ~type_env
   let attribute_import, attribute_renaming =
     value_description.val_attributes |> Annotation.get_attribute_import_renaming
   in
-  match (type_expr_translation.type_, attribute_import) with
+  let satisfies_attr =
+    value_description.val_attributes |> Annotation.get_attribute_satisfies
+  in
+  (* Determine whether to export the imported value on the TS surface. *)
+  let has_plain_gentype =
+    Annotation.has_attribute Annotation.tag_is_gentype
+      value_description.val_attributes
+  in
+  let has_gentype_import =
+    Annotation.has_attribute Annotation.tag_is_gentype_import
+      value_description.val_attributes
+  in
+  let export_binding = has_plain_gentype || has_gentype_import in
+  (* Optionally wrap the type with the `satisfies` helper when present. *)
+  let type_with_satisfies type_ =
+    match
+      value_description.val_attributes |> Annotation.get_attribute_satisfies
+    with
+    | None -> type_
+    | Some (import_str, path) ->
+      let import_path = ImportPath.from_string_unsafe import_str in
+      let import_path_str = ImportPath.emit import_path in
+      (* For values, reference the TS value type via `typeof import('...').x` *)
+      let inline_import =
+        let base = "typeof import(\"" ^ import_path_str ^ "\")" in
+        match path with
+        | [] -> base
+        | _ -> base ^ "." ^ String.concat "." path
+      in
+      let ts_type = ident ~builtin:true inline_import in
+      ident ~builtin:true ~type_args:[type_; ts_type]
+        SatisfiesHelpers.helper_type_name
+  in
+  let effective_import_string =
+    match (attribute_import, satisfies_attr) with
+    | Some import_string, _ -> Some import_string
+    | None, Some (import_string, _) -> Some import_string
+    | None, None -> None
+  in
+  match (type_expr_translation.type_, effective_import_string) with
   | _, Some import_string ->
     let as_path =
       match attribute_renaming with
       | Some as_path -> as_path
-      | None -> value_name
+      | None -> (
+        match satisfies_attr with
+        | Some (_import_str, path) -> (
+          match List.rev path with
+          | last :: _ -> last
+          | [] -> value_name)
+        | None -> value_name)
     in
     let type_vars = type_expr_translation.type_ |> TypeVars.free in
     let type_ =
-      type_expr_translation.type_ |> abstract_the_type_parameters ~type_vars
+      type_expr_translation.type_
+      |> abstract_the_type_parameters ~type_vars
+      |> type_with_satisfies
     in
     {
       import_types =
@@ -164,6 +211,7 @@ let translate_primitive ~config ~output_file_relative ~resolver ~type_env
               import_annotation = import_string |> Annotation.import_from_string;
               type_;
               value_name;
+              export_binding;
             };
         ];
       type_declarations = [];

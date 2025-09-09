@@ -3,10 +3,7 @@
 /* eslint-disable */
 /* tslint:disable */
 
-export type $RescriptTypeSatisfiesTypeScriptType<
-RescriptType,
-TypeScriptType extends RescriptType
-> = TypeScriptType;
+export type $RescriptTypeSatisfiesTypeScriptType<RescriptType, TypeScriptType extends RescriptType> = TypeScriptType;
 
 import * as GenTypeSatisfiesExpectedErrorsJS from './GenTypeSatisfiesExpectedErrors.res.js';
 

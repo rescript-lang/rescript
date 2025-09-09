@@ -361,6 +361,57 @@ let emit_export_const ~early ?(comment = "") ~config
      | false -> Emitters.export)
        ~emitters
 
+let emit_export_const_satisfies ~early ?(comment = "") ~config
+    ?(doc_string = DocString.empty) ~emitters ~name ~satisfies_type
+    ~type_name_is_interface expr =
+  let type_string =
+    satisfies_type |> type_to_string ~config ~type_name_is_interface
+  in
+  (match comment = "" with
+  | true -> comment
+  | false -> "// " ^ comment ^ "\n")
+  ^ DocString.render doc_string
+  ^ "export const "
+  ^ name
+  ^ " = "
+  ^ expr
+  ^ " satisfies "
+  ^ type_string
+  ^ ";"
+  |> (match early with
+     | true -> Emitters.export_early
+     | false -> Emitters.export)
+       ~emitters
+
+let emit_const_satisfies ~early ~emitters ~config ~satisfies_type
+    ~type_name_is_interface ?(comment = "") name expr =
+  let type_string =
+    satisfies_type |> type_to_string ~config ~type_name_is_interface
+  in
+  ((match comment = "" with
+   | true -> ""
+   | false -> "// " ^ comment ^ "\n")
+  ^ "const " ^ name ^ " = " ^ expr ^ " satisfies " ^ type_string ^ ";")
+  |> (match early with
+     | true -> Emitters.export_early
+     | false -> Emitters.export)
+       ~emitters
+
+let emit_export_const_assign ~early ?(comment = "") ~config
+    ?(doc_string = DocString.empty) ~emitters ~name ~type_
+    ~type_name_is_interface expr =
+  let type_string = type_ |> type_to_string ~config ~type_name_is_interface in
+  (match comment = "" with
+  | true -> comment
+  | false -> "// " ^ comment ^ "\n")
+  ^ DocString.render doc_string
+  ^ "export const " ^ name ^ ": " ^ type_string ^ " = " ^ expr
+  ^ ";" ^ "\n" ^ "// value-satisfies"
+  |> (match early with
+     | true -> Emitters.export_early
+     | false -> Emitters.export)
+       ~emitters
+
 let emit_export_default ~emitters name =
   "export default " ^ name ^ ";" |> Emitters.export ~emitters
 
@@ -472,3 +523,26 @@ let emit_import_type_as ~emitters ~config ~type_name ~as_type_name
 
 let emit_type_cast ~config ~type_ ~type_name_is_interface s =
   s ^ " as " ^ (type_ |> type_to_string ~config ~type_name_is_interface)
+
+let rec type_to_string_for_value ~config ~type_name_is_interface type_ =
+  match type_ with
+  | Ident {builtin = _; name; type_args = res_t :: _}
+    when SatisfiesHelpers.is_helper_ident name ->
+    type_to_string_for_value ~config ~type_name_is_interface res_t
+  | _ -> type_to_string ~config ~type_name_is_interface type_
+
+let emit_export_const_assign_value ~early ?(comment = "") ~config
+    ?(doc_string = DocString.empty) ~emitters ~name ~type_
+    ~type_name_is_interface expr =
+  let type_string =
+    type_ |> type_to_string_for_value ~config ~type_name_is_interface
+  in
+  (match comment = "" with
+  | true -> comment
+  | false -> "// " ^ comment ^ "\n")
+  ^ DocString.render doc_string
+  ^ "export const " ^ name ^ ": " ^ type_string ^ " = " ^ expr ^ ";"
+  |> (match early with
+     | true -> Emitters.export_early
+     | false -> Emitters.export)
+       ~emitters

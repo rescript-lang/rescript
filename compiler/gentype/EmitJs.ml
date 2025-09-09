@@ -143,7 +143,8 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
     Log_.item "Code Item: %s\n"
       (code_item |> code_item_to_string ~config ~type_name_is_interface);
   match code_item with
-  | ImportValue {as_path; import_annotation; type_; value_name} ->
+  | ImportValue {as_path; import_annotation; type_; value_name; export_binding}
+    ->
     let import_path = import_annotation.import_path in
     let first_name_in_path, rest_of_path =
       match value_name = as_path with
@@ -163,8 +164,15 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
       in
       (emitters, value_name_not_checked, env)
     in
-    let type_ =
+    (* Extract potential satisfies wrapper to drive custom emission. *)
+    let satisfies_rescript_type_opt =
       match type_ with
+      | Ident {builtin = _; name; type_args = [rescript_t; _]}
+        when SatisfiesHelpers.is_helper_ident name -> Some rescript_t
+      | _ -> None
+    in
+    let adjust_for_function_component t =
+      match t with
       | Function
           ({
              arg_types = [{a_type = Object (closed_flag, fields); a_name}];
@@ -217,44 +225,81 @@ let emit_code_item ~config ~emitters ~module_items_emitter ~env ~file_name
             }
           in
           Function function_
-        | _ -> type_)
-      | _ -> type_
+        | _ -> t)
+      | _ -> t
     in
-    let value_name_type_checked = value_name ^ "TypeChecked" in
+    let type_for_emit = adjust_for_function_component type_ in
+    let value_name_type_checked =
+      let base = value_name ^ "TypeChecked" in
+      match export_binding with
+      | false -> "_" ^ base
+      | true -> base
+    in
     let emitters =
-      imported_as_name ^ rest_of_path
-      |> EmitType.emit_export_const ~config
-           ~comment:
-             ("In case of type error, check the type of '" ^ value_name
-            ^ "' in '"
-             ^ (file_name |> ModuleName.to_string)
-             ^ ".res'" ^ " and '"
-             ^ (import_path |> ImportPath.emit)
-             ^ "'.")
-           ~early:true ~emitters ~name:value_name_type_checked ~type_
-           ~type_name_is_interface
+      match satisfies_rescript_type_opt with
+      | Some rescript_type ->
+        let rescript_type = adjust_for_function_component rescript_type in
+        let expr = imported_as_name ^ rest_of_path in
+        (* Non-exported const for the checked binding, emitted early for ordering. *)
+        let comment =
+          match export_binding with
+          | false -> "Check imported TypeScript value conforms to ReScript type"
+          | true -> ""
+        in
+        EmitType.emit_const_satisfies ~early:true ~emitters ~config
+          ~satisfies_type:rescript_type ~type_name_is_interface ~comment
+          value_name_type_checked expr
+      | None ->
+        imported_as_name ^ rest_of_path
+        |> EmitType.emit_export_const ~config
+             ~comment:
+               ("In case of type error, check the type of '" ^ value_name
+              ^ "' in '"
+               ^ (file_name |> ModuleName.to_string)
+               ^ ".res'" ^ " and '"
+               ^ (import_path |> ImportPath.emit)
+               ^ "'.")
+             ~early:true ~emitters ~name:value_name_type_checked ~type_:type_for_emit
+             ~type_name_is_interface
     in
     let value_name_not_default =
       match value_name = "default" with
       | true -> Runtime.default
       | false -> value_name
     in
-    let emitters =
-      value_name_type_checked
-      |> EmitType.emit_type_cast ~config ~type_ ~type_name_is_interface
-      |> EmitType.emit_export_const
-           ~comment:
-             ("Export '" ^ value_name_not_default
-            ^ "' early to allow circular import from the '.bs.js' file.")
-           ~config ~early:true ~emitters ~name:value_name_not_default
-           ~type_:unknown ~type_name_is_interface
+    let env, emitters =
+      match export_binding with
+      | false -> (env, emitters)
+      | true ->
+        let emitters =
+          match satisfies_rescript_type_opt with
+          | Some _ ->
+            (* For satisfies, we can assign the typed binding directly without casts. *)
+            EmitType.emit_export_const_assign_value ~early:true ~emitters ~config
+              ~name:value_name_not_default ~type_:type_for_emit
+              ~type_name_is_interface value_name_type_checked
+              ~comment:
+                ("Export '" ^ value_name_not_default
+               ^ "' early to allow circular import from the '.bs.js' file.")
+          | None ->
+            value_name_type_checked
+            |> EmitType.emit_type_cast ~config ~type_:type_for_emit
+                 ~type_name_is_interface
+            |> EmitType.emit_export_const
+                 ~comment:
+                   ("Export '" ^ value_name_not_default
+                  ^ "' early to allow circular import from the '.bs.js' file.")
+                 ~config ~early:true ~emitters ~name:value_name_not_default
+                 ~type_:unknown ~type_name_is_interface
+        in
+        let emitters =
+          match value_name = "default" with
+          | true -> EmitType.emit_export_default ~emitters value_name_not_default
+          | false -> emitters
+        in
+        ({env with imported_value_or_component = true}, emitters)
     in
-    let emitters =
-      match value_name = "default" with
-      | true -> EmitType.emit_export_default ~emitters value_name_not_default
-      | false -> emitters
-    in
-    ({env with imported_value_or_component = true}, emitters)
+    (env, emitters)
   | ExportValue
       {doc_string; module_access_path; original_name; resolved_name; type_} ->
     let resolved_name_str = ResolvedName.to_string resolved_name in

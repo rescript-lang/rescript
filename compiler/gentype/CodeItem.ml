@@ -15,6 +15,7 @@ type import_value = {
   import_annotation: Annotation.import;
   type_: type_;
   value_name: string;
+  export_binding: bool; (* when false, only emit local satisfies check, no TS export *)
 }
 
 type export_value = {
