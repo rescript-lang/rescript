@@ -9,5 +9,5 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "compiler-flags": ["-nostdlib"]
+  "compiler-flags": []
 }
