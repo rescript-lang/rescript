@@ -4981,7 +4981,7 @@ and parse_constr_decl_args p =
           let spread_typ = parse_typ_expr p in
           match p.token with
           | Rbrace ->
-            (* `{...t}` no tail: inline record with single spread *)
+            (* {...x}, spread without extra fields *)
             Parser.next p;
             let spread_field_name =
               Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)

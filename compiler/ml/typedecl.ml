@@ -267,10 +267,10 @@ let transl_constructor_arguments env closed = function
     match expanded with
     | Some (lbls, lbls') -> (Types.Cstr_record lbls', Cstr_record lbls)
     | None -> (
-      (* Ambiguous `{...t}`: if only spread present and it doesn't resolve to a
-         record type, treat it as an object-typed tuple argument. *)
       match l with
       | [{pld_name = {txt = "..."}; pld_type = spread_typ; _}] ->
+        (* Ambiguous `{...t}`: if only spread present and it doesn't resolve to a
+         record type, treat it as an object-typed tuple argument. *)
         let obj_ty =
           Ast_helper.Typ.object_ ~loc:spread_typ.ptyp_loc
             [Parsetree.Oinherit spread_typ]
