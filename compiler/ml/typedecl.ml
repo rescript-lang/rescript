@@ -28,6 +28,7 @@ type error =
   | Repeated_parameter
   | Duplicate_constructor of string
   | Duplicate_label of string * string option
+  | Object_spread_with_record_field of string
   | Recursive_abbrev of string
   | Cycle_in_def of string * type_expr
   | Definition_mismatch of type_expr * Includecore.type_mismatch list
@@ -623,24 +624,43 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
               else if optional then Record_regular
               else Record_regular ),
           sdecl )
-      | None ->
-        (* Could not find record type decl for ...t: assume t is an object type and this is syntax ambiguity *)
-        type_record_as_object := true;
-        let fields =
-          Ext_list.map lbls_ (fun ld ->
-              match ld.pld_name.txt with
-              | "..." -> Parsetree.Oinherit ld.pld_type
-              | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
+      | None -> (
+        (* Could not find record type decl for ...t. This happens when the spread
+           target is not a record type (e.g. an object type). If additional
+           fields are present in the record, this mixes a record field with an
+           object-type spread and should be rejected. If only the spread exists,
+           reinterpret as an object type for backwards compatibility. *)
+        (* TODO: We really really need to make this "spread that needs to be resolved" 
+        concept 1st class in the AST or similar. This is quite hacky and fragile as
+        is.*)
+        let non_spread_field =
+          List.find_map
+            (fun ld -> if ld.pld_name.txt <> "..." then Some ld else None)
+            lbls_
         in
-        let sdecl =
-          {
-            sdecl with
-            ptype_kind = Ptype_abstract;
-            ptype_manifest =
-              Some (Ast_helper.Typ.object_ ~loc:sdecl.ptype_loc fields Closed);
-          }
-        in
-        (Ttype_abstract, Type_abstract, sdecl))
+        match non_spread_field with
+        | Some ld ->
+          (* Error on the first record field mixed with an object spread. *)
+          raise
+            (Error (ld.pld_loc, Object_spread_with_record_field ld.pld_name.txt))
+        | None ->
+          (* Only a spread present: treat as object type (syntax ambiguity). *)
+          type_record_as_object := true;
+          let fields =
+            Ext_list.map lbls_ (fun ld ->
+                match ld.pld_name.txt with
+                | "..." -> Parsetree.Oinherit ld.pld_type
+                | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
+          in
+          let sdecl =
+            {
+              sdecl with
+              ptype_kind = Ptype_abstract;
+              ptype_manifest =
+                Some (Ast_helper.Typ.object_ ~loc:sdecl.ptype_loc fields Closed);
+            }
+          in
+          (Ttype_abstract, Type_abstract, sdecl)))
     | Ptype_open -> (Ttype_open, Type_open, sdecl)
   in
   let tman, man =
@@ -2076,6 +2096,12 @@ let report_error ppf = function
       "The field @{<info>%s@} is defined several times in this record. Fields \
        can only be added once to a record."
       s
+  | Object_spread_with_record_field field_name ->
+    fprintf ppf
+      "@[You cannot mix a record field with an object type spread.@\n\
+       Remove the record field or change it to an object field (e.g. \"%s\": \
+       ...).@]"
+      field_name
   | Invalid_attribute msg -> fprintf ppf "%s" msg
   | Duplicate_label (s, Some record_name) ->
     fprintf ppf

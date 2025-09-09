@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/mix_record_object_spread.res[0m:[2m4:6-14[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m type props = {
+  [1;31m4[0m [2m│[0m   ...[1;31mbaseProps[0m,
+  5 [2m│[0m   "label": string,
+  6 [2m│[0m }
+
+  The type baseProps is not an object type
