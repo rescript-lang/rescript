@@ -22,10 +22,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
-module String = Ocaml_String
-
 type elt = string
-let compare_elt = String.compare
+let compare_elt = (a, b) => String.compare(a, b)->Float.toInt
 type t = Set_gen.t<elt>
 
 let empty = Set_gen.empty

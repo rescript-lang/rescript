@@ -1,8 +1,6 @@
 open Mocha
 open Test_utils
 
-module Array = Ocaml_Array
-
 let v = [1, 2, 3, 3]
 
 let f = v => {
@@ -49,9 +47,9 @@ describe(__MODULE__, () => {
 
   test("array_mutation_test", () => {
     let v = [1, 2, 3, 3]
-    eq(__LOC__, 3, v[2])
-    v[2] = 4
-    eq(__LOC__, 4, v[2])
+    eq(__LOC__, 3, v->Array.getUnsafe(2))
+    v->Array.setUnsafe(2, 4)
+    eq(__LOC__, 4, v->Array.getUnsafe(2))
   })
 
   test("array_pop_test", () => {

@@ -2,7 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_array from "@rescript/runtime/lib/es6/Primitive_array.js";
 
 let a = [
   0,
@@ -26,8 +25,8 @@ let c = [
 ];
 
 function f() {
-  Primitive_array.set(a, 0, 3.0);
-  Primitive_array.set(b, 0, 3);
+  a[0] = 3.0;
+  b[0] = 3;
 }
 
 function h() {
@@ -36,9 +35,9 @@ function h() {
 
 function g() {
   f();
-  Test_utils.eq("File \"const_block_test.res\", line 26, characters 5-12", [
-    Primitive_array.get(a, 0),
-    Primitive_array.get(b, 0)
+  Test_utils.eq("File \"const_block_test.res\", line 25, characters 5-12", [
+    a[0],
+    b[0]
   ], [
     3.0,
     3
@@ -48,9 +47,9 @@ function g() {
 Mocha.describe("Const_block_test", () => {
   Mocha.test("const_block_test", () => g());
   Mocha.test("avoid_mutable_inline_test", () => {
-    Primitive_array.set(c, 0, 3);
-    Primitive_array.set(c, 1, 4);
-    Test_utils.eq("File \"const_block_test.res\", line 41, characters 7-14", [
+    c[0] = 3;
+    c[1] = 4;
+    Test_utils.eq("File \"const_block_test.res\", line 40, characters 7-14", [
       3,
       4,
       2,

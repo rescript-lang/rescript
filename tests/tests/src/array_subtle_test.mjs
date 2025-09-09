@@ -2,7 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_array from "@rescript/runtime/lib/es6/Primitive_array.js";
 
 let v = [
   1,
@@ -22,7 +21,7 @@ function f(v) {
 }
 
 function fff(x) {
-  return true;
+  return x.length >= 0;
 }
 
 function fff2(x) {
@@ -34,11 +33,15 @@ function fff2(x) {
 }
 
 function fff3(x) {
-  return 1;
+  if (x.length >= 0) {
+    return 1;
+  } else {
+    return 2;
+  }
 }
 
 function fff4(x) {
-  if (x.length !== 0) {
+  if (x.length > 0) {
     return 1;
   } else {
     return 2;
@@ -53,7 +56,7 @@ Mocha.describe("Array_subtle_test", () => {
       3,
       3
     ];
-    Test_utils.eq("File \"array_subtle_test.res\", line 40, characters 7-14", 4, v.length);
+    Test_utils.eq("File \"array_subtle_test.res\", line 38, characters 7-14", 4, v.length);
   });
   Mocha.test("array_push_test", () => {
     let v = [
@@ -62,9 +65,9 @@ Mocha.describe("Array_subtle_test", () => {
       3,
       3
     ];
-    Test_utils.eq("File \"array_subtle_test.res\", line 45, characters 7-14", 5, v.push(3));
-    Test_utils.eq("File \"array_subtle_test.res\", line 46, characters 7-14", 5, v.length);
-    Test_utils.eq("File \"array_subtle_test.res\", line 47, characters 7-14", 5, v.length);
+    Test_utils.eq("File \"array_subtle_test.res\", line 43, characters 7-14", 5, v.push(3));
+    Test_utils.eq("File \"array_subtle_test.res\", line 44, characters 7-14", 5, v.length);
+    Test_utils.eq("File \"array_subtle_test.res\", line 45, characters 7-14", 5, v.length);
   });
   Mocha.test("array_mutation_test", () => {
     let v = [
@@ -73,9 +76,9 @@ Mocha.describe("Array_subtle_test", () => {
       3,
       3
     ];
-    Test_utils.eq("File \"array_subtle_test.res\", line 52, characters 7-14", 3, Primitive_array.get(v, 2));
-    Primitive_array.set(v, 2, 4);
-    Test_utils.eq("File \"array_subtle_test.res\", line 54, characters 7-14", 4, Primitive_array.get(v, 2));
+    Test_utils.eq("File \"array_subtle_test.res\", line 50, characters 7-14", 3, v[2]);
+    v[2] = 4;
+    Test_utils.eq("File \"array_subtle_test.res\", line 52, characters 7-14", 4, v[2]);
   });
   Mocha.test("array_pop_test", () => {
     let v = [
@@ -87,19 +90,16 @@ Mocha.describe("Array_subtle_test", () => {
     while (v.length > 0) {
       v.pop();
     };
-    Test_utils.eq("File \"array_subtle_test.res\", line 62, characters 7-14", 0, v.length);
+    Test_utils.eq("File \"array_subtle_test.res\", line 60, characters 7-14", 0, v.length);
   });
   Mocha.test("array_function_tests", () => {
-    Test_utils.eq("File \"array_subtle_test.res\", line 66, characters 7-14", 1, fff3([]));
-    Test_utils.eq("File \"array_subtle_test.res\", line 67, characters 7-14", 2, fff4([]));
-    Test_utils.eq("File \"array_subtle_test.res\", line 68, characters 7-14", 1, fff4([1]));
+    Test_utils.eq("File \"array_subtle_test.res\", line 64, characters 7-14", 1, fff3([]));
+    Test_utils.eq("File \"array_subtle_test.res\", line 65, characters 7-14", 2, fff4([]));
+    Test_utils.eq("File \"array_subtle_test.res\", line 66, characters 7-14", 1, fff4([1]));
   });
 });
 
-let $$Array;
-
 export {
-  $$Array,
   v,
   f,
   fff,

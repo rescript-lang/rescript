@@ -3,15 +3,13 @@ open Test_utils
 
 @@warning("-107")
 
-module String = Ocaml_String
-
 let max_int = 2147483647 // 0x80000000
 let min_int = -2147483648 // 0x7FFFFFFF
 
 let hash_variant = s => {
   let accu = ref(0)
   for i in 0 to String.length(s) - 1 {
-    accu := land(223 * accu.contents + Char.code(String.get(s, i)), lsl(1, 31) - 1)
+    accu := land(223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe, lsl(1, 31) - 1)
     /* Here accu is 31 bits, times 223 will not be than 53 bits..
        TODO: we can use `Sys.backend_type` for patching
  */
@@ -30,7 +28,7 @@ let hash_variant = s => {
 let hash_variant2 = s => {
   let accu = ref(0)
   for i in 0 to String.length(s) - 1 {
-    accu := 223 * accu.contents + Char.code(String.get(s, i))
+    accu := 223 * accu.contents + String.codePointAt(s, i)->Option.getUnsafe
   }
   /* reduce to 31 bits */
   accu := land(accu.contents, lsl(1, 31) - 1)

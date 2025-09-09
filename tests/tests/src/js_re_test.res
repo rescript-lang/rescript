@@ -1,5 +1,3 @@
-module Array = Ocaml_Array
-
 open Mocha
 open Test_utils
 
@@ -26,7 +24,7 @@ describe(__MODULE__, () => {
       ->(
         x =>
           switch x {
-          | Some(result) => Js.Nullable.toOption(Js.Re.captures(result)[1])
+          | Some(result) => Js.Nullable.toOption(Js.Re.captures(result)->Array.getUnsafe(1))
           | None => None
           }
       )
@@ -34,7 +32,8 @@ describe(__MODULE__, () => {
   })
   test("exec_literal", () => {
     switch /[^.]+/->Js.Re.exec_("http://xxx.domain.com") {
-    | Some(res) => eq(__LOC__, Js.Nullable.return("http://xxx"), Js.Re.captures(res)[0])
+    | Some(res) =>
+      eq(__LOC__, Js.Nullable.return("http://xxx"), Js.Re.captures(res)->Array.getUnsafe(0))
     | None => assert(false)
     }
   })

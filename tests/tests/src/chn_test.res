@@ -1,7 +1,6 @@
 open Mocha
 open Test_utils
 open Belt
-module String = Ocaml_String
 
 Js.log(`你好，
 世界`)
@@ -76,9 +75,9 @@ describe(__MODULE__, () => {
   test("String length with emoji", () => eq(__LOC__, String.length(`\uD83D\uDE80\0`), 3))
 
   test("String get emoji with null", () =>
-    eq(__LOC__, (String.get(`\uD83D\uDE80\0`, 0) :> int), 128640)
+    eq(__LOC__, String.codePointAt(`\uD83D\uDE80\0`, 0), Some(128640))
   )
-  test("String get rocket emoji", () => eq(__LOC__, (String.get(`🚀`, 0) :> int), 128640))
+  test("String get rocket emoji", () => eq(__LOC__, String.codePointAt(`🚀`, 0), Some(128640)))
 
   test("Convert rocket emoji", () => eq(__LOC__, convert(`\uD83D\uDE80`), list{128640}))
   test("Convert double rocket emoji", () =>

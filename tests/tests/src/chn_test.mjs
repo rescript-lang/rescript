@@ -19,7 +19,7 @@ function convert(s) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "chn_test.res",
-        15,
+        14,
         16
       ],
       Error: new Error()
@@ -28,9 +28,9 @@ function convert(s) {
 }
 
 Mocha.describe("Chn_test", () => {
-  Mocha.test("Chinese string newline", () => Test_utils.eq("File \"chn_test.res\", line 24, characters 6-13", `你好，
+  Mocha.test("Chinese string newline", () => Test_utils.eq("File \"chn_test.res\", line 23, characters 6-13", `你好，
 世界`, `你好，\n世界`));
-  Mocha.test("Convert Chinese characters", () => Test_utils.eq("File \"chn_test.res\", line 33, characters 6-13", convert(`汉字是世界上最美丽的character`), {
+  Mocha.test("Convert Chinese characters", () => Test_utils.eq("File \"chn_test.res\", line 32, characters 6-13", convert(`汉字是世界上最美丽的character`), {
     hd: 27721,
     tl: {
       hd: 23383,
@@ -88,7 +88,7 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("Convert hex escape", () => Test_utils.eq("File \"chn_test.res\", line 59, characters 38-45", convert(`\x3f\x3fa`), {
+  Mocha.test("Convert hex escape", () => Test_utils.eq("File \"chn_test.res\", line 58, characters 38-45", convert(`\x3f\x3fa`), {
     hd: 63,
     tl: {
       hd: 63,
@@ -98,7 +98,7 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("Convert question marks", () => Test_utils.eq("File \"chn_test.res\", line 60, characters 42-49", convert(`??a`), {
+  Mocha.test("Convert question marks", () => Test_utils.eq("File \"chn_test.res\", line 59, characters 42-49", convert(`??a`), {
     hd: 63,
     tl: {
       hd: 63,
@@ -108,7 +108,7 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("Convert unicode escape", () => Test_utils.eq("File \"chn_test.res\", line 61, characters 42-49", convert(`\u003f\x3fa`), {
+  Mocha.test("Convert unicode escape", () => Test_utils.eq("File \"chn_test.res\", line 60, characters 42-49", convert(`\u003f\x3fa`), {
     hd: 63,
     tl: {
       hd: 63,
@@ -118,7 +118,7 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("Convert rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 63, characters 7-14", convert(`🚀🚀a`), {
+  Mocha.test("Convert rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 62, characters 7-14", convert(`🚀🚀a`), {
     hd: 128640,
     tl: {
       hd: 128640,
@@ -128,21 +128,21 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("Convert rocket emoji surrogate with a", () => Test_utils.eq("File \"chn_test.res\", line 66, characters 7-14", convert(`\uD83D\uDE80a`), {
+  Mocha.test("Convert rocket emoji surrogate with a", () => Test_utils.eq("File \"chn_test.res\", line 65, characters 7-14", convert(`\uD83D\uDE80a`), {
     hd: 128640,
     tl: {
       hd: 97,
       tl: /* [] */0
     }
   }));
-  Mocha.test("Convert rocket emoji surrogate with question", () => Test_utils.eq("File \"chn_test.res\", line 69, characters 7-14", convert(`\uD83D\uDE80\x3f`), {
+  Mocha.test("Convert rocket emoji surrogate with question", () => Test_utils.eq("File \"chn_test.res\", line 68, characters 7-14", convert(`\uD83D\uDE80\x3f`), {
     hd: 128640,
     tl: {
       hd: 63,
       tl: /* [] */0
     }
   }));
-  Mocha.test("Convert double rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 73, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80a`), {
+  Mocha.test("Convert double rocket emoji with a", () => Test_utils.eq("File \"chn_test.res\", line 72, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80a`), {
     hd: 128640,
     tl: {
       hd: 128640,
@@ -152,21 +152,21 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("String length with emoji", () => Test_utils.eq("File \"chn_test.res\", line 76, characters 44-51", `\uD83D\uDE80\0`.length, 3));
-  Mocha.test("String get emoji with null", () => Test_utils.eq("File \"chn_test.res\", line 79, characters 7-14", `\uD83D\uDE80\0`.codePointAt(0), 128640));
-  Mocha.test("String get rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 81, characters 43-50", `🚀`.codePointAt(0), 128640));
-  Mocha.test("Convert rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 83, characters 40-47", convert(`\uD83D\uDE80`), {
+  Mocha.test("String length with emoji", () => Test_utils.eq("File \"chn_test.res\", line 75, characters 44-51", `\uD83D\uDE80\0`.length, 3));
+  Mocha.test("String get emoji with null", () => Test_utils.eq("File \"chn_test.res\", line 78, characters 7-14", `\uD83D\uDE80\0`.codePointAt(0), 128640));
+  Mocha.test("String get rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 80, characters 43-50", `🚀`.codePointAt(0), 128640));
+  Mocha.test("Convert rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 82, characters 40-47", convert(`\uD83D\uDE80`), {
     hd: 128640,
     tl: /* [] */0
   }));
-  Mocha.test("Convert double rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 85, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80`), {
+  Mocha.test("Convert double rocket emoji", () => Test_utils.eq("File \"chn_test.res\", line 84, characters 7-14", convert(`\uD83D\uDE80\uD83D\uDE80`), {
     hd: 128640,
     tl: {
       hd: 128640,
       tl: /* [] */0
     }
   }));
-  Mocha.test("Convert whitespace chars", () => Test_utils.eq("File \"chn_test.res\", line 88, characters 7-14", convert(` \b\t\n\v\f\ra`), {
+  Mocha.test("Convert whitespace chars", () => Test_utils.eq("File \"chn_test.res\", line 87, characters 7-14", convert(` \b\t\n\v\f\ra`), {
     hd: 32,
     tl: {
       hd: 8,
@@ -191,7 +191,7 @@ Mocha.describe("Chn_test", () => {
       }
     }
   }));
-  Mocha.test("Convert escaped chars", () => Test_utils.eq("File \"chn_test.res\", line 91, characters 7-14", convert(` \b\t\n\v\f\r"'\\\0a`), {
+  Mocha.test("Convert escaped chars", () => Test_utils.eq("File \"chn_test.res\", line 90, characters 7-14", convert(` \b\t\n\v\f\r"'\\\0a`), {
     hd: 32,
     tl: {
       hd: 8,
@@ -230,10 +230,7 @@ Mocha.describe("Chn_test", () => {
   }));
 });
 
-let $$String;
-
 export {
-  $$String,
   convert,
 }
 /*  Not a pure module */

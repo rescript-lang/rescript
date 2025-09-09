@@ -2,7 +2,6 @@ open Mocha
 open Test_utils
 
 module J = Js.Json
-module Array = Ocaml_Array
 
 describe(__MODULE__, () => {
   test("JSON object parsing and validation", () => {
@@ -135,7 +134,7 @@ describe(__MODULE__, () => {
     let ty = J.classify(json)
     switch ty {
     | J.JSONArray(x) =>
-      let ty = J.classify(x[i])
+      let ty = J.classify(x->Array.getUnsafe(i))
       switch kind {
       | J.Kind.Boolean =>
         switch ty {
@@ -196,9 +195,9 @@ describe(__MODULE__, () => {
     let json = J.parseExn(J.stringify(J.numberArray(a)))
 
     /* Loop is unrolled to keep relevant location information */
-    eq_at_i(__LOC__, json, 0, J.Kind.Number, a[0])
-    eq_at_i(__LOC__, json, 1, J.Kind.Number, a[1])
-    eq_at_i(__LOC__, json, 2, J.Kind.Number, a[2])
+    eq_at_i(__LOC__, json, 0, J.Kind.Number, a->Array.getUnsafe(0))
+    eq_at_i(__LOC__, json, 1, J.Kind.Number, a->Array.getUnsafe(1))
+    eq_at_i(__LOC__, json, 2, J.Kind.Number, a->Array.getUnsafe(2))
   })
 
   test("JSON integer array parsing", () => {
@@ -206,9 +205,9 @@ describe(__MODULE__, () => {
     let json = J.parseExn(J.stringify(J.numberArray(a->Belt.Array.map(float_of_int))))
 
     /* Loop is unrolled to keep relevant location information */
-    eq_at_i(__LOC__, json, 0, J.Kind.Number, float_of_int(a[0]))
-    eq_at_i(__LOC__, json, 1, J.Kind.Number, float_of_int(a[1]))
-    eq_at_i(__LOC__, json, 2, J.Kind.Number, float_of_int(a[2]))
+    eq_at_i(__LOC__, json, 0, J.Kind.Number, float_of_int(a->Array.getUnsafe(0)))
+    eq_at_i(__LOC__, json, 1, J.Kind.Number, float_of_int(a->Array.getUnsafe(1)))
+    eq_at_i(__LOC__, json, 2, J.Kind.Number, float_of_int(a->Array.getUnsafe(2)))
   })
 
   test("JSON boolean array parsing", () => {
@@ -216,9 +215,9 @@ describe(__MODULE__, () => {
     let json = J.parseExn(J.stringify(J.booleanArray(a)))
 
     /* Loop is unrolled to keep relevant location information */
-    eq_at_i(__LOC__, json, 0, J.Kind.Boolean, a[0])
-    eq_at_i(__LOC__, json, 1, J.Kind.Boolean, a[1])
-    eq_at_i(__LOC__, json, 2, J.Kind.Boolean, a[2])
+    eq_at_i(__LOC__, json, 0, J.Kind.Boolean, a->Array.getUnsafe(0))
+    eq_at_i(__LOC__, json, 1, J.Kind.Boolean, a->Array.getUnsafe(1))
+    eq_at_i(__LOC__, json, 2, J.Kind.Boolean, a->Array.getUnsafe(2))
   })
 
   test("JSON object array parsing", () => {
@@ -241,7 +240,7 @@ describe(__MODULE__, () => {
     let ty = J.classify(json)
     switch ty {
     | J.JSONArray(x) =>
-      let ty = J.classify(x[1])
+      let ty = J.classify(x->Array.getUnsafe(1))
       switch ty {
       | J.JSONObject(a1) =>
         let ty = J.classify(option_get(Js_dict.get(a1, "a")))

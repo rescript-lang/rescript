@@ -2,7 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_array from "@rescript/runtime/lib/es6/Primitive_array.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 Mocha.describe("Js_re_test", () => {
@@ -10,22 +9,22 @@ Mocha.describe("Js_re_test", () => {
     let contentOf = (tag, xmlString) => {
       let x = Primitive_option.fromNull(new RegExp("<" + (tag + (">(.*?)<\\/" + (tag + ">")))).exec(xmlString));
       if (x !== undefined) {
-        return Primitive_option.fromNullable(Primitive_array.get(Primitive_option.valFromOption(x), 1));
+        return Primitive_option.fromNullable(Primitive_option.valFromOption(x)[1]);
       }
       
     };
-    Test_utils.eq("File \"js_re_test.res\", line 33, characters 7-14", "Hi", contentOf("div", "<div>Hi</div>"));
+    Test_utils.eq("File \"js_re_test.res\", line 31, characters 7-14", "Hi", contentOf("div", "<div>Hi</div>"));
   });
   Mocha.test("exec_literal", () => {
     let res = /[^.]+/.exec("http://xxx.domain.com");
     if (res !== null) {
-      return Test_utils.eq("File \"js_re_test.res\", line 37, characters 22-29", "http://xxx", Primitive_array.get(res, 0));
+      return Test_utils.eq("File \"js_re_test.res\", line 36, characters 9-16", "http://xxx", res[0]);
     }
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "js_re_test.res",
-        38,
+        37,
         14
       ],
       Error: new Error()
@@ -38,32 +37,32 @@ Mocha.describe("Js_re_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "js_re_test.res",
-          43,
+          42,
           17
         ],
         Error: new Error()
       };
     }
-    Test_utils.eq("File \"js_re_test.res\", line 44, characters 17-24", true, true);
+    Test_utils.eq("File \"js_re_test.res\", line 43, characters 17-24", true, true);
   });
   Mocha.test("test_str", () => {
     let res = new RegExp("foo").test("#foo#");
-    Test_utils.eq("File \"js_re_test.res\", line 49, characters 7-14", true, res);
+    Test_utils.eq("File \"js_re_test.res\", line 48, characters 7-14", true, res);
   });
   Mocha.test("fromStringWithFlags", () => {
     let res = new RegExp("foo", "g");
-    Test_utils.eq("File \"js_re_test.res\", line 53, characters 7-14", true, res.global);
+    Test_utils.eq("File \"js_re_test.res\", line 52, characters 7-14", true, res.global);
   });
   Mocha.test("result_index", () => {
     let res = new RegExp("zbar").exec("foobarbazbar");
     if (res !== null) {
-      return Test_utils.eq("File \"js_re_test.res\", line 57, characters 22-29", 8, res.index);
+      return Test_utils.eq("File \"js_re_test.res\", line 56, characters 22-29", 8, res.index);
     }
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "js_re_test.res",
-        58,
+        57,
         14
       ],
       Error: new Error()
@@ -73,32 +72,32 @@ Mocha.describe("Js_re_test", () => {
     let input = "foobar";
     let res = /foo/g.exec(input);
     if (res !== null) {
-      return Test_utils.eq("File \"js_re_test.res\", line 64, characters 22-29", input, res.input);
+      return Test_utils.eq("File \"js_re_test.res\", line 63, characters 22-29", input, res.input);
     }
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "js_re_test.res",
-        65,
+        64,
         14
       ],
       Error: new Error()
     };
   });
-  Mocha.test("t_flags", () => Test_utils.eq("File \"js_re_test.res\", line 70, characters 7-14", "gi", /./ig.flags));
-  Mocha.test("t_global", () => Test_utils.eq("File \"js_re_test.res\", line 73, characters 7-14", true, /./ig.global));
-  Mocha.test("t_ignoreCase", () => Test_utils.eq("File \"js_re_test.res\", line 76, characters 7-14", true, /./ig.ignoreCase));
+  Mocha.test("t_flags", () => Test_utils.eq("File \"js_re_test.res\", line 69, characters 7-14", "gi", /./ig.flags));
+  Mocha.test("t_global", () => Test_utils.eq("File \"js_re_test.res\", line 72, characters 7-14", true, /./ig.global));
+  Mocha.test("t_ignoreCase", () => Test_utils.eq("File \"js_re_test.res\", line 75, characters 7-14", true, /./ig.ignoreCase));
   Mocha.test("t_lastIndex", () => {
     let re = /na/g;
     re.exec("banana");
-    Test_utils.eq("File \"js_re_test.res\", line 84, characters 7-14", 4, re.lastIndex);
+    Test_utils.eq("File \"js_re_test.res\", line 83, characters 7-14", 4, re.lastIndex);
   });
   Mocha.test("t_setLastIndex", () => {
     let re = /na/g;
     let before = re.lastIndex;
     re.lastIndex = 42;
     let after = re.lastIndex;
-    Test_utils.eq("File \"js_re_test.res\", line 91, characters 7-14", [
+    Test_utils.eq("File \"js_re_test.res\", line 90, characters 7-14", [
       0,
       42
     ], [
@@ -106,15 +105,10 @@ Mocha.describe("Js_re_test", () => {
       after
     ]);
   });
-  Mocha.test("t_multiline", () => Test_utils.eq("File \"js_re_test.res\", line 94, characters 7-14", false, /./ig.multiline));
-  Mocha.test("t_source", () => Test_utils.eq("File \"js_re_test.res\", line 97, characters 7-14", "f.+o", /f.+o/ig.source));
-  Mocha.test("t_sticky", () => Test_utils.eq("File \"js_re_test.res\", line 101, characters 7-14", true, /./yg.sticky));
-  Mocha.test("t_unicode", () => Test_utils.eq("File \"js_re_test.res\", line 104, characters 7-14", false, /./yg.unicode));
+  Mocha.test("t_multiline", () => Test_utils.eq("File \"js_re_test.res\", line 93, characters 7-14", false, /./ig.multiline));
+  Mocha.test("t_source", () => Test_utils.eq("File \"js_re_test.res\", line 96, characters 7-14", "f.+o", /f.+o/ig.source));
+  Mocha.test("t_sticky", () => Test_utils.eq("File \"js_re_test.res\", line 100, characters 7-14", true, /./yg.sticky));
+  Mocha.test("t_unicode", () => Test_utils.eq("File \"js_re_test.res\", line 103, characters 7-14", false, /./yg.unicode));
 });
 
-let $$Array;
-
-export {
-  $$Array,
-}
 /*  Not a pure module */

@@ -12,7 +12,7 @@ function f(x) {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "test_string.res",
-          7,
+          5,
           17
         ],
         Error: new Error()
@@ -35,13 +35,10 @@ function c(x, y) {
 let v = "xx".length;
 
 function h(s) {
-  return s.codePointAt(0) === /* 'a' */97;
+  return s.codePointAt(0) === 97;
 }
 
-let $$String;
-
 export {
-  $$String,
   f,
   a,
   b,
@@ -49,4 +46,4 @@ export {
   v,
   h,
 }
-/* No side effect */
+/* v Not a pure module */

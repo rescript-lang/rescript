@@ -2,8 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
+import * as Hash_utils from "./hash_utils.mjs";
 import * as Test_utils from "./test_utils.mjs";
-import * as Ocaml_Hashtbl from "./ocaml_compat/Ocaml_Hashtbl.mjs";
 
 let test_strings = Belt_Array.init(32, i => String.fromCodePoint(i).repeat(i));
 
@@ -47,20 +47,17 @@ function normalize(x) {
 }
 
 function caml_hash(x) {
-  return Ocaml_Hashtbl.hash(x) & 1073741823;
+  return Hash_utils.hash(x) & 1073741823;
 }
 
 Mocha.describe("Hash_test", () => {
-  Mocha.test("test strings hash results", () => Test_utils.eq("File \"hash_test.res\", line 49, characters 7-14", Belt_Array.map(test_strings, caml_hash), test_strings_hash_results));
-  Mocha.test("hash 0", () => Test_utils.eq("File \"hash_test.res\", line 53, characters 7-14", Ocaml_Hashtbl.hash(0) & 1073741823, 129913994));
-  Mocha.test("hash x", () => Test_utils.eq("File \"hash_test.res\", line 57, characters 7-14", Ocaml_Hashtbl.hash("x") & 1073741823, 780510073));
-  Mocha.test("hash xy", () => Test_utils.eq("File \"hash_test.res\", line 61, characters 7-14", Ocaml_Hashtbl.hash("xy") & 1073741823, 194127723));
+  Mocha.test("test strings hash results", () => Test_utils.eq("File \"hash_test.res\", line 47, characters 7-14", Belt_Array.map(test_strings, caml_hash), test_strings_hash_results));
+  Mocha.test("hash 0", () => Test_utils.eq("File \"hash_test.res\", line 51, characters 7-14", Hash_utils.hash(0) & 1073741823, 129913994));
+  Mocha.test("hash x", () => Test_utils.eq("File \"hash_test.res\", line 55, characters 7-14", Hash_utils.hash("x") & 1073741823, 780510073));
+  Mocha.test("hash xy", () => Test_utils.eq("File \"hash_test.res\", line 59, characters 7-14", Hash_utils.hash("xy") & 1073741823, 194127723));
 });
 
-let Hashtbl;
-
 export {
-  Hashtbl,
   test_strings,
   test_strings_hash_results,
   normalize,

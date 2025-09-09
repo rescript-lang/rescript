@@ -6,7 +6,6 @@ import * as Js_json from "@rescript/runtime/lib/es6/Js_json.js";
 import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.js";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_array from "@rescript/runtime/lib/es6/Primitive_array.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 Mocha.describe("Js_json_test", () => {
@@ -14,13 +13,13 @@ Mocha.describe("Js_json_test", () => {
     let v = JSON.parse(` { "x" : [1, 2, 3 ] } `);
     let ty = Js_json.classify(v);
     if (typeof ty !== "object" || ty.TAG !== "JSONObject") {
-      Test_utils.ok("File \"js_json_test.res\", line 36, characters 14-21", false);
+      Test_utils.ok("File \"js_json_test.res\", line 35, characters 14-21", false);
     } else {
       let v$1 = Js_dict.get(ty._0, "x");
       if (v$1 !== undefined) {
         let ty2 = Js_json.classify(v$1);
         if (typeof ty2 !== "object" || ty2.TAG !== "JSONArray") {
-          Test_utils.ok("File \"js_json_test.res\", line 32, characters 18-25", false);
+          Test_utils.ok("File \"js_json_test.res\", line 31, characters 18-25", false);
         } else {
           ty2._0.forEach(x => {
             let ty3 = Js_json.classify(x);
@@ -29,7 +28,7 @@ Mocha.describe("Js_json_test", () => {
                 RE_EXN_ID: "Assert_failure",
                 _1: [
                   "js_json_test.res",
-                  27,
+                  26,
                   21
                 ],
                 Error: new Error()
@@ -42,59 +41,59 @@ Mocha.describe("Js_json_test", () => {
               RE_EXN_ID: "Assert_failure",
               _1: [
                 "js_json_test.res",
-                27,
+                26,
                 21
               ],
               Error: new Error()
             };
           });
-          Test_utils.ok("File \"js_json_test.res\", line 31, characters 13-20", true);
+          Test_utils.ok("File \"js_json_test.res\", line 30, characters 13-20", true);
         }
       } else {
-        Test_utils.ok("File \"js_json_test.res\", line 34, characters 19-26", false);
+        Test_utils.ok("File \"js_json_test.res\", line 33, characters 19-26", false);
       }
     }
-    Test_utils.eq("File \"js_json_test.res\", line 39, characters 7-14", Js_json.test(v, "Object"), true);
+    Test_utils.eq("File \"js_json_test.res\", line 38, characters 7-14", Js_json.test(v, "Object"), true);
   });
   Mocha.test("JSON null parsing", () => {
     let json = JSON.parse(JSON.stringify(null));
     let ty = Js_json.classify(json);
     if (typeof ty !== "object") {
       if (ty === "JSONNull") {
-        return Test_utils.ok("File \"js_json_test.res\", line 46, characters 23-30", true);
+        return Test_utils.ok("File \"js_json_test.res\", line 45, characters 23-30", true);
       }
       console.log(ty);
-      return Test_utils.ok("File \"js_json_test.res\", line 49, characters 9-16", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 48, characters 9-16", false);
     } else {
       console.log(ty);
-      return Test_utils.ok("File \"js_json_test.res\", line 49, characters 9-16", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 48, characters 9-16", false);
     }
   });
   Mocha.test("JSON string parsing", () => {
     let json = JSON.parse(JSON.stringify("test string"));
     let ty = Js_json.classify(json);
     if (typeof ty !== "object" || ty.TAG !== "JSONString") {
-      return Test_utils.ok("File \"js_json_test.res\", line 58, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 57, characters 14-21", false);
     } else {
-      return Test_utils.eq("File \"js_json_test.res\", line 57, characters 28-35", ty._0, "test string");
+      return Test_utils.eq("File \"js_json_test.res\", line 56, characters 28-35", ty._0, "test string");
     }
   });
   Mocha.test("JSON number parsing", () => {
     let json = JSON.parse(JSON.stringify(1.23456789));
     let ty = Js_json.classify(json);
     if (typeof ty !== "object" || ty.TAG !== "JSONNumber") {
-      return Test_utils.ok("File \"js_json_test.res\", line 67, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 66, characters 14-21", false);
     } else {
-      return Test_utils.eq("File \"js_json_test.res\", line 66, characters 28-35", ty._0, 1.23456789);
+      return Test_utils.eq("File \"js_json_test.res\", line 65, characters 28-35", ty._0, 1.23456789);
     }
   });
   Mocha.test("JSON large integer parsing", () => {
     let json = JSON.parse(JSON.stringify(-1347440721));
     let ty = Js_json.classify(json);
     if (typeof ty !== "object" || ty.TAG !== "JSONNumber") {
-      return Test_utils.ok("File \"js_json_test.res\", line 76, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 75, characters 14-21", false);
     } else {
-      return Test_utils.eq("File \"js_json_test.res\", line 75, characters 28-35", ty._0 | 0, -1347440721);
+      return Test_utils.eq("File \"js_json_test.res\", line 74, characters 28-35", ty._0 | 0, -1347440721);
     }
   });
   Mocha.test("JSON boolean parsing", () => {
@@ -102,15 +101,15 @@ Mocha.describe("Js_json_test", () => {
       let json = JSON.parse(JSON.stringify(v));
       let ty = Js_json.classify(json);
       if (typeof ty === "object") {
-        return Test_utils.ok("File \"js_json_test.res\", line 87, characters 16-23", false);
+        return Test_utils.ok("File \"js_json_test.res\", line 86, characters 16-23", false);
       }
       switch (ty) {
         case "JSONFalse" :
-          return Test_utils.eq("File \"js_json_test.res\", line 86, characters 26-33", false, v);
+          return Test_utils.eq("File \"js_json_test.res\", line 85, characters 26-33", false, v);
         case "JSONTrue" :
-          return Test_utils.eq("File \"js_json_test.res\", line 85, characters 25-32", true, v);
+          return Test_utils.eq("File \"js_json_test.res\", line 84, characters 25-32", true, v);
         default:
-          return Test_utils.ok("File \"js_json_test.res\", line 87, characters 16-23", false);
+          return Test_utils.ok("File \"js_json_test.res\", line 86, characters 16-23", false);
       }
     };
     test(true);
@@ -125,7 +124,7 @@ Mocha.describe("Js_json_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "js_json_test.res",
-          98,
+          97,
           16
         ],
         Error: new Error()
@@ -137,27 +136,27 @@ Mocha.describe("Js_json_test", () => {
     let json = JSON.parse(JSON.stringify(dict));
     let ty = Js_json.classify(json);
     if (typeof ty !== "object") {
-      return Test_utils.ok("File \"js_json_test.res\", line 128, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 127, characters 14-21", false);
     }
     if (ty.TAG !== "JSONObject") {
-      return Test_utils.ok("File \"js_json_test.res\", line 128, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 127, characters 14-21", false);
     }
     let x = ty._0;
     let ta = Js_json.classify(option_get(Js_dict.get(x, "a")));
     if (typeof ta !== "object") {
-      return Test_utils.ok("File \"js_json_test.res\", line 126, characters 16-23", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 125, characters 16-23", false);
     }
     if (ta.TAG !== "JSONString") {
-      return Test_utils.ok("File \"js_json_test.res\", line 126, characters 16-23", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 125, characters 16-23", false);
     }
     if (ta._0 !== "test string") {
-      return Test_utils.ok("File \"js_json_test.res\", line 117, characters 13-20", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 116, characters 13-20", false);
     }
     let ty$1 = Js_json.classify(option_get(Js_dict.get(x, "b")));
     if (typeof ty$1 !== "object" || ty$1.TAG !== "JSONNumber") {
-      return Test_utils.ok("File \"js_json_test.res\", line 123, characters 20-27", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 122, characters 20-27", false);
     } else {
-      return Test_utils.approxEq("File \"js_json_test.res\", line 122, characters 40-47", 0.001, 123.0, ty$1._0);
+      return Test_utils.approxEq("File \"js_json_test.res\", line 121, characters 40-47", 0.001, 123.0, ty$1._0);
     }
   });
   let eq_at_i = (loc, json, i, kind, expected) => {
@@ -168,7 +167,7 @@ Mocha.describe("Js_json_test", () => {
     if (ty.TAG !== "JSONArray") {
       return Test_utils.ok(loc, false);
     }
-    let ty$1 = Js_json.classify(Primitive_array.get(ty._0, i));
+    let ty$1 = Js_json.classify(ty._0[i]);
     switch (kind) {
       case "String" :
         if (typeof ty$1 !== "object" || ty$1.TAG !== "JSONString") {
@@ -220,9 +219,9 @@ Mocha.describe("Js_json_test", () => {
       "string 1",
       "string 2"
     ], prim => prim)));
-    eq_at_i("File \"js_json_test.res\", line 181, characters 12-19", json, 0, "String", "string 0");
-    eq_at_i("File \"js_json_test.res\", line 182, characters 12-19", json, 1, "String", "string 1");
-    eq_at_i("File \"js_json_test.res\", line 183, characters 12-19", json, 2, "String", "string 2");
+    eq_at_i("File \"js_json_test.res\", line 180, characters 12-19", json, 0, "String", "string 0");
+    eq_at_i("File \"js_json_test.res\", line 181, characters 12-19", json, 1, "String", "string 1");
+    eq_at_i("File \"js_json_test.res\", line 182, characters 12-19", json, 2, "String", "string 2");
   });
   Mocha.test("JSON stringArray parsing", () => {
     let json = JSON.parse(JSON.stringify([
@@ -230,9 +229,9 @@ Mocha.describe("Js_json_test", () => {
       "string 1",
       "string 2"
     ]));
-    eq_at_i("File \"js_json_test.res\", line 189, characters 12-19", json, 0, "String", "string 0");
-    eq_at_i("File \"js_json_test.res\", line 190, characters 12-19", json, 1, "String", "string 1");
-    eq_at_i("File \"js_json_test.res\", line 191, characters 12-19", json, 2, "String", "string 2");
+    eq_at_i("File \"js_json_test.res\", line 188, characters 12-19", json, 0, "String", "string 0");
+    eq_at_i("File \"js_json_test.res\", line 189, characters 12-19", json, 1, "String", "string 1");
+    eq_at_i("File \"js_json_test.res\", line 190, characters 12-19", json, 2, "String", "string 2");
   });
   Mocha.test("JSON number array parsing", () => {
     let a = [
@@ -241,9 +240,9 @@ Mocha.describe("Js_json_test", () => {
       123.0
     ];
     let json = JSON.parse(JSON.stringify(a));
-    eq_at_i("File \"js_json_test.res\", line 199, characters 12-19", json, 0, "Number", Primitive_array.get(a, 0));
-    eq_at_i("File \"js_json_test.res\", line 200, characters 12-19", json, 1, "Number", Primitive_array.get(a, 1));
-    eq_at_i("File \"js_json_test.res\", line 201, characters 12-19", json, 2, "Number", Primitive_array.get(a, 2));
+    eq_at_i("File \"js_json_test.res\", line 198, characters 12-19", json, 0, "Number", a[0]);
+    eq_at_i("File \"js_json_test.res\", line 199, characters 12-19", json, 1, "Number", a[1]);
+    eq_at_i("File \"js_json_test.res\", line 200, characters 12-19", json, 2, "Number", a[2]);
   });
   Mocha.test("JSON integer array parsing", () => {
     let a = [
@@ -252,9 +251,9 @@ Mocha.describe("Js_json_test", () => {
       -268391749
     ];
     let json = JSON.parse(JSON.stringify(Belt_Array.map(a, prim => prim)));
-    eq_at_i("File \"js_json_test.res\", line 209, characters 12-19", json, 0, "Number", Primitive_array.get(a, 0));
-    eq_at_i("File \"js_json_test.res\", line 210, characters 12-19", json, 1, "Number", Primitive_array.get(a, 1));
-    eq_at_i("File \"js_json_test.res\", line 211, characters 12-19", json, 2, "Number", Primitive_array.get(a, 2));
+    eq_at_i("File \"js_json_test.res\", line 208, characters 12-19", json, 0, "Number", a[0]);
+    eq_at_i("File \"js_json_test.res\", line 209, characters 12-19", json, 1, "Number", a[1]);
+    eq_at_i("File \"js_json_test.res\", line 210, characters 12-19", json, 2, "Number", a[2]);
   });
   Mocha.test("JSON boolean array parsing", () => {
     let a = [
@@ -263,9 +262,9 @@ Mocha.describe("Js_json_test", () => {
       true
     ];
     let json = JSON.parse(JSON.stringify(a));
-    eq_at_i("File \"js_json_test.res\", line 219, characters 12-19", json, 0, "Boolean", Primitive_array.get(a, 0));
-    eq_at_i("File \"js_json_test.res\", line 220, characters 12-19", json, 1, "Boolean", Primitive_array.get(a, 1));
-    eq_at_i("File \"js_json_test.res\", line 221, characters 12-19", json, 2, "Boolean", Primitive_array.get(a, 2));
+    eq_at_i("File \"js_json_test.res\", line 218, characters 12-19", json, 0, "Boolean", a[0]);
+    eq_at_i("File \"js_json_test.res\", line 219, characters 12-19", json, 1, "Boolean", a[1]);
+    eq_at_i("File \"js_json_test.res\", line 220, characters 12-19", json, 2, "Boolean", a[2]);
   });
   Mocha.test("JSON object array parsing", () => {
     let option_get = x => {
@@ -276,7 +275,7 @@ Mocha.describe("Js_json_test", () => {
         RE_EXN_ID: "Assert_failure",
         _1: [
           "js_json_test.res",
-          227,
+          226,
           16
         ],
         Error: new Error()
@@ -295,97 +294,97 @@ Mocha.describe("Js_json_test", () => {
     let json = JSON.parse(JSON.stringify(a));
     let ty = Js_json.classify(json);
     if (typeof ty !== "object") {
-      return Test_utils.ok("File \"js_json_test.res\", line 254, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 253, characters 14-21", false);
     }
     if (ty.TAG !== "JSONArray") {
-      return Test_utils.ok("File \"js_json_test.res\", line 254, characters 14-21", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 253, characters 14-21", false);
     }
-    let ty$1 = Js_json.classify(Primitive_array.get(ty._0, 1));
+    let ty$1 = Js_json.classify(ty._0[1]);
     if (typeof ty$1 !== "object") {
-      return Test_utils.ok("File \"js_json_test.res\", line 252, characters 16-23", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 251, characters 16-23", false);
     }
     if (ty$1.TAG !== "JSONObject") {
-      return Test_utils.ok("File \"js_json_test.res\", line 252, characters 16-23", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 251, characters 16-23", false);
     }
     let ty$2 = Js_json.classify(option_get(Js_dict.get(ty$1._0, "a")));
     if (typeof ty$2 !== "object" || ty$2.TAG !== "JSONString") {
-      return Test_utils.ok("File \"js_json_test.res\", line 250, characters 18-25", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 249, characters 18-25", false);
     } else {
-      return Test_utils.eq("File \"js_json_test.res\", line 249, characters 37-44", ty$2._0, "bbb");
+      return Test_utils.eq("File \"js_json_test.res\", line 248, characters 37-44", ty$2._0, "bbb");
     }
   });
   Mocha.test("JSON invalid parsing", () => {
     try {
       JSON.parse("{{ A}");
-      return Test_utils.ok("File \"js_json_test.res\", line 262, characters 9-16", false);
+      return Test_utils.ok("File \"js_json_test.res\", line 261, characters 9-16", false);
     } catch (exn) {
-      return Test_utils.ok("File \"js_json_test.res\", line 264, characters 16-23", true);
+      return Test_utils.ok("File \"js_json_test.res\", line 263, characters 16-23", true);
     }
   });
-  Mocha.test("JSON stringifyAny array", () => Test_utils.eq("File \"js_json_test.res\", line 269, characters 43-50", JSON.stringify([
+  Mocha.test("JSON stringifyAny array", () => Test_utils.eq("File \"js_json_test.res\", line 268, characters 43-50", JSON.stringify([
     1,
     2,
     3
   ]), "[1,2,3]"));
-  Mocha.test("JSON stringifyAny object", () => Test_utils.eq("File \"js_json_test.res\", line 273, characters 6-13", JSON.stringify({
+  Mocha.test("JSON stringifyAny object", () => Test_utils.eq("File \"js_json_test.res\", line 272, characters 6-13", JSON.stringify({
     foo: 1,
     bar: "hello",
     baz: {
       baaz: 10
     }
   }), `{"foo":1,"bar":"hello","baz":{"baaz":10}}`));
-  Mocha.test("JSON stringifyAny null", () => Test_utils.eq("File \"js_json_test.res\", line 279, characters 42-49", JSON.stringify(null), "null"));
-  Mocha.test("JSON stringifyAny undefined", () => Test_utils.eq("File \"js_json_test.res\", line 281, characters 47-54", JSON.stringify(undefined), undefined));
+  Mocha.test("JSON stringifyAny null", () => Test_utils.eq("File \"js_json_test.res\", line 278, characters 42-49", JSON.stringify(null), "null"));
+  Mocha.test("JSON stringifyAny undefined", () => Test_utils.eq("File \"js_json_test.res\", line 280, characters 47-54", JSON.stringify(undefined), undefined));
   Mocha.test("JSON decodeString", () => {
-    Test_utils.eq("File \"js_json_test.res\", line 284, characters 7-14", Js_json.decodeString("test"), "test");
-    Test_utils.eq("File \"js_json_test.res\", line 285, characters 7-14", Js_json.decodeString(true), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 286, characters 7-14", Js_json.decodeString([]), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 287, characters 7-14", Js_json.decodeString(null), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 288, characters 7-14", Js_json.decodeString({}), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 289, characters 7-14", Js_json.decodeString(1.23), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 283, characters 7-14", Js_json.decodeString("test"), "test");
+    Test_utils.eq("File \"js_json_test.res\", line 284, characters 7-14", Js_json.decodeString(true), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 285, characters 7-14", Js_json.decodeString([]), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 286, characters 7-14", Js_json.decodeString(null), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 287, characters 7-14", Js_json.decodeString({}), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 288, characters 7-14", Js_json.decodeString(1.23), undefined);
   });
   Mocha.test("JSON decodeNumber", () => {
-    Test_utils.eq("File \"js_json_test.res\", line 293, characters 7-14", Js_json.decodeNumber("test"), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 294, characters 7-14", Js_json.decodeNumber(true), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 295, characters 7-14", Js_json.decodeNumber([]), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 296, characters 7-14", Js_json.decodeNumber(null), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 297, characters 7-14", Js_json.decodeNumber({}), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 298, characters 7-14", Js_json.decodeNumber(1.23), 1.23);
+    Test_utils.eq("File \"js_json_test.res\", line 292, characters 7-14", Js_json.decodeNumber("test"), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 293, characters 7-14", Js_json.decodeNumber(true), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 294, characters 7-14", Js_json.decodeNumber([]), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 295, characters 7-14", Js_json.decodeNumber(null), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 296, characters 7-14", Js_json.decodeNumber({}), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 297, characters 7-14", Js_json.decodeNumber(1.23), 1.23);
   });
   Mocha.test("JSON decodeObject", () => {
-    Test_utils.eq("File \"js_json_test.res\", line 302, characters 7-14", Js_json.decodeObject("test"), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 303, characters 7-14", Js_json.decodeObject(true), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 304, characters 7-14", Js_json.decodeObject([]), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 305, characters 7-14", Js_json.decodeObject(null), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 306, characters 7-14", Js_json.decodeObject({}), {});
-    Test_utils.eq("File \"js_json_test.res\", line 307, characters 7-14", Js_json.decodeObject(1.23), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 301, characters 7-14", Js_json.decodeObject("test"), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 302, characters 7-14", Js_json.decodeObject(true), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 303, characters 7-14", Js_json.decodeObject([]), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 304, characters 7-14", Js_json.decodeObject(null), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 305, characters 7-14", Js_json.decodeObject({}), {});
+    Test_utils.eq("File \"js_json_test.res\", line 306, characters 7-14", Js_json.decodeObject(1.23), undefined);
   });
   Mocha.test("JSON decodeArray", () => {
-    Test_utils.eq("File \"js_json_test.res\", line 311, characters 7-14", Js_json.decodeArray("test"), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 312, characters 7-14", Js_json.decodeArray(true), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 313, characters 7-14", Js_json.decodeArray([]), []);
-    Test_utils.eq("File \"js_json_test.res\", line 314, characters 7-14", Js_json.decodeArray(null), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 315, characters 7-14", Js_json.decodeArray({}), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 316, characters 7-14", Js_json.decodeArray(1.23), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 310, characters 7-14", Js_json.decodeArray("test"), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 311, characters 7-14", Js_json.decodeArray(true), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 312, characters 7-14", Js_json.decodeArray([]), []);
+    Test_utils.eq("File \"js_json_test.res\", line 313, characters 7-14", Js_json.decodeArray(null), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 314, characters 7-14", Js_json.decodeArray({}), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 315, characters 7-14", Js_json.decodeArray(1.23), undefined);
   });
   Mocha.test("JSON decodeBoolean", () => {
-    Test_utils.eq("File \"js_json_test.res\", line 320, characters 7-14", Js_json.decodeBoolean("test"), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 321, characters 7-14", Js_json.decodeBoolean(true), true);
-    Test_utils.eq("File \"js_json_test.res\", line 322, characters 7-14", Js_json.decodeBoolean([]), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 323, characters 7-14", Js_json.decodeBoolean(null), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 324, characters 7-14", Js_json.decodeBoolean({}), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 325, characters 7-14", Js_json.decodeBoolean(1.23), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 319, characters 7-14", Js_json.decodeBoolean("test"), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 320, characters 7-14", Js_json.decodeBoolean(true), true);
+    Test_utils.eq("File \"js_json_test.res\", line 321, characters 7-14", Js_json.decodeBoolean([]), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 322, characters 7-14", Js_json.decodeBoolean(null), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 323, characters 7-14", Js_json.decodeBoolean({}), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 324, characters 7-14", Js_json.decodeBoolean(1.23), undefined);
   });
   Mocha.test("JSON decodeNull", () => {
-    Test_utils.eq("File \"js_json_test.res\", line 329, characters 7-14", Js_json.decodeNull("test"), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 330, characters 7-14", Js_json.decodeNull(true), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 331, characters 7-14", Js_json.decodeNull([]), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 332, characters 7-14", Js_json.decodeNull(null), null);
-    Test_utils.eq("File \"js_json_test.res\", line 333, characters 7-14", Js_json.decodeNull({}), undefined);
-    Test_utils.eq("File \"js_json_test.res\", line 334, characters 7-14", Js_json.decodeNull(1.23), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 328, characters 7-14", Js_json.decodeNull("test"), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 329, characters 7-14", Js_json.decodeNull(true), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 330, characters 7-14", Js_json.decodeNull([]), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 331, characters 7-14", Js_json.decodeNull(null), null);
+    Test_utils.eq("File \"js_json_test.res\", line 332, characters 7-14", Js_json.decodeNull({}), undefined);
+    Test_utils.eq("File \"js_json_test.res\", line 333, characters 7-14", Js_json.decodeNull(1.23), undefined);
   });
   Mocha.test("JSON serialize/deserialize identity", () => {
-    let idtest = obj => Test_utils.eq("File \"js_json_test.res\", line 340, characters 27-34", obj, Js_json.deserializeUnsafe(Js_json.serializeExn(obj)));
+    let idtest = obj => Test_utils.eq("File \"js_json_test.res\", line 339, characters 27-34", obj, Js_json.deserializeUnsafe(Js_json.serializeExn(obj)));
     idtest(undefined);
     idtest({
       hd: [
@@ -414,10 +413,7 @@ Mocha.describe("Js_json_test", () => {
 
 let J;
 
-let $$Array;
-
 export {
   J,
-  $$Array,
 }
 /*  Not a pure module */

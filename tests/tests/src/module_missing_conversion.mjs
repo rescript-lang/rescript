@@ -89,10 +89,7 @@ let u = [Stdlib_String];
 
 let hh = "x".length;
 
-let $$Array;
-
 export {
-  $$Array,
   XX,
   u,
   hh,

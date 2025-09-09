@@ -1,8 +1,6 @@
 open Mocha
 open Test_utils
 
-module String = Ocaml_String
-
 let generic_basename = (is_dir_sep, current_dir_name, name) => {
   let rec find_end = n =>
     if n < 0 {
@@ -28,7 +26,7 @@ let generic_basename = (is_dir_sep, current_dir_name, name) => {
   }
 }
 
-let basename = generic_basename((s, i) => String.get(s, i) == '/', "", ...)
+let basename = generic_basename((s, i) => String.getUnsafe(s, i) == "/", "", ...)
 
 describe(__MODULE__, () => {
   test("basename", () => {

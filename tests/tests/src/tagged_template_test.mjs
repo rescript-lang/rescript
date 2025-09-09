@@ -2,7 +2,6 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_array from "@rescript/runtime/lib/es6/Primitive_array.js";
 import * as Tagged_template_libJs from "./tagged_template_lib.js";
 
 function sql(prim0, prim1) {
@@ -28,9 +27,9 @@ function foo(strings, values) {
   let res = "";
   let valueCount = values.length;
   for (let i = 0; i < valueCount; ++i) {
-    res = res + Primitive_array.get(strings, i) + (Primitive_array.get(values, i) * 10 | 0).toString();
+    res = res + strings[i] + (values[i] * 10 | 0).toString();
   }
-  return res + Primitive_array.get(strings, valueCount);
+  return res + strings[valueCount];
 }
 
 let res = foo([
@@ -39,21 +38,18 @@ let res = foo([
 ], [5]);
 
 Mocha.describe("tagged templates", () => {
-  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 40, characters 6-13", query, `
+  Mocha.test("with externals, it should return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 41, characters 6-13", query, `
 " SELECT * FROM 'users' WHERE id = '5'`));
-  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 49, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
-  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 52, characters 79-86", length, 52));
-  Mocha.test("with rescript function, it should return a string with the correct encoding and interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 56, characters 13-20", res, "| 5 × 10 = 50 |"));
-  Mocha.test("a template literal tagged with json should generate a regular string interpolation for now", () => Test_utils.eq("File \"tagged_template_test.res\", line 61, characters 13-20", "some random " + "string", "some random string"));
-  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 65, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
+  Mocha.test("with module scoped externals, it should also return a string with the correct interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 50, characters 13-20", queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"));
+  Mocha.test("with externals, it should return the result of the function", () => Test_utils.eq("File \"tagged_template_test.res\", line 53, characters 79-86", length, 52));
+  Mocha.test("with rescript function, it should return a string with the correct encoding and interpolations", () => Test_utils.eq("File \"tagged_template_test.res\", line 57, characters 13-20", res, "| 5 × 10 = 50 |"));
+  Mocha.test("a template literal tagged with json should generate a regular string interpolation for now", () => Test_utils.eq("File \"tagged_template_test.res\", line 62, characters 13-20", "some random " + "string", "some random string"));
+  Mocha.test("a regular string interpolation should continue working", () => Test_utils.eq("File \"tagged_template_test.res\", line 66, characters 7-14", `some random ` + "string" + ` interpolation`, "some random string interpolation"));
 });
-
-let $$Array;
 
 let extraLength = 10;
 
 export {
-  $$Array,
   Pg,
   table,
   id,

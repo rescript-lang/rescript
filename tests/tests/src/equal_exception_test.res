@@ -1,8 +1,6 @@
 open Mocha
 open Test_utils
 
-module String = Ocaml_String
-
 describe(__MODULE__, () => {
   test("exception", () => {
     try throw(Not_found) catch {

@@ -2,7 +2,6 @@ open Mocha
 open Test_utils
 
 module N = Belt.MutableSet.Int
-module Array = Ocaml_Array
 
 module I = Array_data_util
 module R = Belt.Range
@@ -188,7 +187,7 @@ describe(__MODULE__, () => {
     let count = 100_000
     let vv = I.randomRange(0, count)
     for i in 0 to A.length(vv) - 1 {
-      N.remove(v, vv[i])
+      N.remove(v, vv->Array.getUnsafe(i))
     }
     eq(__LOC__, N.size(v), 0)
     ok(__LOC__, N.isEmpty(v))
@@ -204,7 +203,7 @@ describe(__MODULE__, () => {
     eq(__LOC__, N.size(v), 28)
     let vv = I.randomRange(1, 28)
     for i in 0 to A.length(vv) - 1 {
-      N.remove(v, vv[i])
+      N.remove(v, vv->Array.getUnsafe(i))
     }
     eq(__LOC__, N.size(v), 0)
   })

@@ -1,8 +1,6 @@
 open Mocha
 open Test_utils
 
-module Array = Ocaml_Array
-
 module Pg = {
   @module("./tagged_template_lib.js") @taggedTemplate
   external sql: (array<string>, array<string>) => string = "sql"
@@ -27,9 +25,12 @@ let foo = (strings, values) => {
   let res = ref("")
   let valueCount = Belt.Array.length(values)
   for i in 0 to valueCount - 1 {
-    res := res.contents ++ strings[i] ++ Js.Int.toString(values[i] * 10)
+    res :=
+      res.contents ++
+      strings->Array.getUnsafe(i) ++
+      Js.Int.toString(values->Array.getUnsafe(i) * 10)
   }
-  res.contents ++ strings[valueCount]
+  res.contents ++ strings->Array.getUnsafe(valueCount)
 }
 
 let res = foo`| 5 × 10 = ${5} |`

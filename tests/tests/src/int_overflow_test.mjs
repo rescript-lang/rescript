@@ -37,28 +37,25 @@ function fib(x) {
 }
 
 Mocha.describe("Int_overflow_test", () => {
-  Mocha.test("plus_overflow", () => Test_utils.eq("File \"int_overflow_test.res\", line 53, characters 33-40", true, true));
-  Mocha.test("minus_overflow", () => Test_utils.eq("File \"int_overflow_test.res\", line 54, characters 34-41", true, true));
-  Mocha.test("flow_again1", () => Test_utils.eq("File \"int_overflow_test.res\", line 55, characters 31-38", 2147483646, 2147483646));
-  Mocha.test("flow_again2", () => Test_utils.eq("File \"int_overflow_test.res\", line 56, characters 31-38", -2, -2));
-  Mocha.test("hash_test", () => Test_utils.eq("File \"int_overflow_test.res\", line 57, characters 29-36", hash_variant("xxyyzzuuxxzzyy00112233"), 544087776));
-  Mocha.test("hash_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 58, characters 30-37", hash_variant("xxyyzxzzyy"), -449896130));
-  Mocha.test("hash_variant_test1", () => Test_utils.eq("File \"int_overflow_test.res\", line 59, characters 38-45", hash_variant2("xxyyzzuuxxzzyy00112233"), 544087776));
-  Mocha.test("hash_variant_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 60, characters 38-45", hash_variant2("xxyyzxzzyy"), -449896130));
-  Mocha.test("int_literal_flow", () => Test_utils.eq("File \"int_overflow_test.res\", line 61, characters 36-43", -1, -1));
-  Mocha.test("int_literal_flow2", () => Test_utils.eq("File \"int_overflow_test.res\", line 62, characters 37-44", -1, -1));
-  Mocha.test("float_conversion_test1", () => Test_utils.eq("File \"int_overflow_test.res\", line 63, characters 42-49", Number("3") | 0, 3));
-  Mocha.test("float_conversion_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 64, characters 42-49", Number("3.2") | 0, 3));
+  Mocha.test("plus_overflow", () => Test_utils.eq("File \"int_overflow_test.res\", line 51, characters 33-40", true, true));
+  Mocha.test("minus_overflow", () => Test_utils.eq("File \"int_overflow_test.res\", line 52, characters 34-41", true, true));
+  Mocha.test("flow_again1", () => Test_utils.eq("File \"int_overflow_test.res\", line 53, characters 31-38", 2147483646, 2147483646));
+  Mocha.test("flow_again2", () => Test_utils.eq("File \"int_overflow_test.res\", line 54, characters 31-38", -2, -2));
+  Mocha.test("hash_test", () => Test_utils.eq("File \"int_overflow_test.res\", line 55, characters 29-36", hash_variant("xxyyzzuuxxzzyy00112233"), 544087776));
+  Mocha.test("hash_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 56, characters 30-37", hash_variant("xxyyzxzzyy"), -449896130));
+  Mocha.test("hash_variant_test1", () => Test_utils.eq("File \"int_overflow_test.res\", line 57, characters 38-45", hash_variant2("xxyyzzuuxxzzyy00112233"), 544087776));
+  Mocha.test("hash_variant_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 58, characters 38-45", hash_variant2("xxyyzxzzyy"), -449896130));
+  Mocha.test("int_literal_flow", () => Test_utils.eq("File \"int_overflow_test.res\", line 59, characters 36-43", -1, -1));
+  Mocha.test("int_literal_flow2", () => Test_utils.eq("File \"int_overflow_test.res\", line 60, characters 37-44", -1, -1));
+  Mocha.test("float_conversion_test1", () => Test_utils.eq("File \"int_overflow_test.res\", line 61, characters 42-49", Number("3") | 0, 3));
+  Mocha.test("float_conversion_test2", () => Test_utils.eq("File \"int_overflow_test.res\", line 62, characters 42-49", Number("3.2") | 0, 3));
 });
-
-let $$String;
 
 let max_int = 2147483647;
 
 let min_int = -2147483648;
 
 export {
-  $$String,
   max_int,
   min_int,
   hash_variant,

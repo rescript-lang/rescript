@@ -35,17 +35,14 @@ function generic_basename(is_dir_sep, current_dir_name, name) {
 }
 
 function basename(extra) {
-  return generic_basename((s, i) => s.codePointAt(i) === /* '/' */47, "", extra);
+  return generic_basename((s, i) => s[i] === "/", "", extra);
 }
 
 Mocha.describe("Inline_regression_test", () => {
-  Mocha.test("basename", () => Test_utils.eq("File \"inline_regression_test.res\", line 35, characters 7-14", basename("b/c/a.b"), "a.b"));
+  Mocha.test("basename", () => Test_utils.eq("File \"inline_regression_test.res\", line 33, characters 7-14", basename("b/c/a.b"), "a.b"));
 });
 
-let $$String;
-
 export {
-  $$String,
   generic_basename,
   basename,
 }

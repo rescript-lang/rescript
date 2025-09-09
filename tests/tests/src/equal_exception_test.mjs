@@ -68,7 +68,7 @@ if (Primitive_object.equal(e, {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "equal_exception_test.res",
-      40,
+      38,
       0
     ],
     Error: new Error()
@@ -80,17 +80,14 @@ if (Not_found === "Not_found" !== false) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "equal_exception_test.res",
-      41,
+      39,
       0
     ],
     Error: new Error()
   };
 }
 
-let $$String;
-
 export {
-  $$String,
   e,
   eq,
   Not_found,

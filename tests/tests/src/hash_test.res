@@ -2,8 +2,6 @@ open Belt
 open Mocha
 open Test_utils
 
-module Hashtbl = Ocaml_Hashtbl
-
 let test_strings = Array.init(32, i => Js.String2.fromCodePoint(i)->Js.String2.repeat(i))
 
 let test_strings_hash_results = [
@@ -42,7 +40,7 @@ let test_strings_hash_results = [
 ]
 
 let normalize = x => land(x, 0x3FFFFFFF)
-let caml_hash = x => normalize(Hashtbl.hash(x))
+let caml_hash = x => normalize(Hash_utils.hash(x))
 
 describe(__MODULE__, () => {
   test("test strings hash results", () => {
@@ -50,14 +48,14 @@ describe(__MODULE__, () => {
   })
 
   test("hash 0", () => {
-    eq(__LOC__, normalize(Hashtbl.hash(0)), 129913994)
+    eq(__LOC__, normalize(Hash_utils.hash(0)), 129913994)
   })
 
   test("hash x", () => {
-    eq(__LOC__, normalize(Hashtbl.hash("x")), 780510073)
+    eq(__LOC__, normalize(Hash_utils.hash("x")), 780510073)
   })
 
   test("hash xy", () => {
-    eq(__LOC__, normalize(Hashtbl.hash("xy")), 194127723)
+    eq(__LOC__, normalize(Hash_utils.hash("xy")), 194127723)
   })
 })
