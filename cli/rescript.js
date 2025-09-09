@@ -4,6 +4,10 @@
 
 import * as child_process from "node:child_process";
 import { rescript_exe } from "./common/bins.js";
+import { resolvePackageRoot } from "./common/resolvePackageRoot.js";
+
+const runtimePackage = await resolvePackageRoot("@rescript/runtime");
+console.log({ runtimePackage });
 
 const args = process.argv.slice(2);
 
