@@ -4979,24 +4979,12 @@ and parse_constr_decl_args p =
           (* start of object type spreading, e.g. `User({...a, "u": int})` *)
           Parser.next p;
           let typ = parse_typ_expr p in
-          let had_no_extra_fields =
-            match p.token with
-            | Rbrace ->
-              (* {...x}, spread without extra fields *)
-              Parser.next p; true
-            | _ -> Parser.expect Comma p; false
+          let res =
+            parse_spread_tail_classified ~start_pos ~spread_typ:typ
+              ~grammar:Grammar.FieldDeclarations p
           in
-          (* Heuristic: if the next element starts with a string, it's an object field.
-             Otherwise, treat it as a record field start (attributes, mutable,
-             '...', keywords, or identifiers). This also covers cases where fields
-             have attributes or other qualifiers, not just bare Lidents. *)
-          let is_record_after_spread =
-            match p.token with
-            | String _ -> false
-            | _ -> true
-          in
-          if is_record_after_spread || had_no_extra_fields then (
-            (* Treat as record-style inline record with a type spread *)
+          (match res with
+          | `Record fields ->
             let spread_field_name =
               Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
             in
@@ -5005,39 +4993,18 @@ and parse_constr_decl_args p =
               Ast_helper.Type.field ~attrs:[] ~loc:spread_field_loc
                 ~mut:Asttypes.Immutable spread_field_name typ
             in
-            let more_fields =
-              if had_no_extra_fields then []
-              else
-                parse_comma_delimited_region
-                  ~grammar:Grammar.FieldDeclarations ~closing:Rbrace
-                  ~f:parse_field_declaration_region p
-            in
-            if not had_no_extra_fields then Parser.expect Rbrace p;
             Parser.optional p Comma |> ignore;
             Parser.expect Rparen p;
-            Parsetree.Pcstr_record (spread_field :: more_fields))
-          else
-            (* Object-style spread, remains a tuple arg of object type *)
-            let fields =
-              Parsetree.Oinherit typ
-              :: parse_comma_delimited_region
-                   ~grammar:Grammar.StringFieldDeclarations ~closing:Rbrace
-                   ~f:parse_string_field_declaration p
-            in
-            Parser.expect Rbrace p;
-            let loc = mk_loc start_pos p.prev_end_pos in
-            let typ =
-              Ast_helper.Typ.object_ ~loc fields Asttypes.Closed
-              |> parse_type_alias p
-            in
-            let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
+            Parsetree.Pcstr_record (spread_field :: fields)
+          | `Object typ ->
             Parser.optional p Comma |> ignore;
             let more_args =
               parse_comma_delimited_region ~grammar:Grammar.TypExprList
                 ~closing:Rparen ~f:parse_typ_expr_region p
             in
             Parser.expect Rparen p;
-            Parsetree.Pcstr_tuple (typ :: more_args)
+            Parsetree.Pcstr_tuple (typ :: more_args))
+        
         | _ -> (
           let attrs = parse_attributes p in
           match p.Parser.token with
@@ -5455,6 +5422,52 @@ and parse_type_equation_or_constr_decl p =
     Parser.err p (Diagnostics.uident t);
     (* TODO: is this a good idea? *)
     (None, Asttypes.Public, Parsetree.Ptype_abstract)
+
+(* After parsing `{... <spread_typ>`, parse the remainder inside the braces
+   and classify as record tail vs object tail. Returns:
+   - `Record fields`: list of record fields following the spread (may be empty)
+   - `Object typ`: an object type that inherits the spread and includes the tail
+   The caller is responsible for constructing the synthetic spread field when
+   building a record. *)
+and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
+    ~start_pos ~spread_typ ~grammar p =
+  match p.token with
+  | Rbrace ->
+    (* `{...t}` no extra fields: treat as record without tail fields *)
+    Parser.next p;
+    `Record []
+  | _ ->
+    Parser.expect Comma p;
+    let found_object_field = ref false in
+    let (fields : Parsetree.label_declaration list) =
+      parse_comma_delimited_region ~grammar ~closing:Rbrace
+        ~f:
+          (parse_field_declaration_region ?current_type_name_path
+             ?inline_types_context ~found_object_field)
+        p
+    in
+    Parser.expect Rbrace p;
+    if !found_object_field then (
+      (* Object-style: build an object type that inherits the spread *)
+      let obj_fields =
+        let convert (ld : Parsetree.label_declaration) =
+          let ({Parsetree.pld_name; pld_type; pld_attributes; _} :
+                Parsetree.label_declaration) = ld
+          in
+          match pld_name.txt with
+          | "..." -> Parsetree.Oinherit pld_type
+          | _ -> Otag (pld_name, pld_attributes, pld_type)
+        in
+        Parsetree.Oinherit spread_typ :: List.map convert fields
+      in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      let typ =
+        Ast_helper.Typ.object_ ~loc obj_fields Asttypes.Closed
+        |> parse_type_alias p
+      in
+      let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
+      `Object typ)
+    else `Record fields
 
 and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
     =
