@@ -19,6 +19,8 @@
 
 #### :eyeglasses: Spec Compliance
 
+- Wrap variables in curly braces inside JSX children. https://github.com/rescript-lang/rescript/pull/7863
+
 #### :rocket: New Feature
 
 - Add `Array.filterMapWithIndex` to Stdlib. https://github.com/rescript-lang/rescript/pull/7876

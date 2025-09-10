@@ -9,7 +9,7 @@ module V4C7 = {
       <input
         type_="text" ?className ref=?{Js.Nullable.toOption(ref)->Belt.Option.map(React.Ref.domRef)}
       />
-      children
+      {children}
     </div>
   )
 }
