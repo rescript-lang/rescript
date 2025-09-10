@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Fix return type of `String.charCodeAt`. https://github.com/rescript-lang/rescript/pull/7864
+- Remove support of JSX children spread. https://github.com/rescript-lang/rescript/pull/7869
 
 #### :eyeglasses: Spec Compliance
 

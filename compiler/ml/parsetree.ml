@@ -372,9 +372,7 @@ and jsx_prop =
       Location.t
       * expression
 
-and jsx_children =
-  | JSXChildrenSpreading of expression
-  | JSXChildrenItems of expression list
+and jsx_children = JSXChildrenItems of expression list
 
 and jsx_props = jsx_prop list
 

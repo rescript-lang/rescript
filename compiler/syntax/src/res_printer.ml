@@ -4516,7 +4516,7 @@ and print_jsx_container_tag ~state tag_name
   (* <div className="test" /> *)
   let has_children =
     match children with
-    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
+    | JSXChildrenItems (_ :: _) -> true
     | JSXChildrenItems [] -> false
   in
   let line_sep = get_line_sep_for_jsx_children children in
@@ -4607,7 +4607,7 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
   let has_children =
     match children with
     | JSXChildrenItems [] -> false
-    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
+    | JSXChildrenItems (_ :: _) -> true
   in
   let line_sep = get_line_sep_for_jsx_children children in
   Doc.group
@@ -4622,7 +4622,6 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
 
 and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
   match children with
-  | JSXChildrenSpreading _ -> Doc.line
   | JSXChildrenItems children ->
     if
       List.length children > 1
@@ -4670,7 +4669,6 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   in
   match children with
   | JSXChildrenItems [] -> Doc.nil
-  | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
   | JSXChildrenItems children ->
     let rec visit acc children =
       match children with

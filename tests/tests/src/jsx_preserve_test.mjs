@@ -83,36 +83,19 @@ let baseChildren = [
   </span>
 ];
 
-let _container_with_spread_children = <div
-  className={"barry"}
-  title={"barry"}
->
-  {baseChildren}
-</div>;
-
 let newrecord$2 = {...baseProps};
-
-let _container_with_spread_props_and_children = <div
-  {...newrecord$2} 
-  title={"barry"}
-  className={"barry"}
->
-  {baseChildren}
-</div>;
-
-let newrecord$3 = {...baseProps};
 
 let _unary_element_with_spread_props_keyed = <input
   key={"barry-key"} 
-  {...newrecord$3} 
+  {...newrecord$2} 
   type={"text"}
 />;
 
-let newrecord$4 = {...baseProps};
+let newrecord$3 = {...baseProps};
 
 let _container_with_spread_props_keyed = <div
   key={"barry-key"} 
-  {...newrecord$4} 
+  {...newrecord$3} 
   title={"barry"}
   className={"barry"}
 >
@@ -276,8 +259,6 @@ export {
   _unary_element_with_spread_props,
   _container_with_spread_props,
   baseChildren,
-  _container_with_spread_children,
-  _container_with_spread_props_and_children,
   _unary_element_with_spread_props_keyed,
   _container_with_spread_props_keyed,
   _unary_element_with_only_spread_props,

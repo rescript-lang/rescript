@@ -2999,19 +2999,8 @@ and parse_jsx_children p : Parsetree.jsx_children =
       loop p (child :: children)
     | _ -> children
   in
-  let children =
-    match p.Parser.token with
-    | DotDotDot ->
-      Parser.next p;
-      let expr =
-        parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
-      in
-      Parsetree.JSXChildrenSpreading expr
-    | _ ->
-      let children = List.rev (loop p []) in
-      Parsetree.JSXChildrenItems children
-  in
-  children
+  let children = List.rev (loop p []) in
+  Parsetree.JSXChildrenItems children
 
 and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in

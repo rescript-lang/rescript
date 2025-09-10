@@ -1660,7 +1660,6 @@ and walk_expression expr t comments =
     attach t.trailing opening_token on_same_line;
     let exprs =
       match children with
-      | Parsetree.JSXChildrenSpreading e -> [e]
       | Parsetree.JSXChildrenItems xs -> xs
     in
     let xs = exprs |> List.map (fun e -> Expression e) in
@@ -1803,7 +1802,6 @@ and walk_expression expr t comments =
     | children ->
       let children_nodes =
         match children with
-        | Parsetree.JSXChildrenSpreading e -> [Expression e]
         | Parsetree.JSXChildrenItems xs -> List.map (fun e -> Expression e) xs
       in
 

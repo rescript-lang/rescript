@@ -363,66 +363,6 @@ module App = {
   }
 </div>
 
-<Animated> ...{x => <div />} </Animated>
-<div> ...c </div>
-
-<Animated initialValue=0.0 value>
-  ...{ReactDOMRe.Style.make(
-    ~width="20px",
-    ~height="20px",
-    ~borderRadius="100%",
-    ~backgroundColor="red",
-  )}
-</Animated>
-
-<Animated initialValue=0.0 value>
-  ...{value =>
-    <div
-      style={ReactDOMRe.Style.make(
-        ~width="20px",
-        ~height="20px",
-        ~borderRadius="100%",
-        ~backgroundColor="red",
-      )}
-    />}
-</Animated>
-
-<Animated initialValue=0.0 value>
-  ...{(value): ReasonReact.element =>
-    <div
-      style={ReactDOMRe.Style.make(
-        ~width="20px",
-        ~height="20px",
-        ~borderRadius="100%",
-        ~backgroundColor="red",
-      )}
-    />}
-</Animated>
-
-<Animated initialValue=0.0 value>
-  ...{value => {
-    let width = "20px"
-    let height = "20px"
-
-    <div
-      style={ReactDOMRe.Style.make(~width, ~height, ~borderRadius="100%", ~backgroundColor="red")}
-    />
-  }}
-</Animated>
-
-let v =
-  <A>
-    <B>
-      ...{_ => {
-        let renderX = x => {
-          let y = x ++ x
-          <div key=y />
-        }
-        renderX("foo")
-      }}
-    </B>
-  </A>
-
 let x = <A x="y" {...str} />
 
 // https://github.com/rescript-lang/rescript-compiler/issues/6002
@@ -431,12 +371,6 @@ let x = props =>
     {...props}
     className="inline-block px-6 py-2.5 bg-blue-600 text-white font-medium text-xs leading-tight"
   />
-
-let x = <C> ...{() => msg->React.string} </C>
-
-let x = <C> ...{array->Array.map(React.string)} </C>
-
-let x = <> ...{array->Array.map(React.string)} </>
 
 let x = {
   let _ = <div />

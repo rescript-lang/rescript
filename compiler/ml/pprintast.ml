@@ -840,7 +840,6 @@ and simple_expr ctxt f x =
     | _ -> paren true (expression ctxt) f x
 
 and collect_jsx_children = function
-  | JSXChildrenSpreading e -> [e]
   | JSXChildrenItems xs -> xs
 
 and print_jsx_prop ctxt f = function

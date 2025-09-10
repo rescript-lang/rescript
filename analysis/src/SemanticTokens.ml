@@ -312,7 +312,6 @@ let command ~debug ~emitter ~path =
 
       (* children *)
       (match children with
-      | Parsetree.JSXChildrenSpreading child -> iterator.expr iterator child
       | Parsetree.JSXChildrenItems children ->
         List.iter (iterator.expr iterator) children);
 

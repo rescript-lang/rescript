@@ -1183,7 +1183,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
     (children : jsx_children) : jsx_props =
   match children with
   | JSXChildrenItems [] -> props
-  | JSXChildrenItems [child] | JSXChildrenSpreading child ->
+  | JSXChildrenItems [child] ->
     let expr =
       (* I don't quite know why fragment and uppercase don't do this additional ReactDOM.someElement wrapping *)
       match component_description with
@@ -1232,7 +1232,6 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
     (props : jsx_props) (children : jsx_children) : expression =
   let more_than_one_children =
     match children with
-    | JSXChildrenSpreading _ -> false
     | JSXChildrenItems xs -> List.length xs > 1
   in
   let props_with_children =

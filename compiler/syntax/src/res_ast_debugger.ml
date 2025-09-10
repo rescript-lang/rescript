@@ -710,7 +710,6 @@ module SexpAst = struct
       | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
         let xs =
           match children with
-          | JSXChildrenSpreading e -> [e]
           | JSXChildrenItems xs -> xs
         in
         Sexp.list
@@ -732,7 +731,6 @@ module SexpAst = struct
              }) ->
         let xs =
           match children with
-          | JSXChildrenSpreading e -> [e]
           | JSXChildrenItems xs -> xs
         in
         Sexp.list
