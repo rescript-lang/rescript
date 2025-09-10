@@ -256,6 +256,12 @@ let transl_labels ?record_name env closed lbls =
   in
   (lbls, lbls')
 
+let first_non_spread_field (lbls_ : Parsetree.label_declaration list) =
+  List.find_map
+    (fun (ld : Parsetree.label_declaration) ->
+      if ld.pld_name.txt <> "..." then Some ld else None)
+    lbls_
+
 let transl_constructor_arguments env closed = function
   | Pcstr_tuple l ->
     let l = List.map (transl_simple_type env closed) l in
@@ -271,7 +277,7 @@ let transl_constructor_arguments env closed = function
       match l with
       | [{pld_name = {txt = "..."}; pld_type = spread_typ; _}] ->
         (* Ambiguous `{...t}`: if only spread present and it doesn't resolve to a
-         record type, treat it as an object-typed tuple argument. *)
+           record type, treat it as an object-typed tuple argument. *)
         let obj_ty =
           Ast_helper.Typ.object_ ~loc:spread_typ.ptyp_loc
             [Parsetree.Oinherit spread_typ]
@@ -279,7 +285,32 @@ let transl_constructor_arguments env closed = function
         in
         let cty = transl_simple_type env closed obj_ty in
         (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])
-      | _ -> (Types.Cstr_record lbls', Cstr_record lbls)))
+      | _ -> (
+        (* Could not resolve spread to a record type, but additional record
+           fields are present. Mirror declaration logic and reject mixing
+           object-type spreads with record fields. *)
+        match first_non_spread_field l with
+        | Some ld ->
+          raise
+            (Error (ld.pld_loc, Object_spread_with_record_field ld.pld_name.txt))
+        | None -> (
+          (* Be defensive: treat as an object-typed tuple if somehow only spreads
+             are present but not caught by the single-spread case. *)
+          let fields =
+            Ext_list.filter_map l (fun ld ->
+                match ld.pld_name.txt with
+                | "..." -> Some (Parsetree.Oinherit ld.pld_type)
+                | _ -> None)
+          in
+          match fields with
+          | [] -> (Types.Cstr_record lbls', Cstr_record lbls)
+          | _ ->
+            let obj_ty =
+              Ast_helper.Typ.object_ ~loc:(List.hd l).pld_loc fields
+                Asttypes.Closed
+            in
+            let cty = transl_simple_type env closed obj_ty in
+            (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])))))
 
 let make_constructor env type_path type_params sargs sret_type =
   match sret_type with
@@ -633,12 +664,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
         (* TODO: We really really need to make this "spread that needs to be resolved" 
         concept 1st class in the AST or similar. This is quite hacky and fragile as
         is.*)
-        let non_spread_field =
-          List.find_map
-            (fun ld -> if ld.pld_name.txt <> "..." then Some ld else None)
-            lbls_
-        in
-        match non_spread_field with
+        match first_non_spread_field lbls_ with
         | Some ld ->
           (* Error on the first record field mixed with an object spread. *)
           raise
