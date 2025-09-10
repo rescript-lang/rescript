@@ -6,11 +6,7 @@ import * as Test_utils from "./test_utils.mjs";
 Mocha.describe("Js_array_test", () => {
   Mocha.test("isArray_array", () => Test_utils.eq("File \"js_array_test.res\", line 25, characters 7-14", true, Array.isArray([])));
   Mocha.test("isArray_int", () => Test_utils.eq("File \"js_array_test.res\", line 28, characters 7-14", false, Array.isArray(34)));
-  Mocha.test("length", () => Test_utils.eq("File \"js_array_test.res\", line 31, characters 7-14", 3, [
-    1,
-    2,
-    3
-  ].length));
+  Mocha.test("length", () => Test_utils.eq("File \"js_array_test.res\", line 31, characters 7-14", 3, 3));
   Mocha.test("copyWithin", () => Test_utils.eq("File \"js_array_test.res\", line 35, characters 7-14", [
     1,
     2,

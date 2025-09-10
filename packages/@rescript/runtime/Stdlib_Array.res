@@ -42,7 +42,7 @@ let fromInitializer = (~length, f) =>
 
 @val external isArray: 'a => bool = "Array.isArray"
 
-@get external length: array<'a> => int = "length"
+external length: array<'a> => int = "%array_length"
 
 let isEmpty = arr => arr->length === 0
 

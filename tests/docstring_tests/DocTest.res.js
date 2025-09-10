@@ -135,7 +135,7 @@ async function main() {
 })`;
       }
     });
-    if (codeExamples.length <= 0) {
+    if (codeExamples.length === 0) {
       return;
     }
     let content = `describe("` + key + `", () => {

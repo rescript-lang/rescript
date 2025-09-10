@@ -21,7 +21,7 @@ function f(v) {
 }
 
 function fff(x) {
-  return x.length >= 0;
+  return true;
 }
 
 function fff2(x) {
@@ -33,15 +33,11 @@ function fff2(x) {
 }
 
 function fff3(x) {
-  if (x.length >= 0) {
-    return 1;
-  } else {
-    return 2;
-  }
+  return 1;
 }
 
 function fff4(x) {
-  if (x.length > 0) {
+  if (x.length !== 0) {
     return 1;
   } else {
     return 2;
@@ -87,7 +83,7 @@ Mocha.describe("Array_subtle_test", () => {
       3,
       3
     ];
-    while (v.length > 0) {
+    while (v.length !== 0) {
       v.pop();
     };
     Test_utils.eq("File \"array_subtle_test.res\", line 60, characters 7-14", 0, v.length);
