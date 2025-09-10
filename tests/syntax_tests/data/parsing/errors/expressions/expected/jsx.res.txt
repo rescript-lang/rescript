@@ -101,6 +101,7 @@
   13 │ // Trailing dots in tag names
   14 │ let x = <Foo. />
   15 │ let x = <Foo></Foo.>
+  16 │ 
 
   expected identifier after '.' in JSX tag name
 
@@ -111,8 +112,20 @@
   13 │ // Trailing dots in tag names
   14 │ let x = <Foo. />
   15 │ let x = <Foo></Foo.>
+  16 │ 
+  17 │ // spread children
 
   expected identifier after '.' in JSX tag name
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/jsx.res:18:15-17
+
+  16 │ 
+  17 │ // spread children
+  18 │ let x = <div> ...c </div>
+
+  Spreading JSX children is no longer supported.
 
 let x = <di-v />
 let x = <Unclosed>
@@ -125,3 +138,4 @@ let x = <a-b />
 let x = <V.a />
 let x = <Foo. />
 let x = <Foo></Foo.>
+let x = <div>c</div>

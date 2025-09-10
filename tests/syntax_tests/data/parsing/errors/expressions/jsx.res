@@ -13,3 +13,6 @@ let x = <V.a- />
 // Trailing dots in tag names
 let x = <Foo. />
 let x = <Foo></Foo.>
+
+// spread children
+let x = <div> ...c </div>

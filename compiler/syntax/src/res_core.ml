@@ -188,6 +188,9 @@ module ErrorMessages = struct
   let type_definition_in_function =
     "Type definitions are not allowed inside functions.\n"
     ^ "  Move this `type` declaration to the top level or into a module."
+
+  let spread_children_no_longer_supported =
+    "Spreading JSX children is no longer supported."
 end
 
 module InExternal = struct
@@ -2999,7 +3002,13 @@ and parse_jsx_children p : Parsetree.jsx_children =
       loop p (child :: children)
     | _ -> children
   in
-  List.rev (loop p [])
+  match p.Parser.token with
+  | DotDotDot ->
+    Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+      (Diagnostics.message ErrorMessages.spread_children_no_longer_supported);
+    Parser.next p;
+    [parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p]
+  | _ -> List.rev (loop p [])
 
 and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
