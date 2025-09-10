@@ -323,6 +323,19 @@ let process_tag_name (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
+let process_as_name (attrs : Parsetree.attributes) =
+  let st = ref None in
+  Ext_list.iter attrs (fun ({txt; loc}, payload) ->
+      match txt with
+      | "as" ->
+        if !st = None then (
+          (match Ast_payload.is_single_string payload with
+          | None -> ()
+          | Some (s, _dec) -> st := Some s))
+        else raise (Error (loc, Duplicated_bs_as))
+      | _ -> ());
+  !st
+
 let get_tag_name (cstr : Types.constructor_declaration) =
   process_tag_name cstr.cd_attributes
 
@@ -475,8 +488,15 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
         match cstr.cd_args with
         | Cstr_record fields ->
             List.iter (fun (field : Types.label_declaration) ->
-              if Ident.name field.ld_id = tag_name then
+              (* Check if field name conflicts with tag *)
+              let field_name = Ident.name field.ld_id in
+              if field_name = tag_name then
+                raise (Error (cstr.cd_loc, TagFieldNameConflict (Ident.name cstr.cd_id, tag_name)));
+              (* Check if @as name conflicts with tag *)
+              match process_as_name field.ld_attributes with
+              | Some as_name when as_name = tag_name ->
                 raise (Error (cstr.cd_loc, TagFieldNameConflict (Ident.name cstr.cd_id, tag_name)))
+              | _ -> ()
             ) fields
         | _ -> ())
     | None -> ()
