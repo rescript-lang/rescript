@@ -2999,8 +2999,7 @@ and parse_jsx_children p : Parsetree.jsx_children =
       loop p (child :: children)
     | _ -> children
   in
-  let children = List.rev (loop p []) in
-  Parsetree.JSXChildrenItems children
+  List.rev (loop p [])
 
 and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
