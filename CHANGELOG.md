@@ -31,6 +31,8 @@
 
 #### :nail_care: Polish
 
+- Reactivate optimization for length of array literals. https://github.com/rescript-lang/rescript/pull/7872
+
 #### :house: Internal
 
 - Playground: Add config options for experimental features and jsx preserve mode. https://github.com/rescript-lang/rescript/pull/7865
