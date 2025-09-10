@@ -1,7 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~suites, ~test_id, loc, x, y)
-let b = (loc, v) => Mt.bool_suites(~suites, ~test_id, loc, v)
+open Mocha
+open Test_utils
 
 type u<'a> = option<'a> =
   private
@@ -89,14 +87,6 @@ type xx<'a> = option<'a> =
   | Some('a)
 let f13 = () => N.take(length_10_id, 8) == (Some(list{1, 2, 3}): option<_>)
 
-let () = {
-  b(__LOC__, None < Some(Js.null))
-  b(__LOC__, !(None > Some(Js.null)))
-  b(__LOC__, Some(Js.null) > None)
-  b(__LOC__, None < Some(Js.undefined))
-  b(__LOC__, Some(Js.undefined) > None)
-}
-
 @val
 external log3: (
   ~req: @unwrap
@@ -122,42 +112,48 @@ let neqx = (a, b) => a != b && b != a
 
 let all_true = xs => Belt.List.every(xs, x => x)
 
-b(__LOC__, ...)(all_true(list{gtx(Some(Some(Js.null)), Some(None))}))
+describe(__MODULE__, () => {
+  test("option comparison operations", () => {
+    ok(__LOC__, None < Some(Js.null))
+    ok(__LOC__, !(None > Some(Js.null)))
+    ok(__LOC__, Some(Js.null) > None)
+    ok(__LOC__, None < Some(Js.undefined))
+    ok(__LOC__, Some(Js.undefined) > None)
+  })
 
-b(__LOC__, ...)(
-  all_true(list{
-    ltx(Some(None), Some(Some(3))),
-    ltx(Some(None), Some(Some(None))),
-    ltx(Some(None), Some(Some("3"))),
-    ltx(Some(None), Some(Some(true))),
-    ltx(Some(None), Some(Some(false))),
-    ltx(Some(false), Some(true)),
-    ltx(Some(Some(false)), Some(Some(true))),
-    ltx(None, Some(None)),
-    ltx(None, Some(Js.null)),
-    ltx(None, Some(x => x)),
-    ltx(Some(Js.null), Some(Js.Null.return(3))),
-  }),
-)
+  test("option greater than operations", () => {
+    ok(__LOC__, all_true(list{gtx(Some(Some(Js.null)), Some(None))}))
+  })
 
-b(__LOC__, ...)(
-  all_true(list{
-    eqx(None, None),
-    neqx(None, Some(Js.null)),
-    eqx(Some(None), Some(None)),
-    eqx(Some(Some(None)), Some(Some(None))),
-    neqx(Some(Some(Some(None))), Some(Some(None))),
-  }),
-)
+  test("option less than operations", () => {
+    ok(
+      __LOC__,
+      all_true(list{
+        ltx(Some(None), Some(Some(3))),
+        ltx(Some(None), Some(Some(None))),
+        ltx(Some(None), Some(Some("3"))),
+        ltx(Some(None), Some(Some(true))),
+        ltx(Some(None), Some(Some(false))),
+        ltx(Some(false), Some(true)),
+        ltx(Some(Some(false)), Some(Some(true))),
+        ltx(None, Some(None)),
+        ltx(None, Some(Js.null)),
+        ltx(None, Some(x => x)),
+        ltx(Some(Js.null), Some(Js.Null.return(3))),
+      }),
+    )
+  })
 
-module N0 = {
-  type record = {x: int, mutable y: string}
-  type t =
-    | None
-    | Some(record)
-
-  let v = (x: record): t => Some(x)
-  let v0 = (x: record): option<record> => Some(x)
-  /* [v] and [v0] should be just an identity function */
-}
-Mt.from_pair_suites(__MODULE__, suites.contents)
+  test("option equality operations", () => {
+    ok(
+      __LOC__,
+      all_true(list{
+        eqx(None, None),
+        neqx(None, Some(Js.null)),
+        eqx(Some(None), Some(None)),
+        eqx(Some(Some(None)), Some(Some(None))),
+        neqx(Some(Some(Some(None))), Some(Some(None))),
+      }),
+    )
+  })
+})

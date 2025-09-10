@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 @@warning("-107")
 
 module String = Ocaml_String
@@ -46,37 +49,17 @@ let rec fib = x =>
   | n => fib(n - 1l) + fib(n - 2)
   }
 
-Mt.from_pair_suites(
-  __MODULE__,
-  list{
-    ("plus_overflow", _ => Eq(true, max_int + 1 == min_int)),
-    ("minus_overflow", _ => Eq(true, min_int - 1 == max_int)),
-    (
-      "flow_again",
-      _ => Eq(
-        2147483646,
-        {
-          max_int + max_int + min_int
-        },
-      ),
-    ),
-    (
-      "flow_again",
-      _ => Eq(
-        -2,
-        {
-          max_int + max_int
-        },
-      ),
-    ),
-    ("hash_test", _ => Eq(hash_variant("xxyyzzuuxxzzyy00112233"), 544087776)),
-    ("hash_test2", _ => Eq(hash_variant("xxyyzxzzyy"), -449896130)),
-    (__LOC__, _ => Eq(hash_variant2("xxyyzzuuxxzzyy00112233"), 544087776)),
-    (__LOC__, _ => Eq(hash_variant2("xxyyzxzzyy"), -449896130)),
-    ("int_literal_flow", _ => Eq(-1, 0xffffffff)),
-    ("int_literal_flow2", _ => Eq(-1, 0xfffffffff)),
-    (__LOC__, _ => Eq(int_of_float(Js.Float.fromString("3")), 3)),
-    /* FIXME */
-    (__LOC__, _ => Eq(int_of_float(Js.Float.fromString("3.2")), 3)),
-  },
-)
+describe(__MODULE__, () => {
+  test("plus_overflow", () => eq(__LOC__, true, max_int + 1 == min_int))
+  test("minus_overflow", () => eq(__LOC__, true, min_int - 1 == max_int))
+  test("flow_again1", () => eq(__LOC__, 2147483646, max_int + max_int + min_int))
+  test("flow_again2", () => eq(__LOC__, -2, max_int + max_int))
+  test("hash_test", () => eq(__LOC__, hash_variant("xxyyzzuuxxzzyy00112233"), 544087776))
+  test("hash_test2", () => eq(__LOC__, hash_variant("xxyyzxzzyy"), -449896130))
+  test("hash_variant_test1", () => eq(__LOC__, hash_variant2("xxyyzzuuxxzzyy00112233"), 544087776))
+  test("hash_variant_test2", () => eq(__LOC__, hash_variant2("xxyyzxzzyy"), -449896130))
+  test("int_literal_flow", () => eq(__LOC__, -1, 0xffffffff))
+  test("int_literal_flow2", () => eq(__LOC__, -1, -1))
+  test("float_conversion_test1", () => eq(__LOC__, int_of_float(Js.Float.fromString("3")), 3))
+  test("float_conversion_test2", () => eq(__LOC__, int_of_float(Js.Float.fromString("3.2")), 3))
+})

@@ -17,7 +17,7 @@ external compare: (string, string) => Stdlib_Ordering.t = "%compare"
 @get_index external getUnsafe: (string, int) => string = ""
 @send external charAt: (string, int) => string = "charAt"
 
-@send external charCodeAt: (string, int) => float = "charCodeAt"
+@send external charCodeAt: (string, int) => int = "charCodeAt"
 @send external codePointAt: (string, int) => option<int> = "codePointAt"
 
 @send external concat: (string, string) => string = "concat"

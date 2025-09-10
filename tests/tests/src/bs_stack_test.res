@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 type rec node = {
   value: int,
@@ -95,7 +94,9 @@ let test2 = n(3, ~l=n(1, ~l=n(5, ~l=n(2, ~l=n(4)))))
 
 let test3 = n(1, ~l=n(5, ~l=n(2, ~l=n(4))), ~r=n(3))
 
-eq(__LOC__, inOrder(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
-eq(__LOC__, inOrder3(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
-
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__MODULE__, () => {
+  test("tree in-order traversal", () => {
+    eq(__LOC__, inOrder(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
+    eq(__LOC__, inOrder3(Js.Undefined.return(test1)), [4, 2, 5, 1, 3])
+  })
+})

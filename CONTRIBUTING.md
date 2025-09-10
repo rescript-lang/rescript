@@ -227,14 +227,23 @@ Below we will discuss on how to write, build and run these test files.
 - Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mt.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
 
   ```rescript
-  let suites: Mt.pair_suites = list{
-    ("hey", _ => Eq(true, 3 > 2)),
-    ("hi", _ => Neq(2, 3)),
-    ("hello", _ => Approx(3.0, 3.0)),
-    ("throw", _ => ThrowAny(_ => raise(SomeException))),
-  }
+  open Mocha
+  open Test_utils
 
-  Mt.from_pair_suites(__MODULE__, suites)
+  describe(__MODULE__, () => {
+    test("hey", () => {
+      ok(__LOC__, 3 > 2)
+    })
+
+    test("hi", () => {
+      eq(__LOC__, 2, 2)
+      eq(__LOC__, 3, 3)
+    })
+
+    test("throw", () => {
+      throws(__LOC__, () => throw(SomeException))
+    })
+  })
   ```
 
 - Build the test files and run the tests: `node scripts/test.js -mocha`.
