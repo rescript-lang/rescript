@@ -93,8 +93,8 @@ let report_error ppf =
         "Constructor " ^ name ^ " has more than one argument.")
   | TagFieldNameConflict (constructor_name, field_name) ->
     fprintf ppf
-      "Constructor %s: the @tag name \"%s\" conflicts with inline record field \"%s\". \
-       Use a different @tag name or rename the field."
+      "Constructor %s: the @tag name \"%s\" conflicts with inline record field \
+       \"%s\". Use a different @tag name or rename the field."
       constructor_name field_name field_name
 
 (* Type of the runtime representation of an untagged block (case with payoad) *)
@@ -328,10 +328,10 @@ let process_as_name (attrs : Parsetree.attributes) =
   Ext_list.iter attrs (fun ({txt; loc}, payload) ->
       match txt with
       | "as" ->
-        if !st = None then (
-          (match Ast_payload.is_single_string payload with
+        if !st = None then
+          match Ast_payload.is_single_string payload with
           | None -> ()
-          | Some (s, _dec) -> st := Some s))
+          | Some (s, _dec) -> st := Some s
         else raise (Error (loc, Duplicated_bs_as))
       | _ -> ());
   !st
@@ -482,25 +482,33 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
   Some {consts; blocks}
 
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
-  List.iter (fun (cstr : Types.constructor_declaration) ->
-    match process_tag_name cstr.cd_attributes with
-    | Some tag_name -> (
+  List.iter
+    (fun (cstr : Types.constructor_declaration) ->
+      match process_tag_name cstr.cd_attributes with
+      | Some tag_name -> (
         match cstr.cd_args with
         | Cstr_record fields ->
-            List.iter (fun (field : Types.label_declaration) ->
+          List.iter
+            (fun (field : Types.label_declaration) ->
               (* Check if field name conflicts with tag *)
               let field_name = Ident.name field.ld_id in
               if field_name = tag_name then
-                raise (Error (cstr.cd_loc, TagFieldNameConflict (Ident.name cstr.cd_id, tag_name)));
+                raise
+                  (Error
+                     ( cstr.cd_loc,
+                       TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ));
               (* Check if @as name conflicts with tag *)
               match process_as_name field.ld_attributes with
               | Some as_name when as_name = tag_name ->
-                raise (Error (cstr.cd_loc, TagFieldNameConflict (Ident.name cstr.cd_id, tag_name)))
-              | _ -> ()
-            ) fields
+                raise
+                  (Error
+                     ( cstr.cd_loc,
+                       TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ))
+              | _ -> ())
+            fields
         | _ -> ())
-    | None -> ()
-  ) cstrs
+      | None -> ())
+    cstrs
 
 type well_formedness_check = {
   is_untagged_def: bool;
