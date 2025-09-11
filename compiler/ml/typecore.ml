@@ -42,7 +42,7 @@ type error =
       context: type_clash_context option;
     }
   | Apply_non_function of type_expr
-  | Apply_wrong_label of Noloc.arg_label * type_expr
+  | Apply_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: jsx_prop_error_info option;
@@ -61,7 +61,7 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of Noloc.arg_label * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -88,7 +88,7 @@ type error =
       function_type: type_expr;
       expected_arity: int;
       provided_arity: int;
-      provided_args: Asttypes.Noloc.arg_label list;
+      provided_args: Asttypes.arg_label list;
       function_name: Longident.t option;
     }
   | Field_not_optional of string * type_expr
@@ -756,11 +756,10 @@ let print_expr_type_clash ~context env loc trace ppf =
       ~pp_sep:(fun ppf _ -> fprintf ppf ",@ ")
       (fun ppf (label, argtype) ->
         match label with
-        | Asttypes.Noloc.Nolabel ->
-          fprintf ppf "@[%a@]" Printtyp.type_expr argtype
-        | Labelled label ->
+        | Asttypes.Nolabel -> fprintf ppf "@[%a@]" Printtyp.type_expr argtype
+        | Labelled {txt = label} ->
           fprintf ppf "@[(~%s: %a)@]" label Printtyp.type_expr argtype
-        | Optional label ->
+        | Optional {txt = label} ->
           fprintf ppf "@[(?%s: %a)@]" label Printtyp.type_expr argtype)
   in
   match missing_arguments with
@@ -1892,7 +1891,6 @@ and is_nonexpansive_opt = function
 let rec approx_type env sty =
   match sty.ptyp_desc with
   | Ptyp_arrow {arg = {lbl = p}; ret = sty; arity} ->
-    let p = Asttypes.to_noloc p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
@@ -1911,7 +1909,6 @@ let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
-    let p = Asttypes.to_noloc p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
@@ -2243,9 +2240,9 @@ let extract_function_name funct =
   | _ -> None
 
 type lazy_args =
-  (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
+  (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
-type targs = (Asttypes.Noloc.arg_label * Typedtree.expression option) list
+type targs = (Asttypes.arg_label * Typedtree.expression option) list
 let rec type_exp ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ~context ?recarg env sexp (newvar ())
@@ -2382,7 +2379,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         arity;
         async;
       } ->
-    let l = Asttypes.to_noloc l in
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2425,7 +2421,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
-    let l = Asttypes.to_noloc l in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
@@ -3451,7 +3446,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
           unify env lhs_type (instance_def Predef.type_int);
           instance_def Predef.type_int
       in
-      let targs = [(to_noloc lhs_label, Some lhs)] in
+      let targs = [(lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
@@ -3515,9 +3510,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
             let rhs = type_expect ~context:None env rhs_expr Predef.type_int in
             (lhs, rhs, instance_def Predef.type_int))
       in
-      let targs =
-        [(to_noloc lhs_label, Some lhs); (to_noloc rhs_label, Some rhs)]
-      in
+      let targs = [(lhs_label, Some lhs); (rhs_label, Some rhs)] in
       Some (targs, result_type)
     | _ -> None)
   | _ -> None
@@ -3570,7 +3563,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
                    function_type = funct.exp_type;
                    expected_arity = arity;
                    provided_arity = List.length sargs;
-                   provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                   provided_args = sargs |> List.map (fun (a, _) -> a);
                    function_name = extract_function_name funct;
                  } ));
       arity
@@ -3592,7 +3585,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
                     function_type = funct.exp_type;
                     expected_arity = required_args + newarity;
                     provided_arity = required_args;
-                    provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                    provided_args = sargs |> List.map (fun (a, _) -> a);
                     function_name = extract_function_name funct;
                   } )));
       let new_t =
@@ -3620,11 +3613,10 @@ and type_application ~context total_app env funct (sargs : sargs) :
       in
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
-        | Tarrow ({lbl = Optional l; typ = t1}, t2, _, _) ->
-          ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
+        | Tarrow ({lbl; typ = t1}, t2, _, _) when is_optional lbl ->
+          ignored := (lbl, t1, ty_fun.level) :: !ignored;
           let arg =
-            ( Noloc.Optional l,
-              Some (fun () -> option_none (instance env t1) Location.none) )
+            (lbl, Some (fun () -> option_none (instance env t1) Location.none))
           in
           type_unknown_args max_arity ~args:(arg :: args) ~top_arity:None
             omitted t2 []
@@ -3636,7 +3628,6 @@ and type_application ~context total_app env funct (sargs : sargs) :
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
     | (l1, sarg1) :: sargl ->
-      let l1 = to_noloc l1 in
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
@@ -3653,7 +3644,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
                   ({lbl = l1; typ = t1}, t2, Clink (ref Cunknown), top_arity)));
           (t1, t2)
         | Tarrow ({lbl = l; typ = t1}, t2, _, _)
-          when Asttypes.Noloc.same_arg_label l l1 && arity_ok ->
+          when Asttypes.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
           let ty_fun =
@@ -3706,13 +3697,13 @@ and type_application ~context total_app env funct (sargs : sargs) :
               Some (fun () -> option_none (instance env ty) Location.none) ))
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
-          if (not optional) && is_optional_loc l' then
+          if (not optional) && is_optional l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
           ( sargs,
             omitted,
             Some
-              (if (not optional) || is_optional_loc l' then fun () ->
+              (if (not optional) || is_optional l' then fun () ->
                  type_argument
                    ~context:
                      (type_clash_context_for_function_argument ~label:l' context
@@ -4462,7 +4453,7 @@ let report_error env loc ppf error =
         type_expr typ)
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
-      | Noloc.Nolabel ->
+      | Nolabel ->
         fprintf ppf "The argument at this position should be labelled."
       | l ->
         fprintf ppf "This function does not take the argument @{<info>%s@}."
@@ -4544,7 +4535,7 @@ let report_error env loc ppf error =
       fprintf ppf "the expected type is@ %a@]" type_expr ty)
   | Abstract_wrong_label (l, ty) ->
     let label_mark = function
-      | Noloc.Nolabel -> "but its first argument is not labelled"
+      | Nolabel -> "but its first argument is not labelled"
       | l ->
         sprintf "but its first argument is labelled %s" (prefixed_label_name l)
     in
@@ -4647,12 +4638,10 @@ let report_error env loc ppf error =
 
     (* Unlabelled arg counts *)
     let args_from_type_unlabelled =
-      args_from_type
-      |> List.filter (fun arg -> arg = Noloc.Nolabel)
-      |> List.length
+      args_from_type |> List.filter (fun arg -> arg = Nolabel) |> List.length
     in
     let sargs_unlabelled =
-      sargs |> List.filter (fun arg -> arg = Noloc.Nolabel) |> List.length
+      sargs |> List.filter (fun arg -> arg = Nolabel) |> List.length
     in
     let mismatch_in_unlabelled_args =
       args_from_type_unlabelled <> sargs_unlabelled
@@ -4663,14 +4652,14 @@ let report_error env loc ppf error =
       args_from_type
       |> List.filter_map (fun arg ->
              match arg with
-             | Noloc.Labelled n -> Some n
+             | Labelled {txt = n} -> Some n
              | Optional _ | Nolabel -> None)
     in
     let passed_named_args =
       sargs
       |> List.filter_map (fun arg ->
              match arg with
-             | Noloc.Labelled n | Optional n -> Some n
+             | Labelled {txt} | Optional {txt} -> Some txt
              | Nolabel -> None)
     in
     let missing_required_args =
@@ -4683,7 +4672,7 @@ let report_error env loc ppf error =
       args_from_type
       |> List.filter_map (fun arg ->
              match arg with
-             | Noloc.Labelled n | Optional n -> Some n
+             | Labelled {txt = n} | Optional {txt = n} -> Some n
              | Nolabel -> None)
     in
     let superfluous_args =

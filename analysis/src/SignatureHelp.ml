@@ -152,14 +152,14 @@ let findActiveParameter ~argAtCursor ~args =
     (* If a function only has one, unlabelled argument, we can safely assume that's active whenever we're in the signature help for that function,
        even if we technically didn't find anything at the cursor (which we don't for empty expressions). *)
     match args with
-    | [(Asttypes.Noloc.Nolabel, _)] -> Some 0
+    | [(Asttypes.Nolabel, _)] -> Some 0
     | _ -> None)
   | Some (Unlabelled unlabelledArgumentIndex) ->
     let index = ref 0 in
     args
     |> List.find_map (fun (label, _) ->
            match label with
-           | Asttypes.Noloc.Nolabel when !index = unlabelledArgumentIndex ->
+           | Asttypes.Nolabel when !index = unlabelledArgumentIndex ->
              Some !index
            | _ ->
              index := !index + 1;
@@ -169,7 +169,7 @@ let findActiveParameter ~argAtCursor ~args =
     args
     |> List.find_map (fun (label, _) ->
            match label with
-           | (Asttypes.Noloc.Labelled labelName | Optional labelName)
+           | (Asttypes.Labelled {txt = labelName} | Optional {txt = labelName})
              when labelName = name ->
              Some !index
            | _ ->
@@ -472,7 +472,6 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                     parameters =
                       parameters
                       |> List.map (fun (argLabel, start, end_) ->
-                             let argLabel = Asttypes.to_noloc argLabel in
                              let paramArgCount = !paramUnlabelledArgCount in
                              paramUnlabelledArgCount := paramArgCount + 1;
                              let unlabelledArgCount = ref 0 in
@@ -485,17 +484,12 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                                            let argCount = !unlabelledArgCount in
                                            unlabelledArgCount := argCount + 1;
                                            match (lbl, argLabel) with
-                                           | ( Asttypes.Noloc.Optional l1,
-                                               Asttypes.Noloc.Optional l2 )
-                                             when l1 = l2 ->
-                                             true
-                                           | Labelled l1, Labelled l2
-                                             when l1 = l2 ->
-                                             true
-                                           | Nolabel, Nolabel
+                                           | Asttypes.Nolabel, Asttypes.Nolabel
                                              when paramArgCount = argCount ->
                                              true
-                                           | _ -> false)
+                                           | _ ->
+                                             Asttypes.same_arg_label lbl
+                                               argLabel)
                                   with
                                  | None ->
                                    {Protocol.kind = "markdown"; value = ""}

@@ -593,32 +593,24 @@ let forget_abbrev mem path =
 (**********************************)
 
 let is_optional = function
-  | Noloc.Optional _ -> true
-  | _ -> false
-
-let is_optional_loc = function
   | Optional _ -> true
   | _ -> false
 
 let label_name = function
-  | Noloc.Nolabel -> ""
-  | Labelled s | Optional s -> s
-
-let label_loc_name = function
   | Nolabel -> ""
   | Labelled {txt} | Optional {txt} -> txt
 
 let prefixed_label_name = function
-  | Noloc.Nolabel -> ""
-  | Labelled s -> "~" ^ s
-  | Optional s -> "?" ^ s
+  | Nolabel -> ""
+  | Labelled {txt = s} -> "~" ^ s
+  | Optional {txt = s} -> "?" ^ s
 
 type sargs = (Asttypes.arg_label * Parsetree.expression) list
 
 let rec extract_label_aux hd l = function
   | [] -> None
   | ((l', t) as p) :: ls ->
-    if label_loc_name l' = l then Some (l', t, List.rev_append hd ls)
+    if label_name l' = l then Some (l', t, List.rev_append hd ls)
     else extract_label_aux (p :: hd) l ls
 
 let extract_label l (ls : sargs) :
