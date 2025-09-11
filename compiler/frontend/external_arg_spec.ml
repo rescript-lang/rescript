@@ -24,9 +24,7 @@
 
 (** type definitions for arguments to a function declared external *)
 
-type delim = DNone | DStarJ | DNoQuotes | DBackQuotes
-
-type cst = Arg_int_lit of int | Arg_string_lit of string * delim
+type cst = Arg_int_lit of int | Arg_string_lit of string * String_kind.t
 
 type label_noname = Arg_label | Arg_empty | Arg_optional
 
@@ -70,7 +68,7 @@ type params = param list
 
 let cst_int i = Arg_int_lit i
 
-let cst_string s delim = Arg_string_lit (s, delim)
+let cst_string s kind = Arg_string_lit (s, kind)
 
 let empty_label = Obj_empty
 

@@ -273,8 +273,8 @@ let () =
       | _ -> false
 let inline_string_primitive (s : string) (op : string option) : string list =
   let lam : Lam_constant.t =
-    let delim = Ast_utf8_string_interp.parse_processed_delim op in
-    Const_string {s; delim}
+    let kind = Ast_utf8_string_interp.parse_processed_delim op in
+    Const_string {s; kind = Option.value ~default:String_kind.Standard kind}
   in
   [""; to_string (Ffi_inline_const lam)]
 

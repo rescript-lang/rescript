@@ -720,16 +720,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f L.code_point_at;
         (* FIXME: use code_point_at *)
         P.paren_group f 1 (fun _ -> expression ~level:0 cxt f b))
-  | Str {delim; txt} ->
+  | Str {kind; txt} ->
     (*TODO --
        when utf8-> it will not escape '\\' which is definitely not we want
     *)
     let () =
-      match delim with
-      | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
-      | DNoQuotes -> P.string f txt
-      | DNone -> Js_dump_string.pp_string f txt
-      | DBackQuotes -> P.string f ("`" ^ txt ^ "`")
+      match kind with
+      | Verbatim -> P.string f ("\"" ^ txt ^ "\"")
+      | RawJs -> P.string f txt
+      | Standard -> Js_dump_string.pp_string f txt
+      | Template -> P.string f ("`" ^ txt ^ "`")
     in
     cxt
   | Raw_js_code {code = s; code_info = info} -> (
