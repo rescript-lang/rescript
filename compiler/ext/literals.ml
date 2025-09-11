@@ -119,6 +119,8 @@ let suffix_gen_js = ".gen.js"
 
 let suffix_gen_tsx = ".gen.tsx"
 
+let suffix_assertions_ts = ".assertions.ts"
+
 let esmodule = "esmodule"
 
 let commonjs = "commonjs"

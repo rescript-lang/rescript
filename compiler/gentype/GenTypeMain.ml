@@ -90,6 +90,7 @@ let read_cmt cmt_file =
     Log_.item "Try to clean and rebuild.\n\n";
     assert false
 
+(* TODO(gentype-satisfies) Make this return a record. And, in addition to returning `has_gentype_annotations` (the current 2nd element that is a bool), make it also return `has_gentype_satisfies_annotations`. *)
 let read_input_cmt is_interface cmt_file =
   let input_cmt = read_cmt cmt_file in
   let ignore_interface = ref false in
@@ -137,10 +138,10 @@ let process_cmt_file cmt =
   let config = Paths.read_config ~namespace:(cmt |> Paths.find_name_space) in
   if !Debug.basic then Log_.item "Cmt %s\n" cmt;
   let cmt_file = cmt |> Paths.get_cmt_file in
-  if cmt_file <> "" then
+  if cmt_file <> "" then (
     let file_name = cmt |> Paths.get_module_name in
     let is_interface = Filename.check_suffix cmt_file ".cmti" in
-    let input_cmt, has_gentype_annotations =
+    let input_cmt, _has_gentype_annotations =
       read_input_cmt is_interface cmt_file
     in
     let source_file =
@@ -154,6 +155,7 @@ let process_cmt_file cmt =
         | false -> ".res")
     in
     let output_file = source_file |> Paths.get_output_file ~config in
+    let assertions_file = source_file |> Paths.get_assertions_file in
     let output_file_relative =
       source_file |> Paths.get_output_file_relative ~config
     in
@@ -162,7 +164,37 @@ let process_cmt_file cmt =
         ~extensions:[".res"; ".shim.ts"] ~exclude_file:(fun fname ->
           fname = "React.res" || fname = "ReasonReact.res")
     in
-    if has_gentype_annotations then
+    (* First: normal .gen.tsx pipeline if annotated (excluding only-satisfies). *)
+    let _has_non_satisfies_annotations =
+      let file_text = try GeneratedFiles.read_file source_file with _ -> "" in
+      let contains s = Ext_string.contain_substring file_text s in
+      let has_default_gentype_annotations =
+        let check_attr ~loc:_ attrs =
+          attrs
+          |> Annotation.get_attribute_payload
+               Annotation.tag_is_one_of_the_gentype_annotations
+          <> None
+        in
+        input_cmt |> cmt_check_annotations ~check_annotation:check_attr
+      in
+      let source_mentions_only_satisfies =
+        (contains "@gentype.satisfies" || contains "@genType.satisfies")
+        && not
+             (contains "@gentype(" || contains "@gentype "
+            || contains "@genType(" || contains "@genType ")
+      in
+      has_default_gentype_annotations && not source_mentions_only_satisfies
+    in
+    if
+      (* original gating: keep behavior, then post-filter *)
+      let check_attr ~loc:_ attrs =
+        attrs
+        |> Annotation.get_attribute_payload
+             Annotation.tag_is_one_of_the_gentype_annotations
+        <> None
+      in
+      input_cmt |> cmt_check_annotations ~check_annotation:check_attr
+    then
       input_cmt
       |> translate_c_m_t ~config ~output_file_relative ~resolver
       |> emit_translation ~config ~file_name ~output_file ~output_file_relative
@@ -171,5 +203,42 @@ let process_cmt_file cmt =
       output_file |> GeneratedFiles.log_file_action TypeError
     else (
       output_file |> GeneratedFiles.log_file_action NoMatch;
-      if Sys.file_exists output_file then Sys.remove output_file)
+      if Sys.file_exists output_file then Sys.remove output_file);
+    (* Post-filter: if the source only has @gentype.satisfies, drop any .gen.tsx. *)
+    let file_text = try GeneratedFiles.read_file source_file with _ -> "" in
+    let contains s = Ext_string.contain_substring file_text s in
+    let source_mentions_only_satisfies =
+      (contains "@gentype.satisfies" || contains "@genType.satisfies")
+      && not
+           (contains "@gentype(" || contains "@gentype " || contains "@genType("
+          || contains "@genType ")
+    in
+    if source_mentions_only_satisfies then (
+      output_file |> GeneratedFiles.log_file_action NoMatch;
+      if Sys.file_exists output_file then Sys.remove output_file);
+    (* Then: emit assertions file when @gentype.satisfies is present. *)
+    let has_satisfies_annotations =
+      let check_attr ~loc:_ attrs =
+        attrs
+        |> Annotation.get_attribute_payload Annotation.tag_is_gentype_satisfies
+        <> None
+      in
+      input_cmt |> cmt_check_annotations ~check_annotation:check_attr
+    in
+    if has_satisfies_annotations then (
+      match
+        EmitAssertions.emit_for_cmt ~config ~output_file_relative ~resolver
+          input_cmt
+      with
+      | Some file_contents ->
+        GeneratedFiles.write_file_if_required ~output_file:assertions_file
+          ~file_contents
+      | None ->
+        (* No content -> ensure file is removed if present. *)
+        if Sys.file_exists assertions_file then Sys.remove assertions_file)
+    else if input_cmt |> cmt_has_type_errors then
+      assertions_file |> GeneratedFiles.log_file_action TypeError
+    else (
+      assertions_file |> GeneratedFiles.log_file_action NoMatch;
+      if Sys.file_exists assertions_file then Sys.remove assertions_file))
 [@@live]

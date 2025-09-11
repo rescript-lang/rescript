@@ -29,6 +29,9 @@ let tag_is_unboxed s = s = "unboxed" || s = "ocaml.unboxed"
 let tag_is_gentype_import s = s = "genType.import" || s = "gentype.import"
 let tag_is_gentype_opaque s = s = "genType.opaque" || s = "gentype.opaque"
 
+let tag_is_gentype_satisfies s =
+  s = "genType.satisfies" || s = "gentype.satisfies"
+
 let tag_is_one_of_the_gentype_annotations s =
   tag_is_gentype s || tag_is_gentype_as s || tag_is_gentype_import s
   || tag_is_gentype_opaque s
@@ -162,6 +165,19 @@ let doc_string_from_attrs attributes = attributes |> get_doc_payload
 
 let has_attribute check_text (attributes : Typedtree.attributes) =
   get_attribute_payload check_text attributes <> None
+
+let get_satisfies_path (attributes : Typedtree.attributes) : string list option
+    =
+  match attributes |> get_attribute_payload tag_is_gentype_satisfies with
+  | Some (_, TuplePayload payloads) ->
+    let rec collect acc = function
+      | [] -> Some (List.rev acc)
+      | StringPayload s :: tl -> collect (s :: acc) tl
+      | _ -> None
+    in
+    collect [] payloads
+  | Some (_, StringPayload s) -> Some [s]
+  | _ -> None
 
 let from_attributes ~(config : GenTypeConfig.t) ~loc
     (attributes : Typedtree.attributes) =

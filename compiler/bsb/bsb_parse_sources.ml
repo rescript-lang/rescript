@@ -369,13 +369,15 @@ and walk_source_dir_map (cxt : walk_cxt) sub_dirs_field =
   let working_dir = Filename.concat cxt.root cxt.cwd in
   if not (Set_string.mem cxt.ignored_dirs cxt.cwd) then (
     let file_array = Sys.readdir working_dir in
-    (* Remove .gen.js/.gen.tsx during clean up *)
+    (* Remove .gen.js/.gen.tsx/.assertions.ts during clean up *)
     Ext_array.iter file_array (fun file ->
         let is_typescript = cxt.gentype_language = "typescript" in
         if
           (not is_typescript)
           && Ext_string.ends_with file Literals.suffix_gen_js
           || (is_typescript && Ext_string.ends_with file Literals.suffix_gen_tsx)
+          || is_typescript
+             && Ext_string.ends_with file Literals.suffix_assertions_ts
         then Sys.remove (Filename.concat working_dir file));
     let cxt_traverse = cxt.traverse in
     match (sub_dirs_field, cxt_traverse) with

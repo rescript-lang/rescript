@@ -58,6 +58,15 @@ let get_output_file ~(config : Config.t) source_path =
 let get_module_name cmt =
   cmt |> handle_namespace |> Filename.basename |> ModuleName.from_string_unsafe
 
+(* New: compute the companion assertions file path next to the source file. *)
+let get_assertions_file (source_path : string) : string =
+  let dir = Filename.dirname source_path in
+  let base =
+    source_path |> Filename.basename
+    |> (Filename.chop_extension [@doesNotRaise])
+  in
+  Filename.concat dir (base ^ ".assertions.ts")
+
 let get_cmt_file cmt =
   let path_cmt =
     if Filename.is_relative cmt then Filename.concat (Sys.getcwd ()) cmt
