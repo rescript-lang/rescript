@@ -20,6 +20,8 @@
 
 #### :rocket: New Feature
 
+- Add `Array.filterMapWithIndex` to Stdlib. https://github.com/rescript-lang/rescript/pull/7876
+
 #### :bug: Bug fix
 
 - Fix code generation for emojis in polyvars and labels. https://github.com/rescript-lang/rescript/pull/7853
