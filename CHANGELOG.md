@@ -26,6 +26,7 @@
 - Add `reset` to `experimental_features` to correctly reset playground. https://github.com/rescript-lang/rescript/pull/7868
 - Fix crash with `@get` on external of type `unit => 'a`. https://github.com/rescript-lang/rescript/pull/7866
 - Fix record type spreads in inline records. https://github.com/rescript-lang/rescript/pull/7859
+- Make inline record fields that overlap with a variant's tag a compile error. https://github.com/rescript-lang/rescript/pull/7875
 
 #### :memo: Documentation
 
