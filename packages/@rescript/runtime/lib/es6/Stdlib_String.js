@@ -1,6 +1,15 @@
 
 
 
+function charCodeAt(s, i) {
+  let c = s.charCodeAt(i);
+  if (Number.isNaN(c)) {
+    return;
+  } else {
+    return c | 0;
+  }
+}
+
 function indexOfOpt(s, search) {
   let index = s.indexOf(search);
   if (index !== -1) {
@@ -38,6 +47,7 @@ function capitalize(s) {
 }
 
 export {
+  charCodeAt,
   indexOfOpt,
   lastIndexOfOpt,
   searchOpt,
