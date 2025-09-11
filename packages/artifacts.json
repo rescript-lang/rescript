@@ -12,7 +12,7 @@
     "cli/common/bins.js",
     "cli/common/bsb.js",
     "cli/common/minisocket.js",
-    "cli/common/resolvePackageRoot.js",
+    "cli/common/runtime.js",
     "cli/rescript-legacy.js",
     "cli/rescript-legacy/dump.js",
     "cli/rescript-legacy/format.js",
