@@ -494,21 +494,17 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
       | Cstr_record fields ->
         List.iter
           (fun (field : Types.label_declaration) ->
-            (* Check if field name conflicts with tag *)
-            let field_name = Ident.name field.ld_id in
-            if field_name = tag_name then
+            (* Get the effective field name in JavaScript output *)
+            let effective_field_name = match process_as_name field.ld_attributes with
+              | Some as_name -> as_name  (* Use @as name if present *)
+              | None -> Ident.name field.ld_id  (* Otherwise use field name *)
+            in
+            (* Check if effective field name conflicts with tag *)
+            if effective_field_name = tag_name then
               raise
                 (Error
                    ( cstr.cd_loc,
-                     TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ));
-            (* Check if @as name conflicts with tag *)
-            match process_as_name field.ld_attributes with
-            | Some as_name when as_name = tag_name ->
-              raise
-                (Error
-                   ( cstr.cd_loc,
-                     TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ))
-            | _ -> ())
+                     TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) )))
           fields
       | _ -> ())
     cstrs
