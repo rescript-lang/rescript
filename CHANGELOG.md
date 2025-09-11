@@ -32,6 +32,7 @@
 #### :nail_care: Polish
 
 - Reactivate optimization for length of array literals. https://github.com/rescript-lang/rescript/pull/7872
+- `Float.isNaN`: use `Number.isNaN` instead of global `isNaN`. https://github.com/rescript-lang/rescript/pull/7874
 
 #### :house: Internal
 
