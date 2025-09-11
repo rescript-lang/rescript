@@ -4,9 +4,7 @@
 
 import * as child_process from "node:child_process";
 import { rescript_exe } from "./common/bins.js";
-import { resolvePackageRoot } from "./common/resolvePackageRoot.js";
-
-const runtimePackage = await resolvePackageRoot("@rescript/runtime");
+import { runtimePath } from "./common/runtime.js";
 
 const args = process.argv.slice(2);
 
@@ -21,7 +19,7 @@ const args = process.argv.slice(2);
 //   exit the parent with the correct status only after the child has exited.
 const child = child_process.spawn(rescript_exe, args, {
   stdio: "inherit",
-  env: { ...process.env, RESCRIPT_RUNTIME: runtimePackage },
+  env: { ...process.env, RESCRIPT_RUNTIME: runtimePath },
 });
 
 // Map POSIX signal names to conventional exit status numbers so we can

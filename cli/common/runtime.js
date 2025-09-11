@@ -41,7 +41,7 @@ async function resolvePackageInDeno(pkgName) {
   );
 }
 
-export async function resolvePackageRoot(pkgName) {
+async function resolvePackageRoot(pkgName) {
   const specifier =
     typeof globalThis.Deno !== "undefined"
       ? `npm:${pkgName}/package.json`
@@ -74,3 +74,5 @@ export async function resolvePackageRoot(pkgName) {
     throw new Error(`Could not resolve ${pkgName} in Node runtime`);
   }
 }
+
+export const runtimePath = await resolvePackageRoot("@rescript/runtime");
