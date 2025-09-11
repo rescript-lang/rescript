@@ -484,30 +484,33 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
 let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
   List.iter
     (fun (cstr : Types.constructor_declaration) ->
-      match process_tag_name cstr.cd_attributes with
-      | Some tag_name -> (
-        match cstr.cd_args with
-        | Cstr_record fields ->
-          List.iter
-            (fun (field : Types.label_declaration) ->
-              (* Check if field name conflicts with tag *)
-              let field_name = Ident.name field.ld_id in
-              if field_name = tag_name then
-                raise
-                  (Error
-                     ( cstr.cd_loc,
-                       TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ));
-              (* Check if @as name conflicts with tag *)
-              match process_as_name field.ld_attributes with
-              | Some as_name when as_name = tag_name ->
-                raise
-                  (Error
-                     ( cstr.cd_loc,
-                       TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ))
-              | _ -> ())
-            fields
-        | _ -> ())
-      | None -> ())
+      (* Get the effective tag name - either explicit @tag or constructor name *)
+      let tag_name =
+        match process_tag_name cstr.cd_attributes with
+        | Some explicit_tag -> explicit_tag
+        | None -> Ident.name cstr.cd_id (* Default to constructor name *)
+      in
+      match cstr.cd_args with
+      | Cstr_record fields ->
+        List.iter
+          (fun (field : Types.label_declaration) ->
+            (* Check if field name conflicts with tag *)
+            let field_name = Ident.name field.ld_id in
+            if field_name = tag_name then
+              raise
+                (Error
+                   ( cstr.cd_loc,
+                     TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ));
+            (* Check if @as name conflicts with tag *)
+            match process_as_name field.ld_attributes with
+            | Some as_name when as_name = tag_name ->
+              raise
+                (Error
+                   ( cstr.cd_loc,
+                     TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) ))
+            | _ -> ())
+          fields
+      | _ -> ())
     cstrs
 
 type well_formedness_check = {
