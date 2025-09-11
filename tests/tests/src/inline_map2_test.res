@@ -11,6 +11,10 @@
 /*  */
 /* ********************************************************************* */
 
+open Mocha
+/* Import Test_utils functions individually to avoid name conflicts */
+let eq = Test_utils.eq
+
 module type OrderedType = {
   type t
   let compare: (t, t) => int
@@ -472,13 +476,7 @@ let s = Belt.List.reduceReverse(
 )
 @val("console.log") external log: 'a => unit = ""
 
-Mt.from_pair_suites(
-  __MODULE__,
-  {
-    open Mt
-    list{
-      ("assertion1", _ => Eq(IntMap.find(10, m), 'a')),
-      ("assertion2", _ => Eq(SMap.find("10", s), 'a')),
-    }
-  },
-)
+describe(__MODULE__, () => {
+  test("assertion1", () => eq(__LOC__, IntMap.find(10, m), 'a'))
+  test("assertion2", () => eq(__LOC__, SMap.find("10", s), 'a'))
+})

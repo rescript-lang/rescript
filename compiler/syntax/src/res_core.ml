@@ -149,10 +149,6 @@ module ErrorMessages = struct
   let string_interpolation_in_pattern =
     "String interpolation is not supported in pattern matching."
 
-  let spread_in_record_declaration =
-    "A record type declaration doesn't support the ... spread. Only an object \
-     (with quoted field names) does."
-
   let object_quoted_field_name name =
     "An object type declaration needs quoted field names. Did you mean \""
     ^ name ^ "\"?"
@@ -4977,46 +4973,57 @@ and parse_constr_decl_args p =
           in
           Parser.expect Rparen p;
           Parsetree.Pcstr_tuple (typ :: more_args)
-        | DotDotDot ->
+        | DotDotDot -> (
           let dotdotdot_start = p.start_pos in
           let dotdotdot_end = p.end_pos in
-          (* start of object type spreading, e.g. `User({...a, "u": int})` *)
+          (* start of spread, e.g. `User({...a, "u": int})` *)
           Parser.next p;
-          let typ = parse_typ_expr p in
-          let () =
-            match p.token with
-            | Rbrace ->
-              (* {...x}, spread without extra fields *)
-              Parser.next p
-            | _ -> Parser.expect Comma p
-          in
-          let () =
-            match p.token with
-            | Lident _ ->
-              Parser.err ~start_pos:dotdotdot_start ~end_pos:dotdotdot_end p
-                (Diagnostics.message ErrorMessages.spread_in_record_declaration)
-            | _ -> ()
-          in
-          let fields =
-            Parsetree.Oinherit typ
-            :: parse_comma_delimited_region
-                 ~grammar:Grammar.StringFieldDeclarations ~closing:Rbrace
-                 ~f:parse_string_field_declaration p
-          in
-          Parser.expect Rbrace p;
-          let loc = mk_loc start_pos p.prev_end_pos in
-          let typ =
-            Ast_helper.Typ.object_ ~loc fields Asttypes.Closed
-            |> parse_type_alias p
-          in
-          let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
-          Parser.optional p Comma |> ignore;
-          let more_args =
-            parse_comma_delimited_region ~grammar:Grammar.TypExprList
-              ~closing:Rparen ~f:parse_typ_expr_region p
-          in
-          Parser.expect Rparen p;
-          Parsetree.Pcstr_tuple (typ :: more_args)
+          let spread_typ = parse_typ_expr p in
+          match p.token with
+          | Rbrace ->
+            (* {...x}, spread without extra fields *)
+            Parser.next p;
+            let spread_field_name =
+              Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
+            in
+            let spread_field_loc =
+              mk_loc start_pos spread_typ.ptyp_loc.loc_end
+            in
+            let spread_field =
+              Ast_helper.Type.field ~attrs:[] ~loc:spread_field_loc
+                ~mut:Asttypes.Immutable spread_field_name spread_typ
+            in
+            Parser.optional p Comma |> ignore;
+            Parser.expect Rparen p;
+            Parsetree.Pcstr_record [spread_field]
+          | _ -> (
+            let res =
+              parse_spread_tail_classified ~start_pos ~spread_typ
+                ~grammar:Grammar.FieldDeclarations p
+            in
+            match res with
+            | `Record fields ->
+              let spread_field_name =
+                Location.mkloc "..." (mk_loc dotdotdot_start dotdotdot_end)
+              in
+              let spread_field_loc =
+                mk_loc start_pos spread_typ.ptyp_loc.loc_end
+              in
+              let spread_field =
+                Ast_helper.Type.field ~attrs:[] ~loc:spread_field_loc
+                  ~mut:Asttypes.Immutable spread_field_name spread_typ
+              in
+              Parser.optional p Comma |> ignore;
+              Parser.expect Rparen p;
+              Parsetree.Pcstr_record (spread_field :: fields)
+            | `Object typ ->
+              Parser.optional p Comma |> ignore;
+              let more_args =
+                parse_comma_delimited_region ~grammar:Grammar.TypExprList
+                  ~closing:Rparen ~f:parse_typ_expr_region p
+              in
+              Parser.expect Rparen p;
+              Parsetree.Pcstr_tuple (typ :: more_args)))
         | _ -> (
           let attrs = parse_attributes p in
           match p.Parser.token with
@@ -5434,6 +5441,47 @@ and parse_type_equation_or_constr_decl p =
     Parser.err p (Diagnostics.uident t);
     (* TODO: is this a good idea? *)
     (None, Asttypes.Public, Parsetree.Ptype_abstract)
+
+and parse_spread_tail_classified ?current_type_name_path ?inline_types_context
+    ~start_pos ~spread_typ ~grammar p =
+  match p.token with
+  | Rbrace ->
+    (* `{...t}` no extra fields: treat as record without tail fields *)
+    Parser.next p;
+    `Record []
+  | _ ->
+    Parser.expect Comma p;
+    let found_object_field = ref false in
+    let (fields : Parsetree.label_declaration list) =
+      parse_comma_delimited_region ~grammar ~closing:Rbrace
+        ~f:
+          (parse_field_declaration_region ?current_type_name_path
+             ?inline_types_context ~found_object_field)
+        p
+    in
+    Parser.expect Rbrace p;
+    if !found_object_field then
+      (* Object-style: build an object type that inherits the spread *)
+      let obj_fields =
+        let convert (ld : Parsetree.label_declaration) =
+          let ({Parsetree.pld_name; pld_type; pld_attributes; _}
+                : Parsetree.label_declaration) =
+            ld
+          in
+          match pld_name.txt with
+          | "..." -> Parsetree.Oinherit pld_type
+          | _ -> Otag (pld_name, pld_attributes, pld_type)
+        in
+        Parsetree.Oinherit spread_typ :: List.map convert fields
+      in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      let typ =
+        Ast_helper.Typ.object_ ~loc obj_fields Asttypes.Closed
+        |> parse_type_alias p
+      in
+      let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
+      `Object typ
+    else `Record fields
 
 and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
     =

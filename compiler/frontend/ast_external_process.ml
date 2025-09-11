@@ -899,7 +899,12 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    tagged_template = _;
   } ->
     if arg_type_specs_length = 1 then
-      Js_get {js_get_name = name; js_get_scopes = scopes}
+      (* Check if the first argument is unit, which is invalid for @get *)
+      match arg_type_specs with
+      | [{arg_type = Extern_unit}] ->
+        Location.raise_errorf ~loc
+          "Ill defined attribute %@get (unit argument is not allowed)"
+      | _ -> Js_get {js_get_name = name; js_get_scopes = scopes}
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"

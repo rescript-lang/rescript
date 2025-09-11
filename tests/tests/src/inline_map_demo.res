@@ -135,4 +135,9 @@ let rec find = (px, x) =>
     }
   }
 
-Mt.from_pair_suites(__MODULE__, list{("find", _ => Mt.Eq(find(10, m), 'a'))})
+open Mocha
+open Test_utils
+
+describe(__MODULE__, () => {
+  test("find", () => eq(__LOC__, find(10, m), 'a'))
+})

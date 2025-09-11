@@ -65,6 +65,7 @@
       "rewatch/**",
       "lib/es6/**",
       "lib/js/**",
+      "lib/bs/**",
       "ninja/**",
       "playground/**",
       "*.bs.js",

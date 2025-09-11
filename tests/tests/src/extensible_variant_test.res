@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 type attr = ..
 
 type attr += Str(string)
@@ -16,13 +19,16 @@ let to_int = (x: attr) =>
   | _ => assert(false)
   }
 
-let suites = {
-  open Mt
-  list{
-    ("test_int", _ => Eq(3, to_int(N.Int(3, 0)))),
-    ("test_int2", _ => Eq(0, to_int(Int(3, 0)))),
-    ("test_string", _ => Eq(-1, to_int(Str("x")))),
-  }
-}
+describe(__MODULE__, () => {
+  test("test_int", () => {
+    eq(__LOC__, 3, to_int(N.Int(3, 0)))
+  })
 
-Mt.from_pair_suites(__MODULE__, suites)
+  test("test_int2", () => {
+    eq(__LOC__, 0, to_int(Int(3, 0)))
+  })
+
+  test("test_string", () => {
+    eq(__LOC__, -1, to_int(Str("x")))
+  })
+})

@@ -2,7 +2,6 @@
 
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
 import * as Pervasives from "@rescript/runtime/lib/es6/Pervasives.js";
-import * as Primitive_array from "@rescript/runtime/lib/es6/Primitive_array.js";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
 
 function sub(_tr, _k) {
@@ -144,7 +143,7 @@ function lorem(tr) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "flexible_array_test.res",
-      82,
+      80,
       9
     ],
     Error: new Error()
@@ -256,7 +255,7 @@ function sort(s) {
 function of_array(arr) {
   let v = empty;
   for (let i = 0, i_finish = arr.length; i < i_finish; ++i) {
-    v = push_back(v, Primitive_array.get(arr, i));
+    v = push_back(v, arr[i]);
   }
   return v;
 }
@@ -302,7 +301,7 @@ if (!$eq$tilde(sort(u), [
     RE_EXN_ID: "Assert_failure",
     _1: [
       "flexible_array_test.res",
-      186,
+      184,
       2
     ],
     Error: new Error()
@@ -313,10 +312,7 @@ let v = Belt_Array.init(500, i => 500 - i | 0);
 
 $eq$tilde(sort(of_array(v)), Belt_Array.init(500, i => i + 1 | 0));
 
-let $$Array;
-
 export {
-  $$Array,
   sub,
   update,
   $$delete,

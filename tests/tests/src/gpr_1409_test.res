@@ -1,15 +1,6 @@
+open Mocha
+open Test_utils
 open Belt
-
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
 
 /* type t */
 @obj external make: (~foo: string=?, unit) => _ = ""
@@ -77,4 +68,24 @@ eq(__LOC__, keys(list{"hi", "_open"}, Js.Obj.keys(test3(Some(2), None))), true)
 
 eq(__LOC__, keys(list{"hi", "_open", "xx__hi"}, Js.Obj.keys(test3(Some(2), Some(2)))), true)
 
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("test1", () => {
+    eq(__LOC__, b_["foo"], Js.Undefined.return("42"))
+  })
+
+  test("test2", () => {
+    eq(__LOC__, Array.length(Js.Obj.keys(a_)), 0)
+  })
+
+  test("test3", () => {
+    eq(__LOC__, keys(list{"hi"}, Js.Obj.keys(test3(None, None))), true)
+  })
+
+  test("test4", () => {
+    eq(__LOC__, keys(list{"hi", "_open"}, Js.Obj.keys(test3(Some(2), None))), true)
+  })
+
+  test("test5", () => {
+    eq(__LOC__, keys(list{"hi", "_open", "xx__hi"}, Js.Obj.keys(test3(Some(2), Some(2)))), true)
+  })
+})

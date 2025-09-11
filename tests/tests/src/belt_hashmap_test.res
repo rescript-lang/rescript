@@ -1,7 +1,6 @@
 open Mocha
 open Test_utils
 
-module Hashtbl = Ocaml_Hashtbl
 module N = Belt.HashMap
 module S = Belt.Map.Int
 module I = Array_data_util
@@ -9,7 +8,7 @@ module A = Belt.Array
 module So = Belt.SortArray
 
 let intEq = (x: int, y) => x == y
-let intHash = (x: int) => Hashtbl.hash(x)
+let intHash = (x: int) => Hash_utils.hash(x)
 let cmp = (x: int, y) => compare(x, y)
 module Y = unpack(Belt.Id.hashable(~eq=intEq, ~hash=intHash))
 let empty: N.t<int, int, _> = N.make(~id=module(Y), ~hintSize=30)

@@ -59,3 +59,9 @@ module DeepSub = {
     z: #Two(1),
   }
 }
+
+type variant<'f> = One({...f<int>}) | Two({...f<string>}) | Three({...f<'f>})
+
+let v1 = One({a: "", b: 1, c: None, d: None})
+let v2 = Two({a: "", b: "1", c: None, d: None})
+let v3 = Three({a: "", b: true, c: None, d: None})

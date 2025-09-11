@@ -1,14 +1,5 @@
-@@config({
-  flags: [
-    /* "-bs-diagnose" */
-    /* ; "-drawlambda" */
-    /* ; "-dtypedtree" */
-  ],
-})
-
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 @val external hi: (unit => unit) => int = "hi"
 
@@ -38,10 +29,12 @@ let u2 = (x: t) => Some(x)
 let u3: option<t> = Some()
 let u4: t = ()
 
-eq(__LOC__, u0(), Obj.magic(Some(None)))
-eq(__LOC__, u1, Obj.magic(Some(None)))
-eq(__LOC__, u2(), Obj.magic(Some(None)))
-eq(__LOC__, u3, Obj.magic(Some(None)))
-eq(__LOC__, u4, Obj.magic(None))
-
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__MODULE__, () => {
+  test("unit undefined test", () => {
+    eq(__LOC__, u0(), Obj.magic(Some(None)))
+    eq(__LOC__, u1, Obj.magic(Some(None)))
+    eq(__LOC__, u2(), Obj.magic(Some(None)))
+    eq(__LOC__, u3, Obj.magic(Some(None)))
+    eq(__LOC__, u4, Obj.magic(None))
+  })
+})

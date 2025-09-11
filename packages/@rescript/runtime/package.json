@@ -27,7 +27,8 @@
     "Woonki Moon (https://github.com/mununki)"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "files": [
     "lib"

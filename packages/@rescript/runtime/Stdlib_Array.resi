@@ -77,8 +77,7 @@ let someArray = ["hi", "hello"]
 someArray->Array.length == 2
 ```
 */
-@get
-external length: array<'a> => int = "length"
+external length: array<'a> => int = "%array_length"
 
 /**
 `isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.

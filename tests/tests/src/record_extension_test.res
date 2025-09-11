@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 /* Record_extension */
 type t0 = ..
@@ -23,9 +22,13 @@ let f = x =>
   | _ => None
   }
 
-eq(__LOC__, f(Inline_record({x: 3, y: "4"})), Some(7))
-eq(__LOC__, f(SinglePayload("1")), Some(1))
-eq(__LOC__, f(TuplePayload(1, "2")), Some(3))
+describe(__LOC__, () => {
+  test("record extension", () => {
+    eq(__LOC__, f(Inline_record({x: 3, y: "4"})), Some(7))
+    eq(__LOC__, f(SinglePayload("1")), Some(1))
+    eq(__LOC__, f(TuplePayload(1, "2")), Some(3))
+  })
+})
 
 /* Record_unboxed */
 type t1 = | @unboxed A({x: int})
@@ -62,8 +65,10 @@ let u = f =>
   | _ => -1
   }
 
-eq(__LOC__, u(() => throw(A({name: 1, x: 1}))), 2)
-eq(__LOC__, u(() => throw(B(1, 2))), 3)
-eq(__LOC__, u(() => throw(C({name: 4}))), 4)
-
-let () = Mt.from_pair_suites(__LOC__, suites.contents)
+describe(__LOC__, () => {
+  test("record extension with exceptions", () => {
+    eq(__LOC__, u(() => throw(A({name: 1, x: 1}))), 2)
+    eq(__LOC__, u(() => throw(B(1, 2))), 3)
+    eq(__LOC__, u(() => throw(C({name: 4}))), 4)
+  })
+})

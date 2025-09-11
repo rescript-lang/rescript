@@ -3,9 +3,9 @@
 import * as Mocha from "mocha";
 import * as Belt_Id from "@rescript/runtime/lib/es6/Belt_Id.js";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
+import * as Hash_utils from "./hash_utils.mjs";
 import * as Test_utils from "./test_utils.mjs";
 import * as Belt_HashMap from "@rescript/runtime/lib/es6/Belt_HashMap.js";
-import * as Ocaml_Hashtbl from "./ocaml_compat/Ocaml_Hashtbl.mjs";
 import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.js";
 import * as Belt_SortArray from "@rescript/runtime/lib/es6/Belt_SortArray.js";
 import * as Array_data_util from "./array_data_util.mjs";
@@ -14,7 +14,7 @@ function intEq(x, y) {
   return x === y;
 }
 
-let intHash = Ocaml_Hashtbl.hash;
+let intHash = Hash_utils.hash;
 
 let cmp = Primitive_int.compare;
 
@@ -27,8 +27,8 @@ Mocha.describe("Belt_hashmap_test", () => {
     let u = Belt_Array.concat(Array_data_util.randomRange(30, 100), Array_data_util.randomRange(40, 120));
     let v = Belt_Array.zip(u, u);
     let xx = Belt_HashMap.fromArray(v, Y);
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 22, characters 7-14", Belt_HashMap.size(xx), 91);
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 23, characters 7-14", Belt_SortArray.stableSortBy(Belt_HashMap.keysToArray(xx), cmp), Array_data_util.range(30, 120));
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 21, characters 7-14", Belt_HashMap.size(xx), 91);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 22, characters 7-14", Belt_SortArray.stableSortBy(Belt_HashMap.keysToArray(xx), cmp), Array_data_util.range(30, 120));
   });
   Mocha.test("mergeMany", () => {
     Belt_HashMap.mergeMany(empty, [
@@ -49,27 +49,25 @@ Mocha.describe("Belt_hashmap_test", () => {
         2
       ]
     ]);
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 28, characters 7-14", Belt_HashMap.get(empty, 2), 2);
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 29, characters 7-14", Belt_HashMap.size(empty), 3);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 27, characters 7-14", Belt_HashMap.get(empty, 2), 2);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 28, characters 7-14", Belt_HashMap.size(empty), 3);
   });
   Mocha.test("remove", () => {
     let u = Belt_Array.concat(Array_data_util.randomRange(0, 100000), Array_data_util.randomRange(0, 100));
     let v = Belt_HashMap.make(40, Y);
     Belt_HashMap.mergeMany(v, Belt_Array.zip(u, u));
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 36, characters 7-14", Belt_HashMap.size(v), 100001);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 35, characters 7-14", Belt_HashMap.size(v), 100001);
     for (let i = 0; i <= 1000; ++i) {
       Belt_HashMap.remove(v, i);
     }
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 40, characters 7-14", Belt_HashMap.size(v), 99000);
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 39, characters 7-14", Belt_HashMap.size(v), 99000);
     for (let i$1 = 0; i$1 <= 2000; ++i$1) {
       Belt_HashMap.remove(v, i$1);
     }
-    Test_utils.eq("File \"belt_hashmap_test.res\", line 44, characters 7-14", Belt_HashMap.size(v), 98000);
-    Test_utils.ok("File \"belt_hashmap_test.res\", line 45, characters 7-14", Belt_Array.every(Array_data_util.range(2001, 100000), x => Belt_HashMap.has(v, x)));
+    Test_utils.eq("File \"belt_hashmap_test.res\", line 43, characters 7-14", Belt_HashMap.size(v), 98000);
+    Test_utils.ok("File \"belt_hashmap_test.res\", line 44, characters 7-14", Belt_Array.every(Array_data_util.range(2001, 100000), x => Belt_HashMap.has(v, x)));
   });
 });
-
-let Hashtbl;
 
 let N;
 
@@ -82,7 +80,6 @@ let A;
 let So;
 
 export {
-  Hashtbl,
   N,
   S,
   I,

@@ -120,8 +120,7 @@ Returns the number of elements in the array. See
 [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length)
 on MDN.
 */
-@get
-external length: array<'a> => int = "length"
+external length: array<'a> => int = "%array_length"
 
 /* Mutator functions */
 

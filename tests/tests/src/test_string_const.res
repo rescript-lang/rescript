@@ -1,9 +1,9 @@
-module String = Ocaml_String
+open Mocha
+open Test_utils
 
-let f = String.get("ghsogh", 3)
-
-let hh = try String.get("ghsogh", -3) catch {
-| Invalid_argument(e) =>
-  Js.log(e)
-  'a'
-}
+describe(__MODULE__, () => {
+  test("getUnsafe", () => {
+    eq(__LOC__, String.codePointAt("ghsogh", 3), Some(111))
+    eq(__LOC__, String.codePointAt("ghsogh", -3), None)
+  })
+})

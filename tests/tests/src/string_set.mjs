@@ -5,7 +5,9 @@ import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.js";
 import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
 import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.js";
 
-let compare_elt = Primitive_string.compare;
+function compare_elt(a, b) {
+  return Primitive_string.compare(a, b) | 0;
+}
 
 function split(x, tree) {
   if (typeof tree !== "object") {
@@ -18,7 +20,7 @@ function split(x, tree) {
   let r = tree._2;
   let v = tree._1;
   let l = tree._0;
-  let c = Primitive_string.compare(x, v);
+  let c = Primitive_string.compare(x, v) | 0;
   if (c === 0) {
     return [
       l,
@@ -55,7 +57,7 @@ function add(x, tree) {
   let r = tree._2;
   let v = tree._1;
   let l = tree._0;
-  let c = Primitive_string.compare(x, v);
+  let c = Primitive_string.compare(x, v) | 0;
   if (c === 0) {
     return tree;
   } else if (c < 0) {
@@ -134,7 +136,7 @@ function mem(x, _tree) {
     if (typeof tree !== "object") {
       return false;
     }
-    let c = Primitive_string.compare(x, tree._1);
+    let c = Primitive_string.compare(x, tree._1) | 0;
     if (c === 0) {
       return true;
     }
@@ -150,7 +152,7 @@ function remove(x, tree) {
   let r = tree._2;
   let v = tree._1;
   let l = tree._0;
-  let c = Primitive_string.compare(x, v);
+  let c = Primitive_string.compare(x, v) | 0;
   if (c === 0) {
     return Set_gen.internal_merge(l, r);
   } else if (c < 0) {
@@ -183,7 +185,7 @@ function subset(_s1, _s2) {
     }
     let r2 = s2._2;
     let l2 = s2._0;
-    let c = Primitive_string.compare(v1, s2._1);
+    let c = Primitive_string.compare(v1, s2._1) | 0;
     if (c === 0) {
       if (!subset(l1, l2)) {
         return false;
@@ -229,7 +231,7 @@ function find(x, _tree) {
       };
     }
     let v = tree._1;
-    let c = Primitive_string.compare(x, v);
+    let c = Primitive_string.compare(x, v) | 0;
     if (c === 0) {
       return v;
     }
@@ -279,8 +281,6 @@ function invariant(t) {
   return Set_gen.is_ordered(compare_elt, t);
 }
 
-let $$String;
-
 let empty = Set_gen.empty;
 
 let is_empty = Set_gen.is_empty;
@@ -314,7 +314,6 @@ let of_sorted_list = Set_gen.of_sorted_list;
 let of_sorted_array = Set_gen.of_sorted_array;
 
 export {
-  $$String,
   compare_elt,
   empty,
   is_empty,

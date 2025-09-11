@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 let string_or_number = (type t, x) => {
   let ty = Js.Types.classify(x)
   switch ty {
@@ -21,25 +24,52 @@ let string_or_number = (type t, x) => {
   }
 }
 
-let suites = {
-  open Mt
-  list{
-    ("int_type", _ => Eq(Js.typeof(3), "number")),
-    ("string_type", _ => Eq(Js.typeof("x"), "string")),
-    ("number_gadt_test", _ => Eq(Js.Types.test(3, Number), true)),
-    ("boolean_gadt_test", _ => Eq(Js.Types.test(true, Boolean), true)),
-    /* assert.notDeepEqual(undefined,null) raises .. */
-    ("undefined_gadt_test", _ => Eq(Js.Types.test(Js.undefined, Undefined), true)),
-    /* "null_gadt_test", (fun _ -> Neq (Js.Types.test Js.null  Js.Null, Js.null )); */
-    /* there ['a Js.null] is one case that the value is already null  ' */
-    ("string_on_number1", _ => Eq(string_or_number("xx"), true)),
-    ("string_on_number2", _ => Eq(string_or_number(3.02), true)),
-    ("string_on_number3", _ => Eq(string_or_number(x => x), false)),
-    ("string_gadt_test", _ => Eq(Js.Types.test("3", String), true)),
-    ("string_gadt_test_neg", _ => Eq(Js.Types.test(3, String), false)),
-    ("function_gadt_test", _ => Eq(Js.Types.test(x => x, Function), true)),
-    ("object_gadt_test", _ => Eq(Js.Types.test({"x": 3}, Object), true)),
-  }
-}
+describe(__MODULE__, () => {
+  test("int_type", () => {
+    eq(__LOC__, Js.typeof(3), "number")
+  })
 
-Mt.from_pair_suites(__MODULE__, suites)
+  test("string_type", () => {
+    eq(__LOC__, Js.typeof("x"), "string")
+  })
+
+  test("number_gadt_test", () => {
+    eq(__LOC__, Js.Types.test(3, Number), true)
+  })
+
+  test("boolean_gadt_test", () => {
+    eq(__LOC__, Js.Types.test(true, Boolean), true)
+  })
+
+  test("undefined_gadt_test", () => {
+    eq(__LOC__, Js.Types.test(Js.undefined, Undefined), true)
+  })
+
+  test("string_on_number1", () => {
+    eq(__LOC__, string_or_number("xx"), true)
+  })
+
+  test("string_on_number2", () => {
+    eq(__LOC__, string_or_number(3.02), true)
+  })
+
+  test("string_on_number3", () => {
+    eq(__LOC__, string_or_number(x => x), false)
+  })
+
+  test("string_gadt_test", () => {
+    eq(__LOC__, Js.Types.test("3", String), true)
+  })
+
+  test("string_gadt_test_neg", () => {
+    eq(__LOC__, Js.Types.test(3, String), false)
+  })
+
+  test("function_gadt_test", () => {
+    eq(__LOC__, Js.Types.test(x => x, Function), true)
+  })
+
+  test("object_gadt_test", () => {
+    eq(__LOC__, Js.Types.test({"x": 3}, Object), true)
+  })
+})

@@ -13,9 +13,11 @@ let f = () => {
   v
 }
 
-let suites = {
-  open Mt
-  list{("acc", _ => Eq(f(), [0, 1, 3, 6, 10, 15, 21, 28, 36, 45]))}
-}
+open Mocha
+open Test_utils
 
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("acc", () => {
+    eq(__LOC__, [0, 1, 3, 6, 10, 15, 21, 28, 36, 45], f())
+  })
+})

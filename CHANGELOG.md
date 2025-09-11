@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Fix return type of `String.charCodeAt`. https://github.com/rescript-lang/rescript/pull/7864
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
@@ -21,12 +23,20 @@
 #### :bug: Bug fix
 
 - Fix code generation for emojis in polyvars and labels. https://github.com/rescript-lang/rescript/pull/7853
+- Add `reset` to `experimental_features` to correctly reset playground. https://github.com/rescript-lang/rescript/pull/7868
+- Fix crash with `@get` on external of type `unit => 'a`. https://github.com/rescript-lang/rescript/pull/7866
+- Fix record type spreads in inline records. https://github.com/rescript-lang/rescript/pull/7859
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
+- Reactivate optimization for length of array literals. https://github.com/rescript-lang/rescript/pull/7872
+
 #### :house: Internal
+
+- Playground: Add config options for experimental features and jsx preserve mode. https://github.com/rescript-lang/rescript/pull/7865
+- Clean up tests. https://github.com/rescript-lang/rescript/pull/7861 https://github.com/rescript-lang/rescript/pull/7871
 
 # 12.0.0-beta.10
 

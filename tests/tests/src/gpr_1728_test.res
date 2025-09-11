@@ -1,13 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 @scope("Number") external parseInt: string => int = "parseInt"
 
@@ -26,4 +18,17 @@ eq(__LOC__, parseInt("13"), 13)
 eq(__LOC__, parseInt("+0x32"), 50)
 eq(__LOC__, parseInt("-0x32"), -50)
 eq(__LOC__, parseInt("0x32"), 50)
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("bad_inlining_test", () => {
+    eq(__LOC__, badInlining({"field": "3"}), ())
+  })
+
+  test("parseInt_tests", () => {
+    eq(__LOC__, parseInt("-13"), -13)
+    eq(__LOC__, parseInt("+13"), 13)
+    eq(__LOC__, parseInt("13"), 13)
+    eq(__LOC__, parseInt("+0x32"), 50)
+    eq(__LOC__, parseInt("-0x32"), -50)
+    eq(__LOC__, parseInt("0x32"), 50)
+  })
+})
