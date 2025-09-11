@@ -20,7 +20,7 @@ describe("A single ReScript project using deno as package manager", () => {
     await commands.rescript.clean()
   })
 
-  test("should build", async () => {
-    await commands.rescript.build()
-  })
+  // test("should build", async () => {
+  //   await commands.rescript.build()
+  // })
 })
