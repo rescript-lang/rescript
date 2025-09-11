@@ -13,7 +13,7 @@ external equal: (float, float) => bool = "%equal"
 
 external compare: (float, float) => Stdlib_Ordering.t = "%compare"
 
-@val external isNaN: float => bool = "isNaN"
+@val @scope("Number") external isNaN: float => bool = "isNaN"
 @val external isFinite: float => bool = "isFinite"
 @val external parseFloat: 'a => float = "parseFloat"
 // parseInt's return type is a float because it can be NaN
