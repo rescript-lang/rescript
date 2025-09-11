@@ -21,7 +21,7 @@ open Asttypes
 
 type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
 
-and arg = {lbl: Noloc.arg_label; typ: type_expr}
+and arg = {lbl: arg_label; typ: type_expr}
 
 and type_desc =
   | Tvar of string option

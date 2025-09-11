@@ -303,10 +303,7 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
   | Pexp_apply {funct = e1; args} -> (
     match exprToContextPath ~inJsxContext e1 with
     | None -> None
-    | Some contexPath ->
-      Some
-        (CPApply (contexPath, args |> List.map fst |> List.map Asttypes.to_noloc))
-    )
+    | Some contexPath -> Some (CPApply (contexPath, args |> List.map fst)))
   | Pexp_tuple exprs ->
     let exprsAsContextPaths =
       exprs |> List.filter_map (exprToContextPath ~inJsxContext)

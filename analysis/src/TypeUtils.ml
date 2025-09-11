@@ -902,10 +902,10 @@ let getArgs ~env (t : Types.type_expr) ~full =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
-    | Tarrow ({lbl = Labelled l; typ = tArg}, tRet, _, _) ->
+    | Tarrow ({lbl = Labelled {txt = l}; typ = tArg}, tRet, _, _) ->
       (SharedTypes.Completable.Labelled l, tArg)
       :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
-    | Tarrow ({lbl = Optional l; typ = tArg}, tRet, _, _) ->
+    | Tarrow ({lbl = Optional {txt = l}; typ = tArg}, tRet, _, _) ->
       (Optional l, tArg) :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
     | Tarrow ({lbl = Nolabel; typ = tArg}, tRet, _, _) ->
       (Unlabelled {argumentPosition = currentArgumentPosition}, tArg)
@@ -1144,7 +1144,7 @@ let getFirstFnUnlabelledArgType ~env ~full t =
   in
   let rec findFirstUnlabelledArgType labels =
     match labels with
-    | (Asttypes.Noloc.Nolabel, t) :: _ -> Some t
+    | (Asttypes.Nolabel, t) :: _ -> Some t
     | _ :: rest -> findFirstUnlabelledArgType rest
     | [] -> None
   in

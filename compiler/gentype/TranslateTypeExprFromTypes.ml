@@ -2,11 +2,11 @@ open GenTypeCommon
 
 type translation = {dependencies: dep list; type_: type_}
 
-let rec remove_option ~(label : Asttypes.Noloc.arg_label)
+let rec remove_option ~(label : Asttypes.arg_label)
     (type_expr : Types.type_expr) =
   match (type_expr.desc, label) with
-  | Tconstr (Path.Pident id, [t], _), Optional lbl when Ident.name id = "option"
-    ->
+  | Tconstr (Path.Pident id, [t], _), Optional {txt = lbl}
+    when Ident.name id = "option" ->
     Some (lbl, t)
   | Tlink t, _ -> t |> remove_option ~label
   | _ -> None
@@ -344,7 +344,10 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
          ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
   | Tarrow
-      ( {lbl = (Labelled lbl | Optional lbl) as label; typ = type_expr1},
+      ( {
+          lbl = (Labelled {txt = lbl} | Optional {txt = lbl}) as label;
+          typ = type_expr1;
+        },
         type_expr2,
         _,
         arity )

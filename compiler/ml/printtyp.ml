@@ -152,9 +152,9 @@ let print_name ppf = function
   | Some name -> fprintf ppf "\"%s\"" name
 
 let string_of_label = function
-  | Noloc.Nolabel -> ""
-  | Labelled s -> s
-  | Optional s -> "?" ^ s
+  | Nolabel -> ""
+  | Labelled {txt} -> txt
+  | Optional {txt} -> "?" ^ txt
 
 let string_of_arity = function
   | None -> ""

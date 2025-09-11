@@ -1075,13 +1075,12 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           (* compute the application of the first label, then the next ones *)
           let args = processApply args [label] in
           processApply args nextLabels
-        | (Asttypes.Noloc.Nolabel, _) :: nextArgs, [Asttypes.Noloc.Nolabel] ->
-          nextArgs
+        | (Asttypes.Nolabel, _) :: nextArgs, [Asttypes.Nolabel] -> nextArgs
         | ((Labelled _, _) as arg) :: nextArgs, [Nolabel] ->
           arg :: processApply nextArgs labels
         | (Optional _, _) :: nextArgs, [Nolabel] -> processApply nextArgs labels
-        | ( (((Labelled s1 | Optional s1), _) as arg) :: nextArgs,
-            [(Labelled s2 | Optional s2)] ) ->
+        | ( (((Labelled {txt = s1} | Optional {txt = s1}), _) as arg) :: nextArgs,
+            [(Labelled {txt = s2} | Optional {txt = s2})] ) ->
           if s1 = s2 then nextArgs else arg :: processApply nextArgs labels
         | ((Nolabel, _) as arg) :: nextArgs, [(Labelled _ | Optional _)] ->
           arg :: processApply nextArgs labels
@@ -1132,9 +1131,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
             synthetic = true;
             contextPath =
               (match cp with
-              | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Noloc.Nolabel])
+              | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Nolabel])
               | CPId _ when TypeUtils.isFunctionType ~env ~package typ ->
-                CPApply (cp, [Asttypes.Noloc.Nolabel])
+                CPApply (cp, [Asttypes.Nolabel])
               | _ -> cp);
             id = fieldName;
             inJsx;
@@ -1893,8 +1892,8 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
           args
           |> List.map (fun ((label, typ) : typedFnArg) ->
                  match label with
-                 | Optional name -> "~" ^ name ^ "=?"
-                 | Labelled name -> "~" ^ name
+                 | Optional {txt = name} -> "~" ^ name ^ "=?"
+                 | Labelled {txt = name} -> "~" ^ name
                  | Nolabel ->
                    if TypeUtils.typeIsUnit typ then "()"
                    else (

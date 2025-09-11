@@ -40,7 +40,7 @@ let rec hasOptionalArgs (texpr : Types.type_expr) =
 let rec fromTypeExpr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
-  | Tarrow ({lbl = Optional s}, tTo, _, _) -> s :: fromTypeExpr tTo
+  | Tarrow ({lbl = Optional {txt = s}}, tTo, _, _) -> s :: fromTypeExpr tTo
   | Tarrow (_, tTo, _, _) -> fromTypeExpr tTo
   | Tlink t -> fromTypeExpr t
   | Tsubst t -> fromTypeExpr t

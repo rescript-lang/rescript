@@ -75,7 +75,7 @@ type error =
       context: Error_message_utils.type_clash_context option;
     }
   | Apply_non_function of type_expr
-  | Apply_wrong_label of Noloc.arg_label * type_expr
+  | Apply_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: Error_message_utils.jsx_prop_error_info option;
@@ -94,7 +94,7 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of Noloc.arg_label * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -121,7 +121,7 @@ type error =
       function_type: type_expr;
       expected_arity: int;
       provided_arity: int;
-      provided_args: Asttypes.Noloc.arg_label list;
+      provided_args: Asttypes.arg_label list;
       function_name: Longident.t option;
     }
   | Field_not_optional of string * type_expr

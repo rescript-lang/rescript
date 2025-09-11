@@ -13,7 +13,7 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
     let a_name =
       if a_name = "*opt*" then
         match arg_label with
-        | Optional l -> l
+        | Optional {txt = l} -> l
         | _ -> "" (* should not happen *)
       else a_name
     in
