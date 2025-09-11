@@ -495,9 +495,10 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
         List.iter
           (fun (field : Types.label_declaration) ->
             (* Get the effective field name in JavaScript output *)
-            let effective_field_name = match process_as_name field.ld_attributes with
-              | Some as_name -> as_name  (* Use @as name if present *)
-              | None -> Ident.name field.ld_id  (* Otherwise use field name *)
+            let effective_field_name =
+              match process_as_name field.ld_attributes with
+              | Some as_name -> as_name (* Use @as name if present *)
+              | None -> Ident.name field.ld_id (* Otherwise use field name *)
             in
             (* Check if effective field name conflicts with tag *)
             if effective_field_name = tag_name then
