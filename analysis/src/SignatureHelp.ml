@@ -484,12 +484,18 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                                            let argCount = !unlabelledArgCount in
                                            unlabelledArgCount := argCount + 1;
                                            match (lbl, argLabel) with
-                                           | Asttypes.Nolabel, Asttypes.Nolabel
+                                           | ( Asttypes.Optional {txt = l1},
+                                               Asttypes.Optional {txt = l2} )
+                                             when l1 = l2 ->
+                                             true
+                                           | ( Labelled {txt = l1},
+                                               Labelled {txt = l2} )
+                                             when l1 = l2 ->
+                                             true
+                                           | Nolabel, Nolabel
                                              when paramArgCount = argCount ->
                                              true
-                                           | _ ->
-                                             Asttypes.same_arg_label lbl
-                                               argLabel)
+                                           | _ -> false)
                                   with
                                  | None ->
                                    {Protocol.kind = "markdown"; value = ""}
