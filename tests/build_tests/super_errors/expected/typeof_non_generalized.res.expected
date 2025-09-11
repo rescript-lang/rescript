@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/typeof_non_generalized.res[0m:[2m3:10-16[0m
+
+  1 [2m│[0m let u = []
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type t = [1;31m%typeof[0m(u)
+  4 [2m│[0m 
+
+  Cannot use %typeof on this value, because its type is not fully known yet.
+
+%typeof needs a value whose type is completely determined at this point.
+For example, [] or ref([]) don't say what element type they hold yet.
+
+How to fix:
+- Add a type annotation to the value (e.g. let u: array<int> = [];).
+- Or define the value in a way that makes its type known immediately.
+
+Note: This is related to the value restriction (non-generalizable type variables).

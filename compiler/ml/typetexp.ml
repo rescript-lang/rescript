@@ -206,6 +206,7 @@ let create_package_mty fake loc env (p, l) =
 (* Translation of type expressions *)
 
 let type_variables = ref (Tbl.empty : (string, type_expr) Tbl.t)
+let type_param_names = ref ([] : string list)
 let univars = ref ([] : (string * type_expr) list)
 let pre_univars = ref ([] : type_expr list)
 let used_variables = ref (Tbl.empty : (string, type_expr * Location.t) Tbl.t)
@@ -213,7 +214,8 @@ let used_variables = ref (Tbl.empty : (string, type_expr * Location.t) Tbl.t)
 let reset_type_variables () =
   reset_global_level ();
   Ctype.reset_reified_var_counter ();
-  type_variables := Tbl.empty
+  type_variables := Tbl.empty;
+  type_param_names := []
 
 let narrow () = (increase_global_level (), !type_variables)
 
@@ -252,6 +254,7 @@ let transl_type_param env styp =
       with Not_found ->
         let v = new_global_var ~name () in
         type_variables := Tbl.add name v !type_variables;
+        type_param_names := !type_param_names @ [name];
         v
     in
     {
@@ -571,11 +574,118 @@ and transl_type_aux env policy styp =
       (* %typeof payload must be a single identifier *)
       match Ast_payload.as_ident payload with
       | Some ({txt = lid; loc = lid_loc} as _ident) ->
-        (* Lookup the value and embed a generic instance of its type.
-           Using a generic instance avoids capturing weak (non-generalized)
-           type variables from the value into a type position. *)
+        (* Lookup the value and embed its (generalized) type.
+           Important: avoid manufacturing polymorphism from a monomorphic
+           (weak) type, which would violate the value restriction. We only
+           allow %typeof on values whose type is a closed type scheme. *)
         let _path, desc = find_value env lid_loc lid in
-        let ty = Ctype.generic_instance env desc.val_type in
+        let ty0 = desc.val_type in
+        let () =
+          if not (Ctype.closed_schema env ty0) then
+            let msg =
+              "Cannot use %typeof on this value, because its type is not fully \
+               known yet.\n\n"
+              ^ "%typeof needs a value whose type is completely determined at \
+                 this point.\n"
+              ^ "For example, [] or ref([]) don't say what element type they \
+                 hold yet.\n\n" ^ "How to fix:\n"
+              ^ "- Add a type annotation to the value (e.g. let u: array<int> \
+                 = [];).\n"
+              ^ "- Or define the value in a way that makes its type known \
+                 immediately.\n\n"
+              ^ "Note: This is related to the value restriction \
+                 (non-generalizable type variables)."
+            in
+            raise (Error_forward (Location.error ~loc:ext_loc msg))
+        in
+        (match !type_param_names with
+        | [] -> ()
+        | lhs_params ->
+          let rhs_vars = Ctype.free_variables ty0 in
+          let rhs_names_opt =
+            List.map
+              (fun v ->
+                match (Ctype.repr v).desc with
+                | Tvar (Some n) | Tunivar (Some n) -> Some n
+                | _ -> None)
+              rhs_vars
+          in
+          let mk_params_string names =
+            match names with
+            | [] -> "< >"
+            | _ ->
+              let parts = List.map (fun n -> "'" ^ n) names in
+              Printf.sprintf "<%s>" (String.concat ", " parts)
+          in
+          let error msg =
+            raise (Error_forward (Location.error ~loc:ext_loc msg))
+          in
+          if List.mem None rhs_names_opt then
+            error
+              "This %typeof(...) expression refers to a polymorphic value \
+               whose type variables have no names.\n\
+               Name the type variables in the value's type annotation (e.g. \
+               promise<'response>), and use the same names here in the type \
+               definition.";
+          let rhs_named =
+            List.filter_map
+              (fun v ->
+                match (Ctype.repr v).desc with
+                | Tvar (Some n) | Tunivar (Some n) -> Some (n, v)
+                | _ -> None)
+              rhs_vars
+          in
+          let rhs_names = List.map fst rhs_named in
+          let module S = Set.Make (String) in
+          let s_lhs =
+            List.fold_left (fun s x -> S.add x s) S.empty lhs_params
+          in
+          let s_rhs = List.fold_left (fun s x -> S.add x s) S.empty rhs_names in
+          (if not (S.equal s_lhs s_rhs) then
+             let missing = S.elements (S.diff s_rhs s_lhs) in
+             let extra = S.elements (S.diff s_lhs s_rhs) in
+             let parts =
+               ( [] |> fun acc ->
+                 if missing <> [] then
+                   acc
+                   @ [
+                       Printf.sprintf "Missing on the left: %s"
+                         (mk_params_string missing);
+                     ]
+                 else acc )
+               |> fun acc ->
+               if extra <> [] then
+                 acc
+                 @ [
+                     Printf.sprintf "Remove from the left: %s"
+                       (mk_params_string extra);
+                   ]
+               else acc
+             in
+             let header =
+               Printf.sprintf
+                 "This identifier `%s` has type variables %s, but your type \
+                  parameters are %s."
+                 (Longident.last lid)
+                 (mk_params_string rhs_names)
+                 (mk_params_string lhs_params)
+             in
+             error
+               (if parts = [] then header
+                else header ^ "\n\n" ^ String.concat "\n" parts));
+          (* Tie variables: unify each LHS param with the corresponding RHS var by name.
+             %typeof reuses the value's scheme whose vars are distinct; tying
+             ensures the alias shares those vars (passes closedness, keeps names). *)
+          List.iter
+            (fun lhs_name ->
+              let lhs_param = Tbl.find lhs_name !type_variables in
+              let rhs_var = List.assoc lhs_name rhs_named in
+              Ctype.unify_var env lhs_param rhs_var)
+            lhs_params);
+        (* Preserve type variable names so that typedecl can enforce exact
+           name/order mapping against LHS parameters. Since we already ensured
+           the scheme is closed, we can reuse the original scheme here. *)
+        let ty = ty0 in
         (* Build a core_type node carrying the looked up type; we mark the
            desc as any since downstream only consults ctyp_type for typing. *)
         ctyp Ttyp_any ty
