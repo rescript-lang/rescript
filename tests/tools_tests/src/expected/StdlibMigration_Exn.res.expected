@@ -1,0 +1,41 @@
+// Use deprecated Exn APIs to validate migration to JsExn/JsError
+
+external someExn: exn = "whatever"
+external someJsExn: JsExn.t = "whatever"
+
+// fromException (asJsExn)
+let fromExn1 = someExn->JsExn.fromException
+let fromExn2 = JsExn.fromException(someExn)
+
+// Property accessors on Exn.t
+let stack1 = someJsExn->JsExn.stack
+let stack2 = JsExn.stack(someJsExn)
+
+let message1 = someJsExn->JsExn.message
+let message2 = JsExn.message(someJsExn)
+
+let name1 = someJsExn->JsExn.name
+let name2 = JsExn.name(someJsExn)
+
+let fileName1 = someJsExn->JsExn.fileName
+let fileName2 = JsExn.fileName(someJsExn)
+
+// Type alias migration
+let exnT: JsExn.t = someJsExn
+
+// anyToExnInternal
+let _coerced = JsExn.anyToExnInternal(1)
+
+// ignore
+let ignore1 = someJsExn->JsExn.ignore
+let ignore2 = JsExn.ignore(someJsExn)
+
+// Raise helpers
+let throws1 = () => JsError.throwWithMessage("err")
+let throws2 = () => JsError.EvalError.throwWithMessage("err")
+let throws3 = () => JsError.RangeError.throwWithMessage("err")
+let throws4 = () => JsError.ReferenceError.throwWithMessage("err")
+let throws5 = () => JsError.SyntaxError.throwWithMessage("err")
+let throws6 = () => JsError.TypeError.throwWithMessage("err")
+let throws7 = () => JsError.URIError.throwWithMessage("err")
+
