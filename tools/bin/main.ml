@@ -33,6 +33,7 @@ Usage: rescript-tools [command]
 Commands:
 
 migrate <file> [--stdout]               Runs the migration tool on the given file
+migrate-all <root>                      Runs migrations for all project sources under <root>
 doc <file>                              Generate documentation
 format-codeblocks <file>                Format ReScript code blocks
   [--stdout]                              Output to stdout
@@ -76,6 +77,64 @@ let main () =
     | Ok content, `Stdout -> print_endline content
     | result, `File -> logAndExit result
     | Error e, _ -> logAndExit (Error e))
+  | "migrate-all" :: root :: _opts -> (
+    let rootPath =
+      if Filename.is_relative root then Unix.realpath root else root
+    in
+    (* Ensure no project config cache is used; process files exactly once. *)
+    Analysis.Cfg.readProjectConfigCache := false;
+    (* Discover project package and files from the given root. *)
+    match Analysis.Packages.newBsPackage ~rootPath with
+    | None ->
+      logAndExit
+        (Error
+           (Printf.sprintf
+              "error: failed to load ReScript project at %s (missing \
+               bsconfig.json/rescript.json?)"
+              rootPath))
+    | Some package ->
+      let moduleNames =
+        Analysis.SharedTypes.FileSet.elements package.projectFiles
+      in
+      let files =
+        moduleNames
+        |> List.filter_map (fun modName ->
+               Hashtbl.find_opt package.pathsForModule modName
+               |> Option.map Analysis.SharedTypes.getSrc)
+        |> List.concat
+        |> List.filter (fun path ->
+               Filename.check_suffix path ".res"
+               || Filename.check_suffix path ".resi")
+      in
+      let total = List.length files in
+      if total = 0 then logAndExit (Ok "No source files found to migrate")
+      else
+        let process_one file =
+          (file, Tools.Migrate.migrate ~entryPointFile:file ~outputMode:`File)
+        in
+        let results = List.map process_one files in
+        let failures =
+          results
+          |> List.fold_left
+               (fun acc (_file, res) ->
+                 match res with
+                 | Ok _ -> acc
+                 | Error _ -> acc + 1)
+               0
+        in
+        results
+        |> List.iter (fun (_file, res) ->
+               match res with
+               | Ok msg -> print_endline msg
+               | Error err -> prerr_endline err);
+        if failures > 0 then
+          logAndExit
+            (Error
+               (Printf.sprintf "Completed with %d failure(s) across %d file(s)"
+                  failures total))
+        else
+          logAndExit
+            (Ok (Printf.sprintf "Migrated %d file(s) successfully" total)))
   | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatCodeblocksHelp)
