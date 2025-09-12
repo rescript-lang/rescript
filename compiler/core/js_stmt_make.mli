@@ -141,6 +141,8 @@ val for_ :
   J.block ->
   t
 
+val for_of : ?comment:string -> J.expression -> J.ident -> J.block -> t
+
 val try_ :
   ?comment:string ->
   ?with_:J.ident * J.block ->

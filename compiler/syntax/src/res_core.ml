@@ -3658,27 +3658,45 @@ and parse_if_or_if_let_expression p =
   expr
 
 and parse_for_rest has_opening_paren pattern start_pos p =
-  Parser.expect In p;
-  let e1 = parse_expr p in
-  let direction =
-    match p.Parser.token with
-    | Lident "to" -> Asttypes.Upto
-    | Lident "downto" -> Asttypes.Downto
-    | token ->
-      Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-      Asttypes.Upto
+  let parse_loop_body () =
+    if has_opening_paren then Parser.expect Rparen p;
+    Parser.expect Lbrace p;
+    let body_expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    body_expr
   in
-  if p.Parser.token = Eof then
-    Parser.err ~start_pos:p.start_pos p
-      (Diagnostics.unexpected p.Parser.token p.breadcrumbs)
-  else Parser.next p;
-  let e2 = parse_expr ~context:WhenExpr p in
-  if has_opening_paren then Parser.expect Rparen p;
-  Parser.expect Lbrace p;
-  let body_expr = parse_expr_block p in
-  Parser.expect Rbrace p;
-  let loc = mk_loc start_pos p.prev_end_pos in
-  Ast_helper.Exp.for_ ~loc pattern e1 e2 direction body_expr
+  match p.Parser.token with
+  | Of ->
+    (* for...of loop *)
+    Parser.next p;
+    let array_expr = parse_operand_expr ~context:WhenExpr p in
+    let body_expr = parse_loop_body () in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.mk ~loc
+      (Parsetree.Pexp_for_of (pattern, array_expr, body_expr))
+  | In ->
+    (* regular for loop *)
+    Parser.next p;
+    let e1 = parse_expr p in
+    let direction =
+      match p.Parser.token with
+      | Lident "to" -> Asttypes.Upto
+      | Lident "downto" -> Asttypes.Downto
+      | token ->
+        Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
+        Asttypes.Upto
+    in
+    if p.Parser.token = Eof then
+      Parser.err ~start_pos:p.start_pos p
+        (Diagnostics.unexpected p.Parser.token p.breadcrumbs)
+    else Parser.next p;
+    let e2 = parse_expr ~context:WhenExpr p in
+    let body_expr = parse_loop_body () in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Exp.for_ ~loc pattern e1 e2 direction body_expr
+  | _ ->
+    Parser.err p (Diagnostics.unexpected p.token p.breadcrumbs);
+    Recover.default_expr ()
 
 and parse_for_expression p =
   let start_pos = p.Parser.start_pos in

@@ -200,6 +200,7 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
     | Lwhile (l1, l2) -> Lam.while_ (simplif l1) (simplif l2)
     | Lfor (v, l1, l2, dir, l3) ->
       Lam.for_ v (simplif l1) (simplif l2) dir (simplif l3)
+    | Lfor_of (v, l1, l2) -> Lam.for_of v (simplif l1) (simplif l2)
     | Lassign (v, l) -> Lam.assign v (simplif l)
   in
   simplif lam
