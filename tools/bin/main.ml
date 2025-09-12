@@ -110,28 +110,30 @@ let main () =
           (file, Tools.Migrate.migrate ~entryPointFile:file ~outputMode:`File)
         in
         let results = List.map process_one files in
-        let failures =
+        let migrated, unchanged, failures =
           results
           |> List.fold_left
-               (fun acc (_file, res) ->
+               (fun (migrated, unchanged, failures) (file, res) ->
                  match res with
-                 | Ok _ -> acc
-                 | Error _ -> acc + 1)
-               0
+                 | Ok msg ->
+                   let base = Filename.basename file in
+                   if msg = base ^ ": File migrated successfully" then
+                     (migrated + 1, unchanged, failures)
+                   else if msg = base ^ ": File did not need migration" then
+                     (migrated, unchanged + 1, failures)
+                   else
+                     (* Unknown OK message, count as unchanged *)
+                     (migrated, unchanged + 1, failures)
+                 | Error _ -> (migrated, unchanged, failures + 1))
+               (0, 0, 0)
         in
-        results
-        |> List.iter (fun (_file, res) ->
-               match res with
-               | Ok msg -> print_endline msg
-               | Error err -> prerr_endline err);
-        if failures > 0 then
-          logAndExit
-            (Error
-               (Printf.sprintf "Completed with %d failure(s) across %d file(s)"
-                  failures total))
-        else
-          logAndExit
-            (Ok (Printf.sprintf "Migrated %d file(s) successfully" total)))
+        let summary =
+          Printf.sprintf
+            "Migration summary: migrated %d, unchanged %d, failed %d, total %d"
+            migrated unchanged failures total
+        in
+        if failures > 0 then logAndExit (Error summary)
+        else logAndExit (Ok summary))
   | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatCodeblocksHelp)
