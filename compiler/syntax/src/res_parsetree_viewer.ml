@@ -534,7 +534,8 @@ let should_inline_rhs_binary_expr rhs =
   match rhs.pexp_desc with
   | Parsetree.Pexp_constant _ | Pexp_let _ | Pexp_letmodule _
   | Pexp_letexception _ | Pexp_sequence _ | Pexp_open _ | Pexp_ifthenelse _
-  | Pexp_for _ | Pexp_while _ | Pexp_try _ | Pexp_array _ | Pexp_record _ ->
+  | Pexp_for _ | Pexp_for_of _ | Pexp_while _ | Pexp_try _ | Pexp_array _
+  | Pexp_record _ ->
     true
   | _ -> false
 

@@ -1478,6 +1478,21 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           brace_block cxt f s)
     in
     action cxt
+  | ForOf (id, iterable, s) ->
+    P.vgroup f 0 (fun _ ->
+        P.group f 0 (fun _ ->
+            P.string f L.for_;
+            P.space f;
+            P.paren_group f 1 (fun _ ->
+                P.string f L.let_;
+                P.space f;
+                ignore (Ext_pp_scope.ident cxt f id);
+                P.space f;
+                P.string f L.of_;
+                P.space f;
+                ignore (expression ~level:0 cxt f iterable)));
+        P.space f;
+        brace_block cxt f s)
   | Continue ->
     continue f;
     cxt

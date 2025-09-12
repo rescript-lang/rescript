@@ -316,6 +316,11 @@ and expression i ppf x =
     expression i ppf e1;
     expression i ppf e2;
     expression i ppf e3
+  | Pexp_for_of (p, e1, e2) ->
+    line i ppf "Pexp_for_of\n";
+    pattern i ppf p;
+    expression i ppf e1;
+    expression i ppf e2
   | Pexp_constraint (e, ct) ->
     line i ppf "Pexp_constraint\n";
     expression i ppf e;

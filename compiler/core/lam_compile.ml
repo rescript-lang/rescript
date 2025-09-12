@@ -1181,6 +1181,23 @@ let compile output_prefix =
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
+  and compile_for_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
+      (lambda_cxt : Lam_compile_context.t) =
+    let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+    let block =
+      match compile_lambda new_cxt iterable with
+      | {value = None} -> assert false
+      | {block = b1; value = Some e1} ->
+        let block_body =
+          Js_output.output_as_block
+            (compile_lambda
+               {lambda_cxt with continuation = EffectCall Not_tail}
+               body)
+        in
+        Ext_list.append b1 [S.for_of e1 id block_body]
+    in
+    Js_output.output_of_block_and_expression lambda_cxt.continuation block
+      E.unit
   and compile_assign id (lambda : Lam.t) (lambda_cxt : Lam_compile_context.t) =
     let block =
       match lambda with
@@ -1824,6 +1841,7 @@ let compile output_prefix =
         compile_for id start finish
           (if direction = Upto then Upto else Downto)
           body lambda_cxt)
+    | Lfor_of (id, iterable, body) -> compile_for_of id iterable body lambda_cxt
     | Lassign (id, lambda) -> compile_assign id lambda lambda_cxt
     | Ltrywith (lam, id, catch) ->
       (* generate documentation *)
