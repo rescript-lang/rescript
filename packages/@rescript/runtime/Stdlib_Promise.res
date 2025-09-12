@@ -112,3 +112,8 @@ external any: array<t<'a>> => t<'a> = "any"
 external done: promise<'a> => unit = "%ignore"
 
 external ignore: promise<'a> => unit = "%ignore"
+
+let sleep = ms =>
+  make((resolve, _) => {
+    let _ = Stdlib_Global.setTimeout(resolve, ms)
+  })

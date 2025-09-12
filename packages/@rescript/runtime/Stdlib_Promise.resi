@@ -441,3 +441,18 @@ external done: promise<'a> => unit = "%ignore"
   without having to store or process it further.
 */
 external ignore: promise<'a> => unit = "%ignore"
+
+/**
+`sleep(ms)` creates a promise that resolves after `ms` milliseconds.
+
+## Examples
+
+```rescript
+Promise.sleep(1000)
+->Promise.thenResolve(() => {
+  Console.log("1 second has passed")
+})
+->Promise.ignore
+```
+*/
+let sleep: int => promise<unit>
