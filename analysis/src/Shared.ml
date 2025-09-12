@@ -63,9 +63,17 @@ let declToString ?printNameAsIs ?(recStatus = Types.Trec_not) name t =
   PrintType.printDecl ?printNameAsIs ~recStatus name t
 
 let cacheTypeToString = ref false
-let typeTbl = Hashtbl.create 1
+
+module TypeToStringCache = struct
+  let key : (int * Types.type_expr, string) Hashtbl.t Domain.DLS.key =
+    AnalysisCache.make_hashtbl 1
+
+  let get () : (int * Types.type_expr, string) Hashtbl.t =
+    AnalysisCache.get_hashtbl key
+end
 
 let typeToString ?lineWidth (t : Types.type_expr) =
+  let typeTbl = TypeToStringCache.get () in
   match
     if !cacheTypeToString then Hashtbl.find_opt typeTbl (t.id, t) else None
   with
