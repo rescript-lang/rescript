@@ -58,11 +58,6 @@ export const buildTestDir = path.resolve(testDir, "build_tests");
 export const docstringTestDir = path.resolve(testDir, "docstring_tests");
 
 /**
- * path: `<projectDir>/tests/rewatch_tests/`
- */
-export const rewatchTestDir = path.resolve(testDir, "rewatch_tests");
-
-/**
  * path: `<projectDir>/compiler/common/bs_version.ml`
  */
 export const compilerVersionFile = path.resolve(

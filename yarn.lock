@@ -737,14 +737,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@tests/rewatch-tests@workspace:tests/rewatch_tests":
-  version: 0.0.0-use.local
-  resolution: "@tests/rewatch-tests@workspace:tests/rewatch_tests"
-  dependencies:
-    rescript: "workspace:^"
-  languageName: unknown
-  linkType: soft
-
 "@tests/tools@workspace:tests/tools_tests":
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"

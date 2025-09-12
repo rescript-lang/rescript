@@ -32,9 +32,6 @@ export const {
   execBin,
   execBuild,
   execClean,
-  git,
-  npm,
-  deno,
 } = setup();
 
 /**
@@ -86,7 +83,7 @@ export function setup(cwd = process.cwd()) {
         if (throwOnFail && code !== 0) {
           reject(
             new Error(
-              `Command ${command} exited with non-zero status: ${code}\n${stderr}`,
+              `Command ${command} exited with non-zero status: ${code}`,
             ),
           );
         } else {
@@ -147,7 +144,7 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `rescript` legacy CLI
+     * `rescript` CLI
      *
      * @param {(
      *   | "build"
@@ -213,39 +210,6 @@ export function setup(cwd = process.cwd()) {
     async execBin(bin, args = [], options = {}) {
       const realPath = await fs.realpath(bin);
       return exec(realPath, args, options);
-    },
-
-    /**
-     * Execute Git command
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    git(args = [], options = {}) {
-      return exec("git", args, options);
-    },
-
-    /**
-     * Execute npm command
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    npm(args = [], options = {}) {
-      return exec("npm", args, options);
-    },
-
-    /**
-     * Execute deno command
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    deno(args = [], options = {}) {
-      return exec("deno", args, options);
     },
   };
 }

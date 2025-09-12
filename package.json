@@ -101,7 +101,6 @@
     "tests/docstring_tests",
     "tests/gentype_tests/**",
     "tests/tools_tests",
-    "tests/rewatch_tests",
     "scripts/res"
   ],
   "packageManager": "yarn@4.9.1",
