@@ -1,4 +1,6 @@
-type $RescriptTypeSatisfiesTypeScriptType<RescriptType, TypeScriptType extends RescriptType> = TypeScriptType;
+export {};
+
+type $RescriptTypeSatisfiesTypeScriptType<RescriptType extends TypeScriptType, TypeScriptType> = RescriptType;
 
 type groupRenderProps = $RescriptTypeSatisfiesTypeScriptType<{
   readonly isHovered: boolean; 
@@ -10,7 +12,7 @@ type groupRenderProps = $RescriptTypeSatisfiesTypeScriptType<{
 type selectionBehavior = $RescriptTypeSatisfiesTypeScriptType<"toggle" | "replace", import("react-stately").SelectionBehavior>;
 type selectionMode = $RescriptTypeSatisfiesTypeScriptType<"none" | "single" | "multiple", import("react-stately").SelectionMode>;
 
-const _useTableOptions = null as unknown as () => tableOptionsContextValue satisfies typeof import("react-aria-components").useTableOptions;
+const useTableOptions = undefined as unknown as typeof import("react-aria-components").useTableOptions satisfies () => tableOptionsContextValue;
 
 type tableOptionsContextValue = {
   readonly selectionMode: selectionMode; 

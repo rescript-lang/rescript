@@ -336,13 +336,15 @@ let collect_from_signature ~(config : GenTypeConfig.t) ~output_file_relative
 let render ~(config : GenTypeConfig.t) (a : assertions) : string option =
   let type_name_is_interface _ = false in
   let buf = Buffer.create 256 in
+  (* Make the file a module to avoid global-scope collisions across files. *)
+  Buffer.add_string buf "export {};\n\n";
   (* Emit the helper type if there's at least one type assertion *)
   (match a.type_assertions with
   | [] -> ()
   | _ ->
     Buffer.add_string buf
-      "type $RescriptTypeSatisfiesTypeScriptType<RescriptType, TypeScriptType \
-       extends RescriptType> = TypeScriptType;\n\n");
+      "type $RescriptTypeSatisfiesTypeScriptType<RescriptType extends \
+       TypeScriptType, TypeScriptType> = RescriptType;\n\n");
   let emit_type (t : type_assertion) =
     let generics =
       match t.type_vars with
@@ -353,20 +355,24 @@ let render ~(config : GenTypeConfig.t) (a : assertions) : string option =
       EmitType.type_to_string ~config ~type_name_is_interface t.type_
     in
     let import_ts = ts_import_path t.import_segments in
+    let import_applied_generics =
+      match t.type_vars with
+      | [] -> ""
+      | vs -> "<" ^ String.concat ", " vs ^ ">"
+    in
     Buffer.add_string buf
       ("type " ^ sanitize_type_name t.name ^ generics
      ^ " = $RescriptTypeSatisfiesTypeScriptType<" ^ res_type ^ ", " ^ import_ts
-     ^ ">;\n")
+     ^ import_applied_generics ^ ">;\n")
   in
   let emit_value (v : value_assertion) =
     let res_type =
       EmitType.type_to_string ~config ~type_name_is_interface v.type_
     in
     let import_ts = ts_import_path v.import_segments in
-    let name = "_" ^ v.name in
     Buffer.add_string buf
-      ("const " ^ name ^ " = null as unknown as " ^ res_type
-     ^ " satisfies typeof " ^ import_ts ^ ";\n")
+      ("const " ^ v.name ^ " = undefined as unknown as typeof " ^ import_ts
+     ^ " satisfies " ^ res_type ^ ";\n")
   in
   a.type_assertions |> List.rev |> List.iter emit_type;
   (match a.type_assertions with
