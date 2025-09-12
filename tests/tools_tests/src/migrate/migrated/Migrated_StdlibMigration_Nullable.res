@@ -26,3 +26,11 @@ let toOption2 = Nullable.toOption(Nullable.make(3))
 
 let to_opt1 = Nullable.make(4)->Nullable.toOption
 let to_opt2 = Nullable.toOption(Nullable.make(4))
+
+let optArrayOfNullableToOptArrayOfOpt: option<array<Nullable.t<'a>>> => option<
+  array<option<'a>>,
+> = x =>
+  switch x {
+  | None => None
+  | Some(arr) => Some(arr->Belt.Array.map(Nullable.toOption))
+  }

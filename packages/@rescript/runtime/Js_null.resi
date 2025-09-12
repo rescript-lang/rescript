@@ -25,8 +25,8 @@
 /*** Provides functionality for dealing with the `Js.null<'a>` type */
 
 @deprecated({
-  reason: "Use `null` directly instead.",
-  migrate: %replace.type(: null),
+  reason: "Use `Null.t` instead.",
+  migrate: %replace.type(: Null.t),
 })
 @unboxed
 type t<+'a> = Primitive_js_extern.null<'a> = Value('a) | @as(null) Null

@@ -81,9 +81,6 @@ let main () =
     let rootPath =
       if Filename.is_relative root then Unix.realpath root else root
     in
-    (* Ensure no project config cache is used; process files exactly once. *)
-    Analysis.Cfg.readProjectConfigCache := false;
-    (* Discover project package and files from the given root. *)
     match Analysis.Packages.newBsPackage ~rootPath with
     | None ->
       logAndExit
