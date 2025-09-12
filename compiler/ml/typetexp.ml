@@ -321,7 +321,7 @@ and transl_type_aux env policy styp =
     in
     ctyp (Ttyp_var name) ty
   | Ptyp_arrow {arg; ret; arity} ->
-    let lbl = Asttypes.to_noloc arg.lbl in
+    let lbl = arg.lbl in
     let cty1 = transl_type env policy arg.typ in
     let cty2 = transl_type env policy ret in
     let ty1 = cty1.ctyp_type in

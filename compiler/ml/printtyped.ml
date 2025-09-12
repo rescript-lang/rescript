@@ -121,9 +121,9 @@ let option i f ppf x =
 let longident i ppf li = line i ppf "%a\n" fmt_longident li
 let string i ppf s = line i ppf "\"%s\"\n" s
 let arg_label i ppf = function
-  | Noloc.Nolabel -> line i ppf "Nolabel\n"
-  | Optional s -> line i ppf "Optional \"%s\"\n" s
-  | Labelled s -> line i ppf "Labelled \"%s\"\n" s
+  | Nolabel -> line i ppf "Nolabel\n"
+  | Optional {txt} -> line i ppf "Optional \"%s\"\n" txt
+  | Labelled {txt} -> line i ppf "Labelled \"%s\"\n" txt
 
 let record_representation i ppf =
   let open Types in
