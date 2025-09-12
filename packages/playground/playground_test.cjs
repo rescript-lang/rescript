@@ -7,6 +7,13 @@ require("./packages/@rescript/react/cmij.js");
 
 const compiler = rescript_compiler.make();
 
+console.log("Initial compiler config: ", compiler.getConfig());
+
+compiler.setExperimentalFeatures(["LetUnwrap"]);
+compiler.setJsxPreserveMode(true);
+
+console.log("Current compiler config: ", compiler.getConfig());
+
 const result = compiler.rescript.compile(`
   @@jsxConfig({ version: 4, mode: "automatic" })
 

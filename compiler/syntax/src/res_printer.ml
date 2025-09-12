@@ -4516,8 +4516,8 @@ and print_jsx_container_tag ~state tag_name
   (* <div className="test" /> *)
   let has_children =
     match children with
-    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
-    | JSXChildrenItems [] -> false
+    | _ :: _ -> true
+    | [] -> false
   in
   let line_sep = get_line_sep_for_jsx_children children in
   let print_children children =
@@ -4606,8 +4606,8 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
   in
   let has_children =
     match children with
-    | JSXChildrenItems [] -> false
-    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
+    | [] -> false
+    | _ :: _ -> true
   in
   let line_sep = get_line_sep_for_jsx_children children in
   Doc.group
@@ -4621,18 +4621,15 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
        ])
 
 and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
-  match children with
-  | JSXChildrenSpreading _ -> Doc.line
-  | JSXChildrenItems children ->
-    if
-      List.length children > 1
-      || List.exists
-           (function
-             | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
-             | _ -> false)
-           children
-    then Doc.hard_line
-    else Doc.line
+  if
+    List.length children > 1
+    || List.exists
+         (function
+           | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
+           | _ -> false)
+         children
+  then Doc.hard_line
+  else Doc.line
 
 and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
@@ -4669,9 +4666,8 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
       print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
   in
   match children with
-  | JSXChildrenItems [] -> Doc.nil
-  | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
-  | JSXChildrenItems children ->
+  | [] -> Doc.nil
+  | children ->
     let rec visit acc children =
       match children with
       | [] -> acc

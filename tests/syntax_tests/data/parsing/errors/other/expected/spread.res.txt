@@ -54,18 +54,6 @@ Solution: you need to pull out each field you want explicitly.
   List pattern matches only supports one `...` spread, at the end.
 Explanation: a list spread at the tail is efficient, but a spread in the middle would create new lists; out of performance concern, our pattern matching currently guarantees to never create new intermediate data.
 
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/other/spread.res:9:20
-
-   7 │ 
-   8 │ type t = {...a}
-   9 │ type t = Foo({...a})
-  10 │ type t = option<foo, {...x}>
-  11 │ 
-
-  I'm not sure what to parse here when looking at ")".
-
 let [|arr;_|] = [|1;2;3|]
 let record = { x with y }
 let { x; y } = myRecord
@@ -73,5 +61,6 @@ let x::y = myList
 type nonrec t = {
   ...: a }
 type nonrec t =
-  | Foo of < a  >  
+  | Foo of {
+  ...: a } 
 type nonrec t = (foo, < x  > ) option

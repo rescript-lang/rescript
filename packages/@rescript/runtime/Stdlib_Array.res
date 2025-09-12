@@ -42,7 +42,7 @@ let fromInitializer = (~length, f) =>
 
 @val external isArray: 'a => bool = "Array.isArray"
 
-@get external length: array<'a> => int = "length"
+external length: array<'a> => int = "%array_length"
 
 let isEmpty = arr => arr->length === 0
 
@@ -272,6 +272,23 @@ let filterMap = (a, f) => {
 }
 
 let keepSome = filterMap(_, x => x)
+
+let filterMapWithIndex = (a, f) => {
+  let l = length(a)
+  let r = makeUninitializedUnsafe(l)
+  let j = ref(0)
+  for i in 0 to l - 1 {
+    let v = getUnsafe(a, i)
+    switch f(v, i) {
+    | None => ()
+    | Some(v) =>
+      setUnsafe(r, j.contents, v)
+      j.contents = j.contents + 1
+    }
+  }
+  truncateToLengthUnsafe(r, j.contents)
+  r
+}
 
 @send external flatMap: (array<'a>, 'a => array<'b>) => array<'b> = "flatMap"
 @send external flatMapWithIndex: (array<'a>, ('a, int) => array<'b>) => array<'b> = "flatMap"

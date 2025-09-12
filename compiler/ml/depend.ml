@@ -312,9 +312,7 @@ let rec add_expr bv exp =
     and_jsx_props bv props;
     add_jsx_children bv children
 
-and add_jsx_children bv = function
-  | JSXChildrenSpreading e -> add_expr bv e
-  | JSXChildrenItems xs -> List.iter (add_expr bv) xs
+and add_jsx_children bv xs = List.iter (add_expr bv) xs
 
 and add_jsx_prop bv = function
   | JSXPropPunning (_, _) -> ()

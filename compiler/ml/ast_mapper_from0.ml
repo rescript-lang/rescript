@@ -326,8 +326,8 @@ module E = struct
     match e.pexp_desc with
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
       ->
-      JSXChildrenItems (visit e)
-    | _ -> JSXChildrenSpreading (sub.expr sub e)
+      visit e
+    | _ -> [sub.expr sub e]
 
   let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
       (e : expression) : Parsetree.jsx_prop option =

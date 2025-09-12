@@ -12,13 +12,15 @@ let rec or_f = (b, x, n) =>
     b || or_f(b, x, n + 1)
   }
 
-let suites = {
-  open Mt
-  list{
-    /* becareful inlining will defeat the test purpose here */
-    ("and_tail", _ => Eq(false, f(true, 1, 0))),
-    ("or_tail", _ => Eq(false, or_f(false, 1, 0))),
-  }
-}
+open Mocha
+open Test_utils
 
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  /* becareful inlining will defeat the test purpose here */
+  test("and_tail", () => {
+    eq(__LOC__, false, f(true, 1, 0))
+  })
+  test("or_tail", () => {
+    eq(__LOC__, false, or_f(false, 1, 0))
+  })
+})

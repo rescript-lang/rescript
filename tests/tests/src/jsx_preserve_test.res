@@ -54,11 +54,6 @@ let baseChildren = React.array([
   <span> {React.string("Hello, world!")} </span>,
 ])
 
-let _container_with_spread_children = <div title="barry" className="barry"> ...baseChildren </div>
-
-let _container_with_spread_props_and_children =
-  <div {...baseProps} title="barry" className="barry"> ...baseChildren </div>
-
 let _unary_element_with_spread_props_keyed = <input {...baseProps} type_="text" key="barry-key" />
 
 let _container_with_spread_props_keyed =

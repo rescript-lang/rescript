@@ -105,7 +105,7 @@ Test.run([
     33
   ],
   "clamp - nan"
-], isNaN(Stdlib_Float.clamp(4.1, 4.3, Number.NaN)), eq, true);
+], Number.isNaN(Stdlib_Float.clamp(4.1, 4.3, Number.NaN)), eq, true);
 
 Test.run([
   [

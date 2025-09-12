@@ -4,7 +4,7 @@ import * as Stdlib_Array from "./Stdlib_Array.js";
 
 function fromString(x, radix) {
   let maybeInt = radix !== undefined ? parseInt(x, radix) : parseInt(x);
-  if (isNaN(maybeInt) || maybeInt > 2147483647 || maybeInt < -2147483648) {
+  if (Number.isNaN(maybeInt) || maybeInt > 2147483647 || maybeInt < -2147483648) {
     return;
   } else {
     return maybeInt | 0;

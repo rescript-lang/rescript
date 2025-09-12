@@ -1182,8 +1182,8 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
     (component_description : componentDescription) (props : jsx_props)
     (children : jsx_children) : jsx_props =
   match children with
-  | JSXChildrenItems [] -> props
-  | JSXChildrenItems [child] | JSXChildrenSpreading child ->
+  | [] -> props
+  | [child] ->
     let expr =
       (* I don't quite know why fragment and uppercase don't do this additional ReactDOM.someElement wrapping *)
       match component_description with
@@ -1209,7 +1209,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
         JSXPropValue
           ({txt = "children"; loc = child.pexp_loc}, is_optional, expr);
       ]
-  | JSXChildrenItems (head :: _ as xs) ->
+  | head :: _ as xs ->
     let loc =
       match List.rev xs with
       | [] -> head.pexp_loc
@@ -1230,11 +1230,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
 let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
     (component_description : componentDescription) (elementTag : expression)
     (props : jsx_props) (children : jsx_children) : expression =
-  let more_than_one_children =
-    match children with
-    | JSXChildrenSpreading _ -> false
-    | JSXChildrenItems xs -> List.length xs > 1
-  in
+  let more_than_one_children = List.length children > 1 in
   let props_with_children =
     append_children_prop config mapper component_description props children
   in
@@ -1314,12 +1310,12 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
         (* For example 'input' *)
         let component_name_expr = constant_string ~loc:tag_loc name in
         mk_react_jsx config mapper loc attrs LowercasedComponent
-          component_name_expr props (JSXChildrenItems [])
+          component_name_expr props []
       | JsxUpperTag _ | JsxQualifiedLowerTag _ ->
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
-          (JSXChildrenItems [])
+          []
       | JsxTagInvalid name ->
         Jsx_common.raise_error ~loc
           "JSX: element name is neither upper- or lowercase, got \"%s\"" name)

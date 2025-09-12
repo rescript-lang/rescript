@@ -1658,12 +1658,7 @@ and walk_expression expr t comments =
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest = partition_by_on_same_line opening_token comments in
     attach t.trailing opening_token on_same_line;
-    let exprs =
-      match children with
-      | Parsetree.JSXChildrenSpreading e -> [e]
-      | Parsetree.JSXChildrenItems xs -> xs
-    in
-    let xs = exprs |> List.map (fun e -> Expression e) in
+    let xs = children |> List.map (fun e -> Expression e) in
     walk_list xs t rest
   | Pexp_jsx_element
       (Jsx_unary_element
@@ -1769,7 +1764,7 @@ and walk_expression expr t comments =
         partition_leading_trailing rest closing_tag_loc
     in
     match children with
-    | Parsetree.JSXChildrenItems [] -> (
+    | [] -> (
       (* attach all comments to the closing tag if there are no children *)
       match closing_tag with
       | None ->
@@ -1801,11 +1796,7 @@ and walk_expression expr t comments =
           (* if the closing tag is on the same line, attach comments to the opening tag *)
           attach t.leading closing_tag_loc comments_for_children)
     | children ->
-      let children_nodes =
-        match children with
-        | Parsetree.JSXChildrenSpreading e -> [Expression e]
-        | Parsetree.JSXChildrenItems xs -> List.map (fun e -> Expression e) xs
-      in
+      let children_nodes = List.map (fun e -> Expression e) children in
 
       walk_list children_nodes t comments_for_children
     (* It is less likely that there are comments inside the closing tag, 

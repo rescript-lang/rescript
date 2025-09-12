@@ -162,6 +162,23 @@ function keepSome(__x) {
   return filterMap(__x, x => x);
 }
 
+function filterMapWithIndex(a, f) {
+  let l = a.length;
+  let r = new Array(l);
+  let j = 0;
+  for (let i = 0; i < l; ++i) {
+    let v = a[i];
+    let v$1 = f(v, i);
+    if (v$1 !== undefined) {
+      r[j] = Primitive_option.valFromOption(v$1);
+      j = j + 1 | 0;
+    }
+    
+  }
+  r.length = j;
+  return r;
+}
+
 function findMap(arr, f) {
   let _i = 0;
   while (true) {
@@ -197,6 +214,7 @@ export {
   findIndexOpt,
   findLastIndexOpt,
   filterMap,
+  filterMapWithIndex,
   keepSome,
   toShuffled,
   shuffle,

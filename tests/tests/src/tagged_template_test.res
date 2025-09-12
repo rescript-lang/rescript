@@ -1,4 +1,5 @@
-module Array = Ocaml_Array
+open Mocha
+open Test_utils
 
 module Pg = {
   @module("./tagged_template_lib.js") @taggedTemplate
@@ -24,40 +25,44 @@ let foo = (strings, values) => {
   let res = ref("")
   let valueCount = Belt.Array.length(values)
   for i in 0 to valueCount - 1 {
-    res := res.contents ++ strings[i] ++ Js.Int.toString(values[i] * 10)
+    res :=
+      res.contents ++
+      strings->Array.getUnsafe(i) ++
+      Js.Int.toString(values->Array.getUnsafe(i) * 10)
   }
-  res.contents ++ strings[valueCount]
+  res.contents ++ strings->Array.getUnsafe(valueCount)
 }
 
 let res = foo`| 5 × 10 = ${5} |`
 
-Mt.from_pair_suites(
-  "tagged templates",
-  list{
-    (
-      "with externals, it should return a string with the correct interpolations",
-      () => Eq(
-        query,
-        `
+describe("tagged templates", () => {
+  test("with externals, it should return a string with the correct interpolations", () =>
+    eq(
+      __LOC__,
+      query,
+      `
 " SELECT * FROM 'users' WHERE id = '5'`,
-      ),
-    ),
-    (
-      "with module scoped externals, it should also return a string with the correct interpolations",
-      () => Eq(queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"),
-    ),
-    ("with externals, it should return the result of the function", () => Eq(length, 52)),
-    (
-      "with rescript function, it should return a string with the correct encoding and interpolations",
-      () => Eq(res, "| 5 × 10 = 50 |"),
-    ),
-    (
-      "a template literal tagged with json should generate a regular string interpolation for now",
-      () => Eq(json`some random ${"string"}`, "some random string"),
-    ),
-    (
-      "a regular string interpolation should continue working",
-      () => Eq(`some random ${"string"} interpolation`, "some random string interpolation"),
-    ),
-  },
-)
+    )
+  )
+
+  test(
+    "with module scoped externals, it should also return a string with the correct interpolations",
+    () => eq(__LOC__, queryWithModule, "SELECT * FROM 'users' WHERE id = '5'"),
+  )
+
+  test("with externals, it should return the result of the function", () => eq(__LOC__, length, 52))
+
+  test(
+    "with rescript function, it should return a string with the correct encoding and interpolations",
+    () => eq(__LOC__, res, "| 5 × 10 = 50 |"),
+  )
+
+  test(
+    "a template literal tagged with json should generate a regular string interpolation for now",
+    () => eq(__LOC__, json`some random ${"string"}`, "some random string"),
+  )
+
+  test("a regular string interpolation should continue working", () =>
+    eq(__LOC__, `some random ${"string"} interpolation`, "some random string interpolation")
+  )
+})

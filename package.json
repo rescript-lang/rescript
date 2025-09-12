@@ -34,6 +34,10 @@
     "Paul Tsnobiladzé (https://github.com/tsnobip)",
     "Woonki Moon (https://github.com/mununki)"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=20.11.0"
   },

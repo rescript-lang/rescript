@@ -1,7 +1,5 @@
-@@config({flags: [/* "-bs-diagnose" */]})
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 let u = ref(0)
 let div = (~children, ()) =>
@@ -39,8 +37,11 @@ let fn = (authState, route) =>
     3
   }
 
-eq(__LOC__, fn(#Unauthenticated, #Invite), 1)
-eq(__LOC__, fn(#Unauthenticated, #Onboarding(0)), 0)
-eq(__LOC__, fn(#Unverified(0), #Invite), 2)
-eq(__LOC__, fn(#Unauthenticated, #xx), 3)
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__MODULE__, () => {
+  test("fn with Unauthenticated and Invite", () => eq(__LOC__, fn(#Unauthenticated, #Invite), 1))
+  test("fn with Unauthenticated and Onboarding", () =>
+    eq(__LOC__, fn(#Unauthenticated, #Onboarding(0)), 0)
+  )
+  test("fn with Unverified and Invite", () => eq(__LOC__, fn(#Unverified(0), #Invite), 2))
+  test("fn with Unauthenticated and unknown route", () => eq(__LOC__, fn(#Unauthenticated, #xx), 3))
+})

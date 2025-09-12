@@ -311,10 +311,7 @@ let command ~debug ~emitter ~path =
            ~pos:(Pos.ofLexing posOfGreatherthanAfterProps);
 
       (* children *)
-      (match children with
-      | Parsetree.JSXChildrenSpreading child -> iterator.expr iterator child
-      | Parsetree.JSXChildrenItems children ->
-        List.iter (iterator.expr iterator) children);
+      List.iter (iterator.expr iterator) children;
 
       (* closing tag *)
       closing_tag_opt

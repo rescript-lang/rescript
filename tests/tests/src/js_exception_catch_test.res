@@ -1,29 +1,19 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
+open Mocha
+open Test_utils
+open Js
 
-let add_test = {
-  let counter = ref(0)
-  (loc, test) => {
-    incr(counter)
-    let id = loc ++ (" id " ++ Js.Int.toString(counter.contents))
-    suites := list{(id, test), ...suites.contents}
+test("js_exception_catch_test_json_parse", () => {
+  switch Js.Json.parseExn(` {"x"}`) {
+  | exception Js.Exn.Error(x) => ok(__LOC__, true)
+  | e => ok(__LOC__, false)
   }
-}
-
-let eq = (loc, x, y) => add_test(loc, _ => Mt.Eq(x, y))
-let false_ = loc => add_test(loc, _ => Mt.Ok(false))
-
-let true_ = loc => add_test(loc, _ => Mt.Ok(true))
-
-let () = switch Js.Json.parseExn(` {"x"}`) {
-| exception Js.Exn.Error(x) => true_(__LOC__)
-| e => false_(__LOC__)
-}
+})
 
 exception A(int)
 exception B
 exception C(int, int)
 
-let test = f =>
+let testException = f =>
   try {
     f()
     #No_error
@@ -40,18 +30,18 @@ let test = f =>
   | e => #Any
   }
 
-let () = {
-  eq(__LOC__, test(_ => ()), #No_error)
-  eq(__LOC__, test(_ => throw(Not_found)), #Not_found)
-  eq(__LOC__, test(_ => invalid_arg("x")), #Invalid_argument)
-  eq(__LOC__, test(_ => invalid_arg("")), #Invalid_any)
-  eq(__LOC__, test(_ => throw(A(2))), #A2)
-  eq(__LOC__, test(_ => throw(A(3))), #A_any)
-  eq(__LOC__, test(_ => throw(B)), #B)
-  eq(__LOC__, test(_ => throw(C(1, 2))), #C)
-  eq(__LOC__, test(_ => throw(C(0, 2))), #C_any)
-  eq(__LOC__, test(_ => Js.Exn.raiseError("x")), #Js_error)
-  eq(__LOC__, test(_ => failwith("x")), #Any)
-}
-
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("js exception catch test", () => {
+    eq(__LOC__, testException(_ => ()), #No_error)
+    eq(__LOC__, testException(_ => throw(Not_found)), #Not_found)
+    eq(__LOC__, testException(_ => invalid_arg("x")), #Invalid_argument)
+    eq(__LOC__, testException(_ => invalid_arg("")), #Invalid_any)
+    eq(__LOC__, testException(_ => throw(A(2))), #A2)
+    eq(__LOC__, testException(_ => throw(A(3))), #A_any)
+    eq(__LOC__, testException(_ => throw(B)), #B)
+    eq(__LOC__, testException(_ => throw(C(1, 2))), #C)
+    eq(__LOC__, testException(_ => throw(C(0, 2))), #C_any)
+    eq(__LOC__, testException(_ => Js.Exn.raiseError("x")), #Js_error)
+    eq(__LOC__, testException(_ => failwith("x")), #Any)
+  })
+})

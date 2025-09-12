@@ -340,8 +340,7 @@ module E = struct
 
   let map_jsx_children sub loc children =
     match children with
-    | JSXChildrenSpreading e -> sub.expr sub e
-    | JSXChildrenItems xs ->
+    | xs ->
       let list_expr = Ast_helper.Exp.make_list_expression loc xs None in
       sub.expr sub list_expr
 

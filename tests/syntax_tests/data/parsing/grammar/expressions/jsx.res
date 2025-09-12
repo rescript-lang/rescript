@@ -70,14 +70,6 @@ let _ =
     <     div className="submenu"> sub2 <   /  div>
   <    /    div>
 
-// spread
-let _ = <div> ...child </div>
-let _ = <Foo> ...(a => 1) </Foo>
-let _ = <Foo> ...<Foo2 /> </Foo>
-let _ = <Foo> ...[a] </Foo>
-let _ = <Foo> ...(1, 2) </Foo>
-let _ = <Foo> ...(1, 2)</Foo> // no whitespace between / & </
-
 // children
 let _ = <div> ident [1, 2, 3] {call(a, b)} x.y.z </div>
 
@@ -363,83 +355,6 @@ let _ = <div
  }
 />
 
-let _ = <Animated initialValue=0.0 value>
-  ...{
-       ReactDOMRe.Style.make(
-         ~width="20px",
-         ~height="20px",
-         ~borderRadius="100%",
-         ~backgroundColor="red",
-       )
-     }
-</Animated>
-
-let _ = <Animated initialValue=0.0 value>
-  ...{ value =>
-         <div
-           style={
-             ReactDOMRe.Style.make(
-               ~width="20px",
-               ~height="20px",
-               ~borderRadius="100%",
-               ~backgroundColor="red",
-             )
-           }
-         />
-     }
-</Animated>
-
-let _ = <Animated initialValue=0.0 value>
-  ...{(value) :ReasonReact.element =>
-       <div
-         style={
-           ReactDOMRe.Style.make(
-             ~width="20px",
-             ~height="20px",
-             ~borderRadius="100%",
-             ~backgroundColor="red",
-           )
-         }
-       />
-   }
-</Animated>
-
-let _ = <Animated initialValue=0.0 value>
-  ...{@foo value => {
-       <div
-         style={
-           ReactDOMRe.Style.make(
-             ~width="20px",
-             ~height="20px",
-             ~borderRadius="100%",
-             ~backgroundColor="red",
-           )
-         }
-       />
-   }
- }
-</Animated>
-
-let _ = <Animated initialValue=0.0 value>
-  ...{value => {
-       let width = "20px";
-       // TODO: check semi
-       let height = "20px";
-
-       <div
-         style={
-           ReactDOMRe.Style.make(
-             ~width,
-             ~height,
-             ~borderRadius="100%",
-             ~backgroundColor="red",
-           )
-         }
-       />
-     }
-  }
-</Animated>
-
 let _ = <div callback={reduce(() => !state)} />
 
 let _ = <button ?id className={Cn.make(["button", "is-fullwidth"])} onClick>
@@ -501,20 +416,6 @@ let _ = <View style=styles["backgroundImageWrapper"]>
 <div> <div> {Js.log(a <= 10)} </div> </div>
 <div> <div onClick={_ => Js.log(a <= 10) }> <div> {Js.log(a <= 10)} </div> </div> </div>
 
-
-<div> ...element </div>
-<div> ...{(a) => 1} </div>
-<div> ...<span /> </div>
-<div> ...[a] </div>
-<div> ...(1, 2) </div>
-<div> ...{array->f} </div>
-
-<> ...element </>
-<> ...{(a) => 1} </>
-<> ...<span /> </>
-<> ...[a] </>
-<> ...(1, 2) </>
-<> ...{array->f} </>
 
 let _ = <A x="y" {...str} />
 

@@ -674,6 +674,8 @@ jobs:
         shell: bash
 
   publish:
+    permissions:
+      id-token: write
     needs:
       - test-installation-npm
       - test-installation-pnpm
@@ -701,11 +703,9 @@ jobs:
         shell: bash
 
       - name: Publish packages on npm with tag "ci"
-        env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
           yarn workspaces foreach -W --no-private \
-            npm publish --tolerate-republish --tag ci
+            npm publish --provenance --tolerate-republish --tag ci
 
       - name: Update Website Playground
         run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"

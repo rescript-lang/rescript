@@ -5,7 +5,7 @@ let a10 = "hello world";
 
 let a20 = a10 + "not";
 
-let v = a20.codePointAt(0) === /* 'h' */104 ? 1 : 2;
+let v = a20[0] === "h" ? 1 : 2;
 
 let a21 = a20 + a20;
 

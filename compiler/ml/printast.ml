@@ -383,9 +383,7 @@ and expression i ppf x =
 
 and jsx_children i ppf children =
   line i ppf "jsx_children =\n";
-  match children with
-  | JSXChildrenSpreading e -> expression (i + 1) ppf e
-  | JSXChildrenItems xs -> list (i + 1) expression ppf xs
+  list (i + 1) expression ppf children
 
 and jsx_prop i ppf = function
   | JSXPropPunning (opt, name) ->
