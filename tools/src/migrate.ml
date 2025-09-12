@@ -342,8 +342,17 @@ let remap_needed_extensions (mapper : Ast_mapper.mapper)
 let migrate_reference_from_info (deprecated_info : Cmt_utils.deprecated_used)
     exp =
   match deprecated_info.migration_template with
-  | Some e -> e
   | None -> exp
+  | Some e -> (
+    (* For identifier references, treat templates of the form `f()` as the
+       function reference `f` to avoid inserting a spurious unit call. *)
+    match e.pexp_desc with
+    | Pexp_apply
+        {funct; args = [(_lbl, unit_arg)]; partial = _; transformed_jsx = _}
+      when is_unit_expr unit_arg ->
+      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:e.pexp_attributes
+        funct
+    | _ -> e)
 
 module Template = struct
   type t =
