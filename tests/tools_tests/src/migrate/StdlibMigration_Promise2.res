@@ -39,6 +39,8 @@ let thenDirect = Js.Promise2.then(Js.Promise2.resolve(1), x => Js.Promise2.resol
 // Type alias migration
 external p2: Js.Promise2.t<int> = "p2"
 
-// let catchPipe = Js.Promise2.resolve(1)->Js.Promise2.catch(_e => Js.Promise2.resolve(0))
-// let catchDirect = Js.Promise2.catch(Js.Promise2.resolve(1), _e => Js.Promise2.resolve(0))
+let catchPipe = Js.Promise2.resolve(1)->Js.Promise2.catch(_e => Js.Promise2.resolve(0))
+let catchDirect = Js.Promise2.catch(Js.Promise2.resolve(1), _e => Js.Promise2.resolve(0))
 let make1 = Js.Promise2.make((~resolve, ~reject) => resolve(1))
+
+let _ = p2->Js.Promise2.then(x => Js.Promise2.resolve(x + 1))
