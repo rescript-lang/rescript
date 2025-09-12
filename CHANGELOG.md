@@ -14,11 +14,8 @@
 
 #### :boom: Breaking Change
 
-- Fix return type of `String.charCodeAt`. https://github.com/rescript-lang/rescript/pull/7864
-- Remove support of JSX children spread. https://github.com/rescript-lang/rescript/pull/7869
 - Have `String.charCodeAt` return `option<int>`; add `String.charCodeAtUnsafe`. https://github.com/rescript-lang/rescript/pull/7877
-
-#### :eyeglasses: Spec Compliance
+- Remove support of JSX children spread. https://github.com/rescript-lang/rescript/pull/7869
 
 #### :rocket: New Feature
 
@@ -30,8 +27,6 @@
 - Add `reset` to `experimental_features` to correctly reset playground. https://github.com/rescript-lang/rescript/pull/7868
 - Fix crash with `@get` on external of type `unit => 'a`. https://github.com/rescript-lang/rescript/pull/7866
 - Fix record type spreads in inline records. https://github.com/rescript-lang/rescript/pull/7859
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
