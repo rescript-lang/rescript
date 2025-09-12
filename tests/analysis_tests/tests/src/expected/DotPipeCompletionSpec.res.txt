@@ -375,6 +375,18 @@ Path filt
       "newText": ""
       }]
   }, {
+    "label": "->Array.filterMapWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => option<'b>) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`filterMapWithIndex(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMapWithIndex((item, index) =>\n  switch item {\n  | \"Hello\" => Some(index)\n  | _ => None\n  }\n) == [0]\n```\n"},
+    "sortText": "filterMapWithIndex",
+    "insertText": "->Array.filterMapWithIndex",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
+      "newText": ""
+      }]
+  }, {
     "label": "->Array.filter",
     "kind": 12,
     "tags": [],
