@@ -368,6 +368,8 @@ type lambda =
   | Lcontinue
   | Lwhile of lambda * lambda
   | Lfor of Ident.t * lambda * lambda * Asttypes.direction_flag * lambda
+  | Lfor_of of Ident.t * lambda * lambda
+  | Lfor_await_of of Ident.t * lambda * lambda
   | Lassign of Ident.t * lambda
   | Lsend of string * lambda * Location.t
 
@@ -481,7 +483,9 @@ let make_key e =
     | Lcontinue -> Lcontinue
     | Lassign (x, e) -> Lassign (x, tr_rec env e)
     | Lsend (m, e1, _loc) -> Lsend (m, tr_rec env e1, Location.none)
-    | Lletrec _ | Lfunction _ | Lfor _ | Lwhile _ -> raise_notrace Not_simple
+    | Lletrec _ | Lfunction _ | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lwhile _
+      ->
+      raise_notrace Not_simple
   and tr_recs env es = List.map (tr_rec env) es
   and tr_sw env sw =
     {
@@ -554,6 +558,12 @@ let iter f = function
     f e1;
     f e2;
     f e3
+  | Lfor_of (_v, e1, e2) ->
+    f e1;
+    f e2
+  | Lfor_await_of (_v, e1, e2) ->
+    f e1;
+    f e2
   | Lassign (_, e) -> f e
   | Lsend (_k, obj, _) -> f obj
 
@@ -574,6 +584,8 @@ let free_ids get l =
       List.iter (fun id -> fv := IdentSet.remove id !fv) vars
     | Ltrywith (_e1, exn, _e2) -> fv := IdentSet.remove exn !fv
     | Lfor (v, _e1, _e2, _dir, _e3) -> fv := IdentSet.remove v !fv
+    | Lfor_of (v, _e1, _e2) | Lfor_await_of (v, _e1, _e2) ->
+      fv := IdentSet.remove v !fv
     | Lassign (id, _e) -> fv := IdentSet.add id !fv
     | Lvar _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _ | Lstringswitch _
     | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lbreak | Lcontinue
@@ -685,6 +697,8 @@ let subst_lambda s lam =
     | Lcontinue -> Lcontinue
     | Lwhile (e1, e2) -> Lwhile (subst e1, subst e2)
     | Lfor (v, e1, e2, dir, e3) -> Lfor (v, subst e1, subst e2, dir, subst e3)
+    | Lfor_of (v, e1, e2) -> Lfor_of (v, subst e1, subst e2)
+    | Lfor_await_of (v, e1, e2) -> Lfor_await_of (v, subst e1, subst e2)
     | Lassign (id, e) -> Lassign (id, subst e)
     | Lsend (k, obj, loc) -> Lsend (k, subst obj, loc)
   and subst_decl (id, exp) = (id, subst exp)

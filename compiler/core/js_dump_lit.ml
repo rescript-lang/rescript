@@ -90,6 +90,8 @@ let if_ = "if"
 
 let for_ = "for"
 
+let of_ = "of"
+
 let try_ = "try"
 
 let finally = "finally"

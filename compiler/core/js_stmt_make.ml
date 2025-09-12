@@ -326,6 +326,12 @@ let for_ ?comment ?label for_ident_expression finish_ident_expression id
     comment;
   }
 
+let for_of ?comment ?label iterable_expression id (b : J.block) : t =
+  {statement_desc = ForOf (label, id, iterable_expression, b); comment}
+
+let for_await_of ?comment ?label iterable_expression id (b : J.block) : t =
+  {statement_desc = ForAwaitOf (label, id, iterable_expression, b); comment}
+
 let try_ ?comment ?with_ ?finally body : t =
   {statement_desc = Try (body, with_, finally); comment}
 

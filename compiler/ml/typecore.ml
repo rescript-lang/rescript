@@ -74,6 +74,7 @@ type error =
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
   | Invalid_for_loop_index
+  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
@@ -204,6 +205,9 @@ let iter_expression f e =
       expr e1;
       expr e2;
       expr e3
+    | Pexp_for_of (_, e1, e2) | Pexp_for_await_of (_, e1, e2) ->
+      expr e1;
+      expr e2
     | Pexp_break | Pexp_continue -> ()
     | Pexp_letmodule (_, me, e) ->
       expr e;
@@ -3034,6 +3038,94 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
+  | Pexp_for_of (param, scollection, sbody) ->
+    let ty_elem = newvar () in
+    let collection =
+      let collection = type_exp ~context:None env scollection in
+      let iterable_state = (Btype.snapshot (), Ctype.save_levels ()) in
+      try
+        unify_exp_types ~context:None scollection.pexp_loc env
+          collection.exp_type
+          (Predef.type_iterable ty_elem);
+        collection
+      with Error (_, _, Expr_type_clash _) as iterable_error -> (
+        let snapshot, levels = iterable_state in
+        Btype.backtrack snapshot;
+        Ctype.set_levels levels;
+        (* ReScript accepts raw arrays in `for...of` as a convenience, but
+           keeps `iterable<'a>` as the primary typing rule. If the array
+           fallback also fails, re-raise the original iterable error so other
+           non-iterable inputs still report the usual expectation. *)
+        let array_state = (Btype.snapshot (), Ctype.save_levels ()) in
+        try
+          unify_exp_types ~context:None scollection.pexp_loc env
+            collection.exp_type
+            (Predef.type_array ty_elem);
+          collection
+        with Error (_, _, Expr_type_clash _) ->
+          let snapshot, levels = array_state in
+          Btype.backtrack snapshot;
+          Ctype.set_levels levels;
+          raise iterable_error)
+    in
+    let id, new_env =
+      match param.ppat_desc with
+      | Ppat_any -> (Ident.create "_for_of", env)
+      | Ppat_var {txt} ->
+        Env.enter_value txt
+          {
+            val_type = ty_elem;
+            val_attributes = [];
+            val_kind = Val_reg;
+            Types.val_loc = loc;
+          } env ~check:(fun s -> Warnings.Unused_for_index s)
+      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+    in
+    let body =
+      with_depth loop_depth (fun () ->
+          type_statement ~context:None new_env sbody)
+    in
+    rue
+      {
+        exp_desc = Texp_for_of (id, param, collection, body);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance_def Predef.type_unit;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_for_await_of (param, scollection, sbody) ->
+    let ty_elem = newvar () in
+    let collection =
+      type_expect ~context:None env scollection
+        (Predef.type_async_iterable ty_elem)
+    in
+    let id, new_env =
+      match param.ppat_desc with
+      | Ppat_any -> (Ident.create "_for_await_of", env)
+      | Ppat_var {txt} ->
+        Env.enter_value txt
+          {
+            val_type = ty_elem;
+            val_attributes = [];
+            val_kind = Val_reg;
+            Types.val_loc = loc;
+          } env ~check:(fun s -> Warnings.Unused_for_index s)
+      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_of_pattern))
+    in
+    let body =
+      with_depth loop_depth (fun () ->
+          type_statement ~context:None new_env sbody)
+    in
+    rue
+      {
+        exp_desc = Texp_for_await_of (id, param, collection, body);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance_def Predef.type_unit;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
   | Pexp_constraint (sarg, sty) ->
     let separate = true in
     (* always separate, 1% slowdown for lablgtk *)
@@ -4679,6 +4771,9 @@ let report_error env loc ppf error =
     fprintf ppf "@[Only character intervals are supported in patterns.@]"
   | Invalid_for_loop_index ->
     fprintf ppf "@[Invalid for-loop index: only variables and _ are allowed.@]"
+  | Invalid_for_of_pattern ->
+    fprintf ppf
+      "@[Invalid for...of binding: only variables and _ are allowed.@]"
   | No_value_clauses ->
     fprintf ppf "None of the patterns in this 'match' expression match values."
   | Exception_pattern_below_toplevel ->

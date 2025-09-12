@@ -1232,6 +1232,52 @@ let compile output_prefix =
     in
     Js_output.output_of_block_and_expression lambda_cxt.continuation block
       E.unit
+  and compile_for_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
+      (lambda_cxt : Lam_compile_context.t) =
+    let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+    let emitted_id =
+      if Set_ident.mem (Lam_free_variables.pass_free_variables body) id then id
+      else Ext_ident.create_tmp ~name:"_for_of" ()
+    in
+    let block =
+      match compile_lambda new_cxt iterable with
+      | {value = None} -> assert false
+      | {block = b1; value = Some e1} ->
+        let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
+        let block_body =
+          Js_output.output_as_block
+            (compile_lambda
+               {loop_cxt with continuation = EffectCall Not_tail}
+               body)
+        in
+        Ext_list.append b1
+          [S.for_of ?label:loop_frame.label e1 emitted_id block_body]
+    in
+    Js_output.output_of_block_and_expression lambda_cxt.continuation block
+      E.unit
+  and compile_for_await_of (id : J.for_ident) (iterable : Lam.t) (body : Lam.t)
+      (lambda_cxt : Lam_compile_context.t) =
+    let new_cxt = {lambda_cxt with continuation = NeedValue Not_tail} in
+    let emitted_id =
+      if Set_ident.mem (Lam_free_variables.pass_free_variables body) id then id
+      else Ext_ident.create_tmp ~name:"_for_await_of" ()
+    in
+    let block =
+      match compile_lambda new_cxt iterable with
+      | {value = None} -> assert false
+      | {block = b1; value = Some e1} ->
+        let loop_cxt, loop_frame = Lam_compile_context.push_loop lambda_cxt in
+        let block_body =
+          Js_output.output_as_block
+            (compile_lambda
+               {loop_cxt with continuation = EffectCall Not_tail}
+               body)
+        in
+        Ext_list.append b1
+          [S.for_await_of ?label:loop_frame.label e1 emitted_id block_body]
+    in
+    Js_output.output_of_block_and_expression lambda_cxt.continuation block
+      E.unit
   and compile_assign id (lambda : Lam.t) (lambda_cxt : Lam_compile_context.t) =
     let block =
       match lambda with
@@ -1910,6 +1956,9 @@ let compile output_prefix =
         compile_for id start finish
           (if direction = Upto then Upto else Downto)
           body lambda_cxt)
+    | Lfor_of (id, iterable, body) -> compile_for_of id iterable body lambda_cxt
+    | Lfor_await_of (id, iterable, body) ->
+      compile_for_await_of id iterable body lambda_cxt
     | Lassign (id, lambda) -> compile_assign id lambda lambda_cxt
     | Ltrywith (lam, id, catch) ->
       (* generate documentation *)

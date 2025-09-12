@@ -130,7 +130,8 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
   | Lsequence (_, l2) -> get_arity meta l2
   | Lstaticraise _ (* since it will not be in tail position *) -> Lam_arity.na
   | Lbreak | Lcontinue -> Lam_arity.non_function_arity_info
-  | Lwhile _ | Lfor _ | Lassign _ -> Lam_arity.non_function_arity_info
+  | Lwhile _ | Lfor _ | Lfor_of _ | Lfor_await_of _ | Lassign _ ->
+    Lam_arity.non_function_arity_info
 
 and all_lambdas meta (xs : Lam.t list) =
   match xs with

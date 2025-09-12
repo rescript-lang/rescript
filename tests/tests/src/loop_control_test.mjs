@@ -169,6 +169,93 @@ Mocha.describe("Loop_control_test", () => {
       3
     ], Belt_List.toArray(Belt_List.reverse(values)));
   });
+  Mocha.test("for..of loop break and continue", () => {
+    let values = /* [] */0;
+    for (let i of [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]) {
+      if (i === 1) {
+        continue;
+      }
+      if (i === 4) {
+        break;
+      }
+      values = {
+        hd: i,
+        tl: values
+      };
+    }
+    Test_utils.eq("File \"loop_control_test.res\", line 164, characters 7-14", [
+      0,
+      2,
+      3
+    ], Belt_List.toArray(Belt_List.reverse(values)));
+  });
+  Mocha.test("switch inside for..of targets the loop", () => {
+    let values = /* [] */0;
+    for (let i of [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]) {
+      if (i !== 1) {
+        if (i !== 4) {
+          values = {
+            hd: i,
+            tl: values
+          };
+        } else {
+          break;
+        }
+      } else {
+        continue;
+      }
+    }
+    Test_utils.eq("File \"loop_control_test.res\", line 178, characters 7-14", [
+      0,
+      2,
+      3
+    ], Belt_List.toArray(Belt_List.reverse(values)));
+  });
+  Mocha.test("string switch inside for..of targets the loop via JS switch", () => {
+    let values = /* [] */0;
+    loop_2: for (let i of [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ]) {
+      let state = i !== 1 ? (
+          i !== 4 ? "keep" : "stop"
+        ) : "skip";
+      switch (state) {
+        case "skip" :
+          continue loop_2;
+        case "stop" :
+          break loop_2;
+        default:
+          values = {
+            hd: i,
+            tl: values
+          };
+      }
+    }
+    Test_utils.eq("File \"loop_control_test.res\", line 199, characters 7-14", [
+      0,
+      2,
+      3
+    ], Belt_List.toArray(Belt_List.reverse(values)));
+  });
 });
 
 /*  Not a pure module */

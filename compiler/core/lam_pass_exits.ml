@@ -54,6 +54,7 @@ and no_bounded_variables (l : Lam.t) =
     vars = [] && no_bounded_variables e1 && no_bounded_variables e2
   | Lfunction {body; params} -> params = [] && no_bounded_variables body
   | Lfor _ -> false
+  | Lfor_of _ | Lfor_await_of _ -> false
   | Ltrywith _ -> false
   | Llet _ -> false
   | Lletrec (decl, body) -> decl = [] && no_bounded_variables body
@@ -237,6 +238,8 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
     | Lwhile (l1, l2) -> Lam.while_ (simplif l1) (simplif l2)
     | Lfor (v, l1, l2, dir, l3) ->
       Lam.for_ v (simplif l1) (simplif l2) dir (simplif l3)
+    | Lfor_of (v, l1, l2) -> Lam.for_of v (simplif l1) (simplif l2)
+    | Lfor_await_of (v, l1, l2) -> Lam.for_await_of v (simplif l1) (simplif l2)
     | Lassign (v, l) -> Lam.assign v (simplif l)
   in
   simplif lam

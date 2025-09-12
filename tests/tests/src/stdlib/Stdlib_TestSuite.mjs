@@ -139,6 +139,18 @@ let asyncGeneratorIterableValues = Stdlib_IteratorTests.asyncGeneratorIterableVa
 
 let asyncGeneratorIterable = Stdlib_IteratorTests.asyncGeneratorIterable;
 
+let asyncIterableForAwaitValues = Stdlib_IteratorTests.asyncIterableForAwaitValues;
+
+let asyncIterableForAwait = Stdlib_IteratorTests.asyncIterableForAwait;
+
+let asyncIterableForAwaitLoopControlValues = Stdlib_IteratorTests.asyncIterableForAwaitLoopControlValues;
+
+let asyncIterableForAwaitLoopControl = Stdlib_IteratorTests.asyncIterableForAwaitLoopControl;
+
+let collectStartupMessages = Stdlib_IteratorTests.collectStartupMessages;
+
+let startupLogs = Stdlib_IteratorTests.startupLogs;
+
 let _asyncIterableView = Stdlib_IteratorTests._asyncIterableView;
 
 let asyncGeneratorReturnValueResult = Stdlib_IteratorTests.asyncGeneratorReturnValueResult;
@@ -216,6 +228,12 @@ export {
   asyncGeneratorNextValueResult,
   asyncGeneratorIterableValues,
   asyncGeneratorIterable,
+  asyncIterableForAwaitValues,
+  asyncIterableForAwait,
+  asyncIterableForAwaitLoopControlValues,
+  asyncIterableForAwaitLoopControl,
+  collectStartupMessages,
+  startupLogs,
   _asyncIterableView,
   asyncGeneratorReturnValueResult,
   asyncGeneratorReturnValue,

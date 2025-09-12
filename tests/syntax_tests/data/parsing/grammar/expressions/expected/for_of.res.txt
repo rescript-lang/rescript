@@ -1,0 +1,4 @@
+let arr = [|1;2;3|]
+;;for x of arr do ignore (x + 1) done
+;;for item of arr -> (Array.map (fun [arity:1]x -> x + 1)) do ignore item
+  done

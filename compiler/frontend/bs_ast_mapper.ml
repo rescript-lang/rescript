@@ -396,6 +396,12 @@ module E = struct
            {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
       ->
       jsx_unary_element ~loc ~attrs name (map_jsx_props sub props)
+    | Pexp_for_of (pat, e1, e2) ->
+      Exp.mk ~loc ~attrs
+        (Pexp_for_of (sub.pat sub pat, sub.expr sub e1, sub.expr sub e2))
+    | Pexp_for_await_of (pat, e1, e2) ->
+      Exp.mk ~loc ~attrs
+        (Pexp_for_await_of (sub.pat sub pat, sub.expr sub e1, sub.expr sub e2))
     | Pexp_jsx_element
         (Jsx_container_element
            {

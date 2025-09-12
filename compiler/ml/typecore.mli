@@ -107,6 +107,7 @@ type error =
   | Unqualified_gadt_pattern of Path.t * string
   | Invalid_interval
   | Invalid_for_loop_index
+  | Invalid_for_of_pattern
   | No_value_clauses
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
