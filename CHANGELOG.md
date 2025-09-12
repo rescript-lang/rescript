@@ -28,6 +28,8 @@
 
 #### :house: Internal
 
+- Add `-runtime-path` flag to `bsc` (and `bsb`), we are detecting the location of `@rescript/runtime` in `cli/rescript.js` based on runtime module resolution. https://github.com/rescript-lang/rescript/pull/7858
+
 # 12.0.0-beta.10
 
 #### :rocket: New Feature
