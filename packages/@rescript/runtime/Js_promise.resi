@@ -151,7 +151,6 @@ external race: array<promise<'a>> => promise<'a> = "race"
   reason: "Use `Promise.then` instead.",
   migrate: Promise.then(),
 })
-
 @deprecated({
   reason: "Use `Promise.then` instead.",
   migrate: Promise.then(%insert.unlabelledArgument(1), %insert.unlabelledArgument(0)),
