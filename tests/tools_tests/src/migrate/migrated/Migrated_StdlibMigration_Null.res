@@ -34,4 +34,4 @@ let test2 = Null.null === Null.null
 let test3 = Null.make(5)->Null.map(v => v)->Null.equal(Null, (a, b) => a === b)
 
 // Type alias migration
-let nullT: null<int> = Null.make(1)
+let nullT: Null.t<int> = Null.make(1)

@@ -5,10 +5,16 @@ See [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 */
 
 /** Represents a JavaScript exception. */
-@deprecated("Use `JsError.t` instead")
+@deprecated({
+  reason: "Use `JsError.t` instead",
+  migrate: %replace.type(: JsError.t),
+})
 type t = Stdlib_Exn.t
 
-@deprecated("Use `JsExn.fromException` instead")
+@deprecated({
+  reason: "Use `JsExn.fromException` instead",
+  migrate: JsExn.fromException(),
+})
 let fromException: exn => option<t>
 
 /**
@@ -35,7 +41,11 @@ let error = Error.make("error")
 Console.log(error->Error.stack) // Logs `stack` if it exists on `someError`
 ```
 */
-@deprecated("Use `JsError.stack` instead") @get
+@deprecated({
+  reason: "Use `JsError.stack` instead",
+  migrate: JsError.stack(),
+})
+@get
 external stack: t => option<string> = "stack"
 
 /**
@@ -49,7 +59,11 @@ let error = Error.SyntaxError.make("Some message here")
 Console.log(error->Error.message) // Logs "Some message here" to the console
 ```
 */
-@deprecated("Use `JsError.message` instead") @get
+@deprecated({
+  reason: "Use `JsError.message` instead",
+  migrate: JsError.message(),
+})
+@get
 external message: t => option<string> = "message"
 
 /**
@@ -63,7 +77,11 @@ let error = Error.SyntaxError.make("Some message here")
 Console.log(error->Error.name) // Logs "SyntaxError" to the console
 ```
 */
-@deprecated("Use `JsError.name` instead") @get
+@deprecated({
+  reason: "Use `JsError.name` instead",
+  migrate: JsError.name(),
+})
+@get
 external name: t => option<string> = "name"
 
 /**
@@ -71,7 +89,11 @@ external name: t => option<string> = "name"
 
 See [`Error.prototype.fileName`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/fileName) on MDN.
 */
-@deprecated("Use `JsError.fileName` instead") @get
+@deprecated({
+  reason: "Use `JsError.fileName` instead",
+  migrate: JsError.fileName(),
+})
+@get
 external fileName: t => option<string> = "fileName"
 
 /**
@@ -86,7 +108,11 @@ Console.log(error->Error.message) // Logs "Some message here" to the console
 Console.log(error->Error.name) // Logs "Error" to the console, because this is a regular error
 ```
 */
-@deprecated("Use `JsError.make` instead") @new
+@deprecated({
+  reason: "Use `JsError.make` instead",
+  migrate: JsError.make(),
+})
+@new
 external make: string => t = "Error"
 
 module EvalError: {
@@ -95,7 +121,11 @@ module EvalError: {
 
   See [`EvalError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError) on MDN.
   */
-  @deprecated("Use `JsError.EvalError.make` instead") @new
+  @deprecated({
+    reason: "Use `JsError.EvalError.make` instead",
+    migrate: JsError.EvalError.make(),
+  })
+  @new
   external make: string => t = "EvalError"
 }
 module RangeError: {
@@ -104,7 +134,11 @@ module RangeError: {
 
   See [`RangeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError) on MDN.
   */
-  @deprecated("Use `JsError.RangeError.make` instead") @new
+  @deprecated({
+    reason: "Use `JsError.RangeError.make` instead",
+    migrate: JsError.RangeError.make(),
+  })
+  @new
   external make: string => t = "RangeError"
 }
 module ReferenceError: {
@@ -113,7 +147,11 @@ module ReferenceError: {
 
   See [`ReferenceError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError) on MDN.
   */
-  @deprecated("Use `JsError.ReferenceError.make` instead") @new
+  @deprecated({
+    reason: "Use `JsError.ReferenceError.make` instead",
+    migrate: JsError.ReferenceError.make(),
+  })
+  @new
   external make: string => t = "ReferenceError"
 }
 module SyntaxError: {
@@ -122,7 +160,11 @@ module SyntaxError: {
 
   See [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError) on MDN.
   */
-  @deprecated("Use `JsError.SyntaxError.make` instead") @new
+  @deprecated({
+    reason: "Use `JsError.SyntaxError.make` instead",
+    migrate: JsError.SyntaxError.make(),
+  })
+  @new
   external make: string => t = "SyntaxError"
 }
 module TypeError: {
@@ -131,7 +173,11 @@ module TypeError: {
 
   See [`TypeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError) on MDN.
   */
-  @deprecated("Use `JsError.TypeError.make` instead") @new
+  @deprecated({
+    reason: "Use `JsError.TypeError.make` instead",
+    migrate: JsError.TypeError.make(),
+  })
+  @new
   external make: string => t = "TypeError"
 }
 module URIError: {
@@ -140,7 +186,11 @@ module URIError: {
 
   See [`URIError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError) on MDN.
   */
-  @deprecated("Use `JsError.URIError.make` instead") @new
+  @deprecated({
+    reason: "Use `JsError.URIError.make` instead",
+    migrate: JsError.URIError.make(),
+  })
+  @new
   external make: string => t = "URIError"
 }
 
@@ -158,9 +208,10 @@ if 5 > 10 {
 }
 ```
 */
-@deprecated(
-  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `JsError.throw` instead"
-)
+@deprecated({
+  reason: "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `JsError.throw` instead",
+  migrate: JsError.throw(),
+})
 external raise: t => 'a = "%raise"
 
 /**
@@ -178,7 +229,10 @@ if 5 > 10 {
 }
 ```
 */
-@deprecated("Use `JsError.throw` instead")
+@deprecated({
+  reason: "Use `JsError.throw` instead",
+  migrate: JsError.throw(),
+})
 external throw: t => 'a = "%raise"
 
 /**
@@ -203,7 +257,10 @@ try {
 }
 ```
 */
-@deprecated("Use `JsError.panic` instead")
+@deprecated({
+  reason: "Use `JsError.panic` instead",
+  migrate: JsError.panic(),
+})
 let panic: string => 'a
 
 /**
@@ -212,5 +269,8 @@ let panic: string => 'a
   This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
-@deprecated("Use `JsError.ignore` instead")
+@deprecated({
+  reason: "Use `JsError.ignore` instead",
+  migrate: JsError.ignore(),
+})
 external ignore: t => unit = "%ignore"

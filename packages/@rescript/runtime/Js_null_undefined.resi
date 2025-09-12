@@ -27,8 +27,8 @@ Contains functionality for dealing with values that can be both `null` and `unde
 */
 
 @deprecated({
-  reason: "Use `nullable` directly instead.",
-  migrate: %replace.type(: nullable),
+  reason: "Use `Nullable.t` instead.",
+  migrate: %replace.type(: Nullable.t),
 })
 @unboxed
 type t<+'a> = Primitive_js_extern.nullable<'a> =
