@@ -62,8 +62,8 @@ let lastIndexOfFrom2 = Array.lastIndexOfFrom([1, 2, 1, 3, 1], 1, 3)
 let copy1 = [1, 2, 3]->Array.copy
 let copy2 = Array.copy([1, 2, 3])
 
-let sliceFrom1 = [1, 2, 3, 4]->Array.sliceToEnd(~start=2)
-let sliceFrom2 = Array.sliceToEnd([1, 2, 3, 4], ~start=2)
+let sliceFrom1 = [1, 2, 3, 4]->Array.slice(~start=2)
+let sliceFrom2 = Array.slice([1, 2, 3, 4], ~start=2)
 
 let toString1 = [1, 2, 3]->Array.toString
 let toString2 = Array.toString([1, 2, 3])
