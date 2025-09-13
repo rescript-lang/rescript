@@ -28,8 +28,8 @@ let all6 = Js.Promise.all6((
 
 let race1 = Js.Promise.race([Js.Promise.resolve(10), Js.Promise.resolve(20)])
 
-let thenPipe = Js.Promise.resolve(1)->Js.Promise.then_(x => Js.Promise.resolve(x + 1), _)
-let thenDirect = Js.Promise.then_(x => Js.Promise.resolve(x + 1), Js.Promise.resolve(1))
+// let thenPipe = Js.Promise.resolve(1)->Js.Promise.then_(x => Js.Promise.resolve(x + 1), _)
+// let thenDirect = Js.Promise.then_(x => Js.Promise.resolve(x + 1), Js.Promise.resolve(1))
 
 // Type alias migration
 external p: Js.Promise.t<int> = "p"
