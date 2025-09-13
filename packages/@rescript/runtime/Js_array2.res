@@ -438,7 +438,7 @@ numbers == [1, 10, 2, 20, 3, 30]
 */
 @deprecated({
   reason: "Use `Array.toSorted` instead.",
-  migrate: Array.toSorted((a, b) =>
+  migrate: Array.toSorted((_a, _b) =>
     %todo_("This needs a comparator function. Use `String.compare` for strings, etc.")
   ),
 })

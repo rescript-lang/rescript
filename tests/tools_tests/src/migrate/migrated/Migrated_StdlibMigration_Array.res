@@ -135,10 +135,10 @@ let pushMany1 = [1, 2, 3]->Array.pushMany([4, 5])
 let pushMany2 = Array.pushMany([1, 2, 3], [4, 5])
 
 let sortInPlace1 =
-  ["c", "a", "b"]->Array.toSorted((a, b) =>
+  ["c", "a", "b"]->Array.toSorted((_a, _b) =>
     %todo("This needs a comparator function. Use `String.compare` for strings, etc.")
   )
-let sortInPlace2 = Array.toSorted(["c", "a", "b"], (a, b) =>
+let sortInPlace2 = Array.toSorted(["c", "a", "b"], (_a, _b) =>
   %todo("This needs a comparator function. Use `String.compare` for strings, etc.")
 )
 
