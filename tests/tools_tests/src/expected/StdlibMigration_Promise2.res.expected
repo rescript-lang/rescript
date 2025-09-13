@@ -1,5 +1,5 @@
 let p1 = Promise.resolve(1)
-let p2 = Promise.reject(Failure("err"))
+let _p2 = Promise.reject(Failure("err"))
 
 let all1 = Promise.all([Promise.resolve(1), Promise.resolve(2)])
 let all2 = Promise.all2((Promise.resolve(1), Promise.resolve(2)))
@@ -37,7 +37,7 @@ external p2: promise<int> = "p2"
 
 let catchPipe = Promise.resolve(1)->Promise.catch(_e => Promise.resolve(0))
 let catchDirect = Promise.catch(Promise.resolve(1), _e => Promise.resolve(0))
-let make1 = Promise.make((resolve, reject) => resolve(1))
+let make1 = Promise.make((resolve, _) => resolve(1))
 
 let _ = p2->Promise.then(x => Promise.resolve(x + 1))
 
