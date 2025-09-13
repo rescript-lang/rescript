@@ -282,7 +282,7 @@ apply({
   a
 })
 
-let x = {<div> child </div>}
+let x = {<div> {child} </div>}
 
 // not valid jsx
 let x = {@JSX child}
