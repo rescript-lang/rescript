@@ -804,8 +804,8 @@ Js.String2.sliceToEnd("abcdefg", ~from=7) == ""
 ```
 */
 @deprecated({
-  reason: "Use `String.sliceToEnd` instead",
-  migrate: String.sliceToEnd(~start=%insert.labelledArgument("from")),
+  reason: "Use `String.slice` instead",
+  migrate: String.slice(~start=%insert.labelledArgument("from")),
 })
 @send
 external sliceToEnd: (t, ~from: int) => t = "slice"
