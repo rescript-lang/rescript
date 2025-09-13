@@ -450,6 +450,9 @@ module E = struct
     | Pexp_for (p, e1, e2, d, e3) ->
       for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
         (sub.expr sub e3)
+    | Pexp_for_of (_pat, _array_expr, _body_expr) ->
+      (* Convert for...of to an extension since it doesn't exist in old AST *)
+      extension ~loc ~attrs (Location.mkloc "rescript.for_of" loc, PStr [])
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

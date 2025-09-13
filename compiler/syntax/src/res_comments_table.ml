@@ -1805,6 +1805,10 @@ and walk_expression expr t comments =
        Comments after the closing tag will already be taking into account by the parent node. *)
     )
   | Pexp_await expr -> walk_expression expr t comments
+  | Pexp_for_of (pattern, expr1, expr2) ->
+    walk_pattern pattern t comments;
+    walk_expression expr1 t comments;
+    walk_expression expr2 t comments
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =

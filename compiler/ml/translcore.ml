@@ -903,6 +903,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_while (cond, body) -> Lwhile (transl_exp cond, transl_exp body)
   | Texp_for (param, _, low, high, dir, body) ->
     Lfor (param, transl_exp low, transl_exp high, dir, transl_exp body)
+  | Texp_for_of (param, _, iterable, body) ->
+    Lfor_of (param, transl_exp iterable, transl_exp body)
   | Texp_send (expr, Tmeth_name nm, _) ->
     let obj = transl_exp expr in
     Lsend (nm, obj, e.exp_loc)
