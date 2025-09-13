@@ -84,8 +84,8 @@ let search2 = String.search("abcde", /d/)
 let slice1 = "abcde"->String.slice(~start=1, ~end=3)
 let slice2 = String.slice("abcde", ~start=1, ~end=3)
 
-let sliceToEnd1 = "abcde"->String.sliceToEnd(~start=1)
-let sliceToEnd2 = String.sliceToEnd("abcde", ~start=1)
+let sliceToEnd1 = "abcde"->String.slice(~start=1)
+let sliceToEnd2 = String.slice("abcde", ~start=1)
 
 let split1 = "abcde"->String.split("d")
 let split2 = String.split("abcde", "d")
