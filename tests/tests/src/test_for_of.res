@@ -1,9 +1,6 @@
 open Mocha
 open Test_utils
 
-// Test for...of loop basic functionality
-type item = {value: int, name: string}
-
 describe(__MODULE__, () => {
   test("basic iteration", () => {
     let arr = [1, 2, 3, 4, 5]

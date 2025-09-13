@@ -16,7 +16,7 @@ Mocha.describe("Test_for_of", () => {
     for (let x of arr) {
       sum = sum + x | 0;
     }
-    Test_utils.eq("File \"test_for_of.res\", line 16, characters 7-14", sum, 15);
+    Test_utils.eq("File \"test_for_of.res\", line 13, characters 7-14", sum, 15);
   });
   Mocha.test("single element", () => {
     let arr = [42];
@@ -24,12 +24,12 @@ Mocha.describe("Test_for_of", () => {
     for (let x of arr) {
       result = x;
     }
-    Test_utils.eq("File \"test_for_of.res\", line 27, characters 7-14", result, 42);
+    Test_utils.eq("File \"test_for_of.res\", line 24, characters 7-14", result, 42);
   });
   Mocha.test("empty array", () => {
     let arr = [];
     for (let x of arr) {
-      Test_utils.ok("File \"test_for_of.res\", line 35, characters 9-16", false);
+      Test_utils.ok("File \"test_for_of.res\", line 32, characters 9-16", false);
     }
   });
 });
