@@ -2,4 +2,4 @@
 // It's the migrated version of src/migrate/StdlibMigration_TypedArray_Stdlib.res.
 let a = Uint8Array.fromBuffer(ArrayBuffer.make(8), ~byteOffset=2)
 let b = Uint8Array.fromBuffer(ArrayBuffer.make(8), ~byteOffset=2, ~length=2)
-let c = Uint8Array.fromArrayLikeOrIterable([1, 2], ~map=(v, i) => v)
+let c = Uint8Array.fromArrayLikeOrIterable([1, 2], ~map=(v, _i) => v)

@@ -1,6 +1,10 @@
 module Target = {
-  let doStuff = (~newName: option<int>=?) => ()
+  let doStuff = (~newName: option<int>=?) => {
+    ignore(newName)
+  }
 }
+
+let _ = Target.doStuff
 
 external doStuff: (~oldName: option<int>=?) => unit = "doStuff"
 
