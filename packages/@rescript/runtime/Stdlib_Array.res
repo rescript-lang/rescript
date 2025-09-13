@@ -15,6 +15,8 @@ external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.f
 
 @deprecated("Use `fill` instead") @send external fillAll: (array<'a>, 'a) => unit = "fill"
 
+@val external fromString: string => array<string> = "Array.from"
+
 @deprecated("Use `fill` instead") @send
 external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
@@ -43,8 +45,6 @@ let fromInitializer = (~length, f) =>
 @val external isArray: 'a => bool = "Array.isArray"
 
 external length: array<'a> => int = "%array_length"
-
-let isEmpty = arr => arr->length === 0
 
 let rec equalFromIndex = (a, b, i, eq, len) =>
   if i === len {

@@ -24,29 +24,52 @@
 
 @@config({flags: ["-unboxed-types"]})
 
+@deprecated
 external unsafe_to_method: 'a => 'a = "%unsafe_to_method"
 
 module Callback = {
+  @deprecated
   type arity1<'a> = {@internal i1: 'a}
+  @deprecated
   type arity2<'a> = {@internal i2: 'a}
+  @deprecated
   type arity3<'a> = {@internal i3: 'a}
+  @deprecated
   type arity4<'a> = {@internal i4: 'a}
+  @deprecated
   type arity5<'a> = {@internal i5: 'a}
+  @deprecated
   type arity6<'a> = {@internal i6: 'a}
+  @deprecated
   type arity7<'a> = {@internal i7: 'a}
+  @deprecated
   type arity8<'a> = {@internal i8: 'a}
+  @deprecated
   type arity9<'a> = {@internal i9: 'a}
+  @deprecated
   type arity10<'a> = {@internal i10: 'a}
+  @deprecated
   type arity11<'a> = {@internal i11: 'a}
+  @deprecated
   type arity12<'a> = {@internal i12: 'a}
+  @deprecated
   type arity13<'a> = {@internal i13: 'a}
+  @deprecated
   type arity14<'a> = {@internal i14: 'a}
+  @deprecated
   type arity15<'a> = {@internal i15: 'a}
+  @deprecated
   type arity16<'a> = {@internal i16: 'a}
+  @deprecated
   type arity17<'a> = {@internal i17: 'a}
+  @deprecated
   type arity18<'a> = {@internal i18: 'a}
+  @deprecated
   type arity19<'a> = {@internal i19: 'a}
+  @deprecated
   type arity20<'a> = {@internal i20: 'a}
+  @deprecated
   type arity21<'a> = {@internal i21: 'a}
+  @deprecated
   type arity22<'a> = {@internal i22: 'a}
 }

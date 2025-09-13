@@ -1,0 +1,7 @@
+// Exercise migrations from Js_extern to new Stdlib APIs
+
+let isNullish = Nullable.isNullable(%raw("null"))
+let n = Nullable.null
+let u = Nullable.undefined
+let ty = Type.typeof("hello")
+

@@ -33,6 +33,7 @@ https://rescript-lang.org/docs/manual/latest/promise#promise-legacy
 @@warning("-103")
 
 type t<+'a> = promise<'a>
+
 type error = Js_promise2.error
 
 /*
@@ -47,12 +48,16 @@ type error
 external make: ((~resolve: 'a => unit, ~reject: exn => unit) => unit) => promise<'a> = "Promise"
 
 /* `make (fun resolve reject -> .. )` */
-@val @scope("Promise") external resolve: 'a => promise<'a> = "resolve"
-@val @scope("Promise") external reject: exn => promise<'a> = "reject"
+@val @scope("Promise")
+external resolve: 'a => promise<'a> = "resolve"
+@val @scope("Promise")
+external reject: exn => promise<'a> = "reject"
 
-@val @scope("Promise") external all: array<promise<'a>> => promise<array<'a>> = "all"
+@val @scope("Promise")
+external all: array<promise<'a>> => promise<array<'a>> = "all"
 
-@val @scope("Promise") external all2: ((promise<'a0>, promise<'a1>)) => promise<('a0, 'a1)> = "all"
+@val @scope("Promise")
+external all2: ((promise<'a0>, promise<'a1>)) => promise<('a0, 'a1)> = "all"
 
 @val @scope("Promise")
 external all3: ((promise<'a0>, promise<'a1>, promise<'a2>)) => promise<('a0, 'a1, 'a2)> = "all"
@@ -79,9 +84,11 @@ external all6: (
   (promise<'a0>, promise<'a1>, promise<'a2>, promise<'a3>, promise<'a4>, promise<'a5>)
 ) => promise<('a0, 'a1, 'a2, 'a3, 'a4, 'a5)> = "all"
 
-@val @scope("Promise") external race: array<promise<'a>> => promise<'a> = "race"
+@val @scope("Promise")
+external race: array<promise<'a>> => promise<'a> = "race"
 
-@send external then_: (promise<'a>, 'a => promise<'b>) => promise<'b> = "then"
+@send
+external then_: (promise<'a>, 'a => promise<'b>) => promise<'b> = "then"
 let then_ = (arg1, obj) => then_(obj, arg1)
 
 @send
