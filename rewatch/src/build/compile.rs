@@ -336,7 +336,10 @@ pub fn compile(
     Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
 
-fn get_runtime_path_args(package_config: &Config, project_context: &ProjectContext) -> Result<Vec<String>> {
+pub fn get_runtime_path_args(
+    package_config: &Config,
+    project_context: &ProjectContext,
+) -> Result<Vec<String>> {
     match std::env::var("RESCRIPT_RUNTIME") {
         Ok(runtime_path) => Ok(vec!["-runtime-path".to_string(), runtime_path]),
         Err(_) => match helpers::try_package_path(package_config, project_context, "@rescript/runtime") {

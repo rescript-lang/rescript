@@ -16,7 +16,7 @@ use std::process::Command;
 pub fn generate_asts(
     build_state: &mut BuildState,
     inc: impl Fn() + std::marker::Sync,
-) -> Result<String, String> {
+) -> anyhow::Result<String> {
     let mut has_failure = false;
     let mut stderr = "".to_string();
 
@@ -192,7 +192,15 @@ pub fn generate_asts(
                     // specific to compiling mlmaps
                     let compile_path = package.get_mlmap_compile_path();
                     let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
-                    namespaces::compile_mlmap(package, module_name, &build_state.bsc_path);
+                    if let Err(err) = namespaces::compile_mlmap(
+                        &build_state.project_context,
+                        package,
+                        module_name,
+                        &build_state.bsc_path,
+                    ) {
+                        has_failure = true;
+                        stderr.push_str(&format!("{}\n", err));
+                    }
                     let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
 
                     let suffix = package
@@ -232,7 +240,11 @@ pub fn generate_asts(
         }
     });
 
-    if has_failure { Err(stderr) } else { Ok(stderr) }
+    if has_failure {
+        Err(anyhow!(stderr))
+    } else {
+        Ok(stderr)
+    }
 }
 
 pub fn parser_args(
