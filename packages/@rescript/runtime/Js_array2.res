@@ -828,8 +828,8 @@ Returns a shallow copy of the given array from the given index to the end. See
 on MDN.
 */
 @deprecated({
-  reason: "Use `Array.sliceToEnd` instead.",
-  migrate: Array.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  reason: "Use `Array.slice` instead.",
+  migrate: Array.slice(~start=%insert.unlabelledArgument(1)),
 })
 @send
 external sliceFrom: (t<'a>, int) => t<'a> = "slice"
