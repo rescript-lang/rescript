@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Include `-runtime-path` as bsc argument when generating `.mlmap` file. https://github.com/rescript-lang/rescript/pull/7888
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
