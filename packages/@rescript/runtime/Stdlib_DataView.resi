@@ -47,7 +47,8 @@ DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4)
 DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4, ~length=8) 
 ```
 */
-@new external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) => t = "DataView"
+@new external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) => t =
+  "DataView"
 
 /**
 `fromBufferToEnd(buffer, ~byteOffset)` creates a DataView starting at a given byte offset. See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView) on MDN.
@@ -60,7 +61,7 @@ DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4, ~length=8)
 DataView.fromBufferToEnd(buffer, ~byteOffset=4)
 ```
 */
-@deprecated("Use `fromBuffer` instead") @new 
+@deprecated("Use `fromBuffer` instead") @new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "DataView"
 
 /**
@@ -76,8 +77,9 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 DataView.fromBufferWithRange(ArrayBuffer.make(16), ~byteOffset=2, ~length=8) 
 ```
 */
-@deprecated("Use `fromBuffer` instead") @new 
-external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t = "DataView"
+@deprecated("Use `fromBuffer` instead") @new
+external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =
+  "DataView"
 
 /**
 `buffer(dataView)` returns the underlying ArrayBuffer referenced by this DataView.
