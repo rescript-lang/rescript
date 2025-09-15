@@ -1,3 +1,5 @@
+use crate::helpers;
+
 use super::build_types::{BuildState, CompilerInfo};
 use super::clean;
 use super::packages;
@@ -12,21 +14,21 @@ use std::io::Write;
 // If something is not there, that is fine, we will treat it as a mismatch
 #[derive(Serialize, Deserialize)]
 struct CompilerInfoFile {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    version: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    bsc_path: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    bsc_hash: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    runtime_path: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    generated_at: Option<String>,
+    version: String,
+    bsc_path: String,
+    bsc_hash: String,
+    rescript_config_hash: String,
+    runtime_path: String,
+    generated_at: String,
 }
 
 pub enum CompilerCheckResult {
     SameCompilerAsLastRun,
     CleanedPackagesDueToCompiler,
+}
+
+fn get_rescript_config_hash(package: &packages::Package) -> Option<String> {
+    helpers::compute_file_hash(&package.config.path).map(|hash| hash.to_hex().to_string())
 }
 
 pub fn verify_compiler_info(
@@ -51,32 +53,45 @@ pub fn verify_compiler_info(
             let current_bsc_path_str = compiler.bsc_path.to_string_lossy();
             let current_bsc_hash_hex = compiler.bsc_hash.to_hex().to_string();
             let current_runtime_path_str = compiler.runtime_path.to_string_lossy();
+            let current_rescript_config_hash = match get_rescript_config_hash(package) {
+                Some(hash) => hash,
+                None => return true, // can't compute hash -> treat as mismatch
+            };
 
             let mut mismatch = false;
-            if parsed.bsc_path.as_deref() != Some(&current_bsc_path_str) {
+            if parsed.bsc_path != current_bsc_path_str {
                 log::debug!(
                     "compiler-info mismatch for {}: bsc_path changed (stored='{}', current='{}')",
                     package.name,
-                    parsed.bsc_path.as_deref().unwrap_or("<missing>"),
+                    parsed.bsc_path,
                     current_bsc_path_str
                 );
                 mismatch = true;
             }
-            if parsed.bsc_hash.as_deref() != Some(&current_bsc_hash_hex) {
+            if parsed.bsc_hash != current_bsc_hash_hex {
                 log::debug!(
                     "compiler-info mismatch for {}: bsc_hash changed (stored='{}', current='{}')",
                     package.name,
-                    parsed.bsc_hash.as_deref().unwrap_or("<missing>"),
+                    parsed.bsc_hash,
                     current_bsc_hash_hex
                 );
                 mismatch = true;
             }
-            if parsed.runtime_path.as_deref() != Some(&current_runtime_path_str) {
+            if parsed.runtime_path != current_runtime_path_str {
                 log::debug!(
                     "compiler-info mismatch for {}: runtime_path changed (stored='{}', current='{}')",
                     package.name,
-                    parsed.runtime_path.as_deref().unwrap_or("<missing>"),
+                    parsed.runtime_path,
                     current_runtime_path_str
+                );
+                mismatch = true;
+            }
+            if parsed.rescript_config_hash != current_rescript_config_hash {
+                log::debug!(
+                    "compiler-info mismatch for {}: rescript_config_hash changed (stored='{}', current='{}')",
+                    package.name,
+                    parsed.rescript_config_hash,
+                    current_rescript_config_hash
                 );
                 mismatch = true;
             }
@@ -98,46 +113,58 @@ pub fn verify_compiler_info(
 }
 
 pub fn write_compiler_info(build_state: &BuildState) {
-    let bsc_path_str = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
-    let bsc_hash_hex = build_state.compiler_info.bsc_hash.to_hex().to_string();
-    let runtime_path_str = build_state
+    let bsc_path = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
+    let bsc_hash = build_state.compiler_info.bsc_hash.to_hex().to_string();
+    let runtime_path = build_state
         .compiler_info
         .runtime_path
         .to_string_lossy()
         .to_string();
-
     // derive version from the crate version
     let version = env!("CARGO_PKG_VERSION").to_string();
     let generated_at = crate::helpers::get_system_time().to_string();
 
-    let out = CompilerInfoFile {
-        version: Some(version),
-        bsc_path: Some(bsc_path_str),
-        bsc_hash: Some(bsc_hash_hex),
-        runtime_path: Some(runtime_path_str),
-        generated_at: Some(generated_at),
-    };
-    let contents = serde_json::to_string_pretty(&out).unwrap_or_else(|_| String::new());
+    // Borrowing serializer to avoid cloning the constant fields for every package
+    #[derive(Serialize)]
+    struct CompilerInfoFileRef<'a> {
+        version: &'a str,
+        bsc_path: &'a str,
+        bsc_hash: &'a str,
+        rescript_config_hash: String,
+        runtime_path: &'a str,
+        generated_at: &'a str,
+    }
 
     build_state.packages.values().par_bridge().for_each(|package| {
-        let info_path = package.get_compiler_info_path();
-        let should_write = match std::fs::read_to_string(&info_path) {
-            Ok(existing) => existing != contents,
-            Err(_) => true,
-        };
+        if let Some(rescript_config_hash) = helpers::compute_file_hash(&package.config.path) {
+            let out = CompilerInfoFileRef {
+                version: &version,
+                bsc_path: &bsc_path,
+                bsc_hash: &bsc_hash,
+                rescript_config_hash: rescript_config_hash.to_hex().to_string(),
+                runtime_path: &runtime_path,
+                generated_at: &generated_at,
+            };
+            let contents = serde_json::to_string_pretty(&out).unwrap_or_else(|_| String::new());
+            let info_path = package.get_compiler_info_path();
+            let should_write = match std::fs::read_to_string(&info_path) {
+                Ok(existing) => existing != contents,
+                Err(_) => true,
+            };
 
-        if should_write {
-            if let Some(parent) = info_path.parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            // We write atomically to avoid leaving a partially written JSON file
-            // (e.g. process interruption) that would be read on the next init as an
-            // invalid/mismatched compiler-info, causing unnecessary cleans. The
-            // rename within the same directory is atomic on common platforms.
-            let tmp = info_path.with_extension("json.tmp");
-            if let Ok(mut f) = File::create(&tmp) {
-                let _ = f.write_all(contents.as_bytes());
-                let _ = std::fs::rename(&tmp, &info_path);
+            if should_write {
+                if let Some(parent) = info_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                // We write atomically to avoid leaving a partially written JSON file
+                // (e.g. process interruption) that would be read on the next init as an
+                // invalid/mismatched compiler-info, causing unnecessary cleans. The
+                // rename within the same directory is atomic on common platforms.
+                let tmp = info_path.with_extension("json.tmp");
+                if let Ok(mut f) = File::create(&tmp) {
+                    let _ = f.write_all(contents.as_bytes());
+                    let _ = std::fs::rename(&tmp, &info_path);
+                }
             }
         }
     });
