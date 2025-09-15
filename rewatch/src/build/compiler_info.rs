@@ -1,0 +1,144 @@
+use super::build_types::{BuildState, CompilerInfo};
+use super::clean;
+use super::packages;
+use ahash::AHashMap;
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::Write;
+
+// In order to have a loose coupling with the compiler, we don't want to have a hard dependency on the compiler's structs
+// We can use this struct to parse the compiler-info.json file
+// If something is not there, that is fine, we will treat it as a mismatch
+#[derive(Serialize, Deserialize)]
+struct CompilerInfoFile {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bsc_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    bsc_hash: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    runtime_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    generated_at: Option<String>,
+}
+
+pub enum CompilerCheckResult {
+    SameCompilerAsLastRun,
+    CleanedPackagesDueToCompiler,
+}
+
+pub fn verify_compiler_info(
+    packages: &AHashMap<String, packages::Package>,
+    compiler: &CompilerInfo,
+) -> CompilerCheckResult {
+    let mismatched_packages = packages
+        .values()
+        .filter(|package| {
+            let info_path = package.get_compiler_info_path();
+            let Ok(contents) = std::fs::read_to_string(&info_path) else {
+                // Can't read file → treat as mismatch so we clean and rewrite
+                return true;
+            };
+
+            let parsed: Result<CompilerInfoFile, _> = serde_json::from_str(&contents);
+            let parsed = match parsed {
+                Ok(p) => p,
+                Err(_) => return true, // unknown or invalid format -> treat as mismatch
+            };
+
+            let current_bsc_path_str = compiler.bsc_path.to_string_lossy();
+            let current_bsc_hash_hex = compiler.bsc_hash.to_hex().to_string();
+            let current_runtime_path_str = compiler.runtime_path.to_string_lossy();
+
+            let mut mismatch = false;
+            if parsed.bsc_path.as_deref() != Some(&current_bsc_path_str) {
+                log::debug!(
+                    "compiler-info mismatch for {}: bsc_path changed (stored='{}', current='{}')",
+                    package.name,
+                    parsed.bsc_path.as_deref().unwrap_or("<missing>"),
+                    current_bsc_path_str
+                );
+                mismatch = true;
+            }
+            if parsed.bsc_hash.as_deref() != Some(&current_bsc_hash_hex) {
+                log::debug!(
+                    "compiler-info mismatch for {}: bsc_hash changed (stored='{}', current='{}')",
+                    package.name,
+                    parsed.bsc_hash.as_deref().unwrap_or("<missing>"),
+                    current_bsc_hash_hex
+                );
+                mismatch = true;
+            }
+            if parsed.runtime_path.as_deref() != Some(&current_runtime_path_str) {
+                log::debug!(
+                    "compiler-info mismatch for {}: runtime_path changed (stored='{}', current='{}')",
+                    package.name,
+                    parsed.runtime_path.as_deref().unwrap_or("<missing>"),
+                    current_runtime_path_str
+                );
+                mismatch = true;
+            }
+
+            mismatch
+        })
+        .collect::<Vec<_>>();
+
+    let cleaned_count = mismatched_packages.len();
+    mismatched_packages.par_iter().for_each(|package| {
+        // suppress progress printing during init to avoid breaking step output
+        clean::clean_package(false, true, package);
+    });
+    if cleaned_count == 0 {
+        CompilerCheckResult::SameCompilerAsLastRun
+    } else {
+        CompilerCheckResult::CleanedPackagesDueToCompiler
+    }
+}
+
+pub fn write_compiler_info(build_state: &BuildState) {
+    let bsc_path_str = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
+    let bsc_hash_hex = build_state.compiler_info.bsc_hash.to_hex().to_string();
+    let runtime_path_str = build_state
+        .compiler_info
+        .runtime_path
+        .to_string_lossy()
+        .to_string();
+
+    // derive version from the crate version
+    let version = env!("CARGO_PKG_VERSION").to_string();
+    let generated_at = crate::helpers::get_system_time().to_string();
+
+    let out = CompilerInfoFile {
+        version: Some(version),
+        bsc_path: Some(bsc_path_str),
+        bsc_hash: Some(bsc_hash_hex),
+        runtime_path: Some(runtime_path_str),
+        generated_at: Some(generated_at),
+    };
+    let contents = serde_json::to_string_pretty(&out).unwrap_or_else(|_| String::new());
+
+    build_state.packages.values().par_bridge().for_each(|package| {
+        let info_path = package.get_compiler_info_path();
+        let should_write = match std::fs::read_to_string(&info_path) {
+            Ok(existing) => existing != contents,
+            Err(_) => true,
+        };
+
+        if should_write {
+            if let Some(parent) = info_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            // We write atomically to avoid leaving a partially written JSON file
+            // (e.g. process interruption) that would be read on the next init as an
+            // invalid/mismatched compiler-info, causing unnecessary cleans. The
+            // rename within the same directory is atomic on common platforms.
+            let tmp = info_path.with_extension("json.tmp");
+            if let Ok(mut f) = File::create(&tmp) {
+                let _ = f.write_all(contents.as_bytes());
+                let _ = std::fs::rename(&tmp, &info_path);
+            }
+        }
+    });
+}

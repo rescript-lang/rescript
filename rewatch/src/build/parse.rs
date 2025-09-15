@@ -196,7 +196,7 @@ pub fn generate_asts(
                         &build_state.project_context,
                         package,
                         module_name,
-                        &build_state.bsc_path,
+                        &build_state.compiler_info.bsc_path,
                     ) {
                         has_failure = true;
                         stderr.push_str(&format!("{}\n", err));
@@ -310,7 +310,7 @@ fn generate_ast(
 
     /* Create .ast */
     let result = match Some(
-        Command::new(&build_state.bsc_path)
+        Command::new(&build_state.compiler_info.bsc_path)
             .current_dir(&build_path_abs)
             .args(parser_args)
             .output()
