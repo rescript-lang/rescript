@@ -45,12 +45,12 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 let dv = DataView.fromBuffer(buffer)
 ```
 */
-@new external fromBuffer: Stdlib_ArrayBuffer.t => t = "DataView"
+@new external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) => t = "DataView"
 
 /**
-`fromBufferToEnd(buffer, ~byteOffset)` creates a DataView starting at a given byte offset.
+`fromBufferToEnd(buffer, ~byteOffset)` creates a DataView starting at a given byte offset. See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView) on MDN.
 
-See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView) on MDN.
+**Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
 
 ## Examples
 
@@ -58,12 +58,15 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 let dv = DataView.fromBufferToEnd(buffer, ~byteOffset=4)
 ```
 */
-@new external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "DataView"
+@deprecated("Use `fromBuffer` instead") @new 
+external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "DataView"
 
 /**
-`fromBufferWithRange(buffer, ~byteOffset, ~length)` creates a DataView for a specific byte range.
+`fromBufferWithRange(buffer, ~byteOffset, ~length)` creates a DataView for a specific byte range. 
 
 See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView) on MDN.
+
+**Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
 
 ## Examples
 
@@ -71,7 +74,8 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 let dv = DataView.fromBufferWithRange(buffer, ~byteOffset=2, ~length=8)
 ```
 */
-@new external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t = "DataView"
+@deprecated("Use `fromBuffer` instead") @new 
+external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t = "DataView"
 
 /**
 `buffer(dataView)` returns the underlying ArrayBuffer referenced by this DataView.
