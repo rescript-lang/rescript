@@ -206,7 +206,9 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
   let mi, mi_dev = aux ~read_cmi:`is_cmi ~postbuild:None ~name:"mi" in
   let build_package =
     define
-      ~command:(bsc ^ " -w -49 -color always -no-alias-deps  $i")
+      ~command:
+        (bsc ^ " -w -49 -color always -no-alias-deps -runtime-path "
+       ^ !Runtime_package.path ^ "  $i")
       ~restat:() "build_package"
   in
   {
