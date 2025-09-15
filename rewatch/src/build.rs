@@ -157,6 +157,8 @@ pub fn initialize_build(
     }
 
     let mut build_state = BuildState::new(project_context, packages, bsc_path);
+    // Clear memoization cache at the start of each build
+    helpers::reset_try_package_path_cache();
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 

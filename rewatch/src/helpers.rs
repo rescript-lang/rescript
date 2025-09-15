@@ -2,6 +2,7 @@ use crate::build::packages;
 use crate::config::Config;
 use crate::helpers;
 use crate::project_context::ProjectContext;
+use ahash::AHashMap;
 use anyhow::anyhow;
 use std::ffi::OsString;
 use std::fs;
@@ -9,11 +10,23 @@ use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
+use std::sync::{LazyLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
 
 pub mod deserialize;
+
+// Thread-safe memoization cache for try_package_path results per build.
+// Keyed by "{package_config.name}+{package_name}". Value is Some(path) or None (not found).
+static TRY_PACKAGE_PATH_CACHE: LazyLock<RwLock<AHashMap<String, Option<PathBuf>>>> =
+    LazyLock::new(|| RwLock::new(AHashMap::new()));
+
+pub fn reset_try_package_path_cache() {
+    if let Ok(mut map) = TRY_PACKAGE_PATH_CACHE.write() {
+        map.clear();
+    }
+}
 
 pub mod emojis {
     use console::Emoji;
@@ -114,6 +127,19 @@ pub fn try_package_path(
     project_context: &ProjectContext,
     package_name: &str,
 ) -> anyhow::Result<PathBuf> {
+    // First, attempt to serve from cache
+    let cache_key = format!("{}+{}", package_config.name, package_name);
+    if let Ok(cache) = TRY_PACKAGE_PATH_CACHE.read() {
+        if let Some(cached) = cache.get(&cache_key) {
+            return match cached {
+                Some(path) => Ok(path.clone()),
+                None => Err(anyhow!(
+                    "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
+                )),
+            };
+        }
+    }
+
     // package folder + node_modules + package_name
     // This can happen in the following scenario:
     // The ProjectContext has a MonoRepoContext::MonorepoRoot.
@@ -147,7 +173,7 @@ pub fn try_package_path(
 
     // root folder + node_modules + package_name
     let path_from_root = package_path(project_context.get_root_path(), package_name);
-    if path_from_current_package.exists() {
+    let result = if path_from_current_package.exists() {
         Ok(path_from_current_package)
     } else if path_from_current_config.exists() {
         Ok(path_from_current_config)
@@ -157,7 +183,21 @@ pub fn try_package_path(
         Err(anyhow!(
             "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
         ))
+    };
+
+    // Store in cache
+    if let Ok(mut cache) = TRY_PACKAGE_PATH_CACHE.write() {
+        match &result {
+            Ok(path) => {
+                cache.insert(cache_key, Some(path.clone()));
+            }
+            Err(_) => {
+                cache.insert(cache_key, None);
+            }
+        }
     }
+
+    result
 }
 
 pub fn get_abs_path(path: &Path) -> PathBuf {
