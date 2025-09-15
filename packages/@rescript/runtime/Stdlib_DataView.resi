@@ -129,7 +129,7 @@ See [`DataView.getInt8`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 DataView.getInt8(dv, 0) 
 ```
 */
-@send external getInt8: (t, int, ~littleEndian: bool=?) => int = "getInt8"
+@send external getInt8: (t, int) => int = "getInt8"
 
 /**
 `getUint8(dataView, offset)` reads an 8-bit unsigned integer at the specified byte offset.
@@ -142,7 +142,7 @@ See [`DataView.getUint8`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 DataView.getUint8(dv, 1) 
 ```
 */
-@send external getUint8: (t, int, ~littleEndian: bool=?) => int = "getUint8"
+@send external getUint8: (t, int) => int = "getUint8"
 
 /**
 `getInt16(dataView, offset, ~littleEndian=?)` reads a 16-bit signed integer at the specified byte offset, with optional endianness.
