@@ -377,11 +377,19 @@
     },
     "bs-dependencies": {
       "$ref": "#/definitions/dependencies",
-      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`"
+      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dependencies instead)."
     },
     "bs-dev-dependencies": {
       "$ref": "#/definitions/dependencies",
-      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`"
+      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dev-dependencies instead)."
+    },
+    "dependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`."
+    },
+    "dev-dependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`."
     },
     "generators": {
       "type": "array",
