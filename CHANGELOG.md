@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Make experimental-features kebap-case in compiler config like the other fields. https://github.com/rescript-lang/rescript/pull/7891
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
