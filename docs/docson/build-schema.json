@@ -318,7 +318,7 @@
       },
       "additionalProperties": false
     },
-    "bsc-flags": {
+    "compiler-flags": {
       "oneOf": [
         {
           "type": "array",
@@ -326,21 +326,6 @@
             "type": "string"
           },
           "description": "Default: `[\"-no-alias-deps\"]`"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "enum": ["reset", "prefix", "append"]
-            },
-            "flags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "description": "(Not implemented yet)"
         }
       ]
     },
@@ -422,7 +407,11 @@
       "description": "gentype config, see cristianoc/genType for more details"
     },
     "bsc-flags": {
-      "$ref": "#/definitions/bsc-flags",
+      "$ref": "#/definitions/compiler-flags",
+      "description": "Flags passed to bsc.exe (deprecated, use compiler-flags instead)"
+    },
+    "compiler-flags": {
+      "$ref": "#/definitions/compiler-flags",
       "description": "Flags passed to bsc.exe"
     },
     "warnings": {
