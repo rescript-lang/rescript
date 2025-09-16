@@ -75,6 +75,14 @@ function bnot_bigint(a) {
   return ~a;
 }
 
+function bor_int(a, b) {
+  return a | b;
+}
+
+function bor_bigint(a, b) {
+  return a | b;
+}
+
 function bxor_int(a, b) {
   return a ^ b;
 }
@@ -127,6 +135,8 @@ export {
   pow_overflow,
   bnot_int,
   bnot_bigint,
+  bor_int,
+  bor_bigint,
   bxor_int,
   bxor_bigint,
   band_int,

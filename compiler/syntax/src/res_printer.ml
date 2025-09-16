@@ -3777,7 +3777,7 @@ and print_unary_expression ~state expr cmt_tbl =
       | "~+." -> "+."
       | "~-" -> "-"
       | "~-." -> "-."
-      | "~~" -> "~"
+      | "~~~" -> "~~~"
       | "not" -> "!"
       | _ -> assert false)
   in
@@ -5101,8 +5101,6 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
       match Parens.expr expr with
       | Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
-      | Nothing when ParsetreeViewer.is_unary_bitnot_expression expr ->
-        add_parens doc
       | Nothing -> doc
     in
     let loc = {arg_loc with loc_end = expr.pexp_loc.loc_end} in

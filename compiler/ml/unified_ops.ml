@@ -208,7 +208,7 @@ let entries =
         };
     };
     {
-      path = builtin "~~";
+      path = builtin "~~~";
       name = "%bitnot";
       form = Unary;
       specialization =
@@ -221,20 +221,20 @@ let entries =
         };
     };
     {
-      path = builtin "&";
-      name = "%bitand";
+      path = builtin "|||";
+      name = "%bitor";
       form = Binary;
       specialization =
         {
-          int = Pandint;
+          int = Porint;
           bool = None;
           float = None;
-          bigint = Some Pandbigint;
+          bigint = Some Porbigint;
           string = None;
         };
     };
     {
-      path = builtin "^";
+      path = builtin "^^^";
       name = "%bitxor";
       form = Binary;
       specialization =
@@ -243,6 +243,19 @@ let entries =
           bool = None;
           float = None;
           bigint = Some Pxorbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "&&&";
+      name = "%bitand";
+      form = Binary;
+      specialization =
+        {
+          int = Pandint;
+          bool = None;
+          float = None;
+          bigint = Some Pandbigint;
           string = None;
         };
     };
