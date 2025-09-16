@@ -26,6 +26,8 @@
 
 #### :nail_care: Polish
 
+- Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
+
 #### :house: Internal
 
 # 12.0.0-beta.11
