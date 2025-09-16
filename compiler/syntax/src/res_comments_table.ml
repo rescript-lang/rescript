@@ -1496,7 +1496,7 @@ and walk_expression expr t comments =
                 {
                   txt =
                     Longident.Lident
-                      ("~+" | "~+." | "~-" | "~-." | "~~" | "not" | "!");
+                      ("~+" | "~+." | "~-" | "~-." | "~~~" | "not" | "!");
                 };
           };
         args = [(Nolabel, arg_expr)];
@@ -1517,7 +1517,8 @@ and walk_expression expr t comments =
                     Longident.Lident
                       ( ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!="
                       | "!==" | "<=" | ">=" | "+" | "+." | "-" | "-." | "++"
-                      | "^" | "*" | "*." | "/" | "/." | "**" | "->" | "<>" );
+                      | "|||" | "^^^" | "&&&" | "*" | "*." | "/" | "/." | "**"
+                      | "->" | "<>" );
                 };
           };
         args = [(Nolabel, operand1); (Nolabel, operand2)];
