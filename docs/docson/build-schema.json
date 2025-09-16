@@ -485,7 +485,7 @@
       "$ref": "#/definitions/editor",
       "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
     },
-    "experimentalFeatures": {
+    "experimental-features": {
       "type": "object",
       "description": "Enable experimental compiler features.",
       "properties": {

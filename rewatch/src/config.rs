@@ -293,7 +293,7 @@ pub struct Config {
 
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
-    #[serde(rename = "experimentalFeatures")]
+    #[serde(rename = "experimental-features")]
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
