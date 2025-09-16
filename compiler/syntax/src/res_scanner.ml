@@ -756,9 +756,14 @@ let rec scan scanner =
     | '`' ->
       next scanner;
       Token.Backtick
-    | '~' ->
-      next scanner;
-      Token.Tilde
+    | '~' -> (
+      match (peek scanner, peek2 scanner) with
+      | '~', '~' ->
+        next3 scanner;
+        Token.Bnot
+      | _ ->
+        next scanner;
+        Token.Tilde)
     | '?' ->
       next scanner;
       Token.Question
@@ -830,24 +835,35 @@ let rec scan scanner =
         next scanner;
         Token.Percent)
     | '|' -> (
-      match peek scanner with
-      | '|' ->
+      match (peek scanner, peek2 scanner) with
+      | '|', '|' ->
+        next3 scanner;
+        Token.Bor
+      | '|', _ ->
         next2 scanner;
         Token.Lor
       | _ ->
         next scanner;
         Token.Bar)
     | '&' -> (
-      match peek scanner with
-      | '&' ->
+      match (peek scanner, peek2 scanner) with
+      | '&', '&' ->
+        next3 scanner;
+        Token.Band
+      | '&', _ ->
         next2 scanner;
         Token.Land
       | _ ->
         next scanner;
         Token.Band)
-    | '^' ->
-      next scanner;
-      Token.Caret
+    | '^' -> (
+      match (peek scanner, peek2 scanner) with
+      | '^', '^' ->
+        next3 scanner;
+        Token.Bxor
+      | _ ->
+        next scanner;
+        Token.Caret)
     | ':' -> (
       match peek scanner with
       | '=' ->
