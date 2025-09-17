@@ -268,10 +268,11 @@ and expression i ppf x =
     line i ppf "Pexp_match\n";
     expression i ppf e;
     list i case ppf l
-  | Pexp_try (e, l) ->
+  | Pexp_try (e, l, finally_expr) ->
     line i ppf "Pexp_try\n";
     expression i ppf e;
-    list i case ppf l
+    list i case ppf l;
+    option (i + 2) expression ppf finally_expr
   | Pexp_tuple l ->
     line i ppf "Pexp_tuple\n";
     list i expression ppf l

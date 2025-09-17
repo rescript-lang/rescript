@@ -459,7 +459,9 @@ module E = struct
            l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+    | Pexp_try (e, pel) ->
+      try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+        (Some (ident {txt = Longident.Lident "_"; loc}))
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     (* <></> *)
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)

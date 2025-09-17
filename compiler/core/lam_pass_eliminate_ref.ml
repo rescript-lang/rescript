@@ -90,8 +90,10 @@ let rec eliminate_ref id (lam : Lam.t) =
     Lam.staticraise i (Ext_list.map args (eliminate_ref id))
   | Lstaticcatch (e1, i, e2) ->
     Lam.staticcatch (eliminate_ref id e1) i (eliminate_ref id e2)
-  | Ltrywith (e1, v, e2) ->
-    Lam.try_ (eliminate_ref id e1) v (eliminate_ref id e2)
+  | Ltrywith (e1, v, e2, finally_expr) ->
+    Lam.try_ (eliminate_ref id e1) v
+      (Ext_option.map e2 (eliminate_ref id))
+      (Ext_option.map finally_expr (eliminate_ref id))
   | Lifthenelse (e1, e2, e3) ->
     Lam.if_ (eliminate_ref id e1) (eliminate_ref id e2) (eliminate_ref id e3)
   | Lsequence (e1, e2) -> Lam.seq (eliminate_ref id e1) (eliminate_ref id e2)

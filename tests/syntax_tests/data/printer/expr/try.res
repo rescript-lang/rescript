@@ -3,12 +3,12 @@ try {
   let y = 2
   dangerousCall()
 } catch {
-| Foo => Js.log()
-| Exit => Js.log()
+| Foo => Console.log()
+| Exit => Console.log()
 }
 
 try myDangerousFn() catch {
-| Foo => Js.log()
+| Foo => Console.log()
 }
 
 let x = {
@@ -22,12 +22,143 @@ let x = {
 
 @attr @attr2
 try myDangerousFn() catch {
-| Foo => Js.log()
+| Foo => Console.log()
 }
 
 
 let () =
   @attr @attr2
   try myDangerousFn() catch {
-  | Foo => Js.log()
+  | Foo => Console.log()
   }
+
+// Try-catch-finally tests
+// Comment before try
+try {
+  // Comment inside try block
+  dangerousOperation()
+  // Another comment in try
+} catch {
+  // Comment in catch block
+| Error => Console.log("Error")
+  // More catch comments
+} finally {
+  // Comment in finally block
+  cleanup()
+  // Finally block end comment
+}
+
+try {
+  // Comment: getting data
+  let result = fetchData()
+  // Comment: processing result
+  processResult(result)
+} catch {
+  // Comment: not found case
+| Not_found => Console.log("Not found")
+  // Comment: other errors
+| _ => Console.log("Other error")
+} finally {
+  // Comment: releasing resources
+  releaseResources()
+  // Comment: cleanup complete
+}
+
+// Nested try-catch-finally
+try {
+  // Outer try start
+  try {
+    // Inner try
+    innerOperation()
+  } catch {
+    // Inner catch
+  | InnerError => Console.log("Inner error")
+  } finally {
+    // Inner finally
+    innerCleanup()
+    // End inner finally
+  }
+  // End outer try
+} catch {
+  // Outer catch
+| OuterError => Console.log("Outer error")
+} finally {
+  // Outer finally
+  outerCleanup()
+  // End outer finally
+}
+
+// Try-catch-finally with attributes
+// Comment before attr
+@attr
+try {
+  // Try with attribute
+  operation()
+} catch {
+  // Catch with attribute
+| Error => Console.log("Error")
+} finally {
+  // Finally with attribute
+  cleanup()
+}
+
+// Multiple attributes
+@attr @attr2
+try {
+  // Complex operation with multiple attrs
+  complexOperation()
+} catch {
+  // Error handling
+| Error => Console.log("Error")
+} finally {
+  // Cleanup with logging
+  Console.log("Cleanup")
+}
+
+let () =
+  // Function with try-catch-finally
+  @attr @attr2
+  try {
+    // Operation in function
+    operation()
+  } catch {
+    // Error in function
+  | Error => Console.log("Error")
+  } finally {
+    // Finally in function
+    cleanup()
+  }
+
+// Try-finally without catch tests
+try {
+  dangerousOperation()
+} finally {
+  cleanup()
+}
+
+try simpleCall() finally simpleCleanup()
+
+@attr
+try {
+  operation()
+} finally {
+  cleanup()
+}
+
+// Try-finally in assignment
+let result = try {
+  getValue()
+} finally {
+  releaseResources()
+}
+
+// Nested try-finally
+try {
+  try {
+    innerOperation()
+  } finally {
+    innerCleanup()
+  }
+} finally {
+  outerCleanup()
+}

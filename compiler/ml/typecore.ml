@@ -161,9 +161,13 @@ let iter_expression f e =
     | Pexp_let (_, pel, e) ->
       expr e;
       List.iter binding pel
-    | Pexp_match (e, pel) | Pexp_try (e, pel) ->
+    | Pexp_match (e, pel) ->
       expr e;
       List.iter case pel
+    | Pexp_try (e, pel, finally_expr) ->
+      expr e;
+      List.iter case pel;
+      may expr finally_expr
     | Pexp_array el | Pexp_tuple el -> List.iter expr el
     | Pexp_construct (_, eo) | Pexp_variant (_, eo) -> may expr eo
     | Pexp_record (iel, eo) ->
@@ -1782,7 +1786,7 @@ let rec final_subexpression sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e)
   | Pexp_sequence (_, e)
-  | Pexp_try (e, _)
+  | Pexp_try (e, _, _)
   | Pexp_ifthenelse (_, e, _)
   | Pexp_match (_, {pc_rhs = e} :: _) ->
     final_subexpression e
@@ -1915,7 +1919,7 @@ let rec type_approx env sexp =
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
-  | Pexp_try (e, _) -> type_approx env e
+  | Pexp_try (e, _, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
   | Pexp_ifthenelse (_, e, _) -> type_approx env e
   | Pexp_sequence (_, e) -> type_approx env e
@@ -2512,15 +2516,27 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_try (sbody, caselist) ->
+  | Pexp_try (sbody, caselist, finally_expr) ->
     let body = type_expect ~context:None env sbody ty_expected in
     let cases, _ =
       type_cases ~call_context:`Try env Predef.type_exn ty_expected false loc
         caselist
     in
+    let finally_exp =
+      match finally_expr with
+      | None -> None
+      | Some expr ->
+        let finally_typed =
+          type_expect ~context:None env expr Predef.type_unit
+        in
+        (* Finally blocks must return unit *)
+        unify_exp_types ~context:None loc env finally_typed.exp_type
+          Predef.type_unit;
+        Some finally_typed
+    in
     re
       {
-        exp_desc = Texp_try (body, cases);
+        exp_desc = Texp_try (body, cases, finally_exp);
         exp_loc = loc;
         exp_extra = [];
         exp_type = body.exp_type;

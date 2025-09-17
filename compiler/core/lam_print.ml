@@ -394,9 +394,13 @@ let lambda ppf v =
           | [] -> ()
           | _ -> List.iter (fun x -> fprintf ppf " %a" Ident.print x) vars)
         vars lam lhandler
-    | Ltrywith (lbody, param, lhandler) ->
-      fprintf ppf "@[<2>(try@ %a@;<1 -1>with %a@ %a)@]" lam lbody Ident.print
-        param lam lhandler
+    | Ltrywith (lbody, param, lhandler, finally_expr) ->
+      fprintf ppf "@[<2>(try@ %a" lam lbody;
+      Ext_option.iter lhandler (fun handler ->
+          fprintf ppf "@;<1 -1>with %a@ %a" Ident.print param lam handler);
+      Ext_option.iter finally_expr (fun expr ->
+          fprintf ppf "@ finally@ %a" lam expr);
+      fprintf ppf "@])"
     | Lifthenelse (lcond, lif, lelse) ->
       fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lam lcond lam lif lam lelse
     | Lsequence (l1, l2) ->

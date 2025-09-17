@@ -3548,12 +3548,54 @@ and parse_try_expression p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Try p;
   let expr = parse_expr ~context:WhenExpr p in
-  Parser.expect Res_token.catch p;
-  Parser.expect Lbrace p;
-  let cases = parse_pattern_matching p in
-  Parser.expect Rbrace p;
+
+  (* Check if we have catch or finally *)
+  let cases, finally_expr =
+    if
+      Parser.lookahead p (fun state ->
+          match state.Parser.token with
+          | Lident "catch" -> true
+          | _ -> false)
+    then (
+      (* Parse catch block *)
+      Parser.expect Res_token.catch p;
+      Parser.expect Lbrace p;
+      let cases = parse_pattern_matching p in
+      Parser.expect Rbrace p;
+
+      (* Check for optional finally *)
+      let finally_expr =
+        if
+          Parser.lookahead p (fun state ->
+              match state.Parser.token with
+              | Lident "finally" -> true
+              | _ -> false)
+        then (
+          Parser.expect (Lident "finally") p;
+          let finally_expr = parse_expr ~context:WhenExpr p in
+          Some finally_expr)
+        else None
+      in
+      (cases, finally_expr))
+    else if
+      Parser.lookahead p (fun state ->
+          match state.Parser.token with
+          | Lident "finally" -> true
+          | _ -> false)
+    then (
+      (* Parse finally block without catch *)
+      Parser.expect (Lident "finally") p;
+      let finally_expr = parse_expr ~context:WhenExpr p in
+      ([], Some finally_expr))
+    else (
+      (* Error: need either catch or finally *)
+      Parser.err p
+        (Diagnostics.message "Expected 'catch' or 'finally' after 'try'");
+      ([], None))
+  in
+
   let loc = mk_loc start_pos p.prev_end_pos in
-  Ast_helper.Exp.try_ ~loc expr cases
+  Ast_helper.Exp.try_ ~loc expr cases finally_expr
 
 and parse_if_condition p =
   Parser.leave_breadcrumb p Grammar.IfCondition;

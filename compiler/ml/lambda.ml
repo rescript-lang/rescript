@@ -361,7 +361,7 @@ type lambda =
       lambda * (string * lambda) list * lambda option * Location.t
   | Lstaticraise of int * lambda list
   | Lstaticcatch of lambda * (int * Ident.t list) * lambda
-  | Ltrywith of lambda * Ident.t * lambda
+  | Ltrywith of lambda * Ident.t * lambda option * lambda option
   | Lifthenelse of lambda * lambda * lambda
   | Lsequence of lambda * lambda
   | Lwhile of lambda * lambda
@@ -471,7 +471,8 @@ let make_key e =
     | Lstaticraise (i, es) -> Lstaticraise (i, tr_recs env es)
     | Lstaticcatch (e1, xs, e2) ->
       Lstaticcatch (tr_rec env e1, xs, tr_rec env e2)
-    | Ltrywith (e1, x, e2) -> Ltrywith (tr_rec env e1, x, tr_rec env e2)
+    | Ltrywith (e1, x, e2, finally) ->
+      Ltrywith (tr_rec env e1, x, tr_opt env e2, tr_opt env finally)
     | Lifthenelse (cond, ifso, ifnot) ->
       Lifthenelse (tr_rec env cond, tr_rec env ifso, tr_rec env ifnot)
     | Lsequence (e1, e2) -> Lsequence (tr_rec env e1, tr_rec env e2)
@@ -532,9 +533,10 @@ let iter f = function
   | Lstaticcatch (e1, _, e2) ->
     f e1;
     f e2
-  | Ltrywith (e1, _, e2) ->
+  | Ltrywith (e1, _, e2, finally) ->
     f e1;
-    f e2
+    iter_opt f e2;
+    iter_opt f finally
   | Lifthenelse (e1, e2, e3) ->
     f e1;
     f e2;
@@ -567,7 +569,7 @@ let free_ids get l =
       List.iter (fun (id, _exp) -> fv := IdentSet.remove id !fv) decl
     | Lstaticcatch (_e1, (_, vars), _e2) ->
       List.iter (fun id -> fv := IdentSet.remove id !fv) vars
-    | Ltrywith (_e1, exn, _e2) -> fv := IdentSet.remove exn !fv
+    | Ltrywith (_e1, exn, _e2, _finally) -> fv := IdentSet.remove exn !fv
     | Lfor (v, _e1, _e2, _dir, _e3) -> fv := IdentSet.remove v !fv
     | Lassign (id, _e) -> fv := IdentSet.add id !fv
     | Lvar _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _ | Lstringswitch _
@@ -672,7 +674,8 @@ let subst_lambda s lam =
         (subst arg, List.map subst_strcase cases, subst_opt default, loc)
     | Lstaticraise (i, args) -> Lstaticraise (i, List.map subst args)
     | Lstaticcatch (e1, io, e2) -> Lstaticcatch (subst e1, io, subst e2)
-    | Ltrywith (e1, exn, e2) -> Ltrywith (subst e1, exn, subst e2)
+    | Ltrywith (e1, exn, e2, finally) ->
+      Ltrywith (subst e1, exn, subst_opt e2, subst_opt finally)
     | Lifthenelse (e1, e2, e3) -> Lifthenelse (subst e1, subst e2, subst e3)
     | Lsequence (e1, e2) -> Lsequence (subst e1, subst e2)
     | Lwhile (e1, e2) -> Lwhile (subst e1, subst e2)

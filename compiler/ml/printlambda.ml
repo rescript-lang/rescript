@@ -371,9 +371,15 @@ let rec lam ppf = function
         | [] -> ()
         | _ -> List.iter (fun x -> fprintf ppf " %a" Ident.print x) vars)
       vars lam lhandler
-  | Ltrywith (lbody, param, lhandler) ->
-    fprintf ppf "@[<2>(try@ %a@;<1 -1>with %a@ %a)@]" lam lbody Ident.print
-      param lam lhandler
+  | Ltrywith (lbody, param, lhandler, finally) ->
+    fprintf ppf "@[<2>(try@ %a" lam lbody;
+    (* Print "with" part conditionally *)
+    Ext_option.iter lhandler (fun handler ->
+        fprintf ppf "@;<1 -1>with %a@ %a" Ident.print param lam handler);
+    (* Print "finally" part conditionally *)
+    Ext_option.iter finally (fun lfinally ->
+        fprintf ppf "@ finally@ %a" lam lfinally);
+    fprintf ppf ")@]"
   | Lifthenelse (lcond, lif, lelse) ->
     fprintf ppf "@[<2>(if@ %a@ %a@ %a)@]" lam lcond lam lif lam lelse
   | Lsequence (l1, l2) -> fprintf ppf "@[<2>(seq@ %a@ %a)@]" lam l1 sequence l2

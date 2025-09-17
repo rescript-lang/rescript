@@ -148,7 +148,13 @@ module Exp : sig
     (arg_label * expression) list ->
     expression
   val match_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
-  val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
+  val try_ :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    expression ->
+    case list ->
+    expression option ->
+    expression
   val tuple : ?loc:loc -> ?attrs:attrs -> expression list -> expression
   val construct :
     ?loc:loc -> ?attrs:attrs -> lid -> expression option -> expression

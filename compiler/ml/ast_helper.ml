@@ -167,7 +167,8 @@ module Exp = struct
       =
     mk ?loc ?attrs (Pexp_apply {funct; args; partial; transformed_jsx})
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
-  let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))
+  let try_ ?loc ?attrs a b finally_expr =
+    mk ?loc ?attrs (Pexp_try (a, b, finally_expr))
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Pexp_tuple a)
   let construct ?loc ?attrs a b = mk ?loc ?attrs (Pexp_construct (a, b))
   let variant ?loc ?attrs a b = mk ?loc ?attrs (Pexp_variant (a, b))

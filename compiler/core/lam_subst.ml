@@ -59,7 +59,10 @@ let subst (s : Lam.t Map_ident.t) lam =
     | Lstaticraise (i, args) -> Lam.staticraise i (Ext_list.map args subst_aux)
     | Lstaticcatch (e1, io, e2) ->
       Lam.staticcatch (subst_aux e1) io (subst_aux e2)
-    | Ltrywith (e1, exn, e2) -> Lam.try_ (subst_aux e1) exn (subst_aux e2)
+    | Ltrywith (e1, exn, e2, finally_expr) ->
+      Lam.try_ (subst_aux e1) exn
+        (Ext_option.map e2 subst_aux)
+        (Ext_option.map finally_expr subst_aux)
     | Lifthenelse (e1, e2, e3) ->
       Lam.if_ (subst_aux e1) (subst_aux e2) (subst_aux e3)
     | Lsequence (e1, e2) -> Lam.seq (subst_aux e1) (subst_aux e2)
