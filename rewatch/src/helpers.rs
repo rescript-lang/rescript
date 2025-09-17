@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
+use std::sync::{LazyLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
@@ -29,6 +30,25 @@ pub mod emojis {
     pub static SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
     pub static COMPILE_STATE: Emoji<'_, '_> = Emoji("📝 ", "");
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
+}
+
+// Cache existence checks for candidate node_modules paths during upward traversal.
+// Keyed by the absolute candidate path string; value is the existence boolean.
+static NODE_MODULES_EXIST_CACHE: LazyLock<RwLock<ahash::AHashMap<String, bool>>> =
+    LazyLock::new(|| RwLock::new(ahash::AHashMap::new()));
+
+fn cached_path_exists(path: &Path) -> bool {
+    let key = path.to_string_lossy().to_string();
+    if let Ok(cache) = NODE_MODULES_EXIST_CACHE.read() {
+        if let Some(exists) = cache.get(&key) {
+            return *exists;
+        }
+    }
+    let exists = path.exists();
+    if let Ok(mut cache) = NODE_MODULES_EXIST_CACHE.write() {
+        cache.insert(key, exists);
+    }
+    exists
 }
 
 /// This trait is used to strip the verbatim prefix from a Windows path.
@@ -189,7 +209,7 @@ fn find_dep_in_upward_node_modules(start_dir: &Path, package_name: &str) -> anyh
     while let Some(dir) = current {
         let candidate = package_path(dir, package_name);
         log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
-        if candidate.exists() {
+        if cached_path_exists(&candidate) {
             log::debug!(
                 "try_package_path: found '{}' at '{}' via upward traversal",
                 package_name,
