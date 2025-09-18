@@ -855,7 +855,7 @@ let rec scan scanner =
         Token.Land
       | _ ->
         next scanner;
-        Token.Band)
+        Token.Ampersand)
     | '^' -> (
       match (peek scanner, peek2 scanner) with
       | '^', '^' ->

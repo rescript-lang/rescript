@@ -5943,7 +5943,7 @@ and parse_polymorphic_variant_type_spec_hash ~attrs ~full p :
   let ident, loc = parse_hash_ident ~start_pos p in
   let rec loop p =
     match p.Parser.token with
-    | Band when full ->
+    | Ampersand when full ->
       Parser.next p;
       let row_field = parse_polymorphic_variant_type_args p in
       row_field :: loop p
@@ -5951,7 +5951,7 @@ and parse_polymorphic_variant_type_spec_hash ~attrs ~full p :
   in
   let first_tuple, tag_contains_a_constant_empty_constructor =
     match p.Parser.token with
-    | Band when full ->
+    | Ampersand when full ->
       Parser.next p;
       ([parse_polymorphic_variant_type_args p], true)
     | Lparen -> ([parse_polymorphic_variant_type_args p], false)
