@@ -310,6 +310,20 @@ module E = struct
         | _ -> true)
       attrs
 
+  let extract_for_of_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt = "res.for_of"}, Pt.PPat (_, Some expr) -> Some expr
+        | _ -> None)
+      attrs
+
+  let remove_for_of_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt = "res.for_of"}, _ -> false
+        | _ -> true)
+      attrs
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
@@ -524,9 +538,17 @@ module E = struct
       sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
     | Pexp_while (e1, e2) ->
       while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-    | Pexp_for (p, e1, e2, d, e3) ->
-      for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
-        (sub.expr sub e3)
+    | Pexp_for (p, e1, e2, d, e3) -> (
+      let array_expr = extract_for_of_attribute attrs in
+      let attrs = remove_for_of_attribute attrs in
+      match array_expr with
+      | Some array ->
+        (* This is actually a for...of loop, decode it *)
+        for_of ~loc ~attrs (sub.pat sub p) array (sub.expr sub e3)
+      | None ->
+        (* Regular for loop *)
+        for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
+          (sub.expr sub e3))
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->

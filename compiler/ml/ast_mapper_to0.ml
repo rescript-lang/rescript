@@ -450,9 +450,25 @@ module E = struct
     | Pexp_for (p, e1, e2, d, e3) ->
       for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
         (sub.expr sub e3)
-    | Pexp_for_of (_pat, _array_expr, _body_expr) ->
-      (* Convert for...of to an extension since it doesn't exist in old AST *)
-      extension ~loc ~attrs (Location.mkloc "rescript.for_of" loc, PStr [])
+    | Pexp_for_of (pat, array_expr, body_expr) ->
+      (* Encode for...of as a for loop with attributes *)
+      let for_of_attr =
+        sub.attribute sub
+          ( Location.mkloc "res.for_of" loc,
+            PPat (Ast_helper.Pat.any (), Some array_expr) )
+      in
+      (* Use dummy values for start/end expressions since we store the array in attribute *)
+      let start_expr =
+        sub.expr sub
+          (Ast_helper.Exp.constant (Parsetree.Pconst_integer ("0", None)))
+      in
+      let end_expr =
+        sub.expr sub
+          (Ast_helper.Exp.constant (Parsetree.Pconst_integer ("0", None)))
+      in
+      (* Use Upto direction flag (arbitrary choice) *)
+      for_ ~loc ~attrs:(for_of_attr :: attrs) (sub.pat sub pat) start_expr
+        end_expr Asttypes.Upto (sub.expr sub body_expr)
     | Pexp_coerce (e, (), t2) ->
       coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
     | Pexp_constraint (e, t) ->
