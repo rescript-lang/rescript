@@ -116,7 +116,7 @@ jobs:
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: 1.88.0
           targets: ${{ matrix.rust-target }}
 
       - name: Build rewatch
