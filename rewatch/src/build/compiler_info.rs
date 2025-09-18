@@ -145,7 +145,17 @@ pub fn write_compiler_info(build_state: &BuildState) {
                 runtime_path: &runtime_path,
                 generated_at: &generated_at,
             };
-            let contents = serde_json::to_string_pretty(&out).unwrap_or_else(|_| String::new());
+            let contents = match serde_json::to_string_pretty(&out) {
+                Ok(s) => s,
+                Err(err) => {
+                    log::error!(
+                        "Failed to serialize compiler-info for package {}: {}. Skipping write.",
+                        package.name,
+                        err
+                    );
+                    return;
+                }
+            };
             let info_path = package.get_compiler_info_path();
             let should_write = match std::fs::read_to_string(&info_path) {
                 Ok(existing) => existing != contents,
@@ -162,8 +172,33 @@ pub fn write_compiler_info(build_state: &BuildState) {
                 // rename within the same directory is atomic on common platforms.
                 let tmp = info_path.with_extension("json.tmp");
                 if let Ok(mut f) = File::create(&tmp) {
-                    let _ = f.write_all(contents.as_bytes());
-                    let _ = std::fs::rename(&tmp, &info_path);
+                    if let Err(err) = f.write_all(contents.as_bytes()) {
+                        log::error!(
+                            "Failed to write compiler-info for package {} to temporary file {}: {}. Skipping rename.",
+                            package.name,
+                            tmp.display(),
+                            err
+                        );
+                        let _ = std::fs::remove_file(&tmp);
+                        return;
+                    }
+                    if let Err(err) = f.sync_all() {
+                        log::error!(
+                            "Failed to flush compiler-info for package {}: {}. Skipping rename.",
+                            package.name,
+                            err
+                        );
+                        let _ = std::fs::remove_file(&tmp);
+                        return;
+                    }
+                    if let Err(err) = std::fs::rename(&tmp, &info_path) {
+                        log::error!(
+                            "Failed to atomically replace compiler-info for package {}: {}.",
+                            package.name,
+                            err
+                        );
+                        let _ = std::fs::remove_file(&tmp);
+                    }
                 }
             }
         }
