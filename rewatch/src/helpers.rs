@@ -33,20 +33,35 @@ pub mod emojis {
 }
 
 // Cache existence checks for candidate node_modules paths during upward traversal.
-// Keyed by the absolute candidate path string; value is the existence boolean.
-static NODE_MODULES_EXIST_CACHE: LazyLock<RwLock<ahash::AHashMap<String, bool>>> =
+// Keyed by the absolute candidate path; value is the existence boolean.
+static NODE_MODULES_EXIST_CACHE: LazyLock<RwLock<ahash::AHashMap<PathBuf, bool>>> =
     LazyLock::new(|| RwLock::new(ahash::AHashMap::new()));
 
 fn cached_path_exists(path: &Path) -> bool {
-    let key = path.to_string_lossy().to_string();
-    if let Ok(cache) = NODE_MODULES_EXIST_CACHE.read() {
-        if let Some(exists) = cache.get(&key) {
-            return *exists;
+    match NODE_MODULES_EXIST_CACHE.read() {
+        Ok(cache) => {
+            if let Some(exists) = cache.get(path) {
+                return *exists;
+            }
+        }
+        Err(poisoned) => {
+            log::warn!("NODE_MODULES_EXIST_CACHE read lock poisoned; recovering");
+            let cache = poisoned.into_inner();
+            if let Some(exists) = cache.get(path) {
+                return *exists;
+            }
         }
     }
     let exists = path.exists();
-    if let Ok(mut cache) = NODE_MODULES_EXIST_CACHE.write() {
-        cache.insert(key, exists);
+    match NODE_MODULES_EXIST_CACHE.write() {
+        Ok(mut cache) => {
+            cache.insert(path.to_path_buf(), exists);
+        }
+        Err(poisoned) => {
+            log::warn!("NODE_MODULES_EXIST_CACHE write lock poisoned; recovering");
+            let mut cache = poisoned.into_inner();
+            cache.insert(path.to_path_buf(), exists);
+        }
     }
     exists
 }
