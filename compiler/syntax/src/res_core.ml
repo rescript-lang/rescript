@@ -97,6 +97,8 @@ module ErrorMessages = struct
      ...b}` wouldn't make sense, as `b` would override every field of `a` \
      anyway."
 
+  let dict_expr_spread = "Dict literals do not support spread (`...`) yet."
+
   let variant_ident =
     "A polymorphic variant (e.g. #id) must start with an alphabetical letter \
      or be a number (e.g. #742)"
@@ -3368,6 +3370,11 @@ and parse_record_expr_row p :
 
 and parse_dict_expr_row p =
   match p.Parser.token with
+  | DotDotDot ->
+    Parser.err p (Diagnostics.message ErrorMessages.dict_expr_spread);
+    Parser.next p;
+    let _spread_expr = parse_constrained_or_coerced_expr p in
+    None
   | String s -> (
     let loc = mk_loc p.start_pos p.end_pos in
     Parser.next p;
