@@ -118,6 +118,7 @@ jobs:
         with:
           toolchain: 1.88.0
           targets: ${{ matrix.rust-target }}
+          components: clippy
 
       - name: Build rewatch
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
