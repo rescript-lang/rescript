@@ -199,7 +199,7 @@ pub fn generate_asts(
                         &build_state.bsc_path,
                     ) {
                         has_failure = true;
-                        stderr.push_str(&format!("{}\n", err));
+                        stderr.push_str(&format!("{err}\n"));
                     }
                     let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
 
