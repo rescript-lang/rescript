@@ -352,7 +352,7 @@ pub fn flatten_ppx_flags(
                             let path = helpers::try_package_path(
                                 package_config,
                                 project_context,
-                                format!("{}{}{}", &package_config.name, MAIN_SEPARATOR, y).as_str(),
+                                &format!("{}{}{}", &package_config.name, MAIN_SEPARATOR, y),
                             )
                             .map(|p| p.to_string_lossy().to_string())?;
 
@@ -374,7 +374,7 @@ pub fn flatten_ppx_flags(
                         Some('.') => helpers::try_package_path(
                             package_config,
                             project_context,
-                            format!("{}{}{}", package_config.name, MAIN_SEPARATOR, &ys[0]).as_str(),
+                            &format!("{}{}{}", package_config.name, MAIN_SEPARATOR, &ys[0]),
                         )
                         .map(|p| p.to_string_lossy().to_string())?,
                         _ => helpers::try_package_path(package_config, project_context, &ys[0])

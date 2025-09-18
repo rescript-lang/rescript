@@ -31,6 +31,7 @@
 #### :nail_care: Polish
 
 - Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
+- Rewatch: Traverse upwards for package resolution in single context projects. https://github.com/rescript-lang/rescript/pull/7896
 
 #### :house: Internal
 

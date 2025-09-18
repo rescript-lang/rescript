@@ -164,6 +164,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/standalone@workspace:packages/standalone":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/standalone@workspace:packages/standalone"
+  dependencies:
+    "@testrepo/dep01": "npm:*"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/with-dev-deps@workspace:packages/with-dev-deps":
   version: 0.0.0-use.local
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"

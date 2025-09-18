@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
+use std::sync::{LazyLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
@@ -29,6 +30,40 @@ pub mod emojis {
     pub static SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
     pub static COMPILE_STATE: Emoji<'_, '_> = Emoji("📝 ", "");
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
+}
+
+// Cache existence checks for candidate node_modules paths during upward traversal.
+// Keyed by the absolute candidate path; value is the existence boolean.
+static NODE_MODULES_EXIST_CACHE: LazyLock<RwLock<ahash::AHashMap<PathBuf, bool>>> =
+    LazyLock::new(|| RwLock::new(ahash::AHashMap::new()));
+
+fn cached_path_exists(path: &Path) -> bool {
+    match NODE_MODULES_EXIST_CACHE.read() {
+        Ok(cache) => {
+            if let Some(exists) = cache.get(path) {
+                return *exists;
+            }
+        }
+        Err(poisoned) => {
+            log::warn!("NODE_MODULES_EXIST_CACHE read lock poisoned; recovering");
+            let cache = poisoned.into_inner();
+            if let Some(exists) = cache.get(path) {
+                return *exists;
+            }
+        }
+    }
+    let exists = path.exists();
+    match NODE_MODULES_EXIST_CACHE.write() {
+        Ok(mut cache) => {
+            cache.insert(path.to_path_buf(), exists);
+        }
+        Err(poisoned) => {
+            log::warn!("NODE_MODULES_EXIST_CACHE write lock poisoned; recovering");
+            let mut cache = poisoned.into_inner();
+            cache.insert(path.to_path_buf(), exists);
+        }
+    }
+    exists
 }
 
 /// This trait is used to strip the verbatim prefix from a Windows path.
@@ -154,10 +189,61 @@ pub fn try_package_path(
     } else if path_from_root.exists() {
         Ok(path_from_root)
     } else {
+        // As a last resort, when we're in a Single project context, traverse upwards
+        // starting from the parent of the package root (package_config.path.parent().parent())
+        // and probe each ancestor's node_modules for the dependency. This covers hoisted
+        // workspace setups when building a package standalone.
+        if project_context.monorepo_context.is_none() {
+            match package_config.path.parent().and_then(|p| p.parent()) {
+                Some(start_dir) => {
+                    return find_dep_in_upward_node_modules(start_dir, package_name);
+                }
+                None => {
+                    log::debug!(
+                        "try_package_path: cannot compute start directory for upward traversal from '{}'",
+                        package_config.path.to_string_lossy()
+                    );
+                }
+            }
+        }
+
         Err(anyhow!(
             "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
         ))
     }
+}
+
+fn find_dep_in_upward_node_modules(start_dir: &Path, package_name: &str) -> anyhow::Result<PathBuf> {
+    log::debug!(
+        "try_package_path: falling back to upward traversal for '{}' starting at '{}'",
+        package_name,
+        start_dir.to_string_lossy()
+    );
+
+    let mut current = Some(start_dir);
+    while let Some(dir) = current {
+        let candidate = package_path(dir, package_name);
+        log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
+        if cached_path_exists(&candidate) {
+            log::debug!(
+                "try_package_path: found '{}' at '{}' via upward traversal",
+                package_name,
+                candidate.to_string_lossy()
+            );
+            return Ok(candidate);
+        }
+        current = dir.parent();
+    }
+    log::debug!(
+        "try_package_path: no '{}' found during upward traversal from '{}'",
+        package_name,
+        start_dir.to_string_lossy()
+    );
+    Err(anyhow!(
+        "try_package_path: upward traversal did not find '{}' starting at '{}'",
+        package_name,
+        start_dir.to_string_lossy()
+    ))
 }
 
 pub fn get_abs_path(path: &Path) -> PathBuf {

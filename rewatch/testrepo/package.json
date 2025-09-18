@@ -16,7 +16,8 @@
       "packages/file-casing-no-namespace",
       "packages/pure-dev",
       "packages/with-ppx",
-      "packages/nohoist"
+      "packages/nohoist",
+      "packages/standalone"
     ],
     "nohoist": [
       "rescript-bun"
@@ -26,11 +27,11 @@
     "rescript": "12.0.0-beta.1"
   },
   "scripts": {
-    "build": "../target/release/rewatch build .",
+    "build": "../target/release/rescript build .",
     "build:rescript": "rescript legacy build",
-    "watch": "../target/release/rewatch watch .",
+    "watch": "../target/release/rescript watch .",
     "watch:rescript": "rescript legacy watch",
-    "clean": "../target/release/rewatch clean .",
+    "clean": "../target/release/rescript clean .",
     "clean:rescript": "rescript clean"
   }
 }
