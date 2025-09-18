@@ -970,9 +970,11 @@ module Compile = struct
     | Texp_try (e, cases, finally_expr) ->
       let cE = e |> expression ~ctx in
       let cCases = cases |> List.map (case ~ctx) |> Command.nondet in
-      let cFinally = finally_expr |> expressionOpt ~ctx in
       let open Command in
-      cE +++ cCases +++ cFinally
+      begin match finally_expr with
+      | Some finally -> cE +++ cCases +++ (finally |> expression ~ctx)
+      | None -> cE +++ cCases
+      end
     | Texp_variant (_label, eOpt) -> eOpt |> expressionOpt ~ctx
     | Texp_while _ ->
       notImplemented "Texp_while";
