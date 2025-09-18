@@ -967,14 +967,13 @@ module Compile = struct
     | Texp_tuple expressions | Texp_array expressions ->
       expressions |> List.map (expression ~ctx) |> Command.unorderedSequence
     | Texp_assert _ -> Command.nothing
-    | Texp_try (e, cases, finally_expr) ->
+    | Texp_try (e, cases, finally_expr) -> (
       let cE = e |> expression ~ctx in
       let cCases = cases |> List.map (case ~ctx) |> Command.nondet in
       let open Command in
-      begin match finally_expr with
+      match finally_expr with
       | Some finally -> cE +++ cCases +++ (finally |> expression ~ctx)
-      | None -> cE +++ cCases
-      end
+      | None -> cE +++ cCases)
     | Texp_variant (_label, eOpt) -> eOpt |> expressionOpt ~ctx
     | Texp_while _ ->
       notImplemented "Texp_while";
