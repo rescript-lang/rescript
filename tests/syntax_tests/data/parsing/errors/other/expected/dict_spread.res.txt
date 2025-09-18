@@ -2,10 +2,10 @@
   Syntax error!
   syntax_tests/data/parsing/errors/other/dict_spread.res:1:14-16
 
-  1 │ let x = dict{...foo}
+  1 │ let x = dict{...foo, "bar": 3}
   2 │ 
   3 │ 
 
   Dict literals do not support spread (`...`) yet.
 
-let x = Primitive_dict.make [||]
+let x = Primitive_dict.make [|("bar", 3)|]

@@ -31,6 +31,7 @@
 #### :nail_care: Polish
 
 - Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
+- Dedicated error for dict literal spreads. https://github.com/rescript-lang/rescript/pull/7901
 
 #### :house: Internal
 

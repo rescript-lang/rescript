@@ -3373,6 +3373,7 @@ and parse_dict_expr_row p =
   | DotDotDot ->
     Parser.err p (Diagnostics.message ErrorMessages.dict_expr_spread);
     Parser.next p;
+    (* Parse the expr so it's consumed *)
     let _spread_expr = parse_constrained_or_coerced_expr p in
     None
   | String s -> (
