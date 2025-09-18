@@ -12,6 +12,32 @@ make && make test
 make format && make checkformat
 ```
 
+## Container Tooling Setup
+
+The base container image does not ship with the OCaml toolchain or `dune`.
+Install them once per container session before running any compiler builds or
+tests:
+
+```bash
+# Install the OCaml 4.14 toolchain and findlib support
+apt-get update
+apt-get install -y ocaml-nox ocaml-native-compilers ocaml-findlib m4 pkg-config
+
+# Build and install dune ≥3.20 from source
+curl -LO https://github.com/ocaml/dune/releases/download/3.20.2/dune-3.20.2.tbz
+tar -xf dune-3.20.2.tbz
+cd dune-3.20.2 && make release
+install -m 0755 _build/default/src/dune.exe /usr/local/bin/dune
+cd .. && rm -rf dune-3.20.2 dune-3.20.2.tbz
+
+# Verify dune is available
+dune --version
+```
+
+These steps match the manual bootstrapping previously performed in the
+container, ensuring subsequent `make`/`dune` commands succeed without relying
+on external package mirrors such as `opam.ocaml.org`.
+
 ## ⚠️ Critical Guidelines & Common Pitfalls
 
 - **We are NOT bound by OCaml compatibility** - The ReScript compiler originated as a fork of the OCaml compiler, but we maintain our own AST and can make breaking changes. Focus on what's best for ReScript's JavaScript compilation target.
