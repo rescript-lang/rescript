@@ -32,6 +32,7 @@
 
 - Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
 - Dedicated error for dict literal spreads. https://github.com/rescript-lang/rescript/pull/7901
+- Dedicated error message for when mixing up `:` and `=` in various positions. https://github.com/rescript-lang/rescript/pull/7900
 
 #### :house: Internal
 
