@@ -419,7 +419,16 @@ module E = struct
            args)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_try (e, pel, _) ->
+    | Pexp_try (e, pel, finally_expr) ->
+      let attrs =
+        match finally_expr with
+        | Some expr ->
+          let finally_attr =
+            sub.attribute sub (Location.mknoloc "res.finally", Parsetree.PPat (Ast_helper.Pat.any (), Some expr))
+          in
+          finally_attr :: attrs
+        | None -> attrs
+      in
       try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_construct (lid, arg) ->

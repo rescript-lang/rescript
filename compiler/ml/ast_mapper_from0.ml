@@ -310,6 +310,20 @@ module E = struct
         | _ -> true)
       attrs
 
+  let extract_finally_attribute attrs =
+    List.find_map
+      (function
+        | {Location.txt = "res.finally"}, Pt.PPat (_, Some expr) -> Some expr
+        | _ -> None)
+      attrs
+
+  let remove_finally_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt = "res.finally"}, _ -> false
+        | _ -> true)
+      attrs
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
@@ -460,8 +474,9 @@ module E = struct
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) ->
-      try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-        (Some (ident {txt = Longident.Lident "_"; loc}))
+      let finally_expr = extract_finally_attribute attrs in
+      let attrs = remove_finally_attribute attrs in
+      try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel) finally_expr
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
     (* <></> *)
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
