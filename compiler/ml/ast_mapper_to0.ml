@@ -424,7 +424,9 @@ module E = struct
         match finally_expr with
         | Some expr ->
           let finally_attr =
-            sub.attribute sub (Location.mknoloc "res.finally", Parsetree.PPat (Ast_helper.Pat.any (), Some expr))
+            sub.attribute sub
+              ( Location.mknoloc "res.finally",
+                Parsetree.PPat (Ast_helper.Pat.any (), Some expr) )
           in
           finally_attr :: attrs
         | None -> attrs
