@@ -764,9 +764,6 @@ fn compile_file(
                 }
             });
 
-            // TODO: Optionally record per-module successful compile timestamps if needed
-            //       for future metadata-based invalidation. Current metadata is per-package.
-
             if helpers::contains_ascii_characters(&err) {
                 if package.is_local_dep {
                     // suppress warnings of external deps
