@@ -1159,12 +1159,18 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
   in
   match (record_fields, spread_props) with
   | [], Some spread_props ->
-    {pexp_desc = spread_props.pexp_desc; pexp_loc = loc; pexp_attributes = []}
+    {
+      pexp_desc = spread_props.pexp_desc;
+      pexp_loc = loc;
+      pexp_attributes = [];
+      pexp_is_return = false;
+    }
   | record_fields, spread_props ->
     {
       pexp_desc = Pexp_record (record_fields, spread_props);
       pexp_loc = loc;
       pexp_attributes = [];
+      pexp_is_return = false;
     }
 
 let try_find_key_prop (props : jsx_props) : (arg_label * expression) option =

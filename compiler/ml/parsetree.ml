@@ -212,6 +212,7 @@ and expression = {
   pexp_loc: Location.t;
   (* Hack: made pexp_attributes mutable for use in analysis exe. Please do not use elsewhere! *)
   mutable pexp_attributes: attributes; (* ... [@id1] [@id2] *)
+  mutable pexp_is_return: bool;
 }
 
 and expression_desc =

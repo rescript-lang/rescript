@@ -96,6 +96,7 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
             {funct = fn1; args = (Nolabel, a) :: args; partial; transformed_jsx};
         pexp_loc = e.pexp_loc;
         pexp_attributes = e.pexp_attributes @ f.pexp_attributes;
+        pexp_is_return = false;
       }
     | Pexp_tuple xs ->
       bound a (fun bounded_obj_arg ->
@@ -122,11 +123,13 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
                                transformed_jsx;
                              };
                          pexp_attributes = [];
+                         pexp_is_return = false;
                          pexp_loc = fn.pexp_loc;
                        }
                      | _ ->
                        Ast_compatible.app1 ~loc:fn.pexp_loc fn bounded_obj_arg));
             pexp_attributes = f.pexp_attributes;
+            pexp_is_return = false;
             pexp_loc = f.pexp_loc;
           })
     | _ -> Ast_compatible.app1 ~loc ~attrs:e.pexp_attributes f a)
