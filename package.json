@@ -107,6 +107,6 @@
     "tests/tools_tests",
     "scripts/res"
   ],
-  "packageManager": "yarn@4.9.1",
+  "packageManager": "yarn@4.10.2",
   "preferUnplugged": true
 }
