@@ -1,0 +1,22 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/labelledArgumentMissingEqual.res:1:16
+
+  1 │ let _ = fn(~foo:1)
+  2 │ let _ = fn(~bar:?value)
+  3 │ 
+
+  Use `=` to pass a labelled argument. Example: `~label=value`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/labelledArgumentMissingEqual.res:2:16
+
+  1 │ let _ = fn(~foo:1)
+  2 │ let _ = fn(~bar:?value)
+  3 │ 
+
+  Optional labelled arguments use `=?`. Example: `~label=?value`
+
+let _ = fn ~foo:1
+let _ = fn ?bar:value

@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/recordFieldWrongAssignment.res:1:9
+
+  1 │ let {foo=bar} = record
+  2 │ 
+
+  Record patterns use `:` when matching fields. Example: `{field: value}`
+
+let { foo = bar } = record
