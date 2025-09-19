@@ -174,3 +174,27 @@ let all6 = ((a, b, c, d, e, f)) => {
 }
 
 external ignore: result<'res, 'err> => unit = "%ignore"
+
+let mapOkAsync = async (res, f) =>
+  switch await res {
+  | Ok(value) => Ok(f(value))
+  | Error(err) => Error(err)
+  }
+
+let mapErrorAsync = async (res, f) =>
+  switch await res {
+  | Ok(value) => Ok(value)
+  | Error(err) => Error(f(err))
+  }
+
+let flatMapOkAsync = async (res, f) =>
+  switch await res {
+  | Ok(value) => await f(value)
+  | Error(err) => Error(err)
+  }
+
+let flatMapErrorAsync = async (res, f) =>
+  switch await res {
+  | Ok(value) => Ok(value)
+  | Error(err) => await f(err)
+  }
