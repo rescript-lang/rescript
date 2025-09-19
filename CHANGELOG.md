@@ -26,6 +26,8 @@
 
 #### :rocket: New Feature
 
+- Add completions for `throw`. https://github.com/rescript-lang/rescript/pull/7905
+
 #### :bug: Bug fix
 
 - Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
