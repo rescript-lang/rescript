@@ -1,8 +1,8 @@
 use crate::helpers;
 
 use super::build_types::{BuildState, CompilerInfo};
-use super::clean;
 use super::packages;
+use super::{clean, logs};
 use ahash::AHashMap;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -40,8 +40,9 @@ pub fn verify_compiler_info(
         .filter(|package| {
             let info_path = package.get_compiler_info_path();
             let Ok(contents) = std::fs::read_to_string(&info_path) else {
-                // Can't read file → treat as mismatch so we clean and rewrite
-                return true;
+                // Can't read the compiler-info.json file, maybe there is no current build.
+                // We check if the ocaml build folder exists, if not, we assume the compiler is not installed
+                return logs::does_ocaml_build_compiler_log_exist(package);
             };
 
             let parsed: Result<CompilerInfoFile, _> = serde_json::from_str(&contents);
