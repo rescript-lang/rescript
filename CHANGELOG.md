@@ -21,6 +21,7 @@
 #### :rocket: New Feature
 
 - Add `littleEndian` feature for `DataView` to Stdlib. https://github.com/rescript-lang/rescript/pull/7881
+- Add `mapOkAsync`, `mapErrorAsync`, `flatMapOkAsync` and `flatMapErrorAsync` for async `result`'s to Stdlib. https://github.com/rescript-lang/rescript/pull/7906
 
 #### :bug: Bug fix
 
