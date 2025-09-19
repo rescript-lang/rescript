@@ -147,23 +147,30 @@ pub fn initialize_build(
 
     let compiler_check = verify_compiler_info(&packages, &compiler);
 
-    if !snapshot_output && show_progress {
-        println!(
-            "{}{} {}Built package tree in {:.2}s",
-            LINE_CLEAR,
-            style("[1/7]").bold().dim(),
-            TREE,
-            default_timing
-                .unwrap_or(timing_package_tree_elapsed)
-                .as_secs_f64()
-        );
-        if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
+    if show_progress {
+        if snapshot_output {
+            if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
+                // Snapshot-friendly output (no progress prefixes or emojis)
+                println!("Cleaned previous build due to compiler update");
+            }
+        } else {
             println!(
-                "{}{} {}Cleaned previous build due to compiler update",
+                "{}{} {}Built package tree in {:.2}s",
                 LINE_CLEAR,
                 style("[1/7]").bold().dim(),
-                SWEEP
+                TREE,
+                default_timing
+                    .unwrap_or(timing_package_tree_elapsed)
+                    .as_secs_f64()
             );
+            if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
+                println!(
+                    "{}{} {}Cleaned previous build due to compiler update",
+                    LINE_CLEAR,
+                    style("[1/7]").bold().dim(),
+                    SWEEP
+                );
+            }
         }
     }
 
