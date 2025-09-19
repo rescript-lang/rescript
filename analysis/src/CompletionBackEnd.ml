@@ -822,6 +822,35 @@ let predefined_exceptions : (string * bool) list =
     ("Division_by_zero", false);
   ]
 
+let completionsForThrow ~(env : QueryEnv.t) ~full =
+  let exn_typ = Ctype.newconstr Predef.path_exn [] in
+  let names_from_cmt =
+    let moduleName = env.file.moduleName in
+    match Hashtbl.find_opt full.package.pathsForModule moduleName with
+    | None -> []
+    | Some paths -> (
+      let uri = getUri paths in
+      let cmt_path = getCmtPath ~uri paths in
+      match Shared.tryReadCmt cmt_path with
+      | None -> []
+      | Some infos -> exceptions_from_cmt_infos infos)
+  in
+  let all = names_from_cmt @ predefined_exceptions in
+  all
+  |> List.map (fun (name, hasArgs) ->
+         let insertText =
+           if hasArgs then Printf.sprintf "throw(%s($0))" name
+           else Printf.sprintf "throw(%s)" name
+         in
+         let isBuiltin = List.mem (name, hasArgs) predefined_exceptions in
+         let detail =
+           if isBuiltin then "Built-in Exception" else "User-defined Exception"
+         in
+         Completion.create
+           (Printf.sprintf "throw(%s)" name)
+           ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+           ~insertText ~filterText:"throw" ~detail)
+
 (** Completions intended for piping, from a completion path. *)
 let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos
     ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath =
@@ -1116,34 +1145,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     in
     match (result, path) with
     | [], [prefix] when Utils.startsWith "throw" prefix ->
-      let exn_typ = Ctype.newconstr Predef.path_exn [] in
-      let names_from_cmt =
-        let moduleName = env.file.moduleName in
-        match Hashtbl.find_opt full.package.pathsForModule moduleName with
-        | None -> []
-        | Some paths -> (
-          let uri = getUri paths in
-          let cmt_path = getCmtPath ~uri paths in
-          match Shared.tryReadCmt cmt_path with
-          | None -> []
-          | Some infos -> exceptions_from_cmt_infos infos)
-      in
-      let all = names_from_cmt @ predefined_exceptions in
-      all
-      |> List.map (fun (name, hasArgs) ->
-             let insertText =
-               if hasArgs then Printf.sprintf "throw(%s($0))" name
-               else Printf.sprintf "throw(%s)" name
-             in
-             let isBuiltin = List.mem (name, hasArgs) predefined_exceptions in
-             let detail =
-               if isBuiltin then "Built-in Exception"
-               else "User-defined Exception"
-             in
-             Completion.create
-               (Printf.sprintf "throw(%s)" name)
-               ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
-               ~insertText ~filterText:"throw" ~detail)
+      completionsForThrow ~env ~full
     | _ -> result)
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
