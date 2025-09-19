@@ -4738,7 +4738,7 @@ let report_error env loc ppf error =
       fprintf ppf "@,- Missing arguments that must be provided: %s"
         (missing_required_args
         |> List.map (fun v -> "~" ^ v)
-        |> String.concat ", "));
+        |> String.concat ", ");
 
       fprintf ppf
         "@,\
