@@ -31,6 +31,7 @@
 #### :nail_care: Polish
 
 - Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
+- Add completions for `throw`. https://github.com/rescript-lang/rescript/pull/7905
 
 #### :house: Internal
 
