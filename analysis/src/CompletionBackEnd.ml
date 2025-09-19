@@ -1076,34 +1076,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | Some (Tpromise (env, typ), _env) ->
       [Completion.create "dummy" ~env ~kind:(Completion.Value typ)]
     | _ -> [])
-  | CPId {path = ["throw"]; completionContext = Value; loc = _} ->
-    let exn_typ = Ctype.newconstr Predef.path_exn [] in
-    let names_from_cmt =
-      let moduleName = env.file.moduleName in
-      match Hashtbl.find_opt full.package.pathsForModule moduleName with
-      | None -> []
-      | Some paths -> (
-        let uri = getUri paths in
-        let cmt_path = getCmtPath ~uri paths in
-        match Shared.tryReadCmt cmt_path with
-        | None -> []
-        | Some infos -> exceptions_from_cmt_infos infos)
-    in
-    let all = names_from_cmt @ predefined_exceptions in
-    all
-    |> List.map (fun (name, hasArgs) ->
-           let insertText =
-             if hasArgs then Printf.sprintf "(%s($0))" name
-             else Printf.sprintf "(%s)" name
-           in
-           let isBuiltin = List.mem (name, hasArgs) predefined_exceptions in
-           let detail =
-             if isBuiltin then "Built-in Exception"
-             else "User-defined Exception"
-           in
-           Completion.create name ~env ~kind:(Completion.Value exn_typ)
-             ~includesSnippets:true ~insertText ~detail)
-  | CPId {path; completionContext; loc} ->
+  | CPId {path; completionContext; loc} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPId";
     (* Looks up the type of an identifier.
 
@@ -1141,7 +1114,37 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | _ -> byPath
       else byPath
     in
-    result
+    match (result, path) with
+    | [], [prefix] when Utils.startsWith "throw" prefix ->
+      let exn_typ = Ctype.newconstr Predef.path_exn [] in
+      let names_from_cmt =
+        let moduleName = env.file.moduleName in
+        match Hashtbl.find_opt full.package.pathsForModule moduleName with
+        | None -> []
+        | Some paths -> (
+          let uri = getUri paths in
+          let cmt_path = getCmtPath ~uri paths in
+          match Shared.tryReadCmt cmt_path with
+          | None -> []
+          | Some infos -> exceptions_from_cmt_infos infos)
+      in
+      let all = names_from_cmt @ predefined_exceptions in
+      all
+      |> List.map (fun (name, hasArgs) ->
+             let insertText =
+               if hasArgs then Printf.sprintf "throw(%s($0))" name
+               else Printf.sprintf "throw(%s)" name
+             in
+             let isBuiltin = List.mem (name, hasArgs) predefined_exceptions in
+             let detail =
+               if isBuiltin then "Built-in Exception"
+               else "User-defined Exception"
+             in
+             Completion.create
+               (Printf.sprintf "throw(%s)" name)
+               ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+               ~insertText ~filterText:"throw" ~detail)
+    | _ -> result)
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
     match
