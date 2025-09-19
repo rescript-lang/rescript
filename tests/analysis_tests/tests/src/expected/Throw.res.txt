@@ -1,74 +1,83 @@
-Complete src/Throw.res 3:22
-posCursor:[3:22] posNoWhite:[3:21] Found expr:[3:11->3:22]
-posCursor:[3:22] posNoWhite:[3:21] Found expr:[3:17->3:22]
-Pexp_ident throw:[3:17->3:22]
-Completable: Cpath Value[throw]
+Complete src/Throw.res 3:21
+posCursor:[3:21] posNoWhite:[3:20] Found expr:[3:11->3:21]
+posCursor:[3:21] posNoWhite:[3:20] Found expr:[3:17->3:21]
+Pexp_ident thro:[3:17->3:21]
+Completable: Cpath Value[thro]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Value[throw]
+ContextPath Value[thro]
+Path thro
 [{
-    "label": "MyCustomThingToThrow",
+    "label": "throw(MyCustomThingToThrow)",
     "kind": 12,
     "tags": [],
     "detail": "User-defined Exception",
     "documentation": null,
-    "insertText": "(MyCustomThingToThrow($0))",
+    "filterText": "throw",
+    "insertText": "throw(MyCustomThingToThrow($0))",
     "insertTextFormat": 2
   }, {
-    "label": "NoArgsToThrow",
+    "label": "throw(NoArgsToThrow)",
     "kind": 12,
     "tags": [],
     "detail": "User-defined Exception",
     "documentation": null,
-    "insertText": "(NoArgsToThrow)",
+    "filterText": "throw",
+    "insertText": "throw(NoArgsToThrow)",
     "insertTextFormat": 2
   }, {
-    "label": "Not_found",
+    "label": "throw(Not_found)",
     "kind": 12,
     "tags": [],
     "detail": "Built-in Exception",
     "documentation": null,
-    "insertText": "(Not_found($0))",
+    "filterText": "throw",
+    "insertText": "throw(Not_found($0))",
     "insertTextFormat": 2
   }, {
-    "label": "Invalid_argument",
+    "label": "throw(Invalid_argument)",
     "kind": 12,
     "tags": [],
     "detail": "Built-in Exception",
     "documentation": null,
-    "insertText": "(Invalid_argument($0))",
+    "filterText": "throw",
+    "insertText": "throw(Invalid_argument($0))",
     "insertTextFormat": 2
   }, {
-    "label": "Assert_failure",
+    "label": "throw(Assert_failure)",
     "kind": 12,
     "tags": [],
     "detail": "Built-in Exception",
     "documentation": null,
-    "insertText": "(Assert_failure($0))",
+    "filterText": "throw",
+    "insertText": "throw(Assert_failure($0))",
     "insertTextFormat": 2
   }, {
-    "label": "Failure",
+    "label": "throw(Failure)",
     "kind": 12,
     "tags": [],
     "detail": "Built-in Exception",
     "documentation": null,
-    "insertText": "(Failure($0))",
+    "filterText": "throw",
+    "insertText": "throw(Failure($0))",
     "insertTextFormat": 2
   }, {
-    "label": "Match_failure",
+    "label": "throw(Match_failure)",
     "kind": 12,
     "tags": [],
     "detail": "Built-in Exception",
     "documentation": null,
-    "insertText": "(Match_failure($0))",
+    "filterText": "throw",
+    "insertText": "throw(Match_failure($0))",
     "insertTextFormat": 2
   }, {
-    "label": "Division_by_zero",
+    "label": "throw(Division_by_zero)",
     "kind": 12,
     "tags": [],
     "detail": "Built-in Exception",
     "documentation": null,
-    "insertText": "(Division_by_zero)",
+    "filterText": "throw",
+    "insertText": "throw(Division_by_zero)",
     "insertTextFormat": 2
   }]
 
