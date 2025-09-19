@@ -24,6 +24,8 @@
 
 #### :nail_care: Polish
 
+- Keep track of compiler info during build. https://github.com/rescript-lang/rescript/pull/7889
+
 #### :house: Internal
 
 # 12.0.0-beta.12
