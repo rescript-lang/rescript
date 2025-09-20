@@ -127,7 +127,7 @@ async function main() {
       if (code.length === 0) {
         return;
       } else {
-        return `test("` + example.name + `", () => {
+        return `testAsync("` + example.name + `", async () => {
   module Test = {
     ` + code + `
   }

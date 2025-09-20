@@ -141,9 +141,9 @@ let main = async () => {
         } else {
           // Let's add the examples inside a Test module because some examples
           // have type definitions that are not supported inside a block.
-          // Also add unit type `()`
+          // Also add unit type `()`. Also wrap in async to make top-level awaits work.
           Some(
-            `test("${example.name}", () => {
+            `testAsync("${example.name}", async () => {
   module Test = {
     ${code}
   }
