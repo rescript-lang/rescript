@@ -335,7 +335,7 @@ let traverseAst () =
             kind = Raises;
           }
           :: !currentEvents
-    | Texp_try (e, cases) ->
+    | Texp_try (e, cases, finally_expr) ->
       let exceptions =
         cases
         |> List.map (fun case -> case.Typedtree.c_lhs.pat_desc)
@@ -346,7 +346,8 @@ let traverseAst () =
       e |> iterExpr self;
       currentEvents :=
         {Event.exceptions; loc; kind = Catches !currentEvents} :: oldEvents;
-      cases |> iterCases self
+      cases |> iterCases self;
+      finally_expr |> iterExprOpt self
     | _ -> super.expr self expr |> ignore);
     (if isDoesNoRaise then
        let nestedEvents = !currentEvents in

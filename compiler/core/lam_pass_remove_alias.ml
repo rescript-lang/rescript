@@ -270,7 +270,9 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       Lam.stringswitch l (Ext_list.map_snd sw simpl) (Ext_option.map d simpl)
     | Lstaticraise (i, ls) -> Lam.staticraise i (Ext_list.map ls simpl)
     | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (simpl l1) ids (simpl l2)
-    | Ltrywith (l1, v, l2) -> Lam.try_ (simpl l1) v (simpl l2)
+    | Ltrywith (l1, v, l2, finally_expr) ->
+      Lam.try_ (simpl l1) v (Ext_option.map l2 simpl)
+        (Ext_option.map finally_expr simpl)
     | Lsequence (l1, l2) -> Lam.seq (simpl l1) (simpl l2)
     | Lwhile (l1, l2) -> Lam.while_ (simpl l1) (simpl l2)
     | Lfor (flag, l1, l2, dir, l3) ->

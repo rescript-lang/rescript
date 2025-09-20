@@ -1581,10 +1581,10 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
         match fin with
         | None -> cxt
         | Some b ->
-          P.group f 1 (fun _ ->
-              P.string f L.finally;
-              P.space f;
-              brace_block cxt f b))
+          P.space f;
+          P.string f L.finally;
+          P.space f;
+          brace_block cxt f b)
 
 and function_body ?directive (cxt : cxt) f ~return_unit (b : J.block) : unit =
   (match directive with

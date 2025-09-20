@@ -115,9 +115,10 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
       iter sink_pos e1;
       local_add_list vars;
       iter sink_pos e2
-    | Ltrywith (e1, _exn, e2) ->
+    | Ltrywith (e1, _exn, e2, finally_expr) ->
       iter top e1;
-      iter sink_pos e2
+      Ext_option.iter e2 (iter sink_pos);
+      Ext_option.iter finally_expr (iter sink_pos)
     | Lifthenelse (e1, e2, e3) ->
       iter top e1;
       let top = Lam_var_stats.new_position_after_lam e1 top in
