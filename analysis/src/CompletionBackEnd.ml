@@ -756,6 +756,101 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
         findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
       | None -> []))
 
+(* Collect exception constructor names from cmt infos. *)
+let exceptions_from_cmt_infos (infos : Cmt_format.cmt_infos) :
+    (string * bool) list =
+  let by_name : (string, bool) Hashtbl.t = Hashtbl.create 16 in
+  let add_ext (ext : Typedtree.extension_constructor) : unit =
+    let name = ext.ext_name.txt in
+    let hasArgs =
+      match ext.ext_kind with
+      | Text_decl (Cstr_tuple args, _ret) -> args <> []
+      | Text_decl (Cstr_record fields, _ret) -> fields <> []
+      | Text_rebind _ -> true
+    in
+    let prev =
+      match Hashtbl.find_opt by_name name with
+      | Some b -> b
+      | None -> false
+    in
+    Hashtbl.replace by_name name (prev || hasArgs)
+  in
+  let rec of_structure_items (items : Typedtree.structure_item list) : unit =
+    match items with
+    | [] -> ()
+    | item :: rest ->
+      (match item.str_desc with
+      | Tstr_exception ext -> add_ext ext
+      | _ -> ());
+      of_structure_items rest
+  in
+  let rec of_signature_items (items : Typedtree.signature_item list) : unit =
+    match items with
+    | [] -> ()
+    | item :: rest ->
+      (match item.sig_desc with
+      | Tsig_exception ext -> add_ext ext
+      | _ -> ());
+      of_signature_items rest
+  in
+  let of_parts (parts : Cmt_format.binary_part array) : unit =
+    Array.iter
+      (function
+        | Cmt_format.Partial_structure s -> of_structure_items s.str_items
+        | Partial_structure_item si -> of_structure_items [si]
+        | Partial_signature s -> of_signature_items s.sig_items
+        | Partial_signature_item si -> of_signature_items [si]
+        | _ -> ())
+      parts
+  in
+  (match infos.cmt_annots with
+  | Cmt_format.Implementation s -> of_structure_items s.str_items
+  | Interface s -> of_signature_items s.sig_items
+  | Partial_implementation parts -> of_parts parts
+  | Partial_interface parts -> of_parts parts
+  | _ -> ());
+  Hashtbl.fold (fun name hasArgs acc -> (name, hasArgs) :: acc) by_name []
+
+(* Predefined Stdlib/Pervasives exceptions. *)
+let predefined_exceptions : (string * bool) list =
+  [
+    ("Not_found", true);
+    ("Invalid_argument", true);
+    ("Assert_failure", true);
+    ("Failure", true);
+    ("Match_failure", true);
+    ("Division_by_zero", false);
+  ]
+
+let completionsForThrow ~(env : QueryEnv.t) ~full =
+  let exn_typ = Ctype.newconstr Predef.path_exn [] in
+  let names_from_cmt =
+    let moduleName = env.file.moduleName in
+    match Hashtbl.find_opt full.package.pathsForModule moduleName with
+    | None -> []
+    | Some paths -> (
+      let uri = getUri paths in
+      let cmt_path = getCmtPath ~uri paths in
+      match Shared.tryReadCmt cmt_path with
+      | None -> []
+      | Some infos -> exceptions_from_cmt_infos infos)
+  in
+  let all = names_from_cmt @ predefined_exceptions in
+  all
+  |> List.map (fun (name, hasArgs) ->
+         let insertText =
+           if hasArgs then Printf.sprintf "throw(%s($0))" name
+           else Printf.sprintf "throw(%s)" name
+         in
+         let isBuiltin = List.mem (name, hasArgs) predefined_exceptions in
+         let detail =
+           if isBuiltin then "Built-in Exception" else "User-defined Exception"
+         in
+         Completion.create
+           (Printf.sprintf "throw(%s)" name)
+           ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+           ~insertText ~filterText:"throw" ~detail)
+
 (** Completions intended for piping, from a completion path. *)
 let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos
     ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath =
@@ -1010,7 +1105,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | Some (Tpromise (env, typ), _env) ->
       [Completion.create "dummy" ~env ~kind:(Completion.Value typ)]
     | _ -> [])
-  | CPId {path; completionContext; loc} ->
+  | CPId {path; completionContext; loc} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPId";
     (* Looks up the type of an identifier.
 
@@ -1048,7 +1143,10 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | _ -> byPath
       else byPath
     in
-    result
+    match (result, path) with
+    | [], [prefix] when Utils.startsWith "throw" prefix ->
+      completionsForThrow ~env ~full
+    | _ -> result)
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
     match
