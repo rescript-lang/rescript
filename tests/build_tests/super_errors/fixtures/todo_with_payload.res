@@ -2,4 +2,4 @@ let implementMeLater = (): string => %todo("This should return a string eventual
 
 let x = implementMeLater()
 
-Js.log(x->Js.String2.includes("x"))
+Console.log(x->String.includes("x"))
