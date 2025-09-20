@@ -330,10 +330,16 @@ When `res` is `Error`, returns the error unchanged.
 ## Examples
 
 ```rescript
-let asyncSquare = async x => x * x
+  let square = x => x * x
 
-let result1 = Result.mapOkAsync(Promise.resolve(Ok(4)), asyncSquare) // Returns promise that resolves to Ok(16)
-let result2 = Result.mapOkAsync(Promise.resolve(Error("invalid")), asyncSquare) // Returns promise that resolves to Error("invalid")
+  let result1 = await Result.mapOkAsync(Promise.resolve(Ok(4)), square)
+  result1 == Ok(16)
+
+  let result2 = await Result.mapOkAsync(
+    Promise.resolve(Error("invalid")),
+    square,
+  )
+  result2 == Error("invalid")
 ```
 */
 let mapOkAsync: (
@@ -349,10 +355,13 @@ When `res` is `Ok`, returns the ok value unchanged.
 ## Examples
 
 ```rescript
-let asyncFormatError = async e => `Error: ${e}`
+let formatError = e => `Error: ${e}`
 
-let result1 = Result.mapErrorAsync(Promise.resolve(Ok(42)), asyncFormatError) // Returns promise that resolves to Ok(42)
-let result2 = Result.mapErrorAsync(Promise.resolve(Error("invalid")), asyncFormatError) // Returns promise that resolves to Error("Error: invalid")
+let result1 = await Result.mapErrorAsync(Promise.resolve(Ok(42)), formatError)
+result1 == Ok(42)
+
+let result2 = await Result.mapErrorAsync(Promise.resolve(Error("invalid")), formatError)
+result2 == Error("Error: invalid")
 ```
 */
 let mapErrorAsync: (
@@ -368,15 +377,21 @@ When `res` is `Error`, returns the error unchanged.
 ## Examples
 
 ```rescript
-let asyncValidate = async x => 
+let asyncValidate = async x =>
   if x > 0 {
     Ok(x * 2)
   } else {
     Error("Must be positive")
   }
 
-let result1 = Result.flatMapOkAsync(Promise.resolve(Ok(5)), asyncValidate) // Returns promise that resolves to Ok(10)
-let result2 = Result.flatMapOkAsync(Promise.resolve(Error("Already failed")), asyncValidate) // Returns promise that resolves to Error("Already failed")
+let result1 = await Result.flatMapOkAsync(Promise.resolve(Ok(5)), asyncValidate)
+result1 == Ok(10)
+
+let result2 = await Result.flatMapOkAsync(
+  Promise.resolve(Error("Already failed")),
+  asyncValidate,
+)
+result2 == Error("Already failed")
 ```
 */
 let flatMapOkAsync: (
@@ -392,15 +407,24 @@ When `res` is `Ok`, returns the ok value unchanged.
 ## Examples
 
 ```rescript
-let asyncRecover = async error => 
+let asyncRecover = async error =>
   if error === "timeout" {
     Ok("default")
   } else {
     Error(error)
   }
 
-let result1 = Result.flatMapErrorAsync(Promise.resolve(Error("timeout")), asyncRecover) // Returns promise that resolves to Ok("default")
-let result2 = Result.flatMapErrorAsync(Promise.resolve(Ok("default")), asyncRecover) // Returns promise that resolves to Ok("default")
+let result1 = await Result.flatMapErrorAsync(
+  Promise.resolve(Error("timeout")),
+  asyncRecover,
+)
+result1 == Ok("default")
+
+let result2 = await Result.flatMapErrorAsync(
+  Promise.resolve(Ok("default")),
+  asyncRecover,
+)
+result2 == Ok("default")
 ```
 */
 let flatMapErrorAsync: (
