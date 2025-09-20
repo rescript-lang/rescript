@@ -2625,7 +2625,7 @@ Path g
     "kind": 12,
     "tags": [],
     "detail": "(result<'a, 'b>, ~message: string=?) => 'a",
-    "documentation": {"kind": "markdown", "value": "\n  `getOrThrow(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n  ```res example\n  Result.getOrThrow(Result.Ok(42)) == 42\n  \n  switch Result.getOrThrow(Error(\"Invalid data\")) {\n  | exception _ => assert(true)\n  | _ => assert(false)\n  }\n\n  switch Result.getOrThrow(Error(\"Invalid data\"), ~message=\"was Error!\") {\n  | exception _ => assert(true) // Throws a JsError with the message \"was Error!\"\n  | _ => assert(false)\n  }\n  ```\n"}
+    "documentation": {"kind": "markdown", "value": "\n  `getOrThrow(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n  ```res example\n  Result.getOrThrow(Result.Ok(42)) == 42\n  \n  switch Result.getOrThrow(Error(\"Invalid data\")) {\n  | exception _ => true\n  | _ => false\n  } == true\n\n  switch Result.getOrThrow(Error(\"Invalid data\"), ~message=\"was Error!\") {\n  | exception _ => true // Throws a JsError with the message \"was Error!\"\n  | _ => false\n  } == true\n  ```\n"}
   }, {
     "label": "Result.getOr",
     "kind": 12,
