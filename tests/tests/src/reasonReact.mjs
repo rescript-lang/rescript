@@ -92,17 +92,6 @@ function wrapReasonForJs(component, jsPropsToReason) {
 let dummyInteropComponent = basicComponent("interop");
 
 function wrapJsForReason(reactClass, props, children) {
-  let jsElementWrapped = (extra, extra$1) => {
-    let props$1 = Object.assign(Object.assign({}, props), {
-      ref: extra$1,
-      key: extra
-    });
-    let varargs = Js_array.concat(children, [
-      reactClass,
-      props$1
-    ]);
-    return React.createElement.apply(null, varargs);
-  };
   return {
     debugName: dummyInteropComponent.debugName,
     reactClassInternal: dummyInteropComponent.reactClassInternal,
@@ -117,7 +106,17 @@ function wrapJsForReason(reactClass, props, children) {
     initialState: dummyInteropComponent.initialState,
     retainedProps: dummyInteropComponent.retainedProps,
     reducer: dummyInteropComponent.reducer,
-    jsElementWrapped: jsElementWrapped
+    jsElementWrapped: (extra, extra$1) => {
+      let props$1 = Object.assign(Object.assign({}, props), {
+        ref: extra$1,
+        key: extra
+      });
+      let varargs = Js_array.concat(children, [
+        reactClass,
+        props$1
+      ]);
+      return React.createElement.apply(null, varargs);
+    }
   };
 }
 

@@ -8,6 +8,25 @@ let x6 = {
   x: 42
 };
 
+let x10 = null;
+
+let x11 = Primitive_option.some(undefined);
+
+let x1 = "hello";
+
+let x2 = 1;
+
+let x3 = {
+  TAG: "Ok",
+  _0: "hi"
+};
+
+let x4 = "polyvar";
+
+let x5 = {
+  x: 42
+};
+
 let x7 = [
   1,
   2,
@@ -16,9 +35,7 @@ let x7 = [
 
 let x8 = () => {};
 
-let x10 = null;
-
-let x11 = Primitive_option.some(undefined);
+let x12 = "test";
 
 let x20 = null;
 
@@ -68,35 +85,18 @@ let x42 = new Intl.PluralRules();
 
 let x43 = new Intl.Locale("en");
 
-let x45 = Promise.resolve(true);
-
-let x47 = {};
-
-let x48 = Stdlib_Lazy.make(() => true);
-
-let x1 = "hello";
-
-let x2 = 1;
-
-let x3 = {
-  TAG: "Ok",
-  _0: "hi"
-};
-
-let x4 = "polyvar";
-
-let x5 = {
-  x: 42
-};
-
-let x12 = "test";
-
 let x44 = [
   1,
   2
 ];
 
+let x45 = Promise.resolve(true);
+
 let x46 = /* [] */0;
+
+let x47 = {};
+
+let x48 = Stdlib_Lazy.make(() => true);
 
 export {
   x1,

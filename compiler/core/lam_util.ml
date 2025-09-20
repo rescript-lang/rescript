@@ -93,6 +93,9 @@ let refine_let
         since function evaluation is always delayed
     *)
     Lam.let_ Alias param arg l
+  | (Strict | StrictOpt),
+    ( Lprim {primitive = Psome_not_nest; _} as prim ), _ ->
+    Lam.let_ Alias param prim l
   | ( (Strict | StrictOpt ) ), (Lfunction _ ), _ ->
     (*It can be promoted to [Alias], however, 
         we don't want to do this, since we don't want the 

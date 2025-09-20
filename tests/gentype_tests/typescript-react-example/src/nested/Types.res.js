@@ -57,8 +57,6 @@ function testInstantiateTypeParameter(x) {
 
 let currentTime = new Date();
 
-let optFunction = () => 3;
-
 let ObjectId = {};
 
 let someIntList = {
@@ -79,6 +77,8 @@ let stringT = "a";
 let jsStringT = "a";
 
 let jsString2T = "a";
+
+let optFunction = () => 3;
 
 export {
   someIntList,

@@ -3,9 +3,7 @@
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 function boolean(val1, val2) {
-  let a = val1;
-  let b = val2;
-  if (b || a) {
+  if (val2 || val1) {
     return "a";
   } else {
     return "b";
@@ -33,8 +31,7 @@ function constant() {
 }
 
 function param(opt) {
-  let x = opt;
-  console.log(x);
+  console.log(opt);
 }
 
 export {
