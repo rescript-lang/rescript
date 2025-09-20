@@ -57,6 +57,7 @@ type error =
   | Duplicated_bs_as
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
+  | TagFieldNameConflict of string * string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -90,6 +91,11 @@ let report_error ppf =
       | DuplicateLiteral s -> "Duplicate literal " ^ s ^ "."
       | ConstructorMoreThanOneArg name ->
         "Constructor " ^ name ^ " has more than one argument.")
+  | TagFieldNameConflict (constructor_name, field_name) ->
+    fprintf ppf
+      "Constructor %s: the @tag name \"%s\" conflicts with inline record field \
+       \"%s\". Use a different @tag name or rename the field."
+      constructor_name field_name field_name
 
 (* Type of the runtime representation of an untagged block (case with payoad) *)
 type block_type =
@@ -317,6 +323,19 @@ let process_tag_name (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
+let process_as_name (attrs : Parsetree.attributes) =
+  let st = ref None in
+  Ext_list.iter attrs (fun ({txt; loc}, payload) ->
+      match txt with
+      | "as" ->
+        if !st = None then
+          match Ast_payload.is_single_string payload with
+          | None -> ()
+          | Some (s, _dec) -> st := Some s
+        else raise (Error (loc, Duplicated_bs_as))
+      | _ -> ());
+  !st
+
 let get_tag_name (cstr : Types.constructor_declaration) =
   process_tag_name cstr.cd_attributes
 
@@ -462,12 +481,42 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
   let blocks = Ext_array.reverse_of_list blocks in
   Some {consts; blocks}
 
+let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
+  List.iter
+    (fun (cstr : Types.constructor_declaration) ->
+      (* Get the effective tag name - either explicit @tag or constructor name *)
+      let tag_name =
+        match process_tag_name cstr.cd_attributes with
+        | Some explicit_tag -> explicit_tag
+        | None -> Ident.name cstr.cd_id (* Default to constructor name *)
+      in
+      match cstr.cd_args with
+      | Cstr_record fields ->
+        List.iter
+          (fun (field : Types.label_declaration) ->
+            (* Get the effective field name in JavaScript output *)
+            let effective_field_name =
+              match process_as_name field.ld_attributes with
+              | Some as_name -> as_name (* Use @as name if present *)
+              | None -> Ident.name field.ld_id (* Otherwise use field name *)
+            in
+            (* Check if effective field name conflicts with tag *)
+            if effective_field_name = tag_name then
+              raise
+                (Error
+                   ( cstr.cd_loc,
+                     TagFieldNameConflict (Ident.name cstr.cd_id, tag_name) )))
+          fields
+      | _ -> ())
+    cstrs
+
 type well_formedness_check = {
   is_untagged_def: bool;
   cstrs: Types.constructor_declaration list;
 }
 
 let check_well_formed ~env {is_untagged_def; cstrs} =
+  check_tag_field_conflicts cstrs;
   ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
