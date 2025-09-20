@@ -267,19 +267,20 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "^" -> 4
-  | "&" -> 5
-  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" -> 6
-  | "<<" | ">>" | ">>>" -> 7
-  | "+" | "+." | "-" | "-." | "++" -> 8
-  | "*" | "*." | "/" | "/." | "%" -> 9
-  | "**" -> 10
-  | "#" | "##" | "->" -> 11
+  | "|||" -> 4
+  | "^^^" -> 5
+  | "&&&" -> 6
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" -> 7
+  | "<<" | ">>" | ">>>" -> 8
+  | "+" | "+." | "-" | "-." | "++" -> 9
+  | "*" | "*." | "/" | "/." | "%" -> 10
+  | "**" -> 11
+  | "#" | "##" | "->" -> 12
   | _ -> 0
 
 let is_unary_operator operator =
   match operator with
-  | "~+" | "~+." | "~-" | "~-." | "~~" | "not" -> true
+  | "~+" | "~+." | "~-" | "~-." | "~~~" | "not" -> true
   | _ -> false
 
 let is_unary_expression expr =
@@ -293,21 +294,11 @@ let is_unary_expression expr =
     true
   | _ -> false
 
-let is_unary_bitnot_expression expr =
-  match expr.pexp_desc with
-  | Pexp_apply
-      {
-        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "~~"}};
-        args = [(Nolabel, _arg)];
-      } ->
-    true
-  | _ -> false
-
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**" | "->"
-  | "<>" | "%" | "&" | "^" | "<<" | ">>" | ">>>" ->
+  | "<>" | "%" | "|||" | "^^^" | "&&&" | "<<" | ">>" | ">>>" ->
     true
   | _ -> false
 
