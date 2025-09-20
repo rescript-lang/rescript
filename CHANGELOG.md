@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix result examples. https://github.com/rescript-lang/rescript/pull/7914
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
