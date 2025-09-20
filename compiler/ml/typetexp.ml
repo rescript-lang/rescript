@@ -871,10 +871,10 @@ let report_error env ppf = function
     if did_spellcheck then
       choices
       |> List.iter (fun choice ->
-             Cmt_utils.add_possible_action
+             Actions.add_possible_action
                {
                  loc;
-                 action = Cmt_utils.RewriteIdent {new_ident = Lident choice};
+                 action = Actions.RewriteIdent {new_ident = Lident choice};
                  description = "Change to `" ^ choice ^ "`";
                });
     (* For cases such as when the user refers to something that's a value with 
@@ -899,10 +899,10 @@ let report_error env ppf = function
     in
     match (as_module, as_module_name) with
     | Some module_path, Some as_module_name ->
-      Cmt_utils.add_possible_action
+      Actions.add_possible_action
         {
           loc;
-          action = Cmt_utils.RewriteIdentToModule {module_name = as_module_name};
+          action = Actions.RewriteIdentToModule {module_name = as_module_name};
           description = "Change to `" ^ as_module_name ^ "`";
         };
       Format.fprintf ppf "@,@[<v 2>@,@[%s to use the module @{<info>%a@}?@]@]"
@@ -949,7 +949,7 @@ let report_error env ppf = function
     (* modified *)
     (match from_type with
     | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_option ->
-      Cmt_utils.add_possible_action
+      Actions.add_possible_action
         {
           loc;
           action = UnwrapOptionMapRecordField {field_name};

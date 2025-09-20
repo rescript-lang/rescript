@@ -60,7 +60,7 @@ type action_type =
 (* TODO: 
 - Unused var in patterns (and aliases )*)
 
-type cmt_action = {loc: Location.t; action: action_type; description: string}
+type action = {loc: Location.t; action: action_type; description: string}
 
 let action_to_string = function
   | ApplyFunction {function_name} ->
@@ -117,7 +117,7 @@ let action_to_string = function
     Printf.sprintf "UnwrapOptionMapRecordField(%s)"
       (Longident.flatten field_name |> String.concat ".")
 
-let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
+let _add_possible_action : (action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
 
 let emit_possible_actions_from_warning loc w =

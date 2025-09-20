@@ -701,7 +701,7 @@ let simple_conversions =
 let print_simple_conversion ~loc ppf (actual, expected) =
   try
     let converter = List.assoc (actual, expected) simple_conversions in
-    Cmt_utils.add_possible_action
+    Actions.add_possible_action
       {
         loc;
         action = ApplyFunction {function_name = Longident.parse converter};
@@ -4717,7 +4717,7 @@ let report_error env loc ppf error =
     if not is_fallback then fprintf ppf "@,";
 
     if List.length missing_required_args > 0 then (
-      Cmt_utils.add_possible_action
+      Actions.add_possible_action
         {
           loc;
           action =
@@ -4729,7 +4729,7 @@ let report_error env loc ppf error =
               };
           description = "Insert missing arguments";
         };
-      Cmt_utils.add_possible_action
+      Actions.add_possible_action
         {
           loc;
           action = PartiallyApplyFunction;
@@ -4794,7 +4794,7 @@ let report_error env loc ppf error =
       match suggestion with
       | None -> ()
       | Some suggestion_str ->
-        Cmt_utils.add_possible_action
+        Actions.add_possible_action
           {
             loc;
             action = RewriteIdent {new_ident = Longident.parse suggestion_str};

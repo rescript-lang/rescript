@@ -717,6 +717,13 @@ fn compile_file(
                         .join(format!("{basename}.cmt")),
                     ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
+                let _ = std::fs::copy(
+                    package
+                        .get_build_path()
+                        .join(dir)
+                        .join(format!("{basename}.resextra")),
+                    ocaml_build_path_abs.join(format!("{basename}.resextra")),
+                );
             } else {
                 let _ = std::fs::copy(
                     package
@@ -728,6 +735,13 @@ fn compile_file(
                 let _ = std::fs::copy(
                     package.get_build_path().join(dir).join(format!("{basename}.cmi")),
                     ocaml_build_path_abs.join(format!("{basename}.cmi")),
+                );
+                let _ = std::fs::copy(
+                    package
+                        .get_build_path()
+                        .join(dir)
+                        .join(format!("{basename}.resiextra")),
+                    ocaml_build_path_abs.join(format!("{basename}.resiextra")),
                 );
             }
 
