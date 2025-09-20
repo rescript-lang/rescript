@@ -264,6 +264,7 @@ and statement_desc =
       * for_ident
       * for_direction
       * block
+  | ForOf of for_ident * expression * block
   | Continue
   | Break (* only used when inline a fucntion *)
   | Return of expression

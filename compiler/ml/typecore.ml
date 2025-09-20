@@ -190,6 +190,9 @@ let iter_expression f e =
       expr e1;
       expr e2;
       expr e3
+    | Pexp_for_of (_, e1, e2) ->
+      expr e1;
+      expr e2
     | Pexp_letmodule (_, me, e) ->
       expr e;
       module_expr me
@@ -2942,6 +2945,34 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     rue
       {
         exp_desc = Texp_for (id, param, low, high, dir, body);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance_def Predef.type_unit;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_for_of (param, scollection, sbody) ->
+    let ty_elem = newvar () in
+    let collection =
+      type_expect ~context:None env scollection (Predef.type_array ty_elem)
+    in
+    let id, new_env =
+      match param.ppat_desc with
+      | Ppat_any -> (Ident.create "_for_of", env)
+      | Ppat_var {txt} ->
+        Env.enter_value txt
+          {
+            val_type = ty_elem;
+            val_attributes = [];
+            val_kind = Val_reg;
+            Types.val_loc = loc;
+          } env ~check:(fun s -> Warnings.Unused_for_index s)
+      | _ -> raise (Error (param.ppat_loc, env, Invalid_for_loop_index))
+    in
+    let body = type_statement ~context:None new_env sbody in
+    rue
+      {
+        exp_desc = Texp_for_of (id, param, collection, body);
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance_def Predef.type_unit;
