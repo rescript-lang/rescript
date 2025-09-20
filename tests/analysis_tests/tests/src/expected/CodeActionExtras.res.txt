@@ -1,0 +1,9 @@
+Xform src/CodeActionExtras.res 2:3
+Hit: Remove open
+
+TextDocumentEdit: CodeActionExtras.res
+{"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 9}}
+newText:
+<--here
+
+

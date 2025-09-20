@@ -38,7 +38,8 @@ let fullFromUri ~uri =
         let cmt = getCmtPath ~uri paths in
         fullForCmt ~moduleName ~package ~uri cmt
       | None ->
-        prerr_endline ("can't find module " ^ moduleName);
+        if not (Uri.isInterface uri) then
+          prerr_endline ("can't find module " ^ moduleName);
         None))
 
 let fullsFromModule ~package ~moduleName =

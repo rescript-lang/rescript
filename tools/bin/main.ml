@@ -185,9 +185,9 @@ let main () =
       | _ :: rest -> extract_arg_with_value target_arg rest
       | [] -> None
     in
-    let cmtPath =
+    let extrasPath =
       match opts with
-      | path :: _ when String.ends_with ~suffix:".cmt" path -> Some path
+      | path :: _ when String.ends_with ~suffix:".resextra" path -> Some path
       | _ -> None
     in
     let actionFilter =
@@ -197,8 +197,8 @@ let main () =
       | None -> None
     in
     if run_all_on_file then
-      Tools.Actions.runActionsOnFile ?actionFilter ?cmtPath file
-    else Tools.Actions.extractActionsFromFile ?cmtPath file
+      Tools.Actions.runActionsOnFile ?actionFilter ?extrasPath file
+    else Tools.Actions.extractActionsFromFile ?extrasPath file
   | "extract-embedded" :: extPointNames :: filename :: _ ->
     logAndExit
       (Ok

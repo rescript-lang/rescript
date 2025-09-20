@@ -437,6 +437,9 @@ let _ : unit =
   Bs_conditional_initial.setup_env ();
   Clflags.color := Some Always;
 
+  (* Save extras (e.g., actions) once before exit, after all reporting. *)
+  at_exit (fun () -> Res_extra.save ());
+
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;
   Ast_config.add_signature flags file_level_flags_handler;
@@ -446,6 +449,4 @@ let _ : unit =
     exit 2
   | x ->
     Location.report_exception ppf x;
-    (* Re-save cmt so we can get the possible actions *)
-    Cmt_format.resave_cmt_with_possible_actions ();
     exit 2
