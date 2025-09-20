@@ -28,8 +28,19 @@ function $$null(val1, val2) {
   }
 }
 
+function constant() {
+  console.log(42);
+}
+
+function param(opt) {
+  let x = opt;
+  console.log(x);
+}
+
 export {
   boolean,
   $$null,
+  constant,
+  param,
 }
 /* No side effect */

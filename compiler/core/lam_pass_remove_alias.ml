@@ -41,6 +41,12 @@ let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
   | None ->
     Eval_unknown
 
+let is_const_some (cst : Lam_constant.t) : bool =
+  match cst with
+  | Const_some _ -> true
+  | Const_block (_, (Lambda.Blk_some | Lambda.Blk_some_not_nested), _) -> true
+  | _ -> false
+
 let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
   let rec simpl (lam : Lam.t) : Lam.t =
     match lam with
@@ -78,6 +84,7 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
         ((Lprim {primitive = Pis_not_none; args = [Lvar id]} as l1), l2, l3)
       -> (
       match Hash_ident.find_opt meta.ident_tbl id with
+      | Some (Constant c) when is_const_some c -> simpl l2
       | Some (ImmutableBlock _ | MutableBlock _ | Normal_optional _) -> simpl l2
       | Some (OptionalBlock (l, Null)) ->
         Lam.if_

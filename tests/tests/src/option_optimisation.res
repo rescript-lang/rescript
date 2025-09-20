@@ -19,3 +19,18 @@ let null = (~val1: Nullable.t<int>, ~val2: Nullable.t<int>) => {
   | _ => "b"
   }
 }
+
+let constant = () => {
+  let opt = Some(42)
+  switch opt {
+  | Some(x) => Console.log(x)
+  | None => ()
+  }
+}
+
+let param = (opt: int) => {
+  switch Some(opt) {
+  | Some(x) => Console.log(x)
+  | None => ()
+  }
+}
