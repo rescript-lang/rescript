@@ -1316,7 +1316,7 @@ module Actions = struct
       target_loc actions =
     let change_record_field_optional_action =
       actions
-      |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
+      |> List.find_map (fun (action : Actions.action) ->
              match action.action with
              | ChangeRecordFieldOptional {optional} when target_loc = action.loc
                ->
@@ -1349,7 +1349,7 @@ module Actions = struct
           (fun mapper str_item ->
             let remove_rec_flag_action_locs =
               List.filter_map
-                (fun (action : Cmt_utils.cmt_action) ->
+                (fun (action : Actions.action) ->
                   match action.action with
                   | RemoveRecFlag -> Some action.loc
                   | _ -> None)
@@ -1357,7 +1357,7 @@ module Actions = struct
             in
             let force_open_action_locs =
               List.filter_map
-                (fun (action : Cmt_utils.cmt_action) ->
+                (fun (action : Actions.action) ->
                   match action.action with
                   | ForceOpen -> Some action.loc
                   | _ -> None)
@@ -1365,7 +1365,7 @@ module Actions = struct
             in
             let assign_to_underscore_action_locs =
               List.filter_map
-                (fun (action : Cmt_utils.cmt_action) ->
+                (fun (action : Actions.action) ->
                   match action.action with
                   | AssignToUnderscore -> Some action.loc
                   | _ -> None)
@@ -1414,8 +1414,7 @@ module Actions = struct
                      | Pstr_open _ -> (
                        let remove_open_action =
                          actions
-                         |> List.find_opt
-                              (fun (action : Cmt_utils.cmt_action) ->
+                         |> List.find_opt (fun (action : Actions.action) ->
                                 match action.action with
                                 | RemoveOpen -> action.loc = str_item.pstr_loc
                                 | _ -> false)
@@ -1426,8 +1425,7 @@ module Actions = struct
                      | Pstr_type (_, _type_declarations) -> (
                        let remove_unused_type_action =
                          actions
-                         |> List.find_opt
-                              (fun (action : Cmt_utils.cmt_action) ->
+                         |> List.find_opt (fun (action : Actions.action) ->
                                 match action.action with
                                 | RemoveUnusedType ->
                                   action.loc = str_item.pstr_loc
@@ -1439,7 +1437,7 @@ module Actions = struct
                      | Pstr_module {pmb_loc} ->
                        let remove_unused_module_action_locs =
                          List.filter_map
-                           (fun (action : Cmt_utils.cmt_action) ->
+                           (fun (action : Actions.action) ->
                              match action.action with
                              | RemoveUnusedModule -> Some action.loc
                              | _ -> None)
@@ -1462,7 +1460,7 @@ module Actions = struct
           (fun mapper bindings ->
             let remove_unused_variables_action_locs =
               List.filter_map
-                (fun (action : Cmt_utils.cmt_action) ->
+                (fun (action : Actions.action) ->
                   match action.action with
                   | RemoveUnusedVariable -> Some action.loc
                   | _ -> None)
@@ -1485,7 +1483,7 @@ module Actions = struct
               | Ppat_var var -> (
                 let prefix_underscore_action =
                   actions
-                  |> List.find_opt (fun (action : Cmt_utils.cmt_action) ->
+                  |> List.find_opt (fun (action : Actions.action) ->
                          match action.action with
                          | PrefixVariableWithUnderscore ->
                            action.loc = pattern.ppat_loc
@@ -1508,7 +1506,7 @@ module Actions = struct
               |> List.filter_map (fun (case : Parsetree.case) ->
                      let remove_case_action =
                        actions
-                       |> List.find_opt (fun (action : Cmt_utils.cmt_action) ->
+                       |> List.find_opt (fun (action : Actions.action) ->
                               match action.action with
                               | RemoveSwitchCase ->
                                 action.loc = case.pc_lhs.ppat_loc
@@ -1524,7 +1522,7 @@ module Actions = struct
             (* TODO: Must account for pipe chains *)
             let mapped_expr =
               actions
-              |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
+              |> List.find_map (fun (action : Actions.action) ->
                      (* When the loc is the expr itself *)
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
@@ -1818,33 +1816,43 @@ module Actions = struct
            "error: failed to apply actions to %s because it is not a .res file"
            path)
 
-  let runActionsOnFile ?(actionFilter : string list option) ?cmtPath
+  let runActionsOnFile ?(actionFilter : string list option) ?extrasPath
       entryPointFile =
     let path =
       match Filename.is_relative entryPointFile with
       | true -> Unix.realpath entryPointFile
       | false -> entryPointFile
     in
-    let loadedCmt =
-      match cmtPath with
-      | None -> Cmt.loadCmtInfosFromPath ~path
-      | Some path -> Shared.tryReadCmt path
+    let try_read_resextra path =
+      if Sys.file_exists path then
+        try
+          let ic = open_in_bin path in
+          let v = (input_value ic : Actions.action list) in
+          close_in ic;
+          Some v
+        with _ -> None
+      else None
     in
-    match loadedCmt with
+    let loaded_actions =
+      match extrasPath with
+      | Some path -> try_read_resextra path
+      | None -> None
+    in
+    match loaded_actions with
     | None ->
       Printf.printf
         "error: failed to run actions on %s because build artifacts could not \
          be found. try to build the project"
         path
-    | Some {cmt_possible_actions} -> (
+    | Some cmt_possible_actions -> (
       let possible_actions =
         match actionFilter with
         | None -> cmt_possible_actions
         | Some filter ->
           cmt_possible_actions
-          |> List.filter (fun (action : Cmt_utils.cmt_action) ->
+          |> List.filter (fun (action : Actions.action) ->
                  match action.action with
-                 | Cmt_utils.ApplyFunction _ -> List.mem "ApplyFunction" filter
+                 | Actions.ApplyFunction _ -> List.mem "ApplyFunction" filter
                  | ApplyCoercion _ -> List.mem "ApplyCoercion" filter
                  | RemoveSwitchCase -> List.mem "RemoveSwitchCase" filter
                  | RemoveOpen -> List.mem "RemoveOpen" filter
@@ -1886,27 +1894,37 @@ module Actions = struct
         print_endline applied;
         print_endline "/* === AVAILABLE ACTIONS:";
         cmt_possible_actions
-        |> List.iter (fun (action : Cmt_utils.cmt_action) ->
+        |> List.iter (fun (action : Actions.action) ->
                Printf.printf "- %s - %s\n"
-                 (Cmt_utils.action_to_string action.action)
+                 (Actions.action_to_string action.action)
                  action.description);
         print_endline "*/"
       | Error e ->
         print_endline e;
         exit 1)
 
-  let extractActionsFromFile ?cmtPath entryPointFile =
+  let extractActionsFromFile ?extrasPath entryPointFile =
     let path =
       match Filename.is_relative entryPointFile with
       | true -> Unix.realpath entryPointFile
       | false -> entryPointFile
     in
-    let loadedCmt =
-      match cmtPath with
-      | None -> Cmt.loadCmtInfosFromPath ~path
-      | Some path -> Shared.tryReadCmt path
+    let try_read_resextra path =
+      if Sys.file_exists path then
+        try
+          let ic = open_in_bin path in
+          let v = (input_value ic : Actions.action list) in
+          close_in ic;
+          Some v
+        with _ -> None
+      else None
     in
-    match loadedCmt with
+    let loaded_actions =
+      match extrasPath with
+      | Some path -> try_read_resextra path
+      | None -> None
+    in
+    match loaded_actions with
     | None ->
       Printf.printf
         "error: failed to extract actions for %s because build artifacts could \

@@ -33,12 +33,12 @@ let atLeastOneTaskFailed = false;
 
 for (const fileName of fixtures) {
   const fullFilePath = path.join(import.meta.dirname, "fixtures", fileName);
-  const cmtPath = fullFilePath.replace(".res", ".cmt");
+  const extrasPath = fullFilePath.replace(".res", ".resextra");
   await bsc([...prefix, "-color", "always", fullFilePath]);
   const firstLine =
     (await fs.readFile(fullFilePath, "utf-8")).split("\n")[0] ?? "";
   const actionFilter = firstLine.split("actionFilter=")[1];
-  const callArgs = [fullFilePath, cmtPath, "--runAll"];
+  const callArgs = [fullFilePath, extrasPath, "--runAll"];
   if (actionFilter != null) {
     callArgs.push("--actionFilter", actionFilter);
   }
