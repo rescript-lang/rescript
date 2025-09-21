@@ -126,8 +126,15 @@ async function main() {
       let code = example.code;
       if (code.length === 0) {
         return;
-      } else {
+      } else if (code.includes("await")) {
         return `testAsync("` + example.name + `", async () => {
+  module Test = {
+    ` + code + `
+  }
+  ()
+})`;
+      } else {
+        return `test("` + example.name + `", () => {
   module Test = {
     ` + code + `
   }
