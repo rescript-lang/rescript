@@ -741,13 +741,15 @@ function rotateWithRightChild(k1) {
 
 function doubleWithLeftChild(k3) {
   let k3l = k3.l;
-  k3.l = rotateWithRightChild(k3l);
+  let v = rotateWithRightChild(k3l);
+  k3.l = v;
   return rotateWithLeftChild(k3);
 }
 
 function doubleWithRightChild(k2) {
   let k2r = k2.r;
-  k2.r = rotateWithLeftChild(k2r);
+  let v = rotateWithLeftChild(k2r);
+  k2.r = v;
   return rotateWithRightChild(k2);
 }
 

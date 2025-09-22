@@ -12,36 +12,9 @@ let x10 = null;
 
 let x11 = Primitive_option.some(undefined);
 
-let x1 = "hello";
-
-let x2 = 1;
-
-let x3 = {
-  TAG: "Ok",
-  _0: "hi"
-};
-
-let x4 = "polyvar";
-
-let x5 = {
-  x: 42
-};
-
-let x7 = [
-  1,
-  2,
-  3
-];
-
-let x8 = () => {};
-
-let x12 = "test";
-
 let x20 = null;
 
 let x21 = new Date();
-
-let x22 = /test/;
 
 let x23 = new Map();
 
@@ -75,8 +48,6 @@ let x37 = new Intl.DateTimeFormat();
 
 let x38 = new Intl.NumberFormat();
 
-let x39 = true;
-
 let x40 = new Intl.Collator();
 
 let x41 = new Intl.RelativeTimeFormat();
@@ -85,18 +56,47 @@ let x42 = new Intl.PluralRules();
 
 let x43 = new Intl.Locale("en");
 
+let x45 = Promise.resolve(true);
+
+let x48 = Stdlib_Lazy.make(() => true);
+
+let x1 = "hello";
+
+let x2 = 1;
+
+let x3 = {
+  TAG: "Ok",
+  _0: "hi"
+};
+
+let x4 = "polyvar";
+
+let x5 = {
+  x: 42
+};
+
+let x7 = [
+  1,
+  2,
+  3
+];
+
+let x8 = () => {};
+
+let x12 = "test";
+
+let x22 = /test/;
+
+let x39 = true;
+
 let x44 = [
   1,
   2
 ];
 
-let x45 = Promise.resolve(true);
-
 let x46 = /* [] */0;
 
 let x47 = {};
-
-let x48 = Stdlib_Lazy.make(() => true);
 
 export {
   x1,

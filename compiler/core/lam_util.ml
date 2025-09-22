@@ -45,13 +45,11 @@ let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
     | Lam_primitive.Pmakeblock _ -> true
     | _ -> false
   in
-  (* Helper for spotting RHS expressions that are safe to inline everywhere.
-     These are the obviously pure shapes where substituting the original value
-     cannot introduce extra work or side effects. *)
-  let is_alias_candidate (lam : Lam.t) =
+  let is_safe_to_inline (lam : Lam.t) =
     match lam with
     | Lvar _ | Lconst _ -> true
-    | Lprim { primitive = Psome_not_nest; _ } -> true
+    | Lprim { primitive = Psome_not_nest; args = [inner]; _ } ->
+        Lam_analysis.no_side_effects inner
     | Lprim { primitive = Pfield (_, Fld_module _); args = [ (Lglobal_module _ | Lvar _) ]; _ } -> true
     | _ -> false
   in
@@ -74,7 +72,7 @@ let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
          rewrite to `someFn(value)` as long as the callee does not capture `x`.
          This removes the temporary binding while preserving the call semantics. *)
       Lam.apply fn [arg] ap_info ~ap_transformed_jsx
-  | (Strict | StrictOpt), arg, _ when is_alias_candidate arg ->
+  | (Strict | StrictOpt), arg, _ when is_safe_to_inline arg ->
       (* `Strict` and `StrictOpt` bindings both evaluate the RHS immediately
          (with `StrictOpt` allowing later elimination if unused). When that RHS
          is pure — `{ let x = Some(value); ... }`, `{ let x = 3; ... }`, or a module
