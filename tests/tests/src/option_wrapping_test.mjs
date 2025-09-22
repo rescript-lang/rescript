@@ -8,6 +8,14 @@ let x6 = {
   x: 42
 };
 
+let x7 = [
+  1,
+  2,
+  3
+];
+
+let x8 = () => {};
+
 let x10 = null;
 
 let x11 = Primitive_option.some(undefined);
@@ -15,6 +23,8 @@ let x11 = Primitive_option.some(undefined);
 let x20 = null;
 
 let x21 = new Date();
+
+let x22 = /test/;
 
 let x23 = new Map();
 
@@ -58,6 +68,8 @@ let x43 = new Intl.Locale("en");
 
 let x45 = Promise.resolve(true);
 
+let x47 = {};
+
 let x48 = Stdlib_Lazy.make(() => true);
 
 let x1 = "hello";
@@ -75,17 +87,7 @@ let x5 = {
   x: 42
 };
 
-let x7 = [
-  1,
-  2,
-  3
-];
-
-let x8 = () => {};
-
 let x12 = "test";
-
-let x22 = /test/;
 
 let x39 = true;
 
@@ -95,8 +97,6 @@ let x44 = [
 ];
 
 let x46 = /* [] */0;
-
-let x47 = {};
 
 export {
   x1,
