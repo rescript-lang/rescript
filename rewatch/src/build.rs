@@ -101,6 +101,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         &None,
         is_type_dev,
         true,
+        None, // No warn_error_override for compiler-args command
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -132,7 +133,8 @@ pub fn initialize_build(
     path: &Path,
     build_dev_deps: bool,
     snapshot_output: bool,
-) -> Result<BuildState> {
+    warn_error: Option<String>,
+) -> Result<BuildCommandState> {
     let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
 
@@ -189,7 +191,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(project_context, packages, compiler);
+    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
@@ -300,7 +302,7 @@ impl fmt::Display for IncrementalBuildError {
 }
 
 pub fn incremental_build(
-    build_state: &mut BuildState,
+    build_state: &mut BuildCommandState,
     default_timing: Option<Duration>,
     initial_build: bool,
     show_progress: bool,
@@ -370,7 +372,8 @@ pub fn incremental_build(
         }
     }
     let timing_deps = Instant::now();
-    deps::get_deps(build_state, &build_state.deleted_modules.to_owned());
+    let deleted_modules = build_state.deleted_modules.clone();
+    deps::get_deps(build_state, &deleted_modules);
     let timing_deps_elapsed = timing_deps.elapsed();
     current_step += 1;
 
@@ -385,7 +388,7 @@ pub fn incremental_build(
     }
 
     mark_modules_with_expired_deps_dirty(build_state);
-    mark_modules_with_deleted_deps_dirty(build_state);
+    mark_modules_with_deleted_deps_dirty(&mut build_state.build_state);
     current_step += 1;
 
     //print all the compile_dirty modules
@@ -488,7 +491,7 @@ pub fn incremental_build(
     }
 }
 
-fn log_deprecations(build_state: &BuildState) {
+fn log_deprecations(build_state: &BuildCommandState) {
     build_state.packages.iter().for_each(|(_, package)| {
         // Only warn for local dependencies, not external packages
         if package.is_local_dep {
@@ -522,7 +525,7 @@ fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_n
 // is watching this file.
 // we don't need to do this in an incremental build because there are no file
 // changes (deletes / additions)
-pub fn write_build_ninja(build_state: &BuildState) {
+pub fn write_build_ninja(build_state: &BuildCommandState) {
     for package in build_state.packages.values() {
         // write empty file:
         let mut f = File::create(package.get_build_path().join("build.ninja")).expect("Unable to write file");
@@ -530,6 +533,7 @@ pub fn write_build_ninja(build_state: &BuildState) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn build(
     filter: &Option<regex::Regex>,
     path: &Path,
@@ -538,7 +542,8 @@ pub fn build(
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
-) -> Result<BuildState> {
+    warn_error: Option<String>,
+) -> Result<BuildCommandState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
         Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
     } else {
@@ -552,6 +557,7 @@ pub fn build(
         path,
         build_dev_deps,
         snapshot_output,
+        warn_error,
     )
     .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
 

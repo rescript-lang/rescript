@@ -103,7 +103,7 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
 // and then do cleanup on that state (for instance remove all .mjs files that are not in the state)
 
 pub fn cleanup_previous_build(
-    build_state: &mut BuildState,
+    build_state: &mut BuildCommandState,
     compile_assets_state: CompileAssetsState,
 ) -> (usize, usize) {
     // delete the .mjs file which appear in our previous compile assets
@@ -299,7 +299,7 @@ fn has_compile_warnings(module: &Module) -> bool {
     )
 }
 
-pub fn cleanup_after_build(build_state: &BuildState) {
+pub fn cleanup_after_build(build_state: &BuildCommandState) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
         let package = build_state.get_package(&module.package_name).unwrap();
         if has_parse_warnings(module) {

@@ -64,6 +64,7 @@ struct AsyncWatchArgs<'a> {
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
+    warn_error: Option<String>,
 }
 
 async fn async_watch(
@@ -76,11 +77,20 @@ async fn async_watch(
         create_sourcedirs,
         build_dev_deps,
         snapshot_output,
+        warn_error,
     }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
-    let mut build_state =
-        build::initialize_build(None, filter, show_progress, path, build_dev_deps, snapshot_output)
-            .expect("Can't initialize build");
+    let warn_error = warn_error.clone();
+    let mut build_state: build::build_types::BuildCommandState = build::initialize_build(
+        None,
+        filter,
+        show_progress,
+        path,
+        build_dev_deps,
+        snapshot_output,
+        warn_error.clone(),
+    )
+    .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -164,14 +174,22 @@ async fn async_watch(
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
                         {
-                            for module in build_state.modules.values_mut() {
-                                match module.source_type {
-                                    SourceType::SourceFile(ref mut source_file) => {
-                                        // mark the implementation file dirty
-                                        let package = build_state
-                                            .packages
-                                            .get(&module.package_name)
-                                            .expect("Package not found");
+                            // Collect package names first to avoid borrow checker issues
+                            let module_package_pairs: Vec<(String, String)> = build_state.build_state.modules
+                                .iter()
+                                .map(|(name, module)| (name.clone(), module.package_name.clone()))
+                                .collect();
+
+                            for (module_name, package_name) in module_package_pairs {
+                                let package = build_state
+                                    .build_state
+                                    .packages
+                                    .get(&package_name)
+                                    .expect("Package not found");
+
+                                if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
+                                    match module.source_type {
+                                        SourceType::SourceFile(ref mut source_file) => {
                                         let canonicalized_implementation_file =
                                             package.path.join(&source_file.implementation.path);
                                         if canonicalized_path_buf == canonicalized_implementation_file {
@@ -199,8 +217,9 @@ async fn async_watch(
                                                 break;
                                             }
                                         }
+                                        }
+                                        SourceType::MlMap(_) => (),
                                     }
-                                    SourceType::MlMap(_) => (),
                                 }
                             }
                             needs_compile_type = CompileType::Incremental;
@@ -270,6 +289,7 @@ async fn async_watch(
                     path,
                     build_dev_deps,
                     snapshot_output,
+                    warn_error.clone(),
                 )
                 .expect("Can't initialize build");
                 let _ = build::incremental_build(
@@ -308,6 +328,7 @@ async fn async_watch(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn start(
     filter: &Option<regex::Regex>,
     show_progress: bool,
@@ -316,6 +337,7 @@ pub fn start(
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
+    warn_error: Option<String>,
 ) {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -328,7 +350,7 @@ pub fn start(
         log::debug!("watching {folder}");
 
         watcher
-            .watch(folder.as_ref(), RecursiveMode::Recursive)
+            .watch(Path::new(folder), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
         let path = Path::new(folder);
@@ -342,6 +364,7 @@ pub fn start(
             create_sourcedirs,
             build_dev_deps,
             snapshot_output,
+            warn_error: warn_error.clone(),
         })
         .await
         {

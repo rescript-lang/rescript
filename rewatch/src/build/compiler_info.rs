@@ -1,6 +1,6 @@
 use crate::helpers;
 
-use super::build_types::{BuildState, CompilerInfo};
+use super::build_types::{BuildCommandState, CompilerInfo};
 use super::packages;
 use super::{clean, logs};
 use ahash::AHashMap;
@@ -113,7 +113,7 @@ pub fn verify_compiler_info(
     }
 }
 
-pub fn write_compiler_info(build_state: &BuildState) {
+pub fn write_compiler_info(build_state: &BuildCommandState) {
     let bsc_path = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
     let bsc_hash = build_state.compiler_info.bsc_hash.to_hex().to_string();
     let runtime_path = build_state

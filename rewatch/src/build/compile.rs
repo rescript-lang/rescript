@@ -22,7 +22,7 @@ use std::sync::OnceLock;
 use std::time::SystemTime;
 
 pub fn compile(
-    build_state: &mut BuildState,
+    build_state: &mut BuildCommandState,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
@@ -166,6 +166,7 @@ pub fn compile(
                                         module,
                                         true,
                                         build_state,
+                                        build_state.get_warn_error_override(),
                                     );
                                     Some(result)
                                 }
@@ -177,6 +178,7 @@ pub fn compile(
                                 module,
                                 false,
                                 build_state,
+                                build_state.get_warn_error_override(),
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -243,70 +245,100 @@ pub fn compile(
                 }
             }
 
-            let module = build_state
-                .modules
-                .get_mut(module_name)
-                .ok_or(anyhow!("Module not found"))?;
+            let package_name = {
+                let module = build_state
+                    .build_state
+                    .modules
+                    .get(module_name)
+                    .ok_or(anyhow!("Module not found"))?;
+                module.package_name.clone()
+            };
 
             let package = build_state
+                .build_state
                 .packages
-                .get(&module.package_name)
+                .get(&package_name)
                 .ok_or(anyhow!("Package name not found"))?;
 
-            match module.source_type {
-                SourceType::MlMap(ref mut mlmap) => {
-                    module.compile_dirty = false;
-                    mlmap.parse_dirty = false;
-                }
-                SourceType::SourceFile(ref mut source_file) => {
-                    match result {
+            // Process results and update module state
+            let (compile_warning, compile_error, interface_warning, interface_error) = {
+                let module = build_state
+                    .build_state
+                    .modules
+                    .get_mut(module_name)
+                    .ok_or(anyhow!("Module not found"))?;
+
+                let (compile_warning, compile_error) = match module.source_type {
+                    SourceType::MlMap(ref mut mlmap) => {
+                        module.compile_dirty = false;
+                        mlmap.parse_dirty = false;
+                        (None, None)
+                    }
+                    SourceType::SourceFile(ref mut source_file) => match result {
                         Ok(Some(err)) => {
                             source_file.implementation.compile_state = CompileState::Warning;
-                            logs::append(package, err);
-                            compile_warnings.push_str(err);
+                            (Some(err.to_string()), None)
                         }
                         Ok(None) => {
                             source_file.implementation.compile_state = CompileState::Success;
+                            (None, None)
                         }
                         Err(err) => {
                             source_file.implementation.compile_state = CompileState::Error;
-                            logs::append(package, &err.to_string());
-                            compile_errors.push_str(&err.to_string());
+                            (None, Some(err.to_string()))
                         }
-                    };
-                    match interface_result {
-                        Some(Ok(Some(err))) => {
-                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                            logs::append(package, &err.to_string());
-                            compile_warnings.push_str(&err.to_string());
-                        }
-                        Some(Ok(None)) => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.compile_state = CompileState::Success;
+                    },
+                };
+
+                let (interface_warning, interface_error) =
+                    if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+                        match interface_result {
+                            Some(Ok(Some(err))) => {
+                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
+                                (Some(err.to_string()), None)
                             }
+                            Some(Ok(None)) => {
+                                if let Some(interface) = source_file.interface.as_mut() {
+                                    interface.compile_state = CompileState::Success;
+                                }
+                                (None, None)
+                            }
+                            Some(Err(err)) => {
+                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                                (None, Some(err.to_string()))
+                            }
+                            _ => (None, None),
                         }
-
-                        Some(Err(err)) => {
-                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
-                            logs::append(package, &err.to_string());
-                            compile_errors.push_str(&err.to_string());
-                        }
-                        _ => (),
+                    } else {
+                        (None, None)
                     };
 
-                    match (result, interface_result) {
-                        // successfull compilation
-                        (Ok(None), Some(Ok(None))) | (Ok(None), None) => {
-                            module.compile_dirty = false;
-                            module.last_compiled_cmi = Some(SystemTime::now());
-                            module.last_compiled_cmt = Some(SystemTime::now());
-                        }
-                        // some error or warning
-                        (Err(_), _) | (_, Some(Err(_))) | (Ok(Some(_)), _) | (_, Some(Ok(Some(_)))) => {
-                            module.compile_dirty = true;
-                        }
-                    }
+                // Update compilation timestamps for successful compilation
+                if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
+                    module.compile_dirty = false;
+                    module.last_compiled_cmi = Some(SystemTime::now());
+                    module.last_compiled_cmt = Some(SystemTime::now());
                 }
+
+                (compile_warning, compile_error, interface_warning, interface_error)
+            };
+
+            // Handle logging outside the mutable borrow
+            if let Some(warning) = compile_warning {
+                logs::append(package, &warning);
+                compile_warnings.push_str(&warning);
+            }
+            if let Some(error) = compile_error {
+                logs::append(package, &error);
+                compile_errors.push_str(&error);
+            }
+            if let Some(warning) = interface_warning {
+                logs::append(package, &warning);
+                compile_warnings.push_str(&warning);
+            }
+            if let Some(error) = interface_error {
+                logs::append(package, &error);
+                compile_errors.push_str(&error);
             }
         }
 
@@ -384,6 +416,8 @@ pub fn compiler_args(
     // Is the file listed as "type":"dev"?
     is_type_dev: bool,
     is_local_dep: bool,
+    // Command-line --warn-error flag override (takes precedence over rescript.json config)
+    warn_error_override: Option<String>,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -417,7 +451,7 @@ pub fn compiler_args(
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
     let experimental_args = root_config.get_experimental_features_args();
-    let warning_args = config.get_warning_args(is_local_dep);
+    let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
     let read_cmi_args = match has_interface {
         true => {
@@ -593,6 +627,7 @@ fn compile_file(
     module: &Module,
     is_interface: bool,
     build_state: &BuildState,
+    warn_error_override: Option<String>,
 ) -> Result<Option<String>> {
     let BuildState {
         packages,
@@ -626,6 +661,7 @@ fn compile_file(
         &Some(packages),
         is_type_dev,
         package.is_local_dep,
+        warn_error_override,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)
@@ -800,7 +836,7 @@ pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
 //
 // We could clean up the build after errors. But I think we probably still need
 // to do this, because people can also force quit the watcher of
-pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
+pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState) {
     let mut modules_with_expired_deps: AHashSet<String> = AHashSet::new();
     build_state
         .modules

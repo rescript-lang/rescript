@@ -563,7 +563,13 @@ impl Config {
         }
     }
 
-    pub fn get_warning_args(&self, is_local_dep: bool) -> Vec<String> {
+    pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
+        // Command-line --warn-error flag takes precedence over rescript.json configuration
+        // This follows the same precedence behavior as the legacy bsb build system
+        if let Some(warn_error_str) = warn_error_override {
+            return vec!["-warn-error".to_string(), warn_error_str];
+        }
+
         // Ignore warning config for non local dependencies (node_module dependencies)
         if !is_local_dep {
             return vec![];
@@ -1175,5 +1181,85 @@ pub mod tests {
             Path::new("src/bar/Foo.res"),
             true,
         )
+    }
+
+    #[test]
+    fn test_get_warning_args_with_override() {
+        let config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Test that warn_error_override takes precedence
+        let args = config.get_warning_args(true, Some("+3+8+11".to_string()));
+        assert_eq!(args, vec!["-warn-error".to_string(), "+3+8+11".to_string()]);
+    }
+
+    #[test]
+    fn test_get_warning_args_without_override() {
+        let mut config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Set up warnings in config
+        config.warnings = Some(Warnings {
+            number: Some("+8+32".to_string()),
+            error: Some(Error::Catchall(true)),
+        });
+
+        // Test that config warnings are used when no override
+        let args = config.get_warning_args(true, None);
+        assert_eq!(
+            args,
+            vec![
+                "-w".to_string(),
+                "+8+32".to_string(),
+                "-warn-error".to_string(),
+                "A".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_warning_args_non_local_dep() {
+        let config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Test that non-local deps ignore warning config
+        let args: Vec<String> = config.get_warning_args(false, None);
+        assert_eq!(args, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_get_warning_args_override_ignores_config() {
+        let mut config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Set up warnings in config
+        config.warnings = Some(Warnings {
+            number: Some("+8+32".to_string()),
+            error: Some(Error::Catchall(true)),
+        });
+
+        // Test that override completely ignores config warnings
+        let args = config.get_warning_args(true, Some("+3+8+11".to_string()));
+        assert_eq!(args, vec!["-warn-error".to_string(), "+3+8+11".to_string()]);
     }
 }

@@ -3,7 +3,7 @@ use crate::config::Config;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
-use std::{fmt::Display, path::PathBuf, time::SystemTime};
+use std::{fmt::Display, ops::Deref, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseState {
@@ -90,6 +90,9 @@ impl Module {
     }
 }
 
+/// Core build state containing all the essential data needed for compilation.
+/// This is the minimal state required for basic build operations like cleaning.
+/// Used by commands that don't need command-line specific overrides (e.g., `clean`).
 #[derive(Debug)]
 pub struct BuildState {
     pub project_context: ProjectContext,
@@ -99,6 +102,21 @@ pub struct BuildState {
     pub deleted_modules: AHashSet<String>,
     pub compiler_info: CompilerInfo,
     pub deps_initialized: bool,
+}
+
+/// Extended build state that includes command-line specific overrides.
+/// Wraps `BuildState` and adds command-specific data like warning overrides.
+/// Used by commands that need to respect CLI flags (e.g., `build`, `watch`).
+///
+/// The separation exists because:
+/// - `clean` command only needs core build data, no CLI overrides
+/// - `build`/`watch` commands need both core data AND CLI overrides
+/// - This prevents the "code smell" of optional fields that are None for some commands
+#[derive(Debug)]
+pub struct BuildCommandState {
+    pub build_state: BuildState,
+    // Command-line --warn-error flag override (takes precedence over rescript.json config)
+    pub warn_error_override: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -116,6 +134,7 @@ impl BuildState {
     pub fn get_module(&self, module_name: &str) -> Option<&Module> {
         self.modules.get(module_name)
     }
+
     pub fn new(
         project_context: ProjectContext,
         packages: AHashMap<String, Package>,
@@ -139,6 +158,40 @@ impl BuildState {
 
     pub fn get_root_config(&self) -> &Config {
         self.project_context.get_root_config()
+    }
+}
+
+impl BuildCommandState {
+    pub fn new(
+        project_context: ProjectContext,
+        packages: AHashMap<String, Package>,
+        compiler: CompilerInfo,
+        warn_error_override: Option<String>,
+    ) -> Self {
+        Self {
+            build_state: BuildState::new(project_context, packages, compiler),
+            warn_error_override,
+        }
+    }
+
+    pub fn get_warn_error_override(&self) -> Option<String> {
+        self.warn_error_override.clone()
+    }
+}
+
+// Implement Deref to automatically delegate method calls to the inner BuildState
+impl Deref for BuildCommandState {
+    type Target = BuildState;
+
+    fn deref(&self) -> &Self::Target {
+        &self.build_state
+    }
+}
+
+// Implement DerefMut to allow mutable access to the inner BuildState
+impl std::ops::DerefMut for BuildCommandState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.build_state
     }
 }
 

@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn generate_asts(
-    build_state: &mut BuildState,
+    build_state: &mut BuildCommandState,
     inc: impl Fn() + std::marker::Sync,
 ) -> anyhow::Result<String> {
     let mut has_failure = false;
@@ -94,7 +94,24 @@ pub fn generate_asts(
         )>>()
         .into_iter()
         .for_each(|(module_name, ast_result, iast_result, is_dirty)| {
-            if let Some(module) = build_state.modules.get_mut(&module_name) {
+            // Get package name first to avoid borrow checker issues
+            let package_name = build_state
+                .build_state
+                .modules
+                .get(&module_name)
+                .map(|module| module.package_name.clone())
+                .unwrap_or_else(|| {
+                    eprintln!("Module not found: {module_name}");
+                    String::new()
+                });
+
+            let package = build_state
+                .build_state
+                .packages
+                .get(&package_name)
+                .expect("Package not found");
+
+            if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
                 // if the module is dirty, mark it also compile_dirty
                 // do NOT set to false if the module is not parse_dirty, it needs to keep
                 // the compile_dirty flag if it was set before
@@ -102,10 +119,6 @@ pub fn generate_asts(
                     module.compile_dirty = true;
                     module.deps_dirty = true;
                 }
-                let package = build_state
-                    .packages
-                    .get(&module.package_name)
-                    .expect("Package not found");
                 if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(
                     // stderr_warnings )), the outputs are warnings
@@ -180,65 +193,76 @@ pub fn generate_asts(
         .map(|(_, module)| module.package_name.clone())
         .collect::<AHashSet<String>>();
 
-    build_state.modules.iter_mut().for_each(|(module_name, module)| {
-        let is_dirty = match &module.source_type {
-            SourceType::MlMap(_) => {
-                if dirty_packages.contains(&module.package_name) {
-                    let package = build_state
-                        .packages
-                        .get(&module.package_name)
-                        .expect("Package not found");
-                    // probably better to do this in a different function
-                    // specific to compiling mlmaps
-                    let compile_path = package.get_mlmap_compile_path();
-                    let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
-                    if let Err(err) = namespaces::compile_mlmap(
-                        &build_state.project_context,
-                        package,
-                        module_name,
-                        &build_state.compiler_info.bsc_path,
-                    ) {
-                        has_failure = true;
-                        stderr.push_str(&format!("{err}\n"));
-                    }
-                    let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
+    // Collect package names first to avoid borrow checker issues
+    let module_package_pairs: Vec<(String, String)> = build_state
+        .build_state
+        .modules
+        .iter()
+        .map(|(name, module)| (name.clone(), module.package_name.clone()))
+        .collect();
 
-                    let suffix = package
-                        .namespace
-                        .to_suffix()
-                        .expect("namespace should be set for mlmap module");
-                    let base_build_path = package.get_build_path().join(&suffix);
-                    let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
-                    let _ = std::fs::copy(
-                        base_build_path.with_extension("cmi"),
-                        base_ocaml_build_path.with_extension("cmi"),
-                    );
-                    let _ = std::fs::copy(
-                        base_build_path.with_extension("cmt"),
-                        base_ocaml_build_path.with_extension("cmt"),
-                    );
-                    let _ = std::fs::copy(
-                        base_build_path.with_extension("cmj"),
-                        base_ocaml_build_path.with_extension("cmj"),
-                    );
-                    let _ = std::fs::copy(
-                        base_build_path.with_extension("mlmap"),
-                        base_ocaml_build_path.with_extension("mlmap"),
-                    );
-                    match (mlmap_hash, mlmap_hash_after) {
-                        (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
-                        _ => true,
+    for (module_name, package_name) in module_package_pairs {
+        if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
+            let is_dirty = match &module.source_type {
+                SourceType::MlMap(_) => {
+                    if dirty_packages.contains(&package_name) {
+                        let package = build_state
+                            .build_state
+                            .packages
+                            .get(&package_name)
+                            .expect("Package not found");
+                        // probably better to do this in a different function
+                        // specific to compiling mlmaps
+                        let compile_path = package.get_mlmap_compile_path();
+                        let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
+                        if let Err(err) = namespaces::compile_mlmap(
+                            &build_state.build_state.project_context,
+                            package,
+                            &module_name,
+                            &build_state.build_state.compiler_info.bsc_path,
+                        ) {
+                            has_failure = true;
+                            stderr.push_str(&format!("{err}\n"));
+                        }
+                        let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
+
+                        let suffix = package
+                            .namespace
+                            .to_suffix()
+                            .expect("namespace should be set for mlmap module");
+                        let base_build_path = package.get_build_path().join(&suffix);
+                        let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
+                        let _ = std::fs::copy(
+                            base_build_path.with_extension("cmi"),
+                            base_ocaml_build_path.with_extension("cmi"),
+                        );
+                        let _ = std::fs::copy(
+                            base_build_path.with_extension("cmt"),
+                            base_ocaml_build_path.with_extension("cmt"),
+                        );
+                        let _ = std::fs::copy(
+                            base_build_path.with_extension("cmj"),
+                            base_ocaml_build_path.with_extension("cmj"),
+                        );
+                        let _ = std::fs::copy(
+                            base_build_path.with_extension("mlmap"),
+                            base_ocaml_build_path.with_extension("mlmap"),
+                        );
+                        match (mlmap_hash, mlmap_hash_after) {
+                            (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
+                            _ => true,
+                        }
+                    } else {
+                        false
                     }
-                } else {
-                    false
                 }
+                _ => false,
+            };
+            if is_dirty {
+                module.compile_dirty = is_dirty;
             }
-            _ => false,
-        };
-        if is_dirty {
-            module.compile_dirty = is_dirty;
         }
-    });
+    }
 
     if has_failure {
         Err(anyhow!(stderr))
@@ -267,6 +291,11 @@ pub fn parser_args(
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let experimental_features_args = root_config.get_experimental_features_args();
     let bsc_flags = config::flatten_flags(&package_config.compiler_flags);
+
+    // TODO: The legacy bsb build system applies warning/error flags to both parsing and compilation phases.
+    // We currently only apply them to compilation. We should investigate if this is intentional
+    // or if we need to add warning args here as well for consistency with bsb behavior.
+    // This would require passing the warn_error_override parameter through the parser_args function.
 
     let file = PathBuf::from("..").join("..").join(file);
 

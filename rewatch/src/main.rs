@@ -45,6 +45,7 @@ fn main() -> Result<()> {
                 *build_args.create_sourcedirs,
                 *build_args.dev,
                 *build_args.snapshot_output,
+                build_args.warn_error.clone(),
             ) {
                 Err(e) => {
                     println!("{e}");
@@ -69,6 +70,7 @@ fn main() -> Result<()> {
                 *watch_args.create_sourcedirs,
                 *watch_args.dev,
                 *watch_args.snapshot_output,
+                watch_args.warn_error.clone(),
             );
 
             Ok(())

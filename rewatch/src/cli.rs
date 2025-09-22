@@ -126,6 +126,14 @@ pub struct BuildArgs {
     /// Watch mode (deprecated, use `rescript watch` instead)
     #[arg(short, default_value_t = false, num_args = 0..=1)]
     pub watch: bool,
+
+    /// Warning numbers and whether to turn them into errors
+    ///
+    /// This flag overrides any warning configuration in rescript.json.
+    /// Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"
+    /// This follows the same precedence behavior as the legacy bsb build system.
+    #[arg(long)]
+    pub warn_error: Option<String>,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -147,6 +155,14 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
+
+    /// Warning numbers and whether to turn them into errors
+    ///
+    /// This flag overrides any warning configuration in rescript.json.
+    /// Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"
+    /// This follows the same precedence behavior as the legacy bsb build system.
+    #[arg(long)]
+    pub warn_error: Option<String>,
 }
 
 impl From<BuildArgs> for WatchArgs {
@@ -158,6 +174,7 @@ impl From<BuildArgs> for WatchArgs {
             create_sourcedirs: build_args.create_sourcedirs,
             dev: build_args.dev,
             snapshot_output: build_args.snapshot_output,
+            warn_error: build_args.warn_error,
         }
     }
 }
