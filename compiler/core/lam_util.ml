@@ -39,17 +39,60 @@ let add_required_modules ( x : Ident.t list) (meta : Lam_stats.t) =
 
 
 (* refine_let normalises let-bindings so we avoid redundant locals while
-   preserving evaluation semantics. *)
-let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
+   preserving the semantics encoded by Lambda's let_kind.  Downstream passes at
+   the JS backend interpret the k-tag as the shape of code they are allowed to
+   emit:
+     Strict     --> emit `const x = e; body`, with `e` evaluated exactly once.
+                    Reordering `e` or duplicating it would be incorrect.
+     StrictOpt  --> emit either `const x = e; body` (when `x` is used) or drop
+                    the declaration entirely (when DCE prunes `x`).  Duplicating
+                    `e` remains forbidden.
+     Alias      --> emit `const x = e; body` or substitute `e` directly at each
+                    use site, removing the binding if convenient.
+     Variable   --> emit a thunked shape like `function() { return e; }` or keep
+                    the original `let` without forcing; evaluation must stay
+                    deferred.
+
+   The function implements this contract through ordered rewrite clauses:
+   - (Return)      [let[k] x = e in x]               ⟶ e
+   - (Prim)        [let[k] x = e in prim p x]        ⟶ prim p e   (p ≠ makeblock)
+   - (Call)        [let[k] x = e in f x]             ⟶ f e        (x not captured in f)
+   - (Alias)       [let[k] x = e in body]            ⟶ let[Alias] x = e in body
+                     when k ∈ {Strict, StrictOpt} and SafeAlias(e)
+   - (Strict λ)    [let[Strict] x = fn in body]      ⟶ let[StrictOpt] x = fn in body
+   - (Strict Pure) [let[Strict] x = e in body]       ⟶ let[StrictOpt] x = e in body
+                     when no_side_effects(e)
+   Falling through keeps the original binding.  Only the Alias clause changes
+   evaluation strategy downstream, so we keep its predicate intentionally
+   syntactic and narrow. *)
+  let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
   let is_block_constructor = function
     | Lam_primitive.Pmakeblock _ -> true
     | _ -> false
   in
+  (* SafeAlias is the predicate that justifies the (Alias) rewrite
+       let[k] x = e in body  -->  let[Alias] x = e in body
+     for strict bindings.  Turning a binding into [Alias] authorises JS codegen
+     to inline [e] at every use site or drop `const x = e` entirely, so every
+     clause below must ensure that duplicate evaluation of [e] is equivalent to
+     the single eager evaluation promised by [Strict]/[StrictOpt]. *)
   let rec is_safe_to_alias (lam : Lam.t) =
     match lam with
-    | Lvar _ | Lconst _ -> true
-    | Lprim { primitive = Pfield (_, Fld_module _); args = [ (Lglobal_module _ | Lvar _) ]; _ } -> true
+    | Lvar _ | Lconst _ ->
+        (* var/const --> emitting multiple `const` reads is identical to the
+           original eager evaluation, so codegen may inline them freely. *)
+        true
+    | Lprim { primitive = Pfield (_, Fld_module _); args = [ (Lglobal_module _ | Lvar _) ]; _ } ->
+        (* field read --> access hits an immutable module block; inlining emits
+           the same read the eager binding would have performed once. *)
+        true
     | Lprim { primitive = Psome_not_nest; args = [inner]; _ } ->
+        (* some_not_nest(inner) --> expands to two explicit rewrites:
+             let[k] x = inner  --> let[Alias] x = inner
+             let[Alias] x = inner --> let[Alias] x = Some(inner)
+           The recursive call discharges the first arrow; the constructor wrap is
+           allocation-free in JS, so the second arrow preserves the single eager
+           evaluation promised by Strict/StrictOpt. *)
         is_safe_to_alias inner
     | _ -> false
   in
