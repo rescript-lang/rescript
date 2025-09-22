@@ -9,11 +9,19 @@ function testPrimitive() {
   console.log(42);
 }
 
+function testPrimitivePipe() {
+  console.log(42);
+}
+
 function testPrimitiveRef() {
   console.log(42);
 }
 
 function testNone() {
+  
+}
+
+function testNonePipe() {
   
 }
 
@@ -25,6 +33,10 @@ function testQualified() {
   console.log("hello");
 }
 
+function testQualifiedPipe() {
+  console.log("hello");
+}
+
 function testQualifiedRef() {
   console.log("hello");
 }
@@ -33,11 +45,26 @@ function testComplexExpr() {
   console.log("true");
 }
 
+function testComplexExprPipe() {
+  console.log("true");
+}
+
 function testComplexExprRef() {
   console.log("true");
 }
 
 function testNestedCalls() {
+  let opt = [
+    1,
+    2,
+    3
+  ];
+  opt.forEach(item => {
+    console.log(item);
+  });
+}
+
+function testNestedCallsPipe() {
   let opt = [
     1,
     2,
@@ -63,11 +90,20 @@ function testNamedCallback() {
   console.log(42);
 }
 
+function testNamedCallbackPipe() {
+  console.log(42);
+}
+
 function testNamedCallbackRef() {
   console.log(42);
 }
 
 function testMultiple() {
+  console.log("first");
+  console.log("second");
+}
+
+function testMultiplePipe() {
   console.log("first");
   console.log("second");
 }
@@ -81,30 +117,47 @@ function testNonPrimitive() {
   console.log("hello");
 }
 
+function testNonPrimitivePipe() {
+  console.log("hello");
+}
+
 function testNonPrimitiveRef() {
   console.log("hello");
 }
 
 let ForEach = {
   testPrimitive: testPrimitive,
+  testPrimitivePipe: testPrimitivePipe,
   testPrimitiveRef: testPrimitiveRef,
   testNone: testNone,
+  testNonePipe: testNonePipe,
   testNoneRef: testNoneRef,
   testQualified: testQualified,
+  testQualifiedPipe: testQualifiedPipe,
   testQualifiedRef: testQualifiedRef,
   testComplexExpr: testComplexExpr,
+  testComplexExprPipe: testComplexExprPipe,
   testComplexExprRef: testComplexExprRef,
   testNestedCalls: testNestedCalls,
+  testNestedCallsPipe: testNestedCallsPipe,
   testNestedCallsRef: testNestedCallsRef,
   testNamedCallback: testNamedCallback,
+  testNamedCallbackPipe: testNamedCallbackPipe,
   testNamedCallbackRef: testNamedCallbackRef,
   testMultiple: testMultiple,
+  testMultiplePipe: testMultiplePipe,
   testMultipleRef: testMultipleRef,
   testNonPrimitive: testNonPrimitive,
+  testNonPrimitivePipe: testNonPrimitivePipe,
   testNonPrimitiveRef: testNonPrimitiveRef
 };
 
 function testPrimitive$1() {
+  let result = 42 + 1 | 0;
+  console.log(result);
+}
+
+function testPrimitivePipe$1() {
   let result = 42 + 1 | 0;
   console.log(result);
 }
@@ -119,12 +172,22 @@ function testNone$1() {
   console.log(result);
 }
 
+function testNonePipe$1() {
+  let result;
+  console.log(result);
+}
+
 function testNoneRef$1() {
   let result;
   console.log(result);
 }
 
 function testQualified$1() {
+  let result = "hello" + " world";
+  console.log(result);
+}
+
+function testQualifiedPipe$1() {
   let result = "hello" + " world";
   console.log(result);
 }
@@ -139,12 +202,22 @@ function testComplex() {
   console.log(result);
 }
 
+function testComplexPipe() {
+  let result = "true";
+  console.log(result);
+}
+
 function testComplexRef() {
   let result = "true";
   console.log(result);
 }
 
 function testNamedCallback$1() {
+  let result = 42 + 1 | 0;
+  console.log(result);
+}
+
+function testNamedCallbackPipe$1() {
   let result = 42 + 1 | 0;
   console.log(result);
 }
@@ -156,18 +229,28 @@ function testNamedCallbackRef$1() {
 
 let $$Map = {
   testPrimitive: testPrimitive$1,
+  testPrimitivePipe: testPrimitivePipe$1,
   testPrimitiveRef: testPrimitiveRef$1,
   testNone: testNone$1,
+  testNonePipe: testNonePipe$1,
   testNoneRef: testNoneRef$1,
   testQualified: testQualified$1,
+  testQualifiedPipe: testQualifiedPipe$1,
   testQualifiedRef: testQualifiedRef$1,
   testComplex: testComplex,
+  testComplexPipe: testComplexPipe,
   testComplexRef: testComplexRef,
   testNamedCallback: testNamedCallback$1,
+  testNamedCallbackPipe: testNamedCallbackPipe$1,
   testNamedCallbackRef: testNamedCallbackRef$1
 };
 
 function testPrimitive$2() {
+  let result = 42 + 1 | 0;
+  console.log(result);
+}
+
+function testPrimitivePipe$2() {
   let result = 42 + 1 | 0;
   console.log(result);
 }
@@ -182,12 +265,22 @@ function testNone$2() {
   console.log(result);
 }
 
+function testNonePipe$2() {
+  let result;
+  console.log(result);
+}
+
 function testNoneRef$2() {
   let result;
   console.log(result);
 }
 
 function testQualified$2() {
+  let result = "hello" + " world";
+  console.log(result);
+}
+
+function testQualifiedPipe$2() {
   let result = "hello" + " world";
   console.log(result);
 }
@@ -202,12 +295,22 @@ function testComplex$1() {
   console.log(result);
 }
 
+function testComplexPipe$1() {
+  let result = "true";
+  console.log(result);
+}
+
 function testComplexRef$1() {
   let result = "true";
   console.log(result);
 }
 
 function testNamedCallback$2() {
+  let result = 42 + 1 | 0;
+  console.log(result);
+}
+
+function testNamedCallbackPipe$2() {
   let result = 42 + 1 | 0;
   console.log(result);
 }
@@ -219,14 +322,19 @@ function testNamedCallbackRef$2() {
 
 let FlatMap = {
   testPrimitive: testPrimitive$2,
+  testPrimitivePipe: testPrimitivePipe$2,
   testPrimitiveRef: testPrimitiveRef$2,
   testNone: testNone$2,
+  testNonePipe: testNonePipe$2,
   testNoneRef: testNoneRef$2,
   testQualified: testQualified$2,
+  testQualifiedPipe: testQualifiedPipe$2,
   testQualifiedRef: testQualifiedRef$2,
   testComplex: testComplex$1,
+  testComplexPipe: testComplexPipe$1,
   testComplexRef: testComplexRef$1,
   testNamedCallback: testNamedCallback$2,
+  testNamedCallbackPipe: testNamedCallbackPipe$2,
   testNamedCallbackRef: testNamedCallbackRef$2
 };
 

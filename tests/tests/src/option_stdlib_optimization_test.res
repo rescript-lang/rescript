@@ -13,6 +13,11 @@ module ForEach = {
     Option.forEach(opt, value => Console.log(value))
   }
 
+  let testPrimitivePipe = () => {
+    let opt = Some(42)
+    opt->Option.forEach(value => Console.log(value))
+  }
+
   let testPrimitiveRef = () => {
     let opt = Some(42)
     switch opt {
@@ -24,6 +29,11 @@ module ForEach = {
   let testNone = () => {
     let opt = None
     Option.forEach(opt, value => Console.log(globalValue + value))
+  }
+
+  let testNonePipe = () => {
+    let opt = None
+    opt->Option.forEach(value => Console.log(globalValue + value))
   }
 
   let testNoneRef = () => {
@@ -39,6 +49,11 @@ module ForEach = {
     Stdlib_Option.forEach(opt, value => Console.log(value))
   }
 
+  let testQualifiedPipe = () => {
+    let opt = Some("hello")
+    opt->Stdlib_Option.forEach(value => Console.log(value))
+  }
+
   let testQualifiedRef = () => {
     let opt = Some("hello")
     switch opt {
@@ -50,6 +65,17 @@ module ForEach = {
   let testComplexExpr = () => {
     let opt = Some(true)
     Option.forEach(opt, value =>
+      if value {
+        Console.log("true")
+      } else {
+        Console.log("false")
+      }
+    )
+  }
+
+  let testComplexExprPipe = () => {
+    let opt = Some(true)
+    opt->Option.forEach(value =>
       if value {
         Console.log("true")
       } else {
@@ -76,6 +102,11 @@ module ForEach = {
     Option.forEach(opt, value => Array.forEach(value, item => Console.log(item)))
   }
 
+  let testNestedCallsPipe = () => {
+    let opt = Some([1, 2, 3])
+    opt->Option.forEach(value => Array.forEach(value, item => Console.log(item)))
+  }
+
   let testNestedCallsRef = () => {
     let opt = Some([1, 2, 3])
     switch opt {
@@ -88,6 +119,12 @@ module ForEach = {
     let opt = Some(42)
     let log = value => Console.log(value)
     Option.forEach(opt, log)
+  }
+
+  let testNamedCallbackPipe = () => {
+    let opt = Some(42)
+    let log = value => Console.log(value)
+    opt->Option.forEach(log)
   }
 
   let testNamedCallbackRef = () => {
@@ -107,6 +144,16 @@ module ForEach = {
     Option.forEach(opt1, value => Console.log(value))
     Option.forEach(opt2, value => Console.log(value))
     Option.forEach(opt3, value => Console.log(value))
+  }
+
+  let testMultiplePipe = () => {
+    let opt1 = Some("first")
+    let opt2 = Some("second")
+    let opt3 = None
+
+    opt1->Option.forEach(value => Console.log(value))
+    opt2->Option.forEach(value => Console.log(value))
+    opt3->Option.forEach(value => Console.log(value))
   }
 
   let testMultipleRef = () => {
@@ -133,6 +180,11 @@ module ForEach = {
     Option.forEach(opt, value => Console.log(value))
   }
 
+  let testNonPrimitivePipe = () => {
+    let opt = Some("hello")
+    opt->Option.forEach(value => Console.log(value))
+  }
+
   let testNonPrimitiveRef = () => {
     let opt = Some("hello")
     switch opt {
@@ -146,6 +198,12 @@ module Map = {
   let testPrimitive = () => {
     let opt = Some(42)
     let result = Option.map(opt, value => value + 1)
+    Console.log(result)
+  }
+
+  let testPrimitivePipe = () => {
+    let opt = Some(42)
+    let result = opt->Option.map(value => value + 1)
     Console.log(result)
   }
 
@@ -164,6 +222,12 @@ module Map = {
     Console.log(result)
   }
 
+  let testNonePipe = () => {
+    let opt = None
+    let result = opt->Option.map(value => globalValue + value)
+    Console.log(result)
+  }
+
   let testNoneRef = () => {
     let opt = None
     let result = switch opt {
@@ -179,6 +243,12 @@ module Map = {
     Console.log(result)
   }
 
+  let testQualifiedPipe = () => {
+    let opt = Some("hello")
+    let result = opt->Stdlib_Option.map(value => value ++ " world")
+    Console.log(result)
+  }
+
   let testQualifiedRef = () => {
     let opt = Some("hello")
     let result = switch opt {
@@ -191,6 +261,18 @@ module Map = {
   let testComplex = () => {
     let opt = Some(true)
     let result = Option.map(opt, value =>
+      if value {
+        "true"
+      } else {
+        "false"
+      }
+    )
+    Console.log(result)
+  }
+
+  let testComplexPipe = () => {
+    let opt = Some(true)
+    let result = opt->Option.map(value =>
       if value {
         "true"
       } else {
@@ -223,6 +305,13 @@ module Map = {
     Console.log(result)
   }
 
+  let testNamedCallbackPipe = () => {
+    let opt = Some(42)
+    let add = value => value + 1
+    let result = opt->Option.map(add)
+    Console.log(result)
+  }
+
   let testNamedCallbackRef = () => {
     let opt = Some(42)
     let add = value => value + 1
@@ -241,6 +330,12 @@ module FlatMap = {
     Console.log(result)
   }
 
+  let testPrimitivePipe = () => {
+    let opt = Some(42)
+    let result = opt->Option.flatMap(value => Some(value + 1))
+    Console.log(result)
+  }
+
   let testPrimitiveRef = () => {
     let opt = Some(42)
     let result = switch opt {
@@ -253,6 +348,12 @@ module FlatMap = {
   let testNone = () => {
     let opt = None
     let result = Option.flatMap(opt, value => Some(globalValue + value))
+    Console.log(result)
+  }
+
+  let testNonePipe = () => {
+    let opt = None
+    let result = opt->Option.flatMap(value => Some(globalValue + value))
     Console.log(result)
   }
 
@@ -271,6 +372,12 @@ module FlatMap = {
     Console.log(result)
   }
 
+  let testQualifiedPipe = () => {
+    let opt = Some("hello")
+    let result = opt->Stdlib_Option.flatMap(value => Some(value ++ " world"))
+    Console.log(result)
+  }
+
   let testQualifiedRef = () => {
     let opt = Some("hello")
     let result = switch opt {
@@ -283,6 +390,18 @@ module FlatMap = {
   let testComplex = () => {
     let opt = Some(true)
     let result = Option.flatMap(opt, value =>
+      if value {
+        Some("true")
+      } else {
+        None
+      }
+    )
+    Console.log(result)
+  }
+
+  let testComplexPipe = () => {
+    let opt = Some(true)
+    let result = opt->Option.flatMap(value =>
       if value {
         Some("true")
       } else {
@@ -310,6 +429,13 @@ module FlatMap = {
     let opt = Some(42)
     let add = value => Some(value + 1)
     let result = Option.flatMap(opt, add)
+    Console.log(result)
+  }
+
+  let testNamedCallbackPipe = () => {
+    let opt = Some(42)
+    let add = value => Some(value + 1)
+    let result = opt->Option.flatMap(add)
     Console.log(result)
   }
 
