@@ -24,6 +24,10 @@ fn get_log_file_path(package: &packages::Package, subfolder: Location) -> PathBu
     build_folder.join(".compiler.log")
 }
 
+pub fn does_ocaml_build_compiler_log_exist(package: &packages::Package) -> bool {
+    get_log_file_path(package, Location::Ocaml).exists()
+}
+
 fn escape_colours(str: &str) -> String {
     let re = Regex::new(r"[\u001b\u009b]\[[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]")
         .expect("Could not create regex");

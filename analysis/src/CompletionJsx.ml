@@ -460,8 +460,8 @@ let extractJsxProps ~(compName : Longident.t Location.loc) ~props ~children =
   let open Parsetree in
   let childrenStart =
     match children with
-    | JSXChildrenItems [] -> None
-    | JSXChildrenSpreading child | JSXChildrenItems (child :: _) ->
+    | [] -> None
+    | child :: _ ->
       if child.pexp_loc.loc_ghost then None else Some (Loc.start child.pexp_loc)
   in
   let props =

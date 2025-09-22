@@ -107,6 +107,7 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
       string =
     Ext_buffer.clear buf;
     Ext_buffer.add_string buf bsc;
+    Ext_buffer.add_string buf (" -runtime-path " ^ !Runtime_package.path);
     Ext_buffer.add_string buf ns_flag;
     if read_cmi = `yes then Ext_buffer.add_string buf " -bs-read-cmi";
     (* The include order matters below *)
@@ -139,6 +140,7 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
   let mk_ast =
     Ext_buffer.clear buf;
     Ext_buffer.add_string buf bsc;
+    Ext_buffer.add_string buf (" -runtime-path " ^ !Runtime_package.path);
     Ext_buffer.add_char_string buf ' ' warnings;
     (match ppx_files with
     | [] -> ()
@@ -204,7 +206,9 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
   let mi, mi_dev = aux ~read_cmi:`is_cmi ~postbuild:None ~name:"mi" in
   let build_package =
     define
-      ~command:(bsc ^ " -w -49 -color always -no-alias-deps  $i")
+      ~command:
+        (bsc ^ " -w -49 -color always -no-alias-deps -runtime-path "
+       ^ !Runtime_package.path ^ "  $i")
       ~restat:() "build_package"
   in
   {

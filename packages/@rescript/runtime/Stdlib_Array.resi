@@ -1194,6 +1194,24 @@ Array.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == []
 let filterMap: (array<'a>, 'a => option<'b>) => array<'b>
 
 /**
+`filterMapWithIndex(array, fn)`
+
+Calls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.
+
+## Examples
+
+```rescript
+["Hello", "Hi", "Good bye"]->Array.filterMapWithIndex((item, index) =>
+  switch item {
+  | "Hello" => Some(index)
+  | _ => None
+  }
+) == [0]
+```
+*/
+let filterMapWithIndex: (array<'a>, ('a, int) => option<'b>) => array<'b>
+
+/**
 `keepSome(arr)`
 
 Returns a new array containing `value` for all elements that are `Some(value)`

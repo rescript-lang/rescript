@@ -5,7 +5,7 @@ let Constants = {};
 
 function fromString(i) {
   let i$1 = parseFloat(i);
-  if (isNaN(i$1)) {
+  if (Number.isNaN(i$1)) {
     return;
   } else {
     return i$1;

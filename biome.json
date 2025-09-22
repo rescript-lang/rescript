@@ -75,7 +75,9 @@
       "*.d.ts",
       "*.exe",
       "package.json",
-      "packages/artifacts.json"
+      "packages/artifacts.json",
+      ".mypy_cache/**",
+      ".history/**"
     ]
   }
 }

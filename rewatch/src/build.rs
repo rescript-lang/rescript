@@ -1,6 +1,7 @@
 pub mod build_types;
 pub mod clean;
 pub mod compile;
+pub mod compiler_info;
 pub mod deps;
 pub mod logs;
 pub mod namespaces;
@@ -10,6 +11,7 @@ pub mod read_compile_state;
 
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
+use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
@@ -99,7 +101,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         &None,
         is_type_dev,
         true,
-    );
+    )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
         compiler_args,
@@ -107,6 +109,20 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     })?;
 
     Ok(result)
+}
+
+pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInfo> {
+    let bsc_path = helpers::get_bsc();
+    let bsc_hash = helpers::compute_file_hash(&bsc_path).ok_or(anyhow!(
+        "Failed to compute bsc hash for {}",
+        bsc_path.to_string_lossy()
+    ))?;
+    let runtime_path = compile::get_runtime_path(&project_context.current_config, project_context)?;
+    Ok(CompilerInfo {
+        bsc_path,
+        bsc_hash,
+        runtime_path,
+    })
 }
 
 pub fn initialize_build(
@@ -117,8 +133,8 @@ pub fn initialize_build(
     build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<BuildState> {
-    let bsc_path = helpers::get_bsc();
     let project_context = ProjectContext::new(path)?;
+    let compiler = get_compiler_info(&project_context)?;
 
     if !snapshot_output && show_progress {
         print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
@@ -129,16 +145,33 @@ pub fn initialize_build(
     let packages = packages::make(filter, &project_context, show_progress, build_dev_deps)?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
-    if !snapshot_output && show_progress {
-        println!(
-            "{}{} {}Built package tree in {:.2}s",
-            LINE_CLEAR,
-            style("[1/7]").bold().dim(),
-            TREE,
-            default_timing
-                .unwrap_or(timing_package_tree_elapsed)
-                .as_secs_f64()
-        );
+    let compiler_check = verify_compiler_info(&packages, &compiler);
+
+    if show_progress {
+        if snapshot_output {
+            if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
+                // Snapshot-friendly output (no progress prefixes or emojis)
+                println!("Cleaned previous build due to compiler update");
+            }
+        } else {
+            println!(
+                "{}{} {}Built package tree in {:.2}s",
+                LINE_CLEAR,
+                style("[1/7]").bold().dim(),
+                TREE,
+                default_timing
+                    .unwrap_or(timing_package_tree_elapsed)
+                    .as_secs_f64()
+            );
+            if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
+                println!(
+                    "{}{} {}Cleaned previous build due to compiler update",
+                    LINE_CLEAR,
+                    style("[1/7]").bold().dim(),
+                    SWEEP
+                );
+            }
+        }
     }
 
     if !packages::validate_packages_dependencies(&packages) {
@@ -156,7 +189,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(project_context, packages, bsc_path);
+    let mut build_state = BuildState::new(project_context, packages, compiler);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
@@ -447,6 +480,9 @@ pub fn incremental_build(
         if initial_build {
             log_deprecations(build_state);
         }
+
+        // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
+        write_compiler_info(build_state);
 
         Ok(())
     }

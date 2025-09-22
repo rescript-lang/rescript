@@ -6,6 +6,7 @@ import { createServer } from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import { runtimePath } from "../common/runtime.js";
 import { rescript_legacy_exe } from "./bins.js";
 import { WebSocket } from "./minisocket.js";
 
@@ -49,6 +50,11 @@ function acquireBuild(args, options) {
   if (ownerProcess) {
     return null;
   }
+
+  if (args[0] === "build" && !args.includes("-runtime-path")) {
+    args.push("-runtime-path", runtimePath);
+  }
+
   try {
     ownerProcess = child_process.spawn(rescript_legacy_exe, args, {
       stdio: "inherit",

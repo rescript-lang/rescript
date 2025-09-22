@@ -213,19 +213,36 @@ external charAt: (string, int) => string = "charAt"
 `charCodeAt(str, index)` returns the character code at position `index` in
 string `str` the result is in the range 0-65535, unlike `codePointAt`, so it
 will not work correctly for characters with code points greater than or equal
-to 0x10000. The return type is `float` because this function returns NaN if
-`index` is less than zero or greater than the length of the string.
+to 0x10000.
 See [`String.charCodeAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt) on MDN.
 
 ## Examples
 
 ```rescript
-String.charCodeAt(`😺`, 0) == 0xd83d
+String.charCodeAt(`😺`, 0) == Some(0xd83d)
+String.charCodeAt("", 0) == None
+String.codePointAt(`😺`, 0) == Some(0x1f63a)
+```
+*/
+let charCodeAt: (string, int) => option<int>
+
+/**
+`charCodeAtUnsafe(str, index)` returns the character code at position `index` in
+string `str` the result is in the range 0-65535, unlike `codePointAt`, so it
+will not work correctly for characters with code points greater than or equal
+to 0x10000.
+Beware: If the index is out of range, it will return `NaN` which is not actually a valid int.
+See [`String.charCodeAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt) on MDN.
+
+## Examples
+
+```rescript
+String.charCodeAtUnsafe(`😺`, 0) == 0xd83d
 String.codePointAt(`😺`, 0) == Some(0x1f63a)
 ```
 */
 @send
-external charCodeAt: (string, int) => int = "charCodeAt"
+external charCodeAtUnsafe: (string, int) => int = "charCodeAt"
 
 /**
 `codePointAt(str, index)` returns the code point at position `index` within

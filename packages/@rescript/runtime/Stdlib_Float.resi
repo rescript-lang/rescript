@@ -139,7 +139,7 @@ external compare: (float, float) => Stdlib_Ordering.t = "%compare"
 
 /**
 `isNaN(v)` tests if the given `v` is `NaN`.
-See [`NaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN) on MDN.
+See [`isNaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isNaN) on MDN.
 
 ## Examples
 
@@ -148,7 +148,7 @@ Float.isNaN(3.0) // false
 Float.isNaN(Float.Constants.nan) // true
 ```
 */
-@val
+@val @scope("Number")
 external isNaN: float => bool = "isNaN"
 
 /**

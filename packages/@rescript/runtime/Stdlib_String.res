@@ -17,7 +17,15 @@ external compare: (string, string) => Stdlib_Ordering.t = "%compare"
 @get_index external getUnsafe: (string, int) => string = ""
 @send external charAt: (string, int) => string = "charAt"
 
-@send external charCodeAt: (string, int) => int = "charCodeAt"
+@send external charCodeAtUnsafe: (string, int) => int = "charCodeAt"
+
+@val @scope("Number") external isNaN: float => bool = "isNaN"
+@send external charCodeAt: (string, int) => float = "charCodeAt"
+let charCodeAt = (s, i) => {
+  let c = charCodeAt(s, i)
+  isNaN(c) ? None : Some(c->Stdlib_Int.fromFloat)
+}
+
 @send external codePointAt: (string, int) => option<int> = "codePointAt"
 
 @send external concat: (string, string) => string = "concat"

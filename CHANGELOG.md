@@ -10,11 +10,9 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.11 (Unreleased)
+# 12.0.0-beta.13 (Unreleased)
 
 #### :boom: Breaking Change
-
-- Fix return type of `String.charCodeAt`. https://github.com/rescript-lang/rescript/pull/7864
 
 #### :eyeglasses: Spec Compliance
 
@@ -22,22 +20,68 @@
 
 #### :bug: Bug fix
 
-- Fix code generation for emojis in polyvars and labels. https://github.com/rescript-lang/rescript/pull/7853
-- Add `reset` to `experimental_features` to correctly reset playground. https://github.com/rescript-lang/rescript/pull/7868
-- Fix crash with `@get` on external of type `unit => 'a`. https://github.com/rescript-lang/rescript/pull/7866
-- Fix record type spreads in inline records. https://github.com/rescript-lang/rescript/pull/7859
+- Fix result examples. https://github.com/rescript-lang/rescript/pull/7914
 - Make inline record fields that overlap with a variant's tag a compile error. https://github.com/rescript-lang/rescript/pull/7875
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
+- Keep track of compiler info during build. https://github.com/rescript-lang/rescript/pull/7889
+- Improve option optimization for constants. https://github.com/rescript-lang/rescript/pull/7913
+- Option optimization: do not create redundant local vars. https://github.com/rescript-lang/rescript/pull/7915
+
+#### :house: Internal
+
+# 12.0.0-beta.12
+
+#### :boom: Breaking Change
+
+- Make experimental-features kebap-case in compiler config like the other fields. https://github.com/rescript-lang/rescript/pull/7891
+
+#### :rocket: New Feature
+
+- Add `littleEndian` feature for `DataView` to Stdlib. https://github.com/rescript-lang/rescript/pull/7881
+- Add `mapOkAsync`, `mapErrorAsync`, `flatMapOkAsync` and `flatMapErrorAsync` for async `result`s to Stdlib. https://github.com/rescript-lang/rescript/pull/7906
+
+#### :bug: Bug fix
+
+- Include `-runtime-path` as bsc argument when generating `.mlmap` file. https://github.com/rescript-lang/rescript/pull/7888
+
+#### :nail_care: Polish
+
+- Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
+- Dedicated error for dict literal spreads. https://github.com/rescript-lang/rescript/pull/7901
+- Dedicated error message for when mixing up `:` and `=` in various positions. https://github.com/rescript-lang/rescript/pull/7900
+
+# 12.0.0-beta.11
+
+#### :boom: Breaking Change
+
+- Have `String.charCodeAt` return `option<int>`; add `String.charCodeAtUnsafe`. https://github.com/rescript-lang/rescript/pull/7877
+- Remove support of JSX children spread. https://github.com/rescript-lang/rescript/pull/7869
+
+#### :rocket: New Feature
+
+- Add `Array.filterMapWithIndex` to Stdlib. https://github.com/rescript-lang/rescript/pull/7876
+
+#### :bug: Bug fix
+
+- Fix code generation for emojis in polyvars and labels. https://github.com/rescript-lang/rescript/pull/7853
+- Add `reset` to `experimental_features` to correctly reset playground. https://github.com/rescript-lang/rescript/pull/7868
+- Fix crash with `@get` on external of type `unit => 'a`. https://github.com/rescript-lang/rescript/pull/7866
+- Fix record type spreads in inline records. https://github.com/rescript-lang/rescript/pull/7859
+
+#### :nail_care: Polish
+
 - Reactivate optimization for length of array literals. https://github.com/rescript-lang/rescript/pull/7872
+- `Float.isNaN`: use `Number.isNaN` instead of global `isNaN`. https://github.com/rescript-lang/rescript/pull/7874
 
 #### :house: Internal
 
 - Playground: Add config options for experimental features and jsx preserve mode. https://github.com/rescript-lang/rescript/pull/7865
 - Clean up tests. https://github.com/rescript-lang/rescript/pull/7861 https://github.com/rescript-lang/rescript/pull/7871
+- Add `-runtime-path` flag to `bsc` (and `bsb`), we are detecting the location of `@rescript/runtime` in `cli/rescript.js` based on runtime module resolution. https://github.com/rescript-lang/rescript/pull/7858
 
 # 12.0.0-beta.10
 

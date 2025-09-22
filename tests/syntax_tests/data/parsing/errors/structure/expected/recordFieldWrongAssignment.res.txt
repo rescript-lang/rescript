@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/recordFieldWrongAssignment.res:1:13
+
+  1 │ let r = {foo=1}
+  2 │ 
+
+  Records use `:` when assigning fields. Example: `{field: value}`
+
+let r = { foo = 1 }

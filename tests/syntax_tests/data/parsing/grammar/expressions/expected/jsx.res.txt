@@ -40,12 +40,6 @@ let _ = <div className={js|menu|js}><div className={js|submenu|js}>sub1</div>
   <div className={js|submenu|js}>sub2</div></div>
 let _ = <div className={js|menu|js}><div className={js|submenu|js}>sub1</div>
   <div className={js|submenu|js}>sub2</div></div>
-let _ = <div>child</div>
-let _ = <Foo>(fun [arity:1]a -> 1)</Foo>
-let _ = <Foo><Foo2 /></Foo>
-let _ = <Foo>[|a|]</Foo>
-let _ = <Foo>(1, 2)</Foo>
-let _ = <Foo>(1, 2)</Foo>
 let _ = <div>ident [|1;2;3|] ((call a b)[@res.braces ]) ((x.y).z)</div>
 let _ = <Outer inner=<Inner /> />
 let _ = <div onClick=onClickHandler><>{js|foobar|js}</></div>
@@ -240,51 +234,6 @@ let _ =
   <div style=((ReactDOMRe.Style.make ~width:{js|20px|js} ~height:{js|20px|js}
                  ~borderRadius:{js|100%|js} ~backgroundColor:{js|red|js})
   [@res.braces ][@foo ]) />
-let _ =
-  <Animated initialValue=0.0 value>((ReactDOMRe.Style.make
-                                       ~width:{js|20px|js}
-                                       ~height:{js|20px|js}
-                                       ~borderRadius:{js|100%|js}
-                                       ~backgroundColor:{js|red|js})
-  [@res.braces ])</Animated>
-let _ =
-  <Animated initialValue=0.0 value>((fun [arity:1]value ->
-                                       <div style=((ReactDOMRe.Style.make
-                                                      ~width:{js|20px|js}
-                                                      ~height:{js|20px|js}
-                                                      ~borderRadius:{js|100%|js}
-                                                      ~backgroundColor:{js|red|js})
-                                       [@res.braces ]) />)
-  [@res.braces ])</Animated>
-let _ =
-  <Animated initialValue=0.0 value>((fun [arity:1]value ->
-                                       (<div style=((ReactDOMRe.Style.make
-                                                       ~width:{js|20px|js}
-                                                       ~height:{js|20px|js}
-                                                       ~borderRadius:{js|100%|js}
-                                                       ~backgroundColor:{js|red|js})
-                                       [@res.braces ]) /> : ReasonReact.element))
-  [@res.braces ])</Animated>
-let _ =
-  <Animated initialValue=0.0 value>((fun [arity:1]value ->
-                                       ((<div style=((ReactDOMRe.Style.make
-                                                        ~width:{js|20px|js}
-                                                        ~height:{js|20px|js}
-                                                        ~borderRadius:{js|100%|js}
-                                                        ~backgroundColor:{js|red|js})
-                                       [@res.braces ]) />)[@res.braces ]))
-  [@res.braces ][@foo ])</Animated>
-let _ =
-  <Animated initialValue=0.0 value>((fun [arity:1]value ->
-                                       ((let width = {js|20px|js} in
-                                         let height = {js|20px|js} in
-                                         <div style=((ReactDOMRe.Style.make
-                                                        ~width ~height
-                                                        ~borderRadius:{js|100%|js}
-                                                        ~backgroundColor:{js|red|js})
-                                           [@res.braces ]) />)
-                                       [@res.braces ]))
-  [@res.braces ])</Animated>
 let _ = <div callback=((reduce (fun [arity:1]() -> not state))
   [@res.braces ]) />
 let _ =
@@ -330,18 +279,6 @@ let _ =
 ;;<div><div>((Js.log (a <= 10))[@res.braces ])</div></div>
 ;;<div><div onClick=((fun [arity:1]_ -> Js.log (a <= 10))
   [@res.braces ])><div>((Js.log (a <= 10))[@res.braces ])</div></div></div>
-;;<div>element</div>
-;;<div>((fun [arity:1]a -> 1)[@res.braces ])</div>
-;;<div><span /></div>
-;;<div>[|a|]</div>
-;;<div>(1, 2)</div>
-;;<div>((array -> f)[@res.braces ])</div>
-;;<>element</>
-;;<>((fun [arity:1]a -> 1)[@res.braces ])</>
-;;<><span /></>
-;;<>[|a|]</>
-;;<>(1, 2)</>
-;;<>((array -> f)[@res.braces ])</>
 let _ = <A x={js|y|js} {...str} />
 let _ = <p-x-y></p-x-y>
 let _ = <V.x-y></V.x-y>

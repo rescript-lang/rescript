@@ -138,10 +138,20 @@ let main = async () => {
 
         if code->String.length === 0 {
           None
+        } else if code->String.includes("await") {
+          // Same as below, but wrap in async to make top-level awaits work.
+          Some(
+            `testAsync("${example.name}", async () => {
+  module Test = {
+    ${code}
+  }
+  ()
+})`,
+          )
         } else {
           // Let's add the examples inside a Test module because some examples
           // have type definitions that are not supported inside a block.
-          // Also add unit type `()`
+          // Also add unit type `()`.
           Some(
             `test("${example.name}", () => {
   module Test = {

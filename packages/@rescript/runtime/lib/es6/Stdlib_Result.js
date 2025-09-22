@@ -341,6 +341,60 @@ function all6(param) {
   }
 }
 
+async function mapOkAsync(res, f) {
+  let value = await res;
+  if (value.TAG === "Ok") {
+    return {
+      TAG: "Ok",
+      _0: f(value._0)
+    };
+  } else {
+    return {
+      TAG: "Error",
+      _0: value._0
+    };
+  }
+}
+
+async function mapErrorAsync(res, f) {
+  let value = await res;
+  if (value.TAG === "Ok") {
+    return {
+      TAG: "Ok",
+      _0: value._0
+    };
+  } else {
+    return {
+      TAG: "Error",
+      _0: f(value._0)
+    };
+  }
+}
+
+async function flatMapOkAsync(res, f) {
+  let value = await res;
+  if (value.TAG === "Ok") {
+    return await f(value._0);
+  } else {
+    return {
+      TAG: "Error",
+      _0: value._0
+    };
+  }
+}
+
+async function flatMapErrorAsync(res, f) {
+  let value = await res;
+  if (value.TAG === "Ok") {
+    return {
+      TAG: "Ok",
+      _0: value._0
+    };
+  } else {
+    return await f(value._0);
+  }
+}
+
 let getExn = getOrThrow;
 
 let mapWithDefault = mapOr;
@@ -368,5 +422,9 @@ export {
   all4,
   all5,
   all6,
+  mapOkAsync,
+  mapErrorAsync,
+  flatMapOkAsync,
+  flatMapErrorAsync,
 }
 /* No side effect */

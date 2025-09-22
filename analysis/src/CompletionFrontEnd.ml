@@ -1353,7 +1353,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 (Jsx_container_element
                    {jsx_container_element_children = children}) ->
               children
-            | _ -> JSXChildrenItems []
+            | _ -> []
           in
           let compName_loc = compName.loc in
           let compName_lid =
@@ -1412,8 +1412,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                   (Jsx_container_element
                      {
                        jsx_container_element_closing_tag = None;
-                       jsx_container_element_children =
-                         JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
+                       jsx_container_element_children = _ :: _;
                      }) ) ->
               None
             | Some jsxProps, _ ->

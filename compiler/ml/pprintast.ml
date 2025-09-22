@@ -798,7 +798,7 @@ and simple_expr ctxt f x =
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
     | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
-      pp f "<>%a</>" (list (simple_expr ctxt)) (collect_jsx_children children)
+      pp f "<>%a</>" (list (simple_expr ctxt)) children
     | Pexp_jsx_element
         (Jsx_unary_element
            {
@@ -828,20 +828,12 @@ and simple_expr ctxt f x =
       in
       match props with
       | [] ->
-        pp f "<%s>%a%s" name
-          (list (simple_expr ctxt))
-          (collect_jsx_children children)
-          closing_name
+        pp f "<%s>%a%s" name (list (simple_expr ctxt)) children closing_name
       | _ ->
         pp f "<%s %a>%a%s" name (print_jsx_props ctxt) props
           (list (simple_expr ctxt))
-          (collect_jsx_children children)
-          closing_name)
+          children closing_name)
     | _ -> paren true (expression ctxt) f x
-
-and collect_jsx_children = function
-  | JSXChildrenSpreading e -> [e]
-  | JSXChildrenItems xs -> xs
 
 and print_jsx_prop ctxt f = function
   | JSXPropPunning (is_optional, name) ->

@@ -97,6 +97,26 @@ module ErrorMessages = struct
      ...b}` wouldn't make sense, as `b` would override every field of `a` \
      anyway."
 
+  let dict_expr_spread = "Dict literals do not support spread (`...`) yet."
+
+  let record_field_missing_colon =
+    "Records use `:` when assigning fields. Example: `{field: value}`"
+
+  let record_pattern_field_missing_colon =
+    "Record patterns use `:` when matching fields. Example: `{field: value}`"
+
+  let record_type_field_missing_colon =
+    "Record fields in type declarations use `:`. Example: `{field: string}`"
+
+  let dict_field_missing_colon =
+    "Dict entries use `:` to separate keys from values. Example: `{\"k\": v}`"
+
+  let labelled_argument_missing_equal =
+    "Use `=` to pass a labelled argument. Example: `~label=value`"
+
+  let optional_labelled_argument_missing_equal =
+    "Optional labelled arguments use `=?`. Example: `~label=?value`"
+
   let variant_ident =
     "A polymorphic variant (e.g. #id) must start with an alphabetical letter \
      or be a number (e.g. #742)"
@@ -184,6 +204,9 @@ module ErrorMessages = struct
   let type_definition_in_function =
     "Type definitions are not allowed inside functions.\n"
     ^ "  Move this `type` declaration to the top level or into a module."
+
+  let spread_children_no_longer_supported =
+    "Spreading JSX children is no longer supported."
 end
 
 module InExternal = struct
@@ -1405,6 +1428,13 @@ and parse_record_pattern_row_field ~attrs p =
   let pattern, optional =
     match p.Parser.token with
     | Colon ->
+      Parser.next p;
+      let optional = parse_optional_label p in
+      let pat = parse_pattern p in
+      (pat, optional)
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_pattern_field_missing_colon);
       Parser.next p;
       let optional = parse_optional_label p in
       let pat = parse_pattern p in
@@ -2995,19 +3025,13 @@ and parse_jsx_children p : Parsetree.jsx_children =
       loop p (child :: children)
     | _ -> children
   in
-  let children =
-    match p.Parser.token with
-    | DotDotDot ->
-      Parser.next p;
-      let expr =
-        parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
-      in
-      Parsetree.JSXChildrenSpreading expr
-    | _ ->
-      let children = List.rev (loop p []) in
-      Parsetree.JSXChildrenItems children
-  in
-  children
+  match p.Parser.token with
+  | DotDotDot ->
+    Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+      (Diagnostics.message ErrorMessages.spread_children_no_longer_supported);
+    Parser.next p;
+    [parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p]
+  | _ -> List.rev (loop p [])
 
 and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
@@ -3053,6 +3077,19 @@ and parse_braced_or_record_expr p =
     in
     match p.Parser.token with
     | Colon ->
+      Parser.next p;
+      let field_expr = parse_expr p in
+      Parser.optional p Comma |> ignore;
+      let expr =
+        parse_record_expr_with_string_keys ~start_pos
+          {Parsetree.lid = field; x = field_expr; opt = false}
+          p
+      in
+      Parser.expect Rbrace p;
+      expr
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_field_missing_colon);
       Parser.next p;
       let field_expr = parse_expr p in
       Parser.optional p Comma |> ignore;
@@ -3141,6 +3178,28 @@ and parse_braced_or_record_expr p =
         let optional = parse_optional_label p in
         let field_expr = parse_expr p in
         match p.token with
+        | Rbrace ->
+          Parser.next p;
+          let loc = mk_loc start_pos p.prev_end_pos in
+          Ast_helper.Exp.record ~loc
+            [{lid = path_ident; x = field_expr; opt = optional}]
+            None
+        | _ ->
+          Parser.expect Comma p;
+          let expr =
+            parse_record_expr ~start_pos
+              [{lid = path_ident; x = field_expr; opt = optional}]
+              p
+          in
+          Parser.expect Rbrace p;
+          expr)
+      | Equal -> (
+        Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+          (Diagnostics.message ErrorMessages.record_field_missing_colon);
+        Parser.next p;
+        let optional = parse_optional_label p in
+        let field_expr = parse_expr p in
+        match p.Parser.token with
         | Rbrace ->
           Parser.next p;
           let loc = mk_loc start_pos p.prev_end_pos in
@@ -3298,6 +3357,12 @@ and parse_record_expr_row_with_string_key p :
       Parser.next p;
       let field_expr = parse_expr p in
       Some {lid = field; x = field_expr; opt = false}
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_field_missing_colon);
+      Parser.next p;
+      let field_expr = parse_expr p in
+      Some {lid = field; x = field_expr; opt = false}
     | _ ->
       Some
         {
@@ -3323,6 +3388,13 @@ and parse_record_expr_row p :
     let field = parse_value_path p in
     match p.Parser.token with
     | Colon ->
+      Parser.next p;
+      let optional = parse_optional_label p in
+      let field_expr = parse_expr p in
+      Some {lid = field; x = field_expr; opt = optional}
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_field_missing_colon);
       Parser.next p;
       let optional = parse_optional_label p in
       let field_expr = parse_expr p in
@@ -3371,12 +3443,24 @@ and parse_record_expr_row p :
 
 and parse_dict_expr_row p =
   match p.Parser.token with
+  | DotDotDot ->
+    Parser.err p (Diagnostics.message ErrorMessages.dict_expr_spread);
+    Parser.next p;
+    (* Parse the expr so it's consumed *)
+    let _spread_expr = parse_constrained_or_coerced_expr p in
+    None
   | String s -> (
     let loc = mk_loc p.start_pos p.end_pos in
     Parser.next p;
     let field = Location.mkloc (Longident.Lident s) loc in
     match p.Parser.token with
     | Colon ->
+      Parser.next p;
+      let fieldExpr = parse_expr p in
+      Some (field, fieldExpr)
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.dict_field_missing_colon);
       Parser.next p;
       let fieldExpr = parse_expr p in
       Some (field, fieldExpr)
@@ -3884,12 +3968,42 @@ and parse_argument2 p : argument option =
         in
         Some {label; expr}
       | Colon ->
+        let colon_start = p.start_pos in
         Parser.next p;
-        let typ = parse_typ_expr p in
-        let loc = mk_loc start_pos p.prev_end_pos in
-        let expr = Ast_helper.Exp.constraint_ ~loc ident_expr typ in
-        Some
-          {label = Asttypes.Labelled {txt = ident; loc = named_arg_loc}; expr}
+        let colon_end = p.prev_end_pos in
+        if Grammar.is_typ_expr_start p.Parser.token then
+          let typ = parse_typ_expr p in
+          let loc = mk_loc start_pos p.prev_end_pos in
+          let expr = Ast_helper.Exp.constraint_ ~loc ident_expr typ in
+          Some
+            {label = Asttypes.Labelled {txt = ident; loc = named_arg_loc}; expr}
+        else
+          let label, expr =
+            match p.Parser.token with
+            | Question ->
+              Parser.err ~start_pos:colon_start ~end_pos:colon_end p
+                (Diagnostics.message
+                   ErrorMessages.optional_labelled_argument_missing_equal);
+              Parser.next p;
+              let expr = parse_constrained_or_coerced_expr p in
+              (Asttypes.Optional {txt = ident; loc = named_arg_loc}, expr)
+            | _ ->
+              Parser.err ~start_pos:colon_start ~end_pos:colon_end p
+                (Diagnostics.message
+                   ErrorMessages.labelled_argument_missing_equal);
+              let expr =
+                match p.Parser.token with
+                | Underscore
+                  when not (is_es6_arrow_expression ~in_ternary:false p) ->
+                  let loc = mk_loc p.start_pos p.end_pos in
+                  Parser.next p;
+                  Ast_helper.Exp.ident ~loc
+                    (Location.mkloc (Longident.Lident "_") loc)
+                | _ -> parse_constrained_or_coerced_expr p
+              in
+              (Asttypes.Labelled {txt = ident; loc = named_arg_loc}, expr)
+          in
+          Some {label; expr}
       | _ ->
         Some
           {
@@ -4786,7 +4900,13 @@ and parse_string_field_declaration p =
     let name_end_pos = p.end_pos in
     Parser.next p;
     let field_name = Location.mkloc name (mk_loc name_start_pos name_end_pos) in
-    Parser.expect ~grammar:Grammar.TypeExpression Colon p;
+    (match p.Parser.token with
+    | Colon -> Parser.next p
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
+      Parser.next p
+    | _ -> Parser.expect ~grammar:Grammar.TypeExpression Colon p);
     let typ = parse_poly_type_expr p in
     Some (Parsetree.Otag (field_name, attrs, typ))
   | DotDotDot ->
@@ -4799,7 +4919,13 @@ and parse_string_field_declaration p =
       (Diagnostics.message (ErrorMessages.object_quoted_field_name name));
     Parser.next p;
     let field_name = Location.mkloc name name_loc in
-    Parser.expect ~grammar:Grammar.TypeExpression Colon p;
+    (match p.Parser.token with
+    | Colon -> Parser.next p
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
+      Parser.next p
+    | _ -> Parser.expect ~grammar:Grammar.TypeExpression Colon p);
     let typ = parse_poly_type_expr p in
     Some (Parsetree.Otag (field_name, attrs, typ))
   | _token -> None
@@ -4823,6 +4949,14 @@ and parse_field_declaration ?current_type_name_path ?inline_types_context p =
   let typ =
     match p.Parser.token with
     | Colon ->
+      Parser.next p;
+      let current_type_name_path =
+        extend_current_type_name_path current_type_name_path name.txt
+      in
+      parse_poly_type_expr ?current_type_name_path ?inline_types_context p
+    | Equal ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
       Parser.next p;
       let current_type_name_path =
         extend_current_type_name_path current_type_name_path name.txt
@@ -4867,6 +5001,11 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     let typ =
       match p.Parser.token with
       | Colon ->
+        Parser.next p;
+        parse_poly_type_expr ?current_type_name_path ?inline_types_context p
+      | Equal ->
+        Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+          (Diagnostics.message ErrorMessages.record_type_field_missing_colon);
         Parser.next p;
         parse_poly_type_expr ?current_type_name_path ?inline_types_context p
       | _ ->

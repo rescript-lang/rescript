@@ -318,7 +318,7 @@
       },
       "additionalProperties": false
     },
-    "bsc-flags": {
+    "compiler-flags": {
       "oneOf": [
         {
           "type": "array",
@@ -326,21 +326,6 @@
             "type": "string"
           },
           "description": "Default: `[\"-no-alias-deps\"]`"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "enum": ["reset", "prefix", "append"]
-            },
-            "flags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "description": "(Not implemented yet)"
         }
       ]
     },
@@ -392,11 +377,19 @@
     },
     "bs-dependencies": {
       "$ref": "#/definitions/dependencies",
-      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`"
+      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dependencies instead)."
     },
     "bs-dev-dependencies": {
       "$ref": "#/definitions/dependencies",
-      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`"
+      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dev-dependencies instead)."
+    },
+    "dependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`."
+    },
+    "dev-dependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`."
     },
     "generators": {
       "type": "array",
@@ -422,7 +415,11 @@
       "description": "gentype config, see cristianoc/genType for more details"
     },
     "bsc-flags": {
-      "$ref": "#/definitions/bsc-flags",
+      "$ref": "#/definitions/compiler-flags",
+      "description": "Flags passed to bsc.exe (deprecated, use compiler-flags instead)"
+    },
+    "compiler-flags": {
+      "$ref": "#/definitions/compiler-flags",
       "description": "Flags passed to bsc.exe"
     },
     "warnings": {
@@ -485,7 +482,7 @@
       "$ref": "#/definitions/editor",
       "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
     },
-    "experimentalFeatures": {
+    "experimental-features": {
       "type": "object",
       "description": "Enable experimental compiler features.",
       "properties": {
