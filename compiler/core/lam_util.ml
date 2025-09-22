@@ -45,6 +45,9 @@ let refine_let ~kind param (arg : Lam.t) (l : Lam.t) : Lam.t =
     | Lam_primitive.Pmakeblock _ -> true
     | _ -> false
   in
+  (* Helper for spotting RHS expressions that are safe to inline everywhere.
+     These are the obviously pure shapes where substituting the original value
+     cannot introduce extra work or side effects. *)
   let is_alias_candidate (lam : Lam.t) =
     match lam with
     | Lvar _ | Lconst _ -> true
