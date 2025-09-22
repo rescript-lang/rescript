@@ -255,3 +255,172 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 - All `lam_*.ml` files process this representation
 - Use `lam_print.ml` for debugging lambda expressions
 - Test both with and without optimization passes
+
+## Working on the Build System
+
+### Rewatch Architecture
+
+Rewatch is the modern build system written in Rust that replaces the legacy bsb (BuckleScript) build system. It provides faster incremental builds, better error messages, and improved developer experience.
+
+#### Key Components
+
+```
+rewatch/src/
+├── build/              # Core build system logic
+│   ├── build_types.rs  # Core data structures (BuildState, Module, etc.)
+│   ├── compile.rs      # Compilation logic and bsc argument generation
+│   ├── parse.rs        # AST generation and parser argument handling
+│   ├── packages.rs     # Package discovery and dependency resolution
+│   ├── deps.rs         # Dependency analysis and module graph
+│   ├── clean.rs        # Build artifact cleanup
+│   └── logs.rs         # Build logging and error reporting
+├── cli.rs              # Command-line interface definitions
+├── config.rs           # rescript.json configuration parsing
+├── watcher.rs          # File watching and incremental builds
+└── main.rs             # Application entry point
+```
+
+#### Build System Flow
+
+1. **Initialization** (`build::initialize_build`)
+   - Parse `rescript.json` configuration
+   - Discover packages and dependencies
+   - Set up compiler information
+   - Create initial `BuildState`
+
+2. **AST Generation** (`build::parse`)
+   - Generate AST files using `bsc -bs-ast`
+   - Handle PPX transformations
+   - Process JSX
+
+3. **Dependency Analysis** (`build::deps`)
+   - Analyze module dependencies from AST files
+   - Build dependency graph
+   - Detect circular dependencies
+
+4. **Compilation** (`build::compile`)
+   - Generate `bsc` compiler arguments
+   - Compile modules in dependency order
+   - Handle warnings and errors
+   - Generate JavaScript output
+
+5. **Incremental Updates** (`watcher.rs`)
+   - Watch for file changes
+   - Determine dirty modules
+   - Recompile only affected modules
+
+### Development Guidelines
+
+#### Adding New Features
+
+1. **CLI Arguments**: Add to `cli.rs` in `BuildArgs` and `WatchArgs`
+2. **Configuration**: Extend `config.rs` for new `rescript.json` fields
+3. **Build Logic**: Modify appropriate `build/*.rs` modules
+4. **Thread Parameters**: Pass new parameters through the build system chain
+5. **Add Tests**: Include unit tests for new functionality
+
+#### Common Patterns
+
+- **Parameter Threading**: New CLI flags need to be passed through:
+  - `main.rs` → `build::build()` → `initialize_build()` → `BuildState`
+  - `main.rs` → `watcher::start()` → `async_watch()` → `initialize_build()`
+
+- **Configuration Precedence**: Command-line flags override `rescript.json` config
+- **Error Handling**: Use `anyhow::Result` for error propagation
+- **Logging**: Use `log::debug!` for development debugging
+
+#### Testing
+
+```bash
+# Run rewatch tests (from project root)
+cargo test --manifest-path rewatch/Cargo.toml
+
+# Test specific functionality
+cargo test --manifest-path rewatch/Cargo.toml config::tests::test_get_warning_args
+
+# Run clippy for code quality
+cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
+
+# Check formatting
+cargo fmt --check --manifest-path rewatch/Cargo.toml
+
+# Build rewatch
+cargo build --manifest-path rewatch/Cargo.toml --release
+
+# Or use the Makefile shortcuts
+make rewatch          # Build rewatch
+make test-rewatch     # Run integration tests
+```
+
+**Note**: The rewatch project is located in the `rewatch/` directory with its own `Cargo.toml` file. All cargo commands should be run from the project root using the `--manifest-path rewatch/Cargo.toml` flag, as shown in the CI workflow.
+
+**Integration Tests**: The `make test-rewatch` command runs bash-based integration tests located in `rewatch/tests/suite-ci.sh`. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
+
+#### Debugging
+
+- **Build State**: Use `log::debug!` to inspect `BuildState` contents
+- **Compiler Args**: Check generated `bsc` arguments in `compile.rs`
+- **Dependencies**: Inspect module dependency graph in `deps.rs`
+- **File Watching**: Monitor file change events in `watcher.rs`
+
+#### Performance Considerations
+
+- **Incremental Builds**: Only recompile dirty modules
+- **Parallel Compilation**: Use `rayon` for parallel processing
+- **Memory Usage**: Be mindful of `BuildState` size in large projects
+- **File I/O**: Minimize file system operations
+
+#### Performance vs Code Quality Trade-offs
+
+When clippy suggests refactoring that could impact performance, consider the trade-offs:
+
+- **Parameter Structs vs Many Arguments**: While clippy prefers parameter structs for functions with many arguments, sometimes the added complexity isn't worth it. Use `#[allow(clippy::too_many_arguments)]` for functions that legitimately need many parameters and where a struct would add unnecessary complexity.
+
+- **Cloning vs Borrowing**: Sometimes cloning is necessary due to Rust's borrow checker rules. If the clone is:
+  - Small and one-time (e.g., `Vec<String>` with few elements)
+  - Necessary for correct ownership semantics
+  - Not in a hot path
+  
+  Then accept the clone rather than over-engineering the solution.
+
+- **When to Optimize**: Profile before optimizing. Most "performance concerns" in build systems are negligible compared to actual compilation time.
+
+- **Avoid Unnecessary Type Conversions**: When threading parameters through multiple function calls, use consistent types (e.g., `String` throughout) rather than converting between `String` and `&str` at each boundary. This eliminates unnecessary allocations and conversions.
+
+#### Compatibility with Legacy bsb
+
+- **Command-line Flags**: Maintain compatibility with bsb flags where possible
+- **Configuration**: Support both old (`bs-*`) and new field names
+- **Output Format**: Generate compatible build artifacts
+- **Error Messages**: Provide clear migration guidance
+
+### Common Tasks
+
+#### Adding New CLI Flags
+
+1. Add to `BuildArgs` and `WatchArgs` in `cli.rs`
+2. Update `From<BuildArgs> for WatchArgs` implementation
+3. Pass through `main.rs` to build functions
+4. Thread through build system to where it's needed
+5. Add unit tests for the new functionality
+
+#### Modifying Compiler Arguments
+
+1. Update `compiler_args()` in `build/compile.rs`
+2. Consider both parsing and compilation phases
+3. Handle precedence between CLI flags and config
+4. Test with various `rescript.json` configurations
+
+#### Working with Dependencies
+
+1. Use `packages.rs` for package discovery
+2. Update `deps.rs` for dependency analysis
+3. Handle both local and external dependencies
+4. Consider dev dependencies vs regular dependencies
+
+#### File Watching
+
+1. Modify `watcher.rs` for file change handling
+2. Update `AsyncWatchArgs` for new parameters
+3. Handle different file types (`.res`, `.resi`, etc.)
+4. Consider performance impact of watching many files
