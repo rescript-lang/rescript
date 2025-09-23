@@ -531,8 +531,8 @@ runGetTest({
     ]
   }),
   get: i => {
-    let __res_option_opt = i["a"];
-    return Stdlib_Option.getOr(__res_option_opt !== undefined ? __res_option_opt.concat([
+    let i$1 = i["a"];
+    return Stdlib_Option.getOr(i$1 !== undefined ? i$1.concat([
         4,
         5
       ]) : undefined, []);

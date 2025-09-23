@@ -1074,7 +1074,12 @@ and transl_stdlib_option_call exp opt_expr info oargs =
   match oargs with
   | (Nolabel, Some _) :: (Nolabel, Some _) :: _ | (Nolabel, Some _) :: [] ->
     let opt_lam = transl_exp opt_expr in
-    let opt_id = Ident.create "__res_option_opt" in
+    let opt_id =
+      match info.callback with
+      | Stdlib_option_inline_lambda {param; _} ->
+        Ident.create (Ident.name param)
+      | _ -> Ident.create "__res_option_value"
+    in
     let opt_var = Lvar opt_id in
     let callback_result =
       bind_option_value ~payload_not_nested:info.payload_not_nested opt_var
