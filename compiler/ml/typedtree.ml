@@ -64,11 +64,27 @@ and expression = {
   exp_attributes: attribute list;
 }
 
+and stdlib_option_call_kind =
+  | Stdlib_option_forEach
+  | Stdlib_option_map of {result_cannot_contain_undefined: bool}
+  | Stdlib_option_flatMap
+
+and stdlib_option_callback =
+  | Stdlib_option_inline_lambda of {param: Ident.t; body: expression}
+  | Stdlib_option_inline_ident of expression
+
+and stdlib_option_call = {
+  callback: stdlib_option_callback;
+  call_kind: stdlib_option_call_kind;
+  payload_not_nested: bool;
+}
+
 and exp_extra =
   | Texp_constraint of core_type
   | Texp_coerce of core_type
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
   | Texp_newtype of string
+  | Texp_stdlib_option_call of stdlib_option_call
 
 and expression_desc =
   | Texp_ident of Path.t * Longident.t loc * Types.value_description

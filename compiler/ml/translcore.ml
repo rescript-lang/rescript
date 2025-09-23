@@ -646,6 +646,16 @@ let rec cut n l =
 
 let try_ids = Hashtbl.create 8
 
+let stdlib_option_call_extra exp =
+  let rec aux = function
+    | [] -> None
+    | (Texp_stdlib_option_call info, _, _) :: _ -> Some info
+    | _ :: rest -> aux rest
+  in
+  aux exp.exp_extra
+
+let lambda_none = Lconst (Const_pointer (0, Pt_shape_none))
+
 let extract_directive_for_fn exp =
   exp.exp_attributes
   |> List.find_map (fun ({txt}, payload) ->
@@ -755,10 +765,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           (Lprim
              (Pccall (set_transformed_jsx d ~transformed_jsx), argl, e.exp_loc))
       | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
-  | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
+  | Texp_apply {funct; args = oargs; partial; transformed_jsx} -> (
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in
+    let option_call_info = stdlib_option_call_extra e in
     let uncurried_partial_application =
       (* In case of partial application foo(args, ...) when some args are missing,
          get the arity *)
@@ -771,8 +782,17 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         | None -> None
       else None
     in
-    transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
-      (transl_exp funct) oargs e.exp_loc
+    match option_call_info with
+    | Some info when not partial -> (
+      match oargs with
+      | (Nolabel, Some opt_expr) :: _ ->
+        transl_stdlib_option_call e opt_expr info oargs
+      | _ ->
+        transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
+          (transl_exp funct) oargs e.exp_loc)
+    | _ ->
+      transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
+        (transl_exp funct) oargs e.exp_loc)
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
   | Texp_try (body, pat_expr_list) ->
@@ -923,6 +943,60 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_assert cond ->
     if !Clflags.noassert then lambda_unit
     else Lifthenelse (transl_exp cond, lambda_unit, assert_failed e)
+
+and bind_option_value ~payload_not_nested opt_var opt_loc callback =
+  let value_expr =
+    if payload_not_nested then
+      Lprim (Pval_from_option_not_nest, [opt_var], opt_loc)
+    else Lprim (Pval_from_option, [opt_var], opt_loc)
+  in
+  match callback with
+  | Stdlib_option_inline_lambda {param; body} ->
+    bind Strict param value_expr (transl_exp body)
+  | Stdlib_option_inline_ident expr ->
+    let func = transl_exp expr in
+    let value_id = Ident.create "__res_option_value" in
+    let apply =
+      Lapply
+        {
+          ap_func = func;
+          ap_args = [Lvar value_id];
+          ap_inlined = Default_inline;
+          ap_loc = expr.exp_loc;
+          ap_transformed_jsx = false;
+        }
+    in
+    bind Strict value_id value_expr apply
+
+and transl_stdlib_option_call exp opt_expr info oargs =
+  match oargs with
+  | (Nolabel, Some _) :: (Nolabel, Some _) :: _ | (Nolabel, Some _) :: [] ->
+    let opt_lam = transl_exp opt_expr in
+    let opt_id = Ident.create "__res_option_opt" in
+    let opt_var = Lvar opt_id in
+    let callback_result =
+      bind_option_value ~payload_not_nested:info.payload_not_nested opt_var
+        exp.exp_loc info.callback
+    in
+    let some_branch =
+      match info.call_kind with
+      | Stdlib_option_forEach -> callback_result
+      | Stdlib_option_map {result_cannot_contain_undefined} ->
+        let tag =
+          if result_cannot_contain_undefined then Blk_some_not_nested
+          else Blk_some
+        in
+        Lprim (Pmakeblock tag, [callback_result], exp.exp_loc)
+      | Stdlib_option_flatMap -> callback_result
+    in
+    let none_branch =
+      match info.call_kind with
+      | Stdlib_option_forEach -> lambda_unit
+      | Stdlib_option_map _ | Stdlib_option_flatMap -> lambda_none
+    in
+    let cond = Lprim (Pis_not_none, [opt_var], exp.exp_loc) in
+    bind Strict opt_id opt_lam (Lifthenelse (cond, some_branch, none_branch))
+  | _ -> assert false
 
 and transl_list expr_list = List.map transl_exp expr_list
 

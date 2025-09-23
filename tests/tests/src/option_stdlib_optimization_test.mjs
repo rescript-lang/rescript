@@ -7,11 +7,11 @@ import * as Belt_MapString from "@rescript/runtime/lib/es6/Belt_MapString.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 function getIncidentCategoryName(incidents, categories, incidentId) {
-  let incident = incidentId !== undefined ? Belt_MapString.get(incidents, incidentId) : undefined;
-  let categoryId = incident !== undefined ? incident.categoryId : undefined;
-  let category = categoryId !== undefined ? Belt_MapString.get(categories, categoryId) : undefined;
-  if (category !== undefined) {
-    return category.name;
+  let __res_option_opt = incidentId !== undefined ? Belt_MapString.get(incidents, incidentId) : undefined;
+  let __res_option_opt$1 = __res_option_opt !== undefined ? __res_option_opt.categoryId : undefined;
+  let __res_option_opt$2 = __res_option_opt$1 !== undefined ? Belt_MapString.get(categories, __res_option_opt$1) : undefined;
+  if (__res_option_opt$2 !== undefined) {
+    return __res_option_opt$2.name;
   }
 }
 

@@ -143,6 +143,95 @@ type recarg = Allowed | Required | Rejected
 
 let case lhs rhs = {c_lhs = lhs; c_guard = None; c_rhs = rhs}
 
+type stdlib_option_fun_kind =
+  | Stdlib_option_fun_forEach
+  | Stdlib_option_fun_map
+  | Stdlib_option_fun_flatMap
+
+let stdlib_option_fun_of_path env path =
+  let canonical = Env.normalize_path_prefix None env path in
+  match Path.flatten canonical with
+  | `Contains_apply -> None
+  | `Ok (head, rest) ->
+    let segments = Ident.name head :: rest in
+    let matches fname =
+      match segments with
+      | ["Stdlib"; "Option"; name] -> String.equal name fname
+      | ["Stdlib_Option"; name] -> String.equal name fname
+      | _ -> false
+    in
+    if matches "forEach" then Some Stdlib_option_fun_forEach
+    else if matches "map" then Some Stdlib_option_fun_map
+    else if matches "flatMap" then Some Stdlib_option_fun_flatMap
+    else None
+
+let inline_lambda_callback (expr : expression) : stdlib_option_callback option =
+  match expr.exp_desc with
+  | Texp_function {arg_label = Nolabel; case; partial = Total; async = false; _}
+    when Option.is_none case.c_guard -> (
+    match case.c_lhs.pat_desc with
+    | Tpat_var (param, _) ->
+      Some (Stdlib_option_inline_lambda {param; body = case.c_rhs})
+    | _ -> None)
+  | _ -> None
+
+let inline_ident_callback (expr : expression) : stdlib_option_callback option =
+  match expr.exp_desc with
+  | Texp_ident _ -> Some (Stdlib_option_inline_ident expr)
+  | _ -> None
+
+let callback_return_type env (expr : expression) =
+  match (expand_head env expr.exp_type).desc with
+  | Tarrow (_, ret_ty, _, _) -> Some ret_ty
+  | _ -> None
+
+let detect_stdlib_option_call env (funct : expression)
+    (args : (Noloc.arg_label * expression option) list) :
+    stdlib_option_call option =
+  match funct.exp_desc with
+  | Texp_ident (path, _, _) -> (
+    match stdlib_option_fun_of_path env path with
+    | None -> None
+    | Some fun_kind -> (
+      match args with
+      | [(Nolabel, Some opt_expr); (Nolabel, Some callback_expr)] -> (
+        let callback_info =
+          match inline_lambda_callback callback_expr with
+          | Some info -> Some info
+          | None -> inline_ident_callback callback_expr
+        in
+        match callback_info with
+        | None -> None
+        | Some callback ->
+          let payload_not_nested =
+            match (expand_head env opt_expr.exp_type).desc with
+            | Tconstr (path, [payload_ty], _)
+              when Path.same path Predef.path_option ->
+              Typeopt.type_cannot_contain_undefined payload_ty env
+            | _ -> false
+          in
+          let call_kind =
+            match fun_kind with
+            | Stdlib_option_fun_forEach -> Stdlib_option_forEach
+            | Stdlib_option_fun_map ->
+              let result_cannot_contain_undefined =
+                match callback with
+                | Stdlib_option_inline_lambda {body; _} ->
+                  Typeopt.type_cannot_contain_undefined body.exp_type
+                    body.exp_env
+                | Stdlib_option_inline_ident cb -> (
+                  match callback_return_type cb.exp_env cb with
+                  | Some ret_ty ->
+                    Typeopt.type_cannot_contain_undefined ret_ty cb.exp_env
+                  | None -> false)
+              in
+              Stdlib_option_map {result_cannot_contain_undefined}
+            | Stdlib_option_fun_flatMap -> Stdlib_option_flatMap
+          in
+          Some {callback; call_kind; payload_not_nested})
+      | _ -> None))
+  | _ -> None
+
 (* Upper approximation of free identifiers on the parse tree *)
 
 let iter_expression f e =
@@ -2448,12 +2537,20 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
 
+    let option_call_info =
+      if fully_applied then detect_stdlib_option_call env funct args else None
+    in
+    let exp_extra =
+      match option_call_info with
+      | Some info -> [(Texp_stdlib_option_call info, loc, [])]
+      | None -> []
+    in
     let mk_apply funct args =
       rue
         {
           exp_desc = Texp_apply {funct; args; partial; transformed_jsx};
           exp_loc = loc;
-          exp_extra = [];
+          exp_extra;
           exp_type = ty_res;
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;

@@ -137,11 +137,16 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   | Tpat_alias (p, _, _) -> sub.pat sub p
 
 let expr sub {exp_extra; exp_desc; exp_env; _} =
-  let extra = function
+  let rec extra = function
     | Texp_constraint cty -> sub.typ sub cty
     | Texp_coerce cty2 -> sub.typ sub cty2
     | Texp_newtype _ -> ()
     | Texp_open (_, _, _, _) -> ()
+    | Texp_stdlib_option_call info -> stdlib_option_call info
+  and stdlib_option_call {callback; _} = stdlib_option_callback callback
+  and stdlib_option_callback = function
+    | Stdlib_option_inline_lambda {body; _} -> sub.expr sub body
+    | Stdlib_option_inline_ident expr -> sub.expr sub expr
   in
   List.iter (fun (e, _, _) -> extra e) exp_extra;
   sub.env sub exp_env;

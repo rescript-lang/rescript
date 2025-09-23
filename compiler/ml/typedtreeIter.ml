@@ -218,7 +218,8 @@ end = struct
           | Texp_constraint ct -> iter_core_type ct
           | Texp_coerce cty2 -> iter_core_type cty2
           | Texp_open _ -> ()
-          | Texp_newtype _ -> ()))
+          | Texp_newtype _ -> ()
+          | Texp_stdlib_option_call info -> iter_stdlib_option_call info))
       exp.exp_extra;
     (match exp.exp_desc with
     | Texp_ident _ -> ()
@@ -293,6 +294,13 @@ end = struct
     | Texp_pack mexpr -> iter_module_expr mexpr
     | Texp_extension_constructor _ -> ());
     Iter.leave_expression exp
+
+  and iter_stdlib_option_callback = function
+    | Stdlib_option_inline_lambda {body; _} -> iter_expression body
+    | Stdlib_option_inline_ident expr -> iter_expression expr
+
+  and iter_stdlib_option_call {callback; _} =
+    iter_stdlib_option_callback callback
 
   and iter_package_type pack =
     Iter.enter_package_type pack;
