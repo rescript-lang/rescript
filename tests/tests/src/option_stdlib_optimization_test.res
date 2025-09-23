@@ -7,6 +7,24 @@ open Test_utils
 
 let globalValue = 89
 
+module PipeChain = {
+  // Modeled after some real world code that chains a lot of
+  // Option.flatMap/Option.map calls.
+  type incident = {incidentId: string, categoryId: option<string>}
+  type category = {categoryId: string, name: string}
+
+  let getIncidentCategoryName = (
+    incidents: Belt.Map.String.t<incident>,
+    categories: Belt.Map.String.t<category>,
+    ~incidentId,
+  ) =>
+    incidentId
+    ->Option.flatMap(incidentId => incidents->Belt.Map.String.get(incidentId))
+    ->Option.flatMap(incident => incident.categoryId)
+    ->Option.flatMap(categoryId => categories->Belt.Map.String.get(categoryId))
+    ->Option.map(category => category.name)
+}
+
 module ForEach = {
   let testPrimitive = () => {
     let opt = Some(42)

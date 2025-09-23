@@ -3,7 +3,21 @@
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
 import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.js";
+import * as Belt_MapString from "@rescript/runtime/lib/es6/Belt_MapString.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
+
+function getIncidentCategoryName(incidents, categories, incidentId) {
+  let incident = incidentId !== undefined ? Belt_MapString.get(incidents, incidentId) : undefined;
+  let categoryId = incident !== undefined ? incident.categoryId : undefined;
+  let category = categoryId !== undefined ? Belt_MapString.get(categories, categoryId) : undefined;
+  if (category !== undefined) {
+    return category.name;
+  }
+}
+
+let PipeChain = {
+  getIncidentCategoryName: getIncidentCategoryName
+};
 
 function testPrimitive() {
   console.log(42);
@@ -348,12 +362,12 @@ Mocha.describe("Scope preservation in Option optimizations", () => {
       return _value => {};
     };
     Stdlib_Option.forEach(undefined, makeCallback());
-    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 337, characters 7-14", invocations.contents, 1);
+    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 481, characters 7-14", invocations.contents, 1);
   });
   Mocha.test("Option.forEach does not shadow surrounding bindings", () => {
     let result;
     result = 89 + 1 | 0;
-    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 350, characters 7-14", result, 90);
+    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 494, characters 7-14", result, 90);
   });
   Mocha.test("Option.map evaluates callback argument even when option is None", () => {
     let invocations = {
@@ -364,11 +378,11 @@ Mocha.describe("Scope preservation in Option optimizations", () => {
       return value => value;
     };
     Stdlib_Option.map(undefined, makeCallback());
-    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 362, characters 7-14", invocations.contents, 1);
+    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 506, characters 7-14", invocations.contents, 1);
   });
   Mocha.test("Option.map does not shadow surrounding bindings", () => {
     let result = 89 + 1 | 0;
-    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 368, characters 7-14", result, 90);
+    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 512, characters 7-14", result, 90);
   });
   Mocha.test("Option.flatMap evaluates callback argument even when option is None", () => {
     let invocations = {
@@ -379,11 +393,11 @@ Mocha.describe("Scope preservation in Option optimizations", () => {
       return value => Primitive_option.some(value);
     };
     Stdlib_Option.flatMap(undefined, makeCallback());
-    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 380, characters 7-14", invocations.contents, 1);
+    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 524, characters 7-14", invocations.contents, 1);
   });
   Mocha.test("Option.flatMap does not shadow surrounding bindings", () => {
     let result = 89 + 1 | 0;
-    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 386, characters 7-14", result, 90);
+    Test_utils.eq("File \"option_stdlib_optimization_test.res\", line 530, characters 7-14", result, 90);
   });
 });
 
@@ -391,6 +405,7 @@ let globalValue = 89;
 
 export {
   globalValue,
+  PipeChain,
   ForEach,
   $$Map,
   FlatMap,
