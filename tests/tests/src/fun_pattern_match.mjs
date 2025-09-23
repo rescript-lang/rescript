@@ -74,7 +74,6 @@ function handle_tuple(x, y) {
     if (x === 1 && y === 2) {
       return 3;
     }
-    
   } else if (y === 1) {
     return 2;
   }

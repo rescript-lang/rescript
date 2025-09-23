@@ -14,14 +14,12 @@ function iter(x, f) {
   if (!(x == null)) {
     return f(x);
   }
-  
 }
 
 function fromOption(x) {
   if (x !== undefined) {
     return Primitive_option.valFromOption(x);
   }
-  
 }
 
 let from_opt = fromOption;

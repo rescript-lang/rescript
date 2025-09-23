@@ -519,7 +519,6 @@ Mocha.describe("Bs_queue_test", () => {
           Error: new Error()
         };
       }
-      
     }
     for (let i$2 = 1; i$2 <= 10; ++i$2) {
       if (Belt_MutableQueue.popExn(q2) !== i$2) {
@@ -533,7 +532,6 @@ Mocha.describe("Bs_queue_test", () => {
           Error: new Error()
         };
       }
-      
     }
   });
   Mocha.test("queue size and isEmpty operations", () => {
@@ -573,7 +571,6 @@ Mocha.describe("Bs_queue_test", () => {
           Error: new Error()
         };
       }
-      
     }
     for (let i$1 = 10; i$1 >= 1; --i$1) {
       if (Belt_MutableQueue.size(q) !== i$1) {

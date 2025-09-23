@@ -45,14 +45,12 @@ function andThen(f, x) {
   if (x !== undefined) {
     return f(Primitive_option.valFromOption(x));
   }
-  
 }
 
 function map(f, x) {
   if (x !== undefined) {
     return Primitive_option.some(f(Primitive_option.valFromOption(x)));
   }
-  
 }
 
 function getWithDefault(a, x) {
@@ -71,7 +69,6 @@ function filter(f, x) {
   if (f(x$1)) {
     return Primitive_option.some(x$1);
   }
-  
 }
 
 function firstSome(a, b) {

@@ -42,7 +42,6 @@ function forEach(value, f) {
   if (value !== null) {
     return f(value);
   }
-  
 }
 
 function map(value, f) {

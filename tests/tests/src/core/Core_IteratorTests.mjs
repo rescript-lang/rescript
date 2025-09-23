@@ -21,7 +21,6 @@ iterator.forEach(v => {
     syncResult.contents = "b";
     return;
   }
-  
 });
 
 Test.run([
@@ -53,7 +52,6 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, v => {
     asyncResult.contents = "second";
     return;
   }
-  
 });
 
 Test.run([

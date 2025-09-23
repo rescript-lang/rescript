@@ -8,7 +8,6 @@ function head(x) {
   if (x !== 0) {
     return Primitive_option.some(x.hd);
   }
-  
 }
 
 function headOrThrow(x) {
@@ -25,7 +24,6 @@ function tail(x) {
   if (x !== 0) {
     return x.tl;
   }
-  
 }
 
 function tailOrThrow(x) {
@@ -445,7 +443,6 @@ function take(lst, n) {
   if (has) {
     return cell;
   }
-  
 }
 
 function drop(lst, n) {
@@ -494,7 +491,6 @@ function splitAt(lst, n) {
       rest
     ];
   }
-  
 }
 
 function concat(xs, ys) {

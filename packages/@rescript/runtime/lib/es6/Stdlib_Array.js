@@ -75,7 +75,6 @@ function indexOfOpt(arr, item) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function lastIndexOfOpt(arr, item) {
@@ -83,7 +82,6 @@ function lastIndexOfOpt(arr, item) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function reduce(arr, init, f) {
@@ -107,7 +105,6 @@ function findIndexOpt(array, finder) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function findLastIndexOpt(array, finder) {
@@ -115,7 +112,6 @@ function findLastIndexOpt(array, finder) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function swapUnsafe(xs, i, j) {
@@ -152,7 +148,6 @@ function filterMap(a, f) {
       r[j] = Primitive_option.valFromOption(v$1);
       j = j + 1 | 0;
     }
-    
   }
   r.length = j;
   return r;
@@ -173,7 +168,6 @@ function filterMapWithIndex(a, f) {
       r[j] = Primitive_option.valFromOption(v$1);
       j = j + 1 | 0;
     }
-    
   }
   r.length = j;
   return r;

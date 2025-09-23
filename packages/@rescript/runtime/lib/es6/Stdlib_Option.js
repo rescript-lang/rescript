@@ -7,14 +7,12 @@ function filter(opt, p) {
   if (opt !== undefined && p(Primitive_option.valFromOption(opt))) {
     return opt;
   }
-  
 }
 
 function forEach(opt, f) {
   if (opt !== undefined) {
     return f(Primitive_option.valFromOption(opt));
   }
-  
 }
 
 function getOrThrow(x, message) {
@@ -37,14 +35,12 @@ function map(opt, f) {
   if (opt !== undefined) {
     return Primitive_option.some(f(Primitive_option.valFromOption(opt)));
   }
-  
 }
 
 function flatMap(opt, f) {
   if (opt !== undefined) {
     return f(Primitive_option.valFromOption(opt));
   }
-  
 }
 
 function getOr(opt, $$default) {
@@ -126,7 +122,6 @@ function all2(param) {
       Primitive_option.valFromOption(b)
     ];
   }
-  
 }
 
 function all3(param) {
@@ -140,7 +135,6 @@ function all3(param) {
       Primitive_option.valFromOption(c)
     ];
   }
-  
 }
 
 function all4(param) {
@@ -156,7 +150,6 @@ function all4(param) {
       Primitive_option.valFromOption(d)
     ];
   }
-  
 }
 
 function all5(param) {
@@ -174,7 +167,6 @@ function all5(param) {
       Primitive_option.valFromOption(e)
     ];
   }
-  
 }
 
 function all6(param) {
@@ -194,7 +186,6 @@ function all6(param) {
       Primitive_option.valFromOption(f)
     ];
   }
-  
 }
 
 let getExn = getOrThrow;

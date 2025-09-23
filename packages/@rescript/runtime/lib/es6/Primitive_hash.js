@@ -136,7 +136,6 @@ function hash(count, _limit, seed, obj) {
         s = hash_mix_int(s, (size$1 << 10) | 0);
       }
     }
-    
   };
   return hash_final_mix(s);
 }

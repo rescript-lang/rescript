@@ -472,7 +472,6 @@ function of_sorted_list(l) {
               match.tl
             ];
           }
-          
         }
         break;
       case 3 :
@@ -504,9 +503,7 @@ function of_sorted_list(l) {
                 match$2.tl
               ];
             }
-            
           }
-          
         }
         break;
     }

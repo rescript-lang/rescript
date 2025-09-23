@@ -84,7 +84,6 @@ function push(path) {
     Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
     return;
   }
-  
 }
 
 function replace(path) {
@@ -95,7 +94,6 @@ function replace(path) {
     Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
     return;
   }
-  
 }
 
 function urlNotEqual(a, b) {
@@ -147,7 +145,6 @@ function unwatchUrl(watcherID) {
     Primitive_option.valFromOption(window).removeEventListener("popstate", watcherID);
     return;
   }
-  
 }
 
 function useUrl(serverUrl, param) {

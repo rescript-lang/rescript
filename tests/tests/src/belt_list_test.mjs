@@ -2116,7 +2116,6 @@ Mocha.describe("Belt_list_test", () => {
       if (x % 7 === 0) {
         return x + 1 | 0;
       }
-      
     });
     Test_utils.eq("File \"belt_list_test.res\", line 360, characters 7-14", u1, {
       hd: 1,
@@ -2144,7 +2143,6 @@ Mocha.describe("Belt_list_test", () => {
       if (x % 2 === 0) {
         return -x | 0;
       }
-      
     }), {
       hd: -2,
       tl: {
@@ -2168,7 +2166,6 @@ Mocha.describe("Belt_list_test", () => {
       if (x % 5 === 0) {
         return x;
       }
-      
     }) === /* [] */0);
   });
 });

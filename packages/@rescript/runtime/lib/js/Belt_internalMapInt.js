@@ -195,7 +195,6 @@ function merge(s1, s2, f) {
       let match = split(v1, s2);
       return Belt_internalAVLtree.concatOrJoin(merge(l1, match[0], f), v1, f(v1, Primitive_option.some(d1), match[1]), merge(r1, match[2], f));
     }
-    
   } else if (s2 === undefined) {
     return;
   }

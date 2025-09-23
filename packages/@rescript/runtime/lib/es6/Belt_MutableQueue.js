@@ -38,7 +38,6 @@ function peek(q) {
   if (v !== undefined) {
     return Primitive_option.some(v.content);
   }
-  
 }
 
 function peekUndefined(q) {
@@ -46,7 +45,6 @@ function peekUndefined(q) {
   if (v !== undefined) {
     return v.content;
   }
-  
 }
 
 function peekOrThrow(q) {

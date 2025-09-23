@@ -15,7 +15,6 @@ function indexOfOpt(s, search) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function lastIndexOfOpt(s, search) {
@@ -23,7 +22,6 @@ function lastIndexOfOpt(s, search) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function searchOpt(s, re) {
@@ -31,7 +29,6 @@ function searchOpt(s, re) {
   if (index !== -1) {
     return index;
   }
-  
 }
 
 function isEmpty(s) {

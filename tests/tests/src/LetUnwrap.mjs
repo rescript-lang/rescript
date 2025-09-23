@@ -58,14 +58,12 @@ function doStuffWithOption(s) {
   if (s === "s") {
     return "hello";
   }
-  
 }
 
 function doNextStuffWithOption(s) {
   if (s === "s") {
     return "hello";
   }
-  
 }
 
 function getXWithOption(s) {

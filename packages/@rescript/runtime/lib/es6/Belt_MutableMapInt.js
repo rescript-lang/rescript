@@ -58,7 +58,6 @@ function set(m, k, v) {
     m.data = v$1;
     return;
   }
-  
 }
 
 function forEach(d, f) {
@@ -161,7 +160,6 @@ function remove(d, v) {
     d.data = newRoot;
     return;
   }
-  
 }
 
 function updateDone(t, x, f) {
@@ -211,7 +209,6 @@ function update(t, x, f) {
     t.data = newRoot;
     return;
   }
-  
 }
 
 function removeArrayMutateAux(_t, xs, _i, len) {
@@ -243,7 +240,6 @@ function removeMany(d, xs) {
     d.data = newRoot;
     return;
   }
-  
 }
 
 function fromArray(xs) {
