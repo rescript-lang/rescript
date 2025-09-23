@@ -58,8 +58,6 @@ let x37 = new Intl.DateTimeFormat();
 
 let x38 = new Intl.NumberFormat();
 
-let x39 = true;
-
 let x40 = new Intl.Collator();
 
 let x41 = new Intl.RelativeTimeFormat();
@@ -90,6 +88,8 @@ let x5 = {
 };
 
 let x12 = "test";
+
+let x39 = true;
 
 let x44 = [
   1,

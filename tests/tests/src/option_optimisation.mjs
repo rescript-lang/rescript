@@ -3,9 +3,7 @@
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 function boolean(val1, val2) {
-  let a = val1;
-  let b = val2;
-  if (b || a) {
+  if (val2 || val1) {
     return "a";
   } else {
     return "b";
@@ -28,8 +26,18 @@ function $$null(val1, val2) {
   }
 }
 
+function constant() {
+  console.log(42);
+}
+
+function param(opt) {
+  console.log(opt);
+}
+
 export {
   boolean,
   $$null,
+  constant,
+  param,
 }
 /* No side effect */

@@ -1,5 +1,6 @@
 use super::build_types::*;
 use super::packages;
+use crate::build;
 use crate::build::packages::Package;
 use crate::config::Config;
 use crate::helpers;
@@ -332,9 +333,8 @@ pub fn cleanup_after_build(build_state: &BuildState) {
 
 pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_deps: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
-
+    let compiler_info = build::get_compiler_info(&project_context)?;
     let packages = packages::make(&None, &project_context, show_progress, clean_dev_deps)?;
-    let bsc_path = helpers::get_bsc();
 
     let timing_clean_compiler_assets = Instant::now();
     if !snapshot_output && show_progress {
@@ -364,7 +364,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
     }
 
     let timing_clean_mjs = Instant::now();
-    let mut build_state = BuildState::new(project_context, packages, bsc_path);
+    let mut build_state = BuildState::new(project_context, packages, compiler_info);
     packages::parse_packages(&mut build_state);
     let root_config = build_state.get_root_config();
     let suffix_for_print = if snapshot_output || !show_progress {
@@ -418,7 +418,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
     Ok(())
 }
 
-fn clean_package(show_progress: bool, snapshot_output: bool, package: &Package) {
+pub fn clean_package(show_progress: bool, snapshot_output: bool, package: &Package) {
     if show_progress {
         if snapshot_output {
             println!("Cleaning {}", package.name)
@@ -441,4 +441,7 @@ fn clean_package(show_progress: bool, snapshot_output: bool, package: &Package) 
     let path_str = package.get_ocaml_build_path();
     let path = std::path::Path::new(&path_str);
     let _ = std::fs::remove_dir_all(path);
+
+    // remove the per-package compiler metadata file so that a subsequent build writes fresh metadata
+    let _ = std::fs::remove_file(package.get_compiler_info_path());
 }

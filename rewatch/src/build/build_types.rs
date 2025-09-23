@@ -2,6 +2,7 @@ use crate::build::packages::{Namespace, Package};
 use crate::config::Config;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
+use blake3::Hash;
 use std::{fmt::Display, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,8 +97,15 @@ pub struct BuildState {
     pub packages: AHashMap<String, Package>,
     pub module_names: AHashSet<String>,
     pub deleted_modules: AHashSet<String>,
-    pub bsc_path: PathBuf,
+    pub compiler_info: CompilerInfo,
     pub deps_initialized: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompilerInfo {
+    pub bsc_path: PathBuf,
+    pub bsc_hash: Hash,
+    pub runtime_path: PathBuf,
 }
 
 impl BuildState {
@@ -111,7 +119,7 @@ impl BuildState {
     pub fn new(
         project_context: ProjectContext,
         packages: AHashMap<String, Package>,
-        bsc_path: PathBuf,
+        compiler: CompilerInfo,
     ) -> Self {
         Self {
             project_context,
@@ -119,7 +127,7 @@ impl BuildState {
             modules: AHashMap::new(),
             packages,
             deleted_modules: AHashSet::new(),
-            bsc_path,
+            compiler_info: compiler,
             deps_initialized: false,
         }
     }
