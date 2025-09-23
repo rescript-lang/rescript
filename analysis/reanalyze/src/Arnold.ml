@@ -534,7 +534,7 @@ module FindFunctionsCalled = struct
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
-      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; _} ->
         let functionName = Path.name callee in
         callees := !callees |> StringSet.add functionName
       | _ -> ());
@@ -579,7 +579,8 @@ module ExtendFunctionTable = struct
     | Some
         {
           exp_desc =
-            Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
+            Texp_apply
+              {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args; _};
         }
       when kindOpt <> None ->
       let checkArg ((argLabel : Asttypes.Noloc.arg_label), _argOpt) =
@@ -620,7 +621,7 @@ module ExtendFunctionTable = struct
                             calls a progress function"
                            functionName printPos id_pos;
                      })))
-      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; args}
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; args; _}
         when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
         let functionName = Path.name callee in
         args
@@ -668,8 +669,8 @@ module CheckExpressionWellFormed = struct
       | Texp_ident (path, {loc}, _) ->
         checkIdent ~path ~loc;
         e
-      | Texp_apply {funct = {exp_desc = Texp_ident (functionPath, _, _)}; args}
-        ->
+      | Texp_apply
+          {funct = {exp_desc = Texp_ident (functionPath, _, _)}; args; _} ->
         let functionName = Path.name functionPath in
         args
         |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
@@ -850,7 +851,7 @@ module Compile = struct
              and create a function call with the appropriate arguments *)
           assert false
         | None -> expr |> expression ~ctx |> evalArgs ~args ~ctx)
-    | Texp_apply {funct = expr; args} ->
+    | Texp_apply {funct = expr; args; _} ->
       expr |> expression ~ctx |> evalArgs ~args ~ctx
     | Texp_let
         ( Recursive,

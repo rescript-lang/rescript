@@ -304,7 +304,8 @@ let traverseAst () =
       let exceptions = [arg] |> raiseArgs in
       currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
       arg |> snd |> iterExprOpt self
-    | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args} ->
+    | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args; _}
+      ->
       let calleeName = Path.name callee in
       if calleeName |> isRaise then
         let exceptions = args |> raiseArgs in

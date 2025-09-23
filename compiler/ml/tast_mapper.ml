@@ -180,27 +180,12 @@ let pat sub x =
   {x with pat_extra; pat_desc; pat_env}
 
 let expr sub x =
-  let map_stdlib_option_callback sub = function
-    | Stdlib_option_inline_lambda {param; body} ->
-      Stdlib_option_inline_lambda {param; body = sub.expr sub body}
-    | Stdlib_option_inline_ident expr ->
-      Stdlib_option_inline_ident (sub.expr sub expr)
-  in
-  let map_stdlib_option_call sub {callback; call_kind; payload_not_nested} =
-    {
-      callback = map_stdlib_option_callback sub callback;
-      call_kind;
-      payload_not_nested;
-    }
-  in
   let extra = function
     | Texp_constraint cty -> Texp_constraint (sub.typ sub cty)
     | Texp_coerce cty2 -> Texp_coerce (sub.typ sub cty2)
     | Texp_open (ovf, path, loc, env) ->
       Texp_open (ovf, path, loc, sub.env sub env)
     | Texp_newtype _ as d -> d
-    | Texp_stdlib_option_call info ->
-      Texp_stdlib_option_call (map_stdlib_option_call sub info)
   in
   let exp_extra = List.map (tuple3 extra id id) x.exp_extra in
   let exp_env = sub.env sub x.exp_env in
@@ -213,11 +198,14 @@ let expr sub x =
     | Texp_function {arg_label; arity; param; case; partial; async} ->
       Texp_function
         {arg_label; arity; param; case = sub.case sub case; partial; async}
-    | Texp_apply {funct = exp; args = list; partial; transformed_jsx} ->
+    | Texp_apply
+        {funct = exp; args = list; partial; transformed_jsx; stdlib_option_call}
+      ->
       Texp_apply
         {
           funct = sub.expr sub exp;
           args = List.map (tuple2 id (opt (sub.expr sub))) list;
+          stdlib_option_call;
           partial;
           transformed_jsx;
         }
