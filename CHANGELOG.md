@@ -29,6 +29,7 @@
 - Keep track of compiler info during build. https://github.com/rescript-lang/rescript/pull/7889
 - Improve option optimization for constants. https://github.com/rescript-lang/rescript/pull/7913
 - Option optimization: do not create redundant local vars. https://github.com/rescript-lang/rescript/pull/7915
+- Js output: remove superfluous newline after every `if`. https://github.com/rescript-lang/rescript/pull/7920
 
 #### :house: Internal
 
