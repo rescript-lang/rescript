@@ -1,5 +1,8 @@
 open Node
 
+@module("../../cli/common/bins.js")
+external rescript_tools_exe: string = "rescript_tools_exe"
+
 // Only major version
 let nodeVersion =
   Process.version
@@ -43,10 +46,8 @@ let getOutput = buffer =>
   ->Array.join("")
 
 let extractDocFromFile = async file => {
-  let toolsBin = Path.join([Process.cwd(), "cli", "rescript-tools.js"])
-
   let {stdout} = await SpawnAsync.run(
-    ~command=toolsBin,
+    ~command=rescript_tools_exe,
     ~args=["extract-codeblocks", file, "--transform-assert-equal"],
   )
 
