@@ -775,40 +775,57 @@ let exceptions_from_cmt_infos (infos : Cmt_format.cmt_infos) :
     in
     Hashtbl.replace by_name name (prev || hasArgs)
   in
-  let rec of_structure_items (items : Typedtree.structure_item list) : unit =
-    match items with
-    | [] -> ()
-    | item :: rest ->
+  (* Only collect top-level exception declarations (Tstr_exception/Tsig_exception).
+     Avoid picking up exceptions from Texp_letexception by tracking context. *)
+  let in_toplevel_exception = ref false in
+  let module Iter = TypedtreeIter.MakeIterator (struct
+    include TypedtreeIter.DefaultIteratorArgument
+
+    let enter_structure_item (item : Typedtree.structure_item) =
       (match item.str_desc with
-      | Tstr_exception ext -> add_ext ext
+      | Tstr_exception _ -> in_toplevel_exception := true
       | _ -> ());
-      of_structure_items rest
-  in
-  let rec of_signature_items (items : Typedtree.signature_item list) : unit =
-    match items with
-    | [] -> ()
-    | item :: rest ->
+      ()
+
+    let leave_structure_item (_ : Typedtree.structure_item) =
+      in_toplevel_exception := false
+
+    let enter_signature_item (item : Typedtree.signature_item) =
       (match item.sig_desc with
-      | Tsig_exception ext -> add_ext ext
+      | Tsig_exception _ -> in_toplevel_exception := true
       | _ -> ());
-      of_signature_items rest
+      ()
+
+    let leave_signature_item (_ : Typedtree.signature_item) =
+      in_toplevel_exception := false
+
+    let enter_extension_constructor (ext : Typedtree.extension_constructor) =
+      if !in_toplevel_exception then add_ext ext
+  end) in
+  let () =
+    match infos.cmt_annots with
+    | Cmt_format.Implementation s -> Iter.iter_structure s
+    | Interface s -> Iter.iter_signature s
+    | Partial_implementation parts ->
+      Array.iter
+        (function
+          | Cmt_format.Partial_structure s -> Iter.iter_structure s
+          | Partial_structure_item si -> Iter.iter_structure_item si
+          | Partial_signature s -> Iter.iter_signature s
+          | Partial_signature_item si -> Iter.iter_signature_item si
+          | _ -> ())
+        parts
+    | Partial_interface parts ->
+      Array.iter
+        (function
+          | Cmt_format.Partial_structure s -> Iter.iter_structure s
+          | Partial_structure_item si -> Iter.iter_structure_item si
+          | Partial_signature s -> Iter.iter_signature s
+          | Partial_signature_item si -> Iter.iter_signature_item si
+          | _ -> ())
+        parts
+    | _ -> ()
   in
-  let of_parts (parts : Cmt_format.binary_part array) : unit =
-    Array.iter
-      (function
-        | Cmt_format.Partial_structure s -> of_structure_items s.str_items
-        | Partial_structure_item si -> of_structure_items [si]
-        | Partial_signature s -> of_signature_items s.sig_items
-        | Partial_signature_item si -> of_signature_items [si]
-        | _ -> ())
-      parts
-  in
-  (match infos.cmt_annots with
-  | Cmt_format.Implementation s -> of_structure_items s.str_items
-  | Interface s -> of_signature_items s.sig_items
-  | Partial_implementation parts -> of_parts parts
-  | Partial_interface parts -> of_parts parts
-  | _ -> ());
   Hashtbl.fold (fun name hasArgs acc -> (name, hasArgs) :: acc) by_name []
 
 (* Predefined Stdlib/Pervasives exceptions. *)
