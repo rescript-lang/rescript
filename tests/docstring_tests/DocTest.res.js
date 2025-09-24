@@ -44,6 +44,13 @@ let ignoreRuntimeTests = [
   [
     24,
     ["Stdlib_RegExp.escape"]
+  ],
+  [
+    1000,
+    [
+      "Stdlib_DataView.getFloat16",
+      "Stdlib_DataView.setFloat16"
+    ]
   ]
 ];
 

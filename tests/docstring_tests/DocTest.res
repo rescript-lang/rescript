@@ -38,6 +38,11 @@ let ignoreRuntimeTests = [
     24,
     ["Stdlib_RegExp.escape"],
   ),
+  (
+    // Not available in Node.js yet
+    1000,
+    ["Stdlib_DataView.getFloat16", "Stdlib_DataView.setFloat16"],
+  ),
 ]
 
 let getOutput = buffer =>
