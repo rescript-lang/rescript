@@ -89,7 +89,9 @@ let extractExamples = async () => {
     | Ok(doc) =>
       // TODO: Should this be a flag in the actual command instead, to only include code blocks with tests?
       examples->Array.pushMany(doc->Array.filter(d => d.code->String.includes("assertEqual(")))
-    | Error(e) => Console.error(e)
+    | Error(e) =>
+      Console.error(e)
+      JsError.panic(`Error extracting code blocks for ${f}`)
     }
   })
 

@@ -95,6 +95,7 @@ async function extractExamples() {
       return;
     }
     console.error(doc._0);
+    return Stdlib_JsError.panic(`Error extracting code blocks for ` + f);
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   return examples;
