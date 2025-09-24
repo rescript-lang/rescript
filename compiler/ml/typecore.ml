@@ -143,40 +143,6 @@ type recarg = Allowed | Required | Rejected
 
 let case lhs rhs = {c_lhs = lhs; c_guard = None; c_rhs = rhs}
 
-type stdlib_option_fun_kind =
-  | Stdlib_option_fun_forEach
-  | Stdlib_option_fun_map
-  | Stdlib_option_fun_flatMap
-
-let stdlib_option_fun_of_path env path =
-  let canonical = Env.normalize_path_prefix None env path in
-  match Path.flatten canonical with
-  | `Contains_apply -> None
-  | `Ok (head, rest) ->
-    let segments = Ident.name head :: rest in
-    let matches fname =
-      match segments with
-      | ["Stdlib"; "Option"; name] -> String.equal name fname
-      | ["Stdlib_Option"; name] -> String.equal name fname
-      | _ -> false
-    in
-    if matches "forEach" then Some Stdlib_option_fun_forEach
-    else if matches "map" then Some Stdlib_option_fun_map
-    else if matches "flatMap" then Some Stdlib_option_fun_flatMap
-    else None
-
-let is_stdlib_option_call env (funct : expression)
-    (args : (Noloc.arg_label * expression option) list) : bool =
-  match funct.exp_desc with
-  | Texp_ident (path, _, _) -> (
-    match stdlib_option_fun_of_path env path with
-    | None -> false
-    | Some _ -> (
-      match args with
-      | [(Nolabel, Some _); (Nolabel, Some _)] -> true
-      | _ -> false))
-  | _ -> false
-
 (* Upper approximation of free identifiers on the parse tree *)
 
 let iter_expression f e =
@@ -2482,15 +2448,10 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
 
-    let stdlib_option_call =
-      fully_applied && is_stdlib_option_call env funct args
-    in
     let mk_apply funct args =
       rue
         {
-          exp_desc =
-            Texp_apply
-              {funct; args; partial; transformed_jsx; stdlib_option_call};
+          exp_desc = Texp_apply {funct; args; partial; transformed_jsx};
           exp_loc = loc;
           exp_extra = [];
           exp_type = ty_res;

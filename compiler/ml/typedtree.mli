@@ -150,7 +150,6 @@ and expression_desc =
       args: (Noloc.arg_label * expression option) list;
       partial: bool;
       transformed_jsx: bool;
-      stdlib_option_call: bool;
     }
       (** E0 ~l1:E1 ... ~ln:En
 

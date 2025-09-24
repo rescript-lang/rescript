@@ -672,18 +672,15 @@ let stdlib_option_fun_of_path env path =
   let canonical = Env.normalize_path_prefix None env path in
   match Path.flatten canonical with
   | `Contains_apply -> None
-  | `Ok (head, rest) ->
-    let segments = Ident.name head :: rest in
-    let matches fname =
-      match segments with
-      | ["Stdlib"; "Option"; name] -> String.equal name fname
-      | ["Stdlib_Option"; name] -> String.equal name fname
-      | _ -> false
-    in
-    if matches "forEach" then Some Stdlib_option_fun_forEach
-    else if matches "map" then Some Stdlib_option_fun_map
-    else if matches "flatMap" then Some Stdlib_option_fun_flatMap
-    else None
+  | `Ok (head, rest) -> (
+    match (Ident.name head, rest) with
+    | "Stdlib_Option", [fname] -> (
+      match fname with
+      | "forEach" -> Some Stdlib_option_fun_forEach
+      | "map" -> Some Stdlib_option_fun_map
+      | "flatMap" -> Some Stdlib_option_fun_flatMap
+      | _ -> None)
+    | _ -> None)
 
 let inline_lambda_callback (expr : expression) : stdlib_option_callback option =
   match expr.exp_desc with
@@ -863,15 +860,11 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           (Lprim
              (Pccall (set_transformed_jsx d ~transformed_jsx), argl, e.exp_loc))
       | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
-  | Texp_apply
-      {funct; args = oargs; partial; transformed_jsx; stdlib_option_call} -> (
+  | Texp_apply {funct; args = oargs; partial; transformed_jsx} -> (
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in
-    let option_call_info =
-      if stdlib_option_call then detect_stdlib_option_call e.exp_env funct oargs
-      else None
-    in
+    let option_call_info = detect_stdlib_option_call e.exp_env funct oargs in
     let uncurried_partial_application =
       (* In case of partial application foo(args, ...) when some args are missing,
          get the arity *)

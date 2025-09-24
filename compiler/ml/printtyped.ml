@@ -288,12 +288,11 @@ and expression i ppf x =
     line i ppf "%a" Ident.print param;
     arg_label i ppf p;
     case i ppf case_
-  | Texp_apply {funct = e; args = l; partial; stdlib_option_call; _} ->
+  | Texp_apply {funct = e; args = l; partial} ->
     if partial then line i ppf "partial\n";
     line i ppf "Texp_apply\n";
     expression i ppf e;
-    list i label_x_expression ppf l;
-    if stdlib_option_call then line i ppf "stdlib_option_call\n" else ()
+    list i label_x_expression ppf l
   | Texp_match (e, l1, l2, _partial) ->
     line i ppf "Texp_match\n";
     expression i ppf e;
