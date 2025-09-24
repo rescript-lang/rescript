@@ -736,7 +736,7 @@ let detect_stdlib_option_call env (funct : expression)
             | Stdlib_option_fun_map ->
               let result_cannot_contain_undefined =
                 match callback with
-                | Stdlib_option_inline_lambda {body; _} ->
+                | Stdlib_option_inline_lambda {body} ->
                   Typeopt.type_cannot_contain_undefined body.exp_type
                     body.exp_env
                 | Stdlib_option_inline_ident cb -> (
@@ -1076,8 +1076,7 @@ and transl_stdlib_option_call exp opt_expr info oargs =
     let opt_lam = transl_exp opt_expr in
     let opt_id =
       match info.callback with
-      | Stdlib_option_inline_lambda {param; _} ->
-        Ident.create (Ident.name param)
+      | Stdlib_option_inline_lambda {param} -> Ident.create (Ident.name param)
       | _ -> Ident.create "__res_option_value"
     in
     let opt_var = Lvar opt_id in

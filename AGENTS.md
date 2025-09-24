@@ -30,6 +30,8 @@ make format && make checkformat
 
 - **Do not introduce new keywords unless absolutely necessary** - Try to find ways to implement features without reserving keywords, as seen with the "catch" implementation that avoids making it a keyword.
 
+- **No underscore if not matching on all record fields** - Do not add "; _" to pattern matches in the compiler code. OCaml warning 9 (missing fields in a record pattern) is disabled in this project.
+
 ## Compiler Architecture
 
 ### Compilation Pipeline

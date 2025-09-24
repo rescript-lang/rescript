@@ -1838,7 +1838,7 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
-  | Texp_apply {funct = e; args = (_, None) :: el; _} ->
+  | Texp_apply {funct = e; args = (_, None) :: el} ->
     is_nonexpansive e && List.for_all is_nonexpansive_opt (List.map snd el)
   | Texp_match (e, cases, [], _) ->
     is_nonexpansive e
