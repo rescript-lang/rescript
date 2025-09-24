@@ -756,17 +756,6 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
         findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
       | None -> []))
 
-(* Predefined Stdlib/Pervasives exceptions. *)
-let predefined_exceptions : (string * bool) list =
-  [
-    ("Not_found", true);
-    ("Invalid_argument", true);
-    ("Assert_failure", true);
-    ("Failure", true);
-    ("Match_failure", true);
-    ("Division_by_zero", false);
-  ]
-
 let completionsForThrow ~(env : QueryEnv.t) ~full =
   let exn_typ = Predef.type_exn in
   let names_from_cmt =
@@ -778,21 +767,26 @@ let completionsForThrow ~(env : QueryEnv.t) ~full =
       let cmt_path = getCmtPath ~uri paths in
       ProcessCmt.exceptionsForCmt ~cmt:cmt_path
   in
-  let all = names_from_cmt @ predefined_exceptions in
-  all
-  |> List.map (fun (name, hasArgs) ->
-         let insertText =
-           if hasArgs then Printf.sprintf "throw(%s($0))" name
-           else Printf.sprintf "throw(%s)" name
-         in
-         let isBuiltin = List.mem (name, hasArgs) predefined_exceptions in
-         let detail =
-           if isBuiltin then "Built-in Exception" else "User-defined Exception"
-         in
-         Completion.create
-           (Printf.sprintf "throw(%s)" name)
-           ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
-           ~insertText ~filterText:"throw" ~detail)
+  let completions_from_cmt =
+    names_from_cmt
+    |> List.map (fun (name, hasArgs) ->
+           let insertText =
+             if hasArgs then Printf.sprintf "throw(%s($0))" name
+             else Printf.sprintf "throw(%s)" name
+           in
+           Completion.create
+             (Printf.sprintf "throw(%s)" name)
+             ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+             ~insertText ~filterText:"throw")
+  in
+  Completion.create "JsError.throwWithMessage" ~env
+    ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+    ~detail:"Throw a JavaScript error, example: `throw new Error(str)`"
+    ~insertText:"JsError.throwWithMessage(\"$0\")"
+  :: Completion.create "JsExn.throw" ~env ~kind:(Completion.Value exn_typ)
+       ~includesSnippets:true ~insertText:"JsExn.throw($0)"
+       ~detail:"Throw any JavaScript value, example: `throw 100`"
+  :: completions_from_cmt
 
 (** Completions intended for piping, from a completion path. *)
 let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos
