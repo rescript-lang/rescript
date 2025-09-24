@@ -793,3 +793,77 @@ let fileForModule moduleName ~package =
   | None ->
     Log.log ("No path for module " ^ moduleName);
     None
+
+(* Collect top-level exception constructors from typedtree/CMT file. *)
+let exceptionsForCmt ~cmt : (string * bool) list =
+  match Shared.tryReadCmt cmt with
+  | None -> []
+  | Some infos ->
+    let by_name : (string, bool) Hashtbl.t = Hashtbl.create 16 in
+    let add_ext (ext : Typedtree.extension_constructor) : unit =
+      let name = ext.ext_name.txt in
+      let hasArgs =
+        match ext.ext_kind with
+        | Text_decl (Cstr_tuple args, _ret) -> args <> []
+        | Text_decl (Cstr_record fields, _ret) -> fields <> []
+        | Text_rebind _ -> true
+      in
+      let prev =
+        match Hashtbl.find_opt by_name name with
+        | Some b -> b
+        | None -> false
+      in
+      Hashtbl.replace by_name name (prev || hasArgs)
+    in
+    (* Only collect top-level exception declarations (Tstr_exception/Tsig_exception).
+     Avoid picking up exceptions from Texp_letexception by tracking context. *)
+    let in_toplevel_exception = ref false in
+    let module Iter = TypedtreeIter.MakeIterator (struct
+      include TypedtreeIter.DefaultIteratorArgument
+
+      let enter_structure_item (item : Typedtree.structure_item) =
+        (match item.str_desc with
+        | Tstr_exception _ -> in_toplevel_exception := true
+        | _ -> ());
+        ()
+
+      let leave_structure_item (_ : Typedtree.structure_item) =
+        in_toplevel_exception := false
+
+      let enter_signature_item (item : Typedtree.signature_item) =
+        (match item.sig_desc with
+        | Tsig_exception _ -> in_toplevel_exception := true
+        | _ -> ());
+        ()
+
+      let leave_signature_item (_ : Typedtree.signature_item) =
+        in_toplevel_exception := false
+
+      let enter_extension_constructor (ext : Typedtree.extension_constructor) =
+        if !in_toplevel_exception then add_ext ext
+    end) in
+    let () =
+      match infos.cmt_annots with
+      | Cmt_format.Implementation s -> Iter.iter_structure s
+      | Interface s -> Iter.iter_signature s
+      | Partial_implementation parts ->
+        Array.iter
+          (function
+            | Cmt_format.Partial_structure s -> Iter.iter_structure s
+            | Partial_structure_item si -> Iter.iter_structure_item si
+            | Partial_signature s -> Iter.iter_signature s
+            | Partial_signature_item si -> Iter.iter_signature_item si
+            | _ -> ())
+          parts
+      | Partial_interface parts ->
+        Array.iter
+          (function
+            | Cmt_format.Partial_structure s -> Iter.iter_structure s
+            | Partial_structure_item si -> Iter.iter_structure_item si
+            | Partial_signature s -> Iter.iter_signature s
+            | Partial_signature_item si -> Iter.iter_signature_item si
+            | _ -> ())
+          parts
+      | _ -> ()
+    in
+    Hashtbl.fold (fun name hasArgs acc -> (name, hasArgs) :: acc) by_name []
