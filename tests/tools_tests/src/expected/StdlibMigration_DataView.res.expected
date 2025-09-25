@@ -1,0 +1,3 @@
+let a = DataView.fromBuffer(ArrayBuffer.make(8), ~byteOffset=2)
+let b = DataView.fromBuffer(ArrayBuffer.make(8), ~byteOffset=2, ~length=4)
+

@@ -1,3 +1,6 @@
+let ba1 = [1, 2, 3, 4, 5]->Array.copyAllWithin(~target=2)
+let ba2 = Array.copyAllWithin([1, 2, 3, 4, 5], ~target=2)
+
 let b1 = [1, 2, 3, 4]->Array.copyWithinToEnd(~target=0, ~start=2)
 let b2 = Array.copyWithinToEnd([1, 2, 3, 4], ~target=0, ~start=2)
 

@@ -99,7 +99,10 @@ let compare = (a, b, cmp) => {
     : compareFromIndex(a, b, 0, cmp, lenA)
 }
 
-@deprecated("Use `copyWithin` instead")
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: Array.copyWithin(~start=0),
+})
 @send
 external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
