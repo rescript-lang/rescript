@@ -669,18 +669,19 @@ type stdlib_option_fun_kind =
   | Stdlib_option_fun_flatMap
 
 let stdlib_option_fun_of_path env path =
-  let canonical = Env.normalize_path_prefix None env path in
-  match Path.flatten canonical with
-  | `Contains_apply -> None
-  | `Ok (head, rest) -> (
-    match (Ident.name head, rest) with
-    | "Stdlib_Option", [fname] -> (
+  match Path.last path with
+  | ("forEach" | "map" | "flatMap") as fname -> (
+    let canonical = Env.normalize_path_prefix None env path in
+    match canonical with
+    | Path.Pdot (Path.Pident module_ident, _, _)
+      when Ident.name module_ident = "Stdlib_Option" -> (
       match fname with
       | "forEach" -> Some Stdlib_option_fun_forEach
       | "map" -> Some Stdlib_option_fun_map
       | "flatMap" -> Some Stdlib_option_fun_flatMap
       | _ -> None)
     | _ -> None)
+  | _ -> None
 
 let inline_lambda_callback (expr : expression) : stdlib_option_callback option =
   match expr.exp_desc with
