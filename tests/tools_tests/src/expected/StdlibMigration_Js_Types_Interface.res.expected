@@ -4,3 +4,7 @@ external nullT: Null.t<int> = "nullT"
 external nullableT: Nullable.t<string> = "nullableT"
 external nullUndefT: Nullable.t<float> = "nullUndefT"
 
+external symbolT: Symbol.t = "symbolT"
+external objValT: Type.Classify.object = "objValT"
+external functionValT: Type.Classify.function = "functionValT"
+
