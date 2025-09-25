@@ -29,10 +29,7 @@ external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) 
 */
 @deprecated({
   reason: "Use `fromBuffer` instead",
-  migrate: Float32Array.fromBuffer(
-    %insert.unlabelledArgument(0),
-    ~byteOffset=%insert.labelledArgument("byteOffset"),
-  ),
+  migrate: Float32Array.fromBuffer(),
 })
 @new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "Float32Array"
@@ -43,11 +40,7 @@ external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "Float
 */
 @deprecated({
   reason: "Use `fromBuffer` instead",
-  migrate: Float32Array.fromBuffer(
-    %insert.unlabelledArgument(0),
-    ~byteOffset=%insert.labelledArgument("byteOffset"),
-    ~length=%insert.labelledArgument("length"),
-  ),
+  migrate: Float32Array.fromBuffer(),
 })
 @new
 external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =

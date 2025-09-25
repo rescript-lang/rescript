@@ -387,11 +387,7 @@ Int.rangeWithOptions(3, 6, {step: -2}) // RangeError
 */
 @deprecated({
   reason: "Use `range` instead",
-  migrate: Int.range(
-    %insert.unlabelledArgument(0),
-    %insert.unlabelledArgument(1),
-    ~options=%insert.unlabelledArgument(2),
-  ),
+  migrate: Int.range(~options=%insert.unlabelledArgument(2)),
 })
 let rangeWithOptions: (int, int, rangeOptions) => array<int>
 

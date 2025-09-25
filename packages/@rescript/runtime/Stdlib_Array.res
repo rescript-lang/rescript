@@ -24,11 +24,7 @@ external fillAll: (array<'a>, 'a) => unit = "fill"
 
 @deprecated({
   reason: "Use `fill` instead",
-  migrate: Array.fill(
-    %insert.unlabelledArgument(0),
-    %insert.unlabelledArgument(1),
-    ~start=%insert.labelledArgument("start"),
-  ),
+  migrate: Array.fill(~start=%insert.labelledArgument("start")),
 })
 @send
 external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
