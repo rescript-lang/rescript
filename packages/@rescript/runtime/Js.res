@@ -156,50 +156,105 @@ module Map = Js_map
 module WeakMap = Js_weakmap
 
 /** JS object type */
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use the `{..}` type directly instead."
+)
 type t<'a> = {..} as 'a
 
 /** JS global object reference */
 @val
+@deprecated({
+  reason: "Use `globalThis` directly instead.",
+  migrate: globalThis(),
+})
 external globalThis: t<'a> = "globalThis"
 
+@deprecated({
+  reason: "Use `Null.t` directly instead.",
+  migrate: %replace.type(: Null.t),
+})
 @unboxed
 type null<+'a> = Js_null.t<'a> = Value('a) | @as(null) Null
 
+@deprecated("This has been deprecated and will be removed in v13.")
 type undefined<+'a> = Js_undefined.t<'a>
 
 @unboxed
+@deprecated({
+  reason: "Use `Nullable.t` directly instead.",
+  migrate: %replace.type(: Nullable.t),
+})
 type nullable<+'a> = Js_null_undefined.t<'a> = Value('a) | @as(null) Null | @as(undefined) Undefined
 
+@deprecated({
+  reason: "Use `Nullable.t` directly instead.",
+  migrate: %replace.type(: Nullable.t),
+})
 type null_undefined<+'a> = nullable<'a>
 
 external toOption: nullable<'a> => option<'a> = "%nullable_to_opt"
+@deprecated({
+  reason: "Use `fromUndefined` instead.",
+  migrate: fromUndefined(),
+})
 let undefinedToOption: undefined<'a> => option<'a> = Primitive_option.fromUndefined
+@deprecated({
+  reason: "Use `Null.toOption` instead.",
+  migrate: Null.toOption(),
+})
 external nullToOption: null<'a> => option<'a> = "%null_to_opt"
+@deprecated({
+  reason: "Use `isNullable` directly instead.",
+  migrate: isNullable(),
+})
 external isNullable: nullable<'a> => bool = "%is_nullable"
+@deprecated({
+  reason: "Use `import` directly instead.",
+  migrate: import(),
+})
 external import: 'a => promise<'a> = "%import"
 
 /** The same as {!test} except that it is more permissive on the types of input */
+@deprecated({
+  reason: "Use `testAny` directly instead.",
+  migrate: testAny(),
+})
 external testAny: 'a => bool = "%is_nullable"
 
 /**
   The promise type, defined here for interoperation across packages.
 */
+@deprecated(
+  "This is deprecated and will be removed in v13. Use the `promise` type directly instead."
+)
 type promise<+'a, +'e>
 
 /**
   The same as empty in `Js.Null`. Compiles to `null`.
 */
+@deprecated({
+  reason: "Use `null` instead.",
+  migrate: null(),
+})
 external null: null<'a> = "%null"
 
 /**
   The same as empty `Js.Undefined`. Compiles to `undefined`.
 */
+@deprecated({
+  reason: "Use `undefined` instead.",
+  migrate: undefined(),
+})
 external undefined: undefined<'a> = "%undefined"
 
 /**
 `typeof x` will be compiled as `typeof x` in JS. Please consider functions in
 `Js.Types` for a type safe way of reflection.
 */
+@deprecated({
+  reason: "Use `typeof` instead.",
+  migrate: typeof(),
+})
 external typeof: 'a => string = "%typeof"
 
 /** Equivalent to console.log any value. */
@@ -245,8 +300,20 @@ external log4: ('a, 'b, 'c, 'd) => unit = "log"
 @variadic
 external logMany: array<'a> => unit = "log"
 
+@deprecated({
+  reason: "Use `eqNull` directly instead.",
+  migrate: eqNull(),
+})
 external eqNull: ('a, null<'a>) => bool = "%equal_null"
+@deprecated({
+  reason: "Use `eqUndefined` directly instead.",
+  migrate: eqUndefined(),
+})
 external eqUndefined: ('a, undefined<'a>) => bool = "%equal_undefined"
+@deprecated({
+  reason: "Use `eqNullable` directly instead.",
+  migrate: eqNullable(),
+})
 external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
 
 /* ## Operators */
@@ -256,22 +323,38 @@ external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
     It is marked as unsafe, since it is impossible
     to give a proper semantics for comparision which applies to any type
 */
+@deprecated({
+  reason: "Use `lt` instead.",
+  migrate: lt(),
+})
 external unsafe_lt: ('a, 'a) => bool = "%unsafe_lt"
 
 /**
    `unsafe_le(a, b)` will be compiled as `a <= b`.
    See also `Js.unsafe_lt`.
 */
+@deprecated({
+  reason: "Use `le` instead.",
+  migrate: le(),
+})
 external unsafe_le: ('a, 'a) => bool = "%unsafe_le"
 
 /**
    `unsafe_gt(a, b)` will be compiled as `a > b`.
     See also `Js.unsafe_lt`.
 */
+@deprecated({
+  reason: "Use `gt` instead.",
+  migrate: gt(),
+})
 external unsafe_gt: ('a, 'a) => bool = "%unsafe_gt"
 
 /**
    `unsafe_ge(a, b)` will be compiled as `a >= b`.
    See also `Js.unsafe_lt`.
 */
+@deprecated({
+  reason: "Use `ge` instead.",
+  migrate: ge(),
+})
 external unsafe_ge: ('a, 'a) => bool = "%unsafe_ge"

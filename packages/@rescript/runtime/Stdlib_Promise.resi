@@ -431,7 +431,10 @@ external allSettled6: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>, t<'f>)) => t<(
 `done(p)` is a safe way to ignore a promise. If a value is anything else than a
 promise, it will throw a type error.
 */
-@deprecated("Please use `Promise.ignore` instead")
+@deprecated({
+  reason: "Please use `Promise.ignore` instead",
+  migrate: Promise.ignore(),
+})
 external done: promise<'a> => unit = "%ignore"
 
 /**

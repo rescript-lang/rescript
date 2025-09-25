@@ -132,7 +132,10 @@ Null.null->Null.toOption->greet // "Greetings Anonymous"
 */
 let getOr: (t<'a>, 'a) => 'a
 
-@deprecated("Use getOr instead")
+@deprecated({
+  reason: "Use getOr instead",
+  migrate: Null.getOr(),
+})
 let getWithDefault: (t<'a>, 'a) => 'a
 
 /**
@@ -156,7 +159,10 @@ switch Null.getExn(%raw("null")) {
 
 - Throws `Invalid_argument` if `value` is `null`
 */
-@deprecated("Use `getOrThrow` instead")
+@deprecated({
+  reason: "Use `getOrThrow` instead",
+  migrate: Null.getOrThrow(),
+})
 let getExn: t<'a> => 'a
 
 /**
@@ -240,7 +246,10 @@ noneValue->Null.mapOr(0, x => x + 5) // 0
 */
 let mapOr: (t<'a>, 'b, 'a => 'b) => 'b
 
-@deprecated("Use mapOr instead")
+@deprecated({
+  reason: "Use mapOr instead",
+  migrate: Null.mapOr(),
+})
 let mapWithDefault: (t<'a>, 'b, 'a => 'b) => 'b
 
 /**

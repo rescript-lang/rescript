@@ -129,7 +129,10 @@ Nullable.null->Nullable.toOption->greet // "Greetings Anonymous"
 */
 let getOr: (t<'a>, 'a) => 'a
 
-@deprecated("Use getOr instead")
+@deprecated({
+  reason: "Use getOr instead",
+  migrate: Nullable.getOr(),
+})
 let getWithDefault: (t<'a>, 'a) => 'a
 
 /**
@@ -156,7 +159,10 @@ switch Nullable.getExn(%raw("undefined")) {
 
 - Throws `Invalid_argument` if `value` is `null` or `undefined`
 */
-@deprecated("Use `getOrThrow` instead")
+@deprecated({
+  reason: "Use `getOrThrow` instead",
+  migrate: Nullable.getOrThrow(),
+})
 let getExn: t<'a> => 'a
 
 /**
@@ -244,7 +250,10 @@ noneValue->Nullable.mapOr(0, x => x + 5) // 0
 */
 let mapOr: (t<'a>, 'b, 'a => 'b) => 'b
 
-@deprecated("Use mapOr instead")
+@deprecated({
+  reason: "Use mapOr instead",
+  migrate: Nullable.mapOr(),
+})
 let mapWithDefault: (t<'a>, 'b, 'a => 'b) => 'b
 
 /**

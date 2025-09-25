@@ -13,11 +13,24 @@ external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 @val
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
-@deprecated("Use `fill` instead") @send external fillAll: (array<'a>, 'a) => unit = "fill"
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: Array.fill(),
+})
+@send
+external fillAll: (array<'a>, 'a) => unit = "fill"
 
 @val external fromString: string => array<string> = "Array.from"
 
-@deprecated("Use `fill` instead") @send
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: Array.fill(
+    %insert.unlabelledArgument(0),
+    %insert.unlabelledArgument(1),
+    ~start=%insert.labelledArgument("start"),
+  ),
+})
+@send
 external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
 @send external fill: (array<'a>, 'a, ~start: int=?, ~end: int=?) => unit = "fill"
@@ -86,10 +99,15 @@ let compare = (a, b, cmp) => {
     : compareFromIndex(a, b, 0, cmp, lenA)
 }
 
-@deprecated("Use `copyWithin` instead") @send
+@deprecated("Use `copyWithin` instead")
+@send
 external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
-@deprecated("Use `copyWithin` instead") @send
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: Array.copyWithin(),
+})
+@send
 external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
 @send
@@ -134,17 +152,29 @@ let indexOfOpt = (arr, item) =>
   | -1 => None
   | index => Some(index)
   }
-@deprecated("Use `indexOf` instead") @send
+@deprecated({
+  reason: "Use `indexOf` instead",
+  migrate: Array.indexOf(~from=%insert.unlabelledArgument(2)),
+})
+@send
 external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
 
 @send external join: (array<string>, string) => string = "join"
 
-@deprecated("Use `join` instead") @send
+@deprecated({
+  reason: "Use `join` instead",
+  migrate: Array.join(),
+})
+@send
 external joinWith: (array<string>, string) => string = "join"
 
 @send external joinUnsafe: (array<'a>, string) => string = "join"
 
-@deprecated("Use `joinUnsafe` instead") @send
+@deprecated({
+  reason: "Use `joinUnsafe` instead",
+  migrate: Array.joinUnsafe(),
+})
+@send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
 
 @send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
@@ -153,11 +183,19 @@ let lastIndexOfOpt = (arr, item) =>
   | -1 => None
   | index => Some(index)
   }
-@deprecated("Use `lastIndexOf` instead") @send
+@deprecated({
+  reason: "Use `lastIndexOf` instead",
+  migrate: Array.lastIndexOf(~from=%insert.unlabelledArgument(2)),
+})
+@send
 external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
 
 @send external slice: (array<'a>, ~start: int=?, ~end: int=?) => array<'a> = "slice"
-@deprecated("Use `slice` instead") @send
+@deprecated({
+  reason: "Use `slice` instead",
+  migrate: Array.slice(),
+})
+@send
 external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
 
 @send external copy: array<'a> => array<'a> = "slice"

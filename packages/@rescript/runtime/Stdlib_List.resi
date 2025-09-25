@@ -90,7 +90,10 @@ switch List.headExn(list{}) {
 - Throws an Error if list is empty.
   
 */
-@deprecated("Use `headOrThrow` instead")
+@deprecated({
+  reason: "Use `headOrThrow` instead",
+  migrate: List.headOrThrow(),
+})
 let headExn: list<'a> => 'a
 
 /**
@@ -145,7 +148,10 @@ switch List.tailExn(list{}) {
 
 - Throws an Error if list is empty.
 */
-@deprecated("Use `tailOrThrow` instead")
+@deprecated({
+  reason: "Use `tailOrThrow` instead",
+  migrate: List.tailOrThrow(),
+})
 let tailExn: list<'a> => list<'a>
 
 /**
@@ -217,7 +223,10 @@ switch abc->List.getExn(4) {
 
 - Throws an Error if `index` is larger than the length of list.
 */
-@deprecated("Use `getOrThrow` instead")
+@deprecated({
+  reason: "Use `getOrThrow` instead",
+  migrate: List.getOrThrow(),
+})
 let getExn: (list<'a>, int) => 'a
 
 /**
@@ -288,7 +297,10 @@ let shuffle: list<'a> => list<'a>
 List.toShuffled(list{1, 2, 3}) // list{2, 1, 3}
 ```
 */
-@deprecated("Use `shuffle` instead")
+@deprecated({
+  reason: "Use `shuffle` instead",
+  migrate: List.shuffle(),
+})
 let toShuffled: list<'a> => list<'a>
 
 /**

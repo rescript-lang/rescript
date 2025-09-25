@@ -73,7 +73,10 @@ exception Undefined
     Throw `Undefined` if the forcing of `x` tries to force `x` itself
     recursively.
 */
-@deprecated("Use `Lazy.get` instead")
+@deprecated({
+  reason: "Use `Lazy.get` instead",
+  migrate: Lazy.get(),
+})
 let force: t<'a> => 'a
 
 /** 
@@ -85,7 +88,10 @@ let force: t<'a> => 'a
     If the computation of `x` throws an exception, it is unspecified
     whether `force_val(x)` throws the same exception or `Undefined`.
 */
-@deprecated("Use `Lazy.get` instead")
+@deprecated({
+  reason: "Use `Lazy.get` instead",
+  migrate: Lazy.get(),
+})
 let force_val: t<'a> => 'a
 
 /** 
@@ -94,19 +100,28 @@ let force_val: t<'a> => 'a
     The function returns a lazy value of type `Lazy.t<'a>`.  
     The computation is not executed until the lazy value is accessed.
 */
-@deprecated("Use `Lazy.make` instead")
+@deprecated({
+  reason: "Use `Lazy.make` instead",
+  migrate: Lazy.make(),
+})
 let from_fun: (unit => 'a) => t<'a>
 
 /** 
     `from_val(v)` returns an already-forced suspension of `v`.
     This is for special purposes only.
 */
-@deprecated("Use `Lazy.make` instead")
+@deprecated({
+  reason: "Use `Lazy.make` instead",
+  migrate: Lazy.make(() => %insert.unlabelledArgument(0)),
+})
 let from_val: 'a => t<'a>
 
 /** 
     `is_val(x)` returns `true` if `x has already been forced and
     did not throw an exception.
 */
-@deprecated("Use `Lazy.isEvaluated` instead")
+@deprecated({
+  reason: "Use `Lazy.isEvaluated` instead",
+  migrate: Lazy.isEvaluated(),
+})
 let is_val: t<'a> => bool

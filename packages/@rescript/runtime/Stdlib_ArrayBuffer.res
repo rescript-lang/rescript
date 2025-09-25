@@ -6,4 +6,9 @@ type t
 
 @send external slice: (t, ~start: int=?, ~end: int=?) => t = "slice"
 
-@deprecated("Use `slice` instead.") @send external sliceToEnd: (t, ~start: int) => t = "slice"
+@deprecated({
+  reason: "Use `slice` instead.",
+  migrate: ArrayBuffer.slice(),
+})
+@send
+external sliceToEnd: (t, ~start: int) => t = "slice"

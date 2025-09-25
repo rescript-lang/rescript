@@ -1,0 +1,7 @@
+/* Migration tests for Js.res type deprecations */
+
+// Type alias migrations exercised via externals
+external nullT: Null.t<int> = "nullT"
+external nullableT: Nullable.t<string> = "nullableT"
+external nullUndefT: Nullable.t<float> = "nullUndefT"
+
