@@ -101,7 +101,10 @@ arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
 arr == [100, 101, 100, 101, 102]
 ```
 */
-@deprecated("Use `copyWithin` instead")
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: Array.copyWithin(~start=0),
+})
 @send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
 /**

@@ -1,3 +1,6 @@
+let ba1 = [1, 2, 3, 4, 5]->Array.copyWithin(~target=2, ~start=0)
+let ba2 = Array.copyWithin([1, 2, 3, 4, 5], ~target=2, ~start=0)
+
 let b1 = [1, 2, 3, 4]->Array.copyWithin(~target=0, ~start=2)
 let b2 = Array.copyWithin([1, 2, 3, 4], ~target=0, ~start=2)
 
