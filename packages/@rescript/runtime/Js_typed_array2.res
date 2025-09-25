@@ -1508,7 +1508,12 @@ module Uint16Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
@@ -1525,10 +1530,20 @@ module Uint16Array = {
   @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({
+    reason: "Use `TypedArray.includes` instead.",
+    migrate: TypedArray.includes(),
+  })
+  @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
   @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
   @send external join: t => string = "join"
   @send external joinWith: (t, string) => string = "join"
@@ -1537,17 +1552,35 @@ module Uint16Array = {
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external subarrayFrom: (t, int) => t = "subarray"
 
   @send external toString: t => string = "toString"
   @send external toLocaleString: t => string = "toLocaleString"
@@ -1575,10 +1608,20 @@ module Uint16Array = {
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.map` instead.",
+    migrate: TypedArray.map(),
+  })
+  @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
   @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduce` instead.",
+    migrate: TypedArray.reduce(),
+  })
+  @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
   @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
   @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"

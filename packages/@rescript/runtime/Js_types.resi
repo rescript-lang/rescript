@@ -31,16 +31,33 @@
 })
 type symbol = Stdlib_Symbol.t
 
+@deprecated({
+  reason: "Use `Type.Classify.object` instead.",
+  migrate: %replace.type(: Type.Classify.object),
+})
 type obj_val = Stdlib_Type.Classify.object
 
 /** This type has only one value `undefined` */
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `Type` module instead."
+)
 type undefined_val
 
 /** This type has only one value `null` */
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `Type` module instead."
+)
 type null_val
 
+@deprecated({
+  reason: "Use `Type.Classify.function` instead.",
+  migrate: %replace.type(: Type.Classify.function),
+})
 type function_val = Stdlib_Type.Classify.function
 
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `Type` module instead."
+)
 type rec t<_> =
   | Undefined: t<undefined_val>
   | Null: t<null_val>
@@ -64,8 +81,14 @@ test(() => true, Function) == true
 test("test", Boolean) == false
 ```
 */
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `Type` module instead."
+)
 let test: ('a, t<'b>) => bool
 
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `Type` module instead."
+)
 type tagged_t =
   | JSFalse
   | JSTrue
@@ -78,4 +101,7 @@ type tagged_t =
   | JSSymbol(symbol)
   | JSBigInt(bigint)
 
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `Type` module instead."
+)
 let classify: 'a => tagged_t

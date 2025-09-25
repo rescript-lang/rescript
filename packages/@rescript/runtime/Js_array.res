@@ -42,6 +42,10 @@ type t<'a> = array<'a>
 /**
 A type used to describe JavaScript objects that are like an array or are iterable.
 */
+@deprecated({
+  reason: "Use `Array.arrayLike` instead.",
+  migrate: %replace.type(: Array.arrayLike),
+})
 type array_like<'a> = Js_array2.array_like<'a>
 
 /* commented out until bs has a plan for iterators
@@ -59,6 +63,10 @@ Js.Array.from(strArr) == ["a", "b", "c", "d"]
 ```
 */
 @val
+@deprecated({
+  reason: "Use `Array.fromArrayLike` instead.",
+  migrate: Array.fromArrayLike(),
+})
 external from: array_like<'a> => array<'a> = "Array.from"
 
 /* ES2015 */
@@ -78,11 +86,20 @@ Js.Array.fromMap(strArr, code) == [97.0, 98.0, 99.0, 100.0]
 ```
 */
 @val
+@deprecated({
+  reason: "Use `Array.fromArrayLikeWithMap` instead.",
+  migrate: Array.fromArrayLikeWithMap(),
+})
 external fromMap: (array_like<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /* ES2015 */
 
-@val external isArray: 'a => bool = "Array.isArray"
+@deprecated({
+  reason: "Use `Array.isArray` instead.",
+  migrate: Array.isArray(),
+})
+@val
+external isArray: 'a => bool = "Array.isArray"
 /* ES2015 */
 /*
 Returns `true` if its argument is an array; `false` otherwise. This is a
@@ -101,6 +118,10 @@ Js.Array.isArray("abcd") == false
 /**
 Returns the number of elements in the array. See [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length) on MDN.
 */
+@deprecated({
+  reason: "Use `Array.length` instead.",
+  migrate: Array.length(),
+})
 external length: array<'a> => int = "%array_length"
 
 /* Mutator functions */
@@ -222,6 +243,10 @@ let empty: array<int> = []
 Js.Array.pop(empty) == None
 ```
 */
+@deprecated({
+  reason: "Use `Array.pop` instead.",
+  migrate: Array.pop(),
+})
 @send
 external pop: t<'a> => option<'a> = "pop"
 
@@ -266,6 +291,10 @@ Js.Array.reverseInPlace(arr) == ["cat", "bee", "ant"]
 arr == ["cat", "bee", "ant"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.reverse` instead.",
+  migrate: Array.reverse(),
+})
 @send
 external reverseInPlace: t<'a> => 'this = "reverse"
 
@@ -283,6 +312,10 @@ let empty: array<int> = []
 Js.Array.shift(empty) == None
 ```
 */
+@deprecated({
+  reason: "Use `Array.shift` instead.",
+  migrate: Array.shift(),
+})
 @send
 external shift: t<'a> => option<'a> = "shift"
 
@@ -301,6 +334,9 @@ Js.Array.sortInPlace(numbers) == [1, 10, 2, 20, 3, 30]
 numbers == [1, 10, 2, 20, 3, 30]
 ```
 */
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions from the `Array` module instead."
+)
 @send
 external sortInPlace: t<'a> => 'this = "sort"
 
@@ -531,7 +567,7 @@ Js.Array.indexOfFrom("b", ~from=2, ["a", "b", "a", "c", "a"]) == -1
 external indexOfFrom: (t<'a>, 'a, ~from: int) => int = "indexOf"
 let indexOfFrom = (arg1, ~from, obj) => indexOfFrom(obj, arg1, ~from)
 
-@send @deprecated("please use joinWith instead")
+@send @deprecated({reason: "Use `Array.join` instead.", migrate: Array.join()})
 external join: t<'a> => string = "join"
 
 /**
@@ -615,6 +651,10 @@ Returns a copy of the entire array. Same as `Js.Array.Slice(~start=0,
 [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Array.copy` instead.",
+  migrate: Array.copy(),
+})
 @send
 external copy: t<'a> => 'this = "slice"
 
@@ -646,6 +686,10 @@ Js.Array.toString([3.5, 4.6, 7.8]) == "3.5,4.6,7.8"
 Js.Array.toString(["a", "b", "c"]) == "a,b,c"
 ```
 */
+@deprecated({
+  reason: "Use `Array.toString` instead.",
+  migrate: Array.toString(),
+})
 @send
 external toString: t<'a> => string = "toString"
 
@@ -665,6 +709,10 @@ Js.Array.toLocaleString([Js.Date.make()])
 // returns "2020-3-19 10:52:11" for locale de_DE.utf8
 ```
 */
+@deprecated({
+  reason: "Use `Array.toLocaleString` instead.",
+  migrate: Array.toLocaleString(),
+})
 @send
 external toLocaleString: t<'a> => string = "toLocaleString"
 
@@ -1063,6 +1111,10 @@ Js.Array.unsafe_get(arr, 3) == 103
 Js.Array.unsafe_get(arr, 4) // returns undefined
 ```
 */
+@deprecated({
+  reason: "Use `Array.getUnsafe` instead.",
+  migrate: Array.getUnsafe(),
+})
 external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 /**
@@ -1087,4 +1139,8 @@ Js.Array.unsafe_set(arr, -1, 66)
 // you don't want to know.
 ```
 */
+@deprecated({
+  reason: "Use `Array.setUnsafe` instead.",
+  migrate: Array.setUnsafe(),
+})
 external unsafe_set: (array<'a>, int, 'a) => unit = "%array_unsafe_set"

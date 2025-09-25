@@ -42,6 +42,10 @@ Js.String2.make(3.5) == "3.5"
 Js.String2.make([1, 2, 3]) == "1,2,3"
 ```
 */
+@deprecated({
+  reason: "Use `String.make` instead.",
+  migrate: String.make(),
+})
 @val
 external make: 'a => t = "String"
 
@@ -58,6 +62,10 @@ Js.String2.fromCharCode(0xd55c) == `한`
 Js.String2.fromCharCode(-64568) == `ψ`
 ```
 */
+@deprecated({
+  reason: "Use `String.fromCharCode` instead.",
+  migrate: String.fromCharCode(),
+})
 @val
 external fromCharCode: int => t = "String.fromCharCode"
 
@@ -67,7 +75,12 @@ corresponding to the given numbers, using the same rules as `fromCharCode`. See
 [`String.fromCharCode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/fromCharCode)
 on MDN.
 */
-@val @variadic
+@deprecated({
+  reason: "Use `String.fromCharCodeMany` instead.",
+  migrate: String.fromCharCodeMany(),
+})
+@val
+@variadic
 external fromCharCodeMany: array<int> => t = "String.fromCharCode"
 
 /**
@@ -89,6 +102,10 @@ Js.String2.fromCodePoint(0xd55c) == `한`
 Js.String2.fromCodePoint(0x1f63a) == `😺`
 ```
 */
+@deprecated({
+  reason: "Use `String.fromCodePoint` instead.",
+  migrate: String.fromCodePoint(),
+})
 @val
 external fromCodePoint: int => t = "String.fromCodePoint"
 
@@ -106,7 +123,12 @@ on MDN.
 Js.String2.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 ```
 */
-@val @variadic
+@deprecated({
+  reason: "Use `String.fromCodePointMany` instead.",
+  migrate: String.fromCodePointMany(),
+})
+@val
+@variadic
 external fromCodePointMany: array<int> => t = "String.fromCodePoint"
 
 /* String.raw: ES2015, meant to be used with template strings, not directly */
@@ -122,6 +144,10 @@ on MDN.
 Js.String2.length("abcd") == 4
 ```
 */
+@deprecated({
+  reason: "Use `String.length` instead.",
+  migrate: String.length(),
+})
 @get
 external length: t => int = "length"
 
@@ -138,6 +164,10 @@ Js.String2.get("Reason", 4) == "o"
 Js.String2.get(`Rẽasöń`, 5) == `ń`
 ```
 */
+@deprecated({
+  reason: "Use `String.get` instead.",
+  migrate: String.get(),
+})
 @get_index
 external get: (t, int) => t = ""
 
@@ -465,6 +495,10 @@ on MDN.
 See also [Unicode technical report #15](https://unicode.org/reports/tr15/) for
 details.
 */
+@deprecated({
+  reason: "Use `String.normalize` instead.",
+  migrate: String.normalize(),
+})
 @send
 external normalize: t => t = "normalize"
 
@@ -933,6 +967,10 @@ Js.String.toLowerCase(`ΣΠ`) == `σπ`
 Js.String.toLowerCase(`ΠΣ`) == `πς`
 ```
 */
+@deprecated({
+  reason: "Use `String.toLowerCase` instead.",
+  migrate: String.toLowerCase(),
+})
 @send
 external toLowerCase: t => t = "toLowerCase"
 
@@ -942,6 +980,10 @@ external toLowerCase: t => t = "toLowerCase"
 See [`String.toLocaleLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleLowerCase)
 on MDN.
 */
+@deprecated({
+  reason: "Use `String.toLocaleLowerCase` instead.",
+  migrate: String.toLocaleLowerCase(),
+})
 @send
 external toLocaleLowerCase: t => t = "toLocaleLowerCase"
 
@@ -962,6 +1004,10 @@ Js.String.toUpperCase(`Straße`) == `STRASSE`
 Js.String.toUpperCase(`πς`) == `ΠΣ`
 ```
 */
+@deprecated({
+  reason: "Use `String.toUpperCase` instead.",
+  migrate: String.toUpperCase(),
+})
 @send
 external toUpperCase: t => t = "toUpperCase"
 
@@ -971,6 +1017,10 @@ external toUpperCase: t => t = "toUpperCase"
 See [`String.to:LocaleUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase)
 on MDN.
 */
+@deprecated({
+  reason: "Use `String.toLocaleUpperCase` instead.",
+  migrate: String.toLocaleUpperCase(),
+})
 @send
 external toLocaleUpperCase: t => t = "toLocaleUpperCase"
 
@@ -988,6 +1038,10 @@ Js.String.trim("   abc def   ") == "abc def"
 Js.String.trim("\n\r\t abc def \n\n\t\r ") == "abc def"
 ```
 */
+@deprecated({
+  reason: "Use `String.trim` instead.",
+  migrate: String.trim(),
+})
 @send
 external trim: t => t = "trim"
 
@@ -1041,4 +1095,7 @@ let arr = Js.Array2.fromMap(Js.String.castToArrayLike(s), x => x)
 arr == ["a", "b", "c", "d", "e"]
 ```
 */
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions from the `String` module instead."
+)
 external castToArrayLike: t => Js_array2.array_like<t> = "%identity"

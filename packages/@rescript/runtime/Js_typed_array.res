@@ -30,7 +30,15 @@ JavaScript Typed Array API
 
 @@warning("-103")
 
+@deprecated({
+  reason: "Use `ArrayBuffer.t` instead.",
+  migrate: %replace.type(: ArrayBuffer.t),
+})
 type array_buffer = Js_typed_array2.array_buffer
+
+@deprecated(
+  "This has been deprecated and will be removed in v13. Use functions and types from the `TypedArray` module instead."
+)
 type array_like<'a> = Js_typed_array2.array_like<'a>
 
 module type Type = {
@@ -1489,12 +1497,20 @@ module Float32Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
