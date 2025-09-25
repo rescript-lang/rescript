@@ -29,10 +29,7 @@ external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) 
 */
 @deprecated({
   reason: "Use `fromBuffer` instead",
-  migrate: BigInt64Array.fromBuffer(
-    %insert.unlabelledArgument(0),
-    ~byteOffset=%insert.labelledArgument("byteOffset"),
-  ),
+  migrate: BigInt64Array.fromBuffer(),
 })
 @new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "BigInt64Array"
@@ -43,11 +40,7 @@ external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "BigIn
 */
 @deprecated({
   reason: "Use `fromBuffer` instead",
-  migrate: BigInt64Array.fromBuffer(
-    %insert.unlabelledArgument(0),
-    ~byteOffset=%insert.labelledArgument("byteOffset"),
-    ~length=%insert.labelledArgument("length"),
-  ),
+  migrate: BigInt64Array.fromBuffer(),
 })
 @new
 external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =
@@ -69,10 +62,7 @@ external fromArrayLikeOrIterable: ('a, ~map: ('b, int) => bigint=?) => t = "BigI
 */
 @deprecated({
   reason: "Use `fromArrayLikeOrIterable` instead",
-  migrate: BigInt64Array.fromArrayLikeOrIterable(
-    %insert.unlabelledArgument(0),
-    ~map=%insert.unlabelledArgument(1),
-  ),
+  migrate: BigInt64Array.fromArrayLikeOrIterable(~map=%insert.unlabelledArgument(1)),
 })
 @val
 external fromArrayLikeOrIterableWithMap: ('a, ('b, int) => bigint) => t = "BigInt64Array.from"

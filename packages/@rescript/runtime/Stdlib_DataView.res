@@ -5,20 +5,13 @@ type t
 external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) => t = "DataView"
 @deprecated({
   reason: "Use `fromBuffer` instead",
-  migrate: DataView.fromBuffer(
-    %insert.unlabelledArgument(0),
-    ~byteOffset=%insert.labelledArgument("byteOffset"),
-  ),
+  migrate: DataView.fromBuffer(),
 })
 @new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "DataView"
 @deprecated({
   reason: "Use `fromBuffer` instead",
-  migrate: DataView.fromBuffer(
-    %insert.unlabelledArgument(0),
-    ~byteOffset=%insert.labelledArgument("byteOffset"),
-    ~length=%insert.labelledArgument("length"),
-  ),
+  migrate: DataView.fromBuffer(),
 })
 @new
 external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =

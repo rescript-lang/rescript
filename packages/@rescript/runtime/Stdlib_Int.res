@@ -99,11 +99,7 @@ let range = (start, end, ~options: rangeOptions={}) => {
 
 @deprecated({
   reason: "Use `range` instead",
-  migrate: Int.range(
-    %insert.unlabelledArgument(0),
-    %insert.unlabelledArgument(1),
-    ~options=%insert.unlabelledArgument(2),
-  ),
+  migrate: Int.range(~options=%insert.unlabelledArgument(2)),
 })
 @send
 let rangeWithOptions = (start, end, options) => range(start, end, ~options)
