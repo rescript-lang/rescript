@@ -62,7 +62,10 @@ switch Bool.fromStringExn("notAValidBoolean") {
 }
 ```
 */
-@deprecated("Use `fromStringOrThrow` instead")
+@deprecated({
+  reason: "Use `fromStringOrThrow` instead",
+  migrate: Bool.fromStringOrThrow(),
+})
 let fromStringExn: string => bool
 
 /**
