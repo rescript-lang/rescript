@@ -66,7 +66,8 @@ function prepareContainer(container, param) {
   let containerElement = document.createElement("div");
   let body = document.body;
   if (body !== undefined) {
-    Primitive_option.some(Primitive_option.valFromOption(body).appendChild(containerElement));
+    let body$1 = Primitive_option.valFromOption(body);
+    Primitive_option.some(body$1.appendChild(containerElement));
   }
   container.contents = Primitive_option.some(containerElement);
 }
@@ -74,7 +75,8 @@ function prepareContainer(container, param) {
 function cleanupContainer(container, param) {
   let __res_option_value = container.contents;
   if (__res_option_value !== undefined) {
-    Primitive_option.some((Primitive_option.valFromOption(__res_option_value).remove(), undefined));
+    let __res_option_value$1 = Primitive_option.valFromOption(__res_option_value);
+    Primitive_option.some((__res_option_value$1.remove(), undefined));
   }
   container.contents = undefined;
 }

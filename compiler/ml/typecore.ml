@@ -2466,8 +2466,8 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       | _ -> false
     in
 
-    if fully_applied && not is_primitive then rue (mk_apply funct args)
-    else rue (mk_apply funct args)
+    if fully_applied && not is_primitive then mk_apply funct args
+    else mk_apply funct args
   | Pexp_match (sarg, caselist) ->
     begin_def ();
     let arg = type_exp ~context:None env sarg in

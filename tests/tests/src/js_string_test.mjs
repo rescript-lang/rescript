@@ -3,7 +3,6 @@
 import * as Mocha from "mocha";
 import * as Js_string from "@rescript/runtime/lib/es6/Js_string.js";
 import * as Test_utils from "./test_utils.mjs";
-import * as Belt_Option from "@rescript/runtime/lib/es6/Belt_Option.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 Mocha.describe("Js_string_test", () => {
@@ -34,10 +33,13 @@ Mocha.describe("Js_string_test", () => {
     "na"
   ], Primitive_option.fromNull("banana".match(/na+/g))));
   Mocha.test("match - no match", () => Test_utils.eq("File \"js_string_test.res\", line 34, characters 36-43", undefined, Primitive_option.fromNull("banana".match(/nanana+/g))));
-  Mocha.test("match - not found capture groups", () => Test_utils.eq("File \"js_string_test.res\", line 37, characters 6-13", [
-    "hello ",
-    undefined
-  ], Belt_Option.map(Primitive_option.fromNull("hello word".match(/hello (world)?/)), prim => prim.slice())));
+  Mocha.test("match - not found capture groups", () => {
+    let __res_option_value = "hello word".match(/hello (world)?/);
+    Test_utils.eq("File \"js_string_test.res\", line 37, characters 6-13", [
+      "hello ",
+      undefined
+    ], __res_option_value !== null ? __res_option_value.slice() : undefined);
+  });
   Mocha.test("normalize", () => Test_utils.eq("File \"js_string_test.res\", line 43, characters 29-36", "foo", "foo".normalize()));
   Mocha.test("normalizeByForm", () => Test_utils.eq("File \"js_string_test.res\", line 44, characters 35-42", "foo", "foo".normalize("NFKD")));
   Mocha.test("repeat", () => Test_utils.eq("File \"js_string_test.res\", line 46, characters 26-33", "foofoofoo", "foo".repeat(3)));
