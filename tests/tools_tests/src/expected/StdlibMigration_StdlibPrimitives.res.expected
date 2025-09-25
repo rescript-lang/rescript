@@ -10,7 +10,7 @@ let f3 = Float.toFixed(300.0, ~digits=1)
 let f4 = Float.toPrecision(100.0, ~digits=2)
 let f5 = Float.toString(6.0, ~radix=2)
 
-let b1 = Bool.fromStringExn("true")
+let b1 = Bool.fromStringOrThrow("true")
 
 let buf = ArrayBuffer.make(8)
 let ab1 = buf->ArrayBuffer.slice(~start=2)
