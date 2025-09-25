@@ -53,7 +53,11 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "t<'a> => 'a",
+<<<<<<< HEAD
     "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` throws an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getExn(Null.make(3)) == 3\n\nswitch Null.getExn(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null`\n"},
+=======
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`getExn(value)` raises an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getExn(Null.make(3)) == 3\n\nswitch Null.getExn(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null`\n"},
+>>>>>>> 0b13ce2a2 (analysis output)
     "sortText": "getExn",
     "insertText": "->Null.getExn",
     "additionalTextEdits": [{
@@ -137,7 +141,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use mapOr instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "mapWithDefault",
     "insertText": "->Null.mapWithDefault",
     "additionalTextEdits": [{
@@ -149,7 +153,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use getOr instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "getWithDefault",
     "insertText": "->Null.getWithDefault",
     "additionalTextEdits": [{
@@ -249,7 +253,11 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "t<'a> => 'a",
+<<<<<<< HEAD
     "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` throws an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getExn(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getExn(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null` or `undefined`\n"},
+=======
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`getExn(value)` raises an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getExn(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getExn(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null` or `undefined`\n"},
+>>>>>>> 0b13ce2a2 (analysis output)
     "sortText": "getExn",
     "insertText": "->Nullable.getExn",
     "additionalTextEdits": [{
@@ -333,7 +341,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'b, 'a => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use mapOr instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "mapWithDefault",
     "insertText": "->Nullable.mapWithDefault",
     "additionalTextEdits": [{
@@ -345,7 +353,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use getOr instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "getWithDefault",
     "insertText": "->Nullable.getWithDefault",
     "additionalTextEdits": [{

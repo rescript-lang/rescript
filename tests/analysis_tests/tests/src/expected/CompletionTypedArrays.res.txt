@@ -223,7 +223,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -271,7 +271,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -307,7 +307,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -439,7 +439,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -913,7 +913,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -961,7 +961,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -997,7 +997,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -1129,7 +1129,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -1603,7 +1603,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -1651,7 +1651,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -1687,7 +1687,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -1819,7 +1819,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -2293,7 +2293,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -2341,7 +2341,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -2377,7 +2377,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -2509,7 +2509,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -2983,7 +2983,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -3031,7 +3031,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -3067,7 +3067,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -3199,7 +3199,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -3673,7 +3673,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -3721,7 +3721,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -3757,7 +3757,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -3889,7 +3889,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -4363,7 +4363,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -4411,7 +4411,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -4447,7 +4447,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -4579,7 +4579,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -5053,7 +5053,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -5101,7 +5101,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -5137,7 +5137,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -5269,7 +5269,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -5743,7 +5743,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -5791,7 +5791,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -5827,7 +5827,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -5959,7 +5959,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -6433,7 +6433,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -6481,7 +6481,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -6517,7 +6517,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -6649,7 +6649,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{
@@ -7123,7 +7123,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "sliceToEnd",
     "insertText": "->TypedArray.sliceToEnd",
     "additionalTextEdits": [{
@@ -7171,7 +7171,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, 'a, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "fillToEnd",
     "insertText": "->TypedArray.fillToEnd",
     "additionalTextEdits": [{
@@ -7207,7 +7207,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~start: int) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `subarray` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "subarrayToEnd",
     "insertText": "->TypedArray.subarrayToEnd",
     "additionalTextEdits": [{
@@ -7339,7 +7339,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "(t<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"},
     "sortText": "copyWithinToEnd",
     "insertText": "->TypedArray.copyWithinToEnd",
     "additionalTextEdits": [{

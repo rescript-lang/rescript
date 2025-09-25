@@ -13,15 +13,15 @@ Path eqN
 [{
     "label": "eqNullable",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "('a, nullable<'a>) => bool",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
   }, {
     "label": "eqNull",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "('a, null<'a>) => bool",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
   }]
 
 

@@ -99,13 +99,13 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<string>, string) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `join` instead\n\n\n`joinWith(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinWithUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]->Array.joinWith(\" -- \") == \"One -- Two -- Three\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`joinWith(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinWithUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]->Array.joinWith(\" -- \") == \"One -- Two -- Three\"\n```\n"}
   }, {
     "label": "joinWithUnsafe",
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, string) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `joinUnsafe` instead\n\n\n`joinWithUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[1, 2, 3]->Array.joinWithUnsafe(\" -- \") == \"1 -- 2 -- 3\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`joinWithUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[1, 2, 3]->Array.joinWithUnsafe(\" -- \") == \"1 -- 2 -- 3\"\n```\n"}
   }, {
     "label": "reduceRight",
     "kind": 12,
@@ -183,7 +183,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, 'a, ~start: int) => unit",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray == [1, 9, 9, 9]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray == [1, 9, 9, 9]\n```\n"}
   }, {
     "label": "includes",
     "kind": 12,
@@ -219,7 +219,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, 'a, int) => int",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `lastIndexOf` instead\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
   }, {
     "label": "toLocaleString",
     "kind": 12,
@@ -423,7 +423,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]\n```\n"}
   }, {
     "label": "fromArrayLikeWithMap",
     "kind": 12,
@@ -435,7 +435,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray == [9, 9, 9, 9]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray == [9, 9, 9, 9]\n```\n"}
   }, {
     "label": "set",
     "kind": 12,
@@ -489,7 +489,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n\n`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]\narr == [102, 103, 104, 103, 104]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]\narr == [102, 103, 104, 103, 104]\n```\n"}
   }, {
     "label": "unshift",
     "kind": 12,
@@ -531,13 +531,13 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, int) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"}
   }, {
     "label": "copyAllWithin",
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, ~target: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]\narr == [100, 101, 100, 101, 102]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]\narr == [100, 101, 100, 101, 102]\n```\n"}
   }, {
     "label": "keepSome",
     "kind": 12,
@@ -609,7 +609,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, 'a, int) => int",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `indexOf` instead\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
   }]
 
 Complete src/Completion.res 5:10
@@ -2468,25 +2468,25 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
   }, {
     "label": "Int.toFixedWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }, {
     "label": "Int.toPrecisionWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Int.toPrecision",
     "kind": 12,
@@ -2540,13 +2540,13 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` with `~radix` instead\n\n\n`toStringWithRadix(v, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toStringWithRadix(6.0, ~radix=2) == \"110\"\nFloat.toStringWithRadix(3735928559.0, ~radix=16) == \"deadbeef\"\nFloat.toStringWithRadix(123456.0, ~radix=36) == \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(v, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toStringWithRadix(6.0, ~radix=2) == \"110\"\nFloat.toStringWithRadix(3735928559.0, ~radix=16) == \"deadbeef\"\nFloat.toStringWithRadix(123456.0, ~radix=36) == \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Float.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(v, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponentialWithPrecision(77.0, ~digits=2) == \"7.70e+1\"\nFloat.toExponentialWithPrecision(5678.0, ~digits=2) == \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toExponential(v, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponentialWithPrecision(77.0, ~digits=2) == \"7.70e+1\"\nFloat.toExponentialWithPrecision(5678.0, ~digits=2) == \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
   }, {
     "label": "Float.toInt",
     "kind": 12,
@@ -2558,13 +2558,13 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(v, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixedWithPrecision(300.0, ~digits=4) == \"300.0000\"\nFloat.toFixedWithPrecision(300.0, ~digits=1) == \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toFixedWithPrecision(v, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixedWithPrecision(300.0, ~digits=4) == \"300.0000\"\nFloat.toFixedWithPrecision(300.0, ~digits=1) == \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }, {
     "label": "Float.toPrecisionWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
   }, {
     "label": "Float.toPrecision",
     "kind": 12,
@@ -2613,7 +2613,7 @@ Path g
     "kind": 12,
     "tags": [1],
     "detail": "(result<'a, 'b>, ~message: string=?) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use 'getOrThrow' instead\n\n\n  `getExn(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n  \n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception _ => true\n  | _ => false\n  } == true\n\n  switch Result.getExn(Error(\"Invalid data\"), ~message=\"was Error!\") {\n  | exception _ => true // Throws a JsError with the message \"was Error!\"\n  | _ => false\n  } == true\n  ```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n  `getExn(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n  \n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception _ => true\n  | _ => false\n  } == true\n\n  switch Result.getExn(Error(\"Invalid data\"), ~message=\"was Error!\") {\n  | exception _ => true // Throws a JsError with the message \"was Error!\"\n  | _ => false\n  } == true\n  ```\n"}
   }, {
     "label": "Result.getOrThrow",
     "kind": 12,
@@ -2631,7 +2631,7 @@ Path g
     "kind": 12,
     "tags": [1],
     "detail": "(result<'a, 'b>, 'a) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use getOr instead\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n"}
   }]
 
 Complete src/Completion.res 445:15
@@ -2715,7 +2715,7 @@ Path toS
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toString",
     "kind": 12,

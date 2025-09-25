@@ -16,25 +16,25 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
   }, {
     "label": "Int.toFixedWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }, {
     "label": "Int.toPrecisionWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Int.toPrecision",
     "kind": 12,
@@ -334,25 +334,25 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
   }, {
     "label": "Int.toFixedWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }, {
     "label": "Int.toPrecisionWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Int.toPrecision",
     "kind": 12,
@@ -577,7 +577,7 @@ Path slic
     "kind": 12,
     "tags": [1],
     "detail": "(string, ~start: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
   }]
 
 Complete src/CompletionInferValues.res 91:82
@@ -600,7 +600,7 @@ Path toS
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toString",
     "kind": 12,
@@ -632,7 +632,7 @@ Path toS
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toString",
     "kind": 12,
@@ -665,7 +665,7 @@ Path toS
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toString",
     "kind": 12,
@@ -700,7 +700,7 @@ Path slic
     "kind": 12,
     "tags": [1],
     "detail": "(string, ~start: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
   }]
 
 Complete src/CompletionInferValues.res 107:89
@@ -729,7 +729,7 @@ Path slic
     "kind": 12,
     "tags": [1],
     "detail": "(string, ~start: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
   }]
 
 Complete src/CompletionInferValues.res 111:80
@@ -758,7 +758,7 @@ Path slic
     "kind": 12,
     "tags": [1],
     "detail": "(string, ~start: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`sliceToEnd(str, ~start)` returns the substring of `str` starting at character\n`start` to the end of the string.\n- If `start` is negative, then it is evaluated as `length(str - start)`.\n- If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.\n  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.sliceToEnd(\"abcdefg\", ~start=4) == \"efg\"\nString.sliceToEnd(\"abcdefg\", ~start=-2) == \"fg\"\nString.sliceToEnd(\"abcdefg\", ~start=7) == \"\"\n```\n"}
   }]
 
 Complete src/CompletionInferValues.res 115:53
@@ -779,7 +779,7 @@ Path toSt
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: \n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Int.toString",
     "kind": 12,
