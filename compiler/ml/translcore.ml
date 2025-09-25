@@ -674,7 +674,8 @@ let stdlib_option_fun_of_path env path =
     let canonical = Env.normalize_path_prefix None env path in
     match canonical with
     | Path.Pdot (Path.Pident module_ident, _, _)
-      when Ident.name module_ident = "Stdlib_Option" -> (
+      when Ident.name module_ident = "Stdlib_Option"
+           || Ident.name module_ident = "Belt_Option" -> (
       match fname with
       | "forEach" -> Some Stdlib_option_fun_forEach
       | "map" -> Some Stdlib_option_fun_map
