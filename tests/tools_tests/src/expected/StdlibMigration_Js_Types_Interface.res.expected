@@ -1,0 +1,6 @@
+/* Implementation to satisfy interface build for tests */
+
+external nullT: Null.t<int> = "nullT"
+external nullableT: Nullable.t<string> = "nullableT"
+external nullUndefT: Nullable.t<float> = "nullUndefT"
+

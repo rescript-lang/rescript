@@ -631,7 +631,11 @@ let matchFn = (~match, ~offset as _, ~input as _) => String.toUpperCase(match)
 String.unsafeReplaceRegExpBy0(str, re, matchFn) == "bEAUtIfUl vOwEls"
 ```
 */
-@deprecated("Use `replaceRegExpBy0Unsafe` instead") @send
+@deprecated({
+  reason: "Use `replaceRegExpBy0Unsafe` instead",
+  migrate: String.replaceRegExpBy0Unsafe(),
+})
+@send
 external unsafeReplaceRegExpBy0: (
   string,
   Stdlib_RegExp.t,
@@ -654,7 +658,11 @@ let matchFn = (~match as _, ~group1, ~offset as _, ~input as _) => {
 String.unsafeReplaceRegExpBy1(str, re, matchFn) == "Jony is 41"
 ```
 */
-@deprecated("Use `replaceRegExpBy1Unsafe` instead") @send
+@deprecated({
+  reason: "Use `replaceRegExpBy1Unsafe` instead",
+  migrate: String.replaceRegExpBy1Unsafe(),
+})
+@send
 external unsafeReplaceRegExpBy1: (
   string,
   Stdlib_RegExp.t,
@@ -680,7 +688,11 @@ let matchFn = (~match as _, ~group1, ~group2, ~offset as _, ~input as _) => {
 String.unsafeReplaceRegExpBy2(str, re, matchFn) == "42"
 ```
 */
-@deprecated("Use `replaceRegExpBy2Unsafe` instead") @send
+@deprecated({
+  reason: "Use `replaceRegExpBy2Unsafe` instead",
+  migrate: String.replaceRegExpBy2Unsafe(),
+})
+@send
 external unsafeReplaceRegExpBy2: (
   string,
   Stdlib_RegExp.t,
@@ -692,7 +704,11 @@ external unsafeReplaceRegExpBy2: (
 has three group parameters.
 See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
 */
-@deprecated("Use `replaceRegExpBy3Unsafe` instead") @send
+@deprecated({
+  reason: "Use `replaceRegExpBy3Unsafe` instead",
+  migrate: String.replaceRegExpBy3Unsafe(),
+})
+@send
 external unsafeReplaceRegExpBy3: (
   string,
   Stdlib_RegExp.t,
@@ -894,7 +910,11 @@ String.sliceToEnd("abcdefg", ~start=-2) == "fg"
 String.sliceToEnd("abcdefg", ~start=7) == ""
 ```
 */
-@deprecated("Use `slice` instead") @send
+@deprecated({
+  reason: "Use `slice` instead",
+  migrate: String.slice(),
+})
+@send
 external sliceToEnd: (string, ~start: int) => string = "slice"
 
 /**
@@ -1036,7 +1056,11 @@ String.substringToEnd("playground", ~start=-3) == "playground"
 String.substringToEnd("playground", ~start=12) == ""
 ```
 */
-@deprecated("Use `substring` instead") @send
+@deprecated({
+  reason: "Use `substring` instead",
+  migrate: String.substring(),
+})
+@send
 external substringToEnd: (string, ~start: int) => string = "substring"
 
 /**

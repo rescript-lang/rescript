@@ -10,19 +10,35 @@ external equal: (int, int) => bool = "%equal"
 external compare: (int, int) => Stdlib_Ordering.t = "%compare"
 
 @send external toExponential: (int, ~digits: int=?) => string = "toExponential"
-@deprecated("Use `toExponential` instead") @send
+@deprecated({
+  reason: "Use `toExponential` instead",
+  migrate: Int.toExponential(),
+})
+@send
 external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
 
 @send external toFixed: (int, ~digits: int=?) => string = "toFixed"
-@deprecated("Use `toFixed` instead") @send
+@deprecated({
+  reason: "Use `toFixed` instead",
+  migrate: Int.toFixed(),
+})
+@send
 external toFixedWithPrecision: (int, ~digits: int) => string = "toFixed"
 
 @send external toPrecision: (int, ~digits: int=?) => string = "toPrecision"
-@deprecated("Use `toPrecision` instead") @send
+@deprecated({
+  reason: "Use `toPrecision` instead",
+  migrate: Int.toPrecision(),
+})
+@send
 external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
 
 @send external toString: (int, ~radix: int=?) => string = "toString"
-@deprecated("Use `toString` instead") @send
+@deprecated({
+  reason: "Use `toString` instead",
+  migrate: Int.toString(),
+})
+@send
 external toStringWithRadix: (int, ~radix: int) => string = "toString"
 @send external toLocaleString: int => string = "toLocaleString"
 
@@ -81,7 +97,15 @@ let range = (start, end, ~options: rangeOptions={}) => {
   Stdlib_Array.fromInitializer(~length, i => start + i * step)
 }
 
-@deprecated("Use `range` instead") @send
+@deprecated({
+  reason: "Use `range` instead",
+  migrate: Int.range(
+    %insert.unlabelledArgument(0),
+    %insert.unlabelledArgument(1),
+    ~options=%insert.unlabelledArgument(2),
+  ),
+})
+@send
 let rangeWithOptions = (start, end, options) => range(start, end, ~options)
 
 let clamp = (~min=?, ~max=?, value): int => {

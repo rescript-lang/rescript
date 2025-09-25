@@ -101,10 +101,8 @@ arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
 arr == [100, 101, 100, 101, 102]
 ```
 */
-@deprecated("Use `copyWithin` instead") @send external copyAllWithin: (
-  array<'a>,
-  ~target: int,
-) => array<'a> = "copyWithin"
+@deprecated("Use `copyWithin` instead")
+@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
 /**
 `copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.
@@ -121,7 +119,11 @@ arr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]
 arr == [102, 103, 104, 103, 104]
 ```
 */
-@deprecated("Use `copyWithin` instead") @send
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: Array.copyWithin(),
+})
+@send
 external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
 /**
@@ -157,7 +159,11 @@ myArray->Array.fillAll(9)
 myArray == [9, 9, 9, 9]
 ```
 */
-@deprecated("Use `fill` instead") @send
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: Array.fill(),
+})
+@send
 external fillAll: (array<'a>, 'a) => unit = "fill"
 
 /**
@@ -175,7 +181,11 @@ myArray->Array.fillToEnd(9, ~start=1)
 myArray == [1, 9, 9, 9]
 ```
 */
-@deprecated("Use `fill` instead") @send
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: Array.fill(~start=%insert.labelledArgument("start")),
+})
+@send
 external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
 /**
@@ -505,7 +515,11 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ```
 */
 let indexOfOpt: (array<'a>, 'a) => option<int>
-@deprecated("Use `indexOf` instead") @send
+@deprecated({
+  reason: "Use `indexOf` instead",
+  migrate: Array.indexOf(~from=%insert.unlabelledArgument(2)),
+})
+@send
 external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
 
 /**
@@ -531,7 +545,11 @@ external join: (array<string>, string) => string = "join"
 ["One", "Two", "Three"]->Array.joinWith(" -- ") == "One -- Two -- Three"
 ```
 */
-@deprecated("Use `join` instead") @send
+@deprecated({
+  reason: "Use `join` instead",
+  migrate: Array.join(),
+})
+@send
 external joinWith: (array<string>, string) => string = "join"
 
 /**
@@ -557,7 +575,11 @@ external joinUnsafe: (array<'a>, string) => string = "join"
 [1, 2, 3]->Array.joinWithUnsafe(" -- ") == "1 -- 2 -- 3"
 ```
 */
-@deprecated("Use `joinUnsafe` instead") @send
+@deprecated({
+  reason: "Use `joinUnsafe` instead",
+  migrate: Array.joinUnsafe(),
+})
+@send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
 /**
 `lastIndexOf(array, item, ~from)` returns the last index of the provided `item` in `array`, searching backwards from `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
@@ -578,7 +600,11 @@ See [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 */
 @send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>
-@deprecated("Use `lastIndexOf` instead") @send
+@deprecated({
+  reason: "Use `lastIndexOf` instead",
+  migrate: Array.lastIndexOf(~from=%insert.unlabelledArgument(2)),
+})
+@send
 external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
 
 /**
@@ -608,7 +634,11 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 [1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]
 ```
 */
-@deprecated("Use `slice` instead") @send
+@deprecated({
+  reason: "Use `slice` instead",
+  migrate: Array.slice(),
+})
+@send
 external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
 /**
 `copy(array)` makes a copy of the array with the items in it, but does not make copies of the items themselves.
@@ -1113,7 +1143,10 @@ for index in 0 to array->Array.length - 1 {
 }
 ```
 */
-@deprecated("Use getUnsafe instead. This will be removed in v13")
+@deprecated({
+  reason: "Use getUnsafe instead. This will be removed in v13",
+  migrate: Array.getUnsafe(),
+})
 external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 /**
