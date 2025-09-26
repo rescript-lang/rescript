@@ -80,7 +80,6 @@ async fn async_watch(
         warn_error,
     }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
-    let warn_error = warn_error.clone();
     let mut build_state: build::build_types::BuildCommandState = build::initialize_build(
         None,
         filter,
@@ -88,7 +87,7 @@ async fn async_watch(
         path,
         build_dev_deps,
         snapshot_output,
-        warn_error.clone(),
+        warn_error,
     )
     .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
@@ -286,7 +285,7 @@ async fn async_watch(
                     path,
                     build_dev_deps,
                     snapshot_output,
-                    warn_error.clone(),
+                    build_state.get_warn_error_override(),
                 )
                 .expect("Can't initialize build");
                 let _ = build::incremental_build(
