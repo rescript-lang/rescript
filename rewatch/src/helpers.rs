@@ -32,30 +32,31 @@ pub mod emojis {
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
 }
 
-fn cached_path_exists(project_context: &ProjectContext, path: &Path) -> bool {
+// Cached check: does the given directory contain a node_modules subfolder?
+fn has_node_modules_cached(project_context: &ProjectContext, dir: &Path) -> bool {
     match project_context.node_modules_exist_cache.read() {
         Ok(cache) => {
-            if let Some(exists) = cache.get(path) {
+            if let Some(exists) = cache.get(dir) {
                 return *exists;
             }
         }
         Err(poisoned) => {
             log::warn!("node_modules_exist_cache read lock poisoned; recovering");
             let cache = poisoned.into_inner();
-            if let Some(exists) = cache.get(path) {
+            if let Some(exists) = cache.get(dir) {
                 return *exists;
             }
         }
     }
-    let exists = path.exists();
+    let exists = dir.join("node_modules").exists();
     match project_context.node_modules_exist_cache.write() {
         Ok(mut cache) => {
-            cache.insert(path.to_path_buf(), exists);
+            cache.insert(dir.to_path_buf(), exists);
         }
         Err(poisoned) => {
             log::warn!("node_modules_exist_cache write lock poisoned; recovering");
             let mut cache = poisoned.into_inner();
-            cache.insert(path.to_path_buf(), exists);
+            cache.insert(dir.to_path_buf(), exists);
         }
     }
     exists
@@ -221,15 +222,17 @@ fn find_dep_in_upward_node_modules(
 
     let mut current = Some(start_dir);
     while let Some(dir) = current {
-        let candidate = package_path(dir, package_name);
-        log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
-        if cached_path_exists(project_context, &candidate) {
-            log::debug!(
-                "try_package_path: found '{}' at '{}' via upward traversal",
-                package_name,
-                candidate.to_string_lossy()
-            );
-            return Ok(candidate);
+        if has_node_modules_cached(project_context, dir) {
+            let candidate = package_path(dir, package_name);
+            log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
+            if candidate.exists() {
+                log::debug!(
+                    "try_package_path: found '{}' at '{}' via upward traversal",
+                    package_name,
+                    candidate.to_string_lossy()
+                );
+                return Ok(candidate);
+            }
         }
         current = dir.parent();
     }

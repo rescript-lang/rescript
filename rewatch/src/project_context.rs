@@ -22,7 +22,7 @@ pub enum MonoRepoContext {
 pub struct ProjectContext {
     pub current_config: Config,
     pub monorepo_context: Option<MonoRepoContext>,
-    pub node_modules_exist_cache: RwLock<AHashMap<PathBuf, bool>>, // caches existence checks for candidate node_modules paths
+    pub node_modules_exist_cache: RwLock<AHashMap<PathBuf, bool>>, // caches whether a directory contains a node_modules subfolder
 }
 
 fn format_dependencies(dependencies: &AHashSet<String>) -> String {
