@@ -564,15 +564,15 @@ impl Config {
     }
 
     pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
+        // Ignore warning config for non local dependencies (node_module dependencies)
+        if !is_local_dep {
+            return vec![];
+        }
+
         // Command-line --warn-error flag takes precedence over rescript.json configuration
         // This follows the same precedence behavior as the legacy bsb build system
         if let Some(warn_error_str) = warn_error_override {
             return vec!["-warn-error".to_string(), warn_error_str];
-        }
-
-        // Ignore warning config for non local dependencies (node_module dependencies)
-        if !is_local_dep {
-            return vec![];
         }
 
         match self.warnings {
@@ -1261,5 +1261,20 @@ pub mod tests {
         // Test that override completely ignores config warnings
         let args = config.get_warning_args(true, Some("+3+8+11".to_string()));
         assert_eq!(args, vec!["-warn-error".to_string(), "+3+8+11".to_string()]);
+    }
+
+    #[test]
+    fn test_get_warning_args_non_local_dep_ignores_override() {
+        let config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Non-local dependency should never receive warning args, even if override is provided
+        let args = config.get_warning_args(false, Some("+3+8+11".to_string()));
+        assert_eq!(args, Vec::<String>::new());
     }
 }
