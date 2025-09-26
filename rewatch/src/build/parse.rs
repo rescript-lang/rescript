@@ -52,12 +52,18 @@ pub fn generate_asts(
                             package.to_owned(),
                             &source_file.implementation.path.to_owned(),
                             build_state,
+                            build_state.get_warn_error_override(),
                         )
                         .map_err(|e| e.to_string());
 
                         let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned()) {
                             Some(interface_file_path) => {
-                                generate_ast(package.to_owned(), &interface_file_path.to_owned(), build_state)
+                                generate_ast(
+                                    package.to_owned(),
+                                    &interface_file_path.to_owned(),
+                                    build_state,
+                                    build_state.get_warn_error_override(),
+                                )
                                     .map_err(|e| e.to_string())
                                     .map(Some)
                             }
@@ -276,6 +282,8 @@ pub fn parser_args(
     package_config: &Config,
     filename: &Path,
     contents: &str,
+    is_local_dep: bool,
+    warn_error_override: Option<String>,
 ) -> anyhow::Result<(PathBuf, Vec<String>)> {
     let root_config = project_context.get_root_config();
     let file = &filename;
@@ -291,11 +299,7 @@ pub fn parser_args(
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let experimental_features_args = root_config.get_experimental_features_args();
     let bsc_flags = config::flatten_flags(&package_config.compiler_flags);
-
-    // TODO: The legacy bsb build system applies warning/error flags to both parsing and compilation phases.
-    // We currently only apply them to compilation. We should investigate if this is intentional
-    // or if we need to add warning args here as well for consistency with bsb behavior.
-    // This would require passing the warn_error_override parameter through the parser_args function.
+    let warning_args = package_config.get_warning_args(is_local_dep, warn_error_override);
 
     let file = PathBuf::from("..").join("..").join(file);
 
@@ -308,6 +312,7 @@ pub fn parser_args(
             jsx_mode_args,
             jsx_preserve_args,
             experimental_features_args,
+            warning_args,
             bsc_flags,
             vec![
                 "-absname".to_string(),
@@ -325,13 +330,20 @@ fn generate_ast(
     package: Package,
     filename: &Path,
     build_state: &BuildState,
+    warn_error_override: Option<String>,
 ) -> anyhow::Result<(PathBuf, Option<helpers::StdErr>)> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
     let build_path_abs = package.get_build_path();
-    let (ast_path, parser_args) =
-        parser_args(&build_state.project_context, &package.config, filename, &contents)?;
+    let (ast_path, parser_args) = parser_args(
+        &build_state.project_context,
+        &package.config,
+        filename,
+        &contents,
+        package.is_local_dep,
+        warn_error_override,
+    )?;
 
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());

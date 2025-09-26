@@ -82,6 +82,8 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         &project_context.current_config,
         relative_filename,
         &contents,
+        /* is_local_dep */ true,
+        /* warn_error_override */ None,
     )?;
     let is_interface = filename.to_string_lossy().ends_with('i');
     let has_interface = if is_interface {
