@@ -7,7 +7,7 @@ use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
     let raw_args: Vec<String> = env::args().collect();
-    let cli = parse_cli(raw_args);
+    let cli = parse_cli(raw_args).unwrap_or_else(|err| err.exit());
 
     let log_level_filter = cli.verbose.log_level_filter();
 
@@ -113,9 +113,9 @@ fn get_lock(folder: &str) -> lock::Lock {
     }
 }
 
-fn parse_cli(raw_args: Vec<String>) -> cli::Cli {
+fn parse_cli(raw_args: Vec<String>) -> Result<cli::Cli, clap::Error> {
     match cli::Cli::try_parse_from(&raw_args) {
-        Ok(cli) => cli,
+        Ok(cli) => Ok(cli),
         Err(err) => {
             if should_default_to_build(&err, &raw_args) {
                 let mut fallback_args = raw_args.clone();
@@ -123,11 +123,11 @@ fn parse_cli(raw_args: Vec<String>) -> cli::Cli {
                 fallback_args.insert(insert_at, "build".into());
 
                 match cli::Cli::try_parse_from(&fallback_args) {
-                    Ok(cli) => cli,
-                    Err(fallback_err) => fallback_err.exit(),
+                    Ok(cli) => Ok(cli),
+                    Err(fallback_err) => Err(fallback_err),
                 }
             } else {
-                err.exit()
+                Err(err)
             }
         }
     }
@@ -172,4 +172,52 @@ fn is_global_flag(arg: &str) -> bool {
             | "-V"
             | "--version"
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(args: &[&str]) -> Result<cli::Cli, clap::Error> {
+        parse_cli(args.iter().map(|arg| arg.to_string()).collect())
+    }
+
+    #[test]
+    fn defaults_to_build_without_args() {
+        let cli = parse(&["rescript"]).expect("expected default build command");
+
+        match cli.command {
+            cli::Command::Build(build_args) => assert_eq!(build_args.folder.folder, "."),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn defaults_to_build_with_folder_shortcut() {
+        let cli = parse(&["rescript", "someFolder"]).expect("expected build command");
+
+        match cli.command {
+            cli::Command::Build(build_args) => assert_eq!(build_args.folder.folder, "someFolder"),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn respects_global_flag_before_subcommand() {
+        let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
+
+        assert!(matches!(cli.command, cli::Command::Watch(_)));
+    }
+
+    #[test]
+    fn help_flag_does_not_default_to_build() {
+        let err = parse(&["rescript", "--help"]).expect_err("expected clap help error");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+    }
+
+    #[test]
+    fn version_flag_does_not_default_to_build() {
+        let err = parse(&["rescript", "--version"]).expect_err("expected clap version error");
+        assert_eq!(err.kind(), ErrorKind::DisplayVersion);
+    }
 }

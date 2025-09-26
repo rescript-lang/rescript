@@ -21,7 +21,6 @@ pub enum FileExtension {
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
 #[command(version)]
-#[command(args_conflicts_with_subcommands = true)]
 #[command(
     after_help = "[1m[1m[4mNote:[0m If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information."
 )]
