@@ -57,14 +57,17 @@ pub fn generate_asts(
                         .map_err(|e| e.to_string());
 
                         let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned()) {
-                            Some(interface_file_path) => generate_ast(
-                                package.to_owned(),
-                                &interface_file_path.to_owned(),
-                                build_state,
-                                build_state.get_warn_error_override(),
-                            )
-                            .map_err(|e| e.to_string())
-                            .map(Some),
+                            Some(interface_file_path) => {
+                                match generate_ast(
+                                    package.to_owned(),
+                                    &interface_file_path.to_owned(),
+                                    build_state,
+                                    build_state.get_warn_error_override(),
+                                ) {
+                                    Ok(v) => Ok(Some(v)),
+                                    Err(e) => Err(e.to_string()),
+                                }
+                            }
                             _ => Ok(None),
                         };
 
