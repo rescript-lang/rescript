@@ -10,20 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.13 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
+# 12.0.0-beta.13
 
 #### :bug: Bug fix
 
 - Fix result examples. https://github.com/rescript-lang/rescript/pull/7914
 - Make inline record fields that overlap with a variant's tag a compile error. https://github.com/rescript-lang/rescript/pull/7875
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
@@ -33,8 +25,6 @@
 - Js output: remove superfluous newline after every `if`. https://github.com/rescript-lang/rescript/pull/7920
 - Rewatch: Traverse upwards for package resolution in single context projects. https://github.com/rescript-lang/rescript/pull/7896
 - Rewatch: Add `--warn-error` flag to `build`. https://github.com/rescript-lang/rescript/pull/7916
-
-#### :house: Internal
 
 # 12.0.0-beta.12
 
