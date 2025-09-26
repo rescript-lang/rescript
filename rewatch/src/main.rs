@@ -1,12 +1,14 @@
 use anyhow::Result;
 use clap::{CommandFactory, Parser, error::ErrorKind};
 use log::LevelFilter;
-use std::{env, io::Write, path::Path};
+use std::{env, ffi::OsString, io::Write, path::Path};
 
 use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
-    let raw_args: Vec<String> = env::args().collect();
+    // Use `args_os` so non-UTF bytes still reach clap for proper error reporting on platforms that
+    // allow arbitrary argv content.
+    let raw_args: Vec<OsString> = env::args_os().collect();
     let cli = parse_cli(raw_args).unwrap_or_else(|err| err.exit());
 
     let log_level_filter = cli.verbose.log_level_filter();
@@ -113,14 +115,14 @@ fn get_lock(folder: &str) -> lock::Lock {
     }
 }
 
-fn parse_cli(raw_args: Vec<String>) -> Result<cli::Cli, clap::Error> {
+fn parse_cli(raw_args: Vec<OsString>) -> Result<cli::Cli, clap::Error> {
     match cli::Cli::try_parse_from(&raw_args) {
         Ok(cli) => Ok(cli),
         Err(err) => {
             if should_default_to_build(&err, &raw_args) {
                 let mut fallback_args = raw_args.clone();
                 let insert_at = index_after_global_flags(&fallback_args);
-                fallback_args.insert(insert_at, "build".into());
+                fallback_args.insert(insert_at, OsString::from("build"));
 
                 match cli::Cli::try_parse_from(&fallback_args) {
                     Ok(cli) => Ok(cli),
@@ -133,7 +135,7 @@ fn parse_cli(raw_args: Vec<String>) -> Result<cli::Cli, clap::Error> {
     }
 }
 
-fn should_default_to_build(err: &clap::Error, args: &[String]) -> bool {
+fn should_default_to_build(err: &clap::Error, args: &[OsString]) -> bool {
     match err.kind() {
         ErrorKind::MissingSubcommand
         | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
@@ -149,7 +151,7 @@ fn should_default_to_build(err: &clap::Error, args: &[String]) -> bool {
     }
 }
 
-fn index_after_global_flags(args: &[String]) -> usize {
+fn index_after_global_flags(args: &[OsString]) -> usize {
     let mut idx = 1;
     while let Some(arg) = args.get(idx) {
         if is_global_flag(arg) {
@@ -161,44 +163,52 @@ fn index_after_global_flags(args: &[String]) -> usize {
     idx.min(args.len())
 }
 
-fn is_global_flag(arg: &str) -> bool {
+fn is_global_flag(arg: &OsString) -> bool {
     matches!(
-        arg,
-        "-v" | "-vv"
-            | "-vvv"
-            | "-vvvv"
-            | "-q"
-            | "-qq"
-            | "-qqq"
-            | "-qqqq"
-            | "--verbose"
-            | "--quiet"
-            | "-h"
-            | "--help"
-            | "-V"
-            | "--version"
+        arg.to_str(),
+        Some(
+            "-v" | "-vv"
+                | "-vvv"
+                | "-vvvv"
+                | "-q"
+                | "-qq"
+                | "-qqq"
+                | "-qqqq"
+                | "--verbose"
+                | "--quiet"
+                | "-h"
+                | "--help"
+                | "-V"
+                | "--version"
+        )
     )
 }
 
-fn first_non_global_arg(args: &[String]) -> Option<&str> {
-    args.iter()
-        .skip(1)
-        .find(|arg| !is_global_flag(arg))
-        .map(|s| s.as_str())
+fn first_non_global_arg(args: &[OsString]) -> Option<&OsString> {
+    args.iter().skip(1).find(|arg| !is_global_flag(arg))
 }
 
-fn is_known_subcommand(arg: &str) -> bool {
+fn is_known_subcommand(arg: &OsString) -> bool {
+    let Some(arg_str) = arg.to_str() else {
+        return false;
+    };
+
     cli::Cli::command().get_subcommands().any(|subcommand| {
-        subcommand.get_name() == arg || subcommand.get_all_aliases().any(|alias| alias == arg)
+        subcommand.get_name() == arg_str || subcommand.get_all_aliases().any(|alias| alias == arg_str)
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
 
     fn parse(args: &[&str]) -> Result<cli::Cli, clap::Error> {
-        parse_cli(args.iter().map(|arg| arg.to_string()).collect())
+        parse_cli(args.iter().map(OsString::from).collect())
+    }
+
+    fn parse_os(args: Vec<OsString>) -> Result<cli::Cli, clap::Error> {
+        parse_cli(args)
     }
 
     #[test]
@@ -244,5 +254,15 @@ mod tests {
     fn version_flag_does_not_default_to_build() {
         let err = parse(&["rescript", "--version"]).expect_err("expected clap version error");
         assert_eq!(err.kind(), ErrorKind::DisplayVersion);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn non_utf_argument_returns_error() {
+        use std::os::unix::ffi::OsStringExt;
+
+        let args = vec![OsString::from("rescript"), OsString::from_vec(vec![0xff])];
+        let err = parse_os(args).expect_err("expected clap to report invalid utf8");
+        assert_eq!(err.kind(), ErrorKind::InvalidUtf8);
     }
 }
