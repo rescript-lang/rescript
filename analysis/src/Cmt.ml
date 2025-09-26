@@ -38,7 +38,8 @@ let fullFromUri ~uri =
         let cmt = getCmtPath ~uri paths in
         fullForCmt ~moduleName ~package ~uri cmt
       | None ->
-        prerr_endline ("can't find module " ^ moduleName);
+        if not (Uri.isInterface uri) then
+          prerr_endline ("can't find module " ^ moduleName);
         None))
 
 let fullsFromModule ~package ~moduleName =
@@ -51,3 +52,17 @@ let fullsFromModule ~package ~moduleName =
 let loadFullCmtFromPath ~path =
   let uri = Uri.fromPath path in
   fullFromUri ~uri
+
+let loadCmtInfosFromPath ~path =
+  let uri = Uri.fromPath path in
+  match Packages.getPackage ~uri with
+  | None -> None
+  | Some package -> (
+    let moduleName =
+      BuildSystem.namespacedName package.namespace (FindFiles.getName path)
+    in
+    match Hashtbl.find_opt package.pathsForModule moduleName with
+    | Some paths ->
+      let cmt = getCmtPath ~uri paths in
+      Shared.tryReadCmt cmt
+    | None -> None)
