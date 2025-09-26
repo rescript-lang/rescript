@@ -145,7 +145,11 @@ let searchOpt = (s, re) =>
   }
 
 @send external slice: (string, ~start: int, ~end: int=?) => string = "slice"
-@deprecated("Use `slice` instead") @send
+@deprecated({
+  reason: "Use `slice` instead",
+  migrate: String.slice(),
+})
+@send
 external sliceToEnd: (string, ~start: int) => string = "slice"
 
 @send external split: (string, string) => array<string> = "split"
@@ -159,7 +163,11 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 @send external startsWithFrom: (string, string, int) => bool = "startsWith"
 
 @send external substring: (string, ~start: int, ~end: int=?) => string = "substring"
-@deprecated("Use `substring` instead") @send
+@deprecated({
+  reason: "Use `substring` instead",
+  migrate: String.substring(),
+})
+@send
 external substringToEnd: (string, ~start: int) => string = "substring"
 
 @send external toLowerCase: string => string = "toLowerCase"

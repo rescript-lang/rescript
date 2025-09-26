@@ -14,13 +14,21 @@ type t<'a>
 @get external length: t<'a> => int = "length"
 
 @send external copyAllWithin: (t<'a>, ~target: int) => array<'a> = "copyWithin"
-@deprecated("Use `copyWithin` instead") @send
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: TypedArray.copyWithin(),
+})
+@send
 external copyWithinToEnd: (t<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 @send
 external copyWithin: (t<'a>, ~target: int, ~start: int, ~end: int=?) => array<'a> = "copyWithin"
 
 @send external fillAll: (t<'a>, 'a) => t<'a> = "fill"
-@deprecated("Use `fill` instead") @send
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: TypedArray.fill(),
+})
+@send
 external fillToEnd: (t<'a>, 'a, ~start: int) => t<'a> = "fill"
 @send external fill: (t<'a>, 'a, ~start: int, ~end: int=?) => t<'a> = "fill"
 
@@ -43,12 +51,20 @@ external fillToEnd: (t<'a>, 'a, ~start: int) => t<'a> = "fill"
 @send external lastIndexOfFrom: (t<'a>, 'a, int) => int = "lastIndexOf"
 
 @send external slice: (t<'a>, ~start: int, ~end: int=?) => t<'a> = "slice"
-@deprecated("Use `slice` instead") @send
+@deprecated({
+  reason: "Use `slice` instead",
+  migrate: TypedArray.slice(),
+})
+@send
 external sliceToEnd: (t<'a>, ~start: int) => t<'a> = "slice"
 @send external copy: t<'a> => t<'a> = "slice"
 
 @send external subarray: (t<'a>, ~start: int, ~end: int=?) => t<'a> = "subarray"
-@deprecated("Use `subarray` instead") @send
+@deprecated({
+  reason: "Use `subarray` instead",
+  migrate: TypedArray.subarray(),
+})
+@send
 external subarrayToEnd: (t<'a>, ~start: int) => t<'a> = "subarray"
 
 @send external toString: t<'a> => string = "toString"

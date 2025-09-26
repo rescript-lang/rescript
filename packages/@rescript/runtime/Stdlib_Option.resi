@@ -91,7 +91,10 @@ switch Option.getExn(None, ~message="was None!") {
 
 - Throws an error if `opt` is `None`
 */
-@deprecated("Use `getOrThrow` instead")
+@deprecated({
+  reason: "Use `getOrThrow` instead",
+  migrate: Option.getOrThrow(),
+})
 let getExn: (option<'a>, ~message: string=?) => 'a
 
 /**
@@ -148,7 +151,10 @@ noneValue->Option.mapOr(0, x => x + 5) // 0
 */
 let mapOr: (option<'a>, 'b, 'a => 'b) => 'b
 
-@deprecated("Use mapOr instead")
+@deprecated({
+  reason: "Use mapOr instead",
+  migrate: Option.mapOr(),
+})
 let mapWithDefault: (option<'a>, 'b, 'a => 'b) => 'b
 
 /**
@@ -200,7 +206,10 @@ None->greet // "Greetings Anonymous"
 */
 let getOr: (option<'a>, 'a) => 'a
 
-@deprecated("Use getOr instead")
+@deprecated({
+  reason: "Use getOr instead",
+  migrate: Option.getOr(),
+})
 let getWithDefault: (option<'a>, 'a) => 'a
 
 /**

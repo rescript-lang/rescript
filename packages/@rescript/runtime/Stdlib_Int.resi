@@ -103,7 +103,11 @@ Int.toExponentialWithPrecision(5678, ~digits=2) // "5.68e+3"
 
 - `RangeError`: If `digits` less than 0 or greater than 10.
 */
-@deprecated("Use `toExponential` instead") @send
+@deprecated({
+  reason: "Use `toExponential` instead",
+  migrate: Int.toExponential(),
+})
+@send
 external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
 
 /**
@@ -145,7 +149,11 @@ Int.toFixedWithPrecision(300, ~digits=1) // "300.0"
 
 - `RangeError`: If `digits` is less than 0 or larger than 100.
 */
-@deprecated("Use `toFixed` instead") @send
+@deprecated({
+  reason: "Use `toFixed` instead",
+  migrate: Int.toFixed(),
+})
+@send
 external toFixedWithPrecision: (int, ~digits: int) => string = "toFixed"
 
 /**
@@ -186,9 +194,12 @@ Int.toPrecisionWithPrecision(1, ~digits=2) // "1.0"
 - `RangeError`: If `digits` is not between 1 and 100 (inclusive).
   Implementations are allowed to support larger and smaller values as well.
   ECMA-262 only requires a precision of up to 21 significant digits.
-  
 */
-@send @deprecated("Use `toPrecision` instead")
+@send
+@deprecated({
+  reason: "Use `toPrecision` instead",
+  migrate: Int.toPrecision(),
+})
 external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
 
 /**
@@ -232,7 +243,11 @@ Int.toStringWithRadix(123456, ~radix=36) // "2n9c"
 
 `RangeError`: if `radix` is less than 2 or greater than 36.
 */
-@deprecated("Use `toString` instead") @send
+@deprecated({
+  reason: "Use `toString` instead",
+  migrate: Int.toString(),
+})
+@send
 external toStringWithRadix: (int, ~radix: int) => string = "toString"
 
 /**
@@ -370,7 +385,10 @@ Int.rangeWithOptions(3, 6, {step: -2}) // RangeError
 
 - Raises `RangeError` if `step == 0 && start != end`.
 */
-@deprecated("Use `range` instead")
+@deprecated({
+  reason: "Use `range` instead",
+  migrate: Int.range(~options=%insert.unlabelledArgument(2)),
+})
 let rangeWithOptions: (int, int, rangeOptions) => array<int>
 
 /**
@@ -470,6 +488,46 @@ Int.shiftRightUnsigned(4, 1) == 2
 ```
 */
 external shiftRightUnsigned: (int, int) => int = "%lsrint"
+
+module Bitwise: {
+  @deprecated({
+    reason: "Use `Int.bitwiseAnd` instead",
+    migrate: Int.bitwiseAnd(),
+  })
+  external land: (int, int) => int = "%andint"
+  @deprecated({
+    reason: "Use `Int.bitwiseOr` instead",
+    migrate: Int.bitwiseOr(),
+  })
+  external lor: (int, int) => int = "%orint"
+  @deprecated({
+    reason: "Use `Int.bitwiseXor` instead",
+    migrate: Int.bitwiseXor(),
+  })
+  external lxor: (int, int) => int = "%xorint"
+
+  @deprecated({
+    reason: "Use `Int.shiftLeft` instead",
+    migrate: Int.shiftLeft(),
+  })
+  external lsl: (int, int) => int = "%lslint"
+  @deprecated({
+    reason: "Use `Int.shiftRightUnsigned` instead",
+    migrate: Int.shiftRightUnsigned(),
+  })
+  external lsr: (int, int) => int = "%lsrint"
+  @deprecated({
+    reason: "Use `Int.shiftRight` instead",
+    migrate: Int.shiftRight(),
+  })
+  external asr: (int, int) => int = "%asrint"
+
+  @deprecated({
+    reason: "Use `Int.bitwiseNot` instead",
+    migrate: Int.bitwiseNot(),
+  })
+  let lnot: int => int
+}
 
 /**
   `ignore(int)` ignores the provided int and returns unit.

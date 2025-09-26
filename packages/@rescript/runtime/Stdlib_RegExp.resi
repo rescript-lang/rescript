@@ -118,7 +118,11 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 }
 ```
 */
-@deprecated("Use `fromString` instead") @new
+@deprecated({
+  reason: "Use `fromString` instead",
+  migrate: RegExp.fromString(~flags=%insert.labelledArgument("flags")),
+})
+@new
 external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 /**

@@ -1292,3 +1292,5 @@ module ExtractCodeblocks = struct
                    ])
           |> Protocol.array)
 end
+
+module Migrate = Migrate

@@ -120,7 +120,8 @@ let find_type env loc lid =
       env loc lid
   in
   let decl = Env.find_type path env in
-  Builtin_attributes.check_deprecated loc decl.type_attributes (Path.name path);
+  Builtin_attributes.check_deprecated ~deprecated_context:Cmt_utils.Reference
+    loc decl.type_attributes (Path.name path);
   (path, decl)
 
 let find_constructor =
@@ -131,12 +132,13 @@ let find_all_constructors =
 let find_all_labels =
   find_component Env.lookup_all_labels (fun lid -> Unbound_label (lid, None))
 
-let find_value env loc lid =
+let find_value ?deprecated_context env loc lid =
   Env.check_value_name (Longident.last lid) loc;
   let ((path, decl) as r) =
     find_component Env.lookup_value (fun lid -> Unbound_value lid) env loc lid
   in
-  Builtin_attributes.check_deprecated loc decl.val_attributes (Path.name path);
+  Builtin_attributes.check_deprecated ?deprecated_context loc
+    decl.val_attributes (Path.name path);
   r
 
 let lookup_module ?(load = false) env loc lid =
