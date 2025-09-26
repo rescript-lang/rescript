@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Parser, error::ErrorKind};
+use clap::{CommandFactory, Parser, error::ErrorKind};
 use log::LevelFilter;
 use std::{env, io::Write, path::Path};
 
@@ -134,11 +134,19 @@ fn parse_cli(raw_args: Vec<String>) -> Result<cli::Cli, clap::Error> {
 }
 
 fn should_default_to_build(err: &clap::Error, args: &[String]) -> bool {
+    let first_non_global = first_non_global_arg(args);
+
     match err.kind() {
-        ErrorKind::MissingSubcommand | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => true,
-        ErrorKind::UnknownArgument | ErrorKind::InvalidSubcommand => {
-            args.iter().skip(1).any(|arg| !is_global_flag(arg))
+        ErrorKind::MissingSubcommand | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+            match first_non_global {
+                Some(arg) => !is_known_subcommand(arg),
+                None => true,
+            }
         }
+        ErrorKind::UnknownArgument | ErrorKind::InvalidSubcommand => match first_non_global {
+            Some(arg) if is_known_subcommand(arg) => false,
+            _ => true,
+        },
         _ => false,
     }
 }
@@ -174,6 +182,19 @@ fn is_global_flag(arg: &str) -> bool {
     )
 }
 
+fn first_non_global_arg(args: &[String]) -> Option<&str> {
+    args.iter()
+        .skip(1)
+        .find(|arg| !is_global_flag(arg))
+        .map(|s| s.as_str())
+}
+
+fn is_known_subcommand(arg: &str) -> bool {
+    cli::Cli::command().get_subcommands().any(|subcommand| {
+        subcommand.get_name() == arg || subcommand.get_all_aliases().any(|alias| alias == arg)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,6 +228,12 @@ mod tests {
         let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
 
         assert!(matches!(cli.command, cli::Command::Watch(_)));
+    }
+
+    #[test]
+    fn invalid_option_for_subcommand_does_not_fallback() {
+        let err = parse(&["rescript", "watch", "--no-timing"]).expect_err("expected watch parse failure");
+        assert_eq!(err.kind(), ErrorKind::UnknownArgument);
     }
 
     #[test]
