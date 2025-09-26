@@ -284,10 +284,11 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_letexception (_, e) -> expression env e
   | Texp_assert e -> Use.inspect (expression env e)
   | Texp_pack m -> modexp env m
-  | Texp_try (e, cases) ->
+  | Texp_try (e, cases, finally_expr) ->
     (* This is more permissive than the old check. *)
     let case env {Typedtree.c_rhs} = expression env c_rhs in
-    Use.join (expression env e) (list case env cases)
+    Use.join (expression env e)
+      (Use.join (list case env cases) (option expression env finally_expr))
   | Texp_function {case = case_} ->
     Use.delay (list (case ~scrutinee:Use.empty) env [case_])
   | Texp_extension_constructor _ -> Use.empty

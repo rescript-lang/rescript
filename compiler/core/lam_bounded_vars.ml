@@ -136,11 +136,12 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       let l = aux l in
       Lam.stringswitch l (Ext_list.map_snd sw aux) (option_map d)
     | Lstaticraise (i, ls) -> Lam.staticraise i (Ext_list.map ls aux)
-    | Ltrywith (l1, v, l2) ->
+    | Ltrywith (l1, v, l2, finally_expr) ->
       let l1 = aux l1 in
       let v = rebind v in
-      let l2 = aux l2 in
-      Lam.try_ l1 v l2
+      let l2 = option_map l2 in
+      let finally_expr = option_map finally_expr in
+      Lam.try_ l1 v l2 finally_expr
     | Lifthenelse (l1, l2, l3) ->
       let l1 = aux l1 in
       let l2 = aux l2 in

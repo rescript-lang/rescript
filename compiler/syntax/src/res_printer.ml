@@ -3477,7 +3477,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
            ])
     | Pexp_sequence _ -> print_expression_block ~state ~braces:true e cmt_tbl
     | Pexp_let _ -> print_expression_block ~state ~braces:true e cmt_tbl
-    | Pexp_try (expr, cases) ->
+    | Pexp_try (expr, cases, finally_expr) ->
       let expr_doc =
         let doc = print_expression_with_comments ~state expr cmt_tbl in
         match Parens.expr expr with
@@ -3485,13 +3485,34 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         | Braced braces -> print_braces doc expr braces
         | Nothing -> doc
       in
-      Doc.concat
-        [
-          Doc.text "try ";
-          expr_doc;
-          Doc.text " catch ";
-          print_cases ~state cases cmt_tbl;
-        ]
+      let base_doc =
+        if cases = [] then
+          (* try..finally without catch *)
+          Doc.concat [Doc.text "try "; expr_doc]
+        else
+          (* try..catch..finally *)
+          Doc.concat
+            [
+              Doc.text "try ";
+              expr_doc;
+              Doc.text " catch ";
+              print_cases ~state cases cmt_tbl;
+            ]
+      in
+      let finally_doc =
+        match finally_expr with
+        | None -> Doc.nil
+        | Some expr ->
+          let finally_expr_doc =
+            let doc = print_expression_with_comments ~state expr cmt_tbl in
+            match Parens.expr expr with
+            | Parens.Parenthesized -> add_parens doc
+            | Braced braces -> print_braces doc expr braces
+            | Nothing -> doc
+          in
+          Doc.concat [Doc.text " finally "; finally_expr_doc]
+      in
+      Doc.concat [base_doc; finally_doc]
     | Pexp_match (_, [_; _]) when ParsetreeViewer.is_if_let_expr e ->
       let ifs, else_expr = ParsetreeViewer.collect_if_expressions e in
       print_if_chain ~state e.pexp_attributes ifs else_expr cmt_tbl
