@@ -16,7 +16,6 @@ function map(f, x) {
   if (x !== undefined) {
     return Primitive_option.some(f(Primitive_option.valFromOption(x)));
   }
-  
 }
 
 function make(foo, param) {

@@ -46,7 +46,6 @@ if (person2.TAG === "Teacher") {
     if (exit === 1) {
       message$1 = person2.reportCard.gpa !== 0.0 ? `Good luck next semester ` + name + `!` : `Come back in ` + (12345)._0.toString() + ` days!`;
     }
-    
   }
 }
 

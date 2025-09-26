@@ -7,7 +7,6 @@ function fromOption(option) {
   if (option !== undefined) {
     return Primitive_option.valFromOption(option);
   }
-  
 }
 
 function equal(a, b, eq) {
@@ -41,7 +40,6 @@ function forEach(value, f) {
   if (!(value == null)) {
     return f(value);
   }
-  
 }
 
 function map(value, f) {

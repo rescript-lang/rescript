@@ -266,14 +266,12 @@ function equal(a, b) {
           result.contents = false;
           return;
         }
-        
       };
       let do_key_b = key => {
         if (!Object.prototype.hasOwnProperty.call(a, key) || !equal(b[key], a[key])) {
           result.contents = false;
           return;
         }
-        
       };
       for_in(a, do_key_a);
       if (result.contents) {

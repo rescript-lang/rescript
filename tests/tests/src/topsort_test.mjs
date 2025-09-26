@@ -275,7 +275,6 @@ function dfs3(nodes, graph) {
       };
       return Belt_List.forEach(nexts(node, graph), x => aux(x, graph));
     }
-    
   };
   Belt_List.forEach(nodes, node => aux(node, graph));
   return Belt_List.reverse(visited.contents);
@@ -481,7 +480,6 @@ function pathsort(graph) {
       };
       return;
     }
-    
   };
   Belt_List.forEach(graph, param => sort_node(empty_path, param[0]));
   return visited.contents;
@@ -548,7 +546,6 @@ try {
           if (match$3 === 0 || match$3.hd !== "go" || match$3.tl !== 0) {
             exit = 1;
           }
-          
         } else {
           exit = 1;
         }
@@ -572,7 +569,6 @@ try {
       Error: new Error()
     };
   }
-  
 }
 
 let String_set;

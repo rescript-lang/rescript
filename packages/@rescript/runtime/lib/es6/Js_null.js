@@ -25,7 +25,6 @@ function iter(x, f) {
   if (x !== null) {
     return f(x);
   }
-  
 }
 
 function fromOption(x) {

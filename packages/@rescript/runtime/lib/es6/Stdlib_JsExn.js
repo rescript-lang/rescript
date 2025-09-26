@@ -6,7 +6,6 @@ function fromException(exn) {
   if (exn.RE_EXN_ID === "JsExn") {
     return Primitive_option.some(exn._1);
   }
-  
 }
 
 let getOrUndefined = (fieldName => t => (t && typeof t[fieldName] === "string" ? t[fieldName] : undefined));

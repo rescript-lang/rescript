@@ -61,42 +61,36 @@ function decodeString(json) {
   if (typeof json === "string") {
     return json;
   }
-  
 }
 
 function decodeNumber(json) {
   if (typeof json === "number") {
     return json;
   }
-  
 }
 
 function decodeObject(json) {
   if (typeof json === "object" && !Array.isArray(json) && json !== null) {
     return json;
   }
-  
 }
 
 function decodeArray(json) {
   if (Array.isArray(json)) {
     return json;
   }
-  
 }
 
 function decodeBoolean(json) {
   if (typeof json === "boolean") {
     return json;
   }
-  
 }
 
 function decodeNull(json) {
   if (json === null) {
     return null;
   }
-  
 }
 
 let patch = (function (json) {

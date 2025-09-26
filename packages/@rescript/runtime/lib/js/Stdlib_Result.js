@@ -83,7 +83,6 @@ function forEach(r, f) {
   if (r.TAG === "Ok") {
     return f(r._0);
   }
-  
 }
 
 function mapError(r, f) {

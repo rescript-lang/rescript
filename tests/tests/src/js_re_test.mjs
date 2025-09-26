@@ -11,7 +11,6 @@ Mocha.describe("Js_re_test", () => {
       if (x !== undefined) {
         return Primitive_option.fromNullable(Primitive_option.valFromOption(x)[1]);
       }
-      
     };
     Test_utils.eq("File \"js_re_test.res\", line 31, characters 7-14", "Hi", contentOf("div", "<div>Hi</div>"));
   });

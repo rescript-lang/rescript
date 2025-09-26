@@ -1365,9 +1365,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     P.space f;
     let cxt = brace_block cxt f s1 in
     match s2 with
-    | [] | [{statement_desc = Block [] | Exp {expression_desc = Var _}}] ->
-      P.newline f;
-      cxt
+    | [] | [{statement_desc = Block [] | Exp {expression_desc = Var _}}] -> cxt
     | [({statement_desc = If _} as nest)]
     | [{statement_desc = Block [({statement_desc = If _; _} as nest)]; _}] ->
       P.space f;

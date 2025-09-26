@@ -259,7 +259,6 @@ Test.run([
   if (n % 2 === 0) {
     return n * n | 0;
   }
-  
 }), eq, [
   4,
   16,
@@ -295,7 +294,6 @@ Test.run([
   if (n % 2 === 0) {
     return n * n | 0;
   }
-  
 }), eq, []);
 
 Test.run([
@@ -376,7 +374,6 @@ Test.run([
   if (n % 2 === 0) {
     return n - 8 | 0;
   }
-  
 }), eq, -6);
 
 Test.run([
@@ -408,7 +405,6 @@ Test.run([
   if (n % 2 === 0) {
     return n * n | 0;
   }
-  
 }), eq, undefined);
 
 Test.run([

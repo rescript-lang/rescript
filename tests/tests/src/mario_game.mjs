@@ -1064,7 +1064,6 @@ function update_pos(obj) {
     obj.pos.y = obj.vel.y + obj.pos.y;
     return;
   }
-  
 }
 
 function process_obj(obj, mapy) {
@@ -1074,7 +1073,6 @@ function process_obj(obj, mapy) {
     obj.kill = true;
     return;
   }
-  
 }
 
 function normalize_origin(pos, spr) {
@@ -1104,7 +1102,6 @@ function collide_block(check_xOpt, dir, obj) {
     obj.vel.x = 0;
     return;
   }
-  
 }
 
 function opposite_dir(dir) {
@@ -1735,7 +1732,6 @@ function process_collision(dir, c1, c2, state) {
                 undefined
               ];
             }
-            
           }
           break;
       }
@@ -1818,7 +1814,6 @@ function process_collision(dir, c1, c2, state) {
                       undefined
                     ];
                   }
-                  
               }
           }
           switch (exit$2) {
@@ -2310,7 +2305,6 @@ function update_loop(canvas, param, map_dim) {
         };
         return;
       }
-      
     });
     fps(canvas, fps$1);
     hud(canvas, state$1.score, state$1.coins);
@@ -3267,7 +3261,6 @@ function inc_counter(param) {
   if (loadCount.contents === 4) {
     return load();
   }
-  
 }
 
 function preload(param) {

@@ -23,7 +23,6 @@ function bind(x, f) {
   if (x$1 !== undefined) {
     return f(Primitive_option.valFromOption(x$1));
   }
-  
 }
 
 function iter(x, f) {
@@ -31,14 +30,12 @@ function iter(x, f) {
   if (x$1 !== undefined) {
     return f(Primitive_option.valFromOption(x$1));
   }
-  
 }
 
 function fromOption(x) {
   if (x !== undefined) {
     return Primitive_option.valFromOption(x);
   }
-  
 }
 
 let from_opt = fromOption;

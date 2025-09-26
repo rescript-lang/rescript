@@ -30,7 +30,6 @@ function topUndefined(s) {
   if (x !== undefined) {
     return x.head;
   }
-  
 }
 
 function top(s) {
@@ -38,7 +37,6 @@ function top(s) {
   if (x !== undefined) {
     return Primitive_option.some(x.head);
   }
-  
 }
 
 function isEmpty(s) {
@@ -51,7 +49,6 @@ function popUndefined(s) {
     s.root = x.tail;
     return x.head;
   }
-  
 }
 
 function pop(s) {
@@ -60,7 +57,6 @@ function pop(s) {
     s.root = x.tail;
     return Primitive_option.some(x.head);
   }
-  
 }
 
 function size(s) {
