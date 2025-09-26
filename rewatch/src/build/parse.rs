@@ -201,12 +201,7 @@ pub fn generate_asts(
         .collect::<AHashSet<String>>();
 
     // Collect package names first to avoid borrow checker issues
-    let module_package_pairs: Vec<(String, String)> = build_state
-        .build_state
-        .modules
-        .iter()
-        .map(|(name, module)| (name.clone(), module.package_name.clone()))
-        .collect();
+    let module_package_pairs = build_state.module_name_package_pairs();
 
     for (module_name, package_name) in module_package_pairs {
         if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {

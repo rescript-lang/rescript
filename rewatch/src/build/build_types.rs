@@ -177,6 +177,14 @@ impl BuildCommandState {
     pub fn get_warn_error_override(&self) -> Option<String> {
         self.warn_error_override.clone()
     }
+
+    pub fn module_name_package_pairs(&self) -> Vec<(String, String)> {
+        self.build_state
+            .modules
+            .iter()
+            .map(|(name, module)| (name.clone(), module.package_name.clone()))
+            .collect()
+    }
 }
 
 // Implement Deref to automatically delegate method calls to the inner BuildState
