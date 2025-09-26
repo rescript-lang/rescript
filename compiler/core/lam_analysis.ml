@@ -119,6 +119,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
   | Lwhile _ ->
     false (* conservative here, non-terminating loop does have side effect *)
   | Lfor _ -> false
+  | Lfor_of _ -> false
   | Lassign _ -> false (* actually it depends ... *)
   (* | Lsend _ -> false  *)
   | Lapply
@@ -179,6 +180,7 @@ let rec size (lam : Lam.t) =
     | Lsequence (l1, l2) -> size l1 + size l2
     | Lwhile _ -> really_big ()
     | Lfor _ -> really_big ()
+    | Lfor_of _ -> really_big ()
     | Lassign (_, v) -> 1 + size v
     (* This is side effectful,  be careful *)
     (* | Lsend _  ->  really_big () *)
