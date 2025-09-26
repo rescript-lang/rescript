@@ -323,19 +323,6 @@ let process_tag_name (attrs : Parsetree.attributes) =
       | _ -> ());
   !st
 
-let process_as_name (attrs : Parsetree.attributes) =
-  let st = ref None in
-  Ext_list.iter attrs (fun ({txt; loc}, payload) ->
-      match txt with
-      | "as" ->
-        if !st = None then
-          match Ast_payload.is_single_string payload with
-          | None -> ()
-          | Some (s, _dec) -> st := Some s
-        else raise (Error (loc, Duplicated_bs_as))
-      | _ -> ());
-  !st
-
 let get_tag_name (cstr : Types.constructor_declaration) =
   process_tag_name cstr.cd_attributes
 
@@ -496,9 +483,9 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
           (fun (field : Types.label_declaration) ->
             (* Get the effective field name in JavaScript output *)
             let effective_field_name =
-              match process_as_name field.ld_attributes with
-              | Some as_name -> as_name (* Use @as name if present *)
-              | None -> Ident.name field.ld_id (* Otherwise use field name *)
+              match process_tag_type field.ld_attributes with
+              | Some (String as_name) -> as_name (* Use @as name if present *)
+              | _ -> Ident.name field.ld_id (* Otherwise use field name *)
             in
             (* Check if effective field name conflicts with tag *)
             if effective_field_name = tag_name then
