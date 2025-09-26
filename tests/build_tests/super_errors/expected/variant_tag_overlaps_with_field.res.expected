@@ -7,4 +7,4 @@
   3 [2m│[0m 
   4 [2m│[0m let cat = Cat({name: "my cat"})
 
-  Constructor Cat: the @tag name "name" conflicts with inline record field "name". Use a different @tag name or rename the field.
+  Constructor Cat: the @tag name "name" conflicts with the runtime value of inline record field "name". Use a different @tag name or rename the field.
