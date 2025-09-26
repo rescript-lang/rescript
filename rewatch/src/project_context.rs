@@ -23,6 +23,7 @@ pub struct ProjectContext {
     pub current_config: Config,
     pub monorepo_context: Option<MonoRepoContext>,
     pub node_modules_exist_cache: RwLock<AHashMap<PathBuf, bool>>, // caches whether a directory contains a node_modules subfolder
+    pub packages_cache: RwLock<AHashMap<(PathBuf, String), PathBuf>>, // caches full results of helpers::try_package_path per (package_dir, package_name)
 }
 
 fn format_dependencies(dependencies: &AHashSet<String>) -> String {
@@ -133,6 +134,7 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
             current_config,
             monorepo_context: None,
             node_modules_exist_cache: RwLock::new(AHashMap::new()),
+            packages_cache: RwLock::new(AHashMap::new()),
         })
     } else {
         Ok(ProjectContext {
@@ -142,6 +144,7 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
                 local_dev_dependencies,
             }),
             node_modules_exist_cache: RwLock::new(AHashMap::new()),
+            packages_cache: RwLock::new(AHashMap::new()),
         })
     }
 }
@@ -192,6 +195,7 @@ impl ProjectContext {
                                 parent_config: Box::new(workspace_config),
                             }),
                             node_modules_exist_cache: RwLock::new(AHashMap::new()),
+                            packages_cache: RwLock::new(AHashMap::new()),
                         })
                     }
                     Ok(_) => {

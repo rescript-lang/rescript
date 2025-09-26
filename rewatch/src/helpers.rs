@@ -137,6 +137,25 @@ pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
 }
 
+// Tap-style helper: cache and return the value (single clone for cache insert)
+fn cache_package_tap(
+    project_context: &ProjectContext,
+    key: &(PathBuf, String),
+    value: PathBuf,
+) -> anyhow::Result<PathBuf> {
+    match project_context.packages_cache.write() {
+        Ok(mut cache) => {
+            cache.insert(key.clone(), value.clone());
+        }
+        Err(poisoned) => {
+            log::warn!("packages_cache write lock poisoned; recovering");
+            let mut cache = poisoned.into_inner();
+            cache.insert(key.clone(), value.clone());
+        }
+    }
+    Ok(value)
+}
+
 /// Tries to find a path for input package_name.
 /// The node_modules folder may be found at different levels in the case of a monorepo.
 /// This helper tries a variety of paths.
@@ -145,14 +164,9 @@ pub fn try_package_path(
     project_context: &ProjectContext,
     package_name: &str,
 ) -> anyhow::Result<PathBuf> {
-    // package folder + node_modules + package_name
-    // This can happen in the following scenario:
-    // The ProjectContext has a MonoRepoContext::MonorepoRoot.
-    // We are reading a dependency from the root package.
-    // And that local dependency has a hoisted dependency.
-    // Example, we need to find package_name `foo` in the following scenario:
-    // root/packages/a/node_modules/foo
-    let path_from_current_package = package_config
+    // try cached result first, keyed by (package_dir, package_name)
+    let pkg_name = package_name.to_string();
+    let package_dir = package_config
         .path
         .parent()
         .ok_or_else(|| {
@@ -160,8 +174,33 @@ pub fn try_package_path(
                 "Expected {} to have a parent folder",
                 package_config.path.to_string_lossy()
             )
-        })
-        .map(|parent_path| helpers::package_path(parent_path, package_name))?;
+        })?
+        .to_path_buf();
+
+    let cache_key = (package_dir.clone(), pkg_name.clone());
+    match project_context.packages_cache.read() {
+        Ok(cache) => {
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
+        }
+        Err(poisoned) => {
+            log::warn!("packages_cache read lock poisoned; recovering");
+            let cache = poisoned.into_inner();
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
+    // package folder + node_modules + package_name
+    // This can happen in the following scenario:
+    // The ProjectContext has a MonoRepoContext::MonorepoRoot.
+    // We are reading a dependency from the root package.
+    // And that local dependency has a hoisted dependency.
+    // Example, we need to find package_name `foo` in the following scenario:
+    // root/packages/a/node_modules/foo
+    let path_from_current_package = helpers::package_path(&package_dir, package_name);
 
     // current folder + node_modules + package_name
     let path_from_current_config = project_context
@@ -179,11 +218,11 @@ pub fn try_package_path(
     // root folder + node_modules + package_name
     let path_from_root = package_path(project_context.get_root_path(), package_name);
     if path_from_current_package.exists() {
-        Ok(path_from_current_package)
+        cache_package_tap(project_context, &cache_key, path_from_current_package)
     } else if path_from_current_config.exists() {
-        Ok(path_from_current_config)
+        cache_package_tap(project_context, &cache_key, path_from_current_config)
     } else if path_from_root.exists() {
-        Ok(path_from_root)
+        cache_package_tap(project_context, &cache_key, path_from_root)
     } else {
         // As a last resort, when we're in a Single project context, traverse upwards
         // starting from the parent of the package root (package_config.path.parent().parent())
@@ -192,7 +231,8 @@ pub fn try_package_path(
         if project_context.monorepo_context.is_none() {
             match package_config.path.parent().and_then(|p| p.parent()) {
                 Some(start_dir) => {
-                    return find_dep_in_upward_node_modules(project_context, start_dir, package_name);
+                    return find_dep_in_upward_node_modules(project_context, start_dir, package_name)
+                        .and_then(|p| cache_package_tap(project_context, &cache_key, p));
                 }
                 None => {
                     log::debug!(
