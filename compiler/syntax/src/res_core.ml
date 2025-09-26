@@ -228,6 +228,9 @@ let template_literal_attr = (Location.mknoloc "res.template", Parsetree.PStr [])
 let make_pat_variant_spread_attr =
   (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
 
+let make_alias_polyvariant_from_literals_attr =
+  (Location.mknoloc "res.asPolyVariantFromLiterals", Parsetree.PStr [])
+
 let tagged_template_literal_attr =
   (Location.mknoloc "res.taggedTemplate", Parsetree.PStr [])
 
@@ -1347,11 +1350,19 @@ and parse_alias_pattern ~attrs pattern p =
   match p.Parser.token with
   | As ->
     Parser.next p;
+    let alias_attrs =
+      match p.Parser.token with
+      | Hash ->
+        Parser.next p;
+        Parser.expect DotDotDot p;
+        make_alias_polyvariant_from_literals_attr :: attrs
+      | _ -> attrs
+    in
     let name, loc = parse_lident p in
     let name = Location.mkloc name loc in
     Ast_helper.Pat.alias
       ~loc:{pattern.ppat_loc with loc_end = p.prev_end_pos}
-      ~attrs pattern name
+      ~attrs:alias_attrs pattern name
   | _ -> pattern
 
 (* or ::= pattern | pattern
