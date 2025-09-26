@@ -207,10 +207,6 @@ mod tests {
         parse_cli(args.iter().map(OsString::from).collect())
     }
 
-    fn parse_os(args: Vec<OsString>) -> Result<cli::Cli, clap::Error> {
-        parse_cli(args)
-    }
-
     #[test]
     fn defaults_to_build_without_args() {
         let cli = parse(&["rescript"]).expect("expected default build command");
@@ -262,7 +258,7 @@ mod tests {
         use std::os::unix::ffi::OsStringExt;
 
         let args = vec![OsString::from("rescript"), OsString::from_vec(vec![0xff])];
-        let err = parse_os(args).expect_err("expected clap to report invalid utf8");
+        let err = parse_cli(args).expect_err("expected clap to report invalid utf8");
         assert_eq!(err.kind(), ErrorKind::InvalidUtf8);
     }
 }
