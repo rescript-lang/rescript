@@ -1,15 +1,13 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, error::ErrorKind};
 use log::LevelFilter;
 use std::{env, io::Write, path::Path};
 
 use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
-    let mut args: Vec<String> = env::args().collect();
-    handle_default_arg(&mut args);
-
-    let cli = cli::Cli::parse_from(args);
+    let raw_args: Vec<String> = env::args().collect();
+    let cli = parse_cli(raw_args);
 
     let log_level_filter = cli.verbose.log_level_filter();
 
@@ -115,16 +113,63 @@ fn get_lock(folder: &str) -> lock::Lock {
     }
 }
 
-fn handle_default_arg(args: &mut Vec<String>) {
-    let first_arg = args.get(1);
-    let global_flags = ["-h", "--help", "-V", "--version"];
+fn parse_cli(raw_args: Vec<String>) -> cli::Cli {
+    match cli::Cli::try_parse_from(&raw_args) {
+        Ok(cli) => cli,
+        Err(err) => {
+            if should_default_to_build(&err, &raw_args) {
+                let mut fallback_args = raw_args.clone();
+                let insert_at = index_after_global_flags(&fallback_args);
+                fallback_args.insert(insert_at, "build".into());
 
-    let needs_default_arg = match first_arg {
-        Some(arg) => arg.starts_with("-") && !global_flags.contains(&arg.as_str()),
-        None => true,
-    };
-
-    if needs_default_arg {
-        args.insert(1, "build".to_string());
+                match cli::Cli::try_parse_from(&fallback_args) {
+                    Ok(cli) => cli,
+                    Err(fallback_err) => fallback_err.exit(),
+                }
+            } else {
+                err.exit()
+            }
+        }
     }
+}
+
+fn should_default_to_build(err: &clap::Error, args: &[String]) -> bool {
+    match err.kind() {
+        ErrorKind::MissingSubcommand | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => true,
+        ErrorKind::UnknownArgument | ErrorKind::InvalidSubcommand => {
+            args.iter().skip(1).any(|arg| !is_global_flag(arg))
+        }
+        _ => false,
+    }
+}
+
+fn index_after_global_flags(args: &[String]) -> usize {
+    let mut idx = 1;
+    while let Some(arg) = args.get(idx) {
+        if is_global_flag(arg) {
+            idx += 1;
+        } else {
+            break;
+        }
+    }
+    idx.min(args.len())
+}
+
+fn is_global_flag(arg: &str) -> bool {
+    matches!(
+        arg,
+        "-v" | "-vv"
+            | "-vvv"
+            | "-vvvv"
+            | "-q"
+            | "-qq"
+            | "-qqq"
+            | "-qqqq"
+            | "--verbose"
+            | "--quiet"
+            | "-h"
+            | "--help"
+            | "-V"
+            | "--version"
+    )
 }
