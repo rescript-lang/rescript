@@ -1,12 +1,13 @@
 use crate::build::packages;
 use crate::config::Config;
 use crate::helpers;
-use ahash::AHashSet;
+use ahash::{AHashMap, AHashSet};
 use anyhow::Result;
 use anyhow::anyhow;
 use log::debug;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 
 pub enum MonoRepoContext {
     /// Monorepo root - contains local dependencies (symlinked in node_modules)
@@ -21,6 +22,7 @@ pub enum MonoRepoContext {
 pub struct ProjectContext {
     pub current_config: Config,
     pub monorepo_context: Option<MonoRepoContext>,
+    pub node_modules_exist_cache: RwLock<AHashMap<PathBuf, bool>>, // caches existence checks for candidate node_modules paths
 }
 
 fn format_dependencies(dependencies: &AHashSet<String>) -> String {
@@ -130,6 +132,7 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
         Ok(ProjectContext {
             current_config,
             monorepo_context: None,
+            node_modules_exist_cache: RwLock::new(AHashMap::new()),
         })
     } else {
         Ok(ProjectContext {
@@ -138,6 +141,7 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
                 local_dependencies,
                 local_dev_dependencies,
             }),
+            node_modules_exist_cache: RwLock::new(AHashMap::new()),
         })
     }
 }
@@ -187,6 +191,7 @@ impl ProjectContext {
                             monorepo_context: Some(MonoRepoContext::MonorepoPackage {
                                 parent_config: Box::new(workspace_config),
                             }),
+                            node_modules_exist_cache: RwLock::new(AHashMap::new()),
                         })
                     }
                     Ok(_) => {

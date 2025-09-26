@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
-use std::sync::{LazyLock, RwLock};
+
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
@@ -32,20 +32,15 @@ pub mod emojis {
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
 }
 
-// Cache existence checks for candidate node_modules paths during upward traversal.
-// Keyed by the absolute candidate path; value is the existence boolean.
-static NODE_MODULES_EXIST_CACHE: LazyLock<RwLock<ahash::AHashMap<PathBuf, bool>>> =
-    LazyLock::new(|| RwLock::new(ahash::AHashMap::new()));
-
-fn cached_path_exists(path: &Path) -> bool {
-    match NODE_MODULES_EXIST_CACHE.read() {
+fn cached_path_exists(project_context: &ProjectContext, path: &Path) -> bool {
+    match project_context.node_modules_exist_cache.read() {
         Ok(cache) => {
             if let Some(exists) = cache.get(path) {
                 return *exists;
             }
         }
         Err(poisoned) => {
-            log::warn!("NODE_MODULES_EXIST_CACHE read lock poisoned; recovering");
+            log::warn!("node_modules_exist_cache read lock poisoned; recovering");
             let cache = poisoned.into_inner();
             if let Some(exists) = cache.get(path) {
                 return *exists;
@@ -53,12 +48,12 @@ fn cached_path_exists(path: &Path) -> bool {
         }
     }
     let exists = path.exists();
-    match NODE_MODULES_EXIST_CACHE.write() {
+    match project_context.node_modules_exist_cache.write() {
         Ok(mut cache) => {
             cache.insert(path.to_path_buf(), exists);
         }
         Err(poisoned) => {
-            log::warn!("NODE_MODULES_EXIST_CACHE write lock poisoned; recovering");
+            log::warn!("node_modules_exist_cache write lock poisoned; recovering");
             let mut cache = poisoned.into_inner();
             cache.insert(path.to_path_buf(), exists);
         }
@@ -196,7 +191,7 @@ pub fn try_package_path(
         if project_context.monorepo_context.is_none() {
             match package_config.path.parent().and_then(|p| p.parent()) {
                 Some(start_dir) => {
-                    return find_dep_in_upward_node_modules(start_dir, package_name);
+                    return find_dep_in_upward_node_modules(project_context, start_dir, package_name);
                 }
                 None => {
                     log::debug!(
@@ -213,7 +208,11 @@ pub fn try_package_path(
     }
 }
 
-fn find_dep_in_upward_node_modules(start_dir: &Path, package_name: &str) -> anyhow::Result<PathBuf> {
+fn find_dep_in_upward_node_modules(
+    project_context: &ProjectContext,
+    start_dir: &Path,
+    package_name: &str,
+) -> anyhow::Result<PathBuf> {
     log::debug!(
         "try_package_path: falling back to upward traversal for '{}' starting at '{}'",
         package_name,
@@ -224,7 +223,7 @@ fn find_dep_in_upward_node_modules(start_dir: &Path, package_name: &str) -> anyh
     while let Some(dir) = current {
         let candidate = package_path(dir, package_name);
         log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
-        if cached_path_exists(&candidate) {
+        if cached_path_exists(project_context, &candidate) {
             log::debug!(
                 "try_package_path: found '{}' at '{}' via upward traversal",
                 package_name,
