@@ -54,6 +54,7 @@ let local_external_apply loc ?(pval_attributes = []) ~(pval_prim : string list)
              Pexp_ident
                {txt = Ldot (Lident local_module_name, local_fun_name); loc};
            pexp_attributes = [];
+           pexp_is_return = false;
            pexp_loc = loc;
          }
           : Parsetree.expression)
@@ -90,6 +91,7 @@ let local_external_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
              Pexp_ident
                {txt = Ldot (Lident local_module_name, local_fun_name); loc};
            pexp_attributes = [];
+           pexp_is_return = false;
            pexp_loc = loc;
          }
           : Parsetree.expression)
@@ -126,5 +128,6 @@ let local_extern_cont_to_obj loc ?(pval_attributes = []) ~pval_prim ~pval_type
             Pexp_ident
               {txt = Ldot (Lident local_module_name, local_fun_name); loc};
           pexp_attributes = [];
+          pexp_is_return = false;
           pexp_loc = loc;
         } )

@@ -35,6 +35,7 @@ let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc =
       Pexp_apply
         {
@@ -49,6 +50,7 @@ let app1 ?(loc = default_loc) ?(attrs = []) fn arg1 : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc =
       Pexp_apply
         {
@@ -63,6 +65,7 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc =
       Pexp_apply
         {
@@ -77,6 +80,7 @@ let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc =
       Pexp_apply
         {
@@ -91,6 +95,7 @@ let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc =
       Pexp_fun
         {
@@ -108,6 +113,7 @@ let const_exp_string ?(loc = default_loc) ?(attrs = []) ?delimiter (s : string)
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc = Pexp_constant (Pconst_string (s, delimiter));
   }
 
@@ -115,6 +121,7 @@ let const_exp_int ?(loc = default_loc) ?(attrs = []) (s : int) : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc = Pexp_constant (Pconst_integer (string_of_int s, None));
   }
 
@@ -123,6 +130,7 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
+    pexp_is_return = false;
     pexp_desc =
       Pexp_apply
         {
