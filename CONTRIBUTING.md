@@ -350,6 +350,7 @@ Some tips:
 - Always use `@deprecated` when applicable.
 - Always use `@raise` when applicable.
 - Always provide a `@see` tag pointing to MDN for more information when available.
+- Format code samples in doc comments via `./cli/rescript-tools.js format-codeblocks <path-to-rescript-file>`
 
 See [Ocamldoc documentation](http://caml.inria.fr/pub/docs/manual-ocaml/ocamldoc.html#sec333) for more details.
 
@@ -389,6 +390,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
 (If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
 Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
+
 ## Code structure
 
 The highlevel architecture is illustrated as below:
