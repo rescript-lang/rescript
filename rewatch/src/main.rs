@@ -134,19 +134,17 @@ fn parse_cli(raw_args: Vec<String>) -> Result<cli::Cli, clap::Error> {
 }
 
 fn should_default_to_build(err: &clap::Error, args: &[String]) -> bool {
-    let first_non_global = first_non_global_arg(args);
-
     match err.kind() {
-        ErrorKind::MissingSubcommand | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+        ErrorKind::MissingSubcommand
+        | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+        | ErrorKind::UnknownArgument
+        | ErrorKind::InvalidSubcommand => {
+            let first_non_global = first_non_global_arg(args);
             match first_non_global {
                 Some(arg) => !is_known_subcommand(arg),
                 None => true,
             }
         }
-        ErrorKind::UnknownArgument | ErrorKind::InvalidSubcommand => match first_non_global {
-            Some(arg) if is_known_subcommand(arg) => false,
-            _ => true,
-        },
         _ => false,
     }
 }
