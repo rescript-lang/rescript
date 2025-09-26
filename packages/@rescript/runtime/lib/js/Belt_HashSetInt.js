@@ -111,11 +111,9 @@ function add(h, key) {
       if (tail !== undefined) {
         tail.next = undefined;
       }
-      
     }
     return;
   }
-  
 }
 
 function has(h, key) {

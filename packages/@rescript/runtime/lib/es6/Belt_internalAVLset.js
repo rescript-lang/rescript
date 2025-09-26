@@ -98,14 +98,12 @@ function minimum(n) {
   if (n !== undefined) {
     return Primitive_option.some(min0Aux(n));
   }
-  
 }
 
 function minUndefined(n) {
   if (n !== undefined) {
     return min0Aux(n);
   }
-  
 }
 
 function max0Aux(_n) {
@@ -124,14 +122,12 @@ function maximum(n) {
   if (n !== undefined) {
     return Primitive_option.some(max0Aux(n));
   }
-  
 }
 
 function maxUndefined(n) {
   if (n !== undefined) {
     return max0Aux(n);
   }
-  
 }
 
 function removeMinAuxWithRef(n, v) {

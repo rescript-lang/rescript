@@ -120,14 +120,12 @@ function minKey(n) {
   if (n !== undefined) {
     return Primitive_option.some(minKey0Aux(n));
   }
-  
 }
 
 function minKeyUndefined(n) {
   if (n !== undefined) {
     return minKey0Aux(n);
   }
-  
 }
 
 function maxKey0Aux(_n) {
@@ -146,14 +144,12 @@ function maxKey(n) {
   if (n !== undefined) {
     return Primitive_option.some(maxKey0Aux(n));
   }
-  
 }
 
 function maxKeyUndefined(n) {
   if (n !== undefined) {
     return maxKey0Aux(n);
   }
-  
 }
 
 function minKV0Aux(_n) {
@@ -175,14 +171,12 @@ function minimum(n) {
   if (n !== undefined) {
     return minKV0Aux(n);
   }
-  
 }
 
 function minUndefined(n) {
   if (n !== undefined) {
     return minKV0Aux(n);
   }
-  
 }
 
 function maxKV0Aux(_n) {
@@ -204,14 +198,12 @@ function maximum(n) {
   if (n !== undefined) {
     return maxKV0Aux(n);
   }
-  
 }
 
 function maxUndefined(n) {
   if (n !== undefined) {
     return maxKV0Aux(n);
   }
-  
 }
 
 function removeMinAuxWithRef(n, kr, vr) {
@@ -266,7 +258,6 @@ function findFirstBy(n, p) {
   if (right !== undefined) {
     return right;
   }
-  
 }
 
 function forEach(_n, f) {

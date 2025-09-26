@@ -8,7 +8,6 @@ function asJsExn(exn) {
   if (exn.RE_EXN_ID === $$Error) {
     return Primitive_option.some(exn._1);
   }
-  
 }
 
 function raiseError(str) {

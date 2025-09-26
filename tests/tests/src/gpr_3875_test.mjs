@@ -37,7 +37,6 @@ function compilerBug(a, b, c, f) {
       }
       return;
     }
-    
   }
   if (f()) {
     result.contents = "Some x, f returns true";

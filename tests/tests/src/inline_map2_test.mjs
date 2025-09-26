@@ -397,14 +397,12 @@ function Make(Ord) {
       if (typeof s2 !== "object") {
         return "Empty";
       }
-      
     } else {
       let v1 = s1._1;
       if (s1._4 >= height(s2)) {
         let match = split(v1, s2);
         return concat_or_join(merge(f, s1._0, match[0]), v1, f(v1, Primitive_option.some(s1._2), match[1]), merge(f, s1._3, match[2]));
       }
-      
     }
     if (typeof s2 !== "object") {
       throw {
@@ -1015,14 +1013,12 @@ function merge(f, s1, s2) {
     if (typeof s2 !== "object") {
       return "Empty";
     }
-    
   } else {
     let v1 = s1._1;
     if (s1._4 >= height(s2)) {
       let match = split(v1, s2);
       return concat_or_join(merge(f, s1._0, match[0]), v1, f(v1, Primitive_option.some(s1._2), match[1]), merge(f, s1._3, match[2]));
     }
-    
   }
   if (typeof s2 !== "object") {
     throw {
@@ -1669,14 +1665,12 @@ function merge$1(f, s1, s2) {
     if (typeof s2 !== "object") {
       return "Empty";
     }
-    
   } else {
     let v1 = s1._1;
     if (s1._4 >= height$1(s2)) {
       let match = split$1(v1, s2);
       return concat_or_join$1(merge$1(f, s1._0, match[0]), v1, f(v1, Primitive_option.some(s1._2), match[1]), merge$1(f, s1._3, match[2]));
     }
-    
   }
   if (typeof s2 !== "object") {
     throw {

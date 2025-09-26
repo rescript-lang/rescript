@@ -3,14 +3,14 @@ cd $(dirname $0)
 source "./utils.sh"
 cd ../testrepo
 
-bold "Test: invalid experimentalFeatures keys produce helpful error"
+bold "Test: invalid experimental-features keys produce helpful error"
 
 cp rescript.json rescript.json.bak
 
 node -e '
 const fs=require("fs");
 const j=JSON.parse(fs.readFileSync("rescript.json","utf8"));
-j.experimentalFeatures={FooBar:true};
+j["experimental-features"]={FooBar:true};
 fs.writeFileSync("rescript.json", JSON.stringify(j,null,2));
 '
 
@@ -32,5 +32,5 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-success "invalid experimentalFeatures produces helpful error"
+success "invalid experimental-features produces helpful error"
 

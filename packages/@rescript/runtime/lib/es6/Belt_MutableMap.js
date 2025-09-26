@@ -50,7 +50,6 @@ function remove(d, k) {
     d.data = newRoot;
     return;
   }
-  
 }
 
 function removeArrayMutateAux(_t, xs, _i, len, cmp) {
@@ -82,7 +81,6 @@ function removeMany(d, xs) {
     d.data = newRoot;
     return;
   }
-  
 }
 
 function updateDone(t, x, f, cmp) {
@@ -132,7 +130,6 @@ function update(t, x, f) {
     t.data = newRoot;
     return;
   }
-  
 }
 
 function make(id) {
@@ -280,7 +277,6 @@ function set(m, e, v) {
     m.data = newRoot;
     return;
   }
-  
 }
 
 function mergeManyAux(t, xs, cmp) {
@@ -299,7 +295,6 @@ function mergeMany(d, xs) {
     d.data = newRoot;
     return;
   }
-  
 }
 
 let Int;

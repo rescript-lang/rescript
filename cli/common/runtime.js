@@ -42,10 +42,7 @@ async function resolvePackageInDeno(pkgName) {
 }
 
 async function resolvePackageRoot(pkgName) {
-  const specifier =
-    typeof globalThis.Deno !== "undefined"
-      ? `npm:${pkgName}/package.json`
-      : `${pkgName}/package.json`;
+  const specifier = `${pkgName}/package.json`;
 
   if (typeof import.meta.resolve === "function") {
     const url = import.meta.resolve(specifier);

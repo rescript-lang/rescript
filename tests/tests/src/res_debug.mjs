@@ -28,7 +28,6 @@ function optionMap(x, f) {
   if (x !== undefined) {
     return Primitive_option.some(f(Primitive_option.valFromOption(x)));
   }
-  
 }
 
 let ok_name = optionMap(undefined, x => x);

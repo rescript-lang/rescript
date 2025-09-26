@@ -49,7 +49,6 @@ function decodeGroup(json) {
       users: Stdlib_Array.filterMap(users, decodeUser)
     };
   }
-  
 }
 
 export {

@@ -7,7 +7,6 @@ function get(arr, i) {
   if (i >= 0 && i < arr.length) {
     return Primitive_option.some(arr[i]);
   }
-  
 }
 
 function getOrThrow(arr, i) {
@@ -328,7 +327,6 @@ function keep(a, f) {
       r[j] = v;
       j = j + 1 | 0;
     }
-    
   }
   r.length = j;
   return r;
@@ -344,7 +342,6 @@ function keepWithIndex(a, f) {
       r[j] = v;
       j = j + 1 | 0;
     }
-    
   }
   r.length = j;
   return r;
@@ -361,7 +358,6 @@ function keepMap(a, f) {
       r[j] = Primitive_option.valFromOption(v$1);
       j = j + 1 | 0;
     }
-    
   }
   r.length = j;
   return r;

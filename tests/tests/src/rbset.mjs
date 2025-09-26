@@ -85,7 +85,6 @@ function balance_left(l, x, r) {
         exit = 2;
       }
     }
-    
   }
   switch (exit) {
     case 1 :
@@ -160,7 +159,6 @@ function balance_right(l, x, r) {
         exit = 2;
       }
     }
-    
   }
   switch (exit) {
     case 1 :
@@ -240,9 +238,7 @@ function unbalanced_left(x) {
             false
           ];
         }
-        
       }
-      
     } else {
       let match$2 = x._1;
       if (typeof match$2 === "object" && match$2._0 === "Black") {
@@ -257,7 +253,6 @@ function unbalanced_left(x) {
           false
         ];
       }
-      
     }
   }
   throw {
@@ -309,9 +304,7 @@ function unbalanced_right(x) {
             false
           ];
         }
-        
       }
-      
     } else {
       let match$2 = x._3;
       if (typeof match$2 === "object" && match$2._0 === "Black") {
@@ -326,7 +319,6 @@ function unbalanced_right(x) {
           false
         ];
       }
-      
     }
   }
   throw {
@@ -475,9 +467,7 @@ function rbalance(x1, x2, x3) {
           }
         };
       }
-      
     }
-    
   }
   return {
     TAG: "Node",
@@ -599,7 +589,6 @@ function remove_min(x) {
         Error: new Error()
       };
     }
-    
   } else {
     let tmp$1 = x._1;
     if (typeof tmp$1 !== "object") {
@@ -609,7 +598,6 @@ function remove_min(x) {
         false
       ];
     }
-    
   }
   let match$1 = remove_min(x._1);
   let y = match$1[1];

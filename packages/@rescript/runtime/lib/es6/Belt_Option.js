@@ -6,14 +6,12 @@ function keep(opt, p) {
   if (opt !== undefined && p(Primitive_option.valFromOption(opt))) {
     return opt;
   }
-  
 }
 
 function forEach(opt, f) {
   if (opt !== undefined) {
     return f(Primitive_option.valFromOption(opt));
   }
-  
 }
 
 function getOrThrow(x) {
@@ -38,14 +36,12 @@ function map(opt, f) {
   if (opt !== undefined) {
     return Primitive_option.some(f(Primitive_option.valFromOption(opt)));
   }
-  
 }
 
 function flatMap(opt, f) {
   if (opt !== undefined) {
     return f(Primitive_option.valFromOption(opt));
   }
-  
 }
 
 function getWithDefault(opt, $$default) {

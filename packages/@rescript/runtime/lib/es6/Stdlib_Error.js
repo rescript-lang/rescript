@@ -7,7 +7,6 @@ function fromException(exn) {
   if (exn.RE_EXN_ID === Stdlib_Exn.$$Error) {
     return Primitive_option.some(exn._1);
   }
-  
 }
 
 let $$EvalError = {};

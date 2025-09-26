@@ -6,7 +6,6 @@ function get(dict, k) {
   if ((k in dict)) {
     return Primitive_option.some(dict[k]);
   }
-  
 }
 
 let unsafeDeleteKey = (function (dict,key){

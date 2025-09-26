@@ -113,7 +113,6 @@ function remove(n, x) {
   if (n !== undefined) {
     return removeAux(n, x);
   }
-  
 }
 
 function removeMany(t, keys) {
@@ -137,7 +136,6 @@ function removeMany(t, keys) {
       continue;
     };
   }
-  
 }
 
 function mergeMany(h, arr) {

@@ -10,7 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.12 (Unreleased)
+# 12.0.0-beta.13 (Unreleased)
 
 #### :boom: Breaking Change
 
@@ -20,11 +20,39 @@
 
 #### :bug: Bug fix
 
+- Fix result examples. https://github.com/rescript-lang/rescript/pull/7914
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
+- Keep track of compiler info during build. https://github.com/rescript-lang/rescript/pull/7889
+- Improve option optimization for constants. https://github.com/rescript-lang/rescript/pull/7913
+- Option optimization: do not create redundant local vars. https://github.com/rescript-lang/rescript/pull/7915
+- Js output: remove superfluous newline after every `if`. https://github.com/rescript-lang/rescript/pull/7920
+
 #### :house: Internal
+
+# 12.0.0-beta.12
+
+#### :boom: Breaking Change
+
+- Make experimental-features kebap-case in compiler config like the other fields. https://github.com/rescript-lang/rescript/pull/7891
+
+#### :rocket: New Feature
+
+- Add `littleEndian` feature for `DataView` to Stdlib. https://github.com/rescript-lang/rescript/pull/7881
+- Add `mapOkAsync`, `mapErrorAsync`, `flatMapOkAsync` and `flatMapErrorAsync` for async `result`s to Stdlib. https://github.com/rescript-lang/rescript/pull/7906
+
+#### :bug: Bug fix
+
+- Include `-runtime-path` as bsc argument when generating `.mlmap` file. https://github.com/rescript-lang/rescript/pull/7888
+
+#### :nail_care: Polish
+
+- Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
+- Dedicated error for dict literal spreads. https://github.com/rescript-lang/rescript/pull/7901
+- Dedicated error message for when mixing up `:` and `=` in various positions. https://github.com/rescript-lang/rescript/pull/7900
 
 # 12.0.0-beta.11
 

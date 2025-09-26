@@ -29,7 +29,6 @@ function mergeInter(s1, s2) {
     if (v1 !== undefined && v2 !== undefined) {
       return Primitive_option.some(undefined);
     }
-    
   })), Icmp);
 }
 
@@ -38,7 +37,6 @@ function mergeUnion(s1, s2) {
     if (v1 !== undefined || v2 !== undefined) {
       return Primitive_option.some(undefined);
     }
-    
   })), Icmp);
 }
 
@@ -47,7 +45,6 @@ function mergeDiff(s1, s2) {
     if (v1 !== undefined && v2 === undefined) {
       return Primitive_option.some(undefined);
     }
-    
   })), Icmp);
 }
 
@@ -82,7 +79,6 @@ Mocha.describe("Bs_poly_map_test", () => {
       if (k !== undefined) {
         return k + 1 | 0;
       }
-      
     });
     let a5 = Belt_Map.remove(a0, 3);
     let a6 = Belt_Map.remove(a5, 3);

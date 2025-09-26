@@ -54,14 +54,14 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
   Result.getExn(Result.Ok(42)) == 42
   
   switch Result.getExn(Error("Invalid data")) {
-  | exception _ => assert(true)
-  | _ => assert(false)
-  }
+  | exception _ => true
+  | _ => false
+  } == true
 
   switch Result.getExn(Error("Invalid data"), ~message="was Error!") {
-  | exception _ => assert(true) // Throws a JsError with the message "was Error!"
-  | _ => assert(false)
-  }
+  | exception _ => true // Throws a JsError with the message "was Error!"
+  | _ => false
+  } == true
   ```
 */
 @deprecated("Use 'getOrThrow' instead")
@@ -74,14 +74,14 @@ let getExn: (result<'a, 'b>, ~message: string=?) => 'a
   Result.getOrThrow(Result.Ok(42)) == 42
   
   switch Result.getOrThrow(Error("Invalid data")) {
-  | exception _ => assert(true)
-  | _ => assert(false)
-  }
+  | exception _ => true
+  | _ => false
+  } == true
 
   switch Result.getOrThrow(Error("Invalid data"), ~message="was Error!") {
-  | exception _ => assert(true) // Throws a JsError with the message "was Error!"
-  | _ => assert(false)
-  }
+  | exception _ => true // Throws a JsError with the message "was Error!"
+  | _ => false
+  } == true
   ```
 */
 let getOrThrow: (result<'a, 'b>, ~message: string=?) => 'a
@@ -259,8 +259,8 @@ let forEach: (result<'a, 'b>, 'a => unit) => unit
 
 ```rescript
 let format = n => `Error code: ${n->Int.toString}`
-Result.mapError(Error(14), format) // Error("Error code: 14")
-Result.mapError(Ok("abc"), format) // Ok("abc")
+Result.mapError(Error(14), format) == Error("Error code: 14")
+Result.mapError(Ok("abc"), format) == Ok("abc")
 ```
 */
 let mapError: (result<'a, 'b>, 'b => 'c) => result<'a, 'c>
@@ -269,8 +269,8 @@ let mapError: (result<'a, 'b>, 'b => 'c) => result<'a, 'c>
 `all(results)` returns a result of array if all options are Ok, otherwise returns Error.
 ## Examples
 ```rescript
-Result.all([Ok(1), Ok(2), Ok(3)]) // Ok([1, 2, 3])
-Result.all([Ok(1), Error(1)]) // Error(1)
+Result.all([Ok(1), Ok(2), Ok(3)]) == Ok([1, 2, 3])
+Result.all([Ok(1), Error(1)]) == Error(1)
 ```
 */
 let all: array<result<'a, 'b>> => result<array<'a>, 'b>
@@ -321,3 +321,113 @@ let all6: (
   without having to store or process it further.
 */
 external ignore: result<'res, 'err> => unit = "%ignore"
+
+/**
+`mapOkAsync(res, f)`: Asynchronously maps over the Ok value of a Result. When `res` is `Ok(n)`, 
+applies the async function `f` to `n` and wraps the result in `Ok`. 
+When `res` is `Error`, returns the error unchanged.
+
+## Examples
+
+```rescript
+  let square = x => x * x
+
+  let result1 = await Result.mapOkAsync(Promise.resolve(Ok(4)), square)
+  result1 == Ok(16)
+
+  let result2 = await Result.mapOkAsync(
+    Promise.resolve(Error("invalid")),
+    square,
+  )
+  result2 == Error("invalid")
+```
+*/
+let mapOkAsync: (
+  promise<result<'ok, 'error>>,
+  'ok => 'mappedOk,
+) => promise<result<'mappedOk, 'error>>
+
+/**
+`mapErrorAsync(res, f)`: Asynchronously maps over the Error value of a Result. When `res` is `Error(e)`, 
+applies the async function `f` to `e` and wraps the result in `Error`. 
+When `res` is `Ok`, returns the ok value unchanged.
+
+## Examples
+
+```rescript
+let formatError = e => `Error: ${e}`
+
+let result1 = await Result.mapErrorAsync(Promise.resolve(Ok(42)), formatError)
+result1 == Ok(42)
+
+let result2 = await Result.mapErrorAsync(Promise.resolve(Error("invalid")), formatError)
+result2 == Error("Error: invalid")
+```
+*/
+let mapErrorAsync: (
+  promise<result<'ok, 'error>>,
+  'error => 'mappedError,
+) => promise<result<'ok, 'mappedError>>
+
+/**
+`flatMapOkAsync(res, f)`: Asynchronously flat-maps over the Ok value of a Result. When `res` is `Ok(n)`, 
+applies the async function `f` to `n` which returns a Promise of a Result. 
+When `res` is `Error`, returns the error unchanged.
+
+## Examples
+
+```rescript
+let asyncValidate = async x =>
+  if x > 0 {
+    Ok(x * 2)
+  } else {
+    Error("Must be positive")
+  }
+
+let result1 = await Result.flatMapOkAsync(Promise.resolve(Ok(5)), asyncValidate)
+result1 == Ok(10)
+
+let result2 = await Result.flatMapOkAsync(
+  Promise.resolve(Error("Already failed")),
+  asyncValidate,
+)
+result2 == Error("Already failed")
+```
+*/
+let flatMapOkAsync: (
+  promise<result<'ok, 'error>>,
+  'ok => promise<result<'mappedOk, 'error>>,
+) => promise<result<'mappedOk, 'error>>
+
+/**
+`flatMapErrorAsync(res, f)`: Asynchronously flat-maps over the Error value of a Result. When `res` is `Error(e)`, 
+applies the async function `f` to `e` which returns a Promise of a Result. 
+When `res` is `Ok`, returns the ok value unchanged.
+
+## Examples
+
+```rescript
+let asyncRecover = async error =>
+  if error === "timeout" {
+    Ok("default")
+  } else {
+    Error(error)
+  }
+
+let result1 = await Result.flatMapErrorAsync(
+  Promise.resolve(Error("timeout")),
+  asyncRecover,
+)
+result1 == Ok("default")
+
+let result2 = await Result.flatMapErrorAsync(
+  Promise.resolve(Ok("default")),
+  asyncRecover,
+)
+result2 == Ok("default")
+```
+*/
+let flatMapErrorAsync: (
+  promise<result<'ok, 'error>>,
+  'error => promise<result<'ok, 'mappedError>>,
+) => promise<result<'ok, 'mappedError>>
