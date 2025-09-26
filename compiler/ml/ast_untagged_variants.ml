@@ -93,9 +93,9 @@ let report_error ppf =
         "Constructor " ^ name ^ " has more than one argument.")
   | TagFieldNameConflict (constructor_name, field_name, runtime_value) ->
     fprintf ppf
-      "Constructor %s: the @tag name \"%s\" conflicts with the runtime value \
-       of inline record field \"%s\". Use a different @tag name or rename the \
-       field."
+      "Constructor \"%s\": the @tag name \"%s\" conflicts with the runtime \
+       value of inline record field \"%s\". Use a different @tag name or \
+       rename the field."
       constructor_name runtime_value field_name
 
 (* Type of the runtime representation of an untagged block (case with payoad) *)
