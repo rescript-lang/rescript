@@ -44,42 +44,36 @@ function bool(json) {
   if (typeof json === "boolean") {
     return json;
   }
-  
 }
 
 function $$null(json) {
   if (json === null) {
     return null;
   }
-  
 }
 
 function string(json) {
   if (typeof json === "string") {
     return json;
   }
-  
 }
 
 function float(json) {
   if (typeof json === "number") {
     return json;
   }
-  
 }
 
 function object(json) {
   if (typeof json === "object" && json !== null && !Array.isArray(json)) {
     return json;
   }
-  
 }
 
 function array(json) {
   if (Array.isArray(json)) {
     return json;
   }
-  
 }
 
 let Decode = {

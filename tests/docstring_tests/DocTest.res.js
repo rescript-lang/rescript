@@ -14,6 +14,9 @@ import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.js";
 import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.js";
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.js";
+import * as BinsJs from "../../cli/common/bins.js";
+
+let rescript_tools_exe = BinsJs.rescript_tools_exe;
 
 let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
 
@@ -41,6 +44,13 @@ let ignoreRuntimeTests = [
   [
     24,
     ["Stdlib_RegExp.escape"]
+  ],
+  [
+    1000,
+    [
+      "Stdlib_DataView.getFloat16",
+      "Stdlib_DataView.setFloat16"
+    ]
   ]
 ];
 
@@ -49,8 +59,7 @@ function getOutput(buffer) {
 }
 
 async function extractDocFromFile(file) {
-  let toolsBin = Nodepath.join(process.cwd(), "cli", "rescript-tools.js");
-  let match = await SpawnAsync.run(toolsBin, [
+  let match = await SpawnAsync.run(rescript_tools_exe, [
     "extract-codeblocks",
     file,
     "--transform-assert-equal"
@@ -93,6 +102,7 @@ async function extractExamples() {
       return;
     }
     console.error(doc._0);
+    return Stdlib_JsError.panic(`Error extracting code blocks for ` + f);
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   return examples;
@@ -161,4 +171,4 @@ async function main() {
 
 await main();
 
-/* nodeVersion Not a pure module */
+/* rescript_tools_exe Not a pure module */

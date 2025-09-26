@@ -176,7 +176,6 @@ function keepMapInPlace(h, f) {
     if (v !== undefined) {
       filterMapInplaceBucket(f, h, i, undefined, v);
     }
-    
   }
 }
 
@@ -222,7 +221,6 @@ function linear(h, f) {
     if (cell !== undefined) {
       current = fillArrayMap(current, arr, cell, f);
     }
-    
   }
   return arr;
 }

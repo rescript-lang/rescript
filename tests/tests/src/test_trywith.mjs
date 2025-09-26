@@ -18,7 +18,6 @@ function ff(g, x) {
     if (exn.RE_EXN_ID !== "Not_found") {
       throw exn;
     }
-    
   }
   try {
     g(x);
@@ -27,7 +26,6 @@ function ff(g, x) {
     if (exn$1.RE_EXN_ID !== Out_of_memory) {
       throw exn$1;
     }
-    
   }
   try {
     g(x);
@@ -36,7 +34,6 @@ function ff(g, x) {
     if (exn$2.RE_EXN_ID !== Sys_error) {
       throw exn$2;
     }
-    
   }
   try {
     g(x);
@@ -45,7 +42,6 @@ function ff(g, x) {
     if (exn$3.RE_EXN_ID !== "Invalid_argument") {
       throw exn$3;
     }
-    
   }
   try {
     g(x);
@@ -54,7 +50,6 @@ function ff(g, x) {
     if (exn$4.RE_EXN_ID !== "End_of_file") {
       throw exn$4;
     }
-    
   }
   try {
     g(x);
@@ -63,7 +58,6 @@ function ff(g, x) {
     if (exn$5.RE_EXN_ID !== "Match_failure") {
       throw exn$5;
     }
-    
   }
   try {
     g(x);
@@ -72,7 +66,6 @@ function ff(g, x) {
     if (exn$6.RE_EXN_ID !== Stack_overflow) {
       throw exn$6;
     }
-    
   }
   try {
     g(x);
@@ -81,7 +74,6 @@ function ff(g, x) {
     if (exn$7.RE_EXN_ID !== Sys_blocked_io) {
       throw exn$7;
     }
-    
   }
   try {
     g(x);
@@ -90,7 +82,6 @@ function ff(g, x) {
     if (exn$8.RE_EXN_ID !== "Assert_failure") {
       throw exn$8;
     }
-    
   }
   try {
     return g(x);

@@ -29,7 +29,6 @@ function fff2(x) {
     console.log("hi");
     return;
   }
-  
 }
 
 function fff3(x) {

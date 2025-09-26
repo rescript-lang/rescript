@@ -13,7 +13,6 @@ function getString(formData, name) {
   if (!(value == null) && typeof value === "string") {
     return Primitive_option.some(value);
   }
-  
 }
 
 function getFile(formData, name) {
@@ -21,7 +20,6 @@ function getFile(formData, name) {
   if (!(value == null) && typeof value !== "string") {
     return Primitive_option.some(value);
   }
-  
 }
 
 function getAll(t, string) {

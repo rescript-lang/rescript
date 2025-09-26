@@ -111,11 +111,9 @@ function add0(h, key, hash, eq) {
       if (tail !== undefined) {
         tail.next = undefined;
       }
-      
     }
     return;
   }
-  
 }
 
 function add(h, key) {

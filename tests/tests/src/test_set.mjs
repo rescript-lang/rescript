@@ -588,7 +588,6 @@ function Make(Ord) {
                 match.tl
               ];
             }
-            
           }
           break;
         case 3 :
@@ -620,9 +619,7 @@ function Make(Ord) {
                   match$2.tl
                 ];
               }
-              
             }
-            
           }
           break;
       }

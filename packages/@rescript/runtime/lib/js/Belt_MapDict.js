@@ -121,7 +121,6 @@ function remove(n, x, cmp) {
   if (n !== undefined) {
     return removeAux0(n, x, cmp);
   }
-  
 }
 
 function mergeMany(h, arr, cmp) {
@@ -255,7 +254,6 @@ function removeMany(t, keys, cmp) {
       continue;
     };
   }
-  
 }
 
 let empty;

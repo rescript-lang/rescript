@@ -49,7 +49,6 @@ function remove(d, v) {
     d.data = newRoot;
     return;
   }
-  
 }
 
 function removeMany0(_t, xs, _i, len) {
@@ -168,7 +167,6 @@ function add(d, k) {
     d.data = v;
     return;
   }
-  
 }
 
 function addArrayMutate(t, xs) {
