@@ -69,7 +69,6 @@ try {
       console.warn(`Unexpected error message: "` + message + `"`);
       throw e$3;
     }
-    
   } else {
     let e$4 = Stdlib_JsExn.fromException(e$2);
     if (e$4 !== undefined) {

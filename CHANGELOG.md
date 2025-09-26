@@ -21,12 +21,17 @@
 #### :bug: Bug fix
 
 - Fix result examples. https://github.com/rescript-lang/rescript/pull/7914
+- Make inline record fields that overlap with a variant's tag a compile error. https://github.com/rescript-lang/rescript/pull/7875
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
 - Keep track of compiler info during build. https://github.com/rescript-lang/rescript/pull/7889
+- Improve option optimization for constants. https://github.com/rescript-lang/rescript/pull/7913
+- Option optimization: do not create redundant local vars. https://github.com/rescript-lang/rescript/pull/7915
+- Js output: remove superfluous newline after every `if`. https://github.com/rescript-lang/rescript/pull/7920
+- Rewatch: Traverse upwards for package resolution in single context projects. https://github.com/rescript-lang/rescript/pull/7896
 
 #### :house: Internal
 
@@ -50,7 +55,6 @@
 - Add (dev-)dependencies to build schema. https://github.com/rescript-lang/rescript/pull/7892
 - Dedicated error for dict literal spreads. https://github.com/rescript-lang/rescript/pull/7901
 - Dedicated error message for when mixing up `:` and `=` in various positions. https://github.com/rescript-lang/rescript/pull/7900
-- Improve option optimization for constants. https://github.com/rescript-lang/rescript/pull/7913
 
 # 12.0.0-beta.11
 

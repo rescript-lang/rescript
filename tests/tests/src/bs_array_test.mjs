@@ -311,7 +311,6 @@ Mocha.describe("Bs_array_test", () => {
       if (x % 2 === 0) {
         return x + 1 | 0;
       }
-      
     });
     Test_utils.eq("File \"bs_array_test.res\", line 152, characters 7-14", v0, [
       0,

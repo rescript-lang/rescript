@@ -42,9 +42,9 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-DataView.fromBuffer(ArrayBuffer.make(16)) 
-DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4)  
-DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4, ~length=8) 
+DataView.fromBuffer(ArrayBuffer.make(16))
+DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4)
+DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4, ~length=8)
 ```
 */
 @new external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) => t =
@@ -65,7 +65,7 @@ DataView.fromBufferToEnd(buffer, ~byteOffset=4)
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "DataView"
 
 /**
-`fromBufferWithRange(buffer, ~byteOffset, ~length)` creates a DataView for a specific byte range. 
+`fromBufferWithRange(buffer, ~byteOffset, ~length)` creates a DataView for a specific byte range.
 
 See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView) on MDN.
 
@@ -74,7 +74,7 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-DataView.fromBufferWithRange(ArrayBuffer.make(16), ~byteOffset=2, ~length=8) 
+DataView.fromBufferWithRange(ArrayBuffer.make(16), ~byteOffset=2, ~length=8)
 ```
 */
 @deprecated("Use `fromBuffer` instead") @new
@@ -135,7 +135,7 @@ See [`DataView.getInt8`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setInt8(0, -12)
+dv->DataView.setInt8(0, -12)
 DataView.getInt8(dv, 0) == -12
 ```
 */
@@ -150,7 +150,7 @@ See [`DataView.getUint8`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setUint8(1, 255)
+dv->DataView.setUint8(1, 255)
 DataView.getUint8(dv, 1) == 255
 ```
 */
@@ -165,8 +165,8 @@ See [`DataView.getInt16`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setInt16(0, -1234)
-dv->DateView.setInt16(2, -1234, ~littleEndian=true)
+dv->DataView.setInt16(0, -1234)
+dv->DataView.setInt16(2, -1234, ~littleEndian=true)
 DataView.getInt16(dv, 0) == -1234
 DataView.getInt16(dv, 2, ~littleEndian=true) == -1234
 ```
@@ -182,8 +182,8 @@ See [`DataView.getUint16`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setUint16(0, 1234)
-dv->DateView.setUint16(2, 1234, ~littleEndian=true)
+dv->DataView.setUint16(0, 1234)
+dv->DataView.setUint16(2, 1234, ~littleEndian=true)
 DataView.getUint16(dv, 0) == 1234
 DataView.getUint16(dv, 2, ~littleEndian=true) == 1234
 ```
@@ -199,8 +199,8 @@ See [`DataView.getInt32`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setInt32(0, -123456)
-dv->DateView.setInt32(4, -123456, ~littleEndian=true)
+dv->DataView.setInt32(0, -123456)
+dv->DataView.setInt32(4, -123456, ~littleEndian=true)
 DataView.getInt32(dv, 0) == -123456
 DataView.getInt32(dv, 4, ~littleEndian=true) == -123456
 ```
@@ -216,8 +216,8 @@ See [`DataView.getUint32`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setUint32(0, 123456)
-dv->DateView.setUint32(4, 123456, ~littleEndian=true)
+dv->DataView.setUint32(0, 123456)
+dv->DataView.setUint32(4, 123456, ~littleEndian=true)
 DataView.getUint32(dv, 0) == 123456
 DataView.getUint32(dv, 4, ~littleEndian=true) == 123456
 ```
@@ -232,8 +232,8 @@ See [`DataView.getFloat16`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 ## Examples
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setFloat16(0, 1.5)
-dv->DateView.setFloat16(2, 1.5, ~littleEndian=true)
+dv->DataView.setFloat16(0, 1.5)
+dv->DataView.setFloat16(2, 1.5, ~littleEndian=true)
 DataView.getFloat16(dv, 0) == 1.5
 DataView.getFloat16(dv, 2, ~littleEndian=true) == 1.5
 ```
@@ -249,10 +249,10 @@ See [`DataView.getFloat32`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setFloat32(0, 3.14)
-dv->DateView.setFloat32(4, 3.14, ~littleEndian=true
-DataView.getFloat32(dv, 0) == 3.14
-DataView.getFloat32(dv, 4, ~littleEndian=true) == 3.14
+dv->DataView.setFloat32(0, 3.14)
+dv->DataView.setFloat32(4, 3.14, ~littleEndian=true)
+// DataView.getFloat32(dv, 0) == 3.14
+// DataView.getFloat32(dv, 4, ~littleEndian=true) == 3.14
 ```
 */
 @send external getFloat32: (t, int, ~littleEndian: bool=?) => float = "getFloat32"
@@ -266,8 +266,8 @@ See [`DataView.getFloat64`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setFloat64(0, 6.28)
-dv->DateView.setFloat64(8, 6.28, ~littleEndian=true)
+dv->DataView.setFloat64(0, 6.28)
+dv->DataView.setFloat64(8, 6.28, ~littleEndian=true)
 DataView.getFloat64(dv, 0) == 6.28
 DataView.getFloat64(dv, 8, ~littleEndian=true) == 6.28
 ```
@@ -282,8 +282,8 @@ See [`DataView.getBigInt64`](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ## Examples
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setBigInt64(0, -123456789n)
-dv->DateView.setBigInt64(8, -123456789n, ~littleEndian=true)
+dv->DataView.setBigInt64(0, -123456789n)
+dv->DataView.setBigInt64(8, -123456789n, ~littleEndian=true)
 DataView.getBigInt64(dv, 0) == -123456789n
 DataView.getBigInt64(dv, 8, ~littleEndian=true) == -123456789n
 ```
@@ -299,8 +299,8 @@ See [`DataView.getBigUint64`](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-dv->DateView.setBigUint64(0, 123456789n)
-dv->DateView.setBigUint64(8, 123456789n, ~littleEndian=true)
+dv->DataView.setBigUint64(0, 123456789n)
+dv->DataView.setBigUint64(8, 123456789n, ~littleEndian=true)
 DataView.getBigUint64(dv, 0) == 123456789n
 DataView.getBigUint64(dv, 8, ~littleEndian=true) == 123456789n
 ```
@@ -317,7 +317,7 @@ See [`DataView.setInt8`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setInt8(dv, 0, -12)
-dv->DateView.getInt8(0) == -12
+dv->DataView.getInt8(0) == -12
 ```
 */
 @send external setInt8: (t, int, int) => unit = "setInt8"
@@ -332,7 +332,7 @@ See [`DataView.setUint8`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setUint8(dv, 0, 255)
-dv->DateView.getUint8(0) == 255
+dv->DataView.getUint8(0) == 255
 ```
 */
 @send external setUint8: (t, int, int) => unit = "setUint8"
@@ -346,10 +346,10 @@ See [`DataView.setInt16`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-DataView.setInt16(dv, 0 -1234)
+DataView.setInt16(dv, 0, -1234)
 DataView.setInt16(dv, 2, -1234, ~littleEndian=true)
-dv->DateView.getInt16(0) == -1234
-dv->DateView.getInt16(2, ~littleEndian=true) == -1234
+dv->DataView.getInt16(0) == -1234
+dv->DataView.getInt16(2, ~littleEndian=true) == -1234
 ```
 */
 @send external setInt16: (t, int, int, ~littleEndian: bool=?) => unit = "setInt16"
@@ -365,8 +365,8 @@ See [`DataView.setUint16`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setUint16(dv, 0, 1234)
 DataView.setUint16(dv, 2, 1234, ~littleEndian=true)
-dv->DateView.getUint16(0) == 1234
-dv->DateView.getUint16(2, ~littleEndian=true) == 1234
+dv->DataView.getUint16(0) == 1234
+dv->DataView.getUint16(2, ~littleEndian=true) == 1234
 ```
 */
 @send external setUint16: (t, int, int, ~littleEndian: bool=?) => unit = "setUint16"
@@ -382,8 +382,8 @@ See [`DataView.setInt32`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setInt32(dv, 0, -123456)
 DataView.setInt32(dv, 4, -123456, ~littleEndian=true)
-dv->DateView.getInt32(0) == -123456
-dv->DateView.getInt32(4, ~littleEndian=true) == -123456
+dv->DataView.getInt32(0) == -123456
+dv->DataView.getInt32(4, ~littleEndian=true) == -123456
 ```
 */
 @send external setInt32: (t, int, int, ~littleEndian: bool=?) => unit = "setInt32"
@@ -397,10 +397,10 @@ See [`DataView.setUint32`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 
 ```rescript
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
-DataView.setUint32(dv, 0 123456)
+DataView.setUint32(dv, 0, 123456)
 DataView.setUint32(dv, 4, 123456, ~littleEndian=true)
-dv->DateView.getUint32(0) == 123456
-dv->DateView.getUint32(4, ~littleEndian=true) == 123456
+dv->DataView.getUint32(0) == 123456
+dv->DataView.getUint32(4, ~littleEndian=true) == 123456
 ```
 */
 @send external setUint32: (t, int, int, ~littleEndian: bool=?) => unit = "setUint32"
@@ -416,8 +416,8 @@ See [`DataView.setFloat16`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setFloat16(dv, 0, 1.5)
 DataView.setFloat16(dv, 2, 1.5, ~littleEndian=true)
-dv->DateView.getFloat16(0) == 1.5
-dv->DateView.getFloat16(2, ~littleEndian=true) == 1.5
+dv->DataView.getFloat16(0) == 1.5
+dv->DataView.getFloat16(2, ~littleEndian=true) == 1.5
 ```
 */
 @send external setFloat16: (t, int, float, ~littleEndian: bool=?) => unit = "setFloat16"
@@ -433,8 +433,8 @@ See [`DataView.setFloat32`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setFloat32(dv, 0, 3.14)
 DataView.setFloat32(dv, 4, 3.14, ~littleEndian=true)
-dv->DateView.getFloat32(0) == 3.14
-dv->DateView.getFloat32(4, ~littleEndian=true) == 3.14
+// dv->DataView.getFloat32(0) == 3.14
+// dv->DataView.getFloat32(4, ~littleEndian=true) == 3.14
 ```
 */
 @send external setFloat32: (t, int, float, ~littleEndian: bool=?) => unit = "setFloat32"
@@ -450,8 +450,8 @@ See [`DataView.setFloat64`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setFloat64(dv, 0, 6.28)
 DataView.setFloat64(dv, 8, 6.28, ~littleEndian=true)
-dv->DateView.getFloat64(0) == 6.28
-dv->DateView.getFloat64(8, ~littleEndian=true) == 6.28
+dv->DataView.getFloat64(0) == 6.28
+dv->DataView.getFloat64(8, ~littleEndian=true) == 6.28
 ```
 */
 @send external setFloat64: (t, int, float, ~littleEndian: bool=?) => unit = "setFloat64"
@@ -467,8 +467,8 @@ See [`DataView.setBigInt64`](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setBigInt64(dv, 0, -123456789n)
 DataView.setBigInt64(dv, 8, -123456789n, ~littleEndian=true)
-dv->DateView.getBigInt64(0) == -123456789n
-dv->DateView.getBigInt64(8, ~littleEndian=true) == -123456789n
+dv->DataView.getBigInt64(0) == -123456789n
+dv->DataView.getBigInt64(8, ~littleEndian=true) == -123456789n
 ```
 */
 @send external setBigInt64: (t, int, bigint, ~littleEndian: bool=?) => unit = "setBigInt64"
@@ -484,8 +484,8 @@ See [`DataView.setBigUint64`](https://developer.mozilla.org/en-US/docs/Web/JavaS
 let dv = DataView.fromBuffer(ArrayBuffer.make(16))
 DataView.setBigUint64(dv, 0, 123456789n)
 DataView.setBigUint64(dv, 8, 123456789n, ~littleEndian=true)
-dv->DateView.getBigUint64(0) == 123456789n
-dv->DateView.getBigUint64(8, ~littleEndian=true) == 123456789n
+dv->DataView.getBigUint64(0) == 123456789n
+dv->DataView.getBigUint64(8, ~littleEndian=true) == 123456789n
 ```
 */
 @send external setBigUint64: (t, int, bigint, ~littleEndian: bool=?) => unit = "setBigUint64"

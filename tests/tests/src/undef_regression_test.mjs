@@ -13,7 +13,6 @@ function f(obj) {
     console.log(Primitive_option.valFromOption(s));
     return;
   }
-  
 }
 
 export {

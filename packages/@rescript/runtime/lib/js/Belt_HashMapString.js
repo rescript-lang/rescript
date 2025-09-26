@@ -54,7 +54,6 @@ function set(h, key, value) {
       };
       h.size = h.size + 1 | 0;
     }
-    
   } else {
     h_buckets[i] = {
       key: key,
@@ -81,11 +80,9 @@ function set(h, key, value) {
       if (tail !== undefined) {
         tail.next = undefined;
       }
-      
     }
     return;
   }
-  
 }
 
 function remove(h, key) {
@@ -118,7 +115,6 @@ function remove(h, key) {
       };
     }
   }
-  
 }
 
 function get(h, key) {
@@ -157,7 +153,6 @@ function get(h, key) {
       };
     }
   }
-  
 }
 
 function has(h, key) {

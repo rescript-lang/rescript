@@ -123,7 +123,6 @@ Mocha.describe("Large_record_duplication_test", () => {
       if (x.TAG === "A0") {
         return x.x0;
       }
-      
     };
     let f2 = x => {
       if (x.TAG !== "A0") {
@@ -173,7 +172,6 @@ Mocha.describe("Large_record_duplication_test", () => {
       if (x.RE_EXN_ID === A0) {
         return x.x0;
       }
-      
     };
     let v3 = {
       RE_EXN_ID: A0,

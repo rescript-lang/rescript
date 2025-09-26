@@ -107,7 +107,6 @@ function toArray(h) {
     if (cell !== undefined) {
       current = fillArray(current, arr, cell);
     }
-    
   }
   return arr;
 }

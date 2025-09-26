@@ -38,7 +38,6 @@ function fn(authState, route) {
       }, undefined);
       return 2;
     }
-    
   } else {
     let exit$1 = 0;
     if (typeof route === "object") {
@@ -64,7 +63,6 @@ function fn(authState, route) {
       }, undefined);
       return 3;
     }
-    
   }
   console.log(onboardingRoute);
   div({

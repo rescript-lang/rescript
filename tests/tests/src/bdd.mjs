@@ -373,7 +373,6 @@ function test_hwb(bdd, vars) {
     if (vars[i]) {
       ntrue = ntrue + 1 | 0;
     }
-    
   }
   return bool_equal($$eval(bdd, vars), ntrue > 0 ? vars[ntrue - 1 | 0] : false);
 }

@@ -225,7 +225,6 @@ function filter_from(i, p, s) {
     if (p(ele)) {
       u = push_back(u, ele);
     }
-    
   }
   return u;
 }

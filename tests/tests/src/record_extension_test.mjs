@@ -30,7 +30,6 @@ function f(x) {
   if (v1 !== undefined) {
     return x._1 + v1 | 0;
   }
-  
 }
 
 Mocha.describe("File \"record_extension_test.res\", line 25, characters 9-16", () => {

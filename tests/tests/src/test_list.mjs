@@ -724,11 +724,8 @@ function stable_sort(cmp, l) {
               };
             }
           }
-          
         }
-        
       }
-      
     } else if (l !== 0) {
       let match$2 = l.tl;
       if (match$2 !== 0) {
@@ -752,7 +749,6 @@ function stable_sort(cmp, l) {
           };
         }
       }
-      
     }
     let n1 = (n >> 1);
     let n2 = n - n1 | 0;
@@ -870,11 +866,8 @@ function stable_sort(cmp, l) {
               };
             }
           }
-          
         }
-        
       }
-      
     } else if (l !== 0) {
       let match$2 = l.tl;
       if (match$2 !== 0) {
@@ -898,7 +891,6 @@ function stable_sort(cmp, l) {
           };
         }
       }
-      
     }
     let n1 = (n >> 1);
     let n2 = n - n1 | 0;
@@ -1092,11 +1084,8 @@ function sort_uniq(cmp, l) {
               };
             }
           }
-          
         }
-        
       }
-      
     } else if (l !== 0) {
       let match$2 = l.tl;
       if (match$2 !== 0) {
@@ -1126,7 +1115,6 @@ function sort_uniq(cmp, l) {
           };
         }
       }
-      
     }
     let n1 = (n >> 1);
     let n2 = n - n1 | 0;
@@ -1323,11 +1311,8 @@ function sort_uniq(cmp, l) {
               };
             }
           }
-          
         }
-        
       }
-      
     } else if (l !== 0) {
       let match$2 = l.tl;
       if (match$2 !== 0) {
@@ -1357,7 +1342,6 @@ function sort_uniq(cmp, l) {
           };
         }
       }
-      
     }
     let n1 = (n >> 1);
     let n2 = n - n1 | 0;
