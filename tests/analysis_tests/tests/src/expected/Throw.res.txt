@@ -19,7 +19,7 @@ Path thro
     "label": "JsExn.throw",
     "kind": 12,
     "tags": [],
-    "detail": "Throw any JavaScript value, example: throw 100",
+    "detail": "Throw any JavaScript value, example: `throw 100`",
     "documentation": null,
     "insertText": "JsExn.throw($0)",
     "insertTextFormat": 2
