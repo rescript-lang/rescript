@@ -228,14 +228,11 @@ mod tests {
         parse_cli(args.iter().map(OsString::from).collect())
     }
 
+    // Default command behaviour.
     #[test]
-    fn defaults_to_build_without_args() {
+    fn no_subcommand_defaults_to_build() {
         let cli = parse(&["rescript"]).expect("expected default build command");
-
-        match cli.command {
-            cli::Command::Build(build_args) => assert_eq!(build_args.folder.folder, "."),
-            other => panic!("expected build command, got {other:?}"),
-        }
+        assert!(matches!(cli.command, cli::Command::Build(_)));
     }
 
     #[test]
@@ -246,13 +243,6 @@ mod tests {
             cli::Command::Build(build_args) => assert_eq!(build_args.folder.folder, "someFolder"),
             other => panic!("expected build command, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn respects_global_flag_before_subcommand() {
-        let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
-
-        assert!(matches!(cli.command, cli::Command::Watch(_)));
     }
 
     #[test]
@@ -267,19 +257,78 @@ mod tests {
     }
 
     #[test]
+    fn unknown_subcommand_help_uses_global_help() {
+        let err = parse(&["rescript", "xxx", "--help"]).expect_err("expected global help");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+    }
+
+    // Build command specifics.
+    #[test]
+    fn build_help_shows_subcommand_help() {
+        let err = parse(&["rescript", "build", "--help"]).expect_err("expected subcommand help");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+        let rendered = err.to_string();
+        assert!(
+            rendered.contains("Usage: rescript build"),
+            "unexpected help: {rendered:?}"
+        );
+        assert!(!rendered.contains("Usage: rescript [OPTIONS] <COMMAND>"));
+    }
+
+    #[test]
+    fn build_allows_global_verbose_flag() {
+        let cli = parse(&["rescript", "build", "-v"]).expect("expected build command");
+        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Debug);
+        assert!(matches!(cli.command, cli::Command::Build(_)));
+    }
+
+    #[test]
+    fn build_option_is_parsed_normally() {
+        let cli = parse(&["rescript", "build", "--no-timing"]).expect("expected build command");
+
+        match cli.command {
+            cli::Command::Build(build_args) => assert!(build_args.no_timing),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    // Subcommand flag handling.
+    #[test]
+    fn respects_global_flag_before_subcommand() {
+        let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
+
+        assert!(matches!(cli.command, cli::Command::Watch(_)));
+    }
+
+    #[test]
     fn invalid_option_for_subcommand_does_not_fallback() {
         let err = parse(&["rescript", "watch", "--no-timing"]).expect_err("expected watch parse failure");
         assert_eq!(err.kind(), ErrorKind::UnknownArgument);
     }
 
+    // Version/help flag handling.
     #[test]
-    fn help_flag_does_not_default_to_build() {
-        let err = parse(&["rescript", "--help"]).expect_err("expected clap help error");
-        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+    fn version_flag_before_subcommand_displays_version() {
+        let err = parse(&["rescript", "-V", "build"]).expect_err("expected version display");
+        assert_eq!(err.kind(), ErrorKind::DisplayVersion);
     }
 
     #[test]
-    fn version_flag_does_not_default_to_build() {
+    fn version_flag_after_subcommand_is_rejected() {
+        let err = parse(&["rescript", "build", "-V"]).expect_err("expected unexpected argument");
+        assert_eq!(err.kind(), ErrorKind::UnknownArgument);
+    }
+
+    #[test]
+    fn global_help_flag_shows_help() {
+        let err = parse(&["rescript", "--help"]).expect_err("expected clap help error");
+        assert_eq!(err.kind(), ErrorKind::DisplayHelp);
+        let rendered = err.to_string();
+        assert!(rendered.contains("Usage: rescript [OPTIONS] <COMMAND>"));
+    }
+
+    #[test]
+    fn global_version_flag_shows_version() {
         let err = parse(&["rescript", "--version"]).expect_err("expected clap version error");
         assert_eq!(err.kind(), ErrorKind::DisplayVersion);
     }
