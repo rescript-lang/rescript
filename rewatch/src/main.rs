@@ -120,9 +120,7 @@ fn parse_cli(raw_args: Vec<OsString>) -> Result<cli::Cli, clap::Error> {
         Ok(cli) => Ok(cli),
         Err(err) => {
             if should_default_to_build(&err, &raw_args) {
-                let mut fallback_args = raw_args.clone();
-                let insert_at = index_after_global_flags(&fallback_args);
-                fallback_args.insert(insert_at, OsString::from("build"));
+                let fallback_args = build_default_args(&raw_args);
 
                 match cli::Cli::try_parse_from(&fallback_args) {
                     Ok(cli) => Ok(cli),
@@ -149,18 +147,6 @@ fn should_default_to_build(err: &clap::Error, args: &[OsString]) -> bool {
         }
         _ => false,
     }
-}
-
-fn index_after_global_flags(args: &[OsString]) -> usize {
-    let mut idx = 1;
-    while let Some(arg) = args.get(idx) {
-        if is_global_flag(arg) {
-            idx += 1;
-        } else {
-            break;
-        }
-    }
-    idx.min(args.len())
 }
 
 fn is_global_flag(arg: &OsString) -> bool {
@@ -198,9 +184,44 @@ fn is_known_subcommand(arg: &OsString) -> bool {
     })
 }
 
+fn build_default_args(raw_args: &[OsString]) -> Vec<OsString> {
+    let mut result = Vec::with_capacity(raw_args.len() + 1);
+    if raw_args.is_empty() {
+        return vec![OsString::from("build")];
+    }
+
+    let mut globals = Vec::new();
+    let mut others = Vec::new();
+    let mut saw_double_dash = false;
+
+    for arg in raw_args.iter().skip(1) {
+        if !saw_double_dash {
+            if arg == "--" {
+                saw_double_dash = true;
+                others.push(arg.clone());
+                continue;
+            }
+
+            if is_global_flag(arg) {
+                globals.push(arg.clone());
+                continue;
+            }
+        }
+
+        others.push(arg.clone());
+    }
+
+    result.push(raw_args[0].clone());
+    result.extend(globals);
+    result.push(OsString::from("build"));
+    result.extend(others);
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use log::LevelFilter;
     use std::ffi::OsString;
 
     fn parse(args: &[&str]) -> Result<cli::Cli, clap::Error> {
@@ -232,6 +253,17 @@ mod tests {
         let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
 
         assert!(matches!(cli.command, cli::Command::Watch(_)));
+    }
+
+    #[test]
+    fn trailing_global_flag_is_treated_as_global() {
+        let cli = parse(&["rescript", "my-project", "-v"]).expect("expected build command");
+
+        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Debug);
+        match cli.command {
+            cli::Command::Build(build_args) => assert_eq!(build_args.folder.folder, "my-project"),
+            other => panic!("expected build command, got {other:?}"),
+        }
     }
 
     #[test]
