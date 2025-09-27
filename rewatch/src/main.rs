@@ -257,6 +257,17 @@ mod tests {
     }
 
     #[test]
+    fn double_dash_keeps_following_args_positional() {
+        let cli = parse(&["rescript", "--", "-v"]).expect("expected build command");
+
+        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Info);
+        match cli.command {
+            cli::Command::Build(build_args) => assert_eq!(build_args.folder.folder, "-v"),
+            other => panic!("expected build command, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn unknown_subcommand_help_uses_global_help() {
         let err = parse(&["rescript", "xxx", "--help"]).expect_err("expected global help");
         assert_eq!(err.kind(), ErrorKind::DisplayHelp);
