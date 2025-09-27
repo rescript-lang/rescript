@@ -20,8 +20,11 @@ pub enum FileExtension {
 
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
+#[command(name = "rescript", bin_name = "rescript")]
 #[command(version)]
-#[command(args_conflicts_with_subcommands = true)]
+#[command(
+    after_help = "[1m[1m[4mNote:[0m If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information."
+)]
 pub struct Cli {
     /// Verbosity:
     /// -v -> Debug
@@ -35,10 +38,7 @@ pub struct Cli {
 
     /// The command to run. If not provided it will default to build.
     #[command(subcommand)]
-    pub command: Option<Command>,
-
-    #[command(flatten)]
-    pub build_args: BuildArgs,
+    pub command: Command,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -181,7 +181,7 @@ impl From<BuildArgs> for WatchArgs {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    /// Build the project
+    /// Build the project (default command)
     Build(BuildArgs),
     /// Build, then start a watcher
     Watch(WatchArgs),

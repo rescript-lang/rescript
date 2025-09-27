@@ -24,6 +24,8 @@
 
 #### :nail_care: Polish
 
+- Rewatch cli: do not show build command options in the root help. https://github.com/rescript-lang/rescript/pull/7715
+
 #### :house: Internal
 
 # 12.0.0-beta.13
