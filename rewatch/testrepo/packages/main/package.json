@@ -12,7 +12,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@testrepo/compiled-by-legacy": "*",
     "@testrepo/dep01": "*"
   }
 }

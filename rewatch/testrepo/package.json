@@ -9,7 +9,6 @@
       "packages/new-namespace",
       "packages/namespace-casing",
       "packages/with-dev-deps",
-      "packages/compiled-by-legacy",
       "packages/nonexisting-dev-files",
       "packages/deprecated-config",
       "packages/file-casing",
@@ -28,10 +27,7 @@
   },
   "scripts": {
     "build": "../target/release/rescript build .",
-    "build:rescript": "rescript-legacy build",
     "watch": "../target/release/rescript watch .",
-    "watch:rescript": "rescript-legacy watch",
-    "clean": "../target/release/rescript clean .",
-    "clean:rescript": "rescript clean"
+    "clean": "../target/release/rescript clean ."
   }
 }
