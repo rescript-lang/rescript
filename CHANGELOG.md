@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Prevent lockfile creation when project folder is missing. https://github.com/rescript-lang/rescript/pull/7927
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
