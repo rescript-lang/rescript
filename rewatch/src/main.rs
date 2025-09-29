@@ -1,14 +1,11 @@
 use anyhow::Result;
 use log::LevelFilter;
-use std::{env, ffi::OsString, io::Write, path::Path};
+use std::{io::Write, path::Path};
 
 use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
-    // Use `args_os` so non-UTF bytes still reach clap for proper error reporting on platforms that
-    // allow arbitrary argv content.
-    let raw_args: Vec<OsString> = env::args_os().collect();
-    let cli = cli::parse_with_default(&raw_args).unwrap_or_else(|err| err.exit());
+    let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
 
     let log_level_filter = cli.verbose.log_level_filter();
 

@@ -1,4 +1,4 @@
-use std::{ffi::OsString, ops::Deref};
+use std::{env, ffi::OsString, ops::Deref};
 
 use clap::{Args, CommandFactory, Parser, Subcommand, error::ErrorKind};
 use clap_verbosity_flag::InfoLevel;
@@ -44,10 +44,18 @@ pub struct Cli {
     pub command: Command,
 }
 
-/// Parse argv while treating `build` as the implicit default subcommand when clap indicates the
-/// user omitted one. This keeps the top-level help compact while still supporting bare `rescript …`
-/// invocations that expect to run the build.
-pub fn parse_with_default(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
+/// Parse argv from the current process while treating `build` as the implicit default subcommand
+/// when clap indicates the user omitted one. This keeps the top-level help compact while still
+/// supporting bare `rescript …` invocations that expect to run the build.
+pub fn parse_with_default() -> Result<Cli, clap::Error> {
+    // Use `args_os` so non-UTF bytes still reach clap for proper error reporting on platforms that
+    // allow arbitrary argv content.
+    let raw_args: Vec<OsString> = env::args_os().collect();
+    parse_with_default_from(&raw_args)
+}
+
+/// Parse the provided argv while applying the implicit `build` defaulting rules.
+pub fn parse_with_default_from(raw_args: &[OsString]) -> Result<Cli, clap::Error> {
     match Cli::try_parse_from(raw_args) {
         Ok(cli) => Ok(cli),
         Err(err) => {
@@ -253,7 +261,7 @@ mod tests {
 
     fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
         let raw_args: Vec<OsString> = args.iter().map(OsString::from).collect();
-        parse_with_default(&raw_args)
+        parse_with_default_from(&raw_args)
     }
 
     // Default command behaviour.
@@ -378,7 +386,7 @@ mod tests {
         use std::os::unix::ffi::OsStringExt;
 
         let args = vec![OsString::from("rescript"), OsString::from_vec(vec![0xff])];
-        let err = parse_with_default(&args).expect_err("expected clap to report invalid utf8");
+        let err = parse_with_default_from(&args).expect_err("expected clap to report invalid utf8");
         assert_eq!(err.kind(), ErrorKind::InvalidUtf8);
     }
 }
