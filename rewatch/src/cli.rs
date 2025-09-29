@@ -1,6 +1,6 @@
 use std::{ffi::OsString, ops::Deref};
 
-use clap::{error::ErrorKind, Args, CommandFactory, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand, error::ErrorKind};
 use clap_verbosity_flag::InfoLevel;
 use regex::Regex;
 
