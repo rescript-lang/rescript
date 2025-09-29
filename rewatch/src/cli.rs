@@ -1,3 +1,16 @@
+// We currently use https://docs.rs/clap/latest/clap/ v4 for command line parsing.
+// However, it does not fully fit our use case as it does not support default commands,
+// but we want to default to the "build" command if no other command is specified.
+//
+// Various workarounds exist, but each with its own drawbacks.
+// The workaround implemented here (injecting "build" into the args at the right place
+// and then parsing again if no other command matches at the first parse attempt)
+// avoids flattening all build command options into the root help, but requires careful
+// handling of edge cases regarding global flags.
+// Correctness is ensured by a comprehensive test suite.
+//
+// However, we may want to revisit the decision to use clap after the v12 release.
+
 use std::{env, ffi::OsString, ops::Deref};
 
 use clap::{Args, CommandFactory, Parser, Subcommand, error::ErrorKind};
