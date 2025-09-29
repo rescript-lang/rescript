@@ -20,6 +20,9 @@ pub enum FileExtension {
 
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
+// The shipped binary is `rescript.exe` everywhere, but users invoke it as `rescript` (e.g.
+// via `npm run rescript`). Without forcing `bin_name`, clap would print `rescript.exe` in help,
+// which leaks the packaging detail into the CLI UX.
 #[command(name = "rescript", bin_name = "rescript")]
 #[command(version)]
 #[command(

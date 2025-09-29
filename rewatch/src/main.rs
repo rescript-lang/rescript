@@ -116,6 +116,11 @@ fn get_lock(folder: &str) -> lock::Lock {
 }
 
 fn parse_cli(raw_args: Vec<OsString>) -> Result<cli::Cli, clap::Error> {
+    // Clap's builder API cannot express "build" as an implicit default subcommand without also
+    // polluting the top-level help output. To keep help focused while still honoring "rescript"
+    // invocations that omit a command, we first attempt the canonical parse and only synthesize a
+    // `build` subcommand when clap tells us the invocation failed because no subcommand (or a
+    // positional that maps to one) was provided.
     match cli::Cli::try_parse_from(&raw_args) {
         Ok(cli) => Ok(cli),
         Err(err) => {
@@ -185,6 +190,10 @@ fn is_known_subcommand(arg: &OsString) -> bool {
 }
 
 fn build_default_args(raw_args: &[OsString]) -> Vec<OsString> {
+    // Preserve clap's global flag handling semantics by keeping `-v/-q/-h/-V` in front of the
+    // inserted `build` token while leaving the rest of the argv untouched. This mirrors clap's own
+    // precedence rules so the second parse sees an argument layout it would have produced if the
+    // user had typed `rescript build …` directly.
     let mut result = Vec::with_capacity(raw_args.len() + 1);
     if raw_args.is_empty() {
         return vec![OsString::from("build")];
