@@ -377,28 +377,6 @@ pub fn get_bsc() -> PathBuf {
         .to_stripped_verbatim_path()
 }
 
-pub fn get_rescript_legacy(project_context: &ProjectContext) -> PathBuf {
-    let root_path = project_context.get_root_path();
-    let node_modules_rescript = root_path.join("node_modules").join("rescript");
-    let rescript_legacy_path = if node_modules_rescript.exists() {
-        node_modules_rescript
-            .join("cli")
-            .join("rescript-legacy.js")
-            .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-    } else {
-        // If the root folder / node_modules doesn't exist, something is wrong.
-        // The only way this can happen is if we are inside the rescript repository.
-        root_path
-            .join("cli")
-            .join("rescript-legacy.js")
-            .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-    };
-
-    rescript_legacy_path.unwrap_or_else(|_| panic!("Could not find rescript-legacy.exe"))
-}
-
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
     suffixes
         .iter()

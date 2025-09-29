@@ -579,7 +579,7 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript legacy build && cat src/Test.res.js
+        run: npx rescript -h && npx rescript-legacy build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -634,7 +634,7 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: pnpm rescript -h && pnpm rescript legacy build && cat src/Test.res.js
+        run: pnpm rescript -h && pnpm rescript-legacy build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 

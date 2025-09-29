@@ -2,7 +2,7 @@
   "name": "@tests/tools",
   "private": true,
   "scripts": {
-    "build": "rescript legacy build",
+    "build": "rescript-legacy build",
     "clean": "rescript clean",
     "dev": "rescript -w"
   },

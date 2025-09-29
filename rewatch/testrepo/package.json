@@ -28,9 +28,9 @@
   },
   "scripts": {
     "build": "../target/release/rescript build .",
-    "build:rescript": "rescript legacy build",
+    "build:rescript": "rescript-legacy build",
     "watch": "../target/release/rescript watch .",
-    "watch:rescript": "rescript legacy watch",
+    "watch:rescript": "rescript-legacy watch",
     "clean": "../target/release/rescript clean .",
     "clean:rescript": "rescript clean"
   }

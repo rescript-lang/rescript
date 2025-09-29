@@ -24,7 +24,7 @@ import {
 } from "./common.mjs";
 
 exec("yarn rescript clean");
-exec("yarn rescript legacy");
+exec("yarn rescript-legacy build");
 
 // We need to build the compiler's builtin modules as a separate cmij.
 // Otherwise we can't use them for compilation within the playground.

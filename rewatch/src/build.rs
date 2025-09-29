@@ -22,12 +22,10 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
 use serde::Serialize;
-use std::ffi::OsString;
 use std::fmt;
 use std::fs::File;
 use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 fn is_dirty(module: &Module) -> bool {
@@ -590,27 +588,6 @@ pub fn build(
             clean::cleanup_after_build(&build_state);
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
-        }
-    }
-}
-
-pub fn pass_through_legacy(mut args: Vec<OsString>) -> i32 {
-    let project_root = helpers::get_abs_path(Path::new("."));
-    let project_context = ProjectContext::new(&project_root).unwrap();
-    let rescript_legacy_path = helpers::get_rescript_legacy(&project_context);
-
-    args.insert(0, rescript_legacy_path.into());
-    let status = std::process::Command::new("node")
-        .args(args)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status();
-
-    match status {
-        Ok(s) => s.code().unwrap_or(0),
-        Err(err) => {
-            eprintln!("Error running the legacy build system: {err}");
-            1
         }
     }
 }

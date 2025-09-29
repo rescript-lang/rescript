@@ -2,8 +2,8 @@
   "name": "@tests/generic-jsx-transform",
   "private": true,
   "scripts": {
-    "build": "rescript legacy build",
-    "clean": "rescript legacy clean"
+    "build": "rescript-legacy build",
+    "clean": "rescript-legacy clean"
   },
   "dependencies": {
     "rescript": "workspace:^"

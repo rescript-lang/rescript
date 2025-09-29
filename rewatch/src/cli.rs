@@ -38,9 +38,9 @@ pub enum FileExtension {
 // which leaks the packaging detail into the CLI UX.
 #[command(name = "rescript", bin_name = "rescript")]
 #[command(version)]
-#[command(
-    after_help = "[1m[1m[4mNote:[0m If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information."
-)]
+#[command(after_help = "[1m[1m[4mNotes:[0m
+  - If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information.
+  - For the legacy (pre-v12) build system, run `rescript-legacy` instead.")]
 pub struct Cli {
     /// Verbosity:
     /// -v -> Debug
@@ -492,14 +492,6 @@ pub enum Command {
         /// Path to a rescript file (.res or .resi)
         #[command()]
         path: String,
-    },
-    /// Use the legacy build system.
-    ///
-    /// After this command is encountered, the rest of the arguments are passed to the legacy build system.
-    #[command(disable_help_flag = true, external_subcommand = true)]
-    Legacy {
-        #[arg(allow_hyphen_values = true, num_args = 0..)]
-        legacy_args: Vec<OsString>,
     },
 }
 
