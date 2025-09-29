@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Removed "rescript legacy" subcommand in favor of separate "rescript-legacy" binary. https://github.com/rescript-lang/rescript/pull/7928
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
