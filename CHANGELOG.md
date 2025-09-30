@@ -23,6 +23,7 @@
 #### :bug: Bug fix
 
 - Prevent lockfile creation when project folder is missing. https://github.com/rescript-lang/rescript/pull/7927
+- Fix parameter type / return type ambiguity error for unit case. https://github.com/rescript-lang/rescript/pull/7930
 
 #### :memo: Documentation
 
