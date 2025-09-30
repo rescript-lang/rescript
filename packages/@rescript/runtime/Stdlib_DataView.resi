@@ -61,7 +61,11 @@ DataView.fromBuffer(ArrayBuffer.make(16), ~byteOffset=4, ~length=8)
 DataView.fromBufferToEnd(buffer, ~byteOffset=4)
 ```
 */
-@deprecated("Use `fromBuffer` instead") @new
+@deprecated({
+  reason: "Use `fromBuffer` instead",
+  migrate: DataView.fromBuffer(~byteOffset=%insert.labelledArgument("byteOffset")),
+})
+@new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "DataView"
 
 /**
@@ -77,7 +81,11 @@ See [`DataView`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 DataView.fromBufferWithRange(ArrayBuffer.make(16), ~byteOffset=2, ~length=8)
 ```
 */
-@deprecated("Use `fromBuffer` instead") @new
+@deprecated({
+  reason: "Use `fromBuffer` instead",
+  migrate: DataView.fromBuffer(),
+})
+@new
 external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =
   "DataView"
 

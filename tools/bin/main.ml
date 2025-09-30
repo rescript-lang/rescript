@@ -32,6 +32,8 @@ Usage: rescript-tools [command]
 
 Commands:
 
+migrate <file> [--stdout]               Runs the migration tool on the given file
+migrate-all <root>                      Runs migrations for all project sources under <root>
 doc <file>                              Generate documentation
 format-codeblocks <file>                Format ReScript code blocks
   [--stdout]                              Output to stdout
@@ -66,6 +68,72 @@ let main () =
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
+  | "migrate" :: file :: opts -> (
+    let isStdout = List.mem "--stdout" opts in
+    let outputMode = if isStdout then `Stdout else `File in
+    match
+      (Tools.Migrate.migrate ~entryPointFile:file ~outputMode, outputMode)
+    with
+    | Ok content, `Stdout -> print_endline content
+    | result, `File -> logAndExit result
+    | Error e, _ -> logAndExit (Error e))
+  | "migrate-all" :: root :: _opts -> (
+    let rootPath =
+      if Filename.is_relative root then Unix.realpath root else root
+    in
+    match Analysis.Packages.newBsPackage ~rootPath with
+    | None ->
+      logAndExit
+        (Error
+           (Printf.sprintf
+              "error: failed to load ReScript project at %s (missing \
+               bsconfig.json/rescript.json?)"
+              rootPath))
+    | Some package ->
+      let moduleNames =
+        Analysis.SharedTypes.FileSet.elements package.projectFiles
+      in
+      let files =
+        moduleNames
+        |> List.filter_map (fun modName ->
+               Hashtbl.find_opt package.pathsForModule modName
+               |> Option.map Analysis.SharedTypes.getSrc)
+        |> List.concat
+        |> List.filter (fun path ->
+               Filename.check_suffix path ".res"
+               || Filename.check_suffix path ".resi")
+      in
+      let total = List.length files in
+      if total = 0 then logAndExit (Ok "No source files found to migrate")
+      else
+        let process_one file =
+          (file, Tools.Migrate.migrate ~entryPointFile:file ~outputMode:`File)
+        in
+        let results = List.map process_one files in
+        let migrated, unchanged, failures =
+          results
+          |> List.fold_left
+               (fun (migrated, unchanged, failures) (file, res) ->
+                 match res with
+                 | Ok msg ->
+                   let base = Filename.basename file in
+                   if msg = base ^ ": File migrated successfully" then
+                     (migrated + 1, unchanged, failures)
+                   else if msg = base ^ ": File did not need migration" then
+                     (migrated, unchanged + 1, failures)
+                   else
+                     (* Unknown OK message, count as unchanged *)
+                     (migrated, unchanged + 1, failures)
+                 | Error _ -> (migrated, unchanged, failures + 1))
+               (0, 0, 0)
+        in
+        let summary =
+          Printf.sprintf
+            "Migration summary: migrated %d, unchanged %d, failed %d, total %d"
+            migrated unchanged failures total
+        in
+        if failures > 0 then logAndExit (Error summary)
+        else logAndExit (Ok summary))
   | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatCodeblocksHelp)

@@ -227,7 +227,11 @@ Float.parseIntWithRadix("12", ~radix=13) == 15.0
 Float.parseIntWithRadix("17", ~radix=40)->Float.isNaN == true
 ```
 */
-@deprecated("Use `parseInt` instead") @val
+@deprecated({
+  reason: "Use `parseInt` instead",
+  migrate: Float.parseInt(),
+})
+@val
 external parseIntWithRadix: ('a, ~radix: int) => float = "parseInt"
 
 /**
@@ -269,7 +273,11 @@ Float.toExponentialWithPrecision(5678.0, ~digits=2) == "5.68e+3"
 
 - `RangeError`: If `digits` less than 0 or greater than 10.
 */
-@deprecated("Use `toExponential` instead") @send
+@deprecated({
+  reason: "Use `toExponential` instead",
+  migrate: Float.toExponential(),
+})
+@send
 external toExponentialWithPrecision: (float, ~digits: int) => string = "toExponential"
 
 /**
@@ -311,7 +319,11 @@ Float.toFixedWithPrecision(300.0, ~digits=1) == "300.0"
 
 - `RangeError`: If `digits` is less than 0 or larger than 100.
 */
-@deprecated("Use `toFixed` instead") @send
+@deprecated({
+  reason: "Use `toFixed` instead",
+  migrate: Float.toFixed(),
+})
+@send
 external toFixedWithPrecision: (float, ~digits: int) => string = "toFixed"
 
 /**
@@ -356,7 +368,11 @@ Float.toPrecisionWithPrecision(1.0, ~digits=1) == "1"
   ECMA-262 only requires a precision of up to 21 significant digits.
   
 */
-@deprecated("Use `toPrecision` instead") @send
+@deprecated({
+  reason: "Use `toPrecision` instead",
+  migrate: Float.toPrecision(),
+})
+@send
 external toPrecisionWithPrecision: (float, ~digits: int) => string = "toPrecision"
 
 /**
@@ -390,7 +406,11 @@ Float.toStringWithRadix(123456.0, ~radix=36) == "2n9c"
 
 `RangeError`: if `radix` is less than 2 or greater than 36.
 */
-@deprecated("Use `toString` with `~radix` instead") @send
+@deprecated({
+  reason: "Use `toString` with `~radix` instead",
+  migrate: Float.toString(),
+})
+@send
 external toStringWithRadix: (float, ~radix: int) => string = "toString"
 
 /**

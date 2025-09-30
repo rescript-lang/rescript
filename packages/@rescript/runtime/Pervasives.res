@@ -22,9 +22,10 @@ result == "Caught exception: Out of milk"
 */
 external throw: exn => 'a = "%raise"
 
-@deprecated(
-  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
-)
+@deprecated({
+  reason: "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead",
+  migrate: throw(),
+})
 external raise: exn => 'a = "%raise"
 
 @deprecated("Use custom exception instead")

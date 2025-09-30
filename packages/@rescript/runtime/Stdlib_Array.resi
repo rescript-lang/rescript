@@ -32,6 +32,17 @@ external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /**
+`fromString(str)` creates an array of each character as a separate string from the provided `str`.
+
+## Examples
+
+```rescript
+Array.fromString("abcde") == ["a", "b", "c", "d", "e"]
+```
+*/
+@val external fromString: string => array<string> = "Array.from"
+
+/**
 `make(~length, init)` creates an array of length `length` initialized with the value of `init`.
 
 ## Examples
@@ -85,28 +96,19 @@ external length: array<'a> => int = "%array_length"
 ## Examples
 
 ```rescript
-[]->Array.isEmpty->assertEqual(true)
-[1, 2, 3]->Array.isEmpty->assertEqual(false)
-
-let emptyArray = []
-emptyArray->Array.isEmpty->assertEqual(true)
-
-let nonEmptyArray = ["hello"]
-nonEmptyArray->Array.isEmpty->assertEqual(false)
+let arr = [100, 101, 102, 103, 104]
+arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
+arr == [100, 101, 100, 101, 102]
 ```
 */
-let isEmpty: array<'a> => bool
-
-// TODO: Docs
-@deprecated("Use `copyWithin` instead") @send
-external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
-
-// TODO: Docs
-@deprecated("Use `copyWithin` instead") @send
-external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: Array.copyWithin(~start=0),
+})
+@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
 /**
-`copyWithin(array, ~target, ~start, ~end)` copies the sequence of array elements within the array to the position starting at `target`. The copy is taken from the index positions `start` to `end`.
+`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.
 
 Beware this will *mutate* the array.
 
@@ -115,11 +117,31 @@ See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 ## Examples
 
 ```rescript
-let myArray = [1, 2, 3, 4, 5]
-myArray->Array.copyWithin(~target=0, ~start=3) == [4, 5, 3, 4, 5]
+let arr = [100, 101, 102, 103, 104]
+arr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]
+arr == [102, 103, 104, 103, 104]
+```
+*/
+@deprecated({
+  reason: "Use `copyWithin` instead",
+  migrate: Array.copyWithin(),
+})
+@send
+external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
-let myArray = [1, 2, 3, 4, 5]
-myArray->Array.copyWithin(~target=1, ~start=3, ~end=4) == [1, 4, 3, 4, 5]
+/**
+`copyWithin(array, ~target, ~start, ~end)` copies starting at element `start` in the given array up to but not including `end` to the designated `target` position, returning the resulting array.
+
+Beware this will *mutate* the array.
+
+See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
+
+## Examples
+
+```rescript
+let arr = [100, 101, 102, 103, 104, 105]
+arr->Array.copyWithin(~target=1, ~start=2, ~end=5) == [100, 102, 103, 104, 104, 105]
+arr == [100, 102, 103, 104, 104, 105]
 ```
 */
 @send
@@ -140,7 +162,11 @@ myArray->Array.fillAll(9)
 myArray == [9, 9, 9, 9]
 ```
 */
-@deprecated("Use `fill` instead") @send
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: Array.fill(),
+})
+@send
 external fillAll: (array<'a>, 'a) => unit = "fill"
 
 /**
@@ -158,7 +184,11 @@ myArray->Array.fillToEnd(9, ~start=1)
 myArray == [1, 9, 9, 9]
 ```
 */
-@deprecated("Use `fill` instead") @send
+@deprecated({
+  reason: "Use `fill` instead",
+  migrate: Array.fill(~start=%insert.labelledArgument("start")),
+})
+@send
 external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
 /**
@@ -488,7 +518,11 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ```
 */
 let indexOfOpt: (array<'a>, 'a) => option<int>
-@deprecated("Use `indexOf` instead") @send
+@deprecated({
+  reason: "Use `indexOf` instead",
+  migrate: Array.indexOf(~from=%insert.unlabelledArgument(2)),
+})
+@send
 external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
 
 /**
@@ -514,7 +548,11 @@ external join: (array<string>, string) => string = "join"
 ["One", "Two", "Three"]->Array.joinWith(" -- ") == "One -- Two -- Three"
 ```
 */
-@deprecated("Use `join` instead") @send
+@deprecated({
+  reason: "Use `join` instead",
+  migrate: Array.join(),
+})
+@send
 external joinWith: (array<string>, string) => string = "join"
 
 /**
@@ -540,7 +578,11 @@ external joinUnsafe: (array<'a>, string) => string = "join"
 [1, 2, 3]->Array.joinWithUnsafe(" -- ") == "1 -- 2 -- 3"
 ```
 */
-@deprecated("Use `joinUnsafe` instead") @send
+@deprecated({
+  reason: "Use `joinUnsafe` instead",
+  migrate: Array.joinUnsafe(),
+})
+@send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
 /**
 `lastIndexOf(array, item, ~from)` returns the last index of the provided `item` in `array`, searching backwards from `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
@@ -561,7 +603,11 @@ See [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 */
 @send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>
-@deprecated("Use `lastIndexOf` instead") @send
+@deprecated({
+  reason: "Use `lastIndexOf` instead",
+  migrate: Array.lastIndexOf(~from=%insert.unlabelledArgument(2)),
+})
+@send
 external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
 
 /**
@@ -591,7 +637,11 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 [1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]
 ```
 */
-@deprecated("Use `slice` instead") @send
+@deprecated({
+  reason: "Use `slice` instead",
+  migrate: Array.slice(),
+})
+@send
 external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
 /**
 `copy(array)` makes a copy of the array with the items in it, but does not make copies of the items themselves.
@@ -1096,7 +1146,10 @@ for index in 0 to array->Array.length - 1 {
 }
 ```
 */
-@deprecated("Use getUnsafe instead. This will be removed in v13")
+@deprecated({
+  reason: "Use getUnsafe instead. This will be removed in v13",
+  migrate: Array.getUnsafe(),
+})
 external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 /**

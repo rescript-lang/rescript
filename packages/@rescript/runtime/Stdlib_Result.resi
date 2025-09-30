@@ -64,7 +64,10 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
   } == true
   ```
 */
-@deprecated("Use 'getOrThrow' instead")
+@deprecated({
+  reason: "Use 'getOrThrow' instead",
+  migrate: Result.getOrThrow(),
+})
 let getExn: (result<'a, 'b>, ~message: string=?) => 'a
 
 /**
@@ -101,7 +104,10 @@ Result.mapOr(error, 0, x => x / 2) == 0
 */
 let mapOr: (result<'a, 'c>, 'b, 'a => 'b) => 'b
 
-@deprecated("Use mapOr instead")
+@deprecated({
+  reason: "Use mapOr instead",
+  migrate: Result.mapOr(),
+})
 let mapWithDefault: (result<'a, 'c>, 'b, 'a => 'b) => 'b
 
 /**
@@ -158,7 +164,10 @@ Result.getOr(Error("Invalid Data"), 0) == 0
 */
 let getOr: (result<'a, 'b>, 'a) => 'a
 
-@deprecated("Use getOr instead")
+@deprecated({
+  reason: "Use getOr instead",
+  migrate: Result.getOr(),
+})
 let getWithDefault: (result<'a, 'b>, 'a) => 'a
 
 /**
