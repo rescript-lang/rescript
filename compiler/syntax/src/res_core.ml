@@ -2560,15 +2560,15 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
           ( Ast_helper.Pat.var ~loc:expr.pexp_loc
               (Location.mkloc
                  (Longident.flatten longident.txt |> String.concat ".")
-                 longident.loc)
-          , false )
-        | Pexp_construct ({txt = Longident.Lident "()"} as lid, None) ->
+                 longident.loc),
+            false )
+        | Pexp_construct (({txt = Longident.Lident "()"} as lid), None) ->
           (Ast_helper.Pat.construct ~loc:expr.pexp_loc lid None, true)
         (* TODO: can we convert more expressions to patterns?*)
         | _ ->
           ( Ast_helper.Pat.var ~loc:expr.pexp_loc
-              (Location.mkloc "pattern" expr.pexp_loc)
-          , false )
+              (Location.mkloc "pattern" expr.pexp_loc),
+            false )
       in
       let arrow1 =
         Ast_helper.Exp.fun_
@@ -2578,9 +2578,8 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
       in
       (* When the "expr" was `()`, the colon must apply to the return type, so
          skip the ambiguity diagnostic and keep the parameter as unit. *)
-      if expr_is_unit then
-        arrow1
-      else (
+      if expr_is_unit then arrow1
+      else
         let arrow2 =
           Ast_helper.Exp.fun_
             ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
@@ -2610,7 +2609,7 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
         in
         Parser.err ~start_pos:expr.pexp_loc.loc_start
           ~end_pos:body.pexp_loc.loc_end p (Diagnostics.message msg);
-        arrow1)
+        arrow1
     | _ ->
       let loc = mk_loc expr.pexp_loc.loc_start typ.ptyp_loc.loc_end in
       let expr = Ast_helper.Exp.constraint_ ~loc expr typ in
