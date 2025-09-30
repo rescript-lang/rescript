@@ -4,7 +4,7 @@
 Developers regularly ask for a lightweight way to exit a function before its final expression. Today they must emulate early exits using nested conditionals, exceptions, or helper functions, which obscures intent and bloats JavaScript output. Supporting a first-class `return` keyword improves readability, enables more idiomatic interop with JavaScript, and narrows the ergonomics gap with other languages while preserving ReScript's expression-oriented style.
 
 ## Goals
-- Introduce a `return` expression that exits the innermost function, optionally carrying a value (`return expr` or `return;`).
+- Introduce a `return` expression that exits the innermost function, optionally carrying a value (`return expr` or bare `return`).
 - Type-check `return` so that subsequent code is treated as unreachable, avoiding spurious exhaustiveness warnings.
 - Emit direct JavaScript `return` statements to make async and `try` interactions behave exactly like plain JS.
 - Preserve backward compatibility for existing code that does not use `return`.
@@ -17,11 +17,11 @@ Developers regularly ask for a lightweight way to exit a function before its fin
 ## Semantics Overview
 - `return` is an expression with the bottom-like type `never`. The payload, when present, must unify with the enclosing function's declared result.
 - `return` targets only the innermost function scope, including anonymous functions and closures.
-- `return;` is syntactic sugar for `return ();` but keeps type `never` so the function's result type must be `unit`.
+- A bare `return` is sugar for returning `unit`, still typed as `never`.
 - Once a `return` is evaluated, control flow stops at that point; subsequent expressions in the same block are unreachable.
 
 ## Syntax Layer Changes (`compiler/syntax/`)
-- Extend the grammar in `parser.mly` to parse `return` as a `simple_expr` with an optional trailing expression (`return`, `return expr`).
+- Extend the grammar handled in `compiler/syntax/src/res_parser.ml` (and related helpers such as `res_grammar.ml`) to parse `return` as an expression with an optional trailing payload (`return` or `return expr`).
 - Add `Pexp_return of expression option` to `parsetree.ml`, and update related helpers (`ast_iterator`, printers, etc.).
 - Mirror the changes in `ast_mapper_from0.ml` and `ast_mapper_to0.ml` to maintain compatibility with `parsetree0.ml` (which must stay frozen).
 - Update syntax error recovery to produce messages such as “`return` is only allowed inside function bodies" when seen in invalid positions.
@@ -71,6 +71,5 @@ Developers regularly ask for a lightweight way to exit a function before its fin
 
 ## Open Questions & Follow-ups
 - Does the compiler already expose a notion of bottom in other phases? If so, integrate rather than re-invent; otherwise, ensure `never` is threaded consistently (e.g. into `Predef` and external tooling).
-- Should `return` be allowed inside `fun { } =>` pipelines or only as a standalone statement expression? Current proposal allows it anywhere expressions are permitted, but we should validate editor ergonomics and readability.
+- Validate how `return` reads inside pipeline-heavy expressions; current proposal allows it everywhere, but we should document guidance if certain patterns feel awkward.
 - Consider introducing linting guidance to discourage overuse in expression-heavy code while still allowing pragmatic escapes.
-
