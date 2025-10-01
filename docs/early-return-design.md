@@ -28,16 +28,15 @@ Developers regularly ask for a lightweight way to exit a function before its fin
 - Add new parser fixtures under `tests/syntax_tests/` (positive and negative cases).
 
 ## Typed Tree & Type Checking (`compiler/ml/`)
-- Introduce `Texp_return` in `Typedtree.expression_desc` and a corresponding record in `Typedtree_helper` utilities.
+- Introduce `Texp_return` in `Typedtree.expression_desc` (update `compiler/ml/typedtree.mli` and `typedtree.ml`) and thread it through the existing iterators/printers.
 - Extend `typecore.ml` to:
-  - Ensure we are inside a function context (reusing or extending `env.in_function`).
+  - Reject uses outside functions by reusing the existing optional `in_function` plumbing that `type_function` already threads through.
   - Type-check the optional payload against the enclosing function's result type.
-  - Assign the new `never` type to the expression so downstream phases treat it as non-returning.
-  - Register an error when used outside functions or when the payload type mismatches.
-- Introduce a dedicated bottom type constructor (`never`) if one does not already exist:
-  - Extend `Types.type_desc` and helpers in `btype.ml` / `ctype.ml` with `Tnever` (or similar) plus `Predef` registration, including printer support in `printtyp.ml`.
-  - Update utility predicates (`Types.maybe_bottom`, dead-code checks) to understand the new type.
-- Ensure exhaustiveness and dead code analysis (e.g. `parmatch.ml`, `clflags.warn_error`) treat `never` as non-fallthrough so we avoid double warnings.
+- Populate the new node with a freshly created type variable (mirroring how `%raise` is typed today) so downstream phases treat it as non-returning without introducing a bespoke primitive type.
+  - Emit appropriate errors on context or payload mismatches.
+  - Keep `type_statement` warning behaviour intact so `return` inherits the existing `Warnings.Nonreturning_statement` flow (`compiler/ml/typecore.ml:3884-3894`).
+- If the type-variable approach proves insufficient, adding an explicit bottom constructor would require touching `Types.type_desc` plus `btype.ml`, `ctype.ml`, `predef.ml`, and the printers in `printtyp.ml`, but the current pipeline already models non-returning code via `Tvar`.
+- Ensure exhaustiveness and dead code analysis (e.g. `compiler/ml/parmatch.ml`, `compiler/ext/warnings.ml`) treat `return` as non-fallthrough so we avoid double warnings.
 - Update typed tree iterators and printers (`TypedtreeIter`, `Printtyped`) to handle `Texp_return`.
 
 ## Lambda IR Translation (`compiler/core/`)
@@ -50,7 +49,7 @@ Developers regularly ask for a lightweight way to exit a function before its fin
 ## JavaScript Backend (`compiler/core/js_*`)
 - Update JS lowering (`lam_compile.ml`, `js_output.ml`) so lambda outputs marked as “finished” get converted to `return_stmt payload` and no additional implicit return is appended.
 - Ensure `switch`/`if` lowering avoids emitting duplicate `return` statements when a branch already ends with `return`. This likely relies on `output_finished = True` plumbing already used by `throw` and existing returns.
-- Adjust `js_stmt_make` / `js_exp_make` to expose helper constructors where needed, and audit passes like `js_pass_flatten.ml` to respect terminating statements.
+- Adjust `js_stmt_make` / `js_exp_make` to expose helper constructors where needed, and audit passes like `js_pass_flatten_and_mark_dead.ml` to respect terminating statements.
 - Validate async helpers and promise sugar to confirm the generated functions contain direct `return` statements, ensuring semantics match JavaScript.
 
 ## Tooling & Diagnostics
@@ -69,7 +68,12 @@ Developers regularly ask for a lightweight way to exit a function before its fin
 - **Lambda / JS IR tests**: add golden-print tests verifying `Lreturn` in `lam_print` and generated JS blocks for representative cases (`if`, `switch`, `try/finally`, async wrappers).
 - **Integration tests** (`tests/build_tests/`): demonstrate runtime behaviour, including interaction with promise helpers and exceptions.
 
+## Existing Unreachable Code Handling
+- **Typechecker warnings**: `type_statement` warns with `Warnings.Nonreturning_statement` whenever an expression typed as a bare `Tvar` is discarded (`compiler/ml/typecore.ml:3884-3894`), which is how `%raise` communicates non-returning behaviour today.
+- **Pattern reachability**: `Parmatch.check_unused` emits `Warnings.Unreachable_case` for dead match arms and already runs for every `Texp_match`/`Texp_function` (`compiler/ml/parmatch.ml:2158-2201`).
+- **Backend pruning**: `%raise` lowers to `Lprim (Praise, …)` in `translcore` (`compiler/ml/translcore.ml:738-745`). The JS backend recognises that primitive and marks the output as finished (`compiler/core/lam_compile.ml:1540-1560`), and `Js_output.append_output` drops any subsequent statements when `output_finished = True` (`compiler/core/js_output.ml:82-138`). A future `return` node should reuse this plumbing so dead statements are automatically discarded without a new bottom type.
+
 ## Open Questions & Follow-ups
-- Does the compiler already expose a notion of bottom in other phases? If so, integrate rather than re-invent; otherwise, ensure `never` is threaded consistently (e.g. into `Predef` and external tooling).
+- The compiler already models non-returning expressions via fresh type variables plus warning logic (`compiler/ml/typecore.ml:3884-3894`) and by marking backend outputs as finished (`compiler/core/lam_compile.ml:1540-1560`, `compiler/core/js_output.ml:117-138`). Reuse that machinery for `return` before introducing a dedicated `never` constructor.
 - Validate how `return` reads inside pipeline-heavy expressions; current proposal allows it everywhere, but we should document guidance if certain patterns feel awkward.
 - Consider introducing linting guidance to discourage overuse in expression-heavy code while still allowing pragmatic escapes.
