@@ -21,7 +21,6 @@
     "@testrepo/new-namespace",
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
-    "@testrepo/nonexisting-dev-files",
     "@testrepo/deprecated-config",
     "@testrepo/file-casing",
     "@testrepo/file-casing-no-namespace",
