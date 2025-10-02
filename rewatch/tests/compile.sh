@@ -100,9 +100,9 @@ rewatch build --snapshot-output &> ../tests/snapshots/bs-dev-dependency-used-by-
 normalize_paths ../tests/snapshots/bs-dev-dependency-used-by-non-dev-source.txt
 git checkout -- packages/with-dev-deps/src/FileToTest.res
 
-# it should compile dev dependencies with the --dev flag
-rewatch clean --dev &> /dev/null
-rewatch build --dev &> /dev/null;
+# it should compile dev dependencies
+rewatch clean &> /dev/null
+rewatch build &> /dev/null;
 if [ $? -ne 0 ];
 then
   error "Failed to compile dev dependencies"
@@ -115,11 +115,11 @@ if [ "$file_count" -eq $expected_file_count ];
 then
   success "Compiled dev dependencies successfully"
 else
-  error "Expected $expected_file_count files to be compiled with the --dev flag, found $file_count"
+  error "Expected $expected_file_count files to be compiled, found $file_count"
   exit 1
 fi
 
-error_output=$(rewatch clean --dev 2>&1 >/dev/null)
+error_output=$(rewatch clean 2>&1 >/dev/null)
 file_count=$(find ./packages/with-dev-deps -name *.mjs | wc -l)
 if [ "$file_count" -eq 0 ];
 then

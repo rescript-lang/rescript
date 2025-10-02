@@ -60,7 +60,7 @@ fi
 
 bold "Test: it should format dev package as well"
 
-error_output=$("$REWATCH_EXECUTABLE" format --dev)
+error_output=$("$REWATCH_EXECUTABLE" format)
 git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 9 ];
 then

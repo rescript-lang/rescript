@@ -66,7 +66,7 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            if watch_args.dev.dev{
+            if watch_args.dev.dev {
                 log::warn!(
                     "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
                 );

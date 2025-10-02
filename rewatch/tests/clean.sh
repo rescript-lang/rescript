@@ -48,10 +48,10 @@ else
   exit 1
 fi
 
-bold "--dev should clean dev-dependencies of monorepo"
+bold "-should clean dev-dependencies of monorepo"
 
-# First we build the entire monorepo (including --dev)
-error_output=$(rewatch build --dev 2>&1)
+# First we build the entire monorepo
+error_output=$(rewatch build 2>&1)
 if [ $? -eq 0 ];
 then
   success "Built monorepo"
@@ -61,8 +61,8 @@ else
   exit 1
 fi
 
-# Clean entire monorepo (including --dev)
-error_output=$(rewatch clean --dev 2>&1)
+# Clean entire monorepo
+error_output=$(rewatch clean 2>&1)
 clean_status=$?
 if [ $clean_status -ne 0 ];
 then

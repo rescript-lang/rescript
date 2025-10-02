@@ -78,15 +78,9 @@ async fn async_watch(
         warn_error,
     }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
-    let mut build_state: build::build_types::BuildCommandState = build::initialize_build(
-        None,
-        filter,
-        show_progress,
-        path,
-        snapshot_output,
-        warn_error,
-    )
-    .expect("Can't initialize build");
+    let mut build_state: build::build_types::BuildCommandState =
+        build::initialize_build(None, filter, show_progress, path, snapshot_output, warn_error)
+            .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
