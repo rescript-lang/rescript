@@ -10,12 +10,12 @@ type rec t =
 @unboxed
 type replacer = Keys(array<string>) | Replacer((string, t) => t)
 
-@raises @val external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
+@throws @val external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
-@deprecated("Use `parseOrThrow` instead") @raises @val
+@deprecated("Use `parseOrThrow` instead") @throws @val
 external parseExn: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
-@deprecated("Use `parseOrThrow` with optional parameter instead") @raises @val
+@deprecated("Use `parseOrThrow` with optional parameter instead") @throws @val
 external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
 
 @val external stringify: (t, ~replacer: replacer=?, ~space: int=?) => string = "JSON.stringify"
@@ -30,19 +30,19 @@ external stringifyWithFilter: (t, array<string>) => string = "JSON.stringify"
 @deprecated("Use `stringify` with optional parameters instead") @val
 external stringifyWithFilterAndIndent: (t, array<string>, int) => string = "JSON.stringify"
 
-@raises @val
+@throws @val
 external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<string> =
   "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameter instead") @raises @val
+@deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
 external stringifyAnyWithIndent: ('a, @as(json`null`) _, int) => option<string> = "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameter instead") @raises @val
+@deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
 external stringifyAnyWithReplacer: ('a, (string, t) => t) => option<string> = "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameters instead") @raises @val
+@deprecated("Use `stringifyAny` with optional parameters instead") @throws @val
 external stringifyAnyWithReplacerAndIndent: ('a, (string, t) => t, int) => option<string> =
   "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameter instead") @raises @val
+@deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
 external stringifyAnyWithFilter: ('a, array<string>) => string = "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameters instead") @raises @val
+@deprecated("Use `stringifyAny` with optional parameters instead") @throws @val
 external stringifyAnyWithFilterAndIndent: ('a, array<string>, int) => string = "JSON.stringify"
 
 module Classify = {

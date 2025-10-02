@@ -102,9 +102,9 @@ let missingRaiseInfoToText {missingAnnotations; locFull} =
     Format.asprintf "%a" (Exceptions.pp ~exnTable:None) missingAnnotations
   in
   if !Cli.json then
-    EmitJson.emitAnnotate ~action:"Add @raises annotation"
+    EmitJson.emitAnnotate ~action:"Add @throws annotation"
       ~pos:(EmitJson.locToPos locFull)
-      ~text:(Format.asprintf "@raises(%s)\\n" missingTxt)
+      ~text:(Format.asprintf "@throws(%s)\\n" missingTxt)
   else ""
 
 let logAdditionalInfo ~(description : description) =
@@ -126,7 +126,7 @@ let missingRaiseInfoToMessage {exnTable; exnName; missingAnnotations; raiseSet}
     Format.asprintf "%a" (Exceptions.pp ~exnTable:None) missingAnnotations
   in
   Format.asprintf
-    "@{<info>%s@} might raise %s and is not annotated with @raises(%s)" exnName
+    "@{<info>%s@} might raise %s and is not annotated with @throws(%s)" exnName
     raisesTxt missingTxt
 
 let descriptionToMessage (description : description) =

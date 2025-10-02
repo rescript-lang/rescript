@@ -211,7 +211,7 @@ module Checks = struct
                       raiseSet
                 in
                 Format.asprintf
-                  "@{<info>%s@} %a and is annotated with redundant @raises(%a)"
+                  "@{<info>%s@} %a and is annotated with redundant @throws(%a)"
                   exnName raisesDescription ()
                   (Exceptions.pp ~exnTable:None)
                   redundantAnnotations);
@@ -362,7 +362,8 @@ let traverseAst () =
   let getExceptionsFromAnnotations attributes =
     let raisesAnnotationPayload =
       attributes
-      |> Annotation.getAttributePayload (fun s -> s = "raises" || s = "raise")
+      |> Annotation.getAttributePayload (fun s ->
+             s = "throws" || s = "throw" || s = "raises" || s = "raise")
     in
     let rec getExceptions payload =
       match payload with

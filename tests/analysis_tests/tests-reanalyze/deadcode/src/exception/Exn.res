@@ -13,12 +13,12 @@ let raiseAndCatch = try throw(Not_found) catch {
 | _ => ()
 }
 
-@raises(Not_found)
+@throws(Not_found)
 let raisesWithAnnotaion = () => throw(Not_found)
 
 let callsRaiseWithAnnotation = raisesWithAnnotaion()
 
-@raises(A)
+@throws(A)
 let callsRaiseWithAnnotationAndIsAnnotated = raisesWithAnnotaion()
 
 let incompleteMatch = l =>
@@ -58,7 +58,7 @@ let wrongCatch2 = b =>
   | list{} => ()
   }
 
-@raises([A, B, C])
+@throws([A, B, C])
 let raise2Annotate3 = (x, y) => {
   if x {
     throw(A)
@@ -106,16 +106,16 @@ let tryChar = v => {
   42
 }
 
-@raises(Not_found)
+@throws(Not_found)
 let raiseAtAt = () => \"@@"(raise, Not_found)
 
-@raises(Not_found)
+@throws(Not_found)
 let raisePipe = throw(Not_found)
 
-@raises(Not_found)
+@throws(Not_found)
 let raiseArrow = Not_found->raise
 
-@raises(JsExn)
+@throws(JsExn)
 let bar = () => Js.Json.parseExn("!!!")
 
 let severalCases = cases =>
@@ -126,10 +126,10 @@ let severalCases = cases =>
   | _ => ()
   }
 
-@raises(genericException)
+@throws(genericException)
 let genericRaiseIsNotSupported = exn => throw(exn)
 
-@raises(Invalid_argument)
+@throws(Invalid_argument)
 let redundantAnnotation = () => ()
 
 let _x = throw(A)

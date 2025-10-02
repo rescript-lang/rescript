@@ -149,11 +149,22 @@ The `@new` decorator is used whenever you need to bind to a JavaScript class con
     ( "raises",
       Some "raises(\"$0\")",
       [
-        {|The `@raises` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+        {|The `@raises` decorator is deprecated. Please use `@throws` instead.
 
 `@raises` acknowledges that a function can raise exceptions that are not caught, and suppresses
 a warning in that case. Callers of the functions are then subjected to the same rule.
 Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
+[Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
+> Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
+      ] );
+    ( "throws",
+      Some "throws(\"$0\")",
+      [
+        {|The `@throws` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+
+`@throws` acknowledges that a function can raise exceptions that are not caught, and suppresses
+a warning in that case. Callers of the functions are then subjected to the same rule.
+Example `@throws(Exn)` or `@throws([E1, E2, E3])` for multiple exceptions.
 [Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
 > Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );

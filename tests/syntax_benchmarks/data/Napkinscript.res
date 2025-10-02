@@ -1798,7 +1798,7 @@ module Token = {
     | Export => "export"
     }
 
-  @raises(Not_found)
+  @throws(Not_found)
   let keywordTable = x =>
     switch x {
     | "true" => True
