@@ -117,17 +117,17 @@ let logAdditionalInfo ~(description : description) =
     missingRaiseInfoToText missingRaiseInfo
   | _ -> ""
 
-let missingRaiseInfoToMessage {exnTable; exnName; missingAnnotations; raiseSet}
+let missingThrowInfoToMessage {exnTable; exnName; missingAnnotations; throwSet}
     =
-  let raisesTxt =
-    Format.asprintf "%a" (Exceptions.pp ~exnTable:(Some exnTable)) raiseSet
+  let throwsTxt =
+    Format.asprintf "%a" (Exceptions.pp ~exnTable:(Some exnTable)) throwSet
   in
   let missingTxt =
     Format.asprintf "%a" (Exceptions.pp ~exnTable:None) missingAnnotations
   in
   Format.asprintf
-    "@{<info>%s@} might raise %s and is not annotated with @throws(%s)" exnName
-    raisesTxt missingTxt
+    "@{<info>%s@} might throw %s and is not annotated with @throws(%s)" exnName
+    throwsTxt missingTxt
 
 let descriptionToMessage (description : description) =
   match description with
@@ -138,7 +138,7 @@ let descriptionToMessage (description : description) =
     Format.asprintf "@{<info>%s@} %s" path message
   | ExceptionAnalysis {message} -> message
   | ExceptionAnalysisMissing missingRaiseInfo ->
-    missingRaiseInfoToMessage missingRaiseInfo
+    missingThrowInfoToMessage missingRaiseInfo
   | Termination {message} -> message
 
 let descriptionToName (description : description) =

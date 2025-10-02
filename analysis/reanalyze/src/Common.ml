@@ -205,12 +205,12 @@ type line = {mutable declarations: decl list; original: string}
 
 module ExnSet = Set.Make (Exn)
 
-type missingRaiseInfo = {
+type missingThrowInfo = {
   exnName: string;
   exnTable: (Exn.t, LocSet.t) Hashtbl.t;
   locFull: Location.t;
   missingAnnotations: ExnSet.t;
-  raiseSet: ExnSet.t;
+  throwSet: ExnSet.t;
 }
 
 type severity = Warning | Error
@@ -234,7 +234,7 @@ type lineAnnotation = (decl * line) option
 type description =
   | Circular of {message: string}
   | ExceptionAnalysis of {message: string}
-  | ExceptionAnalysisMissing of missingRaiseInfo
+  | ExceptionAnalysisMissing of missingThrowInfo
   | DeadModule of {message: string}
   | DeadOptional of {deadOptional: deadOptional; message: string}
   | DeadWarning of {

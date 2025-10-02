@@ -66,9 +66,9 @@ module Event = struct
   type kind =
     | Catches of t list (* with | E => ... *)
     | Call of {callee: Common.Path.t; modulePath: Common.Path.t} (* foo() *)
-    | DoesNotRaise of
-        t list (* DoesNotRaise(events) where events come from an expression *)
-    | Raises  (** raise E *)
+    | DoesNotThrow of
+        t list (* DoesNotThrow(events) where events come from an expression *)
+    | Throws  (** raise E *)
 
   and t = {exceptions: Exceptions.t; kind: kind; loc: Location.t}
 
@@ -81,14 +81,14 @@ module Event = struct
         (modulePath |> Common.Path.toString)
         (Exceptions.pp ~exnTable:None)
         exceptions
-    | {kind = DoesNotRaise nestedEvents; loc} ->
-      Format.fprintf ppf "%s DoesNotRaise(%a)@."
+    | {kind = DoesNotThrow nestedEvents; loc} ->
+      Format.fprintf ppf "%s DoesNotThrow(%a)@."
         (loc.loc_start |> posToString)
         (fun ppf () ->
           nestedEvents |> List.iter (fun e -> Format.fprintf ppf "%a " print e))
         ()
-    | {kind = Raises; exceptions; loc} ->
-      Format.fprintf ppf "%s raises %a@."
+    | {kind = Throws; exceptions; loc} ->
+      Format.fprintf ppf "%s throws %a@."
         (loc.loc_start |> posToString)
         (Exceptions.pp ~exnTable:None)
         exceptions
@@ -118,7 +118,7 @@ module Event = struct
     in
     let rec loop exnSet events =
       match events with
-      | ({kind = Raises; exceptions; loc} as ev) :: rest ->
+      | ({kind = Throws; exceptions; loc} as ev) :: rest ->
         if !Common.Cli.debug then Log_.item "%a@." print ev;
         exceptions |> Exceptions.iter (fun exn -> extendExnTable exn loc);
         loop (Exceptions.union exnSet exceptions) rest
@@ -134,7 +134,7 @@ module Event = struct
         in
         exceptions |> Exceptions.iter (fun exn -> extendExnTable exn loc);
         loop (Exceptions.union exnSet exceptions) rest
-      | ({kind = DoesNotRaise nestedEvents; loc} as ev) :: rest ->
+      | ({kind = DoesNotThrow nestedEvents; loc} as ev) :: rest ->
         if !Common.Cli.debug then Log_.item "%a@." print ev;
         let nestedExceptions = loop Exceptions.empty nestedEvents in
         (if Exceptions.isEmpty nestedExceptions (* catch-all *) then
@@ -148,8 +148,8 @@ module Event = struct
                 {
                   message =
                     Format.asprintf
-                      "@{<info>%s@} does not raise and is annotated with \
-                       redundant @doesNotRaise"
+                      "@{<info>%s@} does not throw and is annotated with \
+                       redundant @doesNotThrow"
                       (name |> Name.toString);
                 }));
         loop exnSet rest
@@ -188,13 +188,13 @@ module Checks = struct
     checks := {events; exceptions; loc; locFull; moduleName; exnName} :: !checks
 
   let doCheck {events; exceptions; loc; locFull; moduleName; exnName} =
-    let raiseSet, exnTable = events |> Event.combine ~moduleName in
-    let missingAnnotations = Exceptions.diff raiseSet exceptions in
-    let redundantAnnotations = Exceptions.diff exceptions raiseSet in
+    let throwSet, exnTable = events |> Event.combine ~moduleName in
+    let missingAnnotations = Exceptions.diff throwSet exceptions in
+    let redundantAnnotations = Exceptions.diff exceptions throwSet in
     (if not (Exceptions.isEmpty missingAnnotations) then
        let description =
          Common.ExceptionAnalysisMissing
-           {exnName; exnTable; raiseSet; missingAnnotations; locFull}
+           {exnName; exnTable; throwSet; missingAnnotations; locFull}
        in
        Log_.warning ~loc description);
     if not (Exceptions.isEmpty redundantAnnotations) then
@@ -203,12 +203,12 @@ module Checks = struct
            {
              message =
                (let raisesDescription ppf () =
-                  if raiseSet |> Exceptions.isEmpty then
+                  if throwSet |> Exceptions.isEmpty then
                     Format.fprintf ppf "raises nothing"
                   else
                     Format.fprintf ppf "might raise %a"
                       (Exceptions.pp ~exnTable:(Some exnTable))
-                      raiseSet
+                      throwSet
                 in
                 Format.asprintf
                   "@{<info>%s@} %a and is annotated with redundant @throws(%a)"
@@ -249,7 +249,7 @@ let traverseAst () =
            case.c_guard |> iterExprOpt self;
            case.c_rhs |> iterExpr self)
   in
-  let isRaise s = s = "Pervasives.raise" || s = "Pervasives.throw" in
+  let isThrow s = s = "Pervasives.raise" || s = "Pervasives.throw" in
   let raiseArgs args =
     match args with
     | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, _, _)})] ->
@@ -258,26 +258,29 @@ let traverseAst () =
       [Exn.fromString "genericException"] |> Exceptions.fromList
     | _ -> [Exn.fromString "TODO_from_raise1"] |> Exceptions.fromList
   in
-  let doesNotRaise attributes =
+  let doesNotThrow attributes =
     attributes
-    |> Annotation.getAttributePayload (fun s ->
-           s = "doesNotRaise" || s = "doesnotraise" || s = "DoesNoRaise"
-           || s = "doesNotraise" || s = "doNotRaise" || s = "donotraise"
-           || s = "DoNoRaise" || s = "doNotraise")
+    |> Annotation.getAttributePayload (function
+         | "doesNotRaise" | "doesnotraise" | "DoesNoRaise" | "doesNotraise"
+         | "doNotRaise" | "donotraise" | "DoNoRaise" | "doNotraise"
+         | "doesNotThrow" | "doesnotthrow" | "DoesNoThrow" | "doesNotthrow"
+         | "doNotThrow" | "donotthrow" | "DoNoThrow" | "doNotthrow" ->
+           true
+         | _ -> false)
     <> None
   in
   let expr (self : Tast_mapper.mapper) (expr : Typedtree.expression) =
     let loc = expr.exp_loc in
-    let isDoesNoRaise = expr.exp_attributes |> doesNotRaise in
+    let isDoesNoThrow = expr.exp_attributes |> doesNotThrow in
     let oldEvents = !currentEvents in
-    if isDoesNoRaise then currentEvents := [];
+    if isDoesNoThrow then currentEvents := [];
     (match expr.exp_desc with
     | Texp_ident (callee_, _, _) ->
       let callee =
         callee_ |> Common.Path.fromPathT |> ModulePath.resolveAlias
       in
       let calleeName = callee |> Common.Path.toName in
-      if calleeName |> Name.toString |> isRaise then
+      if calleeName |> Name.toString |> isThrow then
         Log_.warning ~loc
           (Common.ExceptionAnalysis
              {
@@ -299,17 +302,17 @@ let traverseAst () =
           args = [(_lbl1, Some {exp_desc = Texp_ident (callee, _, _)}); arg];
         }
       when (* raise @@ Exn(...) *)
-           atat |> Path.name = "Pervasives.@@" && callee |> Path.name |> isRaise
+           atat |> Path.name = "Pervasives.@@" && callee |> Path.name |> isThrow
       ->
       let exceptions = [arg] |> raiseArgs in
-      currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
+      currentEvents := {Event.exceptions; loc; kind = Throws} :: !currentEvents;
       arg |> snd |> iterExprOpt self
     | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args} ->
       let calleeName = Path.name callee in
-      if calleeName |> isRaise then
+      if calleeName |> isThrow then
         let exceptions = args |> raiseArgs in
         currentEvents :=
-          {Event.exceptions; loc; kind = Raises} :: !currentEvents
+          {Event.exceptions; loc; kind = Throws} :: !currentEvents
       else e |> iterExpr self;
       args |> List.iter (fun (_, eOpt) -> eOpt |> iterExprOpt self)
     | Texp_match (e, casesOk, casesExn, partial) ->
@@ -332,7 +335,7 @@ let traverseAst () =
           {
             Event.exceptions = [Exn.matchFailure] |> Exceptions.fromList;
             loc;
-            kind = Raises;
+            kind = Throws;
           }
           :: !currentEvents
     | Texp_try (e, cases) ->
@@ -348,19 +351,19 @@ let traverseAst () =
         {Event.exceptions; loc; kind = Catches !currentEvents} :: oldEvents;
       cases |> iterCases self
     | _ -> super.expr self expr |> ignore);
-    (if isDoesNoRaise then
+    (if isDoesNoThrow then
        let nestedEvents = !currentEvents in
        currentEvents :=
          {
            Event.exceptions = Exceptions.empty;
            loc;
-           kind = DoesNotRaise nestedEvents;
+           kind = DoesNotThrow nestedEvents;
          }
          :: oldEvents);
     expr
   in
   let getExceptionsFromAnnotations attributes =
-    let raisesAnnotationPayload =
+    let throwsAnnotationPayload =
       attributes
       |> Annotation.getAttributePayload (fun s ->
              s = "throws" || s = "throw" || s = "raises" || s = "raise")
@@ -380,7 +383,7 @@ let traverseAst () =
         |> List.concat |> Exceptions.fromList
       | _ -> Exceptions.empty
     in
-    match raisesAnnotationPayload with
+    match throwsAnnotationPayload with
     | None -> Exceptions.empty
     | Some payload -> payload |> getExceptions
   in

@@ -9,17 +9,17 @@ let catches2 = switch () {
 | exception Not_found => ()
 }
 
-let raiseAndCatch = try throw(Not_found) catch {
+let throwAndCatch = try throw(Not_found) catch {
 | _ => ()
 }
 
 @throws(Not_found)
-let raisesWithAnnotaion = () => throw(Not_found)
+let throwsWithAnnotation = () => throw(Not_found)
 
-let callsRaiseWithAnnotation = raisesWithAnnotaion()
+let callsThrowWithAnnotation = throwsWithAnnotation()
 
 @throws(A)
-let callsRaiseWithAnnotationAndIsAnnotated = raisesWithAnnotaion()
+let callsThrowWithAnnotationAndIsAnnotated = throwsWithAnnotation()
 
 let incompleteMatch = l =>
   switch l {
@@ -29,7 +29,7 @@ let incompleteMatch = l =>
 exception A
 exception B
 
-let twoRaises = (x, y) => {
+let twoThrows = (x, y) => {
   if x {
     throw(A)
   }
@@ -59,7 +59,7 @@ let wrongCatch2 = b =>
   }
 
 @throws([A, B, C])
-let raise2Annotate3 = (x, y) => {
+let throw2Annotate3 = (x, y) => {
   if x {
     throw(A)
   }
@@ -77,7 +77,7 @@ let parse_json_from_file = s => {
   }
 }
 
-let reRaise = () =>
+let reThrow = () =>
   switch throw(A) {
   | exception A => throw(B)
   | _ => 11
@@ -88,12 +88,12 @@ let switchWithCatchAll = switch throw(A) {
 | _ => 2
 }
 
-let raiseInInternalLet = b => {
+let throwInInternalLet = b => {
   let a = b ? throw(A) : 22
   a + 34
 }
 
-let indirectCall = () => raisesWithAnnotaion()
+let indirectCall = () => throwsWithAnnotation()
 
 let array = a => a[2]
 
@@ -107,13 +107,13 @@ let tryChar = v => {
 }
 
 @throws(Not_found)
-let raiseAtAt = () => \"@@"(raise, Not_found)
+let throwAtAt = () => \"@@"(throw, Not_found)
 
 @throws(Not_found)
-let raisePipe = throw(Not_found)
+let throwPipe = throw(Not_found)
 
 @throws(Not_found)
-let raiseArrow = Not_found->raise
+let throwArrow = Not_found->throw
 
 @throws(JsExn)
 let bar = () => Js.Json.parseExn("!!!")
@@ -127,7 +127,7 @@ let severalCases = cases =>
   }
 
 @throws(genericException)
-let genericRaiseIsNotSupported = exn => throw(exn)
+let genericThrowIsNotSupported = exn => throw(exn)
 
 @throws(Invalid_argument)
 let redundantAnnotation = () => ()
@@ -142,10 +142,10 @@ throw(Not_found)
 
 // Examples with pipe
 
-let onFunction = () => (@doesNotRaise Belt.Array.getExn)([], 0)
+let onFunction = () => (@doesNotThrow Belt.Array.getExn)([], 0)
 
-let onResult = () => @doesNotRaise Belt.Array.getExn([], 0)
+let onResult = () => @doesNotThrow Belt.Array.getExn([], 0)
 
-let onFunctionPipe = () => []->(@doesNotRaise Belt.Array.getExn)(0)
+let onFunctionPipe = () => []->(@doesNotThrow Belt.Array.getExn)(0)
 
-let onResultPipeWrong = () => (@doesNotRaise [])->Belt.Array.getExn(0)
+let onResultPipeWrong = () => (@doesNotThrow [])->Belt.Array.getExn(0)
