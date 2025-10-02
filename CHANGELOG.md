@@ -29,6 +29,7 @@
 #### :nail_care: Polish
 
 - Rewatch cli: do not show build command options in the root help. https://github.com/rescript-lang/rescript/pull/7715
+- Deprecate reanalyze `@raises` in favor of `@throws`. https://github.com/rescript-lang/rescript/pull/7932
 
 #### :house: Internal
 
