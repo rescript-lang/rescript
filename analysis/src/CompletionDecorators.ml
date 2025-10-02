@@ -41,12 +41,24 @@ Alternatively, use the `@@deprecated` decorator to add a deprecation warning to 
     ( "doesNotRaise",
       None,
       [
-        {|The `@doesNotRaise` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+        {|The `@doesNotRaise` decorator is deprecated. Please use `@doesNotThrow` instead.
 
-`@doesNotRaise` is uses to override the analysis and state that an expression does not raise any exceptions,
+`@doesNotRaise` is uses to override the analysis and state that an expression does not throw any exceptions,
 even though the analysis reports otherwise. This can happen for example in the case of array access where
 the analysis does not perform range checks but takes a conservative stance that any access
-could potentially raise.
+could potentially throw.
+[Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
+> Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
+      ] );
+    ( "doesNotThrow",
+      None,
+      [
+        {|The `@doesNotThrow` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+
+`@doesNotThrow` is uses to override the analysis and state that an expression does not throw any exceptions,
+even though the analysis reports otherwise. This can happen for example in the case of array access where
+the analysis does not perform range checks but takes a conservative stance that any access
+could potentially throw.
 [Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
 > Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );
@@ -151,7 +163,7 @@ The `@new` decorator is used whenever you need to bind to a JavaScript class con
       [
         {|The `@raises` decorator is deprecated. Please use `@throws` instead.
 
-`@raises` acknowledges that a function can raise exceptions that are not caught, and suppresses
+`@raises` acknowledges that a function can throw exceptions that are not caught, and suppresses
 a warning in that case. Callers of the functions are then subjected to the same rule.
 Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
 [Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
@@ -162,7 +174,7 @@ Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
       [
         {|The `@throws` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
 
-`@throws` acknowledges that a function can raise exceptions that are not caught, and suppresses
+`@throws` acknowledges that a function can throw exceptions that are not caught, and suppresses
 a warning in that case. Callers of the functions are then subjected to the same rule.
 Example `@throws(Exn)` or `@throws([E1, E2, E3])` for multiple exceptions.
 [Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
