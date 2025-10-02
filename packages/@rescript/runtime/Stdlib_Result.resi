@@ -172,11 +172,11 @@ let isOk: result<'a, 'b> => bool
 let isError: result<'a, 'b> => bool
 
 /**
-`equal(res1, res2, f)`: Determine if two `Result` variables are equal with
-respect to an equality function. If `res1` and `res2` are of the form `Ok(n)`
-and `Ok(m)`, return the result of `f(n, m)`. If one of `res1` and `res2` are of
+`equal(res1, res2, fOk, fError)`: Determine if two `Result` variables are equal with
+respect to equality functions. If `res1` and `res2` are of the form `Ok(n)`
+and `Ok(m)`, return the result of `fOk(n, m)`. If one of `res1` and `res2` are of
 the form `Error(e)`, return false If both `res1` and `res2` are of the form
-`Error(e)`, return true
+`Error(e)`, return the result of `fError(e1, e2)`.
 
 ## Examples
 
@@ -191,28 +191,28 @@ let bad2 = Error("really invalid")
 
 let mod10equal = (a, b) => mod(a, 10) === mod(b, 10)
 
-Result.equal(good1, good2, mod10equal) == true
+Result.equal(good1, good2, mod10equal, String.equal) == true
 
-Result.equal(good1, bad1, mod10equal) == false
+Result.equal(good1, bad1, mod10equal, String.equal) == false
 
-Result.equal(bad2, good2, mod10equal) == false
+Result.equal(bad2, good2, mod10equal, String.equal) == false
 
-Result.equal(bad1, bad2, mod10equal) == true
+Result.equal(bad1, bad2, mod10equal, String.equal) == false
 ```
 */
-let equal: (result<'a, 'c>, result<'b, 'd>, ('a, 'b) => bool) => bool
+let equal: (result<'a, 'c>, result<'b, 'd>, ('a, 'b) => bool, ('c, 'd) => bool) => bool
 
 /**
-`compare(res1, res2, f)`: Compare two `Result` variables with respect to a
+`compare(res1, res2, fOk, fError)`: Compare two `Result` variables with respect to a
 comparison function. The comparison function returns -1. if the first variable
 is "less than" the second, 0. if the two variables are equal, and 1. if the first
 is "greater than" the second.
 
 If `res1` and `res2` are of the form `Ok(n)` and `Ok(m)`, return the result of
-`f(n, m)`. If `res1` is of the form `Error(e)` and `res2` of the form `Ok(n)`,
+`fOk(n, m)`. If `res1` is of the form `Error(e)` and `res2` of the form `Ok(n)`,
 return -1. (nothing is less than something) If `res1` is of the form `Ok(n)` and
-`res2` of the form `Error(e)`, return 1. (something is greater than nothing) If
-both `res1` and `res2` are of the form `Error(e)`, return 0. (equal)
+`res2` is of the form `Error(e)`, return 1. (something is greater than nothing) If
+both `res1` and `res2` are of the form `Error(e)`, return fError(e1, e2).
 
 ## Examples
 
@@ -227,18 +227,23 @@ let bad2 = Error("really invalid")
 
 let mod10cmp = (a, b) => Int.compare(mod(a, 10), mod(b, 10))
 
-Result.compare(Ok(39), Ok(57), mod10cmp) == 1.
+Result.compare(Ok(39), Ok(57), mod10cmp, String.compare) == 1.
 
-Result.compare(Ok(57), Ok(39), mod10cmp) == -1.
+Result.compare(Ok(57), Ok(39), mod10cmp, String.compare) == -1.
 
-Result.compare(Ok(39), Error("y"), mod10cmp) == 1.
+Result.compare(Ok(39), Error("y"), mod10cmp, String.compare) == 1.
 
-Result.compare(Error("x"), Ok(57), mod10cmp) == -1.
+Result.compare(Error("x"), Ok(57), mod10cmp, String.compare) == -1.
 
-Result.compare(Error("x"), Error("y"), mod10cmp) == 0.
+Result.compare(Error("x"), Error("y"), mod10cmp, String.compare) == -1.
 ```
 */
-let compare: (result<'a, 'c>, result<'b, 'd>, ('a, 'b) => Stdlib_Ordering.t) => Stdlib_Ordering.t
+let compare: (
+  result<'a, 'c>,
+  result<'b, 'd>,
+  ('a, 'b) => Stdlib_Ordering.t,
+  ('c, 'd) => Stdlib_Ordering.t,
+) => Stdlib_Ordering.t
 
 /**
 `forEach(res, f)` runs the provided function `f` on the `Ok` value. If `res` is `Error`, nothing happens.

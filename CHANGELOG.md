@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Removed "rescript legacy" subcommand in favor of separate "rescript-legacy" binary. https://github.com/rescript-lang/rescript/pull/7928
+- Add comparison fn for Error in Result.equal and compare. https://github.com/rescript-lang/rescript/pull/7933
 
 #### :eyeglasses: Spec Compliance
 

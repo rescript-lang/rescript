@@ -77,20 +77,20 @@ let isError = x =>
   | Error(_) => true
   }
 
-let equal = (a, b, f) =>
+let equal = (a, b, fOk, fError) =>
   switch (a, b) {
-  | (Ok(a), Ok(b)) => f(a, b)
+  | (Ok(a), Ok(b)) => fOk(a, b)
   | (Error(_), Ok(_))
   | (Ok(_), Error(_)) => false
-  | (Error(_), Error(_)) => true
+  | (Error(a), Error(b)) => fError(a, b)
   }
 
-let compare = (a, b, f) =>
+let compare = (a, b, fOk, fError) =>
   switch (a, b) {
-  | (Ok(a), Ok(b)) => f(a, b)
+  | (Ok(a), Ok(b)) => fOk(a, b)
   | (Error(_), Ok(_)) => Stdlib_Ordering.less
   | (Ok(_), Error(_)) => Stdlib_Ordering.greater
-  | (Error(_), Error(_)) => Stdlib_Ordering.equal
+  | (Error(a), Error(b)) => fError(a, b)
   }
 
 let forEach = (r, f) =>
