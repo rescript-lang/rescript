@@ -334,30 +334,15 @@ Note that there's currently still a manual step involved on [rescript-lang.org](
 
 ## Contribute to the API Reference
 
-The API reference is generated from doc comments in the source code. [Here](https://github.com/rescript-lang/rescript-compiler/blob/99650/jscomp/others/js_re.mli#L146-L161)'s a good example.
+The API reference is generated from doc comments in the source code. [Here](https://github.com/rescript-lang/rescript/blob/57c696b1a38f53badaddcc082ed29188d80df70d/packages/%40rescript/runtime/Stdlib_String.resi#L441-L458)'s a good example.
 
 Some tips:
 
-- The first sentence or line should be a very short summary. This is used in indexes and by tools like merlin.
-- Ideally, every function should have **at least one** `@example`.
-- Cross-reference another definition with `{! identifier}`. But use them sparingly, they’re a bit verbose (currently, at least).
-- Wrap non-cross-referenced identifiers and other code in `[ ... ]`.
-- Escape `{`, `}`, `[`, `]` and `@` using `\`.
-- It’s possible to use `{%html ...}` to generate custom html, but use this very, very sparingly.
-- A number of "documentation tags" are provided that would be nice to use, but unfortunately they’re often not supported for \`external\`s. Which is of course most of the API.
-- `@param` usually doesn’t work. Use `{b <param>} ...` instead
-- `@returns` usually doesn’t work. Use `{b returns} ...` instead.
+- The first sentence or line should show the function call with a very short summary.
+- Ideally, every function should have an `## Examples` section with **at least one** example. The examples are compiled to check that they are correct. Use `==` to generate tests from the examples.
 - Always use `@deprecated` when applicable.
-- Always use `@raise` when applicable.
-- Always provide a `@see` tag pointing to MDN for more information when available.
-
-See [Ocamldoc documentation](http://caml.inria.fr/pub/docs/manual-ocaml/ocamldoc.html#sec333) for more details.
-
-To generate the html:
-
-```sh
-../scripts/ninja docs
-```
+- Always use `@throw` when applicable.
+- Always provide a `See` section pointing to MDN for more information when available.
 
 ## Contribute to JSX `domProps`
 
@@ -389,6 +374,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
 (If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
 Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
+
 ## Code structure
 
 The highlevel architecture is illustrated as below:
