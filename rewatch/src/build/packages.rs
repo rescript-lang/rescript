@@ -288,12 +288,12 @@ fn read_dependencies(
     project_context: &ProjectContext,
     package_config: &Config,
     show_progress: bool,
-    build_dev_deps: bool,
+    is_local_dep: bool,
 ) -> Vec<Dependency> {
     let mut dependencies = package_config.dependencies.to_owned().unwrap_or_default();
 
-    // Concatenate dev dependencies if build_dev_deps is true
-    if build_dev_deps && let Some(dev_deps) = package_config.dev_dependencies.to_owned() {
+    // Concatenate dev dependencies if is_local_dep is true
+    if is_local_dep && let Some(dev_deps) = package_config.dev_dependencies.to_owned() {
         dependencies.extend(dev_deps);
     }
 
@@ -367,7 +367,7 @@ fn read_dependencies(
                 project_context,
                 &config,
                 show_progress,
-                is_local_dep && build_dev_deps,
+                is_local_dep,
             );
 
             Dependency {
@@ -477,11 +477,7 @@ This inconsistency will cause issues with package resolution.\n",
     }
 }
 
-fn read_packages(
-    project_context: &ProjectContext,
-    show_progress: bool,
-    build_dev_deps: bool,
-) -> Result<AHashMap<String, Package>> {
+fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
     let current_package = {
@@ -501,7 +497,7 @@ fn read_packages(
         project_context,
         &project_context.current_config,
         show_progress,
-        build_dev_deps,
+        /* is local dep */ true,
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
@@ -564,7 +560,6 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
-    build_dev_deps: bool,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
         let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
@@ -577,7 +572,7 @@ fn extend_with_children(
                     Path::new(&package.path),
                     filter,
                     source,
-                    package.is_local_dep && build_dev_deps,
+                    package.is_local_dep,
                 )
             })
             .collect::<Vec<AHashMap<PathBuf, SourceFileMeta>>>()
@@ -620,13 +615,12 @@ pub fn make(
     filter: &Option<regex::Regex>,
     project_context: &ProjectContext,
     show_progress: bool,
-    build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
-    let map = read_packages(project_context, show_progress, build_dev_deps)?;
+    let map = read_packages(project_context, show_progress)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map, build_dev_deps);
+    let result = extend_with_children(filter, map);
 
     Ok(result)
 }

@@ -226,7 +226,7 @@ impl ProjectContext {
 
     /// Returns the local packages relevant for the current context.
     /// Either a single project, all projects from a monorepo or a single package inside a monorepo.
-    pub fn get_scoped_local_packages(&self, include_dev_deps: bool) -> AHashSet<String> {
+    pub fn get_scoped_local_packages(&self) -> AHashSet<String> {
         let mut local_packages = AHashSet::<String>::new();
         match &self.monorepo_context {
             None => {
@@ -238,9 +238,7 @@ impl ProjectContext {
             }) => {
                 local_packages.insert(self.current_config.name.clone());
                 local_packages.extend(local_dependencies.iter().cloned());
-                if include_dev_deps {
-                    local_packages.extend(local_dev_dependencies.iter().cloned());
-                }
+                local_packages.extend(local_dev_dependencies.iter().cloned());
             }
             Some(MonoRepoContext::MonorepoPackage { .. }) => {
                 local_packages.insert(self.current_config.name.clone());

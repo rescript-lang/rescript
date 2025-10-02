@@ -131,7 +131,6 @@ pub fn initialize_build(
     filter: &Option<regex::Regex>,
     show_progress: bool,
     path: &Path,
-    build_dev_deps: bool,
     snapshot_output: bool,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
@@ -144,7 +143,7 @@ pub fn initialize_build(
     }
 
     let timing_package_tree = Instant::now();
-    let packages = packages::make(filter, &project_context, show_progress, build_dev_deps)?;
+    let packages = packages::make(filter, &project_context, show_progress)?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
     let compiler_check = verify_compiler_info(&packages, &compiler);
@@ -540,7 +539,6 @@ pub fn build(
     show_progress: bool,
     no_timing: bool,
     create_sourcedirs: bool,
-    build_dev_deps: bool,
     snapshot_output: bool,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
@@ -555,7 +553,6 @@ pub fn build(
         filter,
         show_progress,
         path,
-        build_dev_deps,
         snapshot_output,
         warn_error,
     )

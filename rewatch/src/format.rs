@@ -12,12 +12,7 @@ use crate::build::packages;
 use crate::cli::FileExtension;
 use clap::ValueEnum;
 
-pub fn format(
-    stdin_extension: Option<FileExtension>,
-    check: bool,
-    files: Vec<String>,
-    format_dev_deps: bool,
-) -> Result<()> {
+pub fn format(stdin_extension: Option<FileExtension>, check: bool, files: Vec<String>) -> Result<()> {
     let bsc_path = helpers::get_bsc();
 
     match stdin_extension {
@@ -26,7 +21,7 @@ pub fn format(
         }
         None => {
             let files = if files.is_empty() {
-                get_files_in_scope(format_dev_deps)?
+                get_files_in_scope()?
             } else {
                 files
             };
@@ -37,13 +32,13 @@ pub fn format(
     Ok(())
 }
 
-fn get_files_in_scope(format_dev_deps: bool) -> Result<Vec<String>> {
+fn get_files_in_scope() -> Result<Vec<String>> {
     let current_dir = std::env::current_dir()?;
     let project_context = project_context::ProjectContext::new(&current_dir)?;
 
-    let packages = packages::make(&None, &project_context, false, format_dev_deps)?;
+    let packages = packages::make(&None, &project_context, false)?;
     let mut files: Vec<String> = Vec::new();
-    let packages_to_format = project_context.get_scoped_local_packages(format_dev_deps);
+    let packages_to_format = project_context.get_scoped_local_packages();
 
     for (_package_name, package) in packages {
         if packages_to_format.contains(&package.name)

@@ -36,13 +36,18 @@ fn main() -> Result<()> {
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
 
+            if build_args.dev.dev {
+                log::warn!(
+                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
+                );
+            }
+
             match build::build(
                 &build_args.filter,
                 Path::new(&build_args.folder as &str),
                 show_progress,
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
-                *build_args.dev,
                 *build_args.snapshot_output,
                 build_args.warn_error.clone(),
             ) {
@@ -61,13 +66,18 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
+            if watch_args.dev.dev{
+                log::warn!(
+                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
+                );
+            }
+
             watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),
                 *watch_args.create_sourcedirs,
-                *watch_args.dev,
                 *watch_args.snapshot_output,
                 watch_args.warn_error.clone(),
             );
@@ -81,19 +91,27 @@ fn main() -> Result<()> {
         } => {
             let _lock = get_lock(&folder);
 
-            build::clean::clean(
-                Path::new(&folder as &str),
-                show_progress,
-                *snapshot_output,
-                dev.dev,
-            )
+            if dev.dev {
+                log::warn!(
+                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
+                );
+            }
+
+            build::clean::clean(Path::new(&folder as &str), show_progress, *snapshot_output)
         }
         cli::Command::Format {
             stdin,
             check,
             files,
             dev,
-        } => format::format(stdin, check, files, dev.dev),
+        } => {
+            if dev.dev {
+                log::warn!(
+                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
+                );
+            }
+            format::format(stdin, check, files)
+        }
     }
 }
 

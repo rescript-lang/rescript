@@ -212,12 +212,9 @@ pub struct CreateSourceDirsArg {
 
 #[derive(Args, Debug, Clone, Copy)]
 pub struct DevArg {
-    /// Build development dependencies
+    /// Deprecated: Build development dependencies
     ///
-    /// This is the flag to also compile development dependencies
-    /// It's important to know that we currently do not discern between project src, and
-    /// dependencies. So enabling this flag will enable building _all_ development dependencies of
-    /// _all_ packages
+    /// This is the flag no longer does anything and will be removed in future versions.
     #[arg(long, default_value_t = false, num_args = 0..=1)]
     pub dev: bool,
 }
