@@ -73,7 +73,30 @@ Developers regularly ask for a lightweight way to exit a function before its fin
 - **Pattern reachability**: `Parmatch.check_unused` emits `Warnings.Unreachable_case` for dead match arms and already runs for every `Texp_match`/`Texp_function` (`compiler/ml/parmatch.ml:2158-2201`).
 - **Backend pruning**: `%raise` lowers to `Lprim (Praise, …)` in `translcore` (`compiler/ml/translcore.ml:738-745`). The JS backend recognises that primitive and marks the output as finished (`compiler/core/lam_compile.ml:1540-1560`), and `Js_output.append_output` drops any subsequent statements when `output_finished = True` (`compiler/core/js_output.ml:82-138`). A future `return` node should reuse this plumbing so dead statements are automatically discarded without a new bottom type.
 
+## Prior Art
+- **Rust**
+  - **Syntax**: supports `return expr;` and bare `return;` alongside the idiomatic “last expression wins” rule.
+  - **Semantics**: the `return` expression has the bottom type `!`, so type inference and control-flow analysis mark all following code as unreachable. The same machinery covers other diverging constructs (`loop {}`, `panic!`), letting borrow checking and MIR optimisations short-circuit safely.
+  - **Interoperability**: because Rust targets native back-ends, early return is compiled to direct jumps, proving the pattern fits expression-oriented languages that still value low-level control.
+- **Kotlin**
+  - **Syntax**: `return expr` exits the current function; `return@label expr` exits a labeled lambda or loop, preserving expression-based APIs such as `run { … }` and collection pipelines.
+  - **Semantics**: `return` yields the bottom type `Nothing`. Smart casts and exhaustiveness checking treat `Nothing` as terminating, so unreachable code is rejected and type inference remains precise.
+  - **Diagnostics**: Kotlin’s flow analysis creates “dead code” warnings immediately after a `return`, demonstrating the value of threading bottom types through the checker.
+- **Scala**
+  - **Syntax**: `return expr` returns from the nearest named method; it is legal inside expression bodies but not idiomatic.
+  - **Semantics**: the return expression has type `Nothing`, Scala’s bottom type. Inside anonymous functions the compiler lowers `return` to throwing `NonLocalReturnControl`, which highlights surprising control flow when the target is not obvious.
+  - **Lesson**: ReScript should explicitly specify whether `return` is allowed in closures and, if so, how it interacts with captured continuations to avoid Scala’s non-local return pitfalls.
+- **Swift**
+  - **Syntax**: `return expr` is required unless the function consists of a single expression; `guard … else { return }` is a first-class use-case.
+  - **Semantics**: Swift’s `Never` bottom type represents non-returning code. Diagnose unreachable statements immediately after `return`, and type inference propagates `Never` through `guard`/`switch` constructs.
+  - **Interop**: Because Swift targets multiple back-ends (including JS through SwiftWasm), it shows early return maps cleanly to JavaScript code generation.
+- **TypeScript / JavaScript**
+  - **Syntax**: `return expr;` is a statement. TypeScript adds inference of the bottom type `never` for functions that always return or throw, feeding its exhaustiveness checking and control-flow narrowing.
+  - **Semantics**: even without expression syntax, TypeScript’s `never` demonstrates the benefit of a bottom type for tooling and editor diagnostics—something ReScript can leverage while preserving JS parity.
+- **Swift / Rust Hybrids vs ML lineage**
+  - OCaml, Standard ML, Elm, Haskell, and F# avoid early return altogether, relying on expression composition or exceptions. This contrast underlines that adopting `return` aligns ReScript with Rust/Kotlin ergonomics rather than traditional ML style, but also that we can reuse ML-derived analyses if we thread a bottom type carefully.
+
 ## Open Questions & Follow-ups
-- The compiler already models non-returning expressions via fresh type variables plus warning logic (`compiler/ml/typecore.ml:3884-3894`) and by marking backend outputs as finished (`compiler/core/lam_compile.ml:1540-1560`, `compiler/core/js_output.ml:117-138`). Reuse that machinery for `return` before introducing a dedicated `never` constructor.
+- The compiler already models non-returning expressions via fresh type variables plus warning logic (`compiler/ml/typecore.ml:3884-3894`) and by marking backend outputs as finished (`compiler/core/lam_compile.ml:1540-1560`, `compiler/core/js_output.ml:117-138`). Reuse that machinery for `return` before introducing a dedicated `never` constructor—but note that every language we surveyed leans on an explicit bottom type (`!`, `Nothing`, `Never`, `never`) to make control-flow reasoning robust.
 - Validate how `return` reads inside pipeline-heavy expressions; current proposal allows it everywhere, but we should document guidance if certain patterns feel awkward.
 - Consider introducing linting guidance to discourage overuse in expression-heavy code while still allowing pragmatic escapes.
