@@ -215,7 +215,7 @@ pub struct DevArg {
     /// Deprecated: Build development dependencies
     ///
     /// This is the flag no longer does anything and will be removed in future versions.
-    #[arg(long, default_value_t = false, num_args = 0..=1)]
+    #[arg(long, default_value_t = false, num_args = 0..=1, hide = true)]
     pub dev: bool,
 }
 
