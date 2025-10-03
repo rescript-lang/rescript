@@ -68,7 +68,7 @@ module Event = struct
     | Call of {callee: Common.Path.t; modulePath: Common.Path.t} (* foo() *)
     | DoesNotThrow of
         t list (* DoesNotThrow(events) where events come from an expression *)
-    | Throws  (** raise E *)
+    | Throws  (** throw E *)
 
   and t = {exceptions: Exceptions.t; kind: kind; loc: Location.t}
 
@@ -158,12 +158,12 @@ module Event = struct
         if Exceptions.isEmpty exceptions then loop exnSet rest
         else
           let nestedExceptions = loop Exceptions.empty nestedEvents in
-          let newRaises = Exceptions.diff nestedExceptions exceptions in
+          let newThrows = Exceptions.diff nestedExceptions exceptions in
           exceptions
           |> Exceptions.iter (fun exn ->
                  nestedEvents
                  |> List.iter (fun event -> shrinkExnTable exn event.loc));
-          loop (Exceptions.union exnSet newRaises) rest
+          loop (Exceptions.union exnSet newThrows) rest
       | [] -> exnSet
     in
     let exnSet = loop Exceptions.empty events in
@@ -202,17 +202,17 @@ module Checks = struct
         (Common.ExceptionAnalysis
            {
              message =
-               (let raisesDescription ppf () =
+               (let throwsDescription ppf () =
                   if throwSet |> Exceptions.isEmpty then
-                    Format.fprintf ppf "raises nothing"
+                    Format.fprintf ppf "throws nothing"
                   else
-                    Format.fprintf ppf "might raise %a"
+                    Format.fprintf ppf "might throw %a"
                       (Exceptions.pp ~exnTable:(Some exnTable))
                       throwSet
                 in
                 Format.asprintf
                   "@{<info>%s@} %a and is annotated with redundant @throws(%a)"
-                  exnName raisesDescription ()
+                  exnName throwsDescription ()
                   (Exceptions.pp ~exnTable:None)
                   redundantAnnotations);
            })
@@ -250,7 +250,7 @@ let traverseAst () =
            case.c_rhs |> iterExpr self)
   in
   let isThrow s = s = "Pervasives.raise" || s = "Pervasives.throw" in
-  let raiseArgs args =
+  let throwArgs args =
     match args with
     | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, _, _)})] ->
       [Exn.fromLid txt] |> Exceptions.fromList
@@ -304,13 +304,13 @@ let traverseAst () =
       when (* raise @@ Exn(...) *)
            atat |> Path.name = "Pervasives.@@" && callee |> Path.name |> isThrow
       ->
-      let exceptions = [arg] |> raiseArgs in
+      let exceptions = [arg] |> throwArgs in
       currentEvents := {Event.exceptions; loc; kind = Throws} :: !currentEvents;
       arg |> snd |> iterExprOpt self
     | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args} ->
       let calleeName = Path.name callee in
       if calleeName |> isThrow then
-        let exceptions = args |> raiseArgs in
+        let exceptions = args |> throwArgs in
         currentEvents :=
           {Event.exceptions; loc; kind = Throws} :: !currentEvents
       else e |> iterExpr self;
