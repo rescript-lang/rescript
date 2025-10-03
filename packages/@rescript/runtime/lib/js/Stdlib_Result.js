@@ -53,31 +53,31 @@ function isError(x) {
   return x.TAG !== "Ok";
 }
 
-function equal(a, b, fOk, fError) {
+function equal(a, b, eqOk, eqError) {
   if (a.TAG === "Ok") {
     if (b.TAG === "Ok") {
-      return fOk(a._0, b._0);
+      return eqOk(a._0, b._0);
     } else {
       return false;
     }
   } else if (b.TAG === "Ok") {
     return false;
   } else {
-    return fError(a._0, b._0);
+    return eqError(a._0, b._0);
   }
 }
 
-function compare(a, b, fOk, fError) {
+function compare(a, b, cmpOk, cmpError) {
   if (a.TAG === "Ok") {
     if (b.TAG === "Ok") {
-      return fOk(a._0, b._0);
+      return cmpOk(a._0, b._0);
     } else {
       return 1;
     }
   } else if (b.TAG === "Ok") {
     return -1;
   } else {
-    return fError(a._0, b._0);
+    return cmpError(a._0, b._0);
   }
 }
 

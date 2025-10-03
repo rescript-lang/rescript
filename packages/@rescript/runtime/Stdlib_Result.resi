@@ -172,11 +172,11 @@ let isOk: result<'a, 'b> => bool
 let isError: result<'a, 'b> => bool
 
 /**
-`equal(res1, res2, fOk, fError)`: Determine if two `Result` variables are equal with
+`equal(res1, res2, eqOk, eqError)`: Determine if two `Result` variables are equal with
 respect to equality functions. If `res1` and `res2` are of the form `Ok(n)`
-and `Ok(m)`, return the result of `fOk(n, m)`. If one of `res1` and `res2` are of
+and `Ok(m)`, return the result of `eqOk(n, m)`. If one of `res1` and `res2` are of
 the form `Error(e)`, return false If both `res1` and `res2` are of the form
-`Error(e)`, return the result of `fError(e1, e2)`.
+`Error(e)`, return the result of `eqError(e1, e2)`.
 
 ## Examples
 
@@ -203,16 +203,16 @@ Result.equal(bad1, bad2, mod10equal, String.equal) == false
 let equal: (result<'a, 'c>, result<'b, 'd>, ('a, 'b) => bool, ('c, 'd) => bool) => bool
 
 /**
-`compare(res1, res2, fOk, fError)`: Compare two `Result` variables with respect to a
+`compare(res1, res2, cmpOk, cmpError)`: Compare two `Result` variables with respect to a
 comparison function. The comparison function returns -1. if the first variable
 is "less than" the second, 0. if the two variables are equal, and 1. if the first
 is "greater than" the second.
 
 If `res1` and `res2` are of the form `Ok(n)` and `Ok(m)`, return the result of
-`fOk(n, m)`. If `res1` is of the form `Error(e)` and `res2` of the form `Ok(n)`,
+`cmpOk(n, m)`. If `res1` is of the form `Error(e)` and `res2` of the form `Ok(n)`,
 return -1. (nothing is less than something) If `res1` is of the form `Ok(n)` and
 `res2` is of the form `Error(e)`, return 1. (something is greater than nothing) If
-both `res1` and `res2` are of the form `Error(e)`, return fError(e1, e2).
+both `res1` and `res2` are of the form `Error(e)`, return cmpError(e1, e2).
 
 ## Examples
 
