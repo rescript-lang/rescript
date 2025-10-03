@@ -15,7 +15,7 @@
 #### :boom: Breaking Change
 
 - Removed "rescript legacy" subcommand in favor of separate "rescript-legacy" binary. https://github.com/rescript-lang/rescript/pull/7928
-- Rewatch: `"type": "dev"` and `dev-dependencies` of local packages will be compiled by default. The `--dev` flag no longer does anything. https://github.com/rescript-lang/rescript/pull/7934
+- Rewatch: `"type": "dev"` and `dev-dependencies` will be compiled by default for local packages. The `--dev` flag no longer does anything. https://github.com/rescript-lang/rescript/pull/7934
 
 #### :eyeglasses: Spec Compliance
 
