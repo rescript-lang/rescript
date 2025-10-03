@@ -99,7 +99,7 @@ One common confusion comes from the way Belt handles array access. It differs fr
 let letters = ["a", "b", "c"]
 let a = letters[0] // a == "a"
 let capitalA = Js.String.toUpperCase(a)
-let k = letters[10] // Raises an exception! The 10th index doesn't exist.
+let k = letters[10] // Throws an exception! The 10th index doesn't exist.
 ```
 
 Because Belt avoids exceptions and returns `options` instead, this code behaves differently:
@@ -114,7 +114,7 @@ let captialA = Js.String.toUpperCase(a) // Type error! This code will not compil
 let k = letters[10] // k == None
 ```
 
-Although we've fixed the problem where `k` raises an exception, we now have a type error when trying to capitalize `a`. There are a few things going on here:
+Although we've fixed the problem where `k` throws an exception, we now have a type error when trying to capitalize `a`. There are a few things going on here:
 
 - Reason transforms array index access to the function `Array.get`. So `letters[0]` is the same as `Array.get(letters, 0)`.
 - The compiler uses whichever `Array` module is in scope. If you `open Belt`, then it uses `Belt.Array`.

@@ -164,7 +164,7 @@ if 5 > 10 {
 external raise: t => 'a = "%raise"
 
 /**
-Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
+Throws the given exception, terminating execution unless caught by a surrounding try/catch block.
 
 ## Examples
 
@@ -182,7 +182,7 @@ if 5 > 10 {
 external throw: t => 'a = "%raise"
 
 /**
-Raises a panic exception with the given message.
+Throws a panic exception with the given message.
 
 A panic exception is a native JavaScript exception that is not intended to be caught and
 handled. Compared to a ReScript exception this will give a better stack trace and

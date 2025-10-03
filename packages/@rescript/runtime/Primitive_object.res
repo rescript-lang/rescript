@@ -67,7 +67,7 @@ let updateDummy = Primitive_object_extern.updateDummy
     Namely, the comparison predicates treat nan as different from any other float value,
     including itself; while compare treats [nan] as equal to itself and less than any other float value.
     This treatment of [nan] ensures that compare defines a total ordering relation.
-    compare applied to functional values may raise Invalid_argument. compare applied to cyclic structures
+    compare applied to functional values may throw Invalid_argument. compare applied to cyclic structures
     may not terminate.
 
     The compare function can be used as the comparison function required by the [Set.Make] and [Map.Make] functors,
@@ -268,7 +268,7 @@ let rec equal = (a: t, b: t): bool =>
       ) {
         false
       } else {
-        /* [a] [b] could not be null, so it can not raise */
+        /* [a] [b] could not be null, so it can not throw */
         let tag_a = tag(a)
         let tag_b = tag(b)
         if tag_a != tag_b {

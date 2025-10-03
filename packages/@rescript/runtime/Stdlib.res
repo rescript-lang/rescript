@@ -109,7 +109,7 @@ external import: 'a => promise<'a> = "%import"
 let panic = JsError.panic
 
 /**
-`assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception
+`assertEqual(a, b)` check if `a` is equal `b`. If not throw a panic exception
 
 ## Examples
 

@@ -117,7 +117,7 @@ let getExn: (t<'v>, key) => 'v
 let getOrThrow: (t<'v>, key) => 'v
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit
 

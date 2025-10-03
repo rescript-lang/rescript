@@ -321,7 +321,7 @@ If `step` is set, the sequence will increase or decrease by that amount for each
 step. If `start < end` and `step` is negative, or vice versa, an empty array is
 returned since the sequence would otherwise never reach or exceed the end value
 and hence be infinite. If `step` is `0` and `start !=` end, a `RangeError` is
-raised as the sequence would never reach or exceed the end value and hence be
+thrown as the sequence would never reach or exceed the end value and hence be
 infinite.
 
 If `inclusive` is set to `true`, the sequence will include `end` if `step` is

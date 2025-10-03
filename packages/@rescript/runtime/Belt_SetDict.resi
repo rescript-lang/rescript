@@ -603,12 +603,12 @@ Same as [get](#get) but returns `undefined` when element does not exist.
 let getUndefined: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => Js.undefined<'value>
 
 /**
-Same as [get](#get) but raise when element does not exist.
+Same as [get](#get) but throw when element does not exist.
 */
 let getExn: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
 
 /**
-Same as [get](#get) but raise when element does not exist.
+Same as [get](#get) but throw when element does not exist.
 */
 let getOrThrow: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
 
@@ -639,6 +639,6 @@ let split: (
 ) => ((t<'value, 'id>, t<'value, 'id>), bool)
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit

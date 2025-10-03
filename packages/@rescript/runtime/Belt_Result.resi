@@ -34,7 +34,7 @@ type t<'a, 'b> = result<'a, 'b> =
   | Error('b)
 
 /**
-`getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
+`getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, throw an exception
 
 ## Examples
 
@@ -42,7 +42,7 @@ type t<'a, 'b> = result<'a, 'b> =
 Belt.Result.Ok(42)->Belt.Result.getExn == 42
 
 switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) {
-// raise a exception
+// throw a exception
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -51,7 +51,7 @@ switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) {
 let getExn: t<'a, 'b> => 'a
 
 /**
-`getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
+`getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, throw an exception
 
 ## Examples
 
@@ -59,7 +59,7 @@ let getExn: t<'a, 'b> => 'a
 Belt.Result.Ok(42)->Belt.Result.getOrThrow == 42
 
 switch Belt.Result.getOrThrow(Belt.Result.Error("Invalid data")) {
-// raise a exception
+// throw a exception
 | exception _ => assert(true)
 | _ => assert(false)
 }

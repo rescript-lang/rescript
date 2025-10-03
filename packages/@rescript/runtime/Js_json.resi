@@ -149,7 +149,7 @@ external objectArray: array<dict<t>> => t = "%identity"
 /**
 `parseExn(s)` parses the `string` `s` into a JSON data structure.
 Returns a JSON data structure.
-Raises `SyntaxError` if the given string is not a valid JSON. Note: `SyntaxError` is a JavaScript exception.
+Throws `SyntaxError` if the given string is not a valid JSON. Note: `SyntaxError` is a JavaScript exception.
 
 See [`parse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse) on MDN.
 
@@ -267,7 +267,7 @@ It is unsafe in two aspects
 let deserializeUnsafe: string => 'a
 
 /**
-It will raise in such situations:
+It will throw in such situations:
 - The object can not be serlialized to a JSON
 - There are cycles
 - Some JS engines can not stringify deeply nested json objects

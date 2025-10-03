@@ -9,8 +9,8 @@
     The type of a lazy value.  `Lazy.t<'a>` represents a lazy value
     that will eventually yield a value of type `'a` when accessed.
     The value is computed only once, and the result is cached for
-    subsequent accesses.  If the computation raises an exception,
-    the same exception is raised again on subsequent accesses.
+    subsequent accesses.  If the computation throws an exception,
+    the same exception is thrown again on subsequent accesses.
  */
 @notUndefined
 type t<+'a>
@@ -36,16 +36,16 @@ let make: (unit => 'a) => t<'a>
 /**
     `Lazy.get(x)` forces the suspension `x` and returns its result.
     If `x` has already been forced, `Lazy.get(x)` returns the
-    same value again without recomputing it.  If it raised an
-    exception, the same exception is raised again.
-    Raise `Undefined` if the forcing of `x` tries to force `x`  itself
+    same value again without recomputing it.  If it threw an
+    exception, the same exception is thrown again.
+    Throw `Undefined` if the forcing of `x` tries to force `x`  itself
     recursively.  This is a runtime error.
  */
 let get: t<'a> => 'a
 
 /**
     `Lazy.isEvaluated(x)` returns `true` if the suspension `x` has
-    already been forced and did not raise an exception.  Otherwise, 
+    already been forced and did not throw an exception.  Otherwise, 
     it returns `false`.  This is useful for checking if a lazy value
     has been computed before accessing it.
 
@@ -68,9 +68,9 @@ exception Undefined
 /** 
     `force(x)` forces the suspension `x` and returns its result.
     If `x` has already been forced, `Lazy.force(x)` returns the
-    same value again without recomputing it.  If it raised an exception,
-    the same exception is raised again.
-    Raise `Undefined` if the forcing of `x` tries to force `x` itself
+    same value again without recomputing it.  If it threw an exception,
+    the same exception is thrown again.
+    Throw `Undefined` if the forcing of `x` tries to force `x` itself
     recursively.
 */
 @deprecated("Use `Lazy.get` instead")
@@ -80,10 +80,10 @@ let force: t<'a> => 'a
     `force_val(x)` forces the suspension `x` and returns its
     result.  If `x` has already been forced, `force_val(x)`
     returns the same value again without recomputing it.
-    Raise `Undefined` if the forcing of `x` tries to force `x` itself
+    Throw `Undefined` if the forcing of `x` tries to force `x` itself
     recursively.
-    If the computation of `x` raises an exception, it is unspecified
-    whether `force_val(x)` raises the same exception or `Undefined`.
+    If the computation of `x` throws an exception, it is unspecified
+    whether `force_val(x)` throws the same exception or `Undefined`.
 */
 @deprecated("Use `Lazy.get` instead")
 let force_val: t<'a> => 'a
@@ -106,7 +106,7 @@ let from_val: 'a => t<'a>
 
 /** 
     `is_val(x)` returns `true` if `x has already been forced and
-    did not raise an exception.
+    did not throw an exception.
 */
 @deprecated("Use `Lazy.isEvaluated` instead")
 let is_val: t<'a> => bool

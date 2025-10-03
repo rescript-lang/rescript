@@ -67,7 +67,7 @@ external isFinite: float => bool = "isFinite"
 
 /**
 Formats a `float` using exponential (scientific) notation. Return a
-`string` representing the given value in exponential notation. Raise
+`string` representing the given value in exponential notation. Throw
 RangeError if digits is not in the range \[0, 20\] (inclusive). See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
 
 ## Examples
@@ -88,7 +88,7 @@ Formats a `float` using exponential (scientific) notation. `digits` specifies
 how many digits should appear after the decimal point. The value must be in
 the range \[0, 20\] (inclusive). Return a `string` representing the given value
 in exponential notation. The output will be rounded or padded with zeroes if
-necessary. Raise RangeError if `digits` is not in the range \[0, 20\] (inclusive).
+necessary. Throw RangeError if `digits` is not in the range \[0, 20\] (inclusive).
 See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
 
 ## Examples
@@ -103,7 +103,7 @@ external toExponentialWithPrecision: (float, ~digits: int) => string = "toExpone
 
 /**
 Formats a `float` using fixed point notation. Return a `string` representing the
-given value in fixed-point notation (usually). Raise RangeError if digits is not
+given value in fixed-point notation (usually). Throw RangeError if digits is not
 in the range \[0, 20\] (inclusive). See [`toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.
 
 ## Examples
@@ -127,7 +127,7 @@ fixed-point notation (usually). See [`toFixed`](https://developer.mozilla.org/en
 
 The output will be rounded or padded with zeroes if necessary.
 
-Raise RangeError if digits is not in the range \[0, 20\] (inclusive)
+Throw RangeError if digits is not in the range \[0, 20\] (inclusive)
 
 ## Examples
 
@@ -149,7 +149,7 @@ from `Js.Float.toFixed` in that the former will format the number with full
 precision, while the latter will not output any digits after the decimal point.
 See [`toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.
 
-Raise RangeError if digits is not in the range accepted by this function (what do you mean "vague"?)
+Throw RangeError if digits is not in the range accepted by this function (what do you mean "vague"?)
 
 ## Examples
 
@@ -181,7 +181,7 @@ the digits after the decimal point. `toPrecisionWithPrecision` will also use
 scientific notation if the specified precision is less than the number for digits
 before the decimal point.
 
-Raise RangeError if digits is not in the range accepted by this function (what do you mean "vague"?)
+Throw RangeError if digits is not in the range accepted by this function (what do you mean "vague"?)
 
 ## Examples
 
@@ -215,7 +215,7 @@ Formats a `float` as a string. `radix` specifies the radix base to use for the
 formatted number. The value must be in the range \[2, 36\] (inclusive). Return a
 `string` representing the given value in fixed-point (usually). See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
 
-Raise RangeError if radix is not in the range \[2, 36\] (inclusive)
+Throw RangeError if radix is not in the range \[2, 36\] (inclusive)
 
 ## Examples
 

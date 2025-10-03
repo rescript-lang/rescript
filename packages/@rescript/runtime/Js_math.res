@@ -557,7 +557,7 @@ on MDN.
 external minMany_float: array<float> => float = "min"
 
 /**
-Raises the given base to the given exponent. (Arguments and result are
+Throws the given base to the given exponent. (Arguments and result are
 integers.) See
 [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow)
 on MDN.
@@ -572,7 +572,7 @@ Js.Math.pow_int(~base=3, ~exp=4) == 81
 external pow_int: (~base: int, ~exp: int) => int = "pow"
 
 /**
-Raises the given base to the given exponent. (Arguments and result are
+Throws the given base to the given exponent. (Arguments and result are
 floats.) Returns `NaN` if the result would be imaginary. See
 [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow)
 on MDN.

@@ -80,7 +80,7 @@ let size: t<'a> => int
 let toList: t<'a> => list<'a>
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit
 

@@ -68,9 +68,9 @@ external fromCharCodeMany: array<int> => t = "String.fromCharCode"
 
 /**
 `fromCodePoint(n)` creates a `string` containing the character corresponding to
-that numeric code point. If the number is not a valid code point, it raises
+that numeric code point. If the number is not a valid code point, it throws
 `RangeError`.Thus, `fromCodePoint(0x1F63A)` will produce a correct value,
-unlike `fromCharCode(0x1F63A)`, and `fromCodePoint(-5)` will raise a
+unlike `fromCharCode(0x1F63A)`, and `fromCodePoint(-5)` will throw a
 `RangeError`.
 
 See [`String.fromCodePoint`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/fromCodePoint)
@@ -481,7 +481,7 @@ let normalizeByForm = (arg1, obj) => normalizeByForm(obj, arg1)
 
 /**
 `repeat(n, str)` returns a `string` that consists of `n` repetitions of `str`.
-Raises `RangeError` if `n` is negative.
+Throws `RangeError` if `n` is negative.
 
 See [`String.repeat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/repeat)
 on MDN.

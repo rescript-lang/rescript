@@ -63,7 +63,7 @@ Belt.List.head(list{1, 2, 3}) == Some(1)
 let head: t<'a> => option<'a>
 
 /**
-Same as `Belt.List.head` but raises an exception if `someList` is empty. Use
+Same as `Belt.List.head` but throws an exception if `someList` is empty. Use
 with care.
 
 ## Examples
@@ -72,7 +72,7 @@ with care.
 Belt.List.headExn(list{1, 2, 3}) == 1
 
 switch Belt.List.headExn(list{}) {
-// Raises an Error
+// Throws an Error
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -81,7 +81,7 @@ switch Belt.List.headExn(list{}) {
 let headExn: t<'a> => 'a
 
 /**
-Same as `Belt.List.head` but raises an exception if `someList` is empty. Use
+Same as `Belt.List.head` but throws an exception if `someList` is empty. Use
 with care.
 
 ## Examples
@@ -90,7 +90,7 @@ with care.
 Belt.List.headOrThrow(list{1, 2, 3}) == 1
 
 switch Belt.List.headOrThrow(list{}) {
-// Raises an Error
+// Throws an Error
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -113,7 +113,7 @@ Belt.List.tail(list{}) == None
 let tail: t<'a> => option<t<'a>>
 
 /**
-Same as `Belt.List.tail` but raises an exception if `someList` is empty. Use
+Same as `Belt.List.tail` but throws an exception if `someList` is empty. Use
 with care.
 
 ## Examples
@@ -122,7 +122,7 @@ with care.
 Belt.List.tailExn(list{1, 2, 3}) == list{2, 3}
 
 switch Belt.List.tailExn(list{}) {
-// Raises an Error
+// Throws an Error
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -131,7 +131,7 @@ switch Belt.List.tailExn(list{}) {
 let tailExn: t<'a> => t<'a>
 
 /**
-Same as `Belt.List.tail` but raises an exception if `someList` is empty. Use
+Same as `Belt.List.tail` but throws an exception if `someList` is empty. Use
 with care.
 
 ## Examples
@@ -140,7 +140,7 @@ with care.
 Belt.List.tailOrThrow(list{1, 2, 3}) == list{2, 3}
 
 switch Belt.List.tailOrThrow(list{}) {
-// Raises an Error
+// Throws an Error
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -178,7 +178,7 @@ abc->Belt.List.get(4) == None
 let get: (t<'a>, int) => option<'a>
 
 /**
-Same as `Belt.List.get` but raises an exception if `index` is larger than the
+Same as `Belt.List.get` but throws an exception if `index` is larger than the
 length. Use with care.
 
 ## Examples
@@ -189,7 +189,7 @@ let abc = list{"A", "B", "C"}
 abc->Belt.List.getExn(1) == "B"
 
 switch abc->Belt.List.getExn(4) {
-// Raises an Error
+// Throws an Error
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -198,7 +198,7 @@ switch abc->Belt.List.getExn(4) {
 let getExn: (t<'a>, int) => 'a
 
 /**
-Same as `Belt.List.get` but raises an exception if `index` is larger than the
+Same as `Belt.List.get` but throws an exception if `index` is larger than the
 length. Use with care.
 
 ## Examples
@@ -209,7 +209,7 @@ let abc = list{"A", "B", "C"}
 abc->Belt.List.getOrThrow(1) == "B"
 
 switch abc->Belt.List.getOrThrow(4) {
-// Raises an Error
+// Throws an Error
 | exception _ => assert(true)
 | _ => assert(false)
 }

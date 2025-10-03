@@ -140,7 +140,7 @@ function serializeExn(x) {
   });
   
  if(output === undefined){
-   // JSON.stringify will raise TypeError when it detects cylic objects
+   // JSON.stringify will throw TypeError when it detects cylic objects
    throw new TypeError("output is undefined")
  }
  return output 

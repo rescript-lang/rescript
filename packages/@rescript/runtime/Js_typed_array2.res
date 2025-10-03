@@ -165,7 +165,7 @@ module Int8Array = {
   external fromBuffer: array_buffer => t = "Int8Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -173,7 +173,7 @@ module Int8Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Int8Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -290,7 +290,7 @@ module Uint8Array = {
   external fromBuffer: array_buffer => t = "Uint8Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -298,7 +298,7 @@ module Uint8Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Uint8Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -415,7 +415,7 @@ module Uint8ClampedArray = {
   external fromBuffer: array_buffer => t = "Uint8ClampedArray"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -423,7 +423,7 @@ module Uint8ClampedArray = {
   external fromBufferOffset: (array_buffer, int) => t = "Uint8ClampedArray"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -540,7 +540,7 @@ module Int16Array = {
   external fromBuffer: array_buffer => t = "Int16Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -548,7 +548,7 @@ module Int16Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Int16Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -665,7 +665,7 @@ module Uint16Array = {
   external fromBuffer: array_buffer => t = "Uint16Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -673,7 +673,7 @@ module Uint16Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Uint16Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -790,7 +790,7 @@ module Int32Array = {
   external fromBuffer: array_buffer => t = "Int32Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -798,7 +798,7 @@ module Int32Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Int32Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -915,7 +915,7 @@ module Uint32Array = {
   external fromBuffer: array_buffer => t = "Uint32Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -923,7 +923,7 @@ module Uint32Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Uint32Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -1043,7 +1043,7 @@ module Float32Array = {
   external fromBuffer: array_buffer => t = "Float32Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -1051,7 +1051,7 @@ module Float32Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Float32Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
@@ -1168,7 +1168,7 @@ module Float64Array = {
   external fromBuffer: array_buffer => t = "Float64Array"
 
   /**
-  **raise** Js.Exn.Error raise Js exception
+  **throw** Js.Exn.Error throw Js exception
 
   **param** offset is in bytes
   */
@@ -1176,7 +1176,7 @@ module Float64Array = {
   external fromBufferOffset: (array_buffer, int) => t = "Float64Array"
 
   /**
-  **raise** Js.Exn.Error raises Js exception
+  **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */

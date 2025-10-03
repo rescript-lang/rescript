@@ -359,7 +359,7 @@ let getWithDefault: (t<'k, 'v, 'id>, 'k, 'v) => 'v
 
 See `Belt.Map.get`
 
-raise when `k` not exist
+throw when `k` not exist
 */
 let getExn: (t<'k, 'v, 'id>, 'k) => 'v
 
@@ -368,7 +368,7 @@ let getExn: (t<'k, 'v, 'id>, 'k) => 'v
 
 See `Belt.Map.get`
 
-raise when `k` not exist
+throw when `k` not exist
 */
 let getOrThrow: (t<'k, 'v, 'id>, 'k) => 'v
 
@@ -535,6 +535,6 @@ Returns the packed collection.
 let packIdData: (~id: id<'k, 'id>, ~data: Belt_MapDict.t<'k, 'v, 'id>) => t<'k, 'v, 'id>
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit

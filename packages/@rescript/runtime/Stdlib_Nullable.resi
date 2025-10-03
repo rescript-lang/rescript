@@ -133,7 +133,7 @@ let getOr: (t<'a>, 'a) => 'a
 let getWithDefault: (t<'a>, 'a) => 'a
 
 /**
-`getExn(value)` raises an exception if `null` or `undefined`, otherwise returns the value.
+`getExn(value)` throws an exception if `null` or `undefined`, otherwise returns the value.
 
 ```rescript
 switch Nullable.getExn(%raw("'Hello'")) {
@@ -154,13 +154,13 @@ switch Nullable.getExn(%raw("undefined")) {
 
 ## Exceptions
 
-- Raises `Invalid_argument` if `value` is `null` or `undefined`
+- Throws `Invalid_argument` if `value` is `null` or `undefined`
 */
 @deprecated("Use `getOrThrow` instead")
 let getExn: t<'a> => 'a
 
 /**
-`getOrThrow(value)` raises an exception if `null` or `undefined`, otherwise returns the value.
+`getOrThrow(value)` throws an exception if `null` or `undefined`, otherwise returns the value.
 
 ```rescript
 switch Nullable.getOrThrow(%raw("'Hello'")) {
@@ -181,7 +181,7 @@ switch Nullable.getOrThrow(%raw("undefined")) {
 
 ## Exceptions
 
-- Raises `Invalid_argument` if `value` is `null` or `undefined`
+- Throws `Invalid_argument` if `value` is `null` or `undefined`
 */
 let getOrThrow: t<'a> => 'a
 
@@ -192,7 +192,7 @@ let getOrThrow: t<'a> => 'a
 
 ```rescript
 Nullable.getUnsafe(Nullable.make(3)) == 3
-Nullable.getUnsafe(Nullable.null) // Raises an error
+Nullable.getUnsafe(Nullable.null) // Throws an error
 ```
 
 ## Important

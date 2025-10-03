@@ -122,7 +122,7 @@ let getUndefined: (t<'k, 'a, 'id>, 'k) => Js.undefined<'a>
 let getWithDefault: (t<'k, 'a, 'id>, 'k, 'a) => 'a
 let getExn: (t<'k, 'a, 'id>, 'k) => 'a
 let getOrThrow: (t<'k, 'a, 'id>, 'k) => 'a
-/** Raise when invariant is not held. */
+/** Throw when invariant is not held. */
 let checkInvariantInternal: t<_> => unit
 
 /* ************************************************************************** */

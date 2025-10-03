@@ -109,7 +109,7 @@ let getExn: (t<'a>, key) => 'a
 let getOrThrow: (t<'a>, key) => 'a
 
 /**
-  **raise** when invariant is not held
+  **Throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit
 

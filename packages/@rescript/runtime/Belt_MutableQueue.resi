@@ -59,12 +59,12 @@ let peek: t<'a> => option<'a>
 let peekUndefined: t<'a> => Js.undefined<'a>
 
 /**
-`peekExn(q)` raises an exception if `q` is empty.
+`peekExn(q)` throws an exception if `q` is empty.
 */
 let peekExn: t<'a> => 'a
 
 /**
-`peekOrThrow(q)` raises an exception if `q` is empty.
+`peekOrThrow(q)` throws an exception if `q` is empty.
 */
 let peekOrThrow: t<'a> => 'a
 
@@ -80,12 +80,12 @@ return `undefined` if it is already empty.
 let popUndefined: t<'a> => Js.undefined<'a>
 
 /**
-`popExn(q)` raise an exception if q is empty.
+`popExn(q)` throw an exception if q is empty.
 */
 let popExn: t<'a> => 'a
 
 /**
-`popOrThrow(q)` raise an exception if q is empty.
+`popOrThrow(q)` throw an exception if q is empty.
 */
 let popOrThrow: t<'a> => 'a
 

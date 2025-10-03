@@ -47,13 +47,13 @@ Belt.Array.get(["a", "b", "c"], -1) == None
 let get: (t<'a>, int) => option<'a>
 
 /**
-Raise an exception if `i` is out of range.
+Throw an exception if `i` is out of range.
 Otherwise return the value at index `i` in `arr`.
 */
 let getExn: (t<'a>, int) => 'a
 
 /**
-Raise an exception if `i` is out of range.
+Throw an exception if `i` is out of range.
 Otherwise return the value at index `i` in `arr`.
 */
 let getOrThrow: (t<'a>, int) => 'a
@@ -83,12 +83,12 @@ with `x`. Returning `false` means not updated due to out of range.
 let set: (t<'a>, int, 'a) => bool
 
 /**
-`setExn(arr, i, x)` raise an exception if `i` is out of range.
+`setExn(arr, i, x)` throw an exception if `i` is out of range.
 */
 let setExn: (t<'a>, int, 'a) => unit
 
 /**
-`setOrThrow(arr, i, x)` raise an exception if `i` is out of range.
+`setOrThrow(arr, i, x)` throw an exception if `i` is out of range.
 */
 let setOrThrow: (t<'a>, int, 'a) => unit
 
@@ -774,7 +774,7 @@ let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
 /**
 Unsafe `truncateToLengthUnsafe(xs, n)` sets length of array `xs` to `n`. If `n`
 is greater than the length of `xs`; the extra elements are set to `Js.Null_undefined.null`.
-If `n` is less than zero; raises a `RangeError`.
+If `n` is less than zero; throws a `RangeError`.
 
 ## Examples
 

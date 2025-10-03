@@ -494,9 +494,9 @@ let shuffle = xs => {
 /* fillAuxMap arr 0 x f; */
 /* J.array arr */
 
-/* TODO: best practice about raising excpetion
-   1. raise OCaml exception, no stacktrace
-   2. raise JS exception, how to pattern match
+/* TODO: best practice about raising exception
+   1. throw OCaml exception, no stacktrace
+   2. throw JS exception, how to pattern match
 */
 
 let rec reverseConcat = (l1, l2) =>

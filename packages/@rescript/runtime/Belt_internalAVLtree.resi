@@ -92,7 +92,7 @@ let size: t<'a, 'b> => int
 
 let toList: t<'a, 'b> => list<('a, 'b)>
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<'a, 'b> => unit
 

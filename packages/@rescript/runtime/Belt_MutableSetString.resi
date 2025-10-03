@@ -133,6 +133,6 @@ let getOrThrow: (t, value) => value
 let split: (t, value) => ((t, t), bool)
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t => unit

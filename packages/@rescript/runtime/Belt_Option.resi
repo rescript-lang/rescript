@@ -74,7 +74,7 @@ Belt.Option.forEach(None, x => Js.log(x)) /* returns () */
 let forEach: (option<'a>, 'a => unit) => unit
 
 /**
-Raises an Error in case `None` is provided. Use with care.
+Throws an Error in case `None` is provided. Use with care.
 
 ## Examples
 
@@ -82,7 +82,7 @@ Raises an Error in case `None` is provided. Use with care.
 Some(3)->Belt.Option.getExn == 3
 
 switch Belt.Option.getExn(None) {
-// Raises an exception
+// Throws an exception
 | exception _ => assert(true)
 | _ => assert(false)
 }
@@ -91,7 +91,7 @@ switch Belt.Option.getExn(None) {
 let getExn: option<'a> => 'a
 
 /**
-Raises an Error in case `None` is provided. Use with care.
+Throws an Error in case `None` is provided. Use with care.
 
 ## Examples
 
@@ -99,7 +99,7 @@ Raises an Error in case `None` is provided. Use with care.
 Some(3)->Belt.Option.getOrThrow == 3
 
 switch Belt.Option.getOrThrow(None) {
-// Raises an exception
+// Throws an exception
 | exception _ => assert(true)
 | _ => assert(false)
 }

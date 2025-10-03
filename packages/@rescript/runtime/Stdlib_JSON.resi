@@ -58,7 +58,7 @@ try {
 
 ## Exceptions
 
-- Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
+- Throws a SyntaxError (Exn.t) if the string isn't valid JSON.
 */
 @throws(Exn.t) @val
 external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
@@ -104,7 +104,7 @@ try {
 
 ## Exceptions
 
-- Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
+- Throws a SyntaxError (Exn.t) if the string isn't valid JSON.
 */
 @deprecated("Use `parseOrThrow` instead") @throws(Exn.t) @val
 external parseExn: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
@@ -140,7 +140,7 @@ try {
 
 ## Exceptions
 
-- Raises a SyntaxError if the string is not a valid JSON.
+- Throws a SyntaxError if the string is not a valid JSON.
 */
 @deprecated("Use `parseOrThrow` with optional parameter instead") @throws(Exn.t) @val
 external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
@@ -387,7 +387,7 @@ dict
 
 JSON.stringifyAny(() => "hello world") == None
 
-// Raise a exception
+// Throw a exception
 switch BigInt.fromInt(0)->JSON.stringifyAny {
 | exception _ => assert(true)
 | _ => assert(false)
@@ -396,8 +396,8 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 
 ## Exceptions
 
-- Raises a TypeError if the value contains circular references.
-- Raises a TypeError if the value contains `BigInt`s.
+- Throws a TypeError if the value contains circular references.
+- Throws a TypeError if the value contains `BigInt`s.
 */
 @throws(Exn.t) @val
 external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<string> =
@@ -438,8 +438,8 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 
 ## Exceptions
 
-- Raises a TypeError if the value contains circular references.
-- Raises a TypeError if the value contains `BigInt`s.
+- Throws a TypeError if the value contains circular references.
+- Throws a TypeError if the value contains `BigInt`s.
 */
 @deprecated("Use `stringifyAny` with optional parameter instead") @throws(Exn.t) @val
 external stringifyAnyWithIndent: ('a, @as(json`null`) _, int) => option<string> = "JSON.stringify"
@@ -484,8 +484,8 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 
 ## Exceptions
 
-- Raises a TypeError if the value contains circular references.
-- Raises a TypeError if the value contains `BigInt`s.
+- Throws a TypeError if the value contains circular references.
+- Throws a TypeError if the value contains `BigInt`s.
 */
 @deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
 external stringifyAnyWithReplacer: ('a, (string, t) => t) => option<string> = "JSON.stringify"
@@ -531,8 +531,8 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 
 ## Exceptions
 
-- Raises a TypeError if the value contains circular references.
-- Raises a TypeError if the value contains `BigInt`s.
+- Throws a TypeError if the value contains circular references.
+- Throws a TypeError if the value contains `BigInt`s.
 */
 @deprecated("Use `stringifyAny` with optional parameters instead") @throws @val
 external stringifyAnyWithReplacerAndIndent: ('a, (string, t) => t, int) => option<string> =
@@ -568,8 +568,8 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 
 ## Exceptions
 
-- Raises a TypeError if the value contains circular references.
-- Raises a TypeError if the value contains `BigInt`s.
+- Throws a TypeError if the value contains circular references.
+- Throws a TypeError if the value contains `BigInt`s.
 */
 @deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
 external stringifyAnyWithFilter: ('a, array<string>) => string = "JSON.stringify"
@@ -618,8 +618,8 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 
 ## Exceptions
 
-- Raises a TypeError if the value contains circular references.
-- Raises a TypeError if the value contains `BigInt`s.
+- Throws a TypeError if the value contains circular references.
+- Throws a TypeError if the value contains `BigInt`s.
 */
 @deprecated("Use `stringifyAny` with optional parameters instead") @throws @val
 external stringifyAnyWithFilterAndIndent: ('a, array<string>, int) => string = "JSON.stringify"

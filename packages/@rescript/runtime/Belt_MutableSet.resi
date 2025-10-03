@@ -633,12 +633,12 @@ Same as `Belt.MutableSet.get` but returns `undefined` when element does not exis
 let getUndefined: (t<'value, 'id>, 'value) => Js.undefined<'value>
 
 /**
-Same as `Belt.MutableSet.get` but raise when element does not exist.
+Same as `Belt.MutableSet.get` but throw when element does not exist.
 */
 let getExn: (t<'value, 'id>, 'value) => 'value
 
 /**
-Same as `Belt.MutableSet.get` but raise when element does not exist.
+Same as `Belt.MutableSet.get` but throw when element does not exist.
 */
 let getOrThrow: (t<'value, 'id>, 'value) => 'value
 
@@ -665,7 +665,7 @@ larger->Belt.MutableSet.toArray == [4, 5]
 let split: (t<'value, 'id>, 'value) => ((t<'value, 'id>, t<'value, 'id>), bool)
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit
 

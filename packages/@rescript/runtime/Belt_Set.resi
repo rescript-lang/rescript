@@ -676,12 +676,12 @@ Same as [get](#get) but returns `undefined` when element does not exist.
 let getUndefined: (t<'value, 'id>, 'value) => Js.undefined<'value>
 
 /**
-Same as [get](#get) but raise when element does not exist.
+Same as [get](#get) but throw when element does not exist.
 */
 let getExn: (t<'value, 'id>, 'value) => 'value
 
 /**
-Same as [get](#get) but raise when element does not exist.
+Same as [get](#get) but throw when element does not exist.
 */
 let getOrThrow: (t<'value, 'id>, 'value) => 'value
 
@@ -708,7 +708,7 @@ larger->Belt.Set.toArray == [4, 5]
 let split: (t<'value, 'id>, 'value) => ((t<'value, 'id>, t<'value, 'id>), bool)
 
 /**
-**raise** when invariant is not held
+**throw** when invariant is not held
 */
 let checkInvariantInternal: t<_> => unit
 

@@ -38,7 +38,7 @@ comes with `NAN`
 /**
 Formats an `int` using exponential (scientific) notation.
 Returns a `string` representing the given value in exponential notation.
-Raises `RangeError` if digits is not in the range \[0, 20\] (inclusive).
+Throws `RangeError` if digits is not in the range \[0, 20\] (inclusive).
 
 See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
 
@@ -59,7 +59,7 @@ Formats an `int` using exponential (scientific) notation.
 Returns a `string` representing the given value in exponential notation.
 
 The output will be rounded or padded with zeroes if necessary.
-Raises `RangeError` if `digits` is not in the range \[0, 20\] (inclusive).
+Throws `RangeError` if `digits` is not in the range \[0, 20\] (inclusive).
 
 See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
 
@@ -81,7 +81,7 @@ Formats an `int` using some fairly arbitrary rules.
 Returns a `string` representing the given value in fixed-point (usually).
 
 `toPrecision` differs from `toFixed` in that the former will format the number with full precision, while the latter will not output any digits after the decimal point.
-Raises `RangeError` if `digits` is not in the range accepted by this function.
+Throws `RangeError` if `digits` is not in the range accepted by this function.
 
 See [`toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.
 
@@ -105,7 +105,7 @@ The output will be rounded or padded with zeroes if necessary.
 
 `toPrecisionWithPrecision` differs from `toFixedWithPrecision` in that the former will count all digits against the precision, while the latter will count only the digits after the decimal point.
 `toPrecisionWithPrecision` will also use scientific notation if the specified precision is less than the number of digits before the decimal point.
-Raises `RangeError` if `digits` is not in the range accepted by this function.
+Throws `RangeError` if `digits` is not in the range accepted by this function.
 
 
 See [`toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.
@@ -142,7 +142,7 @@ external toString: int => string = "toString"
 /**
 Formats an `int` as a `string`. `radix` specifies the radix base to use for the
 formatted number. The value must be in the range \[2, 36\] (inclusive). Returns
-a `string` representing the given value in fixed-point (usually). Raises
+a `string` representing the given value in fixed-point (usually). Throws
 `RangeError` if `radix` is not in the range \[2, 36\] (inclusive).
 
 

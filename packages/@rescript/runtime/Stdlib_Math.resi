@@ -246,7 +246,7 @@ See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
   external maxMany: array<int> => int = "Math.max"
 
   /**
-  `pow(a, ~exp)` raises the given base `a` to the given exponent `exp`.
+  `pow(a, ~exp)` throws the given base `a` to the given exponent `exp`.
 See [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow) on MDN.
 
   ## Examples
@@ -729,7 +729,7 @@ Math.maxMany([])->Float.isFinite == false
 external maxMany: array<float> => float = "Math.max"
 
 /**
-`pow(a, ~exp)` raises the given base `a` to the given exponent `exp`.
+`pow(a, ~exp)` throws the given base `a` to the given exponent `exp`.
 See [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow) on MDN.
 
 ## Examples

@@ -87,7 +87,7 @@ switch List.headExn(list{}) {
 
 ## Exceptions
 
-- Raises an Error if list is empty.
+- Throws an Error if list is empty.
   
 */
 @deprecated("Use `headOrThrow` instead")
@@ -109,7 +109,7 @@ switch List.headOrThrow(list{}) {
 
 ## Exceptions
 
-- Raises an Error if list is empty.
+- Throws an Error if list is empty.
 */
 let headOrThrow: list<'a> => 'a
 
@@ -143,7 +143,7 @@ switch List.tailExn(list{}) {
 
 ## Exceptions
 
-- Raises an Error if list is empty.
+- Throws an Error if list is empty.
 */
 @deprecated("Use `tailOrThrow` instead")
 let tailExn: list<'a> => list<'a>
@@ -164,7 +164,7 @@ switch List.tailOrThrow(list{}) {
 
 ## Exceptions
 
-- Raises an Error if list is empty.
+- Throws an Error if list is empty.
 */
 let tailOrThrow: list<'a> => list<'a>
 
@@ -215,7 +215,7 @@ switch abc->List.getExn(4) {
 
 ## Exceptions
 
-- Raises an Error if `index` is larger than the length of list.
+- Throws an Error if `index` is larger than the length of list.
 */
 @deprecated("Use `getOrThrow` instead")
 let getExn: (list<'a>, int) => 'a
@@ -238,7 +238,7 @@ switch abc->List.getOrThrow(4) {
 
 ## Exceptions
 
-- Raises an Error if `index` is larger than the length of list.
+- Throws an Error if `index` is larger than the length of list.
 */
 let getOrThrow: (list<'a>, int) => 'a
 

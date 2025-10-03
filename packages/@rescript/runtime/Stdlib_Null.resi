@@ -136,7 +136,7 @@ let getOr: (t<'a>, 'a) => 'a
 let getWithDefault: (t<'a>, 'a) => 'a
 
 /**
-`getExn(value)` raises an exception if `null`, otherwise returns the value.
+`getExn(value)` throws an exception if `null`, otherwise returns the value.
 
 ```rescript
 Null.getExn(Null.make(3)) == 3
@@ -154,13 +154,13 @@ switch Null.getExn(%raw("null")) {
 
 ## Exceptions
 
-- Raises `Invalid_argument` if `value` is `null`
+- Throws `Invalid_argument` if `value` is `null`
 */
 @deprecated("Use `getOrThrow` instead")
 let getExn: t<'a> => 'a
 
 /**
-`getOrThrow(value)` raises an exception if `null`, otherwise returns the value.
+`getOrThrow(value)` throws an exception if `null`, otherwise returns the value.
 
 ```rescript
 Null.getOrThrow(Null.make(3)) == 3
@@ -178,7 +178,7 @@ switch Null.getOrThrow(%raw("null")) {
 
 ## Exceptions
 
-- Raises `Invalid_argument` if `value` is `null`
+- Throws `Invalid_argument` if `value` is `null`
 */
 let getOrThrow: t<'a> => 'a
 
@@ -189,7 +189,7 @@ let getOrThrow: t<'a> => 'a
 
 ```rescript
 Null.getUnsafe(Null.make(3)) == 3
-Null.getUnsafe(Null.null) // Raises an error
+Null.getUnsafe(Null.null) // Throws an error
 ```
 
 ## Important
