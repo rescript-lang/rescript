@@ -10,28 +10,22 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.14 (Unreleased)
+# 12.0.0-rc.1
 
 #### :boom: Breaking Change
 
-- Removed "rescript legacy" subcommand in favor of separate "rescript-legacy" binary. https://github.com/rescript-lang/rescript/pull/7928
-- Add comparison fn for Error in Result.equal and compare. https://github.com/rescript-lang/rescript/pull/7933
+- Removed `rescript legacy` subcommand in favor of separate `rescript-legacy` binary. https://github.com/rescript-lang/rescript/pull/7928
+- Add comparison function for `Error` in `Result.equal` and `compare`. https://github.com/rescript-lang/rescript/pull/7933
 - Rewatch: `"type": "dev"` and `dev-dependencies` will be compiled by default for local packages. The `--dev` flag no longer does anything. https://github.com/rescript-lang/rescript/pull/7934
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
 
 #### :bug: Bug fix
 
 - Prevent lockfile creation when project folder is missing. https://github.com/rescript-lang/rescript/pull/7927
 - Fix parameter type / return type ambiguity error for unit case. https://github.com/rescript-lang/rescript/pull/7930
 
-#### :memo: Documentation
-
 #### :nail_care: Polish
 
-- Rewatch cli: do not show build command options in the root help. https://github.com/rescript-lang/rescript/pull/7715
+- ReScript cli: do not show build command options in the root help. https://github.com/rescript-lang/rescript/pull/7715
 - Deprecate reanalyze `@raises` in favor of `@throws`. https://github.com/rescript-lang/rescript/pull/7932
 
 #### :house: Internal
