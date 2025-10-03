@@ -32,6 +32,8 @@
 
 #### :house: Internal
 
+- CI: run macOS builds on macOS 15. https://github.com/rescript-lang/rescript/pull/7935
+
 # 12.0.0-beta.13
 
 #### :bug: Bug fix
