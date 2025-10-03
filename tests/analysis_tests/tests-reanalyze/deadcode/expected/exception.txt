@@ -14,7 +14,7 @@
 
   Exception Analysis
   Exn.res:22:5-42
-  callsThrowWithAnnotationAndIsAnnotated might raise Not_found (Exn.res:22:45) and is annotated with redundant @throws(A)
+  callsThrowWithAnnotationAndIsAnnotated might throw Not_found (Exn.res:22:45) and is annotated with redundant @throws(A)
 
   Exception Analysis
   Exn.res:24:5-19
@@ -38,7 +38,7 @@
 
   Exception Analysis
   Exn.res:62:5-19
-  throw2Annotate3 might raise [A (Exn.res:64:4), B (Exn.res:67:4)] and is annotated with redundant @throws(C)
+  throw2Annotate3 might throw [A (Exn.res:64:4), B (Exn.res:67:4)] and is annotated with redundant @throws(C)
 
   Exception Analysis
   Exn.res:73:5-24
@@ -62,7 +62,7 @@
 
   Exception Analysis
   Exn.res:133:5-23
-  redundantAnnotation raises nothing and is annotated with redundant @throws(Invalid_argument)
+  redundantAnnotation throws nothing and is annotated with redundant @throws(Invalid_argument)
 
   Exception Analysis
   Exn.res:135:5-6

@@ -29,7 +29,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "t<'a> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(value)` returns `value`.\n\n## Examples\n\n```rescript\nNull.getUnsafe(Null.make(3)) == 3\nNull.getUnsafe(Null.null) // Raises an error\n```\n\n## Important\n\n- This is an unsafe operation, it assumes `value` is not `null`.\n"},
+    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(value)` returns `value`.\n\n## Examples\n\n```rescript\nNull.getUnsafe(Null.make(3)) == 3\nNull.getUnsafe(Null.null) // Throws an error\n```\n\n## Important\n\n- This is an unsafe operation, it assumes `value` is not `null`.\n"},
     "sortText": "getUnsafe",
     "insertText": "->Null.getUnsafe",
     "additionalTextEdits": [{
@@ -53,7 +53,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "t<'a> => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` raises an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getExn(Null.make(3)) == 3\n\nswitch Null.getExn(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null`\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` throws an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getExn(Null.make(3)) == 3\n\nswitch Null.getExn(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null`\n"},
     "sortText": "getExn",
     "insertText": "->Null.getExn",
     "additionalTextEdits": [{
@@ -89,7 +89,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "t<'a> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(value)` raises an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getOrThrow(Null.make(3)) == 3\n\nswitch Null.getOrThrow(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getOrThrow(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null`\n"},
+    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(value)` throws an exception if `null`, otherwise returns the value.\n\n```rescript\nNull.getOrThrow(Null.make(3)) == 3\n\nswitch Null.getOrThrow(%raw(\"'ReScript'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"ReScript\"\n}\n\nswitch Null.getOrThrow(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null`\n"},
     "sortText": "getOrThrow",
     "insertText": "->Null.getOrThrow",
     "additionalTextEdits": [{
@@ -225,7 +225,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "t<'a> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(value)` returns `value`.\n\n## Examples\n\n```rescript\nNullable.getUnsafe(Nullable.make(3)) == 3\nNullable.getUnsafe(Nullable.null) // Raises an error\n```\n\n## Important\n\n- This is an unsafe operation, it assumes `value` is not `null` or `undefined`.\n"},
+    "documentation": {"kind": "markdown", "value": "\n`getUnsafe(value)` returns `value`.\n\n## Examples\n\n```rescript\nNullable.getUnsafe(Nullable.make(3)) == 3\nNullable.getUnsafe(Nullable.null) // Throws an error\n```\n\n## Important\n\n- This is an unsafe operation, it assumes `value` is not `null` or `undefined`.\n"},
     "sortText": "getUnsafe",
     "insertText": "->Nullable.getUnsafe",
     "additionalTextEdits": [{
@@ -249,7 +249,7 @@ Path
     "kind": 12,
     "tags": [1],
     "detail": "t<'a> => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` raises an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getExn(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getExn(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null` or `undefined`\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `getOrThrow` instead\n\n\n`getExn(value)` throws an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getExn(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getExn(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getExn(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null` or `undefined`\n"},
     "sortText": "getExn",
     "insertText": "->Nullable.getExn",
     "additionalTextEdits": [{
@@ -285,7 +285,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "t<'a> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(value)` raises an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getOrThrow(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getOrThrow(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getOrThrow(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Raises `Invalid_argument` if `value` is `null` or `undefined`\n"},
+    "documentation": {"kind": "markdown", "value": "\n`getOrThrow(value)` throws an exception if `null` or `undefined`, otherwise returns the value.\n\n```rescript\nswitch Nullable.getOrThrow(%raw(\"'Hello'\")) {\n| exception Invalid_argument(_) => assert(false)\n| value => value == \"Hello\"\n}\n\nswitch Nullable.getOrThrow(%raw(\"null\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n\nswitch Nullable.getOrThrow(%raw(\"undefined\")) {\n| exception Invalid_argument(_) => assert(true)\n| _ => assert(false)\n}\n```\n\n## Exceptions\n\n- Throws `Invalid_argument` if `value` is `null` or `undefined`\n"},
     "sortText": "getOrThrow",
     "insertText": "->Nullable.getOrThrow",
     "additionalTextEdits": [{
