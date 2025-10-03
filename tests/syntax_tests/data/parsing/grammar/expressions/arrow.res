@@ -103,6 +103,8 @@ let un = (():u)
 type d<'a,'b> = ('a,'b)
 let c = (): d<'a,'b> => (1,2)
 
+let arr = (): array<nullable<int>> => []
+
 let fn = f => f;
 type f = int => unit;
 let a = fn(_ => (): f);

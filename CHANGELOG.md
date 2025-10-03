@@ -24,6 +24,7 @@
 #### :bug: Bug fix
 
 - Prevent lockfile creation when project folder is missing. https://github.com/rescript-lang/rescript/pull/7927
+- Fix parameter type / return type ambiguity error for unit case. https://github.com/rescript-lang/rescript/pull/7930
 
 #### :memo: Documentation
 
@@ -32,6 +33,8 @@
 - Rewatch cli: do not show build command options in the root help. https://github.com/rescript-lang/rescript/pull/7715
 
 #### :house: Internal
+
+- CI: run macOS builds on macOS 15. https://github.com/rescript-lang/rescript/pull/7935
 
 # 12.0.0-beta.13
 

@@ -42,12 +42,12 @@ jobs:
             benchmarks: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
-          - os: macos-13 # x64
+          - os: macos-15-intel # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-x64
             rust-target: x86_64-apple-darwin
-          - os: macos-14 # ARM
+          - os: macos-15 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-arm64
@@ -539,8 +539,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-          - os: macos-14
+          - os: macos-15-intel
+          - os: macos-15
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
           - os: windows-2022
@@ -590,8 +590,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-          - os: macos-14
+          - os: macos-15-intel
+          - os: macos-15
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
           - os: windows-2022
@@ -645,8 +645,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-          - os: macos-14
+          - os: macos-15-intel
+          - os: macos-15
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
           - os: windows-2022

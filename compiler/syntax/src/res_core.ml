@@ -2554,17 +2554,21 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
     | EqualGreater ->
       Parser.next p;
       let body = parse_expr p in
-      let pat =
+      let pat, expr_is_unit =
         match expr.pexp_desc with
         | Pexp_ident longident ->
-          Ast_helper.Pat.var ~loc:expr.pexp_loc
-            (Location.mkloc
-               (Longident.flatten longident.txt |> String.concat ".")
-               longident.loc)
+          ( Ast_helper.Pat.var ~loc:expr.pexp_loc
+              (Location.mkloc
+                 (Longident.flatten longident.txt |> String.concat ".")
+                 longident.loc),
+            false )
+        | Pexp_construct (({txt = Longident.Lident "()"} as lid), None) ->
+          (Ast_helper.Pat.construct ~loc:expr.pexp_loc lid None, true)
         (* TODO: can we convert more expressions to patterns?*)
         | _ ->
-          Ast_helper.Pat.var ~loc:expr.pexp_loc
-            (Location.mkloc "pattern" expr.pexp_loc)
+          ( Ast_helper.Pat.var ~loc:expr.pexp_loc
+              (Location.mkloc "pattern" expr.pexp_loc),
+            false )
       in
       let arrow1 =
         Ast_helper.Exp.fun_
@@ -2572,36 +2576,40 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
           ~arity:None Asttypes.Nolabel None pat
           (Ast_helper.Exp.constraint_ body typ)
       in
-      let arrow2 =
-        Ast_helper.Exp.fun_
-          ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolabel None
-          (Ast_helper.Pat.constraint_ pat typ)
-          body
-      in
-      let msg =
-        Doc.breakable_group ~force_break:true
-          (Doc.concat
-             [
-               Doc.text
-                 "Did you mean to annotate the parameter type or the return \
-                  type?";
-               Doc.indent
-                 (Doc.concat
-                    [
-                      Doc.line;
-                      Doc.text "1) ";
-                      ResPrinter.print_expression arrow1 CommentTable.empty;
-                      Doc.line;
-                      Doc.text "2) ";
-                      ResPrinter.print_expression arrow2 CommentTable.empty;
-                    ]);
-             ])
-        |> Doc.to_string ~width:80
-      in
-      Parser.err ~start_pos:expr.pexp_loc.loc_start
-        ~end_pos:body.pexp_loc.loc_end p (Diagnostics.message msg);
-      arrow1
+      (* When the "expr" was `()`, the colon must apply to the return type, so
+         skip the ambiguity diagnostic and keep the parameter as unit. *)
+      if expr_is_unit then arrow1
+      else
+        let arrow2 =
+          Ast_helper.Exp.fun_
+            ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
+            ~arity:None Asttypes.Nolabel None
+            (Ast_helper.Pat.constraint_ pat typ)
+            body
+        in
+        let msg =
+          Doc.breakable_group ~force_break:true
+            (Doc.concat
+               [
+                 Doc.text
+                   "Did you mean to annotate the parameter type or the return \
+                    type?";
+                 Doc.indent
+                   (Doc.concat
+                      [
+                        Doc.line;
+                        Doc.text "1) ";
+                        ResPrinter.print_expression arrow1 CommentTable.empty;
+                        Doc.line;
+                        Doc.text "2) ";
+                        ResPrinter.print_expression arrow2 CommentTable.empty;
+                      ]);
+               ])
+          |> Doc.to_string ~width:80
+        in
+        Parser.err ~start_pos:expr.pexp_loc.loc_start
+          ~end_pos:body.pexp_loc.loc_end p (Diagnostics.message msg);
+        arrow1
     | _ ->
       let loc = mk_loc expr.pexp_loc.loc_start typ.ptyp_loc.loc_end in
       let expr = Ast_helper.Exp.constraint_ ~loc expr typ in
