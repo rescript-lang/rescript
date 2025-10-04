@@ -22,14 +22,14 @@ Hover src/JsxV4.res 14:9
 Create Interface src/JsxV4.res
 module M4: {
   @react.component
-  let make: (~first: string, ~fun: string=?, ~second: string=?) => React.element
+  let make: (~first: string, ~fun: string=?, ~second: string=?) => Jsx.element
 }
 module MM: {
   @react.component
-  let make: unit => React.element
+  let make: unit => Jsx.element
 }
 module Other: {
   @react.component
-  let make: (~name: string) => React.element
+  let make: (~name: string) => Jsx.element
 }
 

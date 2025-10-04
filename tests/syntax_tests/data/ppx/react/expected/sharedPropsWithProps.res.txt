@@ -4,36 +4,36 @@ let f = a => Js.Promise.resolve(a + a)
 
 module V4A1 = {
   type props = sharedProps
-  let make = props => React.string(props.x ++ props.y)
+  let make = (props): Jsx.element => React.string(props.x ++ props.y)
   let make = {
-    let \"SharedPropsWithProps$V4A1" = props => make(props)
+    let \"SharedPropsWithProps$V4A1" = (props): Jsx.element => make(props)
     \"SharedPropsWithProps$V4A1"
   }
 }
 
 module V4A2 = {
   type props = sharedProps
-  let make = (props: props) => React.string(props.x ++ props.y)
+  let make = (props: props): Jsx.element => React.string(props.x ++ props.y)
   let make = {
-    let \"SharedPropsWithProps$V4A2" = (props: props) => make(props)
+    let \"SharedPropsWithProps$V4A2" = (props: props): Jsx.element => make(props)
     \"SharedPropsWithProps$V4A2"
   }
 }
 
 module V4A3 = {
   type props<'a> = sharedProps<'a>
-  let make = ({x, y}: props<_>) => React.string(x ++ y)
+  let make = ({x, y}: props<_>): Jsx.element => React.string(x ++ y)
   let make = {
-    let \"SharedPropsWithProps$V4A3" = (props: props<_>) => make(props)
+    let \"SharedPropsWithProps$V4A3" = (props: props<_>): Jsx.element => make(props)
     \"SharedPropsWithProps$V4A3"
   }
 }
 
 module V4A4 = {
   type props<'a> = sharedProps<string, 'a>
-  let make = ({x, y}: props<_>) => React.string(x ++ y)
+  let make = ({x, y}: props<_>): Jsx.element => React.string(x ++ y)
   let make = {
-    let \"SharedPropsWithProps$V4A4" = (props: props<_>) => make(props)
+    let \"SharedPropsWithProps$V4A4" = (props: props<_>): Jsx.element => make(props)
     \"SharedPropsWithProps$V4A4"
   }
 }
@@ -42,24 +42,24 @@ module V4A5 = {
   type props<'a> = {a: 'a}
   let make = async ({a}: props<_>) => {
     let a = await f(a)
-    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
+    (ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})}): Jsx.element)
   }
   let make = {
-    let \"SharedPropsWithProps$V4A5" = (props: props<_>) => Jsx.promise(make(props))
+    let \"SharedPropsWithProps$V4A5" = (props: props<_>): Jsx.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A5"
   }
 }
 
 module V4A6 = {
   type props<'status> = {status: 'status}
-  let make = async ({status}: props<_>) => {
+  let make = async ({status}: props<_>): Jsx.element => {
     switch status {
     | #on => React.string("on")
     | #off => React.string("off")
     }
   }
   let make = {
-    let \"SharedPropsWithProps$V4A6" = (props: props<_>) => Jsx.promise(make(props))
+    let \"SharedPropsWithProps$V4A6" = (props: props<_>): Jsx.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A6"
   }
 }
@@ -67,11 +67,11 @@ module V4A6 = {
 module V4A7 = {
   type props = {count: int}
 
-  let make = props => {
+  let make = (props): Jsx.element => {
     React.int(props.count)
   }
   let make = {
-    let \"SharedPropsWithProps$V4A7" = @directive("'use memo'") props => make(props)
+    let \"SharedPropsWithProps$V4A7" = @directive("'use memo'") (props): Jsx.element => make(props)
     \"SharedPropsWithProps$V4A7"
   }
 }

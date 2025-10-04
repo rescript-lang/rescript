@@ -9,7 +9,10 @@ module V4A = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
+    let make = (
+      {?className, children, _}: props<_, _, 'ref>,
+      ref: Js.Nullable.t<'ref>,
+    ): Jsx.element =>
       ReactDOM.jsxs(
         "div",
         {
@@ -35,7 +38,7 @@ module V4A = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) => {
+  let make = (_: props): Jsx.element => {
     let input = React.useRef(Js.Nullable.null)
 
     ReactDOM.jsx(
@@ -63,7 +66,10 @@ module V4AUncurried = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
+    let make = (
+      {?className, children, _}: props<_, _, 'ref>,
+      ref: Js.Nullable.t<'ref>,
+    ): Jsx.element =>
       ReactDOM.jsxs(
         "div",
         {
@@ -89,7 +95,7 @@ module V4AUncurried = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) => {
+  let make = (_: props): Jsx.element => {
     let input = React.useRef(Js.Nullable.null)
 
     ReactDOM.jsx(
