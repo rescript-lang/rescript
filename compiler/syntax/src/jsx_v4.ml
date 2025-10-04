@@ -936,7 +936,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       new_binding )
   else (None, binding, None)
 
-let rec collect_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
+let rec collect_prop_types types {ptyp_loc; ptyp_desc} =
   match ptyp_desc with
   | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as rest}
     when is_labelled arg.lbl || is_optional arg.lbl ->
@@ -944,8 +944,8 @@ let rec collect_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
   | Ptyp_arrow {arg = {lbl = Nolabel}; ret} -> collect_prop_types types ret
   | Ptyp_arrow {arg; ret = return_value}
     when is_labelled arg.lbl || is_optional arg.lbl ->
-    (return_value, (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types)
-  | _ -> (full_type, types)
+    (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types
+  | _ -> types
 
 let transform_structure_item ~config item =
   match item with
@@ -979,7 +979,7 @@ let transform_structure_item ~config item =
         |> Option.map Jsx_common.typ_vars_of_core_type
         |> Option.value ~default:[]
       in
-      let _, prop_types = collect_prop_types [] pval_type in
+      let prop_types = collect_prop_types [] pval_type in
       let named_type_list = List.fold_left arg_to_concrete_type [] prop_types in
       let ret_props_type =
         Typ.constr ~loc:pstr_loc
@@ -1068,7 +1068,7 @@ let transform_signature_item ~config item =
         |> Option.map Jsx_common.typ_vars_of_core_type
         |> Option.value ~default:[]
       in
-      let _, prop_types = collect_prop_types [] pval_type in
+      let prop_types = collect_prop_types [] pval_type in
       let named_type_list = List.fold_left arg_to_concrete_type [] prop_types in
       let ret_props_type =
         Typ.constr
