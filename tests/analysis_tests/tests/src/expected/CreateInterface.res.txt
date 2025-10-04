@@ -2,18 +2,18 @@ Create Interface src/CreateInterface.res
 type r = {name: string, age: int}
 let add: (~x: int, ~y: int) => int
 @react.component
-let make: (~name: string) => React.element
+let make: (~name: string) => Jsx.element
 module Other: {
   @react.component
-  let otherComponentName: (~name: string) => React.element
+  let otherComponentName: (~name: string) => Jsx.element
 }
 module Mod: {
   @react.component
-  let make: (~name: string) => React.element
+  let make: (~name: string) => Jsx.element
 }
 module type ModTyp = {
   @react.component
-  let make: (~name: string) => React.element
+  let make: (~name: string) => Jsx.element
 }
 @module("path") external dirname: string => string = "dirname"
 @module("path") @variadic
@@ -49,21 +49,21 @@ module RFS: {
 module Functor: () =>
 {
   @react.component
-  let make: unit => React.element
+  let make: unit => Jsx.element
 }
 module type FT = {
   module Functor: (
     X: {
       let a: int
       @react.component
-      let make: (~name: string) => React.element
+      let make: (~name: string) => Jsx.element
       let b: int
     },
     Y: ModTyp,
   ) =>
   {
     @react.component
-    let make: (~name: string) => React.element
+    let make: (~name: string) => Jsx.element
   }
 }
 module NormaList = List
@@ -73,34 +73,34 @@ module rec RM: ModTyp
 and D: ModTyp
 module type OptT = {
   @react.component
-  let withOpt1: (~x: int=?, ~y: int) => int
+  let withOpt1: (~x: int=?, ~y: int) => Jsx.element
   module type Opt2 = {
     @react.component
-    let withOpt2: (~x: int=?, ~y: int) => int
+    let withOpt2: (~x: int=?, ~y: int) => Jsx.element
   }
   module type Opt3 = {
     @react.component
-    let withOpt3: (~x: option<int>, ~y: int) => int
+    let withOpt3: (~x: option<int>, ~y: int) => Jsx.element
   }
 }
 module Opt: {
   @react.component
-  let withOpt1: (~x: int=?, ~y: int) => int
+  let withOpt1: (~x: int=?, ~y: int) => Jsx.element
   module Opt2: {
     @react.component
-    let withOpt2: (~x: int=?, ~y: int) => int
+    let withOpt2: (~x: int=?, ~y: int) => Jsx.element
   }
   module type Opt2 = {
     @react.component
-    let withOpt2: (~x: int=?, ~y: int) => int
+    let withOpt2: (~x: int=?, ~y: int) => Jsx.element
   }
   module Opt3: {
     @react.component
-    let withOpt3: (~x: option<int>, ~y: int) => int
+    let withOpt3: (~x: option<int>, ~y: int) => Jsx.element
   }
   module type Opt3 = {
     @react.component
-    let withOpt3: (~x: option<int>, ~y: int) => int
+    let withOpt3: (~x: option<int>, ~y: int) => Jsx.element
   }
 }
 module Opt2: OptT

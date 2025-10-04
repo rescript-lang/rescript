@@ -46,6 +46,38 @@ let ref_type loc =
     {loc; txt = Ldot (Ldot (Lident "Js", "Nullable"), "t")}
     [ref_type_var loc]
 
+let jsx_element_type ~loc =
+  Typ.constr ~loc {loc; txt = Ldot (Lident "Jsx", "element")} []
+
+let jsx_element_constraint ~loc expr =
+  Exp.constraint_ ~loc expr (jsx_element_type ~loc)
+
+let rec constrain_jsx_return ~loc expr =
+  match expr.pexp_desc with
+  | Pexp_fun ({rhs} as desc) ->
+    {
+      expr with
+      pexp_desc = Pexp_fun {desc with rhs = constrain_jsx_return ~loc rhs};
+    }
+  | Pexp_newtype (param, inner) ->
+    {
+      expr with
+      pexp_desc = Pexp_newtype (param, constrain_jsx_return ~loc inner);
+    }
+  | Pexp_constraint (inner, _) ->
+    jsx_element_constraint ~loc (constrain_jsx_return ~loc inner)
+  | Pexp_let (rec_flag, bindings, body) ->
+    {
+      expr with
+      pexp_desc = Pexp_let (rec_flag, bindings, constrain_jsx_return ~loc body);
+    }
+  | Pexp_sequence (first, second) ->
+    {
+      expr with
+      pexp_desc = Pexp_sequence (first, constrain_jsx_return ~loc second);
+    }
+  | _ -> jsx_element_constraint ~loc expr
+
 let merlin_focus = ({loc = Location.none; txt = "merlin.focus"}, PStr [])
 
 (* Helper method to filter out any attribute that isn't [@react.component] *)
@@ -713,6 +745,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         vb_match_expr named_arg_list expression
       else expression
     in
+    let expression =
+      Exp.constraint_ ~loc:binding_loc expression
+        (jsx_element_type ~loc:binding_loc)
+    in
     (* (ref) => expr *)
     let expression =
       List.fold_left
@@ -784,6 +820,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
+    let binding_loc = binding.pvb_loc in
     let modified_binding =
       {
         binding with
@@ -839,21 +876,28 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         | _ -> Pat.var {txt = "props"; loc}
       in
 
+      let applied_expression =
+        Exp.apply
+          (Exp.ident
+             {
+               txt =
+                 Lident
+                   (match rec_flag with
+                   | Recursive -> internal_fn_name
+                   | Nonrecursive -> fn_name);
+               loc;
+             })
+          [(Nolabel, Exp.ident {txt = Lident "props"; loc})]
+      in
+      let applied_expression =
+        Jsx_common.async_component ~async:is_async applied_expression
+      in
+      let applied_expression =
+        Exp.constraint_ ~loc applied_expression (jsx_element_type ~loc)
+      in
       let wrapper_expr =
         Exp.fun_ ~arity:None Nolabel None props_pattern
-          ~attrs:binding.pvb_expr.pexp_attributes
-          (Jsx_common.async_component ~async:is_async
-             (Exp.apply
-                (Exp.ident
-                   {
-                     txt =
-                       Lident
-                         (match rec_flag with
-                         | Recursive -> internal_fn_name
-                         | Nonrecursive -> fn_name);
-                     loc;
-                   })
-                [(Nolabel, Exp.ident {txt = Lident "props"; loc})]))
+          ~attrs:binding.pvb_expr.pexp_attributes applied_expression
       in
 
       let wrapper_expr = Ast_uncurried.uncurried_fun ~arity:1 wrapper_expr in
@@ -874,21 +918,34 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | Recursive -> None
       | Nonrecursive ->
         Some
-          (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
+          (make_new_binding ~loc:binding_loc ~full_module_name modified_binding)
+    in
+    let binding_expr =
+      {
+        binding.pvb_expr with
+        (* moved to wrapper_expr *)
+        pexp_attributes = [];
+      }
     in
     ( None,
       {
         binding with
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
-        pvb_expr =
-          {
-            binding.pvb_expr with
-            (* moved to wrapper_expr *)
-            pexp_attributes = [];
-          };
+        pvb_expr = binding_expr |> constrain_jsx_return ~loc:binding_loc;
       },
       new_binding )
   else (None, binding, None)
+
+let rec collect_prop_types types {ptyp_loc; ptyp_desc} =
+  match ptyp_desc with
+  | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as rest}
+    when is_labelled arg.lbl || is_optional arg.lbl ->
+    collect_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) rest
+  | Ptyp_arrow {arg = {lbl = Nolabel}; ret} -> collect_prop_types types ret
+  | Ptyp_arrow {arg; ret = return_value}
+    when is_labelled arg.lbl || is_optional arg.lbl ->
+    (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types
+  | _ -> types
 
 let transform_structure_item ~config item =
   match item with
@@ -922,19 +979,7 @@ let transform_structure_item ~config item =
         |> Option.map Jsx_common.typ_vars_of_core_type
         |> Option.value ~default:[]
       in
-      let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
-        match ptyp_desc with
-        | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
-          when is_labelled arg.lbl || is_optional arg.lbl ->
-          get_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) typ2
-        | Ptyp_arrow {arg = {lbl = Nolabel}; ret} -> get_prop_types types ret
-        | Ptyp_arrow {arg; ret = return_value}
-          when is_labelled arg.lbl || is_optional arg.lbl ->
-          ( return_value,
-            (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types )
-        | _ -> (full_type, types)
-      in
-      let inner_type, prop_types = get_prop_types [] pval_type in
+      let prop_types = collect_prop_types [] pval_type in
       let named_type_list = List.fold_left arg_to_concrete_type [] prop_types in
       let ret_props_type =
         Typ.constr ~loc:pstr_loc
@@ -955,7 +1000,7 @@ let transform_structure_item ~config item =
       let new_external_type =
         Ptyp_constr
           ( {loc = pstr_loc; txt = module_access_name config "componentLike"},
-            [ret_props_type; inner_type] )
+            [ret_props_type; jsx_element_type ~loc:pstr_loc] )
       in
       let new_structure =
         {
@@ -1023,30 +1068,7 @@ let transform_signature_item ~config item =
         |> Option.map Jsx_common.typ_vars_of_core_type
         |> Option.value ~default:[]
       in
-      let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
-        match ptyp_desc with
-        | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as rest}
-          when is_optional arg.lbl || is_labelled arg.lbl ->
-          get_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) rest
-        | Ptyp_arrow
-            {
-              arg =
-                {
-                  lbl = Nolabel;
-                  typ = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
-                };
-              ret = rest;
-            } ->
-          get_prop_types types rest
-        | Ptyp_arrow {arg = {lbl = Nolabel}; ret = rest} ->
-          get_prop_types types rest
-        | Ptyp_arrow {arg; ret = return_value}
-          when is_optional arg.lbl || is_labelled arg.lbl ->
-          ( return_value,
-            (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types )
-        | _ -> (full_type, types)
-      in
-      let inner_type, prop_types = get_prop_types [] pval_type in
+      let prop_types = collect_prop_types [] pval_type in
       let named_type_list = List.fold_left arg_to_concrete_type [] prop_types in
       let ret_props_type =
         Typ.constr
@@ -1067,7 +1089,7 @@ let transform_signature_item ~config item =
       let new_external_type =
         Ptyp_constr
           ( {loc = psig_loc; txt = module_access_name config "componentLike"},
-            [ret_props_type; inner_type] )
+            [ret_props_type; jsx_element_type ~loc:psig_loc] )
       in
       let new_structure =
         {

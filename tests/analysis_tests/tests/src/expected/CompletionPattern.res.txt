@@ -1178,7 +1178,8 @@ Path res
   }]
 
 Complete src/CompletionPattern.res 227:25
-posCursor:[227:25] posNoWhite:[227:24] Found expr:[223:11->231:1]
+posCursor:[227:25] posNoWhite:[227:24] Found expr:[223:11->232:1]
+posCursor:[227:25] posNoWhite:[227:24] Found expr:[224:2->231:12]
 posCursor:[227:25] posNoWhite:[227:24] Found expr:[226:4->227:28]
 posCursor:[227:25] posNoWhite:[227:24] Found pattern:[227:18->227:27]
 Completable: Cpattern Value[r]->recordBody
@@ -1206,8 +1207,8 @@ Path r
     "documentation": {"kind": "markdown", "value": "```rescript\nnest: nestedRecord\n```\n\n```rescript\ntype someRecord = {first: int, second: (bool, option<someRecord>), optThird: option<[#first | #second(someRecord)]>, nest: nestedRecord}\n```"}
   }]
 
-Complete src/CompletionPattern.res 242:33
-posCursor:[242:33] posNoWhite:[242:32] Found pattern:[242:7->242:35]
+Complete src/CompletionPattern.res 243:33
+posCursor:[243:33] posNoWhite:[243:32] Found pattern:[243:7->243:35]
 Completable: Cpattern Value[hitsUse](Nolabel)->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

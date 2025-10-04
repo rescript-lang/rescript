@@ -67,7 +67,7 @@ module MultiPropComp = {
   @react.component
   let make = (~name, ~age, ~time: time) => {
     ignore(time)
-    name ++ age
+    React.string(name ++ age)
   }
 }
 

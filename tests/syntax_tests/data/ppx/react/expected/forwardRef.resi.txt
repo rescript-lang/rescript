@@ -11,7 +11,7 @@ module V4C: {
 
     let make: React.componentLike<
       props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
+      Jsx.element,
     >
   }
 
@@ -19,7 +19,7 @@ module V4C: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, Jsx.element>
   }
 }
 
@@ -34,7 +34,7 @@ module V4CUncurried: {
 
     let make: React.componentLike<
       props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
+      Jsx.element,
     >
   }
 
@@ -42,7 +42,7 @@ module V4CUncurried: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, Jsx.element>
   }
 }
 
@@ -59,7 +59,7 @@ module V4A: {
 
     let make: React.componentLike<
       props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
+      Jsx.element,
     >
   }
 
@@ -67,7 +67,7 @@ module V4A: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, Jsx.element>
   }
 }
 
@@ -82,7 +82,7 @@ module V4AUncurried: {
 
     let make: React.componentLike<
       props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
+      Jsx.element,
     >
   }
 
@@ -90,6 +90,6 @@ module V4AUncurried: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, Jsx.element>
   }
 }
