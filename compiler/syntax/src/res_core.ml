@@ -508,9 +508,12 @@ let make_unary_expr start_pos token_end token operand =
     }
   | (Minus | MinusDot), Pexp_constant (Pconst_float (n, m)) ->
     {operand with pexp_desc = Pexp_constant (Pconst_float (negate_string n, m))}
-  | (Token.Plus | PlusDot | Minus | MinusDot | Tilde), _ ->
+  | (Token.Plus | PlusDot | Minus | MinusDot | Bnot), _ ->
     let token_loc = mk_loc start_pos token_end in
-    let operator = "~" ^ Token.to_string token in
+    let token_string = Token.to_string token in
+    let operator =
+      if token_string.[0] = '~' then token_string else "~" ^ token_string
+    in
     Ast_helper.Exp.apply
       ~loc:(mk_loc start_pos operand.Parsetree.pexp_loc.loc_end)
       (Ast_helper.Exp.ident ~loc:token_loc
@@ -2292,7 +2295,7 @@ and parse_primary_expr ~operand ?(no_call = false) p =
 and parse_unary_expr p =
   let start_pos = p.Parser.start_pos in
   match p.Parser.token with
-  | (Minus | MinusDot | Plus | PlusDot | Bang | Tilde) as token ->
+  | (Minus | MinusDot | Plus | PlusDot | Bang | Bnot) as token ->
     Parser.leave_breadcrumb p Grammar.ExprUnary;
     let token_end = p.end_pos in
     Parser.next p;
@@ -5940,7 +5943,7 @@ and parse_polymorphic_variant_type_spec_hash ~attrs ~full p :
   let ident, loc = parse_hash_ident ~start_pos p in
   let rec loop p =
     match p.Parser.token with
-    | Band when full ->
+    | Ampersand when full ->
       Parser.next p;
       let row_field = parse_polymorphic_variant_type_args p in
       row_field :: loop p
@@ -5948,7 +5951,7 @@ and parse_polymorphic_variant_type_spec_hash ~attrs ~full p :
   in
   let first_tuple, tag_contains_a_constant_empty_constructor =
     match p.Parser.token with
-    | Band when full ->
+    | Ampersand when full ->
       Parser.next p;
       ([parse_polymorphic_variant_type_args p], true)
     | Lparen -> ([parse_polymorphic_variant_type_args p], false)
