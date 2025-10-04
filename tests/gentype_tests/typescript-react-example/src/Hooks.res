@@ -81,17 +81,14 @@ module WithRename = {
 
 module WithRef = {
   @genType @react.component
-  let makeWithRef = (~vehicle) => {
+  let make = React.forwardRef((~vehicle, ref) => {
     let _ = 34
-    ref =>
-      switch ref->Js.Nullable.toOption {
-      | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}> {React.string(vehicle.name)} </button>
-      | None => React.null
-      }
-  }
+    switch ref->Js.Nullable.toOption {
+    | Some(ref) => <button ref={ReactDOM.Ref.domRef(ref)}> {React.string(vehicle.name)} </button>
+    | None => React.null
+    }
+  })
 }
-
-@genType let testForwardRef = React.forwardRef((x, y) => WithRef.makeWithRef(x)(y))
 
 type r = {x: string}
 

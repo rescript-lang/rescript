@@ -22,10 +22,10 @@ Hover src/Hover.res 33:4
 {"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"}}
 
 Hover src/Hover.res 37:13
-{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nJsx.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx.res%22%2C25%2C0%5D)\n"}}
 
 Hover src/Hover.res 42:15
-{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nJsx.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx.res%22%2C25%2C0%5D)\n"}}
 
 Hover src/Hover.res 46:10
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}

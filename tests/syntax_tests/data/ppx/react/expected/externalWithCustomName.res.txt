@@ -5,7 +5,7 @@ module Foo = {
   type props<'a, 'b> = {a: 'a, b: 'b}
 
   @module("Foo")
-  external component: React.componentLike<props<int, string>, React.element> = "component"
+  external component: React.componentLike<props<int, string>, Jsx.element> = "component"
 }
 
 let t = React.jsx(Foo.component, {a: 1, b: {"1"}})

@@ -124,27 +124,20 @@ let WithRename = {
   componentWithRenamedArgs: Hooks$WithRename$componentWithRenamedArgs
 };
 
-function makeWithRef(param) {
-  let vehicle = param.vehicle;
-  return ref => {
-    if (ref == null) {
-      return null;
-    } else {
-      return JsxRuntime.jsx("button", {
-        children: vehicle.name,
-        ref: Primitive_option.some(ref)
-      });
-    }
-  };
-}
-
-let Hooks$WithRef$makeWithRef = makeWithRef;
+let make = React.forwardRef((props, ref) => {
+  if (ref == null) {
+    return null;
+  } else {
+    return JsxRuntime.jsx("button", {
+      children: props.vehicle.name,
+      ref: Primitive_option.some(ref)
+    });
+  }
+});
 
 let WithRef = {
-  makeWithRef: Hooks$WithRef$makeWithRef
+  make: make
 };
-
-let testForwardRef = React.forwardRef((x, y) => makeWithRef(x)(y));
 
 let input = React.forwardRef((r, ref) => JsxRuntime.jsx("div", {
   children: r.x,
@@ -207,12 +200,12 @@ let DD = {
   make: Hooks$DD
 };
 
-let make = Hooks;
+let make$1 = Hooks;
 
 let $$default = Hooks;
 
 export {
-  make,
+  make$1 as make,
   $$default as default,
   Another,
   Inner,
@@ -220,7 +213,6 @@ export {
   functionWithRenamedArgs,
   WithRename,
   WithRef,
-  testForwardRef,
   ForwardRef,
   Poly,
   Fun,
@@ -228,4 +220,4 @@ export {
   WithChildren,
   DD,
 }
-/* testForwardRef Not a pure module */
+/* make Not a pure module */

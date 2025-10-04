@@ -31,7 +31,7 @@ export type WithRename_props<T_to,T_Type,cb> = {
   readonly cb: cb
 };
 
-export type WithRef_props<vehicle> = { readonly vehicle: vehicle };
+export type WithRef_props<vehicle,ref> = { readonly vehicle: vehicle; readonly ref?: ref };
 
 export type r = { readonly x: string };
 
@@ -79,9 +79,7 @@ export const WithRename_componentWithRenamedArgs: React.ComponentType<{
   readonly cb: cb
 }> = HooksJS.WithRename.componentWithRenamedArgs as any;
 
-export const WithRef_makeWithRef: (_1:WithRef_props<vehicle>) => (_1:(null | undefined | any)) => JSX.Element = HooksJS.WithRef.makeWithRef as any;
-
-export const testForwardRef: React.ComponentType<{ readonly vehicle: vehicle }> = HooksJS.testForwardRef as any;
+export const WithRef_make: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> = HooksJS.WithRef.make as any;
 
 export const ForwardRef_input: (_1:r) => JSX.Element = HooksJS.ForwardRef.input as any;
 
@@ -130,7 +128,7 @@ export const ForwardRef: { input: (_1:r) => JSX.Element } = HooksJS.ForwardRef a
 
 export const Fun: { functionReturningReactElement: React.ComponentType<{ readonly name: string }> } = HooksJS.Fun as any;
 
-export const WithRef: { makeWithRef: (_1:WithRef_props<vehicle>) => (_1:(null | undefined | any)) => JSX.Element } = HooksJS.WithRef as any;
+export const WithRef: { make: React.ComponentType<{ readonly vehicle: vehicle; readonly ref?: any }> } = HooksJS.WithRef as any;
 
 export const WithChildren: { aComponentWithChildren: React.ComponentType<{ readonly vehicle: vehicle; readonly children: React.ReactNode }> } = HooksJS.WithChildren as any;
 

@@ -1,12 +1,12 @@
 module A: {
   @res.jsxComponentProps
   type props<'x> = {x: 'x}
-  let make: React.componentLike<props<string>, React.element>
+  let make: React.componentLike<props<string>, Jsx.element>
 }
 
 module NoProps: {
   @res.jsxComponentProps
   type props = {}
 
-  let make: React.componentLike<props, React.element>
+  let make: React.componentLike<props, Jsx.element>
 }

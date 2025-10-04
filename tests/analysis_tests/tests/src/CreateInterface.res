@@ -109,27 +109,27 @@ module type OptT = {
 
 module Opt = {
   @react.component
-  let withOpt1 = (~x=3, ~y) => x + y
+  let withOpt1 = (~x=3, ~y) => React.int(x + y)
 
   module Opt2 = {
     @react.component
     let withOpt2 = (~x: option<int>=?, ~y: int) =>
-      switch x {
+      React.int(switch x {
       | None => 0
       | Some(x) => x
       } +
-      y
+      y)
   }
   module type Opt2 = module type of Opt2
 
   module Opt3 = {
     @react.component
     let withOpt3 = (~x: option<int>, ~y: int) =>
-      switch x {
+      React.int(switch x {
       | None => 0
       | Some(x) => x
       } +
-      y
+      y)
   }
   module type Opt3 = module type of Opt3
 }
