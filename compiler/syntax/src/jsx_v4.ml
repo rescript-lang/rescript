@@ -920,18 +920,18 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         Some
           (make_new_binding ~loc:binding_loc ~full_module_name modified_binding)
     in
+    let binding_expr =
+      {
+        binding.pvb_expr with
+        (* moved to wrapper_expr *)
+        pexp_attributes = [];
+      }
+    in
     ( None,
       {
         binding with
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
-        pvb_expr =
-          ( binding.pvb_expr |> fun expr ->
-            {
-              expr with
-              (* moved to wrapper_expr *)
-              pexp_attributes = [];
-            }
-            |> constrain_jsx_return ~loc:binding_loc );
+        pvb_expr = binding_expr |> constrain_jsx_return ~loc:binding_loc;
       },
       new_binding )
   else (None, binding, None)
