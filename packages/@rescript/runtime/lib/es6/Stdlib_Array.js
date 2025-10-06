@@ -22,6 +22,10 @@ function fromInitializer(length, f) {
   return arr;
 }
 
+function isEmpty(arr) {
+  return arr.length === 0;
+}
+
 function equal(a, b, eq) {
   let len = a.length;
   if (len === b.length) {
@@ -194,6 +198,7 @@ export {
   fromInitializer,
   equal,
   compare,
+  isEmpty,
   indexOfOpt,
   lastIndexOfOpt,
   reduce,

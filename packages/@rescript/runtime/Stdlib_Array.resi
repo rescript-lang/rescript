@@ -96,6 +96,24 @@ external length: array<'a> => int = "%array_length"
 ## Examples
 
 ```rescript
+[]->Array.isEmpty->assertEqual(true)
+[1, 2, 3]->Array.isEmpty->assertEqual(false)
+
+let emptyArray = []
+emptyArray->Array.isEmpty->assertEqual(true)
+
+let nonEmptyArray = ["hello"]
+nonEmptyArray->Array.isEmpty->assertEqual(false)
+```
+*/
+let isEmpty: array<'a> => bool
+
+/**
+`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.
+
+## Examples
+
+```rescript
 let arr = [100, 101, 102, 103, 104]
 arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
 arr == [100, 101, 100, 101, 102]
