@@ -8,4 +8,4 @@
   deprecated: Js.Array2.map
   Use `Array.map` instead.
 
-  This can be automatically migrated by the ReScript migration tool. Run `rescript-tools migrate-all` to run all automatic migrations available in your project.
+  This can be automatically migrated by the ReScript migration tool. Run `rescript-tools migrate-all <project-root>` to run all automatic migrations available in your project, or `rescript-tools migrate <file>` to migrate a single file.
