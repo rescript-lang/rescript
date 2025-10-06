@@ -26,6 +26,8 @@
 
 #### :house: Internal
 
+- Use AST nodes with locations for fn arguments in the typed tree. https://github.com/rescript-lang/rescript/pull/7873
+
 # 12.0.0-beta.14
 
 #### :boom: Breaking Change
