@@ -272,7 +272,7 @@ is transformed to
 ```rescript
 type props<'x, 'y, 'z> = {x: 'x, y?: 'y, z?: 'z}
 
-({x, ?y, ?z}: props<_, _, _>) => {
+({x, ?y, ?z}: props<_, _, _>): Jsx.element => {
   let y = switch y {
   | None => 3 + x
   | Some(y) => y
@@ -281,7 +281,9 @@ type props<'x, 'y, 'z> = {x: 'x, y?: 'y, z?: 'z}
 }
 ```
 
-> Note: this implicit definition of type `props` means that there cannot be other type definitions of `props` in the same scope, or it will be a compiler error about multiple definitions of the type name.
+> Note:
+> - This implicit definition of type `props` means that there cannot be other type definitions of `props` in the same scope, or it will be a compiler error about multiple definitions of the type name.
+> - JSX V4 automatically adds a `Jsx.element` return constraint to all component functions. This ensures that components always return valid JSX elements and provides better type safety. If a component returns a non-JSX value, you'll get a helpful error message suggesting how to convert it (e.g., use `React.int` for integers, `React.string` for strings, etc.).
 
 ### Transformation for Component Application
 
