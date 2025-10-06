@@ -57,7 +57,6 @@ module Rec = {
   type props = {}
 
   let rec make = {
-    @merlin.focus
     let \"make$Internal" = (_: props): Jsx.element => {
       make(({}: props))
     }
@@ -75,7 +74,6 @@ module Rec1 = {
   type props = {}
 
   let rec make = {
-    @merlin.focus
     let \"make$Internal" = (_: props): Jsx.element => {
       React.null
     }
@@ -93,7 +91,6 @@ module Rec2 = {
   type props = {}
 
   let rec make = {
-    @merlin.focus
     let \"make$Internal" = (_: props): Jsx.element => {
       mm(({}: props))
     }

@@ -78,8 +78,6 @@ let rec constrain_jsx_return ~loc expr =
     }
   | _ -> jsx_element_constraint ~loc expr
 
-let merlin_focus = ({loc = Location.none; txt = "merlin.focus"}, PStr [])
-
 (* Helper method to filter out any attribute that isn't [@react.component] *)
 let other_attrs_pure (loc, _) =
   match loc.txt with
@@ -105,7 +103,7 @@ let make_new_binding binding expression new_name =
       pvb_pat =
         {pvb_pat with ppat_desc = Ppat_var {ppat_var with txt = new_name}};
       pvb_expr = expression;
-      pvb_attributes = [merlin_focus];
+      pvb_attributes = [];
     }
   | {pvb_loc} ->
     Jsx_common.raise_error ~loc:pvb_loc
