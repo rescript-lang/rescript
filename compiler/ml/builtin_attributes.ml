@@ -132,7 +132,11 @@ let check_deprecated ?deprecated_context loc attrs s =
     !Cmt_utils.record_deprecated_used
       ?deprecated_context ?migration_template ?migration_in_pipe_chain_template
       loc txt;
-    Location.deprecated loc (cat s txt)
+    Location.deprecated
+      ~can_be_automigrated:
+        (Option.is_some migration_template
+        || Option.is_some migration_in_pipe_chain_template)
+      loc (cat s txt)
 
 let check_deprecated_inclusion ~def ~use loc attrs1 attrs2 s =
   match (deprecated_of_attrs attrs1, deprecated_of_attrs attrs2) with

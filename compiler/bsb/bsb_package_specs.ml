@@ -50,7 +50,7 @@ let supported_format (x : string) loc : Ext_module_system.t =
         {loc with Lexing.pos_cnum = loc.Lexing.pos_cnum + String.length x}
       in
       let loc = {Warnings.loc_start = loc; loc_end; loc_ghost = false} in
-      Location.deprecated loc
+      Location.deprecated ~can_be_automigrated:false loc
         (Printf.sprintf "Option \"%s\" is deprecated. Use \"%s\" instead." x
            Literals.esmodule)
   in

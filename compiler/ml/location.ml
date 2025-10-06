@@ -298,7 +298,8 @@ let raise_errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") =
   pp_ksprintf ~before:print_phanton_error_prefix (fun msg ->
       raise (Error {loc; msg; sub; if_highlight}))
 
-let deprecated ?(def = none) ?(use = none) loc msg =
-  prerr_warning loc (Warnings.Deprecated (msg, def, use))
+let deprecated ?(can_be_automigrated = false) ?(def = none) ?(use = none) loc
+    msg =
+  prerr_warning loc (Warnings.Deprecated (msg, def, use, can_be_automigrated))
 
 let map_loc f {txt; loc} = {txt = f txt; loc}

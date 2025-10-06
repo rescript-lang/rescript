@@ -31,7 +31,7 @@ type top_level_unit_help = FunctionCall | Other
 type t =
   | Comment_start (*  1 *)
   | Comment_not_end (*  2 *)
-  | Deprecated of string * loc * loc (*  3 *)
+  | Deprecated of string * loc * loc * bool (*  3 *)
   | Fragile_match of string (*  4 *)
   | Partial_application (*  5 *)
   | Method_override of string list (*  7 *)
@@ -299,7 +299,7 @@ let () = reset ()
 let message = function
   | Comment_start -> "this is the start of a comment."
   | Comment_not_end -> "this is not the end of a comment."
-  | Deprecated (s, _, _) ->
+  | Deprecated (s, _, _, can_be_automigrated) ->
     (* Reduce \r\n to \n:
          - Prevents any \r characters being printed on Unix when processing
            Windows sources
@@ -307,6 +307,13 @@ let message = function
            testsuite
     *)
     "deprecated: " ^ Misc.normalise_eol s
+    ^
+    if can_be_automigrated then
+      "\n\n\
+      \  This can be automatically migrated by the ReScript migration tool. \
+       Run `rescript-tools migrate-all` to run all automatic migrations \
+       available in your project."
+    else ""
   | Fragile_match "" -> "this pattern-matching is fragile."
   | Fragile_match s ->
     "this pattern-matching is fragile.\n\
@@ -533,7 +540,7 @@ let message = function
        you implement this before running the code."
 
 let sub_locs = function
-  | Deprecated (_, def, use) ->
+  | Deprecated (_, def, use, _) ->
     [(def, "Definition"); (use, "Expected signature")]
   | _ -> []
 
