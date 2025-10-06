@@ -443,6 +443,12 @@ Path Array.
     "detail": "(array<'a>, int, 'a) => unit",
     "documentation": {"kind": "markdown", "value": "\n`set(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.set(1, \"Hello\")\n\narray[1] == Some(\"Hello\")\n```\n"}
   }, {
+    "label": "isEmpty",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => bool",
+    "documentation": {"kind": "markdown", "value": "\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\n[]->Array.isEmpty->assertEqual(true)\n[1, 2, 3]->Array.isEmpty->assertEqual(false)\n\nlet emptyArray = []\nemptyArray->Array.isEmpty->assertEqual(true)\n\nlet nonEmptyArray = [\"hello\"]\nnonEmptyArray->Array.isEmpty->assertEqual(false)\n```\n"}
+  }, {
     "label": "filterWithIndex",
     "kind": 12,
     "tags": [],
