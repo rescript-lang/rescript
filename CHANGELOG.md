@@ -25,6 +25,7 @@
 #### :nail_care: Polish
 
 - Improve circular dependency errors, and make sure they end up in the compiler log so the editor tooling can surface them. https://github.com/rescript-lang/rescript/pull/7940
+- JSX PPX: add Jsx.element return constraint. https://github.com/rescript-lang/rescript/pull/7939
 
 #### :house: Internal
 
