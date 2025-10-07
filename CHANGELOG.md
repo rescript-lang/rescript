@@ -24,6 +24,8 @@
 
 #### :nail_care: Polish
 
+- Improve circular dependency errors, and make sure they end up in the compiler log so the editor tooling can surface them. https://github.com/rescript-lang/rescript/pull/7940
+
 #### :house: Internal
 
 - Use AST nodes with locations for fn arguments in the typed tree. https://github.com/rescript-lang/rescript/pull/7873
