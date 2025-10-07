@@ -12,10 +12,14 @@ The field 'bsc-flags' found in the package config of '@testrepo/deprecated-confi
 Use 'compiler-flags' instead.
 
 Can't continue... Found a circular dependency in your code:
-Dep01
- → Dep02
- → NS
- → NewNamespace.NS_alias
- → Dep01
+Dep01 (packages/dep01/src/Dep01.res)
+ → Dep02 (packages/dep02/src/Dep02.res)
+ → NS (packages/new-namespace/src/NS.res)
+ → NewNamespace.NS_alias (packages/new-namespace/src/NS_alias.res)
+ → Dep01 (packages/dep01/src/Dep01.res)
+
+How to fix:
+- Extract shared code into a new module both depend on.
+- If a namespace entry is part of the cycle, import submodules directly instead of the entry.
 
 Incremental build failed. Error: [2K  Failed to Compile. See Errors Above

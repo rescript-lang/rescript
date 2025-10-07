@@ -1,7 +1,10 @@
 use super::super::build_types::*;
 use crate::helpers;
 use ahash::AHashSet;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    path::Path,
+};
 
 pub fn find(modules: &Vec<(&String, &Module)>) -> Vec<String> {
     find_shortest_cycle(modules)
@@ -139,15 +142,47 @@ fn find_cycle_bfs(
     None
 }
 
-pub fn format(cycle: &[String]) -> String {
-    let mut cycle = cycle.to_vec();
-    cycle.reverse();
-    // add the first module to the end of the cycle
-    cycle.push(cycle[0].clone());
+pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
+    // Mirror dependency_cycle::format semantics: reverse then close the loop
+    let mut nodes = cycle.to_vec();
+    if nodes.is_empty() {
+        return String::new();
+    }
+    nodes.reverse();
+    nodes.push(nodes[0].clone());
 
-    cycle
+    let root = build_state.get_root_config().path.parent().unwrap();
+
+    nodes
         .iter()
-        .map(|s| helpers::format_namespaced_module_name(s))
+        .map(|name| {
+            let display_name = helpers::format_namespaced_module_name(name);
+
+            match build_state.get_module(name) {
+                Some(Module {
+                    source_type: SourceType::SourceFile(source_file),
+                    package_name,
+                    ..
+                }) => {
+                    if let Some(package) = build_state.get_package(package_name) {
+                        let abs_path = Path::new(&package.path).join(&source_file.implementation.path);
+                        let rel_path = abs_path
+                            .strip_prefix(root)
+                            .unwrap_or(&abs_path)
+                            .to_string_lossy()
+                            .replace('\\', "/");
+                        format!("{} ({})", display_name, rel_path)
+                    } else {
+                        display_name
+                    }
+                }
+                Some(Module {
+                    source_type: SourceType::MlMap(_),
+                    ..
+                })
+                | None => display_name,
+            }
+        })
         .collect::<Vec<String>>()
         .join("\n → ")
 }

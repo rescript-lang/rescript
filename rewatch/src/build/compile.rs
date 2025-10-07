@@ -356,11 +356,28 @@ pub fn compile(
                     .collect::<Vec<(&String, &Module)>>(),
             );
 
-            compile_errors.push_str(&format!(
-                "\n{}\n{}\n",
+            let guidance = "\nHow to fix:\n- Extract shared code into a new module both depend on.\n- If a namespace entry is part of the cycle, import submodules directly instead of the entry.\n";
+            let message = format!(
+                "\n{}\n{}\n{}",
                 style("Can't continue... Found a circular dependency in your code:").red(),
-                dependency_cycle::format(&cycle)
-            ))
+                dependency_cycle::format(&cycle, build_state),
+                guidance
+            );
+
+            // Append the error to the logs of all packages involved in the cycle,
+            // so editor tooling can surface it from .compiler.log
+            let mut touched_packages = AHashSet::<String>::new();
+            for module_name in cycle.iter() {
+                if let Some(module) = build_state.get_module(module_name) {
+                    if touched_packages.insert(module.package_name.clone()) {
+                        if let Some(package) = build_state.get_package(&module.package_name) {
+                            logs::append(package, &message);
+                        }
+                    }
+                }
+            }
+
+            compile_errors.push_str(&message)
         }
         if !compile_errors.is_empty() {
             break;
