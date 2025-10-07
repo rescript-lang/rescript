@@ -151,7 +151,8 @@ pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
     nodes.reverse();
     nodes.push(nodes[0].clone());
 
-    let root = build_state.get_root_config().path.parent().unwrap();
+    let root_path = &build_state.get_root_config().path;
+    let root = root_path.parent().unwrap_or(root_path.as_path());
 
     nodes
         .iter()
