@@ -162,10 +162,6 @@ let clear () =
   value_deps := [];
   deprecated_used := []
 
-let clear () =
-  saved_types := [];
-  value_deps := []
-
 let add_saved_type b = saved_types := b :: !saved_types
 let get_saved_types () = !saved_types
 let set_saved_types l = saved_types := l
