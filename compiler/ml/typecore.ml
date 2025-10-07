@@ -3722,7 +3722,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
               Some (fun () -> option_none (instance env ty) Location.none) ))
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
-          if (not optional) && is_optional_loc l' then
+          if (not optional) && is_optional l' then
             (* TODO(actions) Add ? to make argument optional *)
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
