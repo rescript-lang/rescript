@@ -356,7 +356,7 @@ pub fn compile(
                     .collect::<Vec<(&String, &Module)>>(),
             );
 
-            let guidance = "\nHow to fix:\n- Extract shared code into a new module both depend on.\n- If a namespace entry is part of the cycle, import submodules directly instead of the entry.\n";
+            let guidance = "Possible solutions:\n- Extract shared code into a new module both depend on.\n";
             let message = format!(
                 "\n{}\n{}\n{}",
                 style("Can't continue... Found a circular dependency in your code:").red(),

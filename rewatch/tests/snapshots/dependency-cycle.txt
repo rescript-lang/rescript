@@ -17,9 +17,7 @@ Dep01 (packages/dep01/src/Dep01.res)
  → NS (packages/new-namespace/src/NS.res)
  → NewNamespace.NS_alias (packages/new-namespace/src/NS_alias.res)
  → Dep01 (packages/dep01/src/Dep01.res)
-
-How to fix:
+Possible solutions:
 - Extract shared code into a new module both depend on.
-- If a namespace entry is part of the cycle, import submodules directly instead of the entry.
 
 Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
