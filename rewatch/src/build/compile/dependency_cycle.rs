@@ -143,7 +143,6 @@ fn find_cycle_bfs(
 }
 
 pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
-    // Mirror dependency_cycle::format semantics: reverse then close the loop
     let mut nodes = cycle.to_vec();
     if nodes.is_empty() {
         return String::new();
