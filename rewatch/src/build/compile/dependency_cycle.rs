@@ -171,7 +171,7 @@ pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
                             .unwrap_or(&abs_path)
                             .to_string_lossy()
                             .replace('\\', "/");
-                        format!("{} ({})", display_name, rel_path)
+                        format!("{display_name} ({rel_path})")
                     } else {
                         display_name
                     }
