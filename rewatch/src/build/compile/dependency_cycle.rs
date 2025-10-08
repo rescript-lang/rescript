@@ -166,11 +166,7 @@ pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
                 }) => {
                     if let Some(package) = build_state.get_package(package_name) {
                         let abs_path = Path::new(&package.path).join(&source_file.implementation.path);
-                        let rel_path = abs_path
-                            .strip_prefix(root)
-                            .unwrap_or(&abs_path)
-                            .to_string_lossy()
-                            .replace('\\', "/");
+                        let rel_path = abs_path.strip_prefix(root).unwrap_or(&abs_path).to_string_lossy();
                         format!("{display_name} ({rel_path})")
                     } else {
                         display_name
