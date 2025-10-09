@@ -103,6 +103,11 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       let l2 = aux l2 in
       let l3 = aux l3 in
       Lam.for_ ident (aux l1) l2 dir l3
+    | Lfor_of (ident, l1, l2) ->
+      let ident = rebind ident in
+      let l1 = aux l1 in
+      let l2 = aux l2 in
+      Lam.for_of ident l1 l2
     | Lconst _ -> lam
     | Lprim {primitive; args; loc} ->
       (* here it makes sure that global vars are not rebound *)
