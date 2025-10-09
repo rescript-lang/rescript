@@ -38,16 +38,17 @@ module V4A = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props): Jsx.element => {
+  let make = (_: props) => {
     let input = React.useRef(Js.Nullable.null)
-
-    ReactDOM.jsx(
-      "div",
-      {
-        children: ?ReactDOM.someElement(
-          React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
-        ),
-      },
+    (
+      ReactDOM.jsx(
+        "div",
+        {
+          children: ?ReactDOM.someElement(
+            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+          ),
+        },
+      ): Jsx.element
     )
   }
   let make = {
@@ -95,16 +96,17 @@ module V4AUncurried = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props): Jsx.element => {
+  let make = (_: props) => {
     let input = React.useRef(Js.Nullable.null)
-
-    ReactDOM.jsx(
-      "div",
-      {
-        children: ?ReactDOM.someElement(
-          React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
-        ),
-      },
+    (
+      ReactDOM.jsx(
+        "div",
+        {
+          children: ?ReactDOM.someElement(
+            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+          ),
+        },
+      ): Jsx.element
     )
   }
   let make = {

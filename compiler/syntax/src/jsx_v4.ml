@@ -49,34 +49,30 @@ let ref_type loc =
 let jsx_element_type ~loc =
   Typ.constr ~loc {loc; txt = Ldot (Lident "Jsx", "element")} []
 
-let jsx_element_constraint ~loc expr =
-  Exp.constraint_ ~loc expr (jsx_element_type ~loc)
+let jsx_element_constraint expr =
+  Exp.constraint_ expr (jsx_element_type ~loc:expr.pexp_loc)
 
-let rec constrain_jsx_return ~loc expr =
+(* Traverse the component body and force every reachable return expression to
+   be annotated as `Jsx.element`. This walks through the wrapper constructs the
+   PPX introduces (fun/newtype/let/sequence) so that the constraint ends up on
+   the real return position even after we rewrite the function. *)
+let rec constrain_jsx_return expr =
   match expr.pexp_desc with
   | Pexp_fun ({rhs} as desc) ->
-    {
-      expr with
-      pexp_desc = Pexp_fun {desc with rhs = constrain_jsx_return ~loc rhs};
-    }
+    {expr with pexp_desc = Pexp_fun {desc with rhs = constrain_jsx_return rhs}}
   | Pexp_newtype (param, inner) ->
-    {
-      expr with
-      pexp_desc = Pexp_newtype (param, constrain_jsx_return ~loc inner);
-    }
+    {expr with pexp_desc = Pexp_newtype (param, constrain_jsx_return inner)}
   | Pexp_constraint (inner, _) ->
-    jsx_element_constraint ~loc (constrain_jsx_return ~loc inner)
+    let constrained_inner = constrain_jsx_return inner in
+    jsx_element_constraint constrained_inner
   | Pexp_let (rec_flag, bindings, body) ->
     {
       expr with
-      pexp_desc = Pexp_let (rec_flag, bindings, constrain_jsx_return ~loc body);
+      pexp_desc = Pexp_let (rec_flag, bindings, constrain_jsx_return body);
     }
   | Pexp_sequence (first, second) ->
-    {
-      expr with
-      pexp_desc = Pexp_sequence (first, constrain_jsx_return ~loc second);
-    }
-  | _ -> jsx_element_constraint ~loc expr
+    {expr with pexp_desc = Pexp_sequence (first, constrain_jsx_return second)}
+  | _ -> jsx_element_constraint expr
 
 (* Helper method to filter out any attribute that isn't [@react.component] *)
 let other_attrs_pure (loc, _) =
@@ -743,10 +739,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         vb_match_expr named_arg_list expression
       else expression
     in
-    let expression =
-      Exp.constraint_ ~loc:binding_loc expression
-        (jsx_element_type ~loc:binding_loc)
-    in
+    let expression = constrain_jsx_return expression in
     (* (ref) => expr *)
     let expression =
       List.fold_left
@@ -890,9 +883,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       let applied_expression =
         Jsx_common.async_component ~async:is_async applied_expression
       in
-      let applied_expression =
-        Exp.constraint_ ~loc applied_expression (jsx_element_type ~loc)
-      in
+      let applied_expression = constrain_jsx_return applied_expression in
       let wrapper_expr =
         Exp.fun_ ~arity:None Nolabel None props_pattern
           ~attrs:binding.pvb_expr.pexp_attributes applied_expression
@@ -929,7 +920,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       {
         binding with
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
-        pvb_expr = binding_expr |> constrain_jsx_return ~loc:binding_loc;
+        pvb_expr = binding_expr |> constrain_jsx_return;
       },
       new_binding )
   else (None, binding, None)

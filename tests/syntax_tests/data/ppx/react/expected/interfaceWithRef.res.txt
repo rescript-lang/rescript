@@ -2,9 +2,9 @@
 let make = (
   {x, _}: props<string, ReactDOM.Ref.currentDomRef>,
   ref: Js.Nullable.t<ReactDOM.Ref.currentDomRef>,
-): Jsx.element => {
+) => {
   let _ = ref->Js.Nullable.toOption->Belt.Option.map(ReactDOM.Ref.domRef)
-  React.string(x)
+  (React.string(x): Jsx.element)
 }
 let make = React.forwardRef({
   let \"InterfaceWithRef" = (props: props<_>, ref) => make(props, ref)
