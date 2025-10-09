@@ -811,7 +811,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
-    let binding_loc = binding.pvb_loc in
     let modified_binding =
       {
         binding with
@@ -907,7 +906,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | Recursive -> None
       | Nonrecursive ->
         Some
-          (make_new_binding ~loc:binding_loc ~full_module_name modified_binding)
+          (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
     in
     let binding_expr =
       {
