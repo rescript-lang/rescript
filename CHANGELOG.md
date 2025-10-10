@@ -10,17 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-rc.1 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
-
-#### :bug: Bug fix
-
-#### :memo: Documentation
+# 12.0.0-rc.1
 
 #### :nail_care: Polish
 
