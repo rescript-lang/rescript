@@ -20,6 +20,6 @@ module Select: {
       option<'key> => unit,
       array<'a>,
     >,
-    Jsx.element,
+    React.element,
   >
 }

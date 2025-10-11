@@ -9,7 +9,7 @@ module C0 = {
     | Some(text) => text
     | None => "Test"
     }
-    (React.string(text): Jsx.element)
+    (React.string(text): React.element)
   }
   let make = {
     let \"AliasProps$C0" = (props: props<_>) => make(props)
@@ -27,7 +27,7 @@ module C1 = {
     | Some(text) => text
     | None => "Test"
     }
-    (React.string(p ++ text): Jsx.element)
+    (React.string(p ++ text): React.element)
   }
   let make = {
     let \"AliasProps$C1" = (props: props<_>) => make(props)
@@ -45,7 +45,7 @@ module C2 = {
     | Some(foo) => foo
     | None => ""
     }
-    (React.string(bar): Jsx.element)
+    (React.string(bar): React.element)
   }
   let make = {
     let \"AliasProps$C2" = (props: props<_>) => make(props)
@@ -70,7 +70,7 @@ module C3 = {
     (
       {
         React.string(bar ++ a ++ b)
-      }: Jsx.element
+      }: React.element
     )
   }
   let make = {
@@ -89,7 +89,7 @@ module C4 = {
     | Some(x) => x
     | None => true
     }
-    (ReactDOM.jsx("div", {children: ?ReactDOM.someElement(b)}): Jsx.element)
+    (ReactDOM.jsx("div", {children: ?ReactDOM.someElement(b)}): React.element)
   }
   let make = {
     let \"AliasProps$C4" = (props: props<_>) => make(props)
@@ -107,7 +107,7 @@ module C5 = {
     | Some(z) => z
     | None => 3
     }
-    (x + y + z: Jsx.element)
+    (x + y + z: React.element)
   }
   let make = {
     let \"AliasProps$C5" = (props: props<_>) => make(props)
@@ -121,12 +121,12 @@ module C6 = {
     @res.jsxComponentProps
     type props = {}
 
-    let make: React.componentLike<props, Jsx.element>
+    let make: React.componentLike<props, React.element>
   }
   @res.jsxComponentProps
   type props<'comp, 'x> = {comp: 'comp, x: 'x}
 
-  let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>): Jsx.element =>
+  let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>): React.element =>
     React.jsx(Comp.make, {})
   let make = {
     let \"AliasProps$C6" = (props: props<_>) => make(props)

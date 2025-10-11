@@ -1,6 +1,6 @@
 @res.jsxComponentProps
 type props<'x, 'y> = {x: 'x, y: 'y} // Component with type constraint
-let make = ({x, y, _}: props<string, string>): Jsx.element => React.string(x ++ y)
+let make = ({x, y, _}: props<string, string>): React.element => React.string(x ++ y)
 let make = {
   let \"V4" = (props: props<_>) => make(props)
   \"V4"
@@ -11,7 +11,7 @@ module AnotherName = {
   type // Component with another name than "make"
   props<'x> = {x: 'x}
 
-  let anotherName = ({x, _}: props<_>): Jsx.element => React.string(x)
+  let anotherName = ({x, _}: props<_>): React.element => React.string(x)
   let anotherName = {
     let \"V4$AnotherName$anotherName" = (props: props<_>) => anotherName(props)
 
@@ -23,7 +23,7 @@ module Uncurried = {
   @res.jsxComponentProps
   type props<'x> = {x: 'x}
 
-  let make = ({x, _}: props<_>): Jsx.element => React.string(x)
+  let make = ({x, _}: props<_>): React.element => React.string(x)
   let make = {
     let \"V4$Uncurried" = (props: props<_>) => make(props)
 
@@ -35,21 +35,21 @@ module type TUncurried = {
   @res.jsxComponentProps
   type props<'x> = {x: 'x}
 
-  let make: React.componentLike<props<string>, Jsx.element>
+  let make: React.componentLike<props<string>, React.element>
 }
 
 module E = {
   @res.jsxComponentProps @live
   type props<'x> = {x: 'x}
 
-  external make: React.componentLike<props<string>, Jsx.element> = "default"
+  external make: React.componentLike<props<string>, React.element> = "default"
 }
 
 module EUncurried = {
   @res.jsxComponentProps @live
   type props<'x> = {x: 'x}
 
-  external make: React.componentLike<props<string>, Jsx.element> = "default"
+  external make: React.componentLike<props<string>, React.element> = "default"
 }
 
 module Rec = {
@@ -57,7 +57,7 @@ module Rec = {
   type props = {}
 
   let rec make = {
-    let \"make$Internal" = (_: props): Jsx.element => {
+    let \"make$Internal" = (_: props): React.element => {
       make(({}: props))
     }
     let make = {
@@ -74,7 +74,7 @@ module Rec1 = {
   type props = {}
 
   let rec make = {
-    let \"make$Internal" = (_: props): Jsx.element => {
+    let \"make$Internal" = (_: props): React.element => {
       React.null
     }
     let make = {
@@ -91,7 +91,7 @@ module Rec2 = {
   type props = {}
 
   let rec make = {
-    let \"make$Internal" = (_: props): Jsx.element => {
+    let \"make$Internal" = (_: props): React.element => {
       mm(({}: props))
     }
     let make = {

@@ -1,4 +1,4 @@
-@@jsxConfig({version: 4})
+@@jsxConfig({version: 4, module_: "Jsx"})
 
 type props<'a> = {value: 'a}
 

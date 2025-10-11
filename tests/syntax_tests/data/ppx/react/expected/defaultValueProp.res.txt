@@ -10,7 +10,7 @@ module C0 = {
     | Some(b) => b
     | None => a * 2
     }
-    (React.int(a + b): Jsx.element)
+    (React.int(a + b): React.element)
   }
   let make = {
     let \"DefaultValueProp$C0" = (props: props<_>) => make(props)
@@ -27,7 +27,7 @@ module C1 = {
     | Some(a) => a
     | None => 2
     }
-    (React.int(a + b): Jsx.element)
+    (React.int(a + b): React.element)
   }
   let make = {
     let \"DefaultValueProp$C1" = (props: props<_>) => make(props)
@@ -46,7 +46,7 @@ module C2 = {
     | Some(a) => a
     | None => a
     }
-    (React.string(a): Jsx.element)
+    (React.string(a): React.element)
   }
   let make = {
     let \"DefaultValueProp$C2" = (props: props<_>) => make(props)
@@ -67,7 +67,7 @@ module C3 = {
     (
       {
         React.string(everythingDisabled ? "true" : "false")
-      }: Jsx.element
+      }: React.element
     )
   }
   let make = {

@@ -1,12 +1,12 @@
 module Outer = {
   @res.jsxComponentProps
   type props = {}
-  let make = (_: props): Jsx.element => {
+  let make = (_: props): React.element => {
     module Inner = {
       @res.jsxComponentProps
       type props = {}
 
-      let make = (_: props): Jsx.element => ReactDOM.jsx("div", {})
+      let make = (_: props): React.element => ReactDOM.jsx("div", {})
       let make = {
         let \"Nested$Outer" = props => make(props)
 

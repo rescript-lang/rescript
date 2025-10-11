@@ -12,7 +12,7 @@ module V4A = {
     let make = (
       {?className, children, _}: props<_, _, 'ref>,
       ref: Js.Nullable.t<'ref>,
-    ): Jsx.element =>
+    ): React.element =>
       ReactDOM.jsxs(
         "div",
         {
@@ -48,7 +48,7 @@ module V4A = {
             React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
           ),
         },
-      ): Jsx.element
+      ): React.element
     )
   }
   let make = {
@@ -70,7 +70,7 @@ module V4AUncurried = {
     let make = (
       {?className, children, _}: props<_, _, 'ref>,
       ref: Js.Nullable.t<'ref>,
-    ): Jsx.element =>
+    ): React.element =>
       ReactDOM.jsxs(
         "div",
         {
@@ -106,7 +106,7 @@ module V4AUncurried = {
             React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
           ),
         },
-      ): Jsx.element
+      ): React.element
     )
   }
   let make = {

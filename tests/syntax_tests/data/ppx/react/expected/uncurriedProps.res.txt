@@ -7,7 +7,7 @@ let make = ({a: ?__a, _}: props<unit => unit>) => {
   | Some(a) => a
   | None => () => ()
   }
-  (React.null: Jsx.element)
+  (React.null: React.element)
 }
 let make = {
   let \"UncurriedProps" = (props: props<_>) => make(props)
@@ -37,7 +37,7 @@ module Foo = {
     (
       {
         React.null
-      }: Jsx.element
+      }: React.element
     )
   }
   let make = {
@@ -51,7 +51,7 @@ module Bar = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props): Jsx.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
+  let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
   let make = {
     let \"UncurriedProps$Bar" = props => make(props)
 
