@@ -84,7 +84,8 @@ let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
     | Lvar id -> Ident.same id fv
     | Lassign (id, e) -> Ident.same id fv || hit e
     | Lstaticcatch (e1, (_, _vars), e2) -> hit e1 || hit e2
-    | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
+    | Ltrywith (e1, _exn, e2, finally_expr) ->
+      hit e1 || Ext_option.exists e2 hit || Ext_option.exists finally_expr hit
     | Lfunction {body; params = _} -> hit body
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl
@@ -491,16 +492,20 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       convert_aux b
     | Lstaticcatch (b, (i, ids), handler) ->
       Lam.staticcatch (convert_aux b) (i, ids) (convert_aux handler)
-    | Ltrywith (b, id, handler) ->
+    | Ltrywith (b, id, handler, finally) -> (
       let body = convert_aux b in
-      let handler = convert_aux handler in
-      if exception_id_destructed handler id then
+      let handler = Ext_option.map handler convert_aux in
+      let converted_finally = Ext_option.map finally convert_aux in
+      match handler with
+      | Some handler when exception_id_destructed handler id ->
         let new_id = Ident.create ("raw_" ^ id.name) in
         Lam.try_ body new_id
-          (Lam.let_ StrictOpt id
-             (prim ~primitive:Pwrap_exn ~args:[Lam.var new_id] Location.none)
-             handler)
-      else Lam.try_ body id handler
+          (Some
+             (Lam.let_ StrictOpt id
+                (prim ~primitive:Pwrap_exn ~args:[Lam.var new_id] Location.none)
+                handler))
+          converted_finally
+      | _ -> Lam.try_ body id handler converted_finally)
     | Lifthenelse (b, then_, else_) ->
       Lam.if_ (convert_aux b) (convert_aux then_) (convert_aux else_)
     | Lsequence (a, b) -> Lam.seq (convert_aux a) (convert_aux b)

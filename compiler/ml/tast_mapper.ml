@@ -209,7 +209,9 @@ let expr sub x =
     | Texp_match (exp, cases, exn_cases, p) ->
       Texp_match
         (sub.expr sub exp, sub.cases sub cases, sub.cases sub exn_cases, p)
-    | Texp_try (exp, cases) -> Texp_try (sub.expr sub exp, sub.cases sub cases)
+    | Texp_try (exp, cases, finally_expr) ->
+      Texp_try
+        (sub.expr sub exp, sub.cases sub cases, opt (sub.expr sub) finally_expr)
     | Texp_tuple list -> Texp_tuple (List.map (sub.expr sub) list)
     | Texp_construct (lid, cd, args) ->
       Texp_construct (lid, cd, List.map (sub.expr sub) args)

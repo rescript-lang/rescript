@@ -1211,17 +1211,27 @@ let compile output_prefix =
    }
    ]}
 *)
-  and compile_trywith lam id catch (lambda_cxt : Lam_compile_context.t) =
+  and compile_trywith lam id catch finally_expr
+      (lambda_cxt : Lam_compile_context.t) =
     let aux (with_context : Lam_compile_context.t)
         (body_context : Lam_compile_context.t) =
       (* should_return is passed down
          #1701, try should prevent tailcall *)
-      [
-        S.try_
-          (Js_output.output_as_block (compile_lambda body_context lam))
-          ~with_:
-            (id, Js_output.output_as_block (compile_lambda with_context catch));
-      ]
+      let body = Js_output.output_as_block (compile_lambda body_context lam) in
+      let with_ =
+        Ext_option.map catch (fun catch_lam ->
+            ( id,
+              Js_output.output_as_block (compile_lambda with_context catch_lam)
+            ))
+      in
+      let finally =
+        Ext_option.map finally_expr (fun finally_lam ->
+            let finally_cxt =
+              {lambda_cxt with continuation = EffectCall Not_tail}
+            in
+            Js_output.output_as_block (compile_lambda finally_cxt finally_lam))
+      in
+      [S.try_ body ?with_ ?finally]
     in
     match lambda_cxt.continuation with
     | Declare (kind, id) ->
@@ -1825,9 +1835,9 @@ let compile output_prefix =
           (if direction = Upto then Upto else Downto)
           body lambda_cxt)
     | Lassign (id, lambda) -> compile_assign id lambda lambda_cxt
-    | Ltrywith (lam, id, catch) ->
+    | Ltrywith (lam, id, catch, finally_expr) ->
       (* generate documentation *)
-      compile_trywith lam id catch lambda_cxt
+      compile_trywith lam id catch finally_expr lambda_cxt
   in
 
   (compile_recursive_lets, compile_lambda)
