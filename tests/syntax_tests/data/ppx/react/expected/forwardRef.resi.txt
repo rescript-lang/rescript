@@ -9,17 +9,14 @@ module V4C: {
       ref?: 'ref,
     }
 
-    let make: React.componentLike<
-      props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
-    >
+    let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
 
@@ -32,17 +29,14 @@ module V4CUncurried: {
       ref?: 'ref,
     }
 
-    let make: React.componentLike<
-      props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
-    >
+    let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
 
@@ -57,17 +51,14 @@ module V4A: {
       ref?: 'ref,
     }
 
-    let make: React.componentLike<
-      props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
-    >
+    let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
 
@@ -80,16 +71,13 @@ module V4AUncurried: {
       ref?: 'ref,
     }
 
-    let make: React.componentLike<
-      props<string, React.element, ReactDOM.Ref.currentDomRef>,
-      React.element,
-    >
+    let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
 
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {ref?: 'ref}
 
-    let make: React.componentLike<props<React.ref<Js.Nullable.t<inputRef>>>, React.element>
+    let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }

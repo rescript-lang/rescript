@@ -17,7 +17,7 @@ module V4CB = {
   type props = {}
 
   @module("c")
-  external make: React.componentLike<props, React.element> = "component"
+  external make: React.component<props> = "component"
 }
 
 module V4C = {

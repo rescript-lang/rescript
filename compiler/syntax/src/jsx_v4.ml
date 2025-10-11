@@ -990,8 +990,8 @@ let transform_structure_item ~config item =
       (* can't be an arrow because it will defensively uncurry *)
       let new_external_type =
         Ptyp_constr
-          ( {loc = pstr_loc; txt = module_access_name config "componentLike"},
-            [ret_props_type; jsx_element_type config ~loc:pstr_loc] )
+          ( {loc = pstr_loc; txt = module_access_name config "component"},
+            [ret_props_type] )
       in
       let new_structure =
         {
@@ -1079,8 +1079,8 @@ let transform_signature_item ~config item =
       (* can't be an arrow because it will defensively uncurry *)
       let new_external_type =
         Ptyp_constr
-          ( {loc = psig_loc; txt = module_access_name config "componentLike"},
-            [ret_props_type; jsx_element_type config ~loc:psig_loc] )
+          ( {loc = psig_loc; txt = module_access_name config "component"},
+            [ret_props_type] )
       in
       let new_structure =
         {
