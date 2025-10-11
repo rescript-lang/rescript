@@ -1,12 +1,12 @@
 let x = -a
 let x = -.a
 let x = !a
-let x = ~a
+let x = ~~~a
 
-let x = ~-a
-let x = -~a
-let x = ~(-a)
-let x = -(~a)
+let x = ~~~-a
+let x = -~~~a
+let x = ~~~(-a)
+let x = -(~~~a)
 
 let isMale = !user["female"]
 
