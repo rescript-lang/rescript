@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix: use configured Jsx module for constraining component return type. https://github.com/rescript-lang/rescript/pull/7945
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
