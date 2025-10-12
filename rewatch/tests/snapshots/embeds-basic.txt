@@ -1,0 +1,3 @@
+=== Foo.embeds.json ===
+{ "embeds" : [ { "tag" : "sql.one" , "range" : { "end" : { "line" : 1 , "column" : 45 } , "start" : { "line" : 1 , "column" : 17 } } , "context" : "expr" , "embedString" : "/* @name Hello */ select 1" , "literalHash" : "83e2ac06f0a4639ce4d3d7e22794225e" , "occurrenceIndex" : 1 } ] , "module" : "Foo" , "version" : 1 , "sourcePath" : "./fixtures/embeds/src/Foo.res" }
+=== Rewritten Source ===

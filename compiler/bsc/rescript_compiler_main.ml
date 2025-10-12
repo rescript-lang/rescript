@@ -346,6 +346,29 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-dparsetree", set Clflags.dump_parsetree, "*internal* debug parsetree");
     ("-drawlambda", set Clflags.dump_rawlambda, "*internal* debug raw lambda");
     ("-dsource", set Clflags.dump_source, "*internal* print source");
+    ( "-embeds",
+      string_call (fun s ->
+          Js_config.collect_embeds := true;
+          let s = String.trim s in
+          if s = "all" then (
+            Js_config.embed_collect_all := true;
+            Js_config.embed_tags := [])
+          else
+            Js_config.embed_tags :=
+              Ext_string.split_by ~keep_empty:false (fun c -> c = ',') s
+              |> List.map String.trim),
+      "*internal* Collect embed extension occurrences (csv of tags or 'all')"
+    );
+    ( "-rewrite-embeds",
+      unit_call (fun () -> Js_config.rewrite_embeds_mode := true),
+      "*internal* Run embed rewrite on a binary AST (-ast <in.ast> -map <map.json> [-o <out.ast>])"
+    );
+    ( "-ast",
+      string_optional_set Js_config.rewrite_embeds_ast,
+      "*internal* Input .ast file for -rewrite-embeds" );
+    ( "-map",
+      string_optional_set Js_config.rewrite_embeds_map,
+      "*internal* Resolution map JSON for -rewrite-embeds" );
     ( "-reprint-source",
       string_call reprint_source_file,
       "*internal* transform the target ReScript file using PPXes provided, and \
@@ -440,7 +463,26 @@ let _ : unit =
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;
   Ast_config.add_signature flags file_level_flags_handler;
-  try Bsc_args.parse_exn ~argv:Sys.argv command_line_flags anonymous ~usage with
+  try
+    Bsc_args.parse_exn ~argv:Sys.argv command_line_flags anonymous ~usage;
+    if !Js_config.rewrite_embeds_mode then (
+      (* Dedicated AST-only embed rewrite entrypoint *)
+      let in_ast =
+        match !Js_config.rewrite_embeds_ast with
+        | Some f -> f
+        | None -> Bsc_args.bad_arg "-rewrite-embeds requires -ast <in.ast>"
+      in
+      let map_path =
+        match !Js_config.rewrite_embeds_map with
+        | Some f -> f
+        | None -> Bsc_args.bad_arg "-rewrite-embeds requires -map <map.json>"
+      in
+      let out_opt = !Clflags.output_name in
+      (* Delegate to frontend/Embed_rewrite *)
+      Embed_rewrite.run ~in_ast ~map_path ~out_ast:out_opt;
+      exit 0
+    )
+  with
   | Bsc_args.Bad msg ->
     Format.eprintf "%s@." msg;
     exit 2

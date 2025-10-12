@@ -71,4 +71,13 @@ let jsx_module_of_string = function
   | module_name -> Generic {module_name}
 
 let as_pp = ref false
+
+(* Embed indexing and rewrite configuration *)
+let collect_embeds = ref false
+let embed_collect_all = ref false
+let embed_tags : string list ref = ref []
+
+let rewrite_embeds_mode = ref false
+let rewrite_embeds_ast : string option ref = ref None
+let rewrite_embeds_map : string option ref = ref None
 let self_stack : string Stack.t = Stack.create ()

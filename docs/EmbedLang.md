@@ -332,6 +332,9 @@ Phase 0 — Wiring and Flags
 - Define CLI flag `-embeds <csv|all>` in `bsc` (parser phase only).
 - Define CLI entry `-rewrite-embeds -ast <in.ast> -map <map.json> [-o <out.ast>]`.
 - Plumb flags through `compiler/bsc/rescript_compiler_main.ml` and ensure they are mutually orthogonal to existing flags (no impact on `-bs-no-builtin-ppx`).
+Tests (E2E‑first):
+- Smoke: `bsc -help` lists new flags; `bsc -rewrite-embeds` without args prints usage and exits non‑zero.
+- Minimal unit (optional): flag wiring helpers, if any, remain backward compatible.
 
 Phase 1 — Compiler: Embed Indexing (after parse)
 - Add a lightweight AST walker to collect embeds:
@@ -345,11 +348,19 @@ Phase 1 — Compiler: Embed Indexing (after parse)
 - Implementation points:
   - Hook immediately after parse and before any heavy transforms (mirroring PR #6823 pattern used for early artifacts).
   - Ensure binary AST emission remains unchanged.
+Tests (E2E‑first):
+- Golden: `bsc -bs-ast -embeds sql.one -o build/src/Foo src/Foo.res` produces `build/src/Foo.ast` and `build/src/Foo.embeds.json` matching expected JSON (dotted tags, both string literal kinds, expr/module/include contexts, correct occurrenceIndex, ranges present).
+- Golden: non‑literal payload case fixture → indexer reports `EMBED_SYNTAX` in a companion diagnostics artifact or stderr (choose one) with correct location.
+- Golden: files under outDir are ignored (no index emitted). 
+- Minimal unit (optional): pure helpers like literal hashing and tag normalization.
 
 Phase 2 — Rewatch: Parse Step and Tag Discovery
 - Compute the set of tags to index from `rescript.json` `embeds.generators[].tags`.
 - During AST generation (`build/parse.rs`), add `-embeds <csv>` to the `bsc -bs-ast` invocation for modules in packages that configure embeds.
 - Confirm index files are written and co‑located with `.ast` files; add error handling if missing when embeds are configured.
+Tests (Integration):
+- Rust unit: `parse.rs` threads `-embeds <csv>` when configured; absent otherwise.
+- Rewatch testrepo: configured tags → `*.embeds.json` co‑located with `.ast`; unset config → none created.
 
 Phase 3 — Rewatch: Generator Invocation & Caching
 - Read `SomeFile.embeds.json` and group embeds by generator (tag → generator.id).
@@ -362,12 +373,21 @@ Phase 3 — Rewatch: Generator Invocation & Caching
   - Enforce suffix uniqueness per source+tag; on collision, raise `EMBED_SUFFIX_COLLISION` with both locations.
 - Concurrency: cap concurrent processes to `max(1, num_cpus/2)`.
 - Maintain a cache index for `extraSources` mtimes to avoid repeated stat calls.
+Tests (Integration):
+- Stub generator returns `status=ok`: generated files written with header; second run is a cache hit.
+- Modify embed string → cache miss; touch `extraSources` → cache miss; unrelated change → cache hit.
+- Diagnostics mapping: generator error (line/column) → logs show mapped source span + code frame; non‑zero exit/timeout → `EMBED_GENERATOR_FAILED`.
+- Minimal unit: suffix sanitization and collision detection.
 
 Phase 4 — Rewatch: Resolution Map Writer
 - For each source module with embeds, write `SomeFile.embeds.map.json` next to `.ast`:
   - Fields: version, module, entries[] with tag, occurrenceIndex, literalHash, targetModule.
   - Always target `default` for expression contexts; module/include target the module itself.
 - Ensure `literalHash` in map matches the current index; if mismatch during rewrite, surface `EMBED_MAP_MISMATCH`.
+Tests (Integration‑first):
+- Rewatch writes `*.embeds.map.json` with stable ordering; rewriter consumes it successfully.
+- Deliberate mismatch between index hash and map → `EMBED_MAP_MISMATCH` at rewrite time.
+- Minimal unit (optional): JSON schema read/write round‑trip.
 
 Phase 5 — Compiler: AST‑Only Rewrite Pass
 - Implement a minimal rewriter that:
@@ -376,8 +396,14 @@ Phase 5 — Compiler: AST‑Only Rewrite Pass
     - `%tag("...")` (expr) → `GeneratedModule.default`.
     - `module X = %tag("...")` → `module X = GeneratedModule`.
     - `include %tag("...")` → `include GeneratedModule`.
-  - Writes AST to `-o` (or in‑place if omitted).
+- Writes AST to `-o` (or in‑place if omitted).
 - Do not perform JSX or builtin PPX here; keep this pass surgical and idempotent.
+Tests (E2E‑first):
+- `bsc -rewrite-embeds -ast build/src/Foo.ast -map build/src/Foo.embeds.map.json -o build/src/Foo.ast` then `bsc -only-parse -dsource build/src/Foo.ast` → printed source matches expected snapshot:
+  - expr `%tag("...")` → `GeneratedModule.default`
+  - module/include → `GeneratedModule`
+- Idempotency: running the rewriter twice leaves `build/src/Foo.ast` unchanged (digest check).
+- Error: missing map entry or hash mismatch emits clear error and does not modify the input AST.
 
 Phase 6 — Rewatch: Pipeline Integration
 - After AST generation and generation/map writing, invoke `bsc -rewrite-embeds` per module that has an index.
@@ -385,27 +411,43 @@ Phase 6 — Rewatch: Pipeline Integration
 - Extend dependency graph:
   - `OriginalFile → GeneratedModule(s)` and `GeneratedModule → extraSources`.
   - Treat generated files as regular sources for ordering; do not index embeds within them.
+Tests (Integration):
+- End‑to‑end: `bsc -bs-ast -embeds ...` → generate files → `bsc -rewrite-embeds ...` → `bsc build/src/Foo.ast` produces JS; imports from generated module resolved.
+- Type errors in generated code surface normally; removing an embed or generated file triggers correct rebuild and cleanup.
+- Multi‑package: generated files live under each package’s outDir; no cross‑package collisions.
 
 Phase 7 — Watch Mode & Cleanup
 - Watch original `.res`, generated `outDir`, and `extraSources`.
 - On changes, invalidate affected embeds, re‑run generation and rewrite only for impacted modules, and rebuild dependents.
 - Cleanup: compute expected generated files per source; remove stale files and clear cache entries when embeds are removed or sources deleted.
+Tests (Integration, watch):
+- Change `extraSources` → only affected module regenerates; JS updates; others untouched.
+- Delete an embed → stale generated files removed; dependent modules rebuild.
+- Manual edits to generated files are overwritten by the next build.
 
 Phase 8 — Errors & Diagnostics
 - Map generator diagnostics (literal‑relative positions) to absolute source spans via the index ranges; print rich code frames.
 - Error codes: `EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_SUFFIX_COLLISION`, `EMBED_MAP_MISMATCH`.
 - Align severity with compiler conventions; ensure non‑zero exit on errors to integrate with CI.
+Tests (Integration):
+- Each error class (`EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_SUFFIX_COLLISION`, `EMBED_MAP_MISMATCH`) reproduced in testrepo with stable messages and exit codes.
+- Optional unit: code frame formatting helper includes correct context lines.
 
-Phase 9 — Testing
-- Compiler unit tests (ounit):
-  - Indexer: dotted tags, both string literal kinds, expr/module/include contexts, occurrenceIndex stability, outDir exclusion.
-  - Rewriter: given AST+map, verify node replacements and validation errors.
-- Rewatch unit/integration:
-  - Happy path: generator returns code; files created; map written; build succeeds.
-  - Caching: modify embed string and extra sources; verify regeneration as expected.
-  - Errors: timeouts, non‑zero exit, diagnostics mapping to original source.
-  - Watch: change extra source; only affected modules rebuild; stale files cleaned.
-- Wire into `make test`, `make test-rewatch`, and add a small sample generator used only in tests.
+- E2E‑first: integration tests live under `rewatch/tests/` and are invoked from `suite-ci.sh`.
+- Embeds tests use a standalone fixture repo at `rewatch/tests/fixtures/embeds/` and a driver script `rewatch/tests/embeds.sh` that:
+  - Produces `.ast` + `*.embeds.json` via `bsc -bs-ast -embeds ...`
+  - Runs `bsc -rewrite-embeds ...`
+  - Snapshots the index JSON and the rewritten source printed from the AST.
+  - Fails if the snapshot changes and is not staged, consistent with other tests.
+- Compiler unit tests (minimal OUnit only where warranted):
+  - Pure helpers: suffix sanitization, tag normalization, literal hashing.
+  - Optional: JSON map schema read/write validation.
+- Harness commands used in tests:
+  - `bsc -bs-ast -embeds <tags> -o <outprefix> <file.res>` → writes `<outprefix>.ast` and `*.embeds.json`.
+  - `bsc -rewrite-embeds -ast <in.ast> -map <map.json> -o <out.ast>` → rewrites embeds.
+  - `bsc -only-parse -dsource <out.ast>` or `-dparsetree` → snapshot rewritten AST as source or parsetree.
+  - `bsc <out.ast>` → typecheck and generate JS for full end‑to‑end checks.
+- CI: wire into `make test-rewatch` and keep snapshots stable.
 
 Phase 10 — Documentation & Examples
 - Document `embeds` config in `rescript.json`, CLI flags, and generator protocol.

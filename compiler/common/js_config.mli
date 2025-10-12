@@ -100,4 +100,23 @@ val jsx_module_of_string : string -> jsx_module
 
 val as_pp : bool ref
 
+(* Embed indexing and rewrite configuration *)
+val collect_embeds : bool ref
+(** When true, emit per-module embed index artifacts during parse *)
+
+val embed_collect_all : bool ref
+(** When true, collect all extension tags; otherwise restrict to [embed_tags] *)
+
+val embed_tags : string list ref
+(** Comma-separated list of tags to collect when [embed_collect_all] = false *)
+
+val rewrite_embeds_mode : bool ref
+(** Dedicated AST-only rewrite mode flag *)
+
+val rewrite_embeds_ast : string option ref
+(** Input .ast file path for rewrite mode *)
+
+val rewrite_embeds_map : string option ref
+(** Resolution map JSON path for rewrite mode *)
+
 val self_stack : string Stack.t
