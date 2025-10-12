@@ -8,6 +8,7 @@ pub mod namespaces;
 pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
+pub mod embeds;
 
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
@@ -18,6 +19,7 @@ use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
 use build_types::*;
+use build_types::SourceType;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
@@ -370,6 +372,65 @@ pub fn incremental_build(
             });
         }
     }
+    // Process embeds: run generators, write maps, rewrite ASTs, and register generated modules
+    let timing_embeds = Instant::now();
+    {
+        // Collect work items first to avoid borrow conflicts
+        let mut work: Vec<(String, String, std::path::PathBuf, std::path::PathBuf)> = Vec::new();
+        for (module_name, package_name) in build_state.module_name_package_pairs() {
+            if let Some(module) = build_state.build_state.modules.get(&module_name) {
+                if let SourceType::SourceFile(source_file) = &module.source_type {
+                    let ast_path_rel = helpers::get_ast_path(&source_file.implementation.path);
+                    work.push((module_name.clone(), package_name.clone(), source_file.implementation.path.clone(), ast_path_rel));
+                }
+            }
+        }
+
+        for (module_name, package_name, impl_rel, ast_rel) in work {
+            let result = {
+                let package_ref = build_state
+                    .build_state
+                    .packages
+                    .get(&package_name)
+                    .expect("Package not found")
+                    .clone();
+                embeds::process_module_embeds(build_state, package_ref, &impl_rel, &ast_rel)
+            };
+            match result {
+                Ok(generated) => {
+                    if !generated.is_empty() {
+                        {
+                            let package_ref = build_state
+                                .build_state
+                                .packages
+                                .get(&package_name)
+                                .expect("Package not found")
+                                .clone();
+                            embeds::add_generated_modules_to_state(build_state, package_ref, &generated);
+                        }
+                        for g in generated {
+                            let _ = parse::generate_ast(
+                                build_state
+                                    .build_state
+                                    .packages
+                                    .get(&package_name)
+                                    .expect("Package not found")
+                                    .clone(),
+                                &g.rel_path,
+                                &build_state.build_state,
+                                build_state.get_warn_error_override(),
+                            );
+                            pb.inc(1);
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::error!("Embed processing failed for {}: {}", module_name, e);
+                }
+            }
+        }
+    }
+
     let timing_deps = Instant::now();
     let deleted_modules = build_state.deleted_modules.clone();
     deps::get_deps(build_state, &deleted_modules);
@@ -377,13 +438,13 @@ pub fn incremental_build(
     current_step += 1;
 
     if !snapshot_output && show_progress {
-        println!(
-            "{}{} {}Collected deps in {:.2}s",
-            LINE_CLEAR,
-            format_step(current_step, total_steps),
-            DEPS,
-            default_timing.unwrap_or(timing_deps_elapsed).as_secs_f64()
-        );
+            println!(
+                "{}{} {}Collected deps in {:.2}s",
+                LINE_CLEAR,
+                format_step(current_step, total_steps),
+                DEPS,
+                default_timing.unwrap_or(timing_deps_elapsed).as_secs_f64()
+            );
     }
 
     mark_modules_with_expired_deps_dirty(build_state);

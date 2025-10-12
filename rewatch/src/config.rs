@@ -297,6 +297,9 @@ pub struct Config {
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
+    // Embeds configuration (Rewatch feature)
+    #[serde(default)]
+    pub embeds: Option<EmbedsConfig>,
     // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
@@ -314,6 +317,79 @@ pub struct Config {
 
 fn default_path() -> PathBuf {
     PathBuf::from("./rescript.json")
+}
+
+// Embeds configuration types
+#[derive(Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbedsConfig {
+    pub generators: Vec<EmbedGenerator>,
+    pub out_dir: Option<String>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbedGenerator {
+    pub id: String,
+    pub cmd: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    pub cwd: Option<String>,
+    pub env: Option<HashMap<String, String>>,
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub extra_sources: Vec<String>,
+    pub timeout_ms: Option<u64>,
+}
+
+impl EmbedsConfig {
+    pub fn all_tags(&self) -> Vec<String> {
+        use ahash::AHashSet;
+        let mut set: AHashSet<String> = AHashSet::new();
+        for generator in &self.generators {
+            for t in &generator.tags {
+                set.insert(t.to_string());
+            }
+        }
+        set.into_iter().collect()
+    }
+}
+
+impl Config {
+    pub fn get_effective_embeds_config<'a>(&'a self, project_context: &'a ProjectContext) -> Option<&'a EmbedsConfig> {
+        if self.embeds.is_some() {
+            self.embeds.as_ref()
+        } else {
+            project_context.get_root_config().embeds.as_ref()
+        }
+    }
+
+    pub fn get_embeds_tags(&self, project_context: &ProjectContext) -> Vec<String> {
+        self.get_effective_embeds_config(project_context)
+            .map(|e| e.all_tags())
+            .unwrap_or_default()
+    }
+
+    /// Compute embeds outDir relative to the package root.
+    /// If configured, use that path. Otherwise, if `src/` exists under the package root,
+    /// use `src/__generated__`. Fallback to `__generated__`.
+    pub fn get_embeds_out_dir(&self, package_root: &Path) -> PathBuf {
+        if let Some(e) = &self.embeds {
+            if let Some(out) = &e.out_dir {
+                let p = Path::new(out);
+                if p.is_absolute() {
+                    return p.to_path_buf();
+                }
+                return package_root.join(p);
+            }
+        }
+        let src = package_root.join("src");
+        if src.exists() {
+            src.join("__generated__")
+        } else {
+            package_root.join("__generated__")
+        }
+    }
 }
 
 /// This flattens string flags

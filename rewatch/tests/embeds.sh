@@ -4,55 +4,42 @@ set -euo pipefail
 cd "$(dirname "$0")"
 source ./utils.sh
 
-bold "Embeds: index + rewrite e2e"
+bold "Embeds: full flow via Rewatch"
 
-SRCDIR="./fixtures/embeds/src"
-BUILDDIR="./_tmp_embeds/build/src"
-mkdir -p "$BUILDDIR"
+FIXDIR="./_tmp_embeds/rewatch_proj"
+# normalize rewatch executable to absolute path so pushd doesn't break it
+REWATCH_BIN=$(cd "$(dirname "$REWATCH_EXECUTABLE")" >/dev/null 2>&1 && pwd)/$(basename "$REWATCH_EXECUTABLE")
+rm -rf "$FIXDIR"
+mkdir -p "$FIXDIR"
+cp -R ./fixtures/embeds/* "$FIXDIR"/
 
-# 1) Emit AST + index
-"$RESCRIPT_BSC_EXE" -bs-ast -o "$BUILDDIR/Foo" -embeds sql.one "$SRCDIR/Foo.res" >/dev/null 2>&1 || true
+pushd "$FIXDIR" >/dev/null
+"$REWATCH_BIN" build --snapshot-output >/dev/null 2>&1 || true
+popd >/dev/null
 
-# Extract the literalHash from the index (regex; jq not required)
-LITERAL_HASH=$(sed -n 's/.*"literalHash"[[:space:]]*:[[:space:]]*"\([a-f0-9]\{32\}\)".*/\1/p' "$BUILDDIR/Foo.embeds.json" | head -n1)
-
-# 2) Create resolution map and run rewrite
-cat > "$BUILDDIR/Foo.embeds.map.json" <<MAP
-{
-  "version": 1,
-  "module": "Foo",
-  "entries": [
-    {
-      "tag": "sql.one",
-      "occurrenceIndex": 1,
-      "literalHash": "$LITERAL_HASH",
-      "targetModule": "Foo__embed_sql_one_Hello"
-    }
-  ]
-}
-MAP
-
-"$RESCRIPT_BSC_EXE" -rewrite-embeds -ast "$BUILDDIR/Foo.ast" -map "$BUILDDIR/Foo.embeds.map.json" -o "$BUILDDIR/Foo.ast" >/dev/null 2>&1
-
-# 3) Produce snapshot by concatenating index + rewritten source
-SNAPSHOT="../tests/snapshots/embeds-basic.txt"
+SNAPSHOT2="../tests/snapshots/embeds-rewatch.txt"
 {
   echo '=== Foo.embeds.json ==='
-  cat "$BUILDDIR/Foo.embeds.json"
+  cat "$FIXDIR/lib/bs/src/Foo.embeds.json" || true
+  echo
+  echo '=== Foo.embeds.map.json ==='
+  cat "$FIXDIR/lib/bs/src/Foo.embeds.map.json" || true
   echo
   echo '=== Rewritten Source ==='
-  "$RESCRIPT_BSC_EXE" -only-parse -dsource "$BUILDDIR/Foo.ast" 2>/dev/null || true
-} > "$SNAPSHOT"
+  "$RESCRIPT_BSC_EXE" -only-parse -dsource "$FIXDIR/lib/bs/src/Foo.ast" 2>/dev/null || true
+  echo
+  echo '=== Generated Module ==='
+  cat "$FIXDIR/src/__generated__/Foo__embed_sql_one_Hello.res" || true
+} > "$SNAPSHOT2"
 
-normalize_paths "$SNAPSHOT"
+normalize_paths "$SNAPSHOT2"
 
-changed_snapshots=$(git ls-files --modified ../tests/snapshots/embeds-basic.txt)
-if git diff --exit-code ../tests/snapshots/embeds-basic.txt &> /dev/null;
+if git diff --exit-code ../tests/snapshots/embeds-rewatch.txt &> /dev/null;
 then
-  success "Embeds index + rewrite flow OK"
+  success "Rewatch embeds flow OK"
 else
-  error "Embeds snapshot changed"
-  bold ../tests/snapshots/embeds-basic.txt
-  git --no-pager diff ../tests/snapshots/embeds-basic.txt ../tests/snapshots/embeds-basic.txt
+  error "Embeds (Rewatch) snapshot changed"
+  bold ../tests/snapshots/embeds-rewatch.txt
+  git --no-pager diff ../tests/snapshots/embeds-rewatch.txt ../tests/snapshots/embeds-rewatch.txt
   exit 1
 fi

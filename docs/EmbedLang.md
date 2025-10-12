@@ -2,6 +2,22 @@
 
 This document proposes “embed lang”, a Rewatch feature that lets users call external code generators from embedded code snippets in ReScript source files, generate ReScript modules, and link them seamlessly into the original source.
 
+## Implementation Status (WIP)
+- Phase progress
+  - Phase 2 (Rewatch: Parse step): DONE — `-embeds <csv>` threaded via parser args from `rescript.json` tags.
+  - Phase 3 (Generator invocation): PARTIAL — per‑embed process invocation + generated file write + headers implemented; caching/timeout not yet.
+  - Phase 4 (Resolution map writer): DONE — `*.embeds.map.json` written next to `.ast` with stable entries.
+  - Phase 5 (Compiler rewriter): PRESENT — `bsc -rewrite-embeds` invoked per module and applied in‑place.
+  - Phase 6 (Rewatch integration): DONE — integrates generation + rewrite into build, registers generated modules and parses their ASTs.
+  - Phase 7 (Watch/cleanup): TODO — extraSources watching + stale file cleanup not implemented yet.
+  - Phase 8 (Diagnostics): TODO — error mapping with code frames and stable EMBED_* codes.
+- Test coverage
+  - Compiler‑only flow: `rewatch/tests/embeds-compiler.sh` validates index + manual map + rewriter (no Rewatch involvement).
+  - Rewatch E2E: `rewatch/tests/embeds.sh` builds a fixture repo and snapshots index, map, rewritten source, and generated module.
+- Known gaps (to implement next)
+  - Per‑embed timeout, caching/invalidation (including `extraSources`), diagnostics mapping, and cleanup of stale generated files.
+  - User‑visible progress reporting in Rewatch for embeds (per‑module discovery, generator start/finish with cache hit/miss, rewrite applied, concise summaries; integrate with existing progress bar and `--verbose`).
+
 ## Summary
 - Users write an embed expression in `.res` files using a tag and a string literal (backtick or normal quoted), for example:
   - `let query = %sql.one(`/* @name GetUser */ select * from users where id = :id`)
@@ -373,6 +389,9 @@ Phase 3 — Rewatch: Generator Invocation & Caching
   - Enforce suffix uniqueness per source+tag; on collision, raise `EMBED_SUFFIX_COLLISION` with both locations.
 - Concurrency: cap concurrent processes to `max(1, num_cpus/2)`.
 - Maintain a cache index for `extraSources` mtimes to avoid repeated stat calls.
+ - Progress reporting: for each module and embed, emit concise progress events —
+   - discovery (N embeds found), per‑embed start, cache hit/miss, done/failed (with error class),
+   - and a per‑module summary (generated X, reused Y, failed Z). Integrate with the existing progress bar and `--verbose`.
 Tests (Integration):
 - Stub generator returns `status=ok`: generated files written with header; second run is a cache hit.
 - Modify embed string → cache miss; touch `extraSources` → cache miss; unrelated change → cache hit.
@@ -411,6 +430,7 @@ Phase 6 — Rewatch: Pipeline Integration
 - Extend dependency graph:
   - `OriginalFile → GeneratedModule(s)` and `GeneratedModule → extraSources`.
   - Treat generated files as regular sources for ordering; do not index embeds within them.
+ - Progress reporting: show rewrite step per module where embeds exist (e.g., “rewrote 2 embeds in Foo”), and include a concise build‑level summary (modules with embeds, total embeds processed, total generated).
 Tests (Integration):
 - End‑to‑end: `bsc -bs-ast -embeds ...` → generate files → `bsc -rewrite-embeds ...` → `bsc build/src/Foo.ast` produces JS; imports from generated module resolved.
 - Type errors in generated code surface normally; removing an embed or generated file triggers correct rebuild and cleanup.

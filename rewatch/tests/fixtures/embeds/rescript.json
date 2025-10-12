@@ -1,0 +1,18 @@
+{
+  "name": "embeds-fixture",
+  "sources": [ { "dir": "src", "subdirs": true } ],
+  "embeds": {
+    "generators": [
+      {
+        "id": "sqlgen",
+        "cmd": "node",
+        "args": ["gen.mjs"],
+        "cwd": ".",
+        "tags": ["sql.one"],
+        "extraSources": [],
+        "timeoutMs": 5000
+      }
+    ]
+  }
+}
+

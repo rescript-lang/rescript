@@ -299,6 +299,14 @@ pub fn parser_args(
 
     let file = PathBuf::from("..").join("..").join(file);
 
+    // Embeds tags
+    let embed_tags = package_config.get_embeds_tags(project_context);
+    let embed_args = if embed_tags.is_empty() {
+        vec![]
+    } else {
+        vec!["-embeds".to_string(), embed_tags.join(",")]
+    };
+
     Ok((
         ast_path.to_owned(),
         [
@@ -310,6 +318,7 @@ pub fn parser_args(
             experimental_features_args,
             warning_args,
             bsc_flags,
+            embed_args,
             vec![
                 "-absname".to_string(),
                 "-bs-ast".to_string(),
@@ -322,7 +331,7 @@ pub fn parser_args(
     ))
 }
 
-fn generate_ast(
+pub(crate) fn generate_ast(
     package: Package,
     filename: &Path,
     build_state: &BuildState,
