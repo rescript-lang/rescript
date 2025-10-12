@@ -28,6 +28,8 @@
 
 #### :house: Internal
 
+- JSX PPX: use `React.component` instead of `React.componentLike` for externals. https://github.com/rescript-lang/rescript/pull/7952
+
 # 12.0.0-rc.1
 
 #### :nail_care: Polish
