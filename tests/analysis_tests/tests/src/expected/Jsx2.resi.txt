@@ -1,5 +1,5 @@
 Hover src/Jsx2.resi 1:4
-{"contents": {"kind": "markdown", "value": "```rescript\nReact.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nprops<string>\n```\n\n---\n\n```\n \n```\n```rescript\ntype props<'first> = {first: 'first}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.resi%22%2C0%2C0%5D)\n"}}
 
 Hover src/Jsx2.resi 4:4
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
