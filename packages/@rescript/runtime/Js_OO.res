@@ -24,52 +24,29 @@
 
 @@config({flags: ["-unboxed-types"]})
 
-@deprecated("This has been deprecated and will be removed in v13.")
 external unsafe_to_method: 'a => 'a = "%unsafe_to_method"
 
 module Callback = {
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity1<'a> = {@internal i1: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity2<'a> = {@internal i2: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity3<'a> = {@internal i3: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity4<'a> = {@internal i4: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity5<'a> = {@internal i5: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity6<'a> = {@internal i6: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity7<'a> = {@internal i7: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity8<'a> = {@internal i8: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity9<'a> = {@internal i9: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity10<'a> = {@internal i10: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity11<'a> = {@internal i11: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity12<'a> = {@internal i12: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity13<'a> = {@internal i13: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity14<'a> = {@internal i14: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity15<'a> = {@internal i15: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity16<'a> = {@internal i16: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity17<'a> = {@internal i17: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity18<'a> = {@internal i18: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity19<'a> = {@internal i19: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity20<'a> = {@internal i20: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity21<'a> = {@internal i21: 'a}
-  @deprecated("This has been deprecated and will be removed in v13.")
   type arity22<'a> = {@internal i22: 'a}
 }
