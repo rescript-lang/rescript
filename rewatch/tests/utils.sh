@@ -36,20 +36,20 @@ normalize_paths() {
     # Examples:
     #   src=./../../foo -> src=../../foo
     #   "sourcePath": "./../../foo" -> "sourcePath": "../../foo"
-    sed -i '' -E 's#(src=)\./(\.\./)#\1\2#g' $1;
-    sed -i '' -E 's#("sourcePath"[[:space:]]*:[[:space:]]*")\./(\.\./)#\1\2#g' $1;
+    sed -i '' 's#\(src=\)\./\(\.\./\)#\1\2#g' $1;
+    sed -i '' 's#\("sourcePath"[[:space:]]*:[[:space:]]*"\)\./\(\.\./\)#\1\2#g' $1;
   else
     if is_windows; then
       sed -i "s#$(pwd_prefix)##g" $1
       sed -i "s#\\\\#/#g" $1
       # Normalize leading './' before '../' segments
-      sed -i -E 's#(src=)\./(\.\./)#\1\2#g' $1
-      sed -i -E 's#("sourcePath"[[:space:]]*:[[:space:]]*")\./(\.\./)#\1\2#g' $1
+      sed -i 's#\(src=\)\./\(\.\./\)#\1\2#g' $1
+      sed -i 's#\("sourcePath"[[:space:]]*:[[:space:]]*"\)\./\(\.\./\)#\1\2#g' $1
     else
       sed -i "s#$(pwd_prefix)##g" $1;
       # Normalize leading './' before '../' segments
-      sed -i -E 's#(src=)\./(\.\./)#\1\2#g' $1
-      sed -i -E 's#("sourcePath"[[:space:]]*:[[:space:]]*")\./(\.\./)#\1\2#g' $1
+      sed -i 's#\(src=\)\./\(\.\./\)#\1\2#g' $1
+      sed -i 's#\("sourcePath"[[:space:]]*:[[:space:]]*"\)\./\(\.\./\)#\1\2#g' $1
     fi
   fi
 }
