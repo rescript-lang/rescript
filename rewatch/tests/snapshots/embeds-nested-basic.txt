@@ -1,0 +1,3 @@
+=== Foo.embeds.json ===
+{ "embeds" : [ { "tag" : "sql.one" , "range" : { "end" : { "line" : 1 , "column" : 45 } , "start" : { "line" : 1 , "column" : 21 } } , "context" : "expr" , "embedString" : "/* @name A */ select 1" , "literalHash" : "040b7e3d20321295fb092cda36a6c4e0" , "occurrenceIndex" : 1 } , { "tag" : "sql.one" , "range" : { "end" : { "line" : 1 , "column" : 81 } , "start" : { "line" : 1 , "column" : 57 } } , "context" : "expr" , "embedString" : "/* @name B */ select 2" , "literalHash" : "582f4f09f01b4ab3197ab897eb3674aa" , "occurrenceIndex" : 2 } ] , "module" : "Foo" , "version" : 1 , "sourcePath" : "./fixtures/embeds_nested/src/Foo.res" }
+=== Rewritten Source ===

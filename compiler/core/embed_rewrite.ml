@@ -84,12 +84,11 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
       | _ -> None)
     | _ -> None
   in
-  let open Ast_helper in
-  let rec map_mod (m : module_expr) : module_expr =
+  let module_expr (self : Ast_mapper.mapper) (m : module_expr) : module_expr =
     match m.pmod_desc with
     | Pmod_extension (({txt = tag; _} as name_loc), payload) -> (
       match string_lit_of_payload payload with
-      | None -> m
+      | None -> Ast_mapper.default_mapper.module_expr self m
       | Some s -> (
         match Hashtbl.find_opt index tag with
         | None ->
@@ -108,18 +107,15 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
               Location.raise_errorf ~loc:name_loc.loc
                 "EMBED_MAP_MISMATCH: hash mismatch for tag %s occurrence %d" tag
                 k;
-            Mod.ident ~loc:m.pmod_loc
-              {txt = Lident entry.target_module; loc = m.pmod_loc})))
-    | Pmod_structure s -> Mod.structure ~loc:m.pmod_loc (map_str s)
-    | Pmod_functor (n, mt, body) ->
-      Mod.functor_ ~loc:m.pmod_loc n mt (map_mod body)
-    | Pmod_apply (m1, m2) -> Mod.apply ~loc:m.pmod_loc (map_mod m1) (map_mod m2)
-    | _ -> m
-  and map_expr (e : expression) : expression =
+            Ast_helper.Mod.ident ~loc:m.pmod_loc
+              {txt = Longident.Lident entry.target_module; loc = m.pmod_loc})))
+    | _ -> Ast_mapper.default_mapper.module_expr self m
+  in
+  let expr (self : Ast_mapper.mapper) (e : expression) : expression =
     match e.pexp_desc with
     | Pexp_extension (({txt = tag; _} as name_loc), payload) -> (
       match string_lit_of_payload payload with
-      | None -> e
+      | None -> Ast_mapper.default_mapper.expr self e
       | Some s -> (
         match Hashtbl.find_opt index tag with
         | None ->
@@ -138,44 +134,19 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
               Location.raise_errorf ~loc:name_loc.loc
                 "EMBED_MAP_MISMATCH: hash mismatch for tag %s occurrence %d" tag
                 k;
-            let id =
-              Exp.ident ~loc:e.pexp_loc
-                {
-                  txt = Longident.Ldot (Lident entry.target_module, "default");
-                  loc = e.pexp_loc;
-                }
-            in
-            id)))
-    | _ -> e
-  and map_str (s : structure) : structure =
-    List.map
-      (fun (si : structure_item) ->
-        match si.pstr_desc with
-        | Pstr_include incl ->
-          let m' = map_mod incl.pincl_mod in
-          if m' == incl.pincl_mod then si
-          else Str.include_ ~loc:si.pstr_loc {incl with pincl_mod = m'}
-        | Pstr_module mb ->
-          let m' = map_mod mb.pmb_expr in
-          if m' == mb.pmb_expr then si
-          else Str.module_ ~loc:si.pstr_loc {mb with pmb_expr = m'}
-        | Pstr_recmodule mbs ->
-          let mbs' =
-            List.map (fun mb -> {mb with pmb_expr = map_mod mb.pmb_expr}) mbs
-          in
-          Str.rec_module ~loc:si.pstr_loc mbs'
-        | Pstr_value (recflag, vbs) ->
-          let vbs' =
-            List.map (fun vb -> {vb with pvb_expr = map_expr vb.pvb_expr}) vbs
-          in
-          Str.value ~loc:si.pstr_loc recflag vbs'
-        | Pstr_eval (e, _attrs) ->
-          let e' = map_expr e in
-          if e' == e then si else Str.eval ~loc:si.pstr_loc e'
-        | _ -> si)
-      s
+            Ast_helper.Exp.ident ~loc:e.pexp_loc
+              {
+                txt =
+                  Longident.Ldot
+                    (Longident.Lident entry.target_module, "default");
+                loc = e.pexp_loc;
+              })))
+    | _ -> Ast_mapper.default_mapper.expr self e
   in
-  map_str ast
+  let mapper : Ast_mapper.mapper =
+    {Ast_mapper.default_mapper with expr; module_expr}
+  in
+  mapper.Ast_mapper.structure mapper ast
 
 let write_ast_impl ~output (ast : structure) =
   let sourcefile = !Location.input_name in
