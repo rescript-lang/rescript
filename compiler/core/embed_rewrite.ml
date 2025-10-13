@@ -90,16 +90,20 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
       | None -> m
       | Some s -> (
         match Hashtbl.find_opt index tag with
-        | None -> m
+        | None ->
+          Location.raise_errorf ~loc:name_loc.loc
+            "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" tag (bump tag)
         | Some subtbl ->
           let k = bump tag in
           (match Hashtbl.find_opt subtbl k with
-          | None -> m
+          | None ->
+            Location.raise_errorf ~loc:name_loc.loc
+              "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" tag k
           | Some entry ->
             let lit_hash = csv_hash tag s in
             if lit_hash <> entry.literal_hash then
               Location.raise_errorf ~loc:name_loc.loc
-                "embed map mismatch for tag %s occurrence %d" tag k;
+                "EMBED_MAP_MISMATCH: hash mismatch for tag %s occurrence %d" tag k;
             Mod.ident ~loc:m.pmod_loc {txt = Lident entry.target_module; loc = m.pmod_loc})))
     | Pmod_structure s -> Mod.structure ~loc:m.pmod_loc (map_str s)
     | Pmod_functor (n, mt, body) -> Mod.functor_ ~loc:m.pmod_loc n mt (map_mod body)
@@ -112,16 +116,20 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
       | None -> e
       | Some s -> (
         match Hashtbl.find_opt index tag with
-        | None -> e
+        | None ->
+          Location.raise_errorf ~loc:name_loc.loc
+            "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" tag (bump tag)
         | Some subtbl ->
           let k = bump tag in
           match Hashtbl.find_opt subtbl k with
-          | None -> e
+          | None ->
+            Location.raise_errorf ~loc:name_loc.loc
+              "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" tag k
           | Some entry ->
             let lit_hash = csv_hash tag s in
             if lit_hash <> entry.literal_hash then
               Location.raise_errorf ~loc:name_loc.loc
-                "embed map mismatch for tag %s occurrence %d" tag k;
+                "EMBED_MAP_MISMATCH: hash mismatch for tag %s occurrence %d" tag k;
             let id =
               Exp.ident ~loc:e.pexp_loc
                 { txt = Longident.Ldot (Lident entry.target_module, "default");

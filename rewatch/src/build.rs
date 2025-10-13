@@ -375,6 +375,7 @@ pub fn incremental_build(
     // Process embeds: run generators, write maps, rewrite ASTs, and register generated modules
     let timing_embeds = Instant::now();
     {
+        let mut embeds_had_failure = false;
         // Collect work items first to avoid borrow conflicts
         let mut work: Vec<(String, String, std::path::PathBuf, std::path::PathBuf)> = Vec::new();
         for (module_name, package_name) in build_state.module_name_package_pairs() {
@@ -426,8 +427,16 @@ pub fn incremental_build(
                 }
                 Err(e) => {
                     log::error!("Embed processing failed for {}: {}", module_name, e);
+                    embeds_had_failure = true;
                 }
             }
+        }
+        if embeds_had_failure {
+            logs::finalize(&build_state.packages);
+            return Err(IncrementalBuildError {
+                kind: IncrementalBuildErrorKind::CompileError(None),
+                snapshot_output,
+            });
         }
     }
 

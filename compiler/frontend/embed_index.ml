@@ -55,6 +55,26 @@ let string_lit_of_payload (payload : Ast_payload.t) :
 let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
   if not (is_enabled ()) then ()
   else
+    (* Skip generated embed files to prevent nested/embed loops *)
+    (let is_generated =
+       try
+         (* Fast path: any source under a __generated__ folder *)
+         (String.contains sourcefile '/' &&
+            (Ext_string.contain_substring sourcefile "/__generated__/"))
+         ||
+         (* Slower path: check for header markers in source text *)
+         let ic = open_in sourcefile in
+         let l1 = input_line ic in
+         let l2 = try input_line ic with End_of_file -> "" in
+         close_in_noerr ic;
+         Ext_string.contain_substring l1 "@sourceHash"
+         || Ext_string.contain_substring l2 "rewatch-embed:"
+       with _ -> false
+     in
+     if is_generated then
+       (* Do not emit any embed index for generated files *)
+       ()
+     else
     let entries = ref [] in
     let counts : (string, int) Hashtbl.t = Hashtbl.create 7 in
     let bump tag =
@@ -139,4 +159,4 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
     in
     let out_dir = Filename.dirname (outprefix ^ Literals.suffix_ast) in
     mkdirp out_dir;
-    Ext_json_noloc.to_file (outprefix ^ ".embeds.json") json
+    Ext_json_noloc.to_file (outprefix ^ ".embeds.json") json)

@@ -97,6 +97,89 @@ enum GeneratorOutput {
     Error { errors: serde_json::Value },
 }
 
+// Diagnostics shape emitted by generators (best-effort typed parsing)
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GenDiagPos { line: u32, column: u32 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GenDiagItem {
+    message: String,
+    #[serde(default)]
+    severity: Option<String>,
+    #[serde(default)]
+    code: Option<String>,
+    #[serde(default)]
+    start: Option<GenDiagPos>,
+    #[serde(default)]
+    end: Option<GenDiagPos>,
+}
+
+fn map_embed_pos_to_abs(
+    embed: &EmbedEntry,
+    rel: &GenDiagPos,
+) -> (u32, u32) {
+    // Lines and columns are 1-based. When moving beyond the first line, columns reset.
+    let abs_line = embed.range.start.line.saturating_add(rel.line.saturating_sub(1));
+    let abs_col = if rel.line <= 1 {
+        embed
+            .range
+            .start
+            .column
+            .saturating_add(rel.column)
+    } else {
+        rel.column
+    };
+    (abs_line, abs_col)
+}
+
+fn read_file_lines(path: &Path) -> Vec<String> {
+    match fs::read_to_string(path) {
+        Ok(s) => s.lines().map(|l| l.to_string()).collect(),
+        Err(_) => vec![],
+    }
+}
+
+fn clamp<T: Ord>(v: T, lo: T, hi: T) -> T { std::cmp::min(std::cmp::max(v, lo), hi) }
+
+fn render_code_frame(
+    file_abs: &Path,
+    abs_line: u32,
+    abs_col: u32,
+    abs_end_line: Option<u32>,
+    abs_end_col: Option<u32>,
+    context: usize,
+) -> String {
+    let lines = read_file_lines(file_abs);
+    if lines.is_empty() { return String::new(); }
+    let total = lines.len() as u32;
+    let line = clamp(abs_line, 1, total);
+    let start_idx = line.saturating_sub(context as u32).saturating_sub(1) as usize;
+    let end_idx = std::cmp::min(total, line + context as u32) as usize;
+    let mut out = String::new();
+    for (i, lno) in ((start_idx + 1)..=end_idx).enumerate() {
+        let idx = start_idx + i;
+        if lno as u32 == line {
+            // caret line
+            out.push_str(&format!("> {:>4} | {}\n", lno, lines[idx]));
+            // Calculate underline for single-line spans; for multi-line, mark just the start col
+            let col = if abs_col == 0 { 1 } else { abs_col } as usize;
+            let underline_len = match (abs_end_line, abs_end_col) {
+                (Some(el), Some(ec)) if el == line && ec > abs_col => (ec - abs_col) as usize,
+                _ => 1,
+            };
+            let mut marker = String::new();
+            for _ in 0..(col + 7) { marker.push(' '); } // 7 accounts for "> XXXX | "
+            for _ in 0..underline_len { marker.push('^'); }
+            out.push_str(&format!("{}\n", marker));
+        } else {
+            out.push_str(&format!("  {:>4} | {}\n", lno, lines[idx]));
+        }
+    }
+    out
+}
+
 #[derive(Debug, Clone)]
 pub struct GeneratedModuleInfo {
     pub module_name: String,
@@ -281,17 +364,25 @@ pub fn process_module_embeds(
     let Some(effective) = package
         .config
         .get_effective_embeds_config(&build_state.project_context)
-        else { return Ok(vec![]) };
+        else {
+            // No embeds configured; still remove any stale generated files for this module
+            cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
+            return Ok(vec![]);
+        };
 
     let build_dir = package.get_build_path();
     let index_rel = embeds_index_path_for_ast(ast_rel_path);
     let index_abs = build_dir.join(&index_rel);
     if !index_abs.exists() {
+        // No index for this module (no embeds found) — perform cleanup
+        cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
         return Ok(vec![]);
     }
 
     let index = read_index(&index_abs)?;
     if index.embeds.is_empty() {
+        // No embeds present — perform cleanup
+        cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
         return Ok(vec![]);
     }
 
@@ -361,14 +452,54 @@ pub fn process_module_embeds(
         let (code, mut suffix) = match output {
             GeneratorOutput::Ok { code, suffix } => (code, suffix.unwrap_or_default()),
             GeneratorOutput::Error { errors } => {
-                // Print generator error details
-                log::error!(
-                    "EMBED_GENERATOR_FAILED: Generator '{}' reported errors for {}:{} => {}",
-                    generator.id,
-                    index.source_path,
-                    embed.occurrence_index,
-                    errors
-                );
+                // Map diagnostics to absolute positions and render code frames
+                let build_dir = package.get_build_path();
+                let src_abs = build_dir.join(&index.source_path);
+                let diags: Vec<GenDiagItem> = match &errors {
+                    serde_json::Value::Array(arr) => arr.clone()
+                        .into_iter()
+                        .filter_map(|v| serde_json::from_value::<GenDiagItem>(v).ok())
+                        .collect(),
+                    _ => vec![],
+                };
+                if diags.is_empty() {
+                    log::error!(
+                        "EMBED_GENERATOR_FAILED: {}:{} -> {}",
+                        index.source_path,
+                        embed.occurrence_index,
+                        errors
+                    );
+                } else {
+                    for d in diags {
+                        let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
+                            (Some(s), Some(e)) => {
+                                let (sl, sc) = map_embed_pos_to_abs(embed, s);
+                                let (el, ec) = map_embed_pos_to_abs(embed, e);
+                                (sl, sc, Some(el), Some(ec))
+                            }
+                            (Some(s), None) => {
+                                let (sl, sc) = map_embed_pos_to_abs(embed, s);
+                                (sl, sc, None, None)
+                            }
+                            _ => (embed.range.start.line, embed.range.start.column, None, None),
+                        };
+                        let frame = render_code_frame(&src_abs, abs_line, abs_col, end_line, end_col, 1);
+                        let code_sfx = d.code.as_deref().unwrap_or("");
+                        let sev = d.severity.as_deref().unwrap_or("error");
+                        if code_sfx.is_empty() {
+                            log::error!(
+                                "EMBED_GENERATOR_FAILED ({sev}) at {}:{}:{}\n{}\n{}",
+                                index.source_path, abs_line, abs_col, d.message, frame
+                            );
+                        } else {
+                            log::error!(
+                                "EMBED_GENERATOR_FAILED[{code}] ({sev}) at {}:{}:{}\n{}\n{}",
+                                index.source_path, abs_line, abs_col, d.message, frame,
+                                code = code_sfx
+                            );
+                        }
+                    }
+                }
                 continue;
             }
         };
@@ -423,42 +554,47 @@ pub fn process_module_embeds(
         generated.push(GeneratedModuleInfo { module_name, rel_path });
     }
 
-    // Write resolution map next to AST
-    if !res_entries.is_empty() {
-        let map_rel = resolution_map_path_for_ast(ast_rel_path);
-        let map_abs = build_dir.join(&map_rel);
-        if let Some(parent) = map_abs.parent() { let _ = fs::create_dir_all(parent); }
-        let map = ResolutionMap { version: 1, module: index.module.clone(), entries: res_entries };
-        let data = serde_json::to_string(&map)?;
-        fs::write(&map_abs, data)?;
+    // Always write resolution map and attempt rewrite, even if entries are empty.
+    // This ensures missing mappings surface as EMBED_MAP_MISMATCH instead of a generic
+    // "Uninterpreted extension" later in the pipeline.
+    let map_rel = resolution_map_path_for_ast(ast_rel_path);
+    let map_abs = build_dir.join(&map_rel);
+    if let Some(parent) = map_abs.parent() { let _ = fs::create_dir_all(parent); }
+    let map = ResolutionMap { version: 1, module: index.module.clone(), entries: res_entries };
+    let data = serde_json::to_string(&map)?;
+    fs::write(&map_abs, data)?;
 
-        // Run rewrite: bsc -rewrite-embeds -ast <ast> -map <map> -o <ast>
-        let bsc = &build_state.compiler_info.bsc_path;
-        let args = vec![
-            "-rewrite-embeds".to_string(),
-            "-ast".to_string(),
-            ast_rel_path.to_string_lossy().to_string(),
-            "-map".to_string(),
-            map_rel.to_string_lossy().to_string(),
-            "-o".to_string(),
-            ast_rel_path.to_string_lossy().to_string(),
-        ];
-        let output = Command::new(bsc)
-            .current_dir(&build_dir)
-            .args(&args)
-            .output()
-            .with_context(|| format!("Failed to run bsc -rewrite-embeds for {}", ast_rel_path.display()))?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            log::error!("rewrite-embeds failed: {}", stderr);
-        }
-
-        // Mark original module for recompilation so rewrite takes effect
-        if let Some(orig) = build_state.build_state.modules.get_mut(&index.module) {
-            orig.compile_dirty = true;
-            orig.deps_dirty = true;
-        }
+    // Run rewrite: bsc -rewrite-embeds -ast <ast> -map <map> -o <ast>
+    let bsc = &build_state.compiler_info.bsc_path;
+    let args = vec![
+        "-rewrite-embeds".to_string(),
+        "-ast".to_string(),
+        ast_rel_path.to_string_lossy().to_string(),
+        "-map".to_string(),
+        map_rel.to_string_lossy().to_string(),
+        "-o".to_string(),
+        ast_rel_path.to_string_lossy().to_string(),
+    ];
+    let output = Command::new(bsc)
+        .current_dir(&build_dir)
+        .args(&args)
+        .output()
+        .with_context(|| format!("Failed to run bsc -rewrite-embeds for {}", ast_rel_path.display()))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::error!("rewrite-embeds failed: {}", stderr);
+        // Surface as an error to stop pipeline early; avoids later generic errors.
+        return Err(anyhow!("rewrite-embeds failed"));
     }
+
+    // Mark original module for recompilation so rewrite takes effect
+    if let Some(orig) = build_state.build_state.modules.get_mut(&index.module) {
+        orig.compile_dirty = true;
+        orig.deps_dirty = true;
+    }
+
+    // Cleanup: remove any stale generated files for this module that weren't produced this run
+    cleanup_stale_generated_for_module(&package, ast_rel_path, &generated)?;
 
     Ok(generated)
 }
@@ -518,6 +654,37 @@ fn find_cached_generated(
         }
     }
     None
+}
+
+fn cleanup_stale_generated_for_module(
+    package: &Package,
+    ast_rel_path: &Path,
+    generated: &[GeneratedModuleInfo],
+) -> Result<()> {
+    let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
+    let module_name = ast_rel_path
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let prefix = format!("{}__embed_", module_name);
+    let keep_stems: AHashSet<String> = generated
+        .iter()
+        .map(|g| g.module_name.clone())
+        .collect();
+    if let Ok(entries) = fs::read_dir(&out_dir_abs) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if !p.is_file() { continue; }
+            let fname = p.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            if fname.starts_with(&prefix) && !keep_stems.contains(stem) {
+                let _ = fs::remove_file(&p);
+                log::debug!("Embeds: removed stale generated file {}", p.display());
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn add_generated_modules_to_state(

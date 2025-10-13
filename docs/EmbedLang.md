@@ -7,16 +7,16 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
   - Phase 2 (Rewatch: Parse step): DONE — `-embeds <csv>` threaded via parser args from `rescript.json` tags.
   - Phase 3 (Generator invocation): PARTIAL → MOSTLY DONE — per‑embed process invocation + generated file write + headers, caching (hash + extraSources mtime), and per‑embed timeout implemented; remaining work: concurrency limits and richer progress UX.
   - Phase 4 (Resolution map writer): DONE — `*.embeds.map.json` written next to `.ast` with stable entries.
-  - Phase 5 (Compiler rewriter): PRESENT — `bsc -rewrite-embeds` invoked per module and applied in‑place.
+  - Phase 5 (Compiler rewriter): PRESENT — `bsc -rewrite-embeds` invoked per module (whenever an index exists) and applied in‑place; missing or mismatched map entries surface `EMBED_MAP_MISMATCH` and stop the build to avoid generic parser errors.
   - Phase 6 (Rewatch integration): DONE — integrates generation + rewrite into build, registers generated modules and parses their ASTs.
-  - Phase 7 (Watch/cleanup): PARTIAL — extraSources watching wired into Rewatch; cleanup of stale generated files still TODO.
-  - Phase 8 (Diagnostics): TODO — error mapping with code frames and stable EMBED_* codes.
+- Phase 7 (Watch/cleanup): DONE — extraSources changes now invalidate affected modules in watch mode; stale generated files are cleaned up per-module.
+- Phase 8 (Diagnostics): PARTIAL — compiler rewriter now surfaces EMBED_MAP_MISMATCH with clear messages; remaining work: generator diagnostics mapping with code frames.
 - Test coverage
   - Compiler‑only flow: `rewatch/tests/embeds-compiler.sh` validates index + manual map + rewriter (no Rewatch involvement).
   - Rewatch E2E: `rewatch/tests/embeds.sh` builds a fixture repo and snapshots index, map, rewritten source, and generated module.
 - Known gaps (to implement next)
-  - Per‑embed timeout, caching/invalidation (including `extraSources`), diagnostics mapping, and cleanup of stale generated files.
-  - User‑visible progress reporting in Rewatch for embeds (per‑module discovery, generator start/finish with cache hit/miss, rewrite applied, concise summaries; integrate with existing progress bar and `--verbose`).
+  - Progress reporting polish: concise per‑embed and per‑module events (discovered, start, cache hit/miss, done/failed) and build summaries; integrate with progress bar and `--verbose`.
+  - Concurrency cap and scheduling for generator processes (e.g. limit to num_cpus/2) with stable ordering of resolution map entries.
 
 ## Summary
 - Users write an embed expression in `.res` files using a tag and a string literal (backtick or normal quoted), for example:
@@ -177,7 +177,7 @@ Protocol considerations:
    - On `status=ok`, write/overwrite the generated `.res` file to `outDir` (default `src/__generated__`) with the conventional name.
    - On `status=error`, collect diagnostics mapped to the original source positions (see “Diagnostics & Mapping”).
 4. Rewrite Stage (AST‑Only, Two‑Phase)
-   - For each source module, Rewatch writes a resolution map artifact (e.g. `SomeFile.embeds.map.json`) that lists, for each embed occurrence, the target generated module name (e.g., `SomeFile__embed_sql_one_GetUser`). Entry is always `default` for expression contexts.
+   - For each source module that has an embed index, Rewatch writes a resolution map artifact (e.g. `SomeFile.embeds.map.json`) that lists, for each embed occurrence, the target generated module name (e.g., `SomeFile__embed_sql_one_GetUser`). Entry is always `default` for expression contexts.
    - Rewatch invokes a dedicated compiler entrypoint that only:
      - Reads the input `.ast` file (`-ast <in.ast>`) and the explicit resolution map path (`-map <SomeFile.embeds.map.json>`).
      - Runs a small, isolated AST mapper that performs only the embed rewrites:
@@ -185,7 +185,7 @@ Protocol considerations:
        - Module contexts: `module X = %tag(...)` → `module X = GeneratedModule`
        - Include contexts: `include %tag(...)` → `include GeneratedModule`
      - Writes the rewritten AST to `-o <out.ast>` (or in‑place if `-o` is omitted).
-   - Files without embeds skip this stage entirely.
+   - Modules without an embed index skip this stage. For modules with an index, rewrite always runs. If the map is missing an entry for a discovered embed or the hash mismatches, the rewriter raises `EMBED_MAP_MISMATCH` at that occurrence. This avoids surfacing a generic “Uninterpreted extension …” later in the pipeline.
 5. Dependency Graph
    - Add edges: `OriginalFile -> GeneratedModule` and `GeneratedModule -> extraSources`.
    - Include generated files in the parse/compile lists alongside user sources.
@@ -266,9 +266,10 @@ Resolution map lookup:
 - This prevents infinite embed expansion chains and cyclic generation.
 
 ## Diagnostics & Mapping
-- Generator diagnostics are returned relative to the embedded string (line/column within the literal). Rewatch computes the absolute source positions using the ranges from the compiler’s embed index.
+- Generator diagnostics are returned relative to the embedded string (line/column within the literal). Rewatch computes absolute source positions using the ranges from the compiler’s embed index and prints a concise code frame.
 - The compiler handles PPX rewrites directly on the AST; diagnostics from the compiler refer to the original source files.
-- Error presentation: Rewatch includes a code fence in logs with the embedded code, highlights the error span, and shows surrounding context for quick inspection (similar to compiler formatting).
+- Error presentation: Rewatch includes a code frame in logs with the embedded code, highlights the error span, and shows surrounding context for quick inspection.
+- If a generator reports errors for an embed, no map entry is written for that occurrence. The subsequent rewrite pass then fails with `EMBED_MAP_MISMATCH` (“no mapping for tag … occurrence …”), ensuring clear embed‑specific feedback instead of a generic “uninterpreted extension”.
 
 ## Invalidation & Caching
 - Cache key includes:
@@ -279,9 +280,9 @@ Resolution map lookup:
 ## Edge Cases & Errors
 - Unknown tag: error with code `EMBED_NO_GENERATOR` listing known tags.
 - Missing/invalid string literal: error `EMBED_SYNTAX` with a short hint.
-- Generator timeout/crash: error `EMBED_GENERATOR_FAILED` with stderr summary.
+- Generator timeout/crash or structured errors: log `EMBED_GENERATOR_FAILED` with mapped code frames; the missing map entry leads the rewriter to emit `EMBED_MAP_MISMATCH` at the embed site.
 - Suffix collision: error (`EMBED_SUFFIX_COLLISION`) with both locations.
-- Resolution map mismatch: error (`EMBED_MAP_MISMATCH`) when `literalHash` in the map does not match the current embed string; triggers regeneration.
+- Resolution map mismatch or missing entry: error (`EMBED_MAP_MISMATCH`) when `literalHash` does not match or when no mapping exists for a discovered occurrence. The build stops at rewrite time to avoid generic parser errors later.
 - Illegal suffix chars: sanitized to `_`; collapse repeats.
 - `.resi` generation: not supported in v1; the generated module is compiled without an interface.
 - Nested embeds: disallowed. Generated files are ignored by the compiler’s embed indexer and never expanded.
