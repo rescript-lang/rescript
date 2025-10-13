@@ -17,11 +17,11 @@ fn main() -> Result<()> {
 
     let mut command = cli.command;
 
-    if let cli::Command::Build(build_args) = &command {
-        if build_args.watch {
-            log::warn!("`rescript build -w` is deprecated. Please use `rescript watch` instead.");
-            command = cli::Command::Watch(build_args.clone().into());
-        }
+    if let cli::Command::Build(build_args) = &command
+        && build_args.watch
+    {
+        log::warn!("`rescript build -w` is deprecated. Please use `rescript watch` instead.");
+        command = cli::Command::Watch(build_args.clone().into());
     }
 
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log

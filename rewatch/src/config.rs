@@ -377,14 +377,14 @@ impl Config {
     /// If configured, use that path. Otherwise, if `src/` exists under the package root,
     /// use `src/__generated__`. Fallback to `__generated__`.
     pub fn get_embeds_out_dir(&self, package_root: &Path) -> PathBuf {
-        if let Some(e) = &self.embeds {
-            if let Some(out) = &e.out_dir {
-                let p = Path::new(out);
-                if p.is_absolute() {
-                    return p.to_path_buf();
-                }
-                return package_root.join(p);
+        if let Some(e) = &self.embeds
+            && let Some(out) = &e.out_dir
+        {
+            let p = Path::new(out);
+            if p.is_absolute() {
+                return p.to_path_buf();
             }
+            return package_root.join(p);
         }
         let src = package_root.join("src");
         if src.exists() {
@@ -803,6 +803,7 @@ pub mod tests {
             bsc_flags: None,
             namespace: None,
             jsx: None,
+            embeds: None,
             gentype_config: None,
             namespace_entry: None,
             deprecation_warnings: vec![],

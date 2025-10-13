@@ -379,16 +379,16 @@ pub fn incremental_build(
         // Collect work items first to avoid borrow conflicts
         let mut work: Vec<(String, String, std::path::PathBuf, std::path::PathBuf)> = Vec::new();
         for (module_name, package_name) in build_state.module_name_package_pairs() {
-            if let Some(module) = build_state.build_state.modules.get(&module_name) {
-                if let SourceType::SourceFile(source_file) = &module.source_type {
-                    let ast_path_rel = helpers::get_ast_path(&source_file.implementation.path);
-                    work.push((
-                        module_name.clone(),
-                        package_name.clone(),
-                        source_file.implementation.path.clone(),
-                        ast_path_rel,
-                    ));
-                }
+            if let Some(module) = build_state.build_state.modules.get(&module_name)
+                && let SourceType::SourceFile(source_file) = &module.source_type
+            {
+                let ast_path_rel = helpers::get_ast_path(&source_file.implementation.path);
+                work.push((
+                    module_name.clone(),
+                    package_name.clone(),
+                    source_file.implementation.path.clone(),
+                    ast_path_rel,
+                ));
             }
         }
 
@@ -402,7 +402,7 @@ pub fn incremental_build(
                 .packages
                 .get(package_name)
                 .expect("Package not found");
-            if let Ok((inv, reused)) = embeds::count_planned_invocations(&build_state, package_ref, ast_rel) {
+            if let Ok((inv, reused)) = embeds::count_planned_invocations(build_state, package_ref, ast_rel) {
                 planned_invocations += inv as u64;
                 planned_reused += reused as u64;
                 per_module_invocations.push((module_name.clone(), inv as u64));
@@ -461,19 +461,19 @@ pub fn incremental_build(
                             );
                         }
                     }
-                    if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name) {
-                        if *inv > 0 {
-                            pb_embeds.inc(*inv);
-                        }
+                    if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name)
+                        && *inv > 0
+                    {
+                        pb_embeds.inc(*inv);
                     }
                 }
                 Err(e) => {
-                    log::error!("Embed processing failed for {}: {}", module_name, e);
+                    log::error!("Embed processing failed for {module_name}: {e}");
                     embeds_had_failure = true;
-                    if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name) {
-                        if *inv > 0 {
-                            pb_embeds.inc(*inv);
-                        }
+                    if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name)
+                        && *inv > 0
+                    {
+                        pb_embeds.inc(*inv);
                     }
                 }
             }
@@ -485,8 +485,7 @@ pub fn incremental_build(
             if show_progress {
                 if snapshot_output {
                     println!(
-                        "Processed embeds: ran {} generators; cache hits {}",
-                        planned_invocations, planned_reused
+                        "Processed embeds: ran {planned_invocations} generators; cache hits {planned_reused}"
                     );
                 } else {
                     println!(

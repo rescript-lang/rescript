@@ -181,7 +181,7 @@ fn render_code_frame(
             for _ in 0..underline_len {
                 marker.push('^');
             }
-            out.push_str(&format!("{}\n", marker));
+            out.push_str(&format!("{marker}\n"));
         } else {
             out.push_str(&format!("  {:>4} | {}\n", lno, lines[idx]));
         }
@@ -228,7 +228,7 @@ fn embeds_index_path_for_ast(ast_rel: &Path) -> PathBuf {
     ast_rel
         .parent()
         .unwrap_or_else(|| Path::new(""))
-        .join(format!("{}.embeds.json", stem))
+        .join(format!("{stem}.embeds.json"))
 }
 
 fn resolution_map_path_for_ast(ast_rel: &Path) -> PathBuf {
@@ -240,7 +240,7 @@ fn resolution_map_path_for_ast(ast_rel: &Path) -> PathBuf {
     ast_rel
         .parent()
         .unwrap_or_else(|| Path::new(""))
-        .join(format!("{}.embeds.map.json", stem))
+        .join(format!("{stem}.embeds.map.json"))
 }
 
 fn read_index(index_path_abs: &Path) -> Result<EmbedIndexFile> {
@@ -337,6 +337,7 @@ fn run_generator(
     Ok(parsed)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn write_generated_file(
     out_dir_abs: &Path,
     file_name: &str,
@@ -353,11 +354,10 @@ fn write_generated_file(
     let mut f = fs::File::create(&out_path)
         .with_context(|| format!("Failed to create generated file {}", out_path.display()))?;
     // Fast header line + extended header
-    writeln!(f, "// @sourceHash {}", header_hash)?;
+    writeln!(f, "// @sourceHash {header_hash}")?;
     writeln!(
         f,
-        "/* rewatch-embed: v1; tag={}; src={}; idx={}; suffix={}; entry=default; hash={}; gen={} */",
-        header_tag, src_path, idx, suffix, header_hash, gen_id
+        "/* rewatch-embed: v1; tag={header_tag}; src={src_path}; idx={idx}; suffix={suffix}; entry=default; hash={header_hash}; gen={gen_id} */",
     )?;
     f.write_all(code.as_bytes())?;
     Ok(out_path)
@@ -596,11 +596,7 @@ pub fn process_module_embeds(
     });
 
     // Merge results in stable order (original discovery order)
-    let mut ordered: Vec<(usize, JobResult)> = jobs
-        .into_iter()
-        .map(|(i, _)| i)
-        .zip(job_results.into_iter())
-        .collect();
+    let mut ordered: Vec<(usize, JobResult)> = jobs.into_iter().map(|(i, _)| i).zip(job_results).collect();
     ordered.sort_by_key(|(i, _)| *i);
 
     for (_i, jr) in ordered.into_iter() {
@@ -667,7 +663,7 @@ pub fn process_module_embeds(
                 });
                 count_generated += 1;
             }
-            JobResult::Failed { .. } => {
+            JobResult::Failed => {
                 count_failed += 1;
             }
         }
@@ -715,7 +711,7 @@ pub fn process_module_embeds(
         .with_context(|| format!("Failed to run bsc -rewrite-embeds for {}", ast_rel_path.display()))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log::error!("rewrite-embeds failed: {}", stderr);
+        log::error!("rewrite-embeds failed: {stderr}");
         // Surface as an error to stop pipeline early; avoids later generic errors.
         return Err(anyhow!("rewrite-embeds failed"));
     }
@@ -801,7 +797,7 @@ fn find_cached_generated(
     generator: &EmbedGenerator,
     package: &Package,
 ) -> Option<(String, PathBuf)> {
-    let prefix = format!("{}__embed_{}_", module_name, tag_norm);
+    let prefix = format!("{module_name}__embed_{tag_norm}_");
     let dir_iter = fs::read_dir(out_dir_abs).ok()?;
     for entry in dir_iter.flatten() {
         let p = entry.path();
@@ -852,7 +848,7 @@ fn cleanup_stale_generated_for_module(
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
-    let prefix = format!("{}__embed_", module_name);
+    let prefix = format!("{module_name}__embed_");
     let keep_stems: AHashSet<String> = generated.iter().map(|g| g.module_name.clone()).collect();
     if let Ok(entries) = fs::read_dir(&out_dir_abs) {
         for entry in entries.flatten() {

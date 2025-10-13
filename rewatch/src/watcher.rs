@@ -50,10 +50,11 @@ fn is_in_build_path(path_buf: &Path) -> bool {
     let mut prev_component: Option<&std::ffi::OsStr> = None;
     for component in path_buf.components() {
         let comp_os = component.as_os_str();
-        if let Some(prev) = prev_component {
-            if prev == "lib" && (comp_os == "bs" || comp_os == "ocaml") {
-                return true;
-            }
+        if let Some(prev) = prev_component
+            && prev == "lib"
+            && (comp_os == "bs" || comp_os == "ocaml")
+        {
+            return true;
         }
         prev_component = Some(comp_os);
     }
@@ -87,10 +88,9 @@ fn is_embed_extra_source(build_state: &build::build_types::BuildCommandState, pa
                     if let Ok(abs) = candidate
                         .canonicalize()
                         .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                        && abs == canonicalized_path_buf
                     {
-                        if abs == canonicalized_path_buf {
-                            return true;
-                        }
+                        return true;
                     }
                 }
             }
@@ -129,11 +129,10 @@ fn mark_modules_for_extra_source(
                     .join(rel)
                     .canonicalize()
                     .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                    && abs == changed_abs
                 {
-                    if abs == changed_abs {
-                        matching_generators.push(generator);
-                        break;
-                    }
+                    matching_generators.push(generator);
+                    break;
                 }
             }
         }
@@ -178,25 +177,23 @@ fn mark_modules_for_extra_source(
                 let idx_rel = ast_rel
                     .parent()
                     .unwrap_or_else(|| Path::new(""))
-                    .join(format!("{}.embeds.json", stem));
+                    .join(format!("{stem}.embeds.json"));
                 let idx_abs = build_dir.join(&idx_rel);
                 if !idx_abs.exists() {
                     continue;
                 }
-                if let Ok(contents) = std::fs::read_to_string(&idx_abs) {
-                    if let Ok(index) = serde_json::from_str::<EmbedIndexTagOnly>(&contents) {
-                        let uses_tag = index.embeds.iter().any(|e| tags.contains(&e.tag));
-                        if uses_tag {
-                            if let Some(mutable) = build_state.build_state.modules.get_mut(&module_name) {
-                                if let build::build_types::SourceType::SourceFile(ref mut sf_mut) =
-                                    mutable.source_type
-                                {
-                                    sf_mut.implementation.parse_dirty = true;
-                                    mutable.compile_dirty = true;
-                                    mutable.deps_dirty = true;
-                                }
-                            }
-                        }
+                if let Ok(contents) = std::fs::read_to_string(&idx_abs)
+                    && let Ok(index) = serde_json::from_str::<EmbedIndexTagOnly>(&contents)
+                {
+                    let uses_tag = index.embeds.iter().any(|e| tags.contains(&e.tag));
+                    if uses_tag
+                        && let Some(mutable) = build_state.build_state.modules.get_mut(&module_name)
+                        && let build::build_types::SourceType::SourceFile(ref mut sf_mut) =
+                            mutable.source_type
+                    {
+                        sf_mut.implementation.parse_dirty = true;
+                        mutable.compile_dirty = true;
+                        mutable.deps_dirty = true;
                     }
                 }
             }
@@ -265,14 +262,14 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if event.paths.iter().any(|path| path.ends_with(LOCKFILE)) {
-                if let EventKind::Remove(_) = event.kind {
-                    if show_progress {
-                        println!("\nExiting... (lockfile removed)");
-                    }
-                    clean::cleanup_after_build(&build_state);
-                    return Ok(());
+            if event.paths.iter().any(|path| path.ends_with(LOCKFILE))
+                && let EventKind::Remove(_) = event.kind
+            {
+                if show_progress {
+                    println!("\nExiting... (lockfile removed)");
                 }
+                clean::cleanup_after_build(&build_state);
+                return Ok(());
             }
 
             let event_paths: Vec<_> = event
