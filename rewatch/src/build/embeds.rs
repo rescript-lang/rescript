@@ -437,7 +437,7 @@ pub fn process_module_embeds(
 
     let job_results: Vec<JobResult> = pool.install(|| {
         jobs.par_iter()
-            .map(|(idx_pos, embed)| {
+            .map(|(_idx_pos, embed)| {
                 let generator = match find_generator(effective, &embed.tag) {
                     Some(g) => g,
                     None => {
