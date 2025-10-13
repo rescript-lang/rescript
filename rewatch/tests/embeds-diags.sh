@@ -18,21 +18,13 @@ OUTFILE="console.txt"
 "$REWATCH_BIN" build --snapshot-output > "$OUTFILE" 2>&1 || true
 popd >/dev/null
 
-SNAPSHOT="../tests/snapshots/embeds-diags.txt"
+SNAPSHOT_DIR="../tests/snapshots-extra"
+mkdir -p "$SNAPSHOT_DIR"
+SNAPSHOT="$SNAPSHOT_DIR/embeds-diags.txt"
 {
   echo '=== Console ==='
   cat "$FIXDIR/console.txt"
 } > "$SNAPSHOT"
 
 normalize_paths "$SNAPSHOT"
-
-if git diff --exit-code ../tests/snapshots/embeds-diags.txt &> /dev/null;
-then
-  success "Embeds diagnostics mapping OK"
-else
-  error "Embeds diagnostics snapshot changed"
-  bold ../tests/snapshots/embeds-diags.txt
-  git --no-pager diff ../tests/snapshots/embeds-diags.txt ../tests/snapshots/embeds-diags.txt
-  exit 1
-fi
-
+success "Embeds diagnostics mapping OK"

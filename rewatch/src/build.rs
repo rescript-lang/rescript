@@ -387,15 +387,48 @@ pub fn incremental_build(
             }
         }
 
-        for (module_name, package_name, impl_rel, ast_rel) in work {
+        // Pre-scan embeds to compute planned invocations (cache misses) and cache hits
+        let mut planned_invocations: u64 = 0;
+        let mut planned_reused: u64 = 0;
+        let mut per_module_invocations: Vec<(String, u64)> = Vec::new();
+        for (module_name, package_name, _impl_rel, ast_rel) in &work {
+            let package_ref = build_state
+                .build_state
+                .packages
+                .get(package_name)
+                .expect("Package not found");
+            if let Ok((inv, reused)) = embeds::count_planned_invocations(&build_state, package_ref, ast_rel) {
+                planned_invocations += inv as u64;
+                planned_reused += reused as u64;
+                per_module_invocations.push((module_name.clone(), inv as u64));
+            }
+        }
+
+        // Progress bar for generator invocations (non-verbose)
+        let pb_embeds = if planned_invocations > 0 && !snapshot_output && show_progress {
+            let pb = ProgressBar::new(planned_invocations);
+            pb.set_style(
+                ProgressStyle::with_template(&format!(
+                    "{} {}Generating embeds... {{spinner}} {{pos}}/{{len}} {{msg}}",
+                    format_step(current_step, total_steps),
+                    CODE
+                ))
+                .unwrap(),
+            );
+            pb
+        } else {
+            ProgressBar::hidden()
+        };
+
+        for (module_name, package_name, impl_rel, ast_rel) in &work {
             let result = {
                 let package_ref = build_state
                     .build_state
                     .packages
-                    .get(&package_name)
+                    .get(package_name)
                     .expect("Package not found")
                     .clone();
-                embeds::process_module_embeds(build_state, package_ref, &impl_rel, &ast_rel)
+                embeds::process_module_embeds(build_state, package_ref, impl_rel, ast_rel)
             };
             match result {
                 Ok(generated) => {
@@ -404,7 +437,7 @@ pub fn incremental_build(
                             let package_ref = build_state
                                 .build_state
                                 .packages
-                                .get(&package_name)
+                                .get(package_name)
                                 .expect("Package not found")
                                 .clone();
                             embeds::add_generated_modules_to_state(build_state, package_ref, &generated);
@@ -414,23 +447,53 @@ pub fn incremental_build(
                                 build_state
                                     .build_state
                                     .packages
-                                    .get(&package_name)
+                                    .get(package_name)
                                     .expect("Package not found")
                                     .clone(),
                                 &g.rel_path,
                                 &build_state.build_state,
                                 build_state.get_warn_error_override(),
                             );
-                            pb.inc(1);
                         }
+                    }
+                    if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name) {
+                        if *inv > 0 { pb_embeds.inc(*inv); }
                     }
                 }
                 Err(e) => {
                     log::error!("Embed processing failed for {}: {}", module_name, e);
                     embeds_had_failure = true;
+                    if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name) {
+                        if *inv > 0 { pb_embeds.inc(*inv); }
+                    }
                 }
             }
         }
+
+        if planned_invocations > 0 {
+            let elapsed = timing_embeds.elapsed();
+            pb_embeds.finish();
+            if show_progress {
+                if snapshot_output {
+                    println!(
+                        "Processed embeds: ran {} generators; cache hits {}",
+                        planned_invocations,
+                        planned_reused
+                    );
+                } else {
+                    println!(
+                        "{}{} {}Processed embeds: ran {} generators; cache hits {} in {:.2}s",
+                        LINE_CLEAR,
+                        format_step(current_step, total_steps),
+                        CODE,
+                        planned_invocations,
+                        planned_reused,
+                        default_timing.unwrap_or(elapsed).as_secs_f64()
+                    );
+                }
+            }
+        }
+
         if embeds_had_failure {
             logs::finalize(&build_state.packages);
             return Err(IncrementalBuildError {

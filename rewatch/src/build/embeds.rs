@@ -3,6 +3,8 @@ use super::packages::Package;
 use crate::config::{EmbedGenerator, EmbedsConfig};
 use crate::helpers;
 use ahash::{AHashMap, AHashSet};
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -391,167 +393,253 @@ pub fn process_module_embeds(
     let mut res_entries: Vec<ResolutionMapEntry> = Vec::new();
     let mut generated: Vec<GeneratedModuleInfo> = Vec::new();
     let mut seen_suffix: AHashSet<(String, String)> = AHashSet::new(); // (tag, suffix)
+    let mut count_generated = 0u32;
+    let mut count_reused = 0u32;
+    let mut count_failed = 0u32;
 
-    for embed in &index.embeds {
-        let Some(generator) = find_generator(effective, &embed.tag) else {
-            // Unknown tag: skip with warning
-            log::error!(
-                "EMBED_NO_GENERATOR: No generator configured for tag '{}' (module {})",
-                embed.tag, index.module
-            );
-            continue;
-        };
+    log::debug!(
+        "Embeds: module {} — discovered {} embed(s)",
+        index.module,
+        index.embeds.len()
+    );
 
-        log::debug!(
-            "Embeds: processing tag '{}' occurrence #{} in module {}",
-            embed.tag, embed.occurrence_index, index.module
-        );
+    // Build jobs for parallel execution
+    struct OkGen {
+        code: String,
+        suffix: String,
+        tag_norm: String,
+        tag: String,
+        occurrence_index: u32,
+        literal_hash: String,
+        index_pos: usize,
+        generator_id: String,
+    }
+    enum JobResult {
+        Reused {
+            module_name: String,
+            rel_path: PathBuf,
+            entry: ResolutionMapEntry,
+            index_pos: usize,
+        },
+        Ok(OkGen),
+        Failed { index_pos: usize },
+    }
 
-        let input = GeneratorInput {
-            version: 1,
-            tag: &embed.tag,
-            embed_string: &embed.embed_string,
-            source: GeneratorSource {
-                path: &index.source_path,
-                module: &index.module,
-            },
-            occurrence_index: embed.occurrence_index,
-            config: GeneratorConfig { extra_sources: &generator.extra_sources, options: None },
-        };
+    let jobs: Vec<(usize, &EmbedEntry)> = index.embeds.iter().enumerate().collect();
+    let thread_cap = std::cmp::max(1, num_cpus::get() / 2);
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(std::cmp::min(thread_cap, jobs.len()))
+        .build()?;
 
-        let tag_norm = normalize_tag(&embed.tag);
-        // Try cache hit: scan outDir for existing generated file with matching hash
-        // If found and extraSources are not newer than the file, reuse
-        if let Some((existing_module_name, existing_rel_path)) = find_cached_generated(
-            &out_dir_abs,
-            &index.module,
-            &tag_norm,
-            embed,
-            generator,
-            &package,
-        ) {
-            log::debug!(
-                "Embeds: cache hit for tag '{}' in module {} -> {}",
-                embed.tag, index.module, existing_module_name
-            );
-            res_entries.push(ResolutionMapEntry {
-                tag: embed.tag.clone(),
-                occurrence_index: embed.occurrence_index,
-                literal_hash: embed.literal_hash.clone(),
-                target_module: existing_module_name.clone(),
-            });
-            generated.push(GeneratedModuleInfo { module_name: existing_module_name, rel_path: existing_rel_path });
-            continue;
-        }
-
-        log::debug!(
-            "Embeds: cache miss for tag '{}' in module {} — running generator '{}'",
-            embed.tag, index.module, generator.id
-        );
-        let output = run_generator(generator, &package, &input)?;
-        let (code, mut suffix) = match output {
-            GeneratorOutput::Ok { code, suffix } => (code, suffix.unwrap_or_default()),
-            GeneratorOutput::Error { errors } => {
-                // Map diagnostics to absolute positions and render code frames
-                let build_dir = package.get_build_path();
-                let src_abs = build_dir.join(&index.source_path);
-                let diags: Vec<GenDiagItem> = match &errors {
-                    serde_json::Value::Array(arr) => arr.clone()
-                        .into_iter()
-                        .filter_map(|v| serde_json::from_value::<GenDiagItem>(v).ok())
-                        .collect(),
-                    _ => vec![],
+    let job_results: Vec<JobResult> = pool.install(|| {
+        jobs.par_iter()
+            .map(|(idx_pos, embed)| {
+                let generator = match find_generator(effective, &embed.tag) {
+                    Some(g) => g,
+                    None => {
+                        log::error!(
+                            "EMBED_NO_GENERATOR: No generator configured for tag '{}' (module {})",
+                            embed.tag, index.module
+                        );
+                        return JobResult::Failed { index_pos: *idx_pos };
+                    }
                 };
-                if diags.is_empty() {
-                    log::error!(
-                        "EMBED_GENERATOR_FAILED: {}:{} -> {}",
-                        index.source_path,
-                        embed.occurrence_index,
-                        errors
-                    );
-                } else {
-                    for d in diags {
-                        let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
-                            (Some(s), Some(e)) => {
-                                let (sl, sc) = map_embed_pos_to_abs(embed, s);
-                                let (el, ec) = map_embed_pos_to_abs(embed, e);
-                                (sl, sc, Some(el), Some(ec))
-                            }
-                            (Some(s), None) => {
-                                let (sl, sc) = map_embed_pos_to_abs(embed, s);
-                                (sl, sc, None, None)
-                            }
-                            _ => (embed.range.start.line, embed.range.start.column, None, None),
+
+                let tag_norm = normalize_tag(&embed.tag);
+        log::debug!(
+            "Embeds: {} #{} '{}': start",
+            index.module,
+            embed.occurrence_index,
+            embed.tag
+        );
+
+                if let Some((existing_module_name, existing_rel_path)) = find_cached_generated(
+                    &out_dir_abs,
+                    &index.module,
+                    &tag_norm,
+                    embed,
+                    generator,
+                    &package,
+                ) {
+            log::debug!(
+                "Embeds: {} #{} '{}': cache hit -> {}",
+                index.module,
+                embed.occurrence_index,
+                embed.tag,
+                existing_module_name
+            );
+                    return JobResult::Reused {
+                        module_name: existing_module_name.clone(),
+                        rel_path: existing_rel_path,
+                        entry: ResolutionMapEntry {
+                            tag: embed.tag.clone(),
+                            occurrence_index: embed.occurrence_index,
+                            literal_hash: embed.literal_hash.clone(),
+                            target_module: existing_module_name,
+                        },
+                        index_pos: *idx_pos,
+                    };
+                }
+
+        log::debug!(
+            "Embeds: {} #{} '{}': cache miss — run '{}'",
+            index.module,
+            embed.occurrence_index,
+            embed.tag,
+            generator.id
+        );
+
+                let input = GeneratorInput {
+                    version: 1,
+                    tag: &embed.tag,
+                    embed_string: &embed.embed_string,
+                    source: GeneratorSource { path: &index.source_path, module: &index.module },
+                    occurrence_index: embed.occurrence_index,
+                    config: GeneratorConfig { extra_sources: &generator.extra_sources, options: None },
+                };
+                let output = match run_generator(generator, &package, &input) {
+                    Ok(o) => o,
+                    Err(e) => {
+                        log::error!("EMBED_GENERATOR_FAILED: {}:{} -> {}", index.source_path, embed.occurrence_index, e);
+                        return JobResult::Failed { index_pos: *idx_pos };
+                    }
+                };
+                match output {
+                    GeneratorOutput::Ok { code, suffix } => {
+                        let mut suffix = suffix.unwrap_or_default();
+                        if suffix.is_empty() {
+                            suffix = format!("_{}", embed.occurrence_index);
+                        }
+                        JobResult::Ok(OkGen {
+                            code,
+                            suffix,
+                            tag_norm,
+                            tag: embed.tag.clone(),
+                            occurrence_index: embed.occurrence_index,
+                            literal_hash: embed.literal_hash.clone(),
+                            index_pos: *idx_pos,
+                            generator_id: generator.id.clone(),
+                        })
+                    }
+                    GeneratorOutput::Error { errors } => {
+                        let build_dir = package.get_build_path();
+                        let src_abs = build_dir.join(&index.source_path);
+                        let diags: Vec<GenDiagItem> = match &errors {
+                            serde_json::Value::Array(arr) => arr.clone()
+                                .into_iter()
+                                .filter_map(|v| serde_json::from_value::<GenDiagItem>(v).ok())
+                                .collect(),
+                            _ => vec![],
                         };
-                        let frame = render_code_frame(&src_abs, abs_line, abs_col, end_line, end_col, 1);
-                        let code_sfx = d.code.as_deref().unwrap_or("");
-                        let sev = d.severity.as_deref().unwrap_or("error");
-                        if code_sfx.is_empty() {
+                        if diags.is_empty() {
                             log::error!(
-                                "EMBED_GENERATOR_FAILED ({sev}) at {}:{}:{}\n{}\n{}",
-                                index.source_path, abs_line, abs_col, d.message, frame
+                                "EMBED_GENERATOR_FAILED: {}:{} -> {}",
+                                index.source_path,
+                                embed.occurrence_index,
+                                errors
                             );
                         } else {
-                            log::error!(
-                                "EMBED_GENERATOR_FAILED[{code}] ({sev}) at {}:{}:{}\n{}\n{}",
-                                index.source_path, abs_line, abs_col, d.message, frame,
-                                code = code_sfx
-                            );
+                            for d in diags {
+                                let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
+                                    (Some(s), Some(e)) => {
+                                        let (sl, sc) = map_embed_pos_to_abs(embed, s);
+                                        let (el, ec) = map_embed_pos_to_abs(embed, e);
+                                        (sl, sc, Some(el), Some(ec))
+                                    }
+                                    (Some(s), None) => {
+                                        let (sl, sc) = map_embed_pos_to_abs(embed, s);
+                                        (sl, sc, None, None)
+                                    }
+                                    _ => (embed.range.start.line, embed.range.start.column, None, None),
+                                };
+                                let frame = render_code_frame(&src_abs, abs_line, abs_col, end_line, end_col, 1);
+                                let code_sfx = d.code.as_deref().unwrap_or("");
+                                let sev = d.severity.as_deref().unwrap_or("error");
+                                if code_sfx.is_empty() {
+                                    log::error!(
+                                        "EMBED_GENERATOR_FAILED ({sev}) at {}:{}:{}\n{}\n{}",
+                                        index.source_path, abs_line, abs_col, d.message, frame
+                                    );
+                                } else {
+                                    log::error!(
+                                        "EMBED_GENERATOR_FAILED[{code}] ({sev}) at {}:{}:{}\n{}\n{}",
+                                        index.source_path, abs_line, abs_col, d.message, frame,
+                                        code = code_sfx
+                                    );
+                                }
+                            }
                         }
+                        JobResult::Failed { index_pos: *idx_pos }
                     }
                 }
-                continue;
+            })
+            .collect()
+    });
+
+    // Merge results in stable order (original discovery order)
+    let mut ordered: Vec<(usize, JobResult)> = jobs
+        .into_iter()
+        .map(|(i, _)| i)
+        .zip(job_results.into_iter())
+        .collect();
+    ordered.sort_by_key(|(i, _)| *i);
+
+    for (_i, jr) in ordered.into_iter() {
+        match jr {
+            JobResult::Reused { module_name, rel_path, entry, .. } => {
+                res_entries.push(entry);
+                generated.push(GeneratedModuleInfo { module_name, rel_path });
+                count_reused += 1;
             }
-        };
-        if suffix.is_empty() {
-            suffix = format!("_{}", embed.occurrence_index);
+            JobResult::Ok(ok) => {
+                let suffix = sanitize_suffix(&ok.suffix);
+                let key = (ok.tag.clone(), suffix.clone());
+                if seen_suffix.contains(&key) {
+                    log::error!(
+                        "EMBED_SUFFIX_COLLISION: duplicate suffix '{}' for tag '{}' in module {}",
+                        suffix, ok.tag, index.module
+                    );
+                    count_failed += 1;
+                    continue;
+                }
+                seen_suffix.insert(key);
+
+                let gen_file_name = format!("{}__embed_{}_{}.res", index.module, ok.tag_norm, suffix);
+                let out_path_abs = write_generated_file(
+                    &out_dir_abs,
+                    &gen_file_name,
+                    &ok.literal_hash,
+                    &ok.tag,
+                    &index.source_path,
+                    ok.occurrence_index,
+                    &suffix,
+                    // generator id omitted here (unknown); use a placeholder for header
+                    // but better carry it - adjust above to include; for now leave blank
+                    &ok.generator_id,
+                    &ok.code,
+                )?;
+                let rel_path = out_path_abs
+                    .strip_prefix(&package.path)
+                    .unwrap_or(&out_path_abs)
+                    .to_path_buf();
+                let module_name = Path::new(&gen_file_name)
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string();
+                res_entries.push(ResolutionMapEntry {
+                    tag: ok.tag.clone(),
+                    occurrence_index: ok.occurrence_index,
+                    literal_hash: ok.literal_hash.clone(),
+                    target_module: module_name.clone(),
+                });
+                generated.push(GeneratedModuleInfo { module_name, rel_path });
+                count_generated += 1;
+            }
+            JobResult::Failed { .. } => {
+                count_failed += 1;
+            }
         }
-        let suffix = sanitize_suffix(&suffix);
-        // Collision per (tag, suffix) within file
-        let key = (embed.tag.clone(), suffix.clone());
-        if seen_suffix.contains(&key) {
-            log::error!(
-                "EMBED_SUFFIX_COLLISION: duplicate suffix '{}' for tag '{}' in module {}",
-                suffix, embed.tag, index.module
-            );
-            continue;
-        }
-        seen_suffix.insert(key);
-
-        let gen_file_name = format!(
-            "{}__embed_{}_{}.res",
-            index.module, tag_norm, suffix
-        );
-        let out_path_abs = write_generated_file(
-            &out_dir_abs,
-            &gen_file_name,
-            &embed.literal_hash,
-            &embed.tag,
-            &index.source_path,
-            embed.occurrence_index,
-            &suffix,
-            &generator.id,
-            &code,
-        )?;
-
-        // Compute rel path to package root
-        let rel_path = out_path_abs
-            .strip_prefix(&package.path)
-            .unwrap_or(&out_path_abs)
-            .to_path_buf();
-        let module_name = Path::new(&gen_file_name)
-            .file_stem()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-
-        res_entries.push(ResolutionMapEntry {
-            tag: embed.tag.clone(),
-            occurrence_index: embed.occurrence_index,
-            literal_hash: embed.literal_hash.clone(),
-            target_module: module_name.clone(),
-        });
-        generated.push(GeneratedModuleInfo { module_name, rel_path });
     }
 
     // Always write resolution map and attempt rewrite, even if entries are empty.
@@ -563,6 +651,14 @@ pub fn process_module_embeds(
     let map = ResolutionMap { version: 1, module: index.module.clone(), entries: res_entries };
     let data = serde_json::to_string(&map)?;
     fs::write(&map_abs, data)?;
+    log::debug!(
+        "Embeds: module {} — generated {}, reused {}, failed {}; rewriting {} entry(ies)",
+        index.module,
+        count_generated,
+        count_reused,
+        count_failed,
+        map.entries.len()
+    );
 
     // Run rewrite: bsc -rewrite-embeds -ast <ast> -map <map> -o <ast>
     let bsc = &build_state.compiler_info.bsc_path;
@@ -597,6 +693,40 @@ pub fn process_module_embeds(
     cleanup_stale_generated_for_module(&package, ast_rel_path, &generated)?;
 
     Ok(generated)
+}
+
+pub fn count_planned_invocations(
+    build_state: &BuildCommandState,
+    package: &Package,
+    ast_rel_path: &Path,
+) -> Result<(u32, u32)> {
+    let Some(effective) = package
+        .config
+        .get_effective_embeds_config(&build_state.project_context)
+        else { return Ok((0, 0)); };
+
+    let build_dir = package.get_build_path();
+    let index_rel = embeds_index_path_for_ast(ast_rel_path);
+    let index_abs = build_dir.join(&index_rel);
+    if !index_abs.exists() {
+        return Ok((0, 0));
+    }
+    let index = read_index(&index_abs)?;
+    if index.embeds.is_empty() { return Ok((0,0)); }
+
+    let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
+    let mut reused = 0u32;
+    let mut invocations = 0u32;
+    for embed in &index.embeds {
+        let Some(generator) = find_generator(effective, &embed.tag) else { continue };
+        let tag_norm = normalize_tag(&embed.tag);
+        if let Some(_hit) = find_cached_generated(&out_dir_abs, &index.module, &tag_norm, embed, generator, package) {
+            reused += 1;
+        } else {
+            invocations += 1;
+        }
+    }
+    Ok((invocations, reused))
 }
 
 fn read_first_line(path: &Path) -> Option<String> {

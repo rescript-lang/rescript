@@ -22,4 +22,5 @@ rewrite-embeds failed:
 
 ERROR:
 Embed processing failed for Foo: rewrite-embeds failed
+Processed embeds: ran 1 generators; cache hits 0
 Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
