@@ -356,7 +356,10 @@ impl EmbedsConfig {
 }
 
 impl Config {
-    pub fn get_effective_embeds_config<'a>(&'a self, project_context: &'a ProjectContext) -> Option<&'a EmbedsConfig> {
+    pub fn get_effective_embeds_config<'a>(
+        &'a self,
+        project_context: &'a ProjectContext,
+    ) -> Option<&'a EmbedsConfig> {
         if self.embeds.is_some() {
             self.embeds.as_ref()
         } else {

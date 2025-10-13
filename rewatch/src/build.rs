@@ -3,12 +3,12 @@ pub mod clean;
 pub mod compile;
 pub mod compiler_info;
 pub mod deps;
+pub mod embeds;
 pub mod logs;
 pub mod namespaces;
 pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
-pub mod embeds;
 
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
@@ -18,8 +18,8 @@ use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
-use build_types::*;
 use build_types::SourceType;
+use build_types::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
@@ -382,7 +382,12 @@ pub fn incremental_build(
             if let Some(module) = build_state.build_state.modules.get(&module_name) {
                 if let SourceType::SourceFile(source_file) = &module.source_type {
                     let ast_path_rel = helpers::get_ast_path(&source_file.implementation.path);
-                    work.push((module_name.clone(), package_name.clone(), source_file.implementation.path.clone(), ast_path_rel));
+                    work.push((
+                        module_name.clone(),
+                        package_name.clone(),
+                        source_file.implementation.path.clone(),
+                        ast_path_rel,
+                    ));
                 }
             }
         }
@@ -457,14 +462,18 @@ pub fn incremental_build(
                         }
                     }
                     if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name) {
-                        if *inv > 0 { pb_embeds.inc(*inv); }
+                        if *inv > 0 {
+                            pb_embeds.inc(*inv);
+                        }
                     }
                 }
                 Err(e) => {
                     log::error!("Embed processing failed for {}: {}", module_name, e);
                     embeds_had_failure = true;
                     if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == module_name) {
-                        if *inv > 0 { pb_embeds.inc(*inv); }
+                        if *inv > 0 {
+                            pb_embeds.inc(*inv);
+                        }
                     }
                 }
             }
@@ -477,8 +486,7 @@ pub fn incremental_build(
                 if snapshot_output {
                     println!(
                         "Processed embeds: ran {} generators; cache hits {}",
-                        planned_invocations,
-                        planned_reused
+                        planned_invocations, planned_reused
                     );
                 } else {
                     println!(
@@ -510,13 +518,13 @@ pub fn incremental_build(
     current_step += 1;
 
     if !snapshot_output && show_progress {
-            println!(
-                "{}{} {}Collected deps in {:.2}s",
-                LINE_CLEAR,
-                format_step(current_step, total_steps),
-                DEPS,
-                default_timing.unwrap_or(timing_deps_elapsed).as_secs_f64()
-            );
+        println!(
+            "{}{} {}Collected deps in {:.2}s",
+            LINE_CLEAR,
+            format_step(current_step, total_steps),
+            DEPS,
+            default_timing.unwrap_or(timing_deps_elapsed).as_secs_f64()
+        );
     }
 
     mark_modules_with_expired_deps_dirty(build_state);

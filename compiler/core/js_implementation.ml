@@ -163,8 +163,9 @@ let implementation ~parser ppf ?outputprefix fname =
   Res_compmisc.init_path ();
   let ast0 = parser fname in
   (* Emit embed index (if enabled) alongside binary AST output prefix *)
-  (try Embed_index.write_structure_index ~outprefix:outputprefix
-         ~sourcefile:fname ast0
+  (try
+     Embed_index.write_structure_index ~outprefix:outputprefix ~sourcefile:fname
+       ast0
    with _ -> ());
   ast0
   |> Cmd_ppx_apply.apply_rewriters ~restore:false ~tool_name:Js_config.tool_name

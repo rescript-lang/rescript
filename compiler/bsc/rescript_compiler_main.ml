@@ -357,12 +357,11 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
             Js_config.embed_tags :=
               Ext_string.split_by ~keep_empty:false (fun c -> c = ',') s
               |> List.map String.trim),
-      "*internal* Collect embed extension occurrences (csv of tags or 'all')"
-    );
+      "*internal* Collect embed extension occurrences (csv of tags or 'all')" );
     ( "-rewrite-embeds",
       unit_call (fun () -> Js_config.rewrite_embeds_mode := true),
-      "*internal* Run embed rewrite on a binary AST (-ast <in.ast> -map <map.json> [-o <out.ast>])"
-    );
+      "*internal* Run embed rewrite on a binary AST (-ast <in.ast> -map \
+       <map.json> [-o <out.ast>])" );
     ( "-ast",
       string_optional_set Js_config.rewrite_embeds_ast,
       "*internal* Input .ast file for -rewrite-embeds" );
@@ -480,8 +479,7 @@ let _ : unit =
       let out_opt = !Clflags.output_name in
       (* Delegate to frontend/Embed_rewrite *)
       Embed_rewrite.run ~in_ast ~map_path ~out_ast:out_opt;
-      exit 0
-    )
+      exit 0)
   with
   | Bsc_args.Bad msg ->
     Format.eprintf "%s@." msg;

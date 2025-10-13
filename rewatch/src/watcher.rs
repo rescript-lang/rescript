@@ -11,19 +11,23 @@ use crate::queue::*;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use serde::Deserialize;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use serde::Deserialize;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct EmbedIndexTagOnlyEntry { tag: String }
+struct EmbedIndexTagOnlyEntry {
+    tag: String,
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct EmbedIndexTagOnly { embeds: Vec<EmbedIndexTagOnlyEntry> }
+struct EmbedIndexTagOnly {
+    embeds: Vec<EmbedIndexTagOnlyEntry>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 enum CompileType {
@@ -67,7 +71,10 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
 fn is_embed_extra_source(build_state: &build::build_types::BuildCommandState, path_buf: &Path) -> bool {
     let Ok(canonicalized_path_buf) = path_buf
         .canonicalize()
-        .map(StrippedVerbatimPath::to_stripped_verbatim_path) else { return false };
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    else {
+        return false;
+    };
 
     for package in build_state.packages.values() {
         if let Some(embeds) = package
@@ -99,13 +106,19 @@ fn mark_modules_for_extra_source(
 ) {
     let Ok(changed_abs) = changed_path
         .canonicalize()
-        .map(StrippedVerbatimPath::to_stripped_verbatim_path) else { return };
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    else {
+        return;
+    };
 
     // For each package/generator whose extraSources include this path, mark modules that use any of the generator's tags as dirty
     for package in build_state.build_state.packages.values() {
         let Some(embeds_cfg) = package
             .config
-            .get_effective_embeds_config(&build_state.project_context) else { continue };
+            .get_effective_embeds_config(&build_state.project_context)
+        else {
+            continue;
+        };
 
         // Collect all generators that reference the changed path
         let mut matching_generators: Vec<&crate::config::EmbedGenerator> = Vec::new();
@@ -125,13 +138,17 @@ fn mark_modules_for_extra_source(
             }
         }
 
-        if matching_generators.is_empty() { continue; }
+        if matching_generators.is_empty() {
+            continue;
+        }
 
         // Build a quick tag set for fast lookup
         use ahash::AHashSet;
         let mut tags: AHashSet<String> = AHashSet::new();
         for generator in &matching_generators {
-            for t in &generator.tags { tags.insert(t.clone()); }
+            for t in &generator.tags {
+                tags.insert(t.clone());
+            }
         }
 
         // Iterate all modules in this package and see if their embed index mentions any of these tags
@@ -142,8 +159,9 @@ fn mark_modules_for_extra_source(
             .modules
             .iter()
             .filter_map(|(n, m)| match &m.source_type {
-                build::build_types::SourceType::SourceFile(sf) if m.package_name == package.name =>
-                    Some((n.clone(), sf.implementation.path.clone())),
+                build::build_types::SourceType::SourceFile(sf) if m.package_name == package.name => {
+                    Some((n.clone(), sf.implementation.path.clone()))
+                }
                 _ => None,
             })
             .collect();
@@ -162,13 +180,17 @@ fn mark_modules_for_extra_source(
                     .unwrap_or_else(|| Path::new(""))
                     .join(format!("{}.embeds.json", stem));
                 let idx_abs = build_dir.join(&idx_rel);
-                if !idx_abs.exists() { continue; }
+                if !idx_abs.exists() {
+                    continue;
+                }
                 if let Ok(contents) = std::fs::read_to_string(&idx_abs) {
                     if let Ok(index) = serde_json::from_str::<EmbedIndexTagOnly>(&contents) {
                         let uses_tag = index.embeds.iter().any(|e| tags.contains(&e.tag));
                         if uses_tag {
                             if let Some(mutable) = build_state.build_state.modules.get_mut(&module_name) {
-                                if let build::build_types::SourceType::SourceFile(ref mut sf_mut) = mutable.source_type {
+                                if let build::build_types::SourceType::SourceFile(ref mut sf_mut) =
+                                    mutable.source_type
+                                {
                                     sf_mut.implementation.parse_dirty = true;
                                     mutable.compile_dirty = true;
                                     mutable.deps_dirty = true;
@@ -262,7 +284,6 @@ async fn async_watch(
                 .map(|p| p.to_path_buf())
                 .collect();
             for path_buf in event_paths {
-
                 match (needs_compile_type, event.kind) {
                     (
                         CompileType::Incremental | CompileType::None,
