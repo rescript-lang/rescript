@@ -1,4 +1,5 @@
 use super::build_types::{BuildCommandState, Implementation, Interface, Module, SourceType};
+use super::logs;
 use super::packages::Package;
 use crate::config::{EmbedGenerator, EmbedsConfig};
 use ahash::AHashSet;
@@ -511,6 +512,21 @@ pub fn process_module_embeds(
                             embed.occurrence_index,
                             e
                         );
+                        // Also emit to compiler log for editor consumption
+                        let file_abs = package.get_build_path().join(&index.source_path);
+                        let mut msg = String::new();
+                        msg.push_str("  Syntax error!\n");
+                        msg.push_str(&format!(
+                            "  {}:{}:{}\n",
+                            file_abs.display(),
+                            embed.range.start.line,
+                            embed.range.start.column
+                        ));
+                        msg.push_str(&format!(
+                            "  Generator '{}' failed to run: {}\n\n",
+                            generator.id, e
+                        ));
+                        logs::append(&package, &msg);
                         return JobResult::Failed;
                     }
                 };
@@ -548,6 +564,18 @@ pub fn process_module_embeds(
                                 embed.occurrence_index,
                                 errors
                             );
+                            // Emit a generic compiler-log entry
+                            let file_abs = package.get_build_path().join(&index.source_path);
+                            let mut msg = String::new();
+                            msg.push_str("  Syntax error!\n");
+                            msg.push_str(&format!(
+                                "  {}:{}:{}\n",
+                                file_abs.display(),
+                                embed.range.start.line,
+                                embed.range.start.column
+                            ));
+                            msg.push_str(&format!("  Generator '{}' reported an error.\n\n", generator.id));
+                            logs::append(&package, &msg);
                         } else {
                             for d in diags {
                                 let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
@@ -586,6 +614,42 @@ pub fn process_module_embeds(
                                         code = code_sfx
                                     );
                                 }
+
+                                // Emit editor-friendly diagnostics in .compiler.log
+                                let mut out = String::new();
+                                match sev {
+                                    "warning" => out.push_str("  Warning number 999\n"),
+                                    _ => out.push_str("  Syntax error!\n"),
+                                }
+                                let file_abs = package.get_build_path().join(&index.source_path);
+                                // Range line: file:line:col[-end] or file:line:col-endCol (same line)
+                                let range_suffix = match (end_line, end_col) {
+                                    (Some(el), Some(ec)) if el != abs_line => format!("-{}:{}", el, ec),
+                                    (Some(_), Some(ec)) => format!("-{}", ec),
+                                    _ => String::new(),
+                                };
+                                out.push_str(&format!(
+                                    "  {}:{}:{}{}\n",
+                                    file_abs.display(),
+                                    abs_line,
+                                    abs_col,
+                                    range_suffix
+                                ));
+                                // Message lines
+                                for line in d.message.lines() {
+                                    out.push_str("  ");
+                                    out.push_str(line);
+                                    out.push('\n');
+                                }
+                                if !frame.is_empty() {
+                                    for line in frame.lines() {
+                                        out.push_str("  ");
+                                        out.push_str(line);
+                                        out.push('\n');
+                                    }
+                                }
+                                out.push('\n');
+                                logs::append(&package, &out);
                             }
                         }
                         JobResult::Failed
@@ -712,6 +776,8 @@ pub fn process_module_embeds(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         log::error!("rewrite-embeds failed: {stderr}");
+        // Surface to compiler log so the editor can pick it up
+        logs::append(&package, &stderr);
         // Surface as an error to stop pipeline early; avoids later generic errors.
         return Err(anyhow!("rewrite-embeds failed"));
     }

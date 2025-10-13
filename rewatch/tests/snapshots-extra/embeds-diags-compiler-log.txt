@@ -1,0 +1,18 @@
+=== .compiler.log (filtered) ===
+  Syntax error!
+  /_tmp_embeds/rewatch_diags_proj/lib/bs/../../src/Foo.res:1:27-31
+  Example error from generator
+  >    1 | let a = %sql.one("/* @name Err */ select 1")
+                                    ^^^^
+       2 | 
+
+
+  We've found a bug for you!
+  /_tmp_embeds/rewatch_diags_proj/src/Foo.res:1:9-16
+
+  1 │ let a = %sql.one("/* @name Err */ select 1")
+  2 │ 
+  3 │ 
+
+  EMBED_MAP_MISMATCH: no mapping for tag sql.one occurrence 1
+

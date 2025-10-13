@@ -11,6 +11,12 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
   - Phase 6 (Rewatch integration): DONE — integrates generation + rewrite into build, registers generated modules and parses their ASTs.
 - Phase 7 (Watch/cleanup): DONE — extraSources changes now invalidate affected modules in watch mode; stale generated files are cleaned up per-module.
 - Phase 8 (Diagnostics): PARTIAL — compiler rewriter now surfaces EMBED_MAP_MISMATCH with clear messages; remaining work: generator diagnostics mapping with code frames.
+- Schema tooling — ADDED: run `rescript schema embeds --output-dir ./schemas --openapi` to generate JSON Schema for the generator input/output and an OpenAPI (components-only) document. Fields are camelCase and unknown fields are denied for generator-facing types.
+  - Committed copies live at `docs/schemas/`:
+    - `docs/schemas/embedlang.input.schema.json`
+    - `docs/schemas/embedlang.output.schema.json`
+    - `docs/schemas/embedlang.openapi.json`
+  - Or regenerate via `make schemas`.
 - Test coverage
   - Compiler‑only flow: `rewatch/tests/embeds-compiler.sh` validates index + manual map + rewriter (no Rewatch involvement).
   - Rewatch E2E: `rewatch/tests/embeds.sh` builds a fixture repo and snapshots index, map, rewritten source, and generated module.

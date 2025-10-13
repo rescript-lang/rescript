@@ -90,8 +90,22 @@ let emit_external_warnings : iterator =
              Example: type rec t = ..."
         | _ -> super.structure_item self str_item);
     expr =
-      (fun self ({pexp_loc = loc} as a) ->
+      (fun self ({pexp_loc = loc; pexp_attributes = attrs} as a) ->
         match a.pexp_desc with
+        | Pexp_constant (Pconst_string (_s, Some delim))
+          when Ast_utf8_string_interp.is_unescaped delim ->
+          (* Skip the "uninterpreted delimiters" warning for template/backtick
+             strings that are still inside extension payloads or carry the
+             template attributes. These will either be rewritten later or have
+             already been marked as template literals. *)
+          let has_template_attr =
+            Ext_list.exists attrs (fun ({txt}, _) ->
+                match txt with
+                | "res.template" | "res.taggedTemplate" -> true
+                | _ -> false)
+          in
+          if not has_template_attr then
+            Bs_warnings.error_unescaped_delimiter loc delim
         | Pexp_constant const -> check_constant loc const
         | Pexp_variant (s, None) when Ext_string.is_valid_hash_number s -> (
           try ignore (Ext_string.hash_number_as_i32_exn s : int32)

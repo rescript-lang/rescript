@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EmbedLang GeneratorInput",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer" },
+    "tag": { "type": "string" },
+    "embedString": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "module": { "type": "string" }
+      },
+      "required": ["path", "module"]
+    },
+    "occurrenceIndex": { "type": "integer" },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "extraSources": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "options": {}
+      },
+      "required": ["extraSources"]
+    }
+  },
+  "required": [
+    "version",
+    "tag",
+    "embedString",
+    "source",
+    "occurrenceIndex",
+    "config"
+  ],
+  "examples": [
+    {
+      "version": 1,
+      "tag": "sql.one",
+      "embedString": "/* @name GetUser */ select * from users where id = :id",
+      "source": { "path": "src/Foo.res", "module": "Foo" },
+      "occurrenceIndex": 1,
+      "config": { "extraSources": ["schema.graphql"] }
+    }
+  ]
+}

@@ -19,6 +19,12 @@ rewatch:
 	cargo build --manifest-path rewatch/Cargo.toml --release
 	./scripts/copyExes.js --rewatch
 
+# Generate EmbedLang JSON/OpenAPI schemas into docs/schemas
+schemas: rewatch
+	@mkdir -p docs/schemas
+	@rewatch/target/release/rescript schema embeds --output-dir docs/schemas --openapi >/dev/null
+	@echo "Schemas written to docs/schemas"
+
 ninja/ninja:
 	./scripts/buildNinjaBinary.js
 
@@ -99,4 +105,4 @@ dev-container:
 
 .DEFAULT_GOAL := build
 
-.PHONY: build watch rewatch ninja bench dce test test-syntax test-syntax-roundtrip test-gentype test-analysis test-tools test-all lib playground playground-cmijs playground-release artifacts format checkformat clean-gentype clean-rewatch clean clean-all dev-container
+.PHONY: build watch rewatch ninja bench dce test test-syntax test-syntax-roundtrip test-gentype test-analysis test-tools test-all lib playground playground-cmijs playground-release artifacts format checkformat clean-gentype clean-rewatch clean clean-all dev-container schemas

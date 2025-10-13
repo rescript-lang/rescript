@@ -1,0 +1,104 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Rewatch EmbedLang Protocol",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GeneratorInput": {
+        "title": "EmbedLang GeneratorInput",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": { "type": "integer" },
+          "tag": { "type": "string" },
+          "embedString": { "type": "string" },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string" },
+              "module": { "type": "string" }
+            },
+            "required": ["path", "module"]
+          },
+          "occurrenceIndex": { "type": "integer" },
+          "config": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "extraSources": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "options": {}
+            },
+            "required": ["extraSources"]
+          }
+        },
+        "required": [
+          "version",
+          "tag",
+          "embedString",
+          "source",
+          "occurrenceIndex",
+          "config"
+        ]
+      },
+      "GeneratorOutput": {
+        "title": "EmbedLang GeneratorOutput",
+        "discriminator": { "propertyName": "status" },
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": { "const": "ok" },
+              "code": { "type": "string" },
+              "suffix": { "type": "string" }
+            },
+            "required": ["status", "code"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": { "const": "error" },
+              "errors": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/GenDiagItem" }
+              }
+            },
+            "required": ["status", "errors"]
+          }
+        ]
+      },
+      "GenDiagItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "message": { "type": "string" },
+          "severity": {
+            "type": "string",
+            "enum": ["error", "warning", "info"]
+          },
+          "code": { "type": "string" },
+          "start": { "$ref": "#/components/schemas/GenDiagPos" },
+          "end": { "$ref": "#/components/schemas/GenDiagPos" }
+        },
+        "required": ["message"]
+      },
+      "GenDiagPos": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "line": { "type": "integer" },
+          "column": { "type": "integer" }
+        },
+        "required": ["line", "column"]
+      }
+    }
+  }
+}

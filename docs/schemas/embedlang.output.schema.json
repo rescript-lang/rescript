@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EmbedLang GeneratorOutput",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "ok" },
+        "code": { "type": "string" },
+        "suffix": { "type": "string" }
+      },
+      "required": ["status", "code"]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "error" },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "message": { "type": "string" },
+              "severity": {
+                "type": "string",
+                "enum": ["error", "warning", "info"]
+              },
+              "code": { "type": "string" },
+              "start": { "$ref": "#/definitions/GenDiagPos" },
+              "end": { "$ref": "#/definitions/GenDiagPos" }
+            },
+            "required": ["message"]
+          }
+        }
+      },
+      "required": ["status", "errors"]
+    }
+  ],
+  "definitions": {
+    "GenDiagPos": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "line": { "type": "integer" },
+        "column": { "type": "integer" }
+      },
+      "required": ["line", "column"]
+    }
+  },
+  "examples": [
+    { "status": "ok", "code": "let default = \"...\"", "suffix": "GetUser" },
+    {
+      "status": "error",
+      "errors": [
+        {
+          "message": "Example",
+          "start": { "line": 1, "column": 10 },
+          "end": { "line": 1, "column": 14 }
+        }
+      ]
+    }
+  ]
+}

@@ -33,6 +33,56 @@ fn main() -> Result<()> {
             println!("{}", build::get_compiler_args(Path::new(&path))?);
             std::process::exit(0);
         }
+        cli::Command::Schema {
+            what,
+            output_dir,
+            openapi,
+        } => {
+            match what {
+                cli::SchemaWhat::Embeds => {
+                    let input = rescript::schema::embeds::embedlang_input_schema();
+                    let output = rescript::schema::embeds::embedlang_output_schema();
+                    if let Some(dir) = output_dir {
+                        let dir_path = Path::new(&dir);
+                        std::fs::create_dir_all(dir_path).ok();
+                        let input_path = dir_path.join("embedlang.input.schema.json");
+                        let output_path = dir_path.join("embedlang.output.schema.json");
+                        std::fs::write(&input_path, serde_json::to_vec_pretty(&input)?).unwrap();
+                        std::fs::write(&output_path, serde_json::to_vec_pretty(&output)?).unwrap();
+                        if openapi {
+                            let doc = rescript::schema::embeds::openapi_document();
+                            let openapi_path = dir_path.join("embedlang.openapi.json");
+                            std::fs::write(&openapi_path, serde_json::to_vec_pretty(&doc)?).unwrap();
+                        }
+                        println!(
+                            "Wrote schemas to {}",
+                            dir_path
+                                .canonicalize()
+                                .unwrap_or(dir_path.to_path_buf())
+                                .display()
+                        );
+                    } else {
+                        // stdout (concatenate with separators)
+                        println!(
+                            "=== EmbedLang GeneratorInput (JSON Schema) ===\n{}",
+                            serde_json::to_string_pretty(&input)?
+                        );
+                        println!(
+                            "\n=== EmbedLang GeneratorOutput (JSON Schema) ===\n{}",
+                            serde_json::to_string_pretty(&output)?
+                        );
+                        if openapi {
+                            let doc = rescript::schema::embeds::openapi_document();
+                            println!(
+                                "\n=== OpenAPI 3.1 (components only) ===\n{}",
+                                serde_json::to_string_pretty(&doc)?
+                            );
+                        }
+                    }
+                }
+            }
+            std::process::exit(0);
+        }
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
 
