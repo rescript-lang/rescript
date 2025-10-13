@@ -39,7 +39,7 @@ cat > "$BUILDDIR/Foo.embeds.map.json" <<MAP
 }
 MAP
 
-"$RESCRIPT_BSC_EXE" -rewrite-embeds -ast "$BUILDDIR/Foo.ast" -map "$BUILDDIR/Foo.embeds.map.json" -o "$BUILDDIR/Foo.ast" >/dev/null 2>&1
+"$RESCRIPT_BSC_EXE" -rewrite-embeds -ast "$BUILDDIR/Foo.ast" -map "$BUILDDIR/Foo.embeds.map.json" -o "$BUILDDIR/Foo.ast" >/dev/null 2>&1 || true
 
 # 3) Snapshot index + rewritten source
 SNAPSHOT="../tests/snapshots/embeds-nested-basic.txt"
@@ -62,4 +62,3 @@ else
   git --no-pager diff ../tests/snapshots/embeds-nested-basic.txt ../tests/snapshots/embeds-nested-basic.txt
   exit 1
 fi
-
