@@ -15,10 +15,14 @@ const readStdin = async () => {
     const m = /@name\s+([A-Za-z0-9_]+)/.exec(s);
     if (m) suffix = m[1];
     const code = 'let default = "generated-from: ' + suffix + '"\n';
+    // record a side-effect so tests can assert cache hits/misses
+    try {
+      const fs = await import('node:fs');
+      fs.appendFileSync('gen-runs.log', `${new Date().toISOString()} ${input.tag} ${suffix}\n`);
+    } catch {}
     process.stdout.write(JSON.stringify({ status: 'ok', code, suffix }));
   } catch (err) {
     process.stdout.write(JSON.stringify({ status: 'error', errors: [{ message: String(err) }] }));
     process.exitCode = 0; // keep non-error status to simplify fixture
   }
 })();
-

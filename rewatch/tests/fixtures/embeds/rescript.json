@@ -9,10 +9,9 @@
         "args": ["gen.mjs"],
         "cwd": ".",
         "tags": ["sql.one"],
-        "extraSources": [],
+        "extraSources": ["dep.txt"],
         "timeoutMs": 5000
       }
     ]
   }
 }
-

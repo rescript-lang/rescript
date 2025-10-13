@@ -9,7 +9,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime, Instant};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -205,9 +205,28 @@ fn run_generator(
             .context("Failed to write generator stdin")?;
     }
 
-    let output = child
-        .wait_with_output()
-        .context("Failed to read generator output")?;
+    // Timeout handling
+    let timeout = Duration::from_millis(generator.timeout_ms.unwrap_or(10_000));
+    let start = Instant::now();
+    let output = loop {
+        if let Some(status) = child.try_wait().context("Failed to poll generator")? {
+            // Child exited; collect stdout/stderr
+            let out = child
+                .wait_with_output()
+                .context("Failed to read generator output")?;
+            break out;
+        }
+        if start.elapsed() >= timeout {
+            // Kill on timeout and report failure
+            let _ = child.kill();
+            return Err(anyhow!(
+                "Generator '{}' timed out after {}ms",
+                generator.id,
+                timeout.as_millis()
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    };
 
     if !output.status.success() {
         return Err(anyhow!(
@@ -256,7 +275,7 @@ fn write_generated_file(
 pub fn process_module_embeds(
     build_state: &mut BuildCommandState,
     package: Package,
-    module_rel: &Path,
+    _module_rel: &Path,
     ast_rel_path: &Path,
 ) -> Result<Vec<GeneratedModuleInfo>> {
     let Some(effective) = package
@@ -292,6 +311,11 @@ pub fn process_module_embeds(
             continue;
         };
 
+        log::debug!(
+            "Embeds: processing tag '{}' occurrence #{} in module {}",
+            embed.tag, embed.occurrence_index, index.module
+        );
+
         let input = GeneratorInput {
             version: 1,
             tag: &embed.tag,
@@ -304,6 +328,35 @@ pub fn process_module_embeds(
             config: GeneratorConfig { extra_sources: &generator.extra_sources, options: None },
         };
 
+        let tag_norm = normalize_tag(&embed.tag);
+        // Try cache hit: scan outDir for existing generated file with matching hash
+        // If found and extraSources are not newer than the file, reuse
+        if let Some((existing_module_name, existing_rel_path)) = find_cached_generated(
+            &out_dir_abs,
+            &index.module,
+            &tag_norm,
+            embed,
+            generator,
+            &package,
+        ) {
+            log::debug!(
+                "Embeds: cache hit for tag '{}' in module {} -> {}",
+                embed.tag, index.module, existing_module_name
+            );
+            res_entries.push(ResolutionMapEntry {
+                tag: embed.tag.clone(),
+                occurrence_index: embed.occurrence_index,
+                literal_hash: embed.literal_hash.clone(),
+                target_module: existing_module_name.clone(),
+            });
+            generated.push(GeneratedModuleInfo { module_name: existing_module_name, rel_path: existing_rel_path });
+            continue;
+        }
+
+        log::debug!(
+            "Embeds: cache miss for tag '{}' in module {} — running generator '{}'",
+            embed.tag, index.module, generator.id
+        );
         let output = run_generator(generator, &package, &input)?;
         let (code, mut suffix) = match output {
             GeneratorOutput::Ok { code, suffix } => (code, suffix.unwrap_or_default()),
@@ -323,7 +376,6 @@ pub fn process_module_embeds(
             suffix = format!("_{}", embed.occurrence_index);
         }
         let suffix = sanitize_suffix(&suffix);
-        let tag_norm = normalize_tag(&embed.tag);
         // Collision per (tag, suffix) within file
         let key = (embed.tag.clone(), suffix.clone());
         if seen_suffix.contains(&key) {
@@ -400,9 +452,72 @@ pub fn process_module_embeds(
             let stderr = String::from_utf8_lossy(&output.stderr);
             log::error!("rewrite-embeds failed: {}", stderr);
         }
+
+        // Mark original module for recompilation so rewrite takes effect
+        if let Some(orig) = build_state.build_state.modules.get_mut(&index.module) {
+            orig.compile_dirty = true;
+            orig.deps_dirty = true;
+        }
     }
 
     Ok(generated)
+}
+
+fn read_first_line(path: &Path) -> Option<String> {
+    use std::io::{BufRead, BufReader};
+    let f = fs::File::open(path).ok()?;
+    let mut reader = BufReader::new(f);
+    let mut line = String::new();
+    let _ = reader.read_line(&mut line).ok()?;
+    Some(line)
+}
+
+fn header_hash_from_file(path: &Path) -> Option<String> {
+    let line = read_first_line(path)?;
+    let prefix = "// @sourceHash ";
+    if line.starts_with(prefix) {
+        Some(line.trim()[prefix.len()..].to_string())
+    } else {
+        None
+    }
+}
+
+fn find_cached_generated(
+    out_dir_abs: &Path,
+    module_name: &str,
+    tag_norm: &str,
+    embed: &EmbedEntry,
+    generator: &EmbedGenerator,
+    package: &Package,
+) -> Option<(String, PathBuf)> {
+    let prefix = format!("{}__embed_{}_", module_name, tag_norm);
+    let dir_iter = fs::read_dir(out_dir_abs).ok()?;
+    for entry in dir_iter.flatten() {
+        let p = entry.path();
+        if !p.is_file() { continue; }
+        if p.extension().and_then(|s| s.to_str()) != Some("res") { continue; }
+        let fname = p.file_name()?.to_string_lossy().to_string();
+        if !fname.starts_with(&prefix) { continue; }
+        // Quick hash check
+        if let Some(h) = header_hash_from_file(&p) {
+            if h != embed.literal_hash { continue; }
+            // Extra sources mtime check
+            let file_mtime = p.metadata().and_then(|m| m.modified()).ok()?;
+            let extra_newer = generator.extra_sources.iter().any(|rel| {
+                let ap = package.path.join(rel);
+                ap.metadata()
+                    .and_then(|m| m.modified())
+                    .map(|t| t > file_mtime)
+                    .unwrap_or(false)
+            });
+            if extra_newer { continue; }
+            let module = p.file_stem()?.to_string_lossy().to_string();
+            // Return rel path to package root
+            let rel = p.strip_prefix(&package.path).unwrap_or(&p).to_path_buf();
+            return Some((module, rel));
+        }
+    }
+    None
 }
 
 pub fn add_generated_modules_to_state(

@@ -5,11 +5,11 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 ## Implementation Status (WIP)
 - Phase progress
   - Phase 2 (Rewatch: Parse step): DONE — `-embeds <csv>` threaded via parser args from `rescript.json` tags.
-  - Phase 3 (Generator invocation): PARTIAL — per‑embed process invocation + generated file write + headers implemented; caching/timeout not yet.
+  - Phase 3 (Generator invocation): PARTIAL → MOSTLY DONE — per‑embed process invocation + generated file write + headers, caching (hash + extraSources mtime), and per‑embed timeout implemented; remaining work: concurrency limits and richer progress UX.
   - Phase 4 (Resolution map writer): DONE — `*.embeds.map.json` written next to `.ast` with stable entries.
   - Phase 5 (Compiler rewriter): PRESENT — `bsc -rewrite-embeds` invoked per module and applied in‑place.
   - Phase 6 (Rewatch integration): DONE — integrates generation + rewrite into build, registers generated modules and parses their ASTs.
-  - Phase 7 (Watch/cleanup): TODO — extraSources watching + stale file cleanup not implemented yet.
+  - Phase 7 (Watch/cleanup): PARTIAL — extraSources watching wired into Rewatch; cleanup of stale generated files still TODO.
   - Phase 8 (Diagnostics): TODO — error mapping with code frames and stable EMBED_* codes.
 - Test coverage
   - Compiler‑only flow: `rewatch/tests/embeds-compiler.sh` validates index + manual map + rewriter (no Rewatch involvement).
@@ -314,7 +314,7 @@ Resolution map lookup:
 - Rewatch unit: suffix sanitization; resolution map writer/reader; mtime vs content hash behavior for extraSources.
 - Integration (rewatch/tests):
   - Happy path: create a small generator that returns code; ensure generated file(s) are created and linked; build succeeds.
-  - Cache hit/miss: modify embed string and extra sources; ensure regeneration occurs only when needed.
+  - Cache hit/miss: modify embed string and `extraSources`; ensure regeneration occurs only when needed. Covered by `rewatch/tests/embeds-cache.sh` (asserts generator run count and invalidation on `extraSources`).
   - Errors: generator returns diagnostics; verify mapping to original file positions and code‑fenced logs.
   - Watch: change extra source; verify incremental rebuild of affected modules and cleanup of unused files.
 

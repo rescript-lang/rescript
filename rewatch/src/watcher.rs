@@ -55,6 +55,34 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
+fn is_embed_extra_source(build_state: &build::build_types::BuildCommandState, path_buf: &Path) -> bool {
+    let Ok(canonicalized_path_buf) = path_buf
+        .canonicalize()
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path) else { return false };
+
+    for package in build_state.packages.values() {
+        if let Some(embeds) = package
+            .config
+            .get_effective_embeds_config(&build_state.project_context)
+        {
+            for generator in &embeds.generators {
+                for rel in &generator.extra_sources {
+                    let candidate = package.path.join(rel);
+                    if let Ok(abs) = candidate
+                        .canonicalize()
+                        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                    {
+                        if abs == canonicalized_path_buf {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
 struct AsyncWatchArgs<'a> {
     q: Arc<FifoQueue<Result<Event, Error>>>,
     path: &'a Path,
@@ -126,14 +154,15 @@ async fn async_watch(
                 }
             }
 
-            let paths = event
+            let event_paths: Vec<_> = event
                 .paths
                 .iter()
-                .filter(|path| is_rescript_file(path))
                 .filter(|path| !is_in_build_path(path))
-                .filter(|path| matches_filter(path, filter));
-            for path in paths {
-                let path_buf = path.to_path_buf();
+                .filter(|path| matches_filter(path, filter))
+                .filter(|path| is_rescript_file(path) || is_embed_extra_source(&build_state, path))
+                .map(|p| p.to_path_buf())
+                .collect();
+            for path_buf in event_paths {
 
                 match (needs_compile_type, event.kind) {
                     (
