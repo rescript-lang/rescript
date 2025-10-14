@@ -3453,9 +3453,14 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
           instance_def Predef.type_string
-        | _ ->
-          unify env lhs_type (instance_def Predef.type_int);
-          instance_def Predef.type_int
+        | _ -> (
+          try
+            unify env lhs_type (instance_def Predef.type_int);
+            instance_def Predef.type_int
+          with Ctype.Unify trace ->
+            raise
+              (Error (lhs.exp_loc, env, Expr_type_clash {trace; context = None}))
+          )
       in
       let targs = [(lhs_label, Some lhs)] in
       Some (targs, result_type)
