@@ -26,9 +26,10 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 
 ## Summary
 - Users write an embed expression in `.res` files using a tag and a string literal (backtick or normal quoted), for example:
-  - `let query = %sql.one(`/* @name GetUser */ select * from users where id = :id`)
+  - `let query = ::sql.one(`/* @name GetUser */ select * from users where id = :id`)
 `
-  - or `let query = %sql.one("/* @name GetUser */ select * from users where id = :id")`
+  - or `let query = ::sql.one("/* @name GetUser */ select * from users where id = :id")`
+  - The legacy form `%sql.one("...")` remains accepted; the new `::sql.one("...")` form is equivalent and preferred.
 - The compiler detects these embeds during parsing and records them. Rewrites happen in a dedicated, AST‑only second phase driven by Rewatch (see “Two‑Phase Rewrite”).
 - Rewatch invokes user-configured generators based on the recorded embeds, receives ReScript code, and writes generated files with a conventional name (e.g. `SomeFile__embed_sql_one_GetUser.res`, optional `.resi`).
 - A dedicated `-rewrite-embeds` compiler entrypoint performs the AST rewrite to `GeneratedModule.default`, using a small resolution map produced by Rewatch.
@@ -43,29 +44,32 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 - Integrate cleanly with Rewatch’s parse/compile/watch pipeline.
 
 ## Non‑Goals (Initial Version)
-- Changing the ReScript parser or reserving new keywords.
+- Reserving new keywords. The `::` prefix is not a keyword and does not conflict with existing syntax.
 - Supporting multi-file generation from a single embed (future extension).
 - Providing a long-lived generator “server mode” (future optimization).
 
 ## Syntax & Semantics
 - Embed expression grammar:
-  - `%<tag>(<string-literal>)`
-  - `%<tag>.<subtag>(<string-literal>)`
+  - `::<tag>(<string-literal>)`
+  - `::<tag>.<subtag>(<string-literal>)`
+  - Equivalent legacy form: `%<tag>(<string-literal>)` and `%<tag>.<subtag>(<string-literal>)`
+  - The `::` form parses to an extension node with the attribute name automatically prefixed with `embed.`; i.e. `::sql.one(...)` parses as `%embed.sql.one(...)` in the parsetree. The printer also emits `::sql.one(...)` when encountering `%embed.<tag>(...)`.
   - The `<string-literal>` can be a backtick string or a normal quoted string, but must be a single literal (no concatenation, pipelines, or computed expressions). Interpolation is not allowed.
-  - Examples: `%sql.one(`...`)`, `%graphql.query("...")`
+  - Examples: `::sql.one(`...`)`, `::graphql.query("...")`
 - The embed expression evaluates to the value exported by the generated module’s entry binding, which is always `default`.
 - The embedded string may contain metadata comments (e.g. `/* @name GetUser */`) consumed by the generator. The compiler does not interpret these beyond discovery.
 
 Syntax support notes:
 - Tags may contain dots in their names (e.g. `sql.one`); the parser accepts dotted extension names in both expression and module positions.
+- The printer recognizes `%embed.<tag>(...)` and prints it as `::<tag>(...)`.
 - Only expression and module‑expression contexts are supported in v1 (see “Rewrite semantics”). Embeds cannot appear in pattern, type, or other unsupported positions.
 
 Rewrite semantics:
 - Value expression context:
-  - `%tag(...): expr` → `GeneratedModule.default`
+  - `%tag(...): expr` or `::tag(...): expr` → `GeneratedModule.default`
 - Module expression context:
-  - `module X = %tag(...)` → `module X = GeneratedModule`
-  - `include %tag(...)` → `include GeneratedModule`
+  - `module X = %tag(...)` or `module X = ::tag(...)` → `module X = GeneratedModule`
+  - `include %tag(...)` or `include ::tag(...)` → `include GeneratedModule`
 
 ## File & Module Naming
 - Generated filename: `<SourceModule>__embed_<tagNormalized>_<suffix>.res`
@@ -173,7 +177,7 @@ Protocol considerations:
 1. Compiler Embed Index (pass 1)
    - During parsing, the compiler records all embed occurrences (tag, literal content, precise ranges, occurrence index, and context: expression vs module expression vs include) and writes a per‑module artifact next to the `.ast` file, e.g. `SomeFile.embeds.json`.
    - Index emission is controlled by a new `-embeds <csv>` flag. The timing mirrors the approach in PR #6823: emit immediately after parsing (before type‑checking and heavy transforms), alongside the binary AST output, so that Rewatch never needs to re‑parse sources.
-   - This artifact is the single source of truth for Rewatch to know which embeds exist, without Rewatch re‑parsing sources.
+   - This artifact is the single source of truth for Rewatch to know which embeds exist, without Rewatch re‑parsing sources. For `::tag(...)`, the recorded `tag` is the base name without the `embed.` prefix (e.g. `sql.one`).
 2. Caching Check
    - For each embed in the index, compute an embed hash `H = hash(specVersion + generator.id + tag + embedString)`.
    - For per‑generator `extraSources`, use mtime‑based invalidation by default (content hashes optional if needed).
@@ -187,9 +191,9 @@ Protocol considerations:
    - Rewatch invokes a dedicated compiler entrypoint that only:
      - Reads the input `.ast` file (`-ast <in.ast>`) and the explicit resolution map path (`-map <SomeFile.embeds.map.json>`).
      - Runs a small, isolated AST mapper that performs only the embed rewrites:
-       - Expression contexts: `%tag(...)` → `GeneratedModule.default`
-       - Module contexts: `module X = %tag(...)` → `module X = GeneratedModule`
-       - Include contexts: `include %tag(...)` → `include GeneratedModule`
+       - Expression contexts: `%tag(...)` or `::tag(...)` → `GeneratedModule.default`
+       - Module contexts: `module X = %tag(...)` or `module X = ::tag(...)` → `module X = GeneratedModule`
+       - Include contexts: `include %tag(...)` or `include ::tag(...)` → `include GeneratedModule`
      - Writes the rewritten AST to `-o <out.ast>` (or in‑place if `-o` is omitted).
    - Modules without an embed index skip this stage. For modules with an index, rewrite always runs. If the map is missing an entry for a discovered embed or the hash mismatches, the rewriter raises `EMBED_MAP_MISMATCH` at that occurrence. This avoids surfacing a generic “Uninterpreted extension …” later in the pipeline.
 5. Dependency Graph

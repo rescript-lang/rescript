@@ -103,21 +103,26 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
         in
         entries := entry :: !entries
       in
+      let normalize_tag (tag : string) : string =
+        match Ext_embed.get_embed_tag tag with Some t -> t | None -> tag
+      in
       let rec walk_mod (m : module_expr) (context_for_mod : string option) =
         match m.pmod_desc with
-        | Pmod_extension ({txt = tag; loc = _}, payload)
-          when should_collect_tag tag -> (
-          match string_lit_of_payload payload with
-          | Some (txt, loc) ->
-            let context =
-              match context_for_mod with
-              | Some c -> c
-              | None -> "module"
-            in
-            add_entry ~tag ~context ~txt ~loc
-          | None ->
-            Location.raise_errorf ~loc:m.pmod_loc
-              "%%%s expects a single string literal" tag)
+        | Pmod_extension ({txt = tag; loc = _}, payload) -> (
+          let base_tag = normalize_tag tag in
+          if should_collect_tag base_tag then (
+            match string_lit_of_payload payload with
+            | Some (txt, loc) ->
+              let context =
+                match context_for_mod with
+                | Some c -> c
+                | None -> "module"
+              in
+            add_entry ~tag:base_tag ~context ~txt ~loc
+            | None ->
+              Location.raise_errorf ~loc:m.pmod_loc
+                "%%%s expects a single string literal" tag)
+          else ())
         | Pmod_structure s -> walk_str s
         | Pmod_functor (_name, _arg, body) -> walk_mod body None
         | Pmod_apply (m1, m2) ->
@@ -145,13 +150,15 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
           expr =
             (fun self e ->
               (match e.pexp_desc with
-              | Pexp_extension ({txt = tag; _}, payload)
-                when should_collect_tag tag -> (
+              | Pexp_extension ({txt = tag; _}, payload) -> (
+                let base_tag = normalize_tag tag in
+                if should_collect_tag base_tag then (
                 match string_lit_of_payload payload with
-                | Some (txt, loc) -> add_entry ~tag ~context:"expr" ~txt ~loc
+                | Some (txt, loc) -> add_entry ~tag:base_tag ~context:"expr" ~txt ~loc
                 | None ->
                   Location.raise_errorf ~loc:e.pexp_loc
                     "%%%s expects a single string literal" tag)
+                else ())
               | _ -> ());
               default_it.expr self e);
         }

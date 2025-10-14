@@ -2315,15 +2315,17 @@ and print_package_constraint ~state i cmt_tbl (longident_loc, typ) =
 
 and print_extension ~state ~at_module_lvl (string_loc, payload) cmt_tbl =
   let txt = string_loc.Location.txt in
+  let is_embed =
+    let len = String.length txt in
+    len >= 6 && String.sub txt 0 6 = "embed."
+  in
+  let shown_txt, head =
+    if is_embed then
+      (String.sub txt 6 (String.length txt - 6), Doc.text "::")
+    else (txt, Doc.concat [Doc.text "%"; (if at_module_lvl then Doc.text "%" else Doc.nil)])
+  in
   let ext_name =
-    let doc =
-      Doc.concat
-        [
-          Doc.text "%";
-          (if at_module_lvl then Doc.text "%" else Doc.nil);
-          Doc.text txt;
-        ]
-    in
+    let doc = Doc.concat [head; Doc.text shown_txt] in
     print_comments doc cmt_tbl string_loc.Location.loc
   in
   Doc.group (Doc.concat [ext_name; print_payload ~state payload cmt_tbl])

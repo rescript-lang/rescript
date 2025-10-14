@@ -1,0 +1,15 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/embed.res:5:22-7:0
+
+  3 │ include ::
+  4 │ module N = ::sql.one(
+  5 │ include ::sql.one("x"
+  6 │ 
+  7 │ 
+
+  Did you forget a `)` here?
+
+module M = [%embed. ]
+include [%embed. ]
+module N = [%embed.sql.one include [%embed.sql.one {js|x|js}]]
