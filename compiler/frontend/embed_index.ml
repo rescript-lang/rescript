@@ -42,13 +42,49 @@ let rel_to_cwd (file : string) : string =
   let s = if rel = "" then Filename.basename abs else rel in
   normalize_slashes s
 
-let string_lit_of_payload (payload : Ast_payload.t) :
-    (string * Location.t) option =
+(* Convert a restricted subset of expressions to JSON for config embeds *)
+let rec expr_to_json (e : Parsetree.expression) : Ext_json_noloc.t option =
+  match e.pexp_desc with
+  | Pexp_constant (Pconst_string (s, _)) -> Some (Ext_json_noloc.str s)
+  | Pexp_constant (Pconst_integer (s, _)) -> Some (Ext_json_noloc.flo s)
+  | Pexp_constant (Pconst_float (s, _)) -> Some (Ext_json_noloc.flo s)
+  | Pexp_construct ({txt = Longident.Lident "true"}, None) ->
+    Some Ext_json_noloc.true_
+  | Pexp_construct ({txt = Longident.Lident "false"}, None) ->
+    Some Ext_json_noloc.false_
+  | Pexp_array exprs ->
+    let xs =
+      Ext_list.filter_map exprs (fun e -> expr_to_json e) |> Array.of_list
+    in
+    Some (Ext_json_noloc.arr xs)
+  | Pexp_record (fields, None) ->
+    let fields_json =
+      Ext_list.filter_map fields
+        (fun
+          ({lid; x = e; _} : Parsetree.expression Parsetree.record_element) ->
+          let key = String.concat "." (Longident.flatten lid.txt) in
+          match expr_to_json e with
+          | Some v -> Some (key, v)
+          | None -> None)
+    in
+    (* Ensure stable ordering by sorting keys *)
+    let fields_json =
+      List.sort (fun (a, _) (b, _) -> Stdlib.compare a b) fields_json
+    in
+    Some (Ext_json_noloc.kvs fields_json)
+  | _ -> None
+
+let payload_to_data (payload : Ast_payload.t) :
+    (Ext_json_noloc.t * Location.t) option =
   match payload with
   | PStr [{pstr_desc = Pstr_eval (e, _attrs); _}] -> (
     match e.pexp_desc with
-    | Pexp_constant (Pconst_string (txt, _)) -> Some (txt, e.pexp_loc)
-    | _ -> None)
+    | Pexp_constant (Pconst_string (txt, _)) ->
+      Some (Ext_json_noloc.str txt, e.pexp_loc)
+    | _ -> (
+      match expr_to_json e with
+      | Some json -> Some (json, e.pexp_loc)
+      | None -> None))
   | _ -> None
 
 let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
@@ -86,9 +122,16 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
         Hashtbl.replace counts tag v';
         v'
       in
-      let add_entry ~tag ~context ~(txt : string) ~(loc : Location.t) =
+      let add_entry ~tag ~context ~(data : Ext_json_noloc.t) ~(loc : Location.t)
+          =
         let occurrence_index = bump tag in
-        let literal_hash = csv_hash tag txt in
+        let data_str =
+          match data with
+          | Ext_json_noloc.Arr _ | Ext_json_noloc.Obj _ ->
+            Ext_json_noloc.to_string data
+          | _ -> Ext_json_noloc.to_string data
+        in
+        let literal_hash = csv_hash tag data_str in
         let entry =
           Ext_json_noloc.kvs
             [
@@ -97,32 +140,36 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
               ( "occurrenceIndex",
                 Ext_json_noloc.flo (string_of_int occurrence_index) );
               ("range", loc_to_json loc);
-              ("embedString", Ext_json_noloc.str txt);
+              ("data", data);
               ("literalHash", Ext_json_noloc.str literal_hash);
             ]
         in
         entries := entry :: !entries
       in
       let normalize_tag (tag : string) : string =
-        match Ext_embed.get_embed_tag tag with Some t -> t | None -> tag
+        match Ext_embed.get_embed_tag tag with
+        | Some t -> t
+        | None -> tag
       in
       let rec walk_mod (m : module_expr) (context_for_mod : string option) =
         match m.pmod_desc with
-        | Pmod_extension ({txt = tag; loc = _}, payload) -> (
+        | Pmod_extension ({txt = tag; loc = _}, payload) ->
           let base_tag = normalize_tag tag in
-          if should_collect_tag base_tag then (
-            match string_lit_of_payload payload with
-            | Some (txt, loc) ->
+          if should_collect_tag base_tag then
+            match payload_to_data payload with
+            | Some (data, loc) ->
               let context =
                 match context_for_mod with
                 | Some c -> c
                 | None -> "module"
               in
-            add_entry ~tag:base_tag ~context ~txt ~loc
+              add_entry ~tag:base_tag ~context ~data ~loc
             | None ->
               Location.raise_errorf ~loc:m.pmod_loc
-                "%%%s expects a single string literal" tag)
-          else ())
+                "%%%s expects a string literal or a JSON-serializable record \
+                 literal"
+                tag
+          else ()
         | Pmod_structure s -> walk_str s
         | Pmod_functor (_name, _arg, body) -> walk_mod body None
         | Pmod_apply (m1, m2) ->
@@ -150,15 +197,18 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
           expr =
             (fun self e ->
               (match e.pexp_desc with
-              | Pexp_extension ({txt = tag; _}, payload) -> (
+              | Pexp_extension ({txt = tag; _}, payload) ->
                 let base_tag = normalize_tag tag in
-                if should_collect_tag base_tag then (
-                match string_lit_of_payload payload with
-                | Some (txt, loc) -> add_entry ~tag:base_tag ~context:"expr" ~txt ~loc
-                | None ->
-                  Location.raise_errorf ~loc:e.pexp_loc
-                    "%%%s expects a single string literal" tag)
-                else ())
+                if should_collect_tag base_tag then
+                  match payload_to_data payload with
+                  | Some (data, loc) ->
+                    add_entry ~tag:base_tag ~context:"expr" ~data ~loc
+                  | None ->
+                    Location.raise_errorf ~loc:e.pexp_loc
+                      "%%%s expects a string literal or a JSON-serializable \
+                       record literal"
+                      tag
+                else ()
               | _ -> ());
               default_it.expr self e);
         }

@@ -34,7 +34,7 @@ pub struct EmbedEntry {
     pub context: String,
     pub occurrence_index: u32,
     pub range: EmbedRange,
-    pub embed_string: String,
+    pub data: serde_json::Value,
     pub literal_hash: String,
 }
 
@@ -47,29 +47,14 @@ pub struct EmbedIndexFile {
     pub embeds: Vec<EmbedEntry>,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ResolutionMapEntry {
-    tag: String,
-    occurrence_index: u32,
-    literal_hash: String,
-    target_module: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ResolutionMap {
-    version: u32,
-    module: String,
-    entries: Vec<ResolutionMapEntry>,
-}
+// Resolution map removed in single-pass design
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GeneratorInput<'a> {
     version: u32,
     tag: &'a str,
-    embed_string: &'a str,
+    data: &'a serde_json::Value,
     source: GeneratorSource<'a>,
     occurrence_index: u32,
     config: GeneratorConfig<'a>,
@@ -94,11 +79,7 @@ struct GeneratorConfig<'a> {
 #[serde(rename_all = "camelCase", tag = "status")]
 enum GeneratorOutput {
     #[serde(rename_all = "camelCase")]
-    Ok {
-        code: String,
-        #[serde(default)]
-        suffix: Option<String>,
-    },
+    Ok { code: String },
     #[serde(rename_all = "camelCase")]
     Error { errors: serde_json::Value },
 }
@@ -232,17 +213,7 @@ fn embeds_index_path_for_ast(ast_rel: &Path) -> PathBuf {
         .join(format!("{stem}.embeds.json"))
 }
 
-fn resolution_map_path_for_ast(ast_rel: &Path) -> PathBuf {
-    let stem = ast_rel
-        .file_stem()
-        .unwrap_or_default()
-        .to_string_lossy()
-        .to_string();
-    ast_rel
-        .parent()
-        .unwrap_or_else(|| Path::new(""))
-        .join(format!("{stem}.embeds.map.json"))
-}
+// resolution map path no longer used
 
 fn read_index(index_path_abs: &Path) -> Result<EmbedIndexFile> {
     let data = fs::read_to_string(index_path_abs)
@@ -397,12 +368,12 @@ pub fn process_module_embeds(
 
     // Prepare outDir
     let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
-    let mut res_entries: Vec<ResolutionMapEntry> = Vec::new();
+    // resolution map removed; only track generated modules
     let mut generated: Vec<GeneratedModuleInfo> = Vec::new();
     let mut seen_suffix: AHashSet<(String, String)> = AHashSet::new(); // (tag, suffix)
-    let mut count_generated = 0u32;
-    let mut count_reused = 0u32;
-    let mut count_failed = 0u32;
+    let mut _count_generated = 0u32;
+    let mut _count_reused = 0u32;
+    let mut _count_failed = 0u32;
 
     log::debug!(
         "Embeds: module {} — discovered {} embed(s)",
@@ -421,11 +392,7 @@ pub fn process_module_embeds(
         generator_id: String,
     }
     enum JobResult {
-        Reused {
-            module_name: String,
-            rel_path: PathBuf,
-            entry: ResolutionMapEntry,
-        },
+        Reused { module_name: String, rel_path: PathBuf },
         Ok(OkGen),
         Failed,
     }
@@ -469,16 +436,7 @@ pub fn process_module_embeds(
                         embed.tag,
                         existing_module_name
                     );
-                    return JobResult::Reused {
-                        module_name: existing_module_name.clone(),
-                        rel_path: existing_rel_path,
-                        entry: ResolutionMapEntry {
-                            tag: embed.tag.clone(),
-                            occurrence_index: embed.occurrence_index,
-                            literal_hash: embed.literal_hash.clone(),
-                            target_module: existing_module_name,
-                        },
-                    };
+                    return JobResult::Reused { module_name: existing_module_name, rel_path: existing_rel_path };
                 }
 
                 log::debug!(
@@ -492,7 +450,7 @@ pub fn process_module_embeds(
                 let input = GeneratorInput {
                     version: 1,
                     tag: &embed.tag,
-                    embed_string: &embed.embed_string,
+                    data: &embed.data,
                     source: GeneratorSource {
                         path: &index.source_path,
                         module: &index.module,
@@ -531,14 +489,33 @@ pub fn process_module_embeds(
                     }
                 };
                 match output {
-                    GeneratorOutput::Ok { code, suffix } => {
-                        let mut suffix = suffix.unwrap_or_default();
-                        if suffix.is_empty() {
-                            suffix = format!("_{}", embed.occurrence_index);
-                        }
+                    GeneratorOutput::Ok { code } => {
+                        // Determine suffix deterministically: config.id or occurrence index
+                        let suffix_raw = match &embed.data {
+                            serde_json::Value::String(_) => embed.occurrence_index.to_string(),
+                            serde_json::Value::Object(map) => match map.get("id") {
+                                Some(serde_json::Value::String(s)) => s.clone(),
+                                _ => {
+                                    log::error!(
+                                        "EMBED_SYNTAX: config embed for tag '{}' in module {} must include id: string",
+                                        embed.tag,
+                                        index.module
+                                    );
+                                    return JobResult::Failed;
+                                }
+                            },
+                            _ => {
+                                log::error!(
+                                    "EMBED_SYNTAX: embed data for tag '{}' in module {} must be string or object",
+                                    embed.tag,
+                                    index.module
+                                );
+                                return JobResult::Failed;
+                            }
+                        };
                         JobResult::Ok(OkGen {
                             code,
-                            suffix,
+                            suffix: suffix_raw,
                             tag_norm,
                             tag: embed.tag.clone(),
                             occurrence_index: embed.occurrence_index,
@@ -668,26 +645,24 @@ pub fn process_module_embeds(
             JobResult::Reused {
                 module_name,
                 rel_path,
-                entry,
             } => {
-                res_entries.push(entry);
                 generated.push(GeneratedModuleInfo {
                     module_name,
                     rel_path,
                 });
-                count_reused += 1;
+                _count_reused += 1;
             }
             JobResult::Ok(ok) => {
                 let suffix = sanitize_suffix(&ok.suffix);
                 let key = (ok.tag.clone(), suffix.clone());
                 if seen_suffix.contains(&key) {
                     log::error!(
-                        "EMBED_SUFFIX_COLLISION: duplicate suffix '{}' for tag '{}' in module {}",
+                        "EMBED_NAMING_CONFLICT: duplicate name '{}' for tag '{}' in module {}",
                         suffix,
                         ok.tag,
                         index.module
                     );
-                    count_failed += 1;
+                    _count_failed += 1;
                     continue;
                 }
                 seen_suffix.insert(key);
@@ -715,79 +690,17 @@ pub fn process_module_embeds(
                     .unwrap()
                     .to_string_lossy()
                     .to_string();
-                res_entries.push(ResolutionMapEntry {
-                    tag: ok.tag.clone(),
-                    occurrence_index: ok.occurrence_index,
-                    literal_hash: ok.literal_hash.clone(),
-                    target_module: module_name.clone(),
-                });
                 generated.push(GeneratedModuleInfo {
                     module_name,
                     rel_path,
                 });
-                count_generated += 1;
+                _count_generated += 1;
             }
             JobResult::Failed => {
-                count_failed += 1;
+                _count_failed += 1;
             }
         }
     }
-
-    // Always write resolution map and attempt rewrite, even if entries are empty.
-    // This ensures missing mappings surface as EMBED_MAP_MISMATCH instead of a generic
-    // "Uninterpreted extension" later in the pipeline.
-    let map_rel = resolution_map_path_for_ast(ast_rel_path);
-    let map_abs = build_dir.join(&map_rel);
-    if let Some(parent) = map_abs.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    let map = ResolutionMap {
-        version: 1,
-        module: index.module.clone(),
-        entries: res_entries,
-    };
-    let data = serde_json::to_string(&map)?;
-    fs::write(&map_abs, data)?;
-    log::debug!(
-        "Embeds: module {} — generated {}, reused {}, failed {}; rewriting {} entry(ies)",
-        index.module,
-        count_generated,
-        count_reused,
-        count_failed,
-        map.entries.len()
-    );
-
-    // Run rewrite: bsc -rewrite-embeds -ast <ast> -map <map> -o <ast>
-    let bsc = &build_state.compiler_info.bsc_path;
-    let args = vec![
-        "-rewrite-embeds".to_string(),
-        "-ast".to_string(),
-        ast_rel_path.to_string_lossy().to_string(),
-        "-map".to_string(),
-        map_rel.to_string_lossy().to_string(),
-        "-o".to_string(),
-        ast_rel_path.to_string_lossy().to_string(),
-    ];
-    let output = Command::new(bsc)
-        .current_dir(&build_dir)
-        .args(&args)
-        .output()
-        .with_context(|| format!("Failed to run bsc -rewrite-embeds for {}", ast_rel_path.display()))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        log::error!("rewrite-embeds failed: {stderr}");
-        // Surface to compiler log so the editor can pick it up
-        logs::append(&package, &stderr);
-        // Surface as an error to stop pipeline early; avoids later generic errors.
-        return Err(anyhow!("rewrite-embeds failed"));
-    }
-
-    // Mark original module for recompilation so rewrite takes effect
-    if let Some(orig) = build_state.build_state.modules.get_mut(&index.module) {
-        orig.compile_dirty = true;
-        orig.deps_dirty = true;
-    }
-
     // Cleanup: remove any stale generated files for this module that weren't produced this run
     cleanup_stale_generated_for_module(&package, ast_rel_path, &generated)?;
 

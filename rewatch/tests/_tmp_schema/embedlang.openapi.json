@@ -100,7 +100,7 @@
                 "schema.graphql"
               ]
             },
-            "embedString": "/* @name GetUser */ select * from users where id = :id",
+            "data": "/* @name GetUser */ select * from users where id = :id",
             "occurrenceIndex": 1,
             "source": {
               "module": "Foo",
@@ -119,9 +119,8 @@
             ],
             "description": "Generator configuration as derived from rescript.json"
           },
-          "embedString": {
-            "description": "The literal string content inside the embed",
-            "type": "string"
+          "data": {
+            "description": "The embed data: either a string literal or a config object"
           },
           "occurrenceIndex": {
             "description": "1-based occurrence index of this embed in the file for this tag",
@@ -150,7 +149,7 @@
         },
         "required": [
           "config",
-          "embedString",
+          "data",
           "occurrenceIndex",
           "source",
           "tag",
@@ -166,8 +165,7 @@
         "examples": [
           {
             "code": "let default = \"...\"",
-            "status": "ok",
-            "suffix": "GetUser"
+            "status": "ok"
           }
         ],
         "oneOf": [
@@ -182,14 +180,6 @@
                   "ok"
                 ],
                 "type": "string"
-              },
-              "suffix": {
-                "default": null,
-                "description": "Optional suffix contributing to generated module name. Will be sanitized.",
-                "type": [
-                  "string",
-                  "null"
-                ]
               }
             },
             "required": [

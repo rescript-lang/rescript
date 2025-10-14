@@ -1,51 +1,93 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "EmbedLang GeneratorInput",
-  "type": "object",
-  "additionalProperties": false,
-  "properties": {
-    "version": { "type": "integer" },
-    "tag": { "type": "string" },
-    "embedString": { "type": "string" },
-    "source": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "path": { "type": "string" },
-        "module": { "type": "string" }
-      },
-      "required": ["path", "module"]
-    },
-    "occurrenceIndex": { "type": "integer" },
-    "config": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "extraSources": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "options": {}
-      },
-      "required": ["extraSources"]
-    }
-  },
-  "required": [
-    "version",
-    "tag",
-    "embedString",
-    "source",
-    "occurrenceIndex",
-    "config"
-  ],
+  "title": "GeneratorInputSchema",
   "examples": [
     {
-      "version": 1,
-      "tag": "sql.one",
-      "embedString": "/* @name GetUser */ select * from users where id = :id",
-      "source": { "path": "src/Foo.res", "module": "Foo" },
+      "config": {
+        "extraSources": ["schema.graphql"]
+      },
+      "data": "/* @name GetUser */ select * from users where id = :id",
       "occurrenceIndex": 1,
-      "config": { "extraSources": ["schema.graphql"] }
+      "source": {
+        "module": "Foo",
+        "path": "src/Foo.res"
+      },
+      "tag": "sql.one",
+      "version": 1
     }
-  ]
+  ],
+  "type": "object",
+  "required": ["config", "data", "occurrenceIndex", "source", "tag", "version"],
+  "properties": {
+    "version": {
+      "description": "Protocol version (currently 1)",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "tag": {
+      "description": "The embed tag that matched, e.g. \"sql.one\"",
+      "type": "string"
+    },
+    "data": {
+      "description": "The embed data: either a string literal or a config object"
+    },
+    "source": {
+      "description": "Source file path and module",
+      "allOf": [
+        {
+          "$ref": "#/definitions/GeneratorSourceSchema"
+        }
+      ]
+    },
+    "occurrenceIndex": {
+      "description": "1-based occurrence index of this embed in the file for this tag",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "config": {
+      "description": "Generator configuration as derived from rescript.json",
+      "allOf": [
+        {
+          "$ref": "#/definitions/GeneratorConfigSchema"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "GeneratorSourceSchema": {
+      "type": "object",
+      "required": ["module", "path"],
+      "properties": {
+        "path": {
+          "description": "Absolute or project-relative path to the source file containing the embed",
+          "type": "string"
+        },
+        "module": {
+          "description": "Module name of the source file (e.g. Foo__Bar)",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GeneratorConfigSchema": {
+      "type": "object",
+      "properties": {
+        "extraSources": {
+          "description": "Extra files the generator depends on (project-relative paths)",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "description": "Reserved for future project-level options. Pass-through JSON."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
 }

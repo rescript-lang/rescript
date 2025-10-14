@@ -110,13 +110,4 @@ val embed_collect_all : bool ref
 val embed_tags : string list ref
 (** Comma-separated list of tags to collect when [embed_collect_all] = false *)
 
-val rewrite_embeds_mode : bool ref
-(** Dedicated AST-only rewrite mode flag *)
-
-val rewrite_embeds_ast : string option ref
-(** Input .ast file path for rewrite mode *)
-
-val rewrite_embeds_map : string option ref
-(** Resolution map JSON path for rewrite mode *)
-
 val self_stack : string Stack.t

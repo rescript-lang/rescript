@@ -2320,9 +2320,11 @@ and print_extension ~state ~at_module_lvl (string_loc, payload) cmt_tbl =
     len >= 6 && String.sub txt 0 6 = "embed."
   in
   let shown_txt, head =
-    if is_embed then
-      (String.sub txt 6 (String.length txt - 6), Doc.text "::")
-    else (txt, Doc.concat [Doc.text "%"; (if at_module_lvl then Doc.text "%" else Doc.nil)])
+    if is_embed then (String.sub txt 6 (String.length txt - 6), Doc.text "::")
+    else
+      ( txt,
+        Doc.concat
+          [Doc.text "%"; (if at_module_lvl then Doc.text "%" else Doc.nil)] )
   in
   let ext_name =
     let doc = Doc.concat [head; Doc.text shown_txt] in

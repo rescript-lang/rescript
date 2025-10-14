@@ -1,66 +1,107 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "EmbedLang GeneratorOutput",
+  "title": "GeneratorOutputSchema",
+  "examples": [
+    {
+      "code": "let default = \"...\"",
+      "status": "ok"
+    }
+  ],
   "oneOf": [
     {
       "type": "object",
-      "additionalProperties": false,
+      "required": ["code", "status"],
       "properties": {
-        "status": { "const": "ok" },
-        "code": { "type": "string" },
-        "suffix": { "type": "string" }
-      },
-      "required": ["status", "code"]
+        "status": {
+          "type": "string",
+          "enum": ["ok"]
+        },
+        "code": {
+          "description": "ReScript source code to write to generated module (.res)",
+          "type": "string"
+        }
+      }
     },
     {
       "type": "object",
-      "additionalProperties": false,
+      "required": ["errors", "status"],
       "properties": {
-        "status": { "const": "error" },
+        "status": {
+          "type": "string",
+          "enum": ["error"]
+        },
         "errors": {
+          "description": "Diagnostics mapped to the embed string",
           "type": "array",
           "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "message": { "type": "string" },
-              "severity": {
-                "type": "string",
-                "enum": ["error", "warning", "info"]
-              },
-              "code": { "type": "string" },
-              "start": { "$ref": "#/definitions/GenDiagPos" },
-              "end": { "$ref": "#/definitions/GenDiagPos" }
-            },
-            "required": ["message"]
+            "$ref": "#/definitions/GenDiagItemSchema"
           }
         }
-      },
-      "required": ["status", "errors"]
+      }
     }
   ],
   "definitions": {
-    "GenDiagPos": {
+    "GenDiagItemSchema": {
       "type": "object",
-      "additionalProperties": false,
+      "required": ["message"],
       "properties": {
-        "line": { "type": "integer" },
-        "column": { "type": "integer" }
-      },
-      "required": ["line", "column"]
-    }
-  },
-  "examples": [
-    { "status": "ok", "code": "let default = \"...\"", "suffix": "GetUser" },
-    {
-      "status": "error",
-      "errors": [
-        {
-          "message": "Example",
-          "start": { "line": 1, "column": 10 },
-          "end": { "line": 1, "column": 14 }
+        "message": {
+          "description": "Human-readable error message",
+          "type": "string"
+        },
+        "severity": {
+          "description": "Optional severity (\"error\" | \"warning\" | \"info\"), defaults to \"error\"",
+          "default": null,
+          "type": ["string", "null"]
+        },
+        "code": {
+          "description": "Optional machine-readable code (e.g. \"SQL001\")",
+          "default": null,
+          "type": ["string", "null"]
+        },
+        "start": {
+          "description": "Start position relative to the embed string (1-based)",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GenDiagPosSchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "description": "End position relative to the embed string (1-based, inclusive)",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GenDiagPosSchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
-      ]
+      },
+      "additionalProperties": false
+    },
+    "GenDiagPosSchema": {
+      "type": "object",
+      "required": ["column", "line"],
+      "properties": {
+        "line": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "column": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
     }
-  ]
+  }
 }

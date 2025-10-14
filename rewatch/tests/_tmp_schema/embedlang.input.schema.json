@@ -8,7 +8,7 @@
           "schema.graphql"
         ]
       },
-      "embedString": "/* @name GetUser */ select * from users where id = :id",
+      "data": "/* @name GetUser */ select * from users where id = :id",
       "occurrenceIndex": 1,
       "source": {
         "module": "Foo",
@@ -21,7 +21,7 @@
   "type": "object",
   "required": [
     "config",
-    "embedString",
+    "data",
     "occurrenceIndex",
     "source",
     "tag",
@@ -38,9 +38,8 @@
       "description": "The embed tag that matched, e.g. \"sql.one\"",
       "type": "string"
     },
-    "embedString": {
-      "description": "The literal string content inside the embed",
-      "type": "string"
+    "data": {
+      "description": "The embed data: either a string literal or a config object"
     },
     "source": {
       "description": "Source file path and module",

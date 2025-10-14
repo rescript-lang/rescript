@@ -1,2 +1,1 @@
-let a = %sql.one("/* @name Err */ select 1")
-
+let a = ::sql.one("/* @name Err */ select 1")

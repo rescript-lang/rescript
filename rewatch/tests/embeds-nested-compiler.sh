@@ -17,31 +17,7 @@ mkdir -p "$BUILDDIR"
 LITERAL_HASH_1=$(sed -n 's/.*"literalHash"[[:space:]]*:[[:space:]]*"\([a-f0-9]\{32\}\)".*/\1/p' "$BUILDDIR/Foo.embeds.json" | sed -n '1p')
 LITERAL_HASH_2=$(sed -n 's/.*"literalHash"[[:space:]]*:[[:space:]]*"\([a-f0-9]\{32\}\)".*/\1/p' "$BUILDDIR/Foo.embeds.json" | sed -n '2p')
 
-# 2) Create resolution map for both embeds and run rewrite
-cat > "$BUILDDIR/Foo.embeds.map.json" <<MAP
-{
-  "version": 1,
-  "module": "Foo",
-  "entries": [
-    {
-      "tag": "sql.one",
-      "occurrenceIndex": 1,
-      "literalHash": "$LITERAL_HASH_1",
-      "targetModule": "Foo__embed_sql_one_A"
-    },
-    {
-      "tag": "sql.one",
-      "occurrenceIndex": 2,
-      "literalHash": "$LITERAL_HASH_2",
-      "targetModule": "Foo__embed_sql_one_B"
-    }
-  ]
-}
-MAP
-
-"$RESCRIPT_BSC_EXE" -rewrite-embeds -ast "$BUILDDIR/Foo.ast" -map "$BUILDDIR/Foo.embeds.map.json" -o "$BUILDDIR/Foo.ast" >/dev/null 2>&1 || true
-
-# 3) Snapshot index + rewritten source
+# 2) Snapshot index + rewritten source (PPX inline)
 SNAPSHOT="../tests/snapshots/embeds-nested-basic.txt"
 {
   echo '=== Foo.embeds.json ==='

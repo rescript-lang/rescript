@@ -32,8 +32,8 @@ pub struct GeneratorInputSchema {
     pub version: u32,
     /// The embed tag that matched, e.g. "sql.one"
     pub tag: String,
-    /// The literal string content inside the embed
-    pub embed_string: String,
+    /// The embed data: either a string literal or a config object
+    pub data: serde_json::Value,
     /// Source file path and module
     pub source: GeneratorSourceSchema,
     /// 1-based occurrence index of this embed in the file for this tag
@@ -78,9 +78,6 @@ pub enum GeneratorOutputSchema {
     Ok {
         /// ReScript source code to write to generated module (.res)
         code: String,
-        /// Optional suffix contributing to generated module name. Will be sanitized.
-        #[serde(default)]
-        suffix: Option<String>,
     },
     #[serde(rename_all = "camelCase")]
     Error {
@@ -94,7 +91,7 @@ fn example_input() -> GeneratorInputSchema {
     GeneratorInputSchema {
         version: 1,
         tag: "sql.one".to_string(),
-        embed_string: "/* @name GetUser */ select * from users where id = :id".to_string(),
+        data: serde_json::json!("/* @name GetUser */ select * from users where id = :id"),
         source: GeneratorSourceSchema {
             path: "src/Foo.res".to_string(),
             module: "Foo".to_string(),
@@ -110,7 +107,6 @@ fn example_input() -> GeneratorInputSchema {
 fn example_output_ok() -> GeneratorOutputSchema {
     GeneratorOutputSchema::Ok {
         code: "let default = \"...\"".to_string(),
-        suffix: Some("GetUser".to_string()),
     }
 }
 

@@ -6,11 +6,10 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 - Phase progress
   - Phase 2 (Rewatch: Parse step): DONE — `-embeds <csv>` threaded via parser args from `rescript.json` tags.
   - Phase 3 (Generator invocation): PARTIAL → MOSTLY DONE — per‑embed process invocation + generated file write + headers, caching (hash + extraSources mtime), and per‑embed timeout implemented; remaining work: concurrency limits and richer progress UX.
-  - Phase 4 (Resolution map writer): DONE — `*.embeds.map.json` written next to `.ast` with stable entries.
-  - Phase 5 (Compiler rewriter): PRESENT — `bsc -rewrite-embeds` invoked per module (whenever an index exists) and applied in‑place; missing or mismatched map entries surface `EMBED_MAP_MISMATCH` and stop the build to avoid generic parser errors.
-  - Phase 6 (Rewatch integration): DONE — integrates generation + rewrite into build, registers generated modules and parses their ASTs.
+  - Phase 4 (Inline rewrite via PPX): PRESENT — embeds are rewritten directly during the main compile using a deterministic naming scheme; no separate rewrite pass or map artifacts.
+  - Phase 5 (Rewatch integration): DONE — integrates generation + compile, registers generated modules and parses their ASTs.
 - Phase 7 (Watch/cleanup): DONE — extraSources changes now invalidate affected modules in watch mode; stale generated files are cleaned up per-module.
-- Phase 8 (Diagnostics): PARTIAL — compiler rewriter now surfaces EMBED_MAP_MISMATCH with clear messages; remaining work: generator diagnostics mapping with code frames.
+- Phase 8 (Diagnostics): PARTIAL — structured generator diagnostics mapping with code frames; map‑mismatch errors are obsolete in the single‑pass design.
 - Schema tooling — ADDED: run `rescript schema embeds --output-dir ./schemas --openapi` to generate JSON Schema for the generator input/output and an OpenAPI (components-only) document. Fields are camelCase and unknown fields are denied for generator-facing types.
   - Committed copies live at `docs/schemas/`:
     - `docs/schemas/embedlang.input.schema.json`
@@ -18,27 +17,30 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
     - `docs/schemas/embedlang.openapi.json`
   - Or regenerate via `make schemas`.
 - Test coverage
-  - Compiler‑only flow: `rewatch/tests/embeds-compiler.sh` validates index + manual map + rewriter (no Rewatch involvement).
-  - Rewatch E2E: `rewatch/tests/embeds.sh` builds a fixture repo and snapshots index, map, rewritten source, and generated module.
+  - Compiler‑only flow: `rewatch/tests/embeds-compiler.sh` validates index + PPX rewrite (no separate rewrite pass).
+  - Rewatch E2E: `rewatch/tests/embeds.sh` builds a fixture repo and snapshots index, rewritten source, and generated module.
 - Known gaps (to implement next)
   - Progress reporting polish: concise per‑embed and per‑module events (discovered, start, cache hit/miss, done/failed) and build summaries; integrate with progress bar and `--verbose`.
-  - Concurrency cap and scheduling for generator processes (e.g. limit to num_cpus/2) with stable ordering of resolution map entries.
+  - Concurrency cap and scheduling for generator processes (e.g. limit to num_cpus/2) with stable deterministic ordering per module.
 
 ## Summary
-- Users write an embed expression in `.res` files using a tag and a string literal (backtick or normal quoted), for example:
-  - `let query = ::sql.one(`/* @name GetUser */ select * from users where id = :id`)
+- Users write an embed expression in `.res` files using a tag and either:
+  - a string literal (backtick or normal quoted), for example:
+    - `let query = ::sql.one(`/* @name GetUser */ select * from users where id = :id`)
 `
-  - or `let query = ::sql.one("/* @name GetUser */ select * from users where id = :id")`
-  - The legacy form `%sql.one("...")` remains accepted; the new `::sql.one("...")` form is equivalent and preferred.
-- The compiler detects these embeds during parsing and records them. Rewrites happen in a dedicated, AST‑only second phase driven by Rewatch (see “Two‑Phase Rewrite”).
+    - or `let query = ::sql.one("/* @name GetUser */ select * from users where id = :id")`
+  - a config record literal, for example:
+    - `let query = ::sql.one({id: "GetUser", query: "select * from users where id = :id"})`
+  - The legacy form `%sql.one("...")` remains accepted; the new `::sql.one(...)` form is equivalent and preferred.
+- The compiler detects these embeds during parsing and records them. Rewrites happen inline during the normal compile using a PPX that deterministically computes the target generated module name — no second pass or resolution map.
 - Rewatch invokes user-configured generators based on the recorded embeds, receives ReScript code, and writes generated files with a conventional name (e.g. `SomeFile__embed_sql_one_GetUser.res`, optional `.resi`).
-- A dedicated `-rewrite-embeds` compiler entrypoint performs the AST rewrite to `GeneratedModule.default`, using a small resolution map produced by Rewatch.
+- The embed PPX performs the AST rewrite to `GeneratedModule.default` directly in the compile pipeline, based solely on the tag and a deterministic filename scheme.
 - Errors from generators are mapped back to original source locations by Rewatch. Caching avoids unnecessary generator runs.
 
 ## Goals
 - Support user-defined generators that “claim” one or more embed tags.
 - Provide a stable file/module naming convention for generated modules.
-- Seamlessly link generated modules in place of the embed expression without changing user code on disk.
+- Seamlessly link generated modules in place of the embed expression without changing user code on disk or requiring a second compiler pass.
 - Map generator diagnostics to user source locations so they appear in editors.
 - Add caching and invalidation driven by the embed content and additional watched sources (e.g. schema files).
 - Integrate cleanly with Rewatch’s parse/compile/watch pipeline.
@@ -52,10 +54,12 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 - Embed expression grammar:
   - `::<tag>(<string-literal>)`
   - `::<tag>.<subtag>(<string-literal>)`
+  - `::<tag>({<config-object>})` where the config is a record literal with JSON‑serializable values
   - Equivalent legacy form: `%<tag>(<string-literal>)` and `%<tag>.<subtag>(<string-literal>)`
   - The `::` form parses to an extension node with the attribute name automatically prefixed with `embed.`; i.e. `::sql.one(...)` parses as `%embed.sql.one(...)` in the parsetree. The printer also emits `::sql.one(...)` when encountering `%embed.<tag>(...)`.
   - The `<string-literal>` can be a backtick string or a normal quoted string, but must be a single literal (no concatenation, pipelines, or computed expressions). Interpolation is not allowed.
-  - Examples: `::sql.one(`...`)`, `::graphql.query("...")`
+  - The `<config-object>` must be a single record literal whose fields and nested values are JSON‑serializable (string, number, boolean, null, arrays, objects); no computed expressions. It must include `id: string` for naming; all fields are forwarded to the generator as `data`.
+  - Examples: `::sql.one(`...`)`, `::graphql.query(\"...\")`, `::sql.one({id: \"GetUser\", query: \"select * from users where id = :id\"})`
 - The embed expression evaluates to the value exported by the generated module’s entry binding, which is always `default`.
 - The embedded string may contain metadata comments (e.g. `/* @name GetUser */`) consumed by the generator. The compiler does not interpret these beyond discovery.
 
@@ -74,10 +78,12 @@ Rewrite semantics:
 ## File & Module Naming
 - Generated filename: `<SourceModule>__embed_<tagNormalized>_<suffix>.res`
   - `tagNormalized` = tag with non‑alphanumeric chars replaced by `_` (e.g. `sql.one` → `sql_one`).
-  - `suffix` = provided by generator output (preferred), else a stable fallback derived from either an explicit `@name` found by the generator or the 1‑based index of this tag occurrence in the source file (e.g. `_1`, `_2`).
+  - `suffix` is deterministic and not supplied by the generator:
+    - For simple string embeds (`::<tag>("...")`): `_N` where `N` is the 1‑based occurrence index for this tag within the source file in appearance order (e.g. `_1`, `_2`).
+    - For config embeds (`::<tag>({...})`): the sanitized `id` field value from the config object (must be a string) with non‑alphanumeric characters replaced by `_`.
   - Module name is derived from filename as usual (`SomeFile__embed_sql_one_GetUser`).
   
-The compiler rewrites the embed expression to `SomeFile__embed_sql_one_<suffix>.default` (see Compiler Integration).
+The compiler rewrites the embed expression to `SomeFile__embed_sql_one_<suffix>.default` via PPX.
 
 ## Configuration (rescript.json)
 Add a new top‑level `embeds` key to configure generators and behavior:
@@ -128,7 +134,9 @@ Input JSON (v1):
 {
   "version": 1,
   "tag": "sql.one",
-  "embedString": "/* @name GetUser */ select * from users where id = :id",
+  "data": "/* @name GetUser */ select * from users where id = :id",   // string embeds
+  // or, for config embeds
+  // "data": {"id": "GetUser", "query": "select * from users where id = :id", ...},
   "source": {
     "path": "src/SomeFile.res",
     "module": "SomeFile"
@@ -145,8 +153,7 @@ Successful Output JSON:
 ```
 {
   "status": "ok",
-  "code": "let query = \"select * from users where id = $1\"\n type params = {...}\n let default = ...\n",
-  "suffix": "GetUser"            // optional; must be sanitized by Rewatch
+  "code": "let query = \"select * from users where id = $1\"\n type params = {...}\n let default = ...\n"
 }
 ```
 
@@ -170,32 +177,29 @@ Protocol considerations:
 - Rewatch enforces a per‑embed timeout (configurable). Timeout or non‑zero exit → treated as a generator error.
 - Generators do not implement caching; Rewatch is the source of truth for cache decisions.
 - All paths in generator output are normalized to absolute paths by Rewatch and validated to be inside the project root unless explicitly allowed.
-- Rewatch sanitizes `suffix` to `[A-Za-z0-9_]+`; collisions are handled as errors per file (see Suffix & Collision Policy).
+- Generators cannot influence file naming: the filename is determined by the tag + (occurrenceIndex or config.id). Rewatch and the PPX must compute the same target.
 - Generators cannot control the entry binding; the compiler always expects `default`.
+ - For config embeds, the full config object is forwarded as `data` and must be JSON‑serializable (no functions, symbols, or non‑JSON values).
 
 ## Build & Watch Flow (High‑Level)
 1. Compiler Embed Index (pass 1)
-   - During parsing, the compiler records all embed occurrences (tag, literal content, precise ranges, occurrence index, and context: expression vs module expression vs include) and writes a per‑module artifact next to the `.ast` file, e.g. `SomeFile.embeds.json`.
+   - During parsing, the compiler records all embed occurrences (tag, argument data (string or config), precise ranges, occurrence index, and context: expression vs module expression vs include) and writes a per‑module artifact next to the `.ast` file, e.g. `SomeFile.embeds.json`.
    - Index emission is controlled by a new `-embeds <csv>` flag. The timing mirrors the approach in PR #6823: emit immediately after parsing (before type‑checking and heavy transforms), alongside the binary AST output, so that Rewatch never needs to re‑parse sources.
    - This artifact is the single source of truth for Rewatch to know which embeds exist, without Rewatch re‑parsing sources. For `::tag(...)`, the recorded `tag` is the base name without the `embed.` prefix (e.g. `sql.one`).
 2. Caching Check
-   - For each embed in the index, compute an embed hash `H = hash(specVersion + generator.id + tag + embedString)`.
+   - For each embed in the index, compute an embed hash `H = hash(specVersion + generator.id + tag + dataAsJson)`.
    - For per‑generator `extraSources`, use mtime‑based invalidation by default (content hashes optional if needed).
    - If a generated module exists with matching header metadata (see “Generated File Format”), skip generation.
 3. Generation
    - If cache miss or invalid, invoke the generator and capture output.
    - On `status=ok`, write/overwrite the generated `.res` file to `outDir` (default `src/__generated__`) with the conventional name.
    - On `status=error`, collect diagnostics mapped to the original source positions (see “Diagnostics & Mapping”).
-4. Rewrite Stage (AST‑Only, Two‑Phase)
-   - For each source module that has an embed index, Rewatch writes a resolution map artifact (e.g. `SomeFile.embeds.map.json`) that lists, for each embed occurrence, the target generated module name (e.g., `SomeFile__embed_sql_one_GetUser`). Entry is always `default` for expression contexts.
-   - Rewatch invokes a dedicated compiler entrypoint that only:
-     - Reads the input `.ast` file (`-ast <in.ast>`) and the explicit resolution map path (`-map <SomeFile.embeds.map.json>`).
-     - Runs a small, isolated AST mapper that performs only the embed rewrites:
-       - Expression contexts: `%tag(...)` or `::tag(...)` → `GeneratedModule.default`
-       - Module contexts: `module X = %tag(...)` or `module X = ::tag(...)` → `module X = GeneratedModule`
-       - Include contexts: `include %tag(...)` or `include ::tag(...)` → `include GeneratedModule`
-     - Writes the rewritten AST to `-o <out.ast>` (or in‑place if `-o` is omitted).
-   - Modules without an embed index skip this stage. For modules with an index, rewrite always runs. If the map is missing an entry for a discovered embed or the hash mismatches, the rewriter raises `EMBED_MAP_MISMATCH` at that occurrence. This avoids surfacing a generic “Uninterpreted extension …” later in the pipeline.
+4. Rewrite During Compile (Single‑Pass)
+   - The embed PPX runs as part of the main compile and rewrites embeds directly in the AST to reference the computed generated module:
+     - Expression contexts: `%tag(...)` or `::tag(...)` → `GeneratedModule.default`.
+     - Module contexts: `module X = %tag(...)` or `module X = ::tag(...)` → `module X = GeneratedModule`.
+     - Include contexts: `include %tag(...)` or `include ::tag(...)` → `include GeneratedModule`.
+   - The PPX computes the same deterministic target module name as Rewatch using the tag and either the occurrence index (string case) or the `id` in the config object.
 5. Dependency Graph
    - Add edges: `OriginalFile -> GeneratedModule` and `GeneratedModule -> extraSources`.
    - Include generated files in the parse/compile lists alongside user sources.
@@ -208,16 +212,13 @@ Protocol considerations:
   - Example: `-embeds sql.one,sql.many,sql.execute`
   - When present during parsing, the compiler collects only these extension names and emits `SomeFile.embeds.json` next to the `.ast`.
   - The flag can also accept `all` to collect all extension names if desired in the future.
-- `-rewrite-embeds -ast <in.ast> -map <SomeFile.embeds.map.json> [-o <out.ast>]`
-  - Runs a minimal AST‑only rewriter that applies the resolution map, replacing only recognized embed nodes.
-  - `-map` is explicit (no implicit discovery). This is idiomatic in ReScript’s tooling: callers (Rewatch) compute and pass exact paths to avoid ambiguity across multi‑package workspaces.
-  - If `-o` is omitted, rewriting may happen in place.
-  - No type checking or further transforms occur in this mode.
+  
+There is no separate `-rewrite-embeds` entry point in the single‑pass design; rewriting is handled by the embed PPX during normal compilation.
 
 ## Artifact Filenames
 - Per module (next to `.ast`):
   - Index: `SomeFile.embeds.json`
-  - Resolution map: `SomeFile.embeds.map.json`
+  - (removed) Resolution map: no longer produced in the single‑pass design
 
 ## Artifact Schemas (initial)
 - `SomeFile.embeds.json` (embed index; written during parse with `-embeds`):
@@ -232,35 +233,19 @@ Protocol considerations:
       "context": "expr",                    // "expr" | "module" | "include"
       "occurrenceIndex": 1,                  // 1‑based within this file for this tag
       "range": {"start": {"line": 5, "column": 12}, "end": {"line": 5, "column": 78}},
-      "embedString": "/* @name GetUser */ select * from users where id = :id",
-      "literalHash": "<hex>"                 // hash(tag + embedString)
+      "data": "/* @name GetUser */ select * from users where id = :id",
+      // or {"id":"GetUser","query":"...", ...}
+      "literalHash": "<hex>"                 // hash(tag + dataAsJson)
     }
   ]
 }
 ```
 
 ## Cross‑Platform Paths
-- All paths written to artifacts (`*.embeds.json`, `*.embeds.map.json`) use `/` as the separator and are project‑relative where possible.
+- All paths written to artifacts (`*.embeds.json`) use `/` as the separator and are project‑relative where possible.
 - Rewatch normalizes paths when computing hashes and comparing cache keys to avoid Windows vs POSIX discrepancies.
 
-Resolution map lookup:
-- Rewatch computes the exact resolution map path (next to the corresponding `.ast`) and passes it explicitly via `-map`. The compiler does not search for the map implicitly; this avoids ambiguity and keeps the interface explicit and reproducible.
-
-- `SomeFile.embeds.map.json` (resolution map; written by Rewatch after generation):
-```
-{
-  "version": 1,
-  "module": "SomeFile",
-  "entries": [
-    {
-      "tag": "sql.one",
-      "occurrenceIndex": 1,
-      "literalHash": "<hex>",                 // must match index; used to validate mapping
-      "targetModule": "SomeFile__embed_sql_one_GetUser"
-    }
-  ]
-}
-```
+Resolution map lookup: not applicable in the single‑pass design.
 
 ## Generated File Format
 - Generated file begins with a header comment Rewatch can read quickly without parsing full code:
@@ -279,29 +264,29 @@ Resolution map lookup:
 - Generator diagnostics are returned relative to the embedded string (line/column within the literal). Rewatch computes absolute source positions using the ranges from the compiler’s embed index and prints a concise code frame.
 - The compiler handles PPX rewrites directly on the AST; diagnostics from the compiler refer to the original source files.
 - Error presentation: Rewatch includes a code frame in logs with the embedded code, highlights the error span, and shows surrounding context for quick inspection.
-- If a generator reports errors for an embed, no map entry is written for that occurrence. The subsequent rewrite pass then fails with `EMBED_MAP_MISMATCH` (“no mapping for tag … occurrence …”), ensuring clear embed‑specific feedback instead of a generic “uninterpreted extension”.
+ 
 
 ## Invalidation & Caching
 - Cache key includes:
-  - `tag`, `embedString` content, generator `id`, generator command string/version, embed spec version. Embed string is content‑hashed; per‑generator `extraSources` use mtime by default.
+  - `tag`, `data` (string or config) content as canonical JSON, generator `id`, generator command string/version, embed spec version. The embed `data` is content‑hashed; per‑generator `extraSources` use mtime by default.
 - Quick check reads only the generated file’s header to confirm hash equality; if mismatch, regenerate.
 - Rewatch may persist a small cache index to memoize `extraSources` mtimes for performance.
 
 ## Edge Cases & Errors
 - Unknown tag: error with code `EMBED_NO_GENERATOR` listing known tags.
 - Missing/invalid string literal: error `EMBED_SYNTAX` with a short hint.
-- Generator timeout/crash or structured errors: log `EMBED_GENERATOR_FAILED` with mapped code frames; the missing map entry leads the rewriter to emit `EMBED_MAP_MISMATCH` at the embed site.
-- Suffix collision: error (`EMBED_SUFFIX_COLLISION`) with both locations.
-- Resolution map mismatch or missing entry: error (`EMBED_MAP_MISMATCH`) when `literalHash` does not match or when no mapping exists for a discovered occurrence. The build stops at rewrite time to avoid generic parser errors later.
-- Illegal suffix chars: sanitized to `_`; collapse repeats.
+- Generator timeout/crash or structured errors: log `EMBED_GENERATOR_FAILED` with mapped code frames.
+- Naming collision: error (`EMBED_NAMING_CONFLICT`) with both locations.
+- Illegal id chars: sanitized to `_`; collapse repeats.
 - `.resi` generation: not supported in v1; the generated module is compiled without an interface.
 - Nested embeds: disallowed. Generated files are ignored by the compiler’s embed indexer and never expanded.
 
-## Suffix & Collision Policy
-- Generators may supply a custom `suffix`. After sanitization, Rewatch enforces uniqueness per source file and tag for a given build.
-- If two embeds in the same source file and tag resolve to the same `suffix`, Rewatch reports `EMBED_SUFFIX_COLLISION` with both locations. Default policy is to error (no overwrite) for determinism.
-- If `suffix` is omitted, Rewatch uses a stable numeric fallback: `_1`, `_2`, ... in appearance order for that tag in the file.
-- Cross-file collisions are avoided by including the source module name in the generated filename (e.g., `SomeFile__embed_sql_one_<suffix>.res`).
+## Naming & Collision Policy
+- File/module naming is fully deterministic and not controlled by generators.
+- For string embeds: suffix `_N` where `N` is 1‑based per‑tag occurrence within the file.
+- For config embeds: suffix from `id` after sanitization to `[A-Za-z0-9_]+`.
+- Rewatch enforces uniqueness per source file and tag for a given build; collisions raise `EMBED_NAMING_CONFLICT` with both locations.
+- Cross‑file collisions are avoided by including the source module name in the generated filename (e.g., `SomeFile__embed_sql_one_<suffix>.res`).
 
 ## Cleanup & Lifecycle
 - Per build (and on watch updates), compute the expected set of generated files for each source file based on current embeds.
@@ -318,14 +303,14 @@ Resolution map lookup:
 - Minimize full content hashing by memoizing `extraSources` hashes per path.
 - Cap concurrent generator processes to `N = max(1, num_cpus / 2)` with a small queue.
 - Rely on the compiler’s embed index artifact; Rewatch does not scan sources.
- - Rewrite stage is an AST‑only pass that reads `.ast` + `*.embeds.map.json` and performs a single traversal. Overhead is small vs type checking and codegen.
+ - Rewrite occurs inline via PPX during normal compilation and is a small traversal relative to type checking and codegen.
 
 ## Testing Plan
-- Compiler unit: embed indexer collects tags for both backtick and normal string literals; ignores generated outDir; occurrence indices stability.
-- Rewatch unit: suffix sanitization; resolution map writer/reader; mtime vs content hash behavior for extraSources.
+- Compiler unit: embed indexer collects tags for both backtick and normal string literals; ignores generated outDir; occurrence indices stability. Validate PPX rewrite behavior for string vs config embeds.
+- Rewatch unit: naming sanitization; mtime vs content hash behavior for extraSources.
 - Integration (rewatch/tests):
   - Happy path: create a small generator that returns code; ensure generated file(s) are created and linked; build succeeds.
-  - Cache hit/miss: modify embed string and `extraSources`; ensure regeneration occurs only when needed. Covered by `rewatch/tests/embeds-cache.sh` (asserts generator run count and invalidation on `extraSources`).
+  - Cache hit/miss: modify embed input (`data`) and `extraSources`; ensure regeneration occurs only when needed. Covered by `rewatch/tests/embeds-cache.sh` (asserts generator run count and invalidation on `extraSources`).
   - Errors: generator returns diagnostics; verify mapping to original file positions and code‑fenced logs.
   - Watch: change extra source; verify incremental rebuild of affected modules and cleanup of unused files.
 
@@ -333,11 +318,11 @@ Resolution map lookup:
 - Long‑lived generator server with handshake to claim tags and avoid per‑embed process cost.
 - Multiple files per embed (e.g. helper modules), richer emission APIs.
 - Richer mapping: embed‑specific source maps and IDE hovers with generator metadata.
-- Inline rewrite during initial parse when a valid resolution map is already available (skip separate rewrite stage); only if validation remains trivial and robust.
+- Support structured config schemas per tag (validated and surfaced to generators).
 
 ## Open Questions
-1. Embed index and resolution map formats
-   - JSON vs compact binary; stability/versioning. (Timing is specified: emit index right after parse, rewrite as a distinct pass.)
+1. Embed index format
+   - JSON vs compact binary; stability/versioning. (Timing is specified: emit index right after parse.)
 2. Naming collisions across files
    - If two files produce the same `<suffix>`, we’re safe because the filename also includes the source module; confirm no package‑level namespace issues.
 3. Diagnostics severity mapping
@@ -346,10 +331,10 @@ Resolution map lookup:
 ---
 
 If this plan looks good, next steps would be:
-- Confirm grammar (string literal only; no interpolation) and config shape.
+- Confirm grammar (string or config record; no interpolation) and config shape.
 - Compiler: add embed indexing during parse and emit `*.embeds.json` artifacts next to `*.ast`.
-- Rewatch: read embed index, implement generator invocation + caching + mtime watching, write generated files and `*.embeds.map.json` resolution maps.
-- Compiler: add the dedicated `-rewrite-embeds` pass that reads `-ast` and `-map` and rewrites embeds into references to generated modules.
+- Rewatch: read embed index, implement generator invocation + caching + mtime watching, write generated files using deterministic naming (no suffix from generator).
+- Compiler: implement the embed PPX that rewrites embeds inline during compile using the same naming rules.
 - Thread dependency info through Rewatch’s `BuildState`; wire cleanup of stale generated files.
 - Add integration tests (happy path, caching, errors with code fences, watch, cleanup).
 
@@ -357,26 +342,27 @@ If this plan looks good, next steps would be:
 
 Phase 0 — Wiring and Flags
 - Define CLI flag `-embeds <csv|all>` in `bsc` (parser phase only).
-- Define CLI entry `-rewrite-embeds -ast <in.ast> -map <map.json> [-o <out.ast>]`.
-- Plumb flags through `compiler/bsc/rescript_compiler_main.ml` and ensure they are mutually orthogonal to existing flags (no impact on `-bs-no-builtin-ppx`).
+  
+- Remove the standalone `-rewrite-embeds` entry; rewriting happens via the embed PPX.
+- Plumb `-embeds` through `compiler/bsc/rescript_compiler_main.ml` and ensure it is orthogonal to existing flags (no impact on `-bs-no-builtin-ppx`).
 Tests (E2E‑first):
-- Smoke: `bsc -help` lists new flags; `bsc -rewrite-embeds` without args prints usage and exits non‑zero.
+- Smoke: `bsc -help` lists `-embeds`; no `-rewrite-embeds` entry.
 - Minimal unit (optional): flag wiring helpers, if any, remain backward compatible.
 
 Phase 1 — Compiler: Embed Indexing (after parse)
 - Add a lightweight AST walker to collect embeds:
   - Expression: `Pexp_extension (name, payload)` where `name` matches configured tags.
   - Module expr: `Pmod_extension ...` and `Pstr_include` forms for include contexts.
-  - Only accept a single string literal argument (backtick or quoted). Otherwise, record an `EMBED_SYNTAX` error location.
+  - Accept either a single string literal (backtick or quoted) or a single record literal with JSON‑serializable fields. Otherwise, record an `EMBED_SYNTAX` error location.
 - Emit `SomeFile.embeds.json` next to `.ast` when `-embeds` is present:
-  - Fields: version, module, sourcePath (project‑relative), embeds[] with tag, context, occurrenceIndex (1‑based per‑tag), range, embedString, literalHash.
+  - Fields: version, module, sourcePath (project‑relative), embeds[] with tag, context, occurrenceIndex (1‑based per‑tag), range, data (string or object), literalHash.
   - Use `/` path separators for portability.
 - Exclude generated outDir from indexing (by path prefix and by reading the generated header marker if present) to prevent nested embeds.
 - Implementation points:
   - Hook immediately after parse and before any heavy transforms (mirroring PR #6823 pattern used for early artifacts).
   - Ensure binary AST emission remains unchanged.
 Tests (E2E‑first):
-- Golden: `bsc -bs-ast -embeds sql.one -o build/src/Foo src/Foo.res` produces `build/src/Foo.ast` and `build/src/Foo.embeds.json` matching expected JSON (dotted tags, both string literal kinds, expr/module/include contexts, correct occurrenceIndex, ranges present).
+- Golden: `bsc -bs-ast -embeds sql.one -o build/src/Foo src/Foo.res` produces `build/src/Foo.ast` and `build/src/Foo.embeds.json` matching expected JSON (dotted tags, string and config arguments, expr/module/include contexts, correct occurrenceIndex, ranges present).
 - Golden: non‑literal payload case fixture → indexer reports `EMBED_SYNTAX` in a companion diagnostics artifact or stderr (choose one) with correct location.
 - Golden: files under outDir are ignored (no index emitted). 
 - Minimal unit (optional): pure helpers like literal hashing and tag normalization.
@@ -392,12 +378,12 @@ Tests (Integration):
 Phase 3 — Rewatch: Generator Invocation & Caching
 - Read `SomeFile.embeds.json` and group embeds by generator (tag → generator.id).
 - For each embed:
-  - Compute cache key `H = hash(specVersion + generator.id + tag + embedString)`.
+  - Compute cache key `H = hash(specVersion + generator.id + tag + dataAsJson)`.
   - Check existing generated file header for a quick hash match; also check per‑generator `extraSources` mtimes.
   - On miss or invalidation, spawn the generator process with the JSON protocol over stdin/stdout; enforce `timeoutMs`.
-  - Validate response: sanitize `suffix`, ensure `entry` is `default`, normalize paths, collect diagnostics.
-  - Write generated `*.res` (and header) to `outDir` using naming scheme `<SourceModule>__embed_<tagNormalized>_<suffix>.res`.
-  - Enforce suffix uniqueness per source+tag; on collision, raise `EMBED_SUFFIX_COLLISION` with both locations.
+  - Validate response: ensure `entry` is `default`, normalize paths, collect diagnostics.
+  - Write generated `*.res` (and header) to `outDir` using naming scheme `<SourceModule>__embed_<tagNormalized>_<suffix>.res` computed from occurrence index or config `id`.
+  - Enforce name uniqueness per source+tag; on collision, raise `EMBED_NAMING_CONFLICT` with both locations.
 - Concurrency: cap concurrent processes to `max(1, num_cpus/2)`.
 - Maintain a cache index for `extraSources` mtimes to avoid repeated stat calls.
  - Progress reporting: for each module and embed, emit concise progress events —
@@ -407,78 +393,69 @@ Tests (Integration):
 - Stub generator returns `status=ok`: generated files written with header; second run is a cache hit.
 - Modify embed string → cache miss; touch `extraSources` → cache miss; unrelated change → cache hit.
 - Diagnostics mapping: generator error (line/column) → logs show mapped source span + code frame; non‑zero exit/timeout → `EMBED_GENERATOR_FAILED`.
-- Minimal unit: suffix sanitization and collision detection.
+- Minimal unit: naming sanitization and collision detection.
 
-Phase 4 — Rewatch: Resolution Map Writer
-- For each source module with embeds, write `SomeFile.embeds.map.json` next to `.ast`:
-  - Fields: version, module, entries[] with tag, occurrenceIndex, literalHash, targetModule.
-  - Always target `default` for expression contexts; module/include target the module itself.
-- Ensure `literalHash` in map matches the current index; if mismatch during rewrite, surface `EMBED_MAP_MISMATCH`.
-Tests (Integration‑first):
-- Rewatch writes `*.embeds.map.json` with stable ordering; rewriter consumes it successfully.
-- Deliberate mismatch between index hash and map → `EMBED_MAP_MISMATCH` at rewrite time.
-- Minimal unit (optional): JSON schema read/write round‑trip.
-
-Phase 5 — Compiler: AST‑Only Rewrite Pass
-- Implement a minimal rewriter that:
-  - Reads `-ast` (binary AST) and `-map` (JSON), builds a lookup by (tag, occurrenceIndex) and validates `literalHash`.
-  - Traverses AST and replaces only recognized nodes:
-    - `%tag("...")` (expr) → `GeneratedModule.default`.
-    - `module X = %tag("...")` → `module X = GeneratedModule`.
-    - `include %tag("...")` → `include GeneratedModule`.
-- Writes AST to `-o` (or in‑place if omitted).
-- Do not perform JSX or builtin PPX here; keep this pass surgical and idempotent.
+Phase 4 — Compiler: Embed PPX Rewrite
+- Implement a PPX that:
+  - Counts per‑tag occurrences in a module in appearance order.
+  - Detects argument kind (string vs record literal) and computes the target module name deterministically.
+  - Rewrites expression contexts to `GeneratedModule.default`, and module/include contexts to the module itself.
+  - Rejects non‑literal or non‑JSON‑serializable config values with `EMBED_SYNTAX`.
+- Ensure counting rules match the indexer to keep filenames in sync with Rewatch.
 Tests (E2E‑first):
-- `bsc -rewrite-embeds -ast build/src/Foo.ast -map build/src/Foo.embeds.map.json -o build/src/Foo.ast` then `bsc -only-parse -dsource build/src/Foo.ast` → printed source matches expected snapshot:
-  - expr `%tag("...")` → `GeneratedModule.default`
-  - module/include → `GeneratedModule`
-- Idempotency: running the rewriter twice leaves `build/src/Foo.ast` unchanged (digest check).
-- Error: missing map entry or hash mismatch emits clear error and does not modify the input AST.
+- Print parsetree/source with `-dsource` and assert rewritten form shows `GeneratedModule.default`.
+- Idempotency: PPX rewrite does not re‑enter on generated modules.
 
-Phase 6 — Rewatch: Pipeline Integration
-- After AST generation and generation/map writing, invoke `bsc -rewrite-embeds` per module that has an index.
-- Feed the (possibly rewritten) `.ast` into the normal compile path (typecheck, lambda, JS) unchanged.
+Phase 5 — Rewatch: Pipeline Integration
+- After AST generation and generation, compile modules normally; the PPX handles rewriting during compilation.
 - Extend dependency graph:
   - `OriginalFile → GeneratedModule(s)` and `GeneratedModule → extraSources`.
   - Treat generated files as regular sources for ordering; do not index embeds within them.
- - Progress reporting: show rewrite step per module where embeds exist (e.g., “rewrote 2 embeds in Foo”), and include a concise build‑level summary (modules with embeds, total embeds processed, total generated).
+- Progress reporting: show per‑module summaries (modules with embeds, total embeds processed, generated/reused/failed).
 Tests (Integration):
-- End‑to‑end: `bsc -bs-ast -embeds ...` → generate files → `bsc -rewrite-embeds ...` → `bsc build/src/Foo.ast` produces JS; imports from generated module resolved.
+- End‑to‑end: `bsc -bs-ast -embeds ...` → generate files → normal compile produces JS; imports from generated module resolved.
 - Type errors in generated code surface normally; removing an embed or generated file triggers correct rebuild and cleanup.
 - Multi‑package: generated files live under each package’s outDir; no cross‑package collisions.
 
-Phase 7 — Watch Mode & Cleanup
+Phase 6 — Watch Mode & Cleanup
+- After AST generation and generation, compile modules normally; the PPX handles rewriting during compilation.
 - Watch original `.res`, generated `outDir`, and `extraSources`.
-- On changes, invalidate affected embeds, re‑run generation and rewrite only for impacted modules, and rebuild dependents.
+- On changes, invalidate affected embeds, regenerate only for impacted modules, and rebuild dependents.
 - Cleanup: compute expected generated files per source; remove stale files and clear cache entries when embeds are removed or sources deleted.
 Tests (Integration, watch):
 - Change `extraSources` → only affected module regenerates; JS updates; others untouched.
 - Delete an embed → stale generated files removed; dependent modules rebuild.
 - Manual edits to generated files are overwritten by the next build.
 
+Phase 7 — Errors & Diagnostics
+ - Map generator diagnostics (literal‑relative positions) to absolute source spans via the index ranges; print rich code frames.
+ - Error codes: `EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_NAMING_CONFLICT`.
+ - Align severity with compiler conventions; ensure non‑zero exit on errors to integrate with CI.
+Tests (Integration):
+ - Each error class reproduced in testrepo with stable messages and exit codes.
+ - Optional unit: code frame formatting helper includes correct context lines.
+
 Phase 8 — Errors & Diagnostics
 - Map generator diagnostics (literal‑relative positions) to absolute source spans via the index ranges; print rich code frames.
-- Error codes: `EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_SUFFIX_COLLISION`, `EMBED_MAP_MISMATCH`.
+- Error codes: `EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_NAMING_CONFLICT`.
 - Align severity with compiler conventions; ensure non‑zero exit on errors to integrate with CI.
 Tests (Integration):
-- Each error class (`EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_SUFFIX_COLLISION`, `EMBED_MAP_MISMATCH`) reproduced in testrepo with stable messages and exit codes.
+- Each error class reproduced in testrepo with stable messages and exit codes.
 - Optional unit: code frame formatting helper includes correct context lines.
 
 - E2E‑first: integration tests live under `rewatch/tests/` and are invoked from `suite-ci.sh`.
 - Embeds tests use a standalone fixture repo at `rewatch/tests/fixtures/embeds/` and a driver script `rewatch/tests/embeds.sh` that:
   - Produces `.ast` + `*.embeds.json` via `bsc -bs-ast -embeds ...`
-  - Runs `bsc -rewrite-embeds ...`
-  - Snapshots the index JSON and the rewritten source printed from the AST.
+  - Compiles sources normally and snapshots the rewritten source printed from the AST.
   - Fails if the snapshot changes and is not staged, consistent with other tests.
 - Compiler unit tests (minimal OUnit only where warranted):
-  - Pure helpers: suffix sanitization, tag normalization, literal hashing.
-  - Optional: JSON map schema read/write validation.
+  - Pure helpers: naming sanitization, tag normalization, literal hashing.
+  - Optional: JSON schema validation for generator protocol.
 - Harness commands used in tests:
   - `bsc -bs-ast -embeds <tags> -o <outprefix> <file.res>` → writes `<outprefix>.ast` and `*.embeds.json`.
-  - `bsc -rewrite-embeds -ast <in.ast> -map <map.json> -o <out.ast>` → rewrites embeds.
   - `bsc -only-parse -dsource <out.ast>` or `-dparsetree` → snapshot rewritten AST as source or parsetree.
-  - `bsc <out.ast>` → typecheck and generate JS for full end‑to‑end checks.
-- CI: wire into `make test-rewatch` and keep snapshots stable.
+  - Normal `bsc` compile entry → typecheck and generate JS for full end‑to‑end checks.
+ - CI: wire into `make test-rewatch` and keep snapshots stable.
 
 Phase 10 — Documentation & Examples
 - Document `embeds` config in `rescript.json`, CLI flags, and generator protocol.
@@ -487,7 +464,7 @@ Phase 10 — Documentation & Examples
 
 Acceptance Checklist
 - Index files emitted correctly on `-embeds` and are stable across runs.
-- Generated files and headers are deterministic; suffix policy enforced.
-- `-rewrite-embeds` pass is idempotent and only rewrites targeted nodes.
+- Generated files and headers are deterministic; naming policy enforced.
+- Embed PPX rewrite is deterministic and only rewrites targeted nodes.
 - End‑to‑end build (including watch) works across multi‑package repos.
 - Tests cover syntax, compiler passes, Rewatch integration, and watch behavior.

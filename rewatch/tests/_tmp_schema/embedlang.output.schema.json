@@ -4,8 +4,7 @@
   "examples": [
     {
       "code": "let default = \"...\"",
-      "status": "ok",
-      "suffix": "GetUser"
+      "status": "ok"
     }
   ],
   "oneOf": [
@@ -25,14 +24,6 @@
         "code": {
           "description": "ReScript source code to write to generated module (.res)",
           "type": "string"
-        },
-        "suffix": {
-          "description": "Optional suffix contributing to generated module name. Will be sanitized.",
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
         }
       }
     },

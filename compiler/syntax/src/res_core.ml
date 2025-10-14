@@ -1305,7 +1305,10 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       let extension = parse_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Pat.extension ~loc ~attrs extension
-    | Colon when Parser.lookahead p (fun st -> Parser.next st; st.Parser.token = Colon) ->
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
       let extension = parse_embed_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Pat.extension ~loc ~attrs extension
@@ -2109,7 +2112,10 @@ and parse_atomic_expr p =
       let extension = parse_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Exp.extension ~loc extension
-    | Colon when Parser.lookahead p (fun st -> Parser.next st; st.Parser.token = Colon) ->
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
       let extension = parse_embed_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Exp.extension ~loc extension
@@ -4482,7 +4488,10 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
       let extension = parse_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Typ.extension ~attrs ~loc extension
-    | Colon when Parser.lookahead p (fun st -> Parser.next st; st.Parser.token = Colon) ->
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
       let extension = parse_embed_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Typ.extension ~attrs ~loc extension
@@ -6449,7 +6458,10 @@ and parse_atomic_module_expr p =
     let extension = parse_extension p in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Mod.extension ~loc extension
-  | Colon when Parser.lookahead p (fun st -> Parser.next st; st.Parser.token = Colon) ->
+  | Colon
+    when Parser.lookahead p (fun st ->
+             Parser.next st;
+             st.Parser.token = Colon) ->
     let extension = parse_embed_extension p in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Mod.extension ~loc extension
@@ -6777,7 +6789,10 @@ and parse_atomic_module_type p =
       let extension = parse_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Mty.extension ~loc extension
-    | Colon when Parser.lookahead p (fun st -> Parser.next st; st.Parser.token = Colon) ->
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
       let extension = parse_embed_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Mty.extension ~loc extension
@@ -7331,20 +7346,22 @@ and parse_embed_extension p =
   let line_no = start_pos.pos_lnum in
   let rec parse_id acc =
     match p.Parser.token with
-    | Lident ident | Uident ident when p.Parser.start_pos.pos_lnum = line_no -> (
+    | (Lident ident | Uident ident) when p.Parser.start_pos.pos_lnum = line_no
+      ->
       Parser.next p;
       let id = acc ^ ident in
       if p.Parser.token = Dot && p.Parser.start_pos.pos_lnum = line_no then (
         Parser.next p;
-        parse_id (id ^ ".")
-      ) else id)
-    | token when Token.is_keyword token && p.Parser.start_pos.pos_lnum = line_no -> (
+        parse_id (id ^ "."))
+      else id
+    | token when Token.is_keyword token && p.Parser.start_pos.pos_lnum = line_no
+      ->
       Parser.next p;
       let id = acc ^ Token.to_string token in
       if p.Parser.token = Dot && p.Parser.start_pos.pos_lnum = line_no then (
         Parser.next p;
-        parse_id (id ^ ".")
-      ) else id)
+        parse_id (id ^ "."))
+      else id
     | _ -> acc
   in
   let id = parse_id "" in
@@ -7356,12 +7373,16 @@ and parse_embed_extension p =
         | Lparen ->
           let rec loop depth =
             match st.Parser.token with
-            | Lparen -> Parser.next st; loop (depth + 1)
+            | Lparen ->
+              Parser.next st;
+              loop (depth + 1)
             | Rparen ->
               Parser.next st;
               if depth = 1 then true else loop (depth - 1)
             | Eof -> false
-            | _ -> Parser.next st; loop depth
+            | _ ->
+              Parser.next st;
+              loop depth
           in
           (* consume the first '(' and start looping *)
           Parser.next st;
@@ -7375,11 +7396,11 @@ and parse_embed_extension p =
     else if len > 0 && (id.[len - 1] [@doesNotRaise]) = '.' then
       (* Trailing dot: recover dropping it for completion container *)
       let base = String.sub id 0 (len - 1) in
-      (if base = "" then "embed." else "embed." ^ base)
+      if base = "" then "embed." else "embed." ^ base
     else if has_complete_payload then "embed." ^ id
     else "embed." ^ id
   in
-  ((Location.mkloc txt' id_loc), payload)
+  (Location.mkloc txt' id_loc, payload)
 
 (* module signature on the file level *)
 let parse_specification p : Parsetree.signature =

@@ -4,4 +4,3 @@ let get_embed_tag (name : string) : string option =
   if String.length name > plen && String.sub name 0 plen = prefix then
     Some (String.sub name plen (String.length name - plen))
   else None
-

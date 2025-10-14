@@ -9,7 +9,7 @@
           "schema.graphql"
         ]
       },
-      "embedString": "/* @name GetUser */ select * from users where id = :id",
+      "data": "/* @name GetUser */ select * from users where id = :id",
       "occurrenceIndex": 1,
       "source": {
         "module": "Foo",
@@ -22,7 +22,7 @@
   "type": "object",
   "required": [
     "config",
-    "embedString",
+    "data",
     "occurrenceIndex",
     "source",
     "tag",
@@ -39,9 +39,8 @@
       "description": "The embed tag that matched, e.g. \"sql.one\"",
       "type": "string"
     },
-    "embedString": {
-      "description": "The literal string content inside the embed",
-      "type": "string"
+    "data": {
+      "description": "The embed data: either a string literal or a config object"
     },
     "source": {
       "description": "Source file path and module",
@@ -112,8 +111,7 @@
   "examples": [
     {
       "code": "let default = \"...\"",
-      "status": "ok",
-      "suffix": "GetUser"
+      "status": "ok"
     }
   ],
   "oneOf": [
@@ -133,14 +131,6 @@
         "code": {
           "description": "ReScript source code to write to generated module (.res)",
           "type": "string"
-        },
-        "suffix": {
-          "description": "Optional suffix contributing to generated module name. Will be sanitized.",
-          "default": null,
-          "type": [
-            "string",
-            "null"
-          ]
         }
       }
     },
@@ -346,7 +336,7 @@
                 "schema.graphql"
               ]
             },
-            "embedString": "/* @name GetUser */ select * from users where id = :id",
+            "data": "/* @name GetUser */ select * from users where id = :id",
             "occurrenceIndex": 1,
             "source": {
               "module": "Foo",
@@ -365,9 +355,8 @@
             ],
             "description": "Generator configuration as derived from rescript.json"
           },
-          "embedString": {
-            "description": "The literal string content inside the embed",
-            "type": "string"
+          "data": {
+            "description": "The embed data: either a string literal or a config object"
           },
           "occurrenceIndex": {
             "description": "1-based occurrence index of this embed in the file for this tag",
@@ -396,7 +385,7 @@
         },
         "required": [
           "config",
-          "embedString",
+          "data",
           "occurrenceIndex",
           "source",
           "tag",
@@ -412,8 +401,7 @@
         "examples": [
           {
             "code": "let default = \"...\"",
-            "status": "ok",
-            "suffix": "GetUser"
+            "status": "ok"
           }
         ],
         "oneOf": [
@@ -428,14 +416,6 @@
                   "ok"
                 ],
                 "type": "string"
-              },
-              "suffix": {
-                "default": null,
-                "description": "Optional suffix contributing to generated module name. Will be sanitized.",
-                "type": [
-                  "string",
-                  "null"
-                ]
               }
             },
             "required": [

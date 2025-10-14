@@ -22,14 +22,12 @@ SNAPSHOT2="../tests/snapshots/embeds-rewatch.txt"
   echo '=== Foo.embeds.json ==='
   cat "$FIXDIR/lib/bs/src/Foo.embeds.json" || true
   echo
-  echo '=== Foo.embeds.map.json ==='
-  cat "$FIXDIR/lib/bs/src/Foo.embeds.map.json" || true
-  echo
   echo '=== Rewritten Source ==='
   "$RESCRIPT_BSC_EXE" -only-parse -dsource "$FIXDIR/lib/bs/src/Foo.ast" 2>/dev/null || true
   echo
   echo '=== Generated Module ==='
-  cat "$FIXDIR/src/__generated__/Foo__embed_sql_one_Hello.res" || true
+  # With single string embed, suffix is occurrence index 1
+  cat "$FIXDIR/src/__generated__/Foo__embed_sql_one_1.res" || true
 } > "$SNAPSHOT2"
 
 normalize_paths "$SNAPSHOT2"

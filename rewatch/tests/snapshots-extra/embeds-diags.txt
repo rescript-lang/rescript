@@ -2,25 +2,25 @@
 Cleaned 0/0
 Parsed 1 source files
 ERROR:
-EMBED_GENERATOR_FAILED[GEN001] (error) at ../../src/Foo.res:1:27
+EMBED_GENERATOR_FAILED[GEN001] (error) at ../../src/Foo.res:1:28
 Example error from generator
->    1 | let a = %sql.one("/* @name Err */ select 1")
-                                  ^^^^
-     2 | 
+>    1 | let a = ::sql.one("/* @name Err */ select 1")
+                                   ^^^^
 
-ERROR:
-rewrite-embeds failed: 
-  [1;31mWe've found a bug for you![0m
-  [36m/_tmp_embeds/rewatch_diags_proj/src/Foo.res[0m:[2m1:9-16[0m
-
-  [1;31m1[0m [2m│[0m let a = [1;31m%sql.one[0m("/* @name Err */ select 1")
-  2 [2m│[0m 
-  3 [2m│[0m 
-
-  EMBED_MAP_MISMATCH: no mapping for tag sql.one occurrence 1
-
-
-ERROR:
-Embed processing failed for Foo: rewrite-embeds failed
 Processed embeds: ran 1 generators; cache hits 0
+Compiled 1 modules
+
+  [1;31mWe've found a bug for you![0m
+  [36m/_tmp_embeds/rewatch_diags_proj/src/Foo.res[0m:[2m1:9-45[0m
+
+  [1;31m1[0m [2m│[0m let a = [1;31m::sql.one("/* @name Err */ select 1")[0m
+  2 [2m│[0m 
+
+  [1;33mThe module or file Foo__embed_sql_one_1 can't be found.[0m
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
+  
+
+
 Incremental build failed. Error: [2K  Failed to Compile. See Errors Above

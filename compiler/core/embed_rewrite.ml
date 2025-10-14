@@ -87,7 +87,11 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
   let module_expr (self : Ast_mapper.mapper) (m : module_expr) : module_expr =
     match m.pmod_desc with
     | Pmod_extension (({txt = tag; _} as name_loc), payload) -> (
-      let base_tag = match Ext_embed.get_embed_tag tag with Some t -> t | None -> tag in
+      let base_tag =
+        match Ext_embed.get_embed_tag tag with
+        | Some t -> t
+        | None -> tag
+      in
       match string_lit_of_payload payload with
       | None -> Ast_mapper.default_mapper.module_expr self m
       | Some s -> (
@@ -101,7 +105,8 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
           match Hashtbl.find_opt subtbl k with
           | None ->
             Location.raise_errorf ~loc:name_loc.loc
-              "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" base_tag k
+              "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" base_tag
+              k
           | Some entry ->
             let lit_hash = csv_hash base_tag s in
             if lit_hash <> entry.literal_hash then
@@ -115,7 +120,11 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
   let expr (self : Ast_mapper.mapper) (e : expression) : expression =
     match e.pexp_desc with
     | Pexp_extension (({txt = tag; _} as name_loc), payload) -> (
-      let base_tag = match Ext_embed.get_embed_tag tag with Some t -> t | None -> tag in
+      let base_tag =
+        match Ext_embed.get_embed_tag tag with
+        | Some t -> t
+        | None -> tag
+      in
       match string_lit_of_payload payload with
       | None -> Ast_mapper.default_mapper.expr self e
       | Some s -> (
@@ -129,7 +138,8 @@ let rewrite_structure (entries : map_entry list) (ast : structure) : structure =
           match Hashtbl.find_opt subtbl k with
           | None ->
             Location.raise_errorf ~loc:name_loc.loc
-              "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" base_tag k
+              "EMBED_MAP_MISMATCH: no mapping for tag %s occurrence %d" base_tag
+              k
           | Some entry ->
             let lit_hash = csv_hash base_tag s in
             if lit_hash <> entry.literal_hash then
