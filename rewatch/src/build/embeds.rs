@@ -7,10 +7,12 @@ use anyhow::{Context, Result, anyhow};
 use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime};
 
 #[derive(Debug, Deserialize)]
@@ -768,6 +770,32 @@ fn header_hash_from_file(path: &Path) -> Option<String> {
     }
 }
 
+// Simple in-process memoization of extraSources mtimes to reduce filesystem stats.
+// Reset between builds to ensure correctness during watch.
+static EXTRAS_MTIME_CACHE: OnceLock<Mutex<HashMap<PathBuf, SystemTime>>> = OnceLock::new();
+
+fn get_mtime_cached(path: &Path) -> Option<SystemTime> {
+    let cache = EXTRAS_MTIME_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    // Prefer canonicalized path as key for stability across joins
+    let key = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    if let Some(ts) = cache.lock().ok().and_then(|m| m.get(&key).cloned()) {
+        return Some(ts);
+    }
+    let ts = path.metadata().and_then(|m| m.modified()).ok();
+    if let (Some(ts), Ok(mut guard)) = (ts, cache.lock()) {
+        guard.insert(key, ts);
+    }
+    ts
+}
+
+pub fn reset_extra_sources_mtime_cache() {
+    if let Some(m) = EXTRAS_MTIME_CACHE.get() {
+        if let Ok(mut guard) = m.lock() {
+            guard.clear();
+        }
+    }
+}
+
 fn find_cached_generated(
     out_dir_abs: &Path,
     module_name: &str,
@@ -799,10 +827,10 @@ fn find_cached_generated(
             let file_mtime = p.metadata().and_then(|m| m.modified()).ok()?;
             let extra_newer = generator.extra_sources.iter().any(|rel| {
                 let ap = package.path.join(rel);
-                ap.metadata()
-                    .and_then(|m| m.modified())
-                    .map(|t| t > file_mtime)
-                    .unwrap_or(false)
+                match get_mtime_cached(&ap) {
+                    Some(t) => t > file_mtime,
+                    None => false,
+                }
             });
             if extra_newer {
                 continue;

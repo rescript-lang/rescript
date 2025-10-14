@@ -5,7 +5,7 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 ## Implementation Status (WIP)
 - Phase progress
   - Phase 2 (Rewatch: Parse step): DONE — `-embeds <csv>` threaded via parser args from `rescript.json` tags.
-  - Phase 3 (Generator invocation): PARTIAL → MOSTLY DONE — per‑embed process invocation + generated file write + headers, caching (hash + extraSources mtime), and per‑embed timeout implemented; remaining work: concurrency limits and richer progress UX.
+  - Phase 3 (Generator invocation): MOSTLY DONE — per‑embed process invocation + generated file write + headers, caching (hash + extraSources mtime), per‑embed timeout, and a concurrency cap implemented; remaining work: richer progress UX (per‑embed/per‑module events) and polish.
   - Phase 4 (Inline rewrite via PPX): PRESENT — embeds are rewritten directly during the main compile using a deterministic naming scheme; no separate rewrite pass or map artifacts.
   - Phase 5 (Rewatch integration): DONE — integrates generation + compile, registers generated modules and parses their ASTs.
 - Phase 7 (Watch/cleanup): DONE — extraSources changes now invalidate affected modules in watch mode; stale generated files are cleaned up per-module.
@@ -26,12 +26,11 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
 ## Summary
 - Users write an embed expression in `.res` files using a tag and either:
   - a string literal (backtick or normal quoted), for example:
-    - `let query = ::sql.one(`/* @name GetUser */ select * from users where id = :id`)
-`
+    - `let query = ::sql.one(`/* @name GetUser */ select * from users where id = :id`)`
     - or `let query = ::sql.one("/* @name GetUser */ select * from users where id = :id")`
   - a config record literal, for example:
     - `let query = ::sql.one({id: "GetUser", query: "select * from users where id = :id"})`
-  - The legacy form `%sql.one("...")` remains accepted; the new `::sql.one(...)` form is equivalent and preferred.
+  - Equivalent extension form: `%embed.sql.one("...")` (printed as `::sql.one(...)`). Note: plain `%sql.one("...")` is not treated as an embed and remains available for other PPXs.
 - The compiler detects these embeds during parsing and records them. Rewrites happen inline during the normal compile using a PPX that deterministically computes the target generated module name — no second pass or resolution map.
 - Rewatch invokes user-configured generators based on the recorded embeds, receives ReScript code, and writes generated files with a conventional name (e.g. `SomeFile__embed_sql_one_GetUser.res`, optional `.resi`).
 - The embed PPX performs the AST rewrite to `GeneratedModule.default` directly in the compile pipeline, based solely on the tag and a deterministic filename scheme.
@@ -55,7 +54,7 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
   - `::<tag>(<string-literal>)`
   - `::<tag>.<subtag>(<string-literal>)`
   - `::<tag>({<config-object>})` where the config is a record literal with JSON‑serializable values
-  - Equivalent legacy form: `%<tag>(<string-literal>)` and `%<tag>.<subtag>(<string-literal>)`
+  - Equivalent extension form: `%embed.<tag>(<string-literal>)` and `%embed.<tag>.<subtag>(<string-literal>)`
   - The `::` form parses to an extension node with the attribute name automatically prefixed with `embed.`; i.e. `::sql.one(...)` parses as `%embed.sql.one(...)` in the parsetree. The printer also emits `::sql.one(...)` when encountering `%embed.<tag>(...)`.
   - The `<string-literal>` can be a backtick string or a normal quoted string, but must be a single literal (no concatenation, pipelines, or computed expressions). Interpolation is not allowed.
   - The `<config-object>` must be a single record literal whose fields and nested values are JSON‑serializable (string, number, boolean, null, arrays, objects); no computed expressions. It must include `id: string` for naming; all fields are forwarded to the generator as `data`.
@@ -330,14 +329,6 @@ Resolution map lookup: not applicable in the single‑pass design.
 
 ---
 
-If this plan looks good, next steps would be:
-- Confirm grammar (string or config record; no interpolation) and config shape.
-- Compiler: add embed indexing during parse and emit `*.embeds.json` artifacts next to `*.ast`.
-- Rewatch: read embed index, implement generator invocation + caching + mtime watching, write generated files using deterministic naming (no suffix from generator).
-- Compiler: implement the embed PPX that rewrites embeds inline during compile using the same naming rules.
-- Thread dependency info through Rewatch’s `BuildState`; wire cleanup of stale generated files.
-- Add integration tests (happy path, caching, errors with code fences, watch, cleanup).
-
 ## Step‑By‑Step Implementation Plan
 
 Phase 0 — Wiring and Flags
@@ -384,7 +375,7 @@ Phase 3 — Rewatch: Generator Invocation & Caching
   - Validate response: ensure `entry` is `default`, normalize paths, collect diagnostics.
   - Write generated `*.res` (and header) to `outDir` using naming scheme `<SourceModule>__embed_<tagNormalized>_<suffix>.res` computed from occurrence index or config `id`.
   - Enforce name uniqueness per source+tag; on collision, raise `EMBED_NAMING_CONFLICT` with both locations.
-- Concurrency: cap concurrent processes to `max(1, num_cpus/2)`.
+- Concurrency: cap concurrent processes to `max(1, num_cpus/2)` (implemented).
 - Maintain a cache index for `extraSources` mtimes to avoid repeated stat calls.
  - Progress reporting: for each module and embed, emit concise progress events —
    - discovery (N embeds found), per‑embed start, cache hit/miss, done/failed (with error class),
@@ -435,14 +426,6 @@ Tests (Integration):
  - Each error class reproduced in testrepo with stable messages and exit codes.
  - Optional unit: code frame formatting helper includes correct context lines.
 
-Phase 8 — Errors & Diagnostics
-- Map generator diagnostics (literal‑relative positions) to absolute source spans via the index ranges; print rich code frames.
-- Error codes: `EMBED_NO_GENERATOR`, `EMBED_SYNTAX`, `EMBED_GENERATOR_FAILED`, `EMBED_NAMING_CONFLICT`.
-- Align severity with compiler conventions; ensure non‑zero exit on errors to integrate with CI.
-Tests (Integration):
-- Each error class reproduced in testrepo with stable messages and exit codes.
-- Optional unit: code frame formatting helper includes correct context lines.
-
 - E2E‑first: integration tests live under `rewatch/tests/` and are invoked from `suite-ci.sh`.
 - Embeds tests use a standalone fixture repo at `rewatch/tests/fixtures/embeds/` and a driver script `rewatch/tests/embeds.sh` that:
   - Produces `.ast` + `*.embeds.json` via `bsc -bs-ast -embeds ...`
@@ -457,7 +440,7 @@ Tests (Integration):
   - Normal `bsc` compile entry → typecheck and generate JS for full end‑to‑end checks.
  - CI: wire into `make test-rewatch` and keep snapshots stable.
 
-Phase 10 — Documentation & Examples
+Phase 8 — Documentation & Examples
 - Document `embeds` config in `rescript.json`, CLI flags, and generator protocol.
 - Provide a minimal example project demonstrating SQL and GraphQL embed flows.
 - Call out limitations: no nested embeds, no `.resi` in v1, single literal only.

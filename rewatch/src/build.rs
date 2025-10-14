@@ -392,6 +392,9 @@ pub fn incremental_build(
             }
         }
 
+        // Reset extraSources mtime cache for this build cycle
+        embeds::reset_extra_sources_mtime_cache();
+
         // Pre-scan embeds to compute planned invocations (cache misses) and cache hits
         let mut planned_invocations: u64 = 0;
         let mut planned_reused: u64 = 0;
