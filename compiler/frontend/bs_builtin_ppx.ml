@@ -112,7 +112,8 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             body;
         pexp_attributes;
       })
-  | Pexp_apply _ -> Ast_exp_apply.app_exp_mapper e self
+  | Pexp_apply _ ->
+    Ast_exp_apply.app_exp_mapper e self |> Ast_option_optimizations.transform
   | Pexp_match
       ( b,
         [
