@@ -24,6 +24,7 @@
 
 - Fix: use configured Jsx module for constraining component return type. https://github.com/rescript-lang/rescript/pull/7945
 - Undeprecate `Js_OO` module since it is still used with the `@this` attribute. https://github.com/rescript-lang/rescript/pull/7955
+- Fix crash when using bitwise not on incompatible type. https://github.com/rescript-lang/rescript/pull/7965
 
 #### :memo: Documentation
 
