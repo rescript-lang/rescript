@@ -603,8 +603,8 @@ pub fn process_module_embeds(
                                 let file_abs = package.get_build_path().join(&index.source_path);
                                 // Range line: file:line:col[-end] or file:line:col-endCol (same line)
                                 let range_suffix = match (end_line, end_col) {
-                                    (Some(el), Some(ec)) if el != abs_line => format!("-{}:{}", el, ec),
-                                    (Some(_), Some(ec)) => format!("-{}", ec),
+                                    (Some(el), Some(ec)) if el != abs_line => format!("-{el}:{ec}"),
+                                    (Some(_), Some(ec)) => format!("-{ec}"),
                                     _ => String::new(),
                                 };
                                 out.push_str(&format!(
@@ -789,10 +789,10 @@ fn get_mtime_cached(path: &Path) -> Option<SystemTime> {
 }
 
 pub fn reset_extra_sources_mtime_cache() {
-    if let Some(m) = EXTRAS_MTIME_CACHE.get() {
-        if let Ok(mut guard) = m.lock() {
-            guard.clear();
-        }
+    if let Some(m) = EXTRAS_MTIME_CACHE.get()
+        && let Ok(mut guard) = m.lock()
+    {
+        guard.clear();
     }
 }
 
