@@ -451,3 +451,202 @@ Acceptance Checklist
 - Embed PPX rewrite is deterministic and only rewrites targeted nodes.
 - End‑to‑end build (including watch) works across multi‑package repos.
 - Tests cover syntax, compiler passes, Rewatch integration, and watch behavior.
+
+## Generator Modes (Proposal)
+
+This section proposes two execution modes for generators and how Rewatch integrates with each. Mode 1 (one‑shot) reflects the current implementation. Mode 2 (long‑running/daemon) adds an optional optimization for throughput and reduced process churn.
+
+### Modes Overview
+- One‑shot: spawn a fresh generator process per batch, send one JSON line, read one JSON line, exit.
+- Daemon: start a persistent generator process once (per generator id) and exchange multiple batch requests/responses over stdio.
+
+### Goals
+- Reduce process startup overhead for heavy generators (e.g., DB schema loading, GraphQL schema parsing).
+- Make batch‑first the single message shape across both modes.
+- Maintain identical correctness semantics and cache behavior across modes.
+
+### Non‑Goals
+- Changing generator output format, naming, or caching semantics.
+- Allowing generators to control file naming or embed rewrite behavior.
+- Requiring network sockets; stdio is the default IPC to keep things simple and cross‑platform.
+
+### Configuration (rescript.json)
+Extend `embeds.generators[]` minimally to keep setup simple.
+
+```
+{
+  "embeds": {
+    "outDir": "src/__generated__",
+    "generators": [
+      {
+        "id": "sqlgen",
+        "command": ["node", "scripts/sqlgen.js"],
+        "tags": ["sql.one", "sql.many"],
+        "mode": "oneshot" | "daemon",      // default: "oneshot"
+        "timeoutMs": 10000,                  // per batch
+        "extraSources": ["db/schema.sql"]
+      }
+    ]
+  }
+}
+```
+
+Notes:
+- `mode: "daemon"` keeps a single long‑lived process per generator id; `"oneshot"` spawns per batch.
+
+### Daemon Mode Transport (MVP)
+Transport is newline‑delimited JSON over stdio. Each batch request is one line of JSON; the generator returns exactly one line of JSON with the batch results.
+
+- Input per line: a single v2 batch request (see “Batch‑First Protocol (v2)”).
+- Output per line: the matching v2 batch response, same order and length as the request.
+- Sequential only: read one, process, write one. No interleaving, no multiplexing.
+- Logs: send to stderr; stdout is reserved for protocol lines.
+- No handshake required. The process is considered ready after spawn.
+
+### Rewatch Integration (Daemon)
+Add a minimal runtime to manage generator lifecycles:
+
+- Process manager: registry keyed by `generator.id`; responsible for spawn and shutdown.
+- Transport: async line‑oriented codec for newline‑delimited JSON on stdout/stdin.
+- Scheduler: per‑generator queue; stable deterministic ordering (e.g., `modulePath, occurrenceIndex`). Send the next batch only after the previous response is fully read.
+- Integration points:
+  - Build/parse remains unchanged; still read `*.embeds.json` and compute cache.
+  - Generation routes cache misses to the manager as batches.
+  - Watch mode keeps daemon(s) alive across incremental builds; shutdown on Rewatch exit.
+
+### Failure Handling & Resilience
+- Startup failure: surface a clear error and skip this generator for the current build.
+- Crash during work: fail the current batch with `EMBED_GENERATOR_FAILED`. Rewatch respawns the daemon before the next batch.
+- Hangs/timeouts: kill the process, fail the batch, and respawn for the next batch.
+- Protocol errors (malformed JSON or wrong lengths): treat as fatal for that batch; kill the process and respawn for the next batch.
+- Backpressure: bound queue size per generator; surface a clear message when saturated.
+
+### Concurrency & Ordering
+- Deterministic scheduling: order by `(sourcePath, tag, occurrenceIndex)` to keep generated filenames and progress stable across runs.
+- Single process per generator id; sequential batch processing only in MVP.
+
+### Security & Environment
+- Default to a minimal sanitized environment. Allow an explicit env allowlist via generator config (future).
+- No network access is required by the protocol; avoid opening ports unless explicitly configured.
+- Generators never write to disk directly; they return code via stdout. Rewatch validates and writes files.
+
+### UX & Telemetry
+- Progress events: `daemon:start`, per‑batch `queued`, `sent`, `received`, plus a simple `daemon:respawn` counter.
+- Summaries: daemon stats (batches, avg latency, respawns, cache hits/misses before daemon).
+- Logs from generators (stderr) are surfaced under `--verbose`.
+
+### Testing Strategy
+- Unit (Rust): line framing codec, scheduler ordering, timeout behavior, basic respawn on crash.
+- Integration (rewatch/tests):
+  - Happy path: daemon consumes multiple batches sequentially across files; stable ordering; cache hits/misses.
+  - Crash/timeout: process exits mid‑batch → batch fails; next batch triggers automatic respawn.
+- Load: stress with hundreds of embeds to validate memory and throughput.
+
+### Incremental Implementation Plan
+1. Config plumbing (`mode`, `timeoutMs`).
+2. Minimal daemon transport on stdio: spawn process; send/receive one batch per line.
+3. Scheduler: per‑generator queue and deterministic ordering.
+4. Timeouts and simple respawn on crash/hang.
+5. Batching policy wiring and progress events.
+6. Docs and examples; update `make test-rewatch` to include daemon scenarios.
+
+### MVP Scope & Complexity Guardrails
+To avoid overengineering, we constrain the first implementation to a small, robust subset. Advanced features listed above remain future options.
+
+- IPC: `stdio` only. No TCP/pipes in MVP.
+- One process per generator id. No internal pooling in MVP (parallelism comes from multiple generators and natural build concurrency).
+- No handshake required. Process is ready after spawn.
+- Framing: exactly one JSON object per line, one response per request line; sequential processing only.
+- Logs: stderr only (stdout is protocol). No structured `log`/`diag` streaming in MVP.
+- No ping/pong liveness. Timeouts on individual requests suffice; treat stalls as failures and respawn before next batch.
+- Restart policy: allow respawn as needed between batches; no complex backoff in MVP.
+- Ordering: strictly preserve input order; no out‑of‑order or interleaved responses.
+
+These guardrails keep the code path small, reduce state, and make behavior predictable while still delivering the main wins (lower process churn and batching).
+
+## Batch‑First Protocol (v2)
+
+To simplify integration and improve throughput across both modes, we define a batch‑first protocol where the only message shape a generator needs to handle is a batch. This works for one‑shot (one batch per process) and daemon (many batches over time) without needing per‑item envelopes or correlation ids.
+
+This supersedes the prior per‑embed v1 protocol; going forward, generators implement v2 only.
+
+Versioning and artifacts:
+- Generated file header marker version increments to `v2` (e.g., `/* rewatch-embed: v2; ... */`).
+- Update JSON Schemas and OpenAPI in `docs/schemas/` to v2 request/response shapes.
+- Rewatch remains the sole owner of caching and file naming; generators only emit code in responses.
+
+### Input (v2)
+```
+{
+  "version": 2,
+  "requests": [
+    {
+      "tag": "sql.one",
+      "data": "/* @name GetUser */ select * from users where id = :id",
+      "source": {"path": "src/Some.res", "module": "Some"},
+      "occurrenceIndex": 1,
+      "config": {"extraSources": ["db/schema.sql"], "options": {}}
+    }
+    // ... more items
+  ]
+}
+```
+
+### Output (v2)
+```
+{
+  "version": 2,
+  "results": [
+    {"status": "ok", "code": "let default = ...\n"},
+    {"status": "error", "errors": [{"message": "...", "start": {"line":1, "column":1}, "end": {"line":1, "column":5}}]}
+    // ... one result per input in the same order
+  ]
+}
+```
+
+Rules:
+- `results.length` must equal `requests.length`, preserving order 1:1 for trivial matching. No ids required.
+- Each result is independent. A single error does not fail the whole batch.
+- Generators must be deterministic and side‑effect free; internal caches are allowed but must not affect correctness across restarts.
+
+### Rewatch Batching Policy (Default)
+Rewatch groups work per generator id and sends batches sized and timed to balance throughput and latency.
+
+- Full builds:
+  - `maxItems`: 128 per batch
+  - `maxBytes`: 2_000_000 (approx 2 MB payload)
+  - `maxLatencyMs`: 0 (flush immediately once discovery completes)
+- Watch mode (incremental):
+  - `maxItems`: 32 per batch
+  - `maxBytes`: 1_000_000
+  - `maxLatencyMs`: 40 (micro‑batching window to coalesce rapid edits)
+
+Configuration (optional; per‑generator or global):
+```
+{
+  "embeds": {
+    "batching": {"maxItems": 64, "maxBytes": 1_000_000, "maxLatencyMs": 40},
+    "generators": [
+      {"id": "sqlgen", "tags": ["sql.one"], "command": ["node", "sqlgen.js"], "mode": "daemon",
+       "batching": {"maxItems": 128}}
+    ]
+  }
+}
+```
+
+Implementation notes:
+- Group by `generator.id`, then chunk by limits. Maintain `(sourcePath, tag, occurrenceIndex)` ordering within the batch.
+- For one‑shot mode, spawn one process per batch.
+- For daemon mode, write one line per batch and await one response line before sending the next.
+- On malformed response or crash, log `EMBED_GENERATOR_FAILED`. In watch mode, optionally retry by splitting the batch in half once to isolate bad items, then surface per‑item failures.
+
+### Failure Semantics in Batches
+- Timeout applies per batch. If timed out, mark all items as failed for that batch and proceed (watch) or abort (full build) depending on existing error policy.
+- Generators should never partially write responses. Rewatch treats any invalid JSON or wrong lengths as a fatal error for that batch.
+- Rewatch ensures generated file writes remain per‑item, so partial successes in a batch persist correctly.
+
+### Why This Stays Simple
+- One message shape for both modes reduces code paths.
+- No correlation ids, no streaming diagnostics, no multiplexing complexity.
+- Stdio‑only, sequential batches keep the transport trivial and robust across platforms.
+- Clear defaults and small set of tunables prevent configuration sprawl.
