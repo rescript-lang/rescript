@@ -38,6 +38,6 @@ then
 else
   error "Embeds (Rewatch) snapshot changed"
   bold ../tests/snapshots/embeds-rewatch.txt
-  git --no-pager diff ../tests/snapshots/embeds-rewatch.txt ../tests/snapshots/embeds-rewatch.txt
+  git --no-pager diff -- ../tests/snapshots/embeds-rewatch.txt
   exit 1
 fi
