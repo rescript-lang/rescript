@@ -650,3 +650,56 @@ Implementation notes:
 - No correlation ids, no streaming diagnostics, no multiplexing complexity.
 - Stdio‑only, sequential batches keep the transport trivial and robust across platforms.
 - Clear defaults and small set of tunables prevent configuration sprawl.
+
+## Performance Optimizations
+
+This section summarizes concrete, practical optimizations to minimize build and watch latency for projects using EmbedLang. Items are grouped by impact and risk.
+
+### Quick Wins (Low Risk)
+- Deterministic filename cache check
+  - Current: scan the embeds outDir and filter by prefix to find a candidate, then compare `// @sourceHash` + `extraSources` mtimes.
+  - Optimize: compute the exact filename from `(moduleName, normalize(tag), suffix)` and check that file directly.
+    - `suffix`: use `occurrenceIndex` for string embeds, or sanitized `config.id` for config embeds.
+    - Avoids O(k) directory scans per embed when many files exist.
+- Single index read per module
+  - Load `*.embeds.json` once and reuse the parsed structure for both planning (counting cache hits/misses) and processing.
+- Precompute generator lookups
+  - Build a per‑package map `tag -> generator` once and reuse it (O(1) lookup) instead of linear scans per embed.
+- Batch add and parse generated modules
+  - Accumulate all generated files across modules, register them in one pass, then rely on the regular parallel AST generation (instead of per‑file `bsc` parse calls directly after each module’s generation).
+- Global rayon scheduling, no per‑module pools
+  - Use the global rayon pool and a single work queue for all embeds. Avoid building a thread pool per module and let global scheduling balance hotspots.
+
+### High‑Impact (Medium Effort)
+- Batch‑first protocol (v2)
+  - Send/receive requests in batches per generator id to reduce process startup and JSON overhead. Keep one process per batch (one‑shot) if daemon is not enabled.
+- Daemon mode for generators
+  - Keep a persistent process per generator id; exchange batch JSON over stdio. Add a minimal manager with deterministic ordering, timeouts, and respawn on crash/hang.
+  - Expect large wins in watch mode and projects with many embeds or heavy startup costs.
+
+### Watch‑Mode Optimizations
+- Pre‑index `extraSources`
+  - Precompute absolute/canonical paths for all configured `extraSources` and keep them in a set for O(1) membership tests.
+- Tag → modules map
+  - Maintain an in‑memory map from tag to modules that reference it (derived from the latest `*.embeds.json` reads). On `extraSources` changes, mark affected modules dirty without opening each index file.
+
+### Micro‑Optimizations
+- Replace the `try_wait` + sleep loop with a blocking `wait_with_output` on a worker thread and a watchdog timer for timeouts (fewer wakeups; less drift).
+- Cache canonicalized `extraSources` paths for mtime checks to avoid repeated `canonicalize` calls.
+- Generated‑file detection in the indexer
+  - Prefer path‑based exclusion of the embeds outDir and only fall back to header probing when necessary to avoid extra I/O.
+- Keep payload normalization limited to configured embed tags (already implemented) to avoid unnecessary PPX payload work for unrelated extensions.
+
+### Expected Impact
+- Cache checks scale O(1) per embed regardless of outDir size.
+- Fewer redundant reads of embed indexes; lower JSON parsing overhead.
+- Better CPU utilization by scheduling all embeds globally, not per module.
+- Substantial reduction in process churn through batching and, optionally, daemons.
+- Faster watch invalidation when `extraSources` change, with fewer filesystem calls.
+
+### Suggested Implementation Order
+1. Deterministic filename cache check; single index read; prebuilt `tag -> generator` map.
+2. Global scheduling for all embeds and batch parse of generated modules.
+3. Batch‑first protocol (v2) for one‑shot mode (no daemon yet).
+4. Daemon mode with a minimal manager and deterministic per‑generator queues.
+5. Watch‑mode maps for `extraSources` and `tag -> modules`.
