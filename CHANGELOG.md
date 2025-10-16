@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Replace binary operators with F#-style `~~~`, `^^^`, `&&&`, `|||`. https://github.com/rescript-lang/rescript/pull/7894
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
