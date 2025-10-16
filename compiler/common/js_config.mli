@@ -104,10 +104,7 @@ val as_pp : bool ref
 val collect_embeds : bool ref
 (** When true, emit per-module embed index artifacts during parse *)
 
-val embed_collect_all : bool ref
-(** When true, collect all extension tags; otherwise restrict to [embed_tags] *)
-
 val embed_tags : string list ref
-(** Comma-separated list of tags to collect when [embed_collect_all] = false *)
+(** Comma-separated list of tags to collect *)
 
 val self_stack : string Stack.t

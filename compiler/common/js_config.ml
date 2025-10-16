@@ -74,7 +74,6 @@ let as_pp = ref false
 
 (* Embed indexing and rewrite configuration *)
 let collect_embeds = ref false
-let embed_collect_all = ref false
 let embed_tags : string list ref = ref []
 
 let self_stack : string Stack.t = Stack.create ()

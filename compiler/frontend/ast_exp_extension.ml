@@ -89,8 +89,7 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
        normalization runs within the literal. For all other extensions,
        leave payload untouched to avoid surprising side-effects. *)
     let is_embed_tag =
-      !Js_config.collect_embeds
-      && (!Js_config.embed_collect_all || List.mem txt !Js_config.embed_tags)
+      !Js_config.collect_embeds && List.mem txt !Js_config.embed_tags
     in
     if is_embed_tag then
       let payload' = self.payload self payload in

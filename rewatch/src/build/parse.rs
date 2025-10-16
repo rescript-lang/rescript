@@ -341,7 +341,7 @@ pub(crate) fn generate_ast(
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
     let build_path_abs = package.get_build_path();
-    let (ast_path, parser_args) = parser_args(
+    let (ast_path, mut parser_args) = parser_args(
         &build_state.project_context,
         &package.config,
         filename,
@@ -349,6 +349,46 @@ pub(crate) fn generate_ast(
         package.is_local_dep,
         warn_error_override,
     )?;
+
+    // Embeds: do not pass -embeds for generated files
+    //
+    // Rationale:
+    // - The compiler's `-embeds` flag instructs it to scan the parsed AST and
+    //   emit a per-module embeds index (`<module>.embeds.json`). This is needed
+    //   only for first-party source files, so Rewatch knows which generators to
+    //   run. For generated files under the embeds outDir, passing `-embeds`
+    //   would cause the compiler to index those files as well, potentially
+    //   creating nested/embed loops and redundant work.
+    // - Rewatch is the single source of truth for deciding when to run
+    //   generators. It should never rely on indexes produced from generated
+    //   outputs.
+    // - By stripping `-embeds` here, we avoid indexing generated outputs and
+    //   keep the pipeline simple and predictable.
+    //
+    // Consequences:
+    // - The compiler continues to compile generated files normally; only the
+    //   embed index pass is skipped for them.
+    // - If a generator were to emit `%embed.*` constructs (not recommended),
+    //   those would not be indexed for further generation, preventing loops.
+    let is_generated_embed = {
+        let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
+        let file_abs = Path::new(&package.path).join(filename);
+        file_abs.starts_with(&out_dir_abs)
+    };
+    if is_generated_embed {
+        // Remove any existing -embeds <csv> pair
+        let mut i = 0usize;
+        while i < parser_args.len() {
+            if parser_args[i] == "-embeds" {
+                parser_args.remove(i);
+                if i < parser_args.len() {
+                    parser_args.remove(i);
+                }
+                continue;
+            }
+            i += 1;
+        }
+    }
 
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());

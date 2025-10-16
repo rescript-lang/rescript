@@ -210,7 +210,7 @@ Protocol considerations:
 - `-embeds <csv>`
   - Example: `-embeds sql.one,sql.many,sql.execute`
   - When present during parsing, the compiler collects only these extension names and emits `SomeFile.embeds.json` next to the `.ast`.
-  - The flag can also accept `all` to collect all extension names if desired in the future.
+  - Rewatch omits this flag for generated files under the embeds `outDir` so they are never indexed again.
   
 There is no separate `-rewrite-embeds` entry point in the single‑pass design; rewriting is handled by the embed PPX during normal compilation.
 
@@ -225,7 +225,7 @@ There is no separate `-rewrite-embeds` entry point in the single‑pass design; 
 {
   "version": 1,
   "module": "SomeFile",
-  "sourcePath": "src/SomeFile.res",         // project‑relative (normalized to /)
+  "sourcePath": "src/SomeFile.res",         // path as provided by compiler invocation; Rewatch normalizes on read
   "embeds": [
     {
       "tag": "sql.one",
@@ -241,8 +241,8 @@ There is no separate `-rewrite-embeds` entry point in the single‑pass design; 
 ```
 
 ## Cross‑Platform Paths
-- All paths written to artifacts (`*.embeds.json`) use `/` as the separator and are project‑relative where possible.
-- Rewatch normalizes paths when computing hashes and comparing cache keys to avoid Windows vs POSIX discrepancies.
+- The compiler writes paths as provided by its invocation (may be absolute or relative, and use platform‑native separators).
+- Rewatch normalizes and resolves these paths when reading the index for hashing, comparisons, lookups, and diagnostics.
 
 Resolution map lookup: not applicable in the single‑pass design.
 
@@ -256,8 +256,8 @@ Resolution map lookup: not applicable in the single‑pass design.
   - Keep top-level names deterministic for reproducibility.
 
 ## Loop Prevention (No Nested Embeds)
-- Generated files are ignored by the compiler’s embed indexer (exclude `outDir` and/or detect header marker).
-- This prevents infinite embed expansion chains and cyclic generation.
+- Rewatch does not pass `-embeds` for files under the embeds `outDir`, so the compiler does not emit indexes for generated outputs.
+- This prevents infinite embed expansion chains and cyclic generation, keeping loop prevention policy in Rewatch.
 
 ## Diagnostics & Mapping
 - Generator diagnostics are returned relative to the embedded string (line/column within the literal). Rewatch computes absolute source positions using the ranges from the compiler’s embed index and prints a concise code frame.
@@ -278,7 +278,7 @@ Resolution map lookup: not applicable in the single‑pass design.
 - Naming collision: error (`EMBED_NAMING_CONFLICT`) with both locations.
 - Illegal id chars: sanitized to `_`; collapse repeats.
 - `.resi` generation: not supported in v1; the generated module is compiled without an interface.
-- Nested embeds: disallowed. Generated files are ignored by the compiler’s embed indexer and never expanded.
+- Nested embeds: disallowed. Rewatch does not pass `-embeds` for generated files, so they are never indexed again or expanded.
 
 ## Naming & Collision Policy
 - File/module naming is fully deterministic and not controlled by generators.
