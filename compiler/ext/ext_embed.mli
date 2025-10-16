@@ -15,7 +15,6 @@ val missing_id_error_message : string
 val invalid_payload_error_message : string
 (** Error when embed payload is not a string literal or record literal. *)
 
-
 val normalize_tag_for_symbol : string -> string
 (** Convert an embed tag (validated as an attribute id) into a safe fragment
     for inclusion in a single identifier, by replacing '.' with '_'. *)

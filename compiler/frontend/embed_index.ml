@@ -128,8 +128,7 @@ let write_structure_index ~outprefix ~sourcefile (ast : structure) : unit =
           | Some (Ext_json_noloc.Str s) -> s
           | _ ->
             (* Should be prevented by earlier validation *)
-            Location.raise_errorf ~loc "%s"
-              Ext_embed.missing_id_error_message)
+            Location.raise_errorf ~loc "%s" Ext_embed.missing_id_error_message)
         | _ ->
           Location.raise_errorf ~loc "%s"
             Ext_embed.invalid_payload_error_message

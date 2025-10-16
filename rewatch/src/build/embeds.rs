@@ -181,8 +181,6 @@ pub struct GeneratedModuleInfo {
     pub rel_path: PathBuf,
 }
 
-
-
 fn embeds_index_path_for_ast(ast_rel: &Path) -> PathBuf {
     let stem = ast_rel
         .file_stem()
