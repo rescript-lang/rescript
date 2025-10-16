@@ -1,71 +1,83 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "GeneratorInputSchema",
+  "title": "BatchInputSchema",
   "examples": [
     {
-      "config": {
-        "extraSources": [
-          "schema.graphql"
-        ]
-      },
-      "data": "/* @name GetUser */ select * from users where id = :id",
-      "occurrenceIndex": 1,
-      "source": {
-        "module": "Foo",
-        "path": "src/Foo.res"
-      },
-      "tag": "sql.one",
-      "version": 1
+      "requests": [
+        {
+          "config": {
+            "extraSources": [
+              "schema.graphql"
+            ]
+          },
+          "data": "/* @name GetUser */ select * from users where id = :id",
+          "occurrenceIndex": 1,
+          "source": {
+            "module": "Foo",
+            "path": "src/Foo.res"
+          },
+          "tag": "sql.one"
+        }
+      ]
     }
   ],
   "type": "object",
   "required": [
-    "config",
-    "data",
-    "occurrenceIndex",
-    "source",
-    "tag",
-    "version"
+    "requests"
   ],
   "properties": {
-    "version": {
-      "description": "Protocol version (currently 1)",
-      "type": "integer",
-      "format": "uint32",
-      "minimum": 0.0
-    },
-    "tag": {
-      "description": "The embed tag that matched, e.g. \"sql.one\"",
-      "type": "string"
-    },
-    "data": {
-      "description": "The embed data: either a string literal or a config object"
-    },
-    "source": {
-      "description": "Source file path and module",
-      "allOf": [
-        {
-          "$ref": "#/definitions/GeneratorSourceSchema"
-        }
-      ]
-    },
-    "occurrenceIndex": {
-      "description": "1-based occurrence index of this embed in the file for this tag",
-      "type": "integer",
-      "format": "uint32",
-      "minimum": 0.0
-    },
-    "config": {
-      "description": "Generator configuration as derived from rescript.json",
-      "allOf": [
-        {
-          "$ref": "#/definitions/GeneratorConfigSchema"
-        }
-      ]
+    "requests": {
+      "description": "Requests to process in order",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GeneratorRequestSchema"
+      }
     }
   },
   "additionalProperties": false,
   "definitions": {
+    "GeneratorRequestSchema": {
+      "type": "object",
+      "required": [
+        "config",
+        "data",
+        "occurrenceIndex",
+        "source",
+        "tag"
+      ],
+      "properties": {
+        "tag": {
+          "description": "The embed tag that matched, e.g. \"sql.one\"",
+          "type": "string"
+        },
+        "data": {
+          "description": "The embed data: either a string literal or a config object"
+        },
+        "source": {
+          "description": "Source file path and module",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GeneratorSourceSchema"
+            }
+          ]
+        },
+        "occurrenceIndex": {
+          "description": "1-based occurrence index of this embed in the file for this tag",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "config": {
+          "description": "Generator configuration as derived from rescript.json",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GeneratorConfigSchema"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "GeneratorSourceSchema": {
       "type": "object",
       "required": [

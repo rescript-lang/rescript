@@ -26,10 +26,7 @@ pub struct GeneratorConfigSchema {
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 #[schemars(deny_unknown_fields)]
-#[schemars(example = "example_input")]
-pub struct GeneratorInputSchema {
-    /// Protocol version (currently 1)
-    pub version: u32,
+pub struct GeneratorRequestSchema {
     /// The embed tag that matched, e.g. "sql.one"
     pub tag: String,
     /// The embed data: either a string literal or a config object
@@ -40,6 +37,15 @@ pub struct GeneratorInputSchema {
     pub occurrence_index: u32,
     /// Generator configuration as derived from rescript.json
     pub config: GeneratorConfigSchema,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(deny_unknown_fields)]
+#[schemars(example = "example_batch_input")]
+pub struct BatchInputSchema {
+    /// Requests to process in order
+    pub requests: Vec<GeneratorRequestSchema>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
@@ -86,21 +92,24 @@ pub enum GeneratorOutputSchema {
     },
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(deny_unknown_fields)]
+pub struct BatchOutputSchema {
+    /// Results for each request in the same order
+    pub results: Vec<GeneratorOutputSchema>,
+}
+
 // Examples for schema docs
-fn example_input() -> GeneratorInputSchema {
-    GeneratorInputSchema {
-        version: 1,
-        tag: "sql.one".to_string(),
-        data: serde_json::json!("/* @name GetUser */ select * from users where id = :id"),
-        source: GeneratorSourceSchema {
-            path: "src/Foo.res".to_string(),
-            module: "Foo".to_string(),
-        },
-        occurrence_index: 1,
-        config: GeneratorConfigSchema {
-            extra_sources: vec!["schema.graphql".to_string()],
-            options: None,
-        },
+fn example_batch_input() -> BatchInputSchema {
+    BatchInputSchema {
+        requests: vec![GeneratorRequestSchema {
+            tag: "sql.one".to_string(),
+            data: serde_json::json!("/* @name GetUser */ select * from users where id = :id"),
+            source: GeneratorSourceSchema { path: "src/Foo.res".to_string(), module: "Foo".to_string() },
+            occurrence_index: 1,
+            config: GeneratorConfigSchema { extra_sources: vec!["schema.graphql".to_string()], options: None },
+        }],
     }
 }
 
@@ -110,23 +119,15 @@ fn example_output_ok() -> GeneratorOutputSchema {
     }
 }
 
-pub fn embedlang_input_schema() -> RootSchema {
-    schema_for!(GeneratorInputSchema)
-}
-
-pub fn embedlang_output_schema() -> RootSchema {
-    schema_for!(GeneratorOutputSchema)
-}
+pub fn embedlang_input_schema() -> RootSchema { schema_for!(BatchInputSchema) }
+pub fn embedlang_output_schema() -> RootSchema { schema_for!(BatchOutputSchema) }
 
 pub fn openapi_document() -> serde_json::Value {
     // Build a minimal OpenAPI 3.1 document with components only.
     let input = embedlang_input_schema();
     let output = embedlang_output_schema();
     let mut components = serde_json::Map::new();
-    components.insert(
-        "GeneratorInput".to_string(),
-        serde_json::to_value(&input.schema).unwrap_or(serde_json::json!({})),
-    );
+    components.insert("BatchInput".to_string(), serde_json::to_value(&input.schema).unwrap_or(serde_json::json!({})));
     // Inject discriminator for tagged union on `status` in OpenAPI doc
     let mut output_schema = serde_json::to_value(&output.schema).unwrap_or(serde_json::json!({}));
     if let serde_json::Value::Object(ref mut o) = output_schema {
@@ -135,7 +136,7 @@ pub fn openapi_document() -> serde_json::Value {
             serde_json::json!({"propertyName": "status"}),
         );
     }
-    components.insert("GeneratorOutput".to_string(), output_schema);
+    components.insert("BatchOutput".to_string(), output_schema);
     // Merge definitions (if any) into components as inline schemas with stable keys
     for (k, v) in input.definitions {
         components.insert(k, serde_json::to_value(v).unwrap());

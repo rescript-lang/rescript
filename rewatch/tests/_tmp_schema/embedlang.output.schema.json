@@ -1,56 +1,72 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "GeneratorOutputSchema",
-  "examples": [
-    {
-      "code": "let default = \"...\"",
-      "status": "ok"
-    }
+  "title": "BatchOutputSchema",
+  "type": "object",
+  "required": [
+    "results"
   ],
-  "oneOf": [
-    {
-      "type": "object",
-      "required": [
-        "code",
-        "status"
-      ],
-      "properties": {
-        "status": {
-          "type": "string",
-          "enum": [
-            "ok"
-          ]
-        },
-        "code": {
-          "description": "ReScript source code to write to generated module (.res)",
-          "type": "string"
-        }
+  "properties": {
+    "results": {
+      "description": "Results for each request in the same order",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GeneratorOutputSchema"
       }
-    },
-    {
-      "type": "object",
-      "required": [
-        "errors",
-        "status"
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "GeneratorOutputSchema": {
+      "examples": [
+        {
+          "code": "let default = \"...\"",
+          "status": "ok"
+        }
       ],
-      "properties": {
-        "status": {
-          "type": "string",
-          "enum": [
-            "error"
-          ]
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok"
+              ]
+            },
+            "code": {
+              "description": "ReScript source code to write to generated module (.res)",
+              "type": "string"
+            }
+          }
         },
-        "errors": {
-          "description": "Diagnostics mapped to the embed string",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/GenDiagItemSchema"
+        {
+          "type": "object",
+          "required": [
+            "errors",
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "errors": {
+              "description": "Diagnostics mapped to the embed string",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/GenDiagItemSchema"
+              }
+            }
           }
         }
-      }
-    }
-  ],
-  "definitions": {
+      ]
+    },
     "GenDiagItemSchema": {
       "type": "object",
       "required": [

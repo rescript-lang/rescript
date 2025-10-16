@@ -4,8 +4,7 @@ use super::packages::Package;
 use crate::config::{EmbedGenerator, EmbedsConfig};
 use ahash::AHashSet;
 use anyhow::{Context, Result, anyhow};
-use rayon::ThreadPoolBuilder;
-use rayon::prelude::*;
+// use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -56,7 +55,6 @@ pub struct EmbedIndexFile {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct GeneratorInput<'a> {
-    version: u32,
     tag: &'a str,
     data: &'a serde_json::Value,
     source: GeneratorSource<'a>,
@@ -86,6 +84,17 @@ enum GeneratorOutput {
     Ok { code: String },
     #[serde(rename_all = "camelCase")]
     Error { errors: serde_json::Value },
+}
+
+// Batch v2 protocol types
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BatchInput<'a> { requests: &'a [GeneratorInput<'a>] }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BatchOutput {
+    results: Vec<GeneratorOutput>,
 }
 
 // Diagnostics shape emitted by generators (best-effort typed parsing)
@@ -195,7 +204,7 @@ fn embeds_index_path_for_ast(ast_rel: &Path) -> PathBuf {
 
 // resolution map path no longer used
 
-fn read_index(index_path_abs: &Path) -> Result<EmbedIndexFile> {
+pub(crate) fn read_index(index_path_abs: &Path) -> Result<EmbedIndexFile> {
     let data = fs::read_to_string(index_path_abs)
         .with_context(|| format!("Failed reading embed index at {}", index_path_abs.display()))?;
     let idx: EmbedIndexFile = serde_json::from_str(&data)
@@ -203,15 +212,25 @@ fn read_index(index_path_abs: &Path) -> Result<EmbedIndexFile> {
     Ok(idx)
 }
 
-fn find_generator<'a>(cfg: &'a EmbedsConfig, tag: &str) -> Option<&'a EmbedGenerator> {
-    cfg.generators.iter().find(|g| g.tags.iter().any(|t| t == tag))
+// removed legacy helper; batch path uses a prebuilt map
+
+fn build_generator_map<'a>(cfg: &'a EmbedsConfig) -> HashMap<&'a str, &'a EmbedGenerator> {
+    let mut map: HashMap<&'a str, &'a EmbedGenerator> = HashMap::new();
+    for g in &cfg.generators {
+        for t in &g.tags {
+            map.entry(t.as_str()).or_insert(g);
+        }
+    }
+    map
 }
 
-fn run_generator(
+// Removed one-shot runner; batching is the only mode.
+
+fn run_generator_batch(
     generator: &EmbedGenerator,
     package: &Package,
-    input: &GeneratorInput,
-) -> Result<GeneratorOutput> {
+    inputs: &[GeneratorInput],
+) -> Result<Vec<GeneratorOutput>> {
     let mut cmd = Command::new(&generator.cmd);
     cmd.args(&generator.args);
     let cwd = generator
@@ -241,53 +260,53 @@ fn run_generator(
         )
     })?;
 
-    // Write input JSON
+    // Write batch input JSON
     if let Some(mut stdin) = child.stdin.take() {
-        let json = serde_json::to_string(input)?;
+        let req = BatchInput { requests: inputs };
+        let json = serde_json::to_string(&req)?;
         stdin
             .write_all(json.as_bytes())
-            .context("Failed to write generator stdin")?;
+            .context("Failed to write generator stdin (batch)")?;
     }
 
-    // Timeout handling
+    // Timeout per batch
     let timeout = Duration::from_millis(generator.timeout_ms.unwrap_or(10_000));
     let start = Instant::now();
     let output = loop {
-        if let Some(_status) = child.try_wait().context("Failed to poll generator")? {
-            // Child exited; collect stdout/stderr
+        if let Some(_status) = child.try_wait().context("Failed to poll generator (batch)")? {
             let out = child
                 .wait_with_output()
-                .context("Failed to read generator output")?;
+                .context("Failed to read generator output (batch)")?;
             break out;
         }
         if start.elapsed() >= timeout {
-            // Kill on timeout and report failure
             let _ = child.kill();
             return Err(anyhow!(
-                "Generator '{}' timed out after {}ms",
+                "Generator '{}' timed out after {}ms (batch)",
                 generator.id,
                 timeout.as_millis()
             ));
         }
         std::thread::sleep(Duration::from_millis(10));
     };
-
     if !output.status.success() {
         return Err(anyhow!(
-            "Generator '{}' failed with status {}",
+            "Generator '{}' failed with status {} (batch)",
             generator.id,
             output.status
         ));
     }
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let parsed: GeneratorOutput = serde_json::from_str(&stdout).with_context(|| {
+    let parsed: BatchOutput = serde_json::from_str(&stdout).with_context(|| {
         format!(
-            "Generator '{}' returned invalid JSON output: {}",
+            "Generator '{}' returned invalid JSON output (batch): {}",
             generator.id, stdout
         )
     })?;
-    Ok(parsed)
+    Ok(parsed.results)
 }
+
+// removed single-input wrapper; use run_generator_batch exclusively
 
 #[allow(clippy::too_many_arguments)]
 fn write_generated_file(
@@ -309,7 +328,7 @@ fn write_generated_file(
     writeln!(f, "// @sourceHash {header_hash}")?;
     writeln!(
         f,
-        "/* rewatch-embed: v1; tag={header_tag}; src={src_path}; idx={idx}; suffix={suffix}; entry=default; hash={header_hash}; gen={gen_id} */",
+        "/* rewatch-embed; tag={header_tag}; src={src_path}; idx={idx}; suffix={suffix}; entry=default; hash={header_hash}; gen={gen_id} */",
     )?;
     f.write_all(code.as_bytes())?;
     Ok(out_path)
@@ -321,356 +340,16 @@ pub fn process_module_embeds(
     _module_rel: &Path,
     ast_rel_path: &Path,
 ) -> Result<Vec<GeneratedModuleInfo>> {
-    let Some(effective) = package
-        .config
-        .get_effective_embeds_config(&build_state.project_context)
-    else {
-        // No embeds configured; still remove any stale generated files for this module
-        cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
-        return Ok(vec![]);
-    };
-
+    // Delegate to index-based processor (batching only)
     let build_dir = package.get_build_path();
     let index_rel = embeds_index_path_for_ast(ast_rel_path);
     let index_abs = build_dir.join(&index_rel);
     if !index_abs.exists() {
-        // No index for this module (no embeds found) — perform cleanup
         cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
         return Ok(vec![]);
     }
-
     let index = read_index(&index_abs)?;
-    if index.embeds.is_empty() {
-        // No embeds present — perform cleanup
-        cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
-        return Ok(vec![]);
-    }
-
-    // Prepare outDir
-    let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
-    // resolution map removed; only track generated modules
-    let mut generated: Vec<GeneratedModuleInfo> = Vec::new();
-    let mut _count_generated = 0u32;
-    let mut _count_reused = 0u32;
-    let mut _count_failed = 0u32;
-
-    log::debug!(
-        "Embeds: module {} — discovered {} embed(s)",
-        index.module,
-        index.embeds.len()
-    );
-
-    // Build jobs for parallel execution
-    struct OkGen {
-        code: String,
-        suffix: String,
-        tag: String,
-        occurrence_index: u32,
-        literal_hash: String,
-        generator_id: String,
-        target_module: String,
-    }
-    enum JobResult {
-        Reused { module_name: String, rel_path: PathBuf },
-        Ok(OkGen),
-        Failed,
-    }
-
-    let jobs: Vec<(usize, &EmbedEntry)> = index.embeds.iter().enumerate().collect();
-    let thread_cap = std::cmp::max(1, num_cpus::get() / 2);
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(std::cmp::min(thread_cap, jobs.len()))
-        .build()?;
-
-    let job_results: Vec<JobResult> = pool.install(|| {
-        jobs.par_iter()
-            .map(|(_idx_pos, embed)| {
-                let generator = match find_generator(effective, &embed.tag) {
-                    Some(g) => g,
-                    None => {
-                        log::error!(
-                            "EMBED_NO_GENERATOR: No generator configured for tag '{}' (module {})",
-                            embed.tag,
-                            index.module
-                        );
-                        return JobResult::Failed;
-                    }
-                };
-
-                let target_module = embed
-                    .target_module
-                    .clone()
-                    .unwrap_or_else(|| fallback_target_module(&index.module, embed));
-                log::debug!(
-                    "Embeds: {} #{} '{}': start",
-                    index.module,
-                    embed.occurrence_index,
-                    embed.tag
-                );
-
-                if let Some((existing_module_name, existing_rel_path)) =
-                    find_cached_generated(&out_dir_abs, &target_module, embed, generator, &package)
-                {
-                    log::debug!(
-                        "Embeds: {} #{} '{}': cache hit -> {}",
-                        index.module,
-                        embed.occurrence_index,
-                        embed.tag,
-                        existing_module_name
-                    );
-                    return JobResult::Reused { module_name: existing_module_name, rel_path: existing_rel_path };
-                }
-
-                log::debug!(
-                    "Embeds: {} #{} '{}': cache miss — run '{}'",
-                    index.module,
-                    embed.occurrence_index,
-                    embed.tag,
-                    generator.id
-                );
-
-                let input = GeneratorInput {
-                    version: 1,
-                    tag: &embed.tag,
-                    data: &embed.data,
-                    source: GeneratorSource {
-                        path: &index.source_path,
-                        module: &index.module,
-                    },
-                    occurrence_index: embed.occurrence_index,
-                    config: GeneratorConfig {
-                        extra_sources: &generator.extra_sources,
-                        options: None,
-                    },
-                };
-                let output = match run_generator(generator, &package, &input) {
-                    Ok(o) => o,
-                    Err(e) => {
-                        log::error!(
-                            "EMBED_GENERATOR_FAILED: {}:{} -> {}",
-                            index.source_path,
-                            embed.occurrence_index,
-                            e
-                        );
-                        // Also emit to compiler log for editor consumption
-                        let file_abs = package.get_build_path().join(&index.source_path);
-                        let mut msg = String::new();
-                        msg.push_str("  Syntax error!\n");
-                        msg.push_str(&format!(
-                            "  {}:{}:{}\n",
-                            file_abs.display(),
-                            embed.range.start.line,
-                            embed.range.start.column
-                        ));
-                        msg.push_str(&format!(
-                            "  Generator '{}' failed to run: {}\n\n",
-                            generator.id, e
-                        ));
-                        logs::append(&package, &msg);
-                        return JobResult::Failed;
-                    }
-                };
-                match output {
-                    GeneratorOutput::Ok { code } => {
-                        // Determine suffix deterministically: config.id or occurrence index
-                        let suffix_raw = match &embed.data {
-                            serde_json::Value::String(_) => embed.occurrence_index.to_string(),
-                            serde_json::Value::Object(map) => match map.get("id") {
-                                Some(serde_json::Value::String(s)) => s.clone(),
-                                _ => {
-                                    log::error!(
-                                        "EMBED_SYNTAX: config embed for tag '{}' in module {} must include id: string",
-                                        embed.tag,
-                                        index.module
-                                    );
-                                    return JobResult::Failed;
-                                }
-                            },
-                            _ => {
-                                log::error!(
-                                    "EMBED_SYNTAX: embed data for tag '{}' in module {} must be string or object",
-                                    embed.tag,
-                                    index.module
-                                );
-                                return JobResult::Failed;
-                            }
-                        };
-                        JobResult::Ok(OkGen {
-                            code,
-                            suffix: suffix_raw,
-                            tag: embed.tag.clone(),
-                            occurrence_index: embed.occurrence_index,
-                            literal_hash: embed.literal_hash.clone(),
-                            generator_id: generator.id.clone(),
-                            target_module,
-                        })
-                    }
-                    GeneratorOutput::Error { errors } => {
-                        let build_dir = package.get_build_path();
-                        let src_abs = build_dir.join(&index.source_path);
-                        let diags: Vec<GenDiagItem> = match &errors {
-                            serde_json::Value::Array(arr) => arr
-                                .clone()
-                                .into_iter()
-                                .filter_map(|v| serde_json::from_value::<GenDiagItem>(v).ok())
-                                .collect(),
-                            _ => vec![],
-                        };
-                        if diags.is_empty() {
-                            log::error!(
-                                "EMBED_GENERATOR_FAILED: {}:{} -> {}",
-                                index.source_path,
-                                embed.occurrence_index,
-                                errors
-                            );
-                            // Emit a generic compiler-log entry
-                            let file_abs = package.get_build_path().join(&index.source_path);
-                            let mut msg = String::new();
-                            msg.push_str("  Syntax error!\n");
-                            msg.push_str(&format!(
-                                "  {}:{}:{}\n",
-                                file_abs.display(),
-                                embed.range.start.line,
-                                embed.range.start.column
-                            ));
-                            msg.push_str(&format!("  Generator '{}' reported an error.\n\n", generator.id));
-                            logs::append(&package, &msg);
-                        } else {
-                            for d in diags {
-                                let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
-                                    (Some(s), Some(e)) => {
-                                        let (sl, sc) = map_embed_pos_to_abs(embed, s);
-                                        let (el, ec) = map_embed_pos_to_abs(embed, e);
-                                        (sl, sc, Some(el), Some(ec))
-                                    }
-                                    (Some(s), None) => {
-                                        let (sl, sc) = map_embed_pos_to_abs(embed, s);
-                                        (sl, sc, None, None)
-                                    }
-                                    _ => (embed.range.start.line, embed.range.start.column, None, None),
-                                };
-                                let frame =
-                                    render_code_frame(&src_abs, abs_line, abs_col, end_line, end_col, 1);
-                                let code_sfx = d.code.as_deref().unwrap_or("");
-                                let sev = d.severity.as_deref().unwrap_or("error");
-                                if code_sfx.is_empty() {
-                                    log::error!(
-                                        "EMBED_GENERATOR_FAILED ({sev}) at {}:{}:{}\n{}\n{}",
-                                        index.source_path,
-                                        abs_line,
-                                        abs_col,
-                                        d.message,
-                                        frame
-                                    );
-                                } else {
-                                    log::error!(
-                                        "EMBED_GENERATOR_FAILED[{code}] ({sev}) at {}:{}:{}\n{}\n{}",
-                                        index.source_path,
-                                        abs_line,
-                                        abs_col,
-                                        d.message,
-                                        frame,
-                                        code = code_sfx
-                                    );
-                                }
-
-                                // Emit editor-friendly diagnostics in .compiler.log
-                                let mut out = String::new();
-                                match sev {
-                                    "warning" => out.push_str("  Warning number 999\n"),
-                                    _ => out.push_str("  Syntax error!\n"),
-                                }
-                                let file_abs = package.get_build_path().join(&index.source_path);
-                                // Range line: file:line:col[-end] or file:line:col-endCol (same line)
-                                let range_suffix = match (end_line, end_col) {
-                                    (Some(el), Some(ec)) if el != abs_line => format!("-{el}:{ec}"),
-                                    (Some(_), Some(ec)) => format!("-{ec}"),
-                                    _ => String::new(),
-                                };
-                                out.push_str(&format!(
-                                    "  {}:{}:{}{}\n",
-                                    file_abs.display(),
-                                    abs_line,
-                                    abs_col,
-                                    range_suffix
-                                ));
-                                // Message lines
-                                for line in d.message.lines() {
-                                    out.push_str("  ");
-                                    out.push_str(line);
-                                    out.push('\n');
-                                }
-                                if !frame.is_empty() {
-                                    for line in frame.lines() {
-                                        out.push_str("  ");
-                                        out.push_str(line);
-                                        out.push('\n');
-                                    }
-                                }
-                                out.push('\n');
-                                logs::append(&package, &out);
-                            }
-                        }
-                        JobResult::Failed
-                    }
-                }
-            })
-            .collect()
-    });
-
-    // Merge results in stable order (original discovery order)
-    let mut ordered: Vec<(usize, JobResult)> = jobs.into_iter().map(|(i, _)| i).zip(job_results).collect();
-    ordered.sort_by_key(|(i, _)| *i);
-
-    for (_i, jr) in ordered.into_iter() {
-        match jr {
-            JobResult::Reused {
-                module_name,
-                rel_path,
-            } => {
-                generated.push(GeneratedModuleInfo {
-                    module_name,
-                    rel_path,
-                });
-                _count_reused += 1;
-            }
-            JobResult::Ok(ok) => {
-                // Use compiler-provided target module to decide file name
-                let gen_file_stem = ok.target_module.clone();
-                let gen_file_name = format!("{gen_file_stem}.res");
-                let out_path_abs = write_generated_file(
-                    &out_dir_abs,
-                    &gen_file_name,
-                    &ok.literal_hash,
-                    &ok.tag,
-                    &index.source_path,
-                    ok.occurrence_index,
-                    &ok.suffix,
-                    // generator id omitted here (unknown); use a placeholder for header
-                    // but better carry it - adjust above to include; for now leave blank
-                    &ok.generator_id,
-                    &ok.code,
-                )?;
-                let rel_path = out_path_abs
-                    .strip_prefix(&package.path)
-                    .unwrap_or(&out_path_abs)
-                    .to_path_buf();
-                let module_name = gen_file_stem;
-                generated.push(GeneratedModuleInfo {
-                    module_name,
-                    rel_path,
-                });
-                _count_generated += 1;
-            }
-            JobResult::Failed => {
-                _count_failed += 1;
-            }
-        }
-    }
-    // Cleanup: remove any stale generated files for this module that weren't produced this run
-    cleanup_stale_generated_for_module(&package, ast_rel_path, &generated)?;
-
-    Ok(generated)
+    process_module_embeds_with_index(&build_state.project_context, package, ast_rel_path, &index)
 }
 
 pub fn count_planned_invocations(
@@ -696,24 +375,7 @@ pub fn count_planned_invocations(
         return Ok((0, 0));
     }
 
-    let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
-    let mut reused = 0u32;
-    let mut invocations = 0u32;
-    for embed in &index.embeds {
-        let Some(generator) = find_generator(effective, &embed.tag) else {
-            continue;
-        };
-        let target_module = embed
-            .target_module
-            .clone()
-            .unwrap_or_else(|| fallback_target_module(&index.module, embed));
-        if let Some(_hit) = find_cached_generated(&out_dir_abs, &target_module, embed, generator, package) {
-            reused += 1;
-        } else {
-            invocations += 1;
-        }
-    }
-    Ok((invocations, reused))
+    count_planned_invocations_from_index(package, effective, &index)
 }
 
 fn read_first_line(path: &Path) -> Option<String> {
@@ -814,7 +476,7 @@ fn find_cached_generated(
     None
 }
 
-fn cleanup_stale_generated_for_module(
+pub fn cleanup_stale_generated_for_module(
     package: &Package,
     ast_rel_path: &Path,
     generated: &[GeneratedModuleInfo],
@@ -879,4 +541,540 @@ pub fn add_generated_modules_to_state(
         };
         state.insert_module(&g.module_name, module);
     }
+}
+
+// New: compute planned invocations using a preloaded index and a prebuilt generator map
+pub fn count_planned_invocations_from_index(
+    package: &Package,
+    effective: &EmbedsConfig,
+    index: &EmbedIndexFile,
+) -> Result<(u32, u32)> {
+    if index.embeds.is_empty() {
+        return Ok((0, 0));
+    }
+    let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
+    let gmap = build_generator_map(effective);
+    let mut reused = 0u32;
+    let mut invocations = 0u32;
+    for embed in &index.embeds {
+        let Some(generator) = gmap.get(embed.tag.as_str()) else {
+            continue;
+        };
+        let target_module = embed
+            .target_module
+            .clone()
+            .unwrap_or_else(|| fallback_target_module(&index.module, embed));
+        if let Some(_hit) = find_cached_generated(&out_dir_abs, &target_module, embed, generator, package) {
+            reused += 1;
+        } else {
+            invocations += 1;
+        }
+    }
+    Ok((invocations, reused))
+}
+
+// New: process a module’s embeds using a preloaded index and generator map
+pub fn process_module_embeds_with_index(
+    project_context: &crate::project_context::ProjectContext,
+    package: Package,
+    ast_rel_path: &Path,
+    index: &EmbedIndexFile,
+) -> Result<Vec<GeneratedModuleInfo>> {
+    // Batch-only mode
+    /*
+
+    struct OkGen {
+        code: String,
+        suffix: String,
+        tag: String,
+        occurrence_index: u32,
+        literal_hash: String,
+        generator_id: String,
+        target_module: String,
+    }
+    enum JobResult {
+        Reused { module_name: String, rel_path: PathBuf },
+        Ok(OkGen),
+        Failed,
+    }
+
+    let jobs: Vec<(usize, &EmbedEntry)> = index.embeds.iter().enumerate().collect();
+    let job_results: Vec<JobResult> = jobs
+        .par_iter()
+        .map(|(_idx_pos, embed)| {
+            let generator = match gmap.get(embed.tag.as_str()) {
+                Some(g) => *g,
+                None => {
+                    log::error!(
+                        "EMBED_NO_GENERATOR: No generator configured for tag '{}' (module {})",
+                        embed.tag,
+                        index.module
+                    );
+                    return JobResult::Failed;
+                }
+            };
+            let target_module = embed
+                .target_module
+                .clone()
+                .unwrap_or_else(|| fallback_target_module(&index.module, embed));
+            log::debug!(
+                "Embeds: {} #{} '{}': start",
+                index.module,
+                embed.occurrence_index,
+                embed.tag
+            );
+            if let Some((existing_module_name, existing_rel_path)) =
+                find_cached_generated(&out_dir_abs, &target_module, embed, generator, &package)
+            {
+                log::debug!(
+                    "Embeds: {} #{} '{}': cache hit -> {}",
+                    index.module,
+                    embed.occurrence_index,
+                    embed.tag,
+                    existing_module_name
+                );
+                return JobResult::Reused { module_name: existing_module_name, rel_path: existing_rel_path };
+            }
+            log::debug!(
+                "Embeds: {} #{} '{}': cache miss — run '{}'",
+                index.module,
+                embed.occurrence_index,
+                embed.tag,
+                generator.id
+            );
+            let input = GeneratorInput {
+                version: 1,
+                tag: &embed.tag,
+                data: &embed.data,
+                source: GeneratorSource { path: &index.source_path, module: &index.module },
+                occurrence_index: embed.occurrence_index,
+                config: GeneratorConfig { extra_sources: &generator.extra_sources, options: None },
+            };
+            let output = match run_generator(generator, &package, &input) {
+                Ok(o) => o,
+                Err(e) => {
+                    log::error!(
+                        "EMBED_GENERATOR_FAILED: {}:{} -> {}",
+                        index.source_path,
+                        embed.occurrence_index,
+                        e
+                    );
+                    // Also emit to compiler log for editor consumption
+                    let file_abs = package.get_build_path().join(&index.source_path);
+                    let mut msg = String::new();
+                    msg.push_str("  Syntax error!\n");
+                    msg.push_str(&format!(
+                        "  {}:{}:{}\n",
+                        file_abs.display(),
+                        embed.range.start.line,
+                        embed.range.start.column
+                    ));
+                    msg.push_str(&format!(
+                        "  Generator '{}' failed to run: {}\n\n",
+                        generator.id, e
+                    ));
+                    logs::append(&package, &msg);
+                    return JobResult::Failed;
+                }
+            };
+            match output {
+                GeneratorOutput::Ok { code } => {
+                    let suffix_raw = match &embed.data {
+                        serde_json::Value::String(_) => embed.occurrence_index.to_string(),
+                        serde_json::Value::Object(map) => match map.get("id") {
+                            Some(serde_json::Value::String(s)) => s.clone(),
+                            _ => {
+                                log::error!(
+                                    "EMBED_SYNTAX: config embed for tag '{}' in module {} must include id: string",
+                                    embed.tag,
+                                    index.module
+                                );
+                                return JobResult::Failed;
+                            }
+                        },
+                        _ => {
+                            log::error!(
+                                "EMBED_SYNTAX: embed data for tag '{}' in module {} must be string or object",
+                                embed.tag,
+                                index.module
+                            );
+                            return JobResult::Failed;
+                        }
+                    };
+                    JobResult::Ok(OkGen {
+                        code,
+                        suffix: suffix_raw,
+                        tag: embed.tag.clone(),
+                        occurrence_index: embed.occurrence_index,
+                        literal_hash: embed.literal_hash.clone(),
+                        generator_id: generator.id.clone(),
+                        target_module,
+                    })
+                }
+                GeneratorOutput::Error { errors } => {
+                    let build_dir = package.get_build_path();
+                    let src_abs = build_dir.join(&index.source_path);
+                    let diags: Vec<GenDiagItem> = match &errors {
+                        serde_json::Value::Array(arr) => arr
+                            .clone()
+                            .into_iter()
+                            .filter_map(|v| serde_json::from_value::<GenDiagItem>(v).ok())
+                            .collect(),
+                        _ => vec![],
+                    };
+                    if diags.is_empty() {
+                        log::error!(
+                            "EMBED_GENERATOR_FAILED: {}:{} -> {}",
+                            index.source_path,
+                            embed.occurrence_index,
+                            errors
+                        );
+                        let file_abs = package.get_build_path().join(&index.source_path);
+                        let mut msg = String::new();
+                        msg.push_str("  Syntax error!\n");
+                        msg.push_str(&format!(
+                            "  {}:{}:{}\n",
+                            file_abs.display(),
+                            embed.range.start.line,
+                            embed.range.start.column
+                        ));
+                        msg.push_str(&format!("  Generator '{}' reported an error.\n\n", generator.id));
+                        logs::append(&package, &msg);
+                    } else {
+                        for d in diags {
+                            let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
+                                (Some(s), Some(e)) => {
+                                    let (sl, sc) = map_embed_pos_to_abs(embed, s);
+                                    let (el, ec) = map_embed_pos_to_abs(embed, e);
+                                    (sl, sc, Some(el), Some(ec))
+                                }
+                                (Some(s), None) => {
+                                    let (sl, sc) = map_embed_pos_to_abs(embed, s);
+                                    (sl, sc, None, None)
+                                }
+                                _ => (embed.range.start.line, embed.range.start.column, None, None),
+                            };
+                            let frame = render_code_frame(&src_abs, abs_line, abs_col, end_line, end_col, 1);
+                            let code_sfx = d.code.as_deref().unwrap_or("");
+                            let sev = d.severity.as_deref().unwrap_or("error");
+                            if code_sfx.is_empty() {
+                                log::error!(
+                                    "EMBED_GENERATOR_FAILED ({sev}) at {}:{}:{}\n{}\n{}",
+                                    index.source_path,
+                                    abs_line,
+                                    abs_col,
+                                    d.message,
+                                    frame
+                                );
+                            } else {
+                                log::error!(
+                                    "EMBED_GENERATOR_FAILED[{code}] ({sev}) at {}:{}:{}\n{}\n{}",
+                                    index.source_path,
+                                    abs_line,
+                                    abs_col,
+                                    d.message,
+                                    frame,
+                                    code = code_sfx
+                                );
+                            }
+
+                            // Emit editor-friendly diagnostics in .compiler.log
+                            let mut out = String::new();
+                            match sev {
+                                "warning" => out.push_str("  Warning number 999\n"),
+                                _ => out.push_str("  Syntax error!\n"),
+                            }
+                            let file_abs = package.get_build_path().join(&index.source_path);
+                            let range_suffix = match (end_line, end_col) {
+                                (Some(el), Some(ec)) if el != abs_line => format!("-{el}:{ec}"),
+                                (Some(_), Some(ec)) => format!("-{ec}"),
+                                _ => String::new(),
+                            };
+                            out.push_str(&format!(
+                                "  {}:{}:{}{}\n",
+                                file_abs.display(),
+                                abs_line,
+                                abs_col,
+                                range_suffix
+                            ));
+                            for line in d.message.lines() {
+                                out.push_str("  ");
+                                out.push_str(line);
+                                out.push('\n');
+                            }
+                            if !frame.is_empty() {
+                                for line in frame.lines() {
+                                    out.push_str("  ");
+                                    out.push_str(line);
+                                    out.push('\n');
+                                }
+                            }
+                            out.push('\n');
+                            logs::append(&package, &out);
+                        }
+                    }
+                    JobResult::Failed
+                }
+            }
+        })
+        .collect();
+
+    let mut ordered: Vec<(usize, JobResult)> = jobs.into_iter().map(|(i, _)| i).zip(job_results).collect();
+    ordered.sort_by_key(|(i, _)| *i);
+    for (_i, jr) in ordered.into_iter() {
+        match jr {
+            JobResult::Reused { module_name, rel_path } => {
+                generated.push(GeneratedModuleInfo { module_name, rel_path });
+            }
+            JobResult::Ok(ok) => {
+                let gen_file_stem = ok.target_module.clone();
+                let gen_file_name = format!("{gen_file_stem}.res");
+                let out_path_abs = write_generated_file(
+                    &out_dir_abs,
+                    &gen_file_name,
+                    &ok.literal_hash,
+                    &ok.tag,
+                    &index.source_path,
+                    ok.occurrence_index,
+                    &ok.suffix,
+                    &ok.generator_id,
+                    &ok.code,
+                )?;
+                let rel_path = out_path_abs
+                    .strip_prefix(&package.path)
+                    .unwrap_or(&out_path_abs)
+                    .to_path_buf();
+                let module_name = gen_file_stem;
+                generated.push(GeneratedModuleInfo { module_name, rel_path });
+            }
+            JobResult::Failed => {}
+        }
+    }
+    cleanup_stale_generated_for_module(&package, ast_rel_path, &generated)?;
+    Ok(generated)
+    */
+    process_module_embeds_with_index_batched(project_context, package, ast_rel_path, index)
+}
+
+// Batch implementation (v2): group per generator and run one process per batch
+fn process_module_embeds_with_index_batched(
+    project_context: &crate::project_context::ProjectContext,
+    package: Package,
+    ast_rel_path: &Path,
+    index: &EmbedIndexFile,
+) -> Result<Vec<GeneratedModuleInfo>> {
+    let Some(effective) = package
+        .config
+        .get_effective_embeds_config(project_context)
+    else {
+        cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
+        return Ok(vec![]);
+    };
+    if index.embeds.is_empty() {
+        cleanup_stale_generated_for_module(&package, ast_rel_path, &[])?;
+        return Ok(vec![]);
+    }
+    let gmap = build_generator_map(effective);
+    let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
+    let mut generated: Vec<GeneratedModuleInfo> = Vec::new();
+
+    use ahash::AHashMap;
+    struct MissItem<'a> {
+        embed: &'a EmbedEntry,
+        target_module: String,
+    }
+    let mut groups: AHashMap<String, (String, Vec<MissItem>)> = AHashMap::new();
+    let mut gen_order: Vec<String> = Vec::new();
+
+    for embed in &index.embeds {
+        let generator = match gmap.get(embed.tag.as_str()) {
+            Some(g) => *g,
+            None => {
+                log::error!(
+                    "EMBED_NO_GENERATOR: No generator configured for tag '{}' (module {})",
+                    embed.tag, index.module
+                );
+                continue;
+            }
+        };
+        let target_module = embed
+            .target_module
+            .clone()
+            .unwrap_or_else(|| fallback_target_module(&index.module, embed));
+        if let Some((existing_module_name, existing_rel_path)) =
+            find_cached_generated(&out_dir_abs, &target_module, embed, generator, &package)
+        {
+            generated.push(GeneratedModuleInfo { module_name: existing_module_name, rel_path: existing_rel_path });
+            continue;
+        }
+        let entry = groups.entry(generator.id.clone()).or_insert_with(|| (embed.tag.clone(), Vec::new()));
+        if entry.1.is_empty() {
+            gen_order.push(generator.id.clone());
+        }
+        entry.1.push(MissItem { embed, target_module });
+    }
+
+    for gen_id in gen_order {
+        if let Some((tag_sample, items)) = groups.remove(&gen_id) {
+            let generator = gmap.get(tag_sample.as_str()).unwrap();
+            let inputs: Vec<GeneratorInput> = items
+                .iter()
+                .map(|it| GeneratorInput {
+                    tag: &it.embed.tag,
+                    data: &it.embed.data,
+                    source: GeneratorSource { path: &index.source_path, module: &index.module },
+                    occurrence_index: it.embed.occurrence_index,
+                    config: GeneratorConfig { extra_sources: &generator.extra_sources, options: None },
+                })
+                .collect();
+            let batch_res = run_generator_batch(generator, &package, &inputs);
+            if let Ok(results) = batch_res {
+                for (it, res) in items.iter().zip(results.into_iter()) {
+                        match res {
+                            GeneratorOutput::Ok { code } => {
+                                let suffix_raw = match &it.embed.data {
+                                    serde_json::Value::String(_) => it.embed.occurrence_index.to_string(),
+                                    serde_json::Value::Object(map) => match map.get("id") {
+                                        Some(serde_json::Value::String(s)) => s.clone(),
+                                        _ => it.embed.occurrence_index.to_string(),
+                                    },
+                                    _ => it.embed.occurrence_index.to_string(),
+                                };
+                                let gen_file_stem = it.target_module.clone();
+                                let gen_file_name = format!("{gen_file_stem}.res");
+                                let out_path_abs = write_generated_file(
+                                    &out_dir_abs,
+                                    &gen_file_name,
+                                    &it.embed.literal_hash,
+                                    &it.embed.tag,
+                                    &index.source_path,
+                                    it.embed.occurrence_index,
+                                    &suffix_raw,
+                                    &generator.id,
+                                    &code,
+                                )?;
+                                let rel_path = out_path_abs
+                                    .strip_prefix(&package.path)
+                                    .unwrap_or(&out_path_abs)
+                                    .to_path_buf();
+                                generated.push(GeneratedModuleInfo { module_name: gen_file_stem, rel_path });
+                            }
+                            GeneratorOutput::Error { errors } => {
+                                let src_abs = package.get_build_path().join(&index.source_path);
+                                let diags: Vec<GenDiagItem> = match &errors {
+                                    serde_json::Value::Array(arr) => arr
+                                        .clone()
+                                        .into_iter()
+                                        .filter_map(|v| serde_json::from_value::<GenDiagItem>(v).ok())
+                                        .collect(),
+                                    _ => vec![],
+                                };
+                                if diags.is_empty() {
+                                    log::error!(
+                                        "EMBED_GENERATOR_FAILED: {}:{} -> {}",
+                                        index.source_path,
+                                        it.embed.occurrence_index,
+                                        errors
+                                    );
+                                    let file_abs = package.get_build_path().join(&index.source_path);
+                                    let mut msg = String::new();
+                                    msg.push_str("  Syntax error!\n");
+                                    msg.push_str(&format!(
+                                        "  {}:{}:{}\n",
+                                        file_abs.display(),
+                                        it.embed.range.start.line,
+                                        it.embed.range.start.column
+                                    ));
+                                    msg.push_str(&format!("  Generator '{}' reported an error.\n\n", generator.id));
+                                    logs::append(&package, &msg);
+                                } else {
+                                    for d in diags {
+                                        let (abs_line, abs_col, end_line, end_col) = match (&d.start, &d.end) {
+                                            (Some(s), Some(e)) => {
+                                                let (sl, sc) = map_embed_pos_to_abs(it.embed, s);
+                                                let (el, ec) = map_embed_pos_to_abs(it.embed, e);
+                                                (sl, sc, Some(el), Some(ec))
+                                            }
+                                            (Some(s), None) => {
+                                                let (sl, sc) = map_embed_pos_to_abs(it.embed, s);
+                                                (sl, sc, None, None)
+                                            }
+                                            _ => (it.embed.range.start.line, it.embed.range.start.column, None, None),
+                                        };
+                                        let frame = render_code_frame(&src_abs, abs_line, abs_col, end_line, end_col, 1);
+                                        let code_sfx = d.code.as_deref().unwrap_or("");
+                                        let sev = d.severity.as_deref().unwrap_or("error");
+                                        if code_sfx.is_empty() {
+                                            log::error!(
+                                                "EMBED_GENERATOR_FAILED ({sev}) at {}:{}:{}\n{}\n{}",
+                                                index.source_path,
+                                                abs_line,
+                                                abs_col,
+                                                d.message,
+                                                frame
+                                            );
+                                        } else {
+                                            log::error!(
+                                                "EMBED_GENERATOR_FAILED[{code}] ({sev}) at {}:{}:{}\n{}\n{}",
+                                                index.source_path,
+                                                abs_line,
+                                                abs_col,
+                                                d.message,
+                                                frame,
+                                                code = code_sfx
+                                            );
+                                        }
+                                        let mut out = String::new();
+                                        match sev {
+                                            "warning" => out.push_str("  Warning number 999\n"),
+                                            _ => out.push_str("  Syntax error!\n"),
+                                        }
+                                        let file_abs = package.get_build_path().join(&index.source_path);
+                                        let range_suffix = match (end_line, end_col) {
+                                            (Some(el), Some(ec)) if el != abs_line => format!("-{el}:{ec}"),
+                                            (Some(_), Some(ec)) => format!("-{ec}"),
+                                            _ => String::new(),
+                                        };
+                                        out.push_str(&format!("  {}:{}:{}{}\n", file_abs.display(), abs_line, abs_col, range_suffix));
+                                        for line in d.message.lines() {
+                                            out.push_str("  ");
+                                            out.push_str(line);
+                                            out.push('\n');
+                                        }
+                                        if !frame.is_empty() {
+                                            for line in frame.lines() {
+                                                out.push_str("  ");
+                                                out.push_str(line);
+                                                out.push('\n');
+                                            }
+                                        }
+                                        out.push('\n');
+                                        logs::append(&package, &out);
+                                    }
+                                }
+                            }
+                        }
+                    }
+            } else if let Err(e) = batch_res {
+                for it in &items {
+                    let file_abs = package.get_build_path().join(&index.source_path);
+                    let mut msg = String::new();
+                    msg.push_str("  Syntax error!\n");
+                    msg.push_str(&format!(
+                        "  {}:{}:{}\n",
+                        file_abs.display(),
+                        it.embed.range.start.line,
+                        it.embed.range.start.column
+                    ));
+                    msg.push_str(&format!(
+                        "  Generator '{}' failed to run (batch): {}\n\n",
+                        generator.id, e
+                    ));
+                    logs::append(&package, &msg);
+                }
+            }
+        }
+    }
+    cleanup_stale_generated_for_module(&package, ast_rel_path, &generated)?;
+    Ok(generated)
 }

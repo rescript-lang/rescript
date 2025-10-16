@@ -4,5 +4,5 @@
 
 === Generated Module ===
 // @sourceHash 7a747113937e51914c6bac6daa511d38
-/* rewatch-embed: v1; tag=sql.one; src=/_tmp_embeds/rewatch_proj/src/Foo.res; idx=1; suffix=1; entry=default; hash=7a747113937e51914c6bac6daa511d38; gen=sqlgen */
+/* rewatch-embed; tag=sql.one; src=/_tmp_embeds/rewatch_proj/src/Foo.res; idx=1; suffix=1; entry=default; hash=7a747113937e51914c6bac6daa511d38; gen=sqlgen */
 let default = "generated-from: Hello"

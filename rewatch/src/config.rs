@@ -325,6 +325,8 @@ fn default_path() -> PathBuf {
 pub struct EmbedsConfig {
     pub generators: Vec<EmbedGenerator>,
     pub out_dir: Option<String>,
+    #[serde(default)]
+    pub batching: Option<EmbedBatching>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -340,6 +342,27 @@ pub struct EmbedGenerator {
     #[serde(default)]
     pub extra_sources: Vec<String>,
     pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub mode: Option<EmbedGeneratorMode>,
+    #[serde(default)]
+    pub batching: Option<EmbedBatching>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum EmbedGeneratorMode {
+    #[serde(rename = "oneshot")]
+    Oneshot,
+    #[serde(rename = "daemon")]
+    Daemon,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EmbedBatching {
+    pub max_items: Option<usize>,
+    pub max_bytes: Option<usize>,
+    pub max_latency_ms: Option<u64>,
 }
 
 impl EmbedsConfig {
