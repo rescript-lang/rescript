@@ -1,15 +1,15 @@
 let fromStringExn1 = "123"->BigInt.fromStringOrThrow
 let fromStringExn2 = BigInt.fromStringOrThrow("123")
 
-let land1 = 7n & 4n
-let land2 = 7n & 4n
+let land1 = 7n &&& 4n
+let land2 = 7n &&& 4n
 let land3 = 7n->BigInt.toString->BigInt.fromStringOrThrow->BigInt.bitwiseAnd(4n)
 
-let lor1 = 7n->BigInt.bitwiseOr(4n)
-let lor2 = BigInt.bitwiseOr(7n, 4n)
+let lor1 = 7n ||| 4n
+let lor2 = 7n ||| 4n
 
-let lxor1 = 7n ^ 4n
-let lxor2 = 7n ^ 4n
+let lxor1 = 7n ^^^ 4n
+let lxor2 = 7n ^^^ 4n
 
 let lnot1 = 2n->Js.BigInt.lnot
 let lnot2 = Js.BigInt.lnot(2n)
@@ -30,16 +30,16 @@ let toLocaleString2 = BigInt.toLocaleString(123n)
 let stdlib_fromStringExn1 = "123"->BigInt.fromStringOrThrow
 let stdlib_fromStringExn2 = BigInt.fromStringOrThrow("123")
 
-let stdlib_land1 = 7n & 4n
-let stdlib_land2 = 7n & 4n
+let stdlib_land1 = 7n &&& 4n
+let stdlib_land2 = 7n &&& 4n
 
-let stdlib_lor1 = BigInt.bitwiseOr(7n, 4n)
+let stdlib_lor1 = 7n ||| 4n
 
-let stdlib_lxor1 = 7n ^ 4n
-let stdlib_lxor2 = 7n ^ 4n
+let stdlib_lxor1 = 7n ^^^ 4n
+let stdlib_lxor2 = 7n ^^^ 4n
 
-let stdlib_lnot1 = ~2n
-let stdlib_lnot2 = ~2n
+let stdlib_lnot1 = ~~~2n
+let stdlib_lnot2 = ~~~2n
 
 let stdlib_lsl1 = 4n << 1n
 let stdlib_lsl2 = 4n << 1n

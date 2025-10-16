@@ -339,7 +339,7 @@ external ignore: bigint => unit = "%ignore"
 /**
 `land(a, b)` calculates the bitwise AND of two bigints.
 
-**Deprecated:** Use `&` operator or `bitwiseAnd` instead.
+**Deprecated:** Use `&&&` operator or `bitwiseAnd` instead.
 
 ## Examples
 
@@ -348,8 +348,8 @@ BigInt.land(7n, 4n) == 4n
 ```
 */
 @deprecated({
-  reason: "Use `&` operator or `bitwiseAnd` instead.",
-  migrate: %insert.unlabelledArgument(0) & %insert.unlabelledArgument(1),
+  reason: "Use `&&&` operator or `bitwiseAnd` instead.",
+  migrate: %insert.unlabelledArgument(0) &&& %insert.unlabelledArgument(1),
   migrateInPipeChain: BigInt.bitwiseAnd(),
 })
 external land: (bigint, bigint) => bigint = "%andbigint"
@@ -357,7 +357,7 @@ external land: (bigint, bigint) => bigint = "%andbigint"
 /**
 `lor(a, b)` calculates the bitwise OR of two bigints.
 
-**Deprecated:** Use `bitwiseOr` instead.
+**Deprecated:** Use `|||` operator or `bitwiseOr` instead.
 
 ## Examples
 
@@ -366,15 +366,16 @@ BigInt.lor(7n, 4n) == 7n
 ```
 */
 @deprecated({
-  reason: "Use `bitwiseOr` instead.",
-  migrate: BigInt.bitwiseOr(),
+  reason: "Use `|||` operator or `bitwiseOr` instead.",
+  migrate: %insert.unlabelledArgument(0) ||| %insert.unlabelledArgument(1),
+  migrateInPipeChain: BigInt.bitwiseOr(),
 })
 external lor: (bigint, bigint) => bigint = "%orbigint"
 
 /**
 `lxor(a, b)` calculates the bitwise XOR of two bigints.
 
-**Deprecated:** Use `^` operator or `bitwiseXor` instead.
+**Deprecated:** Use `^^^` operator or `bitwiseXor` instead.
 
 ## Examples
 
@@ -383,8 +384,8 @@ BigInt.lxor(7n, 4n) == 3n
 ```
 */
 @deprecated({
-  reason: "Use `^` operator or `bitwiseXor` instead.",
-  migrate: %insert.unlabelledArgument(0) ^ %insert.unlabelledArgument(1),
+  reason: "Use `^^^` operator or `bitwiseXor` instead.",
+  migrate: %insert.unlabelledArgument(0) ^^^ %insert.unlabelledArgument(1),
   migrateInPipeChain: BigInt.bitwiseXor(),
 })
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
@@ -392,7 +393,7 @@ external lxor: (bigint, bigint) => bigint = "%xorbigint"
 /**
 `lnot(bigint)` calculates the bitwise NOT of a bigint.
 
-**Deprecated:** Use `~` operator or `bitwiseNot` instead.
+**Deprecated:** Use `~~~` operator or `bitwiseNot` instead.
 
 ## Examples
 
@@ -401,8 +402,8 @@ BigInt.lnot(2n) == -3n
 ```
 */
 @deprecated({
-  reason: "Use `~` operator or `bitwiseNot` instead.",
-  migrate: ~(%insert.unlabelledArgument(0)),
+  reason: "Use `~~~` operator or `bitwiseNot` instead.",
+  migrate: ~~~(%insert.unlabelledArgument(0)),
   migrateInPipeChain: BigInt.bitwiseNot(),
 })
 external lnot: bigint => bigint = "%bitnot_bigint"

@@ -56,13 +56,13 @@ external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
 
 external ignore: bigint => unit = "%ignore"
 
-@deprecated("Use `&` operator or `bitwiseAnd` instead.")
+@deprecated("Use `&&&` operator or `bitwiseAnd` instead.")
 external land: (bigint, bigint) => bigint = "%andbigint"
 
-@deprecated("Use `bitwiseOr` instead.")
+@deprecated("Use `|||` operator or `bitwiseOr` instead.")
 external lor: (bigint, bigint) => bigint = "%orbigint"
 
-@deprecated("Use `^` operator or `bitwiseXor` instead.")
+@deprecated("Use `^^^` operator or `bitwiseXor` instead.")
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
 @deprecated("Use `~` operator or `bitwiseNot` instead.")

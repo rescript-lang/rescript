@@ -49,28 +49,29 @@ external mod: (bigint, bigint) => bigint = "%modbigint"
 external \"**": (bigint, bigint) => bigint = "%powbigint"
 
 @deprecated({
-  reason: "Use `&` operator or `BigInt.bitwiseAnd` instead.",
-  migrate: %insert.unlabelledArgument(0) & %insert.unlabelledArgument(1),
+  reason: "Use `&&&` operator or `BigInt.bitwiseAnd` instead.",
+  migrate: %insert.unlabelledArgument(0) &&& %insert.unlabelledArgument(1),
   migrateInPipeChain: BigInt.bitwiseAnd(),
 })
 external land: (bigint, bigint) => bigint = "%andbigint"
 
 @deprecated({
-  reason: "Use `bitwiseOr` instead.",
-  migrate: BigInt.bitwiseOr(),
+  reason: "Use `|||` operator or `BigInt.bitwiseOr` instead.",
+  migrate: %insert.unlabelledArgument(0) ||| %insert.unlabelledArgument(1),
+  migrateInPipeChain: BigInt.bitwiseOr(),
 })
 external lor: (bigint, bigint) => bigint = "%orbigint"
 
 @deprecated({
-  reason: "Use `^` operator or `BigInt.bitwiseXor` instead.",
-  migrate: %insert.unlabelledArgument(0) ^ %insert.unlabelledArgument(1),
+  reason: "Use `^^^` operator or `BigInt.bitwiseXor` instead.",
+  migrate: %insert.unlabelledArgument(0) ^^^ %insert.unlabelledArgument(1),
   migrateInPipeChain: BigInt.bitwiseXor(),
 })
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
 @deprecated({
-  reason: "Use `~` operator or `BigInt.bitwiseNot` instead.",
-  migrate: ~(%insert.unlabelledArgument(0)),
+  reason: "Use `~~~` operator or `BigInt.bitwiseNot` instead.",
+  migrate: ~~~(%insert.unlabelledArgument(0)),
   migrateInPipeChain: BigInt.bitwiseNot(),
 })
 let lnot = x => lxor(x, -1n)
