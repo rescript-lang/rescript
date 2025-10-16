@@ -1,3 +1,3 @@
 === Foo.embeds.json ===
-{ "embeds" : [ { "tag" : "sql.one" , "data" : "/* @name Hello */ select 1" , "range" : { "end" : { "line" : 1 , "column" : 46 } , "start" : { "line" : 1 , "column" : 18 } } , "context" : "expr" , "literalHash" : "7a747113937e51914c6bac6daa511d38" , "occurrenceIndex" : 1 } ] , "module" : "Foo" , "version" : 1 , "sourcePath" : "./fixtures/embeds/src/Foo.res" }
+{ "embeds" : [ { "tag" : "sql.one" , "data" : "/* @name Hello */ select 1" , "range" : { "end" : { "line" : 1 , "column" : 46 } , "start" : { "line" : 1 , "column" : 18 } } , "context" : "expr" , "literalHash" : "7a747113937e51914c6bac6daa511d38" , "targetModule" : "Foo__embed_sql_one_1" , "occurrenceIndex" : 1 } ] , "module" : "Foo" , "version" : 1 , "sourcePath" : "./fixtures/embeds/src/Foo.res" }
 === Rewritten Source ===

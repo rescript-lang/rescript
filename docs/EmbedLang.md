@@ -30,8 +30,9 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
     - or `let query = ::sql.one("/* @name GetUser */ select * from users where id = :id")`
   - a config record literal, for example:
     - `let query = ::sql.one({id: "GetUser", query: "select * from users where id = :id"})`
+    - The record payload must include an `id` field of type string. The `id` is required and must match `[A-Za-z][A-Za-z0-9_]*`.
   - Equivalent extension form: `%embed.sql.one("...")` (printed as `::sql.one(...)`). Note: plain `%sql.one("...")` is not treated as an embed and remains available for other PPXs.
-- The compiler detects these embeds during parsing and records them. Rewrites happen inline during the normal compile using a PPX that deterministically computes the target generated module name — no second pass or resolution map.
+- The compiler detects these embeds during parsing and records them. Rewrites happen inline during the normal compile using a PPX that deterministically computes the target generated module name — no second pass or resolution map. If embed payload validation fails, the compiler reports a clear error and the embed index is not written.
 - Rewatch invokes user-configured generators based on the recorded embeds, receives ReScript code, and writes generated files with a conventional name (e.g. `SomeFile__embed_sql_one_GetUser.res`, optional `.resi`).
 - The embed PPX performs the AST rewrite to `GeneratedModule.default` directly in the compile pipeline, based solely on the tag and a deterministic filename scheme.
 - Errors from generators are mapped back to original source locations by Rewatch. Caching avoids unnecessary generator runs.
@@ -54,6 +55,7 @@ This document proposes “embed lang”, a Rewatch feature that lets users call 
   - `::<tag>(<string-literal>)`
   - `::<tag>.<subtag>(<string-literal>)`
   - `::<tag>({<config-object>})` where the config is a record literal with JSON‑serializable values
+  - Only two top‑level payload forms are allowed: a string literal or a record literal. Any other top‑level payload (array, number, boolean, etc.) is rejected with a clear error.
   - Equivalent extension form: `%embed.<tag>(<string-literal>)` and `%embed.<tag>.<subtag>(<string-literal>)`
   - The `::` form parses to an extension node with the attribute name automatically prefixed with `embed.`; i.e. `::sql.one(...)` parses as `%embed.sql.one(...)` in the parsetree. The printer also emits `::sql.one(...)` when encountering `%embed.<tag>(...)`.
   - The `<string-literal>` can be a backtick string or a normal quoted string, but must be a single literal (no concatenation, pipelines, or computed expressions). Interpolation is not allowed.
@@ -76,11 +78,11 @@ Rewrite semantics:
 
 ## File & Module Naming
 - Generated filename: `<SourceModule>__embed_<tagNormalized>_<suffix>.res`
-  - `tagNormalized` = tag with non‑alphanumeric chars replaced by `_` (e.g. `sql.one` → `sql_one`).
+  - `tagNormalized` = tag with dots replaced by `_` (e.g. `sql.one` → `sql_one`). Tags are already validated as extension identifiers by the parser.
   - `suffix` is deterministic and not supplied by the generator:
-    - For simple string embeds (`::<tag>("...")`): `_N` where `N` is the 1‑based occurrence index for this tag within the source file in appearance order (e.g. `_1`, `_2`).
-    - For config embeds (`::<tag>({...})`): the sanitized `id` field value from the config object (must be a string) with non‑alphanumeric characters replaced by `_`.
-  - Module name is derived from filename as usual (`SomeFile__embed_sql_one_GetUser`).
+    - For simple string embeds (`::<tag>("...")`): `N` where `N` is the 1‑based occurrence index for this tag within the source file in appearance order (e.g. `1`, `2`).
+    - For config embeds (`::<tag>({...})`): the `id` field value from the config object (must be a string) and must match `[A-Za-z][A-Za-z0-9_]*`.
+  - Module name is derived from filename as usual (`SomeFile__embed_sql_one_GetUser`). The compiler is the single source of truth for the module name and includes it in the embed index as `targetModule`. Rewatch writes to `<outDir>/<targetModule>.res` and never re-computes the name.
   
 The compiler rewrites the embed expression to `SomeFile__embed_sql_one_<suffix>.default` via PPX.
 
@@ -176,7 +178,7 @@ Protocol considerations:
 - Rewatch enforces a per‑embed timeout (configurable). Timeout or non‑zero exit → treated as a generator error.
 - Generators do not implement caching; Rewatch is the source of truth for cache decisions.
 - All paths in generator output are normalized to absolute paths by Rewatch and validated to be inside the project root unless explicitly allowed.
-- Generators cannot influence file naming: the filename is determined by the tag + (occurrenceIndex or config.id). Rewatch and the PPX must compute the same target.
+- Generators cannot influence file naming: the compiler determines the filename/module and includes it in the embed index as `targetModule`. Rewatch does not recompute names.
 - Generators cannot control the entry binding; the compiler always expects `default`.
  - For config embeds, the full config object is forwarded as `data` and must be JSON‑serializable (no functions, symbols, or non‑JSON values).
 
@@ -216,7 +218,7 @@ There is no separate `-rewrite-embeds` entry point in the single‑pass design; 
 
 ## Artifact Filenames
 - Per module (next to `.ast`):
-  - Index: `SomeFile.embeds.json`
+  - Index: `SomeFile.embeds.json` (only written when all embeds in the module pass validation)
   - (removed) Resolution map: no longer produced in the single‑pass design
 
 ## Artifact Schemas (initial)
@@ -229,6 +231,7 @@ There is no separate `-rewrite-embeds` entry point in the single‑pass design; 
   "embeds": [
     {
       "tag": "sql.one",
+      "targetModule": "SomeFile__embed_sql_one_GetUser",
       "context": "expr",                    // "expr" | "module" | "include"
       "occurrenceIndex": 1,                  // 1‑based within this file for this tag
       "range": {"start": {"line": 5, "column": 12}, "end": {"line": 5, "column": 78}},

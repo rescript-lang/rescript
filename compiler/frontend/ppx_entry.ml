@@ -55,7 +55,6 @@ let rewrite_implementation (ast : Parsetree.structure) : Parsetree.structure =
       let jsx_module = string_of_jsx_module !jsx_module in
       Jsx_ppx.rewrite_implementation ~jsx_version ~jsx_module ast
   in
-  (* Embed rewrite: single-pass PPX that maps ::embed nodes to generated modules *)
   let ast = Embed_ppx.rewrite_implementation ast in
   if !Js_config.no_builtin_ppx then ast
   else

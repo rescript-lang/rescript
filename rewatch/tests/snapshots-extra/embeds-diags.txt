@@ -2,7 +2,7 @@
 Cleaned 0/0
 Parsed 1 source files
 ERROR:
-EMBED_GENERATOR_FAILED[GEN001] (error) at ../../src/Foo.res:1:28
+EMBED_GENERATOR_FAILED[GEN001] (error) at /_tmp_embeds/rewatch_diags_proj/src/Foo.res:1:28
 Example error from generator
 >    1 | let a = ::sql.one("/* @name Err */ select 1")
                                    ^^^^

@@ -1,6 +1,6 @@
 === .compiler.log (filtered) ===
   Syntax error!
-  /_tmp_embeds/rewatch_diags_proj/lib/bs/../../src/Foo.res:1:28-32
+  /_tmp_embeds/rewatch_diags_proj/src/Foo.res:1:28-32
   Example error from generator
   >    1 | let a = ::sql.one("/* @name Err */ select 1")
                                      ^^^^

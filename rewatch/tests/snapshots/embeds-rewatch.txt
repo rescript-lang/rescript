@@ -1,8 +1,8 @@
 === Foo.embeds.json ===
-{ "embeds" : [ { "tag" : "sql.one" , "data" : "/* @name Hello */ select 1" , "range" : { "end" : { "line" : 1 , "column" : 46 } , "start" : { "line" : 1 , "column" : 18 } } , "context" : "expr" , "literalHash" : "7a747113937e51914c6bac6daa511d38" , "occurrenceIndex" : 1 } ] , "module" : "Foo" , "version" : 1 , "sourcePath" : "../../src/Foo.res" }
+{ "embeds" : [ { "tag" : "sql.one" , "data" : "/* @name Hello */ select 1" , "range" : { "end" : { "line" : 1 , "column" : 46 } , "start" : { "line" : 1 , "column" : 18 } } , "context" : "expr" , "literalHash" : "7a747113937e51914c6bac6daa511d38" , "targetModule" : "Foo__embed_sql_one_1" , "occurrenceIndex" : 1 } ] , "module" : "Foo" , "version" : 1 , "sourcePath" : "/_tmp_embeds/rewatch_proj/src/Foo.res" }
 === Rewritten Source ===
 
 === Generated Module ===
 // @sourceHash 7a747113937e51914c6bac6daa511d38
-/* rewatch-embed: v1; tag=sql.one; src=../../src/Foo.res; idx=1; suffix=1; entry=default; hash=7a747113937e51914c6bac6daa511d38; gen=sqlgen */
+/* rewatch-embed: v1; tag=sql.one; src=/_tmp_embeds/rewatch_proj/src/Foo.res; idx=1; suffix=1; entry=default; hash=7a747113937e51914c6bac6daa511d38; gen=sqlgen */
 let default = "generated-from: Hello"

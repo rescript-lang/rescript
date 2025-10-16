@@ -33,6 +33,8 @@ pub struct EmbedRange {
 #[serde(rename_all = "camelCase")]
 pub struct EmbedEntry {
     pub tag: String,
+    #[serde(default)]
+    pub target_module: Option<String>,
     pub context: String,
     pub occurrence_index: u32,
     pub range: EmbedRange,
@@ -179,29 +181,7 @@ pub struct GeneratedModuleInfo {
     pub rel_path: PathBuf,
 }
 
-fn normalize_tag(tag: &str) -> String {
-    tag.chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect()
-}
 
-fn sanitize_suffix(s: &str) -> String {
-    let mut out = String::new();
-    let mut prev_underscore = false;
-    for ch in s.chars() {
-        let c = if ch.is_ascii_alphanumeric() { ch } else { '_' };
-        if c == '_' {
-            if !prev_underscore {
-                out.push(c);
-                prev_underscore = true;
-            }
-        } else {
-            out.push(c);
-            prev_underscore = false;
-        }
-    }
-    if out.is_empty() { "_1".to_string() } else { out }
-}
 
 fn embeds_index_path_for_ast(ast_rel: &Path) -> PathBuf {
     let stem = ast_rel
@@ -372,7 +352,6 @@ pub fn process_module_embeds(
     let out_dir_abs = package.config.get_embeds_out_dir(&package.path);
     // resolution map removed; only track generated modules
     let mut generated: Vec<GeneratedModuleInfo> = Vec::new();
-    let mut seen_suffix: AHashSet<(String, String)> = AHashSet::new(); // (tag, suffix)
     let mut _count_generated = 0u32;
     let mut _count_reused = 0u32;
     let mut _count_failed = 0u32;
@@ -387,11 +366,11 @@ pub fn process_module_embeds(
     struct OkGen {
         code: String,
         suffix: String,
-        tag_norm: String,
         tag: String,
         occurrence_index: u32,
         literal_hash: String,
         generator_id: String,
+        target_module: String,
     }
     enum JobResult {
         Reused { module_name: String, rel_path: PathBuf },
@@ -420,7 +399,10 @@ pub fn process_module_embeds(
                     }
                 };
 
-                let tag_norm = normalize_tag(&embed.tag);
+                let target_module = embed
+                    .target_module
+                    .clone()
+                    .unwrap_or_else(|| fallback_target_module(&index.module, embed));
                 log::debug!(
                     "Embeds: {} #{} '{}': start",
                     index.module,
@@ -429,7 +411,7 @@ pub fn process_module_embeds(
                 );
 
                 if let Some((existing_module_name, existing_rel_path)) =
-                    find_cached_generated(&out_dir_abs, &index.module, &tag_norm, embed, generator, &package)
+                    find_cached_generated(&out_dir_abs, &target_module, embed, generator, &package)
                 {
                     log::debug!(
                         "Embeds: {} #{} '{}': cache hit -> {}",
@@ -518,11 +500,11 @@ pub fn process_module_embeds(
                         JobResult::Ok(OkGen {
                             code,
                             suffix: suffix_raw,
-                            tag_norm,
                             tag: embed.tag.clone(),
                             occurrence_index: embed.occurrence_index,
                             literal_hash: embed.literal_hash.clone(),
                             generator_id: generator.id.clone(),
+                            target_module,
                         })
                     }
                     GeneratorOutput::Error { errors } => {
@@ -655,21 +637,9 @@ pub fn process_module_embeds(
                 _count_reused += 1;
             }
             JobResult::Ok(ok) => {
-                let suffix = sanitize_suffix(&ok.suffix);
-                let key = (ok.tag.clone(), suffix.clone());
-                if seen_suffix.contains(&key) {
-                    log::error!(
-                        "EMBED_NAMING_CONFLICT: duplicate name '{}' for tag '{}' in module {}",
-                        suffix,
-                        ok.tag,
-                        index.module
-                    );
-                    _count_failed += 1;
-                    continue;
-                }
-                seen_suffix.insert(key);
-
-                let gen_file_name = format!("{}__embed_{}_{}.res", index.module, ok.tag_norm, suffix);
+                // Use compiler-provided target module to decide file name
+                let gen_file_stem = ok.target_module.clone();
+                let gen_file_name = format!("{gen_file_stem}.res");
                 let out_path_abs = write_generated_file(
                     &out_dir_abs,
                     &gen_file_name,
@@ -677,7 +647,7 @@ pub fn process_module_embeds(
                     &ok.tag,
                     &index.source_path,
                     ok.occurrence_index,
-                    &suffix,
+                    &ok.suffix,
                     // generator id omitted here (unknown); use a placeholder for header
                     // but better carry it - adjust above to include; for now leave blank
                     &ok.generator_id,
@@ -687,11 +657,7 @@ pub fn process_module_embeds(
                     .strip_prefix(&package.path)
                     .unwrap_or(&out_path_abs)
                     .to_path_buf();
-                let module_name = Path::new(&gen_file_name)
-                    .file_stem()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string();
+                let module_name = gen_file_stem;
                 generated.push(GeneratedModuleInfo {
                     module_name,
                     rel_path,
@@ -739,10 +705,11 @@ pub fn count_planned_invocations(
         let Some(generator) = find_generator(effective, &embed.tag) else {
             continue;
         };
-        let tag_norm = normalize_tag(&embed.tag);
-        if let Some(_hit) =
-            find_cached_generated(&out_dir_abs, &index.module, &tag_norm, embed, generator, package)
-        {
+        let target_module = embed
+            .target_module
+            .clone()
+            .unwrap_or_else(|| fallback_target_module(&index.module, embed));
+        if let Some(_hit) = find_cached_generated(&out_dir_abs, &target_module, embed, generator, package) {
             reused += 1;
         } else {
             invocations += 1;
@@ -774,6 +741,24 @@ fn header_hash_from_file(path: &Path) -> Option<String> {
 // Reset between builds to ensure correctness during watch.
 static EXTRAS_MTIME_CACHE: OnceLock<Mutex<HashMap<PathBuf, SystemTime>>> = OnceLock::new();
 
+fn fallback_target_module(module: &str, embed: &EmbedEntry) -> String {
+    // Compute module name the same way as the compiler: <Module>__embed_<tag_norm>_<suffix>
+    fn tag_norm(tag: &str) -> String {
+        tag.chars().map(|c| if c == '.' { '_' } else { c }).collect()
+    }
+    fn suffix_of(embed: &EmbedEntry) -> String {
+        match &embed.data {
+            serde_json::Value::String(_) => embed.occurrence_index.to_string(),
+            serde_json::Value::Object(map) => match map.get("id") {
+                Some(serde_json::Value::String(s)) => s.clone(),
+                _ => embed.occurrence_index.to_string(),
+            },
+            _ => embed.occurrence_index.to_string(),
+        }
+    }
+    format!("{module}__embed_{}_{}", tag_norm(&embed.tag), suffix_of(embed))
+}
+
 fn get_mtime_cached(path: &Path) -> Option<SystemTime> {
     let cache = EXTRAS_MTIME_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
     // Prefer canonicalized path as key for stability across joins
@@ -798,48 +783,35 @@ pub fn reset_extra_sources_mtime_cache() {
 
 fn find_cached_generated(
     out_dir_abs: &Path,
-    module_name: &str,
-    tag_norm: &str,
+    target_module: &str,
     embed: &EmbedEntry,
     generator: &EmbedGenerator,
     package: &Package,
 ) -> Option<(String, PathBuf)> {
-    let prefix = format!("{module_name}__embed_{tag_norm}_");
-    let dir_iter = fs::read_dir(out_dir_abs).ok()?;
-    for entry in dir_iter.flatten() {
-        let p = entry.path();
-        if !p.is_file() {
-            continue;
+    let p = out_dir_abs.join(format!("{target_module}.res"));
+    if !p.exists() || !p.is_file() {
+        return None;
+    }
+    if let Some(h) = header_hash_from_file(&p) {
+        if h != embed.literal_hash {
+            return None;
         }
-        if p.extension().and_then(|s| s.to_str()) != Some("res") {
-            continue;
-        }
-        let fname = p.file_name()?.to_string_lossy().to_string();
-        if !fname.starts_with(&prefix) {
-            continue;
-        }
-        // Quick hash check
-        if let Some(h) = header_hash_from_file(&p) {
-            if h != embed.literal_hash {
-                continue;
+        // Extra sources mtime check
+        let file_mtime = p.metadata().and_then(|m| m.modified()).ok()?;
+        let extra_newer = generator.extra_sources.iter().any(|rel| {
+            let ap = package.path.join(rel);
+            match get_mtime_cached(&ap) {
+                Some(t) => t > file_mtime,
+                None => false,
             }
-            // Extra sources mtime check
-            let file_mtime = p.metadata().and_then(|m| m.modified()).ok()?;
-            let extra_newer = generator.extra_sources.iter().any(|rel| {
-                let ap = package.path.join(rel);
-                match get_mtime_cached(&ap) {
-                    Some(t) => t > file_mtime,
-                    None => false,
-                }
-            });
-            if extra_newer {
-                continue;
-            }
-            let module = p.file_stem()?.to_string_lossy().to_string();
-            // Return rel path to package root
-            let rel = p.strip_prefix(&package.path).unwrap_or(&p).to_path_buf();
-            return Some((module, rel));
+        });
+        if extra_newer {
+            return None;
         }
+        let module = target_module.to_string();
+        // Return rel path to package root
+        let rel = p.strip_prefix(&package.path).unwrap_or(&p).to_path_buf();
+        return Some((module, rel));
     }
     None
 }
