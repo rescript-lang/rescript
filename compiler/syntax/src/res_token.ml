@@ -77,9 +77,9 @@ type t =
   | Of
   | Land
   | Lor
-  | Bnot (* Bitwise and: ~~~ *)
-  | Bor (* Bitwise and: ||| *)
-  | Bxor (* Bitwise and: ^^^ *)
+  | Bnot (* Bitwise not: ~~~ *)
+  | Bor (* Bitwise or: ||| *)
+  | Bxor (* Bitwise xor: ^^^ *)
   | Band (* Bitwise and: &&& *)
   | Caret
   | BangEqual
