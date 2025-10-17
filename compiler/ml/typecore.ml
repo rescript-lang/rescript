@@ -273,7 +273,15 @@ let constant_or_raise env loc cst =
 let type_option ty = newty (Tconstr (Predef.path_option, [ty], ref Mnil))
 
 let mkexp exp_desc exp_type exp_loc exp_env =
-  {exp_desc; exp_type; exp_loc; exp_env; exp_extra = []; exp_attributes = []}
+  {
+    exp_desc;
+    exp_type;
+    exp_loc;
+    exp_env;
+    exp_extra = [];
+    exp_is_return = false;
+    exp_attributes = [];
+  }
 
 let option_none ty loc =
   let lid = Longident.Lident "None" and env = Env.initial_safe_string in
@@ -2272,6 +2280,7 @@ and type_expect ~context ?deprecated_context ?in_function ?recarg env sexp
         type_expect_ ?deprecated_context ~context ?in_function ?recarg env sexp
           ty_expected)
   in
+  if sexp.pexp_is_return then exp.exp_is_return <- true;
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
   exp
@@ -2329,6 +2338,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance env desc.val_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_constant cst ->
     let cst = constant_or_raise env loc cst in
@@ -2340,6 +2350,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = type_constant cst;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_let
       ( Nonrecursive,
@@ -2378,6 +2389,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = body.exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_fun
       {
@@ -2463,6 +2475,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           exp_type = ty_res;
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
+          exp_is_return = false;
         }
     in
 
@@ -2517,6 +2530,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_try (sbody, caselist) ->
     let body = type_expect ~context:None env sbody ty_expected in
@@ -2532,6 +2546,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = body.exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_tuple sexpl ->
     assert (List.length sexpl >= 2);
@@ -2552,6 +2567,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = newty (Ttuple (List.map (fun e -> e.exp_type) expl));
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_construct (lid, sarg) ->
     type_construct ~context env loc lid sarg ty_expected sexp.pexp_attributes
@@ -2578,6 +2594,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
               exp_type = ty_expected0;
               exp_attributes = sexp.pexp_attributes;
               exp_env = env;
+              exp_is_return = false;
             }
         | _ -> raise Not_found)
       | _ -> raise Not_found
@@ -2605,6 +2622,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
                  });
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
+          exp_is_return = false;
         })
   | Pexp_record (lid_sexp_list, None) ->
     let ty_record, opath, fields, repr_opt =
@@ -2702,6 +2720,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_record (lid_sexp_list, Some sexp) ->
     assert (lid_sexp_list <> []);
@@ -2799,6 +2818,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_field (srecord, lid) ->
     let record, label, _ = type_label_access env srecord lid in
@@ -2812,6 +2832,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = ty_arg;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_setfield (srecord, lid, snewval) ->
     let record, label, opath = type_label_access env srecord lid in
@@ -2833,6 +2854,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance_def Predef.type_unit;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_array sargl ->
     let ty = newgenvar () in
@@ -2851,6 +2873,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_ifthenelse (scond, sifso, sifnot) -> (
     (* TODO(attributes) Unify the attribute handling in the parser and rest of the compiler. *)
@@ -2881,6 +2904,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           exp_type = ifso.exp_type;
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
+          exp_is_return = false;
         }
     | Some sifnot ->
       let ifso = type_expect ~context:return_context env sifso ty_expected in
@@ -2895,6 +2919,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           exp_type = ifso.exp_type;
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
+          exp_is_return = false;
         })
   | Pexp_sequence (sexp1, sexp2) ->
     let exp1 = type_statement ~context:None env sexp1 in
@@ -2907,6 +2932,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = exp2.exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_while (scond, sbody) ->
     let cond =
@@ -2921,6 +2947,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance_def Predef.type_unit;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_for (param, slow, shigh, dir, sbody) ->
     let low =
@@ -2953,6 +2980,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = instance_def Predef.type_unit;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_constraint (sarg, sty) ->
     let separate = true in
@@ -2975,6 +3003,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = ty';
         exp_attributes = arg.exp_attributes;
         exp_env = env;
+        exp_is_return = false;
         exp_extra =
           (Texp_constraint cty, loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
@@ -3031,6 +3060,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = ty';
         exp_attributes = arg.exp_attributes;
         exp_env = env;
+        exp_is_return = false;
         exp_extra =
           (Texp_coerce cty', loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
@@ -3062,6 +3092,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           exp_type = typ;
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
+          exp_is_return = false;
         }
     with Unify _ ->
       let valid_methods =
@@ -3114,6 +3145,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = ty;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_letexception (cd, sbody) ->
     let cd, newenv = Typedecl.transl_exception env cd in
@@ -3126,6 +3158,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = body.exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_assert e ->
     let cond =
@@ -3144,6 +3177,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_newtype ({txt = name}, sbody) ->
     let ty = newvar () in
@@ -3217,6 +3251,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_type = newty (Tpackage (p, nl, tl'));
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
+        exp_is_return = false;
       }
   | Pexp_open (ovf, lid, e) ->
     let path, newenv = !type_open ovf env sexp.pexp_loc lid in
@@ -3251,6 +3286,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
           exp_type = instance_def Predef.type_extension_constructor;
           exp_attributes = sexp.pexp_attributes;
           exp_env = env;
+          exp_is_return = false;
         }
     | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
@@ -3328,6 +3364,7 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
       exp_type;
       exp_attributes = attrs;
       exp_env = env;
+      exp_is_return = false;
     }
 
 and type_label_access env srecord lid =
@@ -3829,6 +3866,7 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
         exp_type = ty_res;
         exp_attributes = attrs;
         exp_env = env;
+        exp_is_return = false;
       }
   in
   (* Forward context if this is a Some constructor injected (meaning it's
