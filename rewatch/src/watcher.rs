@@ -11,10 +11,23 @@ use crate::queue::*;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use serde::Deserialize;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EmbedIndexTagOnlyEntry {
+    tag: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EmbedIndexTagOnly {
+    embeds: Vec<EmbedIndexTagOnlyEntry>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 enum CompileType {
@@ -37,10 +50,11 @@ fn is_in_build_path(path_buf: &Path) -> bool {
     let mut prev_component: Option<&std::ffi::OsStr> = None;
     for component in path_buf.components() {
         let comp_os = component.as_os_str();
-        if let Some(prev) = prev_component {
-            if prev == "lib" && (comp_os == "bs" || comp_os == "ocaml") {
-                return true;
-            }
+        if let Some(prev) = prev_component
+            && prev == "lib"
+            && (comp_os == "bs" || comp_os == "ocaml")
+        {
+            return true;
         }
         prev_component = Some(comp_os);
     }
@@ -53,6 +67,138 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
         .map(|x| x.to_string_lossy().to_string())
         .unwrap_or("".to_string());
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
+}
+
+fn is_embed_extra_source(build_state: &build::build_types::BuildCommandState, path_buf: &Path) -> bool {
+    let Ok(canonicalized_path_buf) = path_buf
+        .canonicalize()
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    else {
+        return false;
+    };
+
+    for package in build_state.packages.values() {
+        if let Some(embeds) = package
+            .config
+            .get_effective_embeds_config(&build_state.project_context)
+        {
+            for generator in &embeds.generators {
+                for rel in &generator.extra_sources {
+                    let candidate = package.path.join(rel);
+                    if let Ok(abs) = candidate
+                        .canonicalize()
+                        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                        && abs == canonicalized_path_buf
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+// Mark all modules that depend (via embeds) on a changed extraSource file as dirty
+fn mark_modules_for_extra_source(
+    build_state: &mut build::build_types::BuildCommandState,
+    changed_path: &Path,
+) {
+    let Ok(changed_abs) = changed_path
+        .canonicalize()
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    else {
+        return;
+    };
+
+    // For each package/generator whose extraSources include this path, mark modules that use any of the generator's tags as dirty
+    for package in build_state.build_state.packages.values() {
+        let Some(embeds_cfg) = package
+            .config
+            .get_effective_embeds_config(&build_state.project_context)
+        else {
+            continue;
+        };
+
+        // Collect all generators that reference the changed path
+        let mut matching_generators: Vec<&crate::config::EmbedGenerator> = Vec::new();
+        for generator in &embeds_cfg.generators {
+            for rel in &generator.extra_sources {
+                if let Ok(abs) = package
+                    .path
+                    .join(rel)
+                    .canonicalize()
+                    .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                    && abs == changed_abs
+                {
+                    matching_generators.push(generator);
+                    break;
+                }
+            }
+        }
+
+        if matching_generators.is_empty() {
+            continue;
+        }
+
+        // Build a quick tag set for fast lookup
+        use ahash::AHashSet;
+        let mut tags: AHashSet<String> = AHashSet::new();
+        for generator in &matching_generators {
+            for t in &generator.tags {
+                tags.insert(t.clone());
+            }
+        }
+
+        // Iterate all modules in this package and see if their embed index mentions any of these tags
+        let build_dir = package.get_build_path();
+        // Collect (module_name, impl_rel_path) pairs first to avoid borrow issues
+        let module_impls: Vec<(String, std::path::PathBuf)> = build_state
+            .build_state
+            .modules
+            .iter()
+            .filter_map(|(n, m)| match &m.source_type {
+                build::build_types::SourceType::SourceFile(sf) if m.package_name == package.name => {
+                    Some((n.clone(), sf.implementation.path.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+
+        for (module_name, impl_rel_path) in module_impls.into_iter() {
+            {
+                let ast_rel = crate::helpers::get_ast_path(&impl_rel_path);
+                // Build embeds index path: <dir>/<stem>.embeds.json
+                let stem = ast_rel
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
+                let idx_rel = ast_rel
+                    .parent()
+                    .unwrap_or_else(|| Path::new(""))
+                    .join(format!("{stem}.embeds.json"));
+                let idx_abs = build_dir.join(&idx_rel);
+                if !idx_abs.exists() {
+                    continue;
+                }
+                if let Ok(contents) = std::fs::read_to_string(&idx_abs)
+                    && let Ok(index) = serde_json::from_str::<EmbedIndexTagOnly>(&contents)
+                {
+                    let uses_tag = index.embeds.iter().any(|e| tags.contains(&e.tag));
+                    if uses_tag
+                        && let Some(mutable) = build_state.build_state.modules.get_mut(&module_name)
+                        && let build::build_types::SourceType::SourceFile(ref mut sf_mut) =
+                            mutable.source_type
+                    {
+                        sf_mut.implementation.parse_dirty = true;
+                        mutable.compile_dirty = true;
+                        mutable.deps_dirty = true;
+                    }
+                }
+            }
+        }
+    }
 }
 
 struct AsyncWatchArgs<'a> {
@@ -116,25 +262,25 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if event.paths.iter().any(|path| path.ends_with(LOCKFILE)) {
-                if let EventKind::Remove(_) = event.kind {
-                    if show_progress {
-                        println!("\nExiting... (lockfile removed)");
-                    }
-                    clean::cleanup_after_build(&build_state);
-                    return Ok(());
+            if event.paths.iter().any(|path| path.ends_with(LOCKFILE))
+                && let EventKind::Remove(_) = event.kind
+            {
+                if show_progress {
+                    println!("\nExiting... (lockfile removed)");
                 }
+                clean::cleanup_after_build(&build_state);
+                return Ok(());
             }
 
-            let paths = event
+            let event_paths: Vec<_> = event
                 .paths
                 .iter()
-                .filter(|path| is_rescript_file(path))
                 .filter(|path| !is_in_build_path(path))
-                .filter(|path| matches_filter(path, filter));
-            for path in paths {
-                let path_buf = path.to_path_buf();
-
+                .filter(|path| matches_filter(path, filter))
+                .filter(|path| is_rescript_file(path) || is_embed_extra_source(&build_state, path))
+                .map(|p| p.to_path_buf())
+                .collect();
+            for path_buf in event_paths {
                 match (needs_compile_type, event.kind) {
                     (
                         CompileType::Incremental | CompileType::None,
@@ -208,6 +354,11 @@ async fn async_watch(
                                         SourceType::MlMap(_) => (),
                                     }
                                 }
+                            }
+                            // Additionally, if this change corresponds to a generator extraSource,
+                            // mark all modules that depend on it as dirty so embeds regenerate.
+                            if is_embed_extra_source(&build_state, &path_buf) {
+                                mark_modules_for_extra_source(&mut build_state, &path_buf);
                             }
                             needs_compile_type = CompileType::Incremental;
                         }

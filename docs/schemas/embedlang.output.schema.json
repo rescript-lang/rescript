@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GeneratorOutputSchema",
+  "examples": [
+    {
+      "code": "let default = \"...\"",
+      "status": "ok"
+    }
+  ],
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["code", "status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok"]
+        },
+        "code": {
+          "description": "ReScript source code to write to generated module (.res)",
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": ["errors", "status"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["error"]
+        },
+        "errors": {
+          "description": "Diagnostics mapped to the embed string",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GenDiagItemSchema"
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "GenDiagItemSchema": {
+      "type": "object",
+      "required": ["message"],
+      "properties": {
+        "message": {
+          "description": "Human-readable error message",
+          "type": "string"
+        },
+        "severity": {
+          "description": "Optional severity (\"error\" | \"warning\" | \"info\"), defaults to \"error\"",
+          "default": null,
+          "type": ["string", "null"]
+        },
+        "code": {
+          "description": "Optional machine-readable code (e.g. \"SQL001\")",
+          "default": null,
+          "type": ["string", "null"]
+        },
+        "start": {
+          "description": "Start position relative to the embed string (1-based)",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GenDiagPosSchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "description": "End position relative to the embed string (1-based, inclusive)",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GenDiagPosSchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "GenDiagPosSchema": {
+      "type": "object",
+      "required": ["column", "line"],
+      "properties": {
+        "line": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "column": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

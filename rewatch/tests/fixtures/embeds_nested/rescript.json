@@ -1,0 +1,5 @@
+{
+  "name": "embeds-nested-fixture",
+  "sources": [ { "dir": "src", "subdirs": true } ]
+}
+

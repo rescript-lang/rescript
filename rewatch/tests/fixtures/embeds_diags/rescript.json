@@ -1,0 +1,18 @@
+{
+  "name": "embeds-diags-fixture",
+  "sources": [ { "dir": "src", "subdirs": true } ],
+  "embeds": {
+    "generators": [
+      {
+        "id": "sqlgenerr",
+        "cmd": "node",
+        "args": ["gen_err.mjs"],
+        "cwd": ".",
+        "tags": ["sql.one"],
+        "extraSources": [],
+        "timeoutMs": 5000
+      }
+    ]
+  }
+}
+

@@ -160,21 +160,18 @@ else
 fi
 
 # see if the snapshots have changed
-changed_snapshots=$(git ls-files  --modified ../tests/snapshots)
-if git diff --exit-code ../tests/snapshots &> /dev/null;
-then
+changed_snapshots=$(git ls-files --modified ../tests/snapshots)
+# Filter out embeds-diags.txt (managed by a separate test harness)
+changed_snapshots=$(echo "$changed_snapshots" | grep -v "embeds-diags.txt" || true)
+if [ -z "$changed_snapshots" ]; then
   success "Snapshots are correct"
 else
   error "Snapshots are incorrect:"
-  # print filenames in the snapshot dir call bold with the filename
-  # and then cat their contents
   printf "\n\n"
   for file in $changed_snapshots; do
     bold $file
-    # show diff of file vs contents in git
-    git diff $file $file
+    git --no-pager diff -- $file $file
     printf "\n\n"
   done
-
   exit 1
 fi

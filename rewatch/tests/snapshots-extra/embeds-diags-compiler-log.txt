@@ -1,0 +1,20 @@
+=== .compiler.log (filtered) ===
+  Syntax error!
+  /_tmp_embeds/rewatch_diags_proj/src/Foo.res:1:28-32
+  Example error from generator
+  >    1 | let a = ::sql.one("/* @name Err */ select 1")
+                                     ^^^^
+
+
+  We've found a bug for you!
+  /_tmp_embeds/rewatch_diags_proj/src/Foo.res:1:9-45
+
+  1 │ let a = ::sql.one("/* @name Err */ select 1")
+  2 │ 
+
+  The module or file Foo__embed_sql_one_1 can't be found.
+  - If it's a third-party dependency:
+    - Did you add it to the "dependencies" or "dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
+  
+

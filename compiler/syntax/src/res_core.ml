@@ -1308,6 +1308,13 @@ let rec parse_pattern ?(alias = true) ?(or_ = true) p =
       let extension = parse_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Pat.extension ~loc ~attrs extension
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
+      let extension = parse_embed_extension p in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Ast_helper.Pat.extension ~loc ~attrs extension
     | Eof ->
       Parser.err p (Diagnostics.unexpected p.Parser.token p.breadcrumbs);
       Recover.default_pattern ()
@@ -2106,6 +2113,13 @@ and parse_atomic_expr p =
     | LessThan -> parse_jsx p
     | Percent ->
       let extension = parse_extension p in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Ast_helper.Exp.extension ~loc extension
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
+      let extension = parse_embed_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Exp.extension ~loc extension
     | Underscore as token ->
@@ -4477,6 +4491,13 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
       let extension = parse_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Typ.extension ~attrs ~loc extension
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
+      let extension = parse_embed_extension p in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Ast_helper.Typ.extension ~attrs ~loc extension
     | Lbrace ->
       parse_record_or_object_type ?current_type_name_path ?inline_types_context
         ~attrs p
@@ -6440,6 +6461,13 @@ and parse_atomic_module_expr p =
     let extension = parse_extension p in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Mod.extension ~loc extension
+  | Colon
+    when Parser.lookahead p (fun st ->
+             Parser.next st;
+             st.Parser.token = Colon) ->
+    let extension = parse_embed_extension p in
+    let loc = mk_loc start_pos p.prev_end_pos in
+    Ast_helper.Mod.extension ~loc extension
   | token ->
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
     Recover.default_module_expr ()
@@ -6762,6 +6790,13 @@ and parse_atomic_module_type p =
       parse_module_type_of p
     | Percent ->
       let extension = parse_extension p in
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Ast_helper.Mty.extension ~loc extension
+    | Colon
+      when Parser.lookahead p (fun st ->
+               Parser.next st;
+               st.Parser.token = Colon) ->
+      let extension = parse_embed_extension p in
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Mty.extension ~loc extension
     | token ->
@@ -7300,6 +7335,75 @@ and parse_extension ?(module_language = false) p =
   let attr_id = parse_attribute_id ~start_pos p in
   let payload = parse_payload p in
   (attr_id, payload)
+
+(* Embed extension (first-class embed syntax):
+ * Parses ::attr-id attr-payload
+ * and rewrites the attribute id to be prefixed with "embed.".
+ * Example: ::sql.one("...") -> %embed.sql.one("...") in the parsetree. *)
+and parse_embed_extension p =
+  let start_pos = p.Parser.start_pos in
+  (* Expect two consecutive ':' tokens *)
+  Parser.expect Colon p;
+  Parser.expect Colon p;
+  (* Parse attribute id limited to the current line to avoid swallowing the next statement. *)
+  let line_no = start_pos.pos_lnum in
+  let rec parse_id acc =
+    match p.Parser.token with
+    | (Lident ident | Uident ident) when p.Parser.start_pos.pos_lnum = line_no
+      ->
+      Parser.next p;
+      let id = acc ^ ident in
+      if p.Parser.token = Dot && p.Parser.start_pos.pos_lnum = line_no then (
+        Parser.next p;
+        parse_id (id ^ "."))
+      else id
+    | token when Token.is_keyword token && p.Parser.start_pos.pos_lnum = line_no
+      ->
+      Parser.next p;
+      let id = acc ^ Token.to_string token in
+      if p.Parser.token = Dot && p.Parser.start_pos.pos_lnum = line_no then (
+        Parser.next p;
+        parse_id (id ^ "."))
+      else id
+    | _ -> acc
+  in
+  let id = parse_id "" in
+  let id_loc = mk_loc start_pos p.prev_end_pos in
+  (* Lookahead to check whether imminent payload has a matching closing ')' *)
+  let has_complete_payload =
+    Parser.lookahead p (fun st ->
+        match st.Parser.token with
+        | Lparen ->
+          let rec loop depth =
+            match st.Parser.token with
+            | Lparen ->
+              Parser.next st;
+              loop (depth + 1)
+            | Rparen ->
+              Parser.next st;
+              if depth = 1 then true else loop (depth - 1)
+            | Eof -> false
+            | _ ->
+              Parser.next st;
+              loop depth
+          in
+          (* consume the first '(' and start looping *)
+          Parser.next st;
+          loop 1
+        | _ -> false)
+  in
+  let payload = parse_payload p in
+  let txt' =
+    let len = String.length id in
+    if id = "" then "embed."
+    else if len > 0 && (id.[len - 1] [@doesNotRaise]) = '.' then
+      (* Trailing dot: recover dropping it for completion container *)
+      let base = String.sub id 0 (len - 1) in
+      if base = "" then "embed." else "embed." ^ base
+    else if has_complete_payload then "embed." ^ id
+    else "embed." ^ id
+  in
+  (Location.mkloc txt' id_loc, payload)
 
 (* module signature on the file level *)
 let parse_specification p : Parsetree.signature =

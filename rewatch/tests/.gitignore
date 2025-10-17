@@ -1,0 +1,6 @@
+# Temporary build artifacts for embeds tests
+_tmp_embeds/
+*.ast
+*.iast
+*.embeds.json
+*.embeds.map.json

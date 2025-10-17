@@ -175,10 +175,11 @@ pub fn cleanup_previous_build(
             // we do this by checking if the cmt file is newer than the AST file. We always compile the
             // interface AND implementation. For some reason the CMI file is not always rewritten if it
             // doesn't have any changes, that's why we just look at the CMT file.
-            if let Some(cmt_last_modified) = cmt_last_modified {
-                if cmt_last_modified > ast_last_modified && !deleted_interfaces.contains(module_name) {
-                    module.compile_dirty = false;
-                }
+            if let Some(cmt_last_modified) = cmt_last_modified
+                && cmt_last_modified > ast_last_modified
+                && !deleted_interfaces.contains(module_name)
+            {
+                module.compile_dirty = false;
             }
 
             match &mut module.source_type {
@@ -302,11 +303,11 @@ fn has_compile_warnings(module: &Module) -> bool {
 pub fn cleanup_after_build(build_state: &BuildCommandState) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
         let package = build_state.get_package(&module.package_name).unwrap();
-        if has_parse_warnings(module) {
-            if let SourceType::SourceFile(source_file) = &module.source_type {
-                remove_iast(package, &source_file.implementation.path);
-                remove_ast(package, &source_file.implementation.path);
-            }
+        if has_parse_warnings(module)
+            && let SourceType::SourceFile(source_file) = &module.source_type
+        {
+            remove_iast(package, &source_file.implementation.path);
+            remove_ast(package, &source_file.implementation.path);
         }
         if has_compile_warnings(module) {
             // only retain AST file if the compilation doesn't have warnings, we remove the AST in favor

@@ -882,10 +882,10 @@ fn get_unallowed_dependents(
     for deps_package_name in dependencies {
         if let Some(deps_package) = packages.get(deps_package_name) {
             let deps_allowed_dependents = deps_package.config.allowed_dependents.to_owned();
-            if let Some(allowed_dependents) = deps_allowed_dependents {
-                if !allowed_dependents.contains(package_name) {
-                    return Some(deps_package_name.to_string());
-                }
+            if let Some(allowed_dependents) = deps_allowed_dependents
+                && !allowed_dependents.contains(package_name)
+            {
+                return Some(deps_package_name.to_string());
             }
         }
     }
