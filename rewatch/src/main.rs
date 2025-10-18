@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     }
 
     let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
-    let snapshot_output = !is_tty;
+    let plain_output = !is_tty;
 
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
@@ -52,7 +52,7 @@ fn main() -> Result<()> {
                 show_progress,
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
-                snapshot_output,
+                plain_output,
                 build_args.warn_error.clone(),
             ) {
                 Err(e) => {
@@ -82,7 +82,7 @@ fn main() -> Result<()> {
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),
                 *watch_args.create_sourcedirs,
-                snapshot_output,
+                plain_output,
                 watch_args.warn_error.clone(),
             );
 
@@ -97,7 +97,7 @@ fn main() -> Result<()> {
                 );
             }
 
-            build::clean::clean(Path::new(&folder as &str), show_progress, snapshot_output)
+            build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
         }
         cli::Command::Format {
             stdin,

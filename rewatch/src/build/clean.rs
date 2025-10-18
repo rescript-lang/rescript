@@ -331,13 +331,13 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
     });
 }
 
-pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<()> {
+pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
     let compiler_info = build::get_compiler_info(&project_context)?;
     let packages = packages::make(&None, &project_context, show_progress)?;
 
     let timing_clean_compiler_assets = Instant::now();
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         print!(
             "{} {}Cleaning compiler assets...",
             style("[1/2]").bold().dim(),
@@ -347,12 +347,12 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<
     };
 
     for (_, package) in &packages {
-        clean_package(show_progress, snapshot_output, package)
+        clean_package(show_progress, plain_output, package)
     }
 
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         println!(
             "{}{} {}Cleaned compiler assets in {:.2}s",
             LINE_CLEAR,
@@ -367,7 +367,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
     packages::parse_packages(&mut build_state);
     let root_config = build_state.get_root_config();
-    let suffix_for_print = if snapshot_output || !show_progress {
+    let suffix_for_print = if plain_output || !show_progress {
         String::new()
     } else {
         match root_config.package_specs {
@@ -390,7 +390,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<
         }
     };
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         println!(
             "{} {}Cleaning {} files...",
             style("[2/2]").bold().dim(),
@@ -403,7 +403,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<
     clean_source_files(&build_state, root_config);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         println!(
             "{}{} {}Cleaned {} files in {:.2}s",
             LINE_CLEAR,
@@ -418,9 +418,9 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<
     Ok(())
 }
 
-pub fn clean_package(show_progress: bool, snapshot_output: bool, package: &Package) {
+pub fn clean_package(show_progress: bool, plain_output: bool, package: &Package) {
     if show_progress {
-        if snapshot_output {
+        if plain_output {
             println!("Cleaning {}", package.name)
         } else {
             print!(

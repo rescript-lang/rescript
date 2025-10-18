@@ -62,7 +62,7 @@ struct AsyncWatchArgs<'a> {
     filter: &'a Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
-    snapshot_output: bool,
+    plain_output: bool,
     warn_error: Option<String>,
 }
 
@@ -74,12 +74,12 @@ async fn async_watch(
         filter,
         after_build,
         create_sourcedirs,
-        snapshot_output,
+        plain_output,
         warn_error,
     }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
     let mut build_state: build::build_types::BuildCommandState =
-        build::initialize_build(None, filter, show_progress, path, snapshot_output, warn_error)
+        build::initialize_build(None, filter, show_progress, path, plain_output, warn_error)
             .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
@@ -241,7 +241,7 @@ async fn async_watch(
                     show_progress,
                     !initial_build,
                     create_sourcedirs,
-                    snapshot_output,
+                    plain_output,
                 )
                 .is_ok()
                 {
@@ -251,7 +251,7 @@ async fn async_watch(
                     let timing_total_elapsed = timing_total.elapsed();
                     if show_progress {
                         let compilation_type = if initial_build { "initial" } else { "incremental" };
-                        if snapshot_output {
+                        if plain_output {
                             println!("Finished {compilation_type} compilation")
                         } else {
                             println!(
@@ -274,7 +274,7 @@ async fn async_watch(
                     filter,
                     show_progress,
                     path,
-                    snapshot_output,
+                    plain_output,
                     build_state.get_warn_error_override(),
                 )
                 .expect("Can't initialize build");
@@ -285,7 +285,7 @@ async fn async_watch(
                     show_progress,
                     false,
                     create_sourcedirs,
-                    snapshot_output,
+                    plain_output,
                 );
                 if let Some(a) = after_build.clone() {
                     cmd::run(a)
@@ -294,7 +294,7 @@ async fn async_watch(
                 build::write_build_ninja(&build_state);
 
                 let timing_total_elapsed = timing_total.elapsed();
-                if !snapshot_output && show_progress {
+                if !plain_output && show_progress {
                     println!(
                         "\n{}{}Finished compilation in {:.2}s\n",
                         LINE_CLEAR,
@@ -321,7 +321,7 @@ pub fn start(
     folder: &str,
     after_build: Option<String>,
     create_sourcedirs: bool,
-    snapshot_output: bool,
+    plain_output: bool,
     warn_error: Option<String>,
 ) {
     futures::executor::block_on(async {
@@ -347,7 +347,7 @@ pub fn start(
             filter,
             after_build,
             create_sourcedirs,
-            snapshot_output,
+            plain_output,
             warn_error: warn_error.clone(),
         })
         .await

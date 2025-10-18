@@ -131,13 +131,13 @@ pub fn initialize_build(
     filter: &Option<regex::Regex>,
     show_progress: bool,
     path: &Path,
-    snapshot_output: bool,
+    plain_output: bool,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
     let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
         let _ = stdout().flush();
     }
@@ -149,7 +149,7 @@ pub fn initialize_build(
     let compiler_check = verify_compiler_info(&packages, &compiler);
 
     if show_progress {
-        if snapshot_output {
+        if plain_output {
             if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
                 // Snapshot-friendly output (no progress prefixes or emojis)
                 println!("Cleaned previous build due to compiler update");
@@ -181,7 +181,7 @@ pub fn initialize_build(
 
     let timing_source_files = Instant::now();
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         print!(
             "{} {}Finding source files...",
             style("[2/7]").bold().dim(),
@@ -194,7 +194,7 @@ pub fn initialize_build(
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         println!(
             "{}{} {}Found source files in {:.2}s",
             LINE_CLEAR,
@@ -216,7 +216,7 @@ pub fn initialize_build(
     let compile_assets_state = read_compile_state::read(&mut build_state)?;
     let timing_compile_state_elapsed = timing_compile_state.elapsed();
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         println!(
             "{}{} {}Read compile state {:.2}s",
             LINE_CLEAR,
@@ -238,7 +238,7 @@ pub fn initialize_build(
     let timing_cleanup_elapsed = timing_cleanup.elapsed();
 
     if show_progress {
-        if snapshot_output {
+        if plain_output {
             println!("Cleaned {diff_cleanup}/{total_cleanup}")
         } else {
             println!(
@@ -268,7 +268,7 @@ pub enum IncrementalBuildErrorKind {
 
 #[derive(Debug, Clone)]
 pub struct IncrementalBuildError {
-    pub snapshot_output: bool,
+    pub plain_output: bool,
     pub kind: IncrementalBuildErrorKind,
 }
 
@@ -276,21 +276,21 @@ impl fmt::Display for IncrementalBuildError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
             IncrementalBuildErrorKind::SourceFileParseError => {
-                if self.snapshot_output {
+                if self.plain_output {
                     write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
                 } else {
                     write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(Some(e)) => {
-                if self.snapshot_output {
+                if self.plain_output {
                     write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
                 } else {
                     write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(None) => {
-                if self.snapshot_output {
+                if self.plain_output {
                     write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
                 } else {
                     write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
@@ -307,11 +307,11 @@ pub fn incremental_build(
     show_progress: bool,
     only_incremental: bool,
     create_sourcedirs: bool,
-    snapshot_output: bool,
+    plain_output: bool,
 ) -> Result<(), IncrementalBuildError> {
     logs::initialize(&build_state.packages);
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
-    let pb = if !snapshot_output && show_progress {
+    let pb = if !plain_output && show_progress {
         ProgressBar::new(num_dirty_modules)
     } else {
         ProgressBar::hidden()
@@ -334,7 +334,7 @@ pub fn incremental_build(
     match result_asts {
         Ok(_ast) => {
             if show_progress {
-                if snapshot_output {
+                if plain_output {
                     println!("Parsed {num_dirty_modules} source files")
                 } else {
                     println!(
@@ -352,7 +352,7 @@ pub fn incremental_build(
         Err(err) => {
             logs::finalize(&build_state.packages);
 
-            if !snapshot_output && show_progress {
+            if !plain_output && show_progress {
                 println!(
                     "{}{} {}Error parsing source files in {:.2}s",
                     LINE_CLEAR,
@@ -366,7 +366,7 @@ pub fn incremental_build(
             println!("{}", &err);
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
-                snapshot_output,
+                plain_output,
             });
         }
     }
@@ -376,7 +376,7 @@ pub fn incremental_build(
     let timing_deps_elapsed = timing_deps.elapsed();
     current_step += 1;
 
-    if !snapshot_output && show_progress {
+    if !plain_output && show_progress {
         println!(
             "{}{} {}Collected deps in {:.2}s",
             LINE_CLEAR,
@@ -400,7 +400,7 @@ pub fn incremental_build(
     };
 
     let start_compiling = Instant::now();
-    let pb = if !snapshot_output && show_progress {
+    let pb = if !plain_output && show_progress {
         ProgressBar::new(build_state.modules.len().try_into().unwrap())
     } else {
         ProgressBar::hidden()
@@ -422,7 +422,7 @@ pub fn incremental_build(
     )
     .map_err(|e| IncrementalBuildError {
         kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-        snapshot_output,
+        plain_output,
     })?;
 
     let compile_duration = start_compiling.elapsed();
@@ -434,7 +434,7 @@ pub fn incremental_build(
     pb.finish();
     if !compile_errors.is_empty() {
         if show_progress {
-            if snapshot_output {
+            if plain_output {
                 println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
@@ -458,11 +458,11 @@ pub fn incremental_build(
         }
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
-            snapshot_output,
+            plain_output,
         })
     } else {
         if show_progress {
-            if snapshot_output {
+            if plain_output {
                 println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
@@ -539,7 +539,7 @@ pub fn build(
     show_progress: bool,
     no_timing: bool,
     create_sourcedirs: bool,
-    snapshot_output: bool,
+    plain_output: bool,
     warn_error: Option<String>,
 ) -> Result<BuildCommandState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
@@ -553,7 +553,7 @@ pub fn build(
         filter,
         show_progress,
         path,
-        snapshot_output,
+        plain_output,
         warn_error,
     )
     .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
@@ -565,10 +565,10 @@ pub fn build(
         show_progress,
         false,
         create_sourcedirs,
-        snapshot_output,
+        plain_output,
     ) {
         Ok(_) => {
-            if !snapshot_output && show_progress {
+            if !plain_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
                 println!(
                     "\n{}{}Finished Compilation in {:.2}s",
