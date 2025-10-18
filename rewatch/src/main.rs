@@ -1,4 +1,5 @@
 use anyhow::Result;
+use console::Term;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
@@ -24,6 +25,7 @@ fn main() -> Result<()> {
         }
     }
 
+    let is_tty = Term::stdout().is_term() && Term::stderr().is_term();
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
     let show_progress = log_level_filter == LevelFilter::Info;
@@ -42,13 +44,15 @@ fn main() -> Result<()> {
                 );
             }
 
+            let snapshot_output = *build_args.snapshot_output || !is_tty;
+
             match build::build(
                 &build_args.filter,
                 Path::new(&build_args.folder as &str),
                 show_progress,
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
-                *build_args.snapshot_output,
+                snapshot_output,
                 build_args.warn_error.clone(),
             ) {
                 Err(e) => {
@@ -72,13 +76,15 @@ fn main() -> Result<()> {
                 );
             }
 
+            let snapshot_output = *watch_args.snapshot_output || !is_tty;
+
             watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),
                 *watch_args.create_sourcedirs,
-                *watch_args.snapshot_output,
+                snapshot_output,
                 watch_args.warn_error.clone(),
             );
 
