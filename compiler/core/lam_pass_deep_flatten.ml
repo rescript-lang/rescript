@@ -254,7 +254,9 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       Lam.stringswitch (aux l) (Ext_list.map_snd sw aux) (Ext_option.map d aux)
     | Lstaticraise (i, ls) -> Lam.staticraise i (Ext_list.map ls aux)
     | Lstaticcatch (l1, ids, l2) -> Lam.staticcatch (aux l1) ids (aux l2)
-    | Ltrywith (l1, v, l2) -> Lam.try_ (aux l1) v (aux l2)
+    | Ltrywith (l1, v, l2, finally_expr) ->
+      Lam.try_ (aux l1) v (Ext_option.map l2 aux)
+        (Ext_option.map finally_expr aux)
     | Lifthenelse (l1, l2, l3) -> Lam.if_ (aux l1) (aux l2) (aux l3)
     | Lwhile (l1, l2) -> Lam.while_ (aux l1) (aux l2)
     | Lfor (flag, l1, l2, dir, l3) ->
