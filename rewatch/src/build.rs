@@ -24,7 +24,7 @@ use log::log_enabled;
 use serde::Serialize;
 use std::fmt;
 use std::fs::File;
-use std::io::{Write, stdout};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -137,16 +137,22 @@ pub fn initialize_build(
     let project_context = ProjectContext::new(path)?;
     let compiler = get_compiler_info(&project_context)?;
 
-    if !plain_output && show_progress {
-        print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
-        let _ = stdout().flush();
-    }
-
-    let timing_package_tree = Instant::now();
+    let timing_clean_start = Instant::now();
     let packages = packages::make(filter, &project_context, show_progress)?;
-    let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
     let compiler_check = verify_compiler_info(&packages, &compiler);
+
+    if !packages::validate_packages_dependencies(&packages) {
+        return Err(anyhow!("Failed to validate package dependencies"));
+    }
+
+    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
+    packages::parse_packages(&mut build_state);
+
+    let compile_assets_state = read_compile_state::read(&mut build_state)?;
+
+    let (diff_cleanup, total_cleanup) = clean::cleanup_previous_build(&mut build_state, compile_assets_state);
+    let timing_clean_total = timing_clean_start.elapsed();
 
     if show_progress {
         if plain_output {
@@ -154,101 +160,24 @@ pub fn initialize_build(
                 // Snapshot-friendly output (no progress prefixes or emojis)
                 println!("Cleaned previous build due to compiler update");
             }
+            println!("Cleaned {diff_cleanup}/{total_cleanup}")
         } else {
-            println!(
-                "{}{} {}Built package tree in {:.2}s",
-                LINE_CLEAR,
-                style("[1/7]").bold().dim(),
-                TREE,
-                default_timing
-                    .unwrap_or(timing_package_tree_elapsed)
-                    .as_secs_f64()
-            );
             if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
                 println!(
                     "{}{} {}Cleaned previous build due to compiler update",
                     LINE_CLEAR,
-                    style("[1/7]").bold().dim(),
+                    style("[1/3]").bold().dim(),
                     SWEEP
                 );
             }
-        }
-    }
-
-    if !packages::validate_packages_dependencies(&packages) {
-        return Err(anyhow!("Failed to validate package dependencies"));
-    }
-
-    let timing_source_files = Instant::now();
-
-    if !plain_output && show_progress {
-        print!(
-            "{} {}Finding source files...",
-            style("[2/7]").bold().dim(),
-            LOOKING_GLASS
-        );
-        let _ = stdout().flush();
-    }
-
-    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
-    packages::parse_packages(&mut build_state);
-    let timing_source_files_elapsed = timing_source_files.elapsed();
-
-    if !plain_output && show_progress {
-        println!(
-            "{}{} {}Found source files in {:.2}s",
-            LINE_CLEAR,
-            style("[2/7]").bold().dim(),
-            LOOKING_GLASS,
-            default_timing
-                .unwrap_or(timing_source_files_elapsed)
-                .as_secs_f64()
-        );
-
-        print!(
-            "{} {}Reading compile state...",
-            style("[3/7]").bold().dim(),
-            COMPILE_STATE
-        );
-        let _ = stdout().flush();
-    }
-    let timing_compile_state = Instant::now();
-    let compile_assets_state = read_compile_state::read(&mut build_state)?;
-    let timing_compile_state_elapsed = timing_compile_state.elapsed();
-
-    if !plain_output && show_progress {
-        println!(
-            "{}{} {}Read compile state {:.2}s",
-            LINE_CLEAR,
-            style("[3/7]").bold().dim(),
-            COMPILE_STATE,
-            default_timing
-                .unwrap_or(timing_compile_state_elapsed)
-                .as_secs_f64()
-        );
-
-        print!(
-            "{} {}Cleaning up previous build...",
-            style("[4/7]").bold().dim(),
-            SWEEP
-        );
-    }
-    let timing_cleanup = Instant::now();
-    let (diff_cleanup, total_cleanup) = clean::cleanup_previous_build(&mut build_state, compile_assets_state);
-    let timing_cleanup_elapsed = timing_cleanup.elapsed();
-
-    if show_progress {
-        if plain_output {
-            println!("Cleaned {diff_cleanup}/{total_cleanup}")
-        } else {
             println!(
-                "{}{} {}Cleaned {}/{} {:.2}s",
+                "{}{} {}Cleaned {}/{} in {:.2}s",
                 LINE_CLEAR,
-                style("[4/7]").bold().dim(),
+                style("[1/3]").bold().dim(),
                 SWEEP,
                 diff_cleanup,
                 total_cleanup,
-                default_timing.unwrap_or(timing_cleanup_elapsed).as_secs_f64()
+                default_timing.unwrap_or(timing_clean_total).as_secs_f64()
             );
         }
     }
@@ -316,8 +245,8 @@ pub fn incremental_build(
     } else {
         ProgressBar::hidden()
     };
-    let mut current_step = if only_incremental { 1 } else { 5 };
-    let total_steps = if only_incremental { 3 } else { 7 };
+    let mut current_step = if only_incremental { 1 } else { 2 };
+    let total_steps = if only_incremental { 2 } else { 3 };
     pb.set_style(
         ProgressStyle::with_template(&format!(
             "{} {}Parsing... {{spinner}} {{pos}}/{{len}} {{msg}}",
@@ -327,27 +256,14 @@ pub fn incremental_build(
         .unwrap(),
     );
 
+    let timing_parse_start = Instant::now();
     let timing_ast = Instant::now();
     let result_asts = parse::generate_asts(build_state, || pb.inc(1));
     let timing_ast_elapsed = timing_ast.elapsed();
 
     match result_asts {
         Ok(_ast) => {
-            if show_progress {
-                if plain_output {
-                    println!("Parsed {num_dirty_modules} source files")
-                } else {
-                    println!(
-                        "{}{} {}Parsed {} source files in {:.2}s",
-                        LINE_CLEAR,
-                        format_step(current_step, total_steps),
-                        CODE,
-                        num_dirty_modules,
-                        default_timing.unwrap_or(timing_ast_elapsed).as_secs_f64()
-                    );
-                    pb.finish();
-                }
-            }
+            pb.finish();
         }
         Err(err) => {
             logs::finalize(&build_state.packages);
@@ -370,20 +286,23 @@ pub fn incremental_build(
             });
         }
     }
-    let timing_deps = Instant::now();
     let deleted_modules = build_state.deleted_modules.clone();
     deps::get_deps(build_state, &deleted_modules);
-    let timing_deps_elapsed = timing_deps.elapsed();
-    current_step += 1;
+    let timing_parse_total = timing_parse_start.elapsed();
 
-    if !plain_output && show_progress {
-        println!(
-            "{}{} {}Collected deps in {:.2}s",
-            LINE_CLEAR,
-            format_step(current_step, total_steps),
-            DEPS,
-            default_timing.unwrap_or(timing_deps_elapsed).as_secs_f64()
-        );
+    if show_progress {
+        if plain_output {
+            println!("Parsed {num_dirty_modules} source files")
+        } else {
+            println!(
+                "{}{} {}Parsed {} source files in {:.2}s",
+                LINE_CLEAR,
+                format_step(current_step, total_steps),
+                CODE,
+                num_dirty_modules,
+                default_timing.unwrap_or(timing_parse_total).as_secs_f64()
+            );
+        }
     }
 
     mark_modules_with_expired_deps_dirty(build_state);
