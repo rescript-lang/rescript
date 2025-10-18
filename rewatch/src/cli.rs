@@ -219,13 +219,6 @@ pub struct DevArg {
     pub dev: bool,
 }
 
-#[derive(Args, Debug, Clone, Copy)]
-pub struct SnapshotOutputArg {
-    /// simple output for snapshot testing
-    #[arg(short, long, default_value = "false", num_args = 0..=1)]
-    pub snapshot_output: bool,
-}
-
 #[derive(Args, Debug, Clone)]
 pub struct BuildArgs {
     #[command(flatten)]
@@ -246,9 +239,6 @@ pub struct BuildArgs {
     /// Disable timing on the output
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub no_timing: bool,
-
-    #[command(flatten)]
-    pub snapshot_output: SnapshotOutputArg,
 
     /// Watch mode (deprecated, use `rescript watch` instead)
     #[arg(short, default_value_t = false, num_args = 0..=1)]
@@ -418,9 +408,6 @@ pub struct WatchArgs {
     #[command(flatten)]
     pub dev: DevArg,
 
-    #[command(flatten)]
-    pub snapshot_output: SnapshotOutputArg,
-
     /// Warning numbers and whether to turn them into errors
     ///
     /// This flag overrides any warning configuration in rescript.json.
@@ -438,7 +425,6 @@ impl From<BuildArgs> for WatchArgs {
             after_build: build_args.after_build,
             create_sourcedirs: build_args.create_sourcedirs,
             dev: build_args.dev,
-            snapshot_output: build_args.snapshot_output,
             warn_error: build_args.warn_error,
         }
     }
@@ -454,9 +440,6 @@ pub enum Command {
     Clean {
         #[command(flatten)]
         folder: FolderArg,
-
-        #[command(flatten)]
-        snapshot_output: SnapshotOutputArg,
 
         #[command(flatten)]
         dev: DevArg,
@@ -529,13 +512,5 @@ impl Deref for DevArg {
 
     fn deref(&self) -> &Self::Target {
         &self.dev
-    }
-}
-
-impl Deref for SnapshotOutputArg {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.snapshot_output
     }
 }

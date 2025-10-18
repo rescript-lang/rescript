@@ -25,7 +25,9 @@ fn main() -> Result<()> {
         }
     }
 
-    let is_tty = Term::stdout().is_term() && Term::stderr().is_term();
+    let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
+    let snapshot_output = !is_tty;
+
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
     let show_progress = log_level_filter == LevelFilter::Info;
@@ -43,8 +45,6 @@ fn main() -> Result<()> {
                     "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
                 );
             }
-
-            let snapshot_output = *build_args.snapshot_output || !is_tty;
 
             match build::build(
                 &build_args.filter,
@@ -76,8 +76,6 @@ fn main() -> Result<()> {
                 );
             }
 
-            let snapshot_output = *watch_args.snapshot_output || !is_tty;
-
             watcher::start(
                 &watch_args.filter,
                 show_progress,
@@ -90,11 +88,7 @@ fn main() -> Result<()> {
 
             Ok(())
         }
-        cli::Command::Clean {
-            folder,
-            snapshot_output,
-            dev,
-        } => {
+        cli::Command::Clean { folder, dev } => {
             let _lock = get_lock(&folder);
 
             if dev.dev {
@@ -103,7 +97,7 @@ fn main() -> Result<()> {
                 );
             }
 
-            build::clean::clean(Path::new(&folder as &str), show_progress, *snapshot_output)
+            build::clean::clean(Path::new(&folder as &str), show_progress, snapshot_output)
         }
         cli::Command::Format {
             stdin,

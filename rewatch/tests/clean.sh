@@ -135,7 +135,7 @@ fi
 
 # Rebuild with snapshot output
 snapshot_file=../tests/snapshots/clean-rebuild.txt
-rewatch build --snapshot-output &> $snapshot_file
+rewatch build &> $snapshot_file
 build_status=$?
 normalize_paths $snapshot_file
 if [ $build_status -eq 0 ];
