@@ -25,6 +25,7 @@
 #### :nail_care: Polish
 
 - Rewatch: plain output when not running in tty. https://github.com/rescript-lang/rescript/pull/7970
+- Streamline rewatch help texts. https://github.com/rescript-lang/rescript/pull/7973
 
 #### :house: Internal
 
