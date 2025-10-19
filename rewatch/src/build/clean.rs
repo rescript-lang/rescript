@@ -391,7 +391,7 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
     };
 
     if !plain_output && show_progress {
-        println!(
+        print!(
             "{} {}Cleaning {} files...",
             style("[2/2]").bold().dim(),
             SWEEP,
