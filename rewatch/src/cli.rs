@@ -40,7 +40,8 @@ pub enum FileExtension {
 #[command(version)]
 #[command(after_help = "[1m[1m[4mNotes:[0m
   - If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information.
-  - For the legacy (pre-v12) build system, run `rescript-legacy` instead.")]
+  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.
+  - For the legacy (pre-v12) build system, run `rescript-legacy`.")]
 pub struct Cli {
     /// Verbosity:
     /// -v -> Debug
@@ -173,39 +174,30 @@ fn build_default_args(raw_args: &[OsString]) -> Vec<OsString> {
 
 #[derive(Args, Debug, Clone)]
 pub struct FolderArg {
-    /// The relative path to where the main rescript.json resides. IE - the root of your project.
+    /// Path to the project or subproject. This folder must contain a rescript.json file.
     #[arg(default_value = ".")]
     pub folder: String,
 }
 
 #[derive(Args, Debug, Clone)]
 pub struct FilterArg {
-    /// Filter files by regex
-    ///
-    /// Filter allows for a regex to be supplied which will filter the files to be compiled. For
-    /// instance, to filter out test files for compilation while doing feature work.
+    /// Filter source files by regex.
+    /// E.g., filter out test files for compilation while doing feature work.
     #[arg(short, long, value_parser = parse_regex)]
     pub filter: Option<Regex>,
 }
 
 #[derive(Args, Debug, Clone)]
 pub struct AfterBuildArg {
-    /// Action after build
-    ///
-    /// This allows one to pass an additional command to the watcher, which allows it to run when
-    /// finished. For instance, to play a sound when done compiling, or to run a test suite.
-    /// NOTE - You may need to add '--color=always' to your subcommand in case you want to output
-    /// color as well
+    /// Run an additional command after build.
+    /// E.g., play a sound or run a test suite when done compiling.
     #[arg(short, long)]
     pub after_build: Option<String>,
 }
 
 #[derive(Args, Debug, Clone, Copy)]
 pub struct CreateSourceDirsArg {
-    /// Create source_dirs.json
-    ///
-    /// This creates a source_dirs.json file at the root of the monorepo, which is needed when you
-    /// want to use Reanalyze
+    /// Create a source_dirs.json file at the root of the monorepo, needed for Reanalyze.
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub create_sourcedirs: bool,
 }
@@ -213,10 +205,17 @@ pub struct CreateSourceDirsArg {
 #[derive(Args, Debug, Clone, Copy)]
 pub struct DevArg {
     /// Deprecated: Build development dependencies
-    ///
     /// This is the flag no longer does anything and will be removed in future versions.
     #[arg(long, default_value_t = false, num_args = 0..=1, hide = true)]
     pub dev: bool,
+}
+
+#[derive(Args, Debug, Clone)]
+pub struct WarnErrorArg {
+    /// Override warning configuration from rescript.json.
+    /// Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"
+    #[arg(long)]
+    pub warn_error: Option<String>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -236,21 +235,16 @@ pub struct BuildArgs {
     #[command(flatten)]
     pub dev: DevArg,
 
-    /// Disable timing on the output
+    #[command(flatten)]
+    pub warn_error: WarnErrorArg,
+
+    /// Disable output timing
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub no_timing: bool,
 
     /// Watch mode (deprecated, use `rescript watch` instead)
-    #[arg(short, default_value_t = false, num_args = 0..=1)]
+    #[arg(short, default_value_t = false, num_args = 0..=1, hide = true)]
     pub watch: bool,
-
-    /// Warning numbers and whether to turn them into errors
-    ///
-    /// This flag overrides any warning configuration in rescript.json.
-    /// Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"
-    /// This follows the same precedence behavior as the legacy bsb build system.
-    #[arg(long)]
-    pub warn_error: Option<String>,
 }
 
 #[cfg(test)]
@@ -408,13 +402,8 @@ pub struct WatchArgs {
     #[command(flatten)]
     pub dev: DevArg,
 
-    /// Warning numbers and whether to turn them into errors
-    ///
-    /// This flag overrides any warning configuration in rescript.json.
-    /// Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"
-    /// This follows the same precedence behavior as the legacy bsb build system.
-    #[arg(long)]
-    pub warn_error: Option<String>,
+    #[command(flatten)]
+    pub warn_error: WarnErrorArg,
 }
 
 impl From<BuildArgs> for WatchArgs {
@@ -444,7 +433,7 @@ pub enum Command {
         #[command(flatten)]
         dev: DevArg,
     },
-    /// Formats ReScript files.
+    /// Format ReScript files.
     Format {
         /// Check formatting status without applying changes.
         #[arg(short, long)]
@@ -467,9 +456,9 @@ pub enum Command {
         #[command(flatten)]
         dev: DevArg,
     },
-    /// This prints the compiler arguments. It expects the path to a rescript file (.res or .resi).
+    /// Print the compiler arguments for a ReScript source file.
     CompilerArgs {
-        /// Path to a rescript file (.res or .resi)
+        /// Path to a ReScript source file (.res or .resi)
         #[command()]
         path: String,
     },
@@ -512,5 +501,13 @@ impl Deref for DevArg {
 
     fn deref(&self) -> &Self::Target {
         &self.dev
+    }
+}
+
+impl Deref for WarnErrorArg {
+    type Target = Option<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.warn_error
     }
 }

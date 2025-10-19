@@ -53,7 +53,7 @@ fn main() -> Result<()> {
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
                 plain_output,
-                build_args.warn_error.clone(),
+                (*build_args.warn_error).clone(),
             ) {
                 Err(e) => {
                     println!("{e}");
@@ -70,7 +70,7 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            if watch_args.dev.dev {
+            if *watch_args.dev {
                 log::warn!(
                     "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
                 );
@@ -83,7 +83,7 @@ fn main() -> Result<()> {
                 (*watch_args.after_build).clone(),
                 *watch_args.create_sourcedirs,
                 plain_output,
-                watch_args.warn_error.clone(),
+                (*watch_args.warn_error).clone(),
             );
 
             Ok(())
