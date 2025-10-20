@@ -71,30 +71,29 @@ You can also open this dev container with [GitHub Codespaces](https://github.com
 
 ## Building the Compiler
 
-The compiler binaries themselves can be built directly with dune as follows:
+To build the compiler, the build tools (rewatch and ninja), and the ReScript runtime/standard library, just run:
 
 ```sh
-# One off build
-dune build
-
-# Watch mode
-dune build -w
+make
 ```
 
-For all additional operations, a Makefile is provided:
+To run tests, execute:
 
 ```sh
-# Build the compiler using dune and copy the exes into the platform dir
-make
-
-# Build the ninja build tool
-make ninja
-
-# Build the ReScript standard library using ninja and the compiler
-make lib
-
-# Run compiler tests
 make test
+```
+
+Additional targets:
+
+```sh
+# Build the compiler executables only
+make compiler
+
+# Build rewatch only
+make rewatch
+
+# Build the ninja tool only
+make ninja
 
 # Run syntax tests
 make test-syntax
@@ -102,8 +101,14 @@ make test-syntax
 # Run syntax tests including roundtrip tests
 make test-syntax-roundtrip
 
-# Populate lib/ocaml and update artifact list
+# Update artifact list
 make artifacts
+
+# Format code
+make format
+
+# Check formatting
+make checkformat
 ```
 
 ## Coding Style

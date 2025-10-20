@@ -16,5 +16,4 @@ if (platform === "win32") {
     process.env.CXXFLAGS = "-flto";
   }
   execSync(buildCommand, { stdio: [0, 1, 2], cwd: ninjaDir });
-  execSync("strip ninja", { stdio: [0, 1, 2], cwd: ninjaDir });
 }

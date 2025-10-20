@@ -5,12 +5,28 @@ This file provides guidance to AI coding assistants when working with code in th
 ## Quick Start: Essential Commands
 
 ```bash
-# Build and test
-make && make test
+# Build the platform toolchain + stdlib (default target)
+make
 
-# Format and check code
-make format && make checkformat
+# Build the platform toolchain + stdlib and run tests
+make test
+
+# Format code
+make format
+
+# Check formatting
+make checkformat
 ```
+
+The Makefile’s targets build on each other in this order:
+
+1. `yarn-install` runs automatically for targets that need JavaScript tooling (lib, playground, tests, formatting, etc.).
+2. Toolchain binaries (all copied into `packages/@rescript/<platform>/bin`):
+   - `compiler` builds the dune executables (`bsc`, `bsb_helper`, `rescript-*`, `ounit_tests`, etc.).
+   - `rewatch` builds the Rust-based ReScript build system and CLI.
+   - `ninja` bootstraps the ninja binary (part of the legacy build system).
+3. `lib` (the default target) uses those toolchain outputs to build the runtime sources.
+4. Test targets (`make test`, `make test-syntax`, etc.) reuse everything above.
 
 ## ⚠️ Critical Guidelines & Common Pitfalls
 

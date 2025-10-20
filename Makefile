@@ -1,102 +1,209 @@
 SHELL = /bin/bash
 
+ifeq ($(OS),Windows_NT)
+	PLATFORM_EXE_EXT = .exe
+else
+	PLATFORM_EXE_EXT =
+endif
+
+ifneq ($(OS),Windows_NT)
+	UNAME_S := $(shell uname -s)
+	UNAME_M := $(shell uname -m)
+endif
+
+ifeq ($(OS),Windows_NT)
+	RESCRIPT_PLATFORM := win32-x64
+else ifeq ($(UNAME_S),Darwin)
+	ifeq ($(UNAME_M),arm64)
+		RESCRIPT_PLATFORM := darwin-arm64
+	else
+		RESCRIPT_PLATFORM := darwin-x64
+	endif
+else ifeq ($(UNAME_S),Linux)
+	ifeq ($(UNAME_M),aarch64)
+		RESCRIPT_PLATFORM := linux-arm64
+	else ifeq ($(UNAME_M),arm64)
+		RESCRIPT_PLATFORM := linux-arm64
+	else
+		RESCRIPT_PLATFORM := linux-x64
+	endif
+else
+	$(error Unsupported platform $(UNAME_S)-$(UNAME_M))
+endif
+
+define COPY_EXE
+	cp $1 $2
+	chmod 755 $2
+$(if $(filter Windows_NT,$(OS)),,strip $2)
+endef
+
+# Directories
+
+BIN_DIR := packages/@rescript/$(RESCRIPT_PLATFORM)/bin
+RUNTIME_DIR := packages/@rescript/runtime
 DUNE_BIN_DIR = ./_build/install/default/bin
 
-build: ninja rewatch
+# Build stamps
+
+YARN_INSTALL_STAMP := node_modules/.yarn.stamp
+COMPILER_BUILD_STAMP := _build/.compiler.stamp
+RUNTIME_BUILD_STAMP := _build/.runtime.stamp
+
+# Yarn
+
+WORKSPACE_PACKAGE_JSONS := $(shell find packages -path '*/lib' -prune -o -name package.json -print)
+YARN_INSTALL_SOURCES := package.json yarn.lock yarn.config.cjs .yarnrc.yml $(WORKSPACE_PACKAGE_JSONS)
+
+yarn-install: $(YARN_INSTALL_STAMP)
+
+$(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
+	yarn install
+	@mkdir -p $(dir $@)
+	touch $@
+
+# Ninja
+
+NINJA_SOURCES = $(wildcard ninja/src/*.cc ninja/src/*.h) $(wildcard ninja/*.py)
+NINJA_EXE = $(BIN_DIR)/ninja.exe
+
+ninja: $(NINJA_EXE)
+
+ninja/ninja: $(NINJA_SOURCES)
+ifeq ($(OS),Darwin)
+	export CXXFLAGS="-flto"
+endif
+	cd ninja && python3 configure.py --bootstrap --verbose
+
+$(NINJA_EXE): ninja/ninja
+	$(call COPY_EXE,$<,$@)
+
+clean-ninja:
+	rm -rf $(NINJA_EXE) ninja/build.ninja ninja/build ninja/misc/__pycache__ ninja/ninja
+
+# Rewatch
+
+REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock rewatch/rust-toolchain.toml
+RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
+
+rewatch: $(RESCRIPT_EXE)
+
+$(RESCRIPT_EXE): rewatch/target/debug/rescript$(PLATFORM_EXE_EXT)
+	$(call COPY_EXE,$<,$@)
+
+rewatch/target/debug/rescript$(PLATFORM_EXE_EXT): $(REWATCH_SOURCES)
+	cargo build --manifest-path rewatch/Cargo.toml
+
+clean-rewatch:
+	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(RESCRIPT_EXE)
+
+# Compiler
+
+COMPILER_SOURCE_DIRS := compiler tests analysis tools
+COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
+COMPILER_BIN_NAMES := bsc bsb_helper rescript-legacy rescript-editor-analysis rescript-tools
+COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
+COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
+
+compiler: $(COMPILER_EXES)
+
+define MAKE_COMPILER_COPY_RULE
+$(BIN_DIR)/$(1).exe: $(DUNE_BIN_DIR)/$(1)$(PLATFORM_EXE_EXT)
+	$$(call COPY_EXE,$$<,$$@)
+endef
+
+$(foreach bin,$(COMPILER_BIN_NAMES),$(eval $(call MAKE_COMPILER_COPY_RULE,$(bin))))
+
+# "touch" after dune build to make sure that the binaries' timestamps are updated
+# even if the actual content of the sources hasn't changed.
+$(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build
-	./scripts/copyExes.js --compiler
+	touch $@
+	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
 
-watch:
-	dune build -w
+$(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
 
-bench:
-	$(DUNE_BIN_DIR)/syntax_benchmarks
+clean-compiler:
+	dune clean && rm -f $(COMPILER_EXES) $(COMPILER_BUILD_STAMP)
 
-dce:
-	reanalyze.exe -dce-cmt _build/default/compiler
+# Runtime / stdlib
 
-rewatch:
-	cargo build --manifest-path rewatch/Cargo.toml --release
-	./scripts/copyExes.js --rewatch
+RUNTIME_SOURCES := $(shell find $(RUNTIME_DIR) -path '$(RUNTIME_DIR)/lib' -prune -o -type f \( -name '*.res' -o -name '*.resi' -o -name 'rescript.json' \) -print)
 
-ninja/ninja:
-	./scripts/buildNinjaBinary.js
+lib: $(RUNTIME_BUILD_STAMP)
 
-ninja: ninja/ninja
-	./scripts/copyExes.js --ninja
-
-test: build lib
-	node scripts/test.js -all
-
-test-analysis:
-	make -C tests/analysis_tests clean test
-
-test-tools:
-	make -C tests/tools_tests clean test
-
-test-syntax:
-	./scripts/test_syntax.sh
-
-test-syntax-roundtrip:
-	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
-
-test-gentype:
-	make -C tests/gentype_tests/typescript-react-example clean test
-	make -C tests/gentype_tests/stdlib-no-shims clean test
-
-test-rewatch:
-	./rewatch/tests/suite-ci.sh
-
-test-all: test test-gentype test-analysis test-tools test-rewatch
-
-reanalyze:
-	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
-
-lib:
+$(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
 	yarn workspace @rescript/runtime build
+	@mkdir -p $(dir $@)
+	touch $@
+
+clean-lib:
+	yarn workspace @rescript/runtime rescript clean
+	rm -f $(RUNTIME_BUILD_STAMP)
+
+# Tests / artifacts / analysis
 
 artifacts: lib
 	./scripts/updateArtifactList.js
 
+bench: $(COMPILER_BUILD_STAMP)
+	$(DUNE_BIN_DIR)/syntax_benchmarks
+
+test: lib ninja | $(YARN_INSTALL_STAMP)
+	node scripts/test.js -all
+
+test-analysis: | $(YARN_INSTALL_STAMP)
+	make -C tests/analysis_tests clean test
+
+test-tools: | $(YARN_INSTALL_STAMP)
+	make -C tests/tools_tests clean test
+
+test-syntax: | $(YARN_INSTALL_STAMP)
+	./scripts/test_syntax.sh
+
+test-syntax-roundtrip: | $(YARN_INSTALL_STAMP)
+	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
+
+test-gentype: | $(YARN_INSTALL_STAMP)
+	make -C tests/gentype_tests/typescript-react-example clean test
+	make -C tests/gentype_tests/stdlib-no-shims clean test
+
+test-rewatch: | $(YARN_INSTALL_STAMP)
+	./rewatch/tests/suite-ci.sh
+
+test-all: test test-gentype test-analysis test-tools test-rewatch
+
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
-playground:
+playground: | $(YARN_INSTALL_STAMP)
 	dune build --profile browser
 	cp -f ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
 
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
-playground-cmijs: artifacts
+playground-cmijs: artifacts | $(YARN_INSTALL_STAMP)
 	yarn workspace playground build
 
 # Builds the playground, runs some e2e tests and releases the playground to the
 # Cloudflare R2 (requires Rclone `rescript:` remote)
-playground-release: playground playground-cmijs
+playground-release: playground playground-cmijs | $(YARN_INSTALL_STAMP)
 	yarn workspace playground test
 	yarn workspace playground upload-bundle
 
-format:
+format: | $(YARN_INSTALL_STAMP)
 	./scripts/format.sh
 
-checkformat:
+checkformat: | $(YARN_INSTALL_STAMP)
 	./scripts/format_check.sh
 
 clean-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean
 	make -C tests/gentype_tests/stdlib-no-shims clean
 
-clean-rewatch:
-	cargo clean --manifest-path rewatch/Cargo.toml && rm -f rewatch/rewatch
+clean-tests: clean-gentype
 
-clean-lib:
-	yarn workspace @rescript/runtime rescript clean
-
-clean: clean-lib
-	dune clean
-
-clean-all: clean clean-gentype clean-rewatch
+clean: clean-lib clean-compiler clean-rewatch clean-ninja
 
 dev-container:
 	docker build -t rescript-dev-container docker
 
-.DEFAULT_GOAL := build
+.DEFAULT_GOAL := lib
 
-.PHONY: build watch rewatch ninja bench dce test test-syntax test-syntax-roundtrip test-gentype test-analysis test-tools test-all lib playground playground-cmijs playground-release artifacts format checkformat clean-gentype clean-rewatch clean clean-all dev-container
+.PHONY: yarn-install ninja rewatch compiler lib artifacts bench dce test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all reanalyze playground playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
