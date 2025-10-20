@@ -346,6 +346,15 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ("-dparsetree", set Clflags.dump_parsetree, "*internal* debug parsetree");
     ("-drawlambda", set Clflags.dump_rawlambda, "*internal* debug raw lambda");
     ("-dsource", set Clflags.dump_source, "*internal* print source");
+    ( "-embeds",
+      string_call (fun s ->
+          Js_config.collect_embeds := true;
+          let s = String.trim s in
+          Js_config.embed_tags :=
+            Ext_string.split_by ~keep_empty:false (fun c -> c = ',') s
+            |> List.map String.trim),
+      "*internal* Collect embed extension occurrences (csv of tags)" );
+    (* single-pass embed rewrite via PPX; no separate -rewrite-embeds entry *)
     ( "-reprint-source",
       string_call reprint_source_file,
       "*internal* transform the target ReScript file using PPXes provided, and \

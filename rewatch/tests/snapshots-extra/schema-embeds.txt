@@ -1,0 +1,534 @@
+=== embedlang.input.schema.json ===
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BatchInputSchema",
+  "examples": [
+    {
+      "requests": [
+        {
+          "config": {
+            "extraSources": [
+              "schema.graphql"
+            ]
+          },
+          "data": "/* @name GetUser */ select * from users where id = :id",
+          "occurrenceIndex": 1,
+          "source": {
+            "module": "Foo",
+            "path": "src/Foo.res"
+          },
+          "tag": "sql.one"
+        }
+      ]
+    }
+  ],
+  "type": "object",
+  "required": [
+    "requests"
+  ],
+  "properties": {
+    "requests": {
+      "description": "Requests to process in order",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GeneratorRequestSchema"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "GeneratorRequestSchema": {
+      "type": "object",
+      "required": [
+        "config",
+        "data",
+        "occurrenceIndex",
+        "source",
+        "tag"
+      ],
+      "properties": {
+        "tag": {
+          "description": "The embed tag that matched, e.g. \"sql.one\"",
+          "type": "string"
+        },
+        "data": {
+          "description": "The embed data: either a string literal or a config object"
+        },
+        "source": {
+          "description": "Source file path and module",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GeneratorSourceSchema"
+            }
+          ]
+        },
+        "occurrenceIndex": {
+          "description": "1-based occurrence index of this embed in the file for this tag",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "config": {
+          "description": "Generator configuration as derived from rescript.json",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GeneratorConfigSchema"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "GeneratorSourceSchema": {
+      "type": "object",
+      "required": [
+        "module",
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "description": "Absolute or project-relative path to the source file containing the embed",
+          "type": "string"
+        },
+        "module": {
+          "description": "Module name of the source file (e.g. Foo__Bar)",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GeneratorConfigSchema": {
+      "type": "object",
+      "properties": {
+        "extraSources": {
+          "description": "Extra files the generator depends on (project-relative paths)",
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "options": {
+          "description": "Reserved for future project-level options. Pass-through JSON."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+=== embedlang.output.schema.json ===
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BatchOutputSchema",
+  "type": "object",
+  "required": [
+    "results"
+  ],
+  "properties": {
+    "results": {
+      "description": "Results for each request in the same order",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/GeneratorOutputSchema"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "GeneratorOutputSchema": {
+      "examples": [
+        {
+          "code": "let default = \"...\"",
+          "status": "ok"
+        }
+      ],
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "code",
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok"
+              ]
+            },
+            "code": {
+              "description": "ReScript source code to write to generated module (.res)",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "errors",
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "errors": {
+              "description": "Diagnostics mapped to the embed string",
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/GenDiagItemSchema"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "GenDiagItemSchema": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "description": "Human-readable error message",
+          "type": "string"
+        },
+        "severity": {
+          "description": "Optional severity (\"error\" | \"warning\" | \"info\"), defaults to \"error\"",
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code": {
+          "description": "Optional machine-readable code (e.g. \"SQL001\")",
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start": {
+          "description": "Start position relative to the embed string (1-based)",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GenDiagPosSchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end": {
+          "description": "End position relative to the embed string (1-based, inclusive)",
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GenDiagPosSchema"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "GenDiagPosSchema": {
+      "type": "object",
+      "required": [
+        "column",
+        "line"
+      ],
+      "properties": {
+        "line": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "column": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+=== embedlang.openapi.json ===
+{
+  "components": {
+    "schemas": {
+      "BatchInput": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "requests": [
+              {
+                "config": {
+                  "extraSources": [
+                    "schema.graphql"
+                  ]
+                },
+                "data": "/* @name GetUser */ select * from users where id = :id",
+                "occurrenceIndex": 1,
+                "source": {
+                  "module": "Foo",
+                  "path": "src/Foo.res"
+                },
+                "tag": "sql.one"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "requests": {
+            "description": "Requests to process in order",
+            "items": {
+              "$ref": "#/definitions/GeneratorRequestSchema"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "requests"
+        ],
+        "title": "BatchInputSchema",
+        "type": "object"
+      },
+      "BatchOutput": {
+        "additionalProperties": false,
+        "discriminator": {
+          "propertyName": "status"
+        },
+        "properties": {
+          "results": {
+            "description": "Results for each request in the same order",
+            "items": {
+              "$ref": "#/definitions/GeneratorOutputSchema"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "title": "BatchOutputSchema",
+        "type": "object"
+      },
+      "GenDiagItemSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "default": null,
+            "description": "Optional machine-readable code (e.g. \"SQL001\")",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/GenDiagPosSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "End position relative to the embed string (1-based, inclusive)"
+          },
+          "message": {
+            "description": "Human-readable error message",
+            "type": "string"
+          },
+          "severity": {
+            "default": null,
+            "description": "Optional severity (\"error\" | \"warning\" | \"info\"), defaults to \"error\"",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/GenDiagPosSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Start position relative to the embed string (1-based)"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "GenDiagPosSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "column": {
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "line": {
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "column",
+          "line"
+        ],
+        "type": "object"
+      },
+      "GeneratorConfigSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "extraSources": {
+            "default": [],
+            "description": "Extra files the generator depends on (project-relative paths)",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "options": {
+            "description": "Reserved for future project-level options. Pass-through JSON."
+          }
+        },
+        "type": "object"
+      },
+      "GeneratorOutputSchema": {
+        "examples": [
+          {
+            "code": "let default = \"...\"",
+            "status": "ok"
+          }
+        ],
+        "oneOf": [
+          {
+            "properties": {
+              "code": {
+                "description": "ReScript source code to write to generated module (.res)",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "ok"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "status"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "errors": {
+                "description": "Diagnostics mapped to the embed string",
+                "items": {
+                  "$ref": "#/definitions/GenDiagItemSchema"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "error"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "errors",
+              "status"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "GeneratorRequestSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/GeneratorConfigSchema"
+              }
+            ],
+            "description": "Generator configuration as derived from rescript.json"
+          },
+          "data": {
+            "description": "The embed data: either a string literal or a config object"
+          },
+          "occurrenceIndex": {
+            "description": "1-based occurrence index of this embed in the file for this tag",
+            "format": "uint32",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "source": {
+            "allOf": [
+              {
+                "$ref": "#/definitions/GeneratorSourceSchema"
+              }
+            ],
+            "description": "Source file path and module"
+          },
+          "tag": {
+            "description": "The embed tag that matched, e.g. \"sql.one\"",
+            "type": "string"
+          }
+        },
+        "required": [
+          "config",
+          "data",
+          "occurrenceIndex",
+          "source",
+          "tag"
+        ],
+        "type": "object"
+      },
+      "GeneratorSourceSchema": {
+        "additionalProperties": false,
+        "properties": {
+          "module": {
+            "description": "Module name of the source file (e.g. Foo__Bar)",
+            "type": "string"
+          },
+          "path": {
+            "description": "Absolute or project-relative path to the source file containing the embed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "module",
+          "path"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Rewatch EmbedLang Protocol",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {}
+}

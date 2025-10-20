@@ -1,0 +1,27 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/embed.res:5:22-7:0
+
+  3 │ let b = ::sql.
+  4 │ let c = ::sql.one(
+  5 │ let d = ::sql.one("x"
+  6 │ 
+  7 │ 
+
+  Did you forget a `)` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/embed.res:5:22-7:0
+
+  3 │ let b = ::sql.
+  4 │ let c = ::sql.one(
+  5 │ let d = ::sql.one("x"
+  6 │ 
+  7 │ 
+
+  Did you forget a `)` here?
+
+let a = [%embed. ]
+let b = [%embed.sql ]
+let c = [%embed.sql.one let d = [%embed.sql.one {js|x|js}]]

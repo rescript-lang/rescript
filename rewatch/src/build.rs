@@ -3,6 +3,7 @@ pub mod clean;
 pub mod compile;
 pub mod compiler_info;
 pub mod deps;
+pub mod embeds;
 pub mod logs;
 pub mod namespaces;
 pub mod packages;
@@ -17,6 +18,7 @@ use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
+use build_types::SourceType;
 use build_types::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -370,6 +372,205 @@ pub fn incremental_build(
             });
         }
     }
+    // Process embeds: run generators, write maps, rewrite ASTs, and register generated modules
+    let timing_embeds = Instant::now();
+    {
+        let mut embeds_had_failure = false;
+        // Collect work items first to avoid borrow conflicts. Preload embed indexes once.
+        // Store the cloned Package for parallel work to avoid shared map lookups.
+        let mut work: Vec<(
+            String,                          // module_name
+            crate::build::packages::Package, // package
+            std::path::PathBuf,              // impl_rel
+            std::path::PathBuf,              // ast_rel
+            Option<crate::build::embeds::EmbedIndexFile>, // preloaded index
+        )> = Vec::new();
+        for (module_name, package_name) in build_state.module_name_package_pairs() {
+            if let Some(module) = build_state.build_state.modules.get(&module_name)
+                && let SourceType::SourceFile(source_file) = &module.source_type
+            {
+                let ast_path_rel = helpers::get_ast_path(&source_file.implementation.path);
+                // Try to preload the embeds index if present
+                let idx_rel = {
+                    let stem = ast_path_rel
+                        .file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string();
+                    ast_path_rel
+                        .parent()
+                        .unwrap_or_else(|| std::path::Path::new(""))
+                        .join(format!("{stem}.embeds.json"))
+                };
+                let package_ref = build_state
+                    .build_state
+                    .packages
+                    .get(&package_name)
+                    .expect("Package not found")
+                    .clone();
+                let idx_abs = package_ref.get_build_path().join(&idx_rel);
+                let preloaded_index = if idx_abs.exists() {
+                    crate::build::embeds::read_index(&idx_abs).ok()
+                } else {
+                    None
+                };
+
+                work.push((
+                    module_name.clone(),
+                    package_ref,
+                    source_file.implementation.path.clone(),
+                    ast_path_rel,
+                    preloaded_index,
+                ));
+            }
+        }
+
+        // Reset extraSources mtime cache for this build cycle
+        embeds::reset_extra_sources_mtime_cache();
+
+        // Pre-scan embeds to compute planned invocations (cache misses) and cache hits
+        let mut planned_invocations: u64 = 0;
+        let mut planned_reused: u64 = 0;
+        let mut per_module_invocations: Vec<(String, u64)> = Vec::new();
+        for (module_name, package_ref, _impl_rel, ast_rel, preloaded_index) in &work {
+            let (inv, reused) = if let Some(ix) = preloaded_index {
+                embeds::count_planned_invocations_from_index(
+                    package_ref,
+                    package_ref
+                        .config
+                        .get_effective_embeds_config(&build_state.project_context)
+                        .expect("embeds config present when index exists"),
+                    ix,
+                )
+                .unwrap_or_default()
+            } else {
+                embeds::count_planned_invocations(build_state, package_ref, ast_rel).unwrap_or_default()
+            };
+            if inv > 0 || reused > 0 {
+                planned_invocations += inv as u64;
+                planned_reused += reused as u64;
+            }
+            per_module_invocations.push((module_name.clone(), inv as u64));
+        }
+
+        // Progress bar for generator invocations (non-verbose)
+        let pb_embeds = if planned_invocations > 0 && !snapshot_output && show_progress {
+            let pb = ProgressBar::new(planned_invocations);
+            pb.set_style(
+                ProgressStyle::with_template(&format!(
+                    "{} {}Generating embeds... {{spinner}} {{pos}}/{{len}} {{msg}}",
+                    format_step(current_step, total_steps),
+                    CODE
+                ))
+                .unwrap(),
+            );
+            pb
+        } else {
+            ProgressBar::hidden()
+        };
+
+        // Process modules in parallel (global scheduling across modules) using preloaded indexes.
+        use rayon::prelude::*;
+        let results: Vec<(String, crate::build::packages::Package, anyhow::Result<Vec<embeds::GeneratedModuleInfo>>)> =
+            work
+                .into_par_iter()
+                .map(|(module_name, package, _impl_rel, ast_rel, preloaded_index)| {
+                    let ix_opt = match preloaded_index {
+                        Some(ix) => Some(ix),
+                        None => {
+                            // Attempt to read index if present
+                            let stem = ast_rel
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            let idx_rel = ast_rel
+                                .parent()
+                                .unwrap_or_else(|| std::path::Path::new(""))
+                                .join(format!("{stem}.embeds.json"));
+                            let idx_abs = package.get_build_path().join(&idx_rel);
+                            if idx_abs.exists() {
+                                crate::build::embeds::read_index(&idx_abs).ok()
+                            } else {
+                                None
+                            }
+                        }
+                    };
+                    let res = match ix_opt {
+                        Some(ix) => embeds::process_module_embeds_with_index(
+                            &build_state.project_context,
+                            package.clone(),
+                            &ast_rel,
+                            &ix,
+                        ),
+                        None => {
+                            // No index; perform cleanup only
+                            embeds::cleanup_stale_generated_for_module(&package, &ast_rel, &[])
+                                .map(|_| Vec::new())
+                        }
+                    };
+                    (module_name, package, res)
+                })
+                .collect();
+
+        // Merge results sequentially: register generated modules and update progress
+        let mut any_generated = false;
+        for (module_name, package, result) in results {
+            match result {
+                Ok(generated) => {
+                    if !generated.is_empty() {
+                        embeds::add_generated_modules_to_state(build_state, package, &generated);
+                        any_generated = true;
+                    }
+                }
+                Err(e) => {
+                    log::error!("Embed processing failed for {module_name}: {e}");
+                    embeds_had_failure = true;
+                }
+            }
+            if let Some((_, inv)) = per_module_invocations.iter().find(|(m, _)| m == &module_name)
+                && *inv > 0
+            {
+                pb_embeds.inc(*inv);
+            }
+        }
+
+        // Batch parse all generated modules in one pass for better throughput
+        if any_generated {
+            let _ = parse::generate_asts(build_state, || {});
+        }
+
+        if planned_invocations > 0 {
+            let elapsed = timing_embeds.elapsed();
+            pb_embeds.finish();
+            if show_progress {
+                if snapshot_output {
+                    println!(
+                        "Processed embeds: ran {planned_invocations} generators; cache hits {planned_reused}"
+                    );
+                } else {
+                    println!(
+                        "{}{} {}Processed embeds: ran {} generators; cache hits {} in {:.2}s",
+                        LINE_CLEAR,
+                        format_step(current_step, total_steps),
+                        CODE,
+                        planned_invocations,
+                        planned_reused,
+                        default_timing.unwrap_or(elapsed).as_secs_f64()
+                    );
+                }
+            }
+        }
+
+        if embeds_had_failure {
+            logs::finalize(&build_state.packages);
+            return Err(IncrementalBuildError {
+                kind: IncrementalBuildErrorKind::CompileError(None),
+                snapshot_output,
+            });
+        }
+    }
+
     let timing_deps = Instant::now();
     let deleted_modules = build_state.deleted_modules.clone();
     deps::get_deps(build_state, &deleted_modules);

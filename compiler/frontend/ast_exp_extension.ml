@@ -84,7 +84,17 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
         pexp_desc = Ast_util.record_as_js_object e.pexp_loc self label_exprs;
       }
     | _ -> Location.raise_errorf ~loc "Expect a record expression here")
-  | _ -> e
+  | _ ->
+    (* For configured embed tags, map the payload so that string
+       normalization runs within the literal. For all other extensions,
+       leave payload untouched to avoid surprising side-effects. *)
+    let is_embed_tag =
+      !Js_config.collect_embeds && List.mem txt !Js_config.embed_tags
+    in
+    if is_embed_tag then
+      let payload' = self.payload self payload in
+      {e with pexp_desc = Parsetree.Pexp_extension ({txt; loc}, payload')}
+    else e
 (* For an unknown extension, we don't really need to process further*)
 (* Exp.extension ~loc ~attrs:e.pexp_attributes (
     self.extension self extension) *)

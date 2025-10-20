@@ -462,6 +462,20 @@ pub enum Command {
         #[command()]
         path: String,
     },
+    /// Generate JSON/OpenAPI schemas for Rewatch protocols
+    Schema {
+        /// Which schema to generate
+        #[arg(value_enum)]
+        what: SchemaWhat,
+
+        /// Optional output directory; if omitted, prints to stdout
+        #[arg(long)]
+        output_dir: Option<String>,
+
+        /// Also emit an OpenAPI 3.1 document with components
+        #[arg(long, default_value_t = false, num_args = 0..=1)]
+        openapi: bool,
+    },
 }
 
 impl Deref for FolderArg {
@@ -510,4 +524,10 @@ impl Deref for WarnErrorArg {
     fn deref(&self) -> &Self::Target {
         &self.warn_error
     }
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+pub enum SchemaWhat {
+    #[value(name = "embeds")]
+    Embeds,
 }
