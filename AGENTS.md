@@ -5,8 +5,11 @@ This file provides guidance to AI coding assistants when working with code in th
 ## Quick Start: Essential Commands
 
 ```bash
-# Build the platform toolchain + stdlib (default target)
+# Build the platform toolchain (default target)
 make
+
+# Build the platform toolchain + stdlib
+make lib
 
 # Build the platform toolchain + stdlib and run tests
 make test

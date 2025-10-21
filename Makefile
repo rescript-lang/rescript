@@ -45,9 +45,18 @@ DUNE_BIN_DIR = ./_build/install/default/bin
 
 # Build stamps
 
-YARN_INSTALL_STAMP := node_modules/.yarn.stamp
-COMPILER_BUILD_STAMP := _build/.compiler.stamp
+# Yarn creates `.yarn/install-state.gz` whenever dependencies are installed.
+# Using that file as our stamp ensures manual `yarn install` runs are detected.
+YARN_INSTALL_STAMP := .yarn/install-state.gz
+# Dune updates `_build/log` for every build invocation, even when run manually.
+# Treat that log file as the compiler build stamp so manual `dune build`
+# keeps Make targets up to date.
+COMPILER_BUILD_STAMP := _build/log
 RUNTIME_BUILD_STAMP := _build/.runtime.stamp
+
+# Default target
+
+build: compiler rewatch ninja
 
 # Yarn
 
@@ -58,7 +67,6 @@ yarn-install: $(YARN_INSTALL_STAMP)
 
 $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 	yarn install
-	@mkdir -p $(dir $@)
 	touch $@
 
 # Ninja
@@ -133,7 +141,6 @@ lib: $(RUNTIME_BUILD_STAMP)
 
 $(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
 	yarn workspace @rescript/runtime build
-	@mkdir -p $(dir $@)
 	touch $@
 
 clean-lib:
@@ -167,7 +174,7 @@ test-gentype: | $(YARN_INSTALL_STAMP)
 	make -C tests/gentype_tests/typescript-react-example clean test
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
-test-rewatch: | $(YARN_INSTALL_STAMP)
+test-rewatch: $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
 	./rewatch/tests/suite-ci.sh
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
@@ -204,6 +211,6 @@ clean: clean-lib clean-compiler clean-rewatch clean-ninja
 dev-container:
 	docker build -t rescript-dev-container docker
 
-.DEFAULT_GOAL := lib
+.DEFAULT_GOAL := build
 
-.PHONY: yarn-install ninja rewatch compiler lib artifacts bench test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build ninja rewatch compiler lib artifacts bench test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container

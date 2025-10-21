@@ -73,13 +73,16 @@ You can also open this dev container with [GitHub Codespaces](https://github.com
 
 To build the compiler, the build tools (rewatch and ninja), and the ReScript runtime/standard library, just run:
 
+Main targets:
+
 ```sh
+# Build the compiler and the build tools (rewatch and ninja)
 make
-```
 
-To run tests, execute:
+# Build the runtime/standard library
+make lib
 
-```sh
+# Run the tests
 make test
 ```
 
