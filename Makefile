@@ -206,4 +206,4 @@ dev-container:
 
 .DEFAULT_GOAL := lib
 
-.PHONY: yarn-install ninja rewatch compiler lib artifacts bench dce test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all reanalyze playground playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install ninja rewatch compiler lib artifacts bench test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
