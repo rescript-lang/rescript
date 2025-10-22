@@ -52,7 +52,10 @@ YARN_INSTALL_STAMP := .yarn/install-state.gz
 # Treat that log file as the compiler build stamp so manual `dune build`
 # keeps Make targets up to date.
 COMPILER_BUILD_STAMP := _build/log
-RUNTIME_BUILD_STAMP := _build/.runtime.stamp
+# Runtime workspace touches this stamp (packages/@rescript/runtime/.buildstamp)
+# after running `yarn workspace @rescript/runtime build`, which now runs `touch`
+# as part of its build script.
+RUNTIME_BUILD_STAMP := packages/@rescript/runtime/.buildstamp
 
 # Default target
 
@@ -125,7 +128,6 @@ $(foreach bin,$(COMPILER_BIN_NAMES),$(eval $(call MAKE_COMPILER_COPY_RULE,$(bin)
 # even if the actual content of the sources hasn't changed.
 $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
 	dune build
-	touch $@
 	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
 
 $(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
@@ -141,7 +143,6 @@ lib: $(RUNTIME_BUILD_STAMP)
 
 $(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
 	yarn workspace @rescript/runtime build
-	touch $@
 
 clean-lib:
 	yarn workspace @rescript/runtime rescript clean
@@ -185,7 +186,7 @@ playground: | $(YARN_INSTALL_STAMP)
 	cp -f ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
 
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
-playground-cmijs: artifacts | $(YARN_INSTALL_STAMP)
+playground-cmijs: | $(YARN_INSTALL_STAMP) # should also depend on artifacts, but that causes an attempt to copy binaries for JSOO
 	yarn workspace playground build
 
 # Builds the playground, runs some e2e tests and releases the playground to the
