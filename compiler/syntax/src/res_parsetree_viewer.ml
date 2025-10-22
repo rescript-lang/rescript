@@ -567,7 +567,7 @@ let partition_doc_comment_attributes attrs =
 let is_fun_newtype expr =
   match expr.pexp_desc with
   | Pexp_fun _ | Pexp_newtype _ -> true
-  | _ -> Ast_uncurried.expr_is_uncurried_fun expr
+  | _ -> false
 
 let requires_special_callback_printing_last_arg args =
   let rec loop args =

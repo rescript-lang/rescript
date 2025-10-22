@@ -628,7 +628,8 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       (* let make = React.forwardRef({
            let \"App" = (props, ref) => make({...props, ref: @optional (Js.Nullabel.toOption(ref))})
          })*)
-      Exp.fun_ ~arity:None Nolabel None
+      let total_arity = if has_forward_ref then 2 else 1 in
+      Exp.fun_ ~arity:(Some total_arity) Nolabel None
         (match core_type_of_attr with
         | None -> make_props_pattern named_type_list
         | Some _ -> make_props_pattern typ_vars_of_core_type)
@@ -638,10 +639,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
              inner_expression
          else inner_expression)
         ~attrs:binding.pvb_expr.pexp_attributes
-    in
-    let full_expression =
-      full_expression
-      |> Ast_uncurried.uncurried_fun ~arity:(if has_forward_ref then 2 else 1)
     in
     let full_expression =
       match full_module_name with
@@ -764,7 +761,8 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
     let expression =
       (* Shape internal implementation to match wrapper: uncurried when using forwardRef. *)
-      Exp.fun_ ~arity:(Some 1) ~async:is_async Nolabel None
+      let total_arity = if has_forward_ref then 2 else 1 in
+      Exp.fun_ ~arity:(Some total_arity) ~async:is_async Nolabel None
         (Pat.constraint_ record_pattern
            (Typ.constr ~loc:empty_loc
               {txt = Lident "props"; loc = empty_loc}
@@ -778,10 +776,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
                 | [] -> []
                 | _ -> [Typ.any ()]))))
         expression
-    in
-    let expression =
-      if has_forward_ref then expression |> Ast_uncurried.uncurried_fun ~arity:2
-      else expression
     in
     let expression =
       (* Add new tupes (type a,b,c) to make's definition *)
@@ -887,12 +881,9 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       in
       let applied_expression = constrain_jsx_return applied_expression in
       let wrapper_expr =
-        Exp.fun_ ~arity:None Nolabel None props_pattern
+        Exp.fun_ ~arity:(Some 1) Nolabel None props_pattern
           ~attrs:binding.pvb_expr.pexp_attributes applied_expression
       in
-
-      let wrapper_expr = Ast_uncurried.uncurried_fun ~arity:1 wrapper_expr in
-
       let internal_expression =
         Exp.let_ Nonrecursive
           [Vb.mk (Pat.var {txt = full_module_name; loc}) wrapper_expr]

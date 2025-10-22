@@ -174,10 +174,9 @@ let init () =
               in
               let to_js_body body =
                 Ast_comb.single_non_rec_value pat_to_js
-                  (Ast_uncurried.uncurried_fun ~arity:1
-                     (Ast_compatible.fun_ ~arity:None
-                        (Pat.constraint_ (Pat.var pat_param) core_type)
-                        body))
+                  (Ast_compatible.fun_ ~arity:(Some 1)
+                     (Pat.constraint_ (Pat.var pat_param) core_type)
+                     body)
               in
               let ( +> ) a ty = Exp.constraint_ (erase_type a) ty in
               let ( +: ) a ty = erase_type (Exp.constraint_ a ty) in
@@ -227,16 +226,12 @@ let init () =
                 in
                 let from_js =
                   Ast_comb.single_non_rec_value pat_from_js
-                    (Ast_uncurried.uncurried_fun ~arity:1
-                       (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
-                          (if create_type then
-                             Exp.let_ Nonrecursive
-                               [
-                                 Vb.mk (Pat.var pat_param)
-                                   (exp_param +: new_type);
-                               ]
-                               (Exp.constraint_ obj_exp core_type)
-                           else Exp.constraint_ obj_exp core_type)))
+                    (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
+                       (if create_type then
+                          Exp.let_ Nonrecursive
+                            [Vb.mk (Pat.var pat_param) (exp_param +: new_type)]
+                            (Exp.constraint_ obj_exp core_type)
+                        else Exp.constraint_ obj_exp core_type))
                 in
                 let rest = [to_js; from_js] in
                 if create_type then erase_type_str :: new_type_str :: rest
@@ -273,14 +268,12 @@ let init () =
                            app2 unsafe_index_get_exp exp_map exp_param
                          else app1 erase_type_exp exp_param);
                       Ast_comb.single_non_rec_value pat_from_js
-                        (Ast_uncurried.uncurried_fun ~arity:1
-                           (Ast_compatible.fun_ ~arity:(Some 1)
-                              (Pat.var pat_param)
-                              (let result =
-                                 app2 unsafe_index_get_exp rev_exp_map exp_param
-                               in
-                               if create_type then raise_when_not_found result
-                               else result)));
+                        (Ast_compatible.fun_ ~arity:(Some 1) (Pat.var pat_param)
+                           (let result =
+                              app2 unsafe_index_get_exp rev_exp_map exp_param
+                            in
+                            if create_type then raise_when_not_found result
+                            else result));
                     ]
                   in
                   if create_type then new_type_str :: v else v

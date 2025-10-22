@@ -134,13 +134,7 @@ let handle_ffi ~loc ~payload =
         Ast_helper.Typ.arrows ~loc args any
       in
       match !is_function with
-      | Some arity ->
-        let type_ =
-          Ast_uncurried.uncurried_type
-            ~arity:(if arity = 0 then 1 else arity)
-            (arrow ~arity)
-        in
-        Ast_helper.Exp.constraint_ ~loc e type_
+      | Some arity -> Ast_helper.Exp.constraint_ ~loc e (arrow ~arity)
       | _ -> err ()
     in
     wrap_type_constraint

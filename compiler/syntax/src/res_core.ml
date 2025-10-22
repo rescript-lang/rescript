@@ -609,10 +609,7 @@ let process_underscore_application args =
           (Ppat_var (Location.mkloc hidden_var loc))
           ~loc:Location.none
       in
-      let fun_expr =
-        Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
-      in
-      Ast_uncurried.uncurried_fun ~arity:1 fun_expr
+      Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
     | None -> exp_apply
   in
   (args, wrap)
