@@ -24,11 +24,11 @@ make checkformat
 The Makefile’s targets build on each other in this order:
 
 1. `yarn-install` runs automatically for targets that need JavaScript tooling (lib, playground, tests, formatting, etc.).
-2. Toolchain binaries (all copied into `packages/@rescript/<platform>/bin`):
+2. `build` (default target) builds the toolchain binaries (all copied into `packages/@rescript/<platform>/bin`):
    - `compiler` builds the dune executables (`bsc`, `bsb_helper`, `rescript-*`, `ounit_tests`, etc.).
    - `rewatch` builds the Rust-based ReScript build system and CLI.
    - `ninja` bootstraps the ninja binary (part of the legacy build system).
-3. `lib` (the default target) uses those toolchain outputs to build the runtime sources.
+3. `lib` uses those toolchain outputs to build the runtime sources.
 4. Test targets (`make test`, `make test-syntax`, etc.) reuse everything above.
 
 ## ⚠️ Critical Guidelines & Common Pitfalls
