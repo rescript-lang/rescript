@@ -374,7 +374,7 @@ Path fnTakingRecord
     "kind": 12,
     "tags": [],
     "detail": "'a => Type.t",
-    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nUseful when narrowing values from dynamic sources.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
   }]
 
 Complete src/CompletionExpressions.res 69:25
