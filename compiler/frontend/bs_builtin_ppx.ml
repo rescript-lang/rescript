@@ -95,13 +95,35 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_newtype (s, body) ->
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
-  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async} -> (
+  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async; arity; default}
+    -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
       (* Handle @async x => y => ... is in async context *)
       async_context := (old_in_function_def && !async_context) || async;
+      (* The default mapper would descend into nested [Pexp_fun] nodes (used for
+         additional parameters) before visiting the function body. Those
+         nested calls see [async = false] and would reset [async_context] to
+         false, so by the time we translate the body we incorrectly think we are
+         outside of an async function. This shows up with function-level
+         [@directive] (GH #7974): the directive attribute lives on the outer
+         async lambda, while extra parameters are represented as nested
+         functions. Rebuild the function manually to keep the async flag alive
+         until the body is processed. *)
+      let attrs = self.attributes self e.pexp_attributes in
+      let default = Option.map (self.expr self) default in
+      let lhs = self.pat self pat in
+      let saved_in_function_def = !in_function_def in
       in_function_def := true;
-      Ast_async.make_function_async ~async (default_expr_mapper self e)
+      (* Keep reporting nested parameters as part of a function definition so
+         they propagate async context exactly like the original mapper. *)
+      let rhs = self.expr self body in
+      in_function_def := saved_in_function_def;
+      let mapped =
+        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~arity ~async label default
+          lhs rhs
+      in
+      Ast_async.make_function_async ~async mapped
     | Meth_callback _, pexp_attributes ->
       (* FIXME: does it make sense to have a label for [this] ? *)
       async_context := false;
