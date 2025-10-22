@@ -272,7 +272,7 @@ jobs:
           gh extension install actions/gh-actions-cache
           gh actions-cache delete ${{ steps.compiler-build-state-key.outputs.value }} \
             -R ${{ github.repository }} \
-            -B ${{ github.ref }} \
+            -B "$GITHUB_REF" \
             --confirm || echo "not exist"
         env:
           GH_TOKEN: ${{ github.token }}
@@ -529,7 +529,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@rescript-lang.org"
           git add data/api
-          git commit -m "Update API docs for ${{ github.ref_name }}"
+          git commit -m "Update API docs for $GITHUB_REF_NAME"
           git push
 
   test-installation-npm:
