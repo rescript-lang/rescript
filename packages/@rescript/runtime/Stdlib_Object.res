@@ -57,10 +57,49 @@ y->Object.get("fruit") // Some("banana")
 @val
 external create: {..} => {..} = "Object.create"
 
+/**
+`createWithProperties(proto, descriptors)` creates a new object that delegates to `proto` and defines additional properties using descriptor objects.
+
+See [`Object.create`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create) on MDN.
+
+## Examples
+
+```rescript
+let proto = {"kind": "fruit"}
+let obj = Object.createWithProperties(proto, {"name": {"value": "banana"}})
+obj->Object.get("name") == Some("banana")
+obj->Object.get("kind") == Some("fruit")
+```
+*/
 @val external createWithProperties: ({..}, {..}) => {..} = "Object.create"
 
+/**
+`createWithNull()` creates an object with a `null` prototype (no inherited properties).
+
+See [`Object.create`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create) on MDN.
+
+## Examples
+
+```rescript
+let obj = Object.createWithNull()
+obj->Object.get("toString") == None
+```
+*/
 @val external createWithNull: (@as(json`null`) _, unit) => {..} = "Object.create"
 
+/**
+`createWithNullAndProperties(descriptors)` creates an object with a `null` prototype and defines properties using descriptor objects.
+
+See [`Object.create`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create) on MDN.
+
+## Examples
+
+```rescript
+let obj = Object.createWithNullAndProperties({"name": {"value": "banana"}})
+obj->Object.get("name") == Some("banana")
+obj->Object.get("toString") == None
+```
+*/
 @val external createWithNullAndProperties: (@as(json`null`) _, {..}) => {..} = "Object.create"
 
 /**
@@ -91,6 +130,20 @@ See [Object.assign on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 @variadic @val
 external assignMany: ({..}, array<{..}>) => {..} = "Object.assign"
 
+/**
+`copy(object)` creates a shallow copy of `object`.
+
+See [`Object.assign`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign) on MDN.
+
+## Examples
+
+```rescript
+let original = {"name": "banana"}
+let cloned = Object.copy(original)
+cloned->Object.get("name") == Some("banana")
+Object.is(original, cloned) == false
+```
+*/
 @val external copy: (@as(json`{}`) _, {..} as 'a) => 'a = "Object.assign"
 
 /**
@@ -118,12 +171,26 @@ external get: ({..}, string) => option<'a> = ""
 let fruit = Symbol.make("fruit")
 let x = Object.make()
 x->Object.setSymbol(fruit, "banana")
-x->Object.getSymbol(fruit) // Some("banana")
+x->Object.getSymbol(fruit) == Some("banana")
 ```
 */
 @get_index
 external getSymbol: ({..}, Stdlib_Symbol.t) => option<'a> = ""
 
+/**
+`getSymbolUnsafe(object, key)` reads the value stored under the symbol `key` without any optional check.
+
+See [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) on MDN.
+
+## Examples
+
+```rescript
+let key = Symbol.make("meta")
+let obj = Object.make()
+obj->Object.setSymbol(key, "hello")
+Object.getSymbolUnsafe(obj, key) == "hello"
+```
+*/
 @get_index external getSymbolUnsafe: ({..}, Stdlib_Symbol.t) => 'a = ""
 
 /**
@@ -140,6 +207,22 @@ external getSymbol: ({..}, Stdlib_Symbol.t) => option<'a> = ""
 @set_index
 external set: ({..}, string, 'a) => unit = ""
 
+/**
+`setSymbol(object, key, value)` stores `value` under the symbol `key` on `object`.
+
+Beware this will *mutate* the object.
+
+See [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) on MDN.
+
+## Examples
+
+```rescript
+let key = Symbol.make("count")
+let obj = Object.make()
+obj->Object.setSymbol(key, 5)
+Object.getSymbol(obj, key) == Some(5)
+```
+*/
 @set_index external setSymbol: ({..}, Stdlib_Symbol.t, 'a) => unit = ""
 
 /**
