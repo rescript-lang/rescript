@@ -13,3 +13,8 @@ let mo = makeOptions
 let options = mo(~name="foo", ())
 
 let shouldNotFail: (~objectMode: _, ~name: string) => int = (~objectMode, ~name) => 3
+
+@scope("somescope")
+external constantArgOnly: @as(json`{foo:true}`) _ => string = "somefn"
+
+let constantValue = constantArgOnly

@@ -19,9 +19,12 @@ function shouldNotFail(objectMode, name) {
   return 3;
 }
 
+let constantValue = somescope.somefn({foo:true});
+
 export {
   mo,
   options,
   shouldNotFail,
+  constantValue,
 }
-/* No side effect */
+/* constantValue Not a pure module */
