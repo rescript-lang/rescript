@@ -24,10 +24,32 @@ Map.fromArray([("foo", 1), ("bar", 2)])
 @val
 external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 
-// TODO: Docs
+/**
+`fromArrayLike(source)` converts an array-like value (anything with indexed items and a `length`) into a regular array.
+
+See [`Array.from`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from) on MDN.
+
+## Examples
+
+```rescript
+let source: Array.arrayLike<int> = %raw(`{0: 10, 1: 20, length: 2}`)
+Array.fromArrayLike(source) == [10, 20]
+```
+*/
 @val external fromArrayLike: arrayLike<'a> => array<'a> = "Array.from"
 
-// TODO: Docs
+/**
+`fromArrayLikeWithMap(source, map)` converts an array-like value into an array and applies `map` to every element.
+
+See [`Array.from`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from) on MDN.
+
+## Examples
+
+```rescript
+let source: Array.arrayLike<int> = %raw(`{0: 1, 1: 2, length: 2}`)
+Array.fromArrayLikeWithMap(source, x => x * 10) == [10, 20]
+```
+*/
 @val
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
@@ -69,10 +91,42 @@ Array.fromInitializer(~length=7, i => i + 3) == [3, 4, 5, 6, 7, 8, 9]
 */
 let fromInitializer: (~length: int, int => 'a) => array<'a>
 
+/**
+`equal(left, right, predicate)` checks if the two arrays contain the same elements according to the equality `predicate`.
+
+## Examples
+
+```rescript
+Array.equal([1, 2, 3], [1, 2, 3], Int.equal) == true
+Array.equal([1, 2, 3], [1, 3, 2], Int.equal) == false
+```
+*/
 let equal: (array<'a>, array<'a>, ('a, 'a) => bool) => bool
 
+/**
+`compare(left, right, comparator)` compares two arrays element by element using `comparator` and returns an `Ordering`.
+
+## Examples
+
+```rescript
+Array.compare([1, 3], [1, 2], Int.compare) == Ordering.greater
+Array.compare([1, 2], [1, 2], Int.compare) == Ordering.equal
+```
+*/
 let compare: (array<'a>, array<'a>, ('a, 'a) => Stdlib_Ordering.t) => Stdlib_Ordering.t
 
+/**
+`isArray(value)` returns `true` when `value` is a JavaScript array and `false` otherwise.
+
+See [`Array.isArray`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/isArray) on MDN.
+
+## Examples
+
+```rescript
+Array.isArray([1, 2, 3]) == true
+Array.isArray("not an array") == false
+```
+*/
 @val external isArray: 'a => bool = "Array.isArray"
 
 /**
@@ -368,9 +422,38 @@ array == [1, 2, 3]
 @send
 external sort: (array<'a>, ('a, 'a) => Stdlib_Ordering.t) => unit = "sort"
 
+/**
+`splice(array, ~start, ~remove, ~insert)` removes `remove` items starting at `start` and inserts the values from `insert`.
+
+Beware this will *mutate* the array.
+
+See [`Array.splice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice) on MDN.
+
+## Examples
+
+```rescript
+let items = ["a", "b", "c"]
+items->Array.splice(~start=1, ~remove=1, ~insert=["x"])
+items == ["a", "x", "c"]
+```
+*/
 @variadic @send
 external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => unit = "splice"
 
+/**
+`toSpliced(array, ~start, ~remove, ~insert)` returns a new array with the same edits that `splice` would perform, leaving the original unchanged.
+
+See [`Array.toSpliced`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSpliced) on MDN.
+
+## Examples
+
+```rescript
+let original = [1, 2, 3]
+let updated = original->Array.toSpliced(~start=1, ~remove=1, ~insert=[10])
+updated == [1, 10, 3]
+original == [1, 2, 3]
+```
+*/
 @variadic @send
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
@@ -395,6 +478,20 @@ array2 == ["Hello", "Good bye"] // Removes the item at index 1
 @send
 external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
 
+/**
+`with(array, index, value)` returns a copy of `array` where the element at `index` is replaced with `value`.
+
+See [`Array.with`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/with) on MDN.
+
+## Examples
+
+```rescript
+let original = ["a", "b", "c"]
+let replaced = original->Array.with(1, "x")
+replaced == ["a", "x", "c"]
+original == ["a", "b", "c"]
+```
+*/
 @send external with: (array<'a>, int, 'a) => array<'a> = "with"
 
 /**
@@ -691,6 +788,17 @@ See [`Array.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 @send
 external toString: array<'a> => string = "toString"
 
+/**
+`toLocaleString(array)` converts each element to a locale-aware string and joins them with commas.
+
+See [`Array.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toLocaleString) on MDN.
+
+## Examples
+
+```rescript
+["apple", "banana"]->Array.toLocaleString == "apple,banana"
+```
+*/
 @send external toLocaleString: array<'a> => string = "toLocaleString"
 
 /**
@@ -1125,8 +1233,54 @@ array[1] == Some("Hello")
 */
 @set_index
 external set: (array<'a>, int, 'a) => unit = ""
+/**
+`getSymbol(array, key)` retrieves the value stored under the symbol `key`, if present.
+
+See [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) on MDN for more details about symbol keys.
+
+## Examples
+
+```rescript
+let key = Symbol.make("meta")
+let items = []
+items->Array.setSymbol(key, "hello")
+Array.getSymbol(items, key) == Some("hello")
+```
+*/
 @get_index external getSymbol: (array<'a>, Stdlib_Symbol.t) => option<'b> = ""
+
+/**
+`getSymbolUnsafe(array, key)` retrieves the value stored under the symbol `key` without any safety checks.
+
+See [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) on MDN.
+
+## Examples
+
+```rescript
+let key = Symbol.make("meta")
+let items = []
+items->Array.setSymbol(key, "hello")
+Array.getSymbolUnsafe(items, key) == "hello"
+```
+*/
 @get_index external getSymbolUnsafe: (array<'a>, Stdlib_Symbol.t) => 'b = ""
+
+/**
+`setSymbol(array, key, value)` stores `value` under the symbol `key` on `array`.
+
+Beware this will *mutate* the array.
+
+See [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) on MDN.
+
+## Examples
+
+```rescript
+let key = Symbol.make("count")
+let items = []
+items->Array.setSymbol(key, 5)
+Array.getSymbol(items, key) == Some(5)
+```
+*/
 @set_index external setSymbol: (array<'a>, Stdlib_Symbol.t, 'b) => unit = ""
 
 /**
