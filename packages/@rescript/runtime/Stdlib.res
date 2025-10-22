@@ -63,8 +63,8 @@ type lazy_t<+'a> = Lazy.t<'a>
 @deprecated("Use rescript-webapi instead") @val external window: Dom.window = "window"
 @deprecated("Use rescript-webapi instead") @val external document: Dom.document = "document"
 /**
-`globalThis` exposes the host global object (`window` in browsers, `global` in Node, etc.).
-Use it to access platform-specific globals without branching.
+`globalThis` gives you the host global object (`window` in browsers, `global` in Node, etc.).
+You can reach shared globals from any runtime without special checks.
 
 ## Examples
 
@@ -121,7 +121,7 @@ external import: 'a => promise<'a> = "%import"
 
 /**
 `panic(message)` throws a JavaScript `Error` prefixed with `Panic!`.
-Use it for unrecoverable situations where the program should stop immediately.
+Call it when something went wrong and the program should stop right away.
 
 ## Examples
 
@@ -152,7 +152,7 @@ let assertEqual = (a, b) => {
 
 /**
 `null` returns the JavaScript `null` value as a `nullable<'a>`.
-Pair it with the `Nullable` helpers to inspect or convert it safely.
+Use the `Nullable` helpers to convert it into an `option` or to read the value.
 
 ## Examples
 
@@ -163,7 +163,7 @@ null->Nullable.toOption == None
 external null: nullable<'a> = "#null"
 /**
 `undefined` returns the JavaScript `undefined` value as a `nullable<'a>`.
-Combine it with `Nullable` utilities to interoperate with optional JS fields.
+Use the `Nullable` helpers to convert it into an `option` or to read the value.
 
 ## Examples
 
@@ -174,7 +174,7 @@ undefined->Nullable.toOption == None
 external undefined: nullable<'a> = "#undefined"
 /**
 `typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.
-Useful when narrowing values from dynamic sources.
+It helps you inspect values that come from JavaScript APIs.
 
 ## Examples
 
