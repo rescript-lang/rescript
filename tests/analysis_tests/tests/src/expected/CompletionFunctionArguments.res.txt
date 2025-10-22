@@ -48,7 +48,7 @@ Path someFn
     "kind": 12,
     "tags": [],
     "detail": "'a => Type.t",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nUseful when narrowing values from dynamic sources.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
   }]
 
 Complete src/CompletionFunctionArguments.res 16:25
@@ -372,7 +372,7 @@ Path someOtherFn
     "kind": 12,
     "tags": [],
     "detail": "'a => Type.t",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nUseful when narrowing values from dynamic sources.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
   }]
 
 Complete src/CompletionFunctionArguments.res 76:25
