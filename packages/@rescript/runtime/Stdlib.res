@@ -68,6 +68,10 @@ You can reach shared globals from any runtime without special checks.
 
 ## Examples
 
+**Note:** These are demonstrative examples. In real code, prefer writing your own type-safe bindings.
+See [`Bind to Global JS Values`](https://rescript-lang.org/docs/manual/v12.0.0/bind-to-global-js-values).
+
+
 ```rescript
 typeof(globalThis["setTimeout"]) == #function
 
