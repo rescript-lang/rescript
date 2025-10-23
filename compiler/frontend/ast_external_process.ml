@@ -1026,8 +1026,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    let fn_type = Ast_helper.Typ.arrows ~loc args result_type in
-    ( fn_type,
+    ( Ast_helper.Typ.arrows ~loc args result_type,
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
       relative )
