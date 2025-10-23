@@ -25,6 +25,8 @@ Stdlib_WeakMap.get(cache, Stdlib_Object.make()) == None
 /**
 `get(map, key)` returns `Some(value)` when `key` exists, otherwise `None`.
 
+See [`WeakMap.prototype.get`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap/get) on MDN.
+
 ## Examples
 
 ```rescript
@@ -39,6 +41,8 @@ Stdlib_WeakMap.get(cache, key) == Some("user")
 
 /**
 `has(map, key)` checks whether `key` exists in the weak map.
+
+See [`WeakMap.prototype.has`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap/has) on MDN.
 
 ## Examples
 
@@ -55,6 +59,8 @@ Stdlib_WeakMap.has(cache, key) == true
 /**
 `set(map, key, value)` stores `value` for `key` and returns the map for chaining.
 
+See [`WeakMap.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap/set) on MDN.
+
 ## Examples
 
 ```rescript
@@ -68,6 +74,8 @@ Stdlib_WeakMap.get(cache, key) == Some(42)
 
 /**
 `delete(map, key)` removes `key` and returns `true` if an entry existed.
+
+See [`WeakMap.prototype.delete`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap/delete) on MDN.
 
 ## Examples
 
