@@ -997,6 +997,24 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
             new_arg_types,
             if arg_type = Ignore then i else i + 1 ))
     in
+    (* If every original argument was erased (e.g. all `@as(json ...) _`),
+       keep the external binding callable by threading a final `unit`
+       parameter through the type and arg specs. *)
+    let args, arg_type_specs =
+      match (args, arg_type_specs_length) with
+      | [], n when n > 0 ->
+        let unit_type =
+          Ast_helper.Typ.constr ~loc
+            (Location.mkloc (Longident.Lident "unit") loc)
+            []
+        in
+        let unit_arg = {Parsetree.attrs = []; lbl = Nolabel; typ = unit_type} in
+        ( [unit_arg],
+          arg_type_specs
+          @ [{External_arg_spec.arg_label = Arg_empty; arg_type = Extern_unit}]
+        )
+      | _ -> (args, arg_type_specs)
+    in
     let ffi : External_ffi_types.external_spec =
       external_desc_of_non_obj loc external_desc prim_name_with_source
         arg_type_specs_length arg_types_ty arg_type_specs

@@ -17,4 +17,4 @@ let shouldNotFail: (~objectMode: _, ~name: string) => int = (~objectMode, ~name)
 @scope("somescope")
 external constantArgOnly: @as(json`{foo:true}`) _ => string = "somefn"
 
-let constantValue = constantArgOnly
+let x = constantArgOnly()
