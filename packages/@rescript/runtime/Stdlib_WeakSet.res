@@ -1,7 +1,7 @@
 /***
 Bindings to JavaScript's `WeakSet`.
 
-Weak sets store object references without preventing those objects from being garbage collected.
+Weak sets store references to objects without preventing those objects from being garbage collected.
 */
 
 /** Mutable weak set storing object references of type `'a`. */
@@ -16,7 +16,8 @@ See [`WeakSet`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referenc
 ## Examples
 
 ```rescript
-let visited: WeakSet.t<{..}> = WeakSet.make()
+let visited = WeakSet.make()
+WeakSet.has(visited, Object.make()) == false
 ```
 */
 @new external make: unit => t<'a> = "WeakSet"
@@ -24,11 +25,13 @@ let visited: WeakSet.t<{..}> = WeakSet.make()
 /**
 `add(set, value)` inserts `value` into the weak set and returns the set for chaining.
 
+See [`WeakSet.prototype.add`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet/add) on MDN.
+
 ## Examples
 
 ```rescript
 let set = WeakSet.make()
-let node = Stdlib_Object.make()
+let node = Object.make()
 WeakSet.add(set, node)
 WeakSet.has(set, node) == true
 ```
@@ -37,11 +40,35 @@ WeakSet.has(set, node) == true
 
 /**
 `delete(set, value)` removes `value` and returns `true` if an entry existed.
+
+See [`WeakSet.prototype.delete`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet/delete) on MDN.
+
+## Examples
+
+```rescript
+let set = WeakSet.make()
+let node = Object.make()
+let _ = WeakSet.add(set, node)
+WeakSet.delete(set, node) == true
+WeakSet.delete(set, node) == false
+```
 */
 @send external delete: (t<'a>, 'a) => bool = "delete"
 
 /**
 `has(set, value)` checks whether `value` exists in the weak set.
+
+See [`WeakSet.prototype.has`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakSet/has) on MDN.
+
+## Examples
+
+```rescript
+let set = WeakSet.make()
+let node = Object.make()
+WeakSet.has(set, node) == false
+let _ = WeakSet.add(set, node)
+WeakSet.has(set, node) == true
+```
 */
 @send external has: (t<'a>, 'a) => bool = "has"
 
