@@ -319,7 +319,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -535,7 +535,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -1009,7 +1009,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -1225,7 +1225,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -1699,7 +1699,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -1915,7 +1915,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -2389,7 +2389,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -2605,7 +2605,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -3079,7 +3079,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -3295,7 +3295,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -3769,7 +3769,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -3985,7 +3985,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -4459,7 +4459,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -4675,7 +4675,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -5149,7 +5149,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -5365,7 +5365,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -5839,7 +5839,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -6055,7 +6055,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -6529,7 +6529,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -6745,7 +6745,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{
@@ -7219,7 +7219,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, value)` writes `value` at `index` in place.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.\n\nBeware this will *mutate* the array.\n\nSee [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2])\nTypedArray.set(view, 1, 5)\nTypedArray.get(view, 1) == Some(5)\n```\n"},
     "sortText": "set",
     "insertText": "->TypedArray.set",
     "additionalTextEdits": [{
@@ -7435,7 +7435,7 @@ Path
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`get(typedArray, index)` returns the element at `index` of `typedArray`.\nReturns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.\n\nSee [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.\n\n## Examples\n\n```rescript\nlet view = Int32Array.fromArray([1, 2, 3])\nTypedArray.get(view, 0) == Some(1)\nTypedArray.get(view, 10) == None\n```\n"},
     "sortText": "get",
     "insertText": "->TypedArray.get",
     "additionalTextEdits": [{

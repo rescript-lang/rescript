@@ -2,7 +2,8 @@
 type t<'a>
 
 /**
-`get(typedArray, index)` returns the element at `index` wrapped in `Some`, or `None` when the position is out of bounds.
+`get(typedArray, index)` returns the element at `index` of `typedArray`.
+Returns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.
 
 See [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.
 
@@ -18,7 +19,9 @@ TypedArray.get(view, 10) == None
 external get: (t<'a>, int) => option<'a> = ""
 
 /**
-`set(typedArray, index, value)` writes `value` at `index` in place.
+`set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.
+
+Beware this will *mutate* the array.
 
 See [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.
 
