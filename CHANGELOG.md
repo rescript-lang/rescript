@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix @directive on function level with async and multiple parameters. https://github.com/rescript-lang/rescript/pull/7977
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
