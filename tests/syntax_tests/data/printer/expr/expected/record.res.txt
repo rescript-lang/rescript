@@ -103,3 +103,15 @@ let optParen = {x: 3, y: ?foo(bar)}
 let optParen = {x: 3, y: ?(foo->bar)}
 let optParen = {x: 3, y: ?(() => 3)}
 let optParen = {x: 3, y: ?-3}
+
+let x = {a: 2}
+let x = {
+  a: 2,
+  bbbbbbbbbbbbbbbbbbbbb: 22222222222,
+  ccccccccccccccccccccc: 22222222222222222,
+  ddddddddddddddddddddd: 2222222222222,
+}
+let x = {a: 2}
+let x = {
+  a: 2,
+}
