@@ -32,6 +32,8 @@
 
 #### :house: Internal
 
+- Clean up usage of `Ast_uncurried` helpers. https://github.com/rescript-lang/rescript/pull/7987
+
 # 12.0.0-rc.2
 
 #### :boom: Breaking Change
