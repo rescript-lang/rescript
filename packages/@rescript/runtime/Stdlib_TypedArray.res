@@ -5,8 +5,6 @@ type t<'a>
 `get(typedArray, index)` returns the element at `index` of `typedArray`.
 Returns `None` if the index does not exist in the typed array. Equivalent to doing `typedArray[index]` in JavaScript.
 
-See [`TypedArray.prototype.at`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/at) on MDN.
-
 ## Examples
 
 ```rescript
@@ -22,8 +20,6 @@ external get: (t<'a>, int) => option<'a> = ""
 `set(typedArray, index, item)` sets the provided `item` at `index` of `typedArray`.
 
 Beware this will *mutate* the array.
-
-See [`TypedArray.prototype.set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/set) on MDN.
 
 ## Examples
 
