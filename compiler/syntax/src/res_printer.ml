@@ -3223,7 +3223,14 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
          *   b: 2,
          *  }` -> record is written on multiple lines, break the group *)
         let force_break =
-          e.pexp_loc.loc_start.pos_lnum < e.pexp_loc.loc_end.pos_lnum
+          match (spread_expr, rows) with
+          | Some expr, _ ->
+            (* If there's a spread, compare with spread expression's location *)
+            e.pexp_loc.loc_start.pos_lnum < expr.pexp_loc.loc_start.pos_lnum
+          | None, first_row :: _ ->
+            (* Otherwise, compare with the first row's location *)
+            e.pexp_loc.loc_start.pos_lnum < first_row.lid.loc.loc_start.pos_lnum
+          | None, [] -> false
         in
         let punning_allowed =
           match (spread_expr, rows) with
