@@ -1,9 +1,30 @@
+/***
+Represents the `useGrouping` option accepted by `Intl.NumberFormat`.
+*/
 @notUndefined
 type t
 
 type parsed = [#bool(bool) | #always | #auto | #min2]
 
+/**
+Constructs a grouping setting from a boolean.
+
+## Examples
+
+```rescript
+Stdlib_Intl_NumberFormat_Grouping.fromBool(true) == Stdlib_Intl_NumberFormat_Grouping.fromBool(true)
+```
+*/
 external fromBool: bool => t = "%identity"
+/**
+Constructs a grouping setting from a string literal.
+
+## Examples
+
+```rescript
+Stdlib_Intl_NumberFormat_Grouping.fromString(#auto) == Stdlib_Intl_NumberFormat_Grouping.fromString(#auto)
+```
+*/
 external fromString: [#always | #auto | #min2] => t = "%identity"
 
 let parseJsValue = value =>

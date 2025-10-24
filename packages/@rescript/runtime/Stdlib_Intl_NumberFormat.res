@@ -167,47 +167,231 @@ type numberFormatRangePart = {
   source: rangeSource,
 }
 
+/**
+Creates a new `Intl.NumberFormat` instance for locale-aware number formatting.
+
+See [`Intl.NumberFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat) on MDN.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en-US"], ~options={style: #currency, currency: "USD"})
+formatter->Intl.NumberFormat.format(1234.5) == "$1,234.50"
+```
+*/
 @new external make: (~locales: array<string>=?, ~options: options=?) => t = "Intl.NumberFormat"
 
+/**
+`supportedLocalesOf(locales, ~options)` filters `locales` to those supported for number formatting.
+
+See [`Intl.NumberFormat.supportedLocalesOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/supportedLocalesOf) on MDN.
+
+## Examples
+
+```rescript
+Intl.NumberFormat.supportedLocalesOf(["en-US", "klingon"]) == ["en-US"]
+```
+*/
 @val
-external supportedLocalesOf: (array<string>, ~options: supportedLocalesOptions=?) => t =
+external supportedLocalesOf: (array<string>, ~options: supportedLocalesOptions=?) => array<string> =
   "Intl.NumberFormat.supportedLocalesOf"
 
+/**
+`resolvedOptions(formatter)` returns the actual options being used.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en-US"])
+Intl.NumberFormat.resolvedOptions(formatter).locale == "en-US"
+```
+*/
 @send external resolvedOptions: t => resolvedOptions = "resolvedOptions"
 
+/**
+`format(formatter, value)` returns the formatted representation of `value`.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en-US"])
+formatter->Intl.NumberFormat.format(1234.5) == "1,234.5"
+```
+*/
 @send external format: (t, float) => string = "format"
+/**
+`formatRange(formatter, ~start, ~end)` formats numbers representing a range.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en-US"])
+formatter->Intl.NumberFormat.formatRange(~start=1., ~end=2.) == ["1", "2"]
+```
+*/
 @send
 external formatRange: (t, ~start: float, ~end: float) => array<string> = "formatRange"
+/**
+`formatToParts(formatter, value)` breaks the formatted result into parts.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en-US"])
+formatter->Intl.NumberFormat.formatToParts(123)->Array.length > 0
+```
+*/
 @send
 external formatToParts: (t, float) => array<numberFormatPart> = "formatToParts"
+/**
+`formatRangeToParts(formatter, ~start, ~end)` returns how the range would be rendered.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en-US"])
+formatter->Intl.NumberFormat.formatRangeToParts(~start=1., ~end=2.)->Array.length > 0
+```
+*/
 @send
 external formatRangeToParts: (t, ~start: float, ~end: float) => array<numberFormatRangePart> =
   "formatRange"
 
+/**
+`formatInt(formatter, value)` formats integer values.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatInt(42) == "42"
+```
+*/
 @send external formatInt: (t, int) => string = "format"
 
+/**
+`formatIntRange(formatter, ~start, ~end)` formats integer ranges.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatIntRange(~start=1, ~end=3) == ["1", "3"]
+```
+*/
 @send
 external formatIntRange: (t, ~start: int, ~end: int) => array<string> = "formatRange"
+/**
+`formatIntToParts(formatter, value)` returns formatting parts for an integer.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatIntToParts(123)->Array.length > 0
+```
+*/
 @send
 external formatIntToParts: (t, int) => array<numberFormatPart> = "formatToParts"
 
+/**
+`formatIntRangeToParts(formatter, ~start, ~end)` returns how the integer range would be rendered.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatIntRangeToParts(~start=1, ~end=1)->Array.length > 0
+```
+*/
 @send
 external formatIntRangeToParts: (t, ~start: int, ~end: int) => array<numberFormatRangePart> =
   "formatRange"
 
+/**
+`formatBigInt(formatter, value)` formats bigint values.
+*/
 @send external formatBigInt: (t, bigint) => string = "format"
 
+/**
+`formatBigIntRange(formatter, ~start, ~end)` formats a range of bigint values.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatBigIntRange(~start=1n, ~end=2n) == ["1", "2"]
+```
+*/
 @send
 external formatBigIntRange: (t, ~start: bigint, ~end: bigint) => array<string> = "formatRange"
+/**
+`formatBigIntToParts(formatter, value)` returns the bigint formatting broken into parts.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatBigIntToParts(5n)->Array.length > 0
+```
+*/
 @send
 external formatBigIntToParts: (t, bigint) => array<numberFormatPart> = "formatToParts"
 
+/**
+`formatBigIntRangeToParts(formatter, ~start, ~end)` describes how the bigint range would be rendered.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatBigIntRangeToParts(~start=3n, ~end=4n)->Array.length > 0
+```
+*/
 @send
 external formatBigIntRangeToParts: (t, ~start: bigint, ~end: bigint) => array<numberFormatPart> =
   "formatRange"
 
+/**
+`formatString(formatter, value)` interprets `value` as a number string and formats it.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatString("1234") == "1,234"
+```
+
+*/
 @send external formatString: (t, string) => string = "format"
 
+/**
+`formatStringToParts(formatter, value)` returns formatting parts for a numeric string.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatStringToParts("123")->Array.length > 0
+```
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatStringToParts("123")->Array.length > 0
+```
+*/
+/**
+`formatStringToParts(formatter, value)` returns formatting parts for a numeric string.
+
+## Examples
+
+```rescript
+let formatter = Intl.NumberFormat.make(~locales=["en"])
+formatter->Intl.NumberFormat.formatStringToParts("123")->Array.length > 0
+```
+*/
 @send
 external formatStringToParts: (t, string) => array<numberFormatRangePart> = "formatToParts"
 
