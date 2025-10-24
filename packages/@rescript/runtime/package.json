@@ -1,6 +1,6 @@
 {
   "name": "@rescript/runtime",
-  "version": "12.0.0-rc.3",
+  "version": "12.0.0-rc.4",
   "description": "ReScript runtime modules",
   "type": "module",
   "homepage": "https://rescript-lang.org",
