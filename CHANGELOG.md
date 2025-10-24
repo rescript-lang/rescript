@@ -10,20 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-rc.3 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
+# 12.0.0-rc.3
 
 #### :bug: Bug fix
 
 - Fix @directive on function level with async and multiple parameters. https://github.com/rescript-lang/rescript/pull/7977
 - Fix fatal error for external with @as. https://github.com/rescript-lang/rescript/pull/7978
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
