@@ -367,27 +367,23 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
     packages::parse_packages(&mut build_state);
     let root_config = build_state.get_root_config();
-    let suffix_for_print = if plain_output || !show_progress {
-        String::new()
-    } else {
-        match root_config.package_specs {
-            None => match &root_config.suffix {
-                None => String::from(".js"),
-                Some(suffix) => suffix.clone(),
-            },
-            Some(_) => root_config
-                .get_package_specs()
-                .into_iter()
-                .filter_map(|spec| {
-                    if spec.in_source {
-                        spec.suffix.or_else(|| root_config.suffix.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<String>>()
-                .join(", "),
-        }
+    let suffix_for_print = match root_config.package_specs {
+        None => match &root_config.suffix {
+            None => String::from(".js"),
+            Some(suffix) => suffix.clone(),
+        },
+        Some(_) => root_config
+            .get_package_specs()
+            .into_iter()
+            .filter_map(|spec| {
+                if spec.in_source {
+                    spec.suffix.or_else(|| root_config.suffix.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(", "),
     };
 
     if !plain_output && show_progress {
