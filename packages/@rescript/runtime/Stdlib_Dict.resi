@@ -44,20 +44,20 @@ For nested dictionary access, consider using the more concise `dict{}` pattern m
 
 ```rescript
 // More concise approach using pattern matching
-let decodePokemonImage = (json: JSON.t) => {
+let decodeImageUrl = (json: JSON.t) => {
   switch json {
-  | JSON.Object(dict{"sprites": JSON.Object(dict{"front_default": JSON.String(url)})}) => Some(url)
+  | JSON.Object(dict{"data": JSON.Object(dict{"image_url": JSON.String(url)})}) => Some(url)
   | _ => None
   }
 }
 
 // Alternative using Dict.get
-let decodePokemonImage = (json: JSON.t) => {
+let decodeImageUrl = (json: JSON.t) => {
   switch json {
   | JSON.Object(obj) =>
-    switch Dict.get(obj, "sprites") {
-    | Some(JSON.Object(sprites)) =>
-      switch Dict.get(sprites, "front_default") {
+    switch Dict.get(obj, "data") {
+    | Some(JSON.Object(data)) =>
+      switch Dict.get(data, "image_url") {
       | Some(JSON.String(url)) => Some(url)
       | _ => None
       }
