@@ -1282,7 +1282,7 @@ and print_type_declaration ~state ~name ~equal_sign ~rec_flag i
           manifest;
           Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
           print_private_flag td.ptype_private;
-          print_record_declaration ~state lds cmt_tbl;
+          print_record_declaration ~record_loc:td.ptype_loc ~state lds cmt_tbl;
         ]
     | Ptype_variant cds ->
       let manifest =
@@ -1370,8 +1370,8 @@ and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
             manifest;
             Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
             print_private_flag td.ptype_private;
-            print_record_declaration ?inline_record_definitions ~state lds
-              cmt_tbl;
+            print_record_declaration ?inline_record_definitions
+              ~record_loc:td.ptype_loc ~state lds cmt_tbl;
           ]
     | Ptype_variant cds ->
       let manifest =
@@ -1465,11 +1465,15 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
   Doc.concat [printed_variance; print_typ_expr ~state typ cmt_tbl]
 
 and print_record_declaration ?check_break_from_loc ?inline_record_definitions
-    ~state (lds : Parsetree.label_declaration list) cmt_tbl =
+    ?record_loc ~state (lds : Parsetree.label_declaration list) cmt_tbl =
   let force_break =
-    match (check_break_from_loc, lds, List.rev lds) with
+    match (check_break_from_loc, record_loc, lds) with
     | Some loc, _, _ -> loc.Location.loc_start.pos_lnum < loc.loc_end.pos_lnum
-    | _, first :: _, last :: _ ->
+    | None, Some loc, first :: _ ->
+      (* Check if first field is on a different line than the opening brace *)
+      loc.loc_start.pos_lnum < first.Parsetree.pld_loc.loc_start.pos_lnum
+    | None, None, first :: _ ->
+      let last = List.hd (List.rev lds) in
       first.pld_loc.loc_start.pos_lnum < last.pld_loc.loc_end.pos_lnum
     | _, _, _ -> false
   in
