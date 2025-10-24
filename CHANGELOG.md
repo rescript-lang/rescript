@@ -29,6 +29,7 @@
 
 - Rewatch: plain output when not running in tty. https://github.com/rescript-lang/rescript/pull/7970
 - Streamline rewatch help texts. https://github.com/rescript-lang/rescript/pull/7973
+- Rewatch: Reduced build progress output from 7 steps to 3 for cleaner, less verbose logging
 
 #### :house: Internal
 
