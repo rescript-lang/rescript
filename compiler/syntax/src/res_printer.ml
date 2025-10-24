@@ -1466,15 +1466,21 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
 
 and print_record_declaration ?check_break_from_loc ?inline_record_definitions
     ?record_loc ~state (lds : Parsetree.label_declaration list) cmt_tbl =
+  let get_field_start_line (ld : Parsetree.label_declaration) =
+    (* For spread fields (...), use the type location instead of pld_loc
+       because pld_loc may incorrectly include preceding whitespace *)
+    if ld.pld_name.txt = "..." then ld.pld_type.ptyp_loc.loc_start.pos_lnum
+    else ld.pld_loc.loc_start.pos_lnum
+  in
   let force_break =
     match (check_break_from_loc, record_loc, lds) with
     | Some loc, _, _ -> loc.Location.loc_start.pos_lnum < loc.loc_end.pos_lnum
     | None, Some loc, first :: _ ->
       (* Check if first field is on a different line than the opening brace *)
-      loc.loc_start.pos_lnum < first.Parsetree.pld_loc.loc_start.pos_lnum
+      loc.loc_start.pos_lnum < get_field_start_line first
     | None, None, first :: _ ->
       let last = List.hd (List.rev lds) in
-      first.pld_loc.loc_start.pos_lnum < last.pld_loc.loc_end.pos_lnum
+      get_field_start_line first < last.pld_loc.loc_end.pos_lnum
     | _, _, _ -> false
   in
   Doc.breakable_group ~force_break
