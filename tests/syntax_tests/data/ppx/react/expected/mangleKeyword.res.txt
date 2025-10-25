@@ -2,7 +2,10 @@
 
 module C4A0 = {
   @res.jsxComponentProps
-  type props<'T_open, 'T_type> = {@as("open") _open: 'T_open, @as("type") _type: 'T_type}
+  type props<'T_open, 'T_type> = {
+    @as("open") _open: 'T_open,
+    @as("type") _type: 'T_type,
+  }
 
   let make = ({@as("open") _open, @as("type") _type, _}: props<_, string>): React.element =>
     React.string(_open)
@@ -14,7 +17,10 @@ module C4A0 = {
 }
 module C4A1 = {
   @res.jsxComponentProps @live
-  type props<'T_open, 'T_type> = {@as("open") _open: 'T_open, @as("type") _type: 'T_type}
+  type props<'T_open, 'T_type> = {
+    @as("open") _open: 'T_open,
+    @as("type") _type: 'T_type,
+  }
 
   external make: React.component<props<string, string>> = "default"
 }
