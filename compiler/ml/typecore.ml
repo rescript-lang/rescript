@@ -95,9 +95,13 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
   | Jsx_not_enabled
+  | AliasPolyFromLiterals_NonLiteralOrPattern
+  | AliasPolyFromLiterals_UnsupportedBaseType of type_expr
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
+
+module StringSet = Set.Make (String)
 
 (* Forward declaration, to be filled in by Typemod.type_module *)
 
@@ -607,6 +611,48 @@ let build_or_pat env loc lid =
         pat pats
     in
     (path, rp {r with pat_loc = loc}, ty)
+
+let maybe_closed_polyvariant_from_literal_or ~env ~loc ~attrs ~typed_pat
+    ~base_ty =
+  let has_attr =
+    List.exists (function
+      | {Location.txt = "res.asPolyVariantFromLiterals"}, _ -> true
+      | _ -> false)
+  in
+  if not (has_attr attrs) then None
+  else
+    let invalid = ref false in
+    let rec gather (p : pattern) (acc : string list) =
+      match p.pat_desc with
+      | Tpat_or (p1, p2, _) -> gather p2 (gather p1 acc)
+      | Tpat_constant (Const_string (s, _)) -> s :: acc
+      | Tpat_constant (Const_int i) -> string_of_int i :: acc
+      | _ ->
+        invalid := true;
+        acc
+    in
+    let literals =
+      gather typed_pat [] |> List.rev |> StringSet.of_list |> StringSet.elements
+    in
+    if !invalid || literals = [] then
+      raise (Error (loc, env, AliasPolyFromLiterals_NonLiteralOrPattern))
+    else
+      match (repr (expand_head env base_ty)).desc with
+      | Tconstr (p, [], _)
+        when Path.same p Predef.path_string || Path.same p Predef.path_int ->
+        let row =
+          {
+            row_fields = List.map (fun l -> (l, Rpresent None)) literals;
+            row_more = newvar ();
+            row_closed = true;
+            row_fixed = false;
+            row_name = None;
+          }
+        in
+        Some (newty (Tvariant row))
+      | _ ->
+        raise
+          (Error (loc, env, AliasPolyFromLiterals_UnsupportedBaseType base_ty))
 
 let extract_type_from_pat_variant_spread env lid expected_ty =
   let path, decl = Typetexp.find_type env lid.loc lid.txt in
@@ -1289,7 +1335,14 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
         let ty_var =
           match override_type_from_variant_spread with
           | Some ty -> ty
-          | None -> build_as_type !env q
+          | None -> (
+            let base_ty = build_as_type !env q in
+            match
+              maybe_closed_polyvariant_from_literal_or ~env:!env ~loc
+                ~attrs:sp.ppat_attributes ~typed_pat:q ~base_ty
+            with
+            | Some ty -> ty
+            | None -> base_ty)
         in
         end_def ();
         generalize ty_var;
@@ -4788,6 +4841,16 @@ let report_error env loc ppf error =
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
+  | AliasPolyFromLiterals_NonLiteralOrPattern ->
+    fprintf ppf
+      "@[The alias form @{<info>as #...id@} can only be used when matching an \
+       or-pattern made solely of string or int literals, e.g. \
+       @{<info>\"a\"|\"b\"@} or @{<info>1|2@}.@]"
+  | AliasPolyFromLiterals_UnsupportedBaseType ty ->
+    fprintf ppf
+      "@[The alias form @{<info>as #...id@} requires the alias to have type \
+       @{<info>string@} or @{<info>int@}, but here it has type@ %a@]"
+      type_expr ty
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)
