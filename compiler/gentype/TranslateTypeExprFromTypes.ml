@@ -118,6 +118,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     }
   | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib"; "RegExp"; "t"]), [] ->
     {dependencies = []; type_ = regexp_t}
+  | ["Js"; "File"; "t"], [] -> {dependencies = []; type_ = ident "File"}
   | ["Stdlib"; "ArrayBuffer"; "t"], [] ->
     {dependencies = []; type_ = ident "ArrayBuffer"}
   | ["Stdlib"; "DataView"; "t"], [] ->
