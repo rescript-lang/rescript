@@ -255,8 +255,8 @@ and expression_desc =
     *)
   | Pexp_match of expression * case list
     (* match E0 with P1 -> E1 | ... | Pn -> En *)
-  | Pexp_try of expression * case list
-    (* try E0 with P1 -> E1 | ... | Pn -> En *)
+  | Pexp_try of expression * case list * expression option
+    (* try E0 with P1 -> E1 | ... | Pn -> En [finally E_final] *)
   | Pexp_tuple of expression list
     (* (E1, ..., En)
 

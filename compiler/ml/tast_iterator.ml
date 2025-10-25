@@ -159,9 +159,10 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp;
     sub.cases sub list1;
     sub.cases sub list2
-  | Texp_try (exp, cases) ->
+  | Texp_try (exp, cases, finally_expr) ->
     sub.expr sub exp;
-    sub.cases sub cases
+    sub.cases sub cases;
+    Option.iter (sub.expr sub) finally_expr
   | Texp_tuple list -> List.iter (sub.expr sub) list
   | Texp_construct (_, _, args) -> List.iter (sub.expr sub) args
   | Texp_variant (_, expo) -> Option.iter (sub.expr sub) expo

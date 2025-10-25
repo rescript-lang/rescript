@@ -109,8 +109,10 @@ let rec no_side_effects (lam : Lam.t) : bool =
       for example [String.contains],
       [Format.make_queue_elem]
   *)
-  | Ltrywith (body, _exn, handler) ->
-    no_side_effects body && no_side_effects handler
+  | Ltrywith (body, _exn, handler, finally_expr) ->
+    no_side_effects body
+    && Option.fold ~none:true ~some:no_side_effects handler
+    && Option.fold ~none:true ~some:no_side_effects finally_expr
   | Lifthenelse (a, b, c) ->
     no_side_effects a && no_side_effects b && no_side_effects c
   | Lsequence (a, b) -> no_side_effects a && no_side_effects b
@@ -174,7 +176,10 @@ let rec size (lam : Lam.t) =
     | Lstaticraise (_i, ls) ->
       Ext_list.fold_left ls 1 (fun acc x -> size x + acc)
     | Lstaticcatch _ -> really_big ()
-    | Ltrywith _ -> really_big ()
+    | Ltrywith (body, _exn, handler, finally_expr) ->
+      size body
+      + Option.fold ~none:0 ~some:size handler
+      + Option.fold ~none:0 ~some:size finally_expr
     | Lifthenelse (l1, l2, l3) -> 1 + size l1 + size l2 + size l3
     | Lsequence (l1, l2) -> size l1 + size l2
     | Lwhile _ -> really_big ()

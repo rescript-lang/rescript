@@ -1,6 +1,52 @@
-;;try ((let x = 1 in let y = 2 in dangerousCall (x + y))[@res.braces ])
-  with | Foo -> Js.log {js|catched Foo|js}
-  | Exit -> Js.log {js|catched exit|js}
-;;try myDangerousFn () with | Foo -> Js.log {js|catched Foo|js}[@@attr ]
+;;try ((let x = 1 in let y = 2 in dangerousCall (x + y))[@res.braces ]) 
+  with | Foo -> Console.log {js|caught Foo|js}
+  | Exit -> Console.log {js|caught exit|js}
+;;try myDangerousFn () with | Foo -> Console.log {js|caught Foo|js}[@@attr ]
 let x = ((let y = 1 in try ((apply y)[@res.braces ]) with | _ -> 2)
   [@res.braces ])
+;;try ((riskyOperation ())[@res.braces ]) with
+                                          | Not_found ->
+                                              Console.log
+                                                {js|Item not found|js}
+                                          | exn ->
+                                              Console.log {js|Other error|js} finally
+  ((Console.log {js|Cleanup complete|js})[@res.braces ])
+;;try ((let result = fetchData () in processResult result)[@res.braces ]) 
+  with | ParseError -> defaultValue | ValidationError -> fallbackValue finally
+  ((logProcessingComplete (); releaseParser ())[@res.braces ])
+;;try
+    ((try ((innerOperation ())[@res.braces ]) with
+                                              | InnerError ->
+                                                  Console.log
+                                                    {js|Inner error handled|js} finally
+      ((Console.log {js|Inner cleanup|js})[@res.braces ]))
+    [@res.braces ]) with
+                    | OuterError -> Console.log {js|Outer error handled|js} finally
+  ((Console.log {js|Outer cleanup|js})[@res.braces ])
+let tryFinally1 = try doSomething () finally cleanup ()
+let tryFinally2 =
+  try ((let x = 1 in let y = 2 in dangerousOperation (x + y))[@res.braces ]) finally
+  ((Console.log {js|Cleanup complete|js})[@res.braces ])
+let tryFinallyInAssignment =
+  {
+    value = (try computeValue () finally logComputation ());
+    status = {js|computed|js}
+  }
+let tryFinallyInArray =
+  [|((try getItem 0 finally logAccess 0));((try getItem 1 finally logAccess 1))|]
+let tryFinallyInFunction [arity:1]() =
+  ((try performOperation () finally logOperationComplete ())[@res.braces ])
+let complex =
+  {
+    data =
+      (try
+         ((let raw = try parseJson input finally logParseAttempt () in
+           let validated = try validate raw finally logValidation () in
+           try transform validated finally logTransform ())
+         [@res.braces ]) with
+                         | ParseError ->
+                             { error = {js|parse|js}; value = null }
+                         | ValidationError ->
+                             { error = {js|validation|js}; value = null } finally
+       ((Console.log {js|Overall cleanup|js})[@res.braces ]))
+  }

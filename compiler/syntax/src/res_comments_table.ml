@@ -1469,7 +1469,7 @@ and walk_expression expr t comments =
         after)
     in
     attach t.trailing else_branch.pc_rhs.pexp_loc after
-  | Pexp_match (expr, cases) | Pexp_try (expr, cases) ->
+  | Pexp_match (expr, cases) ->
     let before, inside, after = partition_by_loc comments expr.pexp_loc in
     let after =
       if is_block_expr expr then (
@@ -1486,7 +1486,47 @@ and walk_expression expr t comments =
     let after_expr, rest = partition_adjacent_trailing expr.pexp_loc after in
     attach t.trailing expr.pexp_loc after_expr;
     walk_list (cases |> List.map (fun case -> Case case)) t rest
-    (* unary expression: todo use parsetreeviewer *)
+  | Pexp_try (expr, cases, finally_expr) -> (
+    let before, inside, after = partition_by_loc comments expr.pexp_loc in
+    let after =
+      if is_block_expr expr then (
+        let after_expr, rest =
+          partition_adjacent_trailing expr.pexp_loc after
+        in
+        walk_expression expr t (List.concat [before; inside; after_expr]);
+        rest)
+      else (
+        attach t.leading expr.pexp_loc before;
+        walk_expression expr t inside;
+        after)
+    in
+    let after_expr, remaining_after_try =
+      partition_adjacent_trailing expr.pexp_loc after
+    in
+    attach t.trailing expr.pexp_loc after_expr;
+    let remaining_after_cases =
+      visit_list_but_continue_with_remaining_comments
+        ~get_loc:(fun (node : node) -> get_loc node)
+        ~walk_node ~newline_delimited:false
+        (cases |> List.map (fun case -> Case case))
+        t remaining_after_try
+    in
+    match finally_expr with
+    | Some finally_expr ->
+      let before, inside, after =
+        partition_by_loc remaining_after_cases finally_expr.pexp_loc
+      in
+      if is_block_expr finally_expr then
+        let after_expr, _ =
+          partition_adjacent_trailing finally_expr.pexp_loc after
+        in
+        walk_expression finally_expr t
+          (List.concat [before; inside; after_expr])
+      else (
+        attach t.leading finally_expr.pexp_loc before;
+        walk_expression finally_expr t inside)
+    | None -> ()
+    (* unary expression: todo use parsetreeviewer *))
   | Pexp_apply
       {
         funct =
