@@ -14,7 +14,9 @@ module V4C: {
 
   module ForwardRef: {
     @res.jsxComponentProps
-    type props<'ref> = {ref?: 'ref}
+    type props<'ref> = {
+      ref?: 'ref,
+    }
 
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
@@ -34,7 +36,9 @@ module V4CUncurried: {
 
   module ForwardRef: {
     @res.jsxComponentProps
-    type props<'ref> = {ref?: 'ref}
+    type props<'ref> = {
+      ref?: 'ref,
+    }
 
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
@@ -56,7 +60,9 @@ module V4A: {
 
   module ForwardRef: {
     @res.jsxComponentProps
-    type props<'ref> = {ref?: 'ref}
+    type props<'ref> = {
+      ref?: 'ref,
+    }
 
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
@@ -76,7 +82,9 @@ module V4AUncurried: {
 
   module ForwardRef: {
     @res.jsxComponentProps
-    type props<'ref> = {ref?: 'ref}
+    type props<'ref> = {
+      ref?: 'ref,
+    }
 
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }

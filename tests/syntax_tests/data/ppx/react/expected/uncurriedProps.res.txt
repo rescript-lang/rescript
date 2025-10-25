@@ -1,6 +1,8 @@
 @@jsxConfig({version: 4})
 @res.jsxComponentProps
-type props<'a> = {a?: 'a}
+type props<'a> = {
+  a?: 'a,
+}
 
 let make = ({a: ?__a, _}: props<unit => unit>) => {
   let a = switch __a {
@@ -27,7 +29,9 @@ func(~callback=(str, a, b) => {
 
 module Foo = {
   @res.jsxComponentProps
-  type props<'callback> = {callback?: 'callback}
+  type props<'callback> = {
+    callback?: 'callback,
+  }
 
   let make = ({callback: ?__callback, _}: props<(string, bool, bool) => unit>) => {
     let callback = switch __callback {

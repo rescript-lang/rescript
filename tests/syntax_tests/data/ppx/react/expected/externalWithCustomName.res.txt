@@ -2,7 +2,10 @@
 
 module Foo = {
   @res.jsxComponentProps @live
-  type props<'a, 'b> = {a: 'a, b: 'b}
+  type props<'a, 'b> = {
+    a: 'a,
+    b: 'b,
+  }
 
   @module("Foo")
   external component: React.component<props<int, string>> = "component"
