@@ -106,6 +106,7 @@ module Types = struct
     | Lsequence of t * t
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
+    | Lfor_of of ident * t * t
     | Lassign of ident * t
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
@@ -158,6 +159,7 @@ module X = struct
     | Lsequence of t * t
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
+    | Lfor_of of ident * t * t
     | Lassign of ident * t
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
@@ -246,6 +248,10 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let e2 = f e2 in
     let e3 = f e3 in
     Lfor (v, e1, e2, dir, e3)
+  | Lfor_of (v, e1, e2) ->
+    let e1 = f e1 in
+    let e2 = f e2 in
+    Lfor_of (v, e1, e2)
   | Lassign (id, e) ->
     let e = f e in
     Lassign (id, e)
@@ -401,7 +407,8 @@ let rec eq_approx (l1 : t) (l2 : t) =
   | Lfunction _
   | Llet (_, _, _, _)
   | Lletrec _ | Lswitch _ | Lstaticcatch _ | Ltrywith _
-  | Lfor (_, _, _, _, _) ->
+  | Lfor (_, _, _, _, _)
+  | Lfor_of (_, _, _) ->
     false
 
 and eq_option l1 l2 =
@@ -459,6 +466,7 @@ let letrec bindings body : t = Lletrec (bindings, body)
 let while_ a b : t = Lwhile (a, b)
 let try_ body id handler : t = Ltrywith (body, id, handler)
 let for_ v e1 e2 dir e3 : t = Lfor (v, e1, e2, dir, e3)
+let for_of v e1 e2 : t = Lfor_of (v, e1, e2)
 let assign v l : t = Lassign (v, l)
 let staticcatch a b c : t = Lstaticcatch (a, b, c)
 let staticraise a b : t = Lstaticraise (a, b)
