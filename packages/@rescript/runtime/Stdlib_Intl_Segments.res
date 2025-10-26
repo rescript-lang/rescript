@@ -1,5 +1,7 @@
 /***
 Bindings to `Segments` objects produced by `Intl.Segmenter.segment`.
+ A Segments instance is an object that represents the segments of a specific string, subject to the locale and options of its constructing Intl.Segmenter instance.
+https://tc39.es/ecma402/#sec-segments-objects.
 
 See [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter/segment) for API details and the [ECMA-402 specification](https://tc39.es/ecma402/#sec-segments-objects) for the object shape.
 */

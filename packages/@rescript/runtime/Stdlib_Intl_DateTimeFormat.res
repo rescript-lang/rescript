@@ -35,16 +35,17 @@ type formatMatcher = [#basic | #"best fit"]
 type fractionalSecondDigits = [#0 | #1 | #2 | #3]
 
 type options = {
-  dateStyle?: dateStyle,
-  timeStyle?: timeStyle,
+  dateStyle?: dateStyle, // can be used with timeStyle, but not other options
+  timeStyle?: timeStyle, // can be used with dateStyle, but not other options
   calendar?: Stdlib_Intl_Common.calendar,
-  dayPeriod?: dayPeriod,
+  dayPeriod?: dayPeriod, // only has an effect if a 12-hour clock is used
   numberingSystem?: Stdlib_Intl_Common.numberingSystem,
   localeMatcher?: Stdlib_Intl_Common.localeMatcher,
   timeZone?: string,
   hour12?: bool,
   hourCycle?: hourCycle,
   formatMatcher?: formatMatcher,
+  // date-time components
   weekday?: weekday,
   era?: era,
   year?: year,

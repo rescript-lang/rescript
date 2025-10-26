@@ -50,7 +50,7 @@ See [`WeakMap.prototype.has`](https://developer.mozilla.org/en-US/docs/Web/JavaS
 let cache = Stdlib_WeakMap.make()
 let key = Stdlib_Object.make()
 Stdlib_WeakMap.has(cache, key) == false
-let _ = Stdlib_WeakMap.set(cache, key)
+let _ = Stdlib_WeakMap.set(cache, key, ())
 Stdlib_WeakMap.has(cache, key) == true
 ```
 */
