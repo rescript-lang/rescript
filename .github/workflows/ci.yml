@@ -363,7 +363,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch tests
-        run: ./rewatch/tests/suite-ci.sh
+        run: ./rewatch/tests/suite.sh
         shell: bash
 
       - name: Run syntax benchmarks
@@ -671,7 +671,7 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rescript
+        run: ./rewatch/tests/suite.sh node_modules/.bin/rescript
         shell: bash
 
   publish:

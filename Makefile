@@ -176,7 +176,7 @@ test-gentype: | $(YARN_INSTALL_STAMP)
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
 test-rewatch: $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
-	./rewatch/tests/suite-ci.sh
+	./rewatch/tests/suite.sh
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
