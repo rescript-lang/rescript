@@ -1,21 +1,30 @@
 #!/bin/bash
 
+set -e
+
 unset CLICOLOR_FORCE
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 <rewatch executable>"
+  exit 1
+fi
+
+REWATCH_EXECUTABLE="$(realpath "$1")"
+export REWATCH_EXECUTABLE
 
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-# Get rewatch executable location from the first argument or use default
-if [ -n "$1" ]; then
-  REWATCH_EXECUTABLE="$1"
+if [[ "$REWATCH_EXECUTABLE" == */cli/rescript.js ]]; then
+  echo "Using rewatch CLI script: $REWATCH_EXECUTABLE"
 else
-  REWATCH_EXECUTABLE="../target/release/rescript"
+  echo "Using rewatch executable: $REWATCH_EXECUTABLE"
   eval $(node ./get_bin_paths.js)
+  export RESCRIPT_BSC_EXE
+  export RESCRIPT_RUNTIME
+  echo Using bsc executable: $RESCRIPT_BSC_EXE
+  echo Using runtime path: $RESCRIPT_RUNTIME
 fi
-
-export REWATCH_EXECUTABLE
-export RESCRIPT_BSC_EXE
-export RESCRIPT_RUNTIME
 
 source ./utils.sh
 

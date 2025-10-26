@@ -148,35 +148,37 @@ clean-lib:
 	yarn workspace @rescript/runtime rescript clean
 	rm -f $(RUNTIME_BUILD_STAMP)
 
-# Tests / artifacts / analysis
+# Artifact list
 
 artifacts: lib
 	./scripts/updateArtifactList.js
 
-bench: $(COMPILER_BUILD_STAMP)
+# Tests
+
+bench: compiler
 	$(DUNE_BIN_DIR)/syntax_benchmarks
 
-test: lib ninja | $(YARN_INSTALL_STAMP)
+test: lib ninja
 	node scripts/test.js -all
 
-test-analysis: | $(YARN_INSTALL_STAMP)
+test-analysis: lib ninja
 	make -C tests/analysis_tests clean test
 
-test-tools: | $(YARN_INSTALL_STAMP)
+test-tools: lib ninja
 	make -C tests/tools_tests clean test
 
-test-syntax: | $(YARN_INSTALL_STAMP)
+test-syntax: compiler
 	./scripts/test_syntax.sh
 
-test-syntax-roundtrip: | $(YARN_INSTALL_STAMP)
+test-syntax-roundtrip: compiler
 	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
 
-test-gentype: | $(YARN_INSTALL_STAMP)
+test-gentype: lib ninja
 	make -C tests/gentype_tests/typescript-react-example clean test
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
-test-rewatch: $(RESCRIPT_EXE) | $(YARN_INSTALL_STAMP)
-	./rewatch/tests/suite.sh
+test-rewatch: lib
+	./rewatch/tests/suite.sh $(RESCRIPT_EXE)
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 

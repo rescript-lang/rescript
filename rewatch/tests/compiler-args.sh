@@ -6,7 +6,7 @@ cd ../testrepo
 bold "Test: It should not matter where we grab the compiler-args for a file"
 # Capture stdout for both invocations
 stdout_root=$(rewatch compiler-args packages/file-casing/src/Consume.res 2>/dev/null)
-stdout_pkg=$(cd packages/file-casing && "../../$REWATCH_EXECUTABLE" compiler-args src/Consume.res 2>/dev/null)
+stdout_pkg=$(cd packages/file-casing && "$REWATCH_EXECUTABLE" compiler-args src/Consume.res 2>/dev/null)
 
 error_output=$(rewatch compiler-args packages/file-casing/src/Consume.res 2>&1)
 if [ $? -ne 0 ]; then
@@ -14,7 +14,7 @@ if [ $? -ne 0 ]; then
   printf "%s\n" "$error_output" >&2
   exit 1
 fi
-error_output=$(cd packages/file-casing && "../../$REWATCH_EXECUTABLE" compiler-args src/Consume.res 2>&1)
+error_output=$(cd packages/file-casing && "$REWATCH_EXECUTABLE" compiler-args src/Consume.res 2>&1)
 if [ $? -ne 0 ]; then
   error "Error grabbing compiler args for src/Consume.res in packages/file-casing"
   printf "%s\n" "$error_output" >&2

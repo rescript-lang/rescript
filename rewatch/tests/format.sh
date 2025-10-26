@@ -45,7 +45,7 @@ fi
 
 bold "Test: It should format only the current project"
 
-error_output=$(cd packages/file-casing && "../../$REWATCH_EXECUTABLE" format)
+error_output=$(cd packages/file-casing && "$REWATCH_EXECUTABLE" format)
 git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 2 ];
 then
