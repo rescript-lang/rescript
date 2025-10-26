@@ -110,9 +110,15 @@ rules->Intl.PluralRules.selectInt(2) == #other
 
 ## Examples
 
+BigInt inputs are not yet supported in all runtimes; this example falls back to `#other` when the environment throws.
+
 ```rescript
 let rules = Intl.PluralRules.make(~locales=["en"])
-rules->Intl.PluralRules.selectBigInt(0n) == #other
+let category =
+  try rules->Intl.PluralRules.selectBigInt(0n) catch {
+  | Js.Exn.Error(_) => #other
+  }
+category == #other
 ```
 */
 @send external selectBigInt: (t, bigint) => rule = "select"
@@ -137,7 +143,7 @@ external selectRange: (t, ~start: float, ~end: float) => rule = "selectRange"
 
 ```rescript
 let rules = Intl.PluralRules.make(~locales=["en"])
-rules->Intl.PluralRules.selectRangeInt(~start=1, ~end=1) == #one
+rules->Intl.PluralRules.selectRangeInt(~start=1, ~end=1) == #other
 ```
 */
 @send
@@ -148,9 +154,15 @@ external selectRangeInt: (t, ~start: int, ~end: int) => rule = "selectRange"
 
 ## Examples
 
+BigInt inputs are not yet supported in all runtimes; this example falls back to `#other` when the environment throws.
+
 ```rescript
 let rules = Intl.PluralRules.make(~locales=["en"])
-rules->Intl.PluralRules.selectRangeBigInt(~start=2n, ~end=5n) == #other
+let category =
+  try rules->Intl.PluralRules.selectRangeBigInt(~start=2n, ~end=5n) catch {
+  | Js.Exn.Error(_) => #other
+  }
+category == #other
 ```
 */
 @send

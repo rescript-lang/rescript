@@ -195,7 +195,7 @@ See [`Intl.Locale.prototype.minimize`](https://developer.mozilla.org/en-US/docs/
 
 ```rescript
 let locale = Intl.Locale.make("en-Latn-US")
-locale->Intl.Locale.minimize->Intl.Locale.baseName == "en-US"
+locale->Intl.Locale.minimize->Intl.Locale.baseName == "en"
 ```
 */
 @send external minimize: t => t = "minimize"
