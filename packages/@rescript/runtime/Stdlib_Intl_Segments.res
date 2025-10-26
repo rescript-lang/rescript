@@ -27,9 +27,9 @@ external containing: t => segmentData = "containing"
 ## Examples
 
 ```rescript
-let segmenter = Intl.Segmenter.make(~locales=["en"], ~options={granularity: #word}, ())
+let segmenter = Intl.Segmenter.make(~locales=["en"], ~options={granularity: #word})
 let segments = segmenter->Intl.Segmenter.segment("Hello world")
-Stdlib_Intl_Segments.containingWithIndex(segments, 0).segment == "Hello"
+Intl.Segments.containingWithIndex(segments, 0).segment == "Hello"
 ```
 */
 @send

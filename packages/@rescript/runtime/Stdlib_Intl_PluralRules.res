@@ -58,6 +58,7 @@ category == #one
 `supportedLocalesOf(locales, ~options)` filters `locales` to those supported for plural rules.
 
 See [`Intl.PluralRules.supportedLocalesOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules/supportedLocalesOf) on MDN.
+
 ## Examples
 
 ```rescript
@@ -70,6 +71,7 @@ external supportedLocalesOf: (array<string>, ~options: supportedLocalesOptions=?
 
 /**
 `resolvedOptions(rules)` returns the plural rule configuration in use.
+
 ## Examples
 
 ```rescript

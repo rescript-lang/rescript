@@ -226,11 +226,11 @@ formatter->Intl.NumberFormat.format(1234.5) == "1,234.5"
 
 ```rescript
 let formatter = Intl.NumberFormat.make(~locales=["en-US"])
-formatter->Intl.NumberFormat.formatRange(~start=1., ~end=2.) == ["1", "2"]
+formatter->Intl.NumberFormat.formatRange(~start=1., ~end=2.)->String.length > 0
 ```
 */
 @send
-external formatRange: (t, ~start: float, ~end: float) => array<string> = "formatRange"
+external formatRange: (t, ~start: float, ~end: float) => string = "formatRange"
 /**
 `formatToParts(formatter, value)` breaks the formatted result into parts.
 
@@ -255,7 +255,7 @@ formatter->Intl.NumberFormat.formatRangeToParts(~start=1., ~end=2.)->Array.lengt
 */
 @send
 external formatRangeToParts: (t, ~start: float, ~end: float) => array<numberFormatRangePart> =
-  "formatRange"
+  "formatRangeToParts"
 
 /**
 `formatInt(formatter, value)` formats integer values.
@@ -276,11 +276,11 @@ formatter->Intl.NumberFormat.formatInt(42) == "42"
 
 ```rescript
 let formatter = Intl.NumberFormat.make(~locales=["en"])
-formatter->Intl.NumberFormat.formatIntRange(~start=1, ~end=3) == ["1", "3"]
+formatter->Intl.NumberFormat.formatIntRange(~start=1, ~end=3)->String.length > 0
 ```
 */
 @send
-external formatIntRange: (t, ~start: int, ~end: int) => array<string> = "formatRange"
+external formatIntRange: (t, ~start: int, ~end: int) => string = "formatRange"
 /**
 `formatIntToParts(formatter, value)` returns formatting parts for an integer.
 
@@ -306,7 +306,7 @@ formatter->Intl.NumberFormat.formatIntRangeToParts(~start=1, ~end=1)->Array.leng
 */
 @send
 external formatIntRangeToParts: (t, ~start: int, ~end: int) => array<numberFormatRangePart> =
-  "formatRange"
+  "formatRangeToParts"
 
 /**
 `formatBigInt(formatter, value)` formats bigint values.
@@ -320,11 +320,11 @@ external formatIntRangeToParts: (t, ~start: int, ~end: int) => array<numberForma
 
 ```rescript
 let formatter = Intl.NumberFormat.make(~locales=["en"])
-formatter->Intl.NumberFormat.formatBigIntRange(~start=1n, ~end=2n) == ["1", "2"]
+formatter->Intl.NumberFormat.formatBigIntRange(~start=1n, ~end=2n) == "1–2"
 ```
 */
 @send
-external formatBigIntRange: (t, ~start: bigint, ~end: bigint) => array<string> = "formatRange"
+external formatBigIntRange: (t, ~start: bigint, ~end: bigint) => string = "formatRange"
 /**
 `formatBigIntToParts(formatter, value)` returns the bigint formatting broken into parts.
 
@@ -349,8 +349,11 @@ formatter->Intl.NumberFormat.formatBigIntRangeToParts(~start=3n, ~end=4n)->Array
 ```
 */
 @send
-external formatBigIntRangeToParts: (t, ~start: bigint, ~end: bigint) => array<numberFormatPart> =
-  "formatRange"
+external formatBigIntRangeToParts: (
+  t,
+  ~start: bigint,
+  ~end: bigint,
+) => array<numberFormatRangePart> = "formatRangeToParts"
 
 /**
 `formatString(formatter, value)` interprets `value` as a number string and formats it.
@@ -361,7 +364,6 @@ external formatBigIntRangeToParts: (t, ~start: bigint, ~end: bigint) => array<nu
 let formatter = Intl.NumberFormat.make(~locales=["en"])
 formatter->Intl.NumberFormat.formatString("1234") == "1,234"
 ```
-
 */
 @send external formatString: (t, string) => string = "format"
 
@@ -374,26 +376,9 @@ formatter->Intl.NumberFormat.formatString("1234") == "1,234"
 let formatter = Intl.NumberFormat.make(~locales=["en"])
 formatter->Intl.NumberFormat.formatStringToParts("123")->Array.length > 0
 ```
-
-## Examples
-
-```rescript
-let formatter = Intl.NumberFormat.make(~locales=["en"])
-formatter->Intl.NumberFormat.formatStringToParts("123")->Array.length > 0
-```
-*/
-/**
-`formatStringToParts(formatter, value)` returns formatting parts for a numeric string.
-
-## Examples
-
-```rescript
-let formatter = Intl.NumberFormat.make(~locales=["en"])
-formatter->Intl.NumberFormat.formatStringToParts("123")->Array.length > 0
-```
 */
 @send
-external formatStringToParts: (t, string) => array<numberFormatRangePart> = "formatToParts"
+external formatStringToParts: (t, string) => array<numberFormatPart> = "formatToParts"
 
 /**
   `ignore(numberFormat)` ignores the provided numberFormat and returns unit.

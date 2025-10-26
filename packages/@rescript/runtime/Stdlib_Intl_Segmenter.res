@@ -35,7 +35,7 @@ See [`Intl.Segmenter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let segmenter = Intl.Segmenter.make(~locales=["en"], ~options={granularity: #word})
-segmenter->Intl.Segmenter.resolvedOptions.granularity == #word
+Intl.Segmenter.resolvedOptions(segmenter).granularity == #word
 ```
 */
 @new
@@ -65,7 +65,7 @@ See [`Intl.Segmenter.prototype.resolvedOptions`](https://developer.mozilla.org/e
 
 ```rescript
 let segmenter = Intl.Segmenter.make(~locales=["en"], ~options={granularity: #sentence})
-segmenter->Intl.Segmenter.resolvedOptions.granularity == #sentence
+Intl.Segmenter.resolvedOptions(segmenter).granularity == #sentence
 ```
 */
 @send external resolvedOptions: t => resolvedOptions = "resolvedOptions"
@@ -80,7 +80,7 @@ See [`Intl.Segmenter.prototype.segment`](https://developer.mozilla.org/en-US/doc
 ```rescript
 let segmenter = Intl.Segmenter.make(~locales=["en"], ~options={granularity: #word})
 let segments = segmenter->Intl.Segmenter.segment("Hello world")
-Intl_Segments.containingWithIndex(segments, 0).segment == "Hello"
+Intl.Segments.containingWithIndex(segments, 0).segment == "Hello"
 ```
 */
 @send external segment: (t, string) => Stdlib_Intl_Segments.t = "segment"

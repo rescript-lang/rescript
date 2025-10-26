@@ -1,5 +1,7 @@
 /***
 Represents the `useGrouping` option accepted by `Intl.NumberFormat`.
+
+See [`Intl.NumberFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat) on MDN for full option details.
 */
 @notUndefined
 type t
@@ -12,7 +14,12 @@ Constructs a grouping setting from a boolean.
 ## Examples
 
 ```rescript
-Stdlib_Intl_NumberFormat_Grouping.fromBool(true) == Stdlib_Intl_NumberFormat_Grouping.fromBool(true)
+let formatter =
+  Intl.NumberFormat.make(
+    ~locales=["en-US"],
+    ~options={useGrouping: Intl.NumberFormat.Grouping.fromBool(false)},
+  )
+formatter->Intl.NumberFormat.format(1234.) == "1234"
 ```
 */
 external fromBool: bool => t = "%identity"
@@ -22,11 +29,25 @@ Constructs a grouping setting from a string literal.
 ## Examples
 
 ```rescript
-Stdlib_Intl_NumberFormat_Grouping.fromString(#auto) == Stdlib_Intl_NumberFormat_Grouping.fromString(#auto)
+let formatter =
+  Intl.NumberFormat.make(
+    ~locales=["en-US"],
+    ~options={useGrouping: Intl.NumberFormat.Grouping.fromString(#always)},
+  )
+formatter->Intl.NumberFormat.format(1234.) == "1,234"
 ```
 */
 external fromString: [#always | #auto | #min2] => t = "%identity"
 
+/**
+`parseJsValue(value)` attempts to interpret a JavaScript `value` as a grouping setting.
+
+## Examples
+
+```rescript
+Intl.NumberFormat.Grouping.parseJsValue(Js.Json.string("auto")) == Some(#auto)
+```
+*/
 let parseJsValue = value =>
   switch Stdlib_Type.Classify.classify(value) {
   | String("always") => Some(#always)
