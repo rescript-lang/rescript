@@ -105,23 +105,6 @@ rules->Intl.PluralRules.selectInt(2) == #other
 ```
 */
 @send external selectInt: (t, int) => rule = "select"
-/**
-`selectBigInt(rules, value)` is like `select` but accepts a bigint.
-
-## Examples
-
-BigInt inputs are not yet supported in all runtimes; this example falls back to `#other` when the environment throws.
-
-```rescript
-let rules = Intl.PluralRules.make(~locales=["en"])
-let category =
-  try rules->Intl.PluralRules.selectBigInt(0n) catch {
-  | Js.Exn.Error(_) => #other
-  }
-category == #other
-```
-*/
-@send external selectBigInt: (t, bigint) => rule = "select"
 
 /**
 `selectRange(rules, ~start, ~end)` returns the category for numbers in the range.
@@ -148,25 +131,6 @@ rules->Intl.PluralRules.selectRangeInt(~start=1, ~end=1) == #other
 */
 @send
 external selectRangeInt: (t, ~start: int, ~end: int) => rule = "selectRange"
-
-/**
-`selectRangeBigInt(rules, ~start, ~end)` is the bigint version of `selectRange`.
-
-## Examples
-
-BigInt inputs are not yet supported in all runtimes; this example falls back to `#other` when the environment throws.
-
-```rescript
-let rules = Intl.PluralRules.make(~locales=["en"])
-let category =
-  try rules->Intl.PluralRules.selectRangeBigInt(~start=2n, ~end=5n) catch {
-  | Js.Exn.Error(_) => #other
-  }
-category == #other
-```
-*/
-@send
-external selectRangeBigInt: (t, ~start: bigint, ~end: bigint) => rule = "selectRange"
 
 /**
   `ignore(pluralRules)` ignores the provided pluralRules and returns unit.
