@@ -22,6 +22,8 @@
 
 #### :bug: Bug fix
 
+- Fix fatal compiler error that occurred when an `%ffi` extension point contained invalid JavaScript https://github.com/rescript-lang/rescript/pull/7998
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
