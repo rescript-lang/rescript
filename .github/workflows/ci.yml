@@ -330,7 +330,7 @@ jobs:
         shell: bash
 
       - name: Build @rescript/runtime
-        run: yarn workspace @rescript/runtime rescript build
+        run: yarn workspace @rescript/runtime build
         shell: bash
 
       - name: Check for changes in @rescript/runtime/lib
@@ -404,7 +404,7 @@ jobs:
 
       - name: Build playground compiler
         if: matrix.build_playground
-        run: opam exec -- make playground playground-cmijs
+        run: opam exec -- make playground
 
       - name: Test playground compiler
         if: matrix.build_playground

@@ -34,3 +34,4 @@ yarn.lock
 /compiler.js
 
 .tmp/
+.buildstamp
