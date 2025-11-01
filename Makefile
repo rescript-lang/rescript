@@ -95,14 +95,22 @@ clean-ninja:
 
 REWATCH_SOURCES = $(shell find rewatch/src -name '*.rs') rewatch/Cargo.toml rewatch/Cargo.lock rewatch/rust-toolchain.toml
 RESCRIPT_EXE = $(BIN_DIR)/rescript.exe
+ifdef CI
+	REWATCH_PROFILE := release
+	REWATCH_CARGO_FLAGS := --release
+else
+	REWATCH_PROFILE := debug
+	REWATCH_CARGO_FLAGS :=
+endif
+REWATCH_TARGET := rewatch/target/$(REWATCH_PROFILE)/rescript$(PLATFORM_EXE_EXT)
 
 rewatch: $(RESCRIPT_EXE)
 
-$(RESCRIPT_EXE): rewatch/target/debug/rescript$(PLATFORM_EXE_EXT)
+$(RESCRIPT_EXE): $(REWATCH_TARGET)
 	$(call COPY_EXE,$<,$@)
 
-rewatch/target/debug/rescript$(PLATFORM_EXE_EXT): $(REWATCH_SOURCES)
-	cargo build --manifest-path rewatch/Cargo.toml
+$(REWATCH_TARGET): $(REWATCH_SOURCES)
+	cargo build --manifest-path rewatch/Cargo.toml $(REWATCH_CARGO_FLAGS)
 
 clean-rewatch:
 	cargo clean --manifest-path rewatch/Cargo.toml && rm -rf rewatch/target && rm -f $(RESCRIPT_EXE)
