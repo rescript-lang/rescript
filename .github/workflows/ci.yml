@@ -294,8 +294,8 @@ jobs:
         id: ninja-build-cache
         uses: actions/cache@v4
         with:
-          path: packages/@rescript/${{ matrix.node-target }}/bin/ninja.exe
-          key: ninja-build-v1-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
+          path: ninja/ninja${{ runner.os == 'Windows' && '.exe' || '' }}
+          key: ninja-build-v2-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
 
       - name: Setup Python for ninja build
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
@@ -320,7 +320,6 @@ jobs:
         run: node scripts/buildNinjaBinary.js
 
       - name: Copy ninja exe to platform bin dir
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true'
         run: node scripts/copyExes.js --ninja
 
       - name: "Syntax: Run tests"
