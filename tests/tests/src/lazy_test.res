@@ -54,7 +54,7 @@ let f006: Lazy.t<unit => int> = Lazy.make(() => {
 
 let f007 = Lazy.make(() => throw(Not_found))
 let f008 = Lazy.make(() => {
-  Js.log("hi")
+  Console.log("hi")
   throw(Not_found)
 })
 

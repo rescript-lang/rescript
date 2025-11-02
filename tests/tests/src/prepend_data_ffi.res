@@ -78,12 +78,12 @@ let f = (x: t) => {
 
 @val external process_on_exit: (@as("exit") _, int => unit) => unit = "process.on"
 
-let () = process_on_exit(exit_code => Js.log2("error code: %d", exit_code))
+let () = process_on_exit(exit_code => Console.log2("error code: %d", exit_code))
 
 type process
 
 @send external on_exit: (process, @as("exit") _, int => unit) => unit = "on"
-let register = (p: process) => p->on_exit(i => Js.log(i))
+let register = (p: process) => p->on_exit(i => Console.log(i))
 
 @obj external io_config: (~stdio: @as("inherit") _, ~cwd: string, unit) => _ = ""
 

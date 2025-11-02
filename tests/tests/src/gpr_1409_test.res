@@ -21,8 +21,8 @@ let b_ = make(~foo=42, ())
 
 eq(__LOC__, b_["foo"], Js.Undefined.return("42"))
 
-Js.log(Js.Obj.keys(a_))
-Js.log4(a, b, a_, b_)
+Console.log(Js.Obj.keys(a_))
+Console.log4(a, b, a_, b_)
 
 eq(__LOC__, Array.length(Js.Obj.keys(a_)), 0)
 
@@ -32,21 +32,21 @@ let test2 = mangle(~hi=2, ())
 
 @inline(never)
 let test3 = (_open, xx__hi) =>
-  /* Js.log "no inlin"; */
+  /* Console.log "no inlin"; */
   mangle(~_open?, ~xx__hi?, ~hi=2, ())
 
 let test4 = (_open, xx__hi) => {
-  Js.log("no inlin")
+  Console.log("no inlin")
   mangle(~_open=?Some(_open), ~xx__hi?, ~hi=2, ())
 }
 
 let test5 = (f, x) => {
-  Js.log("no inline")
+  Console.log("no inline")
   mangle(~_open=?f(x), ~xx__hi=?f(x), ~hi=2, ())
 }
 
 let test6 = (f, x) => {
-  Js.log("no inline")
+  Console.log("no inline")
   let x = ref(3)
   mangle(
     ~_open=?{

@@ -1436,7 +1436,7 @@ module Draw: {
     let (dx, dy) = (posx, posy)
     let (dw, dh) = sprite.params.frame_size
     let sx = sx +. float_of_int(sprite.frame.contents) *. sw
-    /* Js.log(sprite.frame) */
+    /* Console.log(sprite.frame) */
     /* context##clearRect(0.,0.,sw, sh); */
     context["drawImage"](sprite.img, sx, sy, sw, sh, dx, dy, dw, dh)
   }
@@ -2588,7 +2588,7 @@ module Main = {
     let canvas_id = "canvas"
     let canvas = switch Dom_html.getElementById(Dom_html.document, canvas_id) {
     | None =>
-      Js.log("cant find canvas " ++ canvas_id ++ "")
+      Console.log("cant find canvas " ++ canvas_id ++ "")
       failwith("fail")
     | Some(el) => Dom_html.elementToCanvasElement(el)
     }
@@ -2602,7 +2602,7 @@ module Main = {
       Pg.generate(level_width, level_height, context),
       (level_width, level_height),
     )
-    Js.log("asd")
+    Console.log("asd")
     ()
   }
 

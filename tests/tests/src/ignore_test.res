@@ -3,7 +3,7 @@ open Test_utils
 
 let f = x => ignore(x)
 
-let ff = x => ignore(Js.log(x))
+let ff = x => ignore(Console.log(x))
 
 describe(__MODULE__, () => {
   test("ignore function", () => {

@@ -12,15 +12,15 @@ let foo = () => {
   | dict{"first": first} => first ++ "2"
   | _ => "hello"
   }
-  Js.log(first)
+  Console.log(first)
   let second = switch intDict {
   | dict{"first": first} => first + 2
   | _ => 1
   }
-  Js.log(second)
+  Console.log(second)
   let third = switch stringDict {
   | dict{"first": first} => first ++ "2"
   | _ => "hello"
   }
-  Js.log(third)
+  Console.log(third)
 }

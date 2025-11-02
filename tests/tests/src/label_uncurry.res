@@ -11,8 +11,8 @@ let u: u = (~x, ~y) =>
   }
 
 let u1 = (f: u) => {
-  f(~y="x", ~x=2)->Js.log
-  f(~x=2, ~y="x")->Js.log
+  f(~y="x", ~x=2)->Console.log
+  f(~x=2, ~y="x")->Console.log
 }
 let h = (~x: unit) => 3
 

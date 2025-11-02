@@ -44,10 +44,10 @@ module N0: {
   external f: int => int = "%identity"
 }
 
-Js.log2("hei", v)
+Console.log2("hei", v)
 
 let (a, c) = ((1, 2, 2, 4, 3), [1, 2, 3, 4, 5])
-Js.log2(a, c)
+Console.log2(a, c)
 
 %%private(let i = 3)
 %%private(let a = (``, `a`))

@@ -55,7 +55,7 @@ let f = {
     let arr = init(10000000, i => float_of_int(i))
     let b = arr->map(i => i +. i -. 1.)
     let v = b->reduceReverse(0., \"+.")
-    v->Js.Float.toString->Js.log
+    v->Js.Float.toString->Console.log
   }
 }
 
@@ -64,7 +64,7 @@ let f2 = () => {
   let arr = init(30_000_000, i => float_of_int(i))
   let b = arr->map(i => i +. i -. 1.)
   let v = b->reduceReverse(0., \"+.")
-  v->Js.Float.toString->Js.log
+  v->Js.Float.toString->Console.log
 }
 
 /* let time label f = */
@@ -89,7 +89,7 @@ let all_v = ref(list{})
 
 let add5 = (a0, a1, a2, a3, a4) => {
   /* [@bs.noinline] ; */ /* Makes sense for debugging */
-  Js.log((a0, a1, a2, a3, a4))
+  Console.log((a0, a1, a2, a3, a4))
   all_v := list{v.contents, ...all_v.contents}
   a0 + a1 + a2 + a3 + a4
 }

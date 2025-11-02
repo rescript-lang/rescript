@@ -4,7 +4,7 @@ open Mocha
 open Test_utils
 
 let then = (a, b) => {
-  Js.log("no inline")
+  Console.log("no inline")
   a * a + b * b
 }
 

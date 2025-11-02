@@ -22,7 +22,7 @@ let f1 = u =>
   }
 
 let f2 = (~x=?, ~y: option<int>=?, ~z=3, ()) => {
-  Js.log(x)
+  Console.log(x)
   switch y {
   | None => 0
   | Some(y) => y + z

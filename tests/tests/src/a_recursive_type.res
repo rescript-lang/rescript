@@ -27,7 +27,7 @@ type rec t1 = A(array<t1>)
 let rec h1 = A [|h1|] // could be relaxed
 let rec h2 = A2 [|h2|]  
 
-;; Js.log (h,h2) */
+;; Console.log (h,h2) */
 /* If we inline g's definition -- it will be the same, inline uncarefully 
     (inline the inlined result)
     will make it non-terminating

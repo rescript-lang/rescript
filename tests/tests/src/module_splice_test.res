@@ -7,7 +7,7 @@ let a = joinClasses([1, 2, 3])
 
 let () = {
   let pair = (a, 6)
-  Js.log(pair)
+  Console.log(pair)
 }
 
 describe(__MODULE__, () => {

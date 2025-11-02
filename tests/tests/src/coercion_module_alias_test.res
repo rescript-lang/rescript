@@ -1,6 +1,6 @@
 open Belt
 
-let l = Js.log
+let l = Console.log
 module C = Char
 
 module C': module type of Char = C

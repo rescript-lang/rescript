@@ -44,12 +44,12 @@ describe(__MODULE__, () => {
     let pair = ((v, counter.contents), (4, 1))
     let v2 = bug_to_fix2(side_effect2, counter2)
     let pair2 = ((v2, counter.contents), (4, 1))
-    /* Js.log (pair,pair2) */
+    /* Console.log (pair,pair2) */
     eq(__LOC__, pair, ((4, 1), (4, 1)))
     eq(__LOC__, pair2, ((4, 1), (4, 1)))
 
     let pair = ("name4", kk(~name="name", "4"))
-    /* Js.log pair ; */
+    /* Console.log pair ; */
     eq(__LOC__, pair, ("name4", "name4"))
   })
 })

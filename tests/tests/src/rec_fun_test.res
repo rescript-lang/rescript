@@ -13,7 +13,7 @@ let g = () => {
     i + 1
   }
 
-  Js.log(Js.Int.toString(next(0, true)))
+  Console.log(Js.Int.toString(next(0, true)))
 }
 
 g()

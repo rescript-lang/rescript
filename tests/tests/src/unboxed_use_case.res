@@ -15,7 +15,7 @@ let hi = [Any(3), Any(2), Any("x")]
 
 let dump = (any: any) =>
   switch any {
-  | Any(v) => Js.log(v)
+  | Any(v) => Console.log(v)
   }
 
 let () = {

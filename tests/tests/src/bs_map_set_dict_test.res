@@ -35,7 +35,7 @@ let () = {
     data := Md0.set(data.contents, ~cmp=Mm.cmp, i, i)
   }
   let newm = M.packIdData(~data=data.contents, ~id=m_dict)
-  Js.log(newm)
+  Console.log(newm)
 }
 module ISet = Belt.Set
 let () = {
@@ -43,7 +43,7 @@ let () = {
   let m11 = Md0.set(~cmp=Icmp.cmp, m, 1, 1)
 
   let _m20 = M.make(~id=module(Icmp))
-  Js.log(m11)
+  Console.log(m11)
 }
 
 module S0 = Belt.Set.Dict
@@ -57,7 +57,7 @@ let () = {
   for i in 0 to count {
     data := S0.add(~cmp, data.contents, i)
   }
-  Js.log(data.contents)
+  Console.log(data.contents)
 }
 
 let f = M.fromArray(~id=module(Icmp), ...)

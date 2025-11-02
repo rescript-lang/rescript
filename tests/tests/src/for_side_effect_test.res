@@ -1,9 +1,9 @@
 let tst = () =>
   for i in {
-    Js.log("hi")
+    Console.log("hi")
     0
   } to {
-    Js.log("hello")
+    Console.log("hello")
     3
   } {
     ()

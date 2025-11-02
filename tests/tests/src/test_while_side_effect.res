@@ -1,7 +1,7 @@
 let v = ref(0)
 
 while {
-  v.contents->Js.Int.toString->Js.log
+  v.contents->Js.Int.toString->Console.log
   incr(v)
   v.contents < 10
 } {
@@ -17,10 +17,10 @@ let x = ref(3)
 
 while {
   let y = ref(3)
-  x.contents->Js.Int.toString->Js.log
+  x.contents->Js.Int.toString->Console.log
   incr(y)
   incr(x)
   fib(x.contents) + fib(x.contents) < 20
 } {
-  3->Js.Int.toString->Js.log
+  3->Js.Int.toString->Console.log
 }

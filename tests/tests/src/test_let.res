@@ -1,5 +1,5 @@
 {
   let a = 3
-  Js.log(a)
+  Console.log(a)
 }
 let b = 3

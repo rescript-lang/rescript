@@ -35,15 +35,15 @@ let%raw forIn : 'a -> (string -> unit [@bs]) -> unit = fun o foo -> {|
 module N: {
   let log2: string => unit
 } = {
-  let log = x => Js.log(x)
+  let log = x => Console.log(x)
 
   let log2: 'a => unit = log
 }
 
 /* let log : 'a -> unit = fun%raw x -> {|console.log (x)|} */
 
-forIn({"x": 3}, x => Js.log(x))
-forIn({"x": 3, "y": 3}, x => Js.log(x))
+forIn({"x": 3}, x => Console.log(x))
+forIn({"x": 3, "y": 3}, x => Console.log(x))
 
 let f3: unit => bool = %raw("()=>true")
 

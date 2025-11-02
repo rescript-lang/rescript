@@ -12,7 +12,7 @@ let w = 3->foo(4)
 
 let a = 3->foo(4)
 
-Js.log(a) // Test automatic uncurried application
+Console.log(a) // Test automatic uncurried application
 
 let _ = Js.Array2.map([1], x => x + 1)
 
@@ -39,7 +39,7 @@ module AllLabels = {
   let ptl = foo(~y="y", ...)
 
   let a1 = ptl(~x="x", ~z="z")
-  Js.log2("a1:", a1)
+  Console.log2("a1:", a1)
 }
 
 module OptAtEnd = {
@@ -48,9 +48,9 @@ module OptAtEnd = {
   let ptl = foo(~y="y", ...)
 
   let b1 = ptl(~x="x", ~z="z")
-  Js.log2("b1:", b1)
+  Console.log2("b1:", b1)
   let b2 = ptl(~x="x", ~z="z", ~d="d<-100")
-  Js.log2("b2:", b2)
+  Console.log2("b2:", b2)
 }
 
 module OptMixed = {
@@ -69,18 +69,18 @@ module OptMixed = {
   let ptl = foo(~y="y", ~w="w", ...)
 
   let c1 = ptl(~x="x", ~z="z")
-  Js.log2("c1:", c1)
+  Console.log2("c1:", c1)
   let c2 = ptl(~x="x", ~z="z", ~d1="d1<-100")
-  Js.log2("c2:", c2)
+  Console.log2("c2:", c2)
   let c3 = ptl(~x="x", ~z="z", ~d2="d2<-200", ~d4="d4<-400")
-  Js.log2("c3:", c3)
+  Console.log2("c3:", c3)
 }
 
 let fn = cb => {
   cb()
 }
 
-fn(s => Js.log(#foo(s)))
+fn(s => Console.log(#foo(s)))
 
 let fn1 = (a, b, ()) => a() + b
 
@@ -88,7 +88,7 @@ let a = fn1(() => 1, 2, _)
 
 module PartialApplication = {
   let f3 = (~x, ~y, ~z) => {
-    Js.log(x)
+    Console.log(x)
     x + y + z
   }
 

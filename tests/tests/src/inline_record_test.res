@@ -74,8 +74,8 @@ describe(__MODULE__, () => {
   test("inline record basic operations", () => {
     eq(__LOC__, f(v), 3)
     eq(__LOC__, f(v1), 3)
-    Js.log(f(v))
-    Js.log(f(v1))
+    Console.log(f(v))
+    Console.log(f(v1))
   })
 
   test("inline record variant switch", () => {
@@ -131,15 +131,15 @@ describe(__MODULE__, () => {
 
   test("empty record operations", () => {
     switch b {
-    | A => Js.log("A!")
-    | B({}) => Js.log("B")
+    | A => Console.log("A!")
+    | B({}) => Console.log("B")
     }
   })
 
   test("record pattern matching", () => {
     switch r {
-    | {y: 10} => Js.log("10!")
-    | {} => Js.log("Catch all?")
+    | {y: 10} => Console.log("10!")
+    | {} => Console.log("Catch all?")
     }
   })
 })

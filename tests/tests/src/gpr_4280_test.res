@@ -5,13 +5,13 @@ let u = ref(0)
 let div = (~children, ()) =>
   for i in 0 to 1 {
     u := 300
-    Js.log("nonline")
+    Console.log("nonline")
   }
 
 let string = (s: string) =>
   for i in 0 to 1 {
     u := 200
-    Js.log("no")
+    Console.log("no")
   }
 
 let fn = (authState, route) =>

@@ -44,7 +44,7 @@ describe(__MODULE__, () => {
     switch ty {
     | J.JSONNull => ok(__LOC__, true)
     | _ =>
-      Js.log(ty)
+      Console.log(ty)
       ok(__LOC__, false)
     }
   })

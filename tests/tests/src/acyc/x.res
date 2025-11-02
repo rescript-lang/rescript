@@ -15,5 +15,5 @@ module A3_a4 = {
 module A4_a5 = {
   include A3_a4
 
-  Js.log(v)
+  Console.log(v)
 }

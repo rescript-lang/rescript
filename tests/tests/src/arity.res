@@ -1,15 +1,15 @@
 type t = (~x: int, ~y: int) => int
 
 let u = (~f: t, a, b) => {
-  f(~x=a, ~y=b)->Js.log
-  f(~y=b, ~x=a)->Js.log
+  f(~x=a, ~y=b)->Console.log
+  f(~y=b, ~x=a)->Console.log
 }
 
 type t0 = (~x: int, ~y: int) => int
 
 let u2 = (~f: t0, a, b) => {
-  f(~x=a, ~y=b)->Js.log
-  f(~y=b, ~x=a)->Js.log
+  f(~x=a, ~y=b)->Console.log
+  f(~y=b, ~x=a)->Console.log
 }
 
 let f = (~x, y) => x + y

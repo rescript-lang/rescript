@@ -22,7 +22,7 @@ let f = id => {
 
 eq(__LOC__, ({"_5": 3})["_5"], 3)
 eq(__LOC__, (2, 3), (f(h).a, f(h).b))
-Js.log(Obj.tag(Obj.repr({"_5": 3})))
+Console.log(Obj.tag(Obj.repr({"_5": 3})))
 
 describe(__MODULE__, () => {
   test("test1", () => {

@@ -4,8 +4,8 @@ open Test_utils
 @val external to_json_string: 'a => string = "JSON.stringify"
 
 let () = {
-  Js.log(to_json_string(list{1, 2, 3}))
-  Js.log("hey")
+  Console.log(to_json_string(list{1, 2, 3}))
+  Console.log("hey")
 }
 @val external of_any: 'a => string = "String"
 

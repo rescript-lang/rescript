@@ -12,8 +12,8 @@ module type X = module type of List
 
 let f = x => {
   module L = List
-  Js.log(x)
-  Js.log(List.length(x))
+  Console.log(x)
+  Console.log(List.length(x))
   module(L: X)
 }
 

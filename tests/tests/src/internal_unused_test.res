@@ -4,7 +4,7 @@
 module P0 = {
   {
     let a = 3
-    Js.log(a)
+    Console.log(a)
     (a + 2)->ignore
   }
 }
@@ -46,12 +46,12 @@ module N = {
   let b = a + 2
 }
 
-Js.log(h5)
-Js.log(h2)
+Console.log(h5)
+Console.log(h2)
 
-Js.log(f)
+Console.log(f)
 
-Js.log(h(1, 2))
+Console.log(h(1, 2))
 
 /* module%private X  = Arg
  type x = X.spec */

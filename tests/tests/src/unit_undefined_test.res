@@ -6,7 +6,7 @@ open Test_utils
 let f_01 = () =>
   hi((() as x) =>
     if x == () {
-      Js.log("x")
+      Console.log("x")
     }
   ) /* FIXME: not inlined */
 

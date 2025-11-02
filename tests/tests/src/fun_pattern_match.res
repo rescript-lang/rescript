@@ -50,13 +50,13 @@ let v = {
   x()
 }
 
-Js.log(v)
+Console.log(v)
 
 let handle_tuple = (x, y) =>
   switch (x, y) {
   | (0, 1) => 2
   | (1, 2) => 3
   | (a, b) as x =>
-    Js.log(x)
+    Console.log(x)
     a + b
   }

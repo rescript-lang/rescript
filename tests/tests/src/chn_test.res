@@ -2,10 +2,10 @@ open Mocha
 open Test_utils
 open Belt
 
-Js.log(`你好，
+Console.log(`你好，
 世界`)
 
-Js.log(`\x3f\u003f\b\t\n\v\f\r\0"'`)
+Console.log(`\x3f\u003f\b\t\n\v\f\r\0"'`)
 
 let convert = (s: string): list<int> =>
   List.fromArray(

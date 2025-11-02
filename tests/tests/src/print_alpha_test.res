@@ -5,7 +5,7 @@ let f = (h, (), x, y) => h(x, y)
 
 let f = (h, ()) => {
   let u = 1 + 2
-  Js.log(u)
+  Console.log(u)
   (x, y) => h(x, y)
 }
 

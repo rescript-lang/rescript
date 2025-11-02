@@ -37,13 +37,13 @@ let f_0 = () => hi(() => ())
 let f_01 = () =>
   hi((() as x) =>
     if x == () {
-      Js.log("x")
+      Console.log("x")
     }
   ) /* FIXME: not inlined */
 let f_02 = xs =>
   hi((() as x) => {
     xs := x
-    Js.log("x")
+    Console.log("x")
   })
 let f_03 = (xs, u) => hi(u)
 /* arity adjust to [0] [ function (){return u (0)}] */
@@ -62,7 +62,7 @@ let h4 = x => ff1(x, add3(1))
 
 let h5 = x => ff2(x, add3(2))
 let add = (x, y) => {
-  Js.log((x, y))
+  Console.log((x, y))
   x + y
 }
 
@@ -76,9 +76,9 @@ external optional_cb: (
 ) => int = "optional_cb"
 
 /*
-let fishy_unit = fun () -> Js.log 1
+let fishy_unit = fun () -> Console.log 1
 
-let fishy_unit_2 = fun [@bs] (() as x) -> Js.log x
+let fishy_unit_2 = fun [@bs] (() as x) -> Console.log x
 
 let v = fishy_unit_2 () [@bs]
 
@@ -98,7 +98,7 @@ external ff :
 
 /*
 So if we pass
-{[ (fun (() as x) ->  Js.log x  ) ]}
+{[ (fun (() as x) ->  Console.log x  ) ]}
 
 Then we call it on JS side
 [g ()], we are passing undefined
@@ -156,8 +156,8 @@ let () =
 */
 
 let unit_magic = () => {
-  Js.log("noinline")
-  Js.log("noinline")
+  Console.log("noinline")
+  Console.log("noinline")
   3
 }
 

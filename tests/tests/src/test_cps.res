@@ -70,7 +70,7 @@ let rec f = (n, acc) =>
     acc()
   } else {
     f(n - 1, _ => {
-      n->Js.Int.toString->Js.log
+      n->Js.Int.toString->Console.log
       acc()
     })
   }

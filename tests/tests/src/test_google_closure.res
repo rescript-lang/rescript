@@ -18,4 +18,4 @@ let (a, b, c) = (
   },
 )
 
-let () = Js.log((a, b, c))
+let () = Console.log((a, b, c))

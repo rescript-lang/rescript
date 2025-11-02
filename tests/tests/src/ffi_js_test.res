@@ -85,14 +85,14 @@ describe(__MODULE__, () => {
       setGADT2(x, Int, Str, (3, "3"))
       setGADT2(x, Str, Int, ("3", 3))
       switch getGADTI3(x, Int, Str) {
-      | (cc, dd) => Js.log((cc, dd))
+      | (cc, dd) => Console.log((cc, dd))
       }
-      Js.log(getGADT(x, Int))
+      Console.log(getGADT(x, Int))
       switch getGADT2(x, Int, Str) {
-      | (a: int, b: string) => Js.log2(a, b)
+      | (a: int, b: string) => Console.log2(a, b)
       }
       switch getGADTI2(x, Int, Str, 0) {
-      | (a: int, b: string) => Js.log2(a, b)
+      | (a: int, b: string) => Console.log2(a, b)
       }
       setGADTI2(x, Int, Str, 0, (1, "x"))
       setGADTI3(x, Int, Str, (3, "x"))

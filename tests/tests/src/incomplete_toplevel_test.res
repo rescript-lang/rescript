@@ -1,5 +1,5 @@
 let f = () => {
-  Js.log("no inline")
+  Console.log("no inline")
   (1, 2, 3)
 }
 

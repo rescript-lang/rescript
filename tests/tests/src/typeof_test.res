@@ -5,21 +5,21 @@ let string_or_number = (type t, x) => {
   let ty = Js.Types.classify(x)
   switch ty {
   | JSString(v) =>
-    Js.log(v ++ "hei")
+    Console.log(v ++ "hei")
     true /* type check */
   | JSNumber(v) =>
-    Js.log(v +. 3.)
+    Console.log(v +. 3.)
     true /* type check */
   | JSUndefined => false
   | JSNull => false
   | JSFalse | JSTrue => false
   | JSFunction(_) =>
-    Js.log("Function")
+    Console.log("Function")
     false
   | JSObject(_) => false
   | JSSymbol(_) => false
   | JSBigInt(v) =>
-    v->Js.BigInt.toString->Js.log
+    v->Js.BigInt.toString->Console.log
     true
   }
 }

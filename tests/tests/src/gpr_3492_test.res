@@ -6,7 +6,7 @@ open Test_utils
 @val("foo") external foo: (unit => int) => int = ""
 
 let fn = () => {
-  Js.log("hi")
+  Console.log("hi")
   1
 }
 
