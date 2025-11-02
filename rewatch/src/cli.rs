@@ -425,6 +425,8 @@ pub enum Command {
     Build(BuildArgs),
     /// Build, then start a watcher
     Watch(WatchArgs),
+    /// Start a Model Context Protocol (MCP) server over stdio
+    Mcp {},
     /// Clean the build artifacts
     Clean {
         #[command(flatten)]
