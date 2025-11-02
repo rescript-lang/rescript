@@ -57,6 +57,7 @@ jobs:
             upload_binaries: true
             node-target: win32-x64
             rust-target: x86_64-pc-windows-gnu
+            exe-suffix: ".exe"
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
           - os: ubuntu-24.04
@@ -137,9 +138,9 @@ jobs:
 
       - name: Copy rewatch binary
         run: |
-          cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ runner.os == 'Windows' && '.exe' || '' }} rescript
+          cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ matrix.exe-suffix }} rescript
           mkdir -p rewatch/target/release
-          cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release
+          cp rewatch/target/${{ matrix.rust-target }}/release/rescript${{ matrix.exe-suffix }} rewatch/target/release
           ./scripts/copyExes.js --rewatch
         shell: bash
 
@@ -294,7 +295,7 @@ jobs:
         id: ninja-build-cache
         uses: actions/cache@v4
         with:
-          path: ninja/ninja${{ runner.os == 'Windows' && '.exe' || '' }}
+          path: ninja/ninja${{ matrix.exe-suffix }}
           key: ninja-build-v2-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
 
       - name: Setup Python for ninja build
@@ -318,6 +319,11 @@ jobs:
         env:
           LDFLAGS: -static
         run: node scripts/buildNinjaBinary.js
+
+      # Prevent ninja being rebuilt on playground build step later
+      - name: Touch ninja/ninja
+        if: ${{ matrix.build_playground && steps.ninja-build-cache.outputs.cache-hit == 'true' }}
+        run: touch ninja/ninja${{ matrix.exe-suffix }}
 
       - name: Copy ninja exe to platform bin dir
         run: node scripts/copyExes.js --ninja
