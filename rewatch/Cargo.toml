@@ -26,6 +26,9 @@ serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0.93" }
 sysinfo = "0.29.10"
 tempfile = "3.10.1"
+mcp-server = "0.1.0"
+mcp-spec = "0.1.0"
+tokio = { version = "1", features = ["rt-multi-thread", "io-std"] }
 
 
 [profile.release]
