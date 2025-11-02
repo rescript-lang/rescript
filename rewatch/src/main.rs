@@ -3,17 +3,23 @@ use console::Term;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{build, cli, cmd, format, lock, mcp, watcher};
 
 fn main() -> Result<()> {
     let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
 
     let log_level_filter = cli.verbose.log_level_filter();
 
+    // Route logs to stderr when running the MCP server to keep stdout as a pure JSON-RPC stream.
+    let logs_to_stdout = !matches!(cli.command, cli::Command::Mcp { .. });
     env_logger::Builder::new()
         .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
         .filter_level(log_level_filter)
-        .target(env_logger::fmt::Target::Stdout)
+        .target(if logs_to_stdout {
+            env_logger::fmt::Target::Stdout
+        } else {
+            env_logger::fmt::Target::Stderr
+        })
         .init();
 
     let mut command = cli.command;
@@ -35,6 +41,13 @@ fn main() -> Result<()> {
     match command {
         cli::Command::CompilerArgs { path } => {
             println!("{}", build::get_compiler_args(Path::new(&path))?);
+            std::process::exit(0);
+        }
+        cli::Command::Mcp {} => {
+            if let Err(e) = mcp::run() {
+                println!("{e}");
+                std::process::exit(1);
+            }
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
