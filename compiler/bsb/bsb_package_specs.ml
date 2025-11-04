@@ -130,15 +130,18 @@ let from_json suffix (x : Ext_json_types.t) : Spec_set.t =
   | Arr {content; _} -> from_array suffix content
   | _ -> Spec_set.singleton (from_json_single suffix x)
 
-let bs_package_output = "-bs-package-output"
-
 [@@@warning "+9"]
 
 let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) dir =
-  Ext_string.inter2 bs_package_output
-    (Ext_string.concat5 (string_of_format format) Ext_string.single_colon
-       (if in_source then dir else Bsb_config.top_prefix_of_format format // dir)
-       Ext_string.single_colon suffix)
+  (* Generate separate flags for module system, suffix, and output path *)
+  let module_system_flag = "-bs-module-system " ^ string_of_format format in
+  let suffix_flag = "-bs-suffix " ^ suffix in
+  let output_path =
+    if in_source then dir else Bsb_config.top_prefix_of_format format // dir
+  in
+  let output_flag = "-bs-package-output " ^ output_path in
+  (* Concatenate all three flags *)
+  module_system_flag ^ " " ^ suffix_flag ^ " " ^ output_flag
 
 (* FIXME: we should adapt it *)
 let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
