@@ -129,7 +129,7 @@ let string_of_module_id
 
         let dep_info_query =  
           Js_packages_info.query_package_infos dep_package_info module_system 
-        in 
+        in
         match dep_info_query, current_info_query with
         | Package_not_found , _  -> 
           Bs_exception.error (Missing_ml_dependency dep_module_id.id.name)
@@ -138,10 +138,51 @@ let string_of_module_id
         | (Package_script  | Package_found _ ), Package_not_found -> assert false
 
         | Package_found ({suffix} as pkg), Package_script 
-          ->    
+          ->
           let js_file =  
-            Ext_namespace.js_name_of_modulename dep_module_id.id.name case suffix in 
-          pkg.pkg_rel_path // js_file
+            Ext_namespace.js_name_of_modulename dep_module_id.id.name case suffix in
+          (* External package imports: check if pkg_rel_path ends with "/."
+             which indicates the dependency uses in-source builds *)
+          if Ext_string.ends_with pkg.pkg_rel_path "/." then begin
+            let cmj_file = dep_module_id.id.name ^ Literals.suffix_cmj in
+            match Config_util.find_opt cmj_file with
+            | Some cmj_path ->
+              (* External packages store .cmj at node_modules/<pkg>/lib/bs/<source_dir>/<module>.cmj
+                 Example: /Users/barry/Projects/great-project/node_modules/a/lib/bs/src/A-A.cmj
+                 We extract "src" from this path. *)
+              let cmj_dir = Filename.dirname cmj_path in
+              let lib_bs_pattern = "/lib/bs/" in
+              let source_dir =
+                try
+                  let rec find_lib_bs pos =
+                    if pos < 0 then None
+                    else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs_pattern then
+                      Some (pos + String.length lib_bs_pattern)
+                    else
+                      find_lib_bs (pos - 1)
+                  in
+                  match find_lib_bs (String.length cmj_dir - 1) with
+                  | Some start_idx ->
+                    String.sub cmj_dir start_idx (String.length cmj_dir - start_idx)
+                  | None -> "."
+                with Not_found -> "."
+              in
+              (* Extract package name from pkg_rel_path: "a/." -> "a" *)
+              let pkg_name = 
+                String.sub pkg.pkg_rel_path 0 (String.length pkg.pkg_rel_path - 2)
+              in
+              if source_dir = "." then begin
+                pkg.pkg_rel_path // js_file
+              end else begin
+                let result = pkg_name // source_dir // js_file in
+                (* Reconstruct: "a" + "src" + "A.res.js" = "a/src/A.res.js" *)
+                result
+              end
+            | None -> 
+              pkg.pkg_rel_path // js_file
+          end else begin
+            pkg.pkg_rel_path // js_file
+          end
         | Package_found ({suffix } as dep_pkg),
           Package_found cur_pkg -> 
           let js_file =  
@@ -216,62 +257,113 @@ let string_of_module_id
               (* TODO: we assume that both [x] and [path] could only be relative path
                   which is guaranteed by [-bs-package-output]
               *)
-          else  
-          if Js_packages_info.is_runtime_package dep_package_info then 
-            get_runtime_module_path dep_module_id current_package_info module_system
-          else 
-            begin match module_system with 
-              | Commonjs | Esmodule -> 
-                (* External package imports: importing from a different package.
-                   
-                   When dep_pkg.rel_path = "." (dependency uses in-source builds),
-                   pkg_rel_path becomes "package_name/." (e.g., "a/."), which would
-                   generate invalid imports like "a/./A.res.js" instead of "a/src/A.res.js".
-                   
-                   We extract the actual source directory from the dependency's .cmj file
-                   location and reconstruct the import path correctly.
-                *)
-                if dep_pkg.rel_path = "." then
-                  let cmj_file = dep_module_id.id.name ^ Literals.suffix_cmj in
-                  match Config_util.find_opt cmj_file with
-                  | Some cmj_path ->
-                    (* External packages store .cmj at node_modules/<pkg>/lib/bs/<source_dir>/<module>.cmj
-                       Example: /Users/barry/Projects/great-project/node_modules/a/lib/bs/src/A-A.cmj
-                       We extract "src" from this path. *)
-                    let cmj_dir = Filename.dirname cmj_path in
-                    let lib_bs_pattern = "/lib/bs/" in
-                    let source_dir =
-                      try
-                        let idx = String.rindex_from cmj_dir (String.length cmj_dir - 1) '/' in
-                        let rec find_lib_bs pos =
-                          if pos < 0 then None
-                          else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs_pattern then
-                            Some (pos + String.length lib_bs_pattern)
-                          else
-                            find_lib_bs (pos - 1)
+          else
+            if Js_packages_info.is_runtime_package dep_package_info then 
+              get_runtime_module_path dep_module_id current_package_info module_system
+            else begin
+              match module_system with 
+                | Commonjs | Esmodule -> 
+                  (* External package imports: importing from a different package.
+                     
+                     When dep_pkg.rel_path = "." (dependency uses in-source builds),
+                     pkg_rel_path becomes "package_name/." (e.g., "a/."), which would
+                     generate invalid imports like "a/./A.res.js" instead of "a/src/A.res.js".
+                     
+                     We extract the actual source directory from the dependency's .cmj file
+                     location and reconstruct the import path correctly.
+                  *)
+                  (* External package imports: check if pkg_rel_path ends with "/."
+                     which indicates the dependency uses in-source builds *)
+                  if Ext_string.ends_with dep_pkg.pkg_rel_path "/." then begin
+                    let cmj_file = dep_module_id.id.name ^ Literals.suffix_cmj in
+                    (* Prefer lib/bs over lib/ocaml as lib/bs preserves source directory structure *)
+                    let cmj_opt =
+                      match Config_util.find_opt cmj_file with
+                      | Some path when Ext_string.contain_substring path "/lib/bs/" -> 
+                        Some path
+                      | Some ocaml_path ->
+                        (* Found lib/ocaml, derive lib/bs path from it *)
+                        let lib_ocaml_pattern = "/lib/ocaml/" in
+                        let pkg_root = 
+                          try
+                            let rec find_lib_ocaml pos =
+                              if pos < 0 then None
+                              else if Ext_string.starts_with (String.sub ocaml_path pos (String.length ocaml_path - pos)) lib_ocaml_pattern then
+                                Some (String.sub ocaml_path 0 pos)
+                              else
+                                find_lib_ocaml (pos - 1)
+                            in
+                            find_lib_ocaml (String.length ocaml_path - 1)
+                          with Not_found -> None
                         in
-                        match find_lib_bs idx with
-                        | Some start_idx ->
-                          String.sub cmj_dir start_idx (String.length cmj_dir - start_idx)
-                        | None -> "."
-                      with Not_found -> "."
+                        (match pkg_root with
+                         | Some root ->
+                           (* The actual cmj file is in lib/bs/src/, not lib/bs/ directly
+                              Try a glob search to find it *)
+                           let rec find_in_dir dir =
+                             let full_path = Filename.concat dir cmj_file in
+                             if Sys.file_exists full_path then Some full_path
+                             else
+                               try
+                                 let subdirs = Sys.readdir dir in
+                                 Array.fold_left (fun acc subdir ->
+                                   match acc with
+                                   | Some _ -> acc
+                                   | None ->
+                                     let sub_path = Filename.concat dir subdir in
+                                     if Sys.is_directory sub_path then find_in_dir sub_path
+                                     else None
+                                 ) None subdirs
+                               with _ -> None
+                           in
+                           let lib_bs_dir = root ^ "/lib/bs" in
+                           (match find_in_dir lib_bs_dir with
+                            | Some bs_path ->
+                              Some bs_path
+                            | None ->
+                              Some ocaml_path)
+                         | None -> Some ocaml_path)
+                      | None -> None
                     in
-                    (* Extract package name from pkg_rel_path: "a/." -> "a" *)
-                    let pkg_name = 
-                      try
-                        let idx = String.rindex dep_pkg.pkg_rel_path '/' in
-                        String.sub dep_pkg.pkg_rel_path 0 idx
-                      with Not_found -> dep_pkg.pkg_rel_path
-                    in
-                    if source_dir = "." then
+                    match cmj_opt with
+                    | Some cmj_path ->
+                      (* External packages store .cmj at node_modules/<pkg>/lib/bs/<source_dir>/<module>.cmj
+                         Example: /Users/barry/Projects/rescript/node_modules/a/lib/bs/src/A-A.cmj
+                         We extract "src" from this path. *)
+                      let cmj_dir = Filename.dirname cmj_path in
+                      let lib_bs_pattern = "/lib/bs/" in
+                      let source_dir =
+                        try
+                          let idx = String.rindex_from cmj_dir (String.length cmj_dir - 1) '/' in
+                          let rec find_lib_bs pos =
+                            if pos < 0 then None
+                            else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs_pattern then
+                              Some (pos + String.length lib_bs_pattern)
+                            else
+                              find_lib_bs (pos - 1)
+                          in
+                          match find_lib_bs idx with
+                          | Some start_idx ->
+                            String.sub cmj_dir start_idx (String.length cmj_dir - start_idx)
+                          | None -> "."
+                        with Not_found -> "."
+                      in
+                      (* Extract package name from pkg_rel_path: "a/." -> "a" *)
+                      let pkg_name = 
+                        String.sub dep_pkg.pkg_rel_path 0 (String.length dep_pkg.pkg_rel_path - 2)
+                      in
+                      if source_dir = "." then begin
+                        dep_pkg.pkg_rel_path // js_file
+                      end else begin
+                        let result = pkg_name // source_dir // js_file in
+                        (* Reconstruct: "a" + "src" + "A.res.js" = "a/src/A.res.js" *)
+                        result
+                      end
+                    | None -> 
                       dep_pkg.pkg_rel_path // js_file
-                    else
-                      (* Reconstruct: "a" + "src" + "A.res.js" = "a/src/A.res.js" *)
-                      pkg_name // source_dir // js_file
-                  | None -> 
+                  end else begin
                     dep_pkg.pkg_rel_path // js_file
-                else
-                  dep_pkg.pkg_rel_path // js_file
+                  end
               (* Note we did a post-processing when working on Windows *)
               | Es6_global 
                 ->             

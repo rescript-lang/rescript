@@ -312,10 +312,16 @@ let lambda_as_module
           if path = "." || path = "lib/bs" || path = "lib/es6" || path = "lib/es6-global" then
             (* Legacy bsb mode: path is base dir, extract source subdir from output_prefix *)
             let source_subdir = Filename.dirname output_prefix in
-            (Lazy.force Ext_path.package_dir //
-             path //
-             source_subdir //
-             basename)
+            (* When source_subdir is ".", don't include it in the path to avoid "././" *)
+            if source_subdir = "." then
+              (Lazy.force Ext_path.package_dir //
+               path //
+               basename)
+            else
+              (Lazy.force Ext_path.package_dir //
+               path //
+               source_subdir //
+               basename)
           else
             (* Rewatch mode: path already contains full directory *)
             (Lazy.force Ext_path.package_dir //
