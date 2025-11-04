@@ -304,19 +304,25 @@ let lambda_as_module
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
-        (* Extract source subdirectory from output_prefix (e.g., "src/acyc" from "src/acyc/Node") *)
-        let source_subdir = Filename.dirname output_prefix in
         (* Construct target path:
-           - path is the base output directory from config (e.g., "." for in-source, "../lib/es6" for out-of-source)
-           - source_subdir preserves the source directory structure
+           - For bsb (path="."): extract source subdir from output_prefix
+           - For rewatch: path already contains full directory from file_path.parent()
            - basename is the final filename *)
         let target_file = 
-          (Lazy.force Ext_path.package_dir //
-           path //
-           source_subdir //
-           basename
-           (* #913 only generate little-case js file *)
-          ) in     
+          if path = "." || path = "lib/bs" || path = "lib/es6" || path = "lib/es6-global" then
+            (* Legacy bsb mode: path is base dir, extract source subdir from output_prefix *)
+            let source_subdir = Filename.dirname output_prefix in
+            (Lazy.force Ext_path.package_dir //
+             path //
+             source_subdir //
+             basename)
+          else
+            (* Rewatch mode: path already contains full directory *)
+            (Lazy.force Ext_path.package_dir //
+             path //
+             basename
+             (* #913 only generate little-case js file *)
+            ) in     
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );
