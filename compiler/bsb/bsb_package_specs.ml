@@ -132,17 +132,30 @@ let from_json suffix (x : Ext_json_types.t) : Spec_set.t =
 
 [@@@warning "+9"]
 
-let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) _dir =
-  (* Generate separate flags for module system, suffix, and output path *)
+let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) dir =
+  (* Generates three separate compiler flags that were split from the original
+     single "-bs-package-output module:path:suffix" flag.
+     
+     The 'dir' parameter comes from ninja's $in_d variable, which expands to the
+     directory containing the source file being compiled. For example:
+     - File: src/core/intl/Module.res -> dir = "src/core/intl"
+     - File: src/core/Module.res -> dir = "src/core"
+     
+     Passing the actual source directory (not just ".") is essential for the compiler
+     to calculate correct relative import paths between files in subdirectories.
+  *)
   let module_system_flag = "-bs-module-system " ^ string_of_format format in
   let suffix_flag = "-bs-suffix " ^ suffix in
-  (* For in-source, use "." as base dir; for out-of-source, use lib/es6 etc.
-     bsc will extract source subdirectory from output_prefix automatically *)
   let output_path =
-    if in_source then "." else Bsb_config.top_prefix_of_format format
+    if in_source then
+      (* Pass the actual source directory from $in_d (e.g., "src/core/intl") *)
+      dir
+    else
+      (* Combine base output directory with source subdirectory
+         to preserve directory structure (e.g., "lib/es6/src/core/intl") *)
+      Bsb_config.top_prefix_of_format format // dir
   in
   let output_flag = "-bs-package-output " ^ output_path in
-  (* Concatenate all three flags *)
   module_system_flag ^ " " ^ suffix_flag ^ " " ^ output_flag
 
 (* FIXME: we should adapt it *)
