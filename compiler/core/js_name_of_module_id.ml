@@ -57,6 +57,7 @@ let get_runtime_module_path
   let current_info_query = 
     Js_packages_info.query_package_infos current_package_info
       module_system  in
+  (* Runtime package is pre-compiled and always uses .js suffix *)
   let js_file =  
     Ext_namespace.js_name_of_modulename dep_module_id.id.name 
       Upper Literals.suffix_js in 
@@ -177,8 +178,9 @@ let string_of_module_id
             end
         | Package_script, Package_script 
           -> 
+          (* Use configured suffix instead of hardcoded .js *)
           let js_file =  
-            Ext_namespace.js_name_of_modulename dep_module_id.id.name case Literals.suffix_js in 
+            Ext_namespace.js_name_of_modulename dep_module_id.id.name case !Js_config.default_suffix in 
           match Config_util.find_opt js_file with 
           | Some file -> 
             let basename = Filename.basename file in 

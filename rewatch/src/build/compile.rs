@@ -543,25 +543,25 @@ pub fn compiler_args(
         specs
             .iter()
             .flat_map(|spec| {
+                // Pass module system, suffix, and output path as separate flags
                 vec![
+                    "-bs-module-system".to_string(),
+                    spec.module.clone(),
+                    "-bs-suffix".to_string(),
+                    root_config.get_suffix(spec),
                     "-bs-package-output".to_string(),
-                    format!(
-                        "{}:{}:{}",
-                        spec.module,
-                        if spec.in_source {
-                            file_path.parent().unwrap().to_str().unwrap().to_string()
-                        } else {
-                            Path::new("lib")
-                                .join(Path::join(
-                                    Path::new(&spec.get_out_of_source_dir()),
-                                    file_path.parent().unwrap(),
-                                ))
-                                .to_str()
-                                .unwrap()
-                                .to_string()
-                        },
-                        root_config.get_suffix(spec),
-                    ),
+                    if spec.in_source {
+                        file_path.parent().unwrap().to_str().unwrap().to_string()
+                    } else {
+                        Path::new("lib")
+                            .join(Path::join(
+                                Path::new(&spec.get_out_of_source_dir()),
+                                file_path.parent().unwrap(),
+                            ))
+                            .to_str()
+                            .unwrap()
+                            .to_string()
+                    },
                 ]
             })
             .collect()
