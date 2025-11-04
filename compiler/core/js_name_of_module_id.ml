@@ -300,8 +300,9 @@ let string_of_module_id
                          | Some root ->
                            (* The actual cmj file is in lib/bs/src/, not lib/bs/ directly
                               Try a glob search to find it *)
+                           let (//) = Filename.concat in
                            let rec find_in_dir dir =
-                             let full_path = Filename.concat dir cmj_file in
+                             let full_path = dir // cmj_file in
                              if Sys.file_exists full_path then Some full_path
                              else
                                try
@@ -310,13 +311,13 @@ let string_of_module_id
                                    match acc with
                                    | Some _ -> acc
                                    | None ->
-                                     let sub_path = Filename.concat dir subdir in
+                                     let sub_path = dir // subdir in
                                      if Sys.is_directory sub_path then find_in_dir sub_path
                                      else None
                                  ) None subdirs
                                with _ -> None
                            in
-                           let lib_bs_dir = root ^ "/lib/bs" in
+                           let lib_bs_dir = root // "lib" // "bs" in
                            (match find_in_dir lib_bs_dir with
                             | Some bs_path ->
                               Some bs_path
