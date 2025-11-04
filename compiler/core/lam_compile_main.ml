@@ -304,9 +304,16 @@ let lambda_as_module
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
+        (* Extract source subdirectory from output_prefix (e.g., "src/acyc" from "src/acyc/Node") *)
+        let source_subdir = Filename.dirname output_prefix in
+        (* Construct target path:
+           - path is the base output directory from config (e.g., "." for in-source, "../lib/es6" for out-of-source)
+           - source_subdir preserves the source directory structure
+           - basename is the final filename *)
         let target_file = 
           (Lazy.force Ext_path.package_dir //
            path //
+           source_subdir //
            basename
            (* #913 only generate little-case js file *)
           ) in     

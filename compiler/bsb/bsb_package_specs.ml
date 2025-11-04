@@ -132,12 +132,14 @@ let from_json suffix (x : Ext_json_types.t) : Spec_set.t =
 
 [@@@warning "+9"]
 
-let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) dir =
+let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) _dir =
   (* Generate separate flags for module system, suffix, and output path *)
   let module_system_flag = "-bs-module-system " ^ string_of_format format in
   let suffix_flag = "-bs-suffix " ^ suffix in
+  (* For in-source, use "." as base dir; for out-of-source, use lib/es6 etc.
+     bsc will extract source subdirectory from output_prefix automatically *)
   let output_path =
-    if in_source then dir else Bsb_config.top_prefix_of_format format // dir
+    if in_source then "." else Bsb_config.top_prefix_of_format format
   in
   let output_flag = "-bs-package-output " ^ output_path in
   (* Concatenate all three flags *)
