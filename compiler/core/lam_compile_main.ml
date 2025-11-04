@@ -309,7 +309,7 @@ let lambda_as_module
            - For rewatch: path already contains full directory from file_path.parent()
            - basename is the final filename *)
         let target_file = 
-          if path = "." || path = "lib/bs" || path = "lib/es6" || path = "lib/es6-global" then
+          if path = "." || path = "lib/bs" || path = "lib/js" || path = "lib/es6" || path = "lib/es6-global" then
             (* Legacy bsb mode: path is base dir, extract source subdir from output_prefix *)
             let source_subdir = Filename.dirname output_prefix in
             (* When source_subdir is ".", don't include it in the path to avoid "././" *)
