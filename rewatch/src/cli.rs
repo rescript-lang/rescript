@@ -461,6 +461,14 @@ pub enum Command {
         #[command()]
         path: String,
     },
+    /// Compile a single file and output JavaScript to stdout
+    CompileFile {
+        /// Path to a ReScript source file (.res or .resi)
+        path: String,
+
+        #[command(flatten)]
+        warn_error: WarnErrorArg,
+    },
 }
 
 impl Deref for FolderArg {

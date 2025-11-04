@@ -3,7 +3,7 @@ use console::Term;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{build, cli, cmd, format, helpers, lock, watcher};
 
 fn main() -> Result<()> {
     let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
@@ -49,6 +49,28 @@ fn main() -> Result<()> {
         cli::Command::CompilerArgs { path } => {
             println!("{}", build::get_compiler_args(Path::new(&path))?);
             std::process::exit(0);
+        }
+        cli::Command::CompileFile { path, warn_error } => {
+            // Find project root by walking up from file path (same as CompilerArgs command)
+            let file_path = Path::new(&path);
+            let project_root = helpers::get_abs_path(
+                &helpers::get_nearest_config(file_path).expect("Couldn't find package root (rescript.json)"),
+            );
+
+            let _lock = get_lock(project_root.to_str().unwrap());
+
+            match build::compile_one(file_path, &project_root, plain_output, (*warn_error).clone()) {
+                Ok(js_output) => {
+                    // Output JS to stdout (clean for piping)
+                    print!("{js_output}");
+                    std::process::exit(0)
+                }
+                Err(e) => {
+                    // Errors go to stderr
+                    eprintln!("{e}");
+                    std::process::exit(1)
+                }
+            }
         }
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);

@@ -16,6 +16,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
+use ahash::AHashSet;
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -546,5 +547,205 @@ pub fn build(
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
+    }
+}
+
+/// Compile a single ReScript file and return its JavaScript output.
+///
+/// This function performs a targeted one-shot compilation:
+/// 1. Initializes build state (reusing cached artifacts from previous builds)
+/// 2. Finds the target module from the file path
+/// 3. Calculates the dependency closure (all transitive dependencies)
+/// 4. Marks target + dependencies as dirty for compilation
+/// 5. Runs incremental build to compile only what's needed
+/// 6. Reads and returns the generated JavaScript file
+///
+/// # Workflow
+/// Unlike the watch mode which expands UPWARD to dependents when a file changes,
+/// this expands DOWNWARD to dependencies to ensure everything needed is compiled.
+///
+/// # Example
+/// If compiling `App.res` which imports `Component.res` which imports `Utils.res`:
+/// - Dependency closure: {Utils, Component, App}
+/// - Compilation order (via wave algorithm): Utils → Component → App
+///
+/// # Errors
+/// Returns error if:
+/// - File doesn't exist or isn't part of the project
+/// - Compilation fails (parse errors, type errors, etc.)
+/// - Generated JavaScript file cannot be found
+pub fn compile_one(
+    target_file: &Path,
+    project_root: &Path,
+    plain_output: bool,
+    warn_error: Option<String>,
+) -> Result<String> {
+    use std::fs;
+
+    // Step 1: Initialize build state
+    // This leverages any existing .ast/.cmi files from previous builds
+    let mut build_state = initialize_build(
+        None,
+        &None, // no filter
+        false, // no progress output (keep stderr clean)
+        project_root,
+        plain_output,
+        warn_error,
+    )?;
+
+    // Step 2: Find target module from file path
+    let target_module_name = find_module_for_file(&build_state, target_file)
+        .ok_or_else(|| anyhow!("File not found in project: {}", target_file.display()))?;
+
+    // Step 3: Mark only the target file as parse_dirty
+    // This ensures we parse the latest version of the target file
+    if let Some(module) = build_state.modules.get_mut(&target_module_name) {
+        if let SourceType::SourceFile(source_file) = &mut module.source_type {
+            source_file.implementation.parse_dirty = true;
+            if let Some(interface) = &mut source_file.interface {
+                interface.parse_dirty = true;
+            }
+        }
+    }
+
+    // Step 4: Get dependency closure (downward traversal)
+    // Unlike compile universe (upward to dependents), we need all dependencies
+    let dependency_closure = get_dependency_closure(&target_module_name, &build_state);
+
+    // Step 5: Mark all dependencies as compile_dirty
+    for module_name in &dependency_closure {
+        if let Some(module) = build_state.modules.get_mut(module_name) {
+            module.compile_dirty = true;
+        }
+    }
+
+    // Step 6: Run incremental build
+    // The wave compilation algorithm will compile dependencies first, then the target
+    incremental_build(
+        &mut build_state,
+        None,
+        false, // not initial build
+        false, // no progress output
+        true,  // only incremental (no cleanup step)
+        false, // no sourcedirs
+        plain_output,
+    )
+    .map_err(|e| anyhow!("Compilation failed: {}", e))?;
+
+    // Step 7: Find and read the generated JavaScript file
+    let js_path = get_js_output_path(&build_state, &target_module_name, target_file)?;
+    let js_content = fs::read_to_string(&js_path)
+        .map_err(|e| anyhow!("Failed to read generated JS file {}: {}", js_path.display(), e))?;
+
+    Ok(js_content)
+}
+
+/// Find the module name for a given file path by searching through all modules.
+///
+/// This performs a linear search through the build state's modules to match
+/// the canonical file path. Returns the module name if found.
+fn find_module_for_file(build_state: &BuildCommandState, target_file: &Path) -> Option<String> {
+    let canonical_target = target_file.canonicalize().ok()?;
+
+    for (module_name, module) in &build_state.modules {
+        if let SourceType::SourceFile(source_file) = &module.source_type {
+            let package = build_state.packages.get(&module.package_name)?;
+
+            // Check implementation file
+            let impl_path = package.path.join(&source_file.implementation.path);
+            if impl_path.canonicalize().ok().as_ref() == Some(&canonical_target) {
+                return Some(module_name.clone());
+            }
+
+            // Check interface file if present
+            if let Some(interface) = &source_file.interface {
+                let iface_path = package.path.join(&interface.path);
+                if iface_path.canonicalize().ok().as_ref() == Some(&canonical_target) {
+                    return Some(module_name.clone());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Calculate the transitive closure of all dependencies for a given module.
+///
+/// This performs a downward traversal (dependencies, not dependents):
+/// - Module A depends on B and C
+/// - B depends on D
+/// - Result: {A, B, C, D}
+///
+/// This is the opposite of the "compile universe" which expands upward to dependents.
+fn get_dependency_closure(module_name: &str, build_state: &BuildState) -> AHashSet<String> {
+    let mut closure = AHashSet::new();
+    let mut to_process = vec![module_name.to_string()];
+
+    while let Some(current) = to_process.pop() {
+        if !closure.contains(&current) {
+            closure.insert(current.clone());
+
+            if let Some(module) = build_state.get_module(&current) {
+                // Add all dependencies to process queue
+                for dep in &module.deps {
+                    if !closure.contains(dep) {
+                        to_process.push(dep.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    closure
+}
+
+/// Get the path to the generated JavaScript file for a module.
+///
+/// Respects the package's configuration for output location and format:
+/// - in-source: JS file next to the .res file
+/// - out-of-source: JS file in lib/js or lib/es6
+/// - Uses first package spec to determine .js vs .mjs extension
+fn get_js_output_path(
+    build_state: &BuildCommandState,
+    module_name: &str,
+    _original_file: &Path,
+) -> Result<PathBuf> {
+    let module = build_state
+        .get_module(module_name)
+        .ok_or_else(|| anyhow!("Module not found: {}", module_name))?;
+
+    let package = build_state
+        .get_package(&module.package_name)
+        .ok_or_else(|| anyhow!("Package not found: {}", module.package_name))?;
+
+    let root_config = build_state.get_root_config();
+    let package_specs = root_config.get_package_specs();
+    let package_spec = package_specs
+        .first()
+        .ok_or_else(|| anyhow!("No package specs configured"))?;
+
+    let suffix = root_config.get_suffix(package_spec);
+
+    if let SourceType::SourceFile(source_file) = &module.source_type {
+        let source_path = &source_file.implementation.path;
+
+        if package_spec.in_source {
+            // in-source: JS file next to source file
+            let js_file = source_path.with_extension(&suffix[1..]); // remove leading dot
+            Ok(package.path.join(js_file))
+        } else {
+            // out-of-source: in lib/js or lib/es6
+            let base_path = if package_spec.is_common_js() {
+                package.get_js_path()
+            } else {
+                package.get_es6_path()
+            };
+
+            let js_file = source_path.with_extension(&suffix[1..]);
+            Ok(base_path.join(js_file))
+        }
+    } else {
+        Err(anyhow!("Cannot get JS output for non-source module"))
     }
 }
