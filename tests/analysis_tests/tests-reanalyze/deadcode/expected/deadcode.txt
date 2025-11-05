@@ -36,10 +36,12 @@
   addValueReference CreateErrorHandler1.res:3:6 --> CreateErrorHandler1.res:3:21
   addValueReference CreateErrorHandler1.res:3:6 --> CreateErrorHandler1.res:3:21
   addValueReference CreateErrorHandler1.res:8:0 --> ErrorHandler.resi:7:2
+  addValueReference CreateErrorHandler1.res:8:30 --> Pervasives.res:290:0
   addValueReference ErrorHandler.resi:3:2 --> CreateErrorHandler1.res:3:6
   Scanning CreateErrorHandler2.cmt Source:CreateErrorHandler2.res
   addValueDeclaration +notification CreateErrorHandler2.res:3:6 path:+CreateErrorHandler2.Error2
   addValueReference CreateErrorHandler2.res:3:6 --> CreateErrorHandler2.res:3:21
+  addValueReference CreateErrorHandler2.res:3:6 --> Pervasives.res:341:0
   addValueReference ErrorHandler.resi:3:2 --> CreateErrorHandler2.res:3:6
   Scanning DeadCodeImplementation.cmt Source:DeadCodeImplementation.res
   addValueDeclaration +x DeadCodeImplementation.res:2:6 path:+DeadCodeImplementation.M
@@ -56,6 +58,7 @@
   addValueReference DeadExn.res:10:4 --> DeadExn.res:4:2
   addTypeReference DeadExn.res:10:14 --> DeadExn.res:4:2
   addValueReference DeadExn.res:12:7 --> DeadExn.res:10:4
+  addValueReference DeadExn.res:12:0 --> Js.res:260:0
   Scanning DeadExn.cmti Source:DeadExn.resi
   Scanning DeadRT.cmt Source:DeadRT.res
   addValueDeclaration +emitModuleAccessPath DeadRT.res:5:8 path:+DeadRT
@@ -64,6 +67,7 @@
   addValueReference DeadRT.res:5:8 --> DeadRT.res:7:9
   addValueReference DeadRT.res:5:8 --> DeadRT.res:5:31
   addTypeReference DeadRT.res:11:16 --> DeadRT.res:3:2
+  addValueReference DeadRT.res:11:9 --> Js.res:260:0
   Scanning DeadRT.cmti Source:DeadRT.resi
   addVariantCaseDeclaration Root DeadRT.resi:2:2 path:DeadRT.moduleAccessPath
   extendTypeDependencies DeadRT.res:2:2 --> DeadRT.resi:2:2
@@ -109,9 +113,13 @@
   addValueDeclaration +deadIncorrect DeadTest.res:154:4 path:+DeadTest
   addValueDeclaration +ira DeadTest.res:160:4 path:+DeadTest
   addValueReference DeadTest.res:1:15 --> ImmutableArray.resi:9:0
+  addValueReference DeadTest.res:1:8 --> Js.res:260:0
   addValueReference DeadTest.res:8:7 --> DeadTest.res:7:4
+  addValueReference DeadTest.res:8:0 --> Pervasives.res:290:0
   addValueReference DeadTest.res:11:7 --> DeadTest.res:10:4
+  addValueReference DeadTest.res:11:0 --> Pervasives.res:290:0
   addValueReference DeadTest.res:12:7 --> DeadTest.res:10:4
+  addValueReference DeadTest.res:12:0 --> Pervasives.res:290:0
   addValueReference DeadTest.res:20:4 --> DeadTest.res:17:4
   addValueDeclaration +thisSignatureItemIsDead DeadTest.res:31:6 path:+DeadTest.M
   addVariantCaseDeclaration A DeadTest.res:35:11 path:+DeadTest.VariantUsedOnlyInImplementation.t
@@ -140,7 +148,9 @@
   addValueReference DeadTest.res:64:6 --> DeadTest.res:63:6
   addValueDeclaration +valueOnlyInImplementation DeadTest.res:65:6 path:+DeadTest.MM
   addValueReference DeadTest.res:69:9 --> DeadTest.res:60:2
+  addValueReference DeadTest.res:69:2 --> Js.res:260:0
   addValueReference DeadTest.res:73:16 --> DeadValueTest.resi:1:0
+  addValueReference DeadTest.res:73:9 --> Js.res:260:0
   addValueReference DeadTest.res:75:8 --> DeadTest.res:75:8
   addValueReference DeadTest.res:77:8 --> DeadTest.res:77:20
   addValueReference DeadTest.res:77:8 --> DeadTest.res:77:8
@@ -156,26 +166,35 @@
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:42
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:24
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:45
+  addValueReference DeadTest.res:96:4 --> Pervasives.res:64:0
   addTypeReference DeadTest.res:98:16 --> DeadRT.resi:2:2
+  addValueReference DeadTest.res:98:9 --> Js.res:260:0
   addValueDeclaration +a1 DeadTest.res:105:6 path:+DeadTest
   addValueDeclaration +a2 DeadTest.res:106:6 path:+DeadTest
   addValueDeclaration +a3 DeadTest.res:107:6 path:+DeadTest
   addValueReference DeadTest.res:110:17 --> DynamicallyLoadedComponent.res:2:4
+  addValueReference DeadTest.res:110:9 --> Js.res:260:0
+  addValueReference DeadTest.res:114:4 --> Pervasives.res:303:0
   addRecordLabelDeclaration s DeadTest.res:117:12 path:+DeadTest.props
   addValueReference DeadTest.res:117:32 --> DeadTest.res:117:12
   addValueReference DeadTest.res:117:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DeadTest.res:117:12
   addValueReference DeadTest.res:119:16 --> DeadTest.res:117:4
+  addValueReference DeadTest.res:119:9 --> Js.res:260:0
+  addValueReference DeadTest.res:121:4 --> Js.res:260:0
+  addValueReference DeadTest.res:123:4 --> Stdlib_String.resi:150:0
   addVariantCaseDeclaration A DeadTest.res:134:11 path:+DeadTest.WithInclude.t
   addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.T.t
   addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.t
   extendTypeDependencies DeadTest.res:137:13 --> DeadTest.res:134:11
   extendTypeDependencies DeadTest.res:134:11 --> DeadTest.res:137:13
   addTypeReference DeadTest.res:142:7 --> DeadTest.res:134:11
+  addValueReference DeadTest.res:142:0 --> Js.res:260:0
   addValueDeclaration +x DeadTest.res:146:6 path:+DeadTest
   addValueDeclaration +y DeadTest.res:147:6 path:+DeadTest
   addValueReference DeadTest.res:145:4 --> DeadTest.res:146:6
   addValueReference DeadTest.res:145:4 --> DeadTest.res:147:6
+  addValueReference DeadTest.res:145:4 --> Pervasives.res:64:0
   addRecordLabelDeclaration a DeadTest.res:151:11 path:+DeadTest.rc
   addValueDeclaration +_ DeadTest.res:156:0 path:+DeadTest
   addValueReference DeadTest.res:156:8 --> DeadTest.res:154:4
@@ -268,16 +287,21 @@
   addValueDeclaration +valueDead DeadValueTest.res:2:4 path:+DeadValueTest
   addValueDeclaration +valueOnlyInImplementation DeadValueTest.res:4:4 path:+DeadValueTest
   addValueDeclaration +subList DeadValueTest.res:6:8 path:+DeadValueTest
+  addValueReference DeadValueTest.res:6:8 --> Pervasives.res:32:4
   addValueDeclaration +tail DeadValueTest.res:10:8 path:+DeadValueTest
   addValueReference DeadValueTest.res:10:8 --> DeadValueTest.res:6:19
+  addValueReference DeadValueTest.res:10:8 --> Pervasives.res:65:0
   addValueReference DeadValueTest.res:10:8 --> DeadValueTest.res:6:22
+  addValueReference DeadValueTest.res:10:8 --> Pervasives.res:65:0
   addValueReference DeadValueTest.res:10:8 --> DeadValueTest.res:9:15
   addValueReference DeadValueTest.res:10:8 --> DeadValueTest.res:6:8
   addValueReference DeadValueTest.res:10:8 --> DeadValueTest.res:6:22
+  addValueReference DeadValueTest.res:10:8 --> Pervasives.res:84:0
   addValueReference DeadValueTest.res:6:8 --> DeadValueTest.res:9:9
   addValueReference DeadValueTest.res:6:8 --> DeadValueTest.res:10:8
   addValueReference DeadValueTest.res:6:8 --> DeadValueTest.res:10:8
   addValueReference DeadValueTest.res:6:8 --> DeadValueTest.res:6:19
+  addValueReference DeadValueTest.res:6:8 --> Pervasives.res:87:0
   addValueReference DeadValueTest.res:6:8 --> DeadValueTest.res:6:25
   addValueReference DeadValueTest.resi:1:0 --> DeadValueTest.res:1:4
   addValueReference DeadValueTest.resi:2:0 --> DeadValueTest.res:2:4
@@ -306,26 +330,47 @@
   addValueDeclaration +unitArgWithConversionU Docstrings.res:67:4 path:+Docstrings
   addValueReference Docstrings.res:12:4 --> Docstrings.res:12:21
   addValueReference Docstrings.res:12:4 --> Docstrings.res:12:30
+  addValueReference Docstrings.res:12:4 --> Pervasives.res:341:0
+  addValueReference Docstrings.res:12:4 --> Pervasives.res:270:0
   addValueReference Docstrings.res:15:4 --> Docstrings.res:15:10
+  addValueReference Docstrings.res:15:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:18:4 --> Docstrings.res:18:11
   addValueReference Docstrings.res:18:4 --> Docstrings.res:18:14
+  addValueReference Docstrings.res:18:4 --> Pervasives.res:64:0
+  addValueReference Docstrings.res:18:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:21:4 --> Docstrings.res:21:12
   addValueReference Docstrings.res:21:4 --> Docstrings.res:21:15
+  addValueReference Docstrings.res:21:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:21:4 --> Docstrings.res:21:18
+  addValueReference Docstrings.res:21:4 --> Pervasives.res:64:0
+  addValueReference Docstrings.res:21:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:24:4 --> Docstrings.res:24:14
+  addValueReference Docstrings.res:24:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:27:4 --> Docstrings.res:27:14
   addValueReference Docstrings.res:27:4 --> Docstrings.res:27:17
+  addValueReference Docstrings.res:27:4 --> Pervasives.res:64:0
+  addValueReference Docstrings.res:27:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:30:4 --> Docstrings.res:30:15
   addValueReference Docstrings.res:30:4 --> Docstrings.res:30:18
+  addValueReference Docstrings.res:30:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:30:4 --> Docstrings.res:30:21
+  addValueReference Docstrings.res:30:4 --> Pervasives.res:64:0
+  addValueReference Docstrings.res:30:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:33:4 --> Docstrings.res:33:15
+  addValueReference Docstrings.res:33:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:36:4 --> Docstrings.res:36:19
+  addValueReference Docstrings.res:36:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:51:4 --> Docstrings.res:51:15
   addValueReference Docstrings.res:51:4 --> Docstrings.res:51:19
+  addValueReference Docstrings.res:51:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:51:4 --> Docstrings.res:51:23
+  addValueReference Docstrings.res:51:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:51:4 --> Docstrings.res:51:26
+  addValueReference Docstrings.res:51:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:51:4 --> Docstrings.res:51:29
+  addValueReference Docstrings.res:51:4 --> Pervasives.res:64:0
   addValueReference Docstrings.res:51:4 --> Docstrings.res:51:32
+  addValueReference Docstrings.res:51:4 --> Pervasives.res:64:0
   addVariantCaseDeclaration A Docstrings.res:60:2 path:+Docstrings.t
   addVariantCaseDeclaration B Docstrings.res:61:2 path:+Docstrings.t
   addTypeReference Docstrings.res:64:34 --> Docstrings.res:60:2
@@ -365,6 +410,7 @@
   addValueDeclaration +testConvert FirstClassModules.res:54:4 path:+FirstClassModules
   addValueDeclaration +someFunctorAsFunction FirstClassModules.res:65:4 path:+FirstClassModules
   addValueReference FirstClassModules.res:33:8 --> FirstClassModules.res:33:13
+  addValueReference FirstClassModules.res:33:8 --> Pervasives.res:64:0
   addValueReference FirstClassModules.res:54:4 --> FirstClassModules.res:54:19
   addValueDeclaration +ww FirstClassModules.res:61:6 path:+FirstClassModules.SomeFunctor
   addValueReference FirstClassModules.res:61:6 --> FirstClassModules.res:20:2
@@ -410,15 +456,28 @@
   addValueReference Hooks.res:5:26 --> React.res:134:0
   addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
   addValueReference Hooks.res:10:29 --> Hooks.res:4:12
+  DeadOptionalArgs.addReferences Stdlib.Int.toString called with optional argNames: argNamesMaybe: Hooks.res:10:62
   addValueReference Hooks.res:10:75 --> Hooks.res:5:7
+  addValueReference Hooks.res:10:62 --> Stdlib_Int.resi:205:0
+  addValueReference Hooks.res:10:82 --> Pervasives.res:270:0
+  addValueReference Hooks.res:10:58 --> Pervasives.res:270:0
+  addValueReference Hooks.res:10:42 --> Pervasives.res:270:0
+  addValueReference Hooks.res:10:25 --> Pervasives.res:270:0
   addValueReference Hooks.res:9:7 --> React.res:7:0
   addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
   addValueReference Hooks.res:10:29 --> Hooks.res:4:12
+  DeadOptionalArgs.addReferences Stdlib.Int.toString called with optional argNames: argNamesMaybe: Hooks.res:10:62
   addValueReference Hooks.res:10:75 --> Hooks.res:5:7
+  addValueReference Hooks.res:10:62 --> Stdlib_Int.resi:205:0
+  addValueReference Hooks.res:10:82 --> Pervasives.res:270:0
+  addValueReference Hooks.res:10:58 --> Pervasives.res:270:0
+  addValueReference Hooks.res:10:42 --> Pervasives.res:270:0
+  addValueReference Hooks.res:10:25 --> Pervasives.res:270:0
   addValueReference Hooks.res:9:7 --> React.res:7:0
   addValueReference Hooks.res:13:54 --> React.res:7:0
   addValueReference Hooks.res:13:54 --> React.res:7:0
   addValueReference Hooks.res:13:40 --> Hooks.res:5:7
+  addValueReference Hooks.res:13:46 --> Pervasives.res:64:0
   addValueReference Hooks.res:13:26 --> Hooks.res:5:14
   addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
   addValueReference Hooks.res:15:7 --> React.res:7:0
@@ -437,18 +496,22 @@
   addRecordLabelDeclaration vehicle Hooks.res:29:14 path:+Hooks.Inner.props
   addTypeReference Hooks.res:29:66 --> Hooks.res:1:16
   addValueReference Hooks.res:29:66 --> Hooks.res:29:14
+  addValueReference Hooks.res:29:63 --> Pervasives.res:270:0
   addValueReference Hooks.res:29:34 --> React.res:7:0
   addTypeReference Hooks.res:29:66 --> Hooks.res:1:16
   addValueReference Hooks.res:29:66 --> Hooks.res:29:14
+  addValueReference Hooks.res:29:63 --> Pervasives.res:270:0
   addValueReference Hooks.res:29:34 --> React.res:7:0
   addTypeReference _none_:1:-1 --> Hooks.res:29:14
   addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
   addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
   addTypeReference Hooks.res:33:68 --> Hooks.res:1:16
   addValueReference Hooks.res:33:68 --> Hooks.res:33:16
+  addValueReference Hooks.res:33:65 --> Pervasives.res:270:0
   addValueReference Hooks.res:33:36 --> React.res:7:0
   addTypeReference Hooks.res:33:68 --> Hooks.res:1:16
   addValueReference Hooks.res:33:68 --> Hooks.res:33:16
+  addValueReference Hooks.res:33:65 --> Pervasives.res:270:0
   addValueReference Hooks.res:33:36 --> React.res:7:0
   addTypeReference _none_:1:-1 --> Hooks.res:33:16
   addValueReference Hooks.res:39:25 --> React.res:3:0
@@ -457,6 +520,7 @@
   addValueReference Hooks.res:45:4 --> Hooks.res:45:31
   addTypeReference Hooks.res:47:14 --> Hooks.res:1:16
   addValueReference Hooks.res:45:4 --> Hooks.res:45:37
+  addValueReference Hooks.res:45:4 --> Pervasives.res:270:0
   addValueReference Hooks.res:45:4 --> Hooks.res:45:31
   addValueReference Hooks.res:45:4 --> Hooks.res:45:45
   addRecordLabelDeclaration x Hooks.res:50:10 path:+Hooks.r
@@ -591,229 +655,289 @@
   addValueDeclaration +eqU ImmutableArray.res:114:6 path:+ImmutableArray
   addValueDeclaration +eq ImmutableArray.res:115:6 path:+ImmutableArray
   addValueReference ImmutableArray.res:14:6 --> ImmutableArray.res:14:18
+  addValueReference ImmutableArray.res:14:6 --> Belt_Array.resi:340:0
   addValueReference ImmutableArray.res:14:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:16:6 --> ImmutableArray.res:16:16
   addValueReference ImmutableArray.res:16:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:16:6 --> Belt_Array.resi:340:0
   addValueReference ImmutableArray.res:20:6 --> ImmutableArray.res:20:15
   addValueReference ImmutableArray.res:20:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:20:6 --> Belt_Array.resi:21:0
   addValueReference ImmutableArray.res:22:6 --> ImmutableArray.res:22:13
   addValueReference ImmutableArray.res:22:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:22:6 --> Belt_Array.resi:32:0
   addValueReference ImmutableArray.res:24:6 --> ImmutableArray.res:24:13
   addValueReference ImmutableArray.res:24:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:24:6 --> ImmutableArray.res:24:16
+  addValueReference ImmutableArray.res:24:6 --> Belt_Array.resi:35:0
   addValueReference ImmutableArray.res:26:6 --> ImmutableArray.res:26:16
   addValueReference ImmutableArray.res:26:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:26:6 --> ImmutableArray.res:26:19
+  addValueReference ImmutableArray.res:26:6 --> Belt_Array.resi:49:0
   addValueReference ImmutableArray.res:28:6 --> ImmutableArray.res:28:19
   addValueReference ImmutableArray.res:28:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:28:6 --> ImmutableArray.res:28:22
+  addValueReference ImmutableArray.res:28:6 --> Belt_Array.resi:61:0
   addValueReference ImmutableArray.res:30:6 --> ImmutableArray.res:30:22
   addValueReference ImmutableArray.res:30:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:30:6 --> ImmutableArray.res:30:25
+  addValueReference ImmutableArray.res:30:6 --> Belt_Array.resi:70:0
   addValueReference ImmutableArray.res:32:6 --> ImmutableArray.res:32:16
   addValueReference ImmutableArray.res:32:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:32:6 --> Belt_Array.resi:102:0
   addValueReference ImmutableArray.res:32:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:34:6 --> ImmutableArray.res:34:16
   addValueReference ImmutableArray.res:34:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:34:6 --> Belt_Array.resi:120:0
   addValueReference ImmutableArray.res:34:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:36:6 --> ImmutableArray.res:36:26
+  addValueReference ImmutableArray.res:36:6 --> Belt_Array.resi:131:0
   addValueReference ImmutableArray.res:36:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:38:6 --> ImmutableArray.res:38:32
+  addValueReference ImmutableArray.res:38:6 --> Belt_Array.resi:146:0
   addValueReference ImmutableArray.res:38:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:40:6 --> ImmutableArray.res:40:14
   addValueReference ImmutableArray.res:40:6 --> ImmutableArray.res:40:17
+  addValueReference ImmutableArray.res:40:6 --> Belt_Array.resi:164:0
   addValueReference ImmutableArray.res:40:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:42:6 --> ImmutableArray.res:42:15
   addValueReference ImmutableArray.res:42:6 --> ImmutableArray.res:42:18
+  addValueReference ImmutableArray.res:42:6 --> Belt_Array.resi:170:0
   addValueReference ImmutableArray.res:42:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:44:6 --> ImmutableArray.res:44:17
   addValueReference ImmutableArray.res:44:6 --> ImmutableArray.res:44:20
   addValueReference ImmutableArray.res:44:6 --> ImmutableArray.res:44:23
+  addValueReference ImmutableArray.res:44:6 --> Belt_Array.resi:185:0
   addValueReference ImmutableArray.res:44:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:46:6 --> ImmutableArray.res:46:17
   addValueReference ImmutableArray.res:46:6 --> ImmutableArray.res:46:20
+  addValueReference ImmutableArray.res:46:6 --> Belt_Array.resi:209:0
   addValueReference ImmutableArray.res:46:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:47:6 --> ImmutableArray.res:47:16
   addValueReference ImmutableArray.res:47:6 --> ImmutableArray.res:47:19
+  addValueReference ImmutableArray.res:47:6 --> Belt_Array.resi:211:0
   addValueReference ImmutableArray.res:47:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:49:6 --> ImmutableArray.res:49:27
   addValueReference ImmutableArray.res:49:6 --> ImmutableArray.res:49:30
+  addValueReference ImmutableArray.res:49:6 --> Belt_Array.resi:225:0
   addValueReference ImmutableArray.res:49:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:50:6 --> ImmutableArray.res:50:26
   addValueReference ImmutableArray.res:50:6 --> ImmutableArray.res:50:29
+  addValueReference ImmutableArray.res:50:6 --> Belt_Array.resi:227:0
   addValueReference ImmutableArray.res:50:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:52:6 --> ImmutableArray.res:52:13
   addValueReference ImmutableArray.res:52:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:52:6 --> ImmutableArray.res:52:17
   addValueReference ImmutableArray.res:52:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:52:6 --> Belt_Array.resi:232:0
   addValueReference ImmutableArray.res:52:6 --> ImmutableArray.res:9:2
   addValueReference ImmutableArray.res:54:6 --> ImmutableArray.res:54:16
   addValueReference ImmutableArray.res:54:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:54:6 --> ImmutableArray.res:54:20
   addValueReference ImmutableArray.res:54:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:54:6 --> ImmutableArray.res:54:24
+  addValueReference ImmutableArray.res:54:6 --> Belt_Array.resi:244:0
   addValueReference ImmutableArray.res:54:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:55:6 --> ImmutableArray.res:55:15
   addValueReference ImmutableArray.res:55:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:55:6 --> ImmutableArray.res:55:19
   addValueReference ImmutableArray.res:55:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:55:6 --> ImmutableArray.res:55:23
+  addValueReference ImmutableArray.res:55:6 --> Belt_Array.resi:246:0
   addValueReference ImmutableArray.res:55:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:57:6 --> ImmutableArray.res:57:14
   addValueReference ImmutableArray.res:57:6 --> ImmutableArray.res:6:2
+  addValueReference ImmutableArray.res:57:6 --> Belt_Array.resi:260:0
   addValueReference ImmutableArray.res:57:6 --> ImmutableArray.res:10:2
   addValueReference ImmutableArray.res:59:6 --> ImmutableArray.res:59:16
   addValueReference ImmutableArray.res:59:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:59:6 --> ImmutableArray.res:59:20
   addValueReference ImmutableArray.res:59:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:59:6 --> Belt_Array.resi:275:0
   addValueReference ImmutableArray.res:59:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:61:6 --> ImmutableArray.res:61:20
   addValueReference ImmutableArray.res:61:6 --> ImmutableArray.res:7:2
+  addValueReference ImmutableArray.res:61:6 --> Belt_Array.resi:289:0
   addValueReference ImmutableArray.res:61:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:63:6 --> ImmutableArray.res:63:15
   addValueReference ImmutableArray.res:63:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:63:6 --> ImmutableArray.res:63:18
   addValueReference ImmutableArray.res:63:6 --> ImmutableArray.res:63:27
+  addValueReference ImmutableArray.res:63:6 --> Belt_Array.resi:300:0
   addValueReference ImmutableArray.res:63:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:65:6 --> ImmutableArray.res:65:20
   addValueReference ImmutableArray.res:65:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:65:6 --> ImmutableArray.res:65:23
+  addValueReference ImmutableArray.res:65:6 --> Belt_Array.resi:321:0
   addValueReference ImmutableArray.res:65:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:67:6 --> ImmutableArray.res:67:13
   addValueReference ImmutableArray.res:67:6 --> ImmutableArray.res:5:2
+  addValueReference ImmutableArray.res:67:6 --> Belt_Array.resi:340:0
   addValueReference ImmutableArray.res:67:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:69:6 --> ImmutableArray.res:69:18
   addValueReference ImmutableArray.res:69:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:69:6 --> ImmutableArray.res:69:21
+  addValueReference ImmutableArray.res:69:6 --> Belt_Array.resi:400:0
   addValueReference ImmutableArray.res:70:6 --> ImmutableArray.res:70:17
   addValueReference ImmutableArray.res:70:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:70:6 --> ImmutableArray.res:70:20
+  addValueReference ImmutableArray.res:70:6 --> Belt_Array.resi:402:0
   addValueReference ImmutableArray.res:72:6 --> ImmutableArray.res:72:14
   addValueReference ImmutableArray.res:72:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:72:6 --> ImmutableArray.res:72:17
+  addValueReference ImmutableArray.res:72:6 --> Belt_Array.resi:429:0
   addValueReference ImmutableArray.res:72:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:73:6 --> ImmutableArray.res:73:13
   addValueReference ImmutableArray.res:73:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:73:6 --> ImmutableArray.res:73:16
+  addValueReference ImmutableArray.res:73:6 --> Belt_Array.resi:431:0
   addValueReference ImmutableArray.res:73:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:75:6 --> ImmutableArray.res:75:24
   addValueReference ImmutableArray.res:75:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:75:6 --> ImmutableArray.res:75:27
+  addValueReference ImmutableArray.res:75:6 --> Belt_Array.resi:495:0
   addValueReference ImmutableArray.res:75:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:76:6 --> ImmutableArray.res:76:23
   addValueReference ImmutableArray.res:76:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:76:6 --> ImmutableArray.res:76:26
+  addValueReference ImmutableArray.res:76:6 --> Belt_Array.resi:497:0
   addValueReference ImmutableArray.res:76:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:78:6 --> ImmutableArray.res:78:18
   addValueReference ImmutableArray.res:78:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:78:6 --> ImmutableArray.res:78:21
+  addValueReference ImmutableArray.res:78:6 --> Belt_Array.resi:508:0
   addValueReference ImmutableArray.res:78:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:79:6 --> ImmutableArray.res:79:17
   addValueReference ImmutableArray.res:79:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:79:6 --> ImmutableArray.res:79:20
+  addValueReference ImmutableArray.res:79:6 --> Belt_Array.resi:510:0
   addValueReference ImmutableArray.res:79:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:81:6 --> ImmutableArray.res:81:27
   addValueReference ImmutableArray.res:81:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:81:6 --> ImmutableArray.res:81:30
+  addValueReference ImmutableArray.res:81:6 --> Belt_Array.resi:528:0
   addValueReference ImmutableArray.res:82:6 --> ImmutableArray.res:82:26
   addValueReference ImmutableArray.res:82:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:82:6 --> ImmutableArray.res:82:29
+  addValueReference ImmutableArray.res:82:6 --> Belt_Array.resi:530:0
   addValueReference ImmutableArray.res:84:6 --> ImmutableArray.res:84:23
   addValueReference ImmutableArray.res:84:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:84:6 --> ImmutableArray.res:84:26
+  addValueReference ImmutableArray.res:84:6 --> Belt_Array.resi:556:0
   addValueReference ImmutableArray.res:84:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:85:6 --> ImmutableArray.res:85:22
   addValueReference ImmutableArray.res:85:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:85:6 --> ImmutableArray.res:85:25
+  addValueReference ImmutableArray.res:85:6 --> Belt_Array.resi:558:0
   addValueReference ImmutableArray.res:85:6 --> ImmutableArray.res:8:2
   addValueReference ImmutableArray.res:87:6 --> ImmutableArray.res:87:20
   addValueReference ImmutableArray.res:87:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:87:6 --> ImmutableArray.res:87:23
+  addValueReference ImmutableArray.res:87:6 --> Belt_Array.resi:570:0
   addValueReference ImmutableArray.res:87:6 --> ImmutableArray.res:10:2
   addValueReference ImmutableArray.res:88:6 --> ImmutableArray.res:88:19
   addValueReference ImmutableArray.res:88:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:88:6 --> ImmutableArray.res:88:22
+  addValueReference ImmutableArray.res:88:6 --> Belt_Array.resi:572:0
   addValueReference ImmutableArray.res:88:6 --> ImmutableArray.res:10:2
   addValueReference ImmutableArray.res:90:6 --> ImmutableArray.res:90:17
   addValueReference ImmutableArray.res:90:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:90:6 --> ImmutableArray.res:90:20
   addValueReference ImmutableArray.res:90:6 --> ImmutableArray.res:90:23
+  addValueReference ImmutableArray.res:90:6 --> Belt_Array.resi:586:0
   addValueReference ImmutableArray.res:91:6 --> ImmutableArray.res:91:16
   addValueReference ImmutableArray.res:91:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:91:6 --> ImmutableArray.res:91:19
   addValueReference ImmutableArray.res:91:6 --> ImmutableArray.res:91:22
+  addValueReference ImmutableArray.res:91:6 --> Belt_Array.resi:588:0
   addValueReference ImmutableArray.res:93:6 --> ImmutableArray.res:93:24
   addValueReference ImmutableArray.res:93:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:93:6 --> ImmutableArray.res:93:27
   addValueReference ImmutableArray.res:93:6 --> ImmutableArray.res:93:30
+  addValueReference ImmutableArray.res:93:6 --> Belt_Array.resi:604:0
   addValueReference ImmutableArray.res:94:6 --> ImmutableArray.res:94:23
   addValueReference ImmutableArray.res:94:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:94:6 --> ImmutableArray.res:94:26
   addValueReference ImmutableArray.res:94:6 --> ImmutableArray.res:94:29
+  addValueReference ImmutableArray.res:94:6 --> Belt_Array.resi:606:0
   addValueReference ImmutableArray.res:96:6 --> ImmutableArray.res:96:25
   addValueReference ImmutableArray.res:96:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:96:6 --> ImmutableArray.res:96:29
   addValueReference ImmutableArray.res:96:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:96:6 --> ImmutableArray.res:96:33
   addValueReference ImmutableArray.res:96:6 --> ImmutableArray.res:96:36
+  addValueReference ImmutableArray.res:96:6 --> Belt_Array.resi:618:0
   addValueReference ImmutableArray.res:97:6 --> ImmutableArray.res:97:24
   addValueReference ImmutableArray.res:97:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:97:6 --> ImmutableArray.res:97:28
   addValueReference ImmutableArray.res:97:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:97:6 --> ImmutableArray.res:97:32
   addValueReference ImmutableArray.res:97:6 --> ImmutableArray.res:97:35
+  addValueReference ImmutableArray.res:97:6 --> Belt_Array.resi:620:0
   addValueReference ImmutableArray.res:99:6 --> ImmutableArray.res:99:15
   addValueReference ImmutableArray.res:99:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:99:6 --> ImmutableArray.res:99:18
+  addValueReference ImmutableArray.res:99:6 --> Belt_Array.resi:668:0
   addValueReference ImmutableArray.res:100:6 --> ImmutableArray.res:100:14
   addValueReference ImmutableArray.res:100:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:100:6 --> ImmutableArray.res:100:17
+  addValueReference ImmutableArray.res:100:6 --> Belt_Array.resi:670:0
   addValueReference ImmutableArray.res:102:6 --> ImmutableArray.res:102:16
   addValueReference ImmutableArray.res:102:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:102:6 --> ImmutableArray.res:102:19
+  addValueReference ImmutableArray.res:102:6 --> Belt_Array.resi:684:0
   addValueReference ImmutableArray.res:103:6 --> ImmutableArray.res:103:15
   addValueReference ImmutableArray.res:103:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:103:6 --> ImmutableArray.res:103:18
+  addValueReference ImmutableArray.res:103:6 --> Belt_Array.resi:686:0
   addValueReference ImmutableArray.res:105:6 --> ImmutableArray.res:105:17
   addValueReference ImmutableArray.res:105:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:105:6 --> ImmutableArray.res:105:21
   addValueReference ImmutableArray.res:105:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:105:6 --> ImmutableArray.res:105:25
+  addValueReference ImmutableArray.res:105:6 --> Belt_Array.resi:700:0
   addValueReference ImmutableArray.res:106:6 --> ImmutableArray.res:106:16
   addValueReference ImmutableArray.res:106:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:106:6 --> ImmutableArray.res:106:20
   addValueReference ImmutableArray.res:106:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:106:6 --> ImmutableArray.res:106:24
+  addValueReference ImmutableArray.res:106:6 --> Belt_Array.resi:702:0
   addValueReference ImmutableArray.res:108:6 --> ImmutableArray.res:108:16
   addValueReference ImmutableArray.res:108:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:108:6 --> ImmutableArray.res:108:20
   addValueReference ImmutableArray.res:108:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:108:6 --> ImmutableArray.res:108:24
+  addValueReference ImmutableArray.res:108:6 --> Belt_Array.resi:720:0
   addValueReference ImmutableArray.res:109:6 --> ImmutableArray.res:109:15
   addValueReference ImmutableArray.res:109:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:109:6 --> ImmutableArray.res:109:19
   addValueReference ImmutableArray.res:109:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:109:6 --> ImmutableArray.res:109:23
+  addValueReference ImmutableArray.res:109:6 --> Belt_Array.resi:722:0
   addValueReference ImmutableArray.res:111:6 --> ImmutableArray.res:111:14
   addValueReference ImmutableArray.res:111:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:111:6 --> ImmutableArray.res:111:18
   addValueReference ImmutableArray.res:111:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:111:6 --> ImmutableArray.res:111:22
+  addValueReference ImmutableArray.res:111:6 --> Belt_Array.resi:738:0
   addValueReference ImmutableArray.res:112:6 --> ImmutableArray.res:112:13
   addValueReference ImmutableArray.res:112:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:112:6 --> ImmutableArray.res:112:17
   addValueReference ImmutableArray.res:112:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:112:6 --> ImmutableArray.res:112:21
+  addValueReference ImmutableArray.res:112:6 --> Belt_Array.resi:740:0
   addValueReference ImmutableArray.res:114:6 --> ImmutableArray.res:114:13
   addValueReference ImmutableArray.res:114:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:114:6 --> ImmutableArray.res:114:17
   addValueReference ImmutableArray.res:114:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:114:6 --> ImmutableArray.res:114:21
+  addValueReference ImmutableArray.res:114:6 --> Belt_Array.resi:760:0
   addValueReference ImmutableArray.res:115:6 --> ImmutableArray.res:115:12
   addValueReference ImmutableArray.res:115:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:115:6 --> ImmutableArray.res:115:16
   addValueReference ImmutableArray.res:115:6 --> ImmutableArray.res:5:2
   addValueReference ImmutableArray.res:115:6 --> ImmutableArray.res:115:20
+  addValueReference ImmutableArray.res:115:6 --> Belt_Array.resi:762:0
   addValueReference ImmutableArray.resi:6:2 --> ImmutableArray.res:24:6
   addValueReference ImmutableArray.resi:9:0 --> ImmutableArray.res:14:6
   addValueReference ImmutableArray.resi:12:0 --> ImmutableArray.res:16:6
@@ -979,8 +1103,11 @@
   addValueReference ImportJsValue.res:40:6 --> ImportJsValue.res:41:8
   addValueReference ImportJsValue.res:47:4 --> ImportJsValue.res:47:18
   addValueReference ImportJsValue.res:47:4 --> ImportJsValue.res:37:2
+  addValueReference ImportJsValue.res:47:4 --> Pervasives.res:64:0
   addValueReference ImportJsValue.res:50:4 --> ImportJsValue.res:50:17
   addValueReference ImportJsValue.res:50:4 --> ImportJsValue.res:40:6
+  addValueReference ImportJsValue.res:50:4 --> Pervasives.res:64:0
+  addValueReference ImportJsValue.res:64:4 --> Pervasives.res:64:0
   addValueReference ImportJsValue.res:64:4 --> ImportJsValue.res:60:0
   addVariantCaseDeclaration I ImportJsValue.res:67:2 path:+ImportJsValue.variant
   addVariantCaseDeclaration S ImportJsValue.res:68:2 path:+ImportJsValue.variant
@@ -1025,8 +1152,10 @@
   addValueDeclaration +customDouble ModuleExceptionBug.res:2:6 path:+ModuleExceptionBug.Dep
   addValueDeclaration +ddjdj ModuleExceptionBug.res:7:4 path:+ModuleExceptionBug
   addValueReference ModuleExceptionBug.res:2:6 --> ModuleExceptionBug.res:2:21
+  addValueReference ModuleExceptionBug.res:2:6 --> Pervasives.res:66:0
   addExceptionDeclaration MyOtherException ModuleExceptionBug.res:5:0 path:+ModuleExceptionBug
   addValueReference ModuleExceptionBug.res:8:7 --> ModuleExceptionBug.res:7:4
+  addValueReference ModuleExceptionBug.res:8:0 --> Js.res:260:0
   Scanning NestedModules.cmt Source:NestedModules.res
   addValueDeclaration +notNested NestedModules.res:2:4 path:+NestedModules
   addValueDeclaration +theAnswer NestedModules.res:6:6 path:+NestedModules.Universe
@@ -1070,8 +1199,13 @@
   addValueDeclaration +f Newton.res:25:4 path:+Newton
   addValueDeclaration +fPrimed Newton.res:27:4 path:+Newton
   addValueDeclaration +result Newton.res:29:4 path:+Newton
+  addValueReference Newton.res:1:4 --> Pervasives.res:153:0
+  addValueReference Newton.res:2:4 --> Pervasives.res:152:0
+  addValueReference Newton.res:3:4 --> Pervasives.res:154:0
+  addValueReference Newton.res:4:4 --> Pervasives.res:155:0
   addValueDeclaration +current Newton.res:7:6 path:+Newton
   addValueReference Newton.res:7:6 --> Newton.res:6:28
+  addValueReference Newton.res:7:6 --> Pervasives.res:303:0
   addValueDeclaration +iterateMore Newton.res:8:6 path:+Newton
   addValueDeclaration +delta Newton.res:9:8 path:+Newton
   addValueReference Newton.res:9:8 --> Newton.res:8:21
@@ -1082,12 +1216,17 @@
   addValueReference Newton.res:9:8 --> Newton.res:1:4
   addValueReference Newton.res:9:8 --> Newton.res:8:31
   addValueReference Newton.res:9:8 --> Newton.res:8:21
+  addValueReference Newton.res:9:8 --> Pervasives.res:89:0
   addValueReference Newton.res:8:6 --> Newton.res:9:8
   addValueReference Newton.res:8:6 --> Newton.res:6:38
+  addValueReference Newton.res:8:6 --> Pervasives.res:86:0
+  addValueReference Newton.res:8:6 --> Pervasives.res:98:0
   addValueReference Newton.res:8:6 --> Newton.res:7:6
   addValueReference Newton.res:8:6 --> Newton.res:8:31
+  addValueReference Newton.res:8:6 --> Pervasives.res:304:0
   addValueDeclaration +loop Newton.res:14:10 path:+Newton
   addValueDeclaration +previous Newton.res:15:8 path:+Newton
+  addTypeReference Newton.res:15:19 --> Pervasives.res:302:16
   addValueReference Newton.res:15:8 --> Newton.res:7:6
   addValueDeclaration +next Newton.res:16:8 path:+Newton
   addValueReference Newton.res:16:8 --> Newton.res:15:8
@@ -1097,6 +1236,7 @@
   addValueReference Newton.res:16:8 --> Newton.res:6:18
   addValueReference Newton.res:16:8 --> Newton.res:4:4
   addValueReference Newton.res:16:8 --> Newton.res:1:4
+  addTypeReference Newton.res:20:6 --> Pervasives.res:302:16
   addValueReference Newton.res:14:10 --> Newton.res:7:6
   addValueReference Newton.res:14:10 --> Newton.res:14:10
   addValueReference Newton.res:14:10 --> Newton.res:15:8
@@ -1131,6 +1271,7 @@
   addValueReference Newton.res:31:8 --> Newton.res:29:4
   addValueReference Newton.res:31:18 --> Newton.res:29:4
   addValueReference Newton.res:31:16 --> Newton.res:25:4
+  addValueReference Newton.res:31:0 --> Js.res:269:0
   Scanning Opaque.cmt Source:Opaque.res
   addValueDeclaration +noConversion Opaque.res:5:4 path:+Opaque
   addValueDeclaration +testConvertNestedRecordFromOtherFile Opaque.res:11:4 path:+Opaque
@@ -1151,50 +1292,70 @@
   addValueReference OptArg.res:1:4 --> OptArg.res:1:26
   addValueReference OptArg.res:1:4 --> OptArg.res:1:11
   addValueReference OptArg.res:1:4 --> OptArg.res:1:17
+  addValueReference OptArg.res:1:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:1:4 --> OptArg.res:1:23
+  addValueReference OptArg.res:1:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:1:4 --> OptArg.res:1:29
+  addValueReference OptArg.res:1:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:3:4 --> OptArg.res:3:17
   addValueReference OptArg.res:3:4 --> OptArg.res:3:27
+  addValueReference OptArg.res:3:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: OptArg.res:5:7
   addValueReference OptArg.res:5:7 --> OptArg.res:1:4
+  addValueReference OptArg.res:5:0 --> Js.res:260:0
   DeadOptionalArgs.addReferences bar called with optional argNames: argNamesMaybe: OptArg.res:7:7
   addValueReference OptArg.res:7:7 --> OptArg.res:3:4
+  addValueReference OptArg.res:7:0 --> Js.res:260:0
   addValueReference OptArg.res:9:4 --> OptArg.res:9:20
   addValueReference OptArg.res:9:4 --> OptArg.res:9:26
   addValueReference OptArg.res:9:4 --> OptArg.res:9:32
   addValueReference OptArg.res:9:4 --> OptArg.res:9:17
   addValueReference OptArg.res:9:4 --> OptArg.res:9:23
+  addValueReference OptArg.res:9:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:9:4 --> OptArg.res:9:29
+  addValueReference OptArg.res:9:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:9:4 --> OptArg.res:9:35
+  addValueReference OptArg.res:9:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences threeArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:11:7
   addValueReference OptArg.res:11:7 --> OptArg.res:9:4
+  addValueReference OptArg.res:11:0 --> Js.res:260:0
   DeadOptionalArgs.addReferences threeArgs called with optional argNames:a argNamesMaybe: OptArg.res:12:7
   addValueReference OptArg.res:12:7 --> OptArg.res:9:4
+  addValueReference OptArg.res:12:0 --> Js.res:260:0
   addValueReference OptArg.res:14:4 --> OptArg.res:14:18
   addValueReference OptArg.res:14:4 --> OptArg.res:14:24
   addValueReference OptArg.res:14:4 --> OptArg.res:14:15
   addValueReference OptArg.res:14:4 --> OptArg.res:14:21
+  addValueReference OptArg.res:14:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:14:4 --> OptArg.res:14:27
+  addValueReference OptArg.res:14:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:7
   addValueReference OptArg.res:16:10 --> OptArg.res:14:4
+  addValueReference OptArg.res:16:0 --> Js.res:260:0
   addValueReference OptArg.res:18:4 --> OptArg.res:18:17
   addValueReference OptArg.res:18:4 --> OptArg.res:18:14
   addValueReference OptArg.res:18:4 --> OptArg.res:18:24
+  addValueReference OptArg.res:18:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences oneArg called with optional argNames:a argNamesMaybe:a OptArg.res:20:30
   addValueReference OptArg.res:20:4 --> OptArg.res:20:18
   addValueReference OptArg.res:20:4 --> OptArg.res:20:24
   addValueReference OptArg.res:20:4 --> OptArg.res:18:4
   DeadOptionalArgs.addReferences wrapOneArg called with optional argNames:a argNamesMaybe: OptArg.res:22:7
   addValueReference OptArg.res:22:7 --> OptArg.res:20:4
+  addValueReference OptArg.res:22:0 --> Js.res:260:0
   addValueReference OptArg.res:24:4 --> OptArg.res:24:19
   addValueReference OptArg.res:24:4 --> OptArg.res:24:25
   addValueReference OptArg.res:24:4 --> OptArg.res:24:31
   addValueReference OptArg.res:24:4 --> OptArg.res:24:37
   addValueReference OptArg.res:24:4 --> OptArg.res:24:16
   addValueReference OptArg.res:24:4 --> OptArg.res:24:22
+  addValueReference OptArg.res:24:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:24:4 --> OptArg.res:24:28
+  addValueReference OptArg.res:24:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:24:4 --> OptArg.res:24:34
+  addValueReference OptArg.res:24:4 --> Pervasives.res:64:0
   addValueReference OptArg.res:24:4 --> OptArg.res:24:40
+  addValueReference OptArg.res:24:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences fourArgs called with optional argNames:c, b, a argNamesMaybe:c, b, a OptArg.res:26:44
   addValueReference OptArg.res:26:4 --> OptArg.res:26:20
   addValueReference OptArg.res:26:4 --> OptArg.res:26:26
@@ -1203,8 +1364,10 @@
   addValueReference OptArg.res:26:4 --> OptArg.res:24:4
   DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:28:7
   addValueReference OptArg.res:28:7 --> OptArg.res:26:4
+  addValueReference OptArg.res:28:0 --> Js.res:260:0
   DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, b argNamesMaybe: OptArg.res:29:7
   addValueReference OptArg.res:29:7 --> OptArg.res:26:4
+  addValueReference OptArg.res:29:0 --> Js.res:260:0
   addValueReference OptArg.resi:1:0 --> OptArg.res:1:4
   OptionalArgs.addFunctionReference OptArg.resi:1:0 OptArg.res:1:4
   addValueReference OptArg.resi:2:0 --> OptArg.res:3:4
@@ -1240,8 +1403,11 @@
   addRecordLabelDeclaration z Records.res:7:2 path:+Records.coord
   addValueReference Records.res:14:4 --> Records.res:14:20
   addValueReference Records.res:14:4 --> Records.res:14:23
+  addValueReference Records.res:14:4 --> Pervasives.res:66:0
   addValueReference Records.res:14:4 --> Records.res:14:26
   addValueReference Records.res:14:4 --> Records.res:16:31
+  addValueReference Records.res:14:4 --> Belt_Option.resi:122:0
+  addValueReference Records.res:14:4 --> Pervasives.res:66:0
   addTypeReference Records.res:14:19 --> Records.res:5:2
   addTypeReference Records.res:14:19 --> Records.res:6:2
   addTypeReference Records.res:14:19 --> Records.res:7:2
@@ -1256,6 +1422,7 @@
   addValueReference Records.res:36:4 --> Records.res:36:14
   addValueReference Records.res:36:4 --> Records.res:36:19
   addValueReference Records.res:36:4 --> Records.res:36:28
+  addValueReference Records.res:36:4 --> Belt_Option.resi:122:0
   addTypeReference Records.res:40:2 --> Records.res:33:2
   addValueReference Records.res:39:4 --> Records.res:39:19
   addValueReference Records.res:39:4 --> Records.res:40:35
@@ -1272,6 +1439,11 @@
   addValueReference Records.res:46:4 --> Records.res:51:68
   addValueReference Records.res:46:4 --> Records.res:36:4
   addValueReference Records.res:46:4 --> Records.res:36:4
+  addValueReference Records.res:46:4 --> Pervasives.res:360:8
+  addValueReference Records.res:46:4 --> Belt_Array.resi:431:0
+  addValueReference Records.res:46:4 --> Belt_List.resi:405:0
+  addValueReference Records.res:46:4 --> Belt_List.resi:337:0
+  addValueReference Records.res:46:4 --> Belt_List.resi:416:0
   addRecordLabelDeclaration num Records.res:60:2 path:+Records.payload
   addRecordLabelDeclaration payload Records.res:61:2 path:+Records.payload
   addValueReference Records.res:65:4 --> Records.res:65:19
@@ -1283,6 +1455,7 @@
   addValueReference Records.res:80:4 --> Records.res:77:4
   addTypeReference Records.res:85:5 --> Records.res:69:2
   addValueReference Records.res:83:4 --> Records.res:83:32
+  addValueReference Records.res:83:4 --> Pervasives.res:64:0
   addValueReference Records.res:83:4 --> Records.res:83:32
   addTypeReference Records.res:83:31 --> Records.res:61:2
   addRecordLabelDeclaration name Records.res:90:2 path:+Records.business2
@@ -1290,16 +1463,26 @@
   addRecordLabelDeclaration address2 Records.res:92:2 path:+Records.business2
   addTypeReference Records.res:97:2 --> Records.res:92:2
   addValueReference Records.res:96:4 --> Records.res:96:20
+  addValueReference Records.res:96:4 --> Js_null_undefined.resi:119:0
   addValueReference Records.res:96:4 --> Records.res:97:58
   addValueReference Records.res:96:4 --> Records.res:36:4
+  addValueReference Records.res:100:4 --> Js_null_undefined.resi:51:0
+  addValueReference Records.res:100:4 --> Js_null_undefined.resi:51:0
   addValueReference Records.res:107:4 --> Records.res:107:20
   addValueReference Records.res:107:4 --> Records.res:107:20
+  addValueReference Records.res:107:4 --> Pervasives.res:66:0
   addValueReference Records.res:107:4 --> Records.res:107:20
+  addValueReference Records.res:107:4 --> Js_null_undefined.resi:119:0
   addValueReference Records.res:107:4 --> Records.res:108:75
+  addValueReference Records.res:107:4 --> Belt_Option.resi:122:0
+  addValueReference Records.res:107:4 --> Pervasives.res:66:0
   addValueReference Records.res:111:4 --> Records.res:111:20
   addValueReference Records.res:111:4 --> Records.res:111:20
+  addValueReference Records.res:111:4 --> Pervasives.res:66:0
   addValueReference Records.res:111:4 --> Records.res:111:20
   addValueReference Records.res:111:4 --> Records.res:112:53
+  addValueReference Records.res:111:4 --> Belt_Option.resi:122:0
+  addValueReference Records.res:111:4 --> Pervasives.res:66:0
   addRecordLabelDeclaration type_ Records.res:119:2 path:+Records.myRec
   addTypeReference Records.res:127:30 --> Records.res:119:2
   addValueReference Records.res:127:4 --> Records.res:127:17
@@ -1323,12 +1506,19 @@
   addValueDeclaration +destroysRefIdentity References.res:43:4 path:+References
   addValueDeclaration +preserveRefIdentity References.res:47:4 path:+References
   addValueReference References.res:4:4 --> References.res:4:14
+  addValueReference References.res:4:4 --> Pervasives.res:303:0
+  addTypeReference References.res:7:18 --> Pervasives.res:302:16
   addValueReference References.res:7:4 --> References.res:7:13
+  addValueReference References.res:7:4 --> Pervasives.res:64:0
+  addTypeReference References.res:10:31 --> Pervasives.res:302:16
   addValueReference References.res:10:4 --> References.res:10:13
+  addValueReference References.res:10:4 --> Pervasives.res:64:0
   addValueReference References.res:10:4 --> References.res:10:13
   addValueDeclaration +get References.res:22:6 path:+References.R
+  addTypeReference References.res:22:17 --> Pervasives.res:302:16
   addValueReference References.res:22:6 --> References.res:22:12
   addValueDeclaration +make References.res:23:6 path:+References.R
+  addValueReference References.res:23:6 --> Pervasives.res:303:0
   addValueDeclaration +set References.res:24:6 path:+References.R
   addValueReference References.res:24:6 --> References.res:24:16
   addValueReference References.res:24:6 --> References.res:24:13
@@ -1353,6 +1543,7 @@
   addTypeReference RepeatedLabel.res:12:16 --> RepeatedLabel.res:7:2
   addTypeReference RepeatedLabel.res:12:16 --> RepeatedLabel.res:8:2
   addValueReference RepeatedLabel.res:14:7 --> RepeatedLabel.res:12:4
+  addValueReference RepeatedLabel.res:14:0 --> Js.res:260:0
   Scanning RequireCond.cmt Source:RequireCond.res
   Scanning Shadow.cmt Source:Shadow.res
   addValueDeclaration +test Shadow.res:2:4 path:+Shadow
@@ -1360,6 +1551,7 @@
   addValueDeclaration +test Shadow.res:11:6 path:+Shadow.M
   addValueDeclaration +test Shadow.res:9:6 path:+Shadow.M
   Scanning TestDeadExn.cmt Source:TestDeadExn.res
+  addValueReference TestDeadExn.res:1:0 --> Js.res:260:0
   Scanning TestEmitInnerModules.cmt Source:TestEmitInnerModules.res
   addValueDeclaration +x TestEmitInnerModules.res:3:6 path:+TestEmitInnerModules.Inner
   addValueDeclaration +y TestEmitInnerModules.res:5:6 path:+TestEmitInnerModules.Inner
@@ -1380,7 +1572,9 @@
   addValueReference TestImmutableArray.res:2:4 --> TestImmutableArray.res:2:28
   addValueReference TestImmutableArray.res:2:4 --> ImmutableArray.resi:6:2
   addValueReference TestImmutableArray.res:12:4 --> TestImmutableArray.res:12:23
+  addValueReference TestImmutableArray.res:12:4 --> Belt_Array.resi:35:0
   addValueReference TestImmutableArray.res:17:4 --> TestImmutableArray.res:17:23
+  addValueReference TestImmutableArray.res:17:4 --> Belt_Array.resi:79:0
   Scanning TestImport.cmt Source:TestImport.res
   addValueDeclaration +innerStuffContents TestImport.res:1:0 path:+TestImport
   addValueDeclaration +innerStuffContentsAsEmptyObject TestImport.res:7:0 path:+TestImport
@@ -1412,19 +1606,25 @@
   addValueDeclaration +liveSuppressesOptArgs TestOptArg.res:14:4 path:+TestOptArg
   DeadOptionalArgs.addReferences OptArg.bar called with optional argNames:z argNamesMaybe: TestOptArg.res:1:7
   addValueReference TestOptArg.res:1:7 --> OptArg.resi:2:0
+  addValueReference TestOptArg.res:1:0 --> Js.res:260:0
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:14
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:11
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:17
+  addValueReference TestOptArg.res:3:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: TestOptArg.res:5:16
   addValueReference TestOptArg.res:5:4 --> TestOptArg.res:3:4
   addValueReference TestOptArg.res:7:7 --> TestOptArg.res:5:4
+  addValueReference TestOptArg.res:7:0 --> Js.res:260:0
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:31
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:37
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:43
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:28
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:34
+  addValueReference TestOptArg.res:9:4 --> Pervasives.res:64:0
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:40
+  addValueReference TestOptArg.res:9:4 --> Pervasives.res:64:0
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:46
+  addValueReference TestOptArg.res:9:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences notSuppressesOptArgs called with optional argNames: argNamesMaybe: TestOptArg.res:11:8
   addValueReference TestOptArg.res:11:8 --> TestOptArg.res:9:4
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:32
@@ -1432,8 +1632,11 @@
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:44
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:29
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:35
+  addValueReference TestOptArg.res:14:4 --> Pervasives.res:64:0
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:41
+  addValueReference TestOptArg.res:14:4 --> Pervasives.res:64:0
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:47
+  addValueReference TestOptArg.res:14:4 --> Pervasives.res:64:0
   DeadOptionalArgs.addReferences liveSuppressesOptArgs called with optional argNames:x argNamesMaybe: TestOptArg.res:16:8
   addValueReference TestOptArg.res:16:8 --> TestOptArg.res:14:4
   Scanning TestPromise.cmt Source:TestPromise.res
@@ -1442,7 +1645,9 @@
   addRecordLabelDeclaration s TestPromise.res:7:2 path:+TestPromise.fromPayload
   addRecordLabelDeclaration result TestPromise.res:11:18 path:+TestPromise.toPayload
   addValueReference TestPromise.res:14:4 --> TestPromise.res:14:33
+  addValueReference TestPromise.res:14:4 --> Js_promise.resi:66:0
   addTypeReference TestPromise.res:14:32 --> TestPromise.res:7:2
+  addValueReference TestPromise.res:14:4 --> Js_promise.resi:150:0
   Scanning ToSuppress.cmt Source:ToSuppress.res
   addValueDeclaration +toSuppress ToSuppress.res:1:4 path:+ToSuppress
   Scanning TransitiveType1.cmt Source:TransitiveType1.res
@@ -1470,16 +1675,24 @@
   addValueDeclaration +changeSecondAge Tuples.res:49:4 path:+Tuples
   addValueReference Tuples.res:4:4 --> Tuples.res:4:18
   addValueReference Tuples.res:4:4 --> Tuples.res:4:21
+  addValueReference Tuples.res:4:4 --> Pervasives.res:64:0
   addValueReference Tuples.res:13:4 --> Tuples.res:13:20
   addValueReference Tuples.res:13:4 --> Tuples.res:13:23
+  addValueReference Tuples.res:13:4 --> Pervasives.res:66:0
   addValueReference Tuples.res:13:4 --> Tuples.res:13:26
   addValueReference Tuples.res:13:4 --> Tuples.res:15:31
+  addValueReference Tuples.res:13:4 --> Belt_Option.resi:122:0
+  addValueReference Tuples.res:13:4 --> Pervasives.res:66:0
   addValueReference Tuples.res:19:4 --> Tuples.res:19:29
   addValueReference Tuples.res:19:4 --> Tuples.res:19:32
+  addValueReference Tuples.res:19:4 --> Pervasives.res:66:0
   addValueReference Tuples.res:19:4 --> Tuples.res:19:35
   addValueReference Tuples.res:19:4 --> Tuples.res:21:31
+  addValueReference Tuples.res:19:4 --> Belt_Option.resi:122:0
+  addValueReference Tuples.res:19:4 --> Pervasives.res:66:0
   addValueReference Tuples.res:25:4 --> Tuples.res:25:32
   addValueReference Tuples.res:25:4 --> Tuples.res:25:40
+  addValueReference Tuples.res:25:4 --> Pervasives.res:66:0
   addValueReference Tuples.res:28:4 --> Tuples.res:28:15
   addValueReference Tuples.res:28:4 --> Tuples.res:28:18
   addRecordLabelDeclaration name Tuples.res:35:2 path:+Tuples.person
@@ -1491,6 +1704,7 @@
   addValueReference Tuples.res:49:4 --> Tuples.res:49:24
   addTypeReference Tuples.res:49:84 --> Tuples.res:36:2
   addValueReference Tuples.res:49:4 --> Tuples.res:49:31
+  addValueReference Tuples.res:49:4 --> Pervasives.res:64:0
   addValueReference Tuples.res:49:4 --> Tuples.res:49:31
   Scanning TypeParams1.cmt Source:TypeParams1.res
   addValueDeclaration +exportSomething TypeParams1.res:4:4 path:+TypeParams1
@@ -1519,13 +1733,16 @@
   addValueDeclaration +currentTime Types.res:144:4 path:+Types
   addValueDeclaration +i64Const Types.res:153:4 path:+Types
   addValueDeclaration +optFunction Types.res:156:4 path:+Types
+  addValueReference Types.res:8:4 --> Stdlib_List.resi:398:0
   addVariantCaseDeclaration A Types.res:12:2 path:+Types.typeWithVars
   addVariantCaseDeclaration B Types.res:13:2 path:+Types.typeWithVars
   addValueReference Types.res:23:8 --> Types.res:23:16
   addValueReference Types.res:23:8 --> Types.res:23:16
   addValueReference Types.res:23:8 --> Types.res:23:8
+  addValueReference Types.res:23:8 --> Belt_Option.resi:144:0
   addValueReference Types.res:23:8 --> Types.res:23:16
   addValueReference Types.res:23:8 --> Types.res:23:8
+  addValueReference Types.res:23:8 --> Belt_Option.resi:144:0
   addValueReference Types.res:23:8 --> Types.res:24:2
   addRecordLabelDeclaration self Types.res:31:26 path:+Types.selfRecursive
   addRecordLabelDeclaration b Types.res:34:31 path:+Types.mutuallyRecursiveA
@@ -1538,6 +1755,7 @@
   addValueReference Types.res:52:4 --> Types.res:52:54
   addVariantCaseDeclaration A Types.res:56:2 path:+Types.opaqueVariant
   addVariantCaseDeclaration B Types.res:57:2 path:+Types.opaqueVariant
+  addValueReference Types.res:75:4 --> Js_json.resi:279:0
   addRecordLabelDeclaration i Types.res:84:2 path:+Types.record
   addRecordLabelDeclaration s Types.res:85:2 path:+Types.record
   addValueReference Types.res:89:4 --> Types.res:89:23
@@ -1545,6 +1763,7 @@
   addValueReference Types.res:125:4 --> Types.res:125:16
   addRecordLabelDeclaration id Types.res:130:19 path:+Types.someRecord
   addValueReference Types.res:135:4 --> Types.res:135:36
+  addValueReference Types.res:144:4 --> Js_date.res:56:0
   addValueDeclaration +x Types.res:163:6 path:+Types.ObjectId
   Scanning Unboxed.cmt Source:Unboxed.res
   addValueDeclaration +testV1 Unboxed.res:8:4 path:+Unboxed
@@ -1570,15 +1789,27 @@
   addValueDeclaration +sumCurried Uncurried.res:47:4 path:+Uncurried
   addValueDeclaration +sumLblCurried Uncurried.res:53:4 path:+Uncurried
   addValueReference Uncurried.res:17:4 --> Uncurried.res:17:20
+  addValueReference Uncurried.res:17:4 --> Pervasives.res:341:0
   addValueReference Uncurried.res:20:4 --> Uncurried.res:20:20
+  addValueReference Uncurried.res:20:4 --> Pervasives.res:341:0
   addValueReference Uncurried.res:20:4 --> Uncurried.res:20:23
+  addValueReference Uncurried.res:20:4 --> Pervasives.res:270:0
   addValueReference Uncurried.res:23:4 --> Uncurried.res:23:20
+  addValueReference Uncurried.res:23:4 --> Pervasives.res:341:0
   addValueReference Uncurried.res:23:4 --> Uncurried.res:23:23
   addValueReference Uncurried.res:23:4 --> Uncurried.res:23:26
+  addValueReference Uncurried.res:23:4 --> Pervasives.res:341:0
+  addValueReference Uncurried.res:23:4 --> Pervasives.res:270:0
+  addValueReference Uncurried.res:23:4 --> Pervasives.res:270:0
   addValueReference Uncurried.res:26:4 --> Uncurried.res:26:16
+  addValueReference Uncurried.res:26:4 --> Pervasives.res:341:0
   addValueReference Uncurried.res:26:4 --> Uncurried.res:26:19
   addValueReference Uncurried.res:26:4 --> Uncurried.res:26:22
+  addValueReference Uncurried.res:26:4 --> Pervasives.res:341:0
+  addValueReference Uncurried.res:26:4 --> Pervasives.res:270:0
+  addValueReference Uncurried.res:26:4 --> Pervasives.res:270:0
   addValueReference Uncurried.res:29:4 --> Uncurried.res:29:15
+  addValueReference Uncurried.res:29:4 --> Pervasives.res:341:0
   addRecordLabelDeclaration login Uncurried.res:31:13 path:+Uncurried.auth
   addRecordLabelDeclaration loginU Uncurried.res:32:14 path:+Uncurried.authU
   addTypeReference Uncurried.res:35:24 --> Uncurried.res:31:13
@@ -1588,18 +1819,28 @@
   addValueReference Uncurried.res:41:4 --> Uncurried.res:41:17
   addValueReference Uncurried.res:41:4 --> Uncurried.res:41:14
   addValueReference Uncurried.res:41:4 --> Uncurried.res:41:17
+  addValueReference Uncurried.res:41:4 --> Pervasives.res:64:0
+  addValueReference Uncurried.res:41:4 --> Js.res:285:0
   addValueReference Uncurried.res:44:4 --> Uncurried.res:44:20
   addValueReference Uncurried.res:44:4 --> Uncurried.res:44:15
   addValueReference Uncurried.res:44:4 --> Uncurried.res:44:20
+  addValueReference Uncurried.res:44:4 --> Pervasives.res:64:0
+  addValueReference Uncurried.res:44:4 --> Js.res:285:0
   addValueReference Uncurried.res:47:4 --> Uncurried.res:49:2
   addValueReference Uncurried.res:47:4 --> Uncurried.res:47:17
   addValueReference Uncurried.res:47:4 --> Uncurried.res:49:2
+  addValueReference Uncurried.res:47:4 --> Pervasives.res:64:0
+  addValueReference Uncurried.res:47:4 --> Js.res:285:0
   addValueReference Uncurried.res:47:4 --> Uncurried.res:47:17
+  addValueReference Uncurried.res:47:4 --> Js.res:269:0
   addValueReference Uncurried.res:53:4 --> Uncurried.res:55:3
   addValueReference Uncurried.res:53:4 --> Uncurried.res:53:32
   addValueReference Uncurried.res:53:4 --> Uncurried.res:55:3
+  addValueReference Uncurried.res:53:4 --> Pervasives.res:64:0
+  addValueReference Uncurried.res:53:4 --> Js.res:285:0
   addValueReference Uncurried.res:53:4 --> Uncurried.res:53:21
   addValueReference Uncurried.res:53:4 --> Uncurried.res:53:32
+  addValueReference Uncurried.res:53:4 --> Js.res:277:0
   Scanning Unison.cmt Source:Unison.res
   addValueDeclaration +group Unison.res:17:4 path:+Unison
   addValueDeclaration +fits Unison.res:19:8 path:+Unison
@@ -1616,8 +1857,11 @@
   addValueReference Unison.res:17:4 --> Unison.res:17:13
   addValueReference Unison.res:17:4 --> Unison.res:17:28
   addValueReference Unison.res:19:8 --> Unison.res:19:16
+  addValueReference Unison.res:19:8 --> Pervasives.res:86:0
   addValueReference Unison.res:19:8 --> Unison.res:19:16
   addValueReference Unison.res:19:8 --> Unison.res:23:10
+  addValueReference Unison.res:19:8 --> Stdlib_String.resi:150:0
+  addValueReference Unison.res:19:8 --> Pervasives.res:65:0
   addValueReference Unison.res:19:8 --> Unison.res:23:16
   addValueReference Unison.res:19:8 --> Unison.res:19:8
   addTypeReference Unison.res:23:9 --> Unison.res:10:2
@@ -1626,39 +1870,51 @@
   addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:19:8
   addValueReference Unison.res:26:8 --> Unison.res:26:20
+  addValueReference Unison.res:26:8 --> Pervasives.res:65:0
   addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:8
+  addValueReference Unison.res:26:8 --> Pervasives.res:270:0
   addValueReference Unison.res:26:8 --> Unison.res:28:17
   addValueReference Unison.res:26:8 --> Unison.res:26:20
+  addValueReference Unison.res:26:8 --> Pervasives.res:65:0
   addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:8
+  addValueReference Unison.res:26:8 --> Pervasives.res:270:0
+  addValueReference Unison.res:26:8 --> Pervasives.res:270:0
   addValueReference Unison.res:26:8 --> Unison.res:28:17
   addValueReference Unison.res:26:8 --> Unison.res:26:20
+  addValueReference Unison.res:26:8 --> Pervasives.res:65:0
   addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:8
+  addValueReference Unison.res:26:8 --> Pervasives.res:270:0
+  addValueReference Unison.res:26:8 --> Pervasives.res:270:0
   addValueReference Unison.res:26:8 --> Unison.res:28:10
   addTypeReference Unison.res:28:9 --> Unison.res:9:2
   addTypeReference Unison.res:28:9 --> Unison.res:10:2
   addValueReference Unison.res:26:8 --> Unison.res:26:28
   addTypeReference Unison.res:37:20 --> Unison.res:14:2
   addValueReference Unison.res:37:0 --> Unison.res:26:8
+  addValueReference Unison.res:37:28 --> Pervasives.res:290:0
   addTypeReference Unison.res:38:20 --> Unison.res:15:2
   DeadOptionalArgs.addReferences group called with optional argNames:break argNamesMaybe: Unison.res:38:25
   addTypeReference Unison.res:38:38 --> Unison.res:5:2
   addValueReference Unison.res:38:25 --> Unison.res:17:4
   addTypeReference Unison.res:38:53 --> Unison.res:14:2
   addValueReference Unison.res:38:0 --> Unison.res:26:8
+  addValueReference Unison.res:38:62 --> Pervasives.res:290:0
   addTypeReference Unison.res:39:20 --> Unison.res:15:2
   DeadOptionalArgs.addReferences group called with optional argNames:break argNamesMaybe: Unison.res:39:25
   addTypeReference Unison.res:39:38 --> Unison.res:6:2
   addValueReference Unison.res:39:25 --> Unison.res:17:4
   addTypeReference Unison.res:39:52 --> Unison.res:14:2
   addValueReference Unison.res:39:0 --> Unison.res:26:8
+  addValueReference Unison.res:39:61 --> Pervasives.res:290:0
   Scanning UseImportJsValue.cmt Source:UseImportJsValue.res
   addValueDeclaration +useGetProp UseImportJsValue.res:2:4 path:+UseImportJsValue
   addValueDeclaration +useTypeImportedInOtherModule UseImportJsValue.res:5:4 path:+UseImportJsValue
   addValueReference UseImportJsValue.res:2:4 --> UseImportJsValue.res:2:18
   addValueReference UseImportJsValue.res:2:4 --> ImportJsValue.res:37:2
+  addValueReference UseImportJsValue.res:2:4 --> Pervasives.res:64:0
   addValueReference UseImportJsValue.res:5:4 --> UseImportJsValue.res:5:36
   Scanning Variants.cmt Source:Variants.res
   addValueDeclaration +isWeekend Variants.res:13:4 path:+Variants
@@ -1690,7 +1946,9 @@
   addVariantCaseDeclaration Type Variants.res:95:13 path:+Variants.type_
   addValueReference Variants.res:98:4 --> Variants.res:98:18
   addValueReference Variants.res:98:4 --> Variants.res:98:18
+  addValueReference Variants.res:98:4 --> Pervasives.res:94:0
   addValueReference Variants.res:98:4 --> Variants.res:98:18
+  addValueReference Variants.res:98:4 --> Pervasives.res:93:0
   addVariantCaseDeclaration Ok Variants.res:102:2 path:+Variants.result1
   addVariantCaseDeclaration Error Variants.res:103:2 path:+Variants.result1
   addValueReference Variants.res:112:4 --> Variants.res:112:19
@@ -1709,19 +1967,28 @@
   addRecordLabelDeclaration x VariantsWithPayload.res:2:2 path:+VariantsWithPayload.payload
   addRecordLabelDeclaration y VariantsWithPayload.res:3:2 path:+VariantsWithPayload.payload
   addValueReference VariantsWithPayload.res:16:4 --> VariantsWithPayload.res:16:23
+  addValueReference VariantsWithPayload.res:19:4 --> Js.res:260:0
+  addValueReference VariantsWithPayload.res:19:4 --> Js.res:260:0
+  addValueReference VariantsWithPayload.res:19:4 --> Js.res:260:0
+  addValueReference VariantsWithPayload.res:19:4 --> Js.res:260:0
+  addValueReference VariantsWithPayload.res:19:4 --> Js.res:260:0
   addTypeReference VariantsWithPayload.res:26:57 --> VariantsWithPayload.res:2:2
   addValueReference VariantsWithPayload.res:19:4 --> VariantsWithPayload.res:26:7
   addTypeReference VariantsWithPayload.res:26:74 --> VariantsWithPayload.res:3:2
   addValueReference VariantsWithPayload.res:19:4 --> VariantsWithPayload.res:26:7
+  addValueReference VariantsWithPayload.res:19:4 --> Js.res:285:0
   addValueReference VariantsWithPayload.res:19:4 --> VariantsWithPayload.res:19:31
   addValueReference VariantsWithPayload.res:37:4 --> VariantsWithPayload.res:37:24
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:42:9
+  addValueReference VariantsWithPayload.res:40:4 --> Js.res:269:0
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:43:9
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:43:13
+  addValueReference VariantsWithPayload.res:40:4 --> Js.res:277:0
   addTypeReference VariantsWithPayload.res:44:55 --> VariantsWithPayload.res:2:2
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:44:11
   addTypeReference VariantsWithPayload.res:44:72 --> VariantsWithPayload.res:3:2
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:44:11
+  addValueReference VariantsWithPayload.res:40:4 --> Js.res:285:0
   addValueReference VariantsWithPayload.res:40:4 --> VariantsWithPayload.res:40:25
   addVariantCaseDeclaration A VariantsWithPayload.res:49:2 path:+VariantsWithPayload.simpleVariant
   addVariantCaseDeclaration B VariantsWithPayload.res:50:2 path:+VariantsWithPayload.simpleVariant
@@ -1733,14 +2000,42 @@
   addVariantCaseDeclaration D VariantsWithPayload.res:61:2 path:+VariantsWithPayload.variantWithPayloads
   addVariantCaseDeclaration E VariantsWithPayload.res:62:2 path:+VariantsWithPayload.variantWithPayloads
   addValueReference VariantsWithPayload.res:65:4 --> VariantsWithPayload.res:65:31
+  addValueReference VariantsWithPayload.res:68:4 --> Js.res:269:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:71:6
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Js.res:269:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:72:6
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:72:9
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Js.res:269:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:77:7
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:77:10
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Js.res:269:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:82:6
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:82:9
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:82:12
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:341:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Pervasives.res:270:0
+  addValueReference VariantsWithPayload.res:68:4 --> Js.res:269:0
   addValueReference VariantsWithPayload.res:68:4 --> VariantsWithPayload.res:68:31
   addVariantCaseDeclaration R VariantsWithPayload.res:90:19 path:+VariantsWithPayload.variant1Int
   addValueReference VariantsWithPayload.res:93:4 --> VariantsWithPayload.res:93:23
@@ -1757,39 +2052,39 @@ File References
   BootloaderResource.res -->> 
   BucklescriptAnnotations.res -->> 
   ComponentAsProp.res -->> React.res
-  CreateErrorHandler1.res -->> ErrorHandler.resi
-  CreateErrorHandler2.res -->> 
+  CreateErrorHandler1.res -->> Pervasives.res, ErrorHandler.resi
+  CreateErrorHandler2.res -->> Pervasives.res
   DeadCodeImplementation.res -->> 
   DeadCodeInterface.res -->> 
-  DeadExn.res -->> 
+  DeadExn.res -->> Js.res
   DeadExn.resi -->> 
-  DeadRT.res -->> 
+  DeadRT.res -->> Js.res
   DeadRT.resi -->> 
-  DeadTest.res -->> DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi, React.res
+  DeadTest.res -->> Js.res, Pervasives.res, Stdlib_String.resi, DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi, React.res
   DeadTestBlacklist.res -->> 
   DeadTestWithInterface.res -->> 
   DeadTypeTest.res -->> 
   DeadTypeTest.resi -->> DeadTypeTest.res
-  DeadValueTest.res -->> 
+  DeadValueTest.res -->> Pervasives.res
   DeadValueTest.resi -->> DeadValueTest.res
-  Docstrings.res -->> 
+  Docstrings.res -->> Pervasives.res
   DynamicallyLoadedComponent.res -->> React.res
   EmptyArray.res -->> 
   ErrorHandler.res -->> 
   ErrorHandler.resi -->> ErrorHandler.res
   EverythingLiveHere.res -->> 
-  FirstClassModules.res -->> 
+  FirstClassModules.res -->> Pervasives.res
   FirstClassModulesInterface.res -->> 
   FirstClassModulesInterface.resi -->> FirstClassModulesInterface.res
-  Hooks.res -->> ImportHookDefault.res, ImportHooks.res, React.res
+  Hooks.res -->> Pervasives.res, Stdlib_Int.resi, ImportHookDefault.res, ImportHooks.res, React.res
   IgnoreInterface.res -->> 
   IgnoreInterface.resi -->> 
-  ImmutableArray.res -->> 
+  ImmutableArray.res -->> Belt_Array.resi
   ImmutableArray.resi -->> ImmutableArray.res
   ImportHookDefault.res -->> 
   ImportHooks.res -->> 
   ImportIndex.res -->> 
-  ImportJsValue.res -->> 
+  ImportJsValue.res -->> Pervasives.res
   ImportMyBanner.res -->> 
   InnerModuleTypes.res -->> 
   InnerModuleTypes.resi -->> 
@@ -1798,44 +2093,44 @@ File References
   LetPrivate.res -->> 
   ModuleAliases.res -->> 
   ModuleAliases2.res -->> 
-  ModuleExceptionBug.res -->> 
+  ModuleExceptionBug.res -->> Js.res, Pervasives.res
   NestedModules.res -->> 
   NestedModulesInSignature.res -->> 
   NestedModulesInSignature.resi -->> NestedModulesInSignature.res
   Newsyntax.res -->> 
-  Newton.res -->> 
+  Newton.res -->> Js.res, Pervasives.res
   Opaque.res -->> 
-  OptArg.res -->> 
+  OptArg.res -->> Js.res, Pervasives.res
   OptArg.resi -->> OptArg.res
-  Records.res -->> 
-  References.res -->> 
-  RepeatedLabel.res -->> 
+  Records.res -->> Belt_Array.resi, Belt_List.resi, Belt_Option.resi, Js_null_undefined.resi, Pervasives.res
+  References.res -->> Pervasives.res
+  RepeatedLabel.res -->> Js.res
   RequireCond.res -->> 
   Shadow.res -->> 
-  TestDeadExn.res -->> DeadExn.res
+  TestDeadExn.res -->> Js.res, DeadExn.res
   TestEmitInnerModules.res -->> 
   TestFirstClassModules.res -->> 
-  TestImmutableArray.res -->> ImmutableArray.resi
+  TestImmutableArray.res -->> Belt_Array.resi, ImmutableArray.resi
   TestImport.res -->> 
   TestInnedModuleTypes.res -->> 
   TestModuleAliases.res -->> 
-  TestOptArg.res -->> OptArg.resi
-  TestPromise.res -->> 
+  TestOptArg.res -->> Js.res, Pervasives.res, OptArg.resi
+  TestPromise.res -->> Js_promise.resi
   ToSuppress.res -->> 
   TransitiveType1.res -->> 
   TransitiveType2.res -->> 
   TransitiveType3.res -->> 
-  Tuples.res -->> 
+  Tuples.res -->> Belt_Option.resi, Pervasives.res
   TypeParams1.res -->> 
   TypeParams2.res -->> 
   TypeParams3.res -->> 
-  Types.res -->> 
+  Types.res -->> Belt_Option.resi, Js_date.res, Js_json.resi, Stdlib_List.resi
   Unboxed.res -->> 
-  Uncurried.res -->> 
-  Unison.res -->> 
-  UseImportJsValue.res -->> ImportJsValue.res
-  Variants.res -->> 
-  VariantsWithPayload.res -->> 
+  Uncurried.res -->> Js.res, Pervasives.res
+  Unison.res -->> Pervasives.res, Stdlib_String.resi
+  UseImportJsValue.res -->> Pervasives.res, ImportJsValue.res
+  Variants.res -->> Pervasives.res
+  VariantsWithPayload.res -->> Js.res, Pervasives.res
   Dead VariantCase +AutoAnnotate.annotatedVariant.R4: 0 references () [0]
   Dead VariantCase +AutoAnnotate.annotatedVariant.R2: 0 references () [0]
   Dead RecordLabel +AutoAnnotate.r4.r4: 0 references () [0]

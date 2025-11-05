@@ -19,6 +19,13 @@ open ShadowedBelt
 let m2 = List.map
 //            ^hov
 
+module StdlibAlias = {
+  module List = Stdlib.List
+}
+
+let fromAlias = StdlibAlias.List.map
+//                 ^def
+
 let uncurried = (. x, y) => x + y
 
 uncurried(. 3, 12)->ignore

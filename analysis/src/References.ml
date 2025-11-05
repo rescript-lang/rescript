@@ -291,22 +291,79 @@ let validateLoc (loc : Location.t) (backup : Location.t) =
         loc_start = {pos_cnum = 0; pos_lnum = 1; pos_bol = 0; pos_fname = ""};
         loc_end = {pos_cnum = 0; pos_lnum = 1; pos_bol = 0; pos_fname = ""};
       }
-    else backup
+      else backup
   else loc
+
+let isGhostLoc (loc : Location.t) =
+  loc.loc_ghost
+  || (loc.loc_start.pos_fname = "" && loc.loc_end.pos_fname = "")
+  || (loc.loc_start.pos_cnum = 0 && loc.loc_end.pos_cnum = 0)
+
+let fallbackLocFromSource ~(uri : Uri.t) ~(tip : Tip.t) ~(name : string) =
+  let path = Uri.toPath uri in
+  let mk_regexp prefix =
+    Str.regexp
+      (Printf.sprintf "^ *%s +\\(?:rec +\\)?\\(%s\\)\\b" prefix (Str.quote name))
+  in
+  let regexpOpt =
+    match tip with
+    | Value -> Some (mk_regexp "let")
+    | Type -> Some (mk_regexp "type")
+    | _ -> None
+  in
+  match regexpOpt with
+  | None -> None
+  | Some regexp -> (
+    match Files.readFile path with
+    | None -> None
+    | Some text ->
+      let lines = String.split_on_char '\n' text in
+      let rec loop lineNumber = function
+        | [] -> None
+        | line :: rest ->
+          if Str.string_match regexp line 0 then (
+            let endIdx = Str.match_end () in
+            let startIdx = endIdx - String.length name in
+            let loc_start =
+              {
+                Lexing.pos_fname = path;
+                pos_lnum = lineNumber + 1;
+                pos_bol = 0;
+                pos_cnum = startIdx;
+              }
+            in
+            let loc_end =
+              {
+                Lexing.pos_fname = path;
+                pos_lnum = lineNumber + 1;
+                pos_bol = 0;
+                pos_cnum = endIdx;
+              }
+            in
+            Some {Location.loc_start; loc_end; loc_ghost = false}
+          )
+          else loop (lineNumber + 1) rest
+      in
+      loop 0 lines)
 
 let resolveModuleDefinition ~(file : File.t) ~package stamp =
   match Stamps.findModule file.stamps stamp with
   | None -> None
-  | Some md -> (
-    match resolveModuleReference ~file ~package md with
-    | None -> None
-    | Some (file, declared) ->
-      let loc =
-        match declared with
-        | None -> Uri.toTopLevelLoc file.uri
-        | Some declared -> validateLoc declared.name.loc declared.extentLoc
-      in
-      Some (file.uri, loc))
+  | Some aliasDeclared -> (
+    let aliasLoc =
+      validateLoc aliasDeclared.name.loc aliasDeclared.extentLoc
+    in
+    match resolveModuleReference ~file ~package aliasDeclared with
+    | None ->
+      Some (file.uri, aliasLoc)
+    | Some (resolvedFile, declared) -> (
+      match declared with
+      | None ->
+        (* Alias resolved to a top-level module in another file; surface the alias site. *)
+        Some (file.uri, aliasLoc)
+      | Some declared ->
+        let loc = validateLoc declared.name.loc declared.extentLoc in
+        Some (resolvedFile.uri, loc)))
 
 let definition ~file ~package stamp (tip : Tip.t) =
   match tip with
@@ -323,16 +380,22 @@ let definition ~file ~package stamp (tip : Tip.t) =
     match declaredForTip ~stamps:file.stamps stamp tip with
     | None -> None
     | Some declared ->
-      let fileImpl, declaredImpl =
+      let fileForLoc, declaredForLoc =
         match alternateDeclared ~package ~file declared tip with
-        | Some (fileImpl, _extra, declaredImpl) when Uri.isInterface file.uri ->
-          (fileImpl, declaredImpl)
-        | _ -> (file, declared)
+        | Some (fileImpl, _extra, declaredImpl) -> (fileImpl, declaredImpl)
+        | None -> (file, declared)
       in
-      let loc = validateLoc declaredImpl.name.loc declaredImpl.extentLoc in
-      let env = QueryEnv.fromFile fileImpl in
+      let loc = validateLoc declaredForLoc.name.loc declaredForLoc.extentLoc in
+      let env = QueryEnv.fromFile fileForLoc in
       let uri =
-        ResolvePath.getSourceUri ~env ~package declaredImpl.modulePath
+        ResolvePath.getSourceUri ~env ~package declaredForLoc.modulePath
+      in
+      let loc =
+        if isGhostLoc loc || Uri.isInterface uri then
+          match fallbackLocFromSource ~uri ~tip ~name:declaredForLoc.name.txt with
+          | None -> loc
+          | Some foundLoc -> foundLoc
+        else loc
       in
       maybeLog ("Inner uri " ^ Uri.toString uri);
       Some (uri, loc))
@@ -345,15 +408,15 @@ let definitionForLocItem ~full:{file; package} locItem =
      ^ Tip.toString tip);
     match declaredForTip ~stamps:file.stamps stamp tip with
     | None -> None
-    | Some declared ->
-      maybeLog ("Declared " ^ declared.name.txt);
-      if declared.isExported then (
-        maybeLog ("exported, looking for alternate " ^ file.moduleName);
-        match alternateDeclared ~package ~file declared tip with
-        | None -> None
-        | Some (file, _extra, declared) ->
-          let loc = validateLoc declared.name.loc declared.extentLoc in
-          Some (file.uri, loc))
+      | Some declared ->
+        maybeLog ("Declared " ^ declared.name.txt);
+        if declared.isExported then (
+          maybeLog ("exported, looking for alternate " ^ file.moduleName);
+          match alternateDeclared ~package ~file declared tip with
+          | None -> None
+          | Some (file, _extra, declared) ->
+            let loc = validateLoc declared.name.loc declared.extentLoc in
+            Some (file.uri, loc))
       else None)
   | Typed (_, _, NotFound)
   | LModule (NotFound | Definition (_, _))

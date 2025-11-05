@@ -10,9 +10,12 @@ Hover src/Definition.res 14:14
 Hover src/Definition.res 18:14
 {"contents": {"kind": "markdown", "value": "```rescript\n('a => 'b, list<'a>) => list<'b>\n```"}}
 
-Hover src/Definition.res 23:3
+Definition src/Definition.res 25:19
+{"uri": "Definition.res", "range": {"start": {"line": 21, "character": 7}, "end": {"line": 21, "character": 18}}}
+
+Hover src/Definition.res 30:3
 {"contents": {"kind": "markdown", "value": "```rescript\n(int, int) => int\n```"}}
 
-Definition src/Definition.res 26:3
-{"uri": "Definition.res", "range": {"start": {"line": 21, "character": 4}, "end": {"line": 21, "character": 13}}}
+Definition src/Definition.res 33:3
+{"uri": "Definition.res", "range": {"start": {"line": 28, "character": 4}, "end": {"line": 28, "character": 13}}}
 
