@@ -220,21 +220,23 @@ let string_of_module_id
               match Config_util.find_opt cmj_file with
               | Some cmj_path ->
                 let cmj_dir = Filename.dirname cmj_path in
-                let lib_bs_pattern = "/lib/bs/" in
+                (* Platform-independent: look for "lib<sep>bs<sep>" where <sep> is / or \\ *)
                 let source_dir =
                   try
-                    (* Find "/lib/bs/" in the path and extract everything after it *)
-                    let idx = String.rindex_from cmj_dir (String.length cmj_dir - 1) '/' in
+                    let sep = Filename.dir_sep.[0] in
+                    let lib_bs = "lib" ^ Filename.dir_sep ^ "bs" ^ Filename.dir_sep in
+                    (* Find "lib/bs/" or "lib\\bs\\" in the path and extract everything after it *)
+                    let idx = String.rindex_from cmj_dir (String.length cmj_dir - 1) sep in
                     let rec find_lib_bs pos =
                       if pos < 0 then None
-                      else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs_pattern then
-                        Some (pos + String.length lib_bs_pattern)
+                      else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs then
+                        Some (pos + String.length lib_bs)
                       else
                         find_lib_bs (pos - 1)
                     in
                     match find_lib_bs idx with
                     | Some start_idx ->
-                      (* Example: extract "src/core/intl" from ".../lib/bs/src/core/intl" *)
+                      (* Example: extract "src/core/intl" from ".../lib/bs/src/core/intl" or "...\\lib\\bs\\src\\core\\intl" *)
                       String.sub cmj_dir start_idx (String.length cmj_dir - start_idx)
                     | None -> cmj_dir
                   with Not_found -> cmj_dir
@@ -272,26 +274,36 @@ let string_of_module_id
                      We extract the actual source directory from the dependency's .cmj file
                      location and reconstruct the import path correctly.
                   *)
-                  (* External package imports: check if pkg_rel_path ends with "/."
+                  (* External package imports: check if pkg_rel_path ends with "/." or "\."
                      which indicates the dependency uses in-source builds *)
-                  if Ext_string.ends_with dep_pkg.pkg_rel_path "/." then begin
+                  let ends_with_dot = 
+                    Ext_string.ends_with dep_pkg.pkg_rel_path "/." ||
+                    Ext_string.ends_with dep_pkg.pkg_rel_path "\\."
+                  in
+                  if ends_with_dot then begin
                     let cmj_file = dep_module_id.id.name ^ Literals.suffix_cmj in
                     (* Prefer lib/bs over lib/ocaml as lib/bs preserves source directory structure *)
+                    let lib_bs_pattern = "lib" ^ Filename.dir_sep ^ "bs" ^ Filename.dir_sep in
+                    let lib_ocaml_pattern = "lib" ^ Filename.dir_sep ^ "ocaml" ^ Filename.dir_sep in
                     let cmj_opt =
                       match Config_util.find_opt cmj_file with
-                      | Some path when Ext_string.contain_substring path "/lib/bs/" -> 
+                      | Some path when Ext_string.contain_substring path lib_bs_pattern -> 
                         Some path
                       | Some ocaml_path ->
                         (* Found lib/ocaml, derive lib/bs path from it *)
-                        let lib_ocaml_pattern = "/lib/ocaml/" in
                         let pkg_root = 
                           try
+                            let sep = Filename.dir_sep.[0] in
                             let rec find_lib_ocaml pos =
                               if pos < 0 then None
                               else if Ext_string.starts_with (String.sub ocaml_path pos (String.length ocaml_path - pos)) lib_ocaml_pattern then
                                 Some (String.sub ocaml_path 0 pos)
                               else
-                                find_lib_ocaml (pos - 1)
+                                let next_pos = 
+                                  try String.rindex_from ocaml_path (pos - 1) sep
+                                  with Not_found -> -1
+                                in
+                                find_lib_ocaml next_pos
                             in
                             find_lib_ocaml (String.length ocaml_path - 1)
                           with Not_found -> None
@@ -326,37 +338,121 @@ let string_of_module_id
                          | None -> Some ocaml_path)
                       | None -> None
                     in
-                    match cmj_opt with
-                    | Some cmj_path ->
-                      (* External packages store .cmj at node_modules/<pkg>/lib/bs/<source_dir>/<module>.cmj
-                         Example: /Users/barry/Projects/rescript/node_modules/a/lib/bs/src/A-A.cmj
-                         We extract "src" from this path. *)
-                      let cmj_dir = Filename.dirname cmj_path in
-                      let lib_bs_pattern = "/lib/bs/" in
-                      let source_dir =
-                        try
-                          let idx = String.rindex_from cmj_dir (String.length cmj_dir - 1) '/' in
-                          let rec find_lib_bs pos =
-                            if pos < 0 then None
-                            else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs_pattern then
-                              Some (pos + String.length lib_bs_pattern)
-                            else
-                              find_lib_bs (pos - 1)
-                          in
-                          match find_lib_bs idx with
-                          | Some start_idx ->
-                            String.sub cmj_dir start_idx (String.length cmj_dir - start_idx)
-                          | None -> "."
-                        with Not_found -> "."
-                      in
-                      (* Extract package name from pkg_rel_path: "a/." -> "a" *)
+                match cmj_opt with
+              | Some cmj_path ->
+                (* External packages store .cmj at node_modules/<pkg>/lib/bs/<source_dir>/<module>.cmj
+                   Example: /Users/barry/Projects/rescript/node_modules/a/lib/bs/src/A-A.cmj
+                   Or on Windows: C:\Users\barry\node_modules\a\lib\bs\src\A-A.cmj
+                   We extract "src" from this path.
+                   
+                   For namespaced packages, there may be a namespace file at the root (lib/bs/A.cmj)
+                   and the actual module in a subdirectory (lib/bs/src/A-A.cmj). We want the latter. *)
+                let cmj_dir = Filename.dirname cmj_path in
+                let sep = Filename.dir_sep.[0] in
+                let lib_bs_pattern = "lib" ^ Filename.dir_sep ^ "bs" ^ Filename.dir_sep in
+                let source_dir =
+                  try
+                    let idx = String.rindex_from cmj_dir (String.length cmj_dir - 1) sep in
+                    let rec find_lib_bs pos =
+                      if pos < 0 then None
+                      else if Ext_string.starts_with (String.sub cmj_dir pos (String.length cmj_dir - pos)) lib_bs_pattern then
+                        Some (pos + String.length lib_bs_pattern)
+                      else
+                        let next_pos = 
+                          try String.rindex_from cmj_dir (pos - 1) sep
+                          with Not_found -> -1
+                        in
+                        find_lib_bs next_pos
+                    in
+                    match find_lib_bs idx with
+                    | Some start_idx ->
+                      String.sub cmj_dir start_idx (String.length cmj_dir - start_idx)
+                    | None -> "."
+                  with Not_found -> "."
+                in
+                      (* Extract package name from pkg_rel_path: "a/." or "a\\." -> "a" *)
                       let pkg_name = 
                         String.sub dep_pkg.pkg_rel_path 0 (String.length dep_pkg.pkg_rel_path - 2)
                       in
-                      if source_dir = "." then begin
+                      (* If source_dir is ".", we found a namespace file at the root.
+                         Try to find the actual module in subdirectories by searching lib/bs recursively. *)
+                      let final_source_dir =
+                        if source_dir = "." then begin
+                          (* Derive package root from cmj_path: .../node_modules/a/lib/bs/A.cmj -> .../node_modules/a *)
+                          try
+                            let rec find_pkg_root path =
+                              let parent = Filename.dirname path in
+                              let basename = Filename.basename path in
+                              if basename = pkg_name then Some path  (* Return the path itself, not parent *)
+                              else if parent = path then None
+                              else find_pkg_root parent
+                            in
+                            match find_pkg_root cmj_path with
+                            | Some pkg_root ->
+                              let (//) = Filename.concat in
+                              let lib_bs_dir = pkg_root // "lib" // "bs" in
+                              (* Recursively search for the module file in subdirectories.
+                                 For namespaced modules, the file may be A-Namespace.cmj instead of A.cmj *)
+                              let rec find_in_dir dir =
+                                (* Use the original module name directly, don't try to extract from js_file *)
+                                let module_base = dep_module_id.id.name in
+                                (* Check both exact match (A.cmj) and namespace pattern (A-*.cmj) *)
+                                let cmj_exact = module_base ^ Literals.suffix_cmj in
+                                let cmj_pattern_prefix = module_base ^ "-" in
+                                
+                                (* First check if dir itself contains a matching file *)
+                                let found_in_current_dir =
+                                  if dir <> lib_bs_dir then begin
+                                    try
+                                      let files = Sys.readdir dir in
+                                      Array.fold_left (fun acc file ->
+                                        match acc with
+                                        | Some _ -> acc
+                                        | None ->
+                                          if file = cmj_exact || Ext_string.starts_with file cmj_pattern_prefix then begin
+                                            if Ext_string.ends_with file Literals.suffix_cmj then begin
+                                              let full_path = dir // file in
+                                              if Sys.file_exists full_path && not (Sys.is_directory full_path) then
+                                                (* Found in a subdirectory, extract relative path from lib/bs/ *)
+                                                let rel_from_lib_bs = String.sub dir (String.length lib_bs_dir + 1) (String.length dir - String.length lib_bs_dir - 1) in
+                                                Some rel_from_lib_bs
+                                              else None
+                                            end else None
+                                          end else None
+                                      ) None files
+                                    with _ -> None
+                                  end else None
+                                in
+                                
+                                match found_in_current_dir with
+                                | Some _ -> found_in_current_dir
+                                | None ->
+                                  (* Not found in current dir, search subdirectories *)
+                                  try
+                                    let subdirs = Sys.readdir dir in
+                                    Array.fold_left (fun acc subdir ->
+                                      match acc with
+                                      | Some _ -> acc
+                                      | None ->
+                                        let sub_path = dir // subdir in
+                                        if Sys.is_directory sub_path then find_in_dir sub_path
+                                        else None
+                                    ) None subdirs
+                                  with _ -> None
+                              in
+                              (match find_in_dir lib_bs_dir with
+                               | Some subdir -> subdir
+                               | None -> ".")
+                            | None -> "."
+                          with _ -> "."
+                        end else
+                          source_dir
+                      in
+                      if final_source_dir = "." then
+                        (* Still couldn't find it, use default *)
                         dep_pkg.pkg_rel_path // js_file
-                      end else begin
-                        let result = pkg_name // source_dir // js_file in
+                      else begin
+                        let result = pkg_name // final_source_dir // js_file in
                         (* Reconstruct: "a" + "src" + "A.res.js" = "a/src/A.res.js" *)
                         result
                       end
