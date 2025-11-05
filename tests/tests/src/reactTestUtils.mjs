@@ -64,14 +64,18 @@ let DOM = {
 
 function prepareContainer(container, param) {
   let containerElement = document.createElement("div");
-  Belt_Option.map(document.body, body => body.appendChild(containerElement));
+  let body = document.body;
+  if (body !== undefined) {
+    Primitive_option.some(Primitive_option.valFromOption(body).appendChild(containerElement));
+  }
   container.contents = Primitive_option.some(containerElement);
 }
 
 function cleanupContainer(container, param) {
-  Belt_Option.map(container.contents, prim => {
-    prim.remove();
-  });
+  let __res_option_value = container.contents;
+  if (__res_option_value !== undefined) {
+    Primitive_option.some((Primitive_option.valFromOption(__res_option_value).remove(), undefined));
+  }
   container.contents = undefined;
 }
 
