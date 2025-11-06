@@ -495,7 +495,7 @@ pub fn compiler_args(
             .collect()
     };
 
-    Ok(vec![
+    Ok([
         base_args,
         read_cmi_args,
         // vec!["-warn-error".to_string(), "A".to_string()],
