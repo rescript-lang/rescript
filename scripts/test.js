@@ -100,12 +100,12 @@ if (mochaTest) {
     },
   );
 
-  await node("tests/tests/src/core/Core_TestSuite.mjs", [], {
+  await node("tests/tests/src/stdlib/Stdlib_TestSuite.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
 
-  await node("tests/tests/src/core/Core_TempTests.mjs", [], {
+  await node("tests/tests/src/stdlib/Stdlib_TempTests.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });

@@ -14,7 +14,7 @@ let bign$1 = bign + bign;
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     6,
     20,
     32
@@ -24,7 +24,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     7,
     20,
     37
@@ -34,7 +34,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     8,
     20,
     31
@@ -44,7 +44,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     9,
     20,
     36
@@ -54,7 +54,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     10,
     20,
     29
@@ -64,7 +64,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     11,
     20,
     31
@@ -74,7 +74,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     12,
     20,
     33
@@ -84,7 +84,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     13,
     20,
     34
@@ -94,7 +94,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     14,
     20,
     32
@@ -104,7 +104,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     15,
     20,
     34
@@ -116,7 +116,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     16,
     20,
     33
@@ -130,7 +130,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     17,
     20,
     34
@@ -140,7 +140,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     18,
     20,
     36
@@ -150,7 +150,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     19,
     20,
     40
@@ -160,7 +160,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     21,
     13,
     27
@@ -170,7 +170,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_TestTests.res",
+    "Stdlib_TestTests.res",
     26,
     20,
     31

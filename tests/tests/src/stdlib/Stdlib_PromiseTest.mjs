@@ -7,7 +7,7 @@ import * as Stdlib_Promise from "@rescript/runtime/lib/es6/Stdlib_Promise.js";
 import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.js";
 
-let TestError = /* @__PURE__ */Primitive_exceptions.create("Core_PromiseTest.TestError");
+let TestError = /* @__PURE__ */Primitive_exceptions.create("Stdlib_PromiseTest.TestError");
 
 let fail = Stdlib_Exn.raiseError;
 
@@ -17,7 +17,7 @@ function resolveTest() {
   Promise.resolve("test").then(str => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         17,
         26,
         47
@@ -41,7 +41,7 @@ function testThen() {
   return Promise.resolve(1).then(first => Promise.resolve(first + 1 | 0)).then(value => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         39,
         26,
         39
@@ -57,7 +57,7 @@ function testInvalidThen() {
     let isPromise = typeof p === "object";
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         54,
         26,
         51
@@ -71,7 +71,7 @@ function testInvalidThen() {
 function testThenResolve() {
   return Promise.resolve(1).then(num => num + 1 | 0).then(ret => Test.run([
     [
-      "Core_PromiseTest.res",
+      "Stdlib_PromiseTest.res",
       67,
       26,
       39
@@ -85,7 +85,7 @@ function testInvalidThenResolve() {
     let isPromise = typeof p === "object";
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         81,
         26,
         51
@@ -118,7 +118,7 @@ function testExnRejection() {
   }), e => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         103,
         26,
         30
@@ -153,7 +153,7 @@ function testExternalPromiseThrow() {
     let success = e.RE_EXN_ID === "JsExn" ? Primitive_object.equal(Stdlib_JsExn.name(e._1), "SyntaxError") : false;
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         137,
         26,
         76
@@ -175,7 +175,7 @@ function testExnThrow() {
     let isTestErr = e.RE_EXN_ID === TestError ? e._1 === "Thrown exn" : false;
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         156,
         26,
         49
@@ -191,7 +191,7 @@ function testRaiseErrorThrow() {
     let isTestErr = e.RE_EXN_ID === "JsExn" ? Primitive_object.equal(Stdlib_JsExn.message(e._1), "Some JS error") : false;
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         179,
         26,
         51
@@ -213,7 +213,7 @@ function thenAfterCatch() {
   }).then(msg => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         202,
         26,
         45
@@ -236,7 +236,7 @@ function testCatchFinally() {
   }).then(v => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         224,
         26,
         48
@@ -245,7 +245,7 @@ function testCatchFinally() {
     ], v, equal, undefined);
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         225,
         26,
         59
@@ -265,7 +265,7 @@ function testResolveFinally() {
   }).then(v => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         242,
         26,
         45
@@ -274,7 +274,7 @@ function testResolveFinally() {
     ], v, equal, 10);
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         243,
         26,
         59
@@ -342,7 +342,7 @@ function testParallel() {
     ];
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         280,
         26,
         55
@@ -365,7 +365,7 @@ function testRace() {
   return Promise.race(promises).then(winner => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         299,
         26,
         44
@@ -397,7 +397,7 @@ function testParallel2() {
   ]).then(arr => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         323,
         26,
         55
@@ -440,7 +440,7 @@ function testParallel3() {
   ]).then(arr => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         348,
         26,
         55
@@ -489,7 +489,7 @@ function testParallel4() {
   ]).then(arr => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         374,
         26,
         55
@@ -544,7 +544,7 @@ function testParallel5() {
   ]).then(arr => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         401,
         26,
         55
@@ -605,7 +605,7 @@ function testParallel6() {
   ]).then(arr => {
     Test.run([
       [
-        "Core_PromiseTest.res",
+        "Stdlib_PromiseTest.res",
         429,
         26,
         55

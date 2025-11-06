@@ -7,7 +7,7 @@ let eq = Primitive_object.equal;
 
 Test.run([
   [
-    "Core_RegExpTest.res",
+    "Stdlib_RegExpTest.res",
     5,
     13,
     33
@@ -17,7 +17,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_RegExpTest.res",
+    "Stdlib_RegExpTest.res",
     13,
     13,
     35
@@ -27,7 +27,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_RegExpTest.res",
+    "Stdlib_RegExpTest.res",
     20,
     20,
     40

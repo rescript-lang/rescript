@@ -7,9 +7,9 @@ import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.js";
 import * as Stdlib_Float from "@rescript/runtime/lib/es6/Stdlib_Float.js";
 import * as Stdlib_BigInt from "@rescript/runtime/lib/es6/Stdlib_BigInt.js";
 import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.js";
-import * as Core_IntlTests from "./intl/Core_IntlTests.mjs";
 import * as Primitive_bigint from "@rescript/runtime/lib/es6/Primitive_bigint.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
+import * as Stdlib_IntlTests from "./intl/Stdlib_IntlTests.mjs";
 
 console.info("");
 
@@ -292,35 +292,35 @@ console.log(Stdlib_Int.fromString("99999999999999999", undefined));
 
 console.log(Stdlib_Int.fromString("010101", 2));
 
-let _collator = Core_IntlTests._collator;
+let _collator = Stdlib_IntlTests._collator;
 
-let collator = Core_IntlTests.collator;
+let collator = Stdlib_IntlTests.collator;
 
-let resolvedOptions = Core_IntlTests.resolvedOptions;
+let resolvedOptions = Stdlib_IntlTests.resolvedOptions;
 
-let timeZone = Core_IntlTests.timeZone;
+let timeZone = Stdlib_IntlTests.timeZone;
 
-let _locale = Core_IntlTests._locale;
+let _locale = Stdlib_IntlTests._locale;
 
-let locale = Core_IntlTests.locale;
+let locale = Stdlib_IntlTests.locale;
 
-let currencyFormatter = Core_IntlTests.currencyFormatter;
+let currencyFormatter = Stdlib_IntlTests.currencyFormatter;
 
-let roundingFormatter = Core_IntlTests.roundingFormatter;
+let roundingFormatter = Stdlib_IntlTests.roundingFormatter;
 
-let groupingFormatter1 = Core_IntlTests.groupingFormatter1;
+let groupingFormatter1 = Stdlib_IntlTests.groupingFormatter1;
 
-let groupingFormatter2 = Core_IntlTests.groupingFormatter2;
+let groupingFormatter2 = Stdlib_IntlTests.groupingFormatter2;
 
-let sigFormatter = Core_IntlTests.sigFormatter;
+let sigFormatter = Stdlib_IntlTests.sigFormatter;
 
-let options = Core_IntlTests.options;
+let options = Stdlib_IntlTests.options;
 
-let _formatter = Core_IntlTests._formatter;
+let _formatter = Stdlib_IntlTests._formatter;
 
-let formatter = Core_IntlTests.formatter;
+let formatter = Stdlib_IntlTests.formatter;
 
-let segments = Core_IntlTests.segments;
+let segments = Stdlib_IntlTests.segments;
 
 export {
   _collator,

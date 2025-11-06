@@ -9,7 +9,7 @@ let eq = Primitive_object.equal;
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     3,
     20,
     26
@@ -26,7 +26,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     5,
     20,
     42
@@ -36,7 +36,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     6,
     20,
     41
@@ -50,7 +50,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     9,
     13,
     30
@@ -68,7 +68,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     15,
     20,
     28
@@ -91,7 +91,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     16,
     20,
     36
@@ -101,7 +101,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     19,
     13,
     30
@@ -127,7 +127,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     25,
     13,
     38
@@ -140,7 +140,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     32,
     13,
     26
@@ -163,7 +163,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     37,
     20,
     41
@@ -173,7 +173,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     40,
     13,
     35
@@ -199,7 +199,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     46,
     13,
     38
@@ -212,7 +212,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     52,
     20,
     41
@@ -232,7 +232,7 @@ let arr = [
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     55,
     13,
     31
@@ -242,7 +242,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     66,
     13,
     24
@@ -267,7 +267,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     71,
     20,
     42
@@ -284,7 +284,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     73,
     13,
     32
@@ -298,7 +298,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     79,
     20,
     30
@@ -315,7 +315,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     81,
     13,
     34
@@ -333,7 +333,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     86,
     20,
     41
@@ -347,7 +347,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     87,
     20,
     38
@@ -357,7 +357,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     90,
     13,
     22
@@ -378,7 +378,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     95,
     20,
     40
@@ -395,7 +395,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     97,
     13,
     30
@@ -409,7 +409,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     104,
     13,
     27
@@ -431,7 +431,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     110,
     20,
     39
@@ -445,7 +445,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     111,
     20,
     34
@@ -459,7 +459,7 @@ array.splice(1, 0, "foo");
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     116,
     22,
     49
@@ -474,7 +474,7 @@ let array$1 = [
 
 Test.run([
   [
-    "Core_ArrayTests.res",
+    "Stdlib_ArrayTests.res",
     122,
     15,
     43

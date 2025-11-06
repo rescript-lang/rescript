@@ -9,7 +9,7 @@ let eq = Primitive_object.equal;
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     3,
     20,
     27
@@ -19,7 +19,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     4,
     20,
     35
@@ -29,7 +29,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     5,
     20,
     35
@@ -39,7 +39,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     6,
     20,
     35
@@ -49,7 +49,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     7,
     20,
     35
@@ -59,7 +59,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     8,
     20,
     42
@@ -69,7 +69,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     9,
     20,
     42
@@ -79,7 +79,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     10,
     20,
     42
@@ -89,7 +89,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     11,
     20,
     42
@@ -99,7 +99,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     12,
     20,
     33
@@ -109,7 +109,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     13,
     20,
     38
@@ -119,7 +119,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     14,
     20,
     39
@@ -129,7 +129,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     15,
     20,
     37
@@ -139,7 +139,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     16,
     20,
     37
@@ -149,7 +149,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     17,
     20,
     46
@@ -159,7 +159,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     18,
     20,
     42
@@ -169,7 +169,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     19,
     20,
     42
@@ -179,7 +179,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     20,
     20,
     43
@@ -189,7 +189,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     21,
     20,
     43
@@ -199,7 +199,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     23,
     13,
     49
@@ -209,7 +209,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     29,
     13,
     50
@@ -219,7 +219,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     35,
     13,
     50
@@ -229,7 +229,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     41,
     13,
     51
@@ -239,7 +239,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_FloatTests.res",
+    "Stdlib_FloatTests.res",
     47,
     20,
     46

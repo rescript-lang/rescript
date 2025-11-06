@@ -47,7 +47,7 @@ let PatternMatching = {
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     39,
     20,
     26
@@ -57,7 +57,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     41,
     20,
     31
@@ -70,7 +70,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     44,
     13,
     35
@@ -83,7 +83,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     50,
     13,
     34
@@ -98,7 +98,7 @@ let dict = {
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     62,
     22,
     38
@@ -108,7 +108,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     63,
     22,
     43
@@ -118,7 +118,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     64,
     22,
     37
@@ -128,7 +128,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     65,
     22,
     39
@@ -138,7 +138,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_DictTests.res",
+    "Stdlib_DictTests.res",
     67,
     15,
     51

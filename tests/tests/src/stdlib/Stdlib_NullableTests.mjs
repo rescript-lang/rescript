@@ -10,7 +10,7 @@ function shouldHandleNullableValues() {
   tmp = tNull === null;
   Test.run([
     [
-      "Core_NullableTests.res",
+      "Stdlib_NullableTests.res",
       7,
       15,
       35
@@ -21,7 +21,7 @@ function shouldHandleNullableValues() {
   tmp$1 = tUndefined === undefined;
   Test.run([
     [
-      "Core_NullableTests.res",
+      "Stdlib_NullableTests.res",
       17,
       15,
       40
@@ -32,7 +32,7 @@ function shouldHandleNullableValues() {
   tmp$2 = tValue === "hello";
   Test.run([
     [
-      "Core_NullableTests.res",
+      "Stdlib_NullableTests.res",
       27,
       15,
       36

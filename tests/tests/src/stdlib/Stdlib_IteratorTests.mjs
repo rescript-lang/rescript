@@ -25,7 +25,7 @@ iterator.forEach(v => {
 
 Test.run([
   [
-    "Core_IteratorTests.res",
+    "Stdlib_IteratorTests.res",
     19,
     20,
     34
@@ -56,7 +56,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, v => {
 
 Test.run([
   [
-    "Core_IteratorTests.res",
+    "Stdlib_IteratorTests.res",
     42,
     20,
     35
@@ -92,7 +92,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator$1, v => {
 
 Test.run([
   [
-    "Core_IteratorTests.res",
+    "Stdlib_IteratorTests.res",
     67,
     20,
     54

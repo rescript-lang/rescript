@@ -8,7 +8,7 @@ let eq = Primitive_object.equal;
 
 Test.run([
   [
-    "Core_TypedArrayTests.res",
+    "Stdlib_TypedArrayTests.res",
     5,
     20,
     44

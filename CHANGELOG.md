@@ -30,6 +30,8 @@
 
 #### :house: Internal
 
+- Rename Core to Stdlib in tests/tests. https://github.com/rescript-lang/rescript/pull/8005
+
 # 12.0.0-rc.3
 
 #### :bug: Bug fix

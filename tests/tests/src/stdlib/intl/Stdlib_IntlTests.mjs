@@ -3,15 +3,15 @@
 import * as Stdlib_JsExn from "@rescript/runtime/lib/es6/Stdlib_JsExn.js";
 import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.js";
 import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
-import * as Core_Intl_LocaleTest from "./Core_Intl_LocaleTest.mjs";
 import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.js";
-import * as Core_Intl_CollatorTest from "./Core_Intl_CollatorTest.mjs";
-import * as Core_Intl_SegmenterTest from "./Core_Intl_SegmenterTest.mjs";
-import * as Core_Intl_ListFormatTest from "./Core_Intl_ListFormatTest.mjs";
-import * as Core_Intl_PluralRulesTest from "./Core_Intl_PluralRulesTest.mjs";
-import * as Core_Intl_NumberFormatTest from "./Core_Intl_NumberFormatTest.mjs";
-import * as Core_Intl_DateTimeFormatTest from "./Core_Intl_DateTimeFormatTest.mjs";
-import * as Core_Intl_RelativeTimeFormatTest from "./Core_Intl_RelativeTimeFormatTest.mjs";
+import * as Stdlib_Intl_LocaleTest from "./Stdlib_Intl_LocaleTest.mjs";
+import * as Stdlib_Intl_CollatorTest from "./Stdlib_Intl_CollatorTest.mjs";
+import * as Stdlib_Intl_SegmenterTest from "./Stdlib_Intl_SegmenterTest.mjs";
+import * as Stdlib_Intl_ListFormatTest from "./Stdlib_Intl_ListFormatTest.mjs";
+import * as Stdlib_Intl_PluralRulesTest from "./Stdlib_Intl_PluralRulesTest.mjs";
+import * as Stdlib_Intl_NumberFormatTest from "./Stdlib_Intl_NumberFormatTest.mjs";
+import * as Stdlib_Intl_DateTimeFormatTest from "./Stdlib_Intl_DateTimeFormatTest.mjs";
+import * as Stdlib_Intl_RelativeTimeFormatTest from "./Stdlib_Intl_RelativeTimeFormatTest.mjs";
 
 console.log("---");
 
@@ -78,35 +78,35 @@ try {
   }
 }
 
-let _collator = Core_Intl_CollatorTest._collator;
+let _collator = Stdlib_Intl_CollatorTest._collator;
 
-let collator = Core_Intl_CollatorTest.collator;
+let collator = Stdlib_Intl_CollatorTest.collator;
 
-let resolvedOptions = Core_Intl_DateTimeFormatTest.resolvedOptions;
+let resolvedOptions = Stdlib_Intl_DateTimeFormatTest.resolvedOptions;
 
-let timeZone = Core_Intl_DateTimeFormatTest.timeZone;
+let timeZone = Stdlib_Intl_DateTimeFormatTest.timeZone;
 
-let _locale = Core_Intl_LocaleTest._locale;
+let _locale = Stdlib_Intl_LocaleTest._locale;
 
-let locale = Core_Intl_LocaleTest.locale;
+let locale = Stdlib_Intl_LocaleTest.locale;
 
-let currencyFormatter = Core_Intl_NumberFormatTest.currencyFormatter;
+let currencyFormatter = Stdlib_Intl_NumberFormatTest.currencyFormatter;
 
-let roundingFormatter = Core_Intl_NumberFormatTest.roundingFormatter;
+let roundingFormatter = Stdlib_Intl_NumberFormatTest.roundingFormatter;
 
-let groupingFormatter1 = Core_Intl_NumberFormatTest.groupingFormatter1;
+let groupingFormatter1 = Stdlib_Intl_NumberFormatTest.groupingFormatter1;
 
-let groupingFormatter2 = Core_Intl_NumberFormatTest.groupingFormatter2;
+let groupingFormatter2 = Stdlib_Intl_NumberFormatTest.groupingFormatter2;
 
-let sigFormatter = Core_Intl_NumberFormatTest.sigFormatter;
+let sigFormatter = Stdlib_Intl_NumberFormatTest.sigFormatter;
 
-let options = Core_Intl_NumberFormatTest.options;
+let options = Stdlib_Intl_NumberFormatTest.options;
 
-let _formatter = Core_Intl_SegmenterTest._formatter;
+let _formatter = Stdlib_Intl_SegmenterTest._formatter;
 
-let formatter = Core_Intl_SegmenterTest.formatter;
+let formatter = Stdlib_Intl_SegmenterTest.formatter;
 
-let segments = Core_Intl_SegmenterTest.segments;
+let segments = Stdlib_Intl_SegmenterTest.segments;
 
 export {
   _collator,

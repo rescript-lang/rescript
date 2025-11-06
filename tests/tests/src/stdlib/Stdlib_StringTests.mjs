@@ -7,7 +7,7 @@ let eq = Primitive_object.equal;
 
 Test.run([
   [
-    "Core_StringTests.res",
+    "Stdlib_StringTests.res",
     3,
     20,
     47

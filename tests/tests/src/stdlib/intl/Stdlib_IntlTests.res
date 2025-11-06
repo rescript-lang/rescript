@@ -1,11 +1,11 @@
-include Core_Intl_CollatorTest
-include Core_Intl_DateTimeFormatTest
-include Core_Intl_ListFormatTest
-include Core_Intl_LocaleTest
-include Core_Intl_NumberFormatTest
-include Core_Intl_PluralRulesTest
-include Core_Intl_RelativeTimeFormatTest
-include Core_Intl_SegmenterTest
+include Stdlib_Intl_CollatorTest
+include Stdlib_Intl_DateTimeFormatTest
+include Stdlib_Intl_ListFormatTest
+include Stdlib_Intl_LocaleTest
+include Stdlib_Intl_NumberFormatTest
+include Stdlib_Intl_PluralRulesTest
+include Stdlib_Intl_RelativeTimeFormatTest
+include Stdlib_Intl_SegmenterTest
 
 Console.log("---")
 Console.log("Intl")

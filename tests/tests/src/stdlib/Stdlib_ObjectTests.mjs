@@ -9,7 +9,7 @@ let eq = Primitive_object.equal;
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     10,
     20,
     30
@@ -19,7 +19,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     12,
     20,
     33
@@ -29,7 +29,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     13,
     20,
     33
@@ -39,7 +39,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     15,
     20,
     44
@@ -49,7 +49,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     16,
     20,
     44
@@ -59,7 +59,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     17,
     20,
     44
@@ -75,7 +75,7 @@ let nums = [
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     20,
     20,
     32
@@ -93,7 +93,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     21,
     20,
     32
@@ -103,7 +103,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     22,
     20,
     32
@@ -121,7 +121,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     23,
     20,
     32
@@ -139,7 +139,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     25,
     20,
     30
@@ -167,7 +167,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     26,
     20,
     30
@@ -195,7 +195,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     27,
     20,
     30
@@ -225,7 +225,7 @@ let d = new Date(2000, 1);
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     31,
     13,
     23
@@ -235,7 +235,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     36,
     20,
     30
@@ -249,7 +249,7 @@ let x = {
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     39,
     20,
     33
@@ -259,7 +259,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     40,
     20,
     33
@@ -273,7 +273,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     41,
     20,
     33
@@ -283,7 +283,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     42,
     20,
     45
@@ -293,7 +293,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     43,
     20,
     45
@@ -303,7 +303,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     44,
     20,
     45
@@ -317,7 +317,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     46,
     20,
     31
@@ -327,7 +327,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     47,
     20,
     31
@@ -337,7 +337,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     48,
     20,
     31
@@ -349,7 +349,7 @@ let mkBig = Stdlib_BigInt.fromString;
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     51,
     20,
     32
@@ -359,7 +359,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     52,
     20,
     32
@@ -369,7 +369,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     53,
     20,
     32
@@ -379,7 +379,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     54,
     20,
     32
@@ -389,7 +389,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     55,
     20,
     32
@@ -399,7 +399,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     60,
     13,
     50
@@ -423,7 +423,7 @@ function assignOverwritesTarget(title, source) {
   };
   Test.run([
     [
-      "Core_ObjectTests.res",
+      "Stdlib_ObjectTests.res",
       68,
       22,
       39
@@ -434,7 +434,7 @@ function assignOverwritesTarget(title, source) {
   }, sourceObj), eq, sourceObj);
   Test.run([
     [
-      "Core_ObjectTests.res",
+      "Stdlib_ObjectTests.res",
       69,
       22,
       39
@@ -445,7 +445,7 @@ function assignOverwritesTarget(title, source) {
   }, sourceObj), eq, sourceObj);
   Test.run([
     [
-      "Core_ObjectTests.res",
+      "Stdlib_ObjectTests.res",
       70,
       22,
       39
@@ -467,7 +467,7 @@ assignOverwritesTarget("when source is a string", "abc");
 function runGetTest(i) {
   Test.run([
     [
-      "Core_ObjectTests.res",
+      "Stdlib_ObjectTests.res",
       88,
       22,
       46
@@ -550,7 +550,7 @@ function getSymbolTestWhenExists() {
   let retrieved = obj[fruit];
   Test.run([
     [
-      "Core_ObjectTests.res",
+      "Stdlib_ObjectTests.res",
       148,
       15,
       63
@@ -563,7 +563,7 @@ getSymbolTestWhenExists();
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     157,
     13,
     65
@@ -573,7 +573,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     166,
     13,
     46
@@ -585,7 +585,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ObjectTests.res",
+    "Stdlib_ObjectTests.res",
     173,
     13,
     46

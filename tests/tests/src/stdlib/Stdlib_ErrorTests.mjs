@@ -19,7 +19,7 @@ function panicTest() {
   }
   Test.run([
     [
-      "Core_ErrorTests.res",
+      "Stdlib_ErrorTests.res",
       6,
       22,
       43

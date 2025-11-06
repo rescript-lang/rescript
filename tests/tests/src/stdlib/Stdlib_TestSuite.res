@@ -1,0 +1,14 @@
+include Stdlib_TestTests
+include Stdlib_PromiseTest
+include Stdlib_ErrorTests
+include Stdlib_ArrayTests
+include Stdlib_IntTests
+include Stdlib_ObjectTests
+include Stdlib_ResultTests
+include Stdlib_TypedArrayTests
+include Stdlib_FloatTests
+include Stdlib_JsonTests
+include Stdlib_NullableTests
+include Stdlib_DictTests
+include Stdlib_IteratorTests
+include Stdlib_RegExpTest

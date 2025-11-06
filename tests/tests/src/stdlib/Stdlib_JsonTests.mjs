@@ -28,7 +28,7 @@ function decodeJsonTest() {
   }
   Test.run([
     [
-      "Core_JsonTests.res",
+      "Stdlib_JsonTests.res",
       17,
       22,
       55

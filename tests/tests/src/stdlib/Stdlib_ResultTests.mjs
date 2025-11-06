@@ -18,7 +18,7 @@ function forEachIfOkCallFunction() {
   });
   Test.run([
     [
-      "Core_ResultTests.res",
+      "Stdlib_ResultTests.res",
       10,
       22,
       72
@@ -41,7 +41,7 @@ function forEachIfErrorDoNotCallFunction() {
   });
   Test.run([
     [
-      "Core_ResultTests.res",
+      "Stdlib_ResultTests.res",
       17,
       22,
       63
@@ -54,7 +54,7 @@ forEachIfErrorDoNotCallFunction();
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     25,
     20,
     48
@@ -70,7 +70,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     28,
     13,
     42
@@ -86,7 +86,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     34,
     20,
     25
@@ -99,7 +99,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     35,
     20,
     25
@@ -129,7 +129,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     36,
     20,
     25
@@ -151,7 +151,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     37,
     20,
     25
@@ -176,7 +176,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     38,
     20,
     25
@@ -198,7 +198,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     39,
     20,
     25
@@ -228,7 +228,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     40,
     20,
     25
@@ -254,7 +254,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     41,
     20,
     25
@@ -289,7 +289,7 @@ Test.run([
 
 Test.run([
   [
-    "Core_ResultTests.res",
+    "Stdlib_ResultTests.res",
     42,
     20,
     25

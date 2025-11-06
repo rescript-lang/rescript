@@ -3,10 +3,10 @@
 import * as Test from "./Test.mjs";
 
 async function main() {
-  let eq = await import("./Core_IntTests.mjs").then(m => m.eq);
+  let eq = await import("./Stdlib_IntTests.mjs").then(m => m.eq);
   return Test.run([
     [
-      "Core_ImportTests.res",
+      "Stdlib_ImportTests.res",
       3,
       22,
       55
