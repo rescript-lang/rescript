@@ -76,8 +76,7 @@ impl Router for RewatchMcp {
                     }
                 }
                 other => Err(mcp_spec::handler::ToolError::NotFound(format!(
-                    "Unknown tool: {}",
-                    other
+                    "Unknown tool: {other}"
                 ))),
             }
         })
