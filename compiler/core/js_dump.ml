@@ -922,6 +922,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
         | None -> L.tag
         | Some s -> s
       in
+      let is_primitive_catch_all =
+        Ast_untagged_variants.has_primitive_catchall p.attrs
+      in
       let tails =
         Ext_list.filter_map tails (fun ((f, optional), x) ->
             match x.expression_desc with
@@ -929,6 +932,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       if untagged then tails
+      else if is_primitive_catch_all then tails
       else
         ( Js_op.Lit tag_name,
           (* TAG:xx for inline records *)

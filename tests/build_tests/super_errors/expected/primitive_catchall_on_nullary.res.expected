@@ -1,0 +1,9 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/primitive_catchall_on_nullary.res[0m:[2m2:10-21[0m
+
+  1 [2m│[0m @tag("kind")
+  [1;31m2[0m [2m│[0m type t = [1;31m| @as(int) A[0m
+  3 [2m│[0m 
+
+  Constructor "A": primitive catch-all requires an inline record payload
