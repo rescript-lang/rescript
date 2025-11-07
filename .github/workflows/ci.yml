@@ -110,13 +110,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: rewatch/target
-          key: rewatch-build-v2-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
+          key: rewatch-build-v3-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
 
       - name: Install rust toolchain
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.88.0
+          toolchain: 1.91.0
           targets: ${{ matrix.rust-target }}
           components: clippy, rustfmt
 

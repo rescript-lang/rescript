@@ -37,10 +37,11 @@ fn is_in_build_path(path_buf: &Path) -> bool {
     let mut prev_component: Option<&std::ffi::OsStr> = None;
     for component in path_buf.components() {
         let comp_os = component.as_os_str();
-        if let Some(prev) = prev_component {
-            if prev == "lib" && (comp_os == "bs" || comp_os == "ocaml") {
-                return true;
-            }
+        if let Some(prev) = prev_component
+            && prev == "lib"
+            && (comp_os == "bs" || comp_os == "ocaml")
+        {
+            return true;
         }
         prev_component = Some(comp_os);
     }
@@ -116,14 +117,14 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if event.paths.iter().any(|path| path.ends_with(LOCKFILE)) {
-                if let EventKind::Remove(_) = event.kind {
-                    if show_progress {
-                        println!("\nExiting... (lockfile removed)");
-                    }
-                    clean::cleanup_after_build(&build_state);
-                    return Ok(());
+            if event.paths.iter().any(|path| path.ends_with(LOCKFILE))
+                && let EventKind::Remove(_) = event.kind
+            {
+                if show_progress {
+                    println!("\nExiting... (lockfile removed)");
                 }
+                clean::cleanup_after_build(&build_state);
+                return Ok(());
             }
 
             let paths = event

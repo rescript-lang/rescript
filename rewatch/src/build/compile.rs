@@ -368,12 +368,11 @@ pub fn compile(
             // so editor tooling can surface it from .compiler.log
             let mut touched_packages = AHashSet::<String>::new();
             for module_name in cycle.iter() {
-                if let Some(module) = build_state.get_module(module_name) {
-                    if touched_packages.insert(module.package_name.clone()) {
-                        if let Some(package) = build_state.get_package(&module.package_name) {
-                            logs::append(package, &message);
-                        }
-                    }
+                if let Some(module) = build_state.get_module(module_name)
+                    && touched_packages.insert(module.package_name.clone())
+                    && let Some(package) = build_state.get_package(&module.package_name)
+                {
+                    logs::append(package, &message);
                 }
             }
 
@@ -795,24 +794,23 @@ fn compile_file(
 
             // copy js file
             root_config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source {
-                    if let SourceType::SourceFile(SourceFile {
+                if spec.in_source
+                    && let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
                         ..
                     }) = &module.source_type
-                    {
-                        let source = helpers::get_source_file_from_rescript_file(
-                            &Path::new(&package.path).join(path),
-                            &root_config.get_suffix(spec),
-                        );
-                        let destination = helpers::get_source_file_from_rescript_file(
-                            &package.get_build_path().join(path),
-                            &root_config.get_suffix(spec),
-                        );
+                {
+                    let source = helpers::get_source_file_from_rescript_file(
+                        &Path::new(&package.path).join(path),
+                        &root_config.get_suffix(spec),
+                    );
+                    let destination = helpers::get_source_file_from_rescript_file(
+                        &package.get_build_path().join(path),
+                        &root_config.get_suffix(spec),
+                    );
 
-                        if source.exists() {
-                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
-                        }
+                    if source.exists() {
+                        let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
                     }
                 }
             });
@@ -912,10 +910,9 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState)
 
                             if let (Some(last_compiled_dependent), Some(last_compiled)) =
                                 (dependent_module.last_compiled_cmt, module.last_compiled_cmt)
+                                && last_compiled_dependent < last_compiled
                             {
-                                if last_compiled_dependent < last_compiled {
-                                    modules_with_expired_deps.insert(dependent.to_string());
-                                }
+                                modules_with_expired_deps.insert(dependent.to_string());
                             }
                         }
                     }

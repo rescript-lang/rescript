@@ -45,10 +45,10 @@ fn get_files_in_scope() -> Result<Vec<String>> {
             && let Some(source_files) = &package.source_files
         {
             for (path, _metadata) in source_files {
-                if let Some(extension) = path.extension() {
-                    if extension == "res" || extension == "resi" {
-                        files.push(package.path.join(path).to_string_lossy().into_owned());
-                    }
+                if let Some(extension) = path.extension()
+                    && (extension == "res" || extension == "resi")
+                {
+                    files.push(package.path.join(path).to_string_lossy().into_owned());
                 }
             }
         }
