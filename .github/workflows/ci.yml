@@ -82,10 +82,10 @@ jobs:
           git config --system core.longpaths true
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: yarn
           node-version-file: .nvmrc
@@ -181,7 +181,7 @@ jobs:
 
       - name: Get OPAM executable path
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const opamPath = await io.which('opam', true);
@@ -305,13 +305,13 @@ jobs:
 
       - name: Setup Python for ninja build
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
       - name: Setup MSVC for ninja build (Windows)
         if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
-        uses: TheMrMilchmann/setup-msvc-dev@v3
+        uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: x64
 
@@ -441,14 +441,14 @@ jobs:
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: binaries-${{ matrix.node-target }}
           path: packages/@rescript/${{ matrix.node-target }}/bin
 
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lib-ocaml
           path: |
@@ -463,7 +463,7 @@ jobs:
       - name: "Upload artifacts: scripts/res/apiDocs"
         id: upload-api-docs
         if: ${{ matrix.generate_api_docs }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api
           path: scripts/res/apiDocs/
@@ -474,16 +474,16 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: yarn
           node-version-file: .nvmrc
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: "@(binaries-*|lib-ocaml)"
 
@@ -506,13 +506,13 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout rescript-lang.org
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: rescript-lang/rescript-lang.org
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
           path: data
@@ -557,10 +557,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 20
@@ -611,13 +611,13 @@ jobs:
           version: 10
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 20
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Make test directory
         id: tmp-dir
@@ -659,10 +659,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           # Run integration tests with the oldest supported node version.
           node-version: 20
@@ -689,17 +689,17 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           cache: yarn
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: "@(binaries-*|lib-ocaml)"
 
