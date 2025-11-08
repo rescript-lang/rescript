@@ -10,7 +10,7 @@
   I'm not sure what to parse here when looking at "|".
 
   The old data-last pipe `|>` has been removed from the language.
-  Use a data-first `->` pipe instead.
+  Refactor to use a data-first `->` pipe instead.
 
 let x [arity:1]f = f
 ;;String.length
