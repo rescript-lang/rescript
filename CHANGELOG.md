@@ -27,6 +27,8 @@
 
 #### :nail_care: Polish
 
+- Dedicated error messages for old Reason array literal syntax (`[|` and `|]`), and for the old pipe (`|>`). Primarly intended to help LLMs that might try to use old code patterns. https://github.com/rescript-lang/rescript/pull/8010
+
 #### :house: Internal
 
 - Editor: resolve @rescript/runtime via environment variable RESCRIPT_RUNTIME. https://github.com/rescript-lang/rescript/pull/8023
