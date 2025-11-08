@@ -66,6 +66,7 @@ let subst (s : Lam.t Map_ident.t) lam =
     | Lwhile (e1, e2) -> Lam.while_ (subst_aux e1) (subst_aux e2)
     | Lfor (v, e1, e2, dir, e3) ->
       Lam.for_ v (subst_aux e1) (subst_aux e2) dir (subst_aux e3)
+    | Lfor_of (v, e1, e2) -> Lam.for_of v (subst_aux e1) (subst_aux e2)
     | Lassign (id, e) -> Lam.assign id (subst_aux e)
   and subst_decl (id, exp) = (id, subst_aux exp)
   and subst_case (key, case) = (key, subst_aux case)

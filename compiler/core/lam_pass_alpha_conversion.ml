@@ -119,6 +119,7 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     | Lwhile (l1, l2) -> Lam.while_ (simpl l1) (simpl l2)
     | Lfor (flag, l1, l2, dir, l3) ->
       Lam.for_ flag (simpl l1) (simpl l2) dir (simpl l3)
+    | Lfor_of (flag, l1, l2) -> Lam.for_of flag (simpl l1) (simpl l2)
     | Lassign (v, l) ->
       (* Lalias-bound variables are never assigned, so don't increase
          v's refsimpl *)

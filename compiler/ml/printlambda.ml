@@ -385,6 +385,9 @@ let rec lam ppf = function
       | Upto -> "to"
       | Downto -> "downto")
       lam hi lam body
+  | Lfor_of (param, iterable, body) ->
+    fprintf ppf "@[<2>(for_of %a@ %a@ %a)@]" Ident.print param lam iterable lam
+      body
   | Lassign (id, expr) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
   | Lsend (name, obj, _) -> fprintf ppf "@[<2>(send%s@ %a@ )@]" name lam obj
