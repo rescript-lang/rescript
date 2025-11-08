@@ -31,6 +31,7 @@
 #### :house: Internal
 
 - Rename Core to Stdlib in tests/tests. https://github.com/rescript-lang/rescript/pull/8005
+- CI: Build on `windows-2025` runners. https://github.com/rescript-lang/rescript/pull/8006
 
 # 12.0.0-rc.3
 
