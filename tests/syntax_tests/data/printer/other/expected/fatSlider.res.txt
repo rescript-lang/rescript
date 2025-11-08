@@ -34,7 +34,7 @@ let make = (~min=50, ~max=250, ~meterSuffix=?) => {
         values
         onChange={v => values_set(_ => v)}
         renderTrack={({props, children}) => {
-          let element = <div className="h-16" style=props.style> children </div>
+          let element = <div className="h-16" style=props.style> {children} </div>
 
           ReasonReact.cloneElement(element, ~props=Obj.magic(props), [children])
         }}
