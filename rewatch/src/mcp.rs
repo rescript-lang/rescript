@@ -10,6 +10,15 @@ use std::pin::Pin;
 use std::process::Command;
 
 use crate::{build, helpers, project_context::ProjectContext};
+use serde::Deserialize;
+
+// Suggested actions mirror compiler/ext/suggested_actions.ml
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+enum SuggestedAction {
+    ApplyAutomaticMigrationsForFullProject,
+    ApplyAutomaticMigrationsForCurrentFile,
+}
 
 #[derive(Clone)]
 pub struct RewatchMcp;
@@ -25,7 +34,8 @@ impl Router for RewatchMcp {
         "ReScript MCP server.\n\n\
         Tools:\n\
         - diagnose(path): Quick per-file diagnostics after edits. Prefer this before a full build.\n\
-          No writes. Only this file (not dependents). Returns 'OK' if clean."
+          No writes. Only this file (not dependents). Returns 'OK' if clean.\n\
+        - perform-action(path, actionId): Applies an action suggested by the compiler/diagnosis."
             .to_string()
     }
 
@@ -34,16 +44,32 @@ impl Router for RewatchMcp {
     }
 
     fn list_tools(&self) -> Vec<mcp_spec::tool::Tool> {
-        vec![Tool::new(
-            "diagnose",
-            "Quick per-file diagnostics after edits; prefer before full build; no writes; only this file.",
-            json!({
-                "type": "object",
-                "properties": {"path": {"type": "string"}},
-                "required": ["path"],
-                "additionalProperties": false
-            }),
-        )]
+        vec![
+            Tool::new(
+                "diagnose",
+                "Quick per-file diagnostics (shows compiler warnings, errors) after edits; prefer before full build; no writes; only this file.",
+                json!({
+                    "type": "object",
+                    "properties": {"path": {"type": "string"}},
+                    "required": ["path"],
+                    "additionalProperties": false
+                }),
+            ),
+            Tool::new(
+                "perform-action",
+                "Applies an action suggested by the compiler/diagnosis.",
+                json!({
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        // Accept either a string or an object so clients can pass raw JSON, not stringified JSON
+                        "actionId": {"anyOf": [{"type": "string"}, {"type": "object"}]}
+                    },
+                    "required": ["path", "actionId"],
+                    "additionalProperties": false
+                }),
+            ),
+        ]
     }
 
     fn call_tool(
@@ -69,6 +95,16 @@ impl Router for RewatchMcp {
                                 Ok(vec![Content::text(text)])
                             }
                         }
+                        Ok(Err(e)) => Err(mcp_spec::handler::ToolError::ExecutionError(e.to_string())),
+                        Err(join_err) => Err(mcp_spec::handler::ToolError::ExecutionError(format!(
+                            "Join error: {join_err}"
+                        ))),
+                    }
+                }
+                "perform-action" => {
+                    let args = arguments;
+                    match tokio::task::spawn_blocking(move || perform_action_impl(args)).await {
+                        Ok(Ok(())) => Ok(vec![Content::text("OK")]),
                         Ok(Err(e)) => Err(mcp_spec::handler::ToolError::ExecutionError(e.to_string())),
                         Err(join_err) => Err(mcp_spec::handler::ToolError::ExecutionError(format!(
                             "Join error: {join_err}"
@@ -201,4 +237,149 @@ fn diagnose_impl(arguments: serde_json::Value) -> anyhow::Result<(Option<String>
     let is_error = !output.status.success();
     let message_opt = if diag.trim().is_empty() { None } else { Some(diag) };
     Ok((message_opt, is_error))
+}
+
+fn perform_action_impl(arguments: serde_json::Value) -> anyhow::Result<()> {
+    use anyhow::anyhow;
+
+    // Validate required arguments
+    let path_arg = arguments
+        .get("path")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Missing required string argument 'path'"))?;
+
+    let action_id_str = arguments
+        .get("actionId")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow!("Missing required string argument 'actionId'"))?;
+
+    // actionId might be:
+    // - A plain string like: "ApplyAutomaticMigrationsForCurrentFile"
+    // - Stringified JSON of a string: "\"ApplyAutomaticMigrationsForCurrentFile\""
+    // - Stringified JSON of an object with an action string (future-proof)
+    // Accept them in this order: plain string → JSON enum string → JSON object
+    let action: SuggestedAction = match action_id_str {
+        // Plain string case
+        "ApplyAutomaticMigrationsForCurrentFile" => SuggestedAction::ApplyAutomaticMigrationsForCurrentFile,
+        "ApplyAutomaticMigrationsForFullProject" => SuggestedAction::ApplyAutomaticMigrationsForFullProject,
+        // Otherwise try JSON parsing paths
+        _ => {
+            // Try to parse as a JSON string directly into enum (e.g. "\"Apply…\"")
+            match serde_json::from_str::<SuggestedAction>(action_id_str) {
+                Ok(a) => a,
+                Err(_) => {
+                    // Try a generic JSON value to support string or object shapes
+                    let v: serde_json::Value = serde_json::from_str(action_id_str)
+                        .map_err(|e| anyhow!(format!("Invalid actionId JSON or unsupported action: {e}")))?;
+                    match v {
+                        serde_json::Value::String(s) => match s.as_str() {
+                            "ApplyAutomaticMigrationsForCurrentFile" => {
+                                SuggestedAction::ApplyAutomaticMigrationsForCurrentFile
+                            }
+                            "ApplyAutomaticMigrationsForFullProject" => {
+                                SuggestedAction::ApplyAutomaticMigrationsForFullProject
+                            }
+                            other => return Err(anyhow!(format!("Unknown action kind: {other}"))),
+                        },
+                        serde_json::Value::Object(map) => {
+                            let s = map
+                                .get("action")
+                                .and_then(|v| v.as_str())
+                                .or_else(|| map.get("kind").and_then(|v| v.as_str()))
+                                .or_else(|| map.get("type").and_then(|v| v.as_str()))
+                                .ok_or_else(|| {
+                                    anyhow!("actionId JSON did not contain a recognizable action string")
+                                })?;
+                            match s {
+                                "ApplyAutomaticMigrationsForCurrentFile" => {
+                                    SuggestedAction::ApplyAutomaticMigrationsForCurrentFile
+                                }
+                                "ApplyAutomaticMigrationsForFullProject" => {
+                                    SuggestedAction::ApplyAutomaticMigrationsForFullProject
+                                }
+                                other => return Err(anyhow!(format!("Unknown action kind: {other}"))),
+                            }
+                        }
+                        _ => {
+                            return Err(anyhow!(
+                                "actionId JSON did not contain a recognizable action string"
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    let abs_path = helpers::get_abs_path(Path::new(path_arg));
+
+    // Find project root (nearest config) for both actions
+    let package_root = helpers::get_nearest_config(&abs_path).ok_or_else(|| {
+        anyhow!(format!(
+            "Could not find rescript.json/bsconfig.json for {}",
+            abs_path.display()
+        ))
+    })?;
+
+    let project = ProjectContext::new(&package_root)?;
+    let bin_dir = build::get_compiler_info(&project)?
+        .bsc_path
+        .parent()
+        .ok_or_else(|| anyhow!("Could not determine bin directory from bsc path"))?
+        .to_path_buf();
+    let rescript_tools = bin_dir.join("rescript-tools.exe");
+    if !rescript_tools.exists() {
+        return Err(anyhow!(format!(
+            "Could not find rescript-tools at {}",
+            rescript_tools.display()
+        )));
+    }
+
+    let run = |args: Vec<&str>, cwd: &Path| -> anyhow::Result<()> {
+        let output = Command::new(&rescript_tools)
+            .current_dir(cwd)
+            .args(args)
+            .output()
+            .map_err(|e| anyhow!(format!("Failed to run rescript-tools: {e}")))?;
+        if output.status.success() {
+            Ok(())
+        } else {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let mut msg = String::new();
+            if helpers::contains_ascii_characters(&stderr) {
+                msg.push_str(&stderr);
+            }
+            if helpers::contains_ascii_characters(&stdout) {
+                if !msg.is_empty() && !msg.ends_with('\n') {
+                    msg.push('\n');
+                }
+                msg.push_str(&stdout);
+            }
+            if msg.trim().is_empty() {
+                Err(anyhow!("rescript-tools failed"))
+            } else {
+                Err(anyhow!(msg.trim().to_string()))
+            }
+        }
+    };
+
+    match action {
+        SuggestedAction::ApplyAutomaticMigrationsForCurrentFile => {
+            if abs_path.is_dir() {
+                return Err(anyhow!("Expected a file path for single-file migration"));
+            }
+            run(
+                vec!["migrate", abs_path.to_string_lossy().as_ref()],
+                &package_root,
+            )
+        }
+        SuggestedAction::ApplyAutomaticMigrationsForFullProject => {
+            // Use the project root for migrate-all
+            run(
+                vec!["migrate-all", package_root.to_string_lossy().as_ref()],
+                &package_root,
+            )
+        }
+    }
 }

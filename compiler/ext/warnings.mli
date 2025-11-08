@@ -131,3 +131,5 @@ val loc_to_string : loc -> string
 (**
 Turn the location into a string with (line,column--line,column) format.
 *)
+
+val llm_mode : bool ref
