@@ -1,0 +1,16 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/oldDataLastPipe.res:2:16
+
+  1 │ // Old data-last pipe
+  2 │ let x = f => f |> String.length
+  3 │ 
+  4 │ 
+
+  I'm not sure what to parse here when looking at "|".
+
+  The old data-last pipe `|>` has been removed from the language.
+  Use a data first `->` pipe instead.
+
+let x [arity:1]f = f
+;;String.length
