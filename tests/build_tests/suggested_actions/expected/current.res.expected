@@ -1,0 +1,14 @@
+<suggested_actions>
+  <apply_all_migrations_in_file>
+    <description>Applies all automatic migrations in the current file.</description>
+    <command>
+      perform-action tests/build_tests/suggested_actions/fixtures/current.res "ApplyAutomaticMigrationsForCurrentFile"
+    </command>
+  </apply_all_migrations_in_file>
+  <apply_all_migrations_in_project>
+    <description>Applies all automatic migrations in the project.</description>
+    <command>
+      perform-action tests/build_tests/suggested_actions/fixtures/current.res "ApplyAutomaticMigrationsForFullProject"
+    </command>
+  </apply_all_migrations_in_project>
+</suggested_actions>

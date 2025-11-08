@@ -39,6 +39,8 @@ let show_filename file = if file = "_none_" then !input_name else file
 
 let print_filename ppf file = Format.fprintf ppf "%s" (show_filename file)
 
+let draw_underline_in_code_frame = ref false
+
 (* return file, line, char from the given position *)
 let get_pos_info pos = (pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol)
 
@@ -140,8 +142,10 @@ let print ?(src = None) ~message_kind intro ppf (loc : t) =
          branch might not be reached (aka no inline file content display) so
          we don't wanna end up with two line breaks in the the consequent *)
       fprintf ppf "@,%s"
-        (Code_frame.print ~is_warning:(message_kind = `warning) ~src
-           ~start_pos:loc.loc_start ~end_pos:loc.loc_end)
+        (Code_frame.print
+           ~draw_underline:!draw_underline_in_code_frame
+           ~is_warning:(message_kind = `warning) ~src ~start_pos:loc.loc_start
+           ~end_pos:loc.loc_end)
     with
     (* this might happen if the file is e.g. "", "_none_" or any of the fake file name placeholders.
        we've already printed the location above, so nothing more to do here. *)
@@ -300,6 +304,14 @@ let raise_errorf ?(loc = none) ?(sub = []) ?(if_highlight = "") =
 
 let deprecated ?(can_be_automigrated = false) ?(def = none) ?(use = none) loc
     msg =
+  if
+    can_be_automigrated && !Warnings.llm_mode && (not loc.loc_ghost)
+    && loc.loc_start.pos_fname <> "_none_"
+  then (
+    Suggested_actions.add
+      {loc; action = Suggested_actions.ApplyAutomaticMigrationsForCurrentFile};
+    Suggested_actions.add
+      {loc; action = Suggested_actions.ApplyAutomaticMigrationsForFullProject});
   prerr_warning loc (Warnings.Deprecated (msg, def, use, can_be_automigrated))
 
 let map_loc f {txt; loc} = {txt = f txt; loc}

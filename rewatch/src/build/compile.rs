@@ -553,6 +553,7 @@ pub fn compiler_args_for_diagnostics(
         "never".to_string(),
         "-ignore-parse-errors".to_string(),
         "-editor-mode".to_string(),
+        "-llm-mode".to_string(),
     ]);
 
     args.push(file_path.to_string_lossy().to_string());

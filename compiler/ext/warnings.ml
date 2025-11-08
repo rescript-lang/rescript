@@ -296,6 +296,8 @@ let reset () =
 
 let () = reset ()
 
+let llm_mode = ref false
+
 let message = function
   | Comment_start -> "this is the start of a comment."
   | Comment_not_end -> "this is not the end of a comment."
@@ -310,10 +312,15 @@ let message = function
     ^
     if can_be_automigrated then
       "\n\n\
-      \  This can be automatically migrated by the ReScript migration tool. \
-       Run `rescript-tools migrate-all <project-root>` to run all automatic \
-       migrations available in your project, or `rescript-tools migrate \
-       <file>` to migrate a single file."
+      \  This can be automatically migrated by the ReScript migration tool. "
+      ^
+      if !llm_mode then
+        "Run the perform-action MCP tool for automatic migration, suggested \
+         below, to fix this automatically."
+      else
+        "Run `rescript-tools migrate-all <project-root>` to run all automatic \
+         migrations available in your project, or `rescript-tools migrate \
+         <file>` to migrate a single file."
     else ""
   | Fragile_match "" -> "this pattern-matching is fragile."
   | Fragile_match s ->

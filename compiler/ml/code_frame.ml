@@ -104,7 +104,7 @@ end
 
 let setup = Color.setup
 
-type gutter = Number of int | Elided
+type gutter = Number of int | Elided | UnderlinedRow
 type highlighted_string = {s: string; start: int; end_: int}
 type line = {gutter: gutter; content: highlighted_string list}
 
@@ -116,7 +116,7 @@ type line = {gutter: gutter; content: highlighted_string list}
   - center snippet when it's heavily indented
   - ellide intermediate lines when the reported range is huge
 *)
-let print ~is_warning ~src ~(start_pos : Lexing.position)
+let print ~is_warning ~draw_underline ~src ~(start_pos : Lexing.position)
     ~(end_pos : Lexing.position) =
   let indent = 2 in
   let highlight_line_start_line = start_pos.pos_lnum in
@@ -134,27 +134,22 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
   let max_line_digits_count = digits_count last_shown_line in
   (* TODO: change this back to a fixed 100? *)
   (* 3 for separator + the 2 spaces around it *)
-  let line_width = 78 - max_line_digits_count - indent - 3 in
+  let line_width = max 1 (78 - max_line_digits_count - indent - 3) in
   let lines =
-    if
-      start_line_line_offset >= 0
-      && end_line_line_end_offset >= start_line_line_offset
-    then
-      String.sub src start_line_line_offset
-        (end_line_line_end_offset - start_line_line_offset)
-      |> String.split_on_char '\n'
-      |> filter_mapi (fun i line ->
-             let line_number = i + first_shown_line in
-             if more_than_5_highlighted_lines then
-               if line_number = highlight_line_start_line + 2 then
-                 Some (Elided, line)
-               else if
-                 line_number > highlight_line_start_line + 2
-                 && line_number < highlight_line_end_line - 1
-               then None
-               else Some (Number line_number, line)
-             else Some (Number line_number, line))
-    else []
+    String.sub src start_line_line_offset
+      (end_line_line_end_offset - start_line_line_offset)
+    |> String.split_on_char '\n'
+    |> filter_mapi (fun i line ->
+           let line_number = i + first_shown_line in
+           if more_than_5_highlighted_lines then
+             if line_number = highlight_line_start_line + 2 then
+               Some (Elided, line)
+             else if
+               line_number > highlight_line_start_line + 2
+               && line_number < highlight_line_end_line - 1
+             then None
+             else Some (Number line_number, line)
+           else Some (Number line_number, line))
   in
   let leading_space_to_cut =
     lines
@@ -178,41 +173,98 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
                String.sub line leading_space_to_cut
                  (String.length line - leading_space_to_cut)
                |> break_long_line line_width
-               |> List.mapi (fun i line ->
+               |> List.mapi (fun i chunk ->
                       match gutter with
-                      | Elided -> {s = line; start = 0; end_ = 0}
+                      | Elided | UnderlinedRow ->
+                        {s = chunk; start = 0; end_ = 0}
                       | Number line_number ->
-                        let highlight_line_start_offset =
+                        let hl_start_off =
                           start_pos.pos_cnum - start_pos.pos_bol
                         in
-                        let highlight_line_end_offset =
-                          end_pos.pos_cnum - end_pos.pos_bol
+                        let hl_end_off = end_pos.pos_cnum - end_pos.pos_bol in
+                        (* Offsets within the trimmed line (after leading-space cut) *)
+                        let trimmed_hl_start =
+                          if line_number = highlight_line_start_line then
+                            max 0 (hl_start_off - leading_space_to_cut)
+                          else if line_number > highlight_line_start_line then 0
+                          else (* before start line *) max_int
                         in
-                        let start =
-                          if i = 0 && line_number = highlight_line_start_line
-                          then
-                            highlight_line_start_offset - leading_space_to_cut
+                        let trimmed_hl_end =
+                          if line_number < highlight_line_start_line then 0
+                          else if line_number = highlight_line_start_line
+                                  && line_number = highlight_line_end_line
+                          then max 0 (hl_end_off - leading_space_to_cut)
+                          else if line_number = highlight_line_start_line then
+                            (* highlight runs through end of this line *)
+                            String.length chunk (* placeholder; refined below *)
+                          else if line_number < highlight_line_end_line then
+                            (* full line highlight for interior lines *)
+                            String.length chunk (* placeholder; refined below *)
+                          else if line_number = highlight_line_end_line then
+                            max 0 (hl_end_off - leading_space_to_cut)
                           else 0
                         in
-                        let end_ =
-                          if line_number < highlight_line_start_line then 0
-                          else if
+                        (* Map highlight to this chunk using its offset *)
+                        let chunk_offset = i * line_width in
+                        let clen = String.length chunk in
+                        let start_rel =
+                          if trimmed_hl_start = max_int then 0
+                          else trimmed_hl_start - chunk_offset
+                        in
+                        let end_rel =
+                          if
                             line_number = highlight_line_start_line
-                            && line_number = highlight_line_end_line
-                          then highlight_line_end_offset - leading_space_to_cut
-                          else if line_number = highlight_line_start_line then
-                            String.length line
+                            && line_number <> highlight_line_end_line
+                            && i = 0
+                          then clen
                           else if
                             line_number > highlight_line_start_line
                             && line_number < highlight_line_end_line
-                          then String.length line
-                          else if line_number = highlight_line_end_line then
-                            highlight_line_end_offset - leading_space_to_cut
-                          else 0
+                          then clen
+                          else trimmed_hl_end - chunk_offset
                         in
-                        {s = line; start; end_})
+                        let start = max 0 (min clen start_rel) in
+                        let end_ = max 0 (min clen end_rel) in
+                        let start, end_ =
+                          if start >= end_ then (0, 0) else (start, end_)
+                        in
+                        {s = chunk; start; end_})
            in
-           {gutter; content = new_content})
+           if draw_underline then
+             let has_highlight =
+               List.exists (fun {start; end_} -> start < end_) new_content
+             in
+             if has_highlight then
+               let underline_content =
+                 List.map
+                   (fun {start; end_} ->
+                     if start < end_ then
+                       let overline_char = "^" in
+                       let underline_length = end_ - start in
+                       let underline =
+                         String.concat ""
+                           (List.init underline_length (fun _ -> overline_char))
+                       in
+                       [
+                         {
+                           s = String.make start ' ' ^ underline;
+                           start = 0;
+                           end_ = 0;
+                         };
+                       ]
+                     else [{s = ""; start = 0; end_ = 0}])
+                   new_content
+               in
+               [
+                 {gutter; content = new_content};
+                 {
+                   gutter = UnderlinedRow;
+                   content = List.flatten underline_content;
+                 };
+               ]
+             else [{gutter; content = new_content}]
+           else [{gutter; content = new_content}])
+    |> List.flatten
   in
   let buf = Buffer.create 100 in
   let open Color in
@@ -280,5 +332,11 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
                            else NoColor
                          in
                          add_ch c ch);
+                  add_ch NoColor '\n')
+         | UnderlinedRow ->
+           content
+           |> List.iter (fun line ->
+                  draw_gutter NoColor "";
+                  line.s |> String.iter (fun ch -> add_ch NoColor ch);
                   add_ch NoColor '\n'));
   Buffer.contents buf
