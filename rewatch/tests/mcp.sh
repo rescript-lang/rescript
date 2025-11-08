@@ -40,3 +40,47 @@ rm -f "$tmpfile"
 echo "$resp" | grep -q '"content":\[' || { error "diagnose did not return content for syntax error"; echo "$resp"; exit 1; }
 
 success "diagnose reports syntax errors with content"
+
+bold "Test: MCP perform-action (single file)"
+
+# ApplyAutomaticMigrationsForCurrentFile on a simple file (should no-op and return OK)
+resp=$(cat <<'JSON' | "$REWATCH_EXECUTABLE" mcp 2>/dev/null
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"perform-action","arguments":{"path":"../testrepo/src/Test.res","actionId":"\"ApplyAutomaticMigrationsForCurrentFile\""}}}
+JSON
+)
+echo "$resp" | grep -q '"isError":true' && { error "perform-action (single file) returned error"; echo "$resp"; exit 1; }
+echo "$resp" | grep -q '"text":"OK"' || { error "perform-action (single file) did not return OK"; echo "$resp"; exit 1; }
+
+success "perform-action (single file) OK"
+
+bold "Test: MCP perform-action (full project)"
+
+# ApplyAutomaticMigrationsForFullProject from a file path (server resolves project root); expect OK
+resp=$(cat <<'JSON' | "$REWATCH_EXECUTABLE" mcp 2>/dev/null
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"perform-action","arguments":{"path":"../testrepo/src/Test.res","actionId":"\"ApplyAutomaticMigrationsForFullProject\""}}}
+JSON
+)
+echo "$resp" | grep -q '"isError":true' && { error "perform-action (full project) returned error"; echo "$resp"; exit 1; }
+echo "$resp" | grep -q '"text":"OK"' || { error "perform-action (full project) did not return OK"; echo "$resp"; exit 1; }
+
+success "perform-action (full project) OK"
+
+bold "Test: MCP perform-action accepts plain string actionId"
+
+# Single file action with plain string (not stringified JSON)
+resp=$(cat <<'JSON' | "$REWATCH_EXECUTABLE" mcp 2>/dev/null
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"perform-action","arguments":{"path":"../testrepo/src/Test.res","actionId":"ApplyAutomaticMigrationsForCurrentFile"}}}
+JSON
+)
+echo "$resp" | grep -q '"isError":true' && { error "perform-action (plain string, single file) returned error"; echo "$resp"; exit 1; }
+echo "$resp" | grep -q '"text":"OK"' || { error "perform-action (plain string, single file) did not return OK"; echo "$resp"; exit 1; }
+
+# Project-wide action with plain string
+resp=$(cat <<'JSON' | "$REWATCH_EXECUTABLE" mcp 2>/dev/null
+{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"perform-action","arguments":{"path":"../testrepo/src/Test.res","actionId":"ApplyAutomaticMigrationsForFullProject"}}}
+JSON
+)
+echo "$resp" | grep -q '"isError":true' && { error "perform-action (plain string, full project) returned error"; echo "$resp"; exit 1; }
+echo "$resp" | grep -q '"text":"OK"' || { error "perform-action (plain string, full project) did not return OK"; echo "$resp"; exit 1; }
+
+success "perform-action accepts plain string actionId"

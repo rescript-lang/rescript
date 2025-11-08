@@ -42,6 +42,8 @@ val set_input_name : string -> unit
 val get_pos_info : Lexing.position -> string * int * int (* file, line, char *)
 val print_loc : formatter -> t -> unit
 
+val draw_underline_in_code_frame : bool ref
+
 val prerr_warning : t -> Warnings.t -> unit
 
 val warning_printer : (t -> formatter -> Warnings.t -> unit) ref
