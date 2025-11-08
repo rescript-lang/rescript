@@ -164,7 +164,7 @@ let print_report ?(custom_intro = None) ?(formatter = Format.err_formatter)
             base
             ^ "\n\n\
               \  The old data-last pipe `|>` has been removed from the language.\n\
-              \  Use a data first `->` pipe instead."
+              \  Use a data-first `->` pipe instead."
           else explain d
         | _ -> explain d
       in
