@@ -1,0 +1,13 @@
+
+  [1;31mSyntax error![0m
+  [36m/.../fixtures/old_reason_array_literal.res[0m:[2m1:10[0m
+
+  [1;31m1[0m [2m│[0m let s = [[1;31m|[0m1, 2, 3|]
+  2 [2m│[0m 
+  3 [2m│[0m 
+
+  I'm not sure what to parse here when looking at "|".
+
+  Did you mean to write an array literal? Arrays are written with `[ ... ]` (not `[| ... |]`).
+  Quick fix: replace `[|` with `[` and `|]` with `]`.
+  Example: `[|1, 2, 3|]` -> `[1, 2, 3]`

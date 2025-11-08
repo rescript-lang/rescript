@@ -28,6 +28,8 @@
 
 #### :nail_care: Polish
 
+- Dedicated error messages for old Reason array literal syntax (`[|` and `|]`), and for the old pipe (`|>`). Primarly intended to help LLMs that might try to use old code patterns. https://github.com/rescript-lang/rescript/pull/8010
+
 #### :house: Internal
 
 - Rename Core to Stdlib in tests/tests. https://github.com/rescript-lang/rescript/pull/8005

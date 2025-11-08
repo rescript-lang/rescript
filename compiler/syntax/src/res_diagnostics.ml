@@ -137,12 +137,43 @@ let print_report ?(custom_intro = None) ?(formatter = Format.err_formatter)
     match diagnostics with
     | [] -> ()
     | d :: rest ->
+      (* A few specializations for best-effort error messages for old syntax etc. *)
+      let msg =
+        match d.category with
+        | Unexpected {token = Token.Bar; _} ->
+          let idx_prev = d.start_pos.pos_cnum - 1 in
+          let idx_next = d.end_pos.pos_cnum in
+          if
+            idx_prev >= 0
+            && idx_prev < String.length src
+            && String.get src idx_prev = '['
+          then
+            let base = explain d in
+            base
+            ^ "\n\n\
+              \  Did you mean to write an array literal? Arrays are written \
+               with `[ ... ]` (not `[| ... |]`)."
+            ^ "\n  Quick fix: replace `[|` with `[` and `|]` with `]`."
+            ^ "\n  Example: `[|1, 2, 3|]` -> `[1, 2, 3]`"
+          else if
+            idx_next >= 0
+            && idx_next < String.length src
+            && String.get src idx_next = '>'
+          then
+            let base = explain d in
+            base
+            ^ "\n\n\
+              \  The old data-last pipe `|>` has been removed from the language.\n\
+              \  Use a data first `->` pipe instead."
+          else explain d
+        | _ -> explain d
+      in
       Location.report_error ~custom_intro ~src:(Some src) formatter
         Location.
           {
             loc =
               {loc_start = d.start_pos; loc_end = d.end_pos; loc_ghost = false};
-            msg = explain d;
+            msg;
             sub = [];
             if_highlight = "";
           };
