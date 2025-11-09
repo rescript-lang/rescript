@@ -32,6 +32,7 @@
 
 - Rename Core to Stdlib in tests/tests. https://github.com/rescript-lang/rescript/pull/8005
 - CI: Build on `windows-2025` runners. https://github.com/rescript-lang/rescript/pull/8006
+- Rewatch: upgrade Rust to 1.91.0. https://github.com/rescript-lang/rescript/pull/8007
 
 # 12.0.0-rc.3
 
