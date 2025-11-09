@@ -112,11 +112,22 @@ jobs:
           path: rewatch/target
           key: rewatch-build-v3-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
 
+      - name: Determine Rust toolchain version
+        id: rust-version
+        shell: bash
+        run: |
+          version="$(awk -F '"' '/^rust-version[[:space:]]*=/ { print $2; exit }' rewatch/Cargo.toml)"
+          if [ -z "$version" ]; then
+            echo "rust-version missing in rewatch/Cargo.toml" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
       - name: Install rust toolchain
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.91.0
+          toolchain: ${{ steps.rust-version.outputs.version }}
           targets: ${{ matrix.rust-target }}
           components: clippy, rustfmt
 
