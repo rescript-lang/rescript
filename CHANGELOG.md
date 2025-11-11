@@ -20,6 +20,8 @@
 
 #### :rocket: New Feature
 
+- Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
+
 #### :bug: Bug fix
 
 - Fix fatal compiler error that occurred when an `%ffi` extension point contained invalid JavaScript https://github.com/rescript-lang/rescript/pull/7998
