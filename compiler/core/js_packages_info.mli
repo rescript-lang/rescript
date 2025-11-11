@@ -50,6 +50,9 @@ val is_empty : t -> bool
 
 val dump_packages_info : Format.formatter -> t -> unit
 
+val module_system_of_string : string -> module_system option
+(** Parse module system from string (commonjs, esmodule, es6, es6-global) *)
+
 val add_npm_package_path : t -> string -> t
 (** used by command line option 
     e.g [-bs-package-output commonjs:xx/path]

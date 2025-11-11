@@ -84,6 +84,10 @@ val jsx_preserve : bool ref
 
 val js_stdout : bool ref
 
+val default_module_system : Ext_module_system.t ref
+
+val default_suffix : string ref
+
 val all_module_aliases : bool ref
 
 val no_stdlib : bool ref
