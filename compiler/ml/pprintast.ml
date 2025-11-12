@@ -625,11 +625,14 @@ and expression ctxt f x =
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l
-    | Pexp_try (e, l) ->
-      pp f "@[<0>@[<hv2>try@ %a@]@ @[<0>with%a@]@]"
-        (* "try@;@[<2>%a@]@\nwith@\n%a"*)
-        (expression reset_ctxt)
-        e (case_list ctxt) l
+    | Pexp_try (e, l, finally_expr) -> (
+      pp f "@[<0>@[<hv2>try@ %a@]" (expression reset_ctxt) e;
+      (* Print "with" part conditionally *)
+      if l <> [] then pp f " @[<0>with%a@]" (case_list ctxt) l;
+      (* Print "finally" part conditionally *)
+      match finally_expr with
+      | Some expr -> pp f " finally@ %a@]" (expression reset_ctxt) expr
+      | None -> pp f "@]")
     | Pexp_let (rf, l, e) ->
       (* pp f "@[<2>let %a%a in@;<1 -2>%a@]"
          (*no indentation here, a new line*) *)
