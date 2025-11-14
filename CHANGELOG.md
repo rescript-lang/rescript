@@ -10,21 +10,15 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-rc.4 (Unreleased)
+# 12.0.0-rc.4
 
 #### :boom: Breaking Change
 
-- Fix some Intl bindings (`Intl.Collator.supportedLocalesOf`, `Intl.DateTimeFormat.supportedLocalesOf`, `Intl.ListFormat.supportedLocalesOf`, `Intl.NumberFormat.supportedLocalesOf`, `Intl.PluralRules.supportedLocalesOf`, `Intl.RelativeTimeFormat.supportedLocalesOf`, `Intl.Segmenter.supportedLocalesOf`) which return `array<string>` and not their corresponding main type `t`. Also remove `Intl.PluralRules.selectBigInt` and `Intl.PluralRules.selectRangeBigInt` which don't work in many JS runtimes. https://github.com/rescript-lang/rescript/pull/7995
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
+- Fix some `Intl` bindings (`Intl.Collator.supportedLocalesOf`, `Intl.DateTimeFormat.supportedLocalesOf`, `Intl.ListFormat.supportedLocalesOf`, `Intl.NumberFormat.supportedLocalesOf`, `Intl.PluralRules.supportedLocalesOf`, `Intl.RelativeTimeFormat.supportedLocalesOf`, `Intl.Segmenter.supportedLocalesOf`) which return `array<string>` and not their corresponding main type `t`. Also remove `Intl.PluralRules.selectBigInt` and `Intl.PluralRules.selectRangeBigInt` which don't work in many JS runtimes. https://github.com/rescript-lang/rescript/pull/7995
 
 #### :bug: Bug fix
 
-- Fix fatal compiler error that occurred when an `%ffi` extension point contained invalid JavaScript https://github.com/rescript-lang/rescript/pull/7998
-
-#### :memo: Documentation
+- Fix fatal compiler error that occurred when an `%ffi` extension point contained invalid JavaScript. https://github.com/rescript-lang/rescript/pull/7998
 
 #### :nail_care: Polish
 
@@ -32,7 +26,7 @@
 
 #### :house: Internal
 
-- Rename Core to Stdlib in tests/tests. https://github.com/rescript-lang/rescript/pull/8005
+- Rename `Core` to `Stdlib` in tests/tests. https://github.com/rescript-lang/rescript/pull/8005
 - CI: Build on `windows-2025` runners. https://github.com/rescript-lang/rescript/pull/8006
 - Rewatch: upgrade Rust to 1.91.0. https://github.com/rescript-lang/rescript/pull/8007
 
