@@ -10,7 +10,7 @@
  (package analysis)
  (modes byte exe)
  (name main)
- (libraries analysis))
+ (libraries analysis skip_reactive))
 
 (executable
  (name reactive_repl)

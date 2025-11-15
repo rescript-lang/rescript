@@ -13,6 +13,9 @@ Link the editor analysis binary against the Skip runtime on macOS, provide a smo
 - **Skip Runtime Vendoring**
   - `scripts/build_skip_runtime.sh` builds the locally checked-out `skip-ocaml` (authenticated via `SKIP_OCAML_SRC` env var, defaults to `~/GitHub/skip-ocaml`).
   - Only `libskip_reactive.a` is copied into `analysis/bin/skip_runtime/` (ignored by git). No cross-repo linking remains.
+- **Compiler Integration**
+  - `rescript-editor-analysis` now links against `skip_reactive`, so every build already includes the Skip runtime bits even before the reactive path is used.
+  - `make compiler` depends on the `analysis/bin/skip_runtime/.stamp` produced by `make skip-runtime`, ensuring the runtime artifacts are rebuilt (and the `reactive_repl` smoke test is recompiled) before the analysis binary.
 - **OCaml Bridge**
   - Added `analysis/skip_runtime/{dune,reactive.ml}` providing a `skip_reactive` dune library. The OCaml runtime wrapper is copied from `skip-ocaml` and linked with `unix` plus the vendored static library.
 - **Smoke Test**

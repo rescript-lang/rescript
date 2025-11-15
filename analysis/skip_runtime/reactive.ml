@@ -40,7 +40,7 @@ let fork_n_processes2 _n closure =
   skip_setup_local ();
   Fun.protect
     ~finally:(fun () -> toplevel := true)
-    ~f:(fun () ->
+    (fun () ->
       while skip_process_element closure <> 0 do
         ()
       done)
@@ -84,6 +84,16 @@ let fork_n_processes n closure =
     child_pids;
   toplevel := true
 
+let () =
+  if false then (
+    protect_memory_rw ();
+    skip_write "" "";
+    let dummy_closure : string -> (string * string array) array =
+      fun _ -> [||]
+    in
+    fork_n_processes2 0 dummy_closure
+  )
+
 type 'a t = string
 type filename = string
 type key = string
@@ -97,7 +107,7 @@ let read_file filename _tracker =
   let ic = open_in_bin filename in
   Fun.protect
     ~finally:(fun () -> close_in ic)
-    ~f:(fun () ->
+    (fun () ->
       let len = in_channel_length ic in
       really_input_string ic len)
 
