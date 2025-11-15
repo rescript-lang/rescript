@@ -103,5 +103,5 @@ package.tgz
 
 # AI Agents
 .claude/settings.local.json
-dead_code_analysis.aux
-dead_code_analysis.toc
+*.aux
+*.toc
