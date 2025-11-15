@@ -1,5 +1,43 @@
 open Common
 
+let baselineMetricsPath = ref None
+let baselineProcessedFiles = ref 0
+
+let set_baseline_metrics path = baselineMetricsPath := Some path
+
+let increment_baseline_file_count () =
+  match !baselineMetricsPath with
+  | Some _ -> incr baselineProcessedFiles
+  | None -> ()
+
+let mkdir_p path =
+  let rec aux dir =
+    if dir = "" || dir = Filename.dir_sep then ()
+    else if Sys.file_exists dir then ()
+    else (
+      aux (Filename.dirname dir);
+      Unix.mkdir dir 0o755)
+  in
+  aux path
+
+let write_baseline_metrics elapsed =
+  match !baselineMetricsPath with
+  | None -> ()
+  | Some path ->
+      let dir = Filename.dirname path in
+      if dir <> "" && dir <> "." then mkdir_p dir;
+      let oc = open_out path in
+      (try
+         let timestamp = Unix.gettimeofday () in
+         Printf.fprintf oc
+           "{ \"files\": %d, \"wall_time_seconds\": %.6f, \"timestamp\": %.0f \
+            }\n"
+           !baselineProcessedFiles elapsed timestamp;
+         close_out oc
+       with exn ->
+         close_out_noerr oc;
+         raise exn)
+
 let loadCmtFile cmtFilePath =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
@@ -32,6 +70,7 @@ let loadCmtFile cmtFilePath =
       !currentModule
       |> Name.create ~isInterface:(Filename.check_suffix !currentSrc "i");
     if runConfig.dce then cmt_infos |> DeadCode.processCmt ~cmtFilePath;
+    increment_baseline_file_count ();
     if runConfig.exception_ then cmt_infos |> Exception.processCmt;
     if runConfig.termination then cmt_infos |> Arnold.processCmt
   | _ -> ()
@@ -96,12 +135,24 @@ let runAnalysis ~cmtRoot =
   if runConfig.termination && !Common.Cli.debug then Arnold.reportStats ()
 
 let runAnalysisAndReport ~cmtRoot =
+  let baseline_start =
+    match !baselineMetricsPath with
+    | Some _ ->
+        baselineProcessedFiles := 0;
+        Some (Unix.gettimeofday ())
+    | None -> None
+  in
   Log_.Color.setup ();
   if !Common.Cli.json then EmitJson.start ();
   runAnalysis ~cmtRoot;
   Log_.Stats.report ();
   Log_.Stats.clear ();
-  if !Common.Cli.json then EmitJson.finish ()
+  if !Common.Cli.json then EmitJson.finish ();
+  (match baseline_start with
+  | Some start_time ->
+      let elapsed = Unix.gettimeofday () -. start_time in
+      write_baseline_metrics elapsed
+  | None -> ())
 
 let cli () =
   let analysisKindSet = ref false in
@@ -142,6 +193,9 @@ let cli () =
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
       ("-dce", Unit (fun () -> setDCE None), "Experimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
+      ( "--baseline-metrics",
+        String (fun path -> set_baseline_metrics path),
+        "path Write baseline metrics JSON (files, wall_time_seconds) to path" );
       ( "-dce-cmt",
         String (fun s -> setDCE (Some s)),
         "root_path Experimental DCE for all the .cmt files under the root path"

@@ -156,6 +156,11 @@ clean-lib:
 	yarn workspace @rescript/runtime rescript clean
 	rm -f $(RUNTIME_BUILD_STAMP)
 
+.PHONY: skip-runtime
+skip-runtime:
+	./scripts/build_skip_runtime.sh
+	dune build analysis/bin/reactive_repl.exe
+
 # Artifact list
 
 artifacts: lib

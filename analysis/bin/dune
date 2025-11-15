@@ -3,9 +3,17 @@
   (flags
    (:standard -ccopt -static))))
 
+(data_only_dirs skip_runtime)
+
 (executable
  (public_name rescript-editor-analysis)
  (package analysis)
  (modes byte exe)
  (name main)
  (libraries analysis))
+
+(executable
+ (name reactive_repl)
+ (modes exe)
+ (modules reactive_repl)
+ (libraries skip_reactive))
