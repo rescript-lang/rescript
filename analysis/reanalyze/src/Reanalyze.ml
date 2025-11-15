@@ -140,7 +140,7 @@ let cli () =
          path" );
       ("-ci", Unit (fun () -> Cli.ci := true), "Internal flag for use in CI");
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
-      ("-dce", Unit (fun () -> setDCE None), "Eperimental DCE");
+      ("-dce", Unit (fun () -> setDCE None), "Experimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
       ( "-dce-cmt",
         String (fun s -> setDCE (Some s)),
