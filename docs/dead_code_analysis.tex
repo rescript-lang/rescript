@@ -1,0 +1,325 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{seqsplit}
+\setlength{\emergencystretch}{2em}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\title{Dead Code Analysis in Reanalyze: Architecture, Algorithm, and Implementation}
+\author{Codex}
+\date{\today}
+\newcommand{\implref}[1]{\href{run:#1}{\nolinkurl{#1}}}
+\newcommand{\code}[1]{\texttt{\seqsplit{#1}}}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This paper presents a comprehensive description of the dead code analysis performed by the \code{reanalyze} tool that ships with the ReScript compiler. We describe the inputs, intermediate structures, algorithms, and outputs in sufficient detail that an experienced engineer could reconstruct the analysis. Every major concept is tied directly to the implementation in the repository via inline references.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+The ReScript compiler ecosystem includes \code{reanalyze}, a static analysis tool that provides dead code detection, exception analysis, and termination checks. When the dead code elimination (DCE) mode is enabled, \code{reanalyze} consumes OCaml typed artifacts (\code{.cmt/.cmti}) and produces warnings, JSON reports, or inline annotations describing unused values, types, exceptions, and modules. The relevant entry point is the CLI defined in \implref{analysis/reanalyze/src/Reanalyze.ml} (function \code{cli}), which wires command-line switches to the \code{RunConfig} structure and orchestrates loading of compilation metadata.
+
+This document explains the entire DCE pipeline:
+\begin{enumerate}[label=\alph*., leftmargin=*]
+  \item Inputs and configuration options and how they propagate through the system.
+  \item Core data structures that capture declarations, references, and annotations.
+  \item The algorithm for collection, dependency analysis, liveness resolution, and reporting.
+  \item The mapping between conceptual stages and actual OCaml modules/files.
+  \item A detailed walkthrough of the pipeline from invocation to output.
+\end{enumerate}
+
+\paragraph{Reference stability.} Code links point to the relevant modules (rather than fixed line numbers) because the compiler is under active development; checking the latest revision of the cited files is recommended when cross-referencing behavior.
+
+\section{System Overview}
+\subsection{Inputs}
+Dead code analysis operates on:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Typed Artifacts}: \code{.cmt} and \code{.cmti} files produced by the compiler for implementation and interface units. The CLI optionally accepts a root directory via \code{-dce-cmt} (defined in the \code{speclist} inside \implref{analysis/reanalyze/src/Reanalyze.ml}) to scan for these files.
+  \item \textbf{Project Metadata}: The ReScript project root and generated \code{lib/bs} tree, computed by \code{processCmtFiles} in \implref{analysis/reanalyze/src/Reanalyze.ml}, provide per-source-directory artifact locations.
+  \item \textbf{Configuration Flags}: \implref{analysis/reanalyze/src/RunConfig.ml} defines mutable flags such as \code{dce}, \code{transitive}, and suppression lists. Command-line parsing in \implref{analysis/reanalyze/src/Reanalyze.ml} mutates these settings.
+  \item \textbf{Annotation Lists}: Users may specify globally live names/paths through \code{-live-names}, \code{-live-paths}, and exclusion lists (implemented in \implref{analysis/reanalyze/src/Common.ml}).
+\end{itemize}
+
+\subsection{Outputs}
+Depending on CLI flags, the analyzer emits:
+\begin{itemize}[leftmargin=*]
+  \item Human-readable warnings via the generic logging helpers in \implref{analysis/reanalyze/src/Log_.ml}; dead-code specific warnings are constructed in \implref{analysis/reanalyze/src/DeadCommon.ml}.
+  \item Optional JSON diagnostics through \implref{analysis/reanalyze/src/EmitJson.ml}, enabled when the \code{-json} flag (handled in \implref{analysis/reanalyze/src/Reanalyze.ml}) is set.
+  \item Inline suppression annotations inserted directly into source files when \code{-write} is supplied; this is implemented in \implref{analysis/reanalyze/src/WriteDeadAnnotations.ml}.
+  \item Statistical summaries for debugging (files analyzed, warnings emitted) via \code{Log\_.Stats} inside \code{runAnalysisAndReport} (\implref{analysis/reanalyze/src/Reanalyze.ml}); these are independent of JSON emission.
+\end{itemize}
+
+The \code{-json} and \code{-write} flags are orthogonal: JSON reports can be generated without touching source files, and annotation writes only occur when explicitly requested.
+
+\section{Core Data Structures}
+\subsection{Declaration Registry}
+All exported declarations are tracked in a positional hash table declared at \implref{analysis/reanalyze/src/DeadCommon.ml:61}. The helper \code{addDeclaration\_} in \implref{analysis/reanalyze/src/DeadCommon.ml:357} inserts entries with:
+\begin{itemize}[leftmargin=*]
+  \item Kind (\code{Value}, \code{RecordLabel}, \code{VariantCase}, \code{Exception}) defined in \implref{analysis/reanalyze/src/Common.ml:166}.
+  \item Module path (list of \code{Name.t}) describing nested modules.
+  \item Lexical span (\code{posStart}, \code{posEnd}) and annotation metadata (\code{posAdjustment}, \code{resolvedDead} flag).
+\end{itemize}
+Value declarations are added via \implref{analysis/reanalyze/src/DeadCommon.ml:398} (called from \code{collectValueBinding}); the helper threads the current \code{ModulePath}, captures side-effect metadata, and stores optional-argument summaries for later diagnostics.
+
+\subsection{Reference Graphs}
+Two positional graphs record references:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Value References}: \code{ValueReferences.table} at \implref{analysis/reanalyze/src/DeadCommon.ml:63} maps target positions to sets of source positions. Edges are added by \code{addValueReference} (\implref{analysis/reanalyze/src/DeadCommon.ml:91}).
+  \item \textbf{Type References}: \code{TypeReferences.table} (\implref{analysis/reanalyze/src/DeadCommon.ml:71}) records usages of record labels and variant constructors, populated by \code{DeadType} (Section~\ref{subsec:deadtype}).
+\end{itemize}
+
+\subsection{File Dependency DAG}
+\code{Common.FileReferences} (\implref{analysis/reanalyze/src/Common.ml:55}) stores cross-file edges between source files. The procedure \code{iterFilesFromRootsToLeaves} (\implref{analysis/reanalyze/src/DeadCommon.ml:110}) topologically orders files based on these edges, ensuring downstream passes respect transitive liveness constraints.
+
+\subsection{Annotation Index}
+The module \code{ProcessDeadAnnotations} (\implref{analysis/reanalyze/src/DeadCommon.ml:186}) records which positions carry \code{@dead}, \code{@live}, or \code{@gentype} attributes. This informs liveness decisions (Section~\ref{sec:liveness}) and determines whether to auto-insert new annotations via \code{WriteDeadAnnotations}.
+
+\subsection{Optional Argument Model}
+\code{Common.OptionalArgs} defines a structure that tracks call counts, unused optional labels, and always-supplied labels for each function (\implref{analysis/reanalyze/src/Common.ml:129}). \code{DeadOptionalArgs} builds on this to record references and emit dedicated warnings for unused or redundant optional arguments (\implref{analysis/reanalyze/src/DeadOptionalArgs.ml:84}).
+
+\subsection{Module Context Tracking}
+\code{ModulePath} (\implref{analysis/reanalyze/src/ModulePath.ml}) maintains the current module stack and source locations while traversing nested modules. Every declaration recorded by \code{DeadCommon.addDeclaration\_} uses \code{ModulePath.getCurrent} to embed the fully-qualified module path, ensuring that warnings point to the correct namespace even when modules are opened or nested deeply.
+
+\subsection{Module-Level Liveness}
+\code{DeadModules} (\implref{analysis/reanalyze/src/DeadModules.ml:7}) maintains a map from module names to a boolean indicating whether any live declarations were seen. When all items in a module remain dead, \code{checkModuleDead} (\implref{analysis/reanalyze/src/DeadModules.ml:22}) reports a module-level warning.
+
+\subsection{Suppression Writer}
+\code{WriteDeadAnnotations} maintains per-file buffers describing pending \code{@dead} insertions (\implref{analysis/reanalyze/src/WriteDeadAnnotations.ml:23}). Each buffer line stores the original text plus the declarations to annotate, allowing the tool to emit consistent suppression text for ReScript and OCaml sources alike (\implref{analysis/reanalyze/src/WriteDeadAnnotations.ml:28}).
+
+\section{Algorithm}
+\label{sec:algorithm}
+The dead code analysis algorithm comprises five phases (Figure~\ref{fig:phases}).
+
+\begin{figure}[h]
+\centering
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Collection}: Traverse typed trees to record declarations and direct references.
+  \item \textbf{Reference Enrichment}: Fold compiler-generated dependency metadata and delayed queues (optional args, types, exceptions) into the graphs.
+  \item \textbf{Dependency Ordering}: Build a file-level DAG to determine analysis order.
+  \item \textbf{Liveness Resolution}: Recursively solve for dead declarations with cycle handling and annotation awareness.
+  \item \textbf{Reporting \& Annotation}: Emit warnings, JSON entries, module-level diagnostics, and optional inline suppressions.
+\end{enumerate}
+\caption{High-level dead code analysis phases.}
+\label{fig:phases}
+\end{figure}
+
+\subsection{Collection Phase}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Load CMT/CMTI}: \code{loadCmtFile} in \implref{analysis/reanalyze/src/Reanalyze.ml} reads the artifact, resolves its source file, and sets global state (\code{currentSrc}, \code{currentModuleName}, etc.).
+  \item \textbf{Process Annotations}: \code{ProcessDeadAnnotations.signature} or \code{structure} (defined in \implref{analysis/reanalyze/src/DeadCommon.ml}) is invoked before the main traversal to tag declarations that have \code{@dead}, \code{@live}, or \code{@gentype}. These tags influence every later phase, so the annotation pass must run before \code{DeadValue} or \code{DeadType} touch the tree.
+  \item \textbf{Traverse Typed Tree}: For implementation artifacts (\code{.cmt}), \code{DeadValue.traverseStructure} (assembled in \implref{analysis/reanalyze/src/DeadValue.ml}) walks expressions, patterns, and structure items. For interfaces (\code{.cmti}), \code{DeadCode.processSignature} handles the signature nodes. Each \code{value\_binding} triggers \code{collectValueBinding}, which registers the declaration and optional arguments via \code{DeadOptionalArgs.fromTypeExpr}.
+  \item \textbf{Record References}: Expression nodes delegate to \code{collectExpr} (\implref{analysis/reanalyze/src/DeadValue.ml:114}), which adds edges for identifier uses, optional argument applications, exception constructors, and type field accesses.
+  \item \textbf{Type Collection}: \code{DeadType.addDeclaration} (\implref{analysis/reanalyze/src/DeadType.ml:82}) registers record labels and variant constructors, while \code{addTypeReference} (\implref{analysis/reanalyze/src/DeadType.ml:14}) records their usages.
+\end{enumerate}
+
+\subsection{Reference Enrichment}
+After traversal, the analyzer processes delayed queues:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Value Dependencies}: The compiler-provided \code{cmt\_value\_dependencies} list is replayed by \implref{analysis/reanalyze/src/DeadValue.ml:386} to merge aliasing information (e.g., eta-expansion wrappers) via \code{processValueDependency} (\implref{analysis/reanalyze/src/DeadValue.ml:368}).
+  \item \textbf{Optional Arguments}: \code{DeadOptionalArgs.forceDelayedItems} (\implref{analysis/reanalyze/src/DeadOptionalArgs.ml:64}) updates per-function usage counts.
+  \item \textbf{Exceptions}: Deferred exception references are resolved by \implref{analysis/reanalyze/src/DeadException.ml:16}.
+  \item \textbf{Types}: \code{DeadType.TypeDependencies.forceDelayedItems} processes the queued cross-file type dependencies recorded earlier (\implref{analysis/reanalyze/src/DeadType.ml:31}).
+\end{itemize}
+
+\subsection{Dependency Ordering}
+\code{iterFilesFromRootsToLeaves} (\implref{analysis/reanalyze/src/DeadCommon.ml:110}) builds a priority order of files based on \code{Common.FileReferences}. Each file’s incoming edge count determines when it can be processed; zero-degree files run first, and cycles are optionally reported (\implref{analysis/reanalyze/src/DeadCommon.ml:163}). The resulting order is stored in a hash table and used by \code{Decl.compareUsingDependencies} (\implref{analysis/reanalyze/src/DeadCommon.ml:446}) to sort declarations prior to resolution.
+
+\subsection{Liveness Resolution}
+\label{sec:liveness}
+For each declaration:
+\begin{enumerate}[leftmargin=*]
+  \item Fetch the appropriate reference set (value or type) via \code{Decl.isValue} (\implref{analysis/reanalyze/src/DeadCommon.ml:436}).
+  \item Invoke \code{resolveRecursiveRefs} (\implref{analysis/reanalyze/src/DeadCommon.ml:588}) with an empty set of ``currently resolving'' positions.
+  \item During recursion, if a declaration is revisited (cycle), the algorithm assumes it is dead until evidence surfaces, preventing infinite loops.
+  \item References pointing to annotated positions are filtered out: \code{declIsDead} (\implref{analysis/reanalyze/src/DeadCommon.ml:578}) removes references to entities marked \code{@dead} and aborts reporting when \code{@live} or \code{@gentype} is present.
+  \item Once a declaration is definitively dead, it is added to the dead list and \code{DeadModules.markDead} is notified. Live declarations trigger \code{DeadModules.markLive} and optional-argument post-processing (\implref{analysis/reanalyze/src/DeadCommon.ml:654}).
+\end{enumerate}
+
+\subsection{Reporting and Annotation}
+After resolution:
+\begin{itemize}[leftmargin=*]
+  \item Dead declarations are sorted by file/position (\implref{analysis/reanalyze/src/DeadCommon.ml:714}) and fed to \code{Decl.report} (\implref{analysis/reanalyze/src/DeadCommon.ml:521}), which determines the warning type and message.
+  \item \code{emitWarning} (\implref{analysis/reanalyze/src/DeadCommon.ml:405}) logs diagnostics, optionally adds inline annotations via \code{WriteDeadAnnotations.addLineAnnotation} (\implref{analysis/reanalyze/src/WriteDeadAnnotations.ml:139}), and triggers module-level checks.
+  \item \code{WriteDeadAnnotations.write} flushes buffered edits if \code{Cli.write} is enabled (\implref{analysis/reanalyze/src/WriteDeadAnnotations.ml:154}).
+  \item \code{DeadOptionalArgs.check} (\implref{analysis/reanalyze/src/DeadOptionalArgs.ml:84}) emits specific warnings for unused or always-supplied optional parameters on live functions.
+\end{itemize}
+
+The \code{Suppress} module (\implref{analysis/reanalyze/src/Suppress.ml}) mediates whether a warning can be silenced or annotated at a location, so every call to \code{emitWarning} first consults \code{Suppress.filter} before attaching a suggested \code{@dead}.
+
+\section{Implementation Mapping}
+\subsection{CLI and Configuration}
+\code{Reanalyze.cli} (\implref{analysis/reanalyze/src/Reanalyze.ml}) parses CLI flags, toggles run modes (\implref{analysis/reanalyze/src/RunConfig.ml:24}), and sets debugging or JSON options (\implref{analysis/reanalyze/src/Common.ml:14}). Each subcommand (\code{-dce}, \code{-all}, \code{-config}) calls helper setters that mutate \code{RunConfig.runConfig}.
+
+\subsection{DeadCode Dispatcher}
+\code{DeadCode.processCmt} (\implref{analysis/reanalyze/src/DeadCode.ml}) is the bridge between the CLI and the individual analysis modules: it pattern-matches on \code{cmt\_annots}, runs \code{ProcessDeadAnnotations}, and then invokes \code{DeadValue.processStructure} / \code{processSignature} plus the associated \code{DeadType} and \code{DeadOptionalArgs} hooks. In other words, all per-file work originates in \code{DeadCode}, while the specialized modules focus on their respective AST slices.
+
+\subsection{Value Collection}
+The key routines reside in \code{DeadValue.ml}:
+\begin{itemize}[leftmargin=*]
+  \item \code{collectValueBinding} (\implref{analysis/reanalyze/src/DeadValue.ml:18}) records declaration metadata, optional arguments, and side-effect analysis.
+  \item \code{collectExpr} (\implref{analysis/reanalyze/src/DeadValue.ml:114}) adds edges for identifier uses, optional argument applications, field accesses, constructor calls, and custom cases such as lower-case JSX placeholders.
+  \item \code{traverseStructure} assembles a \code{Tast\_mapper} with custom hooks for expressions, patterns, and structure items (\implref{analysis/reanalyze/src/DeadValue.ml:360}).
+  \item \code{processValueDependency} integrates compiler-provided alias data to ensure references reflect inlining and eta-expansion artifacts (\implref{analysis/reanalyze/src/DeadValue.ml:368}).
+\end{itemize}
+
+\subsection{Type Handling}
+\label{subsec:deadtype}
+\code{DeadType.ml} captures record labels and variant constructors:
+\begin{itemize}[leftmargin=*]
+  \item \code{TypeLabels} caches label locations, enabling cross-file dependency tracking (\implref{analysis/reanalyze/src/DeadType.ml:6}).
+  \item \code{addDeclaration} (\implref{analysis/reanalyze/src/DeadType.ml:82}) emits declarations for each label/constructor, accounting for inline records and ReScript-specific position adjustments.
+  \item \code{addTypeDependenciesAcrossFiles} and \code{addTypeDependenciesInnerModule} (\implref{analysis/reanalyze/src/DeadType.ml:43}) ensure interface/implementation references are linked so that a label defined only in one file is treated correctly.
+\end{itemize}
+
+\subsection{Optional Arguments and Exceptions}
+\code{DeadOptionalArgs.ml} implements delayed tracking of optional parameter usage (\implref{analysis/reanalyze/src/DeadOptionalArgs.ml:49}). The delay exists because whether an optional parameter is supplied can only be determined while scanning call expressions, yet the function's declaration (and its optional-argument metadata) might be in a different file. The queued data is therefore replayed after every file has been processed, at which point \code{Common.OptionalArgs} combines the call information with the declaration metadata to decide whether a parameter is unused or always supplied (\implref{analysis/reanalyze/src/Common.ml:129}). \code{DeadException} handles exceptions defined in one module but referenced elsewhere (\implref{analysis/reanalyze/src/DeadException.ml:9}); ghost-located references are deferred until all files finish processing (\implref{analysis/reanalyze/src/DeadException.ml:16}).
+
+\subsection{Central Resolver}
+\code{DeadCommon.ml} contains:
+\begin{itemize}[leftmargin=*]
+  \item Global tables for declarations and references (\implref{analysis/reanalyze/src/DeadCommon.ml:61}).
+  \item Annotation processing (\implref{analysis/reanalyze/src/DeadCommon.ml:211}).
+  \item File ordering (\implref{analysis/reanalyze/src/DeadCommon.ml:110}).
+  \item Liveness solver (\implref{analysis/reanalyze/src/DeadCommon.ml:588}).
+  \item Reporting helpers (\implref{analysis/reanalyze/src/DeadCommon.ml:521}).
+\end{itemize}
+
+\subsection{Output Modules}
+\begin{sloppypar}
+\code{WriteDeadAnnotations} manages inline edits (\implref{analysis/reanalyze/src/WriteDeadAnnotations.ml:23}), \code{EmitJson} produces machine-readable output (\implref{analysis/reanalyze/src/EmitJson.ml:1}), and \code{Log\_} plus \code{Issues} modules normalize diagnostics for the CLI.
+\end{sloppypar}
+
+\section{Pipeline Walkthrough}
+Consider running \code{reanalyze -dce} in a ReScript project:
+\begin{enumerate}[leftmargin=*]
+  \item The CLI sets \code{RunConfig.dce} and resolves the project root (\implref{analysis/reanalyze/src/Reanalyze.ml}).
+  \item Each source directory under \code{lib/bs} is enumerated; for every \code{.cmt/.cmti}, \code{loadCmtFile} sets \code{currentSrc} and \code{currentModuleName}, then triggers \code{DeadCode.processCmt}.
+  \item During traversal, value declarations and references funnel into global tables via \code{addValueDeclaration} and \code{addValueReference}.
+  \item After traversal, delayed optional argument, exception, and type dependencies are flushed.
+  \item Once all files are scanned, \code{iterFilesFromRootsToLeaves} orders the files, \code{Decl.compareUsingDependencies} sorts declarations, and \code{resolveRecursiveRefs} determines deadness.
+  \item Dead declarations trigger warnings and optional inline annotations; modules with only dead items emit module-level warnings. Optional argument diagnostics run on live functions.
+\item If \code{-write} was set, buffered \code{@dead} annotations are committed to disk.
+\end{enumerate}
+
+\section{Module Dependency Overview}
+\begin{figure}[h]
+\centering
+\begin{verbatim}
+Reanalyze.cli
+    |
+    v
+DeadCode.processCmt
+    |
+    +-- ProcessDeadAnnotations
+    +-- DeadValue  --> DeadOptionalArgs
+    +-- DeadType   --> TypeDependencies
+    +-- DeadException
+    +-- ModulePath / DeadCommon tables
+                |
+                v
+         DeadCommon.reportDead --> Log_.warning / EmitJson
+\end{verbatim}
+\caption{High-level dependency graph between the major analysis modules.}
+\end{figure}
+
+\section{End-to-End Pseudocode}
+The following pseudocode captures the control flow when running with the default configuration (DCE enabled, JSON reporting on, no inline annotation writes). The only runtime inputs are the compiler artifacts (\code{.cmt/.cmti} files), and the sole output is the JSON file produced by \code{EmitJson}.
+
+\begin{verbatim}
+(* Default configuration: DCE on, JSON on, no writes *)
+let run_default ~project_root =
+  RunConfig.dce ();
+  Cli.json := true;
+  Cli.write := false;
+  EmitJson.start ();
+
+  let rec walk dir =
+    if Sys.is_directory dir then
+      Sys.readdir dir
+      |> Array.iter (fun entry -> walk (Filename.concat dir entry))
+    else if Filename.check_suffix dir ".cmt"
+         || Filename.check_suffix dir ".cmti"
+    then load_cmt dir
+  and load_cmt path =
+    let infos = Cmt_format.read_cmt path in
+    match infos.cmt_annots with
+    | Implementation structure ->
+        let cmti_exists =
+          Sys.file_exists (Filename.remove_extension path ^ ".cmti") in
+        ProcessDeadAnnotations.structure ~doGenType:(not cmti_exists) structure;
+        DeadValue.processStructure
+          ~doTypes:true ~doExternals:false
+          ~cmt_value_dependencies:infos.cmt_value_dependencies structure;
+        DeadType.TypeDependencies.forceDelayedItems ();
+        DeadType.TypeDependencies.clear ()
+    | Interface signature ->
+        ProcessDeadAnnotations.signature signature;
+        DeadCode.processSignature ~doValues:true ~doTypes:true signature.sig_type
+    | _ -> ()
+  in
+
+  walk (Filename.concat project_root "lib/bs");
+
+  DeadException.forceDelayedItems ();
+  DeadOptionalArgs.forceDelayedItems ();
+  DeadCommon.reportDead ~checkOptionalArg:DeadOptionalArgs.check;
+  Log_.Stats.report ();  (* also writes to JSON because Cli.json = true *)
+  EmitJson.finish ()
+\end{verbatim}
+
+This pseudocode now mirrors the production modules: \code{DeadCode.processCmt} wraps the same operations shown above, the collectors rely on the \code{DeadValue} and \code{DeadType} traversals, and JSON output piggybacks on the standard logging pipeline whenever \code{Cli.json} is enabled.
+
+\section{Dead Code Examples}
+\subsection*{ReScript surface syntax}
+\begin{verbatim}
+module UserStats = {
+  let activeCount = fetchActive ()
+  let unusedValue = expensiveComputation()
+  let getActive () = activeCount
+}
+
+let _ = UserStats.getActive ()
+\end{verbatim}
+The analyzer marks \code{UserStats.unusedValue} as dead (no references survive traversal) while keeping \code{activeCount} alive because it feeds \code{getActive}. If \code{-write} is enabled, the tool suggests inserting \code{@dead("UserStats.unusedValue")} next to the declaration.
+
+\subsection*{OCaml-typed tree representation}
+\begin{verbatim}
+let unused_value =
+  let open UserStats in
+  let v = expensiveComputation () in
+  v
+\end{verbatim}
+After translating the ReScript source to the OCaml typed tree, \code{unused\_value} appears as a standalone \code{value\_binding}. Because no downstream \code{Texp\_ident} references point at its location, \code{DeadCommon.declIsDead} returns \code{true} and the value is reported (or auto-annotated) as removable.
+
+\section{Reconstruction and Extension}
+To rebuild or extend the analyzer:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Typed Tree Access}: Implement a walker mirroring \code{DeadValue.traverseStructure}, ensuring you capture the same metadata (locations, optional args, side effects).
+  \item \textbf{Data Stores}: Recreate the declaration and reference tables (\implref{analysis/reanalyze/src/DeadCommon.ml:61}) along with annotation tracking (\implref{analysis/reanalyze/src/DeadCommon.ml:186}).
+  \item \textbf{Dependency Management}: Mirror \code{iterFilesFromRootsToLeaves} and \code{Decl.compareUsingDependencies} to maintain deterministic ordering.
+  \item \textbf{Solver}: Port \code{resolveRecursiveRefs} and the surrounding helpers to preserve cycle handling, annotation semantics, and module-level reporting.
+  \item \textbf{Diagnostics}: Implement optional argument and exception-specific checks if parity with the existing tooling is required.
+\end{enumerate}
+
+\section{Testing and Validation}
+Reanalyze integrates with the broader ReScript test suite, but dedicated validation can follow these steps:
+\begin{itemize}[leftmargin=*]
+  \item \code{make test-analysis} runs the analysis-specific tests described in \code{AGENTS.md}.
+  \item Synthetic projects can be placed in \code{tests/analysis\_tests} to ensure new features are covered.
+  \item For regression scenarios, create small \code{.res/.resi} files, run \code{reanalyze -dce -write}, and inspect both warnings and inline annotations.
+\end{itemize}
+
+\section{Glossary}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{CMT/CMTI}: Compiled module artifacts (\code{.cmt} for implementations, \code{.cmti} for interfaces) that contain typed trees plus dependency metadata.
+  \item \textbf{Typed tree}: The OCaml \code{Typedtree} representation produced after type checking; all \code{DeadValue} and \code{DeadType} traversals operate on this structure.
+  \item \textbf{Ghost location}: A \code{Location.t} whose \code{loc\_ghost} flag is \code{true}; such positions are ignored for reporting because they do not correspond to concrete source code spans.
+\end{itemize}
+
+\end{document}
