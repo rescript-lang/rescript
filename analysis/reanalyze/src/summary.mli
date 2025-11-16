@@ -22,6 +22,12 @@ type decl_kind =
   | RecordLabel
   | VariantCase
 
+type annotation_snapshot = {
+  annotated_dead: bool;
+  annotated_gen_type_or_live: bool;
+  annotated_gen_type_or_dead: bool;
+}
+
 type decl = {
   path: string list;
   module_path: string list;
@@ -30,6 +36,7 @@ type decl = {
   module_loc: range option;
   decl_kind: decl_kind;
   pos_adjustment: posAdjustment option;
+  annotations: annotation_snapshot;
 }
 
 type value_reference = {

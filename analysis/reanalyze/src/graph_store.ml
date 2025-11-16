@@ -77,6 +77,8 @@ let remove_edge tbl src dest =
 
 let position_key (pos : Summary.position) = (pos.file, pos.cnum)
 
+let lexing_position_key (pos : Lexing.position) = (pos.Lexing.pos_fname, pos.Lexing.pos_cnum)
+
 let find_decl_by_position t key =
   match Hashtbl.find_opt t.position_index key with
   | Some (id :: _) -> Some id
@@ -284,6 +286,11 @@ let get_dirty_files t =
   files
 
 let find_node t id = Hashtbl.find_opt t.nodes id
+
+let find_node_by_position t pos =
+  match Hashtbl.find_opt t.position_index (lexing_position_key pos) with
+  | Some (id :: _) -> Hashtbl.find_opt t.nodes id
+  | _ -> None
 
 let file_decls t file = match Hashtbl.find_opt t.file_to_decls file with Some ids -> ids | None -> []
 

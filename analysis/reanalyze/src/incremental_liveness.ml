@@ -33,7 +33,51 @@ type result = {
   dead_declarations: Common.decl list;
 }
 
-type env = {graph: Graph_store.t; dead_acc: Common.decl list ref}
+type env = {
+  graph: Graph_store.t;
+  dead_acc: Common.decl list ref;
+  annotations: ((string * int), Summary.annotation_snapshot) Hashtbl.t;
+}
+
+let annotation_none : Summary.annotation_snapshot =
+  {
+    annotated_dead = false;
+    annotated_gen_type_or_live = false;
+    annotated_gen_type_or_dead = false;
+  }
+
+let annotation_dead_snapshot : Summary.annotation_snapshot =
+  {
+    annotated_dead = true;
+    annotated_gen_type_or_live = false;
+    annotated_gen_type_or_dead = true;
+  }
+
+let position_key_of_lexing pos = (pos.Lexing.pos_fname, pos.Lexing.pos_cnum)
+
+let set_annotation env pos snapshot =
+  Hashtbl.replace env.annotations (position_key_of_lexing pos) snapshot
+
+let get_annotation env pos =
+  let key = position_key_of_lexing pos in
+  match Hashtbl.find_opt env.annotations key with
+  | Some snapshot -> snapshot
+  | None ->
+      let snapshot =
+        match Graph_store.find_node_by_position env.graph pos with
+        | Some node -> node.summary.annotations
+        | None -> annotation_none
+      in
+      Hashtbl.replace env.annotations key snapshot;
+      snapshot
+
+let annotation_is_dead env pos = (get_annotation env pos).annotated_dead
+
+let annotation_is_live env pos =
+  (get_annotation env pos).annotated_gen_type_or_live
+
+let annotation_is_dead_or_gen env pos =
+  (get_annotation env pos).annotated_gen_type_or_dead
 
 let decl_id_equal a b = DeclId.compare a b = 0
 
@@ -80,21 +124,27 @@ let rec resolve env id level refs_being_resolved =
                   else (PosSet.add ref_node.decl.pos acc, unknown_live))
             refs (PosSet.empty, false)
         in
+        let live_refs =
+          new_refs |> PosSet.filter (fun pos -> not (annotation_is_dead env pos))
+        in
         let is_dead =
-          (not unknown_live) && DeadCommon.declIsDead ~refs:new_refs decl
+          (not unknown_live)
+          && PosSet.is_empty live_refs
+          && not (annotation_is_live env decl.pos)
         in
         debug_decl decl
           (Printf.sprintf
              "decl=%s annotated_live=%b refs=%d unknown=%b"
              (Path.toString decl.path)
-             (ProcessDeadAnnotations.isAnnotatedGenTypeOrLive decl.pos)
+             (annotation_is_live env decl.pos)
              (PosSet.cardinal new_refs) unknown_live);
         let is_resolved = (not is_dead) || !all_deps_resolved || level = 0 in
         if is_resolved then (
           decl.resolvedDead <- Some is_dead;
           if is_dead then (
-            if not (DeadCommon.doReportDead decl.pos) then decl.report <- false;
-            env.dead_acc := decl :: !(env.dead_acc));
+            if annotation_is_dead_or_gen env decl.pos then decl.report <- false;
+            env.dead_acc := decl :: !(env.dead_acc);
+            set_annotation env decl.pos annotation_dead_snapshot);
           if !Common.Cli.debug then
             Log_.item "%s %s %s: %d references [%d]@."
               (if is_dead then "Dead" else "Live")
@@ -123,7 +173,7 @@ let recompute ~graph ~changed_files =
         ~successors:(successors_for_tarjan graph ~frontier)
         nodes
     in
-    let env = {graph; dead_acc = ref []} in
+    let env = {graph; dead_acc = ref []; annotations = Hashtbl.create 1024} in
     components
     |> List.iter (fun (component : _ Tarjan.component) ->
            List.iter

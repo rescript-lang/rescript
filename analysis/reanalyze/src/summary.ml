@@ -1,4 +1,5 @@
 open Common
+open DeadCommon
 
 module Blake2b = Digestif.BLAKE2B
 
@@ -24,6 +25,19 @@ type decl_kind =
   | RecordLabel
   | VariantCase
 
+type annotation_snapshot = {
+  annotated_dead: bool;
+  annotated_gen_type_or_live: bool;
+  annotated_gen_type_or_dead: bool;
+}
+
+let annotation_snapshot_none =
+  {
+    annotated_dead = false;
+    annotated_gen_type_or_live = false;
+    annotated_gen_type_or_dead = false;
+  }
+
 type decl = {
   path: string list;
   module_path: string list;
@@ -32,6 +46,7 @@ type decl = {
   module_loc: range option;
   decl_kind: decl_kind;
   pos_adjustment: posAdjustment option;
+  annotations: annotation_snapshot;
 }
 
 type value_reference = {
@@ -151,6 +166,13 @@ let summary_decl_of_common (decl : Common.decl) =
   let module_path, name = split_modules_and_name components in
   let loc = range_of_positions ~start:decl.posStart ~end_:decl.posEnd in
   let module_loc = range_of_location_opt decl.moduleLoc in
+  let annotations =
+    {
+      annotated_dead = ProcessDeadAnnotations.isAnnotatedDead decl.pos;
+      annotated_gen_type_or_live = ProcessDeadAnnotations.isAnnotatedGenTypeOrLive decl.pos;
+      annotated_gen_type_or_dead = ProcessDeadAnnotations.isAnnotatedGenTypeOrDead decl.pos;
+    }
+  in
   let decl_kind, pos_adjustment =
     match decl.declKind with
     | DeclKind.Value {isToplevel; optionalArgs; sideEffects} ->
@@ -165,7 +187,7 @@ let summary_decl_of_common (decl : Common.decl) =
     | DeclKind.RecordLabel -> (RecordLabel, Some decl.posAdjustment)
     | DeclKind.VariantCase -> (VariantCase, Some decl.posAdjustment)
   in
-  {path = components; module_path; name; loc; module_loc; decl_kind; pos_adjustment}
+  {path = components; module_path; name; loc; module_loc; decl_kind; pos_adjustment; annotations}
 
 let to_common_decl (decl : decl) =
   let moduleLoc =
@@ -266,6 +288,16 @@ let json_of_optional_args {unused; always_used; call_count} =
       ("unused", json_array (unused |> List.map json_string));
     ]
 
+let json_of_annotations annotations =
+  json_object
+    [
+      ("annotated_dead", json_bool annotations.annotated_dead);
+      ( "annotated_gen_type_or_live",
+        json_bool annotations.annotated_gen_type_or_live );
+      ( "annotated_gen_type_or_dead",
+        json_bool annotations.annotated_gen_type_or_dead );
+    ]
+
 let kind_to_string = function
   | Value _ -> "Value"
   | Exception -> "Exception"
@@ -283,6 +315,7 @@ let json_of_decl decl =
       ("path", json_array (decl.path |> List.map json_string));
       ( "pos_adjustment",
         json_option (fun adj -> json_string (pos_adjustment_to_string adj)) decl.pos_adjustment );
+      ("annotations", json_of_annotations decl.annotations);
     ]
   in
   let kind_fields =
@@ -418,6 +451,27 @@ let optional_args_of_json = function
       in
       Some {unused; always_used; call_count})
 
+let annotations_of_json = function
+  | Json.Null -> annotation_snapshot_none
+  | json ->
+      let fields = expect_object "annotations" json in
+      let annotated_dead =
+        match List.assoc_opt "annotated_dead" fields with
+        | Some value -> expect_bool "annotations.annotated_dead" value
+        | None -> false
+      in
+      let annotated_gen_type_or_live =
+        match List.assoc_opt "annotated_gen_type_or_live" fields with
+        | Some value -> expect_bool "annotations.annotated_gen_type_or_live" value
+        | None -> false
+      in
+      let annotated_gen_type_or_dead =
+        match List.assoc_opt "annotated_gen_type_or_dead" fields with
+        | Some value -> expect_bool "annotations.annotated_gen_type_or_dead" value
+        | None -> false
+      in
+      {annotated_dead; annotated_gen_type_or_live; annotated_gen_type_or_dead}
+
 let decl_of_json json =
   let fields = expect_object "decl" json in
   let path =
@@ -452,6 +506,11 @@ let decl_of_json json =
         | None -> raise (Invalid_format ("unknown pos_adjustment: " ^ s)))
     | Some _ -> raise (Invalid_format "decl.pos_adjustment")
   in
+  let annotations =
+    match List.assoc_opt "annotations" fields with
+    | Some json -> annotations_of_json json
+    | None -> annotation_snapshot_none
+  in
   let decl_kind =
     match kind with
     | `Value ->
@@ -471,7 +530,7 @@ let decl_of_json json =
     | `RecordLabel -> RecordLabel
     | `VariantCase -> VariantCase
   in
-  {path; module_path; name; loc; module_loc; decl_kind; pos_adjustment}
+  {path; module_path; name; loc; module_loc; decl_kind; pos_adjustment; annotations}
 
 let value_reference_of_json json =
   let fields = expect_object "value_ref" json in

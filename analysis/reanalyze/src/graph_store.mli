@@ -20,6 +20,7 @@ val create : unit -> t
 val add_summary : t -> Summary.t -> unit
 val get_dirty_files : t -> string list
 val find_node : t -> DeclId.t -> node option
+val find_node_by_position : t -> Lexing.position -> node option
 val file_decls : t -> string -> DeclId.t list
 val successors : t -> kind:[`Value | `Type] -> DeclId.t -> DeclIdSet.t
 val reverse_successors : t -> kind:[`Value | `Type] -> DeclId.t -> DeclIdSet.t

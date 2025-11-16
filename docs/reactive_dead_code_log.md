@@ -115,7 +115,9 @@ Track per-declaration graphs (IDs, edges, file mappings) and compute the frontie
 - `analysis/bin/collector_parity.exe` now has a second stage:
   - Stage 1 still verifies collector parity.
   - Stage 2 rebuilds the summary graph, prints frontier stats, and compares incremental-vs-legacy liveness. Environment knobs (`INCR_GRAPH_SOLVER` and `INCR_AFTER_LEGACY`) allow experimenting with the new solver without regressing CI.
-- Introduced five sub-milestones (3.1–3.5) covering the remaining gaps (annotation semantics, delayed edges, file ordering, reference normalisation, module bookkeeping). Status: all TODO; none attempted yet.
+- Introduced five sub-milestones (3.1–3.5) covering the remaining gaps (annotation semantics, delayed edges, file ordering, reference normalisation, module bookkeeping).
+  - ✅ \textbf{3.1 Annotation Semantics}: summaries now snapshot per-declaration annotation flags (dead/live/genType), and the incremental solver consumes those snapshots instead of relying on global mutable state. Parity harness confirms no annotation-related mismatches remain.
+  - ⏳ 3.2–3.5 remain TODO.
 
 ### Validation
 - `dune build analysis/reanalyze`
