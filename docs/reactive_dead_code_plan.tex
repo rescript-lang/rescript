@@ -283,18 +283,18 @@ let collectValueBinding ~collector super self vb =
 \subsection{Implementation Tasks}
 \begin{enumerate}[leftmargin=*]
   \item Implement \code{Summary.of_collected} covering:
-    \begin{itemize}
+  \begin{itemize}
       \item Conversion of \code{Collected_types.decl} to summary decls, including flags like \code{toplevel}, \code{optional_args}, \code{side_effects}.
       \item Flattening \code{ref_edge_kind} into JSON-friendly shapes.
       \item Deduplicating \code{file_edges} by sorting and calling \code{List.sort_uniq}.
-    \end{itemize}
+  \end{itemize}
   \item Implement \code{Summary.to_json/from_json} with explicit error messages (raise \code{Summary.Invalid_format of string}). Provide property tests to ensure round-trips succeed.
   \item Create \code{Summary_cache}:
-    \begin{itemize}
+  \begin{itemize}
       \item Cache path: \code{.reanalyze/summaries/<digest>.json}.
       \item Write atomically by writing to temp file then \code{Unix.rename}.
       \item Provide \code{read_or_recompute ~project_root summary} helper.
-    \end{itemize}
+  \end{itemize}
   \item Update \code{DeadCode.processCmt}: after obtaining \code{collected}, call \code{Summary.of_collected}. Feed the result into \code{DeadCommon_sink} (for batch) and optionally write to cache when \code{Common.Cli.cache_summaries} is set. This validates the new path without altering output.
   \item Extend verification by running \code{make test-analysis} (deadcode fixture project) plus the parity harness to confirm summaries remain stable between runs. Record any mismatches directly in the implementation log instead of relying on synthetic unit tests.
 \end{enumerate}
@@ -335,7 +335,7 @@ Thread \code{ProcessDeadAnnotations.(annotateLive|annotateDead|doReportDead)} th
 \subsubsection*{Milestone 3.2 – Delayed Edge Replay}
 Ensure \code{DeadOptionalArgs.forceDelayedItems} and the exception replay run before we query the graph, so optional-arg and ghost exception references populate the edge set just like in batch mode. This should shrink the “missing deaths” set where optional parameters currently appear unused.
 
-\paragraph{Status.} ✅ Completed.
+\paragraph{Status.} Completed.
 \begin{itemize}[leftmargin=*]
   \item Added \code{DeadException.replay\_delayed\_items} and \code{DeadOptionalArgs.replay\_delayed\_items}; these re-run the delayed-edge logic against any \emph{pure} collector without consuming the shared queues. \code{Reanalyze.loadCmtFile} now calls them only when a summary/graph run is needed (\code{-cache-summaries} or \code{-incremental-liveness}), so batch runs never touch the new code.
   \item Taught \code{Collector.collected} to deep-copy the mutable optional-argument payloads before storing \code{Common.decl}s. Summary-side replays can now mark arguments as used without mutating the legacy \code{DeadCommon} structures coming from the sink collector.
@@ -355,6 +355,22 @@ Ensure \code{DeadOptionalArgs.forceDelayedItems} and the exception replay run be
 \subsubsection*{Milestone 3.3 – File Ordering Parity}
 Carry the legacy \code{orderedFiles} rank into each node and order SCC processing by that rank, preventing premature deaths when dependencies live in other files. Completing this step should eliminate mismatches caused purely by traversal order.
 
+\paragraph{Status.} Completed.
+\begin{itemize}[leftmargin=*]
+  \item \code{Graph_store} now retains the per-file dependency DAG emitted by the collector and recomputes the same topological order that \code{DeadCommon.iterFilesFromRootsToLeaves} derives. Every time summaries update file edges or digests we invalidate and recompute the rank table so it stays in sync with the legacy ordering.
+  \item The incremental solver fetches those ranks, sorts the frontier before feeding it to Tarjan, and sorts every SCC’s member list with \code{Decl.compareUsingDependencies}, mirroring the batch traversal (files processed from leaves to roots, then bottom-to-top inside each file).
+\end{itemize}
+
+\paragraph{Validation.}
+\begin{itemize}[leftmargin=*]
+  \item \code{make test-analysis}
+  \item \code{INCR\_GRAPH\_SOLVER=1 dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}
+    \begin{itemize}
+      \item Stage 1 remains clean.
+      \item Stage 2 still reports exactly 115 unexpected deaths, all tracked for milestones 3.4–3.5. No file-order-related regressions remain.
+    \end{itemize}
+\end{itemize}
+
 \subsubsection*{Milestone 3.4 – Reference Normalisation}
 Apply the same location rewriting (\code{Current.lastBinding}, ghost filtering, point locations) before counting incoming references so self-ref edges and ghost locations do not skew the solver. Expect the long tail of prop/record mismatches to drop after this milestone.
 
@@ -367,11 +383,11 @@ Each step removes a distinct block of discrepancies that the parity harness curr
 \subsection{Graph Store Design}
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Data structures}
-    \begin{itemize}
+  \begin{itemize}
       \item \code{decl_id = <source file>#<line>#<column>#<kind>#<name>}.
       \item Hashtables: \code{forward_edges : decl_id -> decl_id list}, \code{reverse_edges : decl_id -> decl_id list}, \code{file_to_decls : string -> decl_id list}, \code{decl_info : decl_id -> summary_decl}.
       \item SCC cache: \code{decl_to_scc : decl_id -> int}, \code{scc_states : int -> { members; live; digest }}.
-    \end{itemize}
+  \end{itemize}
   \item \textbf{Frontier computation}
     \begin{lstlisting}
 let frontier graph changed_files =
@@ -389,11 +405,11 @@ let frontier graph changed_files =
     \end{lstlisting}
     This yields all declarations whose liveness can change due to the modified files.
   \item \textbf{Incremental Tarjan}
-    \begin{itemize}
+  \begin{itemize}
       \item Run Tarjan only on the subgraph induced by \code{frontier}. Non-frontier SCCs keep their cached \code{scc_state}.
       \item For each SCC, compute a hash of (members, outgoing edges, summary digests). If unchanged, reuse previous liveness result.
       \item \code{Liveness.solve_scc}: reuse logic from \code{DeadCommon.resolveRecursiveRefs} by parameterizing over callbacks to fetch references.
-    \end{itemize}
+  \end{itemize}
 \end{enumerate}
 \subsection{Pseudocode}
 \begin{lstlisting}
@@ -527,7 +543,7 @@ let run project_root =
                   (fun () -> ModulePath.with_current (fun () ->
                     Pure_collectors.from_cmt cmt_infos))
               in
-              let summary = Summary.of_collected collected in
+        let summary = Summary.of_collected collected in
               Summary_cache.write ~project_root summary;
               [| (source_file, summary) |])
   in
@@ -542,13 +558,13 @@ let run project_root =
   let graph =
     Reactive.map graph_inputs (fun key summary_arrays ->
       if key <> "__all__" then [||] else
-        let graph = Graph_store.create () in
+      let graph = Graph_store.create () in
         Array.iter (fun arr ->
           Array.iter (fun (src, summary) ->
             Graph_store.add_summary graph ~source_file:src summary
           ) arr
         ) summary_arrays;
-        [| (key, graph) |])
+      [| (key, graph) |])
   in
   
   (* Stage 3: Compute liveness *)
@@ -558,7 +574,7 @@ let run project_root =
         let graph = snd graph_arr.(0) in
         let changed = Graph_store.get_dirty_files graph in
         let diffs = Liveness.recompute graph changed in
-        [| (key, diffs) |])
+      [| (key, diffs) |])
   in
   
   Reactive.exit ();
@@ -673,7 +689,7 @@ else
 \subsection{Parity Harness}
 \begin{itemize}[leftmargin=*]
   \item Implement \code{tests/reactive_parity.ml}:
-    \begin{lstlisting}
+\begin{lstlisting}
 let run_batch project =
   Reanalyze_cli.run ~project ~mode:`Batch
 let run_reactive project =
@@ -682,7 +698,7 @@ let assert_parity project =
   let batch = run_batch project in
   let reactive = run_reactive project in
   Alcotest.(check diagnostics) (project ^ " parity") batch reactive
-    \end{lstlisting}
+\end{lstlisting}
   \item Diagnostics comparison normalizes ordering and formatting (sort by file/line, compare message text).
   \item Run parity harness nightly on: core repo, partner repo A, partner repo B. Record failures in local logs for investigation.
 \end{itemize}

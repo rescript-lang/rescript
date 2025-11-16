@@ -12,6 +12,8 @@ module DeclIdSet = Set.Make (struct
 end)
 
 module StringSet = Common.StringSet
+module FileSet = Common.FileSet
+module Decl = DeadCommon.Decl
 
 type node = {
   id: DeclId.t;
@@ -37,6 +39,8 @@ type t = {
   pending_value: (position_key, pending_value_edge list) Hashtbl.t;
   pending_type: (position_key, DeclId.t list) Hashtbl.t;
   file_edges: (string, StringSet.t) Hashtbl.t;
+  mutable file_order: (string, int) Hashtbl.t;
+  mutable file_order_valid: bool;
 }
 
 let create () =
@@ -53,6 +57,8 @@ let create () =
     pending_value = Hashtbl.create 64;
     pending_type = Hashtbl.create 64;
     file_edges = Hashtbl.create 32;
+    file_order = Hashtbl.create 32;
+    file_order_valid = false;
   }
 
 let mark_dirty t file = Hashtbl.replace t.dirty_files file ()
@@ -111,7 +117,10 @@ let remove_position_index t key id =
 
 let record_file_edge t ~from_file ~to_file =
   let existing = match Hashtbl.find_opt t.file_edges from_file with Some s -> s | None -> StringSet.empty in
-  Hashtbl.replace t.file_edges from_file (StringSet.add to_file existing)
+  let updated = StringSet.add to_file existing in
+  if not (StringSet.equal updated existing) then (
+    Hashtbl.replace t.file_edges from_file updated;
+    t.file_order_valid <- false)
 
 let remove_all_edges t id =
   (match Hashtbl.find_opt t.forward_value id with
@@ -160,7 +169,24 @@ let remove_file t file =
               remove_position_index t (position_key node.summary.loc.start_) id
           | None -> ());
           Hashtbl.remove t.nodes id)
-        decls
+        decls;
+      let edges_removed = ref false in
+      if Hashtbl.mem t.file_edges file then (
+        Hashtbl.remove t.file_edges file;
+        edges_removed := true);
+      let pending_updates = ref [] in
+      let pending_removals = ref [] in
+      Hashtbl.iter
+        (fun src dests ->
+          if StringSet.mem file dests then (
+            let updated = StringSet.remove file dests in
+            edges_removed := true;
+            if StringSet.is_empty updated then pending_removals := src :: !pending_removals
+            else pending_updates := (src, updated) :: !pending_updates))
+        t.file_edges;
+      List.iter (fun src -> Hashtbl.remove t.file_edges src) !pending_removals;
+      List.iter (fun (src, set) -> Hashtbl.replace t.file_edges src set) !pending_updates;
+      if !edges_removed then t.file_order_valid <- false
 
 let resolve_pending_value t key target_id =
   match Hashtbl.find_opt t.pending_value key with
@@ -278,7 +304,8 @@ let add_summary t summary =
     List.iter (add_value_reference t summary decl_ids) summary.value_references;
     List.iter (add_type_reference t summary decl_ids) summary.type_references;
     Hashtbl.replace t.file_digests file summary.digest;
-    mark_dirty t file)
+    mark_dirty t file;
+    t.file_order_valid <- false)
 
 let get_dirty_files t =
   let files = Hashtbl.fold (fun file () acc -> file :: acc) t.dirty_files [] in
@@ -332,4 +359,78 @@ let frontier t ~changed_files =
          []
   in
   bfs DeclIdSet.empty seeds
+
+let pop_min_file set_ref =
+  if FileSet.is_empty !set_ref then None
+  else
+    let file = FileSet.min_elt !set_ref in
+    set_ref := FileSet.remove file !set_ref;
+    Some file
+
+let recompute_file_order t =
+  let incoming = Hashtbl.create 64 in
+  let add_file file =
+    if not (Hashtbl.mem incoming file) then Hashtbl.add incoming file 0
+  in
+  Hashtbl.iter (fun file _ -> add_file file) t.file_to_decls;
+  Hashtbl.iter
+    (fun from_file dests ->
+      add_file from_file;
+      StringSet.iter
+        (fun to_file ->
+          add_file to_file;
+          let current = Hashtbl.find incoming to_file in
+          Hashtbl.replace incoming to_file (current + 1))
+        dests)
+    t.file_edges;
+  let ready =
+    Hashtbl.fold
+      (fun file count acc ->
+        if count = 0 then FileSet.add file acc else acc)
+      incoming FileSet.empty
+  in
+  let ready_ref = ref ready in
+  let ranks = Hashtbl.create 64 in
+  let current_rank = ref 0 in
+  let rec process () =
+    match pop_min_file ready_ref with
+    | None -> ()
+    | Some file ->
+        incr current_rank;
+        Hashtbl.replace ranks file !current_rank;
+        let successors =
+          match Hashtbl.find_opt t.file_edges file with
+          | Some set -> set
+          | None -> StringSet.empty
+        in
+        StringSet.iter
+          (fun dest ->
+            let count = Hashtbl.find incoming dest - 1 in
+            Hashtbl.replace incoming dest count;
+            if count = 0 then ready_ref := FileSet.add dest !ready_ref)
+          successors;
+        process ()
+  in
+  process ();
+  Hashtbl.iter
+    (fun file _ ->
+      if not (Hashtbl.mem ranks file) then (
+        incr current_rank;
+        Hashtbl.replace ranks file !current_rank))
+    incoming;
+  t.file_order <- ranks;
+  t.file_order_valid <- true
+
+let ordered_files t =
+  if not t.file_order_valid then recompute_file_order t;
+  Hashtbl.copy t.file_order
+
+let compare_decl_ids t ~ordered_files id1 id2 =
+  match (find_node t id1, find_node t id2) with
+  | Some node1, Some node2 ->
+      Decl.compareUsingDependencies ~orderedFiles:ordered_files node1.decl
+        node2.decl
+  | Some _, None -> -1
+  | None, Some _ -> 1
+  | None, None -> 0
 

@@ -85,14 +85,17 @@ let incoming_refs graph id decl =
   let kind = if Decl.isValue decl then `Value else `Type in
   Graph_store.reverse_successors graph ~kind id
 
-let successors_for_tarjan graph ~frontier id =
+let successors_for_tarjan graph ~frontier ~compare_id id =
   let value_succ = Graph_store.successors graph ~kind:`Value id in
   let type_succ = Graph_store.successors graph ~kind:`Type id in
   let combined = DeclIdSet.union value_succ type_succ in
-  DeclIdSet.fold
-    (fun succ acc ->
-      if DeclIdSet.mem succ frontier then succ :: acc else acc)
-    combined []
+  let succs =
+    DeclIdSet.fold
+      (fun succ acc ->
+        if DeclIdSet.mem succ frontier then succ :: acc else acc)
+      combined []
+  in
+  List.sort compare_id succs
 
 let rec resolve env id level refs_being_resolved =
   match Graph_store.find_node env.graph id with
@@ -167,15 +170,26 @@ let recompute ~graph ~changed_files =
   if (not use_graph_solver) || DeclIdSet.is_empty frontier then
     {visited = frontier; dead_declarations = legacy_dead_decls ()}
   else
-    let nodes = DeclIdSet.elements frontier in
+    let ordered_files = Graph_store.ordered_files graph in
+    let compare_decl_ids = Graph_store.compare_decl_ids graph ~ordered_files in
+    let nodes = DeclIdSet.elements frontier |> List.sort compare_decl_ids in
     let components =
       Tarjan.compute
-        ~successors:(successors_for_tarjan graph ~frontier)
+        ~successors:(successors_for_tarjan graph ~frontier ~compare_id:compare_decl_ids)
         nodes
+    in
+    let components =
+      components
+      |> List.map (fun (component : _ Tarjan.component) ->
+             {Tarjan.members = component.members |> List.sort compare_decl_ids})
+      |> List.sort (fun a b ->
+             match (a.Tarjan.members, b.Tarjan.members) with
+             | id1 :: _, id2 :: _ -> compare_decl_ids id1 id2
+             | _ -> 0)
     in
     let env = {graph; dead_acc = ref []; annotations = Hashtbl.create 1024} in
     components
-    |> List.iter (fun (component : _ Tarjan.component) ->
+    |> List.iter (fun component ->
            List.iter
              (fun id ->
                let refs_being_resolved = ref DeclIdSet.empty in
