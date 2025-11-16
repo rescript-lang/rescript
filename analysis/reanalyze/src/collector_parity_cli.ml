@@ -149,7 +149,7 @@ let resolve_source_file cmt_infos =
   | Some path -> Some path
   | None -> cmt_infos.cmt_sourcefile
 
-let compare_file settings path =
+let compare_file _settings path =
   match Typedtree_helpers.read_cmt path with
   | Result.Error msg -> Result.Error (Load_error (path, msg))
   | Result.Ok cmt_infos -> (

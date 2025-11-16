@@ -49,9 +49,9 @@ DUNE_BIN_DIR = ./_build/install/default/bin
 # Using that file as our stamp ensures manual `yarn install` runs are detected.
 YARN_INSTALL_STAMP := .yarn/install-state.gz
 # Dune updates `_build/log` for every build invocation, even when run manually.
-# Treat that log file as the compiler build stamp so manual `dune build`
-# keeps Make targets up to date.
-COMPILER_BUILD_STAMP := _build/log
+# Use our own stamp so unrelated dune commands don't trick Make into thinking
+# the compiler artifacts are fresh.
+COMPILER_BUILD_STAMP := _build/.compiler-build-stamp
 # Runtime workspace touches this stamp (packages/@rescript/runtime/.buildstamp)
 # after running `yarn workspace @rescript/runtime build`, which now runs `touch`
 # as part of its build script.
@@ -136,8 +136,9 @@ $(foreach bin,$(COMPILER_BIN_NAMES),$(eval $(call MAKE_COMPILER_COPY_RULE,$(bin)
 # "touch" after dune build to make sure that the binaries' timestamps are updated
 # even if the actual content of the sources hasn't changed.
 $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
-	dune build
+	dune build @install
 	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
+	touch $@
 
 $(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
 
@@ -154,7 +155,11 @@ $(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(
 	yarn workspace @rescript/runtime build
 
 clean-lib:
-	yarn workspace @rescript/runtime rescript clean
+	@if [ -x "$(RESCRIPT_EXE)" ]; then \
+	  yarn workspace @rescript/runtime rescript clean; \
+	else \
+	  echo "Skipping runtime clean (compiler binary missing)"; \
+	fi
 	rm -f $(RUNTIME_BUILD_STAMP)
 
 $(SKIP_RUNTIME_STAMP):
