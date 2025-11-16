@@ -63,6 +63,15 @@ let forceDelayedItems () =
          | None -> ()
          | Some locTo -> record_value_reference ~locFrom ~locTo)
 
+let replay_delayed_items ~collector =
+  let items = !delayedItems |> List.rev in
+  with_collector collector (fun () ->
+      items
+      |> List.iter (fun {exceptionPath; locFrom} ->
+             match Hashtbl.find_opt declarations exceptionPath with
+             | None -> ()
+             | Some locTo -> record_value_reference ~locFrom ~locTo))
+
 let markAsUsed ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
   if locTo.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)

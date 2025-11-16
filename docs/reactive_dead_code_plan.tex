@@ -335,6 +335,23 @@ Thread \code{ProcessDeadAnnotations.(annotateLive|annotateDead|doReportDead)} th
 \subsubsection*{Milestone 3.2 – Delayed Edge Replay}
 Ensure \code{DeadOptionalArgs.forceDelayedItems} and the exception replay run before we query the graph, so optional-arg and ghost exception references populate the edge set just like in batch mode. This should shrink the “missing deaths” set where optional parameters currently appear unused.
 
+\paragraph{Status.} ✅ Completed.
+\begin{itemize}[leftmargin=*]
+  \item Added \code{DeadException.replay\_delayed\_items} and \code{DeadOptionalArgs.replay\_delayed\_items}; these re-run the delayed-edge logic against any \emph{pure} collector without consuming the shared queues. \code{Reanalyze.loadCmtFile} now calls them only when a summary/graph run is needed (\code{-cache-summaries} or \code{-incremental-liveness}), so batch runs never touch the new code.
+  \item Taught \code{Collector.collected} to deep-copy the mutable optional-argument payloads before storing \code{Common.decl}s. Summary-side replays can now mark arguments as used without mutating the legacy \code{DeadCommon} structures coming from the sink collector.
+  \item Removed the previous attempt that flushed \code{DeadException}/\code{DeadOptionalArgs} queues at the end of every \code{DeadCode.processCmt}. The queues now drain once per batch run (as before); the summary path reads them through the replay helpers without disturbing the batch data.
+\end{itemize}
+
+\paragraph{Validation.}
+\begin{itemize}[leftmargin=*]
+  \item \code{make test-analysis}
+  \item \code{dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}
+    \begin{itemize}
+      \item Stage 1 (collector parity) remains clean.
+      \item Stage 2 (\code{INCR\_GRAPH\_SOLVER=1}) still reports 115 “unexpected deaths”; those correspond to the remaining sub-milestones (file ordering, reference normalisation, module bookkeeping).
+    \end{itemize}
+\end{itemize}
+
 \subsubsection*{Milestone 3.3 – File Ordering Parity}
 Carry the legacy \code{orderedFiles} rank into each node and order SCC processing by that rank, preventing premature deaths when dependencies live in other files. Completing this step should eliminate mismatches caused purely by traversal order.
 

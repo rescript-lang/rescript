@@ -100,6 +100,27 @@ let forceDelayedItems () =
            replace_decl declTo
          | _ -> ())
 
+let replay_delayed_items ~collector =
+  let delayed = !delayedItems |> List.rev in
+  let refs = !functionReferences |> List.rev in
+  with_collector collector (fun () ->
+      delayed
+      |> List.iter (fun {posTo; argNames; argNamesMaybe} ->
+             match find_decl posTo with
+             | Some ({declKind = Value r} as decl) ->
+               r.optionalArgs |> OptionalArgs.call ~argNames ~argNamesMaybe;
+               replace_decl decl
+             | _ -> ());
+      refs
+      |> List.iter (fun (posFrom, posTo) ->
+             match (find_decl posFrom, find_decl posTo) with
+             | ( Some ({declKind = Value rFrom} as declFrom),
+                 Some ({declKind = Value rTo} as declTo) ) ->
+               OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs;
+               replace_decl declFrom;
+               replace_decl declTo
+             | _ -> ()))
+
 let check decl =
   match decl with
   | {declKind = Value {optionalArgs}}

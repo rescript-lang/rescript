@@ -119,6 +119,13 @@ let collected () =
     with
     | None -> ()
     | Some c ->
+      let c =
+        match c.Common.declKind with
+        | Value {isToplevel; optionalArgs; sideEffects} ->
+          let optionalArgs = Common.OptionalArgs.copy optionalArgs in
+          {c with declKind = Value {isToplevel; optionalArgs; sideEffects}}
+        | _ -> c
+      in
       if not (PosTbl.mem decls c.pos) then decl_order := c.pos :: !decl_order;
       PosTbl.replace decls c.pos c
   in

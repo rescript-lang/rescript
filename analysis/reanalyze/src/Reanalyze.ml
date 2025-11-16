@@ -107,10 +107,13 @@ let loadCmtFile cmtFilePath =
           in
           ModulePath.with_current (fun () ->
               cmt_infos |> DeadCode.processCmt ~collector ~cmtFilePath);
-          let collected = Collector.finalize collector in
           let need_summary =
             !Common.Cli.cacheSummaries || !Common.Cli.incremental
           in
+          if need_summary then (
+            DeadException.replay_delayed_items ~collector:collected_backend;
+            DeadOptionalArgs.replay_delayed_items ~collector:collected_backend);
+          let collected = Collector.finalize collector in
           if need_summary then
             let summary =
               Summary.of_collected ~source_file:sourceFile collected

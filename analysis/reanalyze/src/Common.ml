@@ -178,6 +178,9 @@ module OptionalArgs = struct
     x.alwaysUsed <- alwaysUsed;
     y.alwaysUsed <- alwaysUsed
 
+  let copy x =
+    {count = x.count; unused = x.unused; alwaysUsed = x.alwaysUsed}
+
   let iterUnused f x = StringSet.iter f x.unused
   let iterAlwaysUsed f x = StringSet.iter (fun s -> f s x.count) x.alwaysUsed
 end

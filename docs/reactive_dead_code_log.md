@@ -117,7 +117,8 @@ Track per-declaration graphs (IDs, edges, file mappings) and compute the frontie
   - Stage 2 rebuilds the summary graph, prints frontier stats, and compares incremental-vs-legacy liveness. Environment knobs (`INCR_GRAPH_SOLVER` and `INCR_AFTER_LEGACY`) allow experimenting with the new solver without regressing CI.
 - Introduced five sub-milestones (3.1–3.5) covering the remaining gaps (annotation semantics, delayed edges, file ordering, reference normalisation, module bookkeeping).
   - ✅ \textbf{3.1 Annotation Semantics}: summaries now snapshot per-declaration annotation flags (dead/live/genType), and the incremental solver consumes those snapshots instead of relying on global mutable state. Parity harness confirms no annotation-related mismatches remain.
-  - ⏳ 3.2–3.5 remain TODO.
+  - ✅ \textbf{3.2 Delayed Edge Replay}: \code{DeadException.replay\_delayed\_items} and \code{DeadOptionalArgs.replay\_delayed\_items} replay the pending queues against the pure collector without draining the legacy queues. \code{Collector.collected} now clones \code{OptionalArgs.t} before storing declarations so summary-side replays cannot mutate the batch tables, and \code{DeadCode.processCmt} no longer forces those queues per file (only the type-dependency flush remains). When either \code{-cache-summaries} or \code{-incremental-liveness} is active we replay the queues into the summary collector just before \code{Collector.finalize}; batch runs remain untouched. `make test-analysis` stays green, and the parity harness still reports a clean collector stage with 115 incremental mismatches (downstream sub-milestones).
+  - ⏳ 3.3–3.5 remain TODO.
 
 ### Validation
 - `dune build analysis/reanalyze`
