@@ -116,6 +116,12 @@ let rec resolve env id level refs_being_resolved =
         refs_being_resolved := DeclIdSet.add id !refs_being_resolved;
         let refs = incoming_refs env.graph id decl in
         let all_deps_resolved = ref true in
+        let initial_unknown =
+          if Decl.isValue decl then
+            Graph_store.has_unknown_value_ref env.graph id
+          else
+            Graph_store.has_unknown_type_ref env.graph id
+        in
         let new_refs, unknown_live =
           DeclIdSet.fold
             (fun ref_id (acc, unknown_live) ->
@@ -132,8 +138,7 @@ let rec resolve env id level refs_being_resolved =
                   if ref_is_dead then (acc, unknown_live)
                   else (PosSet.add ref_node.decl.pos acc, unknown_live))
             refs
-            ( PosSet.empty,
-              Graph_store.has_unknown_value_ref env.graph id )
+            (PosSet.empty, initial_unknown)
         in
         let live_refs =
           new_refs |> PosSet.filter (fun pos -> not (annotation_is_dead env pos))

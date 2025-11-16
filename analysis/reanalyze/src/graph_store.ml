@@ -15,6 +15,11 @@ module StringSet = Common.StringSet
 module FileSet = Common.FileSet
 module Decl = DeadCommon.Decl
 
+let format_summary_pos (pos : Summary.position) =
+  Printf.sprintf "%s:%d:%d" pos.file pos.line pos.column
+
+let should_debug _ = false
+
 type node = {
   id: DeclId.t;
   file: string;
@@ -22,7 +27,7 @@ type node = {
   summary: Summary.decl;
 }
 
-type position_key = string * int
+type position_key = string * int * int
 
 type pending_value_edge = DeclId.t * bool
 
@@ -41,6 +46,8 @@ type t = {
   file_edges: (string, StringSet.t) Hashtbl.t;
   unknown_value_targets: (DeclId.t, unit) Hashtbl.t;
   pending_unknown_value: (position_key, unit) Hashtbl.t;
+  unknown_type_targets: (DeclId.t, unit) Hashtbl.t;
+  pending_unknown_type: (position_key, unit) Hashtbl.t;
   mutable file_order: (string, int) Hashtbl.t;
   mutable file_order_valid: bool;
 }
@@ -61,6 +68,8 @@ let create () =
     file_edges = Hashtbl.create 32;
     unknown_value_targets = Hashtbl.create 128;
     pending_unknown_value = Hashtbl.create 64;
+    unknown_type_targets = Hashtbl.create 64;
+    pending_unknown_type = Hashtbl.create 32;
     file_order = Hashtbl.create 32;
     file_order_valid = false;
   }
@@ -85,9 +94,14 @@ let remove_edge tbl src dest =
       if DeclIdSet.is_empty updated then Hashtbl.remove tbl src
       else Hashtbl.replace tbl src updated
 
-let position_key (pos : Summary.position) = (pos.file, pos.cnum)
+let column_of_lexing pos =
+  let column = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
+  if column < 0 then 0 else column
 
-let lexing_position_key (pos : Lexing.position) = (pos.Lexing.pos_fname, pos.Lexing.pos_cnum)
+let position_key (pos : Summary.position) = (pos.file, pos.line, pos.column)
+
+let lexing_position_key (pos : Lexing.position) =
+  (pos.Lexing.pos_fname, pos.Lexing.pos_lnum, column_of_lexing pos)
 
 let find_decl_by_position t key =
   match Hashtbl.find_opt t.position_index key with
@@ -122,6 +136,10 @@ let remove_position_index t key id =
 let mark_unknown_value_ref t id = Hashtbl.replace t.unknown_value_targets id ()
 let has_unknown_value_ref t id = Hashtbl.mem t.unknown_value_targets id
 let add_pending_unknown_value t key = Hashtbl.replace t.pending_unknown_value key ()
+let mark_unknown_type_ref t id =
+  Hashtbl.replace t.unknown_type_targets id ()
+let has_unknown_type_ref t id = Hashtbl.mem t.unknown_type_targets id
+let add_pending_unknown_type t key = Hashtbl.replace t.pending_unknown_type key ()
 
 let record_file_edge t ~from_file ~to_file =
   let existing = match Hashtbl.find_opt t.file_edges from_file with Some s -> s | None -> StringSet.empty in
@@ -177,7 +195,8 @@ let remove_file t file =
               remove_position_index t (position_key node.summary.loc.start_) id
           | None -> ());
           Hashtbl.remove t.nodes id;
-          Hashtbl.remove t.unknown_value_targets id)
+          Hashtbl.remove t.unknown_value_targets id;
+          Hashtbl.remove t.unknown_type_targets id)
         decls;
       let edges_removed = ref false in
       if Hashtbl.mem t.file_edges file then (
@@ -196,14 +215,18 @@ let remove_file t file =
       List.iter (fun src -> Hashtbl.remove t.file_edges src) !pending_removals;
       List.iter (fun (src, set) -> Hashtbl.replace t.file_edges src set) !pending_updates;
       if !edges_removed then t.file_order_valid <- false;
-      let pending_unknown_keys = ref [] in
-      Hashtbl.iter
-        (fun key _ ->
-          let file_key, _ = key in
-          if String.equal file_key file then
-            pending_unknown_keys := key :: !pending_unknown_keys)
-        t.pending_unknown_value;
-      List.iter (fun key -> Hashtbl.remove t.pending_unknown_value key) !pending_unknown_keys
+      let remove_pending table =
+        let keys = ref [] in
+        Hashtbl.iter
+          (fun key _ ->
+            let file_key, _, _ = key in
+            if String.equal file_key file then
+              keys := key :: !keys)
+          table;
+        List.iter (fun key -> Hashtbl.remove table key) !keys
+      in
+      remove_pending t.pending_unknown_value;
+      remove_pending t.pending_unknown_type
 
 let resolve_pending_value t key target_id =
   match Hashtbl.find_opt t.pending_value key with
@@ -233,7 +256,10 @@ let resolve_pending_type t key target_id =
           add_edge t.forward_type src target_id;
           add_edge t.reverse_type target_id src)
         pending;
-      Hashtbl.remove t.pending_type key
+      Hashtbl.remove t.pending_type key;
+      if Hashtbl.mem t.pending_unknown_type key then (
+        Hashtbl.remove t.pending_unknown_type key;
+        mark_unknown_type_ref t target_id)
 
 let add_decls t summary =
   let decl_ids =
@@ -243,6 +269,16 @@ let add_decls t summary =
            let common_decl = Summary.to_common_decl decl in
            let node = {id; file = summary.source_file; decl = common_decl; summary = decl} in
            let start_key = position_key decl.loc.start_ in
+           let () =
+             if should_debug summary.source_file then
+               let end_key = position_key decl.loc.end_ in
+               let s_file, s_line, s_column = start_key in
+               let e_file, e_line, e_column = end_key in
+               Printf.eprintf
+                 "[graph_store] [%s] add decl %s key=(%s,%d,%d) end=(%s,%d,%d)\n"
+                 summary.source_file decl.name s_file s_line s_column e_file
+                 e_line e_column
+           in
            Hashtbl.replace t.nodes id node;
            add_position_index t start_key id;
            resolve_pending_value t start_key id;
@@ -250,6 +286,9 @@ let add_decls t summary =
            if Hashtbl.mem t.pending_unknown_value start_key then (
              Hashtbl.remove t.pending_unknown_value start_key;
              mark_unknown_value_ref t id);
+           if Hashtbl.mem t.pending_unknown_type start_key then (
+             Hashtbl.remove t.pending_unknown_type start_key;
+             mark_unknown_type_ref t id);
            id)
   in
   Hashtbl.replace t.file_to_decls summary.source_file decl_ids;
@@ -263,59 +302,280 @@ let position_in_range (range : Summary.range) (pos : Summary.position) =
 
 let find_local_decl t summary decl_ids pos =
   let key = position_key pos in
-  match find_decl_by_position t key with
-  | Some id -> Some id
-  | None ->
-      let rec loop decls ids =
-        match (decls, ids) with
-        | decl :: rest, id :: id_rest ->
-            if position_in_range decl.Summary.loc pos then Some id
-            else loop rest id_rest
-        | _ -> None
-      in
-      loop summary.Summary.decls decl_ids
+  let result =
+    match find_decl_by_position t key with
+    | Some id -> Some id
+    | None ->
+        let rec loop decls ids =
+          match (decls, ids) with
+          | decl :: rest, id :: id_rest ->
+              if position_in_range decl.Summary.loc pos then Some id
+              else loop rest id_rest
+          | _ -> None
+        in
+        let result = loop summary.Summary.decls decl_ids in
+        (match result with
+        | None ->
+            let line_candidate =
+              let rec loop decls ids candidate =
+                match (decls, ids) with
+                | decl :: rest, id :: id_rest ->
+                    let same_file =
+                      String.equal decl.Summary.loc.start_.file pos.file
+                    in
+                    let candidate =
+                      if same_file && decl.Summary.loc.start_.line <= pos.line then
+                        Some id
+                      else candidate
+                    in
+                    loop rest id_rest candidate
+                | _ -> candidate
+              in
+              loop summary.Summary.decls decl_ids None
+            in
+            (match line_candidate with
+            | Some _ -> line_candidate
+            | None ->
+                (if should_debug summary.source_file then
+                   let file, line, column = key in
+                   Printf.eprintf
+                     "[graph_store] [%s] failed to locate decl for pos %s \
+                      (key=%s,%d,%d)\n"
+                     summary.source_file
+                     (format_summary_pos pos)
+                     file line column);
+                None)
+        | Some _ -> result)
+  in
+  result
+
+let find_decl_ids_by_exact_start summary decl_ids (pos : Summary.position) =
+  let rec loop decls ids acc =
+    match (decls, ids) with
+    | decl :: rest, id :: id_rest ->
+        let start = decl.Summary.loc.start_ in
+        let same_file =
+          String.equal start.Summary.file pos.file
+          || String.equal
+               (Filename.basename start.Summary.file)
+               (Filename.basename pos.file)
+        in
+        let acc =
+          if same_file
+             && start.Summary.line = pos.line
+             && start.Summary.column = pos.column
+          then id :: acc
+          else acc
+        in
+        loop rest id_rest acc
+    | _ -> acc
+  in
+  loop summary.Summary.decls decl_ids []
+
+let find_decl_ids_by_line summary decl_ids (pos : Summary.position) =
+  let rec loop decls ids acc =
+    match (decls, ids) with
+    | decl :: rest, id :: id_rest ->
+        let start = decl.Summary.loc.start_ in
+        let same_file =
+          String.equal start.Summary.file pos.file
+          || String.equal
+               (Filename.basename start.Summary.file)
+               (Filename.basename pos.file)
+        in
+        let acc =
+          if same_file && start.Summary.line = pos.line then id :: acc else acc
+        in
+        loop rest id_rest acc
+    | _ -> acc
+  in
+  loop summary.Summary.decls decl_ids []
 
 let add_value_reference t summary decl_ids ref =
+  let source_file = summary.Summary.source_file in
+  let debug = should_debug source_file in
+  let describe_node id =
+    match Hashtbl.find_opt t.nodes id with
+    | Some node -> Common.Path.toString node.decl.path
+    | None -> id
+  in
+  let log_edge reason src target =
+    if debug then
+      Printf.eprintf
+        "[graph_store] [%s] add edge %s -> %s (%s)\n"
+        source_file (describe_node src) (describe_node target) reason
+  in
   match find_local_decl t summary decl_ids ref.Summary.loc_from with
   | None ->
       let key = position_key ref.loc_to in
+      if debug then
+        let file, line, column = key in
+        Printf.eprintf
+          "[graph_store] [%s] missing value-ref source %s -> %s (key=%s,%d,%d)\n"
+          source_file
+          (format_summary_pos ref.Summary.loc_from)
+          (format_summary_pos ref.Summary.loc_to)
+          file line column;
       (match Hashtbl.find_opt t.position_index key with
       | Some (target :: _) -> mark_unknown_value_ref t target
-      | _ -> add_pending_unknown_value t key)
+      | _ ->
+          if debug then
+            let file, line, column = key in
+            Printf.eprintf
+              "[graph_store] [%s] pending target for %s (key=%s,%d,%d)\n"
+              source_file
+              (format_summary_pos ref.Summary.loc_to)
+              file line column;
+          add_pending_unknown_value t key)
   | Some src ->
       let key = position_key ref.loc_to in
       (match Hashtbl.find_opt t.position_index key with
       | Some (target :: _) ->
           add_edge t.forward_value src target;
           add_edge t.reverse_value target src;
+          log_edge "index" src target;
           if ref.add_file_edge then (
             let from_node = Hashtbl.find t.nodes src in
             let to_node = Hashtbl.find t.nodes target in
             if not (String.equal from_node.file to_node.file) then
               record_file_edge t ~from_file:from_node.file ~to_file:to_node.file)
       | _ ->
+          let fallback_target =
+            if String.equal ref.Summary.loc_to.file summary.source_file then
+              find_local_decl t summary decl_ids ref.Summary.loc_to
+            else None
+          in
+          (match fallback_target with
+          | Some target ->
+              add_edge t.forward_value src target;
+              add_edge t.reverse_value target src;
+              log_edge "fallback" src target;
+              if ref.add_file_edge then (
+                let from_node = Hashtbl.find t.nodes src in
+                let to_node = Hashtbl.find t.nodes target in
+                if not (String.equal from_node.file to_node.file) then
+                  record_file_edge t ~from_file:from_node.file
+                    ~to_file:to_node.file)
+          | None ->
+          if debug then
+            let file, line, column = key in
+            Printf.eprintf
+              "[graph_store] [%s] unresolved value-ref target %s (key=%s,%d,%d)\n"
+              source_file
+              (format_summary_pos ref.Summary.loc_to)
+              file line column;
           let pending =
             match Hashtbl.find_opt t.pending_value key with
             | Some list -> (src, ref.add_file_edge) :: list
             | None -> [ (src, ref.add_file_edge) ]
           in
-          Hashtbl.replace t.pending_value key pending)
+          Hashtbl.replace t.pending_value key pending))
 
 let add_type_reference t summary decl_ids ref =
-  match find_local_decl t summary decl_ids ref.Summary.pos_from with
-  | None -> ()
-  | Some src ->
+  let source_file = summary.Summary.source_file in
+  let debug = should_debug source_file in
+  let describe_node id =
+    match Hashtbl.find_opt t.nodes id with
+    | Some node -> Common.Path.toString node.decl.path
+    | None -> id
+  in
+  let log_edge reason src target =
+    if debug then
+      Printf.eprintf
+        "[graph_store] [%s] add type edge %s -> %s (%s)\n"
+        source_file (describe_node src) (describe_node target) reason
+  in
+  let source_opt = find_local_decl t summary decl_ids ref.Summary.pos_from in
+  let ghost_source = String.equal ref.Summary.pos_from.file "_none_" in
+  if ghost_source then (
+    let key = position_key ref.pos_to in
+    let candidates =
+      let exact =
+        find_decl_ids_by_exact_start summary decl_ids ref.Summary.pos_to
+      in
+      if exact <> [] then exact
+      else find_decl_ids_by_line summary decl_ids ref.Summary.pos_to
+    in
+    if candidates <> [] then
+      List.iter
+        (fun target ->
+          mark_unknown_type_ref t target;
+          if debug then
+            Printf.eprintf
+              "[graph_store] [%s] marked unknown type ref (ghost) for %s\n"
+              source_file (describe_node target))
+        candidates
+    else (
+      add_pending_unknown_type t key;
+      if debug then
+        let file, line, column = key in
+        Printf.eprintf
+          "[graph_store] [%s] pending unknown type target key=%s,%d,%d (ghost)\n"
+          source_file file line column))
+  else
+    match source_opt with
+    | None ->
+      let key = position_key ref.pos_to in
+      if debug then
+        let file, line, column = key in
+        Printf.eprintf
+          "[graph_store] [%s] missing type-ref source %s (target key=%s,%d,%d)\n"
+          source_file
+          (format_summary_pos ref.Summary.pos_from)
+          file line column;
+      let index_entry = Hashtbl.find_opt t.position_index key in
+      let candidates =
+        match index_entry with
+        | Some ids -> ids
+        | None ->
+            let exact =
+              find_decl_ids_by_exact_start summary decl_ids ref.Summary.pos_to
+            in
+            if exact <> [] then exact
+            else
+              let same_line =
+                find_decl_ids_by_line summary decl_ids ref.Summary.pos_to
+              in
+              if same_line <> [] then same_line
+              else
+                (match find_local_decl t summary decl_ids ref.Summary.pos_to with
+                | Some id -> [id]
+                | None -> [])
+      in
+      if candidates <> [] then
+        List.iter
+          (fun target ->
+            mark_unknown_type_ref t target;
+            if debug then
+              Printf.eprintf
+                "[graph_store] [%s] marked unknown type ref for %s\n"
+                source_file (describe_node target))
+          candidates
+      else (
+        add_pending_unknown_type t key;
+        if debug then
+          let file, line, column = key in
+          Printf.eprintf
+            "[graph_store] [%s] pending unknown type target key=%s,%d,%d\n"
+            source_file file line column)
+    | Some src ->
       let key = position_key ref.pos_to in
       (match Hashtbl.find_opt t.position_index key with
       | Some (target :: _) ->
           add_edge t.forward_type src target;
-          add_edge t.reverse_type target src
+          add_edge t.reverse_type target src;
+          log_edge "index" src target
       | _ ->
           let pending =
             match Hashtbl.find_opt t.pending_type key with
             | Some list -> src :: list
             | None -> [src]
           in
+          if debug then
+            let file, line, column = key in
+            Printf.eprintf
+              "[graph_store] [%s] pending type target (%s) key=%s,%d,%d\n"
+              source_file (describe_node src) file line column;
           Hashtbl.replace t.pending_type key pending)
 
 let add_summary t summary =
@@ -327,10 +587,29 @@ let add_summary t summary =
   in
   if not digest_changed then ()
   else (
+    if should_debug file then
+      Printf.eprintf
+        "[graph_store] [%s] summary refs: value=%d type=%d decls=%d\n"
+        file
+        (List.length summary.value_references)
+        (List.length summary.type_references)
+        (List.length summary.decls);
     remove_file t file;
     let decl_ids = add_decls t summary in
     List.iter (add_value_reference t summary decl_ids) summary.value_references;
     List.iter (add_type_reference t summary decl_ids) summary.type_references;
+    if should_debug file then (
+      let describe id =
+        match Hashtbl.find_opt t.nodes id with
+        | Some node -> Common.Path.toString node.decl.path
+        | None -> id
+      in
+      let unknowns =
+        Hashtbl.fold (fun id _ acc -> describe id :: acc) t.unknown_type_targets []
+      in
+      Printf.eprintf
+        "[graph_store] [%s] unknown type targets: [%s]\n"
+        file (String.concat ", " unknowns));
     Hashtbl.replace t.file_digests file summary.digest;
     mark_dirty t file;
     t.file_order_valid <- false)

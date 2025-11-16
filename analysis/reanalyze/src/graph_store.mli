@@ -26,6 +26,7 @@ val successors : t -> kind:[`Value | `Type] -> DeclId.t -> DeclIdSet.t
 val reverse_successors : t -> kind:[`Value | `Type] -> DeclId.t -> DeclIdSet.t
 val frontier : t -> changed_files:string list -> DeclIdSet.t
 val has_unknown_value_ref : t -> DeclId.t -> bool
+val has_unknown_type_ref : t -> DeclId.t -> bool
 val ordered_files : t -> (string, int) Hashtbl.t
 val compare_decl_ids :
   t ->
