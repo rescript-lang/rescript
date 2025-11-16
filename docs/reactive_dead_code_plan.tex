@@ -244,7 +244,7 @@ let collectValueBinding ~collector super self vb =
 \subsection{Schema}
 \begin{lstlisting}
 {
-  "version": 1,
+  "version": 2,
   "source_file": "src/Foo.res",
   "digest": "b2d7...",
   "decls": [
@@ -252,7 +252,7 @@ let collectValueBinding ~collector super self vb =
       "name": "Foo.make",
       "kind": "Value",
       "module_path": ["Foo"],
-      "loc": { "line": 12, "column": 4 },
+      "loc": { "line": 12, "column": 4, "cnum": 1234, "bol": 1228 },
       "toplevel": true,
       "optional_args": ["callback"],
       "side_effects": true
@@ -277,7 +277,7 @@ let collectValueBinding ~collector super self vb =
 \begin{itemize}[leftmargin=*]
   \item \textbf{Version field} follows semantic versioning (major only). Increment when schema changes; maintain backward compatibility by upgrading readers.
   \item Store canonical JSON (sorted keys) and compute digest using \code{Digestif.blake2b} over the canonical bytes.
-  \item Add \code{Summary.version = 1} constant; bump to 2 if new fields become mandatory.
+  \item Set \code{Summary.version = 2} (reflecting the absolute-position schema); bump the constant whenever new mandatory fields ship and regenerate cached artifacts.
 \end{itemize}
 
 \subsection{Implementation Tasks}
@@ -312,16 +312,40 @@ This milestone is the first \emph{algorithmic} change to the analysis. Milestone
   \item assign stable declaration identifiers (file \# line \# column \# kind \# name) and persist forward/reverse edges, so we can answer ``which declarations does this file affect?'' without re-reading \code{.cmt} files;
   \item compute a \textbf{frontier} starting from the files whose summaries changed and walking reverse edges, so only declarations that might change liveness get reprocessed;
   \item run Tarjan’s strongly-connected-components (SCC) algorithm on just that frontier, cache each SCC’s hash (members + outgoing edges + summary digests), and re-run liveness only when the cache misses.
+  \item surface an \code{-incremental-liveness} CLI flag so developers can build the graph, observe the recompute frontier, and keep it in lockstep with batch diagnostics even before the Skip runtime hosts it.
 \end{itemize}
 
+We treat the graph solver as experimental behind the \code{INCR\_GRAPH\_SOLVER=1} environment flag: by default the CLI builds/prints the frontier but reuses the batch liveness answers so parity can run on every change. As soon as the SCC hashing + heuristics catch up, flipping the flag enables the Tarjan-based recompute without touching the driver loop.
+
 Tarjan’s algorithm is a linear-time DFS that assigns every node a discovery index, keeps a stack of “live” nodes, and emits each SCC exactly once when it discovers a node whose lowlink equals its index. This property makes it ideal for the dead-code solver: SCCs correspond to mutually recursive bindings, so we can reuse old SCC solutions unless the component structure changes. Without this graph/SCC layer, the Skip runtime would still be forced to re-run the whole liveness fixpoint on every edit, defeating the point of going reactive.
+
+For now the \code{-incremental-liveness} flag drives a “shadow” path: summaries feed the in-process \code{Graph_store}, we log the size of the recompute frontier after every batch run, and the parity harness executes the same two-stage flow on curated fixtures. Once the Skip service lands we will replace the logging with actual incremental diagnoses, but keeping the flag in tree de-risks each intermediate refactor.
 
 \paragraph{De-risking strategy.} Because this milestone changes core liveness behaviour, we rely on the same safeguards as earlier work, just focused on the new graph layer:
 \begin{itemize}[leftmargin=*]
   \item Every change must keep \code{make test-analysis} green. Those fixture projects exercise dead values, optional args, exceptions, and termination; running them after each graph-store change ensures batch behaviour stays identical.
   \item Run the collector parity harness (\code{dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}) after wiring the new graph to confirm the SCC-based pipeline still matches the legacy \code{DeadCommon} diagnostics.
+  \item Stage 2 of the parity harness now builds the graph, prints the incremental frontier, and compares incremental-vs-legacy deaths. Developers can flip \code{INCR\_GRAPH\_SOLVER} or \code{INCR\_AFTER\_LEGACY} in that command to experiment with the pure solver without regressing the default behaviour.
   \item Log intermediate graph/SCC hashes in the implementation log so we can trace regressions.
 \end{itemize}
+
+\subsubsection*{Milestone 3.1 – Annotation Semantics}
+Thread \code{ProcessDeadAnnotations.(annotateLive|annotateDead|doReportDead)} through the graph solver so declarative annotations (React components, @dead, etc.) behave exactly like the batch path. Finishing this milestone should remove the current block of “unexpected deaths” involving annotated React props/components.
+
+\subsubsection*{Milestone 3.2 – Delayed Edge Replay}
+Ensure \code{DeadOptionalArgs.forceDelayedItems} and the exception replay run before we query the graph, so optional-arg and ghost exception references populate the edge set just like in batch mode. This should shrink the “missing deaths” set where optional parameters currently appear unused.
+
+\subsubsection*{Milestone 3.3 – File Ordering Parity}
+Carry the legacy \code{orderedFiles} rank into each node and order SCC processing by that rank, preventing premature deaths when dependencies live in other files. Completing this step should eliminate mismatches caused purely by traversal order.
+
+\subsubsection*{Milestone 3.4 – Reference Normalisation}
+Apply the same location rewriting (\code{Current.lastBinding}, ghost filtering, point locations) before counting incoming references so self-ref edges and ghost locations do not skew the solver. Expect the long tail of prop/record mismatches to drop after this milestone.
+
+\subsubsection*{Milestone 3.5 – Module Bookkeeping}
+Call \code{DeadModules.(markDead|markLive)} from the graph solver so module-level liveness state and derived warnings stay in sync. Once this lands, module-level discrepancies (e.g. nested components) should disappear.
+
+Each mini-milestone targets a single discrepancy category; running the parity harness after each completion should show a strictly decreasing mismatch count.
+Each step removes a distinct block of discrepancies that the parity harness currently reports, letting us watch the diff set shrink monotonically as we implement the missing behaviour.
 
 \subsection{Graph Store Design}
 \begin{enumerate}[leftmargin=*]

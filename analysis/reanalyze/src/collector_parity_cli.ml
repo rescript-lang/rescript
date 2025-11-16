@@ -181,6 +181,27 @@ let compare_file _settings path =
       | None -> Result.Ok ()
       | Some diff -> Result.Error (Parity_diff {file = path; diff}))
 
+let build_decl_key (decl : Common.decl) =
+  let names = decl.path |> List.map Name.toString |> String.concat "." in
+  Printf.sprintf "%s|%s|%s"
+    decl.pos.pos_fname names
+    (DeclKind.toString decl.declKind)
+
+let decls_to_string_set decls =
+  decls
+  |> List.fold_left
+       (fun acc decl ->
+         if decl.report then StringSet.add (build_decl_key decl) acc else acc)
+       StringSet.empty
+
+let legacy_dead_set () =
+  DeadCommon.PosHash.fold
+    (fun _ decl acc ->
+      match decl.resolvedDead with
+      | Some true when decl.report -> StringSet.add (build_decl_key decl) acc
+      | _ -> acc)
+    DeadCommon.decls StringSet.empty
+
 let print_entries ~label ~max_examples entries =
   if entries <> [] then (
     Printf.printf "    %s (%d):\n" label (List.length entries);
@@ -205,6 +226,20 @@ let print_mismatch ~settings {file; diff} =
     diff.type_missing;
   print_entries ~label:"Extra type refs" ~max_examples:settings.max_examples
     diff.type_extra
+
+let report_liveness_diff ~settings ~legacy ~incremental =
+  if StringSet.equal legacy incremental then
+    Printf.printf "Incremental liveness parity OK (%d declarations checked)\n"
+      (StringSet.cardinal legacy)
+  else (
+    let missing = StringSet.diff legacy incremental |> StringSet.elements in
+    let extra = StringSet.diff incremental legacy |> StringSet.elements in
+    prerr_endline "Incremental liveness mismatch:";
+    print_entries ~label:"Missing deaths" ~max_examples:settings.max_examples
+      missing;
+    print_entries ~label:"Unexpected deaths" ~max_examples:settings.max_examples
+      extra;
+    exit 1)
 
 let run ~settings ~paths =
   let files =
@@ -242,7 +277,80 @@ let run ~settings ~paths =
     prerr_endline "Parity mismatches detected.";
     exit 1);
   if !failures <> [] then exit 1;
-  Printf.printf "Collector parity OK (%d files checked)\n" (List.length files)
+  Printf.printf "Collector parity OK (%d files checked)\n" (List.length files);
+  (* Second pass: build full graph/liveness parity *)
+  let graph = Graph_store.create () in
+  DeadCommon.Test.clear ();
+  let graph_failures = ref [] in
+  let graph_warnings = ref [] in
+  let process_file file =
+    match Typedtree_helpers.read_cmt file with
+    | Result.Error msg ->
+        graph_failures := (file, msg) :: !graph_failures
+    | Result.Ok cmt_infos -> (
+        match resolve_source_file cmt_infos with
+        | None ->
+            if settings.allow_missing_source then
+              graph_warnings :=
+                (file, "unable to resolve source file") :: !graph_warnings
+            else
+              graph_failures :=
+                (file, "unable to resolve source file") :: !graph_failures
+        | Some source_file ->
+            let is_interface =
+              Filename.check_suffix source_file "i"
+              || Filename.check_suffix file ".cmti"
+            in
+            with_module_context ~source_file ~is_interface (fun () ->
+                let collected = DeadCode.collect_cmt ~cmtFilePath:file cmt_infos in
+                let summary = Summary.of_collected ~source_file collected in
+                Graph_store.add_summary graph summary;
+                let collector = Collector.dead_common_sink () in
+                ModulePath.with_current (fun () ->
+                    DeadCode.processCmt ~collector ~cmtFilePath:file cmt_infos);
+                ignore (Collector.finalize collector)))
+  in
+  List.iter process_file files;
+  if !graph_failures <> [] then (
+    prerr_endline "Graph build errors:";
+    !graph_failures
+    |> List.iter (fun (file, msg) -> Printf.eprintf "  %s: %s\n" file msg);
+    exit 1);
+  if !graph_warnings <> [] then (
+    prerr_endline "Graph build warnings:";
+    !graph_warnings
+    |> List.iter (fun (file, msg) -> Printf.eprintf "  %s: %s\n" file msg));
+  let dirty_files = Graph_store.get_dirty_files graph in
+  let incremental_after_legacy =
+    match Sys.getenv_opt "INCR_AFTER_LEGACY" with
+    | Some "1" -> true
+    | Some "0" -> false
+    | _ -> (
+      match Sys.getenv_opt "INCR_GRAPH_SOLVER" with
+      | Some "1" -> false
+      | _ -> true)
+  in
+  let run_incremental () =
+    let result = Incremental_liveness.recompute ~graph ~changed_files:dirty_files in
+    let visited = Graph_store.DeclIdSet.cardinal result.visited in
+    Printf.printf
+      "Incremental liveness frontier: %d decls across %d files\n"
+      visited (List.length dirty_files);
+    result
+  in
+  let incremental =
+    if incremental_after_legacy then None else Some (run_incremental ())
+  in
+  DeadCommon.reportDead ~checkOptionalArg:DeadOptionalArgs.check;
+  let incremental =
+    match incremental with
+    | Some res -> res
+    | None -> run_incremental ()
+  in
+  let legacy_dead = legacy_dead_set () in
+  let incremental_dead = decls_to_string_set incremental.dead_declarations in
+  report_liveness_diff ~settings ~legacy:legacy_dead ~incremental:incremental_dead;
+  DeadCommon.Test.clear ()
 
 let cli () =
   let allow_missing_source = ref false in

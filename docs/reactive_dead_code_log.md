@@ -97,5 +97,33 @@ Emit canonical per-file summaries (with schema, digests, and caching) based on t
 
 ---
 
+## Milestone 3 – Graph Store and Incremental Liveness Scaffolding
+
+### Goal
+Track per-declaration graphs (IDs, edges, file mappings) and compute the frontier touched by changed summaries so later milestones can recompute liveness incrementally. Expose tooling (CLI flag + parity harness) to observe the frontier without changing the batch diagnostics yet.
+
+### Implementation Notes
+- Added `analysis/reanalyze/src/graph_store.{ml,mli}`:
+  - Decl IDs encode `file#line#column#cnum#kind#name`. The store keeps node metadata, per-file decl lists, value/type adjacency, pending edges (for references whose targets are declared later), file->file edges, per-file digests, and a dirty-file tracker.
+  - Source lookup now keys on exact start positions, so references whose `loc_from` matches a declaration header are resolved even when the expression lies outside the declaration’s range.
+- Added `analysis/reanalyze/src/tarjan.{ml,mli}` plus `incremental_liveness.{ml,mli}`:
+  - Tarjan exposes a simple `compute ~successors` API (linear-time SCC). The graph-driven solver is functional but still gated behind `INCR_GRAPH_SOLVER=1` while we encode the remaining legacy heuristics; the default code path reuses the batch liveness decisions so the CLI can enforce parity today.
+- Summary schema bumped to version 2 (positions now include `cnum`/`bol`) so graph store can match references precisely. `docs/reactive_dead_code_plan.tex` reflects the update.
+- `Reanalyze` grows an `-incremental-liveness` flag:
+  - Summaries are built whenever either `-cache-summaries` or `-incremental-liveness` is set.
+  - When incremental mode is on, every summary feeds a process-wide `Graph_store`, and after `DeadCommon.reportDead` runs we collect/log the frontier size. Diagnostics still come from the batch path while the solver flag is experimental.
+- `analysis/bin/collector_parity.exe` now has a second stage:
+  - Stage 1 still verifies collector parity.
+  - Stage 2 rebuilds the summary graph, prints frontier stats, and compares incremental-vs-legacy liveness. Environment knobs (`INCR_GRAPH_SOLVER` and `INCR_AFTER_LEGACY`) allow experimenting with the new solver without regressing CI.
+- Introduced five sub-milestones (3.1–3.5) covering the remaining gaps (annotation semantics, delayed edges, file ordering, reference normalisation, module bookkeeping). Status: all TODO; none attempted yet.
+
+### Validation
+- `dune build analysis/reanalyze`
+- `make test-analysis`
+- `dune exec analysis/bin/collector_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs`
+
+
+
 Add new sections below as soon as a milestone lands.
 
+---

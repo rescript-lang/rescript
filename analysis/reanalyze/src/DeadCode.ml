@@ -3,11 +3,11 @@ open DeadCommon
 let processSignature ~collector ~doValues ~doTypes
     (signature : Types.signature) =
   DeadType.with_collector collector (fun () ->
-      signature
-      |> List.iter (fun sig_item ->
+  signature
+  |> List.iter (fun sig_item ->
              DeadValue.processSignatureItem ~collector ~doValues ~doTypes
-               ~moduleLoc:Location.none
-               ~path:[!Common.currentModuleName]
+           ~moduleLoc:Location.none
+           ~path:[!Common.currentModuleName]
                sig_item))
 
 let processCmt ~collector ~cmtFilePath (cmt_infos : Cmt_format.cmt_infos) =

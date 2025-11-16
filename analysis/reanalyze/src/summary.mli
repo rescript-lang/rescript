@@ -1,6 +1,6 @@
 open Common
 
-type position = {file: string; line: int; column: int}
+type position = {file: string; line: int; column: int; cnum: int; bol: int}
 
 type range = {start_: position; end_: position}
 
@@ -64,4 +64,6 @@ val to_string : ?pretty:bool -> t -> string
 val of_string : string -> t
 val canonical_string : t -> string
 val verify_digest : t -> unit
+val to_common_decl : decl -> Common.decl
+val to_common_decls : t -> Common.decl list
 

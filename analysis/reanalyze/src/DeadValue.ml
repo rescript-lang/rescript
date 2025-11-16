@@ -301,7 +301,7 @@ let rec processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc ~path
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
         record_value_decl collector ~loc ~moduleLoc ~optionalArgs ~path
-          ~sideEffects:false
+             ~sideEffects:false
           (Ident.name id |> Name.create ~isInterface:false)
   | Sig_module (id, {Types.md_type = moduleType; md_loc = moduleLoc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some moduleType; mtd_loc = moduleLoc}) ->
@@ -371,7 +371,7 @@ let traverseStructure ~collector ~doTypes ~doExternals =
         (* see https://github.com/BuckleScript/bucklescript/issues/4532 *)
       then
         record_value_decl collector ~path ~loc:vd.val_loc
-          ~moduleLoc:currentModulePath.loc ~sideEffects:false
+             ~moduleLoc:currentModulePath.loc ~sideEffects:false
           (id |> Name.create ~isInterface:false)
     | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
       if !Config.analyzeTypes then
@@ -434,5 +434,5 @@ let processStructure ~collector ~cmt_value_dependencies ~doTypes ~doExternals
               in
               structure |> traverseStructure.structure traverseStructure
               |> ignore;
-              let valueDependencies = cmt_value_dependencies |> List.rev in
+  let valueDependencies = cmt_value_dependencies |> List.rev in
               valueDependencies |> List.iter (processValueDependency collector))))

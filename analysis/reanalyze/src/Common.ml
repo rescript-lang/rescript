@@ -47,6 +47,7 @@ module Cli = struct
   let excludePaths = ref ([] : string list)
 
   let cacheSummaries = ref false
+  let incremental = ref false
 end
 
 module StringSet = Set.Make (String)

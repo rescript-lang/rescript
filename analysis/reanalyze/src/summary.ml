@@ -2,7 +2,7 @@ open Common
 
 module Blake2b = Digestif.BLAKE2B
 
-type position = {file: string; line: int; column: int}
+type position = {file: string; line: int; column: int; cnum: int; bol: int}
 
 type range = {start_: position; end_: position}
 
@@ -54,7 +54,7 @@ type t = {
   file_edges: file_edge list;
 }
 
-let version = 1
+let version = 2
 
 exception Invalid_format of string
 
@@ -63,7 +63,13 @@ let column_of_pos pos =
   if column < 0 then 0 else column
 
 let position_of_lexing pos =
-  {file = pos.Lexing.pos_fname; line = pos.Lexing.pos_lnum; column = column_of_pos pos}
+  {
+    file = pos.Lexing.pos_fname;
+    line = pos.Lexing.pos_lnum;
+    column = column_of_pos pos;
+    cnum = pos.Lexing.pos_cnum;
+    bol = pos.Lexing.pos_bol;
+  }
 
 let range_of_positions ~start ~end_ = {start_ = position_of_lexing start; end_ = position_of_lexing end_}
 
@@ -79,6 +85,44 @@ let optional_args_snapshot (args : OptionalArgs.t) =
     args.alwaysUsed |> SS.elements |> List.sort String.compare |> List.map (fun name -> (name, args.count))
   in
   {unused; always_used; call_count = args.count}
+
+let lexing_position_of_summary {file; line; cnum; bol; _} =
+  {
+    Lexing.pos_fname = file;
+    pos_lnum = line;
+    pos_cnum = cnum;
+    pos_bol = bol;
+  }
+
+let location_of_range {start_; end_} =
+  {
+    Location.loc_start = lexing_position_of_summary start_;
+    loc_end = lexing_position_of_summary end_;
+    loc_ghost = false;
+  }
+
+let optional_args_of_snapshot ({unused; always_used; call_count} : optional_args_snapshot) =
+  let module SS = StringSet in
+  {
+    OptionalArgs.count = call_count;
+    unused = SS.of_list unused;
+    alwaysUsed = always_used |> List.map fst |> SS.of_list;
+  }
+
+let decl_kind_of_summary = function
+  | Value {is_toplevel; side_effects; optional_args} ->
+      DeclKind.Value
+        {
+          isToplevel = is_toplevel;
+          sideEffects = side_effects;
+          optionalArgs = optional_args_of_snapshot optional_args;
+        }
+  | Exception -> DeclKind.Exception
+  | RecordLabel -> DeclKind.RecordLabel
+  | VariantCase -> DeclKind.VariantCase
+
+let path_of_components components =
+  components |> List.rev_map (fun name -> Name.create name)
 
 let path_components path = path |> List.rev_map Name.toString
 
@@ -122,6 +166,28 @@ let summary_decl_of_common (decl : Common.decl) =
     | DeclKind.VariantCase -> (VariantCase, Some decl.posAdjustment)
   in
   {path = components; module_path; name; loc; module_loc; decl_kind; pos_adjustment}
+
+let to_common_decl (decl : decl) =
+  let moduleLoc =
+    match decl.module_loc with
+    | Some range -> location_of_range range
+    | None -> Location.none
+  in
+  let posAdjustment = match decl.pos_adjustment with Some adj -> adj | None -> Nothing in
+  let path = decl.path |> path_of_components in
+  {
+    declKind = decl_kind_of_summary decl.decl_kind;
+    moduleLoc;
+    posAdjustment;
+    path;
+    pos = lexing_position_of_summary decl.loc.start_;
+    posEnd = lexing_position_of_summary decl.loc.end_;
+    posStart = lexing_position_of_summary decl.loc.start_;
+    resolvedDead = None;
+    report = true;
+  }
+
+let to_common_decls (summary : t) = summary.decls |> List.map to_common_decl
 
 let summary_value_reference (ref : Collected_types.value_reference) =
   let loc_from = position_of_lexing ref.loc_from.loc_start in
@@ -175,9 +241,15 @@ let json_option f = function
   | None -> Json.Null
   | Some v -> f v
 
-let json_of_position {file; line; column} =
+let json_of_position {file; line; column; cnum; bol} =
   json_object
-    [("column", json_int column); ("file", json_string file); ("line", json_int line)]
+    [
+      ("bol", json_int bol);
+      ("column", json_int column);
+      ("cnum", json_int cnum);
+      ("file", json_string file);
+      ("line", json_int line);
+    ]
 
 let json_of_range {start_; end_} =
   json_object [("end", json_of_position end_); ("start", json_of_position start_)]
@@ -317,7 +389,9 @@ let position_of_json json =
   let file = field "file" fields |> expect_string "position.file" in
   let line = field "line" fields |> expect_int "position.line" in
   let column = field "column" fields |> expect_int "position.column" in
-  {file; line; column}
+  let cnum = match List.assoc_opt "cnum" fields with Some v -> expect_int "position.cnum" v | None -> column in
+  let bol = match List.assoc_opt "bol" fields with Some v -> expect_int "position.bol" v | None -> cnum - column in
+  {file; line; column; cnum; bol}
 
 let range_of_json json =
   let fields = expect_object "range" json in
@@ -421,7 +495,7 @@ let file_edge_of_json json =
 let of_json json =
   let fields = expect_object "summary" json in
   let version_value = field "version" fields |> expect_int "version" in
-  if version_value <> version then
+  if version_value <> version && version_value <> 1 then
     raise
       (Invalid_format
          (Printf.sprintf "unsupported summary version %d (expected %d)" version_value version));

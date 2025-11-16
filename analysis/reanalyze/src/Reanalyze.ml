@@ -38,7 +38,9 @@ let write_baseline_metrics elapsed =
          close_out_noerr oc;
          raise exn)
 
-let cache_summary summary =
+let incremental_graph = Graph_store.create ()
+
+let handle_summary summary =
   if !Common.Cli.cacheSummaries then
     let project_root =
       if runConfig.projectRoot = "" then Sys.getcwd () else runConfig.projectRoot
@@ -47,9 +49,23 @@ let cache_summary summary =
     | Ok _ -> ()
     | Error err ->
         prerr_endline
-          (Printf.sprintf "Failed to update summary cache for %s: %s"
+        (Printf.sprintf "Failed to update summary cache for %s: %s"
              summary.Summary.source_file
-             (Summary_cache.error_message err))
+             (Summary_cache.error_message err));
+  if !Common.Cli.incremental then Graph_store.add_summary incremental_graph summary
+
+let run_incremental_liveness () =
+  if !Common.Cli.incremental then (
+    let changed_files = Graph_store.get_dirty_files incremental_graph in
+    if changed_files <> [] then (
+      let result =
+        Incremental_liveness.recompute ~graph:incremental_graph
+          ~changed_files
+      in
+      if !Common.Cli.debug then
+        Log_.item "Incremental liveness: %d decls across %d files@."
+          (Graph_store.DeclIdSet.cardinal result.visited)
+          (List.length changed_files)))
 
 let loadCmtFile cmtFilePath =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
@@ -92,8 +108,14 @@ let loadCmtFile cmtFilePath =
           ModulePath.with_current (fun () ->
               cmt_infos |> DeadCode.processCmt ~collector ~cmtFilePath);
           let collected = Collector.finalize collector in
-          let summary = Summary.of_collected ~source_file:sourceFile collected in
-          cache_summary summary);
+          let need_summary =
+            !Common.Cli.cacheSummaries || !Common.Cli.incremental
+          in
+          if need_summary then
+            let summary =
+              Summary.of_collected ~source_file:sourceFile collected
+            in
+            handle_summary summary);
         increment_baseline_file_count ();
         if runConfig.exception_ then cmt_infos |> Exception.processCmt;
         if runConfig.termination then cmt_infos |> Arnold.processCmt)
@@ -154,7 +176,8 @@ let runAnalysis ~cmtRoot =
     DeadException.forceDelayedItems ();
     DeadOptionalArgs.forceDelayedItems ();
     DeadCommon.reportDead ~checkOptionalArg:DeadOptionalArgs.check;
-    WriteDeadAnnotations.write ());
+    WriteDeadAnnotations.write ();
+    run_incremental_liveness ());
   if runConfig.exception_ then Exception.Checks.doChecks ();
   if runConfig.termination && !Common.Cli.debug then Arnold.reportStats ()
 
@@ -217,6 +240,9 @@ let cli () =
       ( "-cache-summaries",
         Unit (fun () -> Common.Cli.cacheSummaries := true),
         "Write per-file summary JSON files under .reanalyze/summaries");
+      ( "-incremental-liveness",
+        Unit (fun () -> Common.Cli.incremental := true),
+        "Build summary graph and report incremental liveness frontier");
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
       ("-dce", Unit (fun () -> setDCE None), "Experimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
