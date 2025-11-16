@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix printing of tagged template literals. https://github.com/rescript-lang/rescript/pull/8018
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
