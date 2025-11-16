@@ -1,17 +1,27 @@
 open DeadCommon
 open Common
+open Collected_types
 
 type item = {exceptionPath: Path.t; locFrom: Location.t}
 
 let delayedItems = ref []
 let declarations = Hashtbl.create 1
 
-let add ~path ~loc ~(strLoc : Location.t) name =
+let add ~collector ~path ~loc ~(strLoc : Location.t) name =
   let exceptionPath = name :: path in
   Hashtbl.add declarations exceptionPath loc;
-  name
-  |> addDeclaration_ ~posEnd:strLoc.loc_end ~posStart:strLoc.loc_start
-       ~declKind:Exception ~moduleLoc:(ModulePath.getCurrent ()).loc ~path ~loc
+  Collector.add_decl collector
+    (General_decl
+       {
+         name;
+         path;
+         loc;
+         module_loc = (ModulePath.getCurrent ()).loc;
+         decl_kind = Exception;
+         pos_adjustment = Nothing;
+         pos_start = Some strLoc.loc_start;
+         pos_end = Some strLoc.loc_end;
+       })
 
 let forceDelayedItems () =
   let items = !delayedItems |> List.rev in

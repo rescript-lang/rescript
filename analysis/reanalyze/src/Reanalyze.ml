@@ -64,15 +64,21 @@ let loadCmtFile cmtFilePath =
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
-    currentSrc := sourceFile;
-    currentModule := Paths.getModuleName sourceFile;
-    currentModuleName :=
-      !currentModule
-      |> Name.create ~isInterface:(Filename.check_suffix !currentSrc "i");
-    if runConfig.dce then cmt_infos |> DeadCode.processCmt ~cmtFilePath;
-    increment_baseline_file_count ();
-    if runConfig.exception_ then cmt_infos |> Exception.processCmt;
-    if runConfig.termination then cmt_infos |> Arnold.processCmt
+    let module_basename = Paths.getModuleName sourceFile in
+    let module_name =
+      Name.create ~isInterface:(Filename.check_suffix sourceFile "i")
+        module_basename
+    in
+    Common.with_current_module ~src:sourceFile ~module_name
+      ~module_basename:module_basename (fun () ->
+        if runConfig.dce then (
+          let collector = Collector.dead_common_sink () in
+          ModulePath.with_current (fun () ->
+              cmt_infos |> DeadCode.processCmt ~collector ~cmtFilePath);
+          ignore (Collector.finalize collector));
+        increment_baseline_file_count ();
+        if runConfig.exception_ then cmt_infos |> Exception.processCmt;
+        if runConfig.termination then cmt_infos |> Arnold.processCmt)
   | _ -> ()
 
 let processCmtFiles ~cmtRoot =

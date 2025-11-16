@@ -33,3 +33,8 @@ let addAlias ~name ~path =
 let resolveAlias path = path |> normalizePath ~aliases:!current.aliases
 let getCurrent () = !current
 let setCurrent p = current := p
+
+let with_current f =
+  let saved = !current in
+  current := initial;
+  Fun.protect ~finally:(fun () -> current := saved) f

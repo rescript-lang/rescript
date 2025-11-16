@@ -3,6 +3,20 @@ let currentModule = ref ""
 let currentModuleName = ref ("" |> Name.create)
 let runConfig = RunConfig.runConfig
 
+let with_current_module ~src ~module_name ~module_basename f =
+  let old_src = !currentSrc in
+  let old_module = !currentModule in
+  let old_module_name = !currentModuleName in
+  currentSrc := src;
+  currentModule := module_basename;
+  currentModuleName := module_name;
+  Fun.protect
+    ~finally:(fun () ->
+      currentSrc := old_src;
+      currentModule := old_module;
+      currentModuleName := old_module_name)
+    f
+
 (* Location printer: `filename:line: ' *)
 let posToString (pos : Lexing.position) =
   let file = pos.Lexing.pos_fname in

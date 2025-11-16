@@ -38,5 +38,26 @@ Link the editor analysis binary against the Skip runtime on macOS, provide a smo
 
 ---
 
+## Milestone 1 – Collector Abstraction (partial)
+
+### Goal
+Start isolating the AST traversal from global state by introducing a collector interface and plumbing it through the value-analysis entrypoints, while keeping batch behaviour identical via a sink implementation backed by `DeadCommon`.
+
+### Implementation Notes
+- Added `analysis/reanalyze/src/collected_types.{ml,mli}` to describe declarative events (value declarations, references) and final snapshots.
+- Added `analysis/reanalyze/src/collector.{ml,mli}` exposing two back ends:
+  - `Collector.dead_common_sink ()` delegates to existing `DeadCommon` helpers (batch mode).
+  - `Collector.collected ()` stores `Common.decl` and reference events in-memory for future pure consumers.
+- Threaded a `collector` record through `DeadCode.processCmt`, `DeadValue.processStructure`, `DeadValue.processSignatureItem`, and `DeadException.add`. All writes to declarations and value references now go through the collector interface. `DeadType` also mirrors every declaration/type-reference event into the collector so future milestones can build summaries without reading `DeadCommon`.
+- Introduced `Common.with_current_module` and `ModulePath.with_current` so each `.cmt` run resets global/module-path state, avoiding leakage between files while keeping the old globals available to other analyses.
+- `Reanalyze.loadCmtFile` instantiates the sink collector per `.cmt` so current CLI behaviour stays unchanged while enabling later milestones to plug different collectors.
+
+### Validation
+- `dune build analysis/bin/main.exe`
+- `make test-analysis`
+  - Exercises the existing suites (analysis, JSX transform, reanalyze, termination) ensuring no behavioural regressions surfaced.
+
+---
+
 Add new sections below as soon as a milestone lands.
 

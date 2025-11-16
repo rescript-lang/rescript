@@ -2,7 +2,31 @@
 
 open DeadCommon
 
-let checkAnyValueBindingWithNoSideEffects
+let record_value_decl collector ?(isToplevel = true)
+    ?(optionalArgs = Common.OptionalArgs.empty) ?posStart ?posEnd ~loc
+    ~moduleLoc ~path ~sideEffects name =
+  let decl =
+    Collected_types.Value_decl
+      {
+        name;
+        path;
+        loc;
+        module_loc = moduleLoc;
+        optional_args = optionalArgs;
+        side_effects = sideEffects;
+        is_toplevel = isToplevel;
+        pos_start = posStart;
+        pos_end = posEnd;
+      }
+  in
+  Collector.add_decl collector decl
+
+let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
+    ~(locTo : Location.t) =
+  Collector.add_value_reference collector
+    {loc_from = locFrom; loc_to = locTo; add_file_reference = addFileReference}
+
+let checkAnyValueBindingWithNoSideEffects collector
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
       Typedtree.value_binding) =
   match pat_desc with
@@ -10,15 +34,14 @@ let checkAnyValueBindingWithNoSideEffects
     let name = "_" |> Name.create ~isInterface:false in
     let currentModulePath = ModulePath.getCurrent () in
     let path = currentModulePath.path @ [!Common.currentModuleName] in
-    name
-    |> addValueDeclaration ~path ~loc ~moduleLoc:currentModulePath.loc
-         ~sideEffects:false
+    record_value_decl collector ~path ~loc ~moduleLoc:currentModulePath.loc
+      ~sideEffects:false name
   | _ -> ()
 
-let collectValueBinding super self (vb : Typedtree.value_binding) =
+let collectValueBinding collector super self (vb : Typedtree.value_binding) =
   let oldCurrentBindings = !Current.bindings in
   let oldLastBinding = !Current.lastBinding in
-  checkAnyValueBindingWithNoSideEffects vb;
+  checkAnyValueBindingWithNoSideEffects collector vb;
   let loc =
     match vb.vb_pat.pat_desc with
     | Tpat_var (id, {loc = {loc_start; loc_ghost} as loc})
@@ -31,9 +54,10 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
         |> Common.OptionalArgs.fromList
       in
       let exists =
-        match PosHash.find_opt decls loc_start with
-        | Some {declKind = Value r} ->
+        match Collector.find_decl collector loc_start with
+        | Some ({declKind = Value r} as decl) ->
           r.optionalArgs <- optionalArgs;
+          Collector.replace_decl collector decl;
           true
         | _ -> false
       in
@@ -48,10 +72,10 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
          (* This is never toplevel currently *)
          let isToplevel = oldLastBinding = Location.none in
          let sideEffects = SideEffects.checkExpr vb.vb_expr in
-         name
-         |> addValueDeclaration ~isToplevel ~loc
-              ~moduleLoc:currentModulePath.loc ~optionalArgs ~path ~sideEffects);
-      (match PosHash.find_opt decls loc_start with
+         record_value_decl collector ~isToplevel ~loc
+           ~moduleLoc:currentModulePath.loc ~optionalArgs ~path ~sideEffects
+           name);
+      (match Collector.find_decl collector loc_start with
       | None -> ()
       | Some decl ->
         (* Value bindings contain the correct location for the entire declaration: update final position.
@@ -63,7 +87,7 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
               {vk with sideEffects = SideEffects.checkExpr vb.vb_expr}
           | dk -> dk
         in
-        PosHash.replace decls loc_start
+        Collector.replace_decl collector
           {
             decl with
             declKind;
@@ -111,7 +135,7 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
     (!supplied, !suppliedMaybe)
     |> DeadOptionalArgs.addReferences ~locFrom ~locTo ~path)
 
-let rec collectExpr super self (e : Typedtree.expression) =
+let rec collectExpr collector super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as locTo}) ->
@@ -124,7 +148,8 @@ let rec collectExpr super self (e : Typedtree.expression) =
           (Location.none.loc_start |> Common.posToString)
           (locTo.loc_start |> Common.posToString);
       ValueReferences.add locTo.loc_start Location.none.loc_start)
-    else addValueReference ~addFileReference:true ~locFrom ~locTo
+    else record_value_reference collector ~addFileReference:true ~locFrom
+        ~locTo
   | Texp_apply
       {
         funct =
@@ -202,7 +227,7 @@ let rec collectExpr super self (e : Typedtree.expression) =
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr super self e |> ignore
+            collectExpr collector super self e |> ignore
            | _ -> ())
   | _ -> ());
   super.Tast_mapper.expr self e
@@ -235,7 +260,7 @@ let rec getSignature (moduleType : Types.module_type) =
   | Mty_functor (_, _mtParam, mt) -> getSignature mt
   | _ -> []
 
-let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
+let rec processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc ~path
     (si : Types.signature_item) =
   let oldModulePath = ModulePath.getCurrent () in
   (match si with
@@ -258,10 +283,9 @@ let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
 
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
-        Ident.name id
-        |> Name.create ~isInterface:false
-        |> addValueDeclaration ~loc ~moduleLoc ~optionalArgs ~path
-             ~sideEffects:false
+        record_value_decl collector ~loc ~moduleLoc ~optionalArgs ~path
+          ~sideEffects:false
+          (Ident.name id |> Name.create ~isInterface:false)
   | Sig_module (id, {Types.md_type = moduleType; md_loc = moduleLoc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some moduleType; mtd_loc = moduleLoc}) ->
     ModulePath.setCurrent
@@ -278,17 +302,17 @@ let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
     if collect then
       getSignature moduleType
       |> List.iter
-           (processSignatureItem ~doTypes ~doValues ~moduleLoc
+           (processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc
               ~path:((id |> Ident.name |> Name.create) :: path))
   | _ -> ());
   ModulePath.setCurrent oldModulePath
 
 (* Traverse the AST *)
-let traverseStructure ~doTypes ~doExternals =
+let traverseStructure ~collector ~doTypes ~doExternals =
   let super = Tast_mapper.default in
-  let expr self e = e |> collectExpr super self in
+  let expr self e = e |> collectExpr collector super self in
   let pat self p = p |> collectPattern super self in
-  let value_binding self vb = vb |> collectValueBinding super self in
+  let value_binding self vb = vb |> collectValueBinding collector super self in
   let structure_item self (structureItem : Typedtree.structure_item) =
     let oldModulePath = ModulePath.getCurrent () in
     (match structureItem.str_desc with
@@ -309,7 +333,7 @@ let traverseStructure ~doTypes ~doExternals =
         | Mty_signature signature ->
           signature
           |> List.iter
-               (processSignatureItem ~doTypes ~doValues:false
+               (processSignatureItem ~collector ~doTypes ~doValues:false
                   ~moduleLoc:mb_expr.mod_loc
                   ~path:
                     ((ModulePath.getCurrent ()).path
@@ -319,7 +343,7 @@ let traverseStructure ~doTypes ~doExternals =
       let currentModulePath = ModulePath.getCurrent () in
       let path = currentModulePath.path @ [!Common.currentModuleName] in
       let exists =
-        match PosHash.find_opt decls vd.val_loc.loc_start with
+        match Collector.find_decl collector vd.val_loc.loc_start with
         | Some {declKind = Value _} -> true
         | _ -> false
       in
@@ -329,10 +353,9 @@ let traverseStructure ~doTypes ~doExternals =
         (not exists) && id <> "unsafe_expr"
         (* see https://github.com/BuckleScript/bucklescript/issues/4532 *)
       then
-        id
-        |> Name.create ~isInterface:false
-        |> addValueDeclaration ~path ~loc:vd.val_loc
-             ~moduleLoc:currentModulePath.loc ~sideEffects:false
+        record_value_decl collector ~path ~loc:vd.val_loc
+          ~moduleLoc:currentModulePath.loc ~sideEffects:false
+          (id |> Name.create ~isInterface:false)
     | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
       if !Config.analyzeTypes then
         typeDeclarations
@@ -347,7 +370,7 @@ let traverseStructure ~doTypes ~doExternals =
         in
         incl_type
         |> List.iter
-             (processSignatureItem ~doTypes
+             (processSignatureItem ~collector ~doTypes
                 ~doValues:false (* TODO: also values? *)
                 ~moduleLoc:incl_mod.mod_loc ~path:currentPath)
       | _ -> ())
@@ -356,7 +379,8 @@ let traverseStructure ~doTypes ~doExternals =
         (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
       in
       let name = id |> Ident.name |> Name.create in
-      name |> DeadException.add ~path ~loc ~strLoc:structureItem.str_loc
+      name
+      |> DeadException.add ~collector ~path ~loc ~strLoc:structureItem.str_loc
     | _ -> ());
     let result = super.structure_item self structureItem in
     ModulePath.setCurrent oldModulePath;
@@ -365,7 +389,7 @@ let traverseStructure ~doTypes ~doExternals =
   {super with expr; pat; structure_item; value_binding}
 
 (* Merge a location's references to another one's *)
-let processValueDependency
+let processValueDependency collector
     ( ({
          val_loc =
            {loc_start = {pos_fname = fnTo} as posTo; loc_ghost = ghost1} as
@@ -380,12 +404,15 @@ let processValueDependency
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
-    addValueReference ~addFileReference ~locFrom ~locTo;
+    record_value_reference collector ~addFileReference ~locFrom ~locTo;
     DeadOptionalArgs.addFunctionReference ~locFrom ~locTo)
 
-let processStructure ~cmt_value_dependencies ~doTypes ~doExternals
+let processStructure ~collector ~cmt_value_dependencies ~doTypes ~doExternals
     (structure : Typedtree.structure) =
-  let traverseStructure = traverseStructure ~doTypes ~doExternals in
-  structure |> traverseStructure.structure traverseStructure |> ignore;
-  let valueDependencies = cmt_value_dependencies |> List.rev in
-  valueDependencies |> List.iter processValueDependency
+  DeadType.with_collector collector (fun () ->
+      let traverseStructure =
+        traverseStructure ~collector ~doTypes ~doExternals
+      in
+      structure |> traverseStructure.structure traverseStructure |> ignore;
+      let valueDependencies = cmt_value_dependencies |> List.rev in
+      valueDependencies |> List.iter (processValueDependency collector))
