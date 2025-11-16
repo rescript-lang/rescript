@@ -35,7 +35,7 @@
 \maketitle
 
 \begin{abstract}
-This plan replaces the batch-only dead code analysis with a fully reactive pipeline built on the Skip runtime described in \code{docs/reactive\_ocaml.tex}.
+This plan replaces the batch-only dead code analysis with a fully reactive pipeline built on the Skip runtime described in \code{docs/reactive_ocaml.tex}.
 It details the preparatory refactors (pure data extraction, deterministic summaries, graph factoring), the Skip collection design, integration with the existing build (rewatch) outputs, test strategy, and troubleshooting guidance.
 Each milestone enumerates concrete code changes, intermediate validation steps, and acceptance criteria so implementation proceeds from small refactors to a production-ready reactive service with $<200$ms latency for file changes.
 \end{abstract}
@@ -43,7 +43,7 @@ Each milestone enumerates concrete code changes, intermediate validation steps, 
 \tableofcontents
 
 \textbf{Implementation log.} Each milestone has a matching entry in
-\code{docs/reactive\_dead\_code\_log.md} summarizing the concrete code changes,
+\code{docs/reactive_dead_code_log.md} summarizing the concrete code changes,
 validation steps, and commands that landed in the repository. Consult the log
 before starting a new milestone to ensure you're building on the verified
 baseline.
@@ -53,25 +53,25 @@ baseline.
 \subsection{Architectural Transformation}
 The batch-only analyzer mutates global tables and must rescan every \code{.cmt} to emit diagnostics. This plan migrates it to the Skip runtime so that:
 \begin{itemize}[leftmargin=*]
-  \item Collection becomes fully pure: every traversal returns \code{Collected\_types.t}, enabling deterministic caching and parallel work.
+  \item Collection becomes fully pure: every traversal returns \code{Collected_types.t}, enabling deterministic caching and parallel work.
   \item Per-file summaries, graph state, and diagnostics persist inside a Skip heap, so warm edits reuse cached work instead of reprocessing the whole project.
   \item The only tracked resource is \code{.reanalyze/manifest.json}; its digests describe all \code{.cmt/.cmti} files, so Skip re-evaluates only when manifests change.
-  \item \code{reanalyze --reactive} runs once per manifest update (invoked by rewatch or a watch script): declare the graph, call \code{Reactive.exit}, observe diagnostics, exit. This matches the lifecycle in \code{docs/reactive\_ocaml.tex} where each process initializes, declares, exits, and then reads results.
+  \item \code{reanalyze --reactive} runs once per manifest update (invoked by rewatch or a watch script): declare the graph, call \code{Reactive.exit}, observe diagnostics, exit. This matches the lifecycle in \code{docs/reactive_ocaml.tex} where each process initializes, declares, exits, and then reads results.
 \end{itemize}
 
 \subsection{Key Refactors (Milestones 1–3)}
 \begin{itemize}[leftmargin=*]
-  \item Thread a collector interface through \code{DeadValue}, \code{DeadType}, \code{DeadException}, and \code{DeadOptionalArgs}; adapt batch mode via \code{DeadCommon\_sink} so existing tooling continues to work.
-  \item Introduce \code{Collected\_types}, \code{Collector\_intf}, \code{Pure\_collector}, \code{Summary}, and \code{Summary\_cache} to produce deterministic per-file artifacts with JSON goldens.
-  \item Build \code{Graph\_store} and \code{Liveness} modules that incrementally recompute SCCs only within the frontier influenced by changed summaries.
-  \item Add scoped helpers (\code{Common.with\_current\_module}, \code{ModulePath.with\_current}) so Skip maps never depend on ambient mutable refs.
+  \item Thread a collector interface through \code{DeadValue}, \code{DeadType}, \code{DeadException}, and \code{DeadOptionalArgs}; adapt batch mode via \code{DeadCommon_sink} so existing tooling continues to work.
+  \item Introduce \code{Collected_types}, \code{Collector_intf}, \code{Pure_collector}, \code{Summary}, and \code{Summary_cache} to produce deterministic per-file artifacts with JSON goldens.
+  \item Build \code{Graph_store} and \code{Liveness} modules that incrementally recompute SCCs only within the frontier influenced by changed summaries.
+  \item Add scoped helpers (\code{Common.with_current_module}, \code{ModulePath.with_current}) so Skip maps never depend on ambient mutable refs.
 \end{itemize}
 
 \subsection{Skip Integration Path (Milestone 4)}
 \begin{itemize}[leftmargin=*]
   \item Rewatch writes \code{.reanalyze/manifest.json} after a successful build. A supervisor reruns \code{reanalyze --reactive} when that file changes.
-  \item \code{Reactive\_service.run\_once} declares the Skip pipeline: manifest input \textrightarrow{} per-file summaries \textrightarrow{} graph store \textrightarrow{} diagnostic diffs. Individual \code{.cmt} files are read via regular OCaml IO inside the manifest map, relying on manifest digests for invalidation (Option~A from \code{docs/reactive\_ocaml.tex}).
-  \item Diagnostics are pulled only after \code{Reactive.exit}; \code{Diagnostics\_loop} streams them to the CLI or the LSP provider before the process exits.
+  \item \code{Reactive_service.run_once} declares the Skip pipeline: manifest input \textrightarrow{} per-file summaries \textrightarrow{} graph store \textrightarrow{} diagnostic diffs. Individual \code{.cmt} files are read via regular OCaml IO inside the manifest map, relying on manifest digests for invalidation (Option~A from \code{docs/reactive_ocaml.tex}).
+  \item Diagnostics are pulled only after \code{Reactive.exit}; \code{Diagnostics_loop} streams them to the CLI or the LSP provider before the process exits.
 \end{itemize}
 
 \subsection{Expected Outcome}
@@ -86,7 +86,7 @@ The batch-only analyzer mutates global tables and must rescan every \code{.cmt} 
 \begin{itemize}[leftmargin=*]
   \item Maintain golden parity with current batch diagnostics for all analyses that depend on \code{DeadCommon} (dead values, optional args, exceptions).
   \item Recompute only the file summaries and SCC regions whose dependencies changed; target p50 latency $<200$ms and p95 $<1$\,s for same project edits.
-  \item Reuse Skip runtime primitives (\code{Reactive.init}, tracked resources, \code{Reactive.map}, \code{Reactive.exit}) so the tool matches \code{docs/reactive\_ocaml.tex} constraints.
+  \item Reuse Skip runtime primitives (\code{Reactive.init}, tracked resources, \code{Reactive.map}, \code{Reactive.exit}) so the tool matches \code{docs/reactive_ocaml.tex} constraints.
   \item Preserve CLI surface area: batch mode remains default for automation; reactive mode is opt-in until parity is proven.
   \item Non-goals: redesigning the AST, changing warning wording, or introducing new user-facing configuration.
 \end{itemize}
@@ -99,12 +99,12 @@ The batch-only analyzer mutates global tables and must rescan every \code{.cmt} 
   \item After all files, \code{DeadCommon.reportDead} resolves recursion, optional args, and emits diagnostics.
 \end{enumerate}
 
-\subsection{Skip Runtime Constraints (\code{docs/reactive\_ocaml.tex})}
+\subsection{Skip Runtime Constraints (\code{docs/reactive_ocaml.tex})}
 \begin{itemize}[leftmargin=*]
   \item Single initialization via \code{Reactive.init heap size}; Linux binaries must link \code{-no-pie -Wl,-Ttext=...} to keep pointers stable.
-  \item Every file read occurs through trackers returned by \code{Reactive.input\_files} or downstream maps; ad-hoc IO is prohibited.
+  \item Every file read occurs through trackers returned by \code{Reactive.input_files} or downstream maps; ad-hoc IO is prohibited.
   \item \code{Reactive.map} callbacks must be pure relative to inputs; any mutable globals (e.g., \code{Common.currentSrc}) must be encapsulated by helper functions that reset state per invocation.
-  \item Graph declaration finishes with \code{Reactive.exit()}, after which downstream code observes derived arrays via \code{Reactive.get\_array}.
+  \item Graph declaration finishes with \code{Reactive.exit()}, after which downstream code observes derived arrays via \code{Reactive.get_array}.
   \item macOS cannot reopen heaps across fresh runs; service deletes stale \code{*.rheap} on start. Linux may reuse heaps if binary layout is constant.
 \end{itemize}
 
@@ -123,16 +123,18 @@ lib/bs/*.cmt -> Manifest (rewatch) -> Skip Input Collection
 \end{verbatim}
 
 \section{Milestone 0: Runtime Readiness}
+
+This milestone exists to make Skip a first-class dependency of the analysis toolchain before any behavioural changes land. By wiring \code{rescript-editor-analysis} against the Skip runtime, providing a smoke-test binary, and recording baseline metrics, we de-risk future reactive work: later milestones can assume Skip artifacts are always built, the runtime loads on macOS, and we have before/after numbers for \code{reanalyze -dce}.
 \subsection{Tasks}
 \begin{enumerate}[leftmargin=*]
   \item Update \code{analysis/bin/dune}:
     \begin{itemize}
-      \item Add conditional linking of \code{libskip\_reactive.a}.
+      \item Add conditional linking of \code{libskip_reactive.a}.
       \item On Linux, append \code{-ccopt -no-pie -ccopt -Wl,-Ttext=0x8000000}; on macOS, add startup hook that deletes stale heaps before \code{Reactive.init}.
     \end{itemize}
   \item Add \code{analysis/bin/reactive.repl} target that simply runs \code{Reactive.init; Reactive.exit}. Local smoke runs ensure Skip linkage stays healthy.
-  \item Capture baseline metrics (wall-clock, files processed) for \code{reanalyze -dce} on representative projects. Store JSON under \code{analysis/benchmarks/reactive\_baseline.json} for later comparison.
-  \item Stub \code{--reactive} flag in \code{analysis/bin/main.ml} (behind experimental guard) pointing to a placeholder that exits with \code{`Not_implemented`}. This allows CLI plumbing to be reviewed early.
+  \item Capture baseline metrics (wall-clock, files processed) for \code{reanalyze -dce} on representative projects. Store JSON under \code{analysis/benchmarks/reactive_baseline.json} for later comparison.
+  \item Stub \code{--reactive} flag in \code{analysis/bin/main.ml} (behind experimental guard) pointing to a placeholder that exits with \code{Not_implemented}. This allows CLI plumbing to be reviewed early.
 \end{enumerate}
 \subsection{Acceptance}
 \begin{itemize}[leftmargin=*]
@@ -141,6 +143,7 @@ lib/bs/*.cmt -> Manifest (rewatch) -> Skip Input Collection
 \end{itemize}
 
 \section{Milestone 1: Pure Data Extraction}
+\noindent\textbf{Why it exists.} Skip and any future incremental engine need deterministic, side-effect-free inputs; the legacy analyzer mutates global tables during traversal. Milestone~1 introduces collectors and scoping helpers so every \code{.cmt} traversal can produce a pure snapshot (\code{Collected_types.t}) without touching \code{DeadCommon}. This isolates collection logic from reporting logic, enabling parity checks and---long term---the ability to run the same traversal both for batch mode (via a sink collector) and for Skip (via a pure collector) without diverging behaviour.
 \subsection{Overview}
 Goal: isolate AST traversal and data recording from \code{DeadCommon}'s global tables through incremental steps that keep batch behavior unchanged after each sub-step.
 
@@ -192,7 +195,7 @@ end
   \end{lstlisting}
   Provide two implementations:
     \begin{itemize}
-      \item \code{Collected_collector} storing data in \code{Collected\_types.t}.
+      \item \code{Collected_collector} storing data in \code{Collected_types.t}.
       \item \code{DeadCommon_sink} writing into \code{DeadCommon} by delegating to existing functions. This keeps batch mode working while the refactor proceeds.
     \end{itemize}
 
@@ -213,7 +216,7 @@ let collectValueBinding ~collector super self vb =
   !collector
       \end{lstlisting}
       \item Build \code{DeadValue.traverse_structure ~collector structure} returning the updated collector. The function creates a ref cell for the collector and assigns call-back closures inside \code{Tast_mapper} to update the ref.
-      \item Repeat for \code{DeadType}, \code{DeadException}, and \code{DeadOptionalArgs}: each module gains a \code{~collector} parameter. Until the pure pipeline lands, pass \code{DeadCommon\_sink.collector} from \code{DeadCode.processCmt}.
+      \item Repeat for \code{DeadType}, \code{DeadException}, and \code{DeadOptionalArgs}: each module gains a \code{~collector} parameter. Until the pure pipeline lands, pass \code{DeadCommon_sink.collector} from \code{DeadCode.processCmt}.
     \end{itemize}
 
   \item \textbf{Step 1.4: Common state helpers}
@@ -231,12 +234,13 @@ let collectValueBinding ~collector super self vb =
 \end{enumerate}
 \subsection{Acceptance}
 \begin{itemize}[leftmargin=*]
-  \item \code{DeadValue}, \code{DeadType}, \code{DeadException}, \code{DeadOptionalArgs} can return \code{Collected\_types.t} without mutating \code{DeadCommon} when passed \code{Collected\_collector}.
+  \item \code{DeadValue}, \code{DeadType}, \code{DeadException}, \code{DeadOptionalArgs} can return \code{Collected_types.t} without mutating \code{DeadCommon} when passed \code{Collected_collector}.
   \item Batch diagnostics remain unchanged.
   \item Unit tests cover representative constructs.
 \end{itemize}
 
 \section{Milestone 2: Deterministic File Summaries}
+\noindent\textbf{Why it exists.} Collectors give us in-memory snapshots, but Skip needs stable artifacts that can be hashed, cached, and reloaded across runs. Milestone~2 defines a canonical summary schema (positions, decl metadata, references, file edges), emits digested JSON blobs, and introduces a cache so every \code{.cmt} file has a reproducible summary. These summaries become the inputs to the graph store in Milestone~3 and the Skip service in Milestone~4; without them, we would have no persistent boundary between ``per-file traversal'' and ``global liveness.''
 \subsection{Schema}
 \begin{lstlisting}
 {
@@ -280,7 +284,7 @@ let collectValueBinding ~collector super self vb =
 \begin{enumerate}[leftmargin=*]
   \item Implement \code{Summary.of_collected} covering:
     \begin{itemize}
-      \item Conversion of \code{Collected\_types.decl} to summary decls, including flags like \code{toplevel}, \code{optional_args}, \code{side_effects}.
+      \item Conversion of \code{Collected_types.decl} to summary decls, including flags like \code{toplevel}, \code{optional_args}, \code{side_effects}.
       \item Flattening \code{ref_edge_kind} into JSON-friendly shapes.
       \item Deduplicating \code{file_edges} by sorting and calling \code{List.sort_uniq}.
     \end{itemize}
@@ -302,6 +306,16 @@ let collectValueBinding ~collector super self vb =
 \end{itemize}
 
 \section{Milestone 3: Graph Store and Incremental Liveness}
+
+This milestone is the first \emph{algorithmic} change to the analysis. Milestone~2 gave us deterministic per-file summaries, but the batch pipeline still rebuilt the entire global graph after every change. Here we:
+\begin{itemize}[leftmargin=*]
+  \item assign stable declaration identifiers (file \# line \# column \# kind \# name) and persist forward/reverse edges, so we can answer ``which declarations does this file affect?'' without re-reading \code{.cmt} files;
+  \item compute a \textbf{frontier} starting from the files whose summaries changed and walking reverse edges, so only declarations that might change liveness get reprocessed;
+  \item run Tarjan’s strongly-connected-components (SCC) algorithm on just that frontier, cache each SCC’s hash (members + outgoing edges + summary digests), and re-run liveness only when the cache misses.
+\end{itemize}
+
+Tarjan’s algorithm is a linear-time DFS that assigns every node a discovery index, keeps a stack of “live” nodes, and emits each SCC exactly once when it discovers a node whose lowlink equals its index. This property makes it ideal for the dead-code solver: SCCs correspond to mutually recursive bindings, so we can reuse old SCC solutions unless the component structure changes. Without this graph/SCC layer, the Skip runtime would still be forced to re-run the whole liveness fixpoint on every edit, defeating the point of going reactive.
+
 \subsection{Graph Store Design}
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Data structures}
@@ -355,9 +369,10 @@ let recompute_liveness graph changed_files =
 \end{itemize}
 
 \section{Milestone 4: Skip Reactive Service Core}
+\noindent\textbf{Why it exists.} Once summaries and the incremental graph exist, we need a long-running process that actually declares them to Skip, ties them to tracked files, and enforces tracker discipline. Milestone~4 is where \code{reanalyze --reactive} comes to life: it discovers \code{.cmt/.cmti} files, declares them via \code{Reactive.input_files}, maps each one to its summary/graph contribution, and ensures diagnostics are only observed after \code{Reactive.exit}. This milestone proves we can run the analyzer inside Skip’s tracker model without relying on ad-hoc I/O or one-off batch scripts.
 \subsection{CMT Discovery and Input Declaration}
 \paragraph{Discovery Phase}
-Skip runtime requires ALL input files to be declared upfront via \code{Reactive.input\_files} (per \code{docs/reactive\_ocaml.tex}, line 91: ``Declare the set of input files. Skip records and sorts them; cached runs require the same set''). Ad-hoc file IO inside maps violates tracker discipline (line 171: ``ad-hoc I/O violates dependency tracking'').
+Skip runtime requires ALL input files to be declared upfront via \code{Reactive.input_files} (per \code{docs/reactive_ocaml.tex}, line 91: ``Declare the set of input files. Skip records and sorts them; cached runs require the same set''). Ad-hoc file IO inside maps violates tracker discipline (line 171: ``ad-hoc I/O violates dependency tracking'').
 
 \begin{enumerate}[leftmargin=*]
   \item At service startup, discover all \code{.cmt/.cmti} files under \code{lib/bs}:
@@ -377,7 +392,7 @@ let discover_cmt_files ~project_root =
   walk [] lib_bs |> Array.of_list
   \end{lstlisting}
 
-  \item Discovery happens ONCE at startup before \code{Reactive.input\_files}. If new CMT files appear, service must restart (input file list is fixed per \code{docs/reactive\_ocaml.tex}).
+  \item Discovery happens ONCE at startup before \code{Reactive.input_files}. If new CMT files appear, service must restart (input file list is fixed per \code{docs/reactive_ocaml.tex}).
 
   \item For restart coordination, rewatch writes \code{.reanalyze/build.stamp} with monotonic build ID. Reactive service watches this (outside Skip) and exits on change, triggering supervisor restart.
 \end{enumerate}
@@ -409,9 +424,9 @@ if run_successful {
 
 \subsection{Skip Graph Implementation}
 \paragraph{Tracker Discipline}
-\textbf{Critical constraint from \code{docs/reactive\_ocaml.tex} (line 171):}
+\textbf{Critical constraint from \code{docs/reactive_ocaml.tex} (line 171):}
 \begin{quote}
-``Every file read must pass through the tracker array supplied by \code{input\_files}; ad-hoc I/O violates dependency tracking and will compromise the reactive guarantees.''
+``Every file read must pass through the tracker array supplied by \code{input_files}; ad-hoc I/O violates dependency tracking and will compromise the reactive guarantees.''
 \end{quote}
 
 \textbf{Implementation:}
@@ -424,7 +439,7 @@ let cmt_inputs = Reactive.input_files all_cmt_files in
 
   \item Each CMT becomes a key. Skip invokes map once per key, passing: (1) \code{key}: CMT path, (2) \code{trackers}: array with ONE tracker for this file.
 
-  \item Read CMT using ONLY the tracker (per \code{docs/reactive\_ocaml.tex} line 93):
+  \item Read CMT using ONLY the tracker (per \code{docs/reactive_ocaml.tex} line 93):
   \begin{lstlisting}
 let cmt_bytes = Reactive.read_file key trackers.(0) in
   \end{lstlisting}
@@ -506,27 +521,27 @@ let run project_root =
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Per-CMT tracking}: Every CMT gets own tracker. File change re-runs only that key's map invocation.
   
-  \item \textbf{Aggregation key}: \code{"\_\_all\_\_"} collects summaries to build unified graph. Valid pattern per \code{docs/reactive\_ocaml.tex} line 167 (multi-file fan-out).
+  \item \textbf{Aggregation key}: \code{"__all__"} collects summaries to build unified graph. Valid pattern per \code{docs/reactive_ocaml.tex} line 167 (multi-file fan-out).
   
-  \item \textbf{Zero ad-hoc IO}: ALL CMT reads use \code{Reactive.read\_file} with trackers. \code{FindSourceFile.cmt} reads from already-loaded \code{cmt\_infos} (no file IO).
+  \item \textbf{Zero ad-hoc IO}: ALL CMT reads use \code{Reactive.read_file} with trackers. \code{FindSourceFile.cmt} reads from already-loaded \code{cmt_infos} (no file IO).
   
   \item \textbf{Summary cache}: Written for debugging but NOT used for invalidation. Skip's content hashing provides caching.
 \end{enumerate}
 
 \subsection{Error Handling}
 \begin{itemize}[leftmargin=*]
-  \item \textbf{Corrupt CMT}: Catch exception from \code{Cmt\_format.read\_cmt\_bytes}, emit diagnostic, return empty. Skip caches error; if fixed, hash changes and map re-runs.
+  \item \textbf{Corrupt CMT}: Catch exception from \code{Cmt_format.read_cmt_bytes}, emit diagnostic, return empty. Skip caches error; if fixed, hash changes and map re-runs.
   
   \item \textbf{Missing source}: \code{FindSourceFile.cmt} returns \code{None}. Emit diagnostic, return empty.
   
-  \item \textbf{Collector failure}: Wrap \code{Pure\_collectors.from\_cmt} in try-catch, convert to diagnostic. Graph treats missing summaries as files with no declarations.
+  \item \textbf{Collector failure}: Wrap \code{Pure_collectors.from_cmt} in try-catch, convert to diagnostic. Graph treats missing summaries as files with no declarations.
   
   \item \textbf{Service restart}: Fatal errors exit non-zero. Supervisor restarts service, which rediscovers CMT files.
 \end{itemize}
 
 \subsection{Acceptance}
 \begin{itemize}[leftmargin=*]
-  \item \textbf{Tracker discipline verified}: Every CMT read through \code{Reactive.read\_file} with assigned tracker. Zero ad-hoc IO. Validated by inspecting Skip dependency graph showing all CMT files as tracked resources.
+  \item \textbf{Tracker discipline verified}: Every CMT read through \code{Reactive.read_file} with assigned tracker. Zero ad-hoc IO. Validated by inspecting Skip dependency graph showing all CMT files as tracked resources.
   
   \item \textbf{Content-based invalidation}: Single \code{.res} change (CMT rebuild) causes Skip to re-run ONLY that file's map, then propagate through graph/liveness.
   
@@ -536,11 +551,12 @@ let run project_root =
 \end{itemize}
 
 \section{Milestone 5: Integration (CLI, Watcher, LSP)}
+\noindent\textbf{Why it exists.} A reactive engine isn’t useful unless developers can run it the same way they run batch mode. Milestone~5 threads the Skip runtime through the actual user entry points: the CLI flag, watch mode, and the editor integration. It adds the supervisor/watch restart story, wires diagnostics into the existing output formats, and gives LSP clients a near-real-time source of dead-code warnings. In short, it turns the Skip graph into a user-facing feature rather than a behind-the-scenes prototype.
 \subsection{Build Coordination}
 \begin{itemize}[leftmargin=*]
   \item Rewatch writes \code{.reanalyze/build.stamp} after successful builds (Milestone~4). The reactive service detects this change and restarts to discover new/removed CMT files.
   
-  \item Per \code{docs/reactive\_ocaml.tex} Section ``Process Discipline'' (line 183): process stays single-threaded and declares graph once. The service runs continuously, watching \code{build.stamp} in a background thread (outside Skip). When stamp changes, exits gracefully for supervisor restart.
+  \item Per \code{docs/reactive_ocaml.tex} Section ``Process Discipline'' (line 183): process stays single-threaded and declares graph once. The service runs continuously, watching \code{build.stamp} in a background thread (outside Skip). When stamp changes, exits gracefully for supervisor restart.
   
   \item Supervisor (systemd/launchd/manual script) automatically restarts the service, which rediscovers CMT files and rebuilds the Skip graph with fresh inputs.
 \end{itemize}
@@ -555,22 +571,22 @@ else
   Reanalyze.cli ()
     \end{lstlisting}
     
-  \item \code{Reactive\_service.run\_forever}:
+  \item \code{Reactive_service.run_forever}:
     \begin{itemize}
       \item Initialize heap via \code{Reactive.init}
-      \item Discover and declare all CMT files via \code{Reactive.input\_files}
+      \item Discover and declare all CMT files via \code{Reactive.input_files}
       \item Declare reactive graph (summaries -> graph -> diagnostics)
       \item Call \code{Reactive.exit()}
       \item Enter monitoring loop:
         \begin{enumerate}[label=\alph*.]
-          \item Read diagnostics via \code{Reactive.get\_array}
+          \item Read diagnostics via \code{Reactive.get_array}
           \item Print/publish diagnostics
           \item Sleep/poll \code{build.stamp} in background thread
           \item On stamp change, exit gracefully (code 0) for supervisor restart
         \end{enumerate}
     \end{itemize}
     
-  \item Provide \code{--reactive-heap=<bytes>} flag. Heap persists across restarts on Linux (per \code{docs/reactive\_ocaml.tex} line 189), deleted on startup on macOS (line 188).
+  \item Provide \code{--reactive-heap=<bytes>} flag. Heap persists across restarts on Linux (per \code{docs/reactive_ocaml.tex} line 189), deleted on startup on macOS (line 188).
   
   \item Streaming output: Print diagnostics in same format as batch mode (file, location, message).
 \end{enumerate}
@@ -605,6 +621,7 @@ else
 \end{itemize}
 
 \section{Milestone 6: Validation and Rollout}
+\noindent\textbf{Why it exists.} Even with a working reactive service, we need confidence it matches batch diagnostics, meets latency targets, and can be rolled out safely. Milestone~6 adds the parity harness (batch vs reactive diffs), performance benchmarks, and the staged rollout plan. It’s where we prove the new pipeline is both correct and faster for real projects, and where we define the fallback/rollback story so the reactive mode can ship without risking regressions.
 \subsection{Parity Harness}
 \begin{itemize}[leftmargin=*]
   \item Implement \code{tests/reactive_parity.ml}:
