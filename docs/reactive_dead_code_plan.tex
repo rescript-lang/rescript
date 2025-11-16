@@ -316,6 +316,13 @@ This milestone is the first \emph{algorithmic} change to the analysis. Milestone
 
 Tarjan’s algorithm is a linear-time DFS that assigns every node a discovery index, keeps a stack of “live” nodes, and emits each SCC exactly once when it discovers a node whose lowlink equals its index. This property makes it ideal for the dead-code solver: SCCs correspond to mutually recursive bindings, so we can reuse old SCC solutions unless the component structure changes. Without this graph/SCC layer, the Skip runtime would still be forced to re-run the whole liveness fixpoint on every edit, defeating the point of going reactive.
 
+\paragraph{De-risking strategy.} Because this milestone changes core liveness behaviour, we rely on the same safeguards as earlier work, just focused on the new graph layer:
+\begin{itemize}[leftmargin=*]
+  \item Every change must keep \code{make test-analysis} green. Those fixture projects exercise dead values, optional args, exceptions, and termination; running them after each graph-store change ensures batch behaviour stays identical.
+  \item Run the collector parity harness (\code{dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}) after wiring the new graph to confirm the SCC-based pipeline still matches the legacy \code{DeadCommon} diagnostics.
+  \item Log intermediate graph/SCC hashes in the implementation log so we can trace regressions.
+\end{itemize}
+
 \subsection{Graph Store Design}
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Data structures}
@@ -365,7 +372,7 @@ let recompute_liveness graph changed_files =
 \subsection{Acceptance}
 \begin{itemize}[leftmargin=*]
   \item Frontier computation + SCC recompute documented and implemented.
-  \item Unit tests cover cases where SCCs shrink/grow, optional-arg edges toggle liveness, and exception references propagate.
+  \item Existing integration suites (\code{make test-analysis}) cover cases where SCCs shrink/grow, optional-arg edges toggle liveness, and exception references propagate; parity harness runs remain green.
 \end{itemize}
 
 \section{Milestone 4: Skip Reactive Service Core}
