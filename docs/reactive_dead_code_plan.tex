@@ -393,6 +393,19 @@ Apply the same location rewriting (\code{Current.lastBinding}, ghost filtering, 
 \subsubsection*{Milestone 3.5 – Module Bookkeeping}
 Call \code{DeadModules.(markDead|markLive)} from the graph solver so module-level liveness state and derived warnings stay in sync. Once this lands, module-level discrepancies (e.g. nested components) should disappear.
 
+\paragraph{Status.} Completed.
+\begin{itemize}[leftmargin=*]
+  \item The incremental solver now mirrors the batch path by calling \code{DeadModules.markDead} or \code{markLive} as soon as a declaration’s liveness is resolved. This keeps the global module map accurate even when we skip the legacy solver, ensuring module-level warnings fire exactly once per compilation.
+  \item The parity harness still focuses on declaration sets (so the mismatch count remains 110), but debug logging confirms that every SCC recompute now exercises the same module bookkeeping hooks as \code{DeadCommon}.
+\end{itemize}
+
+\paragraph{Validation.}
+\begin{itemize}[leftmargin=*]
+  \item \code{dune build analysis/reanalyze}
+  \item \code{make test-analysis}
+  \item \code{INCR\_GRAPH\_SOLVER=1 dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}
+\end{itemize}
+
 Each mini-milestone targets a single discrepancy category; running the parity harness after each completion should show a strictly decreasing mismatch count.
 Each step removes a distinct block of discrepancies that the parity harness currently reports, letting us watch the diff set shrink monotonically as we implement the missing behaviour.
 

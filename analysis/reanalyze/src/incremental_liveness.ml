@@ -5,7 +5,6 @@ module Decl = DeadCommon.Decl
 module PosSet = DeadCommon.PosSet
 module ProcessDeadAnnotations = DeadCommon.ProcessDeadAnnotations
 module PosHash = DeadCommon.PosHash
-
 let use_graph_solver =
   match Sys.getenv_opt "INCR_GRAPH_SOLVER" with
   | Some "1" -> true
@@ -85,6 +84,13 @@ let incoming_refs graph id decl =
   let kind = if Decl.isValue decl then `Value else `Type in
   Graph_store.reverse_successors graph ~kind id
 
+let update_module_state decl ~is_dead =
+  let is_type = DeclKind.isType decl.declKind in
+  let path = decl.path in
+  let loc = decl.moduleLoc in
+  if is_dead then DeadModules.markDead ~isType:is_type ~loc path
+  else DeadModules.markLive ~isType:is_type ~loc path
+
 let successors_for_tarjan graph ~frontier ~compare_id id =
   let value_succ = Graph_store.successors graph ~kind:`Value id in
   let type_succ = Graph_store.successors graph ~kind:`Type id in
@@ -146,6 +152,7 @@ let rec resolve env id level refs_being_resolved =
         let is_resolved = (not is_dead) || !all_deps_resolved || level = 0 in
         if is_resolved then (
           decl.resolvedDead <- Some is_dead;
+          update_module_state decl ~is_dead;
           if is_dead then (
             if annotation_is_dead_or_gen env decl.pos then decl.report <- false;
             env.dead_acc := decl :: !(env.dead_acc);
