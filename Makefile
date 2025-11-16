@@ -49,13 +49,14 @@ DUNE_BIN_DIR = ./_build/install/default/bin
 # Using that file as our stamp ensures manual `yarn install` runs are detected.
 YARN_INSTALL_STAMP := .yarn/install-state.gz
 # Dune updates `_build/log` for every build invocation, even when run manually.
-# Treat that log file as the compiler build stamp so manual `dune build`
-# keeps Make targets up to date.
-COMPILER_BUILD_STAMP := _build/log
+# Use our own stamp so unrelated dune commands don't trick Make into thinking
+# the compiler artifacts are fresh.
+COMPILER_BUILD_STAMP := _build/.compiler-build-stamp
 # Runtime workspace touches this stamp (packages/@rescript/runtime/.buildstamp)
 # after running `yarn workspace @rescript/runtime build`, which now runs `touch`
 # as part of its build script.
 RUNTIME_BUILD_STAMP := packages/@rescript/runtime/.buildstamp
+SKIP_RUNTIME_STAMP := analysis/bin/skip_runtime/.stamp
 
 # Default target
 
@@ -123,7 +124,7 @@ COMPILER_BIN_NAMES := bsc bsb_helper rescript-legacy rescript-editor-analysis re
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
-compiler: $(COMPILER_EXES)
+compiler: $(SKIP_RUNTIME_STAMP) $(COMPILER_EXES)
 
 define MAKE_COMPILER_COPY_RULE
 $(BIN_DIR)/$(1).exe: $(DUNE_BIN_DIR)/$(1)$(PLATFORM_EXE_EXT)
@@ -135,8 +136,9 @@ $(foreach bin,$(COMPILER_BIN_NAMES),$(eval $(call MAKE_COMPILER_COPY_RULE,$(bin)
 # "touch" after dune build to make sure that the binaries' timestamps are updated
 # even if the actual content of the sources hasn't changed.
 $(COMPILER_BUILD_STAMP): $(COMPILER_SOURCES)
-	dune build
+	dune build @install
 	@$(foreach bin,$(COMPILER_DUNE_BINS),touch $(bin);)
+	touch $@
 
 $(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
 
@@ -153,8 +155,20 @@ $(RUNTIME_BUILD_STAMP): $(RUNTIME_SOURCES) $(COMPILER_EXES) $(RESCRIPT_EXE) | $(
 	yarn workspace @rescript/runtime build
 
 clean-lib:
-	yarn workspace @rescript/runtime rescript clean
+	@if [ -x "$(RESCRIPT_EXE)" ]; then \
+	  yarn workspace @rescript/runtime rescript clean; \
+	else \
+	  echo "Skipping runtime clean (compiler binary missing)"; \
+	fi
 	rm -f $(RUNTIME_BUILD_STAMP)
+
+$(SKIP_RUNTIME_STAMP):
+	./scripts/build_skip_runtime.sh
+	dune build analysis/bin/reactive_repl.exe
+	touch $@
+
+.PHONY: skip-runtime
+skip-runtime: $(SKIP_RUNTIME_STAMP)
 
 # Artifact list
 
@@ -237,11 +251,14 @@ clean-gentype:
 
 clean-tests: clean-gentype
 
-clean: clean-lib clean-compiler clean-rewatch clean-ninja
+clean-skip-runtime:
+	rm -rf analysis/bin/skip_runtime
+
+clean: clean-lib clean-compiler clean-rewatch clean-ninja clean-skip-runtime
 
 dev-container:
 	docker build -t rescript-dev-container docker
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build ninja rewatch compiler lib artifacts bench test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build ninja rewatch compiler lib artifacts bench test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container skip-runtime clean-skip-runtime

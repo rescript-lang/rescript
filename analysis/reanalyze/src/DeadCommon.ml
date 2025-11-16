@@ -66,6 +66,8 @@ module ValueReferences = struct
 
   let add posTo posFrom = PosHash.addSet table posTo posFrom
   let find pos = PosHash.findSet table pos
+
+  let clear () = PosHash.clear table
 end
 
 module TypeReferences = struct
@@ -74,6 +76,8 @@ module TypeReferences = struct
 
   let add posTo posFrom = PosHash.addSet table posTo posFrom
   let find pos = PosHash.findSet table pos
+
+  let clear () = PosHash.clear table
 end
 
 let declGetLoc decl =
@@ -352,6 +356,8 @@ module ProcessDeadAnnotations = struct
     signature
     |> collectExportLocations.signature collectExportLocations
     |> ignore
+
+  let clear () = PosHash.clear positionsAnnotated
 end
 
 let addDeclaration_ ?posEnd ?posStart ~declKind ~path ~(loc : Location.t)
@@ -718,3 +724,45 @@ let reportDead ~checkOptionalArg =
   in
   (* XXX *)
   sortedDeadDeclarations |> List.iter Decl.report
+
+module Test = struct
+  let location_of_pos pos =
+    {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
+
+  let clear () =
+    PosHash.clear decls;
+    ValueReferences.clear ();
+    TypeReferences.clear ();
+    FileReferences.clear ();
+    ProcessDeadAnnotations.clear ()
+
+  let snapshot () =
+    let decls_list =
+      PosHash.fold (fun _ decl acc -> decl :: acc) decls [] |> List.rev
+    in
+    let value_references =
+      PosHash.fold
+        (fun pos_to from_set acc ->
+          PosSet.fold
+            (fun pos_from acc ->
+              {
+                Collected_types.loc_from = location_of_pos pos_from;
+                loc_to = location_of_pos pos_to;
+                add_file_reference = false;
+              }
+              :: acc)
+            from_set acc)
+        ValueReferences.table []
+      |> List.rev
+    in
+    let type_references =
+      PosHash.fold
+        (fun pos_to from_set acc ->
+          PosSet.fold
+            (fun pos_from acc -> {Collected_types.pos_from; pos_to} :: acc)
+            from_set acc)
+        TypeReferences.table []
+      |> List.rev
+    in
+    {Collected_types.decls = decls_list; value_references; type_references}
+end

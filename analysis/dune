@@ -1,4 +1,4 @@
-(dirs bin src reanalyze vendor)
+(dirs bin src reanalyze vendor skip_runtime)
 
 (env
  (dev

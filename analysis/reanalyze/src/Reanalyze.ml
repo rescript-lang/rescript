@@ -1,5 +1,56 @@
 open Common
 
+let baselineMetricsPath = ref None
+let baselineProcessedFiles = ref 0
+
+let set_baseline_metrics path = baselineMetricsPath := Some path
+
+let increment_baseline_file_count () =
+  match !baselineMetricsPath with
+  | Some _ -> incr baselineProcessedFiles
+  | None -> ()
+
+let mkdir_p path =
+  let rec aux dir =
+    if dir = "" || dir = Filename.dir_sep then ()
+    else if Sys.file_exists dir then ()
+    else (
+      aux (Filename.dirname dir);
+      Unix.mkdir dir 0o755)
+  in
+  aux path
+
+let write_baseline_metrics elapsed =
+  match !baselineMetricsPath with
+  | None -> ()
+  | Some path ->
+      let dir = Filename.dirname path in
+      if dir <> "" && dir <> "." then mkdir_p dir;
+      let oc = open_out path in
+      (try
+         let timestamp = Unix.gettimeofday () in
+         Printf.fprintf oc
+           "{ \"files\": %d, \"wall_time_seconds\": %.6f, \"timestamp\": %.0f \
+            }\n"
+           !baselineProcessedFiles elapsed timestamp;
+         close_out oc
+       with exn ->
+         close_out_noerr oc;
+         raise exn)
+
+let cache_summary summary =
+  if !Common.Cli.cacheSummaries then
+    let project_root =
+      if runConfig.projectRoot = "" then Sys.getcwd () else runConfig.projectRoot
+    in
+    match Summary_cache.read_or_recompute ~project_root summary with
+    | Ok _ -> ()
+    | Error err ->
+        prerr_endline
+          (Printf.sprintf "Failed to update summary cache for %s: %s"
+             summary.Summary.source_file
+             (Summary_cache.error_message err))
+
 let loadCmtFile cmtFilePath =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
@@ -26,14 +77,26 @@ let loadCmtFile cmtFilePath =
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
-    currentSrc := sourceFile;
-    currentModule := Paths.getModuleName sourceFile;
-    currentModuleName :=
-      !currentModule
-      |> Name.create ~isInterface:(Filename.check_suffix !currentSrc "i");
-    if runConfig.dce then cmt_infos |> DeadCode.processCmt ~cmtFilePath;
-    if runConfig.exception_ then cmt_infos |> Exception.processCmt;
-    if runConfig.termination then cmt_infos |> Arnold.processCmt
+    let module_basename = Paths.getModuleName sourceFile in
+    let module_name =
+      Name.create ~isInterface:(Filename.check_suffix sourceFile "i")
+        module_basename
+    in
+    Common.with_current_module ~src:sourceFile ~module_name
+      ~module_basename:module_basename (fun () ->
+        if runConfig.dce then (
+          let collected_backend = Collector.collected () in
+          let collector =
+            Collector.tee collected_backend (Collector.dead_common_sink ())
+          in
+          ModulePath.with_current (fun () ->
+              cmt_infos |> DeadCode.processCmt ~collector ~cmtFilePath);
+          let collected = Collector.finalize collector in
+          let summary = Summary.of_collected ~source_file:sourceFile collected in
+          cache_summary summary);
+        increment_baseline_file_count ();
+        if runConfig.exception_ then cmt_infos |> Exception.processCmt;
+        if runConfig.termination then cmt_infos |> Arnold.processCmt)
   | _ -> ()
 
 let processCmtFiles ~cmtRoot =
@@ -96,12 +159,24 @@ let runAnalysis ~cmtRoot =
   if runConfig.termination && !Common.Cli.debug then Arnold.reportStats ()
 
 let runAnalysisAndReport ~cmtRoot =
+  let baseline_start =
+    match !baselineMetricsPath with
+    | Some _ ->
+        baselineProcessedFiles := 0;
+        Some (Unix.gettimeofday ())
+    | None -> None
+  in
   Log_.Color.setup ();
   if !Common.Cli.json then EmitJson.start ();
   runAnalysis ~cmtRoot;
   Log_.Stats.report ();
   Log_.Stats.clear ();
-  if !Common.Cli.json then EmitJson.finish ()
+  if !Common.Cli.json then EmitJson.finish ();
+  (match baseline_start with
+  | Some start_time ->
+      let elapsed = Unix.gettimeofday () -. start_time in
+      write_baseline_metrics elapsed
+  | None -> ())
 
 let cli () =
   let analysisKindSet = ref false in
@@ -139,9 +214,15 @@ let cli () =
         "root_path Run all the analyses for all the .cmt files under the root \
          path" );
       ("-ci", Unit (fun () -> Cli.ci := true), "Internal flag for use in CI");
+      ( "-cache-summaries",
+        Unit (fun () -> Common.Cli.cacheSummaries := true),
+        "Write per-file summary JSON files under .reanalyze/summaries");
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
       ("-dce", Unit (fun () -> setDCE None), "Experimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
+      ( "--baseline-metrics",
+        String (fun path -> set_baseline_metrics path),
+        "path Write baseline metrics JSON (files, wall_time_seconds) to path" );
       ( "-dce-cmt",
         String (fun s -> setDCE (Some s)),
         "root_path Experimental DCE for all the .cmt files under the root path"
@@ -218,3 +299,13 @@ let cli () =
 
 module RunConfig = RunConfig
 module Log_ = Log_
+module Collector_parity = Collector_parity_cli
+module Summary = Summary
+module Summary_cache = Summary_cache
+module DeadCode = DeadCode
+module ModulePath = ModulePath
+module Typedtree_helpers = Typedtree_helpers
+module FindSourceFile = FindSourceFile
+module Paths = Paths
+module Name = Name
+module Common = Common

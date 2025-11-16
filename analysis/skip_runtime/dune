@@ -1,0 +1,10 @@
+(library
+ (name skip_reactive)
+ (wrapped false)
+ (modules reactive)
+ (libraries unix)
+ (flags
+  (:standard
+   "-cclib" "%{project_root}/analysis/bin/skip_runtime/libskip_reactive.a"
+   "-cclib" "-lstdc++")))
+

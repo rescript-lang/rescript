@@ -1,6 +1,23 @@
 open DeadCommon
 open Common
 
+let collector = ref None
+
+let with_collector c f =
+  let previous = !collector in
+  collector := Some c;
+  Fun.protect ~finally:(fun () -> collector := previous) f
+
+let find_decl pos =
+  match !collector with
+  | Some c -> Collector.find_decl c pos
+  | None -> PosHash.find_opt decls pos
+
+let replace_decl decl =
+  match !collector with
+  | Some c -> Collector.replace_decl c decl
+  | None -> PosHash.replace decls decl.pos decl
+
 let active () = true
 
 type item = {
@@ -17,7 +34,7 @@ let addFunctionReference ~(locFrom : Location.t) ~(locTo : Location.t) =
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
     let shouldAdd =
-      match PosHash.find_opt decls posTo with
+      match find_decl posTo with
       | Some {declKind = Value {optionalArgs}} ->
         not (OptionalArgs.isEmpty optionalArgs)
       | _ -> false
@@ -66,19 +83,21 @@ let forceDelayedItems () =
   delayedItems := [];
   items
   |> List.iter (fun {posTo; argNames; argNamesMaybe} ->
-         match PosHash.find_opt decls posTo with
-         | Some {declKind = Value r} ->
-           r.optionalArgs |> OptionalArgs.call ~argNames ~argNamesMaybe
+         match find_decl posTo with
+         | Some ({declKind = Value r} as decl) ->
+           r.optionalArgs |> OptionalArgs.call ~argNames ~argNamesMaybe;
+           replace_decl decl
          | _ -> ());
   let fRefs = !functionReferences |> List.rev in
   functionReferences := [];
   fRefs
   |> List.iter (fun (posFrom, posTo) ->
-         match
-           (PosHash.find_opt decls posFrom, PosHash.find_opt decls posTo)
-         with
-         | Some {declKind = Value rFrom}, Some {declKind = Value rTo} ->
-           OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
+         match (find_decl posFrom, find_decl posTo) with
+         | ( Some ({declKind = Value rFrom} as declFrom),
+             Some ({declKind = Value rTo} as declTo) ) ->
+           OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs;
+           replace_decl declFrom;
+           replace_decl declTo
          | _ -> ())
 
 let check decl =

@@ -3,6 +3,40 @@
 open Common
 open DeadCommon
 
+let collector = ref None
+
+let with_collector c f =
+  let previous = !collector in
+  collector := Some c;
+  Fun.protect ~finally:(fun () -> collector := previous) f
+
+let record_general_decl ?posStart ?posEnd ~declKind ~path ~loc ~moduleLoc
+    ~posAdjustment name =
+  match !collector with
+  | Some c ->
+      Collector.add_decl c
+        (Collected_types.General_decl
+           {
+             name;
+             path;
+             loc;
+             module_loc = moduleLoc;
+             decl_kind = declKind;
+             pos_adjustment = posAdjustment;
+             pos_start = posStart;
+             pos_end = posEnd;
+           });
+  | None ->
+      addDeclaration_ ?posStart ?posEnd ~declKind ~path ~loc ~moduleLoc
+        ~posAdjustment name
+
+let record_type_reference ~posFrom ~posTo =
+  match !collector with
+  | None -> ()
+  | Some c ->
+      Collector.add_type_reference c
+        Collected_types.{pos_from = posFrom; pos_to = posTo}
+
 module TypeLabels = struct
   (* map from type path (for record/variant label) to its location *)
 
@@ -15,6 +49,7 @@ let addTypeReference ~posFrom ~posTo =
   if !Common.Cli.debug then
     Log_.item "addTypeReference %s --> %s@." (posFrom |> posToString)
       (posTo |> posToString);
+  record_type_reference ~posFrom ~posTo;
   TypeReferences.add posTo posFrom
 
 module TypeDependencies = struct
@@ -87,7 +122,7 @@ let addDeclaration ~(typeId : Ident.t) ~(typeKind : Types.type_kind) =
   in
   let processTypeLabel ?(posAdjustment = Nothing) typeLabelName ~declKind
       ~(loc : Location.t) =
-    addDeclaration_ ~declKind ~path:pathToType ~loc
+    record_general_decl ~declKind ~path:pathToType ~loc
       ~moduleLoc:currentModulePath.loc ~posAdjustment typeLabelName;
     addTypeDependenciesAcrossFiles ~pathToType ~loc ~typeLabelName;
     addTypeDependenciesInnerModule ~pathToType ~loc ~typeLabelName;

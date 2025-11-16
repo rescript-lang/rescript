@@ -115,6 +115,12 @@ let main () =
         path line col
   in
   match args with
+  | _ :: "--reactive" :: _ ->
+    prerr_endline
+      "The --reactive flag is not implemented yet. Skip runtime support is \
+       linked for milestone 0; use batch mode until the reactive service \
+       lands.";
+    exit 2
   | [_; "cache-project"; rootPath] -> (
     Cfg.readProjectConfigCache := false;
     let uri = Uri.fromPath rootPath in

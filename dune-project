@@ -26,6 +26,8 @@
    (>= 4.14))
   (cppo
    (= 1.8.0))
+  (digestif
+   (>= 1.0.0))
   dune))
 
 (package
