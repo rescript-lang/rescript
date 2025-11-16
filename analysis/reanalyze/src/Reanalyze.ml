@@ -38,6 +38,19 @@ let write_baseline_metrics elapsed =
          close_out_noerr oc;
          raise exn)
 
+let cache_summary summary =
+  if !Common.Cli.cacheSummaries then
+    let project_root =
+      if runConfig.projectRoot = "" then Sys.getcwd () else runConfig.projectRoot
+    in
+    match Summary_cache.read_or_recompute ~project_root summary with
+    | Ok _ -> ()
+    | Error err ->
+        prerr_endline
+          (Printf.sprintf "Failed to update summary cache for %s: %s"
+             summary.Summary.source_file
+             (Summary_cache.error_message err))
+
 let loadCmtFile cmtFilePath =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
@@ -72,10 +85,15 @@ let loadCmtFile cmtFilePath =
     Common.with_current_module ~src:sourceFile ~module_name
       ~module_basename:module_basename (fun () ->
         if runConfig.dce then (
-          let collector = Collector.dead_common_sink () in
+          let collected_backend = Collector.collected () in
+          let collector =
+            Collector.tee collected_backend (Collector.dead_common_sink ())
+          in
           ModulePath.with_current (fun () ->
               cmt_infos |> DeadCode.processCmt ~collector ~cmtFilePath);
-          ignore (Collector.finalize collector));
+          let collected = Collector.finalize collector in
+          let summary = Summary.of_collected ~source_file:sourceFile collected in
+          cache_summary summary);
         increment_baseline_file_count ();
         if runConfig.exception_ then cmt_infos |> Exception.processCmt;
         if runConfig.termination then cmt_infos |> Arnold.processCmt)
@@ -196,6 +214,9 @@ let cli () =
         "root_path Run all the analyses for all the .cmt files under the root \
          path" );
       ("-ci", Unit (fun () -> Cli.ci := true), "Internal flag for use in CI");
+      ( "-cache-summaries",
+        Unit (fun () -> Common.Cli.cacheSummaries := true),
+        "Write per-file summary JSON files under .reanalyze/summaries");
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
       ("-dce", Unit (fun () -> setDCE None), "Experimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
@@ -279,3 +300,12 @@ let cli () =
 module RunConfig = RunConfig
 module Log_ = Log_
 module Collector_parity = Collector_parity_cli
+module Summary = Summary
+module Summary_cache = Summary_cache
+module DeadCode = DeadCode
+module ModulePath = ModulePath
+module Typedtree_helpers = Typedtree_helpers
+module FindSourceFile = FindSourceFile
+module Paths = Paths
+module Name = Name
+module Common = Common

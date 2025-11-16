@@ -45,6 +45,8 @@ module Cli = struct
 
   (* paths of files to exclude from analysis *)
   let excludePaths = ref ([] : string list)
+
+  let cacheSummaries = ref false
 end
 
 module StringSet = Set.Make (String)

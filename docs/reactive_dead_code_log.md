@@ -73,5 +73,29 @@ Start isolating the AST traversal from global state by introducing a collector i
 
 ---
 
+## Milestone 2 – Deterministic File Summaries
+
+### Goal
+Emit canonical per-file summaries (with schema, digests, and caching) based on the collector snapshots so future Skip stages have a stable input, while continuing to validate exclusively via the real project fixtures (`make test-analysis`) and the parity harness.
+
+### Implementation Notes
+- Added `analysis/reanalyze/src/summary.{ml,mli}`:
+  - Defines explicit summary types (positions, ranges, decl kinds, optional-arg snapshots, references, file edges) and produces canonical JSON (`version = 1`) plus BLAKE2b digests via `Digestif`. Exposes helpers for serialisation (`to_json`, `to_string`), round-trips (`of_json`, `of_string`), canonical strings, and `verify_digest`.
+- Added `analysis/reanalyze/src/summary_cache.{ml,mli}`:
+  - Stores summaries under `.reanalyze/summaries/<digest>.json`, writing atomically and exposing `read`, `write`, and `read_or_recompute` with structured error reporting (`Io_error`, `Invalid_format`, `Digest_mismatch`, `Not_found`).
+- CLI plumbing:
+  - `Common.Cli.cacheSummaries` + `-cache-summaries` flag. When enabled, each `.cmt` run uses a tee collector (`Collector.collected` + `Collector.dead_common_sink`), converts the pure snapshot via `Summary.of_collected`, and updates the cache through `Summary_cache.read_or_recompute`. Batch diagnostics still flow through `DeadCommon`.
+- Build/dependency tweaks: `analysis/reanalyze/src/dune` now links `digestif.c`, and `dune-project` declares `digestif` as an `analysis` dependency.
+- Documentation cleanup: removed the Alcotest/unit-test guidance and rewrote Milestone 2’s validation bullet so it references `make test-analysis` + parity instead of synthetic unit tests.
+- Removed the temporary `tests/bin` helpers and `tests/reactive_goldens/` manifest now that validation relies solely on the existing compiled-project tests; `tests/dune` again only lists the longstanding suite directories.
+
+### Validation
+- `dune build analysis/reanalyze`
+- `make test-analysis`
+- `dune exec analysis/bin/collector_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs`
+
+
+---
+
 Add new sections below as soon as a milestone lands.
 

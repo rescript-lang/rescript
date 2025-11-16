@@ -223,20 +223,7 @@ let collectValueBinding ~collector super self vb =
       \item Add \code{ModulePath.with_current : (unit -> 'a) -> 'a} resetting \code{ModulePath.current} during traversal, ensuring collector runs are isolated.
     \end{itemize}
 
-  \item \textbf{Step 1.5: Unit tests}
-    \begin{itemize}
-      \item Add \code{tests/reanalyze\_tests/typedtree_helpers.ml} to fabricate small typedtrees via the OCaml compiler-libs (e.g., parse a snippet and type-check it in-memory).
-      \item Write tests such as:
-      \begin{lstlisting}
-let test_value_decl_collection () =
-  let typedtree = Helpers.structure_of_string "let foo x = x" in
-  let collected = DeadValue.traverse_structure ~collector:Collected_collector.empty typedtree in
-  Alcotest.(check int) "decl count" 1 (List.length collected.decls)
-      \end{lstlisting}
-      \item Cover optional args, exception usage, type references, and file edges by constructing appropriate typedtrees.
-    \end{itemize}
-
-  \item \textbf{Step 1.6: Parity verification}
+  \item \textbf{Step 1.5: Parity verification}
     \begin{itemize}
       \item After each sub-step (value collection, type collection, exceptions), run \code{reanalyze -dce} on fixtures to ensure diagnostics match.
       \item Add a local parity script that compares JSON outputs before/after refactor using \code{git diff --no-index}. Fail if any change appears.
@@ -305,7 +292,7 @@ let test_value_decl_collection () =
       \item Provide \code{read_or_recompute ~project_root summary} helper.
     \end{itemize}
   \item Update \code{DeadCode.processCmt}: after obtaining \code{collected}, call \code{Summary.of_collected}. Feed the result into \code{DeadCommon_sink} (for batch) and optionally write to cache when \code{Common.Cli.cache_summaries} is set. This validates the new path without altering output.
-  \item Extend unit tests: compare generated JSON to checked-in golden files located under \code{tests/reactive_goldens/<file>.summary.json}. Provide helper to regenerate goldens via \code{dune exec tests/bin/update_summaries.exe}.
+  \item Extend verification by running \code{make test-analysis} (deadcode fixture project) plus the parity harness to confirm summaries remain stable between runs. Record any mismatches directly in the implementation log instead of relying on synthetic unit tests.
 \end{enumerate}
 \subsection{Acceptance}
 \begin{itemize}[leftmargin=*]

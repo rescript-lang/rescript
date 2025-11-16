@@ -20,6 +20,35 @@ let add_value_reference t ref = t.add_value_reference ref
 let add_type_reference t ref = t.add_type_reference ref
 let finalize t = t.finalize ()
 
+let tee primary secondary =
+  {
+    add_decl =
+      (fun decl ->
+        add_decl primary decl;
+        add_decl secondary decl);
+    find_decl = (fun pos ->
+        match find_decl primary pos with
+        | Some _ as found -> found
+        | None -> find_decl secondary pos);
+    replace_decl =
+      (fun decl ->
+        replace_decl primary decl;
+        replace_decl secondary decl);
+    add_value_reference =
+      (fun ref ->
+        add_value_reference primary ref;
+        add_value_reference secondary ref);
+    add_type_reference =
+      (fun ref ->
+        add_type_reference primary ref;
+        add_type_reference secondary ref);
+    finalize =
+      (fun () ->
+        let result = finalize primary in
+        ignore (finalize secondary);
+        result);
+  }
+
 let dead_common_sink () =
   let open DeadCommon in
   let add_decl = function
