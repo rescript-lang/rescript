@@ -149,6 +149,9 @@ let resolve_source_file cmt_infos =
   | Some path -> Some path
   | None -> cmt_infos.cmt_sourcefile
 
+(* Keep the settings parameter even though it is unused for now. We expect to thread
+   comparison options (module filters, severity thresholds, etc.) through this record
+   in later milestones, so keeping the shape stable avoids another round of plumbing. *)
 let compare_file _settings path =
   match Typedtree_helpers.read_cmt path with
   | Result.Error msg -> Result.Error (Load_error (path, msg))

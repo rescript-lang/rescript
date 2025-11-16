@@ -35,6 +35,12 @@ compile_cpp() {
   clang++ -g -c "${CFLAGS[@]}" "$src" -o "$out"
 }
 
+compile_llvm() {
+  local src="$1"
+  local out="$2"
+  clang++ -g -Wno-override-module -c "$src" -o "$out"
+}
+
 maybe_strip_main() {
   local obj="$1"
   if command -v objcopy >/dev/null 2>&1; then
@@ -78,7 +84,7 @@ for src in "$VENDOR_DIR"/external/runtime/*.cpp; do
 done
 
 skip_obj="$WORK_DIR/skip_bc.o"
-compile_cpp "$VENDOR_DIR/external/skip.ll" "$skip_obj"
+compile_llvm "$VENDOR_DIR/external/skip.ll" "$skip_obj"
 OBJECTS+=("$skip_obj")
 
 LIB_PATH="$DEST_DIR/libskip_reactive.a"
