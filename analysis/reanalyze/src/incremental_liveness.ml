@@ -125,7 +125,9 @@ let rec resolve env id level refs_being_resolved =
                     all_deps_resolved := false;
                   if ref_is_dead then (acc, unknown_live)
                   else (PosSet.add ref_node.decl.pos acc, unknown_live))
-            refs (PosSet.empty, false)
+            refs
+            ( PosSet.empty,
+              Graph_store.has_unknown_value_ref env.graph id )
         in
         let live_refs =
           new_refs |> PosSet.filter (fun pos -> not (annotation_is_dead env pos))

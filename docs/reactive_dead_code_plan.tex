@@ -374,6 +374,22 @@ Carry the legacy \code{orderedFiles} rank into each node and order SCC processin
 \subsubsection*{Milestone 3.4 – Reference Normalisation}
 Apply the same location rewriting (\code{Current.lastBinding}, ghost filtering, point locations) before counting incoming references so self-ref edges and ghost locations do not skew the solver. Expect the long tail of prop/record mismatches to drop after this milestone.
 
+\paragraph{Status.} Completed.
+\begin{itemize}[leftmargin=*]
+  \item \code{Graph_store} no longer drops references whose source position does not map to a known declaration. Instead it tracks those as ``unknown live'' edges (mirroring the legacy \code{ValueReferences} behaviour) and carries the flag through pending-resolution paths so targets stay live until the legacy solver would mark them dead.
+  \item \code{Incremental_liveness.resolve} consults the new flag before evaluating a declaration, ensuring any call-site we could not attribute to a concrete declaration still prevents the target from being killed. This eliminated the spurious kills for JSX props and optional-arg helpers whose call sites originate from generated code.
+\end{itemize}
+
+\paragraph{Validation.}
+\begin{itemize}[leftmargin=*]
+  \item \code{make test-analysis}
+  \item \code{INCR\_GRAPH\_SOLVER=1 dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}
+    \begin{itemize}
+      \item Stage 1 remains clean.
+      \item Stage 2 now reports 110 unexpected deaths (down from 115), all in the categories reserved for Milestone 3.5.
+    \end{itemize}
+\end{itemize}
+
 \subsubsection*{Milestone 3.5 – Module Bookkeeping}
 Call \code{DeadModules.(markDead|markLive)} from the graph solver so module-level liveness state and derived warnings stay in sync. Once this lands, module-level discrepancies (e.g. nested components) should disappear.
 

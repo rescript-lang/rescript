@@ -39,6 +39,8 @@ type t = {
   pending_value: (position_key, pending_value_edge list) Hashtbl.t;
   pending_type: (position_key, DeclId.t list) Hashtbl.t;
   file_edges: (string, StringSet.t) Hashtbl.t;
+  unknown_value_targets: (DeclId.t, unit) Hashtbl.t;
+  pending_unknown_value: (position_key, unit) Hashtbl.t;
   mutable file_order: (string, int) Hashtbl.t;
   mutable file_order_valid: bool;
 }
@@ -57,6 +59,8 @@ let create () =
     pending_value = Hashtbl.create 64;
     pending_type = Hashtbl.create 64;
     file_edges = Hashtbl.create 32;
+    unknown_value_targets = Hashtbl.create 128;
+    pending_unknown_value = Hashtbl.create 64;
     file_order = Hashtbl.create 32;
     file_order_valid = false;
   }
@@ -115,6 +119,10 @@ let remove_position_index t key id =
       | [] -> Hashtbl.remove t.position_index key
       | _ -> Hashtbl.replace t.position_index key filtered)
 
+let mark_unknown_value_ref t id = Hashtbl.replace t.unknown_value_targets id ()
+let has_unknown_value_ref t id = Hashtbl.mem t.unknown_value_targets id
+let add_pending_unknown_value t key = Hashtbl.replace t.pending_unknown_value key ()
+
 let record_file_edge t ~from_file ~to_file =
   let existing = match Hashtbl.find_opt t.file_edges from_file with Some s -> s | None -> StringSet.empty in
   let updated = StringSet.add to_file existing in
@@ -168,7 +176,8 @@ let remove_file t file =
           | Some node ->
               remove_position_index t (position_key node.summary.loc.start_) id
           | None -> ());
-          Hashtbl.remove t.nodes id)
+          Hashtbl.remove t.nodes id;
+          Hashtbl.remove t.unknown_value_targets id)
         decls;
       let edges_removed = ref false in
       if Hashtbl.mem t.file_edges file then (
@@ -186,7 +195,15 @@ let remove_file t file =
         t.file_edges;
       List.iter (fun src -> Hashtbl.remove t.file_edges src) !pending_removals;
       List.iter (fun (src, set) -> Hashtbl.replace t.file_edges src set) !pending_updates;
-      if !edges_removed then t.file_order_valid <- false
+      if !edges_removed then t.file_order_valid <- false;
+      let pending_unknown_keys = ref [] in
+      Hashtbl.iter
+        (fun key _ ->
+          let file_key, _ = key in
+          if String.equal file_key file then
+            pending_unknown_keys := key :: !pending_unknown_keys)
+        t.pending_unknown_value;
+      List.iter (fun key -> Hashtbl.remove t.pending_unknown_value key) !pending_unknown_keys
 
 let resolve_pending_value t key target_id =
   match Hashtbl.find_opt t.pending_value key with
@@ -202,7 +219,10 @@ let resolve_pending_value t key target_id =
             if not (String.equal from_node.file to_node.file) then
               record_file_edge t ~from_file:from_node.file ~to_file:to_node.file))
         pending;
-      Hashtbl.remove t.pending_value key
+      Hashtbl.remove t.pending_value key;
+      if Hashtbl.mem t.pending_unknown_value key then (
+        Hashtbl.remove t.pending_unknown_value key;
+        mark_unknown_value_ref t target_id)
 
 let resolve_pending_type t key target_id =
   match Hashtbl.find_opt t.pending_type key with
@@ -222,10 +242,14 @@ let add_decls t summary =
            let id = decl_id_for summary decl in
            let common_decl = Summary.to_common_decl decl in
            let node = {id; file = summary.source_file; decl = common_decl; summary = decl} in
+           let start_key = position_key decl.loc.start_ in
            Hashtbl.replace t.nodes id node;
-           add_position_index t (position_key decl.loc.start_) id;
-           resolve_pending_value t (position_key decl.loc.start_) id;
-           resolve_pending_type t (position_key decl.loc.start_) id;
+           add_position_index t start_key id;
+           resolve_pending_value t start_key id;
+           resolve_pending_type t start_key id;
+           if Hashtbl.mem t.pending_unknown_value start_key then (
+             Hashtbl.remove t.pending_unknown_value start_key;
+             mark_unknown_value_ref t id);
            id)
   in
   Hashtbl.replace t.file_to_decls summary.source_file decl_ids;
@@ -253,7 +277,11 @@ let find_local_decl t summary decl_ids pos =
 
 let add_value_reference t summary decl_ids ref =
   match find_local_decl t summary decl_ids ref.Summary.loc_from with
-  | None -> ()
+  | None ->
+      let key = position_key ref.loc_to in
+      (match Hashtbl.find_opt t.position_index key with
+      | Some (target :: _) -> mark_unknown_value_ref t target
+      | _ -> add_pending_unknown_value t key)
   | Some src ->
       let key = position_key ref.loc_to in
       (match Hashtbl.find_opt t.position_index key with
