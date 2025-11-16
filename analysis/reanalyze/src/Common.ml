@@ -90,6 +90,8 @@ module FileReferences = struct
     | None -> FileSet.empty
 
   let iter f = FileHash.iter f table
+
+  let clear () = FileHash.clear table
 end
 
 module Path = struct

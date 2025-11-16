@@ -38,7 +38,7 @@ Link the editor analysis binary against the Skip runtime on macOS, provide a smo
 
 ---
 
-## Milestone 1 – Collector Abstraction (partial)
+## Milestone 1 – Collector Abstraction
 
 ### Goal
 Start isolating the AST traversal from global state by introducing a collector interface and plumbing it through the value-analysis entrypoints, while keeping batch behaviour identical via a sink implementation backed by `DeadCommon`.
@@ -50,6 +50,15 @@ Start isolating the AST traversal from global state by introducing a collector i
   - `Collector.collected ()` stores `Common.decl` and reference events in-memory for future pure consumers.
 - Threaded a `collector` record through `DeadCode.processCmt`, `DeadValue.processStructure`, `DeadValue.processSignatureItem`, `DeadOptionalArgs`, and `DeadException`. All writes to declarations and value references now go through the collector interface (including delayed optional-arg/exceptions queues). `DeadType` also mirrors every declaration/type-reference event into the collector so future milestones can build summaries without reading `DeadCommon`.
 - Added `DeadCode.collect_cmt` which runs a pure `Collector.collected` pass over a single `.cmt` file and returns a `Collected_types.t` snapshot. Batch mode still uses the sink collector, but this helper gives later milestones a stable entry-point for Skip-backed pipelines.
+- Added `Typedtree_helpers`, a thin wrapper around \code{Cmt_format.read_cmt} that returns typed structures/signatures plus their metadata. Parity tooling can now load typedtrees from compiled artifacts without duplicating the boilerplate in \code{Reanalyze.loadCmtFile}.
+- Added the \code{analysis/bin/collector\_parity.exe} tool. It walks a directory of compiled artefacts, runs both collector implementations per module (pure snapshot vs legacy `DeadCommon`), normalises the results, and reports any mismatches. New `DeadCommon.Test` helpers clear/snapshot the legacy tables so parity runs stay isolated.
+- Hardened the parity harness for staged debugging: `collector_parity_cli` now resolves missing source files via `cmt_sourcefile`, exposes `--allow-missing-source` (downgrade unresolved paths to warnings when we explicitly opt in), and `--max-examples <n>` so each diff prints a bounded sample per category. Mismatches now emit structured summaries grouped per module, which we can track milestone-by-milestone.
+- Matched collector semantics for value references: `DeadValue.record_value_reference` now mirrors `DeadCommon.addValueReference` (respect `Current.lastBinding`, drop ghost emitters, and store point locations). After this change the parity run on `tests/analysis_tests/tests-reanalyze/deadcode/lib/bs` shrank from dozens of modules down to the remaining type-only cases (DeadRT/DeadTypeTest/DeadTest/FirstClassModulesInterface/InnerModuleTypes) plus the exception suite. This isolates the next stage to type-reference plumbing and exception bookkeeping instead of the general value path.
+- Threaded the collector through `DeadType.TypeDependencies.forceDelayedItems` so cross-file type references land in the pure snapshot. `make test-analysis` still passes, and parity now reports only the exception fixtures (DeadExn + exception/*) as outstanding gaps. Type-only fixtures are clean, so the next pass can focus exclusively on exception declaration/reference wiring.
+- Reconciled exception references: `DeadException.record_value_reference` now mirrors `DeadCommon` semantics (honour `Current.lastBinding`, ignore ghost emitters, and collapse both endpoints to single-point locations before calling `Collector.add_value_reference`). After rebuilding (`make test-analysis`) and re-running `dune exec analysis/bin/collector_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs`, all 97 fixtures report “Collector parity OK”. This completes the parity stage for the deadcode suite.
+  - Root cause summary (pre-fix):  
+    1. **Value reference normalization** – the new collector was using raw `Location.t`s, whereas `DeadCommon` rewrites them through `Current.lastBinding`, drops ghost emitters, and stores point locations; every reference therefore disagreed until `DeadValue`/`DeadException` adopted the same normalization.  
+    2. **Deferred edge replay** – cross-file edges (type deps and ghost exception references) were only flushed through `DeadCommon`, so the pure snapshots simply missed them; wrapping `DeadType.TypeDependencies.forceDelayedItems` (and the exception replay) inside the active collector lets those queued edges emit via `Collector.*`, producing identical graphs.
 - Introduced `Common.with_current_module` and `ModulePath.with_current` so each `.cmt` run resets global/module-path state, avoiding leakage between files while keeping the old globals available to other analyses.
 - `Reanalyze.loadCmtFile` instantiates the sink collector per `.cmt` so current CLI behaviour stays unchanged while enabling later milestones to plug different collectors.
 
@@ -57,6 +66,7 @@ Start isolating the AST traversal from global state by introducing a collector i
 - `dune build analysis/bin/main.exe`
 - `make test-analysis`
   - Exercises the existing suites (analysis, JSX transform, reanalyze, termination) ensuring no behavioural regressions surfaced.
+- `dune exec analysis/bin/collector_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs`
 
 ---
 

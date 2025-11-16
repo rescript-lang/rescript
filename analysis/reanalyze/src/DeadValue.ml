@@ -21,10 +21,27 @@ let record_value_decl collector ?(isToplevel = true)
   in
   Collector.add_decl collector decl
 
+let point_location loc =
+  {
+    Location.loc_start = loc.Location.loc_start;
+    loc_end = loc.Location.loc_start;
+    loc_ghost = false;
+  }
+
 let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
     ~(locTo : Location.t) =
-  Collector.add_value_reference collector
-    {loc_from = locFrom; loc_to = locTo; add_file_reference = addFileReference}
+  let locFrom =
+    match !Current.lastBinding = Location.none with
+    | true -> locFrom
+    | false -> !Current.lastBinding
+  in
+  if not locFrom.loc_ghost then
+    Collector.add_value_reference collector
+      {
+        loc_from = point_location locFrom;
+        loc_to = point_location locTo;
+        add_file_reference = addFileReference;
+      }
 
 let checkAnyValueBindingWithNoSideEffects collector
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :

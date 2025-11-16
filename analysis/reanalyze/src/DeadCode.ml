@@ -30,7 +30,8 @@ let processCmt ~collector ~cmtFilePath (cmt_infos : Cmt_format.cmt_infos) =
     DeadValue.processStructure ~collector ~doTypes:true ~doExternals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
-  DeadType.TypeDependencies.forceDelayedItems ();
+  DeadType.with_collector collector (fun () ->
+      DeadType.TypeDependencies.forceDelayedItems ());
   DeadType.TypeDependencies.clear ()
 
 let collect_cmt ~cmtFilePath (cmt_infos : Cmt_format.cmt_infos) =

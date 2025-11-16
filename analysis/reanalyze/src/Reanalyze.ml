@@ -278,3 +278,4 @@ let cli () =
 
 module RunConfig = RunConfig
 module Log_ = Log_
+module Collector_parity = Collector_parity_cli

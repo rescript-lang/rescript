@@ -13,12 +13,29 @@ let with_collector c f =
   collector_ref := Some c;
   Fun.protect ~finally:(fun () -> collector_ref := previous) f
 
+let point_location loc =
+  {
+    Location.loc_start = loc.Location.loc_start;
+    loc_end = loc.Location.loc_start;
+    loc_ghost = false;
+  }
+
 let record_value_reference ~(locFrom : Location.t) ~(locTo : Location.t) =
   match !collector_ref with
   | Some c ->
-      Collector.add_value_reference c
-        Collected_types.
-          {loc_from = locFrom; loc_to = locTo; add_file_reference = true}
+      let locFrom =
+        match !Current.lastBinding = Location.none with
+        | true -> locFrom
+        | false -> !Current.lastBinding
+      in
+      if not locFrom.loc_ghost then
+        Collector.add_value_reference c
+          Collected_types.
+            {
+              loc_from = point_location locFrom;
+              loc_to = point_location locTo;
+              add_file_reference = true;
+            }
   | None -> addValueReference ~addFileReference:true ~locFrom ~locTo
 
 let add ~collector ~path ~loc ~(strLoc : Location.t) name =

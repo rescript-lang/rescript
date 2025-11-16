@@ -17,3 +17,9 @@
  (modes exe)
  (modules reactive_repl)
  (libraries skip_reactive))
+
+(executable
+ (name collector_parity)
+ (modes exe)
+ (modules collector_parity)
+ (libraries analysis))
