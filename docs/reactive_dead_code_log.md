@@ -13,6 +13,9 @@ Link the editor analysis binary against the Skip runtime on macOS, provide a smo
 - **Skip Runtime Vendoring**
   - `scripts/build_skip_runtime.sh` builds the locally checked-out `skip-ocaml` (authenticated via `SKIP_OCAML_SRC` env var, defaults to `~/GitHub/skip-ocaml`).
   - Only `libskip_reactive.a` is copied into `analysis/bin/skip_runtime/` (ignored by git). No cross-repo linking remains.
+- **Vendored runtime sources (follow-up)**
+  - Copied the required C/C++ runtime sources plus `skip.ll` from `skip-ocaml` commit `0a8ddbf29970869d9396d7e860e3b48bb3df8695` into `analysis/skip_runtime/vendor/`.
+  - `scripts/build_skip_runtime.sh` now compiles `libskip_reactive.a` directly from those vendored files, so no sibling checkout is needed.
 - **Compiler Integration**
   - `rescript-editor-analysis` now links against `skip_reactive`, so every build already includes the Skip runtime bits even before the reactive path is used.
   - `make compiler` depends on the `analysis/bin/skip_runtime/.stamp` produced by `make skip-runtime`, ensuring the runtime artifacts are rebuilt (and the `reactive_repl` smoke test is recompiled) before the analysis binary.
