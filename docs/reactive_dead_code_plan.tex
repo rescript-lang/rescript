@@ -77,7 +77,7 @@ The batch-only analyzer mutates global tables and must rescan every \code{.cmt} 
 \subsection{Expected Outcome}
 \begin{itemize}[leftmargin=*]
   \item \textbf{Performance}: Cold runs match current batch latency; warm edits touch only changed summaries plus dependent SCCs (target p50 $<$200\,ms, p95 $<$1\,s).
-  \item \textbf{Parity}: Batch mode remains the CI default, and nightly parity tests ensure reactive diagnostics are byte-identical.
+  \item \textbf{Parity}: Batch mode remains the default baseline, and nightly local parity tests ensure reactive diagnostics are byte-identical.
   \item \textbf{Developer experience}: Editors receive near-real-time dead-code diagnostics via LSP, and scripts can simply call \code{reanalyze --reactive} after each build—no custom daemons or coordination files required.
   \item \textbf{Fallback}: If Skip mode fails, users fall back to \code{reanalyze -dce}; collector adapters keep batch behavior unchanged.
 \end{itemize}
@@ -87,7 +87,7 @@ The batch-only analyzer mutates global tables and must rescan every \code{.cmt} 
   \item Maintain golden parity with current batch diagnostics for all analyses that depend on \code{DeadCommon} (dead values, optional args, exceptions).
   \item Recompute only the file summaries and SCC regions whose dependencies changed; target p50 latency $<200$ms and p95 $<1$\,s for same project edits.
   \item Reuse Skip runtime primitives (\code{Reactive.init}, tracked resources, \code{Reactive.map}, \code{Reactive.exit}) so the tool matches \code{docs/reactive\_ocaml.tex} constraints.
-  \item Preserve CLI surface area: batch mode remains default for CI; reactive mode is opt-in until parity is proven.
+  \item Preserve CLI surface area: batch mode remains default for automation; reactive mode is opt-in until parity is proven.
   \item Non-goals: redesigning the AST, changing warning wording, or introducing new user-facing configuration.
 \end{itemize}
 
@@ -130,7 +130,7 @@ lib/bs/*.cmt -> Manifest (rewatch) -> Skip Input Collection
       \item Add conditional linking of \code{libskip\_reactive.a}.
       \item On Linux, append \code{-ccopt -no-pie -ccopt -Wl,-Ttext=0x8000000}; on macOS, add startup hook that deletes stale heaps before \code{Reactive.init}.
     \end{itemize}
-  \item Add \code{analysis/bin/reactive.repl} target that simply runs \code{Reactive.init; Reactive.exit}. CI ensures Skip linkage stays healthy.
+  \item Add \code{analysis/bin/reactive.repl} target that simply runs \code{Reactive.init; Reactive.exit}. Local smoke runs ensure Skip linkage stays healthy.
   \item Capture baseline metrics (wall-clock, files processed) for \code{reanalyze -dce} on representative projects. Store JSON under \code{analysis/benchmarks/reactive\_baseline.json} for later comparison.
   \item Stub \code{--reactive} flag in \code{analysis/bin/main.ml} (behind experimental guard) pointing to a placeholder that exits with \code{`Not_implemented`}. This allows CLI plumbing to be reviewed early.
 \end{enumerate}
@@ -239,7 +239,7 @@ let test_value_decl_collection () =
   \item \textbf{Step 1.6: Parity verification}
     \begin{itemize}
       \item After each sub-step (value collection, type collection, exceptions), run \code{reanalyze -dce} on fixtures to ensure diagnostics match.
-      \item Add a CI lane that compares JSON outputs before/after refactor using \code{git diff --no-index}. Fail if any change appears.
+      \item Add a local parity script that compares JSON outputs before/after refactor using \code{git diff --no-index}. Fail if any change appears.
     \end{itemize}
 \end{enumerate}
 \subsection{Acceptance}
@@ -632,7 +632,7 @@ let assert_parity project =
   Alcotest.(check diagnostics) (project ^ " parity") batch reactive
     \end{lstlisting}
   \item Diagnostics comparison normalizes ordering and formatting (sort by file/line, compare message text).
-  \item Run parity harness nightly on: core repo, partner repo A, partner repo B. Report failures in CI dashboard.
+  \item Run parity harness nightly on: core repo, partner repo A, partner repo B. Record failures in local logs for investigation.
 \end{itemize}
 
 \subsection{Performance Benchmarks}
