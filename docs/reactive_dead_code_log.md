@@ -48,7 +48,8 @@ Start isolating the AST traversal from global state by introducing a collector i
 - Added `analysis/reanalyze/src/collector.{ml,mli}` exposing two back ends:
   - `Collector.dead_common_sink ()` delegates to existing `DeadCommon` helpers (batch mode).
   - `Collector.collected ()` stores `Common.decl` and reference events in-memory for future pure consumers.
-- Threaded a `collector` record through `DeadCode.processCmt`, `DeadValue.processStructure`, `DeadValue.processSignatureItem`, and `DeadException.add`. All writes to declarations and value references now go through the collector interface. `DeadType` also mirrors every declaration/type-reference event into the collector so future milestones can build summaries without reading `DeadCommon`.
+- Threaded a `collector` record through `DeadCode.processCmt`, `DeadValue.processStructure`, `DeadValue.processSignatureItem`, `DeadOptionalArgs`, and `DeadException`. All writes to declarations and value references now go through the collector interface (including delayed optional-arg/exceptions queues). `DeadType` also mirrors every declaration/type-reference event into the collector so future milestones can build summaries without reading `DeadCommon`.
+- Added `DeadCode.collect_cmt` which runs a pure `Collector.collected` pass over a single `.cmt` file and returns a `Collected_types.t` snapshot. Batch mode still uses the sink collector, but this helper gives later milestones a stable entry-point for Skip-backed pipelines.
 - Introduced `Common.with_current_module` and `ModulePath.with_current` so each `.cmt` run resets global/module-path state, avoiding leakage between files while keeping the old globals available to other analyses.
 - `Reanalyze.loadCmtFile` instantiates the sink collector per `.cmt` so current CLI behaviour stays unchanged while enabling later milestones to plug different collectors.
 

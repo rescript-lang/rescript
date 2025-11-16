@@ -410,9 +410,12 @@ let processValueDependency collector
 let processStructure ~collector ~cmt_value_dependencies ~doTypes ~doExternals
     (structure : Typedtree.structure) =
   DeadType.with_collector collector (fun () ->
-      let traverseStructure =
-        traverseStructure ~collector ~doTypes ~doExternals
-      in
-      structure |> traverseStructure.structure traverseStructure |> ignore;
-      let valueDependencies = cmt_value_dependencies |> List.rev in
-      valueDependencies |> List.iter (processValueDependency collector))
+      DeadException.with_collector collector (fun () ->
+          DeadOptionalArgs.with_collector collector (fun () ->
+              let traverseStructure =
+                traverseStructure ~collector ~doTypes ~doExternals
+              in
+              structure |> traverseStructure.structure traverseStructure
+              |> ignore;
+              let valueDependencies = cmt_value_dependencies |> List.rev in
+              valueDependencies |> List.iter (processValueDependency collector))))

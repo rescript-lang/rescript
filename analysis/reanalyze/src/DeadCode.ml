@@ -32,3 +32,9 @@ let processCmt ~collector ~cmtFilePath (cmt_infos : Cmt_format.cmt_infos) =
   | _ -> ());
   DeadType.TypeDependencies.forceDelayedItems ();
   DeadType.TypeDependencies.clear ()
+
+let collect_cmt ~cmtFilePath (cmt_infos : Cmt_format.cmt_infos) =
+  let collector = Collector.collected () in
+  ModulePath.with_current (fun () ->
+      processCmt ~collector ~cmtFilePath cmt_infos);
+  Collector.finalize collector
