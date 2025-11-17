@@ -82,7 +82,7 @@ let dead_common_sink () =
   in
   let find_decl pos = PosHash.find_opt decls pos in
   let replace_decl decl = PosHash.replace decls decl.pos decl in
-  let add_value_reference {loc_from; loc_to; add_file_reference} =
+  let add_value_reference {loc_from; loc_to; add_file_reference; target_path = _} =
     addValueReference ~addFileReference:add_file_reference ~locFrom:loc_from
       ~locTo:loc_to
   in

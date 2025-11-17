@@ -65,7 +65,10 @@ let get_annotation env pos =
       let snapshot =
         match Graph_store.find_node_by_position env.graph pos with
         | Some node -> node.summary.annotations
-        | None -> annotation_none
+        | None -> (
+            match Graph_store.annotation_snapshot_of_lexing_position env.graph pos with
+            | Some annotation -> annotation
+            | None -> annotation_none)
       in
       Hashtbl.replace env.annotations key snapshot;
       snapshot
@@ -81,7 +84,9 @@ let annotation_is_dead_or_gen env pos =
 let decl_id_equal a b = DeclId.compare a b = 0
 
 let incoming_refs graph id decl =
-  let kind = if Decl.isValue decl then `Value else `Type in
+  let kind =
+    if DeclKind.isType decl.declKind then `Type else `Value
+  in
   Graph_store.reverse_successors graph ~kind id
 
 let update_module_state decl ~is_dead =
@@ -116,12 +121,14 @@ let rec resolve env id level refs_being_resolved =
         refs_being_resolved := DeclIdSet.add id !refs_being_resolved;
         let refs = incoming_refs env.graph id decl in
         let all_deps_resolved = ref true in
+        let is_type = DeclKind.isType decl.declKind in
         let initial_unknown =
-          if Decl.isValue decl then
-            Graph_store.has_unknown_value_ref env.graph id
-          else
-            Graph_store.has_unknown_type_ref env.graph id
+          if is_type then Graph_store.has_unknown_type_ref env.graph id
+          else Graph_store.has_unknown_value_ref env.graph id
         in
+        debug_decl decl
+          (Printf.sprintf "initial_unknown=%b incoming_refs=%d" initial_unknown
+             (Graph_store.DeclIdSet.cardinal refs));
         let new_refs, unknown_live =
           DeclIdSet.fold
             (fun ref_id (acc, unknown_live) ->
@@ -143,10 +150,13 @@ let rec resolve env id level refs_being_resolved =
         let live_refs =
           new_refs |> PosSet.filter (fun pos -> not (annotation_is_dead env pos))
         in
+        let annotated_dead = annotation_is_dead env decl.pos in
         let is_dead =
-          (not unknown_live)
-          && PosSet.is_empty live_refs
-          && not (annotation_is_live env decl.pos)
+          annotated_dead
+          ||
+          ( (not unknown_live)
+            && PosSet.is_empty live_refs
+            && not (annotation_is_live env decl.pos) )
         in
         debug_decl decl
           (Printf.sprintf

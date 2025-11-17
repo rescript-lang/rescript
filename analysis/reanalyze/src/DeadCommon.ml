@@ -60,6 +60,22 @@ type decls = decl PosHash.t
 
 let decls = (PosHash.create 256 : decls)
 
+let find_decl_at_position pos =
+  try Some (PosHash.find decls pos) with Not_found -> None
+
+let find_decl_by_line pos =
+  let file = pos.Lexing.pos_fname in
+  let line = pos.Lexing.pos_lnum in
+  let result = ref None in
+  PosHash.iter
+    (fun stored_pos decl ->
+      if !result = None
+         && String.equal stored_pos.Lexing.pos_fname file
+         && stored_pos.Lexing.pos_lnum = line
+      then result := Some decl)
+    decls;
+  !result
+
 module ValueReferences = struct
   (** all value references *)
   let table = (PosHash.create 256 : PosSet.t PosHash.t)
@@ -749,6 +765,7 @@ module Test = struct
                 Collected_types.loc_from = location_of_pos pos_from;
                 loc_to = location_of_pos pos_to;
                 add_file_reference = false;
+                target_path = None;
               }
               :: acc)
             from_set acc)

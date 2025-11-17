@@ -1,6 +1,8 @@
 open Common
 open Cmt_format
 
+module StringMap = Map.Make (String)
+
 module Normalize = struct
   module DiffSet = Set.Make (String)
 
@@ -120,6 +122,7 @@ type error =
 type settings = {
   allow_missing_source: bool;
   max_examples: int;
+  dump_filters: string list;
 }
 
 let rec gather_files acc path =
@@ -149,10 +152,150 @@ let resolve_source_file cmt_infos =
   | Some path -> Some path
   | None -> cmt_infos.cmt_sourcefile
 
-(* Keep the settings parameter even though it is unused for now. We expect to thread
-   comparison options (module filters, severity thresholds, etc.) through this record
-   in later milestones, so keeping the shape stable avoids another round of plumbing. *)
-let compare_file _settings path =
+let summary_pos_string (pos : Summary.position) =
+  Printf.sprintf "%s:%d:%d" pos.file pos.line pos.column
+
+let string_contains ~needle haystack =
+  let len_h = String.length haystack and len_n = String.length needle in
+  let rec loop i =
+    if len_n = 0 then true
+    else if i + len_n > len_h then false
+    else if String.sub haystack i len_n = needle then true
+    else loop (i + 1)
+  in
+  loop 0
+
+let should_dump dump_filters path =
+  match dump_filters with
+  | [] -> false
+  | filters -> List.exists (fun needle -> string_contains ~needle path) filters
+
+let dump_collected path collected =
+  let normalized = Normalize.normalize collected in
+  Printf.printf "=== Dump for %s ===\n" path;
+  Printf.printf "Decls (%d):\n" (List.length normalized.decls);
+  List.iter (fun decl -> Printf.printf "  %s\n" decl) normalized.decls;
+  Printf.printf "Value refs (%d):\n" (List.length normalized.value_refs);
+  List.iter (fun ref -> Printf.printf "  %s\n" ref) normalized.value_refs;
+  Printf.printf "Type refs (%d):\n" (List.length normalized.type_refs);
+  List.iter (fun ref -> Printf.printf "  %s\n" ref) normalized.type_refs;
+  flush stdout
+
+let string_of_path names =
+  names |> List.map Name.toString |> String.concat "."
+
+let dump_graph_stats graph source_file =
+  let decl_ids = Graph_store.file_decls graph source_file in
+  if decl_ids = [] then
+    Printf.printf "Graph stats: no declarations recorded for %s\n%!" source_file
+  else (
+    let unknown_ids = Graph_store.unknown_value_ids graph in
+    let unknown_for_file =
+      unknown_ids
+      |> List.filter_map (fun id ->
+             match Graph_store.find_node graph id with
+             | Some node when String.equal node.file source_file ->
+                 Some (string_of_path node.decl.path)
+             | _ -> None)
+    in
+    Printf.printf "=== Graph stats for %s (%d decls) ===\n" source_file
+      (List.length decl_ids);
+    Printf.printf "  total_unknown_values=%d\n"
+      (List.length unknown_ids);
+    List.iter
+      (fun id ->
+        match Graph_store.find_node graph id with
+        | None ->
+            Printf.printf "  [missing node for %s]\n"
+              (Graph_store.DeclId.to_string id)
+        | Some node ->
+            let incoming_set =
+              Graph_store.reverse_successors graph ~kind:`Value id
+            in
+            let incoming = Graph_store.DeclIdSet.cardinal incoming_set in
+            let incoming_names =
+              Graph_store.DeclIdSet.elements incoming_set
+              |> List.filter_map (fun pred_id ->
+                     match Graph_store.find_node graph pred_id with
+                     | None -> None
+                     | Some pred ->
+                         Some (string_of_path pred.decl.path))
+              |> List.sort String.compare
+            in
+            let outgoing =
+              Graph_store.successors graph ~kind:`Value id
+              |> Graph_store.DeclIdSet.cardinal
+            in
+            let unknown = Graph_store.has_unknown_value_ref graph id in
+            Printf.printf
+              "  %s | in=%d out=%d unknown=%b start=%s:%d:%d\n    preds=[%s]\n"
+              (string_of_path node.decl.path)
+              incoming outgoing unknown
+              node.summary.loc.start_.file node.summary.loc.start_.line
+              node.summary.loc.start_.column
+              (String.concat ", " incoming_names))
+      decl_ids;
+    if unknown_for_file <> [] then
+      Printf.printf "  unknown_value_refs=[%s]\n"
+        (String.concat ", " unknown_for_file);
+    flush stdout)
+
+let dump_legacy_stats source_file =
+  let decls =
+    DeadCommon.PosHash.fold
+      (fun _ decl acc ->
+        if String.equal decl.pos.pos_fname source_file then decl :: acc else acc)
+      DeadCommon.decls []
+  in
+  if decls = [] then
+    Printf.printf "Legacy stats: no declarations recorded for %s\n%!" source_file
+  else (
+    Printf.printf "=== Legacy stats for %s (%d decls) ===\n" source_file
+      (List.length decls);
+    decls
+    |> List.iter (fun decl ->
+           let refs =
+             if DeadCommon.Decl.isValue decl then
+               DeadCommon.ValueReferences.find decl.pos
+             else DeadCommon.TypeReferences.find decl.pos
+           in
+           let incoming = DeadCommon.PosSet.cardinal refs in
+           let incoming_desc =
+             refs |> DeadCommon.PosSet.elements
+             |> List.filter_map (fun pos ->
+                    match DeadCommon.PosHash.find_opt DeadCommon.decls pos with
+                    | Some ref_decl ->
+                        Some
+                          (Printf.sprintf "%s(resolved=%s)"
+                             (string_of_path ref_decl.path)
+                             (match ref_decl.resolvedDead with
+                             | Some true -> "dead"
+                             | Some false -> "live"
+                             | None -> "unset"))
+                    | None ->
+                        Some
+                          (Printf.sprintf "%s(unresolved)" (posToString pos)))
+             |> String.concat ", "
+           in
+           Printf.printf
+             "  %s | kind=%s resolved=%s report=%b annotated(dead=%b live=%b \
+              dead_or_gen=%b) in=%d\n    refs=[%s]\n"
+             (string_of_path decl.path)
+             (DeclKind.toString decl.declKind)
+             (match decl.resolvedDead with
+             | Some true -> "true"
+             | Some false -> "false"
+             | None -> "unset")
+             decl.report
+             (DeadCommon.ProcessDeadAnnotations.isAnnotatedDead decl.pos)
+             (DeadCommon.ProcessDeadAnnotations.isAnnotatedGenTypeOrLive
+                decl.pos)
+             (DeadCommon.ProcessDeadAnnotations.isAnnotatedGenTypeOrDead
+                decl.pos)
+             incoming incoming_desc);
+    flush stdout)
+
+let compare_file settings path =
   match Typedtree_helpers.read_cmt path with
   | Result.Error msg -> Result.Error (Load_error (path, msg))
   | Result.Ok cmt_infos -> (
@@ -167,6 +310,7 @@ let compare_file _settings path =
         with_module_context ~source_file ~is_interface (fun () ->
             DeadCode.collect_cmt ~cmtFilePath:path cmt_infos)
       in
+    if should_dump settings.dump_filters path then dump_collected path pure;
       DeadCommon.Test.clear ();
       with_module_context ~source_file ~is_interface (fun () ->
           let collector = Collector.dead_common_sink () in
@@ -187,20 +331,32 @@ let build_decl_key (decl : Common.decl) =
     decl.pos.pos_fname names
     (DeclKind.toString decl.declKind)
 
-let decls_to_string_set decls =
-  decls
-  |> List.fold_left
-       (fun acc decl ->
-         if decl.report then StringSet.add (build_decl_key decl) acc else acc)
-       StringSet.empty
+type decl_index = {
+  set: StringSet.t;
+  map: Common.decl StringMap.t;
+}
 
-let legacy_dead_set () =
+let empty_decl_index = {set = StringSet.empty; map = StringMap.empty}
+
+let add_decl_to_index index decl =
+  if decl.report then
+    let key = build_decl_key decl in
+    {
+      set = StringSet.add key index.set;
+      map = StringMap.add key decl index.map;
+    }
+  else index
+
+let decl_index_of_list decls =
+  List.fold_left add_decl_to_index empty_decl_index decls
+
+let legacy_dead_index () =
   DeadCommon.PosHash.fold
     (fun _ decl acc ->
       match decl.resolvedDead with
-      | Some true when decl.report -> StringSet.add (build_decl_key decl) acc
+      | Some true -> add_decl_to_index acc decl
       | _ -> acc)
-    DeadCommon.decls StringSet.empty
+    DeadCommon.decls empty_decl_index
 
 let print_entries ~label ~max_examples entries =
   if entries <> [] then (
@@ -211,6 +367,39 @@ let print_entries ~label ~max_examples entries =
     if List.length entries > max_examples then
       Printf.printf "      ... (%d more)\n"
         (List.length entries - max_examples))
+
+let describe_decl ~prefix decl =
+  let resolved =
+    match decl.resolvedDead with
+    | Some true -> "true"
+    | Some false -> "false"
+    | None -> "unset"
+  in
+  let annotated_dead =
+    DeadCommon.ProcessDeadAnnotations.isAnnotatedDead decl.pos
+  in
+  let annotated_live =
+    DeadCommon.ProcessDeadAnnotations.isAnnotatedGenTypeOrLive decl.pos
+  in
+  let annotated_dead_or_gen =
+    DeadCommon.ProcessDeadAnnotations.isAnnotatedGenTypeOrDead decl.pos
+  in
+  Printf.printf "%s%s\n" prefix (Normalize.decl_string decl);
+  Printf.printf
+    "%s  resolved=%s report=%b annotated(dead=%b live=%b dead_or_gen=%b)\n"
+    prefix resolved decl.report annotated_dead annotated_live
+    annotated_dead_or_gen
+
+let describe_diff ~label ~keys ~primary ~secondary =
+  keys
+  |> List.iter (fun key ->
+         Printf.printf "      %s: %s\n" label key;
+         (match StringMap.find_opt key primary.map with
+         | Some decl -> describe_decl ~prefix:"        primary: " decl
+         | None -> Printf.printf "        primary: <missing>\n");
+         (match StringMap.find_opt key secondary.map with
+         | Some decl -> describe_decl ~prefix:"        secondary: " decl
+         | None -> Printf.printf "        secondary: <missing>\n"))
 
 let print_mismatch ~settings {file; diff} =
   Printf.printf "Parity mismatch: %s\n" file;
@@ -228,29 +417,49 @@ let print_mismatch ~settings {file; diff} =
     diff.type_extra
 
 let report_liveness_diff ~settings ~legacy ~incremental =
-  if StringSet.equal legacy incremental then
+  if StringSet.equal legacy.set incremental.set then
     Printf.printf "Incremental liveness parity OK (%d declarations checked)\n"
-      (StringSet.cardinal legacy)
+      (StringSet.cardinal legacy.set)
   else (
-    let missing = StringSet.diff legacy incremental |> StringSet.elements in
-    let extra = StringSet.diff incremental legacy |> StringSet.elements in
+    let missing =
+      StringSet.diff legacy.set incremental.set |> StringSet.elements
+    in
+    let extra =
+      StringSet.diff incremental.set legacy.set |> StringSet.elements
+    in
     prerr_endline "Incremental liveness mismatch:";
     print_entries ~label:"Missing deaths" ~max_examples:settings.max_examples
       missing;
     print_entries ~label:"Unexpected deaths" ~max_examples:settings.max_examples
       extra;
+    if missing <> [] then
+      describe_diff ~label:"Legacy-only dead" ~keys:missing ~primary:legacy
+        ~secondary:incremental;
+    if extra <> [] then
+      describe_diff ~label:"Incremental-only dead" ~keys:extra
+        ~primary:incremental ~secondary:legacy;
     exit 1)
 
 let run ~settings ~paths =
-  let files =
-    paths |> List.fold_left gather_files [] |> List.sort String.compare
+  let compare_cmt_paths a b =
+    let base_cmp =
+      String.compare (Filename.chop_extension a) (Filename.chop_extension b)
+    in
+    if base_cmp <> 0 then base_cmp
+    else
+      let priority filename =
+        if Filename.check_suffix filename ".cmti" then 0 else 1
+      in
+      compare (priority a) (priority b)
   in
+  let files = paths |> List.fold_left gather_files [] |> List.sort compare_cmt_paths in
   if files = [] then (
     prerr_endline "No .cmt/.cmti files found.";
     exit 1);
   let mismatches = ref [] in
   let failures = ref [] in
   let warnings = ref [] in
+  let parity_failed = ref false in
   files
   |> List.iter (fun file ->
          match compare_file settings file with
@@ -275,14 +484,15 @@ let run ~settings ~paths =
   if !mismatches <> [] then (
     List.rev !mismatches |> List.iter (print_mismatch ~settings);
     prerr_endline "Parity mismatches detected.";
-    exit 1);
+    parity_failed := true)
+  else Printf.printf "Collector parity OK (%d files checked)\n" (List.length files);
   if !failures <> [] then exit 1;
-  Printf.printf "Collector parity OK (%d files checked)\n" (List.length files);
   (* Second pass: build full graph/liveness parity *)
   let graph = Graph_store.create () in
   DeadCommon.Test.clear ();
   let graph_failures = ref [] in
   let graph_warnings = ref [] in
+  let dump_sources = ref [] in
   let process_file file =
     match Typedtree_helpers.read_cmt file with
     | Result.Error msg ->
@@ -304,7 +514,35 @@ let run ~settings ~paths =
             with_module_context ~source_file ~is_interface (fun () ->
                 let collected = DeadCode.collect_cmt ~cmtFilePath:file cmt_infos in
                 let summary = Summary.of_collected ~source_file collected in
+                (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+                | Some ("1" | "true" | "on") ->
+                    let with_targets, without_targets =
+                      List.fold_left
+                        (fun (with_t, without_t) ref ->
+                          match ref.Summary.target_path with
+                          | Some _ -> (with_t + 1, without_t)
+                          | None -> (with_t, without_t + 1))
+                        (0, 0) summary.Summary.value_references
+                    in
+                    Printf.eprintf
+                      "[collector_parity] %s summary refs target_path with=%d \
+                       without=%d\n"
+                      source_file with_targets without_targets;
+                    if without_targets > 0 then
+                      summary.Summary.value_references
+                      |> List.filter (fun ref -> ref.Summary.target_path = None)
+                      |> List.iteri (fun idx ref ->
+                             if idx < 5 then
+                               Printf.eprintf
+                                 "  [collector_parity] missing target_path %s -> \
+                                  %s\n"
+                                 (summary_pos_string ref.Summary.loc_from)
+                                 (summary_pos_string ref.Summary.loc_to))
+                | _ -> ());
                 Graph_store.add_summary graph summary;
+                if should_dump settings.dump_filters file then (
+                  dump_graph_stats graph source_file;
+                  dump_sources := source_file :: !dump_sources);
                 let collector = Collector.dead_common_sink () in
                 ModulePath.with_current (fun () ->
                     DeadCode.processCmt ~collector ~cmtFilePath:file cmt_infos);
@@ -347,14 +585,23 @@ let run ~settings ~paths =
     | Some res -> res
     | None -> run_incremental ()
   in
-  let legacy_dead = legacy_dead_set () in
-  let incremental_dead = decls_to_string_set incremental.dead_declarations in
+  if !dump_sources <> [] then
+    !dump_sources
+    |> List.rev
+    |> List.iter
+         (fun source_file ->
+           Printf.printf "--- Legacy dump for %s ---\n" source_file;
+           dump_legacy_stats source_file);
+  let legacy_dead = legacy_dead_index () in
+  let incremental_dead = decl_index_of_list incremental.dead_declarations in
   report_liveness_diff ~settings ~legacy:legacy_dead ~incremental:incremental_dead;
-  DeadCommon.Test.clear ()
+  DeadCommon.Test.clear ();
+  if !parity_failed then exit 1
 
 let cli () =
   let allow_missing_source = ref false in
   let max_examples = ref 5 in
+  let dump_filters = ref [] in
   let paths = ref [] in
   let usage = "collector_parity.exe [options] <cmt-or-directory> [...]" in
   let speclist =
@@ -366,6 +613,10 @@ let cli () =
       ( "--max-examples",
         Arg.Int (fun n -> max_examples := max 0 n),
         "Maximum number of diff entries to display per category (default 5)" );
+      ( "--dump",
+        Arg.String (fun s -> dump_filters := s :: !dump_filters),
+        "Dump normalized declarations and references for files whose paths \
+         contain the given substring (can be provided multiple times)" );
     ]
   in
   let anon_fun path = paths := path :: !paths in
@@ -374,7 +625,11 @@ let cli () =
     prerr_endline usage;
     exit 1);
   let settings =
-    {allow_missing_source = !allow_missing_source; max_examples = !max_examples}
+    {
+      allow_missing_source = !allow_missing_source;
+      max_examples = !max_examples;
+      dump_filters = !dump_filters;
+    }
   in
   run ~settings ~paths:(List.rev !paths)
 

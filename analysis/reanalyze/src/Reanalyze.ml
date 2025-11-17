@@ -120,7 +120,7 @@ let loadCmtFile cmtFilePath =
             in
             handle_summary summary);
         increment_baseline_file_count ();
-        if runConfig.exception_ then cmt_infos |> Exception.processCmt;
+    if runConfig.exception_ then cmt_infos |> Exception.processCmt;
         if runConfig.termination then cmt_infos |> Arnold.processCmt)
   | _ -> ()
 
@@ -167,8 +167,19 @@ let processCmtFiles ~cmtRoot =
              |> List.filter (fun x ->
                     Filename.check_suffix x ".cmt"
                     || Filename.check_suffix x ".cmti")
-           in
-           cmtFiles |> List.sort String.compare
+          in
+          let compare_cmt_files a b =
+            let base_cmp =
+              String.compare (Filename.chop_extension a) (Filename.chop_extension b)
+            in
+            if base_cmp <> 0 then base_cmp
+            else
+              let priority filename =
+                if Filename.check_suffix filename ".cmti" then 0 else 1
+              in
+              compare (priority a) (priority b)
+          in
+          cmtFiles |> List.sort compare_cmt_files
            |> List.iter (fun cmtFile ->
                   let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
                   cmtFilePath |> loadCmtFile))

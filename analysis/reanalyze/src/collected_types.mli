@@ -31,6 +31,7 @@ type value_reference = {
   loc_from: Location.t;
   loc_to: Location.t;
   add_file_reference: bool;
+  target_path: Common.Path.t option;
 }
 
 type type_reference = {pos_from: Lexing.position; pos_to: Lexing.position}

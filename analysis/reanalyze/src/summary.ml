@@ -53,6 +53,7 @@ type value_reference = {
   loc_from: position;
   loc_to: position;
   add_file_edge: bool;
+  target_path: string list option;
 }
 
 type type_reference = {pos_from: position; pos_to: position}
@@ -214,7 +215,17 @@ let to_common_decls (summary : t) = summary.decls |> List.map to_common_decl
 let summary_value_reference (ref : Collected_types.value_reference) =
   let loc_from = position_of_lexing ref.loc_from.loc_start in
   let loc_to = position_of_lexing ref.loc_to.loc_start in
-  {loc_from; loc_to; add_file_edge = ref.add_file_reference}
+  let target_path =
+    match ref.target_path with
+    | None -> None
+    | Some components -> Some (List.map Name.toString components)
+  in
+  (match (target_path, Sys.getenv_opt "GRAPH_TRACE_UNKNOWN") with
+  | Some path, Some ("1" | "true" | "on") ->
+      Printf.eprintf "[summary] value ref target path=%s\n"
+        (String.concat "." path)
+  | _ -> ());
+  {loc_from; loc_to; add_file_edge = ref.add_file_reference; target_path}
 
 let summary_type_reference (ref : Collected_types.type_reference) =
   let pos_from = position_of_lexing ref.pos_from in
@@ -243,10 +254,23 @@ let dedup_file_edges refs =
 
 let build_from_collected ~source_file (collected : Collected_types.t) =
   let decls = collected.decls |> List.map summary_decl_of_common in
+  let normalized_source_file =
+    match decls with
+    | decl :: _ -> decl.loc.start_.file
+    | [] -> source_file
+  in
   let value_references = collected.value_references |> List.map summary_value_reference in
   let type_references = collected.type_references |> List.map summary_type_reference in
   let file_edges = dedup_file_edges value_references in
-  {version; source_file; digest = ""; decls; value_references; type_references; file_edges}
+  {
+    version;
+    source_file = normalized_source_file;
+    digest = "";
+    decls;
+    value_references;
+    type_references;
+    file_edges;
+  }
 
 let json_bool = function
   | true -> Json.True
@@ -341,6 +365,10 @@ let json_of_value_reference ref =
       ("add_file_edge", json_bool ref.add_file_edge);
       ("from", json_of_position ref.loc_from);
       ("to", json_of_position ref.loc_to);
+      ( "target_path",
+        json_option
+          (fun components -> json_array (List.map json_string components))
+          ref.target_path );
     ]
 
 let json_of_type_reference ref =
@@ -537,7 +565,15 @@ let value_reference_of_json json =
   let add_file_edge = field "add_file_edge" fields |> expect_bool "value_ref.add_file_edge" in
   let loc_from = field "from" fields |> position_of_json in
   let loc_to = field "to" fields |> position_of_json in
-  {loc_from; loc_to; add_file_edge}
+  let target_path =
+    match List.assoc_opt "target_path" fields with
+    | None -> None
+    | Some Json.Null -> None
+    | Some (Json.Array items) ->
+        Some (List.map (expect_string "value_ref.path entry") items)
+    | Some _ -> raise (Invalid_format "value_ref.path")
+  in
+  {loc_from; loc_to; add_file_edge; target_path}
 
 let type_reference_of_json json =
   let fields = expect_object "type_ref" json in

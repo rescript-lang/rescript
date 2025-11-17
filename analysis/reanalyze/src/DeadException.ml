@@ -20,7 +20,8 @@ let point_location loc =
     loc_ghost = false;
   }
 
-let record_value_reference ~(locFrom : Location.t) ~(locTo : Location.t) =
+let record_value_reference ~(locFrom : Location.t) ~(locTo : Location.t)
+    ?(target_path = None) () =
   match !collector_ref with
   | Some c ->
       let locFrom =
@@ -35,6 +36,7 @@ let record_value_reference ~(locFrom : Location.t) ~(locTo : Location.t) =
               loc_from = point_location locFrom;
               loc_to = point_location locTo;
               add_file_reference = true;
+              target_path;
             }
   | None -> addValueReference ~addFileReference:true ~locFrom ~locTo
 
@@ -61,7 +63,8 @@ let forceDelayedItems () =
   |> List.iter (fun {exceptionPath; locFrom} ->
          match Hashtbl.find_opt declarations exceptionPath with
          | None -> ()
-         | Some locTo -> record_value_reference ~locFrom ~locTo)
+         | Some locTo -> record_value_reference ~locFrom ~locTo
+             ~target_path:(Some exceptionPath) ())
 
 let replay_delayed_items ~collector =
   let items = !delayedItems |> List.rev in
@@ -70,7 +73,8 @@ let replay_delayed_items ~collector =
       |> List.iter (fun {exceptionPath; locFrom} ->
              match Hashtbl.find_opt declarations exceptionPath with
              | None -> ()
-             | Some locTo -> record_value_reference ~locFrom ~locTo))
+             | Some locTo -> record_value_reference ~locFrom ~locTo
+                 ~target_path:(Some exceptionPath) ()))
 
 let markAsUsed ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
   if locTo.loc_ghost then
@@ -79,4 +83,11 @@ let markAsUsed ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
       path_ |> Path.fromPathT |> Path.moduleToImplementation
     in
     delayedItems := {exceptionPath; locFrom} :: !delayedItems
-  else record_value_reference ~locFrom ~locTo
+  else
+    let target_path =
+      Some (path_ |> Path.fromPathT |> Path.moduleToImplementation)
+    in
+    (match target_path with
+    | None -> record_value_reference ~locFrom ~locTo ()
+    | Some path ->
+        record_value_reference ~locFrom ~locTo ~target_path:(Some path) ())

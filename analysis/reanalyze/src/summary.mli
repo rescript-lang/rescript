@@ -43,6 +43,7 @@ type value_reference = {
   loc_from: position;
   loc_to: position;
   add_file_edge: bool;
+  target_path: string list option;
 }
 
 type type_reference = {pos_from: position; pos_to: position}

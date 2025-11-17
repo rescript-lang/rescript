@@ -2,6 +2,74 @@
 
 open DeadCommon
 
+let point_location loc =
+  {
+    Location.loc_start = loc.Location.loc_start;
+    loc_end = loc.Location.loc_start;
+    loc_ghost = false;
+  }
+
+let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
+    ~(locTo : Location.t) ?(target_path = None) () =
+  let locFrom =
+    match !Current.lastBinding = Location.none with
+    | true -> locFrom
+    | false -> !Current.lastBinding
+  in
+  (match (target_path, Sys.getenv_opt "GRAPH_TRACE_UNKNOWN") with
+  | None, Some ("1" | "true" | "on" | "yes") ->
+      let from_pos = Common.posToString locFrom.loc_start in
+      let to_pos = Common.posToString locTo.loc_start in
+      let cross_file =
+        not
+          (String.equal locFrom.loc_start.pos_fname locTo.loc_start.pos_fname)
+      in
+      Printf.eprintf
+        "[deadvalue] record_ref target_path=<none> cross_file=%b from=%s \
+         to=%s\n"
+        cross_file from_pos to_pos
+  | _ -> ());
+  if not locFrom.loc_ghost then
+    Collector.add_value_reference collector
+      {
+        loc_from = point_location locFrom;
+        loc_to = point_location locTo;
+        add_file_reference = addFileReference;
+        target_path;
+      }
+
+module PendingDeps = struct
+  module PosTbl = Hashtbl.Make (struct
+    type t = Lexing.position
+    let hash pos =
+      Hashtbl.hash
+        (pos.Lexing.pos_fname, pos.pos_lnum, pos.pos_bol, pos.pos_cnum)
+    let equal = ( = )
+  end)
+
+  type entry = {
+    loc_from: Location.t;
+    loc_to: Location.t;
+    add_file_ref: bool;
+  }
+
+  let table : entry list PosTbl.t = PosTbl.create 64
+
+  let add entry =
+    let key = entry.loc_to.Location.loc_start in
+    let existing =
+      match PosTbl.find_opt table key with Some lst -> lst | None -> []
+    in
+    PosTbl.replace table key (entry :: existing)
+
+  let resolve key =
+    match PosTbl.find_opt table key with
+    | None -> []
+    | Some entries ->
+        PosTbl.remove table key;
+        entries
+end
+
 let record_value_decl collector ?(isToplevel = true)
     ?(optionalArgs = Common.OptionalArgs.empty) ?posStart ?posEnd ~loc
     ~moduleLoc ~path ~sideEffects name =
@@ -19,48 +87,74 @@ let record_value_decl collector ?(isToplevel = true)
         pos_end = posEnd;
       }
   in
-  Collector.add_decl collector decl
-
-let point_location loc =
-  {
-    Location.loc_start = loc.Location.loc_start;
-    loc_end = loc.Location.loc_start;
-    loc_ghost = false;
-  }
-
-let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
-    ~(locTo : Location.t) =
-  let locFrom =
-    match !Current.lastBinding = Location.none with
-    | true -> locFrom
-    | false -> !Current.lastBinding
+  (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+  | Some ("1" | "true" | "on" | "yes") ->
+      Printf.eprintf
+        "[deadvalue] record_value_decl name=%s loc=%s side=%b isTop=%b\n"
+        (Name.toString name)
+        (Common.posToString loc.Location.loc_start)
+        sideEffects isToplevel
+  | _ -> ());
+  Collector.add_decl collector decl;
+  let common_decl_opt =
+    Collected_types.to_common_decl ~current_src:!Common.currentSrc
+      ~current_module:!Common.currentModule decl
   in
-  if not locFrom.loc_ghost then
-    Collector.add_value_reference collector
-      {
-        loc_from = point_location locFrom;
-        loc_to = point_location locTo;
-        add_file_reference = addFileReference;
-      }
-
-let checkAnyValueBindingWithNoSideEffects collector
-    ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
-      Typedtree.value_binding) =
-  match pat_desc with
-  | Tpat_any when (not (SideEffects.checkExpr expr)) && not loc.loc_ghost ->
-    let name = "_" |> Name.create ~isInterface:false in
-    let currentModulePath = ModulePath.getCurrent () in
-    let path = currentModulePath.path @ [!Common.currentModuleName] in
-    record_value_decl collector ~path ~loc ~moduleLoc:currentModulePath.loc
-      ~sideEffects:false name
-  | _ -> ()
+  (match common_decl_opt with
+  | Some common_decl ->
+      let resolved = PendingDeps.resolve common_decl.Common.pos in
+      (match resolved with
+      | _ :: _ ->
+        (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+        | Some ("1" | "true" | "on" | "yes") ->
+          Printf.eprintf
+            "[deadvalue] resolved %d pending deps at %s\n"
+            (List.length resolved) (Common.posToString common_decl.pos)
+        | _ -> ())
+      | [] -> ());
+      let add_pending_type_reference =
+        match common_decl.Common.declKind with
+        | Common.DeclKind.VariantCase | RecordLabel ->
+            fun entry ->
+              DeadType.addTypeReference
+                ~posTo:common_decl.Common.posStart
+                ~posFrom:entry.PendingDeps.loc_from.Location.loc_start
+        | _ -> fun _ -> ()
+      in
+      resolved
+      |> List.iter (fun entry ->
+             record_value_reference collector
+               ~addFileReference:entry.PendingDeps.add_file_ref
+               ~locFrom:entry.PendingDeps.loc_from
+               ~locTo:entry.PendingDeps.loc_to
+               ~target_path:(Some common_decl.Common.path) ();
+             add_pending_type_reference entry)
+  | None ->
+      (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+      | Some ("1" | "true" | "on" | "yes") ->
+          Printf.eprintf
+            "[deadvalue] record_value_decl missing Common decl at %s name=%s src=%s module=%s\n"
+            (Common.posToString loc.Location.loc_start)
+            (Name.toString name)
+            !Common.currentSrc !Common.currentModule
+      | _ -> ()))
 
 let collectValueBinding collector super self (vb : Typedtree.value_binding) =
   let oldCurrentBindings = !Current.bindings in
   let oldLastBinding = !Current.lastBinding in
-  checkAnyValueBindingWithNoSideEffects collector vb;
   let loc =
     match vb.vb_pat.pat_desc with
+    | Tpat_any when not vb.vb_loc.loc_ghost ->
+      let currentModulePath = ModulePath.getCurrent () in
+      let path = currentModulePath.path @ [!Common.currentModuleName] in
+      let name = Name.create "_" ~isInterface:false in
+      let isToplevel = oldLastBinding = Location.none in
+      let sideEffects =
+        if isToplevel then true else SideEffects.checkExpr vb.vb_expr
+      in
+      record_value_decl collector ~isToplevel ~loc:vb.vb_loc
+        ~moduleLoc:currentModulePath.loc ~path ~sideEffects name;
+      vb.vb_loc
     | Tpat_var (id, {loc = {loc_start; loc_ghost} as loc})
     | Tpat_alias
         ({pat_desc = Tpat_any}, id, {loc = {loc_start; loc_ghost} as loc})
@@ -105,13 +199,20 @@ let collectValueBinding collector super self (vb : Typedtree.value_binding) =
           | dk -> dk
         in
         Collector.replace_decl collector
-          {
-            decl with
-            declKind;
-            posEnd = vb.vb_loc.loc_end;
-            posStart = vb.vb_loc.loc_start;
-          });
+          {decl with declKind; posEnd = vb.vb_loc.loc_end});
       loc
+    | Tpat_construct
+        ( _,
+          ({cstr_name = "()"; cstr_arity = 0; _} : Types.constructor_description),
+          _ )
+      when not vb.vb_loc.loc_ghost ->
+        let currentModulePath = ModulePath.getCurrent () in
+        let path = currentModulePath.path @ [!Common.currentModuleName] in
+        let sideEffects = true in
+        let name = Name.create "_" ~isInterface:false in
+        record_value_decl collector ~isToplevel:true ~loc:vb.vb_loc
+          ~moduleLoc:currentModulePath.loc ~path ~sideEffects name;
+        vb.vb_loc
     | _ -> !Current.lastBinding
   in
   Current.bindings := PosSet.add loc.loc_start !Current.bindings;
@@ -155,9 +256,10 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
 let rec collectExpr collector super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   (match e.exp_desc with
-  | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as locTo}) ->
+  | Texp_ident (path_t, _, {Types.val_loc = {loc_ghost = false; _} as locTo})
+    ->
     (* if Path.name _path = "rc" then assert false; *)
-    if locFrom = locTo && _path |> Path.name = "emptyArray" then (
+    if locFrom = locTo && path_t |> Path.name = "emptyArray" then (
       (* Work around lowercase jsx with no children producing an artifact `emptyArray`
          which is called from its own location as many things are generated on the same location. *)
       if !Common.Cli.debug then
@@ -165,8 +267,32 @@ let rec collectExpr collector super self (e : Typedtree.expression) =
           (Location.none.loc_start |> Common.posToString)
           (locTo.loc_start |> Common.posToString);
       ValueReferences.add locTo.loc_start Location.none.loc_start)
-    else record_value_reference collector ~addFileReference:true ~locFrom
-        ~locTo
+    else
+      let base_path = Common.Path.fromPathT path_t in
+      let target_path =
+        match base_path with
+        | [] -> None
+        | [_name] ->
+            let module_prefix =
+              (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
+            in
+            Some (module_prefix @ base_path)
+        | _ -> Some base_path
+      in
+      (match (Sys.getenv_opt "GRAPH_TRACE_UNKNOWN", Path.name path_t) with
+      | Some ("1" | "true" | "on"), name ->
+          let names =
+            base_path |> List.map Name.toString |> String.concat "."
+          in
+          Printf.eprintf "[deadvalue] ident %s base_path=%s\n" name names
+      | _ -> ());
+      (match target_path with
+      | None ->
+          record_value_reference collector ~addFileReference:true ~locFrom ~locTo
+            ()
+      | Some path ->
+          record_value_reference collector ~addFileReference:true ~locFrom ~locTo
+            ~target_path:(Some path) ())
   | Texp_apply
       {
         funct =
@@ -297,6 +423,14 @@ let rec processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc ~path
           val_type |> DeadOptionalArgs.fromTypeExpr
           |> Common.OptionalArgs.fromList
         in
+        (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+        | Some ("1" | "true" | "on" | "yes") ->
+            Printf.eprintf
+              "[deadvalue] sig_value decl name=%s path=%s loc=%s\n"
+              (Ident.name id)
+              (Common.Path.toString path)
+              (Common.posToString loc.loc_start)
+        | _ -> ());
 
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
@@ -305,22 +439,27 @@ let rec processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc ~path
           (Ident.name id |> Name.create ~isInterface:false)
   | Sig_module (id, {Types.md_type = moduleType; md_loc = moduleLoc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some moduleType; mtd_loc = moduleLoc}) ->
-    ModulePath.setCurrent
-      {
-        oldModulePath with
-        loc = moduleLoc;
-        path = (id |> Ident.name |> Name.create) :: oldModulePath.path;
-      };
-    let collect =
-      match si with
-      | Sig_modtype _ -> false
-      | _ -> true
+    let module_name = Ident.name id |> Name.create in
+    let module_path = module_name :: path in
+    let is_module = match si with Sig_module _ -> true | _ -> false in
+    let () =
+      match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+      | Some ("1" | "true" | "on" | "yes") ->
+          Printf.eprintf
+            "[deadvalue] sig_%s decl path=%s loc=%s\n"
+            (if is_module then "module" else "modtype")
+            (Common.Path.toString module_path)
+            (Common.posToString moduleLoc.loc_start)
+      | _ -> ()
     in
-    if collect then
-      getSignature moduleType
-      |> List.iter
-           (processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc
-              ~path:((id |> Ident.name |> Name.create) :: path))
+    record_value_decl collector ~isToplevel:true ~path:module_path
+      ~loc:moduleLoc ~moduleLoc:moduleLoc ~sideEffects:is_module module_name;
+    ModulePath.setCurrent
+      {oldModulePath with loc = moduleLoc; path = module_name :: oldModulePath.path};
+    getSignature moduleType
+    |> List.iter
+         (processSignatureItem ~collector ~doTypes ~doValues ~moduleLoc
+            ~path:((id |> Ident.name |> Name.create) :: path))
   | _ -> ());
   ModulePath.setCurrent oldModulePath
 
@@ -332,7 +471,21 @@ let traverseStructure ~collector ~doTypes ~doExternals =
   let value_binding self vb = vb |> collectValueBinding collector super self in
   let structure_item self (structureItem : Typedtree.structure_item) =
     let oldModulePath = ModulePath.getCurrent () in
+    let saved_binding_state = ref None in
     (match structureItem.str_desc with
+    | Tstr_eval (_expr, _) ->
+      if not structureItem.str_loc.loc_ghost then (
+        let currentModulePath = ModulePath.getCurrent () in
+        let path = currentModulePath.path @ [!Common.currentModuleName] in
+        let name = Name.create "_" ~isInterface:false in
+        record_value_decl collector ~isToplevel:true ~loc:structureItem.str_loc
+          ~moduleLoc:currentModulePath.loc ~path ~sideEffects:true name;
+        let oldBindings = !Current.bindings in
+        let oldLastBinding = !Current.lastBinding in
+        saved_binding_state := Some (oldBindings, oldLastBinding);
+        Current.bindings :=
+          PosSet.add structureItem.str_loc.loc_start !Current.bindings;
+        Current.lastBinding := structureItem.str_loc)
     | Tstr_module {mb_expr; mb_id; mb_loc} -> (
       let hasInterface =
         match mb_expr.mod_desc with
@@ -345,6 +498,19 @@ let traverseStructure ~collector ~doTypes ~doExternals =
           loc = mb_loc;
           path = (mb_id |> Ident.name |> Name.create) :: oldModulePath.path;
         };
+      let module_name = Ident.name mb_id |> Name.create in
+      let module_path =
+        module_name :: (ModulePath.getCurrent ()).path
+      in
+      (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+      | Some ("1" | "true" | "on" | "yes") ->
+          Printf.eprintf
+            "[deadvalue] struct_module decl path=%s loc=%s\n"
+            (Common.Path.toString module_path)
+            (Common.posToString mb_loc.loc_start)
+      | _ -> ());
+      record_value_decl collector ~isToplevel:true ~path:module_path
+        ~loc:structureItem.str_loc ~moduleLoc:mb_loc ~sideEffects:true module_name;
       if hasInterface then
         match mb_expr.mod_type with
         | Mty_signature signature ->
@@ -356,6 +522,29 @@ let traverseStructure ~collector ~doTypes ~doExternals =
                     ((ModulePath.getCurrent ()).path
                     @ [!Common.currentModuleName]))
         | _ -> ())
+    | Tstr_modtype {mtd_id; mtd_type = Some moduleType; mtd_loc} ->
+      let module_name = Ident.name mtd_id |> Name.create in
+      let module_path = module_name :: (ModulePath.getCurrent ()).path in
+      (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+      | Some ("1" | "true" | "on" | "yes") ->
+          Printf.eprintf
+            "[deadvalue] struct_modtype decl path=%s loc=%s\n"
+            (Common.Path.toString module_path)
+            (Common.posToString mtd_loc.loc_start)
+      | _ -> ());
+      record_value_decl collector ~isToplevel:true ~path:module_path
+        ~loc:structureItem.str_loc ~moduleLoc:mtd_loc ~sideEffects:false module_name;
+      ModulePath.setCurrent
+        {
+          oldModulePath with
+          loc = mtd_loc;
+          path = module_name :: oldModulePath.path;
+        };
+      getSignature moduleType.mty_type
+      |> List.iter
+           (processSignatureItem ~collector ~doTypes ~doValues:true
+              ~moduleLoc:moduleType.mty_loc ~path:module_path)
+    | Tstr_modtype _ -> ()
     | Tstr_primitive vd when doExternals && !Config.analyzeExternals ->
       let currentModulePath = ModulePath.getCurrent () in
       let path = currentModulePath.path @ [!Common.currentModuleName] in
@@ -400,6 +589,11 @@ let traverseStructure ~collector ~doTypes ~doExternals =
       |> DeadException.add ~collector ~path ~loc ~strLoc:structureItem.str_loc
     | _ -> ());
     let result = super.structure_item self structureItem in
+    (match !saved_binding_state with
+    | Some (oldBindings, oldLastBinding) ->
+        Current.bindings := oldBindings;
+        Current.lastBinding := oldLastBinding
+    | None -> ());
     ModulePath.setCurrent oldModulePath;
     result
   in
@@ -421,7 +615,37 @@ let processValueDependency collector
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
-    record_value_reference collector ~addFileReference ~locFrom ~locTo;
+    let target_decl =
+      match Collector.find_decl collector locTo.loc_start with
+      | Some decl -> Some decl
+      | None -> (
+          match DeadCommon.find_decl_at_position locTo.loc_start with
+          | Some decl -> Some decl
+          | None -> DeadCommon.find_decl_by_line locTo.loc_start)
+    in
+    (match target_decl with
+    | Some decl ->
+        record_value_reference collector ~addFileReference ~locFrom ~locTo
+          ~target_path:(Some decl.Common.path) ();
+        (match decl.Common.declKind with
+        | Common.DeclKind.VariantCase | RecordLabel ->
+            DeadType.addTypeReference ~posTo:decl.posStart
+              ~posFrom:locFrom.loc_start
+        | _ -> ())
+    | None ->
+        PendingDeps.add
+          {
+            loc_from = locFrom;
+            loc_to = locTo;
+            add_file_ref = addFileReference;
+          };
+        (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
+        | Some ("1" | "true" | "on" | "yes") ->
+            Printf.eprintf
+              "[deadvalue] missing target decl for dependency loc=%s -> %s\n"
+              (Common.posToString locFrom.loc_start)
+              (Common.posToString locTo.loc_start)
+        | _ -> ()));
     DeadOptionalArgs.addFunctionReference ~locFrom ~locTo)
 
 let processStructure ~collector ~cmt_value_dependencies ~doTypes ~doExternals
