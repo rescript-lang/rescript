@@ -153,6 +153,22 @@ Track per-declaration graphs (IDs, edges, file mappings) and compute the frontie
   - This change prevents `CreateErrorHandler` from hijacking the interface declarations for `+notify` / `+notification`, allowing the interface summaries to retain their unknown-live bits once processed. Validation:  
     `GRAPH_TRACE_UNKNOWN=1 GRAPH_DEBUG_FILE=ErrorHandler.res INCR_GRAPH_SOLVER=1 INCR_DEBUG_NAME=ErrorHandler dune exec analysis/bin/collector_parity.exe -- ErrorHandler tests/analysis_tests/tests-reanalyze/deadcode/lib/bs`
   - ⚠️ Debug note: we still rely on the verbose tracing guarded by `GRAPH_TRACE_UNKNOWN` / `INCR_DEBUG_NAME` inside `graph_store.add_value_reference` and `DeadValue.record_value_decl` to chase remaining mismatches. Remove those `Printf.eprintf` blocks once parity is fully green.
+- 🔧 \textbf{Pending-source key normalisation (2025-11-17)}:
+  - Added targeted tracing for `graph_store.resolve_pending_source_value` plus `.res`/`.resi` key canonicalisation so pending-source queues no longer get stuck when interface summaries arrive before their implementation counterparts. Both the enqueue and replay paths now collapse interface filenames to the `.res` variant, guaranteeing that declarations recorded from either file drain the same key.
+  - Validation (same harness as above) now shows the queue draining immediately:  
+    `[graph_store] pending_source add key=(//…/ErrorHandler.res,3,2)` paired with  
+    `[graph_store] resolve pending source key=(//…/ErrorHandler.res,3,2) source=… count=2`  
+    confirming that the latent `_` bindings in `ErrorHandler.resi` finally attach to their keepalive sources instead of remaining “incremental-only dead”.
+- 🔧 \textbf{Path-key canonicalisation (2025-11-17)}:
+  - `summary_value_reference` now emits target paths in the same module-first order as declarations (`path_components`), and `graph_store`’s pending-by-path structures were upgraded to bucket entries by value name while keeping the full component list for matching. When a declaration arrives we match pending references via `path_matches_decl`, so alias-based names like `MyErrorHandler.notify` successfully bind to `ErrorHandler.Make.notify`.
+  - The pending-path diagnostics now record the bucketed key (`bucket=notify` in this case); more importantly, the full `ErrorHandler` parity pass no longer emits any `pending_target_path` lines because the alias-based references resolve immediately when the interface summary loads.
+- 🔧 \textbf{Path bucket normalisation (2025-11-17)}:
+  - `graph_store.path_bucket` now derives its key from a deterministic pair of the first and last path components (sorted lexicographically) rather than only the trailing component. Interface-first references (`Module.value`) therefore share a bucket with implementation-first declarations (`value.Module`), so pending edges drain as soon as either side is indexed.
+  - The change keeps `path_components_match` exactly as before but fixes the bucket-level fan-out that previously stranded cross-file keepalive edges such as `DeadTest._ -> DeadValueTest.valueAlive`, which published their pending entries under `valueAlive` while the implementation declaration lived under `DeadValueTest`.
+- 🔧 \textbf{Parity status and suspension (2025-11-17)}:
+  - Cross-file value references now resolve through either exact position matches or the canonicalised path buckets above, and `.res`/`.resi` keys are normalised before we enqueue pending edges. That unblocked the ErrorHandler keepalive chain and drained the latent `_` bindings we saw while exercising Milestone 3.
+  - Type propagation remains incomplete: constructor aliases emitted by `.resi` files can surface before their paired `.res` summaries, and our current incremental solver still drops those queued edges. The `DeadValueTest.valueAlive` diff is the canonical repro we are keeping around as a guard-rail.
+  - We are pausing further Milestone 3.5 remediation until the broader reactive effort resumes. All of the tracing hooks (`GRAPH_TRACE_UNKNOWN`, `GRAPH_TRACE_VALUE_PATHS`, `GRAPH_TRACE_DEBUG_PATHS`) stay in tree so the next iteration can pick up exactly where this log leaves off.
 
 ### Validation
 - `dune build analysis/reanalyze`

@@ -48,6 +48,32 @@ let path_matches_decl decl_path target_path =
 
 let path_key path = String.concat "." (normalize_path path)
 
+let components_to_string components = String.concat "." components
+
+let rec last_component = function
+  | [] -> ""
+  | [x] -> x
+  | _ :: tl -> last_component tl
+
+let path_bucket components =
+  match components with
+  | [] -> ""
+  | head :: _ ->
+      let tail = last_component components in
+      if String.compare head tail <= 0 then head ^ "|" ^ tail
+      else tail ^ "|" ^ head
+
+let path_components_match decl_components target_components =
+  string_lists_equal decl_components target_components
+  || string_lists_equal decl_components (List.rev target_components)
+  ||
+  match (decl_components, target_components) with
+  | d_head :: _, t_head :: _ when String.equal d_head t_head -> true
+  | _ -> (
+      match (List.rev decl_components, List.rev target_components) with
+      | d_last :: _, t_last :: _ -> String.equal d_last t_last
+      | _ -> false)
+
 let string_contains ~needle haystack =
   let len_h = String.length haystack and len_n = String.length needle in
   let rec loop i =
@@ -73,6 +99,9 @@ let canonicalize_file path =
 let files_match a b =
   let ca = canonicalize_file a and cb = canonicalize_file b in
   String.equal ca cb || String.equal (Filename.basename ca) (Filename.basename cb)
+
+let same_physical_file a b =
+  String.equal (canonicalize_file a) (canonicalize_file b)
 
 let positions_equal (a : Summary.position) (b : Summary.position) =
   files_match a.file b.file && a.line = b.line && a.column = b.column
@@ -176,11 +205,12 @@ type t = {
   file_digests: (string, string) Hashtbl.t;
   dirty_files: (string, unit) Hashtbl.t;
   pending_value: (position_key, pending_value_edge list) Hashtbl.t;
+  pending_value_by_path: (string, (string list * pending_value_edge) list) Hashtbl.t;
   pending_type: (position_key, DeclId.t list) Hashtbl.t;
   file_edges: (string, StringSet.t) Hashtbl.t;
   unknown_value_targets: (DeclId.t, unit) Hashtbl.t;
   pending_unknown_value: (position_key, unit) Hashtbl.t;
-  pending_unknown_value_by_path: (string, unit) Hashtbl.t;
+  pending_unknown_value_by_path: (string, string list list) Hashtbl.t;
   unknown_path_targets: (string, unit) Hashtbl.t;
   pending_value_by_source:
     (position_key, pending_source_value_edge list) Hashtbl.t;
@@ -231,6 +261,7 @@ let create () =
     file_digests = Hashtbl.create 64;
     dirty_files = Hashtbl.create 16;
     pending_value = Hashtbl.create 64;
+    pending_value_by_path = Hashtbl.create 64;
     pending_type = Hashtbl.create 64;
     file_edges = Hashtbl.create 32;
     unknown_value_targets = Hashtbl.create 128;
@@ -268,6 +299,36 @@ let describe_node t id =
   | Some node -> Common.Path.toString node.decl.path
   | None -> id
 
+let describe_id_set t set =
+  DeclIdSet.elements set |> List.map (describe_node t)
+
+let debug_log_nodes t names =
+  let name_set = StringSet.of_list names in
+  Hashtbl.iter
+    (fun id node ->
+      let path = Common.Path.toString node.decl.path in
+      if StringSet.mem path name_set then
+        let preds =
+          match Hashtbl.find_opt t.reverse_value id with
+          | Some set -> describe_id_set t set
+          | None -> []
+        in
+        let succs =
+          match Hashtbl.find_opt t.forward_value id with
+          | Some set -> describe_id_set t set
+          | None -> []
+        in
+        let file = node.file in
+        let start_pos = format_summary_pos node.summary.loc.start_ in
+        let unknown = Hashtbl.mem t.unknown_value_targets id in
+        Printf.eprintf
+          "[graph_store] debug node %s id=%s file=%s start=%s unknown=%b\n"
+          path id file start_pos unknown;
+        Printf.eprintf "  preds=[%s]\n"
+          (String.concat ", " preds);
+        Printf.eprintf "  succs=[%s]\n"
+          (String.concat ", " succs))
+    t.nodes
 
 let connect_alias_nodes t id_a id_b =
   add_edge t.forward_value id_a id_b;
@@ -281,6 +342,14 @@ let column_of_lexing pos =
 
 let position_key (pos : Summary.position) =
   (canonicalize_file pos.file, pos.line, pos.column)
+
+let normalize_interface_file file =
+  match chop_suffix_opt file ".resi" with
+  | Some prefix -> prefix ^ ".res"
+  | None -> file
+
+let normalize_source_key (file, line, column) =
+  (normalize_interface_file file, line, column)
 
 let lexing_position_key (pos : Lexing.position) =
   (canonicalize_file pos.Lexing.pos_fname, pos.Lexing.pos_lnum, column_of_lexing pos)
@@ -368,15 +437,43 @@ let log_pending_unknown key msg =
 let add_pending_unknown_value t key =
   log_pending_unknown key "add";
   Hashtbl.replace t.pending_unknown_value key ()
-let add_pending_unknown_value_by_path t key =
-  if trace_unknown then Printf.eprintf "[graph_store] pending_unknown add path=%s\n" key;
-  Hashtbl.replace t.pending_unknown_value_by_path key ()
-let resolve_pending_unknown_value_by_path t key id =
-  if Hashtbl.mem t.pending_unknown_value_by_path key then (
-    Hashtbl.remove t.pending_unknown_value_by_path key;
-    if trace_unknown then
-      Printf.eprintf "[graph_store] pending_unknown resolve path=%s id=%s\n" key id;
-    mark_unknown_value_ref_and_aliases t id)
+let add_pending_unknown_value_by_path t components =
+  match components with
+  | [] -> ()
+  | _ ->
+      let bucket = path_bucket components in
+      let existing =
+        Hashtbl.find_opt t.pending_unknown_value_by_path bucket
+        |> Option.value ~default:[]
+      in
+      Hashtbl.replace t.pending_unknown_value_by_path bucket
+        (components :: existing);
+      if trace_unknown then
+        Printf.eprintf "[graph_store] pending_unknown add path=%s bucket=%s\n"
+          (components_to_string components) bucket
+
+let resolve_pending_unknown_value_by_path t components id =
+  match components with
+  | [] -> ()
+  | _ ->
+      let bucket = path_bucket components in
+      (match Hashtbl.find_opt t.pending_unknown_value_by_path bucket with
+      | None -> ()
+      | Some pending ->
+          let matched, remaining =
+            pending
+            |> List.partition (fun candidate ->
+                   path_components_match components candidate)
+          in
+          if matched <> [] then (
+            if remaining = [] then
+              Hashtbl.remove t.pending_unknown_value_by_path bucket
+            else Hashtbl.replace t.pending_unknown_value_by_path bucket remaining;
+            if trace_unknown then
+              Printf.eprintf
+                "[graph_store] pending_unknown resolve path=%s id=%s count=%d\n"
+                (components_to_string components) id (List.length matched);
+            mark_unknown_value_ref_and_aliases t id))
 
 let mark_unknown_type_ref t id =
   Hashtbl.replace t.unknown_type_targets id ()
@@ -471,11 +568,92 @@ let resolve_pending_source_value t key source_id =
   | None -> ()
   | Some pending ->
       Hashtbl.remove t.pending_value_by_source key;
+      if trace_unknown then
+        let file, line, column = key in
+        Printf.eprintf
+          "[graph_store] resolve pending source key=(%s,%d,%d) source=%s count=%d\n"
+          file line column (DeclId.to_string source_id) (List.length pending);
       List.iter
         (fun {target; add_file_edge; summary_file} ->
+          if trace_unknown then
+            Printf.eprintf
+              "[graph_store] pending-source edge %s -> %s\n"
+              (DeclId.to_string source_id) (DeclId.to_string target);
           add_value_edge_between t ~source_file:summary_file ~reason:"pending-source"
             ~src:source_id ~target ~add_file_edge)
         pending
+
+let add_pending_value t key entry =
+  let existing =
+    Hashtbl.find_opt t.pending_value key |> Option.value ~default:[]
+  in
+  Hashtbl.replace t.pending_value key (entry :: existing)
+
+let add_pending_value_by_path t components entry =
+  match components with
+  | [] -> ()
+  | _ ->
+      let bucket = path_bucket components in
+      let existing =
+        Hashtbl.find_opt t.pending_value_by_path bucket
+        |> Option.value ~default:[]
+      in
+      Hashtbl.replace t.pending_value_by_path bucket
+        ((components, entry) :: existing);
+      if trace_unknown then
+        let src, _ = entry in
+        Printf.eprintf
+          "[graph_store] pending_target_path add key=%s bucket=%s src=%s \
+           total=%d\n"
+          (components_to_string components) bucket (DeclId.to_string src)
+          (List.length existing + 1)
+
+let resolve_pending_value_by_path t components target_id =
+  match components with
+  | [] -> ()
+  | _ ->
+      let bucket = path_bucket components in
+      match Hashtbl.find_opt t.pending_value_by_path bucket with
+      | None -> ()
+      | Some pending ->
+          if trace_unknown then
+            Printf.eprintf
+              "[graph_store] pending target bucket=%s candidates=%d incoming=%s\n"
+              bucket (List.length pending) (components_to_string components);
+          let matched, remaining =
+            pending
+            |> List.partition (fun (pending_components, _) ->
+                   path_components_match components pending_components)
+          in
+          if matched <> [] then (
+            if remaining = [] then Hashtbl.remove t.pending_value_by_path bucket
+            else Hashtbl.replace t.pending_value_by_path bucket remaining;
+            if trace_unknown then
+              Printf.eprintf
+                "[graph_store] resolve pending target_path key=%s target=%s \
+                 count=%d\n"
+                (components_to_string components) (DeclId.to_string target_id)
+                (List.length matched);
+            matched
+            |> List.iter (fun (_pending_components, (src, add_file_edge)) ->
+                   let source_file =
+                     match Hashtbl.find_opt t.nodes src with
+                     | Some node -> node.file
+                     | None -> (
+                         match Hashtbl.find_opt t.nodes target_id with
+                         | Some node -> node.file
+                         | None -> "")
+                   in
+                   if trace_unknown then
+                     Printf.eprintf
+                       "[graph_store] pending-target edge %s -> %s (path)\n"
+                       (DeclId.to_string src) (DeclId.to_string target_id);
+                   add_value_edge_between t ~source_file ~reason:"pending-target"
+                      ~src ~target:target_id ~add_file_edge);
+          ) else if trace_unknown then
+            Printf.eprintf
+              "[graph_store] pending target bucket=%s no match for %s\n" bucket
+              (components_to_string components)
 
 let remove_all_edges t id =
   (match Hashtbl.find_opt t.forward_value id with
@@ -513,6 +691,7 @@ let remove_all_edges t id =
 
 let add_path_index t ~file path id =
   let key = path_key path in
+  let normalized_components = normalize_path path in
   let existing = Hashtbl.find_opt t.path_index key |> Option.value ~default:[] in
   if trace_unknown then
     Printf.eprintf "[graph_store] [%s] add path index %s -> %s\n" file key id;
@@ -533,7 +712,8 @@ let add_path_index t ~file path id =
             | None -> ())
         existing
   | None -> ());
-  resolve_pending_unknown_value_by_path t key id;
+  resolve_pending_value_by_path t normalized_components id;
+  resolve_pending_unknown_value_by_path t normalized_components id;
   if has_unknown_path t key then
     match Hashtbl.find_opt t.nodes id with
     | Some node -> (
@@ -674,16 +854,17 @@ let add_decls t summary =
           add_path_index t ~file:summary.source_file decl.Summary.path id;
            add_position_index t start_key id;
            Hashtbl.replace t.annotation_index start_key decl.annotations;
-           resolve_pending_value t start_key id;
+          let normalized_start_key = normalize_source_key start_key in
+           resolve_pending_value t normalized_start_key id;
            resolve_pending_type t start_key id;
-           if Hashtbl.mem t.pending_unknown_value start_key then (
-             Hashtbl.remove t.pending_unknown_value start_key;
-            log_pending_unknown start_key "resolve";
+           if Hashtbl.mem t.pending_unknown_value normalized_start_key then (
+             Hashtbl.remove t.pending_unknown_value normalized_start_key;
+            log_pending_unknown normalized_start_key "resolve";
             mark_unknown_value_ref_and_aliases t id);
            if Hashtbl.mem t.pending_unknown_type start_key then (
              Hashtbl.remove t.pending_unknown_type start_key;
              mark_unknown_type_ref_and_aliases t id);
-          resolve_pending_source_value t start_key id;
+          resolve_pending_source_value t normalized_start_key id;
            id)
   in
   Hashtbl.replace t.file_to_decls summary.source_file decl_ids;
@@ -864,10 +1045,26 @@ let find_decl_ids_by_name summary decl_ids target_name =
   in
   loop summary.Summary.decls decl_ids []
 
+let find_global_decl_by_position t (pos : Summary.position) =
+  let key = position_key pos in
+  match Hashtbl.find_opt t.position_index key with
+  | Some (id :: _) -> Some id
+  | _ -> None
+
 let add_value_reference t summary decl_ids ref =
-  let source_file = summary.Summary.source_file in
+  let summary_file = summary.Summary.source_file in
+  let actual_source_file =
+    if files_match ref.Summary.loc_from.file summary_file then summary_file
+    else canonicalize_file ref.Summary.loc_from.file
+  in
+  let source_file = actual_source_file in
   let debug = should_debug source_file in
   let describe id = describe_node t id in
+  let pending_path_components =
+    match ref.Summary.target_path with
+    | Some path -> Some (normalize_path path)
+    | None -> None
+  in
   let source_opt =
     match find_local_decl t summary decl_ids ref.Summary.loc_from with
     | Some id -> Some (id, `Direct)
@@ -877,12 +1074,17 @@ let add_value_reference t summary decl_ids ref =
             ref.Summary.loc_from
         with
         | Some id -> Some (id, `Fallback)
-        | None -> None)
+        | None -> (
+            match find_global_decl_by_position t ref.Summary.loc_from with
+            | Some id -> Some (id, `Global)
+            | None -> None))
   in
   match source_opt with
   | None ->
       let key = position_key ref.loc_to in
-      let source_key = position_key ref.Summary.loc_from in
+      let source_key =
+        normalize_source_key (position_key ref.Summary.loc_from)
+      in
       let enqueue_pending target =
         add_pending_source_value t source_key
           {target; add_file_edge = ref.add_file_edge; summary_file = source_file}
@@ -912,7 +1114,7 @@ let add_value_reference t summary decl_ids ref =
           (format_summary_pos ref.Summary.loc_from)
           (format_summary_pos ref.Summary.loc_to);
       let same_target_file =
-        files_match ref.Summary.loc_to.file summary.source_file
+        same_physical_file ref.Summary.loc_to.file summary.source_file
       in
       let path_matches =
         match ref.Summary.target_path with
@@ -978,10 +1180,11 @@ let add_value_reference t summary decl_ids ref =
           source_file exists
           (format_summary_pos ref.Summary.loc_from)
           (format_summary_pos ref.Summary.loc_to);
-      let pending_path_key =
-        Option.map path_key ref.Summary.target_path
+      let key_target =
+        if same_target_file then Hashtbl.find_opt t.position_index key
+        else None
       in
-      (match Hashtbl.find_opt t.position_index key with
+      (match key_target with
       | Some (target :: _) ->
           mark_unknown_value_ref_and_aliases t target;
           enqueue_pending target;
@@ -1127,15 +1330,15 @@ let add_value_reference t summary decl_ids ref =
                       (Option.is_some preceding_match);
                   add_pending_unknown_value t key;
                   Option.iter
-                    (fun path_key ->
+                    (fun components ->
                       if trace_unknown then
                         Printf.eprintf
                           "[graph_store] [%s] pending target path=%s for %s -> %s\n"
-                          source_file path_key
+                          source_file (components_to_string components)
                           (format_summary_pos ref.Summary.loc_from)
                           (format_summary_pos ref.Summary.loc_to);
-                      add_pending_unknown_value_by_path t path_key)
-                    pending_path_key)))
+                      add_pending_unknown_value_by_path t components)
+                    pending_path_components)))
   | Some (src, _) ->
       if trace_unknown then
         Printf.eprintf
@@ -1151,7 +1354,7 @@ let add_value_reference t summary decl_ids ref =
             ~add_file_edge:ref.add_file_edge
       | _ ->
           let fallback_target =
-            if files_match ref.Summary.loc_to.file summary.source_file then
+            if same_physical_file ref.Summary.loc_to.file summary.source_file then
               find_local_decl ~allow_line_fallback:true t summary decl_ids
                 ref.Summary.loc_to
             else None
@@ -1175,12 +1378,11 @@ let add_value_reference t summary decl_ids ref =
               source_file
               (format_summary_pos ref.Summary.loc_to)
               file line column;
-          let pending =
-            match Hashtbl.find_opt t.pending_value key with
-            | Some list -> (src, ref.add_file_edge) :: list
-            | None -> [ (src, ref.add_file_edge) ]
-          in
-          Hashtbl.replace t.pending_value key pending))
+          add_pending_value t key (src, ref.add_file_edge);
+          Option.iter
+            (fun components ->
+              add_pending_value_by_path t components (src, ref.add_file_edge))
+            pending_path_components))
 
 let add_type_reference t summary decl_ids ref =
   let source_file = summary.Summary.source_file in

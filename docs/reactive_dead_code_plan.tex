@@ -390,20 +390,30 @@ Apply the same location rewriting (\code{Current.lastBinding}, ghost filtering, 
     \end{itemize}
 \end{itemize}
 
-\subsubsection*{Milestone 3.5 – Module Bookkeeping}
-Call \code{DeadModules.(markDead|markLive)} from the graph solver so module-level liveness state and derived warnings stay in sync. Once this lands, module-level discrepancies (e.g. nested components) should disappear.
+\subsubsection*{Milestone 3.5 – Reactive Remediation Playbook}
+\noindent\textbf{Why it exists.} Milestone 3 introduced the incremental graph and Tarjan solver, but it also surfaced a class of cross-file regressions (missing keepalive edges, `.resi`/\ `.res` mismatches, and orphaned pending queues). Milestone 3.5 collects the remediation techniques we applied so far and documents them as a repeatable playbook for future reactive migrations.
 
-\paragraph{Status.} Completed.
+\paragraph{Remediation steps.}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Normalise sources and targets.} Always record value references under the physical file where the expression originated, even if a different summary emitted the reference. Likewise, collapse `.resi` keys to their `.res` twin before adding pending entries so interface/implementation pairs drain the same queue.
+  \item \textbf{Replay pending edges deterministically.} Augment the graph store with bucketed path queues (\code{path_bucket}, \code{path_components_match}) and explicit tracing so we can prove that deferred edges are replayed when declarations finally appear. This mirrors the legacy `DeadCommon` “unknown live” semantics while keeping instrumentation lightweight.
+  \item \textbf{Tighten lookup heuristics.} Require literal file matches for range/line/name scans before falling back to global indices; otherwise cross-file lookups tempt fate by binding to the wrong declaration. When those heuristics fail, enqueue an unknown edge instead of silently dropping the reference.
+  \item \textbf{Keep module bookkeeping hooked up.} Every SCC resolution still calls \code{DeadModules.markDead/markLive}. That ensures higher-level diagnostics (e.g. nested React components) stay synchronised while we experiment with incremental liveness underneath.
+\end{enumerate}
+
+\paragraph{Reference guidance for future conversions.}
 \begin{itemize}[leftmargin=*]
-  \item The incremental solver now mirrors the batch path by calling \code{DeadModules.markDead} or \code{markLive} as soon as a declaration’s liveness is resolved. This keeps the global module map accurate even when we skip the legacy solver, ensuring module-level warnings fire exactly once per compilation.
-  \item The parity harness still focuses on declaration sets (so the mismatch count remains 110), but debug logging confirms that every SCC recompute now exercises the same module bookkeeping hooks as \code{DeadCommon}.
+  \item Treat cross-file aliases as first-class citizens: synthesise target paths directly from compiler metadata, and prefer matching declarations by canonical path before trying positional heuristics.
+  \item Instrument aggressively (\code{GRAPH\_TRACE\_*}) while the incremental solver is experimental, but gate the logs behind env vars so the debugging aids can live in-tree without spamming CI.
+  \item When a regression reproduces only after multiple files load (e.g. `DeadValueTest.valueAlive`), capture both the `.res` and `.resi` summaries in the log; the next engineer should never have to rediscover the repro.
 \end{itemize}
 
-\paragraph{Validation.}
+\paragraph{Current status (suspended).} The remediation work is on hold while we focus on other milestones. Values now resolve correctly across module boundaries, but type propagation and alias replay are still incomplete, so the `DeadValueTest.valueAlive` mismatch remains as our sentinel. All helper traces and documentation stay in place so the effort can resume later without context loss.
+
+\paragraph{Validation to date.}
 \begin{itemize}[leftmargin=*]
-  \item \code{dune build analysis/reanalyze}
-  \item \code{make test-analysis}
-  \item \code{INCR\_GRAPH\_SOLVER=1 dune exec analysis/bin/collector\_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}
+  \item \code{dune build analysis/reanalyze} and \code{make test-analysis} (ensuring no batch regressions while we diagnose incremental gaps).
+  \item Targeted parity runs such as \code{INCR\_GRAPH\_SOLVER=1 GRAPH\_TRACE\_UNKNOWN=1 dune exec analysis/bin/collector\_parity.exe -- DeadValueTest tests/analysis_tests/tests-reanalyze/deadcode/lib/bs}, which now highlight only the suspended type/alias discrepancies.
 \end{itemize}
 
 Each mini-milestone targets a single discrepancy category; running the parity harness after each completion should show a strictly decreasing mismatch count.
