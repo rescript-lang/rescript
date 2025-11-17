@@ -170,6 +170,15 @@ Track per-declaration graphs (IDs, edges, file mappings) and compute the frontie
   - Type propagation remains incomplete: constructor aliases emitted by `.resi` files can surface before their paired `.res` summaries, and our current incremental solver still drops those queued edges. The `DeadValueTest.valueAlive` diff is the canonical repro we are keeping around as a guard-rail.
   - We are pausing further Milestone 3.5 remediation until the broader reactive effort resumes. All of the tracing hooks (`GRAPH_TRACE_UNKNOWN`, `GRAPH_TRACE_VALUE_PATHS`, `GRAPH_TRACE_DEBUG_PATHS`) stay in tree so the next iteration can pick up exactly where this log leaves off.
 
+### Evaluation snapshot – 2025-11-17
+
+- Re-ran the documented parity harness:  
+  `dune exec analysis/bin/collector_parity.exe -- tests/analysis_tests/tests-reanalyze/deadcode/lib/bs`  
+  Stage 1 is no longer green (missing value refs in `ErrorHandler.cmt`), so the collector snapshots feeding summaries have regressed relative to the “clean” claim earlier in this section.
+- Several Milestone 3 fixes (e.g. synthetic `_` declarations for every `Tstr_eval`, mirroring variant deps into `DeadType.addTypeReference`) now execute even when only the legacy analyzer runs, meaning the purported “original” results have drifted. We no longer have three comparable datasets (original, modified original, incremental) to validate against.
+- Stage 2 parity still defaults to legacy liveness unless `INCR_GRAPH_SOLVER=1` is exported, so the incremental solver improvements cited above simply show that the modified legacy solver agrees with itself.
+- Decision: freeze further Milestone 3 work and move on until we can (1) repair Stage 1 parity, (2) preserve a stable baseline for the legacy analyzer, and (3) demonstrate measured performance wins. Without those guard rails we are just adding instrumentation and uncertainty with no proof of perf impact.
+
 ### Validation
 - `dune build analysis/reanalyze`
 - `make test-analysis`
