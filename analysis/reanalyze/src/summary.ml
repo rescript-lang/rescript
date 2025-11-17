@@ -218,7 +218,7 @@ let summary_value_reference (ref : Collected_types.value_reference) =
   let target_path =
     match ref.target_path with
     | None -> None
-    | Some components -> Some (List.map Name.toString components)
+    | Some components -> Some (path_components components)
   in
   (match (target_path, Sys.getenv_opt "GRAPH_TRACE_UNKNOWN") with
   | Some path, Some ("1" | "true" | "on") ->

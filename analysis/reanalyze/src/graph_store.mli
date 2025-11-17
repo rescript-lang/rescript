@@ -37,4 +37,5 @@ val compare_decl_ids :
   DeclId.t ->
   DeclId.t ->
   int
+val debug_log_nodes : t -> string list -> unit
 

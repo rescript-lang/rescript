@@ -2,6 +2,16 @@
 
 open DeadCommon
 
+let string_contains ~needle haystack =
+  let len_h = String.length haystack and len_n = String.length needle in
+  let rec loop i =
+    if len_n = 0 then true
+    else if i + len_n > len_h then false
+    else if String.sub haystack i len_n = needle then true
+    else loop (i + 1)
+  in
+  loop 0
+
 let point_location loc =
   {
     Location.loc_start = loc.Location.loc_start;
@@ -11,6 +21,7 @@ let point_location loc =
 
 let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
     ~(locTo : Location.t) ?(target_path = None) () =
+  let raw_loc_from = locFrom in
   let locFrom =
     match !Current.lastBinding = Location.none with
     | true -> locFrom
@@ -29,6 +40,33 @@ let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
          to=%s\n"
         cross_file from_pos to_pos
   | _ -> ());
+  (match (target_path, Sys.getenv_opt "GRAPH_TRACE_UNKNOWN") with
+  | Some path, Some ("1" | "true" | "on" | "yes") ->
+      let path_str = Common.Path.toString path in
+      let should_trace =
+        match Sys.getenv_opt "GRAPH_TRACE_VALUE_PATHS" with
+        | Some filters when filters <> "" ->
+            filters |> String.split_on_char ','
+            |> List.exists (fun filter ->
+                   let filter = String.trim filter in
+                   filter <> "" && string_contains ~needle:filter path_str)
+        | _ ->
+            String.equal path_str "+CreateErrorHandler1.Error1.+notification"
+            || String.equal path_str "+CreateErrorHandler2.Error2.+notification"
+            || String.equal path_str "ErrorHandler.Make.notify"
+            || String.equal path_str "ErrorHandler.Make.+notify"
+            || String.equal path_str "+notify.Make.ErrorHandler"
+            || String.equal path_str "+notify.Make.+ErrorHandler"
+            || String.equal path_str "+notification.Error.ErrorHandler"
+      in
+      if should_trace then
+        let from_pos = Common.posToString locFrom.loc_start in
+        let raw_from_pos = Common.posToString raw_loc_from.loc_start in
+        let to_pos = Common.posToString locTo.loc_start in
+        Printf.eprintf
+          "[deadvalue] trace_ref target=%s from=%s (raw=%s) to=%s addFile=%b\n"
+          path_str from_pos raw_from_pos to_pos addFileReference
+  | _ -> ());
   if not locFrom.loc_ghost then
     Collector.add_value_reference collector
       {
@@ -37,6 +75,16 @@ let record_value_reference collector ~addFileReference ~(locFrom : Location.t)
         add_file_reference = addFileReference;
         target_path;
       }
+
+let normalize_interface_file fname =
+  if Filename.check_suffix fname ".resi" then
+    Filename.chop_suffix fname ".resi" ^ ".res"
+  else fname
+
+let canonicalize_position pos =
+  let fname = normalize_interface_file pos.Lexing.pos_fname in
+  if String.equal fname pos.Lexing.pos_fname then pos
+  else {pos with Lexing.pos_fname = fname}
 
 module PendingDeps = struct
   module PosTbl = Hashtbl.Make (struct
@@ -56,13 +104,14 @@ module PendingDeps = struct
   let table : entry list PosTbl.t = PosTbl.create 64
 
   let add entry =
-    let key = entry.loc_to.Location.loc_start in
+    let key = entry.loc_to.Location.loc_start |> canonicalize_position in
     let existing =
       match PosTbl.find_opt table key with Some lst -> lst | None -> []
     in
     PosTbl.replace table key (entry :: existing)
 
   let resolve key =
+    let key = canonicalize_position key in
     match PosTbl.find_opt table key with
     | None -> []
     | Some entries ->
@@ -102,7 +151,9 @@ let record_value_decl collector ?(isToplevel = true)
   in
   (match common_decl_opt with
   | Some common_decl ->
-      let resolved = PendingDeps.resolve common_decl.Common.pos in
+      let resolved =
+        PendingDeps.resolve (canonicalize_position common_decl.Common.pos)
+      in
       (match resolved with
       | _ :: _ ->
         (match Sys.getenv_opt "GRAPH_TRACE_UNKNOWN" with
@@ -268,7 +319,9 @@ let rec collectExpr collector super self (e : Typedtree.expression) =
           (locTo.loc_start |> Common.posToString);
       ValueReferences.add locTo.loc_start Location.none.loc_start)
     else
-      let base_path = Common.Path.fromPathT path_t in
+      let base_path =
+        path_t |> Common.Path.fromPathT |> ModulePath.resolveAlias
+      in
       let target_path =
         match base_path with
         | [] -> None

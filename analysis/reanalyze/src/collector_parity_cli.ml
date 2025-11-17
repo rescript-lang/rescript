@@ -549,6 +549,14 @@ let run ~settings ~paths =
                 ignore (Collector.finalize collector)))
   in
   List.iter process_file files;
+  (match Sys.getenv_opt "GRAPH_TRACE_DEBUG_PATHS" with
+  | Some paths when paths <> "" ->
+      let names =
+        paths |> String.split_on_char ','
+        |> List.map String.trim |> List.filter (fun s -> s <> "")
+      in
+      if names <> [] then Graph_store.debug_log_nodes graph names
+  | _ -> ());
   if !graph_failures <> [] then (
     prerr_endline "Graph build errors:";
     !graph_failures
