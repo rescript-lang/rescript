@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Fix printing of tagged template literals. https://github.com/rescript-lang/rescript/pull/8018
+- Fix printing of optional record fields in pattern matching errors. https://github.com/rescript-lang/rescript/pull/8019
 
 #### :memo: Documentation
 
