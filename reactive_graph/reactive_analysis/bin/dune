@@ -6,5 +6,5 @@
  (link_deps ../../vendor/skip-ocaml/build/libskip_reactive.a)
  (link_flags
   (:standard
-   ../../vendor/skip-ocaml/build/libskip_reactive.a
+   reactive_graph/vendor/skip-ocaml/build/libskip_reactive.a
    -cclib -lstdc++)))

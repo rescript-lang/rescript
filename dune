@@ -1,1 +1,1 @@
-(dirs compiler tests analysis tools)
+(dirs compiler tests analysis tools reactive_graph)
