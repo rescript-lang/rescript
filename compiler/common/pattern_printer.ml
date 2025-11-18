@@ -5,7 +5,8 @@ open Asttypes
 
 let mkpat desc = Ast_helper.Pat.mk desc
 
-let is_generated_optional_constructor (lid : Longident.t Location.loc) =
+let[@warning "-4"] is_generated_optional_constructor
+    (lid : Longident.t Location.loc) =
   match lid.txt with
   | Longident.Lident name ->
     String.length name >= 2 && name.[0] = '#' && name.[1] = '$'
