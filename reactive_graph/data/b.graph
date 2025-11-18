@@ -1,0 +1,5 @@
+# File B: fan-out toward another file
+node 4
+node 5
+edge 4 5
+

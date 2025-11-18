@@ -1,0 +1,5 @@
+(executable
+ (name traditional_main)
+ (modules traditional_main)
+ (libraries graph_lib unix))
+

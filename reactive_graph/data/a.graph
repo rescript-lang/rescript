@@ -1,0 +1,7 @@
+# File A: simple line
+node 1 marked
+node 2
+node 3
+edge 1 2
+edge 2 3
+

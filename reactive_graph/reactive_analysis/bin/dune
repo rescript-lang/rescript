@@ -1,0 +1,10 @@
+(executable
+ (name reactive_main)
+ (modules reactive_main)
+ (libraries graph_lib skip_runtime unix)
+ (modes native)
+ (link_deps ../../vendor/skip-ocaml/build/libskip_reactive.a)
+ (link_flags
+  (:standard
+   ../../vendor/skip-ocaml/build/libskip_reactive.a
+   -cclib -lstdc++)))

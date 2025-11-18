@@ -1,0 +1,6 @@
+# File C: connects into file B
+node 6 marked
+node 7
+edge 6 7
+edge 7 4
+

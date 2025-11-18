@@ -1,0 +1,5 @@
+(test
+ (name test_traditional)
+ (modules test_traditional)
+ (libraries graph_lib))
+

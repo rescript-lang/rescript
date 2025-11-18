@@ -350,6 +350,15 @@ jobs:
       - name: Version Check
         run: yarn constraints
 
+      - name: Run reactive graph analyses
+        if: runner.os == 'macOS'
+        run: |
+          opam exec -- make -C reactive_graph traditional
+          opam exec -- make -C reactive_graph reactive
+          opam exec -- make -C reactive_graph traditional-run
+          opam exec -- make -C reactive_graph reactive-run
+        shell: bash
+
       - name: Run tests
         run: node scripts/test.js -all
 
