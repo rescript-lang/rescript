@@ -129,13 +129,6 @@ could potentially throw.
 
 Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );
-    ( "meth",
-      None,
-      [
-        {|The `@meth` decorator is used to call a function on a JavaScript object, and avoid issues with currying.
-
-[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#meth-decorator).|};
-      ] );
     ( "module",
       Some "module(\"$0\")",
       [
