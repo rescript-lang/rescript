@@ -281,3 +281,6 @@ module Arr = Belt.Array
 
 type aliased = variant
 //    ^hov
+
+let _ = String.length("meh")
+//        ^hov

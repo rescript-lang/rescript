@@ -275,7 +275,12 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
     | Some file ->
       showModule ~docstring:file.structure.docstring ~name:file.moduleName ~file
         ~package None)
-  | Typed (_, _, Definition (_, (Field _ | Constructor _))) -> None
+  | Typed (_, t, Definition (_, (Field _ | Constructor _))) -> (
+    let fromType typ =
+      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ
+    in
+    let t = Shared.dig t in
+    Some (fromType t))
   | Constant t ->
     Some
       (Markdown.codeBlock
