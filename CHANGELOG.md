@@ -29,6 +29,8 @@
 
 #### :house: Internal
 
+- Editor: resolve @rescript/runtime via environment variable RESCRIPT_RUNTIME. https://github.com/rescript-lang/rescript/pull/8023
+
 # 12.0.0-rc.4
 
 #### :boom: Breaking Change
