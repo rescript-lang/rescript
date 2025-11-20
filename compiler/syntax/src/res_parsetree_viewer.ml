@@ -534,7 +534,8 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
+          | "res.template" | "res.taggedTemplate" | "res.ternary"
+          | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false

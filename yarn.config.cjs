@@ -14,7 +14,7 @@ const execPromise = util.promisify(exec);
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "12.0.0-rc.4";
+  const EXPECTED_VERSION = "12.0.0-rc.5";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
