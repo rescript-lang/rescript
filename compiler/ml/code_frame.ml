@@ -191,8 +191,9 @@ let print ~is_warning ~draw_underline ~src ~(start_pos : Lexing.position)
                         in
                         let trimmed_hl_end =
                           if line_number < highlight_line_start_line then 0
-                          else if line_number = highlight_line_start_line
-                                  && line_number = highlight_line_end_line
+                          else if
+                            line_number = highlight_line_start_line
+                            && line_number = highlight_line_end_line
                           then max 0 (hl_end_off - leading_space_to_cut)
                           else if line_number = highlight_line_start_line then
                             (* highlight runs through end of this line *)
