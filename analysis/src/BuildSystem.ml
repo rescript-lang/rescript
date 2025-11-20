@@ -6,11 +6,8 @@ let namespacedName namespace name =
 let ( /+ ) = Filename.concat
 
 (*
-Here is the real problem:
-
-For pnpm it needs to figure out 
-
-"/Users/nojaf/Projects/test-stdlib/node_modules/.pnpm/@rescript+runtime@12.0.0-rc.4/node_modules/@rescript/runtime"
+Editor tooling can more accurately resolve the runtime path and will try and pass it via an environment variable.
+Example path: "test-stdlib/node_modules/.pnpm/@rescript+runtime@12.0.0-rc.4/node_modules/@rescript/runtime"
 *)
 
 let getRuntimeDir rootPath =
