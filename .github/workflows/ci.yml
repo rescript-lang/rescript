@@ -515,7 +515,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
-          path: data
+          path: data/api
 
       - name: Check if repo is clean
         id: diffcheck
