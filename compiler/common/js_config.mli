@@ -101,3 +101,5 @@ val jsx_module_of_string : string -> jsx_module
 val as_pp : bool ref
 
 val self_stack : string Stack.t
+
+val llm_mode : bool ref
