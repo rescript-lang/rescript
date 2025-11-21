@@ -25,10 +25,10 @@ const updateTests = process.argv[2] === "update";
 function postProcessStdout(output) {
   let result = output;
   result = result.trimEnd();
-  // Normalize absolute paths in suggested_actions to stable project-relative ones
+  // Normalize absolute suggested_actions paths to project-relative, POSIX-style paths
   result = result.replace(
-    /(?:[A-Z]:)?[\\/][^\n]*?tests[\\/]build_tests[\\/]suggested_actions[\\/]/g,
-    "tests/build_tests/suggested_actions/",
+    /(?:[A-Z]:)?[\\/][^\n]*?(tests[\\/]build_tests[\\/]suggested_actions[\\/][^\s"]+)/g,
+    (_match, relPath) => relPath.split(/[\\/]+/).join("/"),
   );
   return normalizeNewlines(result);
 }
