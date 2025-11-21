@@ -12,6 +12,8 @@
 
 # 12.0.0-rc.5
 
+- Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
+
 #### :bug: Bug fix
 
 - Fix printing of tagged template literals. https://github.com/rescript-lang/rescript/pull/8018
