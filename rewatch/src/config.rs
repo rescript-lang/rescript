@@ -308,6 +308,10 @@ pub struct Config {
     #[serde(skip)]
     deprecation_warnings: Vec<DeprecationWarning>,
 
+    // Holds unknown fields we encountered while parsing
+    #[serde(skip, default)]
+    unknown_fields: Vec<String>,
+
     #[serde(default = "default_path")]
     pub path: PathBuf,
 }
@@ -435,9 +439,14 @@ impl Config {
 
     /// Try to convert a bsconfig from a string to a bsconfig struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
-        let mut config = serde_json::from_str::<Config>(config_str)?;
+        let mut deserializer = serde_json::Deserializer::from_str(config_str);
+        let mut unknown_fields = Vec::new();
+        let mut config: Config = serde_ignored::deserialize(&mut deserializer, |path| {
+            unknown_fields.push(path.to_string());
+        })?;
 
         config.handle_deprecations()?;
+        config.unknown_fields = unknown_fields;
 
         Ok(config)
     }
@@ -662,6 +671,52 @@ impl Config {
         &self.deprecation_warnings
     }
 
+    pub fn get_unknown_fields(&self) -> Vec<String> {
+        self.unknown_fields
+            .iter()
+            .filter(|field| !self.is_unsupported_field(field))
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_unsupported_fields(&self) -> Vec<String> {
+        let mut fields = self
+            .unknown_fields
+            .iter()
+            .filter(|field| self.is_unsupported_field(field))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        if self.gentype_config.is_some() {
+            fields.push("gentypeconfig".to_string());
+        }
+
+        fields
+    }
+
+    fn is_unsupported_field(&self, field: &str) -> bool {
+        const UNSUPPORTED_TOP_LEVEL_FIELDS: &[&str] = &[
+            "version",
+            "ignored-dirs",
+            "generators",
+            "cut-generators",
+            "pp-flags",
+            "js-post-build",
+            "entries",
+            "use-stdlib",
+            "external-stdlib",
+            "bs-external-includes",
+            "reanalyze",
+        ];
+
+        let top_level = field
+            .split(|c| ['.', '['].contains(&c))
+            .next()
+            .unwrap_or(field);
+
+        UNSUPPORTED_TOP_LEVEL_FIELDS.contains(&top_level)
+    }
+
     fn handle_deprecations(&mut self) -> Result<()> {
         if self.dependencies.is_some() && self.bs_dependencies.is_some() {
             bail!("dependencies and bs-dependencies are mutually exclusive. Please use 'dependencies'.");
@@ -729,6 +784,7 @@ pub mod tests {
             deprecation_warnings: vec![],
             experimental_features: None,
             allowed_dependents: args.allowed_dependents,
+            unknown_fields: vec![],
             path: args.path,
         }
     }
@@ -1021,6 +1077,45 @@ pub mod tests {
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_unknown_fields_are_collected() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "some-new-field": true
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.get_unknown_fields(), vec!["some-new-field".to_string()]);
+        assert!(config.get_unsupported_fields().is_empty());
+    }
+
+    #[test]
+    fn test_unsupported_fields_are_collected() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "ignored-dirs": ["scripts"]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(
+            config.get_unsupported_fields(),
+            vec!["ignored-dirs".to_string()]
+        );
+        assert!(config.get_unknown_fields().is_empty());
     }
 
     #[test]

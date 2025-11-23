@@ -370,7 +370,7 @@ pub fn incremental_build(
             println!("{}", &compile_warnings);
         }
         if initial_build {
-            log_deprecations(build_state);
+            log_config_warnings(build_state);
         }
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
@@ -399,7 +399,7 @@ pub fn incremental_build(
             println!("{}", &compile_warnings);
         }
         if initial_build {
-            log_deprecations(build_state);
+            log_config_warnings(build_state);
         }
 
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
@@ -409,7 +409,7 @@ pub fn incremental_build(
     }
 }
 
-fn log_deprecations(build_state: &BuildCommandState) {
+fn log_config_warnings(build_state: &BuildCommandState) {
     build_state.packages.iter().for_each(|(_, package)| {
         // Only warn for local dependencies, not external packages
         if package.is_local_dep {
@@ -426,6 +426,18 @@ fn log_deprecations(build_state: &BuildCommandState) {
                     }
                 },
             );
+
+            package
+                .config
+                .get_unsupported_fields()
+                .iter()
+                .for_each(|field| log_unsupported_config_field(&package.name, field));
+
+            package
+                .config
+                .get_unknown_fields()
+                .iter()
+                .for_each(|field| log_unknown_config_field(&package.name, field));
         }
     });
 }
@@ -434,6 +446,20 @@ fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_n
     let warning = format!(
         "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
         Use '{new_field_name}' instead."
+    );
+    println!("\n{}", style(warning).yellow());
+}
+
+fn log_unsupported_config_field(package_name: &str, field_name: &str) {
+    let warning = format!(
+        "The field '{field_name}' found in the package config of '{package_name}' is not supported by ReScript 12's new build system."
+    );
+    println!("\n{}", style(warning).yellow());
+}
+
+fn log_unknown_config_field(package_name: &str, field_name: &str) {
+    let warning = format!(
+        "Unknown field '{field_name}' found in the package config of '{package_name}'. This option will be ignored."
     );
     println!("\n{}", style(warning).yellow());
 }
