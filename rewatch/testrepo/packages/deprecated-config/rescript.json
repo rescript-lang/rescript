@@ -10,6 +10,8 @@
     "in-source": true
   },
   "suffix": ".mjs",
+  "ignored-dirs": ["scripts"],
+  "some-new-field": true,
   "bs-dependencies": [],
   "bs-dev-dependencies": [],
   "bsc-flags": []
