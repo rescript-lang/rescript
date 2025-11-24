@@ -709,10 +709,7 @@ impl Config {
             "reanalyze",
         ];
 
-        let top_level = field
-            .split(|c| ['.', '['].contains(&c))
-            .next()
-            .unwrap_or(field);
+        let top_level = field.split(|c| ['.', '['].contains(&c)).next().unwrap_or(field);
 
         UNSUPPORTED_TOP_LEVEL_FIELDS.contains(&top_level)
     }
@@ -1111,10 +1108,7 @@ pub mod tests {
         "#;
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(
-            config.get_unsupported_fields(),
-            vec!["ignored-dirs".to_string()]
-        );
+        assert_eq!(config.get_unsupported_fields(), vec!["ignored-dirs".to_string()]);
         assert!(config.get_unknown_fields().is_empty());
     }
 
