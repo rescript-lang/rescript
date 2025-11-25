@@ -60,7 +60,7 @@ module Inner = {
 
 module NoProps = {
   @genType @react.component
-  let make = () => <div> React.null </div>
+  let make = () => <div> {React.null} </div>
 }
 
 type cb = (~_to: vehicle) => unit
@@ -130,7 +130,7 @@ module WithChildren = {
   let aComponentWithChildren = (~vehicle, ~children) =>
     <div>
       {React.string("Another Hook " ++ vehicle.name)}
-      <div> children </div>
+      <div> {children} </div>
     </div>
 }
 

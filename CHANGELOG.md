@@ -156,6 +156,8 @@ No changes compared to rc.5.
 - Have `String.charCodeAt` return `option<int>`; add `String.charCodeAtUnsafe`. https://github.com/rescript-lang/rescript/pull/7877
 - Remove support of JSX children spread. https://github.com/rescript-lang/rescript/pull/7869
 
+- Wrap variables in curly braces inside JSX children. https://github.com/rescript-lang/rescript/pull/7863
+
 #### :rocket: New Feature
 
 - Add `Array.filterMapWithIndex` to Stdlib. https://github.com/rescript-lang/rescript/pull/7876
