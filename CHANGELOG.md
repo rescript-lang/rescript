@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
+
 #### :bug: Bug fix
 
 #### :memo: Documentation
