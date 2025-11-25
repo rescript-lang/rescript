@@ -38,3 +38,13 @@ let throws4 = () => Exn.raiseReferenceError("err")
 let throws5 = () => Exn.raiseSyntaxError("err")
 let throws6 = () => Exn.raiseTypeError("err")
 let throws7 = () => Exn.raiseUriError("err")
+
+let someThrowingJsCode = () => Some("bar")
+let catchingExnErrorWithSwitch = switch someThrowingJsCode() {
+| exception Exn.Error(e) => e->Exn.message
+| s => s
+}
+
+let catchingExnErrorWithTryCatch = try {someThrowingJsCode()} catch {
+| Exn.Error(e) => e->Exn.message
+}

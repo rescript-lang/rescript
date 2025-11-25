@@ -104,6 +104,10 @@ module MapperUtils = struct
       if Ext_list.is_empty attrs then e
       else {e with pexp_attributes = attrs @ e.pexp_attributes}
 
+    let attach_attrs_to_pat ~attrs (pat : Parsetree.pattern) =
+      if Ext_list.is_empty attrs then pat
+      else {pat with ppat_attributes = attrs @ pat.ppat_attributes}
+
     (* Apply transforms attached to an expression itself and drop the
        transform attributes afterwards. *)
     let apply_on_self (e : Parsetree.expression) : Parsetree.expression =
@@ -332,6 +336,29 @@ module TypeReplace = struct
     | _ -> None
 end
 
+module VariantReplace = struct
+  type target = {lid: Longident.t Location.loc; attrs: Parsetree.attributes}
+
+  let of_template (expr : Parsetree.expression) : target option =
+    match expr.pexp_desc with
+    | Pexp_extension
+        ( {txt = "replace.variant"},
+          PStr
+            [
+              {
+                pstr_desc =
+                  Pstr_eval
+                    ({pexp_desc = Pexp_construct (lid, _); pexp_attributes}, _);
+              };
+            ] ) ->
+      let attrs =
+        if Ext_list.is_empty expr.pexp_attributes then pexp_attributes
+        else expr.pexp_attributes @ pexp_attributes
+      in
+      Some {lid; attrs}
+    | _ -> None
+end
+
 let remap_needed_extensions (mapper : Ast_mapper.mapper)
     (ext : Parsetree.extension) : Parsetree.extension =
   match ext with
@@ -551,6 +578,29 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
   |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
          Hashtbl.replace loc_to_deprecated_reference source_loc d);
 
+  let deprecated_variant_constructors =
+    deprecated_used
+    |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
+           match d.migration_template with
+           | Some template -> (
+             match VariantReplace.of_template template with
+             | Some target -> Some (d.source_loc, target)
+             | None -> None)
+           | None -> None)
+  in
+  let loc_to_deprecated_variant_constructor =
+    Hashtbl.create (List.length deprecated_variant_constructors)
+  in
+  deprecated_variant_constructors
+  |> List.iter (fun (loc, target) ->
+         Hashtbl.replace loc_to_deprecated_variant_constructor loc target);
+
+  let find_variant_target ~loc ~lid_loc =
+    match Hashtbl.find_opt loc_to_deprecated_variant_constructor loc with
+    | Some _ as found -> found
+    | None -> Hashtbl.find_opt loc_to_deprecated_variant_constructor lid_loc
+  in
+
   (* Helpers for type replacement lookups *)
   let loc_contains (a : Location.t) (b : Location.t) =
     let a_start = a.Location.loc_start.pos_cnum in
@@ -629,6 +679,13 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
             match deprecated_info.migration_template with
             | Some e -> apply_template_direct mapper e call_args exp
             | None -> exp)
+          | {pexp_desc = Pexp_construct (lid, arg); pexp_loc} -> (
+            match find_variant_target ~loc:pexp_loc ~lid_loc:lid.loc with
+            | Some {VariantReplace.lid; attrs} ->
+              let arg = Option.map (mapper.expr mapper) arg in
+              let replaced = {exp with pexp_desc = Pexp_construct (lid, arg)} in
+              MapperUtils.ApplyTransforms.attach_to_replacement ~attrs replaced
+            | None -> Ast_mapper.default_mapper.expr mapper exp)
           | {
            pexp_desc =
              Pexp_apply
@@ -664,6 +721,17 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
                 ~pipe_args ~funct exp
             | Some _ -> Ast_mapper.default_mapper.expr mapper exp)
           | _ -> Ast_mapper.default_mapper.expr mapper exp);
+      pat =
+        (fun mapper pat ->
+          match pat with
+          | {ppat_desc = Ppat_construct (lid, arg); ppat_loc} -> (
+            match find_variant_target ~loc:ppat_loc ~lid_loc:lid.loc with
+            | Some {VariantReplace.lid; attrs} ->
+              let arg = Option.map (mapper.pat mapper) arg in
+              let replaced = {pat with ppat_desc = Ppat_construct (lid, arg)} in
+              MapperUtils.ApplyTransforms.attach_attrs_to_pat ~attrs replaced
+            | None -> Ast_mapper.default_mapper.pat mapper pat)
+          | _ -> Ast_mapper.default_mapper.pat mapper pat);
     }
   in
   mapper
