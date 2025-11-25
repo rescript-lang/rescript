@@ -10,6 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.0.1 (unreleased)
+
+#### :nail_care: Polish
+
+- Add missing deprecation and migration for Exn.Error. https://github.com/rescript-lang/rescript/pull/8036
+
 # 12.0.0
 
 No changes compared to rc.5.

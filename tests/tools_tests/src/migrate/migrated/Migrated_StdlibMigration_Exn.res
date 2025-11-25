@@ -40,3 +40,13 @@ let throws4 = () => JsError.ReferenceError.throwWithMessage("err")
 let throws5 = () => JsError.SyntaxError.throwWithMessage("err")
 let throws6 = () => JsError.TypeError.throwWithMessage("err")
 let throws7 = () => JsError.URIError.throwWithMessage("err")
+
+let someThrowingJsCode = () => Some("bar")
+let catchingExnErrorWithSwitch = switch someThrowingJsCode() {
+| exception JsExn(e) => e->JsExn.message
+| s => s
+}
+
+let catchingExnErrorWithTryCatch = try {someThrowingJsCode()} catch {
+| JsExn(e) => e->JsExn.message
+}
