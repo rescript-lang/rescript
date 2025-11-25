@@ -527,11 +527,17 @@ jobs:
             echo "clean=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: yarn
+          node-version-file: .node-version
+
       - name: Build website
         if: steps.diffcheck.outputs.clean == 'false'
         run: |
-          npm ci
-          npm run build
+          yarn
+          yarn build
 
       - name: Commit and push
         if: ${{ steps.diffcheck.outputs.clean == 'false' && startsWith(github.ref, 'refs/tags/v') }}
