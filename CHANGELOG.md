@@ -10,21 +10,9 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-rc.6
+# 12.0.0
 
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
-
-#### :bug: Bug fix
-
-#### :memo: Documentation
-
-#### :nail_care: Polish
-
-#### :house: Internal
+No changes compared to rc.5.
 
 # 12.0.0-rc.5
 
