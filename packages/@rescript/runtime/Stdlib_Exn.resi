@@ -33,7 +33,13 @@ Provide utilities for dealing with JS exceptions.
 })
 type t
 
-type exn += private Error(t)
+type exn +=
+  private
+  | @deprecated({
+    reason: "Use `JsExn` instead",
+    migrate: %replace.variant(JsExn),
+  })
+  Error(t)
 
 @deprecated({
   reason: "Use `JsExn.fromException` instead",
