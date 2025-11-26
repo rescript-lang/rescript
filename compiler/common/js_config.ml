@@ -72,3 +72,5 @@ let jsx_module_of_string = function
 
 let as_pp = ref false
 let self_stack : string Stack.t = Stack.create ()
+
+let llm_mode = ref false

@@ -53,4 +53,4 @@ else
   exit 1
 fi
 
-./compile.sh && ./watch.sh && ./lock.sh && ./suffix.sh && ./format.sh && ./clean.sh && ./experimental.sh && ./experimental-invalid.sh && ./compiler-args.sh
+./compile.sh && ./watch.sh && ./lock.sh && ./suffix.sh && ./format.sh && ./clean.sh && ./experimental.sh && ./experimental-invalid.sh && ./compiler-args.sh && ./mcp.sh

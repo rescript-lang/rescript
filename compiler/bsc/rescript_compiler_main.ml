@@ -52,6 +52,8 @@ let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 
 let setup_runtime_path path = Runtime_package.path := path
 
+let print_suggested_actions_if_any () = Suggested_actions.print_block_if_any ()
+
 let process_file sourcefile ?kind ppf =
   (* This is a better default then "", it will be changed later
      The {!Location.input_name} relies on that we write the binary ast
@@ -114,6 +116,7 @@ let reprint_source_file sourcefile =
       if parse_result.invalid then (
         Res_diagnostics.print_report parse_result.diagnostics
           parse_result.source;
+        print_suggested_actions_if_any ();
         exit 1);
       Res_compmisc.init_path ();
       parse_result.parsetree
@@ -131,6 +134,7 @@ let reprint_source_file sourcefile =
       if parse_result.invalid then (
         Res_diagnostics.print_report parse_result.diagnostics
           parse_result.source;
+        print_suggested_actions_if_any ();
         exit 1);
       Res_compmisc.init_path ();
       parse_result.parsetree
@@ -143,6 +147,7 @@ let reprint_source_file sourcefile =
       print_endline
         ("Invalid input for reprinting ReScript source. Must be a ReScript \
           file: " ^ sourcefile);
+      print_suggested_actions_if_any ();
       exit 2
   in
   res
@@ -198,6 +203,7 @@ let bs_version_string = "ReScript " ^ Bs_version.version
 
 let print_version_string () =
   print_endline bs_version_string;
+  print_suggested_actions_if_any ();
   exit 0
 
 let[@inline] set s : Bsc_args.spec = Unit (Unit_set s)
@@ -358,6 +364,14 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
           Clflags.ignore_parse_errors := true;
           Js_config.cmi_only := true),
       "*internal* Enable editor mode." );
+    ( "-llm-mode",
+      unit_call (fun () ->
+          Js_config.llm_mode := true;
+          Clflags.binary_annotations := false;
+          Clflags.color := Some Never;
+          Location.draw_underline_in_code_frame := true;
+          Warnings.llm_mode := true),
+      "*internal* Enable LLM mode for enhanced tooling" );
     ( "-ignore-parse-errors",
       set Clflags.ignore_parse_errors,
       "*internal* continue after parse errors" );
@@ -443,7 +457,11 @@ let _ : unit =
   try Bsc_args.parse_exn ~argv:Sys.argv command_line_flags anonymous ~usage with
   | Bsc_args.Bad msg ->
     Format.eprintf "%s@." msg;
+    print_suggested_actions_if_any ();
     exit 2
   | x ->
     Location.report_exception ppf x;
+    print_suggested_actions_if_any ();
     exit 2
+
+let _ = print_suggested_actions_if_any ()

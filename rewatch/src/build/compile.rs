@@ -435,39 +435,17 @@ pub fn compiler_args(
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
 ) -> Result<Vec<String>> {
-    let bsc_flags = config::flatten_flags(&config.compiler_flags);
-    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
-
-    let namespace_args = match &config.get_namespace() {
-        packages::Namespace::NamespaceWithEntry { namespace: _, entry } if &module_name == entry => {
-            // if the module is the entry we just want to open the namespace
-            vec![
-                "-open".to_string(),
-                config.get_namespace().to_suffix().unwrap().to_string(),
-            ]
-        }
-        packages::Namespace::Namespace(_)
-        | packages::Namespace::NamespaceWithEntry {
-            namespace: _,
-            entry: _,
-        } => {
-            vec![
-                "-bs-ns".to_string(),
-                config.get_namespace().to_suffix().unwrap().to_string(),
-            ]
-        }
-        packages::Namespace::NoNamespace => vec![],
-    };
-
-    let root_config = project_context.get_root_config();
-    let jsx_args = root_config.get_jsx_args();
-    let jsx_module_args = root_config.get_jsx_module_args();
-    let jsx_mode_args = root_config.get_jsx_mode_args();
-    let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let gentype_arg = config.get_gentype_arg();
-    let experimental_args = root_config.get_experimental_features_args();
-    let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
+    let base_args = base_compile_args(
+        config,
+        file_path,
+        project_context,
+        packages,
+        is_type_dev,
+        is_local_dep,
+        warn_error_override,
+        None,
+    )?;
 
     let read_cmi_args = match has_interface {
         true => {
@@ -482,6 +460,7 @@ pub fn compiler_args(
 
     let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
 
+    let root_config = project_context.get_root_config();
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
         vec![]
@@ -516,11 +495,117 @@ pub fn compiler_args(
             .collect()
     };
 
+    Ok([
+        base_args,
+        read_cmi_args,
+        // vec!["-warn-error".to_string(), "A".to_string()],
+        // ^^ this one fails for bisect-ppx
+        // this is the default
+        // we should probably parse the right ones from the package config
+        // vec!["-w".to_string(), "a".to_string()],
+        package_name_arg,
+        implementation_args,
+        vec![ast_path.to_string_lossy().to_string()],
+    ]
+    .concat())
+}
+
+pub fn compiler_args_for_diagnostics(
+    config: &config::Config,
+    file_path: &Path,
+    is_interface: bool,
+    has_interface: bool,
+    project_context: &ProjectContext,
+    packages: &Option<&AHashMap<String, packages::Package>>,
+    is_type_dev: bool,
+    is_local_dep: bool,
+    warn_error_override: Option<String>,
+    ppx_flags: Vec<String>,
+) -> Result<Vec<String>> {
+    let mut args = base_compile_args(
+        config,
+        file_path,
+        project_context,
+        packages,
+        is_type_dev,
+        is_local_dep,
+        warn_error_override,
+        Some(ppx_flags),
+    )?;
+
+    // Gate -bs-read-cmi by .cmi presence to avoid noisy errors when a project hasn't been built yet.
+    if has_interface && !is_interface {
+        let pkg_root = config
+            .path
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or_else(|| Path::new(".").to_path_buf());
+        let ocaml_build_path = packages::get_ocaml_build_path(&pkg_root);
+        let basename = helpers::file_path_to_compiler_asset_basename(file_path, &config.get_namespace());
+        let cmi_exists = ocaml_build_path.join(format!("{basename}.cmi")).exists();
+        if cmi_exists {
+            args.push("-bs-read-cmi".to_string());
+        }
+    }
+
+    args.extend([
+        "-color".to_string(),
+        "never".to_string(),
+        "-ignore-parse-errors".to_string(),
+        "-editor-mode".to_string(),
+        "-llm-mode".to_string(),
+    ]);
+
+    args.push(file_path.to_string_lossy().to_string());
+    Ok(args)
+}
+
+fn base_compile_args(
+    config: &config::Config,
+    file_path: &Path,
+    project_context: &ProjectContext,
+    packages: &Option<&AHashMap<String, packages::Package>>,
+    is_type_dev: bool,
+    is_local_dep: bool,
+    warn_error_override: Option<String>,
+    include_ppx_flags: Option<Vec<String>>,
+) -> Result<Vec<String>> {
+    let bsc_flags = config::flatten_flags(&config.compiler_flags);
+    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
+    let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
+
+    let namespace_args = match &config.get_namespace() {
+        packages::Namespace::NamespaceWithEntry { namespace: _, entry } if &module_name == entry => {
+            vec![
+                "-open".to_string(),
+                config.get_namespace().to_suffix().unwrap().to_string(),
+            ]
+        }
+        packages::Namespace::Namespace(_)
+        | packages::Namespace::NamespaceWithEntry {
+            namespace: _,
+            entry: _,
+        } => {
+            vec![
+                "-bs-ns".to_string(),
+                config.get_namespace().to_suffix().unwrap().to_string(),
+            ]
+        }
+        packages::Namespace::NoNamespace => vec![],
+    };
+
+    let root_config = project_context.get_root_config();
+    let jsx_args = root_config.get_jsx_args();
+    let jsx_module_args = root_config.get_jsx_module_args();
+    let jsx_mode_args = root_config.get_jsx_mode_args();
+    let jsx_preserve_args = root_config.get_jsx_preserve_args();
+    let gentype_arg = config.get_gentype_arg();
+    let experimental_args = root_config.get_experimental_features_args();
+    let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
     let runtime_path_args = get_runtime_path_args(config, project_context)?;
 
     Ok(vec![
         namespace_args,
-        read_cmi_args,
         vec![
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
@@ -531,22 +616,11 @@ pub fn compiler_args(
         jsx_module_args,
         jsx_mode_args,
         jsx_preserve_args,
+        include_ppx_flags.unwrap_or_default(),
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
         experimental_args,
-        // vec!["-warn-error".to_string(), "A".to_string()],
-        // ^^ this one fails for bisect-ppx
-        // this is the default
-        // we should probably parse the right ones from the package config
-        // vec!["-w".to_string(), "a".to_string()],
-        package_name_arg,
-        implementation_args,
-        // vec![
-        //     "-I".to_string(),
-        //     abs_node_modules_path.to_string() + "/rescript/ocaml",
-        // ],
-        vec![ast_path.to_string_lossy().to_string()],
     ]
     .concat())
 }

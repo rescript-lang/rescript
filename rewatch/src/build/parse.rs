@@ -284,11 +284,7 @@ pub fn parser_args(
     let root_config = project_context.get_root_config();
     let file = &filename;
     let ast_path = helpers::get_ast_path(file);
-    let ppx_flags = config::flatten_ppx_flags(
-        project_context,
-        package_config,
-        &filter_ppx_flags(&package_config.ppx_flags, contents),
-    )?;
+    let ppx_flags = ppx_flags_for_contents(project_context, package_config, contents)?;
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
@@ -320,6 +316,15 @@ pub fn parser_args(
         ]
         .concat(),
     ))
+}
+
+pub fn ppx_flags_for_contents(
+    project_context: &ProjectContext,
+    package_config: &Config,
+    contents: &str,
+) -> anyhow::Result<Vec<String>> {
+    let filtered = filter_ppx_flags(&package_config.ppx_flags, contents);
+    config::flatten_ppx_flags(project_context, package_config, &filtered)
 }
 
 fn generate_ast(
