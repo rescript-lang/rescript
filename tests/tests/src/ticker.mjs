@@ -182,8 +182,10 @@ function process_quote(ticker_map, new_ticker, new_value) {
     let match$1 = match._0;
     let match$2 = match$1.lhs.value;
     let match$3 = match$1.rhs.value;
-    let value = match$2 !== undefined && match$3 !== undefined ? (
-        match$1.op === "PLUS" ? match$2 + match$3 : match$2 - match$3
+    let value = match$2 !== undefined ? (
+        match$3 !== undefined ? (
+            match$1.op === "PLUS" ? match$2 + match$3 : match$2 - match$3
+          ) : undefined
       ) : undefined;
     ticker.value = value;
   });

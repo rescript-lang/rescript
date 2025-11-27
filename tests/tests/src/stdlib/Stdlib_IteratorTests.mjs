@@ -48,9 +48,13 @@ let asyncResult = {
 };
 
 await Stdlib_AsyncIterator.forEach(asyncIterator, v => {
-  if (v !== undefined && v[0] === "second") {
-    asyncResult.contents = "second";
-    return;
+  if (v !== undefined) {
+    if (v[0] === "second") {
+      asyncResult.contents = "second";
+      return;
+    } else {
+      return;
+    }
   }
 });
 
