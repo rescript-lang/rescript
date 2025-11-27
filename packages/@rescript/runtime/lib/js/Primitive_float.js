@@ -6,7 +6,9 @@ function compare(x, y) {
     return 0;
   } else if (x < y) {
     return -1;
-  } else if (x > y || x === x) {
+  } else if (x > y) {
+    return 1;
+  } else if (x === x) {
     return 1;
   } else if (y === y) {
     return -1;
