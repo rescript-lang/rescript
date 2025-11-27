@@ -1166,7 +1166,7 @@ let rec econd ?comment (pred : t) (ifso : t) (ifnot : t) : t =
   | Bool true, _, _ -> ifso
   | _, Bool true, Bool false -> pred
   | _, Cond (pred1, ifso1, ifnot1), _
-    when Js_analyzer.eq_expression ifnot1 ifnot ->
+    when Js_analyzer.eq_expression ifnot1 ifnot -> (
     (* {[
          if b then (if p1 then branch_code0 else branch_code1)
          else branch_code1
@@ -1176,16 +1176,31 @@ let rec econd ?comment (pred : t) (ifso : t) (ifnot : t) : t =
          if b && p1 then branch_code0 else branch_code1
        ]}
     *)
-    econd (and_ pred pred1) ifso1 ifnot
+    (* Prevent infinite recursion: if ifso1 is a Cond or Seq, skip this optimization *)
+    match ifso1.expression_desc with
+    | Cond _ | Seq _ -> {expression_desc = Cond (pred, ifso, ifnot); comment}
+    | _ ->
+      if Js_analyzer.eq_expression ifso1 ifnot then
+        {expression_desc = Cond (pred, ifso, ifnot); comment}
+      else econd (and_ pred pred1) ifso1 ifnot)
   | _, Cond (pred1, ifso1, ifnot1), _ when Js_analyzer.eq_expression ifso1 ifnot
-    ->
-    econd (and_ pred (not pred1)) ifnot1 ifnot
+    -> (
+    (* Prevent infinite recursion: if ifnot1 is a Cond, skip this optimization *)
+    match ifnot1.expression_desc with
+    | Cond _ -> {expression_desc = Cond (pred, ifso, ifnot); comment}
+    | _ -> econd (and_ pred (not pred1)) ifnot1 ifnot)
   | _, _, Cond (pred1, ifso1, ifnot1) when Js_analyzer.eq_expression ifso ifso1
-    ->
-    econd (or_ pred pred1) ifso ifnot1
+    -> (
+    (* Prevent infinite recursion: if ifnot1 is a Cond, skip this optimization *)
+    match ifnot1.expression_desc with
+    | Cond _ -> {expression_desc = Cond (pred, ifso, ifnot); comment}
+    | _ -> econd (or_ pred pred1) ifso ifnot1)
   | _, _, Cond (pred1, ifso1, ifnot1) when Js_analyzer.eq_expression ifso ifnot1
-    ->
-    econd (or_ pred (not pred1)) ifso ifso1
+    -> (
+    (* Prevent infinite recursion: if ifso1 is a Cond, skip this optimization *)
+    match ifso1.expression_desc with
+    | Cond _ -> {expression_desc = Cond (pred, ifso, ifnot); comment}
+    | _ -> econd (or_ pred (not pred1)) ifso ifso1)
   | Js_not e, _, _ when not_empty_branch ifnot -> econd ?comment e ifnot ifso
   | ( _,
       Seq (a, {expression_desc = Undefined _}),
