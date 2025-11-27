@@ -259,10 +259,23 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call ignore,
       "*internal* Set jsx mode, this is no longer used and is a no-op." );
     ("-bs-jsx-preserve", set Js_config.jsx_preserve, "*internal* Preserve jsx");
+    ( "-bs-module-system",
+      string_call (fun s ->
+          Js_config.default_module_system :=
+            match Js_packages_info.module_system_of_string s with
+            | Some ms -> ms
+            | None ->
+              Bsc_args.bad_arg
+                ("Invalid module system: " ^ s
+               ^ ". Use: commonjs, esmodule, or es6-global")),
+      "*internal* Set module system: commonjs, esmodule, es6-global" );
+    ( "-bs-suffix",
+      string_call (fun s -> Js_config.default_suffix := s),
+      "*internal* Set import file suffix: .js, .mjs, .cjs" );
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
-      "*internal* Set npm-output-path: [opt_module]:path, for example: \
-       'lib/cjs', 'amdjs:lib/amdjs', 'es6:lib/es6' " );
+      "*internal* Set output path (when combined with -bs-module-system and \
+       -bs-suffix)" );
     ( "-bs-ast",
       unit_call (fun _ ->
           Js_config.binary_ast := true;

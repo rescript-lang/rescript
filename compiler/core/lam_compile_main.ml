@@ -292,7 +292,8 @@ let lambda_as_module
   : unit = 
   let package_info = Js_packages_state.get_packages_info () in 
   if Js_packages_info.is_empty package_info && !Js_config.js_stdout then begin    
-    Js_dump_program.dump_deps_program ~output_prefix Commonjs (lambda_output) stdout
+    (* Use configured module system instead of hardcoded Commonjs *)
+    Js_dump_program.dump_deps_program ~output_prefix !Js_config.default_module_system (lambda_output) stdout
   end else
     Js_packages_info.iter package_info (fun {module_system; path; suffix} -> 
         let output_chan chan  = 
@@ -303,12 +304,40 @@ let lambda_as_module
         let basename =  
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
+        (* Construct target path:
+           - For bsb (path="."): extract source subdir from output_prefix
+           - For rewatch: path already contains full directory from file_path.parent()
+           - basename is the final filename *)
         let target_file = 
-          (Lazy.force Ext_path.package_dir //
-           path //
-           basename
-           (* #913 only generate little-case js file *)
-          ) in     
+          (* Check if path is a base output directory (bsb mode) vs full path (rewatch mode)
+             Use starts_with to handle both Unix (lib/es6) and Windows (lib\es6) paths *)
+          let is_base_path = 
+            path = "." || 
+            Ext_string.starts_with path "lib" && 
+            (Ext_string.contain_substring path "bs" || 
+             Ext_string.contain_substring path "js" || 
+             Ext_string.contain_substring path "es6")
+          in
+          if is_base_path then
+            (* Legacy bsb mode: path is base dir, extract source subdir from output_prefix *)
+            let source_subdir = Filename.dirname output_prefix in
+            (* When source_subdir is ".", don't include it in the path to avoid "././" *)
+            if source_subdir = "." then
+              (Lazy.force Ext_path.package_dir //
+               path //
+               basename)
+            else
+              (Lazy.force Ext_path.package_dir //
+               path //
+               source_subdir //
+               basename)
+          else
+            (* Rewatch mode: path already contains full directory *)
+            (Lazy.force Ext_path.package_dir //
+             path //
+             basename
+             (* #913 only generate little-case js file *)
+            ) in     
         (if not !Clflags.dont_write_files then 
            Ext_pervasives.with_file_as_chan
              target_file output_chan );
