@@ -10,10 +10,10 @@
  *   optional packages, reusing the same OTP so you only get prompted once.
  * - Pass `--dry-run` to see the commands without executing them.
  */
-import { spawn } from "node:child_process";
 import process from "node:process";
 import readline from "node:readline/promises";
 import { parseArgs } from "node:util";
+import { npm } from "../lib_dev/process.js";
 
 const packages = [
   "rescript",
@@ -46,16 +46,9 @@ async function runDistTag(pkg, version, tag, otp, dryRun) {
     return;
   }
   console.log(`Tagging ${spec} as ${tag}...`);
-  await new Promise((resolve, reject) => {
-    const child = spawn("npm", args, { stdio: "inherit" });
-    child.on("exit", code => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`npm dist-tag failed for ${spec} (exit ${code})`));
-      }
-    });
-    child.on("error", reject);
+  await npm("dist-tag", ["add", spec, tag, "--otp", otp], {
+    stdio: "inherit",
+    throwOnFail: true,
   });
 }
 
