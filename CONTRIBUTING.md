@@ -447,7 +447,7 @@ To build a new version and release it on NPM, follow these steps:
 1. Verify that the playground bundle for the new version is now present on the settings tab in https://rescript-lang.org/try.
 1. Run `npm info rescript` to verify that the new version is now present with tag "ci".
 1. Test the new version.
-1. Tag the new version as appropriate (`latest` or `next`): `npm dist-tag add rescript@<version> <tag>`
+1. Tag all packages for the new version as appropriate (`latest` or `next`): `./scripts/npmRelease.js --version <version> --tag <tag>`
 1. Create a release entry for the version tag on the [Github Releases page](https://github.com/rescript-lang/rescript-compiler/releases), copying the changes from `CHANGELOG.md`.
 1. Create a PR with the following changes to prepare for development of the next version:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
