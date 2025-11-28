@@ -1,0 +1,10 @@
+{
+  "name": "test",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "suffix": ".res.js"
+}
