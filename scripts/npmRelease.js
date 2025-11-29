@@ -6,24 +6,14 @@
  *   node scripts/npmRelease.js --version 12.0.1 --tag next
  *   node scripts/npmRelease.js --version 12.0.1 --tag latest --otp 123456
  *
- * - Runs `npm dist-tag add` for: rescript, @rescript/runtime, and all platform
- *   optional packages, reusing the same OTP so you only get prompted once.
+ * - Runs `npm dist-tag add` for every non-private workspace (same as CI publish)
+ *   reusing the same OTP so you only get prompted once.
  * - Pass `--dry-run` to see the commands without executing them.
  */
 import process from "node:process";
 import readline from "node:readline/promises";
 import { parseArgs } from "node:util";
-import { npm } from "../lib_dev/process.js";
-
-const packages = [
-  "rescript",
-  "@rescript/runtime",
-  "@rescript/darwin-arm64",
-  "@rescript/darwin-x64",
-  "@rescript/linux-arm64",
-  "@rescript/linux-x64",
-  "@rescript/win32-x64",
-];
+import { npm, yarn } from "../lib_dev/process.js";
 
 async function promptForOtp(existingOtp) {
   if (existingOtp) {
@@ -38,8 +28,17 @@ async function promptForOtp(existingOtp) {
   return answer.trim();
 }
 
-async function runDistTag(pkg, version, tag, otp, dryRun) {
-  const spec = `${pkg}@${version}`;
+async function getPublicWorkspaces() {
+  const { stdout } = await yarn("workspaces", ["list", "--no-private", "--json"]);
+  return stdout
+    .split("\n")
+    .filter(Boolean)
+    .map(line => JSON.parse(line))
+    .map(entry => entry.name);
+}
+
+async function runDistTag(pkgName, version, tag, otp, dryRun) {
+  const spec = `${pkgName}@${version}`;
   const args = ["dist-tag", "add", spec, tag, "--otp", otp];
   if (dryRun) {
     console.log(`[dry-run] npm ${args.join(" ")}`);
@@ -71,18 +70,17 @@ async function main() {
       process.exitCode = 1;
       return;
     }
+    const workspaces = await getPublicWorkspaces();
+    if (workspaces.length === 0) {
+      throw new Error("No public workspaces found.");
+    }
+
     const otp = await promptForOtp(values.otp);
     if (!otp) {
       throw new Error("OTP is required to publish dist-tags.");
     }
-    for (const pkg of packages) {
-      await runDistTag(
-        pkg,
-        values.version,
-        values.tag,
-        otp,
-        Boolean(values["dry-run"]),
-      );
+    for (const workspace of workspaces) {
+      await runDistTag(workspace, values.version, values.tag, otp, Boolean(values["dry-run"]));
     }
     if (values["dry-run"]) {
       console.log("Dry run complete.");
