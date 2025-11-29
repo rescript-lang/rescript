@@ -29,7 +29,11 @@ async function promptForOtp(existingOtp) {
 }
 
 async function getPublicWorkspaces() {
-  const { stdout } = await yarn("workspaces", ["list", "--no-private", "--json"]);
+  const { stdout } = await yarn("workspaces", [
+    "list",
+    "--no-private",
+    "--json",
+  ]);
   return stdout
     .split("\n")
     .filter(Boolean)
@@ -80,7 +84,13 @@ async function main() {
       throw new Error("OTP is required to publish dist-tags.");
     }
     for (const workspace of workspaces) {
-      await runDistTag(workspace, values.version, values.tag, otp, Boolean(values["dry-run"]));
+      await runDistTag(
+        workspace,
+        values.version,
+        values.tag,
+        otp,
+        Boolean(values["dry-run"]),
+      );
     }
     if (values["dry-run"]) {
       console.log("Dry run complete.");
