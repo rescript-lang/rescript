@@ -30,6 +30,9 @@ type description = {
 
 let set_transformed_jsx d ~transformed_jsx = {d with transformed_jsx}
 
+let with_arity d ~arity ~from_constructor =
+  {d with prim_arity = arity; prim_from_constructor = from_constructor}
+
 let coerce : (description -> description -> bool) ref =
   ref (fun (p1 : description) (p2 : description) -> p1 = p2)
 
