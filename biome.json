@@ -55,6 +55,7 @@
   "files": {
     "ignore": [
       ".yarn/**",
+      "tests/dependencies/**/src/**",
       "tests/analysis_tests/**/src/**",
       "tests/build_tests/**/src/**",
       "tests/docstring_tests/**",
