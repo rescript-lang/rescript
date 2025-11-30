@@ -19,11 +19,26 @@ module Config = struct
 end
 
 module Current = struct
-  let bindings = ref PosSet.empty
-  let lastBinding = ref Location.none
+  type state = {
+    last_binding: Location.t;
+    max_value_pos_end: Lexing.position;
+  }
 
-  (** max end position of a value reported dead *)
-  let maxValuePosEnd = ref Lexing.dummy_pos
+  let empty_state =
+    {
+      last_binding = Location.none;
+      max_value_pos_end = Lexing.dummy_pos;
+    }
+
+  let get_last_binding (s : state) = s.last_binding
+
+  let with_last_binding (loc : Location.t) (s : state) : state =
+    {s with last_binding = loc}
+
+  let get_max_end (s : state) = s.max_value_pos_end
+
+  let with_max_end (pos : Lexing.position) (s : state) : state =
+    {s with max_value_pos_end = pos}
 end
 
 let rec checkSub s1 s2 n =
@@ -88,24 +103,26 @@ let declGetLoc decl =
   in
   {Location.loc_start; loc_end = decl.posEnd; loc_ghost = false}
 
-let addValueReference ~addFileReference ~(locFrom : Location.t)
-    ~(locTo : Location.t) =
-  let lastBinding = !Current.lastBinding in
-  let locFrom =
+let addValueReference_state ~(current : Current.state) ~addFileReference
+    ~(locFrom : Location.t) ~(locTo : Location.t) : unit =
+  let lastBinding = current.last_binding in
+  let effectiveFrom =
     match lastBinding = Location.none with
     | true -> locFrom
     | false -> lastBinding
   in
-  if not locFrom.loc_ghost then (
+  if not effectiveFrom.loc_ghost then (
     if !Cli.debug then
       Log_.item "addValueReference %s --> %s@."
-        (locFrom.loc_start |> posToString)
+        (effectiveFrom.loc_start |> posToString)
         (locTo.loc_start |> posToString);
-    ValueReferences.add locTo.loc_start locFrom.loc_start;
+    ValueReferences.add locTo.loc_start effectiveFrom.loc_start;
     if
-      addFileReference && (not locTo.loc_ghost) && (not locFrom.loc_ghost)
-      && locFrom.loc_start.pos_fname <> locTo.loc_start.pos_fname
-    then FileReferences.add locFrom locTo)
+      addFileReference && (not locTo.loc_ghost)
+      && (not effectiveFrom.loc_ghost)
+      && effectiveFrom.loc_start.pos_fname <> locTo.loc_start.pos_fname
+    then FileReferences.add effectiveFrom locTo);
+  ()
 
 let iterFilesFromRootsToLeaves iterFun =
   (* For each file, the number of incoming references *)
@@ -502,24 +519,20 @@ module Decl = struct
       (fname1, lnum1, bol1, cnum1, kind1)
       (fname2, lnum2, bol2, cnum2, kind2)
 
-  let isInsideReportedValue decl =
-    let fileHasChanged =
-      !Current.maxValuePosEnd.pos_fname <> decl.pos.pos_fname
-    in
+  let isInsideReportedValue (current_state : Current.state ref) decl =
+    let max_end = Current.get_max_end !current_state in
+    let fileHasChanged = max_end.pos_fname <> decl.pos.pos_fname in
     let insideReportedValue =
-      decl |> isValue && (not fileHasChanged)
-      && !Current.maxValuePosEnd.pos_cnum > decl.pos.pos_cnum
+      decl |> isValue && (not fileHasChanged) && max_end.pos_cnum > decl.pos.pos_cnum
     in
     if not insideReportedValue then
       if decl |> isValue then
-        if
-          fileHasChanged
-          || decl.posEnd.pos_cnum > !Current.maxValuePosEnd.pos_cnum
-        then Current.maxValuePosEnd := decl.posEnd;
+        if fileHasChanged || decl.posEnd.pos_cnum > max_end.pos_cnum then
+          current_state := Current.with_max_end decl.posEnd !current_state;
     insideReportedValue
 
-  let report decl =
-    let insideReportedValue = decl |> isInsideReportedValue in
+  let report current_state decl =
+    let insideReportedValue = decl |> isInsideReportedValue current_state in
     if decl.report then
       let name, message =
         match decl.declKind with
@@ -717,4 +730,5 @@ let reportDead ~checkOptionalArg =
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
   (* XXX *)
-  sortedDeadDeclarations |> List.iter Decl.report
+  let current_state = ref Current.empty_state in
+  sortedDeadDeclarations |> List.iter (Decl.report current_state)

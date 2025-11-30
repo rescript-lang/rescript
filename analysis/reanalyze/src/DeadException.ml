@@ -21,13 +21,19 @@ let forceDelayedItems () =
          match Hashtbl.find_opt declarations exceptionPath with
          | None -> ()
          | Some locTo ->
-           addValueReference ~addFileReference:true ~locFrom ~locTo)
+           (* Delayed exception references don't need a binding context; use an empty state. *)
+           DeadCommon.addValueReference_state
+             ~current:DeadCommon.Current.empty_state ~addFileReference:true
+             ~locFrom ~locTo)
 
-let markAsUsed ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
+let markAsUsed ~(current_state : Current.state ref) ~(locFrom : Location.t)
+    ~(locTo : Location.t) path_ =
   if locTo.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)
     let exceptionPath =
       path_ |> Path.fromPathT |> Path.moduleToImplementation
     in
     delayedItems := {exceptionPath; locFrom} :: !delayedItems
-  else addValueReference ~addFileReference:true ~locFrom ~locTo
+  else
+    DeadCommon.addValueReference_state ~current:!current_state
+      ~addFileReference:true ~locFrom ~locTo
