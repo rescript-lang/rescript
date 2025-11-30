@@ -141,6 +141,51 @@ let rewrite_underscore_apply expr =
     }
   | _ -> expr
 
+(* For pipe RHS: (__x) => f(__x, a, b) -----> f(a, b)
+   Omits the first __x argument since the piped value fills that position *)
+let rewrite_underscore_apply_in_pipe expr =
+  match expr.pexp_desc with
+  | Pexp_fun
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
+      } -> (
+    match args with
+    | (Nolabel, {pexp_desc = Pexp_ident {txt = Longident.Lident "__x"}})
+      :: rest_args ->
+      (* First arg is __x, skip it and convert remaining __x to _ *)
+      let new_args =
+        List.map
+          (fun arg ->
+            match arg with
+            | ( lbl,
+                ({
+                   pexp_desc = Pexp_ident ({txt = Longident.Lident "__x"} as lid);
+                 } as arg_expr) ) ->
+              ( lbl,
+                {
+                  arg_expr with
+                  pexp_desc = Pexp_ident {lid with txt = Longident.Lident "_"};
+                } )
+            | arg -> arg)
+          rest_args
+      in
+      {
+        e with
+        pexp_desc =
+          Pexp_apply
+            {
+              funct = call_expr;
+              args = new_args;
+              partial = false;
+              transformed_jsx = false;
+            };
+      }
+    | _ -> rewrite_underscore_apply expr)
+  | _ -> expr
+
 type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
