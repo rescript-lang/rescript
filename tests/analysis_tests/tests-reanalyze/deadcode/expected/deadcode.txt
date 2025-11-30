@@ -31,7 +31,7 @@
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:12
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:20
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:34
-  addValueReference ComponentAsProp.res:6:4 --> React.res:15:0
+  addValueReference ComponentAsProp.res:6:4 --> React.res:16:0
   Scanning CreateErrorHandler1.cmt Source:CreateErrorHandler1.res
   addValueDeclaration +notification CreateErrorHandler1.res:3:6 path:+CreateErrorHandler1.Error1
   addValueReference CreateErrorHandler1.res:3:6 --> CreateErrorHandler1.res:3:21
@@ -157,7 +157,7 @@
   addValueReference DeadTest.res:117:32 --> DeadTest.res:117:12
   addValueReference DeadTest.res:117:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DeadTest.res:117:12
-  addValueReference DeadTest.res:117:4 --> React.res:15:0
+  addValueReference DeadTest.res:117:4 --> React.res:16:0
   addValueReference DeadTest.res:119:16 --> DeadTest.res:117:4
   addVariantCaseDeclaration A DeadTest.res:140:11 path:+DeadTest.WithInclude.t
   addVariantCaseDeclaration A DeadTest.res:143:13 path:+DeadTest.WithInclude.T.t
@@ -299,10 +299,10 @@
   addValueReference DynamicallyLoadedComponent.res:2:32 --> DynamicallyLoadedComponent.res:2:12
   addValueReference DynamicallyLoadedComponent.res:2:19 --> React.res:7:0
   addTypeReference _none_:1:-1 --> DynamicallyLoadedComponent.res:2:12
-  addValueReference DynamicallyLoadedComponent.res:2:4 --> React.res:15:0
+  addValueReference DynamicallyLoadedComponent.res:2:4 --> React.res:16:0
   Scanning EmptyArray.cmt Source:EmptyArray.res
   addValueDeclaration +make EmptyArray.res:5:6 path:+EmptyArray.Z
-  addValueReference EmptyArray.res:5:6 --> React.res:15:0
+  addValueReference EmptyArray.res:5:6 --> React.res:16:0
   addValueReference EmptyArray.res:10:9 --> EmptyArray.res:5:6
   Scanning ErrorHandler.cmt Source:ErrorHandler.res
   addValueDeclaration +notify ErrorHandler.res:7:6 path:+ErrorHandler.Make
@@ -394,15 +394,15 @@
   addValueReference Hooks.res:17:32 --> React.res:7:0
   addValueReference Hooks.res:16:50 --> Hooks.res:16:32
   addValueReference Hooks.res:16:37 --> React.res:7:0
-  addValueReference Hooks.res:16:16 --> React.res:15:0
+  addValueReference Hooks.res:16:16 --> React.res:16:0
   addValueReference Hooks.res:19:5 --> ImportHookDefault.res:6:0
   addValueReference Hooks.res:22:7 --> React.res:7:0
   addValueReference Hooks.res:22:32 --> React.res:7:0
   addValueReference Hooks.res:21:50 --> Hooks.res:21:32
   addValueReference Hooks.res:21:37 --> React.res:7:0
-  addValueReference Hooks.res:21:16 --> React.res:15:0
+  addValueReference Hooks.res:21:16 --> React.res:16:0
   addTypeReference _none_:1:-1 --> Hooks.res:4:12
-  addValueReference Hooks.res:4:4 --> React.res:15:0
+  addValueReference Hooks.res:4:4 --> React.res:16:0
   addValueReference Hooks.res:28:4 --> Hooks.res:4:4
   addRecordLabelDeclaration vehicle Hooks.res:32:14 path:+Hooks.Inner.props
   addRecordLabelDeclaration vehicle Hooks.res:36:16 path:+Hooks.Inner.Inner2.props
@@ -414,7 +414,7 @@
   addValueReference Hooks.res:32:66 --> Hooks.res:32:14
   addValueReference Hooks.res:32:34 --> React.res:7:0
   addTypeReference _none_:1:-1 --> Hooks.res:32:14
-  addValueReference Hooks.res:32:6 --> React.res:15:0
+  addValueReference Hooks.res:32:6 --> React.res:16:0
   addRecordLabelDeclaration vehicle Hooks.res:36:16 path:+Hooks.Inner.Inner2.props
   addRecordLabelDeclaration vehicle Hooks.res:36:16 path:+Hooks.Inner.Inner2.props
   addTypeReference Hooks.res:36:68 --> Hooks.res:1:16
@@ -424,10 +424,10 @@
   addValueReference Hooks.res:36:68 --> Hooks.res:36:16
   addValueReference Hooks.res:36:36 --> React.res:7:0
   addTypeReference _none_:1:-1 --> Hooks.res:36:16
-  addValueReference Hooks.res:36:8 --> React.res:15:0
+  addValueReference Hooks.res:36:8 --> React.res:16:0
   addValueReference Hooks.res:42:25 --> React.res:3:0
   addValueReference Hooks.res:42:25 --> React.res:3:0
-  addValueReference Hooks.res:42:6 --> React.res:15:0
+  addValueReference Hooks.res:42:6 --> React.res:16:0
   addTypeReference Hooks.res:50:2 --> Hooks.res:1:16
   addValueReference Hooks.res:48:4 --> Hooks.res:48:31
   addTypeReference Hooks.res:50:14 --> Hooks.res:1:16
@@ -442,7 +442,7 @@
   addValueReference Hooks.res:68:18 --> Hooks.res:68:18
   addValueReference Hooks.res:68:4 --> Hooks.res:66:14
   addTypeReference _none_:1:-1 --> Hooks.res:66:14
-  addValueReference Hooks.res:66:6 --> React.res:15:0
+  addValueReference Hooks.res:66:6 --> React.res:16:0
   Scanning IgnoreInterface.cmt Source:IgnoreInterface.res
   Scanning IgnoreInterface.cmti Source:IgnoreInterface.resi
   Scanning ImmutableArray.cmt Source:ImmutableArray.res
@@ -966,7 +966,7 @@
   Scanning JsxV4.cmt Source:JsxV4.res
   addValueDeclaration +make JsxV4.res:4:23 path:+JsxV4.C
   addValueReference JsxV4.res:4:36 --> React.res:3:0
-  addValueReference JsxV4.res:4:23 --> React.res:15:0
+  addValueReference JsxV4.res:4:23 --> React.res:16:0
   addValueReference JsxV4.res:7:9 --> JsxV4.res:4:23
   Scanning LetPrivate.cmt Source:LetPrivate.res
   addValueDeclaration +y LetPrivate.res:7:4 path:+LetPrivate

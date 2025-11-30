@@ -5,6 +5,7 @@ type element = Jsx.element
 external float: float => element = "%identity"
 external int: int => element = "%identity"
 external string: string => element = "%identity"
+external promise: promise<element> => element = "%identity"
 
 external array: array<element> => element = "%identity"
 
@@ -46,7 +47,7 @@ type fragmentProps = {children?: element}
 type ref<'value> = {mutable current: 'value}
 
 @module("react")
-external createRef: unit => ref<Js.nullable<'a>> = "createRef"
+external createRef: unit => ref<nullable<'a>> = "createRef"
 
 module Children = {
   @module("react") @scope("Children")
@@ -81,8 +82,7 @@ module Context = {
 external createContext: 'a => Context.t<'a> = "createContext"
 
 @module("react")
-external forwardRef: (('props, Js.Nullable.t<ref<'a>>) => element) => component<'props> =
-  "forwardRef"
+external forwardRef: (('props, nullable<ref<'a>>) => element) => component<'props> = "forwardRef"
 
 @module("react")
 external memo: component<'props> => component<'props> = "memo"
@@ -250,69 +250,65 @@ external useCallback7: ('callback, ('a, 'b, 'c, 'd, 'e, 'f, 'g)) => 'callback = 
 @module("react")
 external useContext: Context.t<'any> => 'any = "useContext"
 
+@module("react")
+external usePromise: promise<'a> => 'a = "use"
+
 @module("react") external useRef: 'value => ref<'value> = "useRef"
 
 @module("react")
-external useImperativeHandleOnEveryRender: (Js.Nullable.t<ref<'value>>, unit => 'value) => unit =
+external useImperativeHandleOnEveryRender: (nullable<ref<'value>>, unit => 'value) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle: (Js.Nullable.t<ref<'value>>, unit => 'value, 'deps) => unit =
+external useImperativeHandle: (nullable<ref<'value>>, unit => 'value, 'deps) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle0: (
-  Js.Nullable.t<ref<'value>>,
-  unit => 'value,
-  @as(json`[]`) _,
-) => unit = "useImperativeHandle"
-
-@module("react")
-external useImperativeHandle1: (Js.Nullable.t<ref<'value>>, unit => 'value, array<'a>) => unit =
+external useImperativeHandle0: (nullable<ref<'value>>, unit => 'value, @as(json`[]`) _) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle2: (Js.Nullable.t<ref<'value>>, unit => 'value, ('a, 'b)) => unit =
+external useImperativeHandle1: (nullable<ref<'value>>, unit => 'value, array<'a>) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle3: (Js.Nullable.t<ref<'value>>, unit => 'value, ('a, 'b, 'c)) => unit =
+external useImperativeHandle2: (nullable<ref<'value>>, unit => 'value, ('a, 'b)) => unit =
   "useImperativeHandle"
 
 @module("react")
-external useImperativeHandle4: (
-  Js.Nullable.t<ref<'value>>,
-  unit => 'value,
-  ('a, 'b, 'c, 'd),
-) => unit = "useImperativeHandle"
+external useImperativeHandle3: (nullable<ref<'value>>, unit => 'value, ('a, 'b, 'c)) => unit =
+  "useImperativeHandle"
+
+@module("react")
+external useImperativeHandle4: (nullable<ref<'value>>, unit => 'value, ('a, 'b, 'c, 'd)) => unit =
+  "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle5: (
-  Js.Nullable.t<ref<'value>>,
+  nullable<ref<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e),
 ) => unit = "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle6: (
-  Js.Nullable.t<ref<'value>>,
+  nullable<ref<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e, 'f),
 ) => unit = "useImperativeHandle"
 
 @module("react")
 external useImperativeHandle7: (
-  Js.Nullable.t<ref<'value>>,
+  nullable<ref<'value>>,
   unit => 'value,
   ('a, 'b, 'c, 'd, 'e, 'f, 'g),
 ) => unit = "useImperativeHandle"
 
 @module("react") external useId: unit => string = "useId"
 
-@module("react") external useDeferredValue: 'value => 'value = "useDeferredValue"
-
+/** `useDeferredValue` is a React Hook that lets you defer updating a part of the UI. */
 @module("react")
-external useTransition: unit => (bool, (unit => unit) => unit) = "useTransition"
+external useDeferredValue: ('value, ~initialValue: 'value=?) => 'value = "useDeferredValue"
 
 @module("react")
 external useInsertionEffectOnEveryRender: (unit => option<unit => unit>) => unit =
@@ -405,3 +401,75 @@ external setDisplayName: (component<'props>, string) => unit = "displayName"
 
 @get @return(nullable)
 external displayName: component<'props> => option<string> = "displayName"
+
+// Actions
+
+type transitionFunction = unit => unit
+type transitionStartFunction = transitionFunction => unit
+
+type transitionFunctionAsync = unit => promise<unit>
+type transitionStartFunctionAsync = transitionFunctionAsync => unit
+
+/** `startTransition` lets you render a part of the UI in the background. */
+@module("react")
+external startTransition: transitionStartFunction = "startTransition"
+@module("react")
+external startTransitionAsync: transitionStartFunctionAsync = "startTransition"
+
+/** `useTransition` is a React Hook that lets you render a part of the UI in the background. */
+@module("react")
+external useTransition: unit => (bool, transitionStartFunction) = "useTransition"
+@module("react")
+external useTransitionAsync: unit => (bool, transitionStartFunctionAsync) = "useTransition"
+
+type action<'state, 'payload> = ('state, 'payload) => promise<'state>
+
+type formAction<'formData> = 'formData => promise<unit>
+
+/** `useActionState` is a Hook that allows you to update state based on the result of a form action. */
+@module("react")
+external useActionState: (
+  action<'state, 'payload>,
+  'state,
+  ~permalink: string=?,
+) => ('state, formAction<'payload>, bool) = "useActionState"
+
+/** `useOptimistic` is a React Hook that lets you optimistically update the UI. */
+@module("react")
+external useOptimistic: (
+  'state,
+  ~updateFn: ('state, 'action) => 'state=?,
+) => ('state, 'action => unit) = "useOptimistic"
+
+/** `act` is a test helper to apply pending React updates before making assertions. */
+@module("react")
+external act: (unit => promise<unit>) => promise<unit> = "act"
+
+/**
+captureOwnerStack reads the current Owner Stack in development and returns it as a string if available.
+[Read more on the React Documentation](https://react.dev/reference/react/captureOwnerStack)
+*/
+@module("react") @return(null_to_opt)
+external captureOwnerStack: unit => option<string> = "captureOwnerStack"
+
+/**
+<Activity> lets you hide and restore the UI and internal state of its children.
+[Read more on the React Documentation](https://react.dev/reference/react/Activity)
+*/
+module Activity = {
+  type mode =
+    | @as("visible") Visible
+    | @as("hidden") Hidden
+
+  type props = {mode?: mode, children: element, name?: string}
+
+  @module("react")
+  external make: component<props> = "Activity"
+}
+
+/**
+useEffectEvent is a React Hook that lets you extract non-reactive logic from your Effects into a reusable function called an Effect Event.
+[Read more on the React Documentation](https://react.dev/reference/react/useEffectEvent)
+*/
+@module("react")
+external useEffectEvent: (unit => unit) => unit = "useEffectEvent"

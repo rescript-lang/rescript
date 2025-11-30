@@ -8,7 +8,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@rescript/react": "patch:@rescript/react@npm%3A0.14.0#~/.yarn/patches/@rescript-react-npm-0.14.0-e462ba0c5d.patch",
+    "@rescript/react": "workspace:^",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rescript": "workspace:^"
