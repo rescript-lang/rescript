@@ -195,29 +195,13 @@ Goal: step‑wise removal of `Common.currentSrc`, `currentModule`, `currentModul
 
 Each bullet above should be done as a separate patch touching only a small set of functions.
 
-### 4.3 Localise `Current.*` binding state
+### 4.3 Localise `Current.*` binding/reporting state
 
-Goal: remove `DeadCommon.Current.bindings`, `lastBinding`, and `maxValuePosEnd` as mutable globals by turning them into local state threaded through functions.
+Goal: remove `DeadCommon.Current` globals for binding/reporting by threading explicit state.
 
-- [ ] In `DeadCommon`, define:
-      ```ocaml
-      type current_state = {
-        bindings : PosSet.t;
-        last_binding : Location.t;
-        max_value_pos_end : Lexing.position;
-      }
-
-      let empty_current_state = {
-        bindings = PosSet.empty;
-        last_binding = Location.none;
-        max_value_pos_end = Lexing.dummy_pos;
-      }
-      ```
-- [ ] Change `addValueReference` to take a `current_state` and return an updated `current_state` instead of reading/writing `Current.*`. For the first patch, implement it by calling the existing global‑based logic and then mirroring the resulting values into a `current_state`, so behaviour is identical.
-- [ ] Update the places that call `addValueReference` (mainly in `DeadValue`) to thread a `current_state` value through, starting from `empty_current_state`, and ignore `Current.*`.
-- [ ] In a follow‑up patch, re‑implement `addValueReference` and any other helpers that touch `Current.*` purely in terms of `current_state` and delete the `Current.*` refs from DCE code.
-
-At the end of this step, binding‑related state is explicit and confined to the call chains that need it.
+- [x] Add `Current.state`/helpers in `DeadCommon` and thread it through `DeadValue` (bindings) and `DeadException.markAsUsed` so `last_binding` is no longer a global ref.
+- [x] Replace `Current.maxValuePosEnd` with a per‑reporting `Current.state` in `Decl.report`/`reportDead`.
+- [ ] Follow‑up: remove `Current.state ref` usage by making traversals return an updated state (pure, no mutation). Adjust `addValueReference_state` (or its successor) to be purely functional and always return the new state.
 
 ### 4.4 Make `ProcessDeadAnnotations` state explicit
 
@@ -398,4 +382,3 @@ Recommended rough order of tasks (each remains independent and small):
 8. 4.14 – Add and maintain order‑independence tests.
 
 Each checkbox above should be updated to `[x]` as the corresponding change lands, keeping the codebase runnable and behaviour‑preserving after every step.
-

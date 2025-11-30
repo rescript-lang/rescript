@@ -15,9 +15,9 @@ let checkAnyValueBindingWithNoSideEffects
          ~sideEffects:false
   | _ -> ()
 
-let collectValueBinding super self (vb : Typedtree.value_binding) =
-  let oldCurrentBindings = !Current.bindings in
-  let oldLastBinding = !Current.lastBinding in
+let collectValueBinding current_state super self (vb : Typedtree.value_binding)
+    =
+  let oldLastBinding = Current.get_last_binding !current_state in
   checkAnyValueBindingWithNoSideEffects vb;
   let loc =
     match vb.vb_pat.pat_desc with
@@ -71,13 +71,11 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
             posStart = vb.vb_loc.loc_start;
           });
       loc
-    | _ -> !Current.lastBinding
+    | _ -> Current.get_last_binding !current_state
   in
-  Current.bindings := PosSet.add loc.loc_start !Current.bindings;
-  Current.lastBinding := loc;
+  current_state := Current.with_last_binding loc !current_state;
   let r = super.Tast_mapper.value_binding self vb in
-  Current.bindings := oldCurrentBindings;
-  Current.lastBinding := oldLastBinding;
+  current_state := Current.with_last_binding oldLastBinding !current_state;
   r
 
 let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
@@ -111,7 +109,7 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
     (!supplied, !suppliedMaybe)
     |> DeadOptionalArgs.addReferences ~locFrom ~locTo ~path)
 
-let rec collectExpr super self (e : Typedtree.expression) =
+let rec collectExpr current_state super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as locTo}) ->
@@ -124,7 +122,9 @@ let rec collectExpr super self (e : Typedtree.expression) =
           (Location.none.loc_start |> Common.posToString)
           (locTo.loc_start |> Common.posToString);
       ValueReferences.add locTo.loc_start Location.none.loc_start)
-    else addValueReference ~addFileReference:true ~locFrom ~locTo
+    else
+      DeadCommon.addValueReference_state ~current:!current_state
+        ~addFileReference:true ~locFrom ~locTo
   | Texp_apply
       {
         funct =
@@ -190,7 +190,8 @@ let rec collectExpr super self (e : Typedtree.expression) =
         {cstr_loc = {Location.loc_start = posTo; loc_ghost} as locTo; cstr_tag},
         _ ) ->
     (match cstr_tag with
-    | Cstr_extension path -> path |> DeadException.markAsUsed ~locFrom ~locTo
+    | Cstr_extension path ->
+      path |> DeadException.markAsUsed ~current_state ~locFrom ~locTo
     | _ -> ());
     if !Config.analyzeTypes && not loc_ghost then
       DeadType.addTypeReference ~posTo ~posFrom:locFrom.loc_start
@@ -202,7 +203,7 @@ let rec collectExpr super self (e : Typedtree.expression) =
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr super self e |> ignore
+             collectExpr current_state super self e |> ignore
            | _ -> ())
   | _ -> ());
   super.Tast_mapper.expr self e
@@ -286,9 +287,10 @@ let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
 (* Traverse the AST *)
 let traverseStructure ~doTypes ~doExternals =
   let super = Tast_mapper.default in
-  let expr self e = e |> collectExpr super self in
+  let current_state = ref Current.empty_state in
+  let expr self e = e |> collectExpr current_state super self in
   let pat self p = p |> collectPattern super self in
-  let value_binding self vb = vb |> collectValueBinding super self in
+  let value_binding self vb = vb |> collectValueBinding current_state super self in
   let structure_item self (structureItem : Typedtree.structure_item) =
     let oldModulePath = ModulePath.getCurrent () in
     (match structureItem.str_desc with
@@ -365,7 +367,7 @@ let traverseStructure ~doTypes ~doExternals =
   {super with expr; pat; structure_item; value_binding}
 
 (* Merge a location's references to another one's *)
-let processValueDependency
+let processValueDependency current_state
     ( ({
          val_loc =
            {loc_start = {pos_fname = fnTo} as posTo; loc_ghost = ghost1} as
@@ -380,7 +382,8 @@ let processValueDependency
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
-    addValueReference ~addFileReference ~locFrom ~locTo;
+    DeadCommon.addValueReference_state ~current:!current_state
+      ~addFileReference ~locFrom ~locTo;
     DeadOptionalArgs.addFunctionReference ~locFrom ~locTo)
 
 let processStructure ~cmt_value_dependencies ~doTypes ~doExternals
@@ -388,4 +391,5 @@ let processStructure ~cmt_value_dependencies ~doTypes ~doExternals
   let traverseStructure = traverseStructure ~doTypes ~doExternals in
   structure |> traverseStructure.structure traverseStructure |> ignore;
   let valueDependencies = cmt_value_dependencies |> List.rev in
-  valueDependencies |> List.iter processValueDependency
+  let current_state = ref Current.empty_state in
+  valueDependencies |> List.iter (processValueDependency current_state)
