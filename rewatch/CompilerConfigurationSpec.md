@@ -18,7 +18,7 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | generators            | array of Rule-Generator |        |     [_]      |
 | cut-generators        | boolean                 |        |     [_]      |
 | jsx                   | JSX                     |        |     [x]      |
-| gentypeconfig         | Gentype                 |        |     [_]      |
+| gentypeconfig         | Gentype                 |        |     [x]      |
 | compiler-flags        | array of string         |        |     [x]      |
 | warnings              | Warnings                |        |     [x]      |
 | ppx-flags             | array of string         |        |     [x]      |

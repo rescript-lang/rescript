@@ -680,18 +680,11 @@ impl Config {
     }
 
     pub fn get_unsupported_fields(&self) -> Vec<String> {
-        let mut fields = self
-            .unknown_fields
+        self.unknown_fields
             .iter()
             .filter(|field| self.is_unsupported_field(field))
             .cloned()
-            .collect::<Vec<_>>();
-
-        if self.gentype_config.is_some() {
-            fields.push("gentypeconfig".to_string());
-        }
-
-        fields
+            .collect::<Vec<_>>()
     }
 
     fn is_unsupported_field(&self, field: &str) -> bool {
