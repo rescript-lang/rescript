@@ -8,12 +8,6 @@ Completable: Cjsx([div], dangerous, [dangerous])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path ReactDOM.domProps
-Path JsxDOM.domProps
-[{
-    "label": "dangerouslySetInnerHTML",
-    "kind": 4,
-    "tags": [],
-    "detail": "{\"__html\": string}",
-    "documentation": null
-  }]
+[completing-lowercase-jsx] could not find element props to complete from.
+[]
 
