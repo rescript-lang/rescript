@@ -130,15 +130,23 @@ let from_json suffix (x : Ext_json_types.t) : Spec_set.t =
   | Arr {content; _} -> from_array suffix content
   | _ -> Spec_set.singleton (from_json_single suffix x)
 
-let bs_package_output = "-bs-package-output"
-
 [@@@warning "+9"]
 
-let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) dir =
-  Ext_string.inter2 bs_package_output
-    (Ext_string.concat5 (string_of_format format) Ext_string.single_colon
-       (if in_source then dir else Bsb_config.top_prefix_of_format format // dir)
-       Ext_string.single_colon suffix)
+let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) _dir =
+  (* Generates three separate compiler flags that were split from the original
+     single "-bs-package-output module:path:suffix" flag.
+     
+     For in-source builds, pass "." as the base directory. The compiler will
+     extract the source subdirectory from output_prefix to construct the correct path.
+     For out-of-source builds, pass the lib output directory (e.g., "lib/es6").
+  *)
+  let module_system_flag = "-bs-module-system " ^ string_of_format format in
+  let suffix_flag = "-bs-suffix " ^ suffix in
+  let output_path =
+    if in_source then "." else Bsb_config.top_prefix_of_format format
+  in
+  let output_flag = "-bs-package-output " ^ output_path in
+  module_system_flag ^ " " ^ suffix_flag ^ " " ^ output_flag
 
 (* FIXME: we should adapt it *)
 let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
@@ -179,7 +187,15 @@ let get_list_of_output_js (package_specs : t)
         Ext_namespace.change_ext_ns_suffix output_file_sans_extension
           spec.suffix
       in
-      (if spec.in_source then Bsb_config.rev_lib_bs_prefix basename
+      (if spec.in_source then
+         (* When dir=".", name_sans_extension can be "./Module" (from Filename.concat "." "Module").
+            Strip the "./" prefix to avoid generating "../.././Module.res.js" *)
+         let basename_clean =
+           if Ext_string.starts_with basename "./" then
+             String.sub basename 2 (String.length basename - 2)
+           else basename
+         in
+         Bsb_config.rev_lib_bs_prefix basename_clean
        else Bsb_config.lib_bs_prefix_of_format spec.format // basename)
       :: acc)
     package_specs.modules []
