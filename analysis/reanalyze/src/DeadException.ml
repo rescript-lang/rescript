@@ -22,11 +22,10 @@ let forceDelayedItems () =
          | None -> ()
          | Some locTo ->
            (* Delayed exception references don't need a binding context; use an empty state. *)
-           DeadCommon.addValueReference_state
-             ~current:DeadCommon.Current.empty_state ~addFileReference:true
-             ~locFrom ~locTo)
+           DeadCommon.addValueReference ~binding:Location.none
+             ~addFileReference:true ~locFrom ~locTo)
 
-let markAsUsed ~(current_state : Current.state ref) ~(locFrom : Location.t)
+let markAsUsed ~(binding : Location.t) ~(locFrom : Location.t)
     ~(locTo : Location.t) path_ =
   if locTo.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)
@@ -35,5 +34,4 @@ let markAsUsed ~(current_state : Current.state ref) ~(locFrom : Location.t)
     in
     delayedItems := {exceptionPath; locFrom} :: !delayedItems
   else
-    DeadCommon.addValueReference_state ~current:!current_state
-      ~addFileReference:true ~locFrom ~locTo
+    DeadCommon.addValueReference ~binding ~addFileReference:true ~locFrom ~locTo
