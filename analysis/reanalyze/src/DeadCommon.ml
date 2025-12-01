@@ -19,16 +19,10 @@ module Config = struct
 end
 
 module Current = struct
-  type state = {
-    last_binding: Location.t;
-    max_value_pos_end: Lexing.position;
-  }
+  type state = {last_binding: Location.t; max_value_pos_end: Lexing.position}
 
   let empty_state =
-    {
-      last_binding = Location.none;
-      max_value_pos_end = Lexing.dummy_pos;
-    }
+    {last_binding = Location.none; max_value_pos_end = Lexing.dummy_pos}
 
   let get_last_binding (s : state) = s.last_binding
 
@@ -83,6 +77,17 @@ module ValueReferences = struct
   let find pos = PosHash.findSet table pos
 end
 
+(* Local reporting context used only while emitting dead-code warnings.
+   It tracks, per file, the end position of the last value we reported on,
+   so nested values inside that range don't get duplicate warnings. *)
+module ReportingContext = struct
+  type t = Lexing.position ref
+
+  let create () : t = ref Lexing.dummy_pos
+  let get_max_end (ctx : t) = !ctx
+  let set_max_end (ctx : t) (pos : Lexing.position) = ctx := pos
+end
+
 module TypeReferences = struct
   (** all type references *)
   let table = (PosHash.create 256 : PosSet.t PosHash.t)
@@ -103,14 +108,9 @@ let declGetLoc decl =
   in
   {Location.loc_start; loc_end = decl.posEnd; loc_ghost = false}
 
-let addValueReference_state ~(current : Current.state) ~addFileReference
+let addValueReference ~(binding : Location.t) ~addFileReference
     ~(locFrom : Location.t) ~(locTo : Location.t) : unit =
-  let lastBinding = current.last_binding in
-  let effectiveFrom =
-    match lastBinding = Location.none with
-    | true -> locFrom
-    | false -> lastBinding
-  in
+  let effectiveFrom = if binding = Location.none then locFrom else binding in
   if not effectiveFrom.loc_ghost then (
     if !Cli.debug then
       Log_.item "addValueReference %s --> %s@."
@@ -121,8 +121,7 @@ let addValueReference_state ~(current : Current.state) ~addFileReference
       addFileReference && (not locTo.loc_ghost)
       && (not effectiveFrom.loc_ghost)
       && effectiveFrom.loc_start.pos_fname <> locTo.loc_start.pos_fname
-    then FileReferences.add effectiveFrom locTo);
-  ()
+    then FileReferences.add effectiveFrom locTo)
 
 let iterFilesFromRootsToLeaves iterFun =
   (* For each file, the number of incoming references *)
@@ -519,20 +518,21 @@ module Decl = struct
       (fname1, lnum1, bol1, cnum1, kind1)
       (fname2, lnum2, bol2, cnum2, kind2)
 
-  let isInsideReportedValue (current_state : Current.state ref) decl =
-    let max_end = Current.get_max_end !current_state in
+  let isInsideReportedValue (ctx : ReportingContext.t) decl =
+    let max_end = ReportingContext.get_max_end ctx in
     let fileHasChanged = max_end.pos_fname <> decl.pos.pos_fname in
     let insideReportedValue =
-      decl |> isValue && (not fileHasChanged) && max_end.pos_cnum > decl.pos.pos_cnum
+      decl |> isValue && (not fileHasChanged)
+      && max_end.pos_cnum > decl.pos.pos_cnum
     in
     if not insideReportedValue then
       if decl |> isValue then
         if fileHasChanged || decl.posEnd.pos_cnum > max_end.pos_cnum then
-          current_state := Current.with_max_end decl.posEnd !current_state;
+          ReportingContext.set_max_end ctx decl.posEnd;
     insideReportedValue
 
-  let report current_state decl =
-    let insideReportedValue = decl |> isInsideReportedValue current_state in
+  let report (ctx : ReportingContext.t) decl =
+    let insideReportedValue = decl |> isInsideReportedValue ctx in
     if decl.report then
       let name, message =
         match decl.declKind with
@@ -729,6 +729,5 @@ let reportDead ~checkOptionalArg =
   let sortedDeadDeclarations =
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
-  (* XXX *)
-  let current_state = ref Current.empty_state in
-  sortedDeadDeclarations |> List.iter (Decl.report current_state)
+  let reporting_ctx = ReportingContext.create () in
+  sortedDeadDeclarations |> List.iter (Decl.report reporting_ctx)

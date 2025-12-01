@@ -200,8 +200,9 @@ Each bullet above should be done as a separate patch touching only a small set o
 Goal: remove `DeadCommon.Current` globals for binding/reporting by threading explicit state.
 
 - [x] Add `Current.state`/helpers in `DeadCommon` and thread it through `DeadValue` (bindings) and `DeadException.markAsUsed` so `last_binding` is no longer a global ref.
-- [x] Replace `Current.maxValuePosEnd` with a per‑reporting `Current.state` in `Decl.report`/`reportDead`.
-- [ ] Follow‑up: remove `Current.state ref` usage by making traversals return an updated state (pure, no mutation). Adjust `addValueReference_state` (or its successor) to be purely functional and always return the new state.
+- [x] Replace `Current.maxValuePosEnd` with a per‑reporting state in `Decl.report`/`reportDead` (now encapsulated in `ReportingContext`).
+- [x] Replace `addValueReference_state` with `addValueReference ~binding` so reference bookkeeping no longer threads `Current.state` or returns a fake “updated state”.
+- [ ] Follow‑up: remove the remaining local `Current.state ref` in `BindingContext` by making traversals return an updated binding context (pure, no mutation). At that point, binding context becomes an explicit input/output of the traversal, not hidden state.
 
 ### 4.4 Make `ProcessDeadAnnotations` state explicit
 
