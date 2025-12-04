@@ -37,7 +37,7 @@ type exn +=
   private
   | @deprecated({
     reason: "Use `JsExn` instead",
-    migrate: %replace.variant(JsExn),
+    migrate: %replace.constructor(JsExn),
   })
   Error(t)
 

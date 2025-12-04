@@ -336,13 +336,13 @@ module TypeReplace = struct
     | _ -> None
 end
 
-module VariantReplace = struct
+module ConstructorReplace = struct
   type target = {lid: Longident.t Location.loc; attrs: Parsetree.attributes}
 
   let of_template (expr : Parsetree.expression) : target option =
     match expr.pexp_desc with
     | Pexp_extension
-        ( {txt = "replace.variant"},
+        ( {txt = "replace.constructor"},
           PStr
             [
               {
@@ -578,27 +578,27 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
   |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
          Hashtbl.replace loc_to_deprecated_reference source_loc d);
 
-  let deprecated_variant_constructors =
+  let deprecated_constructor_constructors =
     deprecated_used
     |> List.filter_map (fun (d : Cmt_utils.deprecated_used) ->
            match d.migration_template with
            | Some template -> (
-             match VariantReplace.of_template template with
+             match ConstructorReplace.of_template template with
              | Some target -> Some (d.source_loc, target)
              | None -> None)
            | None -> None)
   in
-  let loc_to_deprecated_variant_constructor =
-    Hashtbl.create (List.length deprecated_variant_constructors)
+  let loc_to_deprecated_constructor_constructor =
+    Hashtbl.create (List.length deprecated_constructor_constructors)
   in
-  deprecated_variant_constructors
+  deprecated_constructor_constructors
   |> List.iter (fun (loc, target) ->
-         Hashtbl.replace loc_to_deprecated_variant_constructor loc target);
+         Hashtbl.replace loc_to_deprecated_constructor_constructor loc target);
 
-  let find_variant_target ~loc ~lid_loc =
-    match Hashtbl.find_opt loc_to_deprecated_variant_constructor loc with
+  let find_constructor_target ~loc ~lid_loc =
+    match Hashtbl.find_opt loc_to_deprecated_constructor_constructor loc with
     | Some _ as found -> found
-    | None -> Hashtbl.find_opt loc_to_deprecated_variant_constructor lid_loc
+    | None -> Hashtbl.find_opt loc_to_deprecated_constructor_constructor lid_loc
   in
 
   (* Helpers for type replacement lookups *)
@@ -680,8 +680,8 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
             | Some e -> apply_template_direct mapper e call_args exp
             | None -> exp)
           | {pexp_desc = Pexp_construct (lid, arg); pexp_loc} -> (
-            match find_variant_target ~loc:pexp_loc ~lid_loc:lid.loc with
-            | Some {VariantReplace.lid; attrs} ->
+            match find_constructor_target ~loc:pexp_loc ~lid_loc:lid.loc with
+            | Some {ConstructorReplace.lid; attrs} ->
               let arg = Option.map (mapper.expr mapper) arg in
               let replaced = {exp with pexp_desc = Pexp_construct (lid, arg)} in
               MapperUtils.ApplyTransforms.attach_to_replacement ~attrs replaced
@@ -725,8 +725,8 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
         (fun mapper pat ->
           match pat with
           | {ppat_desc = Ppat_construct (lid, arg); ppat_loc} -> (
-            match find_variant_target ~loc:ppat_loc ~lid_loc:lid.loc with
-            | Some {VariantReplace.lid; attrs} ->
+            match find_constructor_target ~loc:ppat_loc ~lid_loc:lid.loc with
+            | Some {ConstructorReplace.lid; attrs} ->
               let arg = Option.map (mapper.pat mapper) arg in
               let replaced = {pat with ppat_desc = Ppat_construct (lid, arg)} in
               MapperUtils.ApplyTransforms.attach_attrs_to_pat ~attrs replaced
