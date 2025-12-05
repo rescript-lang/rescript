@@ -79,20 +79,28 @@ function search() {
 function push(path) {
   let match = globalThis.history;
   let match$1 = globalThis.window;
-  if (match !== undefined && match$1 !== undefined) {
-    Primitive_option.valFromOption(match).pushState(null, "", path);
-    Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
-    return;
+  if (match !== undefined) {
+    if (match$1 !== undefined) {
+      Primitive_option.valFromOption(match).pushState(null, "", path);
+      Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
+      return;
+    } else {
+      return;
+    }
   }
 }
 
 function replace(path) {
   let match = globalThis.history;
   let match$1 = globalThis.window;
-  if (match !== undefined && match$1 !== undefined) {
-    Primitive_option.valFromOption(match).replaceState(null, "", path);
-    Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
-    return;
+  if (match !== undefined) {
+    if (match$1 !== undefined) {
+      Primitive_option.valFromOption(match).replaceState(null, "", path);
+      Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
+      return;
+    } else {
+      return;
+    }
   }
 }
 
