@@ -143,7 +143,7 @@ module Event = struct
              | {kind = Call {callee}} :: _ -> callee |> Common.Path.toName
              | _ -> "expression" |> Name.create
            in
-           Log_.warning ~loc
+           Log_.warning ~config:(DceConfig.current ()) ~loc
              (Common.ExceptionAnalysis
                 {
                   message =
@@ -196,9 +196,9 @@ module Checks = struct
          Common.ExceptionAnalysisMissing
            {exnName; exnTable; throwSet; missingAnnotations; locFull}
        in
-       Log_.warning ~loc description);
+       Log_.warning ~config:(DceConfig.current ()) ~loc description);
     if not (Exceptions.isEmpty redundantAnnotations) then
-      Log_.warning ~loc
+      Log_.warning ~config:(DceConfig.current ()) ~loc
         (Common.ExceptionAnalysis
            {
              message =
@@ -281,7 +281,7 @@ let traverseAst () =
       in
       let calleeName = callee |> Common.Path.toName in
       if calleeName |> Name.toString |> isThrow then
-        Log_.warning ~loc
+        Log_.warning ~config:(DceConfig.current ()) ~loc
           (Common.ExceptionAnalysis
              {
                message =

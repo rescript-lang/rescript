@@ -12,7 +12,7 @@ type item = {
 let delayedItems = (ref [] : item list ref)
 let functionReferences = (ref [] : (Lexing.position * Lexing.position) list ref)
 
-let addFunctionReference ~(locFrom : Location.t) ~(locTo : Location.t) =
+let addFunctionReference ~config ~(locFrom : Location.t) ~(locTo : Location.t) =
   if active () then
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
@@ -23,7 +23,7 @@ let addFunctionReference ~(locFrom : Location.t) ~(locTo : Location.t) =
       | _ -> false
     in
     if shouldAdd then (
-      if !Common.Cli.debug then
+      if config.DceConfig.cli.debug then
         Log_.item "OptionalArgs.addFunctionReference %s %s@."
           (posFrom |> posToString) (posTo |> posToString);
       functionReferences := (posFrom, posTo) :: !functionReferences)
@@ -46,13 +46,13 @@ let rec fromTypeExpr (texpr : Types.type_expr) =
   | Tsubst t -> fromTypeExpr t
   | _ -> []
 
-let addReferences ~(locFrom : Location.t) ~(locTo : Location.t) ~path
+let addReferences ~config ~(locFrom : Location.t) ~(locTo : Location.t) ~path
     (argNames, argNamesMaybe) =
   if active () then (
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
     delayedItems := {posTo; argNames; argNamesMaybe} :: !delayedItems;
-    if !Common.Cli.debug then
+    if config.DceConfig.cli.debug then
       Log_.item
         "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
          argNamesMaybe:%s %s@."
@@ -81,14 +81,14 @@ let forceDelayedItems () =
            OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
          | _ -> ())
 
-let check decl =
+let check ~config decl =
   match decl with
   | {declKind = Value {optionalArgs}}
     when active ()
          && not (ProcessDeadAnnotations.isAnnotatedGenTypeOrLive decl.pos) ->
     optionalArgs
     |> OptionalArgs.iterUnused (fun s ->
-           Log_.warning ~loc:(decl |> declGetLoc)
+           Log_.warning ~config ~loc:(decl |> declGetLoc)
              (DeadOptional
                 {
                   deadOptional = WarningUnusedArgument;
@@ -101,7 +101,7 @@ let check decl =
                 }));
     optionalArgs
     |> OptionalArgs.iterAlwaysUsed (fun s nCalls ->
-           Log_.warning ~loc:(decl |> declGetLoc)
+           Log_.warning ~config ~loc:(decl |> declGetLoc)
              (DeadOptional
                 {
                   deadOptional = WarningRedundantOptionalArgument;

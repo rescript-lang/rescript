@@ -98,8 +98,8 @@ let readFile fileName =
     close_in_noerr channel;
     !lines |> List.rev |> Array.of_list
 
-let writeFile fileName lines =
-  if fileName <> "" && !Cli.write then (
+let writeFile ~config fileName lines =
+  if fileName <> "" && config.DceConfig.cli.write then (
     let channel = open_out fileName in
     let lastLine = Array.length lines in
     lines
@@ -112,8 +112,8 @@ let offsetOfPosAdjustment = function
   | FirstVariant | Nothing -> 0
   | OtherVariant -> 2
 
-let getLineAnnotation ~decl ~line =
-  if !Cli.json then
+let getLineAnnotation ~config ~decl ~line =
+  if config.DceConfig.cli.json then
     let posAnnotation = decl |> getPosAnnotation in
     let offset = decl.posAdjustment |> offsetOfPosAdjustment in
     EmitJson.emitAnnotate
@@ -130,17 +130,18 @@ let getLineAnnotation ~decl ~line =
     Format.asprintf "@.  <-- line %d@.  %s" decl.pos.pos_lnum
       (line |> lineToString)
 
-let cantFindLine () = if !Cli.json then "" else "\n  <-- Can't find line"
+let cantFindLine ~config =
+  if config.DceConfig.cli.json then "" else "\n  <-- Can't find line"
 
-let lineAnnotationToString = function
-  | None -> cantFindLine ()
-  | Some (decl, line) -> getLineAnnotation ~decl ~line
+let lineAnnotationToString ~config = function
+  | None -> cantFindLine ~config
+  | Some (decl, line) -> getLineAnnotation ~config ~decl ~line
 
-let addLineAnnotation ~decl : lineAnnotation =
+let addLineAnnotation ~config ~decl : lineAnnotation =
   let fileName = decl.pos.pos_fname in
   if Sys.file_exists fileName then (
     if fileName <> !currentFile then (
-      writeFile !currentFile !currentFileLines;
+      writeFile ~config !currentFile !currentFileLines;
       currentFile := fileName;
       currentFileLines := readFile fileName);
     let indexInLines = (decl |> getPosAnnotation).pos_lnum - 1 in
@@ -151,4 +152,4 @@ let addLineAnnotation ~decl : lineAnnotation =
     | exception Invalid_argument _ -> None)
   else None
 
-let write () = writeFile !currentFile !currentFileLines
+let write ~config = writeFile ~config !currentFile !currentFileLines

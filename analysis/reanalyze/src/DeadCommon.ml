@@ -18,7 +18,6 @@ module Config = struct
   let warnOnCircularDependencies = false
 end
 
-
 let rec checkSub s1 s2 n =
   n <= 0
   || (try s1.[n] = s2.[n] with Invalid_argument _ -> false)
@@ -92,11 +91,11 @@ let declGetLoc decl =
   in
   {Location.loc_start; loc_end = decl.posEnd; loc_ghost = false}
 
-let addValueReference ~(binding : Location.t) ~addFileReference
+let addValueReference ~config ~(binding : Location.t) ~addFileReference
     ~(locFrom : Location.t) ~(locTo : Location.t) : unit =
   let effectiveFrom = if binding = Location.none then locFrom else binding in
   if not effectiveFrom.loc_ghost then (
-    if !Cli.debug then
+    if config.DceConfig.cli.debug then
       Log_.item "addValueReference %s --> %s@."
         (effectiveFrom.loc_start |> posToString)
         (locTo.loc_start |> posToString);
@@ -107,7 +106,7 @@ let addValueReference ~(binding : Location.t) ~addFileReference
       && effectiveFrom.loc_start.pos_fname <> locTo.loc_start.pos_fname
     then FileReferences.add effectiveFrom locTo)
 
-let iterFilesFromRootsToLeaves iterFun =
+let iterFilesFromRootsToLeaves ~config iterFun =
   (* For each file, the number of incoming references *)
   let inverseReferences = (Hashtbl.create 1 : (string, int) Hashtbl.t) in
   (* For each number of incoming references, the files *)
@@ -171,7 +170,7 @@ let iterFilesFromRootsToLeaves iterFun =
                     {Location.none with loc_start = pos; loc_end = pos}
                   in
                   if Config.warnOnCircularDependencies then
-                    Log_.warning ~loc
+                    Log_.warning ~config ~loc
                       (Circular
                          {
                            message =
@@ -208,7 +207,7 @@ module ProcessDeadAnnotations = struct
   let annotateLive (pos : Lexing.position) =
     PosHash.replace positionsAnnotated pos Live
 
-  let processAttributes ~doGenType ~name ~pos attributes =
+  let processAttributes ~config ~doGenType ~name ~pos attributes =
     let getPayloadFun f = attributes |> Annotation.getAttributePayload f in
     let getPayload (x : string) =
       attributes |> Annotation.getAttributePayload (( = ) x)
@@ -220,7 +219,7 @@ module ProcessDeadAnnotations = struct
     if getPayload WriteDeadAnnotations.deadAnnotation <> None then
       pos |> annotateDead;
     let nameIsInLiveNamesOrPaths () =
-      !Cli.liveNames |> List.mem name
+      config.DceConfig.cli.live_names |> List.mem name
       ||
       let fname =
         match Filename.is_relative pos.pos_fname with
@@ -228,7 +227,7 @@ module ProcessDeadAnnotations = struct
         | false -> Filename.concat (Sys.getcwd ()) pos.pos_fname
       in
       let fnameLen = String.length fname in
-      !Cli.livePaths
+      config.DceConfig.cli.live_paths
       |> List.exists (fun prefix ->
              String.length prefix <= fnameLen
              &&
@@ -240,7 +239,7 @@ module ProcessDeadAnnotations = struct
     if attributes |> Annotation.isOcamlSuppressDeadWarning then
       pos |> annotateLive
 
-  let collectExportLocations ~doGenType =
+  let collectExportLocations ~config ~doGenType =
     let super = Tast_mapper.default in
     let currentlyDisableWarnings = ref false in
     let value_binding self
@@ -250,7 +249,7 @@ module ProcessDeadAnnotations = struct
       | Tpat_alias ({pat_desc = Tpat_any}, id, {loc = {loc_start = pos}}) ->
         if !currentlyDisableWarnings then pos |> annotateLive;
         vb_attributes
-        |> processAttributes ~doGenType ~name:(id |> Ident.name) ~pos
+        |> processAttributes ~config ~doGenType ~name:(id |> Ident.name) ~pos
       | _ -> ());
       super.value_binding self value_binding
     in
@@ -261,7 +260,7 @@ module ProcessDeadAnnotations = struct
         |> List.iter
              (fun ({ld_attributes; ld_loc} : Typedtree.label_declaration) ->
                toplevelAttrs @ ld_attributes
-               |> processAttributes ~doGenType:false ~name:""
+               |> processAttributes ~config ~doGenType:false ~name:""
                     ~pos:ld_loc.loc_start)
       | Ttype_variant constructorDeclarations ->
         constructorDeclarations
@@ -277,13 +276,13 @@ module ProcessDeadAnnotations = struct
                      (fun ({ld_attributes; ld_loc} :
                             Typedtree.label_declaration) ->
                        toplevelAttrs @ cd_attributes @ ld_attributes
-                       |> processAttributes ~doGenType:false ~name:""
+                       |> processAttributes ~config ~doGenType:false ~name:""
                             ~pos:ld_loc.loc_start)
                      flds
                  | Cstr_tuple _ -> ()
                in
                toplevelAttrs @ cd_attributes
-               |> processAttributes ~doGenType:false ~name:""
+               |> processAttributes ~config ~doGenType:false ~name:""
                     ~pos:cd_loc.loc_start)
       | _ -> ());
       super.type_kind self typeKind
@@ -299,7 +298,7 @@ module ProcessDeadAnnotations = struct
           Typedtree.value_description) =
       if !currentlyDisableWarnings then pos |> annotateLive;
       val_attributes
-      |> processAttributes ~doGenType ~name:(val_id |> Ident.name) ~pos;
+      |> processAttributes ~config ~doGenType ~name:(val_id |> Ident.name) ~pos;
       super.value_description self value_description
     in
     let structure_item self (item : Typedtree.structure_item) =
@@ -341,21 +340,23 @@ module ProcessDeadAnnotations = struct
       value_description;
     }
 
-  let structure ~doGenType structure =
-    let collectExportLocations = collectExportLocations ~doGenType in
+  let structure ~config ~doGenType structure =
+    let collectExportLocations = collectExportLocations ~config ~doGenType in
     structure
     |> collectExportLocations.structure collectExportLocations
     |> ignore
 
-  let signature signature =
-    let collectExportLocations = collectExportLocations ~doGenType:true in
+  let signature ~config signature =
+    let collectExportLocations =
+      collectExportLocations ~config ~doGenType:true
+    in
     signature
     |> collectExportLocations.signature collectExportLocations
     |> ignore
 end
 
-let addDeclaration_ ?posEnd ?posStart ~declKind ~path ~(loc : Location.t)
-    ?(posAdjustment = Nothing) ~moduleLoc (name : Name.t) =
+let addDeclaration_ ~config ?posEnd ?posStart ~declKind ~path
+    ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc (name : Name.t) =
   let pos = loc.loc_start in
   let posStart =
     match posStart with
@@ -376,7 +377,7 @@ let addDeclaration_ ?posEnd ?posStart ~declKind ~path ~(loc : Location.t)
     (not loc.loc_ghost)
     && (!currentSrc = pos.pos_fname || !currentModule == "*include*")
   then (
-    if !Cli.debug then
+    if config.DceConfig.cli.debug then
       Log_.item "add%sDeclaration %s %s path:%s@."
         (declKind |> DeclKind.toString)
         (name |> Name.toString) (pos |> posToString) (path |> Path.toString);
@@ -395,14 +396,14 @@ let addDeclaration_ ?posEnd ?posStart ~declKind ~path ~(loc : Location.t)
     in
     PosHash.replace decls pos decl)
 
-let addValueDeclaration ?(isToplevel = true) ~(loc : Location.t) ~moduleLoc
-    ?(optionalArgs = OptionalArgs.empty) ~path ~sideEffects name =
+let addValueDeclaration ~config ?(isToplevel = true) ~(loc : Location.t)
+    ~moduleLoc ?(optionalArgs = OptionalArgs.empty) ~path ~sideEffects name =
   name
-  |> addDeclaration_
+  |> addDeclaration_ ~config
        ~declKind:(Value {isToplevel; optionalArgs; sideEffects})
        ~loc ~moduleLoc ~path
 
-let emitWarning ~decl ~message deadWarning =
+let emitWarning ~config ~decl ~message deadWarning =
   let loc = decl |> declGetLoc in
   let isToplevelValueWithSideEffects decl =
     match decl.declKind with
@@ -416,13 +417,13 @@ let emitWarning ~decl ~message deadWarning =
   in
   let lineAnnotation =
     if shouldWriteLineAnnotation then
-      WriteDeadAnnotations.addLineAnnotation ~decl
+      WriteDeadAnnotations.addLineAnnotation ~config ~decl
     else None
   in
   decl.path
   |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
-  |> DeadModules.checkModuleDead ~fileName:decl.pos.pos_fname;
-  Log_.warning ~loc
+  |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname;
+  Log_.warning ~config ~loc
     (DeadWarning
        {
          deadWarning;
@@ -515,7 +516,7 @@ module Decl = struct
           ReportingContext.set_max_end ctx decl.posEnd;
     insideReportedValue
 
-  let report (ctx : ReportingContext.t) decl =
+  let report ~config (ctx : ReportingContext.t) decl =
     let insideReportedValue = decl |> isInsideReportedValue ctx in
     if decl.report then
       let name, message =
@@ -563,13 +564,13 @@ module Decl = struct
         && (match decl.path with
            | name :: _ when name |> Name.isUnderscore -> Config.reportUnderscore
            | _ -> true)
-        && (runConfig.transitive || not (hasRefBelow ()))
+        && (config.DceConfig.run.transitive || not (hasRefBelow ()))
       in
       if shouldEmitWarning then (
         decl.path
         |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
-        |> DeadModules.checkModuleDead ~fileName:decl.pos.pos_fname;
-        emitWarning ~decl ~message name)
+        |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname;
+        emitWarning ~config ~decl ~message name)
 end
 
 let declIsDead ~refs decl =
@@ -582,8 +583,10 @@ let declIsDead ~refs decl =
 
 let doReportDead pos = not (ProcessDeadAnnotations.isAnnotatedGenTypeOrDead pos)
 
-let rec resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations ~level
-    ~orderedFiles ~refs ~refsBeingResolved decl : bool =
+let rec resolveRecursiveRefs ~config
+    ~checkOptionalArg:(checkOptionalArgFn : config:DceConfig.t -> decl -> unit)
+    ~deadDeclarations ~level ~orderedFiles ~refs ~refsBeingResolved decl : bool
+    =
   match decl.pos with
   | _ when decl.resolvedDead <> None ->
     if Config.recursiveDebug then
@@ -627,7 +630,8 @@ let rec resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations ~level
                  in
                  let xDeclIsDead =
                    xDecl
-                   |> resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations
+                   |> resolveRecursiveRefs ~config
+                        ~checkOptionalArg:checkOptionalArgFn ~deadDeclarations
                         ~level:(level + 1) ~orderedFiles ~refs:xRefs
                         ~refsBeingResolved
                  in
@@ -640,7 +644,7 @@ let rec resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations ~level
       decl.resolvedDead <- Some isDead;
       if isDead then (
         decl.path
-        |> DeadModules.markDead
+        |> DeadModules.markDead ~config
              ~isType:(decl.declKind |> DeclKind.isType)
              ~loc:decl.moduleLoc;
         if not (decl.pos |> doReportDead) then decl.report <- false;
@@ -648,15 +652,15 @@ let rec resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations ~level
         if not (Decl.isToplevelValueWithSideEffects decl) then
           decl.pos |> ProcessDeadAnnotations.annotateDead)
       else (
-        checkOptionalArg decl;
+        checkOptionalArgFn ~config decl;
         decl.path
-        |> DeadModules.markLive
+        |> DeadModules.markLive ~config
              ~isType:(decl.declKind |> DeclKind.isType)
              ~loc:decl.moduleLoc;
         if decl.pos |> ProcessDeadAnnotations.isAnnotatedDead then
-          emitWarning ~decl ~message:" is annotated @dead but is live"
+          emitWarning ~config ~decl ~message:" is annotated @dead but is live"
             IncorrectDeadAnnotation);
-      if !Cli.debug then
+      if config.DceConfig.cli.debug then
         let refsString =
           newRefs |> PosSet.elements |> List.map posToString
           |> String.concat ", "
@@ -671,18 +675,21 @@ let rec resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations ~level
           refsString level);
     isDead
 
-let reportDead ~checkOptionalArg =
+let reportDead ~config
+    ~checkOptionalArg:(checkOptionalArgFn : config:DceConfig.t -> decl -> unit)
+    =
   let iterDeclInOrder ~deadDeclarations ~orderedFiles decl =
     let refs =
       match decl |> Decl.isValue with
       | true -> ValueReferences.find decl.pos
       | false -> TypeReferences.find decl.pos
     in
-    resolveRecursiveRefs ~checkOptionalArg ~deadDeclarations ~level:0
-      ~orderedFiles ~refsBeingResolved:(ref PosSet.empty) ~refs decl
+    resolveRecursiveRefs ~config ~checkOptionalArg:checkOptionalArgFn
+      ~deadDeclarations ~level:0 ~orderedFiles
+      ~refsBeingResolved:(ref PosSet.empty) ~refs decl
     |> ignore
   in
-  if !Cli.debug then (
+  if config.DceConfig.cli.debug then (
     Log_.item "@.File References@.@.";
     let fileList = ref [] in
     FileReferences.iter (fun file files ->
@@ -698,7 +705,7 @@ let reportDead ~checkOptionalArg =
     PosHash.fold (fun _pos decl declarations -> decl :: declarations) decls []
   in
   let orderedFiles = Hashtbl.create 256 in
-  iterFilesFromRootsToLeaves
+  iterFilesFromRootsToLeaves ~config
     (let current = ref 0 in
      fun fileName ->
        incr current;
@@ -714,4 +721,4 @@ let reportDead ~checkOptionalArg =
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
   let reporting_ctx = ReportingContext.create () in
-  sortedDeadDeclarations |> List.iter (Decl.report reporting_ctx)
+  sortedDeadDeclarations |> List.iter (Decl.report ~config reporting_ctx)
