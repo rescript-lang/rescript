@@ -149,13 +149,17 @@ Each task should:
 **Value**: Can run analysis with different configs without mutating globals. Can test with different configs.
 
 **Changes**:
-- [ ] Use the `DceConfig.t` already created, thread it through analysis functions
-- [ ] Replace all `!Common.Cli.debug`, `runConfig.transitive`, etc. reads with `config.debug`, `config.run.transitive`
-- [ ] Only `DceConfig.current()` reads globals; everything else uses explicit config
+- [x] ~~Use the `DceConfig.t` already created, thread it through DCE analysis functions~~
+- [x] ~~Replace all DCE code's `!Common.Cli.debug`, `runConfig.transitive`, etc. reads with `config.debug`, `config.run.transitive`~~
+- [x] ~~Make all config parameters required (not optional) - no `config option` anywhere~~
+- [ ] **Thread config through Exception and Arnold analyses** - they currently call `DceConfig.current()` at each use site
+- [ ] **Single entry point**: Only `Reanalyze.runAnalysisAndReport` should call `DceConfig.current()` once, then pass explicit config everywhere
+
+**Status**: DCE code complete ✅. Exception/Arnold still need threading.
 
 **Test**: Create two configs with different settings, run analysis with each - should respect the config, not read globals.
 
-**Estimated effort**: Medium (many small changes across multiple files)
+**Estimated effort**: Medium (DCE done; Exception/Arnold similar effort)
 
 ### Task 3: Make `ProcessDeadAnnotations` state explicit (P3)
 
@@ -253,7 +257,20 @@ Each task should:
 
 **Estimated effort**: Small (single module)
 
-### Task 10: Integration and order-independence verification
+### Task 10: Verify zero `DceConfig.current()` calls in analysis code
+
+**Value**: Enforce purity - no hidden global reads.
+
+**Changes**:
+- [ ] Verify `DceConfig.current()` only called in `Reanalyze.runAnalysisAndReport` (entry point)
+- [ ] Verify no calls to `DceConfig.current()` in `Dead*.ml`, `Exception.ml`, `Arnold.ml` analysis code
+- [ ] All analysis functions take explicit `~config` parameter
+
+**Test**: `grep -r "DceConfig.current" analysis/reanalyze/src/{Dead,Exception,Arnold}.ml` returns zero results.
+
+**Estimated effort**: Trivial (verification only, assuming Task 2 complete)
+
+### Task 11: Integration and order-independence verification
 
 **Value**: Verify the refactor achieved its goals.
 
@@ -271,13 +288,15 @@ Each task should:
 
 ## Execution Strategy
 
-**Recommended order**: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
+**Recommended order**: 1 → 2 (complete all analyses) → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 (verify) → 11 (test)
 
 **Why this order?**
 - Tasks 1-2 remove implicit dependencies (file context, config) - these are foundational
+- Task 2 must be **fully complete** (DCE + Exception + Arnold) before proceeding
 - Tasks 3-7 localize global state - can be done incrementally once inputs are explicit
 - Tasks 8-9 separate pure/impure - can only do this once state is local
-- Task 10 validates everything
+- Task 10 verifies no global config reads remain
+- Task 11 validates everything
 
 **Alternative**: Could do 3-7 in any order (they're mostly independent).
 
@@ -295,6 +314,7 @@ After all tasks:
 ✅ **No global mutable state in analysis path**
 - No `ref` or mutable `Hashtbl` in `Dead*.ml` modules
 - All state is local or explicitly threaded
+- **Zero `DceConfig.current()` calls in analysis code** - only at entry point
 
 ✅ **Order independence**
 - Processing files in any order gives identical results

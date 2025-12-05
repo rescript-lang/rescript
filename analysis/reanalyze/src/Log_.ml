@@ -107,11 +107,11 @@ let missingRaiseInfoToText {missingAnnotations; locFull} =
       ~text:(Format.asprintf "@throws(%s)\\n" missingTxt)
   else ""
 
-let logAdditionalInfo ~(description : description) =
+let logAdditionalInfo ~config ~(description : description) =
   match description with
   | DeadWarning {lineAnnotation; shouldWriteLineAnnotation} ->
     if shouldWriteLineAnnotation then
-      WriteDeadAnnotations.lineAnnotationToString lineAnnotation
+      WriteDeadAnnotations.lineAnnotationToString ~config lineAnnotation
     else ""
   | ExceptionAnalysisMissing missingRaiseInfo ->
     missingRaiseInfoToText missingRaiseInfo
@@ -166,10 +166,10 @@ let descriptionToName (description : description) =
   | Termination {termination = TerminationAnalysisInternal} ->
     Issues.terminationAnalysisInternal
 
-let logIssue ~(issue : issue) =
+let logIssue ~config ~(issue : issue) =
   let open Format in
   let loc = issue.loc in
-  if !Cli.json then
+  if config.DceConfig.cli.json then
     let file = Json.escape loc.loc_start.pos_fname in
     let startLine = loc.loc_start.pos_lnum - 1 in
     let startCharacter = loc.loc_start.pos_cnum - loc.loc_start.pos_bol in
@@ -187,8 +187,8 @@ let logIssue ~(issue : issue) =
           ~range:(startLine, startCharacter, endLine, endCharacter)
           ~message)
       ()
-      (logAdditionalInfo ~description:issue.description)
-      (if !Cli.json then EmitJson.emitClose () else "")
+      (logAdditionalInfo ~config ~description:issue.description)
+      (if config.DceConfig.cli.json then EmitJson.emitClose () else "")
   else
     let color =
       match issue.severity with
@@ -197,7 +197,7 @@ let logIssue ~(issue : issue) =
     in
     asprintf "@.  %a@.  %a@.  %s%s@." color issue.name Loc.print issue.loc
       (descriptionToMessage issue.description)
-      (logAdditionalInfo ~description:issue.description)
+      (logAdditionalInfo ~config ~description:issue.description)
 
 module Stats = struct
   let issues = ref []
@@ -225,11 +225,11 @@ module Stats = struct
     in
     (issues |> List.sort (fun (n1, _) (n2, _) -> String.compare n1 n2), nIssues)
 
-  let report () =
+  let report ~config =
     !issues |> List.rev
-    |> List.iter (fun issue -> logIssue ~issue |> print_string);
+    |> List.iter (fun issue -> logIssue ~config ~issue |> print_string);
     let sortedIssues, nIssues = getSortedIssues () in
-    if not !Cli.json then (
+    if not config.DceConfig.cli.json then (
       if sortedIssues <> [] then item "@.";
       item "Analysis reported %d issues%s@." nIssues
         (match sortedIssues with
@@ -247,7 +247,7 @@ let logIssue ~forStats ~severity ~(loc : Location.t) description =
   if Suppress.filter loc.loc_start then
     if forStats then Stats.addIssue {name; severity; loc; description}
 
-let warning ?(forStats = true) ~loc description =
+let warning ~config ?(forStats = true) ~loc description =
   description |> logIssue ~severity:Warning ~forStats ~loc
 
 let error ~loc description =
