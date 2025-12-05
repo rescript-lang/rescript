@@ -57,9 +57,41 @@ opam switch create 5.3.0
 opam install . --deps-only --with-test --with-dev-setup -y
 ```
 
+> [!TIP]
+> If you have
+>
+> ```sh
+> $ git config --global core.fsmonitor
+> true
+> ```
+>
+> and get an error when running the `opam install` command
+>
+> ```sh
+> #=== ERROR while compiling flow_parser.0.267.0 ================================#
+> Copying sockets (rescript/_opam/.opam-switch/sources/flow_parser/.git/fsmonitor--daemon.ipc) is unsupported
+> ```
+>
+> Run this:
+>
+> ```sh
+> cd _opam/.opam-switch/sources/flow_parser \
+>   && git config core.fsmonitor false \
+>   && rm -f .git/fsmonitor--daemon.ipc
+> ```
+
 #### npm install
 
 Run `yarn install`. This will install the npm dependencies required for the build scripts.
+
+#### rustup install
+
+[Rewatch](./rewatch/) is built with rust. Make sure you have [rustup](https://rustup.rs/) installed to manage rust versions.
+
+```sh
+rustup toolchain install 1.91
+rustup override set 1.91
+```
 
 ### B. Devcontainer
 
