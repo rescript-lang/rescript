@@ -1,385 +1,314 @@
 ## Dead Code Analysis – Pure Pipeline Refactor Plan
 
-This document tracks the plan to turn the **reanalyze dead code analysis** into a transparent, effect‑free pipeline expressed as pure function composition. It is deliberately fine‑grained so each task can be done and checked off independently, while always keeping the system runnable and behaviour‑preserving.
+**Goal**: Turn the reanalyze dead code analysis into a transparent, effect-free pipeline where:
+- Analysis is a pure function from inputs → results
+- Global mutable state is eliminated
+- Side effects (logging, file I/O) live at the edges
+- Processing files in different orders gives the same results
 
-Scope: only the **dead code / DCE** parts under `analysis/reanalyze/src`:
-- `Reanalyze.ml` (DCE wiring)
-- `DeadCode.ml`
-- `DeadCommon.ml`
-- `DeadValue.ml`
-- `DeadType.ml`
-- `DeadOptionalArgs.ml`
-- `DeadException.ml`
-- `DeadModules.ml`
-- `SideEffects.ml`
-- `WriteDeadAnnotations.ml` (only the pieces tied to DCE)
-- Supporting shared state in `Common.ml`, `ModulePath.ml`, `Paths.ml`, `RunConfig.ml`, `Log_.ml`
-
-Exception and termination analyses (`Exception.ml`, `Arnold.ml`, etc.) are out of scope except where they share state that must be disentangled.
+**Why?** The current architecture makes:
+- Incremental/reactive analysis impossible (can't reprocess one file)
+- Testing hard (global state persists between tests)
+- Parallelization impossible (shared mutable state)
+- Reasoning difficult (order-dependent hidden mutations)
 
 ---
 
-## 1. Target Architecture: Pure Pipeline (End State)
+## Current Problems (What We're Fixing)
 
-This section describes the desired **end state**, not something to implement in one big change.
+### P1: Global "current file" context
+**Problem**: `Common.currentSrc`, `currentModule`, `currentModuleName` are global refs set before processing each file. Every function implicitly depends on "which file are we processing right now?". This makes it impossible to process multiple files concurrently or incrementally.
 
-### 1.1 Top‑level inputs and outputs
+**Used by**: `DeadCommon.addDeclaration_`, `DeadType.addTypeDependenciesAcrossFiles`, `DeadValue` path construction.
 
-**Inputs**
-- CLI / configuration:
-  - `RunConfig.t` (DCE flags, project root, transitive, suppression lists, etc.).
-  - CLI flags from `Common.Cli` (`debug`, `ci`, `json`, `write`, `liveNames`, `livePaths`, `excludePaths`).
-- Project context:
-  - Root directory / `cmtRoot` or inferred `projectRoot`.
-  - Discovered `cmt` / `cmti` files and their associated source files.
-- Per‑file compiler artifacts:
-  - `Cmt_format.cmt_infos` for each `*.cmt` / `*.cmti`.
+### P2: Global analysis tables
+**Problem**: All analysis results accumulate in global hashtables:
+- `DeadCommon.decls` - all declarations
+- `ValueReferences.table` - all value references  
+- `TypeReferences.table` - all type references
+- `FileReferences.table` - cross-file dependencies
 
-**Outputs**
-- Pure analysis results:
-  - List of `Common.issue` values (dead values, dead types, dead exceptions, dead modules, dead/always‑supplied optional args, incorrect `@dead` annotations, circular dependency warnings).
-  - Derived `@dead` line annotations per file (to be written back to source when enabled).
-- Side‑effectful consumers (kept at the edges):
-  - Terminal logging / JSON output (`Log_`, `EmitJson`).
-  - File rewriting for `@dead` annotations (`WriteDeadAnnotations`).
+**Impact**: Can't analyze a subset of files without reanalyzing everything. Can't clear state between test runs without module reloading.
 
-### 1.2 File‑level pure API (end state)
+### P3: Delayed/deferred processing queues
+**Problem**: Several analyses use global queues that get "flushed" later:
+- `DeadOptionalArgs.delayedItems` - deferred optional arg analysis
+- `DeadException.delayedItems` - deferred exception checks
+- `DeadType.TypeDependencies.delayedItems` - deferred type deps
+- `ProcessDeadAnnotations.positionsAnnotated` - annotation tracking
 
-Conceptual end‑state per‑file API:
+**Impact**: Order-dependent. Processing files in different orders can give different results because queue processing happens at arbitrary times.
+
+### P4: Global configuration reads
+**Problem**: Analysis code directly reads `!Common.Cli.debug`, `RunConfig.runConfig.transitive`, etc. scattered throughout. Can't run analysis with different configs without mutating globals.
+
+### P5: Side effects mixed with analysis
+**Problem**: Analysis functions directly call:
+- `Log_.warning` - logging
+- `EmitJson` - JSON output  
+- `WriteDeadAnnotations` - file I/O
+- Direct mutation of result data structures
+
+**Impact**: Can't get analysis results as data. Can't test without capturing I/O. Can't reuse analysis logic for different output formats.
+
+### P6: Binding/reporting state
+**Problem**: `DeadCommon.Current.bindings`, `lastBinding`, `maxValuePosEnd` are per-file state stored globally.
+
+**Status**: ✅ ALREADY FIXED in previous work - now explicit state threaded through traversals.
+
+---
+
+## End State
 
 ```ocaml
-type cli_config = {
+(* Configuration: all inputs as immutable data *)
+type config = {
+  run : RunConfig.t;          (* transitive, suppress lists, etc. *)
   debug : bool;
-  ci : bool;
   write_annotations : bool;
   live_names : string list;
   live_paths : string list;
   exclude_paths : string list;
 }
 
-type dce_config = {
-  run : RunConfig.t;
-  cli : cli_config;
-}
-
-type file_input = {
-  cmt_path : string;
+(* Per-file analysis state - everything needed to analyze one file *)
+type file_state = {
   source_path : string;
-  cmt_infos : Cmt_format.cmt_infos;
+  module_name : Name.t;
+  is_interface : bool;
+  annotations : annotation_state;
+  (* ... other per-file state *)
 }
 
-type file_dce_result = {
+(* Project-level analysis state - accumulated across all files *)
+type project_state = {
+  decls : decl PosHash.t;
+  value_refs : PosSet.t PosHash.t;
+  type_refs : PosSet.t PosHash.t;
+  file_refs : FileSet.t FileHash.t;
+  optional_args : optional_args_state;
+  exceptions : exception_state;
+  (* ... *)
+}
+
+(* Pure analysis function *)
+val analyze_file : config -> file_state -> project_state -> Cmt_format.cmt_infos -> project_state
+
+(* Pure deadness solver *)
+val solve_deadness : config -> project_state -> analysis_result
+
+type analysis_result = {
+  dead_decls : decl list;
   issues : Common.issue list;
-  dead_annotations : WriteDeadAnnotations.line_annotation list;
+  annotations_to_write : (string * line_annotation list) list;
 }
 
-val analyze_file_dce : dce_config -> file_input -> file_dce_result
+(* Side effects at the edge *)
+let run_analysis ~config ~cmt_files =
+  (* Pure: analyze all files *)
+  let project_state = 
+    cmt_files 
+    |> List.fold_left (fun state file -> 
+         analyze_file config (file_state_for file) state (load_cmt file)
+       ) empty_project_state
+  in
+  (* Pure: solve deadness *)
+  let result = solve_deadness config project_state in
+  (* Impure: report results *)
+  result.issues |> List.iter report_issue;
+  if config.write_annotations then 
+    result.annotations_to_write |> List.iter write_annotations_to_file
 ```
 
-The implementation of `analyze_file_dce` should be expressible as composition of small, pure steps (collect annotations, collect decls and refs, resolve dependencies, solve deadness, derive issues/annotations).
+---
 
-### 1.3 Project‑level pure API (end state)
+## Refactor Tasks
 
-End‑state project‑level API:
+Each task should:
+- ✅ Fix a real problem listed above
+- ✅ Leave the code in a measurably better state
+- ✅ Be testable (behavior preserved, but architecture improved)
+- ❌ NOT add scaffolding that isn't immediately used
 
-```ocaml
-type project_input = {
-  config : dce_config;
-  files : file_input list;
-}
+### Task 1: Remove global "current file" context (P1)
 
-type project_dce_result = {
-  per_file : (string * file_dce_result) list; (* keyed by source path *)
-  cross_file_issues : Common.issue list;      (* e.g. circular deps, dead modules *)
-}
+**Value**: Makes it possible to process files concurrently or out of order.
 
-val analyze_project_dce : project_input -> project_dce_result
-```
+**Changes**:
+- [ ] Create `DeadFileContext.t` type with `source_path`, `module_name`, `is_interface` fields
+- [ ] Thread through `DeadCode.processCmt`, `DeadValue`, `DeadType`, `DeadCommon.addDeclaration_`
+- [ ] Remove all reads of `Common.currentSrc`, `currentModule`, `currentModuleName` from DCE code
+- [ ] Delete the globals (or mark as deprecated if still used by Exception/Arnold)
 
-The actual implementation will be obtained incrementally by refactoring existing code; we do **not** introduce these types until they are immediately used in a small, behaviour‑preserving change.
+**Test**: Run analysis on same files but vary the order - should get identical results.
+
+**Estimated effort**: Medium (touches ~10 functions, mostly mechanical)
+
+### Task 2: Extract configuration into explicit value (P4)
+
+**Value**: Can run analysis with different configs without mutating globals. Can test with different configs.
+
+**Changes**:
+- [ ] Use the `DceConfig.t` already created, thread it through analysis functions
+- [ ] Replace all `!Common.Cli.debug`, `runConfig.transitive`, etc. reads with `config.debug`, `config.run.transitive`
+- [ ] Only `DceConfig.current()` reads globals; everything else uses explicit config
+
+**Test**: Create two configs with different settings, run analysis with each - should respect the config, not read globals.
+
+**Estimated effort**: Medium (many small changes across multiple files)
+
+### Task 3: Make `ProcessDeadAnnotations` state explicit (P3)
+
+**Value**: Removes hidden global state. Makes annotation tracking testable.
+
+**Changes**:
+- [ ] Change `ProcessDeadAnnotations` functions to take/return explicit `state` instead of mutating `positionsAnnotated` ref
+- [ ] Thread `annotation_state` through `DeadCode.processCmt`
+- [ ] Delete the global `positionsAnnotated`
+
+**Test**: Process two files "simultaneously" (two separate state values) - should not interfere.
+
+**Estimated effort**: Small (well-scoped module)
+
+### Task 4: Localize analysis tables (P2) - Part 1: Declarations
+
+**Value**: First step toward incremental analysis. Can analyze a subset of files with isolated state.
+
+**Changes**:
+- [ ] Change `DeadCommon.addDeclaration_` and friends to take `decl_state : decl PosHash.t` parameter
+- [ ] Thread through `DeadCode.processCmt` - allocate fresh state, pass through, return updated state
+- [ ] Accumulate per-file states in `Reanalyze.processCmtFiles`
+- [ ] Delete global `DeadCommon.decls`
+
+**Test**: Analyze files with separate decl tables - should not interfere.
+
+**Estimated effort**: Medium (core data structure, many call sites)
+
+### Task 5: Localize analysis tables (P2) - Part 2: References
+
+**Value**: Completes the localization of analysis state.
+
+**Changes**:
+- [ ] Same pattern as Task 4 but for `ValueReferences.table` and `TypeReferences.table`
+- [ ] Thread explicit `value_refs` and `type_refs` parameters
+- [ ] Delete global reference tables
+
+**Test**: Same as Task 4.
+
+**Estimated effort**: Medium (similar to Task 4)
+
+### Task 6: Localize delayed processing queues (P3)
+
+**Value**: Removes order dependence. Makes analysis deterministic.
+
+**Changes**:
+- [ ] `DeadOptionalArgs`: Thread explicit `state` with `delayed_items` and `function_refs`, delete global refs
+- [ ] `DeadException`: Thread explicit `state` with `delayed_items` and `declarations`, delete global refs
+- [ ] `DeadType.TypeDependencies`: Thread explicit `type_deps_state`, delete global ref
+- [ ] Update `forceDelayedItems` calls to operate on explicit state
+
+**Test**: Process files in different orders - delayed items should be processed consistently.
+
+**Estimated effort**: Medium (3 modules, each similar to Task 3)
+
+### Task 7: Localize file/module tracking (P2 + P3)
+
+**Value**: Removes last major global state. Makes cross-file analysis explicit.
+
+**Changes**:
+- [ ] `FileReferences`: Replace global `table` with explicit `file_refs_state` parameter
+- [ ] `DeadModules`: Replace global `table` with explicit `module_state` parameter  
+- [ ] Thread both through analysis pipeline
+- [ ] `iterFilesFromRootsToLeaves`: take explicit state, return ordered file list (pure)
+
+**Test**: Build file reference graph in isolation, verify topological ordering is correct.
+
+**Estimated effort**: Medium (cross-file logic, but well-contained)
+
+### Task 8: Separate analysis from reporting (P5)
+
+**Value**: Core analysis is now pure. Can get results as data. Can test without I/O.
+
+**Changes**:
+- [ ] `DeadCommon.reportDead`: Return `issue list` instead of calling `Log_.warning`
+- [ ] `Decl.report`: Return `issue` instead of logging
+- [ ] Remove all `Log_.warning`, `Log_.item`, `EmitJson` calls from `Dead*.ml` modules
+- [ ] `Reanalyze.runAnalysis`: Call pure analysis, then separately report issues
+
+**Test**: Run analysis, capture result list, verify no I/O side effects occurred.
+
+**Estimated effort**: Medium (many logging call sites, but mechanical)
+
+### Task 9: Separate annotation computation from file writing (P5)
+
+**Value**: Can compute what to write without actually writing. Testable.
+
+**Changes**:
+- [ ] `WriteDeadAnnotations`: Split into pure `compute_annotations` and impure `write_to_files`
+- [ ] Pure function takes deadness results, returns `(filepath * line_annotation list) list`
+- [ ] Impure function takes that list and does file I/O
+- [ ] Remove file I/O from analysis path
+
+**Test**: Compute annotations, verify correct without touching filesystem.
+
+**Estimated effort**: Small (single module)
+
+### Task 10: Integration and order-independence verification
+
+**Value**: Verify the refactor achieved its goals.
+
+**Changes**:
+- [ ] Write property test: process files in random orders, verify identical results
+- [ ] Write test: analyze with different configs, verify each is respected
+- [ ] Write test: analyze subset of files without initializing globals
+- [ ] Document the new architecture and API
+
+**Test**: The tests are the task.
+
+**Estimated effort**: Small (mostly writing tests)
 
 ---
 
-## 2. Current Mutation and Order Dependencies (High‑Level)
+## Execution Strategy
 
-This section summarises the main sources of mutation / order dependence that the tasks in §4 will address.
+**Recommended order**: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
 
-### 2.1 Global “current file” context
+**Why this order?**
+- Tasks 1-2 remove implicit dependencies (file context, config) - these are foundational
+- Tasks 3-7 localize global state - can be done incrementally once inputs are explicit
+- Tasks 8-9 separate pure/impure - can only do this once state is local
+- Task 10 validates everything
 
-- `Common.currentSrc : string ref`
-- `Common.currentModule : string ref`
-- `Common.currentModuleName : Name.t ref`
-- Set in `Reanalyze.loadCmtFile` before calling `DeadCode.processCmt`.
-- Read by:
-  - `DeadCommon.addDeclaration_` (filters declarations by `!currentSrc`).
-  - `DeadType.addTypeDependenciesAcrossFiles` (decides interface vs implementation using `!currentSrc`).
-  - `DeadValue` (builds paths using `!currentModuleName`).
+**Alternative**: Could do 3-7 in any order (they're mostly independent).
 
-### 2.2 Global declaration / reference tables and binding state
-
-In `DeadCommon`:
-- `decls : decl PosHash.t` – all declarations.
-- `ValueReferences.table` – value references.
-- `TypeReferences.table` – type references.
-- `Current.bindings`, `Current.lastBinding`, `Current.maxValuePosEnd` – per‑file binding/reporting state.
-- `ProcessDeadAnnotations.positionsAnnotated` – global annotation map.
-- `FileReferences.table` / `iterFilesFromRootsToLeaves` – cross‑file graph and ordering using `Hashtbl`s.
-- `reportDead` – mutates global state, constructs orderings, and logs warnings directly.
-
-### 2.3 Per‑analysis mutable queues/sets
-
-- `DeadOptionalArgs.delayedItems` / `functionReferences`.
-- `DeadException.delayedItems` / `declarations`.
-- `DeadType.TypeDependencies.delayedItems`.
-- `DeadModules.table`.
-
-All of these are refs or Hashtbls, updated during traversal and flushed later, with ordering mattering.
-
-### 2.4 CLI/config globals and logging / annotation I/O
-
-- `Common.Cli` refs, `RunConfig.runConfig` mutation.
-- `Log_.warning`, `Log_.item`, `EmitJson` calls inside analysis modules.
-- `WriteDeadAnnotations` holding refs to current file and lines, writing directly during analysis.
+**Time estimate**: 
+- Best case (everything goes smoothly): 2-3 days
+- Realistic (with bugs/complications): 1 week  
+- Worst case (major architectural issues): 2 weeks
 
 ---
 
-## 3. End‑State Summary
+## Success Criteria
 
-At the end of the refactor:
+After all tasks:
 
-- All DCE computations are pure:
-  - No `ref` / mutable `Hashtbl` in the core analysis path.
-  - No writes to global state from `Dead*` modules.
-  - No direct logging or file I/O from the dead‑code logic.
-- Impure actions live only at the edges:
-  - CLI parsing (`Reanalyze.cli`).
-  - Discovering `cmt` / `cmti` files.
-  - Logging / JSON (`Log_`, `EmitJson`).
-  - Applying annotations to files (`WriteDeadAnnotations`).
-- Results are order‑independent:
-  - Processing files in different orders yields the same `project_dce_result`.
+✅ **No global mutable state in analysis path**
+- No `ref` or mutable `Hashtbl` in `Dead*.ml` modules
+- All state is local or explicitly threaded
 
----
+✅ **Order independence**
+- Processing files in any order gives identical results
+- Property test verifies this
 
-## 4. Refactor Tasks – From Mutable to Pure
+✅ **Pure analysis function**
+- Can call analysis and get results as data
+- No side effects (logging, file I/O) during analysis
 
-This section lists **small, incremental changes**. Each checkbox is intended as a single PR/patch that:
-- Starts from a clean, runnable state and returns to a clean, runnable state.
-- Does **not** change user‑visible behaviour of DCE.
-- Only introduces data structures that are immediately used to remove a specific mutation or implicit dependency.
+✅ **Incremental analysis possible**
+- Can create empty state and analyze just one file
+- Can update state with new file without reanalyzing everything
 
-Think “replace one wheel at a time while the car is moving”: every step should feel like a polished state, not a half‑converted architecture.
-
-### 4.1 Make DCE configuration explicit (minimal surface)
-
-Goal: introduce an explicit configuration value for DCE **without** changing how internals read it yet.
-
-- [ ] Add a small `dce_config` record type (e.g. in `RunConfig.ml` or a new `DceConfig.ml`) that just wraps existing data, for example:
-      `type dce_config = { run : RunConfig.t; cli_debug : bool; cli_json : bool; cli_write : bool }`
-- [ ] Add a helper `DceConfig.current () : dce_config` that reads from `RunConfig.runConfig` and `Common.Cli` and returns a value.
-- [ ] Change `Reanalyze.runAnalysis` to take a `dce_config` parameter, but initially always pass `DceConfig.current ()` and keep all existing global reads unchanged.
-
-Result: a single, well‑typed configuration value is threaded at the top level, but internals still use the old globals. No behaviour change.
-
-### 4.2 Encapsulate global “current file” state (one module at a time)
-
-Goal: step‑wise removal of `Common.currentSrc`, `currentModule`, `currentModuleName` as implicit inputs.
-
-- [ ] Define a lightweight `file_ctx` record (e.g. in a new `DeadFileContext` module):
-      `type t = { source_path : string; module_name : Name.t; module_path : Name.t list; is_interface : bool }`
-- [ ] In `Reanalyze.loadCmtFile`, build a `file_ctx` value *in addition to* updating `Common.current*` so behaviour stays identical.
-- [ ] Update `DeadCommon.addDeclaration_` to take a `file_ctx` parameter and use it **only to replace** the check that currently uses `!currentSrc` / `!currentModule`. Call sites pass the new `file_ctx` while still relying on globals elsewhere.
-- [ ] In a follow‑up patch, change `DeadType.addTypeDependenciesAcrossFiles` to take `is_interface` from `file_ctx` instead of reading `!Common.currentSrc`. Again, call sites pass `file_ctx`.
-- [ ] Update `DeadValue` call sites that construct paths (using `!Common.currentModuleName`) to accept `file_ctx` and use its `module_name` instead.
-- [ ] Once all reads of `Common.currentSrc`, `currentModule`, `currentModuleName` in DCE code are replaced by fields from `file_ctx`, remove or deprecate these globals from the DCE path (they may still exist for other analyses).
-
-Each bullet above should be done as a separate patch touching only a small set of functions.
-
-### 4.3 Localise `Current.*` binding/reporting state
-
-Goal: remove `DeadCommon.Current` globals for binding/reporting by threading explicit state.
-
-- [x] Add `Current.state`/helpers in `DeadCommon` and thread it through `DeadValue` (bindings) and `DeadException.markAsUsed` so `last_binding` is no longer a global ref.
-- [x] Replace `Current.maxValuePosEnd` with a per‑reporting state in `Decl.report`/`reportDead` (now encapsulated in `ReportingContext`).
-- [x] Replace `addValueReference_state` with `addValueReference ~binding` so reference bookkeeping no longer threads `Current.state` or returns a fake “updated state”.
-- [x] Follow‑up: remove the remaining local `Current.state ref` in `BindingContext` by making traversals return an updated binding context (pure, no mutation). At that point, binding context becomes an explicit input/output of the traversal, not hidden state.
-
-### 4.4 Make `ProcessDeadAnnotations` state explicit
-
-Goal: turn `ProcessDeadAnnotations.positionsAnnotated` into an explicit value rather than a hidden global.
-
-- [ ] Introduce:
-      ```ocaml
-      module ProcessDeadAnnotations : sig
-        type state
-        val empty : state
-        (* new, pure API; existing API kept temporarily *)
-      end
-      ```
-- [ ] Add pure variants of the mutating functions:
-      - `annotateGenType' : state -> Lexing.position -> state`
-      - `annotateDead'   : state -> Lexing.position -> state`
-      - `annotateLive'   : state -> Lexing.position -> state`
-      - `isAnnotated*'   : state -> Lexing.position -> bool`
-      leaving the old global‑based functions in place for now.
-- [ ] Change `ProcessDeadAnnotations.structure` and `.signature` to:
-      - Take an explicit `state`,
-      - Call the `'` functions,
-      - Return the updated `state` along with the original AST.
-- [ ] Update `DeadCode.processCmt` to allocate a fresh `ProcessDeadAnnotations.state` per file, thread it through the structure/signature walkers, and store it alongside other per‑file information.
-- [ ] Once all users have switched to the state‑passing API, delete or deprecate direct uses of `positionsAnnotated` and the old global helpers.
-
-### 4.5 De‑globalize `DeadOptionalArgs` (minimal slice)
-
-Goal: remove the `delayedItems` and `functionReferences` refs, one small step at a time.
-
-- [ ] Introduce in `DeadOptionalArgs`:
-      ```ocaml
-      type state = {
-        delayed_items : item list;
-        function_refs : (Lexing.position * Lexing.position) list;
-      }
-
-      let empty_state = { delayed_items = []; function_refs = [] }
-      ```
-- [ ] Add pure variants:
-      - `addReferences' : state -> ... -> state`
-      - `addFunctionReference' : state -> ... -> state`
-      - `forceDelayedItems' : state -> decls -> state * decls`
-      and make the existing functions delegate to these, passing a hidden global `state` for now.
-- [ ] Update `DeadValue` to allocate a `DeadOptionalArgs.state` per file and call the `'` variants, **without** changing behaviour (the old global still exists for other callers until fully migrated).
-- [ ] Update `Reanalyze.runAnalysis` (or the relevant driver) to call `forceDelayedItems'` with an explicit state instead of `DeadOptionalArgs.forceDelayedItems`.
-- [ ] When all call sites use the new API, remove `delayedItems` and `functionReferences` refs and the global wrapper.
-
-### 4.6 De‑globalize `DeadException` (minimal slice)
-
-Goal: make delayed exception uses explicit.
-
-- [ ] Introduce:
-      ```ocaml
-      type state = {
-        delayed_items : item list;
-        declarations : (Path.t, Location.t) Hashtbl.t;
-      }
-
-      val empty_state : unit -> state
-      ```
-- [ ] Add state‑passing versions of `add`, `markAsUsed`, and `forceDelayedItems` that operate on a `state` value, with old variants delegating to them using a hidden global state.
-- [ ] Update `DeadValue` and any other DCE callers to allocate a `DeadException.state` per file and use the state‑passing API.
-- [ ] Replace the global `DeadException.forceDelayedItems` call in `Reanalyze.runAnalysis` with a call on the explicit state.
-- [ ] Remove the old globals once all uses go through the new API.
-
-### 4.7 Localise `decls`, `ValueReferences`, and `TypeReferences`
-
-Goal: move the main declaration and reference tables out of global scope, **one structure at a time**.
-
-- [ ] For `decls`:
-      - Introduce `type decl_state = decl PosHash.t`.
-      - Change `addDeclaration_` to take and return a `decl_state`, with an adapter that still passes the existing global `decls` to keep behaviour unchanged.
-      - Thread `decl_state` through `DeadValue`, `DeadType`, and `DeadCode.processCmt`, returning the updated `decl_state` per file.
-- [ ] For value references:
-      - Introduce `type value_refs_state = PosSet.t PosHash.t`.
-      - Parameterise `ValueReferences.add` / `find` over `value_refs_state`, with wrappers that still use the global table.
-      - Thread `value_refs_state` through the same paths that currently use `ValueReferences.table`.
-- [ ] For type references:
-      - Introduce `type type_refs_state = PosSet.t PosHash.t`.
-      - Parameterise `TypeReferences.add` / `find` over `type_refs_state` in the same way.
-- [ ] Once all three structures are threaded explicitly per file, delete the global `decls`, `ValueReferences.table`, and `TypeReferences.table` in DCE code and construct fresh instances in `DeadCode.processCmt`.
-
-Each of these bullets should be implemented as a separate patch (decls first, then value refs, then type refs).
-
-### 4.8 Pure `TypeDependencies` in `DeadType`
-
-Goal: make `DeadType.TypeDependencies` operate on explicit state rather than a ref.
-
-- [ ] Introduce `type type_deps_state = (Location.t * Location.t) list` (or a small record) to represent delayed type dependency pairs.
-- [ ] Change `TypeDependencies.add`, `clear`, and `forceDelayedItems` to take and return a `type_deps_state` instead of writing to a ref, keeping wrappers that still use the old global for the first patch.
-- [ ] Update `DeadType.addDeclaration` and any other callers to thread a `type_deps_state` along with other per‑file state.
-- [ ] Remove the global `delayedItems` ref once all calls have been migrated to the new API.
-
-### 4.9 De‑globalize `DeadModules`
-
-Goal: turn module deadness tracking into project‑level data passed explicitly.
-
-- [ ] Introduce `type module_dead_state = (Name.t, (bool * Location.t)) Hashtbl.t` in `DeadModules` and keep the existing `table` as `module_dead_state` for the first patch.
-- [ ] Change `markDead` and `markLive` to take a `module_dead_state` and operate on it, with wrappers that pass the global `table`.
-- [ ] Update the calls in deadness resolution (in `DeadCommon.resolveRecursiveRefs`) to use a `module_dead_state` passed in from the caller.
-- [ ] Replace `DeadModules.checkModuleDead` so that it:
-      - Takes `module_dead_state` and file name,
-      - Returns a list of `Common.issue` values, leaving logging to the caller.
-- [ ] Once all uses go through explicit state, remove the global `table` and construct a `module_dead_state` in a project‑level driver.
-
-### 4.10 Pure `FileReferences` and `iterFilesFromRootsToLeaves`
-
-Goal: make file ordering and cross‑file references explicit and order‑independent.
-
-- [ ] Extract `FileReferences.table` into a new type `file_refs_state` (e.g. `string -> FileSet.t`) and parameterise `add`, `addFile`, and `iter` over this state, with wrappers retaining the old global behaviour initially.
-- [ ] Rewrite `iterFilesFromRootsToLeaves` to:
-      - Take a `file_refs_state`,
-      - Return an ordered list of file names (plus any diagnostics for circular dependencies),
-      - Avoid any hidden mutation beyond local variables.
-- [ ] Update `DeadCommon.reportDead` to:
-      - Call the new pure `iterFilesFromRootsToLeaves`,
-      - Use the returned ordering instead of relying on a global `orderedFiles` table.
-- [ ] Remove the global `FileReferences.table` once the project‑level driver constructs and passes in a `file_refs_state`.
-
-### 4.11 Separate deadness solving from reporting
-
-Goal: compute which declarations are dead/live purely, then render/report in a separate step.
-
-- [ ] Extract the recursive deadness logic (`resolveRecursiveRefs`, `declIsDead`, plus the bookkeeping that populates `deadDeclarations`) into a function that:
-      - Takes a fully built project‑level state (decls, refs, annotations, module_dead_state),
-      - Returns the same state augmented with dead/live flags and a list of “dead declaration” descriptors.
-- [ ] Replace `Decl.report`’s direct calls to `Log_.warning` with construction of `Common.issue` values, collected into a list.
-- [ ] Change `DeadCommon.reportDead` to:
-      - Return the list of `issue`s instead of logging them,
-      - Leave logging and JSON emission to the caller (`Reanalyze`).
-
-This should only be done after the relevant state has been made explicit by earlier tasks.
-
-### 4.12 Make CLI / configuration explicit internally
-
-Goal: stop reading `Common.Cli.*` and `RunConfig.runConfig` directly inside DCE code.
-
-- [ ] Replace direct reads in `DeadCommon`, `DeadValue`, `DeadType`, `DeadOptionalArgs`, `DeadModules` with fields from the `dce_config` value introduced in 4.1, passed down from `Reanalyze`.
-- [ ] Ensure each function that previously reached into globals now takes the specific configuration flags it needs (or a narrowed config record), minimising the surface area.
-- [ ] Once all reads have been converted, keep `DceConfig.current ()` as the only place that touches the global `RunConfig` and `Common.Cli` for DCE.
-
-### 4.13 Isolate logging / JSON and annotation writing
-
-Goal: keep the core analysis free of side‑effects and move all I/O into thin wrappers.
-
-- [ ] Identify all calls to `Log_.warning`, `Log_.item`, and `EmitJson` in DCE modules and replace them with construction of `Common.issue` values (or similar purely data‑oriented records).
-- [ ] Add a `DceReporter` (or reuse `Reanalyze`) that:
-      - Takes `issue list`,
-      - Emits logs / JSON using `Log_` and `EmitJson`.
-- [ ] In `WriteDeadAnnotations`, introduce a pure function that, given per‑file deadness information, computes the textual updates to apply. Keep file I/O in a separate `apply_updates` wrapper.
-- [ ] Update `Reanalyze.runAnalysis` to:
-      - Call the pure analysis pipeline,
-      - Then call `DceReporter` and `WriteDeadAnnotations.apply_updates` as needed.
-
-### 4.14 Verify order independence
-
-Goal: ensure the new pure pipeline is not order‑dependent.
-
-- [ ] Add tests (or property checks) that:
-      - Compare `project_dce_result` when files are processed in different orders,
-      - Verify deadness decisions for declarations do not change with traversal order.
-- [ ] If order dependence is discovered, treat it as a bug and introduce explicit data flow to remove it (document any necessary constraints in this plan).
-
----
-
-## 5. Suggested Execution Order
-
-Recommended rough order of tasks (each remains independent and small):
-
-1. 4.1 – Introduce and thread `dce_config` at the top level.
-2. 4.2 – Start passing explicit `file_ctx` and remove `current*` reads.
-3. 4.3 / 4.4 – Localise binding state and annotation state.
-4. 4.5 / 4.6 / 4.7 / 4.8 – De‑globalize optional args, exceptions, decls/refs, and type dependencies in small slices.
-5. 4.9 / 4.10 – Make file/module state explicit and pure.
-6. 4.11 – Separate deadness solving from reporting, returning issues instead of logging.
-7. 4.12 / 4.13 – Remove remaining global config/logging/annotation side‑effects.
-8. 4.14 – Add and maintain order‑independence tests.
-
-Each checkbox above should be updated to `[x]` as the corresponding change lands, keeping the codebase runnable and behaviour‑preserving after every step.
+✅ **Testable**
+- Can test analysis without mocking I/O
+- Can test with different configs without mutating globals
+- Can test with isolated state
