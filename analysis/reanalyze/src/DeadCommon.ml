@@ -18,22 +18,6 @@ module Config = struct
   let warnOnCircularDependencies = false
 end
 
-module Current = struct
-  type state = {last_binding: Location.t; max_value_pos_end: Lexing.position}
-
-  let empty_state =
-    {last_binding = Location.none; max_value_pos_end = Lexing.dummy_pos}
-
-  let get_last_binding (s : state) = s.last_binding
-
-  let with_last_binding (loc : Location.t) (s : state) : state =
-    {s with last_binding = loc}
-
-  let get_max_end (s : state) = s.max_value_pos_end
-
-  let with_max_end (pos : Lexing.position) (s : state) : state =
-    {s with max_value_pos_end = pos}
-end
 
 let rec checkSub s1 s2 n =
   n <= 0
