@@ -2,23 +2,6 @@
 
 open DeadCommon
 
-module BindingContext = struct
-  (* Local, encapsulated mutable state for tracking the current binding location
-     during traversal. This ref does not escape the module. *)
-  type t = Current.state ref
-
-  let create () : t = ref Current.empty_state
-
-  let get_binding (ctx : t) : Location.t = !ctx |> Current.get_last_binding
-
-  let with_binding (ctx : t) (loc : Location.t) (f : unit -> 'a) : 'a =
-    let old_state = !ctx in
-    ctx := Current.with_last_binding loc old_state;
-    let result = f () in
-    ctx := old_state;
-    result
-end
-
 let checkAnyValueBindingWithNoSideEffects
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
       Typedtree.value_binding) =
@@ -123,10 +106,10 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
     (!supplied, !suppliedMaybe)
     |> DeadOptionalArgs.addReferences ~locFrom ~locTo ~path)
 
-let rec collectExpr ~(binding_ctx : BindingContext.t) super self
+let rec collectExpr ~(last_binding : Location.t) super self
     (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
-  let binding = BindingContext.get_binding binding_ctx in
+  let binding = last_binding in
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as locTo}) ->
     (* if Path.name _path = "rc" then assert false; *)
@@ -219,7 +202,7 @@ let rec collectExpr ~(binding_ctx : BindingContext.t) super self
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr ~binding_ctx super self e |> ignore
+             collectExpr ~last_binding super self e |> ignore
            | _ -> ())
   | _ -> ());
   super.Tast_mapper.expr self e
@@ -301,93 +284,101 @@ let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
   ModulePath.setCurrent oldModulePath
 
 (* Traverse the AST *)
-let traverseStructure ~doTypes ~doExternals =
-  let binding_ctx = BindingContext.create () in
-  let customize super =
-    let expr self e = e |> collectExpr ~binding_ctx super self in
-    let value_binding self vb =
-      let current_binding = BindingContext.get_binding binding_ctx in
-      let loc = vb |> collectValueBinding ~current_binding in
-      BindingContext.with_binding binding_ctx loc (fun () ->
-          super.Tast_mapper.value_binding self vb)
+let traverseStructure ~doTypes ~doExternals (structure : Typedtree.structure) :
+    unit =
+  let rec create_mapper (last_binding : Location.t) =
+    let super = Tast_mapper.default in
+    let rec mapper =
+      {
+        super with
+        expr = (fun _self e -> e |> collectExpr ~last_binding super mapper);
+        pat = (fun _self p -> p |> collectPattern super mapper);
+        structure_item =
+          (fun _self (structureItem : Typedtree.structure_item) ->
+            let oldModulePath = ModulePath.getCurrent () in
+            (match structureItem.str_desc with
+            | Tstr_module {mb_expr; mb_id; mb_loc} -> (
+              let hasInterface =
+                match mb_expr.mod_desc with
+                | Tmod_constraint _ -> true
+                | _ -> false
+              in
+              ModulePath.setCurrent
+                {
+                  oldModulePath with
+                  loc = mb_loc;
+                  path =
+                    (mb_id |> Ident.name |> Name.create) :: oldModulePath.path;
+                };
+              if hasInterface then
+                match mb_expr.mod_type with
+                | Mty_signature signature ->
+                  signature
+                  |> List.iter
+                       (processSignatureItem ~doTypes ~doValues:false
+                          ~moduleLoc:mb_expr.mod_loc
+                          ~path:
+                            ((ModulePath.getCurrent ()).path
+                            @ [!Common.currentModuleName]))
+                | _ -> ())
+            | Tstr_primitive vd when doExternals && !Config.analyzeExternals ->
+              let currentModulePath = ModulePath.getCurrent () in
+              let path = currentModulePath.path @ [!Common.currentModuleName] in
+              let exists =
+                match PosHash.find_opt decls vd.val_loc.loc_start with
+                | Some {declKind = Value _} -> true
+                | _ -> false
+              in
+              let id = vd.val_id |> Ident.name in
+              Printf.printf "Primitive %s\n" id;
+              if
+                (not exists) && id <> "unsafe_expr"
+                (* see https://github.com/BuckleScript/bucklescript/issues/4532 *)
+              then
+                id
+                |> Name.create ~isInterface:false
+                |> addValueDeclaration ~path ~loc:vd.val_loc
+                     ~moduleLoc:currentModulePath.loc ~sideEffects:false
+            | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
+              if !Config.analyzeTypes then
+                typeDeclarations
+                |> List.iter
+                     (fun (typeDeclaration : Typedtree.type_declaration) ->
+                       DeadType.addDeclaration ~typeId:typeDeclaration.typ_id
+                         ~typeKind:typeDeclaration.typ_type.type_kind)
+            | Tstr_include {incl_mod; incl_type} -> (
+              match incl_mod.mod_desc with
+              | Tmod_ident (_path, _lid) ->
+                let currentPath =
+                  (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
+                in
+                incl_type
+                |> List.iter
+                     (processSignatureItem ~doTypes
+                        ~doValues:false (* TODO: also values? *)
+                        ~moduleLoc:incl_mod.mod_loc ~path:currentPath)
+              | _ -> ())
+            | Tstr_exception {ext_id = id; ext_loc = loc} ->
+              let path =
+                (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
+              in
+              let name = id |> Ident.name |> Name.create in
+              name |> DeadException.add ~path ~loc ~strLoc:structureItem.str_loc
+            | _ -> ());
+            let result = super.structure_item mapper structureItem in
+            ModulePath.setCurrent oldModulePath;
+            result);
+        value_binding =
+          (fun _self vb ->
+            let loc = vb |> collectValueBinding ~current_binding:last_binding in
+            let nested_mapper = create_mapper loc in
+            super.Tast_mapper.value_binding nested_mapper vb);
+      }
     in
-    let pat self p = p |> collectPattern super self in
-    let structure_item self (structureItem : Typedtree.structure_item) =
-      let oldModulePath = ModulePath.getCurrent () in
-      (match structureItem.str_desc with
-      | Tstr_module {mb_expr; mb_id; mb_loc} -> (
-        let hasInterface =
-          match mb_expr.mod_desc with
-          | Tmod_constraint _ -> true
-          | _ -> false
-        in
-        ModulePath.setCurrent
-          {
-            oldModulePath with
-            loc = mb_loc;
-            path = (mb_id |> Ident.name |> Name.create) :: oldModulePath.path;
-          };
-        if hasInterface then
-          match mb_expr.mod_type with
-          | Mty_signature signature ->
-            signature
-            |> List.iter
-                 (processSignatureItem ~doTypes ~doValues:false
-                    ~moduleLoc:mb_expr.mod_loc
-                    ~path:
-                      ((ModulePath.getCurrent ()).path
-                      @ [!Common.currentModuleName]))
-          | _ -> ())
-      | Tstr_primitive vd when doExternals && !Config.analyzeExternals ->
-        let currentModulePath = ModulePath.getCurrent () in
-        let path = currentModulePath.path @ [!Common.currentModuleName] in
-        let exists =
-          match PosHash.find_opt decls vd.val_loc.loc_start with
-          | Some {declKind = Value _} -> true
-          | _ -> false
-        in
-        let id = vd.val_id |> Ident.name in
-        Printf.printf "Primitive %s\n" id;
-        if
-          (not exists) && id <> "unsafe_expr"
-          (* see https://github.com/BuckleScript/bucklescript/issues/4532 *)
-        then
-          id
-          |> Name.create ~isInterface:false
-          |> addValueDeclaration ~path ~loc:vd.val_loc
-               ~moduleLoc:currentModulePath.loc ~sideEffects:false
-      | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
-        if !Config.analyzeTypes then
-          typeDeclarations
-          |> List.iter (fun (typeDeclaration : Typedtree.type_declaration) ->
-                 DeadType.addDeclaration ~typeId:typeDeclaration.typ_id
-                   ~typeKind:typeDeclaration.typ_type.type_kind)
-      | Tstr_include {incl_mod; incl_type} -> (
-        match incl_mod.mod_desc with
-        | Tmod_ident (_path, _lid) ->
-          let currentPath =
-            (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
-          in
-          incl_type
-          |> List.iter
-               (processSignatureItem ~doTypes
-                  ~doValues:false (* TODO: also values? *)
-                  ~moduleLoc:incl_mod.mod_loc ~path:currentPath)
-        | _ -> ())
-      | Tstr_exception {ext_id = id; ext_loc = loc} ->
-        let path =
-          (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
-        in
-        let name = id |> Ident.name |> Name.create in
-        name |> DeadException.add ~path ~loc ~strLoc:structureItem.str_loc
-      | _ -> ());
-      let result = super.structure_item self structureItem in
-      ModulePath.setCurrent oldModulePath;
-      result
-    in
-    {super with expr; pat; structure_item; value_binding}
+    mapper
   in
-  customize Tast_mapper.default
+  let mapper = create_mapper Location.none in
+  mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
 let processValueDependency
@@ -411,7 +402,6 @@ let processValueDependency
 
 let processStructure ~cmt_value_dependencies ~doTypes ~doExternals
     (structure : Typedtree.structure) =
-  let traverseStructure = traverseStructure ~doTypes ~doExternals in
-  structure |> traverseStructure.structure traverseStructure |> ignore;
+  traverseStructure ~doTypes ~doExternals structure;
   let valueDependencies = cmt_value_dependencies |> List.rev in
   valueDependencies |> List.iter processValueDependency
