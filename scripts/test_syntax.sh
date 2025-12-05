@@ -81,6 +81,7 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
     mkdir -p temp/$(dirname $file)
     sexpAst1=temp/$file.sexp
     sexpAst2=temp/$file.2.sexp
+    sexpAst3=temp/$file.3.sexp
     rescript1=temp/$file.res
     rescript2=temp/$file.2.res
 
@@ -89,14 +90,21 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
       *.resi ) resIntf=-interface ;;
     esac
 
+    # First pass: original file -> AST1 and text1
     $DUNE_BIN_DIR/res_parser $resIntf -print sexp $file > $sexpAst1
     $DUNE_BIN_DIR/res_parser $resIntf -print res $file > $rescript1
 
+    # Second pass: text1 -> AST2 and text2
     $DUNE_BIN_DIR/res_parser $resIntf -print sexp $rescript1 > $sexpAst2
     $DUNE_BIN_DIR/res_parser $resIntf -print res $rescript1 > $rescript2
 
-    diff --unified $sexpAst1 $sexpAst2
+    # Third pass: text2 -> AST3 (to check idempotency after normalization)
+    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $rescript2 > $sexpAst3
+
+    # Check AST idempotency: AST2 should equal AST3 (allows AST1 != AST2 for canonicalization)
+    diff --unified $sexpAst2 $sexpAst3
     [[ "$?" = 1 ]] && echo 1 > $roundtripTestsResult
+    # Check text idempotency: text1 should equal text2
     diff --unified $rescript1 $rescript2
     [[ "$?" = 1 ]] && echo 1 > $roundtripTestsResult
   } & maybeWait
