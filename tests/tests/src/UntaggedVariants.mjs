@@ -573,6 +573,22 @@ async function classifyAll(t) {
     console.log("DataView");
     return;
   }
+  if (t instanceof Set) {
+    console.log("Set");
+    return;
+  }
+  if (t instanceof Map) {
+    console.log("Map");
+    return;
+  }
+  if (t instanceof WeakSet) {
+    console.log("WeakSet");
+    return;
+  }
+  if (t instanceof WeakMap) {
+    console.log("WeakMap");
+    return;
+  }
   switch (typeof t) {
     case "string" :
       console.log(t);
