@@ -125,3 +125,11 @@ let from_val: 'a => t<'a>
   migrate: Lazy.isEvaluated(),
 })
 let is_val: t<'a> => bool
+
+/**
+  `ignore(lazyValue)` ignores the provided lazy value and returns unit.
+
+  This helper is useful when you want to discard a lazy value (for example, when only its side effects matter)
+  without having to store or process it further.
+*/
+external ignore: t<'a> => unit = "%ignore"

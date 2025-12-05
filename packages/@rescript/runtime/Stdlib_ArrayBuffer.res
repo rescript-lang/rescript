@@ -12,3 +12,5 @@ type t
 })
 @send
 external sliceToEnd: (t, ~start: int) => t = "slice"
+
+external ignore: t => unit = "%ignore"

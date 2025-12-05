@@ -31,3 +31,5 @@ let fromStringExn = fromStringOrThrow
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
 
 external equal: (bool, bool) => bool = "%equal"
+
+external ignore: bool => unit = "%ignore"

@@ -105,3 +105,5 @@ let from_val = (type a, value: a): t<a> => {
 let make = from_fun
 let get = force
 let isEvaluated = is_val
+
+external ignore: t<'a> => unit = "%ignore"

@@ -93,3 +93,11 @@ Bool.equal(false, true) == false
 ```
 */
 external equal: (bool, bool) => bool = "%equal"
+
+/**
+  `ignore(bool)` ignores the provided boolean and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: bool => unit = "%ignore"

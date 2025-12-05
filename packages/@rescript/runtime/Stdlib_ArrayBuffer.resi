@@ -59,3 +59,11 @@ ArrayBuffer.byteLength(sliced) == 8
 })
 @send
 external sliceToEnd: (t, ~start: int) => t = "slice"
+
+/**
+  `ignore(arrayBuffer)` ignores the provided arrayBuffer and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t => unit = "%ignore"
