@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Rewatch: warnings for unsupported/unknown rescript.json fields. https://github.com/rescript-lang/rescript/pull/8031
+- Fix missing `ignore` function in some Stdlib modules. https://github.com/rescript-lang/rescript/pull/8060
 
 #### :memo: Documentation
 
