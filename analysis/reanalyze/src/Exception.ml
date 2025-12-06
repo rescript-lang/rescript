@@ -101,8 +101,8 @@ module Event = struct
           nestedEvents |> List.iter (fun e -> Format.fprintf ppf "%a " print e))
         ()
 
-  let combine ~moduleName events =
-    if !Common.Cli.debug then (
+  let combine ~config ~moduleName events =
+    if config.DceConfig.cli.debug then (
       Log_.item "@.";
       Log_.item "Events combine: #events %d@." (events |> List.length));
     let exnTable = Hashtbl.create 1 in
@@ -119,11 +119,11 @@ module Event = struct
     let rec loop exnSet events =
       match events with
       | ({kind = Throws; exceptions; loc} as ev) :: rest ->
-        if !Common.Cli.debug then Log_.item "%a@." print ev;
+        if config.DceConfig.cli.debug then Log_.item "%a@." print ev;
         exceptions |> Exceptions.iter (fun exn -> extendExnTable exn loc);
         loop (Exceptions.union exnSet exceptions) rest
       | ({kind = Call {callee; modulePath}; loc} as ev) :: rest ->
-        if !Common.Cli.debug then Log_.item "%a@." print ev;
+        if config.DceConfig.cli.debug then Log_.item "%a@." print ev;
         let exceptions =
           match callee |> Values.findPath ~moduleName ~modulePath with
           | Some exceptions -> exceptions
@@ -135,7 +135,7 @@ module Event = struct
         exceptions |> Exceptions.iter (fun exn -> extendExnTable exn loc);
         loop (Exceptions.union exnSet exceptions) rest
       | ({kind = DoesNotThrow nestedEvents; loc} as ev) :: rest ->
-        if !Common.Cli.debug then Log_.item "%a@." print ev;
+        if config.DceConfig.cli.debug then Log_.item "%a@." print ev;
         let nestedExceptions = loop Exceptions.empty nestedEvents in
         (if Exceptions.isEmpty nestedExceptions (* catch-all *) then
            let name =
@@ -143,7 +143,7 @@ module Event = struct
              | {kind = Call {callee}} :: _ -> callee |> Common.Path.toName
              | _ -> "expression" |> Name.create
            in
-           Log_.warning ~config:(DceConfig.current ()) ~loc
+           Log_.warning ~config ~loc
              (Common.ExceptionAnalysis
                 {
                   message =
@@ -154,7 +154,7 @@ module Event = struct
                 }));
         loop exnSet rest
       | ({kind = Catches nestedEvents; exceptions} as ev) :: rest ->
-        if !Common.Cli.debug then Log_.item "%a@." print ev;
+        if config.DceConfig.cli.debug then Log_.item "%a@." print ev;
         if Exceptions.isEmpty exceptions then loop exnSet rest
         else
           let nestedExceptions = loop Exceptions.empty nestedEvents in
@@ -187,8 +187,8 @@ module Checks = struct
   let add ~events ~exceptions ~loc ?(locFull = loc) ~moduleName exnName =
     checks := {events; exceptions; loc; locFull; moduleName; exnName} :: !checks
 
-  let doCheck {events; exceptions; loc; locFull; moduleName; exnName} =
-    let throwSet, exnTable = events |> Event.combine ~moduleName in
+  let doCheck ~config {events; exceptions; loc; locFull; moduleName; exnName} =
+    let throwSet, exnTable = events |> Event.combine ~config ~moduleName in
     let missingAnnotations = Exceptions.diff throwSet exceptions in
     let redundantAnnotations = Exceptions.diff exceptions throwSet in
     (if not (Exceptions.isEmpty missingAnnotations) then
@@ -196,9 +196,9 @@ module Checks = struct
          Common.ExceptionAnalysisMissing
            {exnName; exnTable; throwSet; missingAnnotations; locFull}
        in
-       Log_.warning ~config:(DceConfig.current ()) ~loc description);
+       Log_.warning ~config ~loc description);
     if not (Exceptions.isEmpty redundantAnnotations) then
-      Log_.warning ~config:(DceConfig.current ()) ~loc
+      Log_.warning ~config ~loc
         (Common.ExceptionAnalysis
            {
              message =
@@ -217,10 +217,10 @@ module Checks = struct
                   redundantAnnotations);
            })
 
-  let doChecks () = !checks |> List.rev |> List.iter doCheck
+  let doChecks ~config = !checks |> List.rev |> List.iter (doCheck ~config)
 end
 
-let traverseAst () =
+let traverseAst ~config () =
   ModulePath.init ();
   let super = Tast_mapper.default in
   let currentId = ref "" in
@@ -281,7 +281,7 @@ let traverseAst () =
       in
       let calleeName = callee |> Common.Path.toName in
       if calleeName |> Name.toString |> isThrow then
-        Log_.warning ~config:(DceConfig.current ()) ~loc
+        Log_.warning ~config ~loc
           (Common.ExceptionAnalysis
              {
                message =
@@ -474,14 +474,14 @@ let traverseAst () =
   let open Tast_mapper in
   {super with expr; value_binding; structure_item}
 
-let processStructure (structure : Typedtree.structure) =
-  let traverseAst = traverseAst () in
+let processStructure ~config (structure : Typedtree.structure) =
+  let traverseAst = traverseAst ~config () in
   structure |> traverseAst.structure traverseAst |> ignore
 
-let processCmt (cmt_infos : Cmt_format.cmt_infos) =
+let processCmt ~config (cmt_infos : Cmt_format.cmt_infos) =
   match cmt_infos.cmt_annots with
   | Interface _ -> ()
   | Implementation structure ->
     Values.newCmt ();
-    structure |> processStructure
+    structure |> processStructure ~config
   | _ -> ()
