@@ -152,14 +152,14 @@ Each task should:
 - [x] ~~Use the `DceConfig.t` already created, thread it through DCE analysis functions~~
 - [x] ~~Replace all DCE code's `!Common.Cli.debug`, `runConfig.transitive`, etc. reads with `config.debug`, `config.run.transitive`~~
 - [x] ~~Make all config parameters required (not optional) - no `config option` anywhere~~
-- [ ] **Thread config through Exception and Arnold analyses** - they currently call `DceConfig.current()` at each use site
-- [ ] **Single entry point**: Only `Reanalyze.runAnalysisAndReport` should call `DceConfig.current()` once, then pass explicit config everywhere
+- [x] Thread config through Exception and Arnold analyses (no `DceConfig.current()` in analysis code)
+- [x] Single entry point: only the CLI/entry wrappers (`runAnalysisAndReport`, `DceCommand`) call `DceConfig.current()` once, then pass explicit config everywhere
 
-**Status**: DCE code complete ✅. Exception/Arnold still need threading.
+**Status**: Complete ✅ (DCE + Exception + Arnold).
 
 **Test**: Create two configs with different settings, run analysis with each - should respect the config, not read globals.
 
-**Estimated effort**: Medium (DCE done; Exception/Arnold similar effort)
+**Estimated effort**: Medium (done)
 
 ### Task 3: Make `ProcessDeadAnnotations` state explicit (P3)
 
@@ -262,13 +262,13 @@ Each task should:
 **Value**: Enforce purity - no hidden global reads.
 
 **Changes**:
-- [ ] Verify `DceConfig.current()` only called in `Reanalyze.runAnalysisAndReport` (entry point)
-- [ ] Verify no calls to `DceConfig.current()` in `Dead*.ml`, `Exception.ml`, `Arnold.ml` analysis code
-- [ ] All analysis functions take explicit `~config` parameter
+- [x] Verify `DceConfig.current()` only called in entry wrappers (CLI / `runAnalysisAndReport`)
+- [x] Verify no calls to `DceConfig.current()` in `Dead*.ml`, `Exception.ml`, `Arnold.ml` analysis code
+- [x] All analysis functions take explicit `~config` parameter
 
-**Test**: `grep -r "DceConfig.current" analysis/reanalyze/src/{Dead,Exception,Arnold}.ml` returns zero results.
+**Test**: `grep -r "DceConfig.current" analysis/reanalyze/src/{Dead,Exception,Arnold}.ml` returns zero results. ✅
 
-**Estimated effort**: Trivial (verification only, assuming Task 2 complete)
+**Estimated effort**: Trivial (done)
 
 ### Task 11: Integration and order-independence verification
 

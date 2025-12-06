@@ -33,8 +33,10 @@ let loadCmtFile ~config cmtFilePath =
       |> Name.create ~isInterface:(Filename.check_suffix !currentSrc "i");
     if config.DceConfig.run.dce then
       cmt_infos |> DeadCode.processCmt ~config ~cmtFilePath;
-    if runConfig.exception_ then cmt_infos |> Exception.processCmt;
-    if runConfig.termination then cmt_infos |> Arnold.processCmt
+    if config.DceConfig.run.exception_ then
+      cmt_infos |> Exception.processCmt ~config;
+    if config.DceConfig.run.termination then
+      cmt_infos |> Arnold.processCmt ~config
   | _ -> ()
 
 let processCmtFiles ~config ~cmtRoot =
@@ -94,8 +96,10 @@ let runAnalysis ~dce_config ~cmtRoot =
     DeadCommon.reportDead ~config:dce_config
       ~checkOptionalArg:DeadOptionalArgs.check;
     WriteDeadAnnotations.write ~config:dce_config);
-  if runConfig.exception_ then Exception.Checks.doChecks ();
-  if runConfig.termination && !Common.Cli.debug then Arnold.reportStats ()
+  if dce_config.DceConfig.run.exception_ then
+    Exception.Checks.doChecks ~config:dce_config;
+  if dce_config.DceConfig.run.termination && dce_config.DceConfig.cli.debug then
+    Arnold.reportStats ~config:dce_config
 
 let runAnalysisAndReport ~cmtRoot =
   Log_.Color.setup ();
