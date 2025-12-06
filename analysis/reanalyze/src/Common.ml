@@ -1,6 +1,3 @@
-let currentSrc = ref ""
-let currentModule = ref ""
-let currentModuleName = ref ("" |> Name.create)
 let runConfig = RunConfig.runConfig
 
 (* Location printer: `filename:line: ' *)

@@ -1,9 +1,9 @@
 open Common
 
-let loadCmtFile cmtFilePath =
+let loadCmtFile ~config cmtFilePath =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
-    !Cli.excludePaths
+    config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
            let prefix =
              match Filename.is_relative sourceFile with
@@ -17,26 +17,34 @@ let loadCmtFile cmtFilePath =
   in
   match cmt_infos.cmt_annots |> FindSourceFile.cmt with
   | Some sourceFile when not (excludePath sourceFile) ->
-    if !Cli.debug then
+    let is_interface =
+      match cmt_infos.cmt_annots with
+      | Interface _ -> true
+      | _ -> Filename.check_suffix sourceFile "i"
+    in
+    let module_name = sourceFile |> Paths.getModuleName in
+    let file_context =
+      DeadCommon.FileContext.
+        {source_path = sourceFile; module_name; is_interface}
+    in
+    if config.cli.debug then
       Log_.item "Scanning %s Source:%s@."
-        (match !Cli.ci && not (Filename.is_relative cmtFilePath) with
+        (match config.cli.ci && not (Filename.is_relative cmtFilePath) with
         | true -> Filename.basename cmtFilePath
         | false -> cmtFilePath)
-        (match !Cli.ci && not (Filename.is_relative sourceFile) with
+        (match config.cli.ci && not (Filename.is_relative sourceFile) with
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
-    currentSrc := sourceFile;
-    currentModule := Paths.getModuleName sourceFile;
-    currentModuleName :=
-      !currentModule
-      |> Name.create ~isInterface:(Filename.check_suffix !currentSrc "i");
-    if runConfig.dce then cmt_infos |> DeadCode.processCmt ~cmtFilePath;
-    if runConfig.exception_ then cmt_infos |> Exception.processCmt;
-    if runConfig.termination then cmt_infos |> Arnold.processCmt
+    if config.DceConfig.run.dce then
+      cmt_infos |> DeadCode.processCmt ~config ~file:file_context ~cmtFilePath;
+    if config.DceConfig.run.exception_ then
+      cmt_infos |> Exception.processCmt ~file:file_context;
+    if config.DceConfig.run.termination then
+      cmt_infos |> Arnold.processCmt ~config ~file:file_context
   | _ -> ()
 
-let processCmtFiles ~cmtRoot =
+let processCmtFiles ~config ~cmtRoot =
   let ( +++ ) = Filename.concat in
   match cmtRoot with
   | Some root ->
@@ -57,7 +65,7 @@ let processCmtFiles ~cmtRoot =
         else if
           Filename.check_suffix absDir ".cmt"
           || Filename.check_suffix absDir ".cmti"
-        then absDir |> loadCmtFile
+        then absDir |> loadCmtFile ~config
     in
     walkSubDirs ""
   | None ->
@@ -83,23 +91,27 @@ let processCmtFiles ~cmtRoot =
            cmtFiles |> List.sort String.compare
            |> List.iter (fun cmtFile ->
                   let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
-                  cmtFilePath |> loadCmtFile))
+                  cmtFilePath |> loadCmtFile ~config))
 
-let runAnalysis ~cmtRoot =
-  processCmtFiles ~cmtRoot;
-  if runConfig.dce then (
-    DeadException.forceDelayedItems ();
+let runAnalysis ~dce_config ~cmtRoot =
+  processCmtFiles ~config:dce_config ~cmtRoot;
+  if dce_config.DceConfig.run.dce then (
+    DeadException.forceDelayedItems ~config:dce_config;
     DeadOptionalArgs.forceDelayedItems ();
-    DeadCommon.reportDead ~checkOptionalArg:DeadOptionalArgs.check;
-    WriteDeadAnnotations.write ());
-  if runConfig.exception_ then Exception.Checks.doChecks ();
-  if runConfig.termination && !Common.Cli.debug then Arnold.reportStats ()
+    DeadCommon.reportDead ~config:dce_config
+      ~checkOptionalArg:DeadOptionalArgs.check;
+    WriteDeadAnnotations.write ~config:dce_config);
+  if dce_config.DceConfig.run.exception_ then
+    Exception.Checks.doChecks ~config:dce_config;
+  if dce_config.DceConfig.run.termination && dce_config.DceConfig.cli.debug then
+    Arnold.reportStats ~config:dce_config
 
 let runAnalysisAndReport ~cmtRoot =
   Log_.Color.setup ();
   if !Common.Cli.json then EmitJson.start ();
-  runAnalysis ~cmtRoot;
-  Log_.Stats.report ();
+  let dce_config = DceConfig.current () in
+  runAnalysis ~dce_config ~cmtRoot;
+  Log_.Stats.report ~config:dce_config;
   Log_.Stats.clear ();
   if !Common.Cli.json then EmitJson.finish ()
 
@@ -217,4 +229,5 @@ let cli () =
 [@@raises exit]
 
 module RunConfig = RunConfig
+module DceConfig = DceConfig
 module Log_ = Log_
