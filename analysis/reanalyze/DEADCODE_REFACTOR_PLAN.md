@@ -21,6 +21,8 @@
 
 **Used by**: `DeadCommon.addDeclaration_`, `DeadType.addTypeDependenciesAcrossFiles`, `DeadValue` path construction.
 
+**Status**: ✅ FIXED in Task 1 - explicit `file_context` now threaded through all analysis functions.
+
 ### P2: Global analysis tables
 **Problem**: All analysis results accumulate in global hashtables:
 - `DeadCommon.decls` - all declarations
@@ -41,6 +43,8 @@
 
 ### P4: Global configuration reads
 **Problem**: Analysis code directly reads `!Common.Cli.debug`, `RunConfig.runConfig.transitive`, etc. scattered throughout. Can't run analysis with different configs without mutating globals.
+
+**Status**: ✅ FIXED in Task 2 - explicit `config` now threaded through all analysis functions.
 
 ### P5: Side effects mixed with analysis
 **Problem**: Analysis functions directly call:
@@ -135,10 +139,13 @@ Each task should:
 **Value**: Makes it possible to process files concurrently or out of order.
 
 **Changes**:
-- [ ] Create `DeadFileContext.t` type with `source_path`, `module_name`, `is_interface` fields
-- [ ] Thread through `DeadCode.processCmt`, `DeadValue`, `DeadType`, `DeadCommon.addDeclaration_`
-- [ ] Remove all reads of `Common.currentSrc`, `currentModule`, `currentModuleName` from DCE code
-- [ ] Delete the globals (or mark as deprecated if still used by Exception/Arnold)
+- [x] Create `DeadCommon.FileContext.t` type with `source_path`, `module_name`, `is_interface` fields
+- [x] Thread through `DeadCode.processCmt`, `DeadValue`, `DeadType`, `DeadCommon.addDeclaration_`
+- [x] Thread through `Exception.processCmt`, `Arnold.processCmt`
+- [x] Remove all reads of `Common.currentSrc`, `currentModule`, `currentModuleName` from DCE code
+- [x] Delete the globals `currentSrc`, `currentModule`, `currentModuleName` from `Common.ml`
+
+**Status**: Complete ✅
 
 **Test**: Run analysis on same files but vary the order - should get identical results.
 
@@ -288,14 +295,15 @@ Each task should:
 
 ## Execution Strategy
 
-**Recommended order**: 1 → 2 (complete all analyses) → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 (verify) → 11 (test)
+**Completed**: Task 1 ✅, Task 2 ✅, Task 10 ✅
+
+**Remaining order**: 3 → 4 → 5 → 6 → 7 → 8 → 9 → 11 (test)
 
 **Why this order?**
-- Tasks 1-2 remove implicit dependencies (file context, config) - these are foundational
-- Task 2 must be **fully complete** (DCE + Exception + Arnold) before proceeding
-- Tasks 3-7 localize global state - can be done incrementally once inputs are explicit
+- Tasks 1-2 remove implicit dependencies (file context, config) - ✅ DONE
+- Tasks 3-7 localize global state - can be done incrementally now that inputs are explicit
 - Tasks 8-9 separate pure/impure - can only do this once state is local
-- Task 10 verifies no global config reads remain
+- Task 10 verifies no global config reads remain - ✅ DONE
 - Task 11 validates everything
 
 **Alternative**: Could do 3-7 in any order (they're mostly independent).

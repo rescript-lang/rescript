@@ -6,12 +6,13 @@ type item = {exceptionPath: Path.t; locFrom: Location.t}
 let delayedItems = ref []
 let declarations = Hashtbl.create 1
 
-let add ~config ~path ~loc ~(strLoc : Location.t) name =
+let add ~config ~file ~path ~loc ~(strLoc : Location.t) name =
   let exceptionPath = name :: path in
   Hashtbl.add declarations exceptionPath loc;
   name
-  |> addDeclaration_ ~config ~posEnd:strLoc.loc_end ~posStart:strLoc.loc_start
-       ~declKind:Exception ~moduleLoc:(ModulePath.getCurrent ()).loc ~path ~loc
+  |> addDeclaration_ ~config ~file ~posEnd:strLoc.loc_end
+       ~posStart:strLoc.loc_start ~declKind:Exception
+       ~moduleLoc:(ModulePath.getCurrent ()).loc ~path ~loc
 
 let forceDelayedItems ~config =
   let items = !delayedItems |> List.rev in
@@ -22,7 +23,7 @@ let forceDelayedItems ~config =
          | None -> ()
          | Some locTo ->
            (* Delayed exception references don't need a binding context; use an empty state. *)
-           DeadCommon.addValueReference ~config ~binding:Location.none
+           addValueReference ~config ~binding:Location.none
              ~addFileReference:true ~locFrom ~locTo)
 
 let markAsUsed ~config ~(binding : Location.t) ~(locFrom : Location.t)
@@ -33,6 +34,4 @@ let markAsUsed ~config ~(binding : Location.t) ~(locFrom : Location.t)
       path_ |> Path.fromPathT |> Path.moduleToImplementation
     in
     delayedItems := {exceptionPath; locFrom} :: !delayedItems
-  else
-    DeadCommon.addValueReference ~config ~binding ~addFileReference:true
-      ~locFrom ~locTo
+  else addValueReference ~config ~binding ~addFileReference:true ~locFrom ~locTo

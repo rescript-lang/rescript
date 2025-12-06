@@ -1,6 +1,6 @@
-let posToString = Common.posToString
-
+open DeadCommon
 module LocSet = Common.LocSet
+let posToString = Common.posToString
 
 module Values = struct
   let valueBindingsTable =
@@ -57,9 +57,9 @@ module Values = struct
       | [] -> None)
     | Some exceptions -> Some exceptions
 
-  let newCmt () =
+  let newCmt ~moduleName =
     currentFileTable := Hashtbl.create 15;
-    Hashtbl.replace valueBindingsTable !Common.currentModule !currentFileTable
+    Hashtbl.replace valueBindingsTable moduleName !currentFileTable
 end
 
 module Event = struct
@@ -143,7 +143,7 @@ module Event = struct
              | {kind = Call {callee}} :: _ -> callee |> Common.Path.toName
              | _ -> "expression" |> Name.create
            in
-           Log_.warning ~config ~loc
+           Log_.warning ~loc
              (Common.ExceptionAnalysis
                 {
                   message =
@@ -196,9 +196,9 @@ module Checks = struct
          Common.ExceptionAnalysisMissing
            {exnName; exnTable; throwSet; missingAnnotations; locFull}
        in
-       Log_.warning ~config ~loc description);
+       Log_.warning ~loc description);
     if not (Exceptions.isEmpty redundantAnnotations) then
-      Log_.warning ~config ~loc
+      Log_.warning ~loc
         (Common.ExceptionAnalysis
            {
              message =
@@ -220,7 +220,7 @@ module Checks = struct
   let doChecks ~config = !checks |> List.rev |> List.iter (doCheck ~config)
 end
 
-let traverseAst ~config () =
+let traverseAst ~file () =
   ModulePath.init ();
   let super = Tast_mapper.default in
   let currentId = ref "" in
@@ -281,7 +281,7 @@ let traverseAst ~config () =
       in
       let calleeName = callee |> Common.Path.toName in
       if calleeName |> Name.toString |> isThrow then
-        Log_.warning ~config ~loc
+        Log_.warning ~loc
           (Common.ExceptionAnalysis
              {
                message =
@@ -394,7 +394,7 @@ let traverseAst ~config () =
     let name = "Toplevel expression" in
     currentId := name;
     currentEvents := [];
-    let moduleName = !Common.currentModule in
+    let moduleName = file.FileContext.module_name in
     self.expr self expr |> ignore;
     Checks.add ~events:!currentEvents
       ~exceptions:(getExceptionsFromAnnotations attributes)
@@ -442,7 +442,7 @@ let traverseAst ~config () =
       in
       exceptionsFromAnnotations |> Values.add ~name;
       let res = super.value_binding self vb in
-      let moduleName = !Common.currentModule in
+      let moduleName = file.FileContext.module_name in
       let path = [name |> Name.create] in
       let exceptions =
         match
@@ -474,14 +474,14 @@ let traverseAst ~config () =
   let open Tast_mapper in
   {super with expr; value_binding; structure_item}
 
-let processStructure ~config (structure : Typedtree.structure) =
-  let traverseAst = traverseAst ~config () in
+let processStructure ~file (structure : Typedtree.structure) =
+  let traverseAst = traverseAst ~file () in
   structure |> traverseAst.structure traverseAst |> ignore
 
-let processCmt ~config (cmt_infos : Cmt_format.cmt_infos) =
+let processCmt ~file (cmt_infos : Cmt_format.cmt_infos) =
   match cmt_infos.cmt_annots with
   | Interface _ -> ()
   | Implementation structure ->
-    Values.newCmt ();
-    structure |> processStructure ~config
+    Values.newCmt ~moduleName:file.FileContext.module_name;
+    structure |> processStructure ~file
   | _ -> ()

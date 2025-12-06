@@ -111,7 +111,7 @@ module Stats = struct
     incr nCacheChecks;
     if hit then incr nCacheHits;
     if config.DceConfig.cli.debug then
-      Log_.warning ~config ~forStats:false ~loc
+      Log_.warning ~forStats:false ~loc
         (Termination
            {
              termination = TerminationAnalysisInternal;
@@ -125,7 +125,7 @@ module Stats = struct
 
   let logResult ~config ~functionCall ~loc ~resString =
     if config.DceConfig.cli.debug then
-      Log_.warning ~config ~forStats:false ~loc
+      Log_.warning ~forStats:false ~loc
         (Termination
            {
              termination = TerminationAnalysisInternal;
@@ -611,7 +611,7 @@ module ExtendFunctionTable = struct
             then (
               functionTable |> FunctionTable.addFunction ~functionName;
               if config.DceConfig.cli.debug then
-                Log_.warning ~config ~forStats:false ~loc
+                Log_.warning ~forStats:false ~loc
                   (Termination
                      {
                        termination = TerminationAnalysisInternal;
@@ -633,7 +633,7 @@ module ExtendFunctionTable = struct
                  functionTable
                  |> FunctionTable.addLabelToKind ~functionName ~label;
                  if config.DceConfig.cli.debug then
-                   Log_.warning ~config ~forStats:false ~loc
+                   Log_.warning ~forStats:false ~loc
                      (Termination
                         {
                           termination = TerminationAnalysisInternal;
@@ -700,7 +700,7 @@ module CheckExpressionWellFormed = struct
                        functionTable
                        |> FunctionTable.addLabelToKind ~functionName ~label;
                        if config.DceConfig.cli.debug then
-                         Log_.warning ~config ~forStats:false ~loc:body.exp_loc
+                         Log_.warning ~forStats:false ~loc:body.exp_loc
                            (Termination
                               {
                                 termination = TerminationAnalysisInternal;
@@ -879,7 +879,7 @@ module Compile = struct
         newFunctionName;
       newFunctionDefinition.body <- Some (vb_expr |> expression ~ctx:newCtx);
       if config.DceConfig.cli.debug then
-        Log_.warning ~config ~forStats:false ~loc:pat_loc
+        Log_.warning ~forStats:false ~loc:pat_loc
           (Termination
              {
                termination = TerminationAnalysisInternal;
@@ -1410,7 +1410,7 @@ let processStructure ~config (structure : Typedtree.structure) =
   let traverseAst = traverseAst ~config ~valueBindingsTable in
   structure |> traverseAst.structure traverseAst |> ignore
 
-let processCmt ~config (cmt_infos : Cmt_format.cmt_infos) =
+let processCmt ~config ~file:_ (cmt_infos : Cmt_format.cmt_infos) =
   match cmt_infos.cmt_annots with
   | Interface _ -> ()
   | Implementation structure -> processStructure ~config structure

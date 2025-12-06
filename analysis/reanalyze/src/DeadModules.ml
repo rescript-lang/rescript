@@ -33,7 +33,7 @@ let checkModuleDead ~config ~fileName:pos_fname moduleName =
           {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
         else loc
       in
-      Log_.warning ~config ~loc
+      Log_.warning ~loc
         (Common.DeadModule
            {
              message =
