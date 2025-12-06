@@ -1,3 +1,5 @@
+// https://github.com/rescript-lang/rescript/issues/8055
+
 let foo = (): option<array<string>> => Some(["foo"])
 let bar = foo()
 
