@@ -81,11 +81,11 @@ let forceDelayedItems () =
            OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
          | _ -> ())
 
-let check ~config:_ decl =
+let check ~state ~config:_ decl =
   match decl with
   | {declKind = Value {optionalArgs}}
     when active ()
-         && not (ProcessDeadAnnotations.isAnnotatedGenTypeOrLive decl.pos) ->
+         && not (AnnotationState.is_annotated_gentype_or_live state decl.pos) ->
     optionalArgs
     |> OptionalArgs.iterUnused (fun s ->
            Log_.warning ~loc:(decl |> declGetLoc)
