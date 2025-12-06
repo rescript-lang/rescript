@@ -9,17 +9,18 @@ let processSignature ~config ~file ~doValues ~doTypes
            ~path:[FileContext.module_name_tagged file]
            sig_item)
 
-let processCmt ~config ~file ~cmtFilePath (cmt_infos : Cmt_format.cmt_infos) =
+let processCmt ~state ~config ~file ~cmtFilePath
+    (cmt_infos : Cmt_format.cmt_infos) =
   (match cmt_infos.cmt_annots with
   | Interface signature ->
-    ProcessDeadAnnotations.signature ~config signature;
+    ProcessDeadAnnotations.signature ~state ~config signature;
     processSignature ~config ~file ~doValues:true ~doTypes:true
       signature.sig_type
   | Implementation structure ->
     let cmtiExists =
       Sys.file_exists ((cmtFilePath |> Filename.remove_extension) ^ ".cmti")
     in
-    ProcessDeadAnnotations.structure ~config ~doGenType:(not cmtiExists)
+    ProcessDeadAnnotations.structure ~state ~config ~doGenType:(not cmtiExists)
       structure;
     processSignature ~config ~file ~doValues:true ~doTypes:false
       structure.str_type;
