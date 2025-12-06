@@ -74,9 +74,9 @@ type nonrec u = unit
 let un = (() : u)
 type nonrec ('a, 'b) d = ('a * 'b)
 let c [arity:1]() = ((1, 2) : ('a, 'b) d)
-let arr () = ([||] : int nullable array)
+let arr [arity:1]() = ([||] : int nullable array)
 let fn [arity:1]f = f
 type nonrec f = int -> unit (a:1)
 let a = fn (fun [arity:1]_ -> () : f)
-let returnsArrayOption () = (Some [|{js|foo|js}|] : string array option)
-let usesIt = returnsArrayOption ()
+let returnsArrayOption [arity:1]() =
+  (Some [|{js|foo|js}|] : string array option)

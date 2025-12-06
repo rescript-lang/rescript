@@ -110,4 +110,3 @@ type f = int => unit;
 let a = fn(_ => (): f);
 
 let returnsArrayOption = (): option<array<string>> => Some(["foo"])
-let usesIt = returnsArrayOption()

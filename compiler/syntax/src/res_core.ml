@@ -362,8 +362,10 @@ let is_es6_arrow_expression ~in_ternary p =
               (match state.Parser.token with
               (* arrived at `() :typ<` here *)
               | LessThan ->
+                Scanner.set_diamond_mode state.scanner;
                 Parser.next state;
-                go_to_closing GreaterThan state
+                go_to_closing GreaterThan state;
+                Scanner.pop_mode state.scanner Diamond
               | _ -> ());
               match state.Parser.token with
               (* arrived at `() :typ =>` or `() :typ<'a,'b> =>` here *)
