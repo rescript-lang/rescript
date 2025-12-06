@@ -23,6 +23,7 @@
 - Rewatch: warnings for unsupported/unknown rescript.json fields. https://github.com/rescript-lang/rescript/pull/8031
 - Fix missing `ignore` function in some Stdlib modules. https://github.com/rescript-lang/rescript/pull/8060
 - Fix signature matching for externals when abstract alias hides function arity. https://github.com/rescript-lang/rescript/pull/8045
+- Fix arity detection for arrows returning nested generics. https://github.com/rescript-lang/rescript/pull/8064
 
 #### :memo: Documentation
 
