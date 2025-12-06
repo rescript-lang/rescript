@@ -1,6 +1,6 @@
 open Common
 
-let loadCmtFile ~config cmtFilePath =
+let loadCmtFile ~annotation_state ~config cmtFilePath =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
@@ -37,14 +37,16 @@ let loadCmtFile ~config cmtFilePath =
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
     if config.DceConfig.run.dce then
-      cmt_infos |> DeadCode.processCmt ~config ~file:file_context ~cmtFilePath;
+      cmt_infos
+      |> DeadCode.processCmt ~state:annotation_state ~config ~file:file_context
+           ~cmtFilePath;
     if config.DceConfig.run.exception_ then
       cmt_infos |> Exception.processCmt ~file:file_context;
     if config.DceConfig.run.termination then
       cmt_infos |> Arnold.processCmt ~config ~file:file_context
   | _ -> ()
 
-let processCmtFiles ~config ~cmtRoot =
+let processCmtFiles ~annotation_state ~config ~cmtRoot =
   let ( +++ ) = Filename.concat in
   match cmtRoot with
   | Some root ->
@@ -65,7 +67,7 @@ let processCmtFiles ~config ~cmtRoot =
         else if
           Filename.check_suffix absDir ".cmt"
           || Filename.check_suffix absDir ".cmti"
-        then absDir |> loadCmtFile ~config
+        then absDir |> loadCmtFile ~annotation_state ~config
     in
     walkSubDirs ""
   | None ->
@@ -91,14 +93,15 @@ let processCmtFiles ~config ~cmtRoot =
            cmtFiles |> List.sort String.compare
            |> List.iter (fun cmtFile ->
                   let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
-                  cmtFilePath |> loadCmtFile ~config))
+                  cmtFilePath |> loadCmtFile ~annotation_state ~config))
 
 let runAnalysis ~dce_config ~cmtRoot =
-  processCmtFiles ~config:dce_config ~cmtRoot;
+  let annotation_state = DeadCommon.AnnotationState.create () in
+  processCmtFiles ~annotation_state ~config:dce_config ~cmtRoot;
   if dce_config.DceConfig.run.dce then (
     DeadException.forceDelayedItems ~config:dce_config;
     DeadOptionalArgs.forceDelayedItems ();
-    DeadCommon.reportDead ~config:dce_config
+    DeadCommon.reportDead ~state:annotation_state ~config:dce_config
       ~checkOptionalArg:DeadOptionalArgs.check;
     WriteDeadAnnotations.write ~config:dce_config);
   if dce_config.DceConfig.run.exception_ then
