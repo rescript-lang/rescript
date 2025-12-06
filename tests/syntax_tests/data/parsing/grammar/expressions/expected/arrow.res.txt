@@ -78,3 +78,5 @@ let arr () = ([||] : int nullable array)
 let fn [arity:1]f = f
 type nonrec f = int -> unit (a:1)
 let a = fn (fun [arity:1]_ -> () : f)
+let returnsArrayOption () = (Some [|{js|foo|js}|] : string array option)
+let usesIt = returnsArrayOption ()

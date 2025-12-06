@@ -108,3 +108,6 @@ let arr = (): array<nullable<int>> => []
 let fn = f => f;
 type f = int => unit;
 let a = fn(_ => (): f);
+
+let returnsArrayOption = (): option<array<string>> => Some(["foo"])
+let usesIt = returnsArrayOption()
