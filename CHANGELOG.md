@@ -81,6 +81,7 @@ No changes compared to rc.5.
 - Rewatch: plain output when not running in tty. https://github.com/rescript-lang/rescript/pull/7970
 - Streamline rewatch help texts. https://github.com/rescript-lang/rescript/pull/7973
 - Rewatch: Reduced build progress output from 7 steps to 3 for cleaner, less verbose logging. https://github.com/rescript-lang/rescript/pull/7971
+- Formatter: Improve multiline printing of record types and values. https://github.com/rescript-lang/rescript/pull/7993
 
 #### :house: Internal
 

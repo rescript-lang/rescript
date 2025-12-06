@@ -5,7 +5,9 @@ module User = {
 
   let format = user => "Dr." ++ user.lastName
   @res.jsxComponentProps
-  type props<'doctor> = {doctor: 'doctor}
+  type props<'doctor> = {
+    doctor: 'doctor,
+  }
 
   let make = ({doctor, _}: props<_>): React.element => {
     ReactDOM.jsx("h1", {id: "h1", children: ?ReactDOM.someElement({React.string(format(doctor))})})
