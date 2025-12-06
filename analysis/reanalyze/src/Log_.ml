@@ -247,7 +247,7 @@ let logIssue ~forStats ~severity ~(loc : Location.t) description =
   if Suppress.filter loc.loc_start then
     if forStats then Stats.addIssue {name; severity; loc; description}
 
-let warning ~config ?(forStats = true) ~loc description =
+let warning ?(forStats = true) ~loc description =
   description |> logIssue ~severity:Warning ~forStats ~loc
 
 let error ~loc description =

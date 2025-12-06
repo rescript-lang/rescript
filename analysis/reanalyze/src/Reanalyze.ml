@@ -17,6 +17,16 @@ let loadCmtFile ~config cmtFilePath =
   in
   match cmt_infos.cmt_annots |> FindSourceFile.cmt with
   | Some sourceFile when not (excludePath sourceFile) ->
+    let is_interface =
+      match cmt_infos.cmt_annots with
+      | Interface _ -> true
+      | _ -> Filename.check_suffix sourceFile "i"
+    in
+    let module_name = sourceFile |> Paths.getModuleName in
+    let file_context =
+      DeadCommon.FileContext.
+        {source_path = sourceFile; module_name; is_interface}
+    in
     if config.cli.debug then
       Log_.item "Scanning %s Source:%s@."
         (match config.cli.ci && not (Filename.is_relative cmtFilePath) with
@@ -26,17 +36,12 @@ let loadCmtFile ~config cmtFilePath =
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
-    currentSrc := sourceFile;
-    currentModule := Paths.getModuleName sourceFile;
-    currentModuleName :=
-      !currentModule
-      |> Name.create ~isInterface:(Filename.check_suffix !currentSrc "i");
     if config.DceConfig.run.dce then
-      cmt_infos |> DeadCode.processCmt ~config ~cmtFilePath;
+      cmt_infos |> DeadCode.processCmt ~config ~file:file_context ~cmtFilePath;
     if config.DceConfig.run.exception_ then
-      cmt_infos |> Exception.processCmt ~config;
+      cmt_infos |> Exception.processCmt ~file:file_context;
     if config.DceConfig.run.termination then
-      cmt_infos |> Arnold.processCmt ~config
+      cmt_infos |> Arnold.processCmt ~config ~file:file_context
   | _ -> ()
 
 let processCmtFiles ~config ~cmtRoot =

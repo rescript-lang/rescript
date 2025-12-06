@@ -1,3 +1,11 @@
+module FileContext = struct
+  type t = {source_path: string; module_name: string; is_interface: bool}
+
+  (** Get module name as Name.t tagged with interface/implementation info *)
+  let module_name_tagged file =
+    file.module_name |> Name.create ~isInterface:file.is_interface
+end
+
 (* Adapted from https://github.com/LexiFi/dead_code_analyzer *)
 
 open Common
@@ -170,7 +178,7 @@ let iterFilesFromRootsToLeaves ~config iterFun =
                     {Location.none with loc_start = pos; loc_end = pos}
                   in
                   if Config.warnOnCircularDependencies then
-                    Log_.warning ~config ~loc
+                    Log_.warning ~loc
                       (Circular
                          {
                            message =
@@ -355,8 +363,9 @@ module ProcessDeadAnnotations = struct
     |> ignore
 end
 
-let addDeclaration_ ~config ?posEnd ?posStart ~declKind ~path
-    ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc (name : Name.t) =
+let addDeclaration_ ~config ~(file : FileContext.t) ?posEnd ?posStart ~declKind
+    ~path ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc
+    (name : Name.t) =
   let pos = loc.loc_start in
   let posStart =
     match posStart with
@@ -373,10 +382,7 @@ let addDeclaration_ ~config ?posEnd ?posStart ~declKind ~path
          module M : Set.S with type elt = int
      will create value definitions whose location is in set.mli
   *)
-  if
-    (not loc.loc_ghost)
-    && (!currentSrc = pos.pos_fname || !currentModule == "*include*")
-  then (
+  if (not loc.loc_ghost) && pos.pos_fname = file.source_path then (
     if config.DceConfig.cli.debug then
       Log_.item "add%sDeclaration %s %s path:%s@."
         (declKind |> DeclKind.toString)
@@ -396,10 +402,10 @@ let addDeclaration_ ~config ?posEnd ?posStart ~declKind ~path
     in
     PosHash.replace decls pos decl)
 
-let addValueDeclaration ~config ?(isToplevel = true) ~(loc : Location.t)
+let addValueDeclaration ~config ~file ?(isToplevel = true) ~(loc : Location.t)
     ~moduleLoc ?(optionalArgs = OptionalArgs.empty) ~path ~sideEffects name =
   name
-  |> addDeclaration_ ~config
+  |> addDeclaration_ ~config ~file
        ~declKind:(Value {isToplevel; optionalArgs; sideEffects})
        ~loc ~moduleLoc ~path
 
@@ -423,7 +429,7 @@ let emitWarning ~config ~decl ~message deadWarning =
   decl.path
   |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
   |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname;
-  Log_.warning ~config ~loc
+  Log_.warning ~loc
     (DeadWarning
        {
          deadWarning;
