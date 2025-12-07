@@ -2,7 +2,7 @@ use crate::build::packages;
 use crate::helpers;
 use crate::helpers::deserialize::*;
 use crate::project_context::ProjectContext;
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use convert_case::{Case, Casing};
 use serde::de::{Error as DeError, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -440,10 +440,19 @@ impl Config {
     /// Try to convert a bsconfig from a string to a bsconfig struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
         let mut deserializer = serde_json::Deserializer::from_str(config_str);
+        let mut tracker = serde_path_to_error::Track::new();
+        let path_deserializer = serde_path_to_error::Deserializer::new(&mut deserializer, &mut tracker);
         let mut unknown_fields = Vec::new();
-        let mut config: Config = serde_ignored::deserialize(&mut deserializer, |path| {
-            unknown_fields.push(path.to_string());
-        })?;
+        let mut config: Config =
+            serde_ignored::deserialize(path_deserializer, |path| unknown_fields.push(path.to_string()))
+                .map_err(|err: serde_json::Error| {
+                    let path = tracker.path().to_string();
+                    if path.is_empty() {
+                        anyhow!("Failed to parse rescript.json: {err}")
+                    } else {
+                        anyhow!("Failed to parse rescript.json at {path}: {err}")
+                    }
+                })?;
 
         config.handle_deprecations()?;
         config.unknown_fields = unknown_fields;

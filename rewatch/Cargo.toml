@@ -25,6 +25,7 @@ regex = "1.7.1"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = { version = "1.0.93" }
 serde_ignored = "0.1.11"
+serde_path_to_error = "0.1.16"
 sysinfo = "0.29.10"
 tempfile = "3.10.1"
 

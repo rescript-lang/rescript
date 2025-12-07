@@ -69,7 +69,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "$out" | grep -qi "invalid type"
+echo "$out" | grep -qi "experimental-features.*invalid type"
 if [ $? -ne 0 ]; then
   error "Missing detailed parse error in build output"
   echo "$out"
@@ -108,7 +108,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "$out" | grep -qi "invalid type"
+echo "$out" | grep -qi "experimental-features.*invalid type"
 if [ $? -ne 0 ]; then
   error "Missing detailed parse error for experimental-features list"
   echo "$out"
