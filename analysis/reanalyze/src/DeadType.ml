@@ -81,7 +81,7 @@ let addTypeDependenciesInnerModule ~config ~pathToType ~loc ~typeLabelName =
       extendTypeDependencies ~config loc2 loc
   | None -> TypeLabels.add path loc
 
-let addDeclaration ~config ~file ~(typeId : Ident.t)
+let addDeclaration ~config ~decls ~file ~(typeId : Ident.t)
     ~(typeKind : Types.type_kind) =
   let currentModulePath = ModulePath.getCurrent () in
   let pathToType =
@@ -90,7 +90,7 @@ let addDeclaration ~config ~file ~(typeId : Ident.t)
   in
   let processTypeLabel ?(posAdjustment = Nothing) typeLabelName ~declKind
       ~(loc : Location.t) =
-    addDeclaration_ ~config ~file ~declKind ~path:pathToType ~loc
+    addDeclaration_ ~config ~decls ~file ~declKind ~path:pathToType ~loc
       ~moduleLoc:currentModulePath.loc ~posAdjustment typeLabelName;
     addTypeDependenciesAcrossFiles ~config ~file ~pathToType ~loc ~typeLabelName;
     addTypeDependenciesInnerModule ~config ~pathToType ~loc ~typeLabelName;

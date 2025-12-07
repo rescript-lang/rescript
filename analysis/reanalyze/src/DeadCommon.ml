@@ -56,9 +56,9 @@ module PosHash = struct
 end
 
 type decls = decl PosHash.t
-(** all exported declarations *)
+(** type alias for declaration hashtables *)
 
-let decls = (PosHash.create 256 : decls)
+(* NOTE: Global decls removed - now using Declarations.builder/t pattern *)
 
 module ValueReferences = struct
   (** all value references *)
@@ -189,8 +189,8 @@ let iterFilesFromRootsToLeaves iterFun =
                          });
                   iterFun fileName))
 
-let addDeclaration_ ~config ~(file : FileContext.t) ?posEnd ?posStart ~declKind
-    ~path ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc
+let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
+    ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc
     (name : Name.t) =
   let pos = loc.loc_start in
   let posStart =
@@ -226,12 +226,13 @@ let addDeclaration_ ~config ~(file : FileContext.t) ?posEnd ?posStart ~declKind
         report = true;
       }
     in
-    PosHash.replace decls pos decl)
+    Declarations.add decls pos decl)
 
-let addValueDeclaration ~config ~file ?(isToplevel = true) ~(loc : Location.t)
-    ~moduleLoc ?(optionalArgs = OptionalArgs.empty) ~path ~sideEffects name =
+let addValueDeclaration ~config ~decls ~file ?(isToplevel = true)
+    ~(loc : Location.t) ~moduleLoc ?(optionalArgs = OptionalArgs.empty) ~path
+    ~sideEffects name =
   name
-  |> addDeclaration_ ~config ~file
+  |> addDeclaration_ ~config ~decls ~file
        ~declKind:(Value {isToplevel; optionalArgs; sideEffects})
        ~loc ~moduleLoc ~path
 
@@ -417,7 +418,7 @@ let declIsDead ~annotations ~refs decl =
 let doReportDead ~annotations pos =
   not (FileAnnotations.is_annotated_gentype_or_dead annotations pos)
 
-let rec resolveRecursiveRefs ~annotations ~config
+let rec resolveRecursiveRefs ~annotations ~config ~decls
     ~checkOptionalArg:(checkOptionalArgFn : config:DceConfig.t -> decl -> unit)
     ~deadDeclarations ~level ~orderedFiles ~refs ~refsBeingResolved decl : bool
     =
@@ -451,7 +452,7 @@ let rec resolveRecursiveRefs ~annotations ~config
                    (decl.path |> Path.toString);
                false)
              else
-               match PosHash.find_opt decls pos with
+               match Declarations.find_opt decls pos with
                | None ->
                  if Config.recursiveDebug then
                    Log_.item "recursiveDebug can't find decl for %s@."
@@ -465,7 +466,7 @@ let rec resolveRecursiveRefs ~annotations ~config
                  in
                  let xDeclIsDead =
                    xDecl
-                   |> resolveRecursiveRefs ~annotations ~config
+                   |> resolveRecursiveRefs ~annotations ~config ~decls
                         ~checkOptionalArg:checkOptionalArgFn ~deadDeclarations
                         ~level:(level + 1) ~orderedFiles ~refs:xRefs
                         ~refsBeingResolved
@@ -508,7 +509,7 @@ let rec resolveRecursiveRefs ~annotations ~config
           refsString level);
     isDead
 
-let reportDead ~annotations ~config
+let reportDead ~annotations ~config ~decls
     ~checkOptionalArg:
       (checkOptionalArgFn :
         annotations:FileAnnotations.t -> config:DceConfig.t -> decl -> unit) =
@@ -518,7 +519,7 @@ let reportDead ~annotations ~config
       | true -> ValueReferences.find decl.pos
       | false -> TypeReferences.find decl.pos
     in
-    resolveRecursiveRefs ~annotations ~config
+    resolveRecursiveRefs ~annotations ~config ~decls
       ~checkOptionalArg:(checkOptionalArgFn ~annotations)
       ~deadDeclarations ~level:0 ~orderedFiles
       ~refsBeingResolved:(ref PosSet.empty) ~refs decl
@@ -537,7 +538,9 @@ let reportDead ~annotations ~config
              (files |> FileSet.elements |> List.map Filename.basename
             |> String.concat ", ")));
   let declarations =
-    PosHash.fold (fun _pos decl declarations -> decl :: declarations) decls []
+    Declarations.fold
+      (fun _pos decl declarations -> decl :: declarations)
+      decls []
   in
   let orderedFiles = Hashtbl.create 256 in
   iterFilesFromRootsToLeaves

@@ -12,12 +12,14 @@ type item = {
 let delayedItems = (ref [] : item list ref)
 let functionReferences = (ref [] : (Lexing.position * Lexing.position) list ref)
 
-let addFunctionReference ~config ~(locFrom : Location.t) ~(locTo : Location.t) =
+let addFunctionReference ~config ~decls ~(locFrom : Location.t)
+    ~(locTo : Location.t) =
   if active () then
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
+    (* Check if target has optional args - for filtering and debug logging *)
     let shouldAdd =
-      match PosHash.find_opt decls posTo with
+      match Declarations.find_opt_builder decls posTo with
       | Some {declKind = Value {optionalArgs}} ->
         not (OptionalArgs.isEmpty optionalArgs)
       | _ -> false
@@ -61,12 +63,12 @@ let addReferences ~config ~(locFrom : Location.t) ~(locTo : Location.t) ~path
         (argNamesMaybe |> String.concat ", ")
         (posFrom |> posToString))
 
-let forceDelayedItems () =
+let forceDelayedItems ~decls =
   let items = !delayedItems |> List.rev in
   delayedItems := [];
   items
   |> List.iter (fun {posTo; argNames; argNamesMaybe} ->
-         match PosHash.find_opt decls posTo with
+         match Declarations.find_opt decls posTo with
          | Some {declKind = Value r} ->
            r.optionalArgs |> OptionalArgs.call ~argNames ~argNamesMaybe
          | _ -> ());
@@ -75,9 +77,12 @@ let forceDelayedItems () =
   fRefs
   |> List.iter (fun (posFrom, posTo) ->
          match
-           (PosHash.find_opt decls posFrom, PosHash.find_opt decls posTo)
+           ( Declarations.find_opt decls posFrom,
+             Declarations.find_opt decls posTo )
          with
-         | Some {declKind = Value rFrom}, Some {declKind = Value rTo} ->
+         | Some {declKind = Value rFrom}, Some {declKind = Value rTo}
+           when not (OptionalArgs.isEmpty rTo.optionalArgs) ->
+           (* Only process if target has optional args - matching original filtering *)
            OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
          | _ -> ())
 

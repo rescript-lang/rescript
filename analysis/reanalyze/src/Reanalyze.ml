@@ -1,8 +1,8 @@
 open Common
 
-(** Process a cmt file and return its annotations builder (if DCE enabled).
+(** Process a cmt file and return its file_data (if DCE enabled).
     Conceptually: map over files, then merge results. *)
-let loadCmtFile ~config cmtFilePath : FileAnnotations.builder option =
+let loadCmtFile ~config cmtFilePath : DceFileProcessing.file_data option =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
@@ -43,8 +43,8 @@ let loadCmtFile ~config cmtFilePath : FileAnnotations.builder option =
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
-    (* Process file for DCE - return builder *)
-    let builder_opt =
+    (* Process file for DCE - return file_data *)
+    let file_data_opt =
       if config.DceConfig.run.dce then
         Some
           (cmt_infos
@@ -56,18 +56,18 @@ let loadCmtFile ~config cmtFilePath : FileAnnotations.builder option =
       cmt_infos |> Exception.processCmt ~file:file_context;
     if config.DceConfig.run.termination then
       cmt_infos |> Arnold.processCmt ~config ~file:file_context;
-    builder_opt
+    file_data_opt
   | _ -> None
 
-(** Process all cmt files and return list of annotation builders.
+(** Process all cmt files and return list of file_data.
     Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot : FileAnnotations.builder list =
+let processCmtFiles ~config ~cmtRoot : DceFileProcessing.file_data list =
   let ( +++ ) = Filename.concat in
   (* Local mutable state for collecting results - does not escape this function *)
-  let builders = ref [] in
+  let file_data_list = ref [] in
   let processFile cmtFilePath =
     match loadCmtFile ~config cmtFilePath with
-    | Some builder -> builders := builder :: !builders
+    | Some file_data -> file_data_list := file_data :: !file_data_list
     | None -> ()
   in
   (match cmtRoot with
@@ -116,17 +116,25 @@ let processCmtFiles ~config ~cmtRoot : FileAnnotations.builder list =
            |> List.iter (fun cmtFile ->
                   let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
                   processFile cmtFilePath)));
-  !builders
+  !file_data_list
 
 let runAnalysis ~dce_config ~cmtRoot =
-  (* Map: process each file -> list of builders *)
-  let builders = processCmtFiles ~config:dce_config ~cmtRoot in
+  (* Map: process each file -> list of file_data *)
+  let file_data_list = processCmtFiles ~config:dce_config ~cmtRoot in
   if dce_config.DceConfig.run.dce then (
     DeadException.forceDelayedItems ~config:dce_config;
-    DeadOptionalArgs.forceDelayedItems ();
-    (* Merge: combine all builders -> immutable annotations *)
-    let annotations = FileAnnotations.merge_all builders in
-    DeadCommon.reportDead ~annotations ~config:dce_config
+    (* Merge: combine all builders -> immutable data *)
+    let annotations =
+      FileAnnotations.merge_all
+        (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.annotations))
+    in
+    let decls =
+      Declarations.merge_all
+        (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
+    in
+    (* Process delayed optional args with merged decls *)
+    DeadOptionalArgs.forceDelayedItems ~decls;
+    DeadCommon.reportDead ~annotations ~decls ~config:dce_config
       ~checkOptionalArg:DeadOptionalArgs.check;
     WriteDeadAnnotations.write ~config:dce_config);
   if dce_config.DceConfig.run.exception_ then
