@@ -1,8 +1,8 @@
 (** Per-file AST processing for dead code analysis.
     
-    This module uses [FileAnnotations.builder] during AST traversal
-    and returns it for merging. The caller freezes the accumulated
-    builder before passing to the solver. *)
+    This module uses mutable builders during AST traversal
+    and returns them for merging. The caller freezes the accumulated
+    builders before passing to the solver. *)
 
 type file_context = {
   source_path: string;
@@ -11,11 +11,17 @@ type file_context = {
 }
 (** File context for processing *)
 
+type file_data = {
+  annotations: FileAnnotations.builder;
+  decls: Declarations.builder;
+}
+(** Result of processing a cmt file - both annotations and declarations *)
+
 val process_cmt_file :
   config:DceConfig.t ->
   file:file_context ->
   cmtFilePath:string ->
   Cmt_format.cmt_infos ->
-  FileAnnotations.builder
-(** Process a cmt file and return mutable builder.
+  file_data
+(** Process a cmt file and return mutable builders.
     Caller should merge builders and freeze before passing to solver. *)

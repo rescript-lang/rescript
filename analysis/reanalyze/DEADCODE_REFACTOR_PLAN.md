@@ -325,12 +325,15 @@ val is_annotated_* : t -> ... -> bool
 **Pattern**: Same as Task 3 - `builder` (mutable) → `builder list` → `merge_all` → `t` (immutable)
 
 **Changes**:
-- [ ] Create `Declarations` module with `builder` and `t` types
-- [ ] `process_cmt_file` returns `Declarations.builder` (local mutable)
-- [ ] `processCmtFiles` collects into `builder list`
-- [ ] `Declarations.merge_all : builder list -> t`
-- [ ] Solver uses immutable `Declarations.t`
-- [ ] Delete global `DeadCommon.decls`
+- [x] Create `Declarations` module with `builder` and `t` types
+- [x] `process_cmt_file` returns `DceFileProcessing.file_data` containing both `annotations` and `decls` builders
+- [x] `processCmtFiles` collects into `file_data list`
+- [x] `Declarations.merge_all : builder list -> t`
+- [x] Solver uses immutable `Declarations.t`
+- [x] Delete global `DeadCommon.decls`
+- [x] Update `DeadOptionalArgs.forceDelayedItems` to take `~decls:Declarations.t`
+
+**Status**: Complete ✅
 
 **Test**: Process files in different orders - results should be identical.
 

@@ -2,7 +2,7 @@
 
 open DeadCommon
 
-let checkAnyValueBindingWithNoSideEffects ~config ~file
+let checkAnyValueBindingWithNoSideEffects ~config ~decls ~file
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
       Typedtree.value_binding) =
   match pat_desc with
@@ -11,14 +11,14 @@ let checkAnyValueBindingWithNoSideEffects ~config ~file
     let currentModulePath = ModulePath.getCurrent () in
     let path = currentModulePath.path @ [FileContext.module_name_tagged file] in
     name
-    |> addValueDeclaration ~config ~file ~path ~loc
+    |> addValueDeclaration ~config ~decls ~file ~path ~loc
          ~moduleLoc:currentModulePath.loc ~sideEffects:false
   | _ -> ()
 
-let collectValueBinding ~config ~file ~(current_binding : Location.t)
+let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
     (vb : Typedtree.value_binding) =
   let oldLastBinding = current_binding in
-  checkAnyValueBindingWithNoSideEffects ~config ~file vb;
+  checkAnyValueBindingWithNoSideEffects ~config ~decls ~file vb;
   let loc =
     match vb.vb_pat.pat_desc with
     | Tpat_var (id, {loc = {loc_start; loc_ghost} as loc})
@@ -31,7 +31,7 @@ let collectValueBinding ~config ~file ~(current_binding : Location.t)
         |> Common.OptionalArgs.fromList
       in
       let exists =
-        match PosHash.find_opt decls loc_start with
+        match Declarations.find_opt_builder decls loc_start with
         | Some {declKind = Value r} ->
           r.optionalArgs <- optionalArgs;
           true
@@ -51,9 +51,9 @@ let collectValueBinding ~config ~file ~(current_binding : Location.t)
          let isToplevel = oldLastBinding = Location.none in
          let sideEffects = SideEffects.checkExpr vb.vb_expr in
          name
-         |> addValueDeclaration ~config ~file ~isToplevel ~loc
+         |> addValueDeclaration ~config ~decls ~file ~isToplevel ~loc
               ~moduleLoc:currentModulePath.loc ~optionalArgs ~path ~sideEffects);
-      (match PosHash.find_opt decls loc_start with
+      (match Declarations.find_opt_builder decls loc_start with
       | None -> ()
       | Some decl ->
         (* Value bindings contain the correct location for the entire declaration: update final position.
@@ -65,7 +65,7 @@ let collectValueBinding ~config ~file ~(current_binding : Location.t)
               {vk with sideEffects = SideEffects.checkExpr vb.vb_expr}
           | dk -> dk
         in
-        PosHash.replace decls loc_start
+        Declarations.replace_builder decls loc_start
           {
             decl with
             declKind;
@@ -237,13 +237,14 @@ let rec getSignature (moduleType : Types.module_type) =
   | Mty_functor (_, _mtParam, mt) -> getSignature mt
   | _ -> []
 
-let rec processSignatureItem ~config ~file ~doTypes ~doValues ~moduleLoc ~path
-    (si : Types.signature_item) =
+let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
+    ~path (si : Types.signature_item) =
   let oldModulePath = ModulePath.getCurrent () in
   (match si with
   | Sig_type (id, t, _) when doTypes ->
     if !Config.analyzeTypes then
-      DeadType.addDeclaration ~config ~file ~typeId:id ~typeKind:t.type_kind
+      DeadType.addDeclaration ~config ~decls ~file ~typeId:id
+        ~typeKind:t.type_kind
   | Sig_value (id, {Types.val_loc = loc; val_kind = kind; val_type})
     when doValues ->
     if not loc.Location.loc_ghost then
@@ -262,8 +263,8 @@ let rec processSignatureItem ~config ~file ~doTypes ~doValues ~moduleLoc ~path
            Printf.printf "XXX %s\n" (Ident.name id); *)
         Ident.name id
         |> Name.create ~isInterface:false
-        |> addValueDeclaration ~config ~file ~loc ~moduleLoc ~optionalArgs ~path
-             ~sideEffects:false
+        |> addValueDeclaration ~config ~decls ~file ~loc ~moduleLoc
+             ~optionalArgs ~path ~sideEffects:false
   | Sig_module (id, {Types.md_type = moduleType; md_loc = moduleLoc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some moduleType; mtd_loc = moduleLoc}) ->
     ModulePath.setCurrent
@@ -280,13 +281,14 @@ let rec processSignatureItem ~config ~file ~doTypes ~doValues ~moduleLoc ~path
     if collect then
       getSignature moduleType
       |> List.iter
-           (processSignatureItem ~config ~file ~doTypes ~doValues ~moduleLoc
+           (processSignatureItem ~config ~decls ~file ~doTypes ~doValues
+              ~moduleLoc
               ~path:((id |> Ident.name |> Name.create) :: path))
   | _ -> ());
   ModulePath.setCurrent oldModulePath
 
 (* Traverse the AST *)
-let traverseStructure ~config ~file ~doTypes ~doExternals
+let traverseStructure ~config ~decls ~file ~doTypes ~doExternals
     (structure : Typedtree.structure) : unit =
   let rec create_mapper (last_binding : Location.t) =
     let super = Tast_mapper.default in
@@ -318,7 +320,7 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
                 | Mty_signature signature ->
                   signature
                   |> List.iter
-                       (processSignatureItem ~config ~file ~doTypes
+                       (processSignatureItem ~config ~decls ~file ~doTypes
                           ~doValues:false ~moduleLoc:mb_expr.mod_loc
                           ~path:
                             ((ModulePath.getCurrent ()).path
@@ -330,7 +332,9 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
                 currentModulePath.path @ [FileContext.module_name_tagged file]
               in
               let exists =
-                match PosHash.find_opt decls vd.val_loc.loc_start with
+                match
+                  Declarations.find_opt_builder decls vd.val_loc.loc_start
+                with
                 | Some {declKind = Value _} -> true
                 | _ -> false
               in
@@ -342,14 +346,15 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
               then
                 id
                 |> Name.create ~isInterface:false
-                |> addValueDeclaration ~config ~file ~path ~loc:vd.val_loc
-                     ~moduleLoc:currentModulePath.loc ~sideEffects:false
+                |> addValueDeclaration ~config ~decls ~file ~path
+                     ~loc:vd.val_loc ~moduleLoc:currentModulePath.loc
+                     ~sideEffects:false
             | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
               if !Config.analyzeTypes then
                 typeDeclarations
                 |> List.iter
                      (fun (typeDeclaration : Typedtree.type_declaration) ->
-                       DeadType.addDeclaration ~config ~file
+                       DeadType.addDeclaration ~config ~decls ~file
                          ~typeId:typeDeclaration.typ_id
                          ~typeKind:typeDeclaration.typ_type.type_kind)
             | Tstr_include {incl_mod; incl_type} -> (
@@ -361,7 +366,7 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
                 in
                 incl_type
                 |> List.iter
-                     (processSignatureItem ~config ~file ~doTypes
+                     (processSignatureItem ~config ~decls ~file ~doTypes
                         ~doValues:false (* TODO: also values? *)
                         ~moduleLoc:incl_mod.mod_loc ~path:currentPath)
               | _ -> ())
@@ -372,7 +377,7 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
               in
               let name = id |> Ident.name |> Name.create in
               name
-              |> DeadException.add ~config ~file ~path ~loc
+              |> DeadException.add ~config ~decls ~file ~path ~loc
                    ~strLoc:structureItem.str_loc
             | _ -> ());
             let result = super.structure_item mapper structureItem in
@@ -382,7 +387,8 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
           (fun _self vb ->
             let loc =
               vb
-              |> collectValueBinding ~config ~file ~current_binding:last_binding
+              |> collectValueBinding ~config ~decls ~file
+                   ~current_binding:last_binding
             in
             let nested_mapper = create_mapper loc in
             super.Tast_mapper.value_binding nested_mapper vb);
@@ -394,7 +400,7 @@ let traverseStructure ~config ~file ~doTypes ~doExternals
   mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let processValueDependency ~config
+let processValueDependency ~config ~decls
     ( ({
          val_loc =
            {loc_start = {pos_fname = fnTo} as posTo; loc_ghost = ghost1} as
@@ -411,10 +417,10 @@ let processValueDependency ~config
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
     addValueReference ~config ~binding:Location.none ~addFileReference ~locFrom
       ~locTo;
-    DeadOptionalArgs.addFunctionReference ~config ~locFrom ~locTo)
+    DeadOptionalArgs.addFunctionReference ~config ~decls ~locFrom ~locTo)
 
-let processStructure ~config ~file ~cmt_value_dependencies ~doTypes ~doExternals
-    (structure : Typedtree.structure) =
-  traverseStructure ~config ~file ~doTypes ~doExternals structure;
+let processStructure ~config ~decls ~file ~cmt_value_dependencies ~doTypes
+    ~doExternals (structure : Typedtree.structure) =
+  traverseStructure ~config ~decls ~file ~doTypes ~doExternals structure;
   let valueDependencies = cmt_value_dependencies |> List.rev in
-  valueDependencies |> List.iter (processValueDependency ~config)
+  valueDependencies |> List.iter (processValueDependency ~config ~decls)

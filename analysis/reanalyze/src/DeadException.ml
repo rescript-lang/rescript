@@ -6,11 +6,11 @@ type item = {exceptionPath: Path.t; locFrom: Location.t}
 let delayedItems = ref []
 let declarations = Hashtbl.create 1
 
-let add ~config ~file ~path ~loc ~(strLoc : Location.t) name =
+let add ~config ~decls ~file ~path ~loc ~(strLoc : Location.t) name =
   let exceptionPath = name :: path in
   Hashtbl.add declarations exceptionPath loc;
   name
-  |> addDeclaration_ ~config ~file ~posEnd:strLoc.loc_end
+  |> addDeclaration_ ~config ~decls ~file ~posEnd:strLoc.loc_end
        ~posStart:strLoc.loc_start ~declKind:Exception
        ~moduleLoc:(ModulePath.getCurrent ()).loc ~path ~loc
 
