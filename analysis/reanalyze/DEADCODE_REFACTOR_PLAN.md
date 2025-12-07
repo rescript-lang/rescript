@@ -17,45 +17,48 @@
 
 ## Key Design Principles
 
-### 1. Separate per-file input from project-wide analysis
+### 1. Local mutable state during AST processing, immutable after
 
-**Per-file source data** (can be incrementally updated):
-- Source annotations (`@dead`, `@live`, `@genType` from AST)
-- Declarations defined in that file
-- References made from that file
-- Keyed by filename so we can replace one file's data
+**AST processing phase** (per-file):
+- Uses local mutable state for performance (hashtables, etc.)
+- Returns **immutable** `file_data` when done
+- This phase is inherently sequential per-file
 
-**Project-wide analysis** (computed from merged per-file data):
-- Deadness solver operates on merged view of all files
-- Results are **immutable** - returned as data, not mutated
-
-### 2. Analysis results are immutable
-
-The solver should:
-- Take source data as **read-only input**
-- Return results as **new immutable data**
-- Never mutate input state during analysis
+**Analysis phase** (project-wide):
+- Works only with **immutable data structures**
+- Must be parallelizable, reorderable
+- Static guarantees from this point on
 
 ```ocaml
-(* WRONG - current design mutates state during analysis *)
-let resolveRecursiveRefs ~state ... =
-  ...
-  AnnotationState.annotate_dead state decl.pos  (* mutation! *)
+(* AST processing: local mutable state OK, returns immutable *)
+let process_file config cmt_infos : file_data =
+  let local_state = Hashtbl.create 256 in  (* local mutable *)
+  ... traverse AST, mutate local_state ...
+  freeze_to_file_data local_state  (* return immutable *)
 
-(* RIGHT - return results as data *)
-let solve_deadness ~source_annotations ~decls ~refs =
-  ... compute ...
-  { dead_positions; issues; annotations_to_write }  (* return, don't mutate *)
+(* Analysis: immutable in, immutable out - parallelizable *)
+let solve_deadness config (files : file_data list) : analysis_result =
+  ... pure computation on immutable data ...
 ```
+
+### 2. Clear phase boundaries
+
+| Phase | Input | Mutability | Output | Parallelizable? |
+|-------|-------|------------|--------|-----------------|
+| **AST processing** | cmt file | Local mutable OK | Immutable `file_data` | Per-file yes |
+| **Merge** | `file_data list` | None | Immutable merged view | Yes |
+| **Analysis** | Merged view | None | Immutable `result` | Yes |
+| **Reporting** | `result` | I/O side effects | None | N/A |
 
 ### 3. Enable incremental updates
 
 When file F changes:
-1. Replace `per_file_data[F]` with new data from re-processing F
-2. Re-merge into project-wide view
-3. Re-run solver (returns new results)
+1. Re-run AST processing for F only → new `file_data`
+2. Replace in `file_data` map (keyed by filename)
+3. Re-run merge and analysis (on immutable data)
 
-This requires per-file data to be **keyed by filename**.
+The key is that **immutable data structures enable safe incremental updates** -
+you can swap one file's data without affecting others.
 
 ---
 
@@ -112,78 +115,93 @@ This requires per-file data to be **keyed by filename**.
 ## End State
 
 ```ocaml
-(* Configuration: immutable *)
-type config = {
-  run : RunConfig.t;
-  debug : bool;
-  write_annotations : bool;
-  live_names : string list;
-  live_paths : string list;
-  exclude_paths : string list;
-}
+(* ===== IMMUTABLE DATA TYPES ===== *)
 
-(* Per-file source data - extracted from one file's AST *)
+(* Configuration: immutable *)
+type config = { ... }
+
+(* Per-file data - IMMUTABLE, returned by AST processing *)
 type file_data = {
   source_path : string;
   module_name : Name.t;
   is_interface : bool;
-  source_annotations : annotated_as PosHash.t;  (* @dead/@live/@genType in source *)
-  decls : decl list;                            (* declarations defined here *)
-  value_refs : (pos * pos) list;                (* references made from here *)
-  type_refs : (pos * pos) list;
-  file_refs : string list;                      (* files this file depends on *)
+  source_annotations : AnnotationMap.t;  (* immutable map *)
+  decls : DeclMap.t;                     (* immutable map *)
+  value_refs : RefMap.t;                 (* immutable map *)
+  type_refs : RefMap.t;
+  file_deps : StringSet.t;               (* files this depends on *)
 }
 
-(* Per-file data keyed by filename - enables incremental updates *)
-type per_file_state = file_data StringMap.t
-
-(* Project-wide merged view - computed from per_file_state *)
-type merged_state = {
-  all_annotations : annotated_as PosHash.t;     (* merged from all files *)
-  all_decls : decl PosHash.t;                   (* merged from all files *)
-  all_value_refs : PosSet.t PosHash.t;          (* merged from all files *)
-  all_type_refs : PosSet.t PosHash.t;
-  all_file_refs : FileSet.t StringMap.t;
+(* Project-wide merged view - IMMUTABLE *)
+type merged_view = {
+  all_annotations : AnnotationMap.t;
+  all_decls : DeclMap.t;
+  all_value_refs : RefMap.t;
+  all_type_refs : RefMap.t;
+  file_graph : FileGraph.t;
 }
 
-(* Analysis results - IMMUTABLE, returned by solver *)
+(* Analysis results - IMMUTABLE *)
 type analysis_result = {
-  dead_positions : PosSet.t;
+  dead_decls : decl list;
   issues : issue list;
   annotations_to_write : (string * line_annotation list) list;
 }
 
-(* Pure: extract data from one file *)
-val process_file : config -> Cmt_format.cmt_infos -> file_data
+(* ===== PHASE 1: AST PROCESSING (local mutable OK) ===== *)
 
-(* Pure: merge per-file data into project-wide view *)
-val merge_file_data : per_file_state -> merged_state
+(* Uses local mutable hashtables for performance, returns immutable *)
+let process_file config cmt_infos : file_data =
+  (* Local mutable state - not visible outside this function *)
+  let annotations = Hashtbl.create 64 in
+  let decls = Hashtbl.create 256 in
+  let refs = Hashtbl.create 256 in
+  
+  (* Traverse AST, populate local tables *)
+  traverse_ast ~annotations ~decls ~refs cmt_infos;
+  
+  (* Freeze into immutable data *)
+  {
+    source_annotations = AnnotationMap.of_hashtbl annotations;
+    decls = DeclMap.of_hashtbl decls;
+    value_refs = RefMap.of_hashtbl refs;
+    ...
+  }
 
-(* Pure: solve deadness - takes READ-ONLY input, returns IMMUTABLE result *)
-val solve_deadness : config -> merged_state -> analysis_result
+(* ===== PHASE 2: MERGE (pure, parallelizable) ===== *)
 
-(* Orchestration with side effects at edges *)
+let merge_files (files : file_data StringMap.t) : merged_view =
+  (* Pure merge of immutable data - can parallelize *)
+  ...
+
+(* ===== PHASE 3: ANALYSIS (pure, parallelizable) ===== *)
+
+let solve_deadness config (view : merged_view) : analysis_result =
+  (* Pure computation on immutable data *)
+  (* Can be parallelized, reordered, memoized *)
+  ...
+
+(* ===== ORCHESTRATION ===== *)
+
 let run_analysis ~config ~cmt_files =
-  (* Pure: process each file independently *)
-  let per_file = 
+  (* Phase 1: Process files (can parallelize per-file) *)
+  let files = 
     cmt_files 
     |> List.map (fun path -> (path, process_file config (load_cmt path)))
     |> StringMap.of_list
   in
-  (* Pure: merge into project-wide view *)
-  let merged = merge_file_data per_file in
-  (* Pure: solve deadness - NO MUTATION *)
+  (* Phase 2: Merge *)
+  let merged = merge_files files in
+  (* Phase 3: Analyze *)
   let result = solve_deadness config merged in
-  (* Impure: report results *)
-  result.issues |> List.iter report_issue;
-  if config.write_annotations then 
-    result.annotations_to_write |> List.iter write_to_file
+  (* Phase 4: Report (side effects) *)
+  report result
 
-(* Incremental update when file F changes *)
-let update_file ~config ~per_file ~changed_file =
-  let new_file_data = process_file config (load_cmt changed_file) in
-  let per_file = StringMap.add changed_file new_file_data per_file in
-  let merged = merge_file_data per_file in
+(* Incremental: only re-process changed file *)
+let update_file ~config ~files ~changed_file =
+  let new_data = process_file config (load_cmt changed_file) in
+  let files = StringMap.add changed_file new_data files in
+  let merged = merge_files files in
   solve_deadness config merged
 ```
 
@@ -231,132 +249,177 @@ Each task should:
 
 **Estimated effort**: Medium (done)
 
-### Task 3: Make `ProcessDeadAnnotations` state explicit (P3)
+### Task 3: Source annotations use map → list → merge pattern (P3)
 
-**Value**: Removes hidden global state. Makes annotation tracking testable.
+**Value**: Demonstrates the "local mutable → immutable" architecture for one data type.
+Shows the reusable pattern: **map** (per-file) → **list** → **merge** → **immutable result**.
 
 **Changes**:
-- [x] Create `AnnotationState.t` module with explicit state type and accessor functions
-- [x] Change `ProcessDeadAnnotations` functions to take explicit `~state:AnnotationState.t`
-- [x] Thread `annotation_state` through `DeadCode.processCmt` and `Reanalyze.loadCmtFile`
-- [x] Update `declIsDead`, `doReportDead`, `resolveRecursiveRefs`, `reportDead` to use explicit state
-- [x] Update `DeadOptionalArgs.check` to take explicit state
-- [x] Delete the global `positionsAnnotated`
+- [x] Create `FileAnnotations` module with two types:
+  - `builder` - mutable, for AST processing
+  - `t` - immutable, for solver (read-only)
+- [x] `DceFileProcessing.process_cmt_file` returns `builder` (local mutable state)
+- [x] `processCmtFiles` collects builders into a list (order doesn't matter)
+- [x] `FileAnnotations.merge_all : builder list -> t` combines all into immutable result
+- [x] Solver receives `t` (read-only, no mutation functions available)
+- [x] **Remove solver mutation**: `resolveRecursiveRefs` no longer calls `annotate_dead`
+- [x] **Use `decl.resolvedDead` directly**: Already-resolved decls use their stored result
 
-**Status**: Partially complete ⚠️
+**Status**: Complete ✅
 
-**Known limitation**: Current implementation still mixes concerns:
-- Source annotations (from `@dead`/`@live`/`@genType` in files) - INPUT
-- Analysis results (positions solver determined are dead) - OUTPUT
+**The Pattern** (reusable for Tasks 4-7):
+```ocaml
+(* Two types: mutable builder, immutable result *)
+type builder  (* mutable - for AST processing *)
+type t        (* immutable - for solver *)
 
-The solver currently **mutates** `AnnotationState` via `annotate_dead` during `resolveRecursiveRefs`.
-This violates the principle that analysis results should be immutable and returned.
+(* Builder API *)
+val create_builder : unit -> builder
+val annotate_* : builder -> ... -> unit
 
-**TODO** (in later task):
-- [ ] Separate `SourceAnnotations.t` (per-file, read-only input) from analysis results
-- [ ] Make `SourceAnnotations` keyed by filename for incremental updates
-- [ ] Solver should return dead positions as part of `analysis_result`, not mutate state
+(* Merge: list of builders → immutable result *)
+val merge_all : builder list -> t
 
-**Test**: Process two files "simultaneously" (two separate state values) - should not interfere.
+(* Read-only API for t *)
+val is_annotated_* : t -> ... -> bool
+```
+
+**Architecture achieved**:
+```
+┌─────────────────────────────────────────────────────────────┐
+│ MAP: process each file (parallelizable)                     │
+│   process_cmt_file → builder (local mutable)                │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                      [ builder list ]
+                      (order doesn't matter)
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ MERGE: combine all (pure)                                   │
+│   merge_all builders → t (immutable)                        │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ ANALYZE: use immutable data                                 │
+│   reportDead ~annotations:t (read-only)                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key properties**:
+- **Order independence**: builders collected in any order → same result
+- **Parallelizable**: map phase can run concurrently
+- **Incremental**: replace one builder in list, re-merge
+- **Type-safe**: `t` has no mutation functions in API
+
+**Test**: Process files in different orders - results should be identical.
 
 **Estimated effort**: Small (well-scoped module)
 
-### Task 4: Localize analysis tables (P2) - Part 1: Declarations
+### Task 4: Declarations use map → list → merge pattern (P2)
 
-**Value**: First step toward incremental analysis. Per-file declaration data enables replacing one file's contributions.
+**Value**: Declarations become immutable after AST processing. Enables parallelizable analysis.
+
+**Pattern**: Same as Task 3 - `builder` (mutable) → `builder list` → `merge_all` → `t` (immutable)
 
 **Changes**:
-- [ ] Create `FileDecls.t` type for per-file declarations (keyed by filename)
-- [ ] `process_file` returns declarations for that file only
-- [ ] Store as `file_decls : decl list StringMap.t` (per-file, keyed by filename)
-- [ ] Create `merge_decls : file_decls -> decl PosHash.t` for project-wide view
+- [ ] Create `Declarations` module with `builder` and `t` types
+- [ ] `process_cmt_file` returns `Declarations.builder` (local mutable)
+- [ ] `processCmtFiles` collects into `builder list`
+- [ ] `Declarations.merge_all : builder list -> t`
+- [ ] Solver uses immutable `Declarations.t`
 - [ ] Delete global `DeadCommon.decls`
 
-**Incremental benefit**: When file F changes, just replace `file_decls[F]` and re-merge.
-
-**Test**: Analyze files with separate decl tables - should not interfere.
+**Test**: Process files in different orders - results should be identical.
 
 **Estimated effort**: Medium (core data structure, many call sites)
 
-### Task 5: Localize analysis tables (P2) - Part 2: References
+### Task 5: References use map → list → merge pattern (P2)
 
-**Value**: Completes per-file reference tracking for incremental analysis.
+**Value**: References become immutable after AST processing.
+
+**Pattern**: Same as Task 3/4.
 
 **Changes**:
-- [ ] Create `FileRefs.t` for per-file references (keyed by filename)
-- [ ] `process_file` returns references made from that file
-- [ ] Store as `file_value_refs : (pos * pos) list StringMap.t`
-- [ ] Create `merge_refs` for project-wide view
+- [ ] Create `References` module with `builder` and `t` types
+- [ ] `process_cmt_file` returns `References.builder` for both value and type refs
+- [ ] `References.merge_all : builder list -> t`
 - [ ] Delete global `ValueReferences.table` and `TypeReferences.table`
 
-**Incremental benefit**: When file F changes, replace `file_refs[F]` and re-merge.
-
-**Test**: Same as Task 4.
+**Test**: Process files in different orders - results should be identical.
 
 **Estimated effort**: Medium (similar to Task 4)
 
-### Task 6: Localize delayed processing queues (P3)
+### Task 6: Delayed items use map → list → merge pattern (P3)
 
-**Value**: Removes order dependence. Makes analysis deterministic.
+**Value**: No global queues. Delayed items are per-file immutable data.
 
-**Changes**:
-- [ ] `DeadOptionalArgs`: Return delayed items from file processing, merge later
-- [ ] `DeadException`: Return delayed items from file processing, merge later
-- [ ] `DeadType.TypeDependencies`: Return delayed items from file processing, merge later
-- [ ] `forceDelayedItems` operates on merged delayed items (pure function)
-- [ ] Delete global refs
-
-**Key insight**: Delayed items should be **returned** from file processing, not accumulated in globals.
-This makes them per-file and enables incremental updates.
-
-**Test**: Process files in different orders - delayed items should be processed consistently.
-
-**Estimated effort**: Medium (3 modules, each similar to Task 3)
-
-### Task 7: Localize file/module tracking (P2 + P3)
-
-**Value**: Per-file dependency tracking enables incremental dependency graph updates.
+**Pattern**: Same as Task 3/4/5.
 
 **Changes**:
-- [ ] `FileReferences`: Store per-file as `file_deps : string list StringMap.t`
-- [ ] Create `merge_file_refs` for project-wide dependency graph
-- [ ] `DeadModules`: Track per-file module usage, merge for project-wide view
-- [ ] `iterFilesFromRootsToLeaves`: pure function on merged file refs, returns ordered list
+- [ ] Create `DelayedItems` module with `builder` and `t` types
+- [ ] `process_cmt_file` returns `DelayedItems.builder`
+- [ ] `DelayedItems.merge_all : builder list -> t`
+- [ ] `forceDelayedItems` is pure function on `DelayedItems.t`
+- [ ] Delete global `delayedItems` refs
 
-**Incremental benefit**: When file F changes, update `file_deps[F]` and re-merge graph.
+**Key insight**: "Delayed" items are just per-file data collected during AST processing.
+They should follow the same pattern as everything else.
 
-**Test**: Build file reference graph in isolation, verify topological ordering is correct.
+**Test**: Process files in different orders - results should be identical.
+
+**Estimated effort**: Medium (3 modules)
+
+### Task 7: File dependencies use map → list → merge pattern (P2 + P3)
+
+**Value**: File graph built from immutable per-file data.
+
+**Pattern**: Same as Task 3/4/5/6.
+
+**Changes**:
+- [ ] Create `FileDeps` module with `builder` and `t` types
+- [ ] `process_cmt_file` returns `FileDeps.builder`
+- [ ] `FileDeps.merge_all : builder list -> FileGraph.t`
+- [ ] `topological_order : FileGraph.t -> string list` (pure function)
+- [ ] `DeadModules` state becomes part of per-file data
+
+**Test**: Build file graph, verify topological ordering is correct.
 
 **Estimated effort**: Medium (cross-file logic, but well-contained)
 
-### Task 8: Separate analysis from reporting (P5) - Immutable Results
+### Task 8: Analysis phase is pure (P5)
 
-**Value**: Solver returns immutable results. No mutation during analysis. Pure function.
+**Value**: Analysis phase works on immutable merged data, returns immutable results.
+Can be parallelized, memoized, reordered.
 
 **Changes**:
-- [ ] Create `AnalysisResult.t` type with `dead_positions`, `issues`, `annotations_to_write`
-- [ ] `solve_deadness`: Return `AnalysisResult.t` instead of mutating state
-- [ ] Remove `AnnotationState.annotate_dead` call from `resolveRecursiveRefs`
-- [ ] Dead positions are part of returned result, not mutated into input state
+- [ ] `solve_deadness : config -> merged_view -> analysis_result` (pure)
+- [ ] Input `merged_view` is immutable (from Tasks 4-7)
+- [ ] Output `analysis_result` is immutable
 - [ ] `Decl.report`: Return `issue` instead of logging
-- [ ] Remove all `Log_.warning`, `Log_.item`, `EmitJson` calls from `Dead*.ml` modules
-- [ ] `Reanalyze.runAnalysis`: Call pure solver, then separately report from result
+- [ ] Remove all `Log_.warning`, `Log_.item` calls from analysis path
+- [ ] Side effects (logging, JSON) only in final reporting phase
 
-**Key principle**: The solver takes **read-only** merged state and returns **new immutable** results.
-No mutation of input state during analysis.
-
-```ocaml
-(* Before - WRONG *)
-let solve ~state = 
-  ... AnnotationState.annotate_dead state pos ...  (* mutates input! *)
-
-(* After - RIGHT *)
-let solve ~merged_state =
-  let dead_positions = ... compute ... in
-  { dead_positions; issues; annotations_to_write }  (* return new data *)
+**Architecture**:
+```
+merged_view (immutable) 
+    │
+    ▼
+solve_deadness (pure function)
+    │
+    ▼
+analysis_result (immutable)
+    │
+    ▼
+report (side effects here only)
 ```
 
-**Test**: Run analysis, capture result, verify input state unchanged.
+**Key guarantee**: After Tasks 4-7, the analysis phase has **no mutable state**.
+This enables parallelization, caching, and incremental recomputation.
+
+**Test**: Run analysis twice on same input, verify identical results. Verify no side effects.
 
 **Estimated effort**: Medium (many logging call sites, but mechanical)
 
@@ -405,16 +468,15 @@ let solve ~merged_state =
 
 ## Execution Strategy
 
-**Completed**: Task 1 ✅, Task 2 ✅, Task 10 ✅
-**Partially complete**: Task 3 ⚠️ (state explicit but still mixes input/output)
+**Completed**: Task 1 ✅, Task 2 ✅, Task 3 ✅, Task 10 ✅
 
 **Remaining order**: 4 → 5 → 6 → 7 → 8 → 9 → 11 (test)
 
 **Why this order?**
 - Tasks 1-2 remove implicit dependencies (file context, config) - ✅ DONE
-- Task 3 makes annotation tracking explicit - ⚠️ PARTIAL (needs input/output separation in Task 8)
+- Task 3 makes source annotations read-only (solver no longer mutates) - ✅ DONE
 - Tasks 4-7 make state **per-file** for incremental updates
-- Task 8 makes solver **pure** with immutable results (also fixes Task 3's input/output mixing)
+- Task 8 makes reporting **pure** with immutable results
 - Task 9 separates annotation computation from file writing
 - Task 10 verifies no global config reads remain - ✅ DONE
 - Task 11 validates everything including incremental updates
@@ -435,32 +497,33 @@ let solve ~merged_state =
 
 After all tasks:
 
-✅ **No global mutable state in analysis path**
-- No `ref` or mutable `Hashtbl` in `Dead*.ml` modules
-- All state is local or explicitly threaded
-- **Zero `DceConfig.current()` calls in analysis code** - only at entry point
+✅ **Local mutable → Immutable boundary**
+- AST processing uses local mutable state (performance)
+- Returns **immutable** `file_data`
+- Analysis phase works **only** on immutable data
+
+✅ **Pure analysis phase**
+- `solve_deadness : merged_view -> analysis_result` is pure
+- No side effects (logging, I/O) in analysis
+- Can parallelize, memoize, reorder
+
+✅ **Incremental updates**
+- Replace one file's `file_data` without touching others
+- Re-merge is pure function on immutable data
+- Re-analyze is pure function on immutable data
 
 ✅ **Order independence**
-- Processing files in any order gives identical results
+- Processing files in any order → identical `file_data`
+- Merging in any order → identical `merged_view`
 - Property test verifies this
 
-✅ **Pure analysis function**
-- Can call analysis and get results as data
-- No side effects (logging, file I/O) during analysis
-- **Solver returns immutable results** - no mutation of input state
-
-✅ **Per-file state enables incremental updates**
-- All per-file data (annotations, decls, refs) keyed by filename
-- Can replace one file's data: `per_file_state[F] = new_data`
-- Re-merge and re-solve without reprocessing other files
-
-✅ **Clear separation of input vs output**
-- Source annotations (from AST) are **read-only input**
-- Analysis results (dead positions, issues) are **immutable output**
-- Solver takes input, returns output - no mixing
+✅ **Static guarantees**
+- Type system enforces immutability after AST processing
+- No `ref` or mutable `Hashtbl` visible in analysis phase API
+- Compiler catches violations
 
 ✅ **Testable**
-- Can test analysis without mocking I/O
-- Can test with different configs without mutating globals
-- Can test with isolated state
-- Can verify solver doesn't mutate its input
+- Test AST processing in isolation (per-file)
+- Test merge function in isolation (pure)
+- Test analysis in isolation (pure)
+- No mocking needed - just pass immutable data

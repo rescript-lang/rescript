@@ -55,35 +55,6 @@ module PosHash = struct
     replace h k (PosSet.add v set)
 end
 
-(** State tracking positions annotated as @dead, @live, or @genType *)
-module AnnotationState = struct
-  type annotated_as = GenType | Dead | Live
-  type t = annotated_as PosHash.t
-
-  let create () : t = PosHash.create 1
-
-  let is_annotated_dead (state : t) pos = PosHash.find_opt state pos = Some Dead
-
-  let is_annotated_gentype_or_live (state : t) pos =
-    match PosHash.find_opt state pos with
-    | Some (Live | GenType) -> true
-    | Some Dead | None -> false
-
-  let is_annotated_gentype_or_dead (state : t) pos =
-    match PosHash.find_opt state pos with
-    | Some (Dead | GenType) -> true
-    | Some Live | None -> false
-
-  let annotate_gentype (state : t) (pos : Lexing.position) =
-    PosHash.replace state pos GenType
-
-  let annotate_dead (state : t) (pos : Lexing.position) =
-    PosHash.replace state pos Dead
-
-  let annotate_live (state : t) (pos : Lexing.position) =
-    PosHash.replace state pos Live
-end
-
 type decls = decl PosHash.t
 (** all exported declarations *)
 
@@ -217,161 +188,6 @@ let iterFilesFromRootsToLeaves iterFun =
                                fileName;
                          });
                   iterFun fileName))
-
-(** Process AST to collect locations annotated @genType, @dead, or @live *)
-module ProcessDeadAnnotations = struct
-  let processAttributes ~state ~config ~doGenType ~name ~pos attributes =
-    let getPayloadFun f = attributes |> Annotation.getAttributePayload f in
-    let getPayload (x : string) =
-      attributes |> Annotation.getAttributePayload (( = ) x)
-    in
-    if
-      doGenType
-      && getPayloadFun Annotation.tagIsOneOfTheGenTypeAnnotations <> None
-    then AnnotationState.annotate_gentype state pos;
-    if getPayload WriteDeadAnnotations.deadAnnotation <> None then
-      AnnotationState.annotate_dead state pos;
-    let nameIsInLiveNamesOrPaths () =
-      config.DceConfig.cli.live_names |> List.mem name
-      ||
-      let fname =
-        match Filename.is_relative pos.pos_fname with
-        | true -> pos.pos_fname
-        | false -> Filename.concat (Sys.getcwd ()) pos.pos_fname
-      in
-      let fnameLen = String.length fname in
-      config.DceConfig.cli.live_paths
-      |> List.exists (fun prefix ->
-             String.length prefix <= fnameLen
-             &&
-             try String.sub fname 0 (String.length prefix) = prefix
-             with Invalid_argument _ -> false)
-    in
-    if getPayload liveAnnotation <> None || nameIsInLiveNamesOrPaths () then
-      AnnotationState.annotate_live state pos;
-    if attributes |> Annotation.isOcamlSuppressDeadWarning then
-      AnnotationState.annotate_live state pos
-
-  let collectExportLocations ~state ~config ~doGenType =
-    let super = Tast_mapper.default in
-    let currentlyDisableWarnings = ref false in
-    let value_binding self
-        ({vb_attributes; vb_pat} as value_binding : Typedtree.value_binding) =
-      (match vb_pat.pat_desc with
-      | Tpat_var (id, {loc = {loc_start = pos}})
-      | Tpat_alias ({pat_desc = Tpat_any}, id, {loc = {loc_start = pos}}) ->
-        if !currentlyDisableWarnings then
-          AnnotationState.annotate_live state pos;
-        vb_attributes
-        |> processAttributes ~state ~config ~doGenType ~name:(id |> Ident.name)
-             ~pos
-      | _ -> ());
-      super.value_binding self value_binding
-    in
-    let type_kind toplevelAttrs self (typeKind : Typedtree.type_kind) =
-      (match typeKind with
-      | Ttype_record labelDeclarations ->
-        labelDeclarations
-        |> List.iter
-             (fun ({ld_attributes; ld_loc} : Typedtree.label_declaration) ->
-               toplevelAttrs @ ld_attributes
-               |> processAttributes ~state ~config ~doGenType:false ~name:""
-                    ~pos:ld_loc.loc_start)
-      | Ttype_variant constructorDeclarations ->
-        constructorDeclarations
-        |> List.iter
-             (fun
-               ({cd_attributes; cd_loc; cd_args} :
-                 Typedtree.constructor_declaration)
-             ->
-               let _process_inline_records =
-                 match cd_args with
-                 | Cstr_record flds ->
-                   List.iter
-                     (fun ({ld_attributes; ld_loc} :
-                            Typedtree.label_declaration) ->
-                       toplevelAttrs @ cd_attributes @ ld_attributes
-                       |> processAttributes ~state ~config ~doGenType:false
-                            ~name:"" ~pos:ld_loc.loc_start)
-                     flds
-                 | Cstr_tuple _ -> ()
-               in
-               toplevelAttrs @ cd_attributes
-               |> processAttributes ~state ~config ~doGenType:false ~name:""
-                    ~pos:cd_loc.loc_start)
-      | _ -> ());
-      super.type_kind self typeKind
-    in
-    let type_declaration self (typeDeclaration : Typedtree.type_declaration) =
-      let attributes = typeDeclaration.typ_attributes in
-      let _ = type_kind attributes self typeDeclaration.typ_kind in
-      typeDeclaration
-    in
-    let value_description self
-        ({val_attributes; val_id; val_val = {val_loc = {loc_start = pos}}} as
-         value_description :
-          Typedtree.value_description) =
-      if !currentlyDisableWarnings then AnnotationState.annotate_live state pos;
-      val_attributes
-      |> processAttributes ~state ~config ~doGenType
-           ~name:(val_id |> Ident.name) ~pos;
-      super.value_description self value_description
-    in
-    let structure_item self (item : Typedtree.structure_item) =
-      (match item.str_desc with
-      | Tstr_attribute attribute
-        when [attribute] |> Annotation.isOcamlSuppressDeadWarning ->
-        currentlyDisableWarnings := true
-      | _ -> ());
-      super.structure_item self item
-    in
-    let structure self (structure : Typedtree.structure) =
-      let oldDisableWarnings = !currentlyDisableWarnings in
-      super.structure self structure |> ignore;
-      currentlyDisableWarnings := oldDisableWarnings;
-      structure
-    in
-    let signature_item self (item : Typedtree.signature_item) =
-      (match item.sig_desc with
-      | Tsig_attribute attribute
-        when [attribute] |> Annotation.isOcamlSuppressDeadWarning ->
-        currentlyDisableWarnings := true
-      | _ -> ());
-      super.signature_item self item
-    in
-    let signature self (signature : Typedtree.signature) =
-      let oldDisableWarnings = !currentlyDisableWarnings in
-      super.signature self signature |> ignore;
-      currentlyDisableWarnings := oldDisableWarnings;
-      signature
-    in
-    {
-      super with
-      signature;
-      signature_item;
-      structure;
-      structure_item;
-      type_declaration;
-      value_binding;
-      value_description;
-    }
-
-  let structure ~state ~config ~doGenType structure =
-    let collectExportLocations =
-      collectExportLocations ~state ~config ~doGenType
-    in
-    structure
-    |> collectExportLocations.structure collectExportLocations
-    |> ignore
-
-  let signature ~state ~config signature =
-    let collectExportLocations =
-      collectExportLocations ~state ~config ~doGenType:true
-    in
-    signature
-    |> collectExportLocations.signature collectExportLocations
-    |> ignore
-end
 
 let addDeclaration_ ~config ~(file : FileContext.t) ?posEnd ?posStart ~declKind
     ~path ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc
@@ -589,18 +405,19 @@ module Decl = struct
         emitWarning ~config ~decl ~message name)
 end
 
-let declIsDead ~state ~refs decl =
+let declIsDead ~annotations ~refs decl =
   let liveRefs =
     refs
-    |> PosSet.filter (fun p -> not (AnnotationState.is_annotated_dead state p))
+    |> PosSet.filter (fun p ->
+           not (FileAnnotations.is_annotated_dead annotations p))
   in
   liveRefs |> PosSet.cardinal = 0
-  && not (AnnotationState.is_annotated_gentype_or_live state decl.pos)
+  && not (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
 
-let doReportDead ~state pos =
-  not (AnnotationState.is_annotated_gentype_or_dead state pos)
+let doReportDead ~annotations pos =
+  not (FileAnnotations.is_annotated_gentype_or_dead annotations pos)
 
-let rec resolveRecursiveRefs ~state ~config
+let rec resolveRecursiveRefs ~annotations ~config
     ~checkOptionalArg:(checkOptionalArgFn : config:DceConfig.t -> decl -> unit)
     ~deadDeclarations ~level ~orderedFiles ~refs ~refsBeingResolved decl : bool
     =
@@ -610,7 +427,8 @@ let rec resolveRecursiveRefs ~state ~config
       Log_.item "recursiveDebug %s [%d] already resolved@."
         (decl.path |> Path.toString)
         level;
-    AnnotationState.is_annotated_dead state decl.pos
+    (* Use the already-resolved value, not source annotations *)
+    Option.get decl.resolvedDead
   | _ when PosSet.mem decl.pos !refsBeingResolved ->
     if Config.recursiveDebug then
       Log_.item "recursiveDebug %s [%d] is being resolved: assume dead@."
@@ -647,7 +465,7 @@ let rec resolveRecursiveRefs ~state ~config
                  in
                  let xDeclIsDead =
                    xDecl
-                   |> resolveRecursiveRefs ~state ~config
+                   |> resolveRecursiveRefs ~annotations ~config
                         ~checkOptionalArg:checkOptionalArgFn ~deadDeclarations
                         ~level:(level + 1) ~orderedFiles ~refs:xRefs
                         ~refsBeingResolved
@@ -655,7 +473,7 @@ let rec resolveRecursiveRefs ~state ~config
                  if xDecl.resolvedDead = None then allDepsResolved := false;
                  not xDeclIsDead)
     in
-    let isDead = decl |> declIsDead ~state ~refs:newRefs in
+    let isDead = decl |> declIsDead ~annotations ~refs:newRefs in
     let isResolved = (not isDead) || !allDepsResolved || level = 0 in
     if isResolved then (
       decl.resolvedDead <- Some isDead;
@@ -664,17 +482,15 @@ let rec resolveRecursiveRefs ~state ~config
         |> DeadModules.markDead ~config
              ~isType:(decl.declKind |> DeclKind.isType)
              ~loc:decl.moduleLoc;
-        if not (doReportDead ~state decl.pos) then decl.report <- false;
-        deadDeclarations := decl :: !deadDeclarations;
-        if not (Decl.isToplevelValueWithSideEffects decl) then
-          AnnotationState.annotate_dead state decl.pos)
+        if not (doReportDead ~annotations decl.pos) then decl.report <- false;
+        deadDeclarations := decl :: !deadDeclarations)
       else (
         checkOptionalArgFn ~config decl;
         decl.path
         |> DeadModules.markLive ~config
              ~isType:(decl.declKind |> DeclKind.isType)
              ~loc:decl.moduleLoc;
-        if AnnotationState.is_annotated_dead state decl.pos then
+        if FileAnnotations.is_annotated_dead annotations decl.pos then
           emitWarning ~config ~decl ~message:" is annotated @dead but is live"
             IncorrectDeadAnnotation);
       if config.DceConfig.cli.debug then
@@ -692,18 +508,18 @@ let rec resolveRecursiveRefs ~state ~config
           refsString level);
     isDead
 
-let reportDead ~state ~config
+let reportDead ~annotations ~config
     ~checkOptionalArg:
       (checkOptionalArgFn :
-        state:AnnotationState.t -> config:DceConfig.t -> decl -> unit) =
+        annotations:FileAnnotations.t -> config:DceConfig.t -> decl -> unit) =
   let iterDeclInOrder ~deadDeclarations ~orderedFiles decl =
     let refs =
       match decl |> Decl.isValue with
       | true -> ValueReferences.find decl.pos
       | false -> TypeReferences.find decl.pos
     in
-    resolveRecursiveRefs ~state ~config
-      ~checkOptionalArg:(checkOptionalArgFn ~state)
+    resolveRecursiveRefs ~annotations ~config
+      ~checkOptionalArg:(checkOptionalArgFn ~annotations)
       ~deadDeclarations ~level:0 ~orderedFiles
       ~refsBeingResolved:(ref PosSet.empty) ~refs decl
     |> ignore
