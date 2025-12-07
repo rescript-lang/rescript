@@ -81,11 +81,13 @@ let forceDelayedItems () =
            OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
          | _ -> ())
 
-let check ~state ~config:_ decl =
+let check ~annotations ~config:_ decl =
   match decl with
   | {declKind = Value {optionalArgs}}
     when active ()
-         && not (AnnotationState.is_annotated_gentype_or_live state decl.pos) ->
+         && not
+              (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
+    ->
     optionalArgs
     |> OptionalArgs.iterUnused (fun s ->
            Log_.warning ~loc:(decl |> declGetLoc)

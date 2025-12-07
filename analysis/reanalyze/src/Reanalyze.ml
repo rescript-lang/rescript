@@ -1,6 +1,8 @@
 open Common
 
-let loadCmtFile ~annotation_state ~config cmtFilePath =
+(** Process a cmt file and return its annotations builder (if DCE enabled).
+    Conceptually: map over files, then merge results. *)
+let loadCmtFile ~config cmtFilePath : FileAnnotations.builder option =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
@@ -23,6 +25,11 @@ let loadCmtFile ~annotation_state ~config cmtFilePath =
       | _ -> Filename.check_suffix sourceFile "i"
     in
     let module_name = sourceFile |> Paths.getModuleName in
+    (* File context for DceFileProcessing (breaks cycle with DeadCommon) *)
+    let dce_file_context : DceFileProcessing.file_context =
+      {source_path = sourceFile; module_name; is_interface}
+    in
+    (* File context for Exception/Arnold (uses DeadCommon.FileContext) *)
     let file_context =
       DeadCommon.FileContext.
         {source_path = sourceFile; module_name; is_interface}
@@ -36,19 +43,34 @@ let loadCmtFile ~annotation_state ~config cmtFilePath =
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     FileReferences.addFile sourceFile;
-    if config.DceConfig.run.dce then
-      cmt_infos
-      |> DeadCode.processCmt ~state:annotation_state ~config ~file:file_context
-           ~cmtFilePath;
+    (* Process file for DCE - return builder *)
+    let builder_opt =
+      if config.DceConfig.run.dce then
+        Some
+          (cmt_infos
+          |> DceFileProcessing.process_cmt_file ~config ~file:dce_file_context
+               ~cmtFilePath)
+      else None
+    in
     if config.DceConfig.run.exception_ then
       cmt_infos |> Exception.processCmt ~file:file_context;
     if config.DceConfig.run.termination then
-      cmt_infos |> Arnold.processCmt ~config ~file:file_context
-  | _ -> ()
+      cmt_infos |> Arnold.processCmt ~config ~file:file_context;
+    builder_opt
+  | _ -> None
 
-let processCmtFiles ~annotation_state ~config ~cmtRoot =
+(** Process all cmt files and return list of annotation builders.
+    Conceptually: map process_cmt_file over all files. *)
+let processCmtFiles ~config ~cmtRoot : FileAnnotations.builder list =
   let ( +++ ) = Filename.concat in
-  match cmtRoot with
+  (* Local mutable state for collecting results - does not escape this function *)
+  let builders = ref [] in
+  let processFile cmtFilePath =
+    match loadCmtFile ~config cmtFilePath with
+    | Some builder -> builders := builder :: !builders
+    | None -> ()
+  in
+  (match cmtRoot with
   | Some root ->
     Cli.cmtCommand := true;
     let rec walkSubDirs dir =
@@ -67,7 +89,7 @@ let processCmtFiles ~annotation_state ~config ~cmtRoot =
         else if
           Filename.check_suffix absDir ".cmt"
           || Filename.check_suffix absDir ".cmti"
-        then absDir |> loadCmtFile ~annotation_state ~config
+        then processFile absDir
     in
     walkSubDirs ""
   | None ->
@@ -93,15 +115,18 @@ let processCmtFiles ~annotation_state ~config ~cmtRoot =
            cmtFiles |> List.sort String.compare
            |> List.iter (fun cmtFile ->
                   let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
-                  cmtFilePath |> loadCmtFile ~annotation_state ~config))
+                  processFile cmtFilePath)));
+  !builders
 
 let runAnalysis ~dce_config ~cmtRoot =
-  let annotation_state = DeadCommon.AnnotationState.create () in
-  processCmtFiles ~annotation_state ~config:dce_config ~cmtRoot;
+  (* Map: process each file -> list of builders *)
+  let builders = processCmtFiles ~config:dce_config ~cmtRoot in
   if dce_config.DceConfig.run.dce then (
     DeadException.forceDelayedItems ~config:dce_config;
     DeadOptionalArgs.forceDelayedItems ();
-    DeadCommon.reportDead ~state:annotation_state ~config:dce_config
+    (* Merge: combine all builders -> immutable annotations *)
+    let annotations = FileAnnotations.merge_all builders in
+    DeadCommon.reportDead ~annotations ~config:dce_config
       ~checkOptionalArg:DeadOptionalArgs.check;
     WriteDeadAnnotations.write ~config:dce_config);
   if dce_config.DceConfig.run.exception_ then
