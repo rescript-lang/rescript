@@ -2,8 +2,8 @@ use crate::build::packages;
 use crate::config::Config;
 use crate::helpers;
 use ahash::{AHashMap, AHashSet};
-use anyhow::Result;
 use anyhow::anyhow;
+use anyhow::{Context, Result};
 use log::debug;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -168,7 +168,7 @@ impl ProjectContext {
     pub fn new(path: &Path) -> Result<ProjectContext> {
         let path = helpers::get_abs_path(path);
         let current_config = packages::read_config(&path)
-            .map_err(|_| anyhow!("Could not read rescript.json at {}", path.to_string_lossy()))?;
+            .with_context(|| format!("Could not read rescript.json at {}", path.to_string_lossy()))?;
         let nearest_parent_config_path = match path.parent() {
             None => Err(anyhow!(
                 "The current path \"{}\" does not have a parent folder",

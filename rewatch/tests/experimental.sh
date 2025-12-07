@@ -38,3 +38,88 @@ fi
 mv rescript.json.bak rescript.json
 
 success "experimental-features emits -enable-experimental twice as string list"
+
+bold "Test: build surfaces experimental-features list parse error"
+
+cp rescript.json rescript.json.bak
+
+node -e '
+const fs = require("fs");
+const j = JSON.parse(fs.readFileSync("rescript.json", "utf8"));
+j["experimental-features"] = ["LetUnwrap"];
+fs.writeFileSync("rescript.json", JSON.stringify(j, null, 2));
+'
+
+out=$(rewatch build 2>&1)
+status=$?
+
+mv rescript.json.bak rescript.json
+rm -f lib/rescript.lock
+
+if [ $status -eq 0 ]; then
+  error "Expected build to fail for experimental-features list input"
+  echo "$out"
+  exit 1
+fi
+
+echo "$out" | grep -q "Could not read rescript.json"
+if [ $? -ne 0 ]; then
+  error "Missing rescript.json path context in build error"
+  echo "$out"
+  exit 1
+fi
+
+echo "$out" | grep -qi "invalid type"
+if [ $? -ne 0 ]; then
+  error "Missing detailed parse error in build output"
+  echo "$out"
+  exit 1
+fi
+
+success "Experimental-features list produces detailed build error"
+
+bold "Test: watch reports invalid experimental-features without panicking"
+
+cp rescript.json rescript.json.bak
+
+node -e '
+const fs = require("fs");
+const cfg = JSON.parse(fs.readFileSync("rescript.json", "utf8"));
+cfg["experimental-features"] = ["LetUnwrap"];
+fs.writeFileSync("rescript.json", JSON.stringify(cfg, null, 2));
+'
+
+out=$(rewatch watch 2>&1)
+status=$?
+
+mv rescript.json.bak rescript.json
+rm -f lib/rescript.lock
+
+if [ $status -eq 0 ]; then
+  error "Expected watch to fail for invalid experimental-features list"
+  echo "$out"
+  exit 1
+fi
+
+echo "$out" | grep -q "Could not read rescript.json"
+if [ $? -ne 0 ]; then
+  error "Missing rescript.json path context in watch error"
+  echo "$out"
+  exit 1
+fi
+
+echo "$out" | grep -qi "invalid type"
+if [ $? -ne 0 ]; then
+  error "Missing detailed parse error for experimental-features list"
+  echo "$out"
+  exit 1
+fi
+
+echo "$out" | grep -q "panicked"
+if [ $? -eq 0 ]; then
+  error "Watcher should not panic when config is invalid"
+  echo "$out"
+  exit 1
+fi
+
+success "Invalid experimental-features list handled without panic"

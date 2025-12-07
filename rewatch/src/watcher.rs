@@ -8,6 +8,7 @@ use crate::helpers::emojis::*;
 use crate::lock::LOCKFILE;
 use crate::queue::FifoQueue;
 use crate::queue::*;
+use anyhow::{Context, Result};
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -78,10 +79,10 @@ async fn async_watch(
         plain_output,
         warn_error,
     }: AsyncWatchArgs<'_>,
-) -> notify::Result<()> {
+) -> Result<()> {
     let mut build_state: build::build_types::BuildCommandState =
         build::initialize_build(None, filter, show_progress, path, plain_output, warn_error)
-            .expect("Can't initialize build");
+            .with_context(|| "Could not initialize build")?;
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -278,7 +279,7 @@ async fn async_watch(
                     plain_output,
                     build_state.get_warn_error_override(),
                 )
-                .expect("Can't initialize build");
+                .expect("Could not initialize build");
                 let _ = build::incremental_build(
                     &mut build_state,
                     None,
@@ -324,7 +325,7 @@ pub fn start(
     create_sourcedirs: bool,
     plain_output: bool,
     warn_error: Option<String>,
-) {
+) -> Result<()> {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
         let producer = queue.clone();
@@ -341,7 +342,7 @@ pub fn start(
 
         let path = Path::new(folder);
 
-        if let Err(e) = async_watch(AsyncWatchArgs {
+        async_watch(AsyncWatchArgs {
             q: consumer,
             path,
             show_progress,
@@ -352,8 +353,5 @@ pub fn start(
             warn_error: warn_error.clone(),
         })
         .await
-        {
-            println!("{e:?}")
-        }
     })
 }

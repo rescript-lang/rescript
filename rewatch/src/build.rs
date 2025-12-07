@@ -16,7 +16,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -501,7 +501,7 @@ pub fn build(
         plain_output,
         warn_error,
     )
-    .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
+    .with_context(|| "Could not initialize build")?;
 
     match incremental_build(
         &mut build_state,

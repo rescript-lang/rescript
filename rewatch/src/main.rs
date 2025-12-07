@@ -56,7 +56,7 @@ fn main() -> Result<()> {
                 (*build_args.warn_error).clone(),
             ) {
                 Err(e) => {
-                    println!("{e}");
+                    println!("{:#}", e);
                     std::process::exit(1)
                 }
                 Ok(_) => {
@@ -76,7 +76,7 @@ fn main() -> Result<()> {
                 );
             }
 
-            watcher::start(
+            match watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
@@ -84,9 +84,13 @@ fn main() -> Result<()> {
                 *watch_args.create_sourcedirs,
                 plain_output,
                 (*watch_args.warn_error).clone(),
-            );
-
-            Ok(())
+            ) {
+                Err(e) => {
+                    println!("{:#}", e);
+                    std::process::exit(1)
+                }
+                Ok(_) => Ok(()),
+            }
         }
         cli::Command::Clean { folder, dev } => {
             let _lock = get_lock(&folder);
