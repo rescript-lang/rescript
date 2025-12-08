@@ -107,12 +107,8 @@ let missingRaiseInfoToText {missingAnnotations; locFull} =
       ~text:(Format.asprintf "@throws(%s)\\n" missingTxt)
   else ""
 
-let logAdditionalInfo ~config ~(description : description) =
+let logAdditionalInfo ~(description : description) =
   match description with
-  | DeadWarning {lineAnnotation; shouldWriteLineAnnotation} ->
-    if shouldWriteLineAnnotation then
-      WriteDeadAnnotations.lineAnnotationToString ~config lineAnnotation
-    else ""
   | ExceptionAnalysisMissing missingRaiseInfo ->
     missingRaiseInfoToText missingRaiseInfo
   | _ -> ""
@@ -187,7 +183,7 @@ let logIssue ~config ~(issue : issue) =
           ~range:(startLine, startCharacter, endLine, endCharacter)
           ~message)
       ()
-      (logAdditionalInfo ~config ~description:issue.description)
+      (logAdditionalInfo ~description:issue.description)
       (if config.DceConfig.cli.json then EmitJson.emitClose () else "")
   else
     let color =
@@ -197,7 +193,7 @@ let logIssue ~config ~(issue : issue) =
     in
     asprintf "@.  %a@.  %a@.  %s%s@." color issue.name Loc.print issue.loc
       (descriptionToMessage issue.description)
-      (logAdditionalInfo ~config ~description:issue.description)
+      (logAdditionalInfo ~description:issue.description)
 
 module Stats = struct
   let issues = ref []

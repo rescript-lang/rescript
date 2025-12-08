@@ -78,7 +78,9 @@ end
 let declGetLoc decl =
   let loc_start =
     let offset =
-      WriteDeadAnnotations.offsetOfPosAdjustment decl.posAdjustment
+      match decl.posAdjustment with
+      | FirstVariant | Nothing -> 0
+      | OtherVariant -> 2
     in
     let cnumWithOffset = decl.posStart.pos_cnum + offset in
     if cnumWithOffset < decl.posEnd.pos_cnum then
@@ -159,33 +161,11 @@ let addValueDeclaration ~config ~decls ~file ?(isToplevel = true)
 
 let emitWarning ~config ~decl ~message deadWarning =
   let loc = decl |> declGetLoc in
-  let isToplevelValueWithSideEffects decl =
-    match decl.declKind with
-    | Value {isToplevel; sideEffects} -> isToplevel && sideEffects
-    | _ -> false
-  in
-  let shouldWriteLineAnnotation =
-    (not (isToplevelValueWithSideEffects decl))
-    && Suppress.filter decl.pos
-    && deadWarning <> IncorrectDeadAnnotation
-  in
-  let lineAnnotation =
-    if shouldWriteLineAnnotation then
-      WriteDeadAnnotations.addLineAnnotation ~config ~decl
-    else None
-  in
   decl.path
   |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
   |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname;
   Log_.warning ~loc
-    (DeadWarning
-       {
-         deadWarning;
-         path = Path.withoutHead decl.path;
-         message;
-         lineAnnotation;
-         shouldWriteLineAnnotation;
-       })
+    (DeadWarning {deadWarning; path = Path.withoutHead decl.path; message})
 
 module Decl = struct
   let isValue decl =

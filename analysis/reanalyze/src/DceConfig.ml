@@ -7,7 +7,6 @@ type cli_config = {
   debug: bool;
   ci: bool;
   json: bool;
-  write: bool;
   live_names: string list;
   live_paths: string list;
   exclude_paths: string list;
@@ -25,7 +24,6 @@ let current () =
       debug = !Common.Cli.debug;
       ci = !Common.Cli.ci;
       json = !Common.Cli.json;
-      write = !Common.Cli.write;
       live_names = !Common.Cli.liveNames;
       live_paths = !Common.Cli.livePaths;
       exclude_paths = !Common.Cli.excludePaths;

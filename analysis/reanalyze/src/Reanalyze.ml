@@ -153,8 +153,7 @@ let runAnalysis ~dce_config ~cmtRoot =
     let refs = References.freeze_builder refs_builder in
     let file_deps = FileDeps.freeze_builder file_deps_builder in
     DeadCommon.reportDead ~annotations ~decls ~refs ~file_deps
-      ~config:dce_config ~checkOptionalArg:DeadOptionalArgs.check;
-    WriteDeadAnnotations.write ~config:dce_config);
+      ~config:dce_config ~checkOptionalArg:DeadOptionalArgs.check);
   if dce_config.DceConfig.run.exception_ then
     Exception.Checks.doChecks ~config:dce_config;
   if dce_config.DceConfig.run.termination && dce_config.DceConfig.cli.debug then
@@ -271,9 +270,6 @@ let cli () =
          specified)" );
       ("-version", Unit versionAndExit, "Show version information and exit");
       ("--version", Unit versionAndExit, "Show version information and exit");
-      ( "-write",
-        Set Common.Cli.write,
-        "Write @dead annotations directly in the source files" );
     ]
   in
   Arg.parse speclist print_endline usage;

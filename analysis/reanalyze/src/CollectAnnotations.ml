@@ -14,8 +14,7 @@ let processAttributes ~state ~config ~doGenType ~name ~pos attributes =
     doGenType
     && getPayloadFun Annotation.tagIsOneOfTheGenTypeAnnotations <> None
   then FileAnnotations.annotate_gentype state pos;
-  if getPayload WriteDeadAnnotations.deadAnnotation <> None then
-    FileAnnotations.annotate_dead state pos;
+  if getPayload "dead" <> None then FileAnnotations.annotate_dead state pos;
   let nameIsInLiveNamesOrPaths () =
     config.DceConfig.cli.live_names |> List.mem name
     ||
