@@ -16,6 +16,8 @@
 
 #### :eyeglasses: Spec Compliance
 
+- Wrap variables in curly braces inside JSX children. https://github.com/rescript-lang/rescript/pull/7863
+
 #### :rocket: New Feature
 
 #### :bug: Bug fix
