@@ -152,8 +152,15 @@ let runAnalysis ~dce_config ~cmtRoot =
     (* Now freeze refs and file_deps for solver *)
     let refs = References.freeze_builder refs_builder in
     let file_deps = FileDeps.freeze_builder file_deps_builder in
-    DeadCommon.reportDead ~annotations ~decls ~refs ~file_deps
-      ~config:dce_config ~checkOptionalArg:DeadOptionalArgs.check);
+    (* Run the solver - returns immutable AnalysisResult.t *)
+    let analysis_result =
+      DeadCommon.reportDead ~annotations ~decls ~refs ~file_deps
+        ~config:dce_config ~checkOptionalArg:DeadOptionalArgs.check
+    in
+    (* Report all issues *)
+    AnalysisResult.get_issues analysis_result
+    |> List.iter (fun (issue : Common.issue) ->
+           Log_.warning ~loc:issue.loc issue.description));
   if dce_config.DceConfig.run.exception_ then
     Exception.Checks.doChecks ~config:dce_config;
   if dce_config.DceConfig.run.termination && dce_config.DceConfig.cli.debug then

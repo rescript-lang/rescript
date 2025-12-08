@@ -159,13 +159,12 @@ let addValueDeclaration ~config ~decls ~file ?(isToplevel = true)
        ~declKind:(Value {isToplevel; optionalArgs; sideEffects})
        ~loc ~moduleLoc ~path
 
-let emitWarning ~config ~decl ~message deadWarning =
+(** Create a dead code issue. Pure - no side effects. *)
+let makeDeadIssue ~decl ~message deadWarning : Common.issue =
   let loc = decl |> declGetLoc in
-  decl.path
-  |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
-  |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname;
-  Log_.warning ~loc
-    (DeadWarning {deadWarning; path = Path.withoutHead decl.path; message})
+  AnalysisResult.make_dead_issue ~loc ~deadWarning
+    ~path:(Path.withoutHead decl.path)
+    ~message
 
 module Decl = struct
   let isValue decl =
@@ -250,10 +249,13 @@ module Decl = struct
           ReportingContext.set_max_end ctx decl.posEnd;
     insideReportedValue
 
-  let report ~config ~refs (ctx : ReportingContext.t) decl =
+  (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
+      Caller is responsible for logging. *)
+  let report ~config ~refs (ctx : ReportingContext.t) decl : Common.issue list =
     let insideReportedValue = decl |> isInsideReportedValue ctx in
-    if decl.report then
-      let name, message =
+    if not decl.report then []
+    else
+      let deadWarning, message =
         match decl.declKind with
         | Exception ->
           (WarningDeadException, "is never raised or passed as value")
@@ -300,11 +302,18 @@ module Decl = struct
            | _ -> true)
         && (config.DceConfig.run.transitive || not (hasRefBelow ()))
       in
-      if shouldEmitWarning then (
-        decl.path
-        |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
-        |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname;
-        emitWarning ~config ~decl ~message name)
+      if shouldEmitWarning then
+        let dead_module_issue =
+          decl.path
+          |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
+          |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+        in
+        let dead_value_issue = makeDeadIssue ~decl ~message deadWarning in
+        (* Return in order: dead module first (if any), then dead value *)
+        match dead_module_issue with
+        | Some mi -> [mi; dead_value_issue]
+        | None -> [dead_value_issue]
+      else []
 end
 
 let declIsDead ~annotations ~refs decl =
@@ -320,9 +329,10 @@ let doReportDead ~annotations pos =
   not (FileAnnotations.is_annotated_gentype_or_dead annotations pos)
 
 let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
-    ~checkOptionalArg:(checkOptionalArgFn : config:DceConfig.t -> decl -> unit)
-    ~deadDeclarations ~level ~orderedFiles ~refs ~refsBeingResolved decl : bool
-    =
+    ~checkOptionalArg:
+      (checkOptionalArgFn : config:DceConfig.t -> decl -> Common.issue list)
+    ~deadDeclarations ~issues ~level ~orderedFiles ~refs ~refsBeingResolved decl
+    : bool =
   match decl.pos with
   | _ when decl.resolvedDead <> None ->
     if Config.recursiveDebug then
@@ -369,7 +379,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
                    xDecl
                    |> resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
                         ~checkOptionalArg:checkOptionalArgFn ~deadDeclarations
-                        ~level:(level + 1) ~orderedFiles ~refs:xRefs
+                        ~issues ~level:(level + 1) ~orderedFiles ~refs:xRefs
                         ~refsBeingResolved
                  in
                  if xDecl.resolvedDead = None then allDepsResolved := false;
@@ -387,14 +397,24 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
         if not (doReportDead ~annotations decl.pos) then decl.report <- false;
         deadDeclarations := decl :: !deadDeclarations)
       else (
-        checkOptionalArgFn ~config decl;
+        (* Collect optional args issues *)
+        checkOptionalArgFn ~config decl
+        |> List.iter (fun issue -> issues := issue :: !issues);
         decl.path
         |> DeadModules.markLive ~config
              ~isType:(decl.declKind |> DeclKind.isType)
              ~loc:decl.moduleLoc;
-        if FileAnnotations.is_annotated_dead annotations decl.pos then
-          emitWarning ~config ~decl ~message:" is annotated @dead but is live"
-            IncorrectDeadAnnotation);
+        if FileAnnotations.is_annotated_dead annotations decl.pos then (
+          (* Collect incorrect @dead annotation issue *)
+          let issue =
+            makeDeadIssue ~decl ~message:" is annotated @dead but is live"
+              IncorrectDeadAnnotation
+          in
+          decl.path
+          |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
+          |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+          |> Option.iter (fun mod_issue -> issues := mod_issue :: !issues);
+          issues := issue :: !issues));
       if config.DceConfig.cli.debug then
         let refsString =
           newRefs |> References.PosSet.elements |> List.map posToString
@@ -413,8 +433,11 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
 let reportDead ~annotations ~config ~decls ~refs ~file_deps
     ~checkOptionalArg:
       (checkOptionalArgFn :
-        annotations:FileAnnotations.t -> config:DceConfig.t -> decl -> unit) =
-  let iterDeclInOrder ~deadDeclarations ~orderedFiles decl =
+        annotations:FileAnnotations.t ->
+        config:DceConfig.t ->
+        decl ->
+        Common.issue list) : AnalysisResult.t =
+  let iterDeclInOrder ~deadDeclarations ~issues ~orderedFiles decl =
     let decl_refs =
       match decl |> Decl.isValue with
       | true -> References.find_value_refs refs decl.pos
@@ -422,7 +445,7 @@ let reportDead ~annotations ~config ~decls ~refs ~file_deps
     in
     resolveRecursiveRefs ~all_refs:refs ~annotations ~config ~decls
       ~checkOptionalArg:(checkOptionalArgFn ~annotations)
-      ~deadDeclarations ~level:0 ~orderedFiles
+      ~deadDeclarations ~issues ~level:0 ~orderedFiles
       ~refsBeingResolved:(ref PosSet.empty) ~refs:decl_refs decl
     |> ignore
   in
@@ -454,10 +477,22 @@ let reportDead ~annotations ~config ~decls ~refs ~file_deps
     declarations |> List.fast_sort (Decl.compareUsingDependencies ~orderedFiles)
   in
   let deadDeclarations = ref [] in
+  let inline_issues = ref [] in
   orderedDeclarations
-  |> List.iter (iterDeclInOrder ~orderedFiles ~deadDeclarations);
+  |> List.iter
+       (iterDeclInOrder ~orderedFiles ~deadDeclarations ~issues:inline_issues);
   let sortedDeadDeclarations =
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
+  (* Collect issues from dead declarations *)
   let reporting_ctx = ReportingContext.create () in
-  sortedDeadDeclarations |> List.iter (Decl.report ~config ~refs reporting_ctx)
+  let dead_issues =
+    sortedDeadDeclarations
+    |> List.concat_map (fun decl ->
+           Decl.report ~config ~refs reporting_ctx decl)
+  in
+  (* Combine all issues: inline issues first (they were logged during analysis),
+     then dead declaration issues *)
+  let all_issues = List.rev !inline_issues @ dead_issues in
+  (* Return result - caller is responsible for logging *)
+  AnalysisResult.add_issues AnalysisResult.empty all_issues
