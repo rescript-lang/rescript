@@ -410,16 +410,7 @@ They should follow the same pattern as everything else.
 **Value**: Analysis phase works on immutable merged data, returns immutable results.
 Can be parallelized, memoized, reordered.
 
-**Changes**:
-- [ ] `solve_deadness : config -> merged_view -> analysis_result` (pure)
-- [ ] Input `merged_view` is immutable (from Tasks 4-7)
-- [ ] Output `analysis_result` is immutable
-- [ ] `Decl.report`: Return `issue` instead of logging
-- [ ] Remove all `Log_.warning`, `Log_.item` calls from analysis path
-- [ ] Side effects (logging, JSON) only in final reporting phase
-- [ ] Make `DeadModules` state part of `analysis_result` (currently mutated during solver)
-
-**Architecture**:
+**Architecture goal**:
 ```
 merged_view (immutable) 
     │
@@ -433,12 +424,127 @@ analysis_result (immutable)
 report (side effects here only)
 ```
 
-**Key guarantee**: After Tasks 4-7, the analysis phase has **no mutable state**.
-This enables parallelization, caching, and incremental recomputation.
+**Approach**: Break into small, behavior-preserving steps. Each step can be verified
+before moving to the next. The key is: change return type, then immediately log at
+the call site, so behavior stays identical.
 
-**Test**: Run analysis twice on same input, verify identical results. Verify no side effects.
+---
 
-**Estimated effort**: Medium (many logging call sites, but mechanical)
+#### Task 8.1: Create `AnalysisResult` module ✅
+
+**Changes**:
+- [x] Create `AnalysisResult.ml/mli` with `type t = { issues: Common.issue list }`
+- [x] Add constructors: `empty`, `add_issue`, `get_issues`
+- [x] Add issue constructors: `make_dead_issue`, `make_dead_module_issue`
+
+**Verify**: Build succeeds. No behavior change (module not used yet).
+
+---
+
+#### Task 8.2: Make `emitWarning` return issue (behavior preserving) ✅
+
+**Changes**:
+- [x] Add `makeDeadIssue` (pure function)
+- [x] `emitWarning` uses `makeDeadIssue` internally (later removed)
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+#### Task 8.3: Make `Decl.report` return issue option (behavior preserving) ✅
+
+**Changes**:
+- [x] Change `Decl.report` signature to return `issue option`
+- [x] Use `makeDeadIssue` internally
+- [x] At call site in `reportDead`, log returned issue
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+#### Task 8.4: Make `DeadOptionalArgs.check` return issues (behavior preserving) ✅
+
+**Changes**:
+- [x] Add `foldUnused`, `foldAlwaysUsed` to `OptionalArgs` module
+- [x] Change `check` signature to return `issue list` instead of `unit`
+- [x] At call site in `resolveRecursiveRefs`, immediately log returned issues
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+#### Task 8.5: Collect incorrect annotation issues (behavior preserving) ✅
+
+**Changes**:
+- [x] Use `makeDeadIssue` for incorrect `@dead` annotation issues
+- [x] Log immediately at call site
+- [x] Remove `emitWarning` function (no longer needed)
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+#### Task 8.6: Make `DeadModules.checkModuleDead` return issue (behavior preserving) ✅
+
+**Changes**:
+- [x] Change `DeadModules.checkModuleDead` to return `issue option`
+- [x] At call sites, log returned issue immediately
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+#### Task 8.7: Collect all issues in `reportDead` (behavior preserving) ✅
+
+**Changes**:
+- [x] Change `Decl.report` to return `issue list` (includes dead module issues)
+- [x] Use `List.concat_map` to collect all issues
+- [x] Log all issues at the end of `reportDead`
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+#### Task 8.8: Return `AnalysisResult.t` from `reportDead` ✅
+
+**Changes**:
+- [x] Change `reportDead` to return `AnalysisResult.t` instead of `unit`
+- [x] Move logging from `reportDead` to caller in `Reanalyze.ml`
+
+**Verify**: `make test-analysis` passes with identical output.
+
+---
+
+**Status**: Complete ✅
+
+**Key guarantee**: The analysis phase (`reportDead`) now returns an immutable
+`AnalysisResult.t` containing all dead code issues. Side effects (logging)
+only happen in the caller (`Reanalyze.runAnalysis`).
+
+**Note**: Optional args and incorrect annotation issues were logged inline
+during `resolveRecursiveRefs`. Fixed in Task 8b.
+
+### Task 8b: Collect all issues in AnalysisResult.t (P5) ✅
+
+**Value**: Complete the pure analysis phase - all issues returned in result, no inline logging.
+
+**Problem**: `resolveRecursiveRefs` was logging two types of issues inline:
+1. Optional args issues (from `checkOptionalArgFn`)
+2. Incorrect `@dead` annotation issues
+
+These bypassed `AnalysisResult.t` and were logged directly via `Log_.warning`.
+
+**Changes**:
+- [x] Pass `~issues:(Common.issue list ref)` through `resolveRecursiveRefs`
+- [x] Collect optional args issues instead of logging inline
+- [x] Collect incorrect annotation issues instead of logging inline
+- [x] Add collected issues to `AnalysisResult.t` in `reportDead`
+- [x] Remove all `Log_.warning` calls from `resolveRecursiveRefs`
+
+**Status**: Complete ✅
+
+**Key guarantee**: No `Log_.warning` calls in `resolveRecursiveRefs`. All issues
+are collected in `AnalysisResult.t` and logged by the caller.
 
 ### Task 9: ~~Separate annotation computation from file writing (P5)~~ REMOVED
 

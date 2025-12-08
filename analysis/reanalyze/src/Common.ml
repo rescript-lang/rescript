@@ -133,6 +133,11 @@ module OptionalArgs = struct
 
   let iterUnused f x = StringSet.iter f x.unused
   let iterAlwaysUsed f x = StringSet.iter (fun s -> f s x.count) x.alwaysUsed
+
+  let foldUnused f x init = StringSet.fold f x.unused init
+
+  let foldAlwaysUsed f x init =
+    StringSet.fold (fun s acc -> f s x.count acc) x.alwaysUsed init
 end
 
 module DeclKind = struct

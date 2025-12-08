@@ -19,8 +19,11 @@ let markLive ~config ~isType ~(loc : Location.t) path =
     | Some (false, loc) -> Hashtbl.replace table moduleName (true, loc)
     | Some (true, _) -> ()
 
-let checkModuleDead ~config ~fileName:pos_fname moduleName =
-  if active ~config then
+(** Check if a module is dead and return issue if so. Pure - no logging. *)
+let checkModuleDead ~config ~fileName:pos_fname moduleName : Common.issue option
+    =
+  if not (active ~config) then None
+  else
     match Hashtbl.find_opt table moduleName with
     | Some (false, loc) ->
       Hashtbl.remove table moduleName;
@@ -33,12 +36,5 @@ let checkModuleDead ~config ~fileName:pos_fname moduleName =
           {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
         else loc
       in
-      Log_.warning ~loc
-        (Common.DeadModule
-           {
-             message =
-               Format.asprintf "@{<info>%s@} %s"
-                 (moduleName |> Name.toInterface |> Name.toString)
-                 "is a dead module as all its items are dead.";
-           })
-    | _ -> ()
+      Some (AnalysisResult.make_dead_module_issue ~loc ~moduleName)
+    | _ -> None

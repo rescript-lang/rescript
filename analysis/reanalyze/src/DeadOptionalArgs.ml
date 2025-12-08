@@ -56,38 +56,64 @@ let addReferences ~config ~cross_file ~(locFrom : Location.t)
         (argNamesMaybe |> String.concat ", ")
         (posFrom |> posToString))
 
-let check ~annotations ~config:_ decl =
+(** Check for optional args issues. Returns issues instead of logging. *)
+let check ~annotations ~config:_ decl : Common.issue list =
   match decl with
   | {declKind = Value {optionalArgs}}
     when active ()
          && not
               (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
     ->
-    optionalArgs
-    |> OptionalArgs.iterUnused (fun s ->
-           Log_.warning ~loc:(decl |> declGetLoc)
-             (DeadOptional
-                {
-                  deadOptional = WarningUnusedArgument;
-                  message =
-                    Format.asprintf
-                      "optional argument @{<info>%s@} of function @{<info>%s@} \
-                       is never used"
-                      s
-                      (decl.path |> Path.withoutHead);
-                }));
-    optionalArgs
-    |> OptionalArgs.iterAlwaysUsed (fun s nCalls ->
-           Log_.warning ~loc:(decl |> declGetLoc)
-             (DeadOptional
-                {
-                  deadOptional = WarningRedundantOptionalArgument;
-                  message =
-                    Format.asprintf
-                      "optional argument @{<info>%s@} of function @{<info>%s@} \
-                       is always supplied (%d calls)"
-                      s
-                      (decl.path |> Path.withoutHead)
-                      nCalls;
-                }))
-  | _ -> ()
+    let loc = decl |> declGetLoc in
+    let unused_issues =
+      OptionalArgs.foldUnused
+        (fun s acc ->
+          let issue : Common.issue =
+            {
+              name = "Warning Unused Argument";
+              severity = Warning;
+              loc;
+              description =
+                DeadOptional
+                  {
+                    deadOptional = WarningUnusedArgument;
+                    message =
+                      Format.asprintf
+                        "optional argument @{<info>%s@} of function \
+                         @{<info>%s@} is never used"
+                        s
+                        (decl.path |> Path.withoutHead);
+                  };
+            }
+          in
+          issue :: acc)
+        optionalArgs []
+    in
+    let redundant_issues =
+      OptionalArgs.foldAlwaysUsed
+        (fun s nCalls acc ->
+          let issue : Common.issue =
+            {
+              name = "Warning Redundant Optional Argument";
+              severity = Warning;
+              loc;
+              description =
+                DeadOptional
+                  {
+                    deadOptional = WarningRedundantOptionalArgument;
+                    message =
+                      Format.asprintf
+                        "optional argument @{<info>%s@} of function \
+                         @{<info>%s@} is always supplied (%d calls)"
+                        s
+                        (decl.path |> Path.withoutHead)
+                        nCalls;
+                  };
+            }
+          in
+          issue :: acc)
+        optionalArgs []
+    in
+    (* Reverse to maintain original order from iterUnused/iterAlwaysUsed *)
+    List.rev unused_issues @ List.rev redundant_issues
+  | _ -> []
