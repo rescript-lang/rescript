@@ -11,25 +11,25 @@ module TypeLabels = struct
   let find path = Hashtbl.find_opt table path
 end
 
-let addTypeReference ~config ~posFrom ~posTo =
+let addTypeReference ~config ~refs ~posFrom ~posTo =
   if config.DceConfig.cli.debug then
     Log_.item "addTypeReference %s --> %s@." (posFrom |> posToString)
       (posTo |> posToString);
-  TypeReferences.add posTo posFrom
+  References.add_type_ref refs ~posTo ~posFrom
 
 module TypeDependencies = struct
   let delayedItems = ref []
   let add loc1 loc2 = delayedItems := (loc1, loc2) :: !delayedItems
   let clear () = delayedItems := []
 
-  let processTypeDependency ~config
+  let processTypeDependency ~config ~refs
       ( ({loc_start = posTo; loc_ghost = ghost1} : Location.t),
         ({loc_start = posFrom; loc_ghost = ghost2} : Location.t) ) =
     if (not ghost1) && (not ghost2) && posTo <> posFrom then
-      addTypeReference ~config ~posTo ~posFrom
+      addTypeReference ~config ~refs ~posTo ~posFrom
 
-  let forceDelayedItems ~config =
-    List.iter (processTypeDependency ~config) !delayedItems
+  let forceDelayedItems ~config ~refs =
+    List.iter (processTypeDependency ~config ~refs) !delayedItems
 end
 
 let extendTypeDependencies ~config (loc1 : Location.t) (loc2 : Location.t) =
