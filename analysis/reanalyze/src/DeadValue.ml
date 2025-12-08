@@ -77,8 +77,8 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
   in
   loc
 
-let processOptionalArgs ~config ~expType ~(locFrom : Location.t) ~locTo ~path
-    args =
+let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
+    ~locTo ~path args =
   if expType |> DeadOptionalArgs.hasOptionalArgs then (
     let supplied = ref [] in
     let suppliedMaybe = ref [] in
@@ -107,10 +107,10 @@ let processOptionalArgs ~config ~expType ~(locFrom : Location.t) ~locTo ~path
              if argIsSupplied = None then suppliedMaybe := s :: !suppliedMaybe
            | _ -> ());
     (!supplied, !suppliedMaybe)
-    |> DeadOptionalArgs.addReferences ~config ~locFrom ~locTo ~path)
+    |> DeadOptionalArgs.addReferences ~config ~cross_file ~locFrom ~locTo ~path)
 
-let rec collectExpr ~config ~(last_binding : Location.t) super self
-    (e : Typedtree.expression) =
+let rec collectExpr ~config ~refs ~cross_file ~(last_binding : Location.t) super
+    self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   let binding = last_binding in
   (match e.exp_desc with
@@ -123,9 +123,11 @@ let rec collectExpr ~config ~(last_binding : Location.t) super self
         Log_.item "addDummyReference %s --> %s@."
           (Location.none.loc_start |> Common.posToString)
           (locTo.loc_start |> Common.posToString);
-      ValueReferences.add locTo.loc_start Location.none.loc_start)
+      References.add_value_ref refs ~posTo:locTo.loc_start
+        ~posFrom:Location.none.loc_start)
     else
-      addValueReference ~config ~binding ~addFileReference:true ~locFrom ~locTo
+      addValueReference ~config ~refs ~binding ~addFileReference:true ~locFrom
+        ~locTo
   | Texp_apply
       {
         funct =
@@ -138,7 +140,7 @@ let rec collectExpr ~config ~(last_binding : Location.t) super self
         args;
       } ->
     args
-    |> processOptionalArgs ~config ~expType:exp_type
+    |> processOptionalArgs ~config ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
          ~locTo ~path
   | Texp_let
@@ -179,23 +181,25 @@ let rec collectExpr ~config ~(last_binding : Location.t) super self
          && Ident.name etaArg = "eta"
          && Path.name idArg2 = "arg" ->
     args
-    |> processOptionalArgs ~config ~expType:exp_type
+    |> processOptionalArgs ~config ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
          ~locTo ~path
   | Texp_field
       (_, _, {lbl_loc = {Location.loc_start = posTo; loc_ghost = false}; _}) ->
     if !Config.analyzeTypes then
-      DeadType.addTypeReference ~config ~posTo ~posFrom:locFrom.loc_start
+      DeadType.addTypeReference ~config ~refs ~posTo ~posFrom:locFrom.loc_start
   | Texp_construct
       ( _,
         {cstr_loc = {Location.loc_start = posTo; loc_ghost} as locTo; cstr_tag},
         _ ) ->
     (match cstr_tag with
     | Cstr_extension path ->
-      path |> DeadException.markAsUsed ~config ~binding ~locFrom ~locTo
+      path
+      |> DeadException.markAsUsed ~config ~refs ~cross_file ~binding ~locFrom
+           ~locTo
     | _ -> ());
     if !Config.analyzeTypes && not loc_ghost then
-      DeadType.addTypeReference ~config ~posTo ~posFrom:locFrom.loc_start
+      DeadType.addTypeReference ~config ~refs ~posTo ~posFrom:locFrom.loc_start
   | Texp_record {fields} ->
     fields
     |> Array.iter (fun (_, record_label_definition, _) ->
@@ -204,7 +208,8 @@ let rec collectExpr ~config ~(last_binding : Location.t) super self
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr ~config ~last_binding super self e |> ignore
+             collectExpr ~config ~refs ~cross_file ~last_binding super self e
+             |> ignore
            | _ -> ())
   | _ -> ());
   super.Tast_mapper.expr self e
@@ -219,7 +224,8 @@ let rec collectExpr ~config ~(last_binding : Location.t) super self
   With this annotation we declare a new type for each branch to allow the
   function to be typed.
   *)
-let collectPattern ~config : _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
+let collectPattern ~config ~refs :
+    _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
  fun super self pat ->
   let posFrom = pat.Typedtree.pat_loc.loc_start in
   (match pat.pat_desc with
@@ -227,7 +233,7 @@ let collectPattern ~config : _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
     cases
     |> List.iter (fun (_loc, {Types.lbl_loc = {loc_start = posTo}}, _pat, _) ->
            if !Config.analyzeTypes then
-             DeadType.addTypeReference ~config ~posFrom ~posTo)
+             DeadType.addTypeReference ~config ~refs ~posFrom ~posTo)
   | _ -> ());
   super.Tast_mapper.pat self pat
 
@@ -288,16 +294,18 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
   ModulePath.setCurrent oldModulePath
 
 (* Traverse the AST *)
-let traverseStructure ~config ~decls ~file ~doTypes ~doExternals
-    (structure : Typedtree.structure) : unit =
+let traverseStructure ~config ~decls ~refs ~cross_file ~file ~doTypes
+    ~doExternals (structure : Typedtree.structure) : unit =
   let rec create_mapper (last_binding : Location.t) =
     let super = Tast_mapper.default in
     let rec mapper =
       {
         super with
         expr =
-          (fun _self e -> e |> collectExpr ~config ~last_binding super mapper);
-        pat = (fun _self p -> p |> collectPattern ~config super mapper);
+          (fun _self e ->
+            e
+            |> collectExpr ~config ~refs ~cross_file ~last_binding super mapper);
+        pat = (fun _self p -> p |> collectPattern ~config ~refs super mapper);
         structure_item =
           (fun _self (structureItem : Typedtree.structure_item) ->
             let oldModulePath = ModulePath.getCurrent () in
@@ -400,7 +408,7 @@ let traverseStructure ~config ~decls ~file ~doTypes ~doExternals
   mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let processValueDependency ~config ~decls
+let processValueDependency ~config ~decls ~refs ~cross_file
     ( ({
          val_loc =
            {loc_start = {pos_fname = fnTo} as posTo; loc_ghost = ghost1} as
@@ -415,12 +423,16 @@ let processValueDependency ~config ~decls
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
-    addValueReference ~config ~binding:Location.none ~addFileReference ~locFrom
-      ~locTo;
-    DeadOptionalArgs.addFunctionReference ~config ~decls ~locFrom ~locTo)
+    addValueReference ~config ~refs ~binding:Location.none ~addFileReference
+      ~locFrom ~locTo;
+    DeadOptionalArgs.addFunctionReference ~config ~decls ~cross_file ~locFrom
+      ~locTo)
 
-let processStructure ~config ~decls ~file ~cmt_value_dependencies ~doTypes
-    ~doExternals (structure : Typedtree.structure) =
-  traverseStructure ~config ~decls ~file ~doTypes ~doExternals structure;
+let processStructure ~config ~decls ~refs ~cross_file ~file
+    ~cmt_value_dependencies ~doTypes ~doExternals
+    (structure : Typedtree.structure) =
+  traverseStructure ~config ~decls ~refs ~cross_file ~file ~doTypes ~doExternals
+    structure;
   let valueDependencies = cmt_value_dependencies |> List.rev in
-  valueDependencies |> List.iter (processValueDependency ~config ~decls)
+  valueDependencies
+  |> List.iter (processValueDependency ~config ~decls ~refs ~cross_file)

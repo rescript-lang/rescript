@@ -3,16 +3,7 @@ open Common
 
 let active () = true
 
-type item = {
-  posTo: Lexing.position;
-  argNames: string list;
-  argNamesMaybe: string list;
-}
-
-let delayedItems = (ref [] : item list ref)
-let functionReferences = (ref [] : (Lexing.position * Lexing.position) list ref)
-
-let addFunctionReference ~config ~decls ~(locFrom : Location.t)
+let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
     ~(locTo : Location.t) =
   if active () then
     let posTo = locTo.loc_start in
@@ -28,7 +19,8 @@ let addFunctionReference ~config ~decls ~(locFrom : Location.t)
       if config.DceConfig.cli.debug then
         Log_.item "OptionalArgs.addFunctionReference %s %s@."
           (posFrom |> posToString) (posTo |> posToString);
-      functionReferences := (posFrom, posTo) :: !functionReferences)
+      CrossFileItems.add_function_reference cross_file ~pos_from:posFrom
+        ~pos_to:posTo)
 
 let rec hasOptionalArgs (texpr : Types.type_expr) =
   match texpr.desc with
@@ -48,12 +40,13 @@ let rec fromTypeExpr (texpr : Types.type_expr) =
   | Tsubst t -> fromTypeExpr t
   | _ -> []
 
-let addReferences ~config ~(locFrom : Location.t) ~(locTo : Location.t) ~path
-    (argNames, argNamesMaybe) =
+let addReferences ~config ~cross_file ~(locFrom : Location.t)
+    ~(locTo : Location.t) ~path (argNames, argNamesMaybe) =
   if active () then (
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
-    delayedItems := {posTo; argNames; argNamesMaybe} :: !delayedItems;
+    CrossFileItems.add_optional_arg_call cross_file ~pos_to:posTo
+      ~arg_names:argNames ~arg_names_maybe:argNamesMaybe;
     if config.DceConfig.cli.debug then
       Log_.item
         "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
@@ -62,29 +55,6 @@ let addReferences ~config ~(locFrom : Location.t) ~(locTo : Location.t) ~path
         (argNames |> String.concat ", ")
         (argNamesMaybe |> String.concat ", ")
         (posFrom |> posToString))
-
-let forceDelayedItems ~decls =
-  let items = !delayedItems |> List.rev in
-  delayedItems := [];
-  items
-  |> List.iter (fun {posTo; argNames; argNamesMaybe} ->
-         match Declarations.find_opt decls posTo with
-         | Some {declKind = Value r} ->
-           r.optionalArgs |> OptionalArgs.call ~argNames ~argNamesMaybe
-         | _ -> ());
-  let fRefs = !functionReferences |> List.rev in
-  functionReferences := [];
-  fRefs
-  |> List.iter (fun (posFrom, posTo) ->
-         match
-           ( Declarations.find_opt decls posFrom,
-             Declarations.find_opt decls posTo )
-         with
-         | Some {declKind = Value rFrom}, Some {declKind = Value rTo}
-           when not (OptionalArgs.isEmpty rTo.optionalArgs) ->
-           (* Only process if target has optional args - matching original filtering *)
-           OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
-         | _ -> ())
 
 let check ~annotations ~config:_ decl =
   match decl with

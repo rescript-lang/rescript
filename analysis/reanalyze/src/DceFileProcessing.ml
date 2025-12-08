@@ -40,6 +40,8 @@ let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
 type file_data = {
   annotations: FileAnnotations.builder;
   decls: Declarations.builder;
+  refs: References.builder;
+  cross_file: CrossFileItems.builder;
 }
 
 let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
@@ -55,6 +57,8 @@ let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
   (* Mutable builders for AST processing *)
   let annotations = FileAnnotations.create_builder () in
   let decls = Declarations.create_builder () in
+  let refs = References.create_builder () in
+  let cross_file = CrossFileItems.create_builder () in
   (match cmt_infos.cmt_annots with
   | Interface signature ->
     CollectAnnotations.signature ~state:annotations ~config signature;
@@ -69,11 +73,11 @@ let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
     processSignature ~config ~decls ~file ~doValues:true ~doTypes:false
       structure.str_type;
     let doExternals = false in
-    DeadValue.processStructure ~config ~decls ~file:dead_common_file
-      ~doTypes:true ~doExternals
+    DeadValue.processStructure ~config ~decls ~refs ~cross_file
+      ~file:dead_common_file ~doTypes:true ~doExternals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
-  DeadType.TypeDependencies.forceDelayedItems ~config;
+  DeadType.TypeDependencies.forceDelayedItems ~config ~refs;
   DeadType.TypeDependencies.clear ();
   (* Return builders - caller will merge and freeze *)
-  {annotations; decls}
+  {annotations; decls; refs; cross_file}

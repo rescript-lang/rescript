@@ -80,11 +80,11 @@ you can swap one file's data without affecting others.
 
 **Impact**: Can't analyze a subset of files without reanalyzing everything. Can't clear state between test runs without module reloading.
 
-### P3: Delayed/deferred processing queues
+### P3: Cross-file processing queues
 **Problem**: Several analyses use global queues that get "flushed" later:
-- `DeadOptionalArgs.delayedItems` - deferred optional arg analysis
-- `DeadException.delayedItems` - deferred exception checks
-- `DeadType.TypeDependencies.delayedItems` - deferred type deps
+- `DeadOptionalArgs.delayedItems` - cross-file optional arg analysis → DELETED (now `CrossFileItems`)
+- `DeadException.delayedItems` - cross-file exception checks → DELETED (now `CrossFileItems`)
+- `DeadType.TypeDependencies.delayedItems` - per-file type deps (already handled per-file)
 - `ProcessDeadAnnotations.positionsAnnotated` - annotation tracking
 
 **Additional problem**: `positionsAnnotated` mixes **input** (source annotations from AST) with **output** (positions the solver determines are dead). The solver mutates this during analysis, violating purity.
@@ -346,29 +346,39 @@ val is_annotated_* : t -> ... -> bool
 **Pattern**: Same as Task 3/4.
 
 **Changes**:
-- [ ] Create `References` module with `builder` and `t` types
-- [ ] `process_cmt_file` returns `References.builder` for both value and type refs
-- [ ] `References.merge_all : builder list -> t`
-- [ ] Delete global `ValueReferences.table` and `TypeReferences.table`
+- [x] Create `References` module with `builder` and `t` types
+- [x] Thread `~refs:References.builder` through `addValueReference`, `addTypeReference`
+- [x] `process_cmt_file` returns `References.builder` in `file_data`
+- [x] Merge refs into builder, process delayed items, then freeze
+- [x] Solver uses `References.t` via `find_value_refs` and `find_type_refs`
+- [x] Delete global `ValueReferences.table` and `TypeReferences.table`
+
+**Status**: Complete ✅
 
 **Test**: Process files in different orders - results should be identical.
 
 **Estimated effort**: Medium (similar to Task 4)
 
-### Task 6: Delayed items use map → list → merge pattern (P3)
+### Task 6: Cross-file items use map → list → merge pattern (P3)
 
-**Value**: No global queues. Delayed items are per-file immutable data.
+**Value**: No global queues. Cross-file items are per-file immutable data.
 
 **Pattern**: Same as Task 3/4/5.
 
 **Changes**:
-- [ ] Create `DelayedItems` module with `builder` and `t` types
-- [ ] `process_cmt_file` returns `DelayedItems.builder`
-- [ ] `DelayedItems.merge_all : builder list -> t`
-- [ ] `forceDelayedItems` is pure function on `DelayedItems.t`
-- [ ] Delete global `delayedItems` refs
+- [x] Create `CrossFileItems` module with `builder` and `t` types
+- [x] Thread `~cross_file:CrossFileItems.builder` through AST processing
+- [x] `process_cmt_file` returns `CrossFileItems.builder` in `file_data`
+- [x] `CrossFileItems.merge_all : builder list -> t`
+- [x] `process_exception_refs` and `process_optional_args` are pure functions on merged `t`
+- [x] Delete global `delayedItems` refs from `DeadException` and `DeadOptionalArgs`
 
-**Key insight**: "Delayed" items are just per-file data collected during AST processing.
+**Status**: Complete ✅
+
+**Note**: `DeadType.TypeDependencies` was already per-file (processed within `process_cmt_file`),
+so it didn't need to be included.
+
+**Key insight**: Cross-file items are references that span file boundaries.
 They should follow the same pattern as everything else.
 
 **Test**: Process files in different orders - results should be identical.
@@ -493,6 +503,37 @@ This enables parallelization, caching, and incremental recomputation.
 - Best case (everything goes smoothly): 2-3 days
 - Realistic (with bugs/complications): 1 week  
 - Worst case (major architectural issues): 2 weeks
+
+---
+
+## Optional Future Tasks
+
+### Optional Task: Make OptionalArgs tracking immutable
+
+**Value**: Currently `CrossFileItems.process_optional_args` mutates `optionalArgs` inside declarations.
+Making this immutable would complete the pure pipeline.
+
+**Current state**:
+- `OptionalArgs.t` inside `decl.declKind = Value {optionalArgs}` is mutable
+- `OptionalArgs.call` and `OptionalArgs.combine` mutate the record
+- This happens after merge but before solver
+
+**Why it's acceptable now**:
+- Mutation happens in a well-defined phase (after merge, before solver)
+- Solver sees effectively immutable data
+- Order independence is maintained (calls accumulate, order doesn't matter)
+
+**Changes needed**:
+- [ ] Make `OptionalArgs.t` an immutable data structure
+- [ ] Collect call info during AST processing as `OptionalArgCalls.builder`
+- [ ] Return calls from `process_cmt_file` in `file_data`
+- [ ] Merge all calls after file processing
+- [ ] Build final `OptionalArgs` state from merged calls (pure)
+- [ ] Store immutable `OptionalArgs` in declarations
+
+**Estimated effort**: Medium-High (touches core data structures)
+
+**Priority**: Low (current design works, just not fully pure)
 
 ---
 

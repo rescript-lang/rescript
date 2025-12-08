@@ -122,7 +122,6 @@ let runAnalysis ~dce_config ~cmtRoot =
   (* Map: process each file -> list of file_data *)
   let file_data_list = processCmtFiles ~config:dce_config ~cmtRoot in
   if dce_config.DceConfig.run.dce then (
-    DeadException.forceDelayedItems ~config:dce_config;
     (* Merge: combine all builders -> immutable data *)
     let annotations =
       FileAnnotations.merge_all
@@ -132,9 +131,24 @@ let runAnalysis ~dce_config ~cmtRoot =
       Declarations.merge_all
         (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
     in
-    (* Process delayed optional args with merged decls *)
-    DeadOptionalArgs.forceDelayedItems ~decls;
-    DeadCommon.reportDead ~annotations ~decls ~config:dce_config
+    let cross_file =
+      CrossFileItems.merge_all
+        (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
+    in
+    (* Merge refs into a single builder for delayed items processing *)
+    let refs_builder = References.create_builder () in
+    file_data_list
+    |> List.iter (fun fd ->
+           References.merge_into_builder ~from:fd.DceFileProcessing.refs
+             ~into:refs_builder);
+    (* Process cross-file exception refs - they write to refs_builder *)
+    CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
+      ~find_exception:DeadException.find_exception ~config:dce_config;
+    (* Process cross-file optional args - they read decls *)
+    CrossFileItems.process_optional_args cross_file ~decls;
+    (* Now freeze refs for solver *)
+    let refs = References.freeze_builder refs_builder in
+    DeadCommon.reportDead ~annotations ~decls ~refs ~config:dce_config
       ~checkOptionalArg:DeadOptionalArgs.check;
     WriteDeadAnnotations.write ~config:dce_config);
   if dce_config.DceConfig.run.exception_ then

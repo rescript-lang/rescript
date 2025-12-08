@@ -60,13 +60,7 @@ type decls = decl PosHash.t
 
 (* NOTE: Global decls removed - now using Declarations.builder/t pattern *)
 
-module ValueReferences = struct
-  (** all value references *)
-  let table = (PosHash.create 256 : PosSet.t PosHash.t)
-
-  let add posTo posFrom = PosHash.addSet table posTo posFrom
-  let find pos = PosHash.findSet table pos
-end
+(* NOTE: Global ValueReferences removed - now using References.builder/t pattern *)
 
 (* Local reporting context used only while emitting dead-code warnings.
    It tracks, per file, the end position of the last value we reported on,
@@ -79,13 +73,7 @@ module ReportingContext = struct
   let set_max_end (ctx : t) (pos : Lexing.position) = ctx := pos
 end
 
-module TypeReferences = struct
-  (** all type references *)
-  let table = (PosHash.create 256 : PosSet.t PosHash.t)
-
-  let add posTo posFrom = PosHash.addSet table posTo posFrom
-  let find pos = PosHash.findSet table pos
-end
+(* NOTE: Global TypeReferences removed - now using References.builder/t pattern *)
 
 let declGetLoc decl =
   let loc_start =
@@ -99,7 +87,7 @@ let declGetLoc decl =
   in
   {Location.loc_start; loc_end = decl.posEnd; loc_ghost = false}
 
-let addValueReference ~config ~(binding : Location.t) ~addFileReference
+let addValueReference ~config ~refs ~(binding : Location.t) ~addFileReference
     ~(locFrom : Location.t) ~(locTo : Location.t) : unit =
   let effectiveFrom = if binding = Location.none then locFrom else binding in
   if not effectiveFrom.loc_ghost then (
@@ -107,7 +95,8 @@ let addValueReference ~config ~(binding : Location.t) ~addFileReference
       Log_.item "addValueReference %s --> %s@."
         (effectiveFrom.loc_start |> posToString)
         (locTo.loc_start |> posToString);
-    ValueReferences.add locTo.loc_start effectiveFrom.loc_start;
+    References.add_value_ref refs ~posTo:locTo.loc_start
+      ~posFrom:effectiveFrom.loc_start;
     if
       addFileReference && (not locTo.loc_ghost)
       && (not effectiveFrom.loc_ghost)
@@ -349,7 +338,7 @@ module Decl = struct
           ReportingContext.set_max_end ctx decl.posEnd;
     insideReportedValue
 
-  let report ~config (ctx : ReportingContext.t) decl =
+  let report ~config ~refs (ctx : ReportingContext.t) decl =
     let insideReportedValue = decl |> isInsideReportedValue ctx in
     if decl.report then
       let name, message =
@@ -382,7 +371,7 @@ module Decl = struct
           (WarningDeadType, "is a variant case which is never constructed")
       in
       let hasRefBelow () =
-        let refs = ValueReferences.find decl.pos in
+        let decl_refs = References.find_value_refs refs decl.pos in
         let refIsBelow (pos : Lexing.position) =
           decl.pos.pos_fname <> pos.pos_fname
           || decl.pos.pos_cnum < pos.pos_cnum
@@ -390,7 +379,7 @@ module Decl = struct
              (* not a function defined inside a function, e.g. not a callback *)
              decl.posEnd.pos_cnum < pos.pos_cnum
         in
-        refs |> PosSet.exists refIsBelow
+        decl_refs |> References.PosSet.exists refIsBelow
       in
       let shouldEmitWarning =
         (not insideReportedValue)
@@ -409,16 +398,16 @@ end
 let declIsDead ~annotations ~refs decl =
   let liveRefs =
     refs
-    |> PosSet.filter (fun p ->
+    |> References.PosSet.filter (fun p ->
            not (FileAnnotations.is_annotated_dead annotations p))
   in
-  liveRefs |> PosSet.cardinal = 0
+  liveRefs |> References.PosSet.cardinal = 0
   && not (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
 
 let doReportDead ~annotations pos =
   not (FileAnnotations.is_annotated_gentype_or_dead annotations pos)
 
-let rec resolveRecursiveRefs ~annotations ~config ~decls
+let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
     ~checkOptionalArg:(checkOptionalArgFn : config:DceConfig.t -> decl -> unit)
     ~deadDeclarations ~level ~orderedFiles ~refs ~refsBeingResolved decl : bool
     =
@@ -445,7 +434,7 @@ let rec resolveRecursiveRefs ~annotations ~config ~decls
     let allDepsResolved = ref true in
     let newRefs =
       refs
-      |> PosSet.filter (fun pos ->
+      |> References.PosSet.filter (fun pos ->
              if pos = decl.pos then (
                if Config.recursiveDebug then
                  Log_.item "recursiveDebug %s ignoring reference to self@."
@@ -461,12 +450,12 @@ let rec resolveRecursiveRefs ~annotations ~config ~decls
                | Some xDecl ->
                  let xRefs =
                    match xDecl.declKind |> DeclKind.isType with
-                   | true -> TypeReferences.find pos
-                   | false -> ValueReferences.find pos
+                   | true -> References.find_type_refs all_refs pos
+                   | false -> References.find_value_refs all_refs pos
                  in
                  let xDeclIsDead =
                    xDecl
-                   |> resolveRecursiveRefs ~annotations ~config ~decls
+                   |> resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
                         ~checkOptionalArg:checkOptionalArgFn ~deadDeclarations
                         ~level:(level + 1) ~orderedFiles ~refs:xRefs
                         ~refsBeingResolved
@@ -496,7 +485,7 @@ let rec resolveRecursiveRefs ~annotations ~config ~decls
             IncorrectDeadAnnotation);
       if config.DceConfig.cli.debug then
         let refsString =
-          newRefs |> PosSet.elements |> List.map posToString
+          newRefs |> References.PosSet.elements |> List.map posToString
           |> String.concat ", "
         in
         Log_.item "%s %s %s: %d references (%s) [%d]@."
@@ -505,24 +494,24 @@ let rec resolveRecursiveRefs ~annotations ~config ~decls
           | false -> "Live")
           (decl.declKind |> DeclKind.toString)
           (decl.path |> Path.toString)
-          (newRefs |> PosSet.cardinal)
+          (newRefs |> References.PosSet.cardinal)
           refsString level);
     isDead
 
-let reportDead ~annotations ~config ~decls
+let reportDead ~annotations ~config ~decls ~refs
     ~checkOptionalArg:
       (checkOptionalArgFn :
         annotations:FileAnnotations.t -> config:DceConfig.t -> decl -> unit) =
   let iterDeclInOrder ~deadDeclarations ~orderedFiles decl =
-    let refs =
+    let decl_refs =
       match decl |> Decl.isValue with
-      | true -> ValueReferences.find decl.pos
-      | false -> TypeReferences.find decl.pos
+      | true -> References.find_value_refs refs decl.pos
+      | false -> References.find_type_refs refs decl.pos
     in
-    resolveRecursiveRefs ~annotations ~config ~decls
+    resolveRecursiveRefs ~all_refs:refs ~annotations ~config ~decls
       ~checkOptionalArg:(checkOptionalArgFn ~annotations)
       ~deadDeclarations ~level:0 ~orderedFiles
-      ~refsBeingResolved:(ref PosSet.empty) ~refs decl
+      ~refsBeingResolved:(ref PosSet.empty) ~refs:decl_refs decl
     |> ignore
   in
   if config.DceConfig.cli.debug then (
@@ -559,4 +548,4 @@ let reportDead ~annotations ~config ~decls
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
   let reporting_ctx = ReportingContext.create () in
-  sortedDeadDeclarations |> List.iter (Decl.report ~config reporting_ctx)
+  sortedDeadDeclarations |> List.iter (Decl.report ~config ~refs reporting_ctx)

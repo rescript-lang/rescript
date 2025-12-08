@@ -14,8 +14,10 @@ type file_context = {
 type file_data = {
   annotations: FileAnnotations.builder;
   decls: Declarations.builder;
+  refs: References.builder;
+  cross_file: CrossFileItems.builder;
 }
-(** Result of processing a cmt file - both annotations and declarations *)
+(** Result of processing a cmt file - annotations, declarations, references, and delayed items *)
 
 val process_cmt_file :
   config:DceConfig.t ->
