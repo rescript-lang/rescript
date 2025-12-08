@@ -223,20 +223,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] muted
 Path ReactDOM.domProps
-Path JsxDOM.domProps
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionJsxProps.res 18:29
 posCursor:[18:29] posNoWhite:[18:28] Found expr:[18:11->18:32]
@@ -246,17 +233,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] onMouseEnter
 Path ReactDOM.domProps
-Path JsxDOM.domProps
-[{
-    "label": "event => event",
-    "kind": 12,
-    "tags": [],
-    "detail": "JsxEvent.Mouse.t => unit",
-    "documentation": null,
-    "sortText": "A",
-    "insertText": "{${1:event} => ${0:event}}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionJsxProps.res 22:52
 posCursor:[22:52] posNoWhite:[22:51] Found expr:[22:11->22:52]
