@@ -24,7 +24,7 @@
 - Fix missing `ignore` function in some Stdlib modules. https://github.com/rescript-lang/rescript/pull/8060
 - Fix signature matching for externals when abstract alias hides function arity. https://github.com/rescript-lang/rescript/pull/8045
 - Fix arity detection for arrows returning nested generics. https://github.com/rescript-lang/rescript/pull/8064
-- Fix error handling when rescript.json parsing fails. https://github.com/rescript-lang/rescript/pull/8067
+- Fix error handling when rescript.json parsing fails and improve error message. https://github.com/rescript-lang/rescript/pull/8067
 
 #### :memo: Documentation
 
