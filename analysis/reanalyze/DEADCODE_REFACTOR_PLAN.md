@@ -392,11 +392,14 @@ They should follow the same pattern as everything else.
 **Pattern**: Same as Task 3/4/5/6.
 
 **Changes**:
-- [ ] Create `FileDeps` module with `builder` and `t` types
-- [ ] `process_cmt_file` returns `FileDeps.builder`
-- [ ] `FileDeps.merge_all : builder list -> FileGraph.t`
-- [ ] `topological_order : FileGraph.t -> string list` (pure function)
-- [ ] `DeadModules` state becomes part of per-file data
+- [x] Create `FileDeps` module with `builder` and `t` types
+- [x] `process_cmt_file` returns `FileDeps.builder`
+- [x] `FileDeps.merge_all : builder list -> t`
+- [x] Thread `~file_deps` through `addValueReference`
+- [x] `iter_files_from_roots_to_leaves : t -> (string -> unit) -> unit` (pure function)
+- [x] Delete global `FileReferences` from `Common.ml`
+
+**Status**: Complete ✅
 
 **Test**: Build file graph, verify topological ordering is correct.
 
@@ -414,6 +417,7 @@ Can be parallelized, memoized, reordered.
 - [ ] `Decl.report`: Return `issue` instead of logging
 - [ ] Remove all `Log_.warning`, `Log_.item` calls from analysis path
 - [ ] Side effects (logging, JSON) only in final reporting phase
+- [ ] Make `DeadModules` state part of `analysis_result` (currently mutated during solver)
 
 **Architecture**:
 ```

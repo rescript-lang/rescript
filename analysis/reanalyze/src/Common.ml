@@ -49,31 +49,7 @@ module FileHash = struct
   end)
 end
 
-module FileReferences = struct
-  (* references across files *)
-  let table = (FileHash.create 256 : FileSet.t FileHash.t)
-
-  let findSet table key =
-    try FileHash.find table key with Not_found -> FileSet.empty
-
-  let add (locFrom : Location.t) (locTo : Location.t) =
-    let key = locFrom.loc_start.pos_fname in
-    let set = findSet table key in
-    FileHash.replace table key (FileSet.add locTo.loc_start.pos_fname set)
-
-  let addFile fileName =
-    let set = findSet table fileName in
-    FileHash.replace table fileName set
-
-  let exists fileName = FileHash.mem table fileName
-
-  let find fileName =
-    match FileHash.find_opt table fileName with
-    | Some set -> set
-    | None -> FileSet.empty
-
-  let iter f = FileHash.iter f table
-end
+(* NOTE: FileReferences has been moved to FileDeps module *)
 
 module Path = struct
   type t = Name.t list

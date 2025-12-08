@@ -60,14 +60,15 @@ let merge_all (builders : builder list) : t =
 
 (** {2 Processing API} *)
 
-let process_exception_refs (t : t) ~refs ~find_exception ~config =
+let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
   t.exception_refs
   |> List.iter (fun {exception_path; loc_from} ->
          match find_exception exception_path with
          | None -> ()
          | Some loc_to ->
-           DeadCommon.addValueReference ~config ~refs ~binding:Location.none
-             ~addFileReference:true ~locFrom:loc_from ~locTo:loc_to)
+           DeadCommon.addValueReference ~config ~refs ~file_deps
+             ~binding:Location.none ~addFileReference:true ~locFrom:loc_from
+             ~locTo:loc_to)
 
 let process_optional_args (t : t) ~decls =
   (* Process optional arg calls *)

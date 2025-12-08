@@ -13,7 +13,7 @@ let add ~config ~decls ~file ~path ~loc ~(strLoc : Location.t) name =
 
 let find_exception path = Hashtbl.find_opt declarations path
 
-let markAsUsed ~config ~refs ~cross_file ~(binding : Location.t)
+let markAsUsed ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
     ~(locFrom : Location.t) ~(locTo : Location.t) path_ =
   if locTo.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)
@@ -23,5 +23,5 @@ let markAsUsed ~config ~refs ~cross_file ~(binding : Location.t)
     CrossFileItems.add_exception_ref cross_file ~exception_path:exceptionPath
       ~loc_from:locFrom
   else
-    addValueReference ~config ~refs ~binding ~addFileReference:true ~locFrom
-      ~locTo
+    addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
+      ~locFrom ~locTo

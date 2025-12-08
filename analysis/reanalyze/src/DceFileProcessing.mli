@@ -16,8 +16,9 @@ type file_data = {
   decls: Declarations.builder;
   refs: References.builder;
   cross_file: CrossFileItems.builder;
+  file_deps: FileDeps.builder;
 }
-(** Result of processing a cmt file - annotations, declarations, references, and delayed items *)
+(** Result of processing a cmt file - annotations, declarations, references, cross-file items, and file dependencies *)
 
 val process_cmt_file :
   config:DceConfig.t ->
