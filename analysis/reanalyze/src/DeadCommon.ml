@@ -87,8 +87,8 @@ let declGetLoc decl =
   in
   {Location.loc_start; loc_end = decl.posEnd; loc_ghost = false}
 
-let addValueReference ~config ~refs ~(binding : Location.t) ~addFileReference
-    ~(locFrom : Location.t) ~(locTo : Location.t) : unit =
+let addValueReference ~config ~refs ~file_deps ~(binding : Location.t)
+    ~addFileReference ~(locFrom : Location.t) ~(locTo : Location.t) : unit =
   let effectiveFrom = if binding = Location.none then locFrom else binding in
   if not effectiveFrom.loc_ghost then (
     if config.DceConfig.cli.debug then
@@ -101,82 +101,14 @@ let addValueReference ~config ~refs ~(binding : Location.t) ~addFileReference
       addFileReference && (not locTo.loc_ghost)
       && (not effectiveFrom.loc_ghost)
       && effectiveFrom.loc_start.pos_fname <> locTo.loc_start.pos_fname
-    then FileReferences.add effectiveFrom locTo)
+    then
+      FileDeps.add_dep file_deps ~from_file:effectiveFrom.loc_start.pos_fname
+        ~to_file:locTo.loc_start.pos_fname)
 
-let iterFilesFromRootsToLeaves iterFun =
-  (* For each file, the number of incoming references *)
-  let inverseReferences = (Hashtbl.create 1 : (string, int) Hashtbl.t) in
-  (* For each number of incoming references, the files *)
-  let referencesByNumber = (Hashtbl.create 1 : (int, FileSet.t) Hashtbl.t) in
-  let getNum fileName =
-    try Hashtbl.find inverseReferences fileName with Not_found -> 0
-  in
-  let getSet num =
-    try Hashtbl.find referencesByNumber num with Not_found -> FileSet.empty
-  in
-  let addIncomingEdge fileName =
-    let oldNum = getNum fileName in
-    let newNum = oldNum + 1 in
-    let oldSetAtNum = getSet oldNum in
-    let newSetAtNum = FileSet.remove fileName oldSetAtNum in
-    let oldSetAtNewNum = getSet newNum in
-    let newSetAtNewNum = FileSet.add fileName oldSetAtNewNum in
-    Hashtbl.replace inverseReferences fileName newNum;
-    Hashtbl.replace referencesByNumber oldNum newSetAtNum;
-    Hashtbl.replace referencesByNumber newNum newSetAtNewNum
-  in
-  let removeIncomingEdge fileName =
-    let oldNum = getNum fileName in
-    let newNum = oldNum - 1 in
-    let oldSetAtNum = getSet oldNum in
-    let newSetAtNum = FileSet.remove fileName oldSetAtNum in
-    let oldSetAtNewNum = getSet newNum in
-    let newSetAtNewNum = FileSet.add fileName oldSetAtNewNum in
-    Hashtbl.replace inverseReferences fileName newNum;
-    Hashtbl.replace referencesByNumber oldNum newSetAtNum;
-    Hashtbl.replace referencesByNumber newNum newSetAtNewNum
-  in
-  let addEdge fromFile toFile =
-    if FileReferences.exists fromFile then addIncomingEdge toFile
-  in
-  let removeEdge fromFile toFile =
-    if FileReferences.exists fromFile then removeIncomingEdge toFile
-  in
-  FileReferences.iter (fun fromFile set ->
-      if getNum fromFile = 0 then
-        Hashtbl.replace referencesByNumber 0 (FileSet.add fromFile (getSet 0));
-      set |> FileSet.iter (fun toFile -> addEdge fromFile toFile));
-  while getSet 0 <> FileSet.empty do
-    let filesWithNoIncomingReferences = getSet 0 in
-    Hashtbl.remove referencesByNumber 0;
-    filesWithNoIncomingReferences
-    |> FileSet.iter (fun fileName ->
-           iterFun fileName;
-           let references = FileReferences.find fileName in
-           references |> FileSet.iter (fun toFile -> removeEdge fileName toFile))
-  done;
-  (* Process any remaining items in case of circular references *)
-  referencesByNumber
-  |> Hashtbl.iter (fun _num set ->
-         if FileSet.is_empty set then ()
-         else
-           set
-           |> FileSet.iter (fun fileName ->
-                  let pos = {Lexing.dummy_pos with pos_fname = fileName} in
-                  let loc =
-                    {Location.none with loc_start = pos; loc_end = pos}
-                  in
-                  if Config.warnOnCircularDependencies then
-                    Log_.warning ~loc
-                      (Circular
-                         {
-                           message =
-                             Format.asprintf
-                               "Results for %s could be inaccurate because of \
-                                circular references"
-                               fileName;
-                         });
-                  iterFun fileName))
+(* NOTE: iterFilesFromRootsToLeaves moved to FileDeps.iter_files_from_roots_to_leaves *)
+
+let iterFilesFromRootsToLeaves ~file_deps iterFun =
+  FileDeps.iter_files_from_roots_to_leaves file_deps iterFun
 
 let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
     ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc
@@ -498,7 +430,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
           refsString level);
     isDead
 
-let reportDead ~annotations ~config ~decls ~refs
+let reportDead ~annotations ~config ~decls ~refs ~file_deps
     ~checkOptionalArg:
       (checkOptionalArgFn :
         annotations:FileAnnotations.t -> config:DceConfig.t -> decl -> unit) =
@@ -517,7 +449,7 @@ let reportDead ~annotations ~config ~decls ~refs
   if config.DceConfig.cli.debug then (
     Log_.item "@.File References@.@.";
     let fileList = ref [] in
-    FileReferences.iter (fun file files ->
+    FileDeps.iter_deps file_deps (fun file files ->
         fileList := (file, files) :: !fileList);
     !fileList
     |> List.sort (fun (f1, _) (f2, _) -> String.compare f1 f2)
@@ -532,7 +464,7 @@ let reportDead ~annotations ~config ~decls ~refs
       decls []
   in
   let orderedFiles = Hashtbl.create 256 in
-  iterFilesFromRootsToLeaves
+  iterFilesFromRootsToLeaves ~file_deps
     (let current = ref 0 in
      fun fileName ->
        incr current;

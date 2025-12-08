@@ -109,8 +109,8 @@ let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
     (!supplied, !suppliedMaybe)
     |> DeadOptionalArgs.addReferences ~config ~cross_file ~locFrom ~locTo ~path)
 
-let rec collectExpr ~config ~refs ~cross_file ~(last_binding : Location.t) super
-    self (e : Typedtree.expression) =
+let rec collectExpr ~config ~refs ~file_deps ~cross_file
+    ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
   let binding = last_binding in
   (match e.exp_desc with
@@ -126,8 +126,8 @@ let rec collectExpr ~config ~refs ~cross_file ~(last_binding : Location.t) super
       References.add_value_ref refs ~posTo:locTo.loc_start
         ~posFrom:Location.none.loc_start)
     else
-      addValueReference ~config ~refs ~binding ~addFileReference:true ~locFrom
-        ~locTo
+      addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
+        ~locFrom ~locTo
   | Texp_apply
       {
         funct =
@@ -195,8 +195,8 @@ let rec collectExpr ~config ~refs ~cross_file ~(last_binding : Location.t) super
     (match cstr_tag with
     | Cstr_extension path ->
       path
-      |> DeadException.markAsUsed ~config ~refs ~cross_file ~binding ~locFrom
-           ~locTo
+      |> DeadException.markAsUsed ~config ~refs ~file_deps ~cross_file ~binding
+           ~locFrom ~locTo
     | _ -> ());
     if !Config.analyzeTypes && not loc_ghost then
       DeadType.addTypeReference ~config ~refs ~posTo ~posFrom:locFrom.loc_start
@@ -208,7 +208,8 @@ let rec collectExpr ~config ~refs ~cross_file ~(last_binding : Location.t) super
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr ~config ~refs ~cross_file ~last_binding super self e
+             collectExpr ~config ~refs ~file_deps ~cross_file ~last_binding
+               super self e
              |> ignore
            | _ -> ())
   | _ -> ());
@@ -294,7 +295,7 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
   ModulePath.setCurrent oldModulePath
 
 (* Traverse the AST *)
-let traverseStructure ~config ~decls ~refs ~cross_file ~file ~doTypes
+let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
     ~doExternals (structure : Typedtree.structure) : unit =
   let rec create_mapper (last_binding : Location.t) =
     let super = Tast_mapper.default in
@@ -304,7 +305,8 @@ let traverseStructure ~config ~decls ~refs ~cross_file ~file ~doTypes
         expr =
           (fun _self e ->
             e
-            |> collectExpr ~config ~refs ~cross_file ~last_binding super mapper);
+            |> collectExpr ~config ~refs ~file_deps ~cross_file ~last_binding
+                 super mapper);
         pat = (fun _self p -> p |> collectPattern ~config ~refs super mapper);
         structure_item =
           (fun _self (structureItem : Typedtree.structure_item) ->
@@ -408,7 +410,7 @@ let traverseStructure ~config ~decls ~refs ~cross_file ~file ~doTypes
   mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let processValueDependency ~config ~decls ~refs ~cross_file
+let processValueDependency ~config ~decls ~refs ~file_deps ~cross_file
     ( ({
          val_loc =
            {loc_start = {pos_fname = fnTo} as posTo; loc_ghost = ghost1} as
@@ -423,16 +425,17 @@ let processValueDependency ~config ~decls ~refs ~cross_file
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
-    addValueReference ~config ~refs ~binding:Location.none ~addFileReference
-      ~locFrom ~locTo;
+    addValueReference ~config ~refs ~file_deps ~binding:Location.none
+      ~addFileReference ~locFrom ~locTo;
     DeadOptionalArgs.addFunctionReference ~config ~decls ~cross_file ~locFrom
       ~locTo)
 
-let processStructure ~config ~decls ~refs ~cross_file ~file
+let processStructure ~config ~decls ~refs ~file_deps ~cross_file ~file
     ~cmt_value_dependencies ~doTypes ~doExternals
     (structure : Typedtree.structure) =
-  traverseStructure ~config ~decls ~refs ~cross_file ~file ~doTypes ~doExternals
-    structure;
+  traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
+    ~doExternals structure;
   let valueDependencies = cmt_value_dependencies |> List.rev in
   valueDependencies
-  |> List.iter (processValueDependency ~config ~decls ~refs ~cross_file)
+  |> List.iter
+       (processValueDependency ~config ~decls ~refs ~file_deps ~cross_file)

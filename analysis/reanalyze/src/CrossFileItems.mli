@@ -43,6 +43,7 @@ val merge_all : builder list -> t
 val process_exception_refs :
   t ->
   refs:References.builder ->
+  file_deps:FileDeps.builder ->
   find_exception:(Common.Path.t -> Location.t option) ->
   config:DceConfig.t ->
   unit
