@@ -17,7 +17,6 @@ module Cli = struct
 
   let experimental = ref false
   let json = ref false
-  let write = ref false
 
   (* names to be considered live values *)
   let liveNames = ref ([] : string list)
@@ -174,8 +173,6 @@ type decl = {
   mutable report: bool;
 }
 
-type line = {mutable declarations: decl list; original: string}
-
 module ExnSet = Set.Make (Exn)
 
 type missingThrowInfo = {
@@ -202,21 +199,13 @@ type deadWarning =
   | WarningDeadValueWithSideEffects
   | IncorrectDeadAnnotation
 
-type lineAnnotation = (decl * line) option
-
 type description =
   | Circular of {message: string}
   | ExceptionAnalysis of {message: string}
   | ExceptionAnalysisMissing of missingThrowInfo
   | DeadModule of {message: string}
   | DeadOptional of {deadOptional: deadOptional; message: string}
-  | DeadWarning of {
-      deadWarning: deadWarning;
-      path: string;
-      message: string;
-      shouldWriteLineAnnotation: bool;
-      lineAnnotation: lineAnnotation;
-    }
+  | DeadWarning of {deadWarning: deadWarning; path: string; message: string}
   | Termination of {termination: termination; message: string}
 
 type issue = {

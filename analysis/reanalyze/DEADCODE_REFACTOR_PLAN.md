@@ -100,7 +100,7 @@ you can swap one file's data without affecting others.
 **Problem**: Analysis functions directly call:
 - `Log_.warning` - logging
 - `EmitJson` - JSON output  
-- `WriteDeadAnnotations` - file I/O
+- ~~`WriteDeadAnnotations` - file I/O~~ (removed - added complexity with little value)
 - Direct mutation of result data structures
 
 **Impact**: Can't get analysis results as data. Can't test without capturing I/O. Can't reuse analysis logic for different output formats.
@@ -440,19 +440,14 @@ This enables parallelization, caching, and incremental recomputation.
 
 **Estimated effort**: Medium (many logging call sites, but mechanical)
 
-### Task 9: Separate annotation computation from file writing (P5)
+### Task 9: ~~Separate annotation computation from file writing (P5)~~ REMOVED
 
-**Value**: Can compute what to write without actually writing. Testable.
+**Status**: Removed ✅ - `WriteDeadAnnotations` feature was deleted entirely.
 
-**Changes**:
-- [ ] `WriteDeadAnnotations`: Split into pure `compute_annotations` and impure `write_to_files`
-- [ ] Pure function takes deadness results, returns `(filepath * line_annotation list) list`
-- [ ] Impure function takes that list and does file I/O
-- [ ] Remove file I/O from analysis path
-
-**Test**: Compute annotations, verify correct without touching filesystem.
-
-**Estimated effort**: Small (single module)
+The `-write` flag that auto-inserted `@dead` annotations into source files was removed
+as it added significant complexity (global state, file I/O during analysis, extra types)
+for a rarely-used feature. Users who want to suppress dead code warnings can manually
+add `@dead` annotations.
 
 ### Task 10: Verify zero `DceConfig.current()` calls in analysis code
 

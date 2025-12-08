@@ -119,8 +119,12 @@ let addDeclaration ~config ~decls ~file ~(typeId : Ident.t)
         in
         let posAdjustment =
           (* In Res the variant loc can include the | and spaces after it *)
-          if WriteDeadAnnotations.posLanguage cd_loc.loc_start = Res then
-            if i = 0 then FirstVariant else OtherVariant
+          let isRes =
+            let fname = cd_loc.loc_start.pos_fname in
+            Filename.check_suffix fname ".res"
+            || Filename.check_suffix fname ".resi"
+          in
+          if isRes then if i = 0 then FirstVariant else OtherVariant
           else Nothing
         in
         Ident.name cd_id |> Name.create
