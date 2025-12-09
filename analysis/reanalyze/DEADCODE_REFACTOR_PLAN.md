@@ -613,32 +613,23 @@ add `@dead` annotations.
 
 ## Optional Future Tasks
 
-### Optional Task: Make OptionalArgs tracking immutable
+### Optional Task: Make OptionalArgs tracking immutable ✅
 
-**Value**: Currently `CrossFileItems.process_optional_args` mutates `optionalArgs` inside declarations.
-Making this immutable would complete the pure pipeline.
+**Value**: `OptionalArgs.t` is now fully immutable. No mutation of declarations.
 
-**Current state**:
-- `OptionalArgs.t` inside `decl.declKind = Value {optionalArgs}` is mutable
-- `OptionalArgs.call` and `OptionalArgs.combine` mutate the record
-- This happens after merge but before solver
+**Changes made**:
+- [x] Made `OptionalArgs.t` immutable (no mutable fields)
+- [x] Added pure functions: `apply_call`, `combine_pair`
+- [x] Created `OptionalArgsState` module in `Common.ml` for state map
+- [x] `compute_optional_args_state` returns immutable state map
+- [x] `DeadOptionalArgs.check` looks up state from map
 
-**Why it's acceptable now**:
-- Mutation happens in a well-defined phase (after merge, before solver)
-- Solver sees effectively immutable data
-- Order independence is maintained (calls accumulate, order doesn't matter)
+**Architecture**:
+- Declaration's `optionalArgs` = initial state (what args exist)
+- `OptionalArgsState.t` = computed state (after all calls/combines)
+- Solver uses `OptionalArgsState.find_opt` to get final state
 
-**Changes needed**:
-- [ ] Make `OptionalArgs.t` an immutable data structure
-- [ ] Collect call info during AST processing as `OptionalArgCalls.builder`
-- [ ] Return calls from `process_cmt_file` in `file_data`
-- [ ] Merge all calls after file processing
-- [ ] Build final `OptionalArgs` state from merged calls (pure)
-- [ ] Store immutable `OptionalArgs` in declarations
-
-**Estimated effort**: Medium-High (touches core data structures)
-
-**Priority**: Low (current design works, just not fully pure)
+**Status**: Complete ✅
 
 ---
 

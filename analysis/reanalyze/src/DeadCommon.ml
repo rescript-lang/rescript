@@ -430,9 +430,10 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
           refsString level);
     isDead
 
-let reportDead ~annotations ~config ~decls ~refs ~file_deps
+let reportDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
     ~checkOptionalArg:
       (checkOptionalArgFn :
+        optional_args_state:OptionalArgsState.t ->
         annotations:FileAnnotations.t ->
         config:DceConfig.t ->
         decl ->
@@ -444,7 +445,7 @@ let reportDead ~annotations ~config ~decls ~refs ~file_deps
       | false -> References.find_type_refs refs decl.pos
     in
     resolveRecursiveRefs ~all_refs:refs ~annotations ~config ~decls
-      ~checkOptionalArg:(checkOptionalArgFn ~annotations)
+      ~checkOptionalArg:(checkOptionalArgFn ~optional_args_state ~annotations)
       ~deadDeclarations ~issues ~level:0 ~orderedFiles
       ~refsBeingResolved:(ref PosSet.empty) ~refs:decl_refs decl
     |> ignore

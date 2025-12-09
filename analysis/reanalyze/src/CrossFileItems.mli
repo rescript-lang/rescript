@@ -49,5 +49,9 @@ val process_exception_refs :
   unit
 (** Process cross-file exception references. *)
 
-val process_optional_args : t -> decls:Declarations.t -> unit
-(** Process cross-file optional argument calls and function references. *)
+(** {2 Optional Args State} *)
+
+val compute_optional_args_state :
+  t -> decls:Declarations.t -> Common.OptionalArgsState.t
+(** Compute final optional args state from calls and function references.
+    Pure function - does not mutate declarations. *)

@@ -5,6 +5,17 @@
 
 open Common
 
+(* Position-keyed hashtable *)
+module PosHash = Hashtbl.Make (struct
+  type t = Lexing.position
+
+  let hash x =
+    let s = Filename.basename x.Lexing.pos_fname in
+    Hashtbl.hash (x.Lexing.pos_cnum, s)
+
+  let equal (x : t) y = x = y
+end)
+
 (** {2 Item types} *)
 
 type exception_ref = {exception_path: Path.t; loc_from: Location.t}
@@ -70,24 +81,39 @@ let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
              ~binding:Location.none ~addFileReference:true ~locFrom:loc_from
              ~locTo:loc_to)
 
-let process_optional_args (t : t) ~decls =
+(** Compute optional args state from calls and function references.
+    Returns a map from position to final OptionalArgs.t state.
+    Pure function - does not mutate declarations. *)
+let compute_optional_args_state (t : t) ~decls : OptionalArgsState.t =
+  let state = OptionalArgsState.create () in
+  (* Initialize state from declarations *)
+  let get_state pos =
+    match OptionalArgsState.find_opt state pos with
+    | Some s -> s
+    | None -> (
+      match Declarations.find_opt decls pos with
+      | Some {declKind = Value {optionalArgs}} -> optionalArgs
+      | _ -> OptionalArgs.empty)
+  in
+  let set_state pos s = OptionalArgsState.set state pos s in
   (* Process optional arg calls *)
   t.optional_arg_calls
   |> List.iter (fun {pos_to; arg_names; arg_names_maybe} ->
-         match Declarations.find_opt decls pos_to with
-         | Some {declKind = Value r} ->
-           r.optionalArgs
-           |> OptionalArgs.call ~argNames:arg_names
-                ~argNamesMaybe:arg_names_maybe
-         | _ -> ());
+         let current = get_state pos_to in
+         let updated =
+           OptionalArgs.apply_call ~argNames:arg_names
+             ~argNamesMaybe:arg_names_maybe current
+         in
+         set_state pos_to updated);
   (* Process function references *)
   t.function_refs
   |> List.iter (fun {pos_from; pos_to} ->
-         match
-           ( Declarations.find_opt decls pos_from,
-             Declarations.find_opt decls pos_to )
-         with
-         | Some {declKind = Value rFrom}, Some {declKind = Value rTo}
-           when not (OptionalArgs.isEmpty rTo.optionalArgs) ->
-           OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
-         | _ -> ())
+         let state_from = get_state pos_from in
+         let state_to = get_state pos_to in
+         if not (OptionalArgs.isEmpty state_to) then (
+           let updated_from, updated_to =
+             OptionalArgs.combine_pair state_from state_to
+           in
+           set_state pos_from updated_from;
+           set_state pos_to updated_to));
+  state
