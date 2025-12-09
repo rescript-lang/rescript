@@ -192,6 +192,8 @@ let _props_with_hyphen = <label
   data-testid={"test"}
 />;
 
+let _empty_fragment = <></>;
+
 let _fragment = <>
   {"Hello, world!"}
 </>;
@@ -271,6 +273,7 @@ export {
   ComponentWithOptionalProps,
   _optional_props,
   _props_with_hyphen,
+  _empty_fragment,
   _fragment,
   _youtube_iframe,
   X,

@@ -1116,6 +1116,12 @@ and print_jsx cxt ?(spread_props : J.expression option)
     (* A user defined component or external component *)
     | _ -> expression ~level cxt f tag
   in
+  let is_fragment =
+    match tag.expression_desc with
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
+      true
+    | _ -> false
+  in
   let children_opt =
     List.find_map
       (fun (n, e) ->
@@ -1129,6 +1135,11 @@ and print_jsx cxt ?(spread_props : J.expression option)
           else Some [e]
         else None)
       fields
+    (* For fragments without children we normalize to an empty list so they
+       print as <></> instead of </> which is invalid JSX. *)
+    |> function
+    | None when is_fragment -> Some []
+    | other -> other
   in
   let print_props cxt props =
     (* If a key is present, should be printed before the spread props,
@@ -1169,7 +1180,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
       match children_opt with
       | Some _ -> cxt
       | None ->
-        (* Put a space the tag name and /> *)
+        (* Put a space between the tag name and /> *)
         P.space f;
         cxt)
     else
