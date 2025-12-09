@@ -4,33 +4,21 @@
     - [builder] - mutable, for AST processing
     - [t] - immutable, for solver (read-only access) *)
 
-open Common
-
-(* Position-keyed hashtable (same as DeadCommon.PosHash but no dependency) *)
-module PosHash = Hashtbl.Make (struct
-  type t = Lexing.position
-
-  let hash x =
-    let s = Filename.basename x.Lexing.pos_fname in
-    Hashtbl.hash (x.Lexing.pos_cnum, s)
-
-  let equal (x : t) y = x = y
-end)
-
 (* Both types have the same representation, but different semantics *)
-type t = decl PosHash.t
-type builder = decl PosHash.t
+type t = Decl.t PosHash.t
+type builder = Decl.t PosHash.t
 
 (* ===== Builder API ===== *)
 
 let create_builder () : builder = PosHash.create 256
 
-let add (builder : builder) (pos : Lexing.position) (decl : decl) =
+let add (builder : builder) (pos : Lexing.position) (decl : Decl.t) =
   PosHash.replace builder pos decl
 
 let find_opt_builder (builder : builder) pos = PosHash.find_opt builder pos
 
-let replace_builder (builder : builder) (pos : Lexing.position) (decl : decl) =
+let replace_builder (builder : builder) (pos : Lexing.position) (decl : Decl.t)
+    =
   PosHash.replace builder pos decl
 
 let merge_all (builders : builder list) : t =

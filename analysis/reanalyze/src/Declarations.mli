@@ -18,15 +18,15 @@ type builder
 (** {2 Builder API - for DceFileProcessing only} *)
 
 val create_builder : unit -> builder
-val add : builder -> Lexing.position -> Common.decl -> unit
-val find_opt_builder : builder -> Lexing.position -> Common.decl option
-val replace_builder : builder -> Lexing.position -> Common.decl -> unit
+val add : builder -> Lexing.position -> Decl.t -> unit
+val find_opt_builder : builder -> Lexing.position -> Decl.t option
+val replace_builder : builder -> Lexing.position -> Decl.t -> unit
 
 val merge_all : builder list -> t
 (** Merge all builders into one immutable result. Order doesn't matter. *)
 
 (** {2 Read-only API for t - for solver} *)
 
-val find_opt : t -> Lexing.position -> Common.decl option
-val fold : (Lexing.position -> Common.decl -> 'a -> 'a) -> t -> 'a -> 'a
-val iter : (Lexing.position -> Common.decl -> unit) -> t -> unit
+val find_opt : t -> Lexing.position -> Decl.t option
+val fold : (Lexing.position -> Decl.t -> 'a -> 'a) -> t -> 'a -> 'a
+val iter : (Lexing.position -> Decl.t -> unit) -> t -> unit

@@ -1,4 +1,4 @@
-open Common
+let runConfig = RunConfig.runConfig
 
 let checkPrefix prefix_ =
   let prefix =

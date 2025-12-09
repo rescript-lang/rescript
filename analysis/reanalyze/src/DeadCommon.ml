@@ -8,14 +8,6 @@ end
 
 (* Adapted from https://github.com/LexiFi/dead_code_analyzer *)
 
-open Common
-
-module PosSet = Set.Make (struct
-  type t = Lexing.position
-
-  let compare = compare
-end)
-
 module Config = struct
   (* Turn on type analysis *)
   let analyzeTypes = ref true
@@ -37,25 +29,14 @@ let fileIsImplementationOf s1 s2 =
 
 let liveAnnotation = "live"
 
-module PosHash = struct
-  include Hashtbl.Make (struct
-    type t = Lexing.position
+(* Helper functions for PosHash with PosSet values *)
+let posHashFindSet h k = try PosHash.find h k with Not_found -> PosSet.empty
 
-    let hash x =
-      let s = Filename.basename x.Lexing.pos_fname in
-      Hashtbl.hash (x.Lexing.pos_cnum, s)
+let posHashAddSet h k v =
+  let set = posHashFindSet h k in
+  PosHash.replace h k (PosSet.add v set)
 
-    let equal (x : t) y = x = y
-  end)
-
-  let findSet h k = try find h k with Not_found -> PosSet.empty
-
-  let addSet h k v =
-    let set = findSet h k in
-    replace h k (PosSet.add v set)
-end
-
-type decls = decl PosHash.t
+type decls = Decl.t PosHash.t
 (** type alias for declaration hashtables *)
 
 (* NOTE: Global decls removed - now using Declarations.builder/t pattern *)
@@ -78,7 +59,7 @@ end
 let declGetLoc decl =
   let loc_start =
     let offset =
-      match decl.posAdjustment with
+      match decl.Decl.posAdjustment with
       | FirstVariant | Nothing -> 0
       | OtherVariant -> 2
     in
@@ -95,8 +76,8 @@ let addValueReference ~config ~refs ~file_deps ~(binding : Location.t)
   if not effectiveFrom.loc_ghost then (
     if config.DceConfig.cli.debug then
       Log_.item "addValueReference %s --> %s@."
-        (effectiveFrom.loc_start |> posToString)
-        (locTo.loc_start |> posToString);
+        (effectiveFrom.loc_start |> Pos.toString)
+        (locTo.loc_start |> Pos.toString);
     References.add_value_ref refs ~posTo:locTo.loc_start
       ~posFrom:effectiveFrom.loc_start;
     if
@@ -113,8 +94,8 @@ let iterFilesFromRootsToLeaves ~file_deps iterFun =
   FileDeps.iter_files_from_roots_to_leaves file_deps iterFun
 
 let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
-    ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Nothing) ~moduleLoc
-    (name : Name.t) =
+    ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Decl.Nothing)
+    ~moduleLoc (name : Name.t) =
   let pos = loc.loc_start in
   let posStart =
     match posStart with
@@ -134,11 +115,11 @@ let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
   if (not loc.loc_ghost) && pos.pos_fname = file.source_path then (
     if config.DceConfig.cli.debug then
       Log_.item "add%sDeclaration %s %s path:%s@."
-        (declKind |> DeclKind.toString)
-        (name |> Name.toString) (pos |> posToString) (path |> Path.toString);
+        (declKind |> Decl.Kind.toString)
+        (name |> Name.toString) (pos |> Pos.toString) (path |> DcePath.toString);
     let decl =
       {
-        declKind;
+        Decl.declKind;
         moduleLoc;
         posAdjustment;
         path = name :: path;
@@ -160,218 +141,149 @@ let addValueDeclaration ~config ~decls ~file ?(isToplevel = true)
        ~loc ~moduleLoc ~path
 
 (** Create a dead code issue. Pure - no side effects. *)
-let makeDeadIssue ~decl ~message deadWarning : Common.issue =
+let makeDeadIssue ~decl ~message deadWarning : Issue.t =
   let loc = decl |> declGetLoc in
   AnalysisResult.make_dead_issue ~loc ~deadWarning
-    ~path:(Path.withoutHead decl.path)
+    ~path:(DcePath.withoutHead decl.path)
     ~message
 
-module Decl = struct
-  let isValue decl =
-    match decl.declKind with
-    | Value _ (* | Exception *) -> true
-    | _ -> false
+let isInsideReportedValue (ctx : ReportingContext.t) decl =
+  let max_end = ReportingContext.get_max_end ctx in
+  let fileHasChanged = max_end.pos_fname <> decl.Decl.pos.pos_fname in
+  let insideReportedValue =
+    decl |> Decl.isValue && (not fileHasChanged)
+    && max_end.pos_cnum > decl.pos.pos_cnum
+  in
+  if not insideReportedValue then
+    if decl |> Decl.isValue then
+      if fileHasChanged || decl.posEnd.pos_cnum > max_end.pos_cnum then
+        ReportingContext.set_max_end ctx decl.posEnd;
+  insideReportedValue
 
-  let isToplevelValueWithSideEffects decl =
-    match decl.declKind with
-    | Value {isToplevel; sideEffects} -> isToplevel && sideEffects
-    | _ -> false
-
-  let compareUsingDependencies ~orderedFiles
-      {
-        declKind = kind1;
-        path = _path1;
-        pos =
-          {
-            pos_fname = fname1;
-            pos_lnum = lnum1;
-            pos_bol = bol1;
-            pos_cnum = cnum1;
-          };
-      }
-      {
-        declKind = kind2;
-        path = _path2;
-        pos =
-          {
-            pos_fname = fname2;
-            pos_lnum = lnum2;
-            pos_bol = bol2;
-            pos_cnum = cnum2;
-          };
-      } =
-    let findPosition fn = Hashtbl.find orderedFiles fn [@@raises Not_found] in
-    (* From the root of the file dependency DAG to the leaves.
-       From the bottom of the file to the top. *)
-    let position1, position2 =
-      try (fname1 |> findPosition, fname2 |> findPosition)
-      with Not_found -> (0, 0)
-    in
-    compare
-      (position1, lnum2, bol2, cnum2, kind1)
-      (position2, lnum1, bol1, cnum1, kind2)
-
-  let compareForReporting
-      {
-        declKind = kind1;
-        pos =
-          {
-            pos_fname = fname1;
-            pos_lnum = lnum1;
-            pos_bol = bol1;
-            pos_cnum = cnum1;
-          };
-      }
-      {
-        declKind = kind2;
-        pos =
-          {
-            pos_fname = fname2;
-            pos_lnum = lnum2;
-            pos_bol = bol2;
-            pos_cnum = cnum2;
-          };
-      } =
-    compare
-      (fname1, lnum1, bol1, cnum1, kind1)
-      (fname2, lnum2, bol2, cnum2, kind2)
-
-  let isInsideReportedValue (ctx : ReportingContext.t) decl =
-    let max_end = ReportingContext.get_max_end ctx in
-    let fileHasChanged = max_end.pos_fname <> decl.pos.pos_fname in
-    let insideReportedValue =
-      decl |> isValue && (not fileHasChanged)
-      && max_end.pos_cnum > decl.pos.pos_cnum
-    in
-    if not insideReportedValue then
-      if decl |> isValue then
-        if fileHasChanged || decl.posEnd.pos_cnum > max_end.pos_cnum then
-          ReportingContext.set_max_end ctx decl.posEnd;
-    insideReportedValue
-
-  (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
+(** Report a dead declaration. Returns list of issues (dead module first, then dead value).
       Caller is responsible for logging. *)
-  let report ~config ~refs (ctx : ReportingContext.t) decl : Common.issue list =
-    let insideReportedValue = decl |> isInsideReportedValue ctx in
-    if not decl.report then []
-    else
-      let deadWarning, message =
-        match decl.declKind with
-        | Exception ->
-          (WarningDeadException, "is never raised or passed as value")
-        | Value {sideEffects} -> (
-          let noSideEffectsOrUnderscore =
-            (not sideEffects)
-            ||
-            match decl.path with
-            | hd :: _ -> hd |> Name.startsWithUnderscore
-            | [] -> false
-          in
-          ( (match not noSideEffectsOrUnderscore with
-            | true -> WarningDeadValueWithSideEffects
-            | false -> WarningDeadValue),
-            match decl.path with
-            | name :: _ when name |> Name.isUnderscore ->
-              "has no side effects and can be removed"
-            | _ -> (
-              "is never used"
-              ^
-              match not noSideEffectsOrUnderscore with
-              | true -> " and could have side effects"
-              | false -> "") ))
-        | RecordLabel ->
-          (WarningDeadType, "is a record label never used to read a value")
-        | VariantCase ->
-          (WarningDeadType, "is a variant case which is never constructed")
-      in
-      let hasRefBelow () =
-        let decl_refs = References.find_value_refs refs decl.pos in
-        let refIsBelow (pos : Lexing.position) =
-          decl.pos.pos_fname <> pos.pos_fname
-          || decl.pos.pos_cnum < pos.pos_cnum
-             &&
-             (* not a function defined inside a function, e.g. not a callback *)
-             decl.posEnd.pos_cnum < pos.pos_cnum
+let reportDeclaration ~config ~refs (ctx : ReportingContext.t) decl :
+    Issue.t list =
+  let insideReportedValue = decl |> isInsideReportedValue ctx in
+  if not decl.report then []
+  else
+    let deadWarning, message =
+      match decl.declKind with
+      | Exception ->
+        (Issue.WarningDeadException, "is never raised or passed as value")
+      | Value {sideEffects} -> (
+        let noSideEffectsOrUnderscore =
+          (not sideEffects)
+          ||
+          match decl.path with
+          | hd :: _ -> hd |> Name.startsWithUnderscore
+          | [] -> false
         in
-        decl_refs |> References.PosSet.exists refIsBelow
+        ( (match not noSideEffectsOrUnderscore with
+          | true -> WarningDeadValueWithSideEffects
+          | false -> WarningDeadValue),
+          match decl.path with
+          | name :: _ when name |> Name.isUnderscore ->
+            "has no side effects and can be removed"
+          | _ -> (
+            "is never used"
+            ^
+            match not noSideEffectsOrUnderscore with
+            | true -> " and could have side effects"
+            | false -> "") ))
+      | RecordLabel ->
+        (WarningDeadType, "is a record label never used to read a value")
+      | VariantCase ->
+        (WarningDeadType, "is a variant case which is never constructed")
+    in
+    let hasRefBelow () =
+      let decl_refs = References.find_value_refs refs decl.pos in
+      let refIsBelow (pos : Lexing.position) =
+        decl.pos.pos_fname <> pos.pos_fname
+        || decl.pos.pos_cnum < pos.pos_cnum
+           &&
+           (* not a function defined inside a function, e.g. not a callback *)
+           decl.posEnd.pos_cnum < pos.pos_cnum
       in
-      let shouldEmitWarning =
-        (not insideReportedValue)
-        && (match decl.path with
-           | name :: _ when name |> Name.isUnderscore -> Config.reportUnderscore
-           | _ -> true)
-        && (config.DceConfig.run.transitive || not (hasRefBelow ()))
+      decl_refs |> PosSet.exists refIsBelow
+    in
+    let shouldEmitWarning =
+      (not insideReportedValue)
+      && (match decl.path with
+         | name :: _ when name |> Name.isUnderscore -> Config.reportUnderscore
+         | _ -> true)
+      && (config.DceConfig.run.transitive || not (hasRefBelow ()))
+    in
+    if shouldEmitWarning then
+      let dead_module_issue =
+        decl.path
+        |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
+        |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
       in
-      if shouldEmitWarning then
-        let dead_module_issue =
-          decl.path
-          |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
-          |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
-        in
-        let dead_value_issue = makeDeadIssue ~decl ~message deadWarning in
-        (* Return in order: dead module first (if any), then dead value *)
-        match dead_module_issue with
-        | Some mi -> [mi; dead_value_issue]
-        | None -> [dead_value_issue]
-      else []
-end
+      let dead_value_issue = makeDeadIssue ~decl ~message deadWarning in
+      (* Return in order: dead module first (if any), then dead value *)
+      match dead_module_issue with
+      | Some mi -> [mi; dead_value_issue]
+      | None -> [dead_value_issue]
+    else []
 
 let declIsDead ~annotations ~refs decl =
   let liveRefs =
     refs
-    |> References.PosSet.filter (fun p ->
+    |> PosSet.filter (fun p ->
            not (FileAnnotations.is_annotated_dead annotations p))
   in
-  liveRefs |> References.PosSet.cardinal = 0
-  && not (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
+  liveRefs |> PosSet.cardinal = 0
+  && not
+       (FileAnnotations.is_annotated_gentype_or_live annotations decl.Decl.pos)
 
 let doReportDead ~annotations pos =
   not (FileAnnotations.is_annotated_gentype_or_dead annotations pos)
 
 let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
     ~checkOptionalArg:
-      (checkOptionalArgFn : config:DceConfig.t -> decl -> Common.issue list)
+      (checkOptionalArgFn : config:DceConfig.t -> Decl.t -> Issue.t list)
     ~deadDeclarations ~issues ~level ~orderedFiles ~refs ~refsBeingResolved decl
     : bool =
-  match decl.pos with
+  match decl.Decl.pos with
   | _ when decl.resolvedDead <> None ->
     if Config.recursiveDebug then
       Log_.item "recursiveDebug %s [%d] already resolved@."
-        (decl.path |> Path.toString)
+        (decl.path |> DcePath.toString)
         level;
     (* Use the already-resolved value, not source annotations *)
     Option.get decl.resolvedDead
   | _ when PosSet.mem decl.pos !refsBeingResolved ->
     if Config.recursiveDebug then
       Log_.item "recursiveDebug %s [%d] is being resolved: assume dead@."
-        (decl.path |> Path.toString)
+        (decl.path |> DcePath.toString)
         level;
     true
   | _ ->
     if Config.recursiveDebug then
       Log_.item "recursiveDebug resolving %s [%d]@."
-        (decl.path |> Path.toString)
+        (decl.path |> DcePath.toString)
         level;
     refsBeingResolved := PosSet.add decl.pos !refsBeingResolved;
     let allDepsResolved = ref true in
     let newRefs =
       refs
-      |> References.PosSet.filter (fun pos ->
+      |> PosSet.filter (fun pos ->
              if pos = decl.pos then (
                if Config.recursiveDebug then
                  Log_.item "recursiveDebug %s ignoring reference to self@."
-                   (decl.path |> Path.toString);
+                   (decl.path |> DcePath.toString);
                false)
              else
                match Declarations.find_opt decls pos with
                | None ->
                  if Config.recursiveDebug then
                    Log_.item "recursiveDebug can't find decl for %s@."
-                     (pos |> posToString);
+                     (pos |> Pos.toString);
                  true
                | Some xDecl ->
                  let xRefs =
-                   match xDecl.declKind |> DeclKind.isType with
+                   match xDecl.declKind |> Decl.Kind.isType with
                    | true -> References.find_type_refs all_refs pos
                    | false -> References.find_value_refs all_refs pos
                  in
@@ -392,7 +304,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
       if isDead then (
         decl.path
         |> DeadModules.markDead ~config
-             ~isType:(decl.declKind |> DeclKind.isType)
+             ~isType:(decl.declKind |> Decl.Kind.isType)
              ~loc:decl.moduleLoc;
         if not (doReportDead ~annotations decl.pos) then decl.report <- false;
         deadDeclarations := decl :: !deadDeclarations)
@@ -402,7 +314,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
         |> List.iter (fun issue -> issues := issue :: !issues);
         decl.path
         |> DeadModules.markLive ~config
-             ~isType:(decl.declKind |> DeclKind.isType)
+             ~isType:(decl.declKind |> Decl.Kind.isType)
              ~loc:decl.moduleLoc;
         if FileAnnotations.is_annotated_dead annotations decl.pos then (
           (* Collect incorrect @dead annotation issue *)
@@ -411,22 +323,22 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
               IncorrectDeadAnnotation
           in
           decl.path
-          |> Path.toModuleName ~isType:(decl.declKind |> DeclKind.isType)
+          |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
           |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
           |> Option.iter (fun mod_issue -> issues := mod_issue :: !issues);
           issues := issue :: !issues));
       if config.DceConfig.cli.debug then
         let refsString =
-          newRefs |> References.PosSet.elements |> List.map posToString
+          newRefs |> PosSet.elements |> List.map Pos.toString
           |> String.concat ", "
         in
         Log_.item "%s %s %s: %d references (%s) [%d]@."
           (match isDead with
           | true -> "Dead"
           | false -> "Live")
-          (decl.declKind |> DeclKind.toString)
-          (decl.path |> Path.toString)
-          (newRefs |> References.PosSet.cardinal)
+          (decl.declKind |> Decl.Kind.toString)
+          (decl.path |> DcePath.toString)
+          (newRefs |> PosSet.cardinal)
           refsString level);
     isDead
 
@@ -436,8 +348,8 @@ let reportDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
         optional_args_state:OptionalArgsState.t ->
         annotations:FileAnnotations.t ->
         config:DceConfig.t ->
-        decl ->
-        Common.issue list) : AnalysisResult.t =
+        Decl.t ->
+        Issue.t list) : AnalysisResult.t =
   let iterDeclInOrder ~deadDeclarations ~issues ~orderedFiles decl =
     let decl_refs =
       match decl |> Decl.isValue with
@@ -490,7 +402,7 @@ let reportDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
   let dead_issues =
     sortedDeadDeclarations
     |> List.concat_map (fun decl ->
-           Decl.report ~config ~refs reporting_ctx decl)
+           reportDeclaration ~config ~refs reporting_ctx decl)
   in
   (* Combine all issues: inline issues first (they were logged during analysis),
      then dead declaration issues *)

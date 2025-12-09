@@ -1,5 +1,4 @@
 open DeadCommon
-open Common
 
 let active () = true
 
@@ -18,7 +17,7 @@ let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
     if shouldAdd then (
       if config.DceConfig.cli.debug then
         Log_.item "OptionalArgs.addFunctionReference %s %s@."
-          (posFrom |> posToString) (posTo |> posToString);
+          (posFrom |> Pos.toString) (posTo |> Pos.toString);
       CrossFileItems.add_function_reference cross_file ~pos_from:posFrom
         ~pos_to:posTo)
 
@@ -51,16 +50,16 @@ let addReferences ~config ~cross_file ~(locFrom : Location.t)
       Log_.item
         "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
          argNamesMaybe:%s %s@."
-        (path |> Path.fromPathT |> Path.toString)
+        (path |> DcePath.fromPathT |> DcePath.toString)
         (argNames |> String.concat ", ")
         (argNamesMaybe |> String.concat ", ")
-        (posFrom |> posToString))
+        (posFrom |> Pos.toString))
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)
-let check ~optional_args_state ~annotations ~config:_ decl : Common.issue list =
+let check ~optional_args_state ~annotations ~config:_ decl : Issue.t list =
   match decl with
-  | {declKind = Value {optionalArgs}}
+  | {Decl.declKind = Value {optionalArgs}}
     when active ()
          && not
               (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
@@ -75,7 +74,7 @@ let check ~optional_args_state ~annotations ~config:_ decl : Common.issue list =
     let unused_issues =
       OptionalArgs.foldUnused
         (fun s acc ->
-          let issue : Common.issue =
+          let issue : Issue.t =
             {
               name = "Warning Unused Argument";
               severity = Warning;
@@ -89,7 +88,7 @@ let check ~optional_args_state ~annotations ~config:_ decl : Common.issue list =
                         "optional argument @{<info>%s@} of function \
                          @{<info>%s@} is never used"
                         s
-                        (decl.path |> Path.withoutHead);
+                        (decl.path |> DcePath.withoutHead);
                   };
             }
           in
@@ -99,7 +98,7 @@ let check ~optional_args_state ~annotations ~config:_ decl : Common.issue list =
     let redundant_issues =
       OptionalArgs.foldAlwaysUsed
         (fun s nCalls acc ->
-          let issue : Common.issue =
+          let issue : Issue.t =
             {
               name = "Warning Redundant Optional Argument";
               severity = Warning;
@@ -113,7 +112,7 @@ let check ~optional_args_state ~annotations ~config:_ decl : Common.issue list =
                         "optional argument @{<info>%s@} of function \
                          @{<info>%s@} is always supplied (%d calls)"
                         s
-                        (decl.path |> Path.withoutHead)
+                        (decl.path |> DcePath.withoutHead)
                         nCalls;
                   };
             }

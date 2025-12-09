@@ -3,21 +3,19 @@
     The solver returns this instead of logging directly.
     All side effects (logging, JSON output) happen in the reporting phase. *)
 
-open Common
-
 type t
 (** Immutable analysis result *)
 
 val empty : t
 (** Empty result with no issues *)
 
-val add_issue : t -> issue -> t
+val add_issue : t -> Issue.t -> t
 (** Add a single issue to the result *)
 
-val add_issues : t -> issue list -> t
+val add_issues : t -> Issue.t list -> t
 (** Add multiple issues to the result *)
 
-val get_issues : t -> issue list
+val get_issues : t -> Issue.t list
 (** Get all issues in order they were added *)
 
 val issue_count : t -> int
@@ -27,11 +25,11 @@ val issue_count : t -> int
 
 val make_dead_issue :
   loc:Location.t ->
-  deadWarning:deadWarning ->
+  deadWarning:Issue.deadWarning ->
   path:string ->
   message:string ->
-  issue
+  Issue.t
 (** Create a dead code warning issue *)
 
-val make_dead_module_issue : loc:Location.t -> moduleName:Name.t -> issue
+val make_dead_module_issue : loc:Location.t -> moduleName:Name.t -> Issue.t
 (** Create a dead module warning issue *)

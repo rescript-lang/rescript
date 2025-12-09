@@ -32,10 +32,6 @@ val merge_all : builder list -> t
 val freeze_builder : builder -> t
 (** Convert builder to immutable t. Builder should not be used after this. *)
 
-(** {2 Types for refs} *)
-
-module PosSet : Set.S with type elt = Lexing.position
-
 (** {2 Read-only API for t - for solver} *)
 
 val find_value_refs : t -> Lexing.position -> PosSet.t

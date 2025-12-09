@@ -5,8 +5,6 @@
     - [builder] - mutable, for AST processing
     - [t] - immutable, for analysis *)
 
-open Common
-
 (** {2 Types} *)
 
 type t

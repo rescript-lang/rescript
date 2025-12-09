@@ -4,24 +4,6 @@
     - [builder] - mutable, for AST processing
     - [t] - immutable, for solver (read-only access) *)
 
-(* Position set - same definition as DeadCommon.PosSet *)
-module PosSet = Set.Make (struct
-  type t = Lexing.position
-
-  let compare = compare
-end)
-
-(* Position-keyed hashtable *)
-module PosHash = Hashtbl.Make (struct
-  type t = Lexing.position
-
-  let hash x =
-    let s = Filename.basename x.Lexing.pos_fname in
-    Hashtbl.hash (x.Lexing.pos_cnum, s)
-
-  let equal (x : t) y = x = y
-end)
-
 (* Helper to add to a set in a hashtable *)
 let addSet h k v =
   let set = try PosHash.find h k with Not_found -> PosSet.empty in

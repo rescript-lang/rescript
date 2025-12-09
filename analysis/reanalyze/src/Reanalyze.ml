@@ -1,4 +1,4 @@
-open Common
+let runConfig = RunConfig.runConfig
 
 (** Process a cmt file and return its file_data (if DCE enabled).
     Conceptually: map over files, then merge results. *)
@@ -162,7 +162,7 @@ let runAnalysis ~dce_config ~cmtRoot =
     in
     (* Report all issues *)
     AnalysisResult.get_issues analysis_result
-    |> List.iter (fun (issue : Common.issue) ->
+    |> List.iter (fun (issue : Issue.t) ->
            Log_.warning ~loc:issue.loc issue.description));
   if dce_config.DceConfig.run.exception_ then
     Exception.Checks.doChecks ~config:dce_config;
@@ -171,12 +171,12 @@ let runAnalysis ~dce_config ~cmtRoot =
 
 let runAnalysisAndReport ~cmtRoot =
   Log_.Color.setup ();
-  if !Common.Cli.json then EmitJson.start ();
+  if !Cli.json then EmitJson.start ();
   let dce_config = DceConfig.current () in
   runAnalysis ~dce_config ~cmtRoot;
   Log_.Stats.report ~config:dce_config;
   Log_.Stats.clear ();
-  if !Common.Cli.json then EmitJson.finish ()
+  if !Cli.json then EmitJson.finish ()
 
 let cli () =
   let analysisKindSet = ref false in
@@ -232,28 +232,28 @@ let cli () =
         String
           (fun s ->
             let paths = s |> String.split_on_char ',' in
-            Common.Cli.excludePaths := paths @ Common.Cli.excludePaths.contents),
+            Cli.excludePaths := paths @ Cli.excludePaths.contents),
         "comma-separated-path-prefixes Exclude from analysis files whose path \
          has a prefix in the list" );
       ( "-experimental",
-        Set Common.Cli.experimental,
+        Set Cli.experimental,
         "Turn on experimental analyses (this option is currently unused)" );
       ( "-externals",
         Set DeadCommon.Config.analyzeExternals,
         "Report on externals in dead code analysis" );
-      ("-json", Set Common.Cli.json, "Print reports in json format");
+      ("-json", Set Cli.json, "Print reports in json format");
       ( "-live-names",
         String
           (fun s ->
             let names = s |> String.split_on_char ',' in
-            Common.Cli.liveNames := names @ Common.Cli.liveNames.contents),
+            Cli.liveNames := names @ Cli.liveNames.contents),
         "comma-separated-names Consider all values with the given names as live"
       );
       ( "-live-paths",
         String
           (fun s ->
             let paths = s |> String.split_on_char ',' in
-            Common.Cli.livePaths := paths @ Common.Cli.livePaths.contents),
+            Cli.livePaths := paths @ Cli.livePaths.contents),
         "comma-separated-path-prefixes Consider all values whose path has a \
          prefix in the list as live" );
       ( "-suppress",

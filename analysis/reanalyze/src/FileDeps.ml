@@ -2,8 +2,6 @@
     
     Tracks which files reference which other files. *)
 
-open Common
-
 (* File-keyed hashtable *)
 module FileHash = Hashtbl.Make (struct
   type t = string

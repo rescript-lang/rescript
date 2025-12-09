@@ -18,7 +18,7 @@ type builder
 val create_builder : unit -> builder
 
 val add_exception_ref :
-  builder -> exception_path:Common.Path.t -> loc_from:Location.t -> unit
+  builder -> exception_path:DcePath.t -> loc_from:Location.t -> unit
 (** Add a cross-file exception reference (defined in another file). *)
 
 val add_optional_arg_call :
@@ -44,7 +44,7 @@ val process_exception_refs :
   t ->
   refs:References.builder ->
   file_deps:FileDeps.builder ->
-  find_exception:(Common.Path.t -> Location.t option) ->
+  find_exception:(DcePath.t -> Location.t option) ->
   config:DceConfig.t ->
   unit
 (** Process cross-file exception references. *)
@@ -52,6 +52,6 @@ val process_exception_refs :
 (** {2 Optional Args State} *)
 
 val compute_optional_args_state :
-  t -> decls:Declarations.t -> Common.OptionalArgsState.t
+  t -> decls:Declarations.t -> OptionalArgsState.t
 (** Compute final optional args state from calls and function references.
     Pure function - does not mutate declarations. *)

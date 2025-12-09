@@ -1,5 +1,3 @@
-open Common
-
 module Color = struct
   let color_enabled = lazy (Unix.isatty Unix.stdout)
   let forceColor = ref false
@@ -97,7 +95,7 @@ let item x =
   Format.fprintf Format.std_formatter "  ";
   Format.fprintf Format.std_formatter x
 
-let missingRaiseInfoToText {missingAnnotations; locFull} =
+let missingRaiseInfoToText {Issue.missingAnnotations; locFull} =
   let missingTxt =
     Format.asprintf "%a" (Exceptions.pp ~exnTable:None) missingAnnotations
   in
@@ -107,14 +105,14 @@ let missingRaiseInfoToText {missingAnnotations; locFull} =
       ~text:(Format.asprintf "@throws(%s)\\n" missingTxt)
   else ""
 
-let logAdditionalInfo ~(description : description) =
+let logAdditionalInfo ~(description : Issue.description) =
   match description with
   | ExceptionAnalysisMissing missingRaiseInfo ->
     missingRaiseInfoToText missingRaiseInfo
   | _ -> ""
 
-let missingThrowInfoToMessage {exnTable; exnName; missingAnnotations; throwSet}
-    =
+let missingThrowInfoToMessage
+    {Issue.exnTable; exnName; missingAnnotations; throwSet} =
   let throwsTxt =
     Format.asprintf "%a" (Exceptions.pp ~exnTable:(Some exnTable)) throwSet
   in
@@ -125,7 +123,7 @@ let missingThrowInfoToMessage {exnTable; exnName; missingAnnotations; throwSet}
     "@{<info>%s@} might throw %s and is not annotated with @throws(%s)" exnName
     throwsTxt missingTxt
 
-let descriptionToMessage (description : description) =
+let descriptionToMessage (description : Issue.description) =
   match description with
   | Circular {message} -> message
   | DeadModule {message} -> message
@@ -137,7 +135,7 @@ let descriptionToMessage (description : description) =
     missingThrowInfoToMessage missingRaiseInfo
   | Termination {message} -> message
 
-let descriptionToName (description : description) =
+let descriptionToName (description : Issue.description) =
   match description with
   | Circular _ -> Issues.warningDeadAnalysisCycle
   | DeadModule _ -> Issues.warningDeadModule
@@ -162,7 +160,7 @@ let descriptionToName (description : description) =
   | Termination {termination = TerminationAnalysisInternal} ->
     Issues.terminationAnalysisInternal
 
-let logIssue ~config ~(issue : issue) =
+let logIssue ~config ~(issue : Issue.t) =
   let open Format in
   let loc = issue.loc in
   if config.DceConfig.cli.json then
@@ -197,13 +195,13 @@ let logIssue ~config ~(issue : issue) =
 
 module Stats = struct
   let issues = ref []
-  let addIssue (issue : issue) = issues := issue :: !issues
+  let addIssue (issue : Issue.t) = issues := issue :: !issues
   let clear () = issues := []
 
   let getSortedIssues () =
     let counters2 = Hashtbl.create 1 in
     !issues
-    |> List.iter (fun (issue : issue) ->
+    |> List.iter (fun (issue : Issue.t) ->
            let counter =
              match Hashtbl.find_opt counters2 issue.name with
              | Some counter -> counter
