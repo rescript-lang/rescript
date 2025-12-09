@@ -147,15 +147,18 @@ let runAnalysis ~dce_config ~cmtRoot =
     CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
       ~file_deps:file_deps_builder ~find_exception:DeadException.find_exception
       ~config:dce_config;
-    (* Process cross-file optional args - they read decls *)
-    CrossFileItems.process_optional_args cross_file ~decls;
+    (* Compute optional args state (pure - no mutation) *)
+    let optional_args_state =
+      CrossFileItems.compute_optional_args_state cross_file ~decls
+    in
     (* Now freeze refs and file_deps for solver *)
     let refs = References.freeze_builder refs_builder in
     let file_deps = FileDeps.freeze_builder file_deps_builder in
     (* Run the solver - returns immutable AnalysisResult.t *)
     let analysis_result =
       DeadCommon.reportDead ~annotations ~decls ~refs ~file_deps
-        ~config:dce_config ~checkOptionalArg:DeadOptionalArgs.check
+        ~optional_args_state ~config:dce_config
+        ~checkOptionalArg:DeadOptionalArgs.check
     in
     (* Report all issues *)
     AnalysisResult.get_issues analysis_result

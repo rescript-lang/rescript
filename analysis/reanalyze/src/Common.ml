@@ -99,11 +99,11 @@ module Path = struct
 end
 
 module OptionalArgs = struct
-  type t = {
-    mutable count: int;
-    mutable unused: StringSet.t;
-    mutable alwaysUsed: StringSet.t;
-  }
+  type t = {count: int; unused: StringSet.t; alwaysUsed: StringSet.t}
+  (** Immutable record tracking optional argument usage.
+      - unused: args that have never been passed
+      - alwaysUsed: args that are always passed (when count > 0)
+      - count: number of calls observed *)
 
   let empty =
     {unused = StringSet.empty; alwaysUsed = StringSet.empty; count = 0}
@@ -113,23 +113,27 @@ module OptionalArgs = struct
 
   let isEmpty x = StringSet.is_empty x.unused
 
-  let call ~argNames ~argNamesMaybe x =
+  (** Apply a call to the optional args state. Returns new state. *)
+  let apply_call ~argNames ~argNamesMaybe x =
     let nameSet = argNames |> StringSet.of_list in
     let nameSetMaybe = argNamesMaybe |> StringSet.of_list in
     let nameSetAlways = StringSet.diff nameSet nameSetMaybe in
-    if x.count = 0 then x.alwaysUsed <- nameSetAlways
-    else x.alwaysUsed <- StringSet.inter nameSetAlways x.alwaysUsed;
-    argNames
-    |> List.iter (fun name -> x.unused <- StringSet.remove name x.unused);
-    x.count <- x.count + 1
+    let alwaysUsed =
+      if x.count = 0 then nameSetAlways
+      else StringSet.inter nameSetAlways x.alwaysUsed
+    in
+    let unused =
+      argNames
+      |> List.fold_left (fun acc name -> StringSet.remove name acc) x.unused
+    in
+    {count = x.count + 1; unused; alwaysUsed}
 
-  let combine x y =
+  (** Combine two optional args states (for function references).
+      Returns a pair of updated states with intersected unused/alwaysUsed. *)
+  let combine_pair x y =
     let unused = StringSet.inter x.unused y.unused in
-    x.unused <- unused;
-    y.unused <- unused;
     let alwaysUsed = StringSet.inter x.alwaysUsed y.alwaysUsed in
-    x.alwaysUsed <- alwaysUsed;
-    y.alwaysUsed <- alwaysUsed
+    ({x with unused; alwaysUsed}, {y with unused; alwaysUsed})
 
   let iterUnused f x = StringSet.iter f x.unused
   let iterAlwaysUsed f x = StringSet.iter (fun s -> f s x.count) x.alwaysUsed
@@ -138,6 +142,29 @@ module OptionalArgs = struct
 
   let foldAlwaysUsed f x init =
     StringSet.fold (fun s acc -> f s x.count acc) x.alwaysUsed init
+end
+
+(* Position-keyed hashtable - shared across modules *)
+module PosHash = Hashtbl.Make (struct
+  type t = Lexing.position
+
+  let hash x =
+    let s = Filename.basename x.Lexing.pos_fname in
+    Hashtbl.hash (x.Lexing.pos_cnum, s)
+
+  let equal (x : t) y = x = y
+end)
+
+(** State map for computed OptionalArgs.
+    Maps declaration position to final state after all calls/combines. *)
+module OptionalArgsState = struct
+  type t = OptionalArgs.t PosHash.t
+
+  let create () : t = PosHash.create 256
+
+  let find_opt (state : t) pos = PosHash.find_opt state pos
+
+  let set (state : t) pos value = PosHash.replace state pos value
 end
 
 module DeclKind = struct

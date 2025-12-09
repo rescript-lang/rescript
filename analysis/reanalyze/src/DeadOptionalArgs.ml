@@ -56,14 +56,21 @@ let addReferences ~config ~cross_file ~(locFrom : Location.t)
         (argNamesMaybe |> String.concat ", ")
         (posFrom |> posToString))
 
-(** Check for optional args issues. Returns issues instead of logging. *)
-let check ~annotations ~config:_ decl : Common.issue list =
+(** Check for optional args issues. Returns issues instead of logging.
+    Uses optional_args_state map for final computed state. *)
+let check ~optional_args_state ~annotations ~config:_ decl : Common.issue list =
   match decl with
   | {declKind = Value {optionalArgs}}
     when active ()
          && not
               (FileAnnotations.is_annotated_gentype_or_live annotations decl.pos)
     ->
+    (* Look up computed state from map, fall back to declaration's initial state *)
+    let state =
+      match OptionalArgsState.find_opt optional_args_state decl.pos with
+      | Some s -> s
+      | None -> optionalArgs
+    in
     let loc = decl |> declGetLoc in
     let unused_issues =
       OptionalArgs.foldUnused
@@ -87,7 +94,7 @@ let check ~annotations ~config:_ decl : Common.issue list =
             }
           in
           issue :: acc)
-        optionalArgs []
+        state []
     in
     let redundant_issues =
       OptionalArgs.foldAlwaysUsed
@@ -112,7 +119,7 @@ let check ~annotations ~config:_ decl : Common.issue list =
             }
           in
           issue :: acc)
-        optionalArgs []
+        state []
     in
     (* Reverse to maintain original order from iterUnused/iterAlwaysUsed *)
     List.rev unused_issues @ List.rev redundant_issues
