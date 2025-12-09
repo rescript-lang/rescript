@@ -18,3 +18,6 @@ let livePaths = ref ([] : string list)
 
 (* paths of files to exclude from analysis *)
 let excludePaths = ref ([] : string list)
+
+(* test flag: shuffle file order to verify order-independence *)
+let testShuffle = ref false

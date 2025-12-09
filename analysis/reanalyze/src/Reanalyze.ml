@@ -117,9 +117,30 @@ let processCmtFiles ~config ~cmtRoot : DceFileProcessing.file_data list =
                   processFile cmtFilePath)));
   !file_data_list
 
+(* Shuffle a list using Fisher-Yates algorithm *)
+let shuffle_list lst =
+  let arr = Array.of_list lst in
+  let n = Array.length arr in
+  for i = n - 1 downto 1 do
+    let j = Random.int (i + 1) in
+    let tmp = arr.(i) in
+    arr.(i) <- arr.(j);
+    arr.(j) <- tmp
+  done;
+  Array.to_list arr
+
 let runAnalysis ~dce_config ~cmtRoot =
   (* Map: process each file -> list of file_data *)
   let file_data_list = processCmtFiles ~config:dce_config ~cmtRoot in
+  (* Optionally shuffle for order-independence testing *)
+  let file_data_list =
+    if !Cli.testShuffle then (
+      Random.self_init ();
+      if dce_config.DceConfig.cli.debug then
+        Log_.item "Shuffling file order for order-independence test@.";
+      shuffle_list file_data_list)
+    else file_data_list
+  in
   if dce_config.DceConfig.run.dce then (
     (* Merge: combine all builders -> immutable data *)
     let annotations =
@@ -156,7 +177,7 @@ let runAnalysis ~dce_config ~cmtRoot =
     let file_deps = FileDeps.freeze_builder file_deps_builder in
     (* Run the solver - returns immutable AnalysisResult.t *)
     let analysis_result =
-      DeadCommon.reportDead ~annotations ~decls ~refs ~file_deps
+      DeadCommon.solveDead ~annotations ~decls ~refs ~file_deps
         ~optional_args_state ~config:dce_config
         ~checkOptionalArg:DeadOptionalArgs.check
     in
@@ -278,6 +299,10 @@ let cli () =
         "comma-separated-path-prefixes Report on files whose path has a prefix \
          in the list, overriding -suppress (no-op if -suppress is not \
          specified)" );
+      ( "-test-shuffle",
+        Set Cli.testShuffle,
+        "Test flag: shuffle file processing order to verify order-independence"
+      );
       ("-version", Unit versionAndExit, "Show version information and exit");
       ("--version", Unit versionAndExit, "Show version information and exit");
     ]

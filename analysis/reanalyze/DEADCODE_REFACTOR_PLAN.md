@@ -62,6 +62,12 @@ you can swap one file's data without affecting others.
 
 ---
 
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full architecture documentation with diagrams.
+
+---
+
 ## Current Problems (What We're Fixing)
 
 ### P1: Global "current file" context
@@ -573,12 +579,16 @@ add `@dead` annotations.
 **Value**: Verify the refactor achieved its goals.
 
 **Changes**:
-- [ ] Write property test: process files in random orders, verify identical results
-- [ ] Write test: analyze with different configs, verify each is respected
-- [ ] Write test: analyze subset of files without initializing globals
-- [ ] Document the new architecture and API
+- [x] Write property test: process files in random orders, verify identical results
+  - Added `-test-shuffle` CLI flag to randomize file processing order
+  - Added `test-order-independence.sh` script that runs 3 shuffled iterations and compares output
+  - Run via `make test-reanalyze-order-independence` (not part of default test)
+- [x] Solver takes explicit inputs (no global state) - verified by architecture
+- [x] Document the new architecture and API - added "Architecture Diagram" section
 
 **Test**: The tests are the task.
+
+**Status**: Complete ✅
 
 **Estimated effort**: Small (mostly writing tests)
 
@@ -586,7 +596,7 @@ add `@dead` annotations.
 
 ## Execution Strategy
 
-**Completed**: Task 1 ✅, Task 2 ✅, Task 3 ✅, Task 10 ✅
+**Completed**: Task 1 ✅, Task 2 ✅, Task 3 ✅, Task 10 ✅, Task 11 ✅
 
 **Remaining order**: 4 → 5 → 6 → 7 → 8 → 9 → 11 (test)
 

@@ -342,7 +342,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
           refsString level);
     isDead
 
-let reportDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
+let solveDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
     ~checkOptionalArg:
       (checkOptionalArgFn :
         optional_args_state:OptionalArgsState.t ->
