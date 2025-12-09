@@ -10,31 +10,21 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.1 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
-
-#### :rocket: New Feature
+# 12.0.1
 
 #### :bug: Bug fix
 
 - Fix exponential compilation blowup with large unboxed variants and dict pattern matching. https://github.com/rescript-lang/rescript/pull/8078
-- Rewatch: warnings for unsupported/unknown rescript.json fields. https://github.com/rescript-lang/rescript/pull/8031
+- Rewatch: warnings for unsupported/unknown `rescript.json` fields. https://github.com/rescript-lang/rescript/pull/8031
 - Fix missing `ignore` function in some Stdlib modules. https://github.com/rescript-lang/rescript/pull/8060
 - Fix signature matching for externals when abstract alias hides function arity. https://github.com/rescript-lang/rescript/pull/8045
 - Fix arity detection for arrows returning nested generics. https://github.com/rescript-lang/rescript/pull/8064
-- Fix error handling when rescript.json parsing fails and improve error message. https://github.com/rescript-lang/rescript/pull/8067
+- Fix error handling when `rescript.json` parsing fails and improve error message. https://github.com/rescript-lang/rescript/pull/8067
 - Fix invalid JSX being generated for empty fragments. https://github.com/rescript-lang/rescript/pull/8077
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
-- Add missing deprecation and migration for Exn.Error. https://github.com/rescript-lang/rescript/pull/8036
-
-#### :house: Internal
+- Add missing deprecation and migration for `Exn.Error`. https://github.com/rescript-lang/rescript/pull/8036
 
 # 12.0.0
 
