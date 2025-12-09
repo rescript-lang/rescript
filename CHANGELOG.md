@@ -20,11 +20,15 @@
 
 #### :bug: Bug fix
 
+- Reanalyze: make optional args analysis liveness-aware, preventing false positives when functions are only called from dead code. https://github.com/rescript-lang/rescript/pull/8082
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
 #### :house: Internal
+
+- Reanalyze: refactor DCE to pure pipeline architecture for order-independence and incremental update support. https://github.com/rescript-lang/rescript/pull/8043
 
 # 12.0.1
 
