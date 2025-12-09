@@ -686,6 +686,9 @@ let rec push_negation (e : t) : t option =
     | _ -> None)
   | _ -> None
 
+(* Depth limit to prevent exponential blowup in simplify_and_/simplify_or_ *)
+let simplify_max_depth = 10
+
 (**
   [simplify_and_ e1 e2] attempts to simplify the boolean AND expression [e1 && e2].
   Returns [Some simplified] if simplification is possible, [None] otherwise.
@@ -731,301 +734,309 @@ let rec simplify_and_ ~n (e1 : t) (e2 : t) : t option =
     Printf.eprintf "%s simplify_and %s %s\n"
       (String.make (n * 2) ' ')
       (!string_of_expression e1) (!string_of_expression e2);
-  let res =
-    match (e1.expression_desc, e2.expression_desc) with
-    | Bool false, _ -> Some false_
-    | _, Bool false -> Some false_
-    | Bool true, _ -> Some e2
-    | _, Bool true -> Some e1
-    | Bin (And, a, b), _ -> (
-      let ao = simplify_and_ ~n:(n + 1) a e2 in
-      let bo = simplify_and_ ~n:(n + 1) b e2 in
-      match (ao, bo) with
-      | None, None -> (
-        match simplify_and_ ~n:(n + 1) a b with
-        | None -> None
-        | Some e -> simplify_and_force ~n:(n + 1) e e2)
-      | Some a_, None -> simplify_and_force ~n:(n + 1) a_ b
-      | None, Some b_ -> simplify_and_force ~n:(n + 1) a b_
-      | Some a_, Some b_ -> simplify_and_force ~n:(n + 1) a_ b_)
-    | _, Bin (And, a, b) ->
-      simplify_and_ ~n:(n + 1)
-        {expression_desc = Bin (And, e1, a); comment = None}
-        b
-    | Bin (Or, a, b), _ -> (
-      let ao = simplify_and_ ~n:(n + 1) a e2 in
-      let bo = simplify_and_ ~n:(n + 1) b e2 in
-      match (ao, bo) with
-      | Some {expression_desc = Bool false}, None ->
-        Some {expression_desc = Bin (And, b, e2); comment = None}
-      | None, Some {expression_desc = Bool false} ->
-        Some {expression_desc = Bin (And, a, e2); comment = None}
-      | None, _ | _, None -> (
-        match simplify_or_ ~n:(n + 1) a b with
-        | None -> None
-        | Some e -> simplify_and_force ~n:(n + 1) e e2)
-      | Some a_, Some b_ -> simplify_or_force ~n:(n + 1) a_ b_)
-    | ( Bin
-          ( ((EqEqEq | NotEqEq) as op1),
-            {expression_desc = Var i1},
-            {expression_desc = Bool b1} ),
-        Bin
-          ( ((EqEqEq | NotEqEq) as op2),
-            {expression_desc = Var i2},
-            {expression_desc = Bool b2} ) )
-      when Js_op_util.same_vident i1 i2 ->
-      let op_eq = op1 = op2 in
-      let consistent = if op_eq then b1 = b2 else b1 <> b2 in
-      if consistent then Some e1 else Some false_
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ),
-        (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Bool _}) as
-         b) )
-    | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Bool _}) as
-         b),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      Some {expression_desc = b; comment = None}
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "string"}} ),
-        (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Str _}) as
-         s) )
-    | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Str _}) as s),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "string"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      Some {expression_desc = s; comment = None}
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "number"}} ),
-        (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
-         as i) )
-    | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
-         as i),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "number"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      Some {expression_desc = i; comment = None}
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean" | "string" | "number"}} ),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ) )
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean" | "string" | "number"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      (* Note: cases boolean / Bool _, number / Number _, string / Str _ are handled above *)
-      Some false_
-    | ( Call
-          ( {expression_desc = Str {txt = "Array.isArray"}},
-            [{expression_desc = Var ia}],
-            _ ),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ) )
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ),
-        Call
-          ( {expression_desc = Str {txt = "Array.isArray"}},
-            [{expression_desc = Var ia}],
-            _ ) )
-      when Js_op_util.same_vident ia ib ->
-      Some false_
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ),
-        Var ib )
-    | ( Var ib,
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      Some
-        {
-          expression_desc =
-            Bin (EqEqEq, {expression_desc = Var ib; comment = None}, true_);
-          comment = None;
-        }
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ),
-        Js_not {expression_desc = Var ib} )
-    | ( Js_not {expression_desc = Var ib},
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      Some
-        {
-          expression_desc =
-            Bin (EqEqEq, {expression_desc = Var ib; comment = None}, false_);
-          comment = None;
-        }
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ),
-        Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Bool b}) )
-    | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Bool b}),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "boolean"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      Some {expression_desc = Bool (not b); comment = None}
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "string"}} ),
-        Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Str _}) )
-    | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Str _}),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "string"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      None
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "number"}} ),
-        Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
-      )
-    | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Number _}),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "number"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      None
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "object"}} ),
-        Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Null}) )
-    | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Null}),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Typeof {expression_desc = Var ia}},
-            {expression_desc = Str {txt = "object"}} ) )
-      when Js_op_util.same_vident ia ib ->
-      None
-    | ( (Bin
-           ( EqEqEq,
-             {expression_desc = Typeof {expression_desc = Var ia}},
-             {
-               expression_desc =
-                 Str {txt = "boolean" | "string" | "number" | "object"};
-             } ) as typeof),
-        Bin
-          ( NotEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ) )
-    | ( Bin
-          ( NotEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _} ),
-        (Bin
-           ( EqEqEq,
-             {expression_desc = Typeof {expression_desc = Var ia}},
-             {
-               expression_desc =
-                 Str {txt = "boolean" | "string" | "number" | "object"};
-             } ) as typeof) )
-      when Js_op_util.same_vident ia ib ->
-      (* Note: cases boolean / Bool _, number / Number _, string / Str _, object / Null are handled above *)
-      Some {expression_desc = typeof; comment = None}
-    | ( (Call
-           ( {expression_desc = Str {txt = "Array.isArray"}},
-             [{expression_desc = Var ia}],
-             _ ) as is_array),
-        Bin
-          ( NotEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ) )
-    | ( Bin
-          ( NotEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ),
-        (Call
-           ( {expression_desc = Str {txt = "Array.isArray"}},
-             [{expression_desc = Var ia}],
-             _ ) as is_array) )
-      when Js_op_util.same_vident ia ib ->
-      Some {expression_desc = is_array; comment = None}
-    | _ when Js_analyzer.eq_expression e1 e2 -> Some e1
-    | ( Bin
-          ( EqEqEq,
-            {expression_desc = Var ia},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ),
-        Bin
-          ( EqEqEq,
-            {expression_desc = Var ib},
-            {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-          ) )
-      when Js_op_util.same_vident ia ib ->
-      (* Note: case x = y is handled above *)
-      Some false_
-    | ( Bin
-          ( ((EqEqEq | NotEqEq) as op1),
-            {expression_desc = Var ia},
-            ({expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-             as v1) ),
-        Bin
-          ( ((EqEqEq | NotEqEq) as op2),
-            {expression_desc = Var ib},
-            ({expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
-             as v2) ) )
-      when Js_op_util.same_vident ia ib && op1 != op2 ->
-      if Js_analyzer.eq_expression v1 v2 then Some false_
-      else if op1 = EqEqEq then Some e1
-      else Some e2
-    | _ -> None
-  in
-  (if debug then
-     match res with
-     | None -> ()
-     | Some e ->
-       Printf.eprintf "%s = %s\n"
-         (String.make (n * 2) ' ')
-         (!string_of_expression e));
-  res
+  (* Bail out if recursion is too deep to prevent exponential blowup *)
+  if n > simplify_max_depth then None
+  else
+    let res =
+      match (e1.expression_desc, e2.expression_desc) with
+      | Bool false, _ -> Some false_
+      | _, Bool false -> Some false_
+      | Bool true, _ -> Some e2
+      | _, Bool true -> Some e1
+      | Bin (And, a, b), _ -> (
+        let ao = simplify_and_ ~n:(n + 1) a e2 in
+        let bo = simplify_and_ ~n:(n + 1) b e2 in
+        match (ao, bo) with
+        | None, None -> (
+          match simplify_and_ ~n:(n + 1) a b with
+          | None -> None
+          | Some e -> simplify_and_force ~n:(n + 1) e e2)
+        | Some a_, None -> simplify_and_force ~n:(n + 1) a_ b
+        | None, Some b_ -> simplify_and_force ~n:(n + 1) a b_
+        | Some a_, Some b_ -> simplify_and_force ~n:(n + 1) a_ b_)
+      | _, Bin (And, a, b) ->
+        simplify_and_ ~n:(n + 1)
+          {expression_desc = Bin (And, e1, a); comment = None}
+          b
+      | Bin (Or, a, b), _ -> (
+        let ao = simplify_and_ ~n:(n + 1) a e2 in
+        let bo = simplify_and_ ~n:(n + 1) b e2 in
+        match (ao, bo) with
+        | Some {expression_desc = Bool false}, None ->
+          Some {expression_desc = Bin (And, b, e2); comment = None}
+        | None, Some {expression_desc = Bool false} ->
+          Some {expression_desc = Bin (And, a, e2); comment = None}
+        | None, _ | _, None -> (
+          match simplify_or_ ~n:(n + 1) a b with
+          | None -> None
+          | Some e -> simplify_and_force ~n:(n + 1) e e2)
+        | Some a_, Some b_ -> simplify_or_force ~n:(n + 1) a_ b_)
+      | ( Bin
+            ( ((EqEqEq | NotEqEq) as op1),
+              {expression_desc = Var i1},
+              {expression_desc = Bool b1} ),
+          Bin
+            ( ((EqEqEq | NotEqEq) as op2),
+              {expression_desc = Var i2},
+              {expression_desc = Bool b2} ) )
+        when Js_op_util.same_vident i1 i2 ->
+        let op_eq = op1 = op2 in
+        let consistent = if op_eq then b1 = b2 else b1 <> b2 in
+        if consistent then Some e1 else Some false_
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ),
+          (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Bool _})
+           as b) )
+      | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Bool _})
+           as b),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        Some {expression_desc = b; comment = None}
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "string"}} ),
+          (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Str _})
+           as s) )
+      | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Str _})
+           as s),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "string"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        Some {expression_desc = s; comment = None}
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "number"}} ),
+          (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
+           as i) )
+      | ( (Bin (EqEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
+           as i),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "number"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        Some {expression_desc = i; comment = None}
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean" | "string" | "number"}} ),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ) )
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean" | "string" | "number"}} )
+        )
+        when Js_op_util.same_vident ia ib ->
+        (* Note: cases boolean / Bool _, number / Number _, string / Str _ are handled above *)
+        Some false_
+      | ( Call
+            ( {expression_desc = Str {txt = "Array.isArray"}},
+              [{expression_desc = Var ia}],
+              _ ),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ) )
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ),
+          Call
+            ( {expression_desc = Str {txt = "Array.isArray"}},
+              [{expression_desc = Var ia}],
+              _ ) )
+        when Js_op_util.same_vident ia ib ->
+        Some false_
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ),
+          Var ib )
+      | ( Var ib,
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        Some
+          {
+            expression_desc =
+              Bin (EqEqEq, {expression_desc = Var ib; comment = None}, true_);
+            comment = None;
+          }
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ),
+          Js_not {expression_desc = Var ib} )
+      | ( Js_not {expression_desc = Var ib},
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        Some
+          {
+            expression_desc =
+              Bin (EqEqEq, {expression_desc = Var ib; comment = None}, false_);
+            comment = None;
+          }
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ),
+          Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Bool b})
+        )
+      | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Bool b}),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "boolean"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        Some {expression_desc = Bool (not b); comment = None}
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "string"}} ),
+          Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Str _}) )
+      | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Str _}),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "string"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        None
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "number"}} ),
+          Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Number _})
+        )
+      | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Number _}),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "number"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        None
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "object"}} ),
+          Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Null}) )
+      | ( Bin (NotEqEq, {expression_desc = Var ib}, {expression_desc = Null}),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Typeof {expression_desc = Var ia}},
+              {expression_desc = Str {txt = "object"}} ) )
+        when Js_op_util.same_vident ia ib ->
+        None
+      | ( (Bin
+             ( EqEqEq,
+               {expression_desc = Typeof {expression_desc = Var ia}},
+               {
+                 expression_desc =
+                   Str {txt = "boolean" | "string" | "number" | "object"};
+               } ) as typeof),
+          Bin
+            ( NotEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ) )
+      | ( Bin
+            ( NotEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _} ),
+          (Bin
+             ( EqEqEq,
+               {expression_desc = Typeof {expression_desc = Var ia}},
+               {
+                 expression_desc =
+                   Str {txt = "boolean" | "string" | "number" | "object"};
+               } ) as typeof) )
+        when Js_op_util.same_vident ia ib ->
+        (* Note: cases boolean / Bool _, number / Number _, string / Str _, object / Null are handled above *)
+        Some {expression_desc = typeof; comment = None}
+      | ( (Call
+             ( {expression_desc = Str {txt = "Array.isArray"}},
+               [{expression_desc = Var ia}],
+               _ ) as is_array),
+          Bin
+            ( NotEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ) )
+      | ( Bin
+            ( NotEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ),
+          (Call
+             ( {expression_desc = Str {txt = "Array.isArray"}},
+               [{expression_desc = Var ia}],
+               _ ) as is_array) )
+        when Js_op_util.same_vident ia ib ->
+        Some {expression_desc = is_array; comment = None}
+      | _ when Js_analyzer.eq_expression e1 e2 -> Some e1
+      | ( Bin
+            ( EqEqEq,
+              {expression_desc = Var ia},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ),
+          Bin
+            ( EqEqEq,
+              {expression_desc = Var ib},
+              {expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _}
+            ) )
+        when Js_op_util.same_vident ia ib ->
+        (* Note: case x = y is handled above *)
+        Some false_
+      | ( Bin
+            ( ((EqEqEq | NotEqEq) as op1),
+              {expression_desc = Var ia},
+              ({
+                 expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _;
+               } as v1) ),
+          Bin
+            ( ((EqEqEq | NotEqEq) as op2),
+              {expression_desc = Var ib},
+              ({
+                 expression_desc = Bool _ | Null | Undefined _ | Number _ | Str _;
+               } as v2) ) )
+        when Js_op_util.same_vident ia ib && op1 != op2 ->
+        if Js_analyzer.eq_expression v1 v2 then Some false_
+        else if op1 = EqEqEq then Some e1
+        else Some e2
+      | _ -> None
+    in
+    (if debug then
+       match res with
+       | None -> ()
+       | Some e ->
+         Printf.eprintf "%s = %s\n"
+           (String.make (n * 2) ' ')
+           (!string_of_expression e));
+    res
 
 and simplify_and_force ~n (e1 : t) (e2 : t) : t option =
   match simplify_and_ ~n e1 e2 with
