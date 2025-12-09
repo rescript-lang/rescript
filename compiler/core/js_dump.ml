@@ -1105,6 +1105,12 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
 and print_jsx cxt ?(spread_props : J.expression option)
     ?(key : J.expression option) ~(level : int) f (fnName : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
+  let is_fragment =
+    match tag.expression_desc with
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
+      true
+    | _ -> false
+  in
   let print_tag cxt =
     match tag.expression_desc with
     (* "div" or any other primitive tag *)
@@ -1112,15 +1118,9 @@ and print_jsx cxt ?(spread_props : J.expression option)
       P.string f txt;
       cxt
     (* fragment *)
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> cxt
+    | _ when is_fragment -> cxt
     (* A user defined component or external component *)
     | _ -> expression ~level cxt f tag
-  in
-  let is_fragment =
-    match tag.expression_desc with
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
-      true
-    | _ -> false
   in
   let children_opt =
     List.find_map
