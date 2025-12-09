@@ -23,11 +23,12 @@ val add_exception_ref :
 
 val add_optional_arg_call :
   builder ->
+  pos_from:Lexing.position ->
   pos_to:Lexing.position ->
   arg_names:string list ->
   arg_names_maybe:string list ->
   unit
-(** Add a cross-file optional argument call. *)
+(** Add a cross-file optional argument call, recording caller and callee. *)
 
 val add_function_reference :
   builder -> pos_from:Lexing.position -> pos_to:Lexing.position -> unit
@@ -52,6 +53,10 @@ val process_exception_refs :
 (** {2 Optional Args State} *)
 
 val compute_optional_args_state :
-  t -> decls:Declarations.t -> OptionalArgsState.t
-(** Compute final optional args state from calls and function references.
+  t ->
+  decls:Declarations.t ->
+  is_live:(Lexing.position -> bool) ->
+  OptionalArgsState.t
+(** Compute final optional args state from calls and function references,
+    taking into account caller liveness via the [is_live] predicate.
     Pure function - does not mutate declarations. *)

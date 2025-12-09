@@ -40,20 +40,22 @@ let rec fromTypeExpr (texpr : Types.type_expr) =
   | _ -> []
 
 let addReferences ~config ~cross_file ~(locFrom : Location.t)
-    ~(locTo : Location.t) ~path (argNames, argNamesMaybe) =
+    ~(locTo : Location.t) ~(binding : Location.t) ~path (argNames, argNamesMaybe)
+    =
   if active () then (
     let posTo = locTo.loc_start in
-    let posFrom = locFrom.loc_start in
-    CrossFileItems.add_optional_arg_call cross_file ~pos_to:posTo
-      ~arg_names:argNames ~arg_names_maybe:argNamesMaybe;
+    let posFrom = binding.loc_start in
+    CrossFileItems.add_optional_arg_call cross_file ~pos_from:posFrom
+      ~pos_to:posTo ~arg_names:argNames ~arg_names_maybe:argNamesMaybe;
     if config.DceConfig.cli.debug then
+      let callPos = locFrom.loc_start in
       Log_.item
         "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
          argNamesMaybe:%s %s@."
         (path |> DcePath.fromPathT |> DcePath.toString)
         (argNames |> String.concat ", ")
         (argNamesMaybe |> String.concat ", ")
-        (posFrom |> Pos.toString))
+        (callPos |> Pos.toString))
 
 (** Check for optional args issues. Returns issues instead of logging.
     Uses optional_args_state map for final computed state. *)

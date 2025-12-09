@@ -8,6 +8,7 @@
 type exception_ref = {exception_path: DcePath.t; loc_from: Location.t}
 
 type optional_arg_call = {
+  pos_from: Lexing.position;
   pos_to: Lexing.position;
   arg_names: string list;
   arg_names_maybe: string list;
@@ -37,9 +38,10 @@ let create_builder () : builder =
 let add_exception_ref (b : builder) ~exception_path ~loc_from =
   b.exception_refs <- {exception_path; loc_from} :: b.exception_refs
 
-let add_optional_arg_call (b : builder) ~pos_to ~arg_names ~arg_names_maybe =
+let add_optional_arg_call (b : builder) ~pos_from ~pos_to ~arg_names
+    ~arg_names_maybe =
   b.optional_arg_calls <-
-    {pos_to; arg_names; arg_names_maybe} :: b.optional_arg_calls
+    {pos_from; pos_to; arg_names; arg_names_maybe} :: b.optional_arg_calls
 
 let add_function_reference (b : builder) ~pos_from ~pos_to =
   b.function_refs <- {pos_from; pos_to} :: b.function_refs
@@ -71,7 +73,7 @@ let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
 (** Compute optional args state from calls and function references.
     Returns a map from position to final OptionalArgs.t state.
     Pure function - does not mutate declarations. *)
-let compute_optional_args_state (t : t) ~decls : OptionalArgsState.t =
+let compute_optional_args_state (t : t) ~decls ~is_live : OptionalArgsState.t =
   let state = OptionalArgsState.create () in
   (* Initialize state from declarations *)
   let get_state pos =
@@ -85,22 +87,24 @@ let compute_optional_args_state (t : t) ~decls : OptionalArgsState.t =
   let set_state pos s = OptionalArgsState.set state pos s in
   (* Process optional arg calls *)
   t.optional_arg_calls
-  |> List.iter (fun {pos_to; arg_names; arg_names_maybe} ->
-         let current = get_state pos_to in
-         let updated =
-           OptionalArgs.apply_call ~argNames:arg_names
-             ~argNamesMaybe:arg_names_maybe current
-         in
-         set_state pos_to updated);
+  |> List.iter (fun {pos_from; pos_to; arg_names; arg_names_maybe} ->
+         if is_live pos_from then
+           let current = get_state pos_to in
+           let updated =
+             OptionalArgs.apply_call ~argNames:arg_names
+               ~argNamesMaybe:arg_names_maybe current
+           in
+           set_state pos_to updated);
   (* Process function references *)
   t.function_refs
   |> List.iter (fun {pos_from; pos_to} ->
-         let state_from = get_state pos_from in
-         let state_to = get_state pos_to in
-         if not (OptionalArgs.isEmpty state_to) then (
-           let updated_from, updated_to =
-             OptionalArgs.combine_pair state_from state_to
-           in
-           set_state pos_from updated_from;
-           set_state pos_to updated_to));
+         if is_live pos_from then
+           let state_from = get_state pos_from in
+           let state_to = get_state pos_to in
+           if not (OptionalArgs.isEmpty state_to) then (
+             let updated_from, updated_to =
+               OptionalArgs.combine_pair state_from state_to
+             in
+             set_state pos_from updated_from;
+             set_state pos_to updated_to));
   state

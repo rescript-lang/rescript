@@ -168,18 +168,43 @@ let runAnalysis ~dce_config ~cmtRoot =
     CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
       ~file_deps:file_deps_builder ~find_exception:DeadException.find_exception
       ~config:dce_config;
-    (* Compute optional args state (pure - no mutation) *)
-    let optional_args_state =
-      CrossFileItems.compute_optional_args_state cross_file ~decls
-    in
     (* Now freeze refs and file_deps for solver *)
     let refs = References.freeze_builder refs_builder in
     let file_deps = FileDeps.freeze_builder file_deps_builder in
-    (* Run the solver - returns immutable AnalysisResult.t *)
-    let analysis_result =
+    (* Run the solver - returns immutable AnalysisResult.t.
+       Optional-args checks are done in a separate pass after liveness is known. *)
+    let empty_optional_args_state = OptionalArgsState.create () in
+    let analysis_result_core =
       DeadCommon.solveDead ~annotations ~decls ~refs ~file_deps
-        ~optional_args_state ~config:dce_config
-        ~checkOptionalArg:DeadOptionalArgs.check
+        ~optional_args_state:empty_optional_args_state ~config:dce_config
+        ~checkOptionalArg:(fun
+            ~optional_args_state:_ ~annotations:_ ~config:_ _ -> [])
+    in
+    (* Compute liveness-aware optional args state *)
+    let is_live pos =
+      match Declarations.find_opt decls pos with
+      | Some decl -> Decl.isLive decl
+      | None -> true
+    in
+    let optional_args_state =
+      CrossFileItems.compute_optional_args_state cross_file ~decls ~is_live
+    in
+    (* Collect optional args issues only for live declarations *)
+    let optional_args_issues =
+      Declarations.fold
+        (fun _pos decl acc ->
+          if Decl.isLive decl then
+            let issues =
+              DeadOptionalArgs.check ~optional_args_state ~annotations
+                ~config:dce_config decl
+            in
+            List.rev_append issues acc
+          else acc)
+        decls []
+      |> List.rev
+    in
+    let analysis_result =
+      AnalysisResult.add_issues analysis_result_core optional_args_issues
     in
     (* Report all issues *)
     AnalysisResult.get_issues analysis_result

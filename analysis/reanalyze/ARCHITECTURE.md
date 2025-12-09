@@ -70,14 +70,17 @@ This design enables:
     ╠══════════════════════════════════════════════════╪══════════════════════╣
     ║                                                  ▼                      ║
     ║  ┌─────────────────────────────────────────────────────────────────┐   ║
-    ║  │ DeadCommon.solveDead                                            │   ║
-    ║  │   ~annotations ~decls ~refs ~file_deps                          │   ║
-    ║  │   ~optional_args_state ~config ~checkOptionalArg                │   ║
+    ║  │ Pass 1: DeadCommon.solveDead (core deadness)                    │   ║
+    ║  │   ~annotations ~decls ~refs ~file_deps ~config                  │   ║
+    ║  │   → AnalysisResult.t (dead/live status resolved)                │   ║
     ║  │                                                                  │   ║
+    ║  │ Pass 2: Optional args analysis (liveness-aware)                 │   ║
+    ║  │   CrossFileItems.compute_optional_args_state ~is_live           │   ║
+    ║  │   DeadOptionalArgs.check (only for live decls)                  │   ║
     ║  │   → AnalysisResult.t { issues: Issue.t list }                   │   ║
     ║  └─────────────────────────────────────────────────────────────────┘   ║
     ║                                                  │                      ║
-    ║  Pure function: immutable in → immutable out     │ issues               ║
+    ║  Pure functions: immutable in → immutable out    │ issues               ║
     ╚══════════════════════════════════════════════════╪══════════════════════╝
                                                        │
     ╔══════════════════════════════════════════════════╪══════════════════════╗
@@ -149,20 +152,30 @@ let file_deps = FileDeps.merge_all (file_data_list |> List.map (fun fd -> fd.fil
 
 ### Phase 3: SOLVE (Deadness Computation)
 
-**Entry point**: `DeadCommon.solveDead`
+**Entry point**: `DeadCommon.solveDead` + optional args second pass in `Reanalyze.runAnalysis`
 
 **Input**: All merged data + config
 
 **Output**: `AnalysisResult.t` containing `Issue.t list`
 
-**Algorithm**:
+**Algorithm** (two-pass for liveness-aware optional args):
+
+**Pass 1: Core deadness resolution**
 1. Build file dependency order (roots to leaves)
 2. Sort declarations by dependency order
 3. For each declaration, resolve references recursively
 4. Determine dead/live status based on reference count
 5. Collect issues for dead declarations
 
-**Key property**: Pure function - immutable in, immutable out. No side effects.
+**Pass 2: Liveness-aware optional args analysis**
+1. Use `Decl.isLive` to build an `is_live` predicate from Pass 1 results
+2. Compute optional args state via `CrossFileItems.compute_optional_args_state`, filtering out calls from dead code
+3. Collect optional args issues only for live declarations
+4. Merge optional args issues into the final result
+
+This two-pass approach ensures that optional argument warnings (e.g., "argument X is never used") only consider calls from live code, preventing false positives when a function is only called from dead code.
+
+**Key property**: Pure functions - immutable in, immutable out. No side effects.
 
 ### Phase 4: REPORT (Output)
 

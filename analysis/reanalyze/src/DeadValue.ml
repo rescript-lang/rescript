@@ -78,7 +78,7 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
   loc
 
 let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
-    ~locTo ~path args =
+    ~(binding : Location.t) ~locTo ~path args =
   if expType |> DeadOptionalArgs.hasOptionalArgs then (
     let supplied = ref [] in
     let suppliedMaybe = ref [] in
@@ -107,7 +107,8 @@ let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
              if argIsSupplied = None then suppliedMaybe := s :: !suppliedMaybe
            | _ -> ());
     (!supplied, !suppliedMaybe)
-    |> DeadOptionalArgs.addReferences ~config ~cross_file ~locFrom ~locTo ~path)
+    |> DeadOptionalArgs.addReferences ~config ~cross_file ~locFrom ~locTo
+         ~binding ~path)
 
 let rec collectExpr ~config ~refs ~file_deps ~cross_file
     ~(last_binding : Location.t) super self (e : Typedtree.expression) =
@@ -142,7 +143,7 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
     args
     |> processOptionalArgs ~config ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
-         ~locTo ~path
+         ~binding:last_binding ~locTo ~path
   | Texp_let
       ( (* generated for functions with optional args *)
         Nonrecursive,
@@ -183,7 +184,7 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
     args
     |> processOptionalArgs ~config ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
-         ~locTo ~path
+         ~binding:last_binding ~locTo ~path
   | Texp_field
       (_, _, {lbl_loc = {Location.loc_start = posTo; loc_ghost = false}; _}) ->
     if !Config.analyzeTypes then

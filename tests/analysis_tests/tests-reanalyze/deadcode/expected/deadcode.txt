@@ -1212,6 +1212,16 @@
   Scanning OptArg.cmti Source:OptArg.resi
   addValueDeclaration +foo OptArg.resi:1:0 path:OptArg
   addValueDeclaration +bar OptArg.resi:2:0 path:OptArg
+  Scanning OptionalArgsLiveDead.cmt Source:OptionalArgsLiveDead.res
+  addValueDeclaration +formatDate OptionalArgsLiveDead.res:1:4 path:+OptionalArgsLiveDead
+  addValueDeclaration +deadCaller OptionalArgsLiveDead.res:3:4 path:+OptionalArgsLiveDead
+  addValueDeclaration +liveCaller OptionalArgsLiveDead.res:5:4 path:+OptionalArgsLiveDead
+  addValueReference OptionalArgsLiveDead.res:1:4 --> OptionalArgsLiveDead.res:1:26
+  DeadOptionalArgs.addReferences formatDate called with optional argNames:fmt argNamesMaybe: OptionalArgsLiveDead.res:3:23
+  addValueReference OptionalArgsLiveDead.res:3:4 --> OptionalArgsLiveDead.res:1:4
+  DeadOptionalArgs.addReferences formatDate called with optional argNames: argNamesMaybe: OptionalArgsLiveDead.res:5:23
+  addValueReference OptionalArgsLiveDead.res:5:4 --> OptionalArgsLiveDead.res:1:4
+  addValueReference OptionalArgsLiveDead.res:7:8 --> OptionalArgsLiveDead.res:5:4
   Scanning Records.cmt Source:Records.res
   addValueDeclaration +origin Records.res:11:4 path:+Records
   addValueDeclaration +computeArea Records.res:14:4 path:+Records
@@ -1807,6 +1817,7 @@ File References
   Opaque.res -->> 
   OptArg.res -->> 
   OptArg.resi -->> OptArg.res
+  OptionalArgsLiveDead.res -->> 
   Records.res -->> 
   References.res -->> 
   RepeatedLabel.res -->> 
@@ -2058,6 +2069,9 @@ File References
   Live Value +Opaque.+testConvertNestedRecordFromOtherFile: 0 references () [0]
   Live Value +Opaque.+noConversion: 0 references () [0]
   Dead VariantCase +Opaque.opaqueFromRecords.A: 0 references () [0]
+  Live Value +OptionalArgsLiveDead.+liveCaller: 1 references (OptionalArgsLiveDead.res:7:8) [0]
+  Dead Value +OptionalArgsLiveDead.+deadCaller: 0 references () [0]
+  Live Value +OptionalArgsLiveDead.+formatDate: 1 references (OptionalArgsLiveDead.res:5:4) [0]
   Live Value +Records.+testMyRecBsAs2: 0 references () [0]
   Live Value +Records.+testMyRecBsAs: 0 references () [0]
   Live RecordLabel +Records.myRecBsAs.type_: 1 references (Records.res:145:38) [0]
@@ -2478,70 +2492,6 @@ File References
   Incorrect Dead Annotation
   DeadTest.res:153:1-28
   deadIncorrect  is annotated @dead but is live
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument x of function notSuppressesOptArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument y of function notSuppressesOptArgs is never used
-
-  Warning Unused Argument
-  TestOptArg.res:9:1-65
-  optional argument z of function notSuppressesOptArgs is never used
-
-  Warning Redundant Optional Argument
-  TestOptArg.res:3:1-28
-  optional argument x of function foo is always supplied (1 calls)
-
-  Warning Redundant Optional Argument
-  Unison.res:17:1-60
-  optional argument break of function group is always supplied (2 calls)
-
-  Warning Unused Argument
-  OptArg.resi:2:1-50
-  optional argument x of function bar is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:26:1-70
-  optional argument c of function wrapfourArgs is always supplied (2 calls)
-
-  Warning Unused Argument
-  OptArg.res:24:1-63
-  optional argument d of function fourArgs is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:20:1-51
-  optional argument a of function wrapOneArg is always supplied (1 calls)
-
-  Warning Unused Argument
-  OptArg.res:14:1-42
-  optional argument a of function twoArgs is never used
-
-  Warning Unused Argument
-  OptArg.res:14:1-42
-  optional argument b of function twoArgs is never used
-
-  Warning Unused Argument
-  OptArg.res:9:1-54
-  optional argument b of function threeArgs is never used
-
-  Warning Redundant Optional Argument
-  OptArg.res:9:1-54
-  optional argument a of function threeArgs is always supplied (2 calls)
-
-  Warning Unused Argument
-  OptArg.res:3:1-38
-  optional argument x of function bar is never used
-
-  Warning Unused Argument
-  OptArg.res:1:1-48
-  optional argument y of function foo is never used
-
-  Warning Unused Argument
-  OptArg.res:1:1-48
-  optional argument z of function foo is never used
 
   Warning Dead Module
   AutoAnnotate.res:0:1
@@ -3459,6 +3409,10 @@ File References
   OptArg.resi:1:1-54
   foo is never used
 
+  Warning Dead Value
+  OptionalArgsLiveDead.res:3:1-59
+  deadCaller is never used
+
   Warning Dead Type
   Records.res:24:3-14
   person.name is a record label never used to read a value
@@ -3682,5 +3636,77 @@ File References
   Warning Dead Type
   VariantsWithPayload.res:96:23-32
   variant1Object.R is a variant case which is never constructed
+
+  Warning Unused Argument
+  OptArg.res:24:1-63
+  optional argument d of function fourArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument x of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument y of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument z of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  OptArg.res:1:1-48
+  optional argument y of function foo is never used
+
+  Warning Unused Argument
+  OptArg.res:1:1-48
+  optional argument z of function foo is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:1:1-48
+  optional argument x of function foo is always supplied (1 calls)
+
+  Warning Unused Argument
+  OptArg.resi:2:1-50
+  optional argument x of function bar is never used
+
+  Warning Unused Argument
+  OptArg.res:3:1-38
+  optional argument x of function bar is never used
+
+  Warning Unused Argument
+  OptArg.res:9:1-54
+  optional argument b of function threeArgs is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:9:1-54
+  optional argument a of function threeArgs is always supplied (2 calls)
+
+  Warning Unused Argument
+  OptionalArgsLiveDead.res:1:1-33
+  optional argument fmt of function formatDate is never used
+
+  Warning Redundant Optional Argument
+  Unison.res:17:1-60
+  optional argument break of function group is always supplied (2 calls)
+
+  Warning Unused Argument
+  OptArg.res:14:1-42
+  optional argument a of function twoArgs is never used
+
+  Warning Unused Argument
+  OptArg.res:14:1-42
+  optional argument b of function twoArgs is never used
+
+  Warning Redundant Optional Argument
+  TestOptArg.res:3:1-28
+  optional argument x of function foo is always supplied (1 calls)
+
+  Warning Redundant Optional Argument
+  OptArg.res:20:1-51
+  optional argument a of function wrapOneArg is always supplied (1 calls)
+
+  Warning Redundant Optional Argument
+  OptArg.res:26:1-70
+  optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 302 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:173, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:5, Warning Unused Argument:11)
+  Analysis reported 305 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:174, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)

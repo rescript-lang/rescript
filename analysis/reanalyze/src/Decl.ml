@@ -43,6 +43,12 @@ let isValue decl =
   | Value _ (* | Exception *) -> true
   | _ -> false
 
+(** Check if a declaration is live (or unknown). Returns false only if resolved as dead. *)
+let isLive decl =
+  match decl.resolvedDead with
+  | Some true -> false
+  | Some false | None -> true
+
 let compareUsingDependencies ~orderedFiles
     {
       declKind = kind1;
