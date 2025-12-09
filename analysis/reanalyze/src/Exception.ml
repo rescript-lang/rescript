@@ -1,6 +1,4 @@
 open DeadCommon
-module LocSet = Common.LocSet
-let posToString = Common.posToString
 
 module Values = struct
   let valueBindingsTable =
@@ -10,10 +8,10 @@ module Values = struct
 
   let add ~name exceptions =
     let path = (name |> Name.create) :: (ModulePath.getCurrent ()).path in
-    Hashtbl.replace !currentFileTable (path |> Common.Path.toName) exceptions
+    Hashtbl.replace !currentFileTable (path |> DcePath.toName) exceptions
 
-  let getFromModule ~moduleName ~modulePath (path_ : Common.Path.t) =
-    let name = path_ @ modulePath |> Common.Path.toName in
+  let getFromModule ~moduleName ~modulePath (path_ : DcePath.t) =
+    let name = path_ @ modulePath |> DcePath.toName in
     match
       Hashtbl.find_opt valueBindingsTable (String.capitalize_ascii moduleName)
     with
@@ -50,7 +48,7 @@ module Values = struct
         match (findExternal ~externalModuleName ~pathRev, pathRev) with
         | (Some _ as found), _ -> found
         | None, externalModuleName2 :: pathRev2
-          when !Common.Cli.cmtCommand && pathRev2 <> [] ->
+          when !Cli.cmtCommand && pathRev2 <> [] ->
           (* Simplistic namespace resolution for dune namespace: skip the root of the path *)
           findExternal ~externalModuleName:externalModuleName2 ~pathRev:pathRev2
         | None, _ -> None)
@@ -65,7 +63,7 @@ end
 module Event = struct
   type kind =
     | Catches of t list (* with | E => ... *)
-    | Call of {callee: Common.Path.t; modulePath: Common.Path.t} (* foo() *)
+    | Call of {callee: DcePath.t; modulePath: DcePath.t} (* foo() *)
     | DoesNotThrow of
         t list (* DoesNotThrow(events) where events come from an expression *)
     | Throws  (** throw E *)
@@ -76,25 +74,25 @@ module Event = struct
     match event with
     | {kind = Call {callee; modulePath}; exceptions; loc} ->
       Format.fprintf ppf "%s Call(%s, modulePath:%s) %a@."
-        (loc.loc_start |> posToString)
-        (callee |> Common.Path.toString)
-        (modulePath |> Common.Path.toString)
+        (loc.loc_start |> Pos.toString)
+        (callee |> DcePath.toString)
+        (modulePath |> DcePath.toString)
         (Exceptions.pp ~exnTable:None)
         exceptions
     | {kind = DoesNotThrow nestedEvents; loc} ->
       Format.fprintf ppf "%s DoesNotThrow(%a)@."
-        (loc.loc_start |> posToString)
+        (loc.loc_start |> Pos.toString)
         (fun ppf () ->
           nestedEvents |> List.iter (fun e -> Format.fprintf ppf "%a " print e))
         ()
     | {kind = Throws; exceptions; loc} ->
       Format.fprintf ppf "%s throws %a@."
-        (loc.loc_start |> posToString)
+        (loc.loc_start |> Pos.toString)
         (Exceptions.pp ~exnTable:None)
         exceptions
     | {kind = Catches nestedEvents; exceptions; loc} ->
       Format.fprintf ppf "%s Catches exceptions:%a nestedEvents:%a@."
-        (loc.loc_start |> posToString)
+        (loc.loc_start |> Pos.toString)
         (Exceptions.pp ~exnTable:None)
         exceptions
         (fun ppf () ->
@@ -140,11 +138,11 @@ module Event = struct
         (if Exceptions.isEmpty nestedExceptions (* catch-all *) then
            let name =
              match nestedEvents with
-             | {kind = Call {callee}} :: _ -> callee |> Common.Path.toName
+             | {kind = Call {callee}} :: _ -> callee |> DcePath.toName
              | _ -> "expression" |> Name.create
            in
            Log_.warning ~loc
-             (Common.ExceptionAnalysis
+             (Issue.ExceptionAnalysis
                 {
                   message =
                     Format.asprintf
@@ -193,13 +191,13 @@ module Checks = struct
     let redundantAnnotations = Exceptions.diff exceptions throwSet in
     (if not (Exceptions.isEmpty missingAnnotations) then
        let description =
-         Common.ExceptionAnalysisMissing
+         Issue.ExceptionAnalysisMissing
            {exnName; exnTable; throwSet; missingAnnotations; locFull}
        in
        Log_.warning ~loc description);
     if not (Exceptions.isEmpty redundantAnnotations) then
       Log_.warning ~loc
-        (Common.ExceptionAnalysis
+        (Issue.ExceptionAnalysis
            {
              message =
                (let throwsDescription ppf () =
@@ -276,13 +274,11 @@ let traverseAst ~file () =
     if isDoesNoThrow then currentEvents := [];
     (match expr.exp_desc with
     | Texp_ident (callee_, _, _) ->
-      let callee =
-        callee_ |> Common.Path.fromPathT |> ModulePath.resolveAlias
-      in
-      let calleeName = callee |> Common.Path.toName in
+      let callee = callee_ |> DcePath.fromPathT |> ModulePath.resolveAlias in
+      let calleeName = callee |> DcePath.toName in
       if calleeName |> Name.toString |> isThrow then
         Log_.warning ~loc
-          (Common.ExceptionAnalysis
+          (Issue.ExceptionAnalysis
              {
                message =
                  Format.asprintf
@@ -421,7 +417,7 @@ let traverseAst ~file () =
     | Tstr_module {mb_id; mb_expr = {mod_desc = Tmod_ident (path_, _lid)}} ->
       ModulePath.addAlias
         ~name:(mb_id |> Ident.name |> Name.create)
-        ~path:(path_ |> Common.Path.fromPathT)
+        ~path:(path_ |> DcePath.fromPathT)
     | _ -> ());
     result
   in

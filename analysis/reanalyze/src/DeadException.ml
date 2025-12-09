@@ -1,5 +1,4 @@
 open DeadCommon
-open Common
 
 let declarations = Hashtbl.create 1
 
@@ -18,7 +17,7 @@ let markAsUsed ~config ~refs ~file_deps ~cross_file ~(binding : Location.t)
   if locTo.loc_ghost then
     (* Probably defined in another file, delay processing and check at the end *)
     let exceptionPath =
-      path_ |> Path.fromPathT |> Path.moduleToImplementation
+      path_ |> DcePath.fromPathT |> DcePath.moduleToImplementation
     in
     CrossFileItems.add_exception_ref cross_file ~exception_path:exceptionPath
       ~loc_from:locFrom

@@ -3,22 +3,9 @@
     These are references that span file boundaries and need to be resolved
     after all files are processed. *)
 
-open Common
-
-(* Position-keyed hashtable *)
-module PosHash = Hashtbl.Make (struct
-  type t = Lexing.position
-
-  let hash x =
-    let s = Filename.basename x.Lexing.pos_fname in
-    Hashtbl.hash (x.Lexing.pos_cnum, s)
-
-  let equal (x : t) y = x = y
-end)
-
 (** {2 Item types} *)
 
-type exception_ref = {exception_path: Path.t; loc_from: Location.t}
+type exception_ref = {exception_path: DcePath.t; loc_from: Location.t}
 
 type optional_arg_call = {
   pos_to: Lexing.position;

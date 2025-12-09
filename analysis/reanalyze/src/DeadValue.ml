@@ -28,7 +28,7 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
       let name = Ident.name id |> Name.create ~isInterface:false in
       let optionalArgs =
         vb.vb_expr.exp_type |> DeadOptionalArgs.fromTypeExpr
-        |> Common.OptionalArgs.fromList
+        |> OptionalArgs.fromList
       in
       let exists =
         match Declarations.find_opt_builder decls loc_start with
@@ -61,7 +61,7 @@ let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
         let declKind =
           match decl.declKind with
           | Value vk ->
-            Common.DeclKind.Value
+            Decl.Kind.Value
               {vk with sideEffects = SideEffects.checkExpr vb.vb_expr}
           | dk -> dk
         in
@@ -121,8 +121,8 @@ let rec collectExpr ~config ~refs ~file_deps ~cross_file
          which is called from its own location as many things are generated on the same location. *)
       if config.DceConfig.cli.debug then
         Log_.item "addDummyReference %s --> %s@."
-          (Location.none.loc_start |> Common.posToString)
-          (locTo.loc_start |> Common.posToString);
+          (Location.none.loc_start |> Pos.toString)
+          (locTo.loc_start |> Pos.toString);
       References.add_value_ref refs ~posTo:locTo.loc_start
         ~posFrom:Location.none.loc_start)
     else
@@ -262,8 +262,7 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
       in
       if (not isPrimitive) || !Config.analyzeExternals then
         let optionalArgs =
-          val_type |> DeadOptionalArgs.fromTypeExpr
-          |> Common.OptionalArgs.fromList
+          val_type |> DeadOptionalArgs.fromTypeExpr |> OptionalArgs.fromList
         in
 
         (* if Ident.name id = "someValue" then

@@ -1,4 +1,3 @@
-open Common
 module StringMap = Map_string
 
 let bsconfig = "bsconfig.json"
@@ -24,6 +23,8 @@ let rec findProjectRoot ~dir =
         ("Error: cannot find project root containing " ^ rescriptJson ^ ".");
       assert false)
     else findProjectRoot ~dir:parent
+
+let runConfig = RunConfig.runConfig
 
 let setReScriptProjectRoot =
   lazy

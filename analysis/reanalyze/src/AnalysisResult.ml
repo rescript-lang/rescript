@@ -3,9 +3,7 @@
     The solver returns this instead of logging directly.
     All side effects (logging, JSON output) happen in the reporting phase. *)
 
-open Common
-
-type t = {issues: issue list}
+type t = {issues: Issue.t list}
 (** Immutable analysis result *)
 
 let empty = {issues = []}
@@ -20,11 +18,11 @@ let get_issues result = result.issues |> List.rev
 let issue_count result = List.length result.issues
 
 (** Create a dead code issue *)
-let make_dead_issue ~loc ~deadWarning ~path ~message =
+let make_dead_issue ~loc ~deadWarning ~path ~message : Issue.t =
   {
-    name =
+    Issue.name =
       (match deadWarning with
-      | WarningDeadException -> "Warning Dead Exception"
+      | Issue.WarningDeadException -> "Warning Dead Exception"
       | WarningDeadType -> "Warning Dead Type"
       | WarningDeadValue -> "Warning Dead Value"
       | WarningDeadValueWithSideEffects ->
@@ -36,9 +34,9 @@ let make_dead_issue ~loc ~deadWarning ~path ~message =
   }
 
 (** Create a dead module issue *)
-let make_dead_module_issue ~loc ~moduleName =
+let make_dead_module_issue ~loc ~moduleName : Issue.t =
   {
-    name = "Warning Dead Module";
+    Issue.name = "Warning Dead Module";
     severity = Warning;
     loc;
     description =

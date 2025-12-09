@@ -4,17 +4,6 @@
     - [builder] - mutable, for AST processing and merging
     - [t] - immutable, for solver (read-only access) *)
 
-(* Position-keyed hashtable *)
-module PosHash = Hashtbl.Make (struct
-  type t = Lexing.position
-
-  let hash x =
-    let s = Filename.basename x.Lexing.pos_fname in
-    Hashtbl.hash (x.Lexing.pos_cnum, s)
-
-  let equal (x : t) y = x = y
-end)
-
 type annotated_as = GenType | Dead | Live
 
 (* Both types have the same representation, but different semantics *)

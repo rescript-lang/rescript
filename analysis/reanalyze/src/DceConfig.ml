@@ -16,17 +16,17 @@ type t = {run: RunConfig.t; cli: cli_config}
 
 (** Capture the current DCE configuration from global state.
     
-    This reads from [RunConfig.runConfig] and [Common.Cli] refs
+    This reads from [RunConfig.runConfig] and [Cli] refs
     to produce a single immutable configuration value. *)
 let current () =
   let cli =
     {
-      debug = !Common.Cli.debug;
-      ci = !Common.Cli.ci;
-      json = !Common.Cli.json;
-      live_names = !Common.Cli.liveNames;
-      live_paths = !Common.Cli.livePaths;
-      exclude_paths = !Common.Cli.excludePaths;
+      debug = !Cli.debug;
+      ci = !Cli.ci;
+      json = !Cli.json;
+      live_names = !Cli.liveNames;
+      live_paths = !Cli.livePaths;
+      exclude_paths = !Cli.excludePaths;
     }
   in
-  {run = Common.runConfig; cli}
+  {run = RunConfig.runConfig; cli}

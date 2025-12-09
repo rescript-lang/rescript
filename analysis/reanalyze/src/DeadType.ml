@@ -1,20 +1,19 @@
 (* Adapted from https://github.com/LexiFi/dead_code_analyzer *)
 
-open Common
 open DeadCommon
 
 module TypeLabels = struct
   (* map from type path (for record/variant label) to its location *)
 
-  let table = (Hashtbl.create 256 : (Path.t, Location.t) Hashtbl.t)
+  let table = (Hashtbl.create 256 : (DcePath.t, Location.t) Hashtbl.t)
   let add path loc = Hashtbl.replace table path loc
   let find path = Hashtbl.find_opt table path
 end
 
 let addTypeReference ~config ~refs ~posFrom ~posTo =
   if config.DceConfig.cli.debug then
-    Log_.item "addTypeReference %s --> %s@." (posFrom |> posToString)
-      (posTo |> posToString);
+    Log_.item "addTypeReference %s --> %s@." (posFrom |> Pos.toString)
+      (posTo |> Pos.toString);
   References.add_type_ref refs ~posTo ~posFrom
 
 module TypeDependencies = struct
@@ -36,8 +35,8 @@ let extendTypeDependencies ~config (loc1 : Location.t) (loc2 : Location.t) =
   if loc1.loc_start <> loc2.loc_start then (
     if config.DceConfig.cli.debug then
       Log_.item "extendTypeDependencies %s --> %s@."
-        (loc1.loc_start |> posToString)
-        (loc2.loc_start |> posToString);
+        (loc1.loc_start |> Pos.toString)
+        (loc2.loc_start |> Pos.toString);
     TypeDependencies.add loc1 loc2)
 
 (* Type dependencies between Foo.re and Foo.rei *)
@@ -45,8 +44,8 @@ let addTypeDependenciesAcrossFiles ~config ~file ~pathToType ~loc ~typeLabelName
     =
   let isInterface = file.FileContext.is_interface in
   if not isInterface then (
-    let path_1 = pathToType |> Path.moduleToInterface in
-    let path_2 = path_1 |> Path.typeToInterface in
+    let path_1 = pathToType |> DcePath.moduleToInterface in
+    let path_2 = path_1 |> DcePath.typeToInterface in
     let path1 = typeLabelName :: path_1 in
     let path2 = typeLabelName :: path_2 in
     match TypeLabels.find path1 with
@@ -62,7 +61,7 @@ let addTypeDependenciesAcrossFiles ~config ~file ~pathToType ~loc ~typeLabelName
       if not Config.reportTypesDeadOnlyInInterface then
         extendTypeDependencies ~config loc1 loc)
   else
-    let path_1 = pathToType |> Path.moduleToImplementation in
+    let path_1 = pathToType |> DcePath.moduleToImplementation in
     let path1 = typeLabelName :: path_1 in
     match TypeLabels.find path1 with
     | None -> ()
@@ -88,7 +87,7 @@ let addDeclaration ~config ~decls ~file ~(typeId : Ident.t)
     (typeId |> Ident.name |> Name.create)
     :: (currentModulePath.path @ [FileContext.module_name_tagged file])
   in
-  let processTypeLabel ?(posAdjustment = Nothing) typeLabelName ~declKind
+  let processTypeLabel ?(posAdjustment = Decl.Nothing) typeLabelName ~declKind
       ~(loc : Location.t) =
     addDeclaration_ ~config ~decls ~file ~declKind ~path:pathToType ~loc
       ~moduleLoc:currentModulePath.loc ~posAdjustment typeLabelName;
@@ -124,7 +123,7 @@ let addDeclaration ~config ~decls ~file ~(typeId : Ident.t)
             Filename.check_suffix fname ".res"
             || Filename.check_suffix fname ".resi"
           in
-          if isRes then if i = 0 then FirstVariant else OtherVariant
+          if isRes then if i = 0 then Decl.FirstVariant else OtherVariant
           else Nothing
         in
         Ident.name cd_id |> Name.create
