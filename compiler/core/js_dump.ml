@@ -1105,6 +1105,8 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
 and print_jsx cxt ?(spread_props : J.expression option)
     ?(key : J.expression option) ~(level : int) f (fnName : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
+  (* TODO: make fragment detection respect custom JSX runtime modules instead of
+     assuming "JsxRuntime". *)
   let is_fragment =
     match tag.expression_desc with
     | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
