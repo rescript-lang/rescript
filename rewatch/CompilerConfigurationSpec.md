@@ -4,7 +4,6 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 
 | Parameter             | JSON type               | Remark | Implemented? |
 | --------------------- | ----------------------- | ------ | :----------: |
-| version               | string                  |        |     [_]      |
 | name                  | string                  |        |     [x]      |
 | namespace             | boolean                 |        |     [x]      |
 | namespace             | string                  |        |     [x]      |
@@ -33,6 +32,7 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | suffix                | Suffix                  |        |     [x]      |
 | reanalyze             | Reanalyze               |        |     [_]      |
 | experimental-features | ExperimentalFeatures    |        |     [x]      |
+| editor                | object                  | VS Code tooling only; ignored by rewatch |     [x]      |
 
 ### Source
 

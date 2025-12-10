@@ -297,6 +297,9 @@ pub struct Config {
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
+    // Used by the VS Code extension; ignored by rewatch but should not emit warnings.
+    // Payload is not validated here, only in the VS Code extension.
+    pub editor: Option<serde_json::Value>,
     // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
@@ -698,7 +701,6 @@ impl Config {
 
     fn is_unsupported_field(&self, field: &str) -> bool {
         const UNSUPPORTED_TOP_LEVEL_FIELDS: &[&str] = &[
-            "version",
             "ignored-dirs",
             "generators",
             "cut-generators",
@@ -779,6 +781,7 @@ pub mod tests {
             namespace: None,
             jsx: None,
             gentype_config: None,
+            editor: None,
             namespace_entry: None,
             deprecation_warnings: vec![],
             experimental_features: None,
@@ -1111,6 +1114,28 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.get_unsupported_fields(), vec!["ignored-dirs".to_string()]);
+        assert!(config.get_unknown_fields().is_empty());
+    }
+
+    #[test]
+    fn test_editor_field_supported() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "editor": {
+                "reason": {
+                    "profile": "development"
+                }
+            }
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert!(config.get_unsupported_fields().is_empty());
         assert!(config.get_unknown_fields().is_empty());
     }
 
