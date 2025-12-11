@@ -1,0 +1,18 @@
+Xform src/InlineQualified.res 5:25
+posCursor:[5:23] posNoWhite:[5:22] Found expr:[5:9->5:36]
+JSX <div:[5:10->5:13] onClick[5:14->5:21]=...[5:23->5:28]> _children:None
+Completable: Cpath Value[F, xxx]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[F, xxx]
+Path F.xxx
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+Hit: Inline variable
+
+TextDocumentEdit: InlineQualified.res
+{"start": {"line": 5, "character": 23}, "end": {"line": 5, "character": 28}}
+newText:
+                       <--here
+                       _ => Console.log(g)
+

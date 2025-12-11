@@ -1,0 +1,22 @@
+Xform src/InlineVariableInModuleRef.res 0:33
+XXX Not found!
+Completable: Cpath Value[InlineVariableInModule, M, x]
+Package opens Stdlib.place holder Pervasives.JsxModules place holder
+Resolved opens 1 Stdlib
+ContextPath Value[InlineVariableInModule, M, x]
+Path InlineVariableInModule.M.x
+Package opens Stdlib place holder Pervasives.JsxModules place holder
+Resolved opens 1 Stdlib
+Hit: Inline variable
+
+TextDocumentEdit: InlineVariableInModule.res
+{"start": {"line": 1, "character": 2}, "end": {"line": 1, "character": 17}}
+newText:
+  <--here
+  
+
+TextDocumentEdit: InlineVariableInModuleRef.res
+{"start": {"line": 0, "character": 8}, "end": {"line": 0, "character": 34}}
+newText:
+        <--here
+        10 + 20

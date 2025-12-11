@@ -1,0 +1,23 @@
+Xform src/InlineVariableRef.res 2:37
+Hit: Inline variable
+
+TextDocumentEdit: InlineVariable.res
+{"start": {"line": 4, "character": 17}, "end": {"line": 4, "character": 30}}
+newText:
+                 <--here
+                 1 + 2
+{"start": {"line": 2, "character": 4}, "end": {"line": 2, "character": 17}}
+newText:
+    <--here
+    1 + 2
+{"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 25}}
+newText:
+<--here
+
+
+TextDocumentEdit: InlineVariableRef.res
+{"start": {"line": 2, "character": 37}, "end": {"line": 2, "character": 50}}
+newText:
+                                     <--here
+                                     1 + 2
+

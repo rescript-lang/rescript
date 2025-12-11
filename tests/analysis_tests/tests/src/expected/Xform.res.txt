@@ -7,6 +7,17 @@ ContextPath Value[kind]
 Path kind
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
+Hit: Inline variable
+
+TextDocumentEdit: Xform.res
+{"start": {"line": 13, "character": 41}, "end": {"line": 13, "character": 45}}
+newText:
+                                         <--here
+                                         assert(false)
+{"start": {"line": 4, "character": 0}, "end": {"line": 4, "character": 24}}
+newText:
+<--here
+
 Hit: Replace with switch
 
 TextDocumentEdit: Xform.res
@@ -357,4 +368,3 @@ TextDocumentEdit: Xform.res
 newText:
   <--here
   Some(#"illegal identifier" | #third(_)) | None
-
