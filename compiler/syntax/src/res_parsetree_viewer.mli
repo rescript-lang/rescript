@@ -146,6 +146,9 @@ val is_single_pipe_expr : Parsetree.expression -> bool
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val rewrite_underscore_apply : Parsetree.expression -> Parsetree.expression
 
+val rewrite_underscore_apply_in_pipe :
+  Parsetree.expression -> Parsetree.expression
+
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val is_underscore_apply_sugar : Parsetree.expression -> bool
 

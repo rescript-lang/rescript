@@ -3985,6 +3985,11 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
     ->
     let lhs_has_comment_below = has_comment_below cmt_tbl lhs.pexp_loc in
     let lhs_doc = print_operand ~is_lhs:true ~is_multiline:false lhs op in
+    (* For pipe RHS, use pipe-specific rewrite to omit redundant first underscore *)
+    let rhs =
+      if op = "->" then ParsetreeViewer.rewrite_underscore_apply_in_pipe rhs
+      else rhs
+    in
     let rhs_doc = print_operand ~is_lhs:false ~is_multiline:false rhs op in
     Doc.group
       (Doc.concat
