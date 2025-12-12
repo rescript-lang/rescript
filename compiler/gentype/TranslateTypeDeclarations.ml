@@ -41,12 +41,20 @@ let create_case (label, attributes) ~poly =
  * If @genType.as is used, perform renaming conversion.
  * If @as is used (with records-as-objects active), escape and quote if
  * the identifier contains characters which are invalid as JS property names.
+ * For escaped identifiers like \"foo-bar", strip the surrounding \"..."
+ * since they are part of the ReScript syntax, not the actual field name.
+ * The resulting name will be quoted later in EmitType if needed.
 *)
 let rename_record_field ~attributes ~name =
   attributes |> Annotation.check_unsupported_gentype_as_renaming;
   match attributes |> Annotation.get_as_string with
-  | Some s -> s |> String.escaped
-  | None -> name
+  | Some s -> String.escaped s
+  | None ->
+    (* Strip surrounding \"..." from escaped identifiers like \"foo-bar" *)
+    let len = String.length name in
+    if len >= 3 && name.[0] = '\\' && name.[1] = '"' && name.[len - 1] = '"'
+    then String.sub name 2 (len - 3)
+    else name
 
 let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     ~type_attributes ~type_env ~type_name ~type_vars declaration_kind :
