@@ -180,7 +180,7 @@ let ident ?(builtin = true) ?(type_args = []) name =
   Ident {builtin; name; type_args}
 
 let sanitize_type_name name =
-  name
+  name |> Ext_ident.unwrap_uppercase_exotic
   |> String.map (function
        | '\'' -> '_'
        | c -> c)

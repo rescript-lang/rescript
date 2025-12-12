@@ -27,6 +27,7 @@
 - Fix `@val` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8098
 - Fix `@scope` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8100
 - Fix rewatch panic on duplicate module name. https://github.com/rescript-lang/rescript/pull/8102
+- Fix gentype generating invalid syntax for exotic / escaped record field names and type names. https://github.com/rescript-lang/rescript/pull/8087
 
 #### :memo: Documentation
 
