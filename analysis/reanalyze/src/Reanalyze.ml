@@ -164,6 +164,9 @@ let runAnalysis ~dce_config ~cmtRoot =
              ~into:refs_builder;
            FileDeps.merge_into_builder ~from:fd.DceFileProcessing.file_deps
              ~into:file_deps_builder);
+    (* Compute type-label dependencies after merge (no global TypeLabels table during traversal) *)
+    DeadType.process_type_label_dependencies ~config:dce_config ~decls
+      ~refs:refs_builder;
     (* Process cross-file exception refs - they write to refs_builder and file_deps_builder *)
     CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
       ~file_deps:file_deps_builder ~find_exception:DeadException.find_exception

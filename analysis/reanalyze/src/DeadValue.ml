@@ -242,12 +242,12 @@ let rec getSignature (moduleType : Types.module_type) =
   | Mty_functor (_, _mtParam, mt) -> getSignature mt
   | _ -> []
 
-let rec processSignatureItem ~config ~decls ~refs ~file ~doTypes ~doValues
-    ~moduleLoc ~(modulePath : ModulePath.t) ~path (si : Types.signature_item) =
+let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
+    ~(modulePath : ModulePath.t) ~path (si : Types.signature_item) =
   match si with
   | Sig_type (id, t, _) when doTypes ->
     if !Config.analyzeTypes then
-      DeadType.addDeclaration ~config ~decls ~refs ~file ~modulePath ~typeId:id
+      DeadType.addDeclaration ~config ~decls ~file ~modulePath ~typeId:id
         ~typeKind:t.type_kind
   | Sig_value (id, {Types.val_loc = loc; val_kind = kind; val_type})
     when doValues ->
@@ -283,7 +283,7 @@ let rec processSignatureItem ~config ~decls ~refs ~file ~doTypes ~doValues
     if collect then
       getSignature moduleType
       |> List.iter
-           (processSignatureItem ~config ~decls ~refs ~file ~doTypes ~doValues
+           (processSignatureItem ~config ~decls ~file ~doTypes ~doValues
               ~moduleLoc ~modulePath:modulePath'
               ~path:((id |> Ident.name |> Name.create) :: path))
   | _ -> ()
@@ -323,7 +323,7 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
                   | Mty_signature signature ->
                     signature
                     |> List.iter
-                         (processSignatureItem ~config ~decls ~refs ~file ~doTypes
+                         (processSignatureItem ~config ~decls ~file ~doTypes
                             ~doValues:false ~moduleLoc:mb_expr.mod_loc
                             ~modulePath:modulePath'
                             ~path:
@@ -361,7 +361,7 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
                   typeDeclarations
                   |> List.iter
                        (fun (typeDeclaration : Typedtree.type_declaration) ->
-                         DeadType.addDeclaration ~config ~decls ~refs ~file
+                         DeadType.addDeclaration ~config ~decls ~file
                            ~modulePath ~typeId:typeDeclaration.typ_id
                            ~typeKind:typeDeclaration.typ_type.type_kind);
                 None
@@ -373,7 +373,7 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
                   in
                   incl_type
                   |> List.iter
-                       (processSignatureItem ~config ~decls ~refs ~file ~doTypes
+                       (processSignatureItem ~config ~decls ~file ~doTypes
                           ~doValues:false (* TODO: also values? *)
                           ~moduleLoc:incl_mod.mod_loc ~modulePath
                           ~path:currentPath)
