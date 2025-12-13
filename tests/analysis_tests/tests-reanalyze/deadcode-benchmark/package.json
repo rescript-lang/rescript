@@ -1,0 +1,12 @@
+{
+  "name": "@tests/reanalyze-benchmark",
+  "private": true,
+  "scripts": {
+    "build": "rescript-legacy build",
+    "clean": "rescript-legacy clean"
+  },
+  "dependencies": {
+    "@rescript/react": "link:../../../dependencies/rescript-react",
+    "rescript": "workspace:^"
+  }
+}

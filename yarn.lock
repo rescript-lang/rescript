@@ -412,6 +412,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-benchmark%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-benchmark":
+  version: 0.0.0-use.local
+  resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-benchmark%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-benchmark"
+  languageName: node
+  linkType: soft
+
 "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode"
@@ -688,6 +694,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/incremental-typechecking@workspace:tests/analysis_tests/tests-incremental-typechecking"
   dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark":
+  version: 0.0.0-use.local
+  resolution: "@tests/reanalyze-benchmark@workspace:tests/analysis_tests/tests-reanalyze/deadcode-benchmark"
+  dependencies:
+    "@rescript/react": "link:../../../dependencies/rescript-react"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft

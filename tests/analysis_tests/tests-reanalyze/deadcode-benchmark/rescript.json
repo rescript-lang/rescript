@@ -1,0 +1,22 @@
+{
+  "reanalyze": {
+    "analysis": ["dce"],
+    "suppress": [],
+    "unsuppress": [],
+    "transitive": true
+  },
+  "name": "reanalyze-benchmark",
+  "jsx": { "version": 4 },
+  "dependencies": ["@rescript/react"],
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": false
+  },
+  "suffix": ".res.js"
+}

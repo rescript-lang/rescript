@@ -1,0 +1,5 @@
+# Generated files - don't commit
+src/
+lib/
+node_modules/
+

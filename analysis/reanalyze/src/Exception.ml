@@ -1,46 +1,54 @@
 open DeadCommon
 
+type values_builder = (Name.t, Exceptions.t) Hashtbl.t
+(** Per-file mutable builder for exception values during AST processing *)
+
+type values_table = (string, (Name.t, Exceptions.t) Hashtbl.t) Hashtbl.t
+(** Merged immutable table for cross-file lookups *)
+
+let create_values_builder () : values_builder = Hashtbl.create 15
+
+let values_builder_add (builder : values_builder) ~modulePath ~name exceptions =
+  let path = (name |> Name.create) :: modulePath.ModulePath.path in
+  Hashtbl.replace builder (path |> DcePath.toName) exceptions
+
+(** Merge all per-file builders into a single lookup table *)
+let merge_values_builders (builders : (string * values_builder) list) :
+    values_table =
+  let table = Hashtbl.create 15 in
+  builders
+  |> List.iter (fun (moduleName, builder) ->
+         Hashtbl.replace table moduleName builder);
+  table
+
 module Values = struct
-  let valueBindingsTable =
-    (Hashtbl.create 15 : (string, (Name.t, Exceptions.t) Hashtbl.t) Hashtbl.t)
-
-  let currentFileTable = ref (Hashtbl.create 1)
-
-  let add ~name exceptions =
-    let path = (name |> Name.create) :: (ModulePath.getCurrent ()).path in
-    Hashtbl.replace !currentFileTable (path |> DcePath.toName) exceptions
-
-  let getFromModule ~moduleName ~modulePath (path_ : DcePath.t) =
+  let getFromModule (table : values_table) ~moduleName ~modulePath
+      (path_ : DcePath.t) =
     let name = path_ @ modulePath |> DcePath.toName in
-    match
-      Hashtbl.find_opt valueBindingsTable (String.capitalize_ascii moduleName)
-    with
+    match Hashtbl.find_opt table (String.capitalize_ascii moduleName) with
     | Some tbl -> Hashtbl.find_opt tbl name
     | None -> (
-      match
-        Hashtbl.find_opt valueBindingsTable
-          (String.uncapitalize_ascii moduleName)
-      with
+      match Hashtbl.find_opt table (String.uncapitalize_ascii moduleName) with
       | Some tbl -> Hashtbl.find_opt tbl name
       | None -> None)
 
-  let rec findLocal ~moduleName ~modulePath path =
-    match path |> getFromModule ~moduleName ~modulePath with
+  let rec findLocal (table : values_table) ~moduleName ~modulePath path =
+    match path |> getFromModule table ~moduleName ~modulePath with
     | Some exceptions -> Some exceptions
     | None -> (
       match modulePath with
       | [] -> None
       | _ :: restModulePath ->
-        path |> findLocal ~moduleName ~modulePath:restModulePath)
+        path |> findLocal table ~moduleName ~modulePath:restModulePath)
 
-  let findPath ~moduleName ~modulePath path =
+  let findPath (table : values_table) ~moduleName ~modulePath path =
     let findExternal ~externalModuleName ~pathRev =
       pathRev |> List.rev
-      |> getFromModule
+      |> getFromModule table
            ~moduleName:(externalModuleName |> Name.toString)
            ~modulePath:[]
     in
-    match path |> findLocal ~moduleName ~modulePath with
+    match path |> findLocal table ~moduleName ~modulePath with
     | None -> (
       (* Search in another file *)
       match path |> List.rev with
@@ -54,10 +62,6 @@ module Values = struct
         | None, _ -> None)
       | [] -> None)
     | Some exceptions -> Some exceptions
-
-  let newCmt ~moduleName =
-    currentFileTable := Hashtbl.create 15;
-    Hashtbl.replace valueBindingsTable moduleName !currentFileTable
 end
 
 module Event = struct
@@ -99,7 +103,7 @@ module Event = struct
           nestedEvents |> List.iter (fun e -> Format.fprintf ppf "%a " print e))
         ()
 
-  let combine ~config ~moduleName events =
+  let combine ~(values_table : values_table) ~config ~moduleName events =
     if config.DceConfig.cli.debug then (
       Log_.item "@.";
       Log_.item "Events combine: #events %d@." (events |> List.length));
@@ -123,7 +127,9 @@ module Event = struct
       | ({kind = Call {callee; modulePath}; loc} as ev) :: rest ->
         if config.DceConfig.cli.debug then Log_.item "%a@." print ev;
         let exceptions =
-          match callee |> Values.findPath ~moduleName ~modulePath with
+          match
+            callee |> Values.findPath values_table ~moduleName ~modulePath
+          with
           | Some exceptions -> exceptions
           | _ -> (
             match ExnLib.find callee with
@@ -168,25 +174,33 @@ module Event = struct
     (exnSet, exnTable)
 end
 
+type checks_builder = check list ref
+(** Per-file mutable builder for checks during AST processing *)
+
+and check = {
+  events: Event.t list;
+  loc: Location.t;
+  locFull: Location.t;
+  moduleName: string;
+  exnName: string;
+  exceptions: Exceptions.t;
+}
+
+let create_checks_builder () : checks_builder = ref []
+
+let checks_builder_add (builder : checks_builder) ~events ~exceptions ~loc
+    ?(locFull = loc) ~moduleName exnName =
+  builder := {events; exceptions; loc; locFull; moduleName; exnName} :: !builder
+
+let checks_builder_to_list (builder : checks_builder) : check list =
+  !builder |> List.rev
+
 module Checks = struct
-  type check = {
-    events: Event.t list;
-    loc: Location.t;
-    locFull: Location.t;
-    moduleName: string;
-    exnName: string;
-    exceptions: Exceptions.t;
-  }
-
-  type t = check list
-
-  let checks = (ref [] : t ref)
-
-  let add ~events ~exceptions ~loc ?(locFull = loc) ~moduleName exnName =
-    checks := {events; exceptions; loc; locFull; moduleName; exnName} :: !checks
-
-  let doCheck ~config {events; exceptions; loc; locFull; moduleName; exnName} =
-    let throwSet, exnTable = events |> Event.combine ~config ~moduleName in
+  let doCheck ~(values_table : values_table) ~config
+      {events; exceptions; loc; locFull; moduleName; exnName} =
+    let throwSet, exnTable =
+      events |> Event.combine ~values_table ~config ~moduleName
+    in
     let missingAnnotations = Exceptions.diff throwSet exceptions in
     let redundantAnnotations = Exceptions.diff exceptions throwSet in
     (if not (Exceptions.isEmpty missingAnnotations) then
@@ -215,14 +229,27 @@ module Checks = struct
                   redundantAnnotations);
            })
 
-  let doChecks ~config = !checks |> List.rev |> List.iter (doCheck ~config)
+  let doChecks ~values_table ~config (checks : check list) =
+    checks |> List.iter (doCheck ~values_table ~config)
 end
 
-let traverseAst ~file () =
-  ModulePath.init ();
+let traverseAst ~file ~values_builder ~checks_builder () =
   let super = Tast_mapper.default in
   let currentId = ref "" in
   let currentEvents = ref [] in
+  (* For local lookups during AST processing, we look up in the current file's builder *)
+  let findLocalExceptions ~modulePath path =
+    let name = path @ modulePath |> DcePath.toName in
+    Hashtbl.find_opt values_builder name
+  in
+  let rec findLocalPath ~modulePath path =
+    match path |> findLocalExceptions ~modulePath with
+    | Some exceptions -> Some exceptions
+    | None -> (
+      match modulePath with
+      | [] -> None
+      | _ :: restModulePath -> path |> findLocalPath ~modulePath:restModulePath)
+  in
   let exceptionsOfPatterns patterns =
     patterns
     |> List.fold_left
@@ -267,14 +294,17 @@ let traverseAst ~file () =
          | _ -> false)
     <> None
   in
-  let expr (self : Tast_mapper.mapper) (expr : Typedtree.expression) =
+  let expr ~(modulePath : ModulePath.t) (self : Tast_mapper.mapper)
+      (expr : Typedtree.expression) =
     let loc = expr.exp_loc in
     let isDoesNoThrow = expr.exp_attributes |> doesNotThrow in
     let oldEvents = !currentEvents in
     if isDoesNoThrow then currentEvents := [];
     (match expr.exp_desc with
     | Texp_ident (callee_, _, _) ->
-      let callee = callee_ |> DcePath.fromPathT |> ModulePath.resolveAlias in
+      let callee =
+        callee_ |> DcePath.fromPathT |> ModulePath.resolveAlias modulePath
+      in
       let calleeName = callee |> DcePath.toName in
       if calleeName |> Name.toString |> isThrow then
         Log_.warning ~loc
@@ -289,7 +319,7 @@ let traverseAst ~file () =
         {
           Event.exceptions = Exceptions.empty;
           loc;
-          kind = Call {callee; modulePath = (ModulePath.getCurrent ()).path};
+          kind = Call {callee; modulePath = modulePath.path};
         }
         :: !currentEvents
     | Texp_apply
@@ -392,36 +422,14 @@ let traverseAst ~file () =
     currentEvents := [];
     let moduleName = file.FileContext.module_name in
     self.expr self expr |> ignore;
-    Checks.add ~events:!currentEvents
+    checks_builder_add checks_builder ~events:!currentEvents
       ~exceptions:(getExceptionsFromAnnotations attributes)
       ~loc:expr.exp_loc ~moduleName name;
     currentId := oldId;
     currentEvents := oldEvents
   in
-  let structure_item (self : Tast_mapper.mapper)
-      (structureItem : Typedtree.structure_item) =
-    let oldModulePath = ModulePath.getCurrent () in
-    (match structureItem.str_desc with
-    | Tstr_eval (expr, attributes) -> toplevelEval self expr attributes
-    | Tstr_module {mb_id; mb_loc} ->
-      ModulePath.setCurrent
-        {
-          oldModulePath with
-          loc = mb_loc;
-          path = (mb_id |> Ident.name |> Name.create) :: oldModulePath.path;
-        }
-    | _ -> ());
-    let result = super.structure_item self structureItem in
-    ModulePath.setCurrent oldModulePath;
-    (match structureItem.str_desc with
-    | Tstr_module {mb_id; mb_expr = {mod_desc = Tmod_ident (path_, _lid)}} ->
-      ModulePath.addAlias
-        ~name:(mb_id |> Ident.name |> Name.create)
-        ~path:(path_ |> DcePath.fromPathT)
-    | _ -> ());
-    result
-  in
-  let value_binding (self : Tast_mapper.mapper) (vb : Typedtree.value_binding) =
+  let value_binding ~(modulePath : ModulePath.t) (self : Tast_mapper.mapper)
+      (vb : Typedtree.value_binding) =
     let oldId = !currentId in
     let oldEvents = !currentEvents in
     let isFunction =
@@ -436,21 +444,18 @@ let traverseAst ~file () =
       let exceptionsFromAnnotations =
         getExceptionsFromAnnotations vb.vb_attributes
       in
-      exceptionsFromAnnotations |> Values.add ~name;
+      values_builder_add values_builder ~modulePath ~name
+        exceptionsFromAnnotations;
       let res = super.value_binding self vb in
       let moduleName = file.FileContext.module_name in
       let path = [name |> Name.create] in
       let exceptions =
-        match
-          path
-          |> Values.findPath ~moduleName
-               ~modulePath:(ModulePath.getCurrent ()).path
-        with
+        match path |> findLocalPath ~modulePath:modulePath.path with
         | Some exceptions -> exceptions
         | _ -> Exceptions.empty
       in
-      Checks.add ~events:!currentEvents ~exceptions ~loc:vb.vb_pat.pat_loc
-        ~locFull:vb.vb_loc ~moduleName name;
+      checks_builder_add checks_builder ~events:!currentEvents ~exceptions
+        ~loc:vb.vb_pat.pat_loc ~locFull:vb.vb_loc ~moduleName name;
       currentId := oldId;
       currentEvents := oldEvents;
       res
@@ -467,17 +472,106 @@ let traverseAst ~file () =
       processBinding (id |> Ident.name)
     | _ -> super.value_binding self vb
   in
-  let open Tast_mapper in
-  {super with expr; value_binding; structure_item}
+  let make_mapper (modulePath : ModulePath.t) : Tast_mapper.mapper =
+    let open Tast_mapper in
+    {
+      super with
+      expr = expr ~modulePath;
+      value_binding = value_binding ~modulePath;
+    }
+  in
+  let rec process_module_expr (modulePath : ModulePath.t)
+      (me : Typedtree.module_expr) =
+    match me.mod_desc with
+    | Tmod_structure structure -> process_structure modulePath structure
+    | Tmod_constraint (me1, _mty, _mtc, _coercion) ->
+      process_module_expr modulePath me1
+    | Tmod_apply (me1, me2, _) ->
+      process_module_expr modulePath me1;
+      process_module_expr modulePath me2
+    | _ ->
+      let mapper = make_mapper modulePath in
+      super.module_expr mapper me |> ignore
+  and process_structure (modulePath : ModulePath.t)
+      (structure : Typedtree.structure) =
+    let rec loop (mp : ModulePath.t) (items : Typedtree.structure_item list) =
+      match items with
+      | [] -> ()
+      | structureItem :: rest ->
+        let mapper = make_mapper mp in
+        let mp' =
+          match structureItem.str_desc with
+          | Tstr_eval (expr, attributes) ->
+            toplevelEval mapper expr attributes;
+            mp
+          | Tstr_module {mb_id; mb_loc; mb_expr} -> (
+            let name = mb_id |> Ident.name |> Name.create in
+            let mp_inside = ModulePath.enterModule mp ~name ~loc:mb_loc in
+            process_module_expr mp_inside mb_expr;
+            match mb_expr.mod_desc with
+            | Tmod_ident (path_, _lid) ->
+              ModulePath.addAlias mp ~name ~path:(path_ |> DcePath.fromPathT)
+            | _ -> mp)
+          | Tstr_recmodule mbs ->
+            (* Process each module in the recursive group in the current scope; aliases are collected in the current scope too. *)
+            List.fold_left
+              (fun acc {Typedtree.mb_id; mb_loc; mb_expr} ->
+                let name = mb_id |> Ident.name |> Name.create in
+                let mp_inside = ModulePath.enterModule acc ~name ~loc:mb_loc in
+                process_module_expr mp_inside mb_expr;
+                match mb_expr.mod_desc with
+                | Tmod_ident (path_, _lid) ->
+                  ModulePath.addAlias acc ~name
+                    ~path:(path_ |> DcePath.fromPathT)
+                | _ -> acc)
+              mp mbs
+          | _ ->
+            super.structure_item mapper structureItem |> ignore;
+            mp
+        in
+        loop mp' rest
+    in
+    loop modulePath structure.str_items
+  in
+  fun (structure : Typedtree.structure) ->
+    process_structure ModulePath.initial structure
 
-let processStructure ~file (structure : Typedtree.structure) =
-  let traverseAst = traverseAst ~file () in
-  structure |> traverseAst.structure traverseAst |> ignore
+type file_result = {
+  module_name: string;
+  values_builder: values_builder;
+  checks: check list;
+}
+(** Result of processing a single file *)
 
-let processCmt ~file (cmt_infos : Cmt_format.cmt_infos) =
+let processStructure ~file ~values_builder ~checks_builder
+    (structure : Typedtree.structure) =
+  let process = traverseAst ~file ~values_builder ~checks_builder () in
+  process structure
+
+let processCmt ~file (cmt_infos : Cmt_format.cmt_infos) : file_result option =
   match cmt_infos.cmt_annots with
-  | Interface _ -> ()
+  | Interface _ -> None
   | Implementation structure ->
-    Values.newCmt ~moduleName:file.FileContext.module_name;
-    structure |> processStructure ~file
-  | _ -> ()
+    let values_builder = create_values_builder () in
+    let checks_builder = create_checks_builder () in
+    structure |> processStructure ~file ~values_builder ~checks_builder;
+    Some
+      {
+        module_name = file.FileContext.module_name;
+        values_builder;
+        checks = checks_builder_to_list checks_builder;
+      }
+  | _ -> None
+
+(** Process all accumulated checks using merged values table *)
+let runChecks ~config (all_results : file_result list) =
+  (* Merge all values builders *)
+  let values_table =
+    all_results
+    |> List.map (fun r -> (r.module_name, r.values_builder))
+    |> merge_values_builders
+  in
+  (* Collect all checks *)
+  let all_checks = all_results |> List.concat_map (fun r -> r.checks) in
+  (* Run checks with merged table *)
+  Checks.doChecks ~values_table ~config all_checks

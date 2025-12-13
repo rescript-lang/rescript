@@ -32,6 +32,7 @@ let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
   |> List.iter (fun sig_item ->
          DeadValue.processSignatureItem ~config ~decls ~file:dead_common_file
            ~doValues ~doTypes ~moduleLoc:Location.none
+           ~modulePath:ModulePath.initial
            ~path:[module_name_tagged file]
            sig_item)
 
@@ -81,7 +82,5 @@ let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
       ~file:dead_common_file ~doTypes:true ~doExternals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
-  DeadType.TypeDependencies.forceDelayedItems ~config ~refs;
-  DeadType.TypeDependencies.clear ();
   (* Return builders - caller will merge and freeze *)
   {annotations; decls; refs; cross_file; file_deps}
