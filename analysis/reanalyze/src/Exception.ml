@@ -1,10 +1,10 @@
 open DeadCommon
 
-(** Per-file mutable builder for exception values during AST processing *)
 type values_builder = (Name.t, Exceptions.t) Hashtbl.t
+(** Per-file mutable builder for exception values during AST processing *)
 
-(** Merged immutable table for cross-file lookups *)
 type values_table = (string, (Name.t, Exceptions.t) Hashtbl.t) Hashtbl.t
+(** Merged immutable table for cross-file lookups *)
 
 let create_values_builder () : values_builder = Hashtbl.create 15
 
@@ -174,8 +174,8 @@ module Event = struct
     (exnSet, exnTable)
 end
 
-(** Per-file mutable builder for checks during AST processing *)
 type checks_builder = check list ref
+(** Per-file mutable builder for checks during AST processing *)
 
 and check = {
   events: Event.t list;
@@ -248,8 +248,7 @@ let traverseAst ~file ~values_builder ~checks_builder () =
     | None -> (
       match modulePath with
       | [] -> None
-      | _ :: restModulePath ->
-        path |> findLocalPath ~modulePath:restModulePath)
+      | _ :: restModulePath -> path |> findLocalPath ~modulePath:restModulePath)
   in
   let exceptionsOfPatterns patterns =
     patterns
@@ -537,12 +536,12 @@ let traverseAst ~file ~values_builder ~checks_builder () =
   fun (structure : Typedtree.structure) ->
     process_structure ModulePath.initial structure
 
-(** Result of processing a single file *)
 type file_result = {
   module_name: string;
   values_builder: values_builder;
   checks: check list;
 }
+(** Result of processing a single file *)
 
 let processStructure ~file ~values_builder ~checks_builder
     (structure : Typedtree.structure) =

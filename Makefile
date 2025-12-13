@@ -172,6 +172,16 @@ test: lib ninja
 test-analysis: lib ninja
 	make -C tests/analysis_tests clean test
 
+test-reanalyze: lib ninja
+	make -C tests/analysis_tests/tests-reanalyze/deadcode test
+
+test-reanalyze-parallel: lib ninja
+	make -C tests/analysis_tests/tests-reanalyze/deadcode test-parallel
+
+# Benchmark parallel analysis on larger codebase (COPIES=N for more files)
+benchmark-reanalyze: lib ninja
+	make -C tests/analysis_tests/tests-reanalyze/deadcode-benchmark benchmark COPIES=$(or $(COPIES),50)
+
 test-tools: lib ninja
 	make -C tests/tools_tests clean test
 
@@ -244,4 +254,4 @@ dev-container:
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build ninja rewatch compiler lib artifacts bench test test-analysis test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build ninja rewatch compiler lib artifacts bench test test-analysis test-reanalyze test-reanalyze-parallel benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container

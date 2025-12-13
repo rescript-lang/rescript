@@ -21,3 +21,9 @@ let excludePaths = ref ([] : string list)
 
 (* test flag: shuffle file order to verify order-independence *)
 let testShuffle = ref false
+
+(* parallel processing: number of domains to use (0 = sequential) *)
+let parallel = ref 0
+
+(* timing: report internal timing of analysis phases *)
+let timing = ref false

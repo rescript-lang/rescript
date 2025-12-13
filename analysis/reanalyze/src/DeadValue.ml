@@ -384,9 +384,10 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
                   modulePath.path @ [FileContext.module_name_tagged file]
                 in
                 let name = id |> Ident.name |> Name.create in
-                name
-                |> DeadException.add ~config ~decls ~file ~path ~loc
-                     ~strLoc:structureItem.str_loc ~moduleLoc:modulePath.loc;
+                ignore
+                  (DeadException.add ~config ~decls ~file ~path ~loc
+                     ~strLoc:structureItem.str_loc ~moduleLoc:modulePath.loc
+                     name);
                 None
               | _ -> None
             in
