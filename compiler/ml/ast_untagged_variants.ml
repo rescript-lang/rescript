@@ -19,6 +19,10 @@ module Instance = struct
     | Uint32Array
     | Uint8Array
     | Uint8ClampedArray
+    | Set
+    | Map
+    | WeakSet
+    | WeakMap
   let to_string = function
     | Array -> "Array"
     | ArrayBuffer -> "ArrayBuffer"
@@ -39,6 +43,10 @@ module Instance = struct
     | Uint32Array -> "Uint32Array"
     | Uint8Array -> "Uint8Array"
     | Uint8ClampedArray -> "Uint8ClampedArray"
+    | Set -> "Set"
+    | Map -> "Map"
+    | WeakSet -> "WeakSet"
+    | WeakMap -> "WeakMap"
 end
 
 type untagged_error =
@@ -256,6 +264,10 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
     | "Stdlib.Uint8ClampedArray.t" -> Some Uint8ClampedArray
     | "Js_file.t" -> Some File
     | "Js_blob.t" -> Some Blob
+    | "Stdlib.Set.t" -> Some Set
+    | "Stdlib.Map.t" -> Some Map
+    | "Stdlib.WeakSet.t" -> Some WeakSet
+    | "Stdlib.WeakMap.t" -> Some WeakMap
     | _ -> None)
   | _ -> None
 

@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
+
 #### :bug: Bug fix
 
 - Reanalyze: make optional args analysis liveness-aware, preventing false positives when functions are only called from dead code. https://github.com/rescript-lang/rescript/pull/8082
