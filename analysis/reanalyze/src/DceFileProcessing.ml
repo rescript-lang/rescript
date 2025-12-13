@@ -19,8 +19,8 @@ let module_name_tagged (file : file_context) =
 
 (* ===== Signature processing ===== *)
 
-let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
-    (signature : Types.signature) =
+let processSignature ~config ~decls ~refs ~(file : file_context) ~doValues
+    ~doTypes (signature : Types.signature) =
   let dead_common_file : FileContext.t =
     {
       source_path = file.source_path;
@@ -31,7 +31,7 @@ let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
   signature
   |> List.iter (fun sig_item ->
          DeadValue.processSignatureItem ~config ~decls ~file:dead_common_file
-           ~doValues ~doTypes ~moduleLoc:Location.none
+           ~refs ~doValues ~doTypes ~moduleLoc:Location.none
            ~modulePath:ModulePath.initial
            ~path:[module_name_tagged file]
            sig_item)
@@ -67,7 +67,7 @@ let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
   (match cmt_infos.cmt_annots with
   | Interface signature ->
     CollectAnnotations.signature ~state:annotations ~config signature;
-    processSignature ~config ~decls ~file ~doValues:true ~doTypes:true
+    processSignature ~config ~decls ~refs ~file ~doValues:true ~doTypes:true
       signature.sig_type
   | Implementation structure ->
     let cmtiExists =
@@ -75,14 +75,12 @@ let process_cmt_file ~config ~(file : file_context) ~cmtFilePath
     in
     CollectAnnotations.structure ~state:annotations ~config
       ~doGenType:(not cmtiExists) structure;
-    processSignature ~config ~decls ~file ~doValues:true ~doTypes:false
+    processSignature ~config ~decls ~refs ~file ~doValues:true ~doTypes:false
       structure.str_type;
     let doExternals = false in
     DeadValue.processStructure ~config ~decls ~refs ~file_deps ~cross_file
       ~file:dead_common_file ~doTypes:true ~doExternals
       ~cmt_value_dependencies:cmt_infos.cmt_value_dependencies structure
   | _ -> ());
-  DeadType.TypeDependencies.forceDelayedItems ~config ~refs;
-  DeadType.TypeDependencies.clear ();
   (* Return builders - caller will merge and freeze *)
   {annotations; decls; refs; cross_file; file_deps}

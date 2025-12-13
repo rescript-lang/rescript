@@ -16,32 +16,19 @@ let addTypeReference ~config ~refs ~posFrom ~posTo =
       (posTo |> Pos.toString);
   References.add_type_ref refs ~posTo ~posFrom
 
-module TypeDependencies = struct
-  let delayedItems = ref []
-  let add loc1 loc2 = delayedItems := (loc1, loc2) :: !delayedItems
-  let clear () = delayedItems := []
-
-  let processTypeDependency ~config ~refs
-      ( ({loc_start = posTo; loc_ghost = ghost1} : Location.t),
-        ({loc_start = posFrom; loc_ghost = ghost2} : Location.t) ) =
-    if (not ghost1) && (not ghost2) && posTo <> posFrom then
-      addTypeReference ~config ~refs ~posTo ~posFrom
-
-  let forceDelayedItems ~config ~refs =
-    List.iter (processTypeDependency ~config ~refs) !delayedItems
-end
-
-let extendTypeDependencies ~config (loc1 : Location.t) (loc2 : Location.t) =
-  if loc1.loc_start <> loc2.loc_start then (
+let extendTypeDependencies ~config ~refs (loc1 : Location.t) (loc2 : Location.t)
+    =
+  let {Location.loc_start = posTo; loc_ghost = ghost1} = loc1 in
+  let {Location.loc_start = posFrom; loc_ghost = ghost2} = loc2 in
+  if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     if config.DceConfig.cli.debug then
-      Log_.item "extendTypeDependencies %s --> %s@."
-        (loc1.loc_start |> Pos.toString)
-        (loc2.loc_start |> Pos.toString);
-    TypeDependencies.add loc1 loc2)
+      Log_.item "extendTypeDependencies %s --> %s@." (posTo |> Pos.toString)
+        (posFrom |> Pos.toString);
+    addTypeReference ~config ~refs ~posFrom ~posTo)
 
 (* Type dependencies between Foo.re and Foo.rei *)
-let addTypeDependenciesAcrossFiles ~config ~file ~pathToType ~loc ~typeLabelName
-    =
+let addTypeDependenciesAcrossFiles ~config ~refs ~file ~pathToType ~loc
+    ~typeLabelName =
   let isInterface = file.FileContext.is_interface in
   if not isInterface then (
     let path_1 = pathToType |> DcePath.moduleToInterface in
@@ -53,34 +40,35 @@ let addTypeDependenciesAcrossFiles ~config ~file ~pathToType ~loc ~typeLabelName
       match TypeLabels.find path2 with
       | None -> ()
       | Some loc2 ->
-        extendTypeDependencies ~config loc loc2;
+        extendTypeDependencies ~config ~refs loc loc2;
         if not Config.reportTypesDeadOnlyInInterface then
-          extendTypeDependencies ~config loc2 loc)
+          extendTypeDependencies ~config ~refs loc2 loc)
     | Some loc1 ->
-      extendTypeDependencies ~config loc loc1;
+      extendTypeDependencies ~config ~refs loc loc1;
       if not Config.reportTypesDeadOnlyInInterface then
-        extendTypeDependencies ~config loc1 loc)
+        extendTypeDependencies ~config ~refs loc1 loc)
   else
     let path_1 = pathToType |> DcePath.moduleToImplementation in
     let path1 = typeLabelName :: path_1 in
     match TypeLabels.find path1 with
     | None -> ()
     | Some loc1 ->
-      extendTypeDependencies ~config loc1 loc;
+      extendTypeDependencies ~config ~refs loc1 loc;
       if not Config.reportTypesDeadOnlyInInterface then
-        extendTypeDependencies ~config loc loc1
+        extendTypeDependencies ~config ~refs loc loc1
 
 (* Add type dependencies between implementation and interface in inner module *)
-let addTypeDependenciesInnerModule ~config ~pathToType ~loc ~typeLabelName =
+let addTypeDependenciesInnerModule ~config ~refs ~pathToType ~loc ~typeLabelName
+    =
   let path = typeLabelName :: pathToType in
   match TypeLabels.find path with
   | Some loc2 ->
-    extendTypeDependencies ~config loc loc2;
+    extendTypeDependencies ~config ~refs loc loc2;
     if not Config.reportTypesDeadOnlyInInterface then
-      extendTypeDependencies ~config loc2 loc
+      extendTypeDependencies ~config ~refs loc2 loc
   | None -> TypeLabels.add path loc
 
-let addDeclaration ~config ~decls ~file ~(modulePath : ModulePath.t)
+let addDeclaration ~config ~decls ~refs ~file ~(modulePath : ModulePath.t)
     ~(typeId : Ident.t) ~(typeKind : Types.type_kind) =
   let pathToType =
     (typeId |> Ident.name |> Name.create)
@@ -90,8 +78,9 @@ let addDeclaration ~config ~decls ~file ~(modulePath : ModulePath.t)
       ~(loc : Location.t) =
     addDeclaration_ ~config ~decls ~file ~declKind ~path:pathToType ~loc
       ~moduleLoc:modulePath.loc ~posAdjustment typeLabelName;
-    addTypeDependenciesAcrossFiles ~config ~file ~pathToType ~loc ~typeLabelName;
-    addTypeDependenciesInnerModule ~config ~pathToType ~loc ~typeLabelName;
+    addTypeDependenciesAcrossFiles ~config ~refs ~file ~pathToType ~loc
+      ~typeLabelName;
+    addTypeDependenciesInnerModule ~config ~refs ~pathToType ~loc ~typeLabelName;
     TypeLabels.add (typeLabelName :: pathToType) loc
   in
   match typeKind with

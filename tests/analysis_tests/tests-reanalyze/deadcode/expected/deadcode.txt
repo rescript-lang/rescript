@@ -67,14 +67,14 @@
   Scanning DeadRT.cmti Source:DeadRT.resi
   addVariantCaseDeclaration Root DeadRT.resi:2:2 path:DeadRT.moduleAccessPath
   extendTypeDependencies DeadRT.res:2:2 --> DeadRT.resi:2:2
+  addTypeReference DeadRT.resi:2:2 --> DeadRT.res:2:2
   extendTypeDependencies DeadRT.resi:2:2 --> DeadRT.res:2:2
+  addTypeReference DeadRT.res:2:2 --> DeadRT.resi:2:2
   addVariantCaseDeclaration Kaboom DeadRT.resi:3:2 path:DeadRT.moduleAccessPath
   extendTypeDependencies DeadRT.res:3:2 --> DeadRT.resi:3:2
+  addTypeReference DeadRT.resi:3:2 --> DeadRT.res:3:2
   extendTypeDependencies DeadRT.resi:3:2 --> DeadRT.res:3:2
   addTypeReference DeadRT.res:3:2 --> DeadRT.resi:3:2
-  addTypeReference DeadRT.resi:3:2 --> DeadRT.res:3:2
-  addTypeReference DeadRT.res:2:2 --> DeadRT.resi:2:2
-  addTypeReference DeadRT.resi:2:2 --> DeadRT.res:2:2
   Scanning DeadTest.cmt Source:DeadTest.res
   addValueDeclaration +fortytwo DeadTest.res:2:4 path:+DeadTest
   addValueDeclaration +fortyTwoButExported DeadTest.res:5:4 path:+DeadTest
@@ -117,7 +117,9 @@
   addVariantCaseDeclaration A DeadTest.res:35:11 path:+DeadTest.VariantUsedOnlyInImplementation.t
   addVariantCaseDeclaration A DeadTest.res:38:11 path:+DeadTest.VariantUsedOnlyInImplementation.t
   extendTypeDependencies DeadTest.res:38:11 --> DeadTest.res:35:11
+  addTypeReference DeadTest.res:35:11 --> DeadTest.res:38:11
   extendTypeDependencies DeadTest.res:35:11 --> DeadTest.res:38:11
+  addTypeReference DeadTest.res:38:11 --> DeadTest.res:35:11
   addValueDeclaration +a DeadTest.res:39:6 path:+DeadTest.VariantUsedOnlyInImplementation
   addTypeReference DeadTest.res:39:10 --> DeadTest.res:38:11
   addValueReference DeadTest.res:42:17 --> DeadTest.res:36:2
@@ -170,7 +172,9 @@
   addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.T.t
   addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.t
   extendTypeDependencies DeadTest.res:137:13 --> DeadTest.res:134:11
+  addTypeReference DeadTest.res:134:11 --> DeadTest.res:137:13
   extendTypeDependencies DeadTest.res:134:11 --> DeadTest.res:137:13
+  addTypeReference DeadTest.res:137:13 --> DeadTest.res:134:11
   addTypeReference DeadTest.res:142:7 --> DeadTest.res:134:11
   addValueDeclaration +x DeadTest.res:146:6 path:+DeadTest
   addValueDeclaration +y DeadTest.res:147:6 path:+DeadTest
@@ -203,10 +207,6 @@
   addValueReference DeadTest.res:36:2 --> DeadTest.res:39:6
   addValueReference DeadTest.res:60:2 --> DeadTest.res:64:6
   addValueReference DeadTest.res:61:2 --> DeadTest.res:63:6
-  addTypeReference DeadTest.res:137:13 --> DeadTest.res:134:11
-  addTypeReference DeadTest.res:134:11 --> DeadTest.res:137:13
-  addTypeReference DeadTest.res:38:11 --> DeadTest.res:35:11
-  addTypeReference DeadTest.res:35:11 --> DeadTest.res:38:11
   Scanning DeadTestBlacklist.cmt Source:DeadTestBlacklist.res
   addValueDeclaration +x DeadTestBlacklist.res:1:4 path:+DeadTestBlacklist
   Scanning DeadTestWithInterface.cmt Source:DeadTestWithInterface.res
@@ -234,35 +234,35 @@
   Scanning DeadTypeTest.cmti Source:DeadTypeTest.resi
   addVariantCaseDeclaration A DeadTypeTest.resi:2:2 path:DeadTypeTest.t
   extendTypeDependencies DeadTypeTest.res:2:2 --> DeadTypeTest.resi:2:2
+  addTypeReference DeadTypeTest.resi:2:2 --> DeadTypeTest.res:2:2
   extendTypeDependencies DeadTypeTest.resi:2:2 --> DeadTypeTest.res:2:2
+  addTypeReference DeadTypeTest.res:2:2 --> DeadTypeTest.resi:2:2
   addVariantCaseDeclaration B DeadTypeTest.resi:3:2 path:DeadTypeTest.t
   extendTypeDependencies DeadTypeTest.res:3:2 --> DeadTypeTest.resi:3:2
+  addTypeReference DeadTypeTest.resi:3:2 --> DeadTypeTest.res:3:2
   extendTypeDependencies DeadTypeTest.resi:3:2 --> DeadTypeTest.res:3:2
+  addTypeReference DeadTypeTest.res:3:2 --> DeadTypeTest.resi:3:2
   addValueDeclaration +a DeadTypeTest.resi:4:0 path:DeadTypeTest
   addVariantCaseDeclaration OnlyInImplementation DeadTypeTest.resi:7:2 path:DeadTypeTest.deadType
   extendTypeDependencies DeadTypeTest.res:7:2 --> DeadTypeTest.resi:7:2
+  addTypeReference DeadTypeTest.resi:7:2 --> DeadTypeTest.res:7:2
   extendTypeDependencies DeadTypeTest.resi:7:2 --> DeadTypeTest.res:7:2
+  addTypeReference DeadTypeTest.res:7:2 --> DeadTypeTest.resi:7:2
   addVariantCaseDeclaration OnlyInInterface DeadTypeTest.resi:8:2 path:DeadTypeTest.deadType
   extendTypeDependencies DeadTypeTest.res:8:2 --> DeadTypeTest.resi:8:2
+  addTypeReference DeadTypeTest.resi:8:2 --> DeadTypeTest.res:8:2
   extendTypeDependencies DeadTypeTest.resi:8:2 --> DeadTypeTest.res:8:2
+  addTypeReference DeadTypeTest.res:8:2 --> DeadTypeTest.resi:8:2
   addVariantCaseDeclaration InBoth DeadTypeTest.resi:9:2 path:DeadTypeTest.deadType
   extendTypeDependencies DeadTypeTest.res:9:2 --> DeadTypeTest.resi:9:2
+  addTypeReference DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
   extendTypeDependencies DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
+  addTypeReference DeadTypeTest.res:9:2 --> DeadTypeTest.resi:9:2
   addVariantCaseDeclaration InNeither DeadTypeTest.resi:10:2 path:DeadTypeTest.deadType
   extendTypeDependencies DeadTypeTest.res:10:2 --> DeadTypeTest.resi:10:2
+  addTypeReference DeadTypeTest.resi:10:2 --> DeadTypeTest.res:10:2
   extendTypeDependencies DeadTypeTest.resi:10:2 --> DeadTypeTest.res:10:2
   addTypeReference DeadTypeTest.res:10:2 --> DeadTypeTest.resi:10:2
-  addTypeReference DeadTypeTest.resi:10:2 --> DeadTypeTest.res:10:2
-  addTypeReference DeadTypeTest.res:9:2 --> DeadTypeTest.resi:9:2
-  addTypeReference DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
-  addTypeReference DeadTypeTest.res:8:2 --> DeadTypeTest.resi:8:2
-  addTypeReference DeadTypeTest.resi:8:2 --> DeadTypeTest.res:8:2
-  addTypeReference DeadTypeTest.res:7:2 --> DeadTypeTest.resi:7:2
-  addTypeReference DeadTypeTest.resi:7:2 --> DeadTypeTest.res:7:2
-  addTypeReference DeadTypeTest.res:3:2 --> DeadTypeTest.resi:3:2
-  addTypeReference DeadTypeTest.resi:3:2 --> DeadTypeTest.res:3:2
-  addTypeReference DeadTypeTest.res:2:2 --> DeadTypeTest.resi:2:2
-  addTypeReference DeadTypeTest.resi:2:2 --> DeadTypeTest.res:2:2
   Scanning DeadValueTest.cmt Source:DeadValueTest.res
   addValueDeclaration +valueAlive DeadValueTest.res:1:4 path:+DeadValueTest
   addValueDeclaration +valueDead DeadValueTest.res:2:4 path:+DeadValueTest
@@ -388,15 +388,15 @@
   Scanning FirstClassModulesInterface.cmti Source:FirstClassModulesInterface.resi
   addRecordLabelDeclaration x FirstClassModulesInterface.resi:3:2 path:FirstClassModulesInterface.record
   extendTypeDependencies FirstClassModulesInterface.res:2:2 --> FirstClassModulesInterface.resi:3:2
+  addTypeReference FirstClassModulesInterface.resi:3:2 --> FirstClassModulesInterface.res:2:2
   extendTypeDependencies FirstClassModulesInterface.resi:3:2 --> FirstClassModulesInterface.res:2:2
+  addTypeReference FirstClassModulesInterface.res:2:2 --> FirstClassModulesInterface.resi:3:2
   addRecordLabelDeclaration y FirstClassModulesInterface.resi:4:2 path:FirstClassModulesInterface.record
   extendTypeDependencies FirstClassModulesInterface.res:3:2 --> FirstClassModulesInterface.resi:4:2
-  extendTypeDependencies FirstClassModulesInterface.resi:4:2 --> FirstClassModulesInterface.res:3:2
-  addValueDeclaration +r FirstClassModulesInterface.resi:7:0 path:FirstClassModulesInterface
-  addTypeReference FirstClassModulesInterface.res:3:2 --> FirstClassModulesInterface.resi:4:2
   addTypeReference FirstClassModulesInterface.resi:4:2 --> FirstClassModulesInterface.res:3:2
-  addTypeReference FirstClassModulesInterface.res:2:2 --> FirstClassModulesInterface.resi:3:2
-  addTypeReference FirstClassModulesInterface.resi:3:2 --> FirstClassModulesInterface.res:2:2
+  extendTypeDependencies FirstClassModulesInterface.resi:4:2 --> FirstClassModulesInterface.res:3:2
+  addTypeReference FirstClassModulesInterface.res:3:2 --> FirstClassModulesInterface.resi:4:2
+  addValueDeclaration +r FirstClassModulesInterface.resi:7:0 path:FirstClassModulesInterface
   Scanning Hooks.cmt Source:Hooks.res
   addValueDeclaration +make Hooks.res:4:4 path:+Hooks
   addValueDeclaration +default Hooks.res:25:4 path:+Hooks
@@ -994,9 +994,9 @@
   Scanning InnerModuleTypes.cmti Source:InnerModuleTypes.resi
   addVariantCaseDeclaration Foo InnerModuleTypes.resi:2:11 path:InnerModuleTypes.I.t
   extendTypeDependencies InnerModuleTypes.res:2:11 --> InnerModuleTypes.resi:2:11
+  addTypeReference InnerModuleTypes.resi:2:11 --> InnerModuleTypes.res:2:11
   extendTypeDependencies InnerModuleTypes.resi:2:11 --> InnerModuleTypes.res:2:11
   addTypeReference InnerModuleTypes.res:2:11 --> InnerModuleTypes.resi:2:11
-  addTypeReference InnerModuleTypes.resi:2:11 --> InnerModuleTypes.res:2:11
   Scanning JSResource.cmt Source:JSResource.res
   Scanning JsxV4.cmt Source:JsxV4.res
   addValueDeclaration +make JsxV4.res:4:23 path:+JsxV4.C
