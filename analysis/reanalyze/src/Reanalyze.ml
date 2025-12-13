@@ -1,8 +1,14 @@
 let runConfig = RunConfig.runConfig
 
-(** Process a cmt file and return its file_data (if DCE enabled).
+(** Result of processing a single cmt file *)
+type cmt_file_result = {
+  dce_data: DceFileProcessing.file_data option;
+  exception_data: Exception.file_result option;
+}
+
+(** Process a cmt file and return its results.
     Conceptually: map over files, then merge results. *)
-let loadCmtFile ~config cmtFilePath : DceFileProcessing.file_data option =
+let loadCmtFile ~config cmtFilePath : cmt_file_result option =
   let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
@@ -43,7 +49,7 @@ let loadCmtFile ~config cmtFilePath : DceFileProcessing.file_data option =
         | true -> sourceFile |> Filename.basename
         | false -> sourceFile);
     (* Process file for DCE - return file_data *)
-    let file_data_opt =
+    let dce_data =
       if config.DceConfig.run.dce then
         Some
           (cmt_infos
@@ -51,22 +57,39 @@ let loadCmtFile ~config cmtFilePath : DceFileProcessing.file_data option =
                ~cmtFilePath)
       else None
     in
-    if config.DceConfig.run.exception_ then
-      cmt_infos |> Exception.processCmt ~file:file_context;
+    (* Process file for Exception analysis *)
+    let exception_data =
+      if config.DceConfig.run.exception_ then
+        cmt_infos |> Exception.processCmt ~file:file_context
+      else None
+    in
     if config.DceConfig.run.termination then
       cmt_infos |> Arnold.processCmt ~config ~file:file_context;
-    file_data_opt
+    Some {dce_data; exception_data}
   | _ -> None
 
-(** Process all cmt files and return list of file_data.
+(** Result of processing all cmt files *)
+type all_files_result = {
+  dce_data_list: DceFileProcessing.file_data list;
+  exception_results: Exception.file_result list;
+}
+
+(** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot : DceFileProcessing.file_data list =
+let processCmtFiles ~config ~cmtRoot : all_files_result =
   let ( +++ ) = Filename.concat in
   (* Local mutable state for collecting results - does not escape this function *)
-  let file_data_list = ref [] in
+  let dce_data_list = ref [] in
+  let exception_results = ref [] in
   let processFile cmtFilePath =
     match loadCmtFile ~config cmtFilePath with
-    | Some file_data -> file_data_list := file_data :: !file_data_list
+    | Some {dce_data; exception_data} ->
+      (match dce_data with
+      | Some data -> dce_data_list := data :: !dce_data_list
+      | None -> ());
+      (match exception_data with
+      | Some data -> exception_results := data :: !exception_results
+      | None -> ())
     | None -> ()
   in
   (match cmtRoot with
@@ -115,7 +138,7 @@ let processCmtFiles ~config ~cmtRoot : DceFileProcessing.file_data list =
            |> List.iter (fun cmtFile ->
                   let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
                   processFile cmtFilePath)));
-  !file_data_list
+  {dce_data_list = !dce_data_list; exception_results = !exception_results}
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -131,34 +154,36 @@ let shuffle_list lst =
 
 let runAnalysis ~dce_config ~cmtRoot =
   (* Map: process each file -> list of file_data *)
-  let file_data_list = processCmtFiles ~config:dce_config ~cmtRoot in
+  let {dce_data_list; exception_results} =
+    processCmtFiles ~config:dce_config ~cmtRoot
+  in
   (* Optionally shuffle for order-independence testing *)
-  let file_data_list =
+  let dce_data_list =
     if !Cli.testShuffle then (
       Random.self_init ();
       if dce_config.DceConfig.cli.debug then
         Log_.item "Shuffling file order for order-independence test@.";
-      shuffle_list file_data_list)
-    else file_data_list
+      shuffle_list dce_data_list)
+    else dce_data_list
   in
   if dce_config.DceConfig.run.dce then (
     (* Merge: combine all builders -> immutable data *)
     let annotations =
       FileAnnotations.merge_all
-        (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.annotations))
+        (dce_data_list |> List.map (fun fd -> fd.DceFileProcessing.annotations))
     in
     let decls =
       Declarations.merge_all
-        (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
+        (dce_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
     in
     let cross_file =
       CrossFileItems.merge_all
-        (file_data_list |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
+        (dce_data_list |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
     in
     (* Merge refs and file_deps into builders for cross-file items processing *)
     let refs_builder = References.create_builder () in
     let file_deps_builder = FileDeps.create_builder () in
-    file_data_list
+    dce_data_list
     |> List.iter (fun fd ->
            References.merge_into_builder ~from:fd.DceFileProcessing.refs
              ~into:refs_builder;
@@ -214,7 +239,7 @@ let runAnalysis ~dce_config ~cmtRoot =
     |> List.iter (fun (issue : Issue.t) ->
            Log_.warning ~loc:issue.loc issue.description));
   if dce_config.DceConfig.run.exception_ then
-    Exception.Checks.doChecks ~config:dce_config;
+    Exception.runChecks ~config:dce_config exception_results;
   if dce_config.DceConfig.run.termination && dce_config.DceConfig.cli.debug then
     Arnold.reportStats ~config:dce_config
 
