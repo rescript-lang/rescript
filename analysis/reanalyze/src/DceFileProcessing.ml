@@ -32,6 +32,7 @@ let processSignature ~config ~decls ~(file : file_context) ~doValues ~doTypes
   |> List.iter (fun sig_item ->
          DeadValue.processSignatureItem ~config ~decls ~file:dead_common_file
            ~doValues ~doTypes ~moduleLoc:Location.none
+           ~modulePath:ModulePath.initial
            ~path:[module_name_tagged file]
            sig_item)
 

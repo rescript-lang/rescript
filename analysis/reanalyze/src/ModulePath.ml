@@ -4,8 +4,6 @@ module NameMap = Map.Make (Name)
 type t = {aliases: DcePath.t NameMap.t; loc: Location.t; path: DcePath.t}
 
 let initial = ({aliases = NameMap.empty; loc = Location.none; path = []} : t)
-let current = (ref initial : t ref)
-let init () = current := initial
 
 let normalizePath ~aliases path =
   match path |> List.rev with
@@ -20,14 +18,15 @@ let normalizePath ~aliases path =
       newPath)
   | _ -> path
 
-let addAlias ~name ~path =
-  let aliases = !current.aliases in
+let addAlias (t : t) ~name ~path : t =
+  let aliases = t.aliases in
   let pathNormalized = path |> normalizePath ~aliases in
   if !Cli.debug then
     Log_.item "Module Alias: %s = %s@." (name |> Name.toString)
       (DcePath.toString pathNormalized);
-  current := {!current with aliases = NameMap.add name pathNormalized aliases}
+  {t with aliases = NameMap.add name pathNormalized aliases}
 
-let resolveAlias path = path |> normalizePath ~aliases:!current.aliases
-let getCurrent () = !current
-let setCurrent p = current := p
+let resolveAlias (t : t) path = path |> normalizePath ~aliases:t.aliases
+
+let enterModule (t : t) ~(name : Name.t) ~(loc : Location.t) : t =
+  {t with loc; path = name :: t.path}

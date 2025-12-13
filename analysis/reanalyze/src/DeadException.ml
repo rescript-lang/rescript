@@ -2,13 +2,13 @@ open DeadCommon
 
 let declarations = Hashtbl.create 1
 
-let add ~config ~decls ~file ~path ~loc ~(strLoc : Location.t) name =
+let add ~config ~decls ~file ~path ~loc ~(strLoc : Location.t)
+    ~(moduleLoc : Location.t) name =
   let exceptionPath = name :: path in
   Hashtbl.add declarations exceptionPath loc;
   name
   |> addDeclaration_ ~config ~decls ~file ~posEnd:strLoc.loc_end
-       ~posStart:strLoc.loc_start ~declKind:Exception
-       ~moduleLoc:(ModulePath.getCurrent ()).loc ~path ~loc
+       ~posStart:strLoc.loc_start ~declKind:Exception ~moduleLoc ~path ~loc
 
 let find_exception path = Hashtbl.find_opt declarations path
 

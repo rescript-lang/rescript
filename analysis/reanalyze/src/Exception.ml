@@ -6,8 +6,8 @@ module Values = struct
 
   let currentFileTable = ref (Hashtbl.create 1)
 
-  let add ~name exceptions =
-    let path = (name |> Name.create) :: (ModulePath.getCurrent ()).path in
+  let add ~modulePath ~name exceptions =
+    let path = (name |> Name.create) :: modulePath.ModulePath.path in
     Hashtbl.replace !currentFileTable (path |> DcePath.toName) exceptions
 
   let getFromModule ~moduleName ~modulePath (path_ : DcePath.t) =
@@ -219,7 +219,6 @@ module Checks = struct
 end
 
 let traverseAst ~file () =
-  ModulePath.init ();
   let super = Tast_mapper.default in
   let currentId = ref "" in
   let currentEvents = ref [] in
@@ -267,14 +266,17 @@ let traverseAst ~file () =
          | _ -> false)
     <> None
   in
-  let expr (self : Tast_mapper.mapper) (expr : Typedtree.expression) =
+  let expr ~(modulePath : ModulePath.t) (self : Tast_mapper.mapper)
+      (expr : Typedtree.expression) =
     let loc = expr.exp_loc in
     let isDoesNoThrow = expr.exp_attributes |> doesNotThrow in
     let oldEvents = !currentEvents in
     if isDoesNoThrow then currentEvents := [];
     (match expr.exp_desc with
     | Texp_ident (callee_, _, _) ->
-      let callee = callee_ |> DcePath.fromPathT |> ModulePath.resolveAlias in
+      let callee =
+        callee_ |> DcePath.fromPathT |> ModulePath.resolveAlias modulePath
+      in
       let calleeName = callee |> DcePath.toName in
       if calleeName |> Name.toString |> isThrow then
         Log_.warning ~loc
@@ -289,7 +291,7 @@ let traverseAst ~file () =
         {
           Event.exceptions = Exceptions.empty;
           loc;
-          kind = Call {callee; modulePath = (ModulePath.getCurrent ()).path};
+          kind = Call {callee; modulePath = modulePath.path};
         }
         :: !currentEvents
     | Texp_apply
@@ -398,30 +400,8 @@ let traverseAst ~file () =
     currentId := oldId;
     currentEvents := oldEvents
   in
-  let structure_item (self : Tast_mapper.mapper)
-      (structureItem : Typedtree.structure_item) =
-    let oldModulePath = ModulePath.getCurrent () in
-    (match structureItem.str_desc with
-    | Tstr_eval (expr, attributes) -> toplevelEval self expr attributes
-    | Tstr_module {mb_id; mb_loc} ->
-      ModulePath.setCurrent
-        {
-          oldModulePath with
-          loc = mb_loc;
-          path = (mb_id |> Ident.name |> Name.create) :: oldModulePath.path;
-        }
-    | _ -> ());
-    let result = super.structure_item self structureItem in
-    ModulePath.setCurrent oldModulePath;
-    (match structureItem.str_desc with
-    | Tstr_module {mb_id; mb_expr = {mod_desc = Tmod_ident (path_, _lid)}} ->
-      ModulePath.addAlias
-        ~name:(mb_id |> Ident.name |> Name.create)
-        ~path:(path_ |> DcePath.fromPathT)
-    | _ -> ());
-    result
-  in
-  let value_binding (self : Tast_mapper.mapper) (vb : Typedtree.value_binding) =
+  let value_binding ~(modulePath : ModulePath.t) (self : Tast_mapper.mapper)
+      (vb : Typedtree.value_binding) =
     let oldId = !currentId in
     let oldEvents = !currentEvents in
     let isFunction =
@@ -436,15 +416,13 @@ let traverseAst ~file () =
       let exceptionsFromAnnotations =
         getExceptionsFromAnnotations vb.vb_attributes
       in
-      exceptionsFromAnnotations |> Values.add ~name;
+      exceptionsFromAnnotations |> Values.add ~modulePath ~name;
       let res = super.value_binding self vb in
       let moduleName = file.FileContext.module_name in
       let path = [name |> Name.create] in
       let exceptions =
         match
-          path
-          |> Values.findPath ~moduleName
-               ~modulePath:(ModulePath.getCurrent ()).path
+          path |> Values.findPath ~moduleName ~modulePath:modulePath.path
         with
         | Some exceptions -> exceptions
         | _ -> Exceptions.empty
@@ -467,12 +445,73 @@ let traverseAst ~file () =
       processBinding (id |> Ident.name)
     | _ -> super.value_binding self vb
   in
-  let open Tast_mapper in
-  {super with expr; value_binding; structure_item}
+  let make_mapper (modulePath : ModulePath.t) : Tast_mapper.mapper =
+    let open Tast_mapper in
+    {
+      super with
+      expr = expr ~modulePath;
+      value_binding = value_binding ~modulePath;
+    }
+  in
+  let rec process_module_expr (modulePath : ModulePath.t)
+      (me : Typedtree.module_expr) =
+    match me.mod_desc with
+    | Tmod_structure structure -> process_structure modulePath structure
+    | Tmod_constraint (me1, _mty, _mtc, _coercion) ->
+      process_module_expr modulePath me1
+    | Tmod_apply (me1, me2, _) ->
+      process_module_expr modulePath me1;
+      process_module_expr modulePath me2
+    | _ ->
+      let mapper = make_mapper modulePath in
+      super.module_expr mapper me |> ignore
+  and process_structure (modulePath : ModulePath.t)
+      (structure : Typedtree.structure) =
+    let rec loop (mp : ModulePath.t) (items : Typedtree.structure_item list) =
+      match items with
+      | [] -> ()
+      | structureItem :: rest ->
+        let mapper = make_mapper mp in
+        let mp' =
+          match structureItem.str_desc with
+          | Tstr_eval (expr, attributes) ->
+            toplevelEval mapper expr attributes;
+            mp
+          | Tstr_module {mb_id; mb_loc; mb_expr} -> (
+            let name = mb_id |> Ident.name |> Name.create in
+            let mp_inside = ModulePath.enterModule mp ~name ~loc:mb_loc in
+            process_module_expr mp_inside mb_expr;
+            match mb_expr.mod_desc with
+            | Tmod_ident (path_, _lid) ->
+              ModulePath.addAlias mp ~name ~path:(path_ |> DcePath.fromPathT)
+            | _ -> mp)
+          | Tstr_recmodule mbs ->
+            (* Process each module in the recursive group in the current scope; aliases are collected in the current scope too. *)
+            List.fold_left
+              (fun acc {Typedtree.mb_id; mb_loc; mb_expr} ->
+                let name = mb_id |> Ident.name |> Name.create in
+                let mp_inside = ModulePath.enterModule acc ~name ~loc:mb_loc in
+                process_module_expr mp_inside mb_expr;
+                match mb_expr.mod_desc with
+                | Tmod_ident (path_, _lid) ->
+                  ModulePath.addAlias acc ~name
+                    ~path:(path_ |> DcePath.fromPathT)
+                | _ -> acc)
+              mp mbs
+          | _ ->
+            super.structure_item mapper structureItem |> ignore;
+            mp
+        in
+        loop mp' rest
+    in
+    loop modulePath structure.str_items
+  in
+  fun (structure : Typedtree.structure) ->
+    process_structure ModulePath.initial structure
 
 let processStructure ~file (structure : Typedtree.structure) =
-  let traverseAst = traverseAst ~file () in
-  structure |> traverseAst.structure traverseAst |> ignore
+  let process = traverseAst ~file () in
+  process structure
 
 let processCmt ~file (cmt_infos : Cmt_format.cmt_infos) =
   match cmt_infos.cmt_annots with
