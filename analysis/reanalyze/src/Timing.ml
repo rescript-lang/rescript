@@ -3,16 +3,32 @@
 let enabled = ref false
 
 type phase_times = {
-  mutable cmt_processing: float;
-  mutable analysis: float;
+  (* CMT processing sub-phases *)
+  mutable file_loading: float;
+  mutable result_collection: float;
+  (* Analysis sub-phases *)
+  mutable merging: float;
+  mutable solving: float;
+  (* Reporting *)
   mutable reporting: float;
 }
 
-let times = {cmt_processing = 0.0; analysis = 0.0; reporting = 0.0}
+let times = {
+  file_loading = 0.0;
+  result_collection = 0.0;
+  merging = 0.0;
+  solving = 0.0;
+  reporting = 0.0;
+}
+
+(* Mutex to protect timing updates from concurrent domains *)
+let timing_mutex = Mutex.create ()
 
 let reset () =
-  times.cmt_processing <- 0.0;
-  times.analysis <- 0.0;
+  times.file_loading <- 0.0;
+  times.result_collection <- 0.0;
+  times.merging <- 0.0;
+  times.solving <- 0.0;
   times.reporting <- 0.0
 
 let now () = Unix.gettimeofday ()
@@ -22,21 +38,33 @@ let time_phase phase_name f =
     let start = now () in
     let result = f () in
     let elapsed = now () -. start in
+    (* Use mutex to safely update shared timing state *)
+    Mutex.lock timing_mutex;
     (match phase_name with
-    | `CmtProcessing -> times.cmt_processing <- times.cmt_processing +. elapsed
-    | `Analysis -> times.analysis <- times.analysis +. elapsed
+    | `FileLoading -> times.file_loading <- times.file_loading +. elapsed
+    | `ResultCollection ->
+      times.result_collection <- times.result_collection +. elapsed
+    | `Merging -> times.merging <- times.merging +. elapsed
+    | `Solving -> times.solving <- times.solving +. elapsed
     | `Reporting -> times.reporting <- times.reporting +. elapsed);
+    Mutex.unlock timing_mutex;
     result)
   else f ()
 
 let report () =
   if !enabled then (
-    let total = times.cmt_processing +. times.analysis +. times.reporting in
+    let cmt_total = times.file_loading +. times.result_collection in
+    let analysis_total = times.merging +. times.solving in
+    let total = cmt_total +. analysis_total +. times.reporting in
     Printf.eprintf "\n=== Timing ===\n";
-    Printf.eprintf "  CMT processing: %.3fs (%.1f%%)\n" times.cmt_processing
-      (100.0 *. times.cmt_processing /. total);
-    Printf.eprintf "  Analysis:       %.3fs (%.1f%%)\n" times.analysis
-      (100.0 *. times.analysis /. total);
-    Printf.eprintf "  Reporting:      %.3fs (%.1f%%)\n" times.reporting
+    Printf.eprintf "  CMT processing:     %.3fs (%.1f%%)\n" cmt_total
+      (100.0 *. cmt_total /. total);
+    Printf.eprintf "    - File loading:     %.3fs\n" times.file_loading;
+    Printf.eprintf "    - Result collection: %.3fs\n" times.result_collection;
+    Printf.eprintf "  Analysis:           %.3fs (%.1f%%)\n" analysis_total
+      (100.0 *. analysis_total /. total);
+    Printf.eprintf "    - Merging:          %.3fs\n" times.merging;
+    Printf.eprintf "    - Solving:          %.3fs\n" times.solving;
+    Printf.eprintf "  Reporting:          %.3fs (%.1f%%)\n" times.reporting
       (100.0 *. times.reporting /. total);
-    Printf.eprintf "  Total:          %.3fs\n" total)
+    Printf.eprintf "  Total:              %.3fs\n" total)

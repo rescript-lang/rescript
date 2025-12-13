@@ -129,20 +129,21 @@ let collectCmtFilePaths ~cmtRoot : string list =
 (** Process files sequentially *)
 let processFilesSequential ~config (cmtFilePaths : string list) :
     all_files_result =
-  let dce_data_list = ref [] in
-  let exception_results = ref [] in
-  cmtFilePaths
-  |> List.iter (fun cmtFilePath ->
-         match loadCmtFile ~config cmtFilePath with
-         | Some {dce_data; exception_data} -> (
-           (match dce_data with
-           | Some data -> dce_data_list := data :: !dce_data_list
-           | None -> ());
-           match exception_data with
-           | Some data -> exception_results := data :: !exception_results
-           | None -> ())
-         | None -> ());
-  {dce_data_list = !dce_data_list; exception_results = !exception_results}
+  Timing.time_phase `FileLoading (fun () ->
+      let dce_data_list = ref [] in
+      let exception_results = ref [] in
+      cmtFilePaths
+      |> List.iter (fun cmtFilePath ->
+             match loadCmtFile ~config cmtFilePath with
+             | Some {dce_data; exception_data} -> (
+               (match dce_data with
+               | Some data -> dce_data_list := data :: !dce_data_list
+               | None -> ());
+               match exception_data with
+               | Some data -> exception_results := data :: !exception_results
+               | None -> ())
+             | None -> ());
+      {dce_data_list = !dce_data_list; exception_results = !exception_results})
 
 (** Process files in parallel using OCaml 5 Domains *)
 let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
@@ -178,42 +179,43 @@ let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
       allExceptionData := !localExn @ !allExceptionData;
       Mutex.unlock resultsMutex
     in
-    (* Spawn domains for parallel processing *)
-    let domains =
-      Array.init numDomains (fun i ->
-          let startIdx = i * chunkSize in
-          let endIdx = min ((i + 1) * chunkSize) numFiles in
-          if startIdx < numFiles then
-            Some (Domain.spawn (fun () -> processChunk startIdx endIdx))
-          else None)
-    in
-    (* Wait for all domains to complete *)
-    Array.iter
-      (function
-        | Some d -> Domain.join d
-        | None -> ())
-      domains;
+    (* Time the overall parallel processing *)
+    Timing.time_phase `FileLoading (fun () ->
+        (* Spawn domains for parallel processing *)
+        let domains =
+          Array.init numDomains (fun i ->
+              let startIdx = i * chunkSize in
+              let endIdx = min ((i + 1) * chunkSize) numFiles in
+              if startIdx < numFiles then
+                Some (Domain.spawn (fun () -> processChunk startIdx endIdx))
+              else None)
+        in
+        (* Wait for all domains to complete *)
+        Array.iter
+          (function
+            | Some d -> Domain.join d
+            | None -> ())
+          domains);
     {dce_data_list = !allDceData; exception_results = !allExceptionData}
 
 (** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files. *)
 let processCmtFiles ~config ~cmtRoot : all_files_result =
-  Timing.time_phase `CmtProcessing (fun () ->
-      let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
-      let numDomains =
-        match !Cli.parallel with
-        | n when n > 0 -> n
-        | n when n < 0 ->
-          (* Auto-detect: use recommended domain count (number of cores) *)
-          Domain.recommended_domain_count ()
-        | _ -> 0
-      in
-      if numDomains > 0 then (
-        if !Cli.timing then
-          Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
-            (List.length cmtFilePaths);
-        processFilesParallel ~config ~numDomains cmtFilePaths)
-      else processFilesSequential ~config cmtFilePaths)
+  let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
+  let numDomains =
+    match !Cli.parallel with
+    | n when n > 0 -> n
+    | n when n < 0 ->
+      (* Auto-detect: use recommended domain count (number of cores) *)
+      Domain.recommended_domain_count ()
+    | _ -> 0
+  in
+  if numDomains > 0 then (
+    if !Cli.timing then
+      Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
+        (List.length cmtFilePaths);
+    processFilesParallel ~config ~numDomains cmtFilePaths)
+  else processFilesSequential ~config cmtFilePaths
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -243,44 +245,47 @@ let runAnalysis ~dce_config ~cmtRoot =
   in
   (* Analysis phase: merge data and solve *)
   let analysis_result =
-    Timing.time_phase `Analysis (fun () ->
-        if dce_config.DceConfig.run.dce then (
-          (* Merge: combine all builders -> immutable data *)
-          let annotations =
-            FileAnnotations.merge_all
-              (dce_data_list
-              |> List.map (fun fd -> fd.DceFileProcessing.annotations))
-          in
-          let decls =
-            Declarations.merge_all
-              (dce_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
-          in
-          let cross_file =
-            CrossFileItems.merge_all
-              (dce_data_list
-              |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
-          in
-          (* Merge refs and file_deps into builders for cross-file items processing *)
-          let refs_builder = References.create_builder () in
-          let file_deps_builder = FileDeps.create_builder () in
-          dce_data_list
-          |> List.iter (fun fd ->
-                 References.merge_into_builder ~from:fd.DceFileProcessing.refs
-                   ~into:refs_builder;
-                 FileDeps.merge_into_builder
-                   ~from:fd.DceFileProcessing.file_deps ~into:file_deps_builder);
-          (* Compute type-label dependencies after merge (no global TypeLabels table during traversal) *)
-          DeadType.process_type_label_dependencies ~config:dce_config ~decls
-            ~refs:refs_builder;
-          let find_exception = DeadException.find_exception_from_decls decls in
-          (* Process cross-file exception refs - they write to refs_builder and file_deps_builder *)
-          CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
-            ~file_deps:file_deps_builder ~find_exception ~config:dce_config;
-          (* Now freeze refs and file_deps for solver *)
-          let refs = References.freeze_builder refs_builder in
-          let file_deps = FileDeps.freeze_builder file_deps_builder in
-          (* Run the solver - returns immutable AnalysisResult.t.
-             Optional-args checks are done in a separate pass after liveness is known. *)
+    if dce_config.DceConfig.run.dce then (
+      (* Merging phase: combine all builders -> immutable data *)
+      let annotations, decls, cross_file, refs, file_deps =
+        Timing.time_phase `Merging (fun () ->
+            let annotations =
+              FileAnnotations.merge_all
+                (dce_data_list
+                |> List.map (fun fd -> fd.DceFileProcessing.annotations))
+            in
+            let decls =
+              Declarations.merge_all
+                (dce_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
+            in
+            let cross_file =
+              CrossFileItems.merge_all
+                (dce_data_list
+                |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
+            in
+            (* Merge refs and file_deps into builders for cross-file items processing *)
+            let refs_builder = References.create_builder () in
+            let file_deps_builder = FileDeps.create_builder () in
+            dce_data_list
+            |> List.iter (fun fd ->
+                   References.merge_into_builder ~from:fd.DceFileProcessing.refs
+                     ~into:refs_builder;
+                   FileDeps.merge_into_builder
+                     ~from:fd.DceFileProcessing.file_deps ~into:file_deps_builder);
+            (* Compute type-label dependencies after merge *)
+            DeadType.process_type_label_dependencies ~config:dce_config ~decls
+              ~refs:refs_builder;
+            let find_exception = DeadException.find_exception_from_decls decls in
+            (* Process cross-file exception refs *)
+            CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
+              ~file_deps:file_deps_builder ~find_exception ~config:dce_config;
+            (* Freeze refs and file_deps for solver *)
+            let refs = References.freeze_builder refs_builder in
+            let file_deps = FileDeps.freeze_builder file_deps_builder in
+            (annotations, decls, cross_file, refs, file_deps))
+      in
+      (* Solving phase: run the solver and collect issues *)
+      Timing.time_phase `Solving (fun () ->
           let empty_optional_args_state = OptionalArgsState.create () in
           let analysis_result_core =
             DeadCommon.solveDead ~annotations ~decls ~refs ~file_deps
@@ -295,8 +300,7 @@ let runAnalysis ~dce_config ~cmtRoot =
             | None -> true
           in
           let optional_args_state =
-            CrossFileItems.compute_optional_args_state cross_file ~decls
-              ~is_live
+            CrossFileItems.compute_optional_args_state cross_file ~decls ~is_live
           in
           (* Collect optional args issues only for live declarations *)
           let optional_args_issues =
@@ -312,9 +316,8 @@ let runAnalysis ~dce_config ~cmtRoot =
               decls []
             |> List.rev
           in
-          Some
-            (AnalysisResult.add_issues analysis_result_core optional_args_issues))
-        else None)
+          Some (AnalysisResult.add_issues analysis_result_core optional_args_issues)))
+    else None
   in
   (* Reporting phase *)
   Timing.time_phase `Reporting (fun () ->

@@ -22,18 +22,18 @@ benchmark: generate build
 	@echo "=== Benchmark: $(COPIES) copies (~$$(find src -name '*.res' | wc -l) files) ==="
 	@echo ""
 	@echo "Sequential:"
-	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing 2>&1 | grep -E "Analysis reported|=== Timing ===|CMT processing|Analysis:|Reporting:|Total:"
+	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing 2>&1 | grep -E "Analysis reported|=== Timing|CMT processing|File loading|Result collection|Analysis:|Merging|Solving|Reporting:|Total:"
 	@echo ""
 	@echo "Parallel (auto-detect cores):"
-	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing -parallel -1 2>&1 | grep -E "Analysis reported|=== Timing ===|CMT processing|Analysis:|Reporting:|Total:"
+	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing -parallel -1 2>&1 | grep -E "Analysis reported|=== Timing|CMT processing|File loading|Result collection|Analysis:|Merging|Solving|Reporting:|Total:"
 
 # Just time analysis (assumes already built)
 time:
 	@echo "Sequential:"
-	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing 2>&1 | grep -E "Analysis reported|=== Timing ===|CMT processing|Analysis:|Reporting:|Total:"
+	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing 2>&1 | grep -E "Analysis reported|=== Timing|CMT processing|File loading|Result collection|Analysis:|Merging|Solving|Reporting:|Total:"
 	@echo ""
 	@echo "Parallel (auto-detect cores):"
-	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing -parallel -1 2>&1 | grep -E "Analysis reported|=== Timing ===|CMT processing|Analysis:|Reporting:|Total:"
+	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing -parallel -1 2>&1 | grep -E "Analysis reported|=== Timing|CMT processing|File loading|Result collection|Analysis:|Merging|Solving|Reporting:|Total:"
 
 .DEFAULT_GOAL := benchmark
 
