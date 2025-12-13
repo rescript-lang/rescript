@@ -167,10 +167,10 @@ let runAnalysis ~dce_config ~cmtRoot =
     (* Compute type-label dependencies after merge (no global TypeLabels table during traversal) *)
     DeadType.process_type_label_dependencies ~config:dce_config ~decls
       ~refs:refs_builder;
+    let find_exception = DeadException.find_exception_from_decls decls in
     (* Process cross-file exception refs - they write to refs_builder and file_deps_builder *)
     CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
-      ~file_deps:file_deps_builder ~find_exception:DeadException.find_exception
-      ~config:dce_config;
+      ~file_deps:file_deps_builder ~find_exception ~config:dce_config;
     (* Now freeze refs and file_deps for solver *)
     let refs = References.freeze_builder refs_builder in
     let file_deps = FileDeps.freeze_builder file_deps_builder in
