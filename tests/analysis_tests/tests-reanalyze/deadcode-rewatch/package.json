@@ -1,0 +1,12 @@
+{
+  "name": "@tests/reanalyze-deadcode-rewatch",
+  "private": true,
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean"
+  },
+  "dependencies": {
+    "@rescript/react": "link:../../../dependencies/rescript-react",
+    "rescript": "workspace:^"
+  }
+}

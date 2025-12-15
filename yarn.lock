@@ -418,6 +418,12 @@ __metadata:
   languageName: node
   linkType: soft
 
+"@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode-rewatch%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-rewatch":
+  version: 0.0.0-use.local
+  resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode-rewatch%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode-rewatch"
+  languageName: node
+  linkType: soft
+
 "@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis%40workspace%3Atests%2Fanalysis_tests%2Ftests":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis%40workspace%3Atests%2Fanalysis_tests%2Ftests"
@@ -688,6 +694,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/incremental-typechecking@workspace:tests/analysis_tests/tests-incremental-typechecking"
   dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/reanalyze-deadcode-rewatch@workspace:tests/analysis_tests/tests-reanalyze/deadcode-rewatch":
+  version: 0.0.0-use.local
+  resolution: "@tests/reanalyze-deadcode-rewatch@workspace:tests/analysis_tests/tests-reanalyze/deadcode-rewatch"
+  dependencies:
+    "@rescript/react": "link:../../../dependencies/rescript-react"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft

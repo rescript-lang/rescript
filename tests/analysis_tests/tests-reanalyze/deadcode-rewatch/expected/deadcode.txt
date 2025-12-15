@@ -1,0 +1,7 @@
+
+  Warning: can't find source dirs: /Users/zth/OSS/rescript-compiler-5/tests/analysis_tests/tests-reanalyze/deadcode-rewatch/lib/bs/.sourcedirs.json
+  Types for cross-references will not be found.
+  
+File References
+
+  Analysis reported 0 issues

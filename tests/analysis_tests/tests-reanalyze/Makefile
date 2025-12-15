@@ -2,10 +2,12 @@ SHELL = /bin/bash
 
 build:
 	make -C deadcode build
+	make -C deadcode-rewatch build
 	make -C termination build
 
 test:
 	make -C deadcode test
+	make -C deadcode-rewatch test
 	make -C termination test
 
 # Order-independence test for reanalyze - not run by default (takes longer)
