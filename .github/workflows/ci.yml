@@ -63,7 +63,7 @@ jobs:
 
           # Verify that the compiler still builds with the oldest OCaml version we support.
           - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.5.0.1+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
             node-target: linux-x64
             rust-target: x86_64-unknown-linux-musl
 

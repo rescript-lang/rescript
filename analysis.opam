@@ -7,7 +7,7 @@ license: "LGPL-3.0-or-later"
 homepage: "https://github.com/rescript-lang/rescript-compiler"
 bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
-  "ocaml" {>= "5.0.1"}
+  "ocaml" {>= "5.0.0"}
   "cppo" {= "1.8.0"}
   "dune" {>= "3.17"}
   "odoc" {with-doc}
