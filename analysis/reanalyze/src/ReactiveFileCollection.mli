@@ -7,22 +7,22 @@
 
     {[
       (* Create collection with processing function *)
-      let coll = Reactive_file_collection.create
+      let coll = ReactiveFileCollection.create
         ~process:(fun (data : Cmt_format.cmt_infos) -> 
           extract_types data
         )
 
       (* Initial load *)
-      List.iter (Reactive_file_collection.add coll) (glob "*.cmt")
+      List.iter (ReactiveFileCollection.add coll) (glob "*.cmt")
 
       (* On file watcher events *)
       match event with
-      | Created path -> Reactive_file_collection.add coll path
-      | Deleted path -> Reactive_file_collection.remove coll path
-      | Modified path -> Reactive_file_collection.update coll path
+      | Created path -> ReactiveFileCollection.add coll path
+      | Deleted path -> ReactiveFileCollection.remove coll path
+      | Modified path -> ReactiveFileCollection.update coll path
 
       (* Access the collection *)
-      Reactive_file_collection.iter (fun path value -> ...) coll
+      ReactiveFileCollection.iter (fun path value -> ...) coll
     ]}
 
     {2 Thread Safety}
@@ -30,34 +30,27 @@
     Not thread-safe. Use external synchronization if accessed from
     multiple threads/domains. *)
 
-(** The type of a reactive file collection with values of type ['v]. *)
 type 'v t
+(** The type of a reactive file collection with values of type ['v]. *)
 
 (** Events for batch updates. *)
 type event =
-  | Added of string     (** File was created *)
-  | Removed of string   (** File was deleted *)
+  | Added of string  (** File was created *)
+  | Removed of string  (** File was deleted *)
   | Modified of string  (** File was modified *)
 
 (** {1 Creation} *)
 
-val create : process:('a -> 'v) -> 'v t
+val create : process:(Cmt_format.cmt_infos -> 'v) -> 'v t
 (** [create ~process] creates an empty collection.
     
-    [process] is called to transform unmarshalled file contents into values.
-    
-    {b Type safety warning}: The caller must ensure files contain data of
-    type ['a]. This has the same safety properties as [Marshal.from_*].
-    
-    @alert unsafe Caller must ensure files contain data of the expected type *)
+    [process] is called to transform CMT file contents into values. *)
 
 (** {1 Delta Operations} *)
 
 val add : 'v t -> string -> unit
 (** [add t path] adds a file to the collection.
-    Loads the file, unmarshals, and processes immediately.
-    
-    @raise Marshal_cache.Cache_error if file cannot be read or unmarshalled *)
+    Loads the file and processes immediately. *)
 
 val remove : 'v t -> string -> unit
 (** [remove t path] removes a file from the collection.
@@ -65,15 +58,15 @@ val remove : 'v t -> string -> unit
 
 val update : 'v t -> string -> unit
 (** [update t path] reloads a modified file.
-    Equivalent to remove + add, but more efficient.
-    
-    @raise Marshal_cache.Cache_error if file cannot be read or unmarshalled *)
+    Equivalent to remove + add, but more efficient. *)
+
+val set : 'v t -> string -> 'v -> unit
+(** [set t path value] sets the value for [path] directly.
+    Used when you have already processed the file externally. *)
 
 val apply : 'v t -> event list -> unit
 (** [apply t events] applies multiple events.
-    More efficient than individual operations for batches.
-    
-    @raise Marshal_cache.Cache_error if any added/modified file fails *)
+    More efficient than individual operations for batches. *)
 
 (** {1 Access} *)
 
@@ -109,7 +102,3 @@ val paths : 'v t -> string list
 
 val values : 'v t -> 'v list
 (** [values t] returns all values in the collection. *)
-
-
-
-

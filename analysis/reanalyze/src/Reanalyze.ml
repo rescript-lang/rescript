@@ -207,18 +207,19 @@ let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
 
 (** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot : all_files_result =
+let processCmtFiles ~config ~cmtRoot ~reactive_collection : all_files_result =
   let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
   (* Reactive mode: use incremental processing that skips unchanged files *)
-  if !Cli.reactive then
+  match reactive_collection with
+  | Some collection ->
     let result =
-      ReactiveAnalysis.process_files_incremental ~config cmtFilePaths
+      ReactiveAnalysis.process_files ~collection ~config cmtFilePaths
     in
     {
       dce_data_list = result.dce_data_list;
       exception_results = result.exception_results;
     }
-  else
+  | None ->
     let numDomains =
       match !Cli.parallel with
       | n when n > 0 -> n
@@ -246,10 +247,10 @@ let shuffle_list lst =
   done;
   Array.to_list arr
 
-let runAnalysis ~dce_config ~cmtRoot =
+let runAnalysis ~dce_config ~cmtRoot ~reactive_collection =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
-    processCmtFiles ~config:dce_config ~cmtRoot
+    processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection
   in
   (* Optionally shuffle for order-independence testing *)
   let dce_data_list =
@@ -361,11 +362,16 @@ let runAnalysisAndReport ~cmtRoot =
   if !Cli.json then EmitJson.start ();
   let dce_config = DceConfig.current () in
   let numRuns = max 1 !Cli.runs in
+  (* Create reactive collection once, reuse across runs *)
+  let reactive_collection =
+    if !Cli.reactive then Some (ReactiveAnalysis.create ~config:dce_config)
+    else None
+  in
   for run = 1 to numRuns do
     Timing.reset ();
     if numRuns > 1 && !Cli.timing then
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
-    runAnalysis ~dce_config ~cmtRoot;
+    runAnalysis ~dce_config ~cmtRoot ~reactive_collection;
     if run = numRuns then (
       (* Only report on last run *)
       Log_.Stats.report ~config:dce_config;
