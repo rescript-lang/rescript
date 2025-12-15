@@ -1,0 +1,3 @@
+(library
+ (name reactive_file_collection)
+ (libraries marshal_cache))
