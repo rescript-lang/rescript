@@ -29,14 +29,10 @@ let clear () = Marshal_cache.clear ()
     The next read will re-load the file from disk. *)
 let invalidate path = Marshal_cache.invalidate path
 
+type stats = {entry_count: int; mapped_bytes: int}
 (** Cache statistics *)
-type stats = {
-  entry_count: int;
-  mapped_bytes: int;
-}
 
 (** Get cache statistics *)
 let stats () : stats =
   let s = Marshal_cache.stats () in
-  { entry_count = s.entry_count; mapped_bytes = s.mapped_bytes }
-
+  {entry_count = s.entry_count; mapped_bytes = s.mapped_bytes}

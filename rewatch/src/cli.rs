@@ -197,9 +197,9 @@ pub struct AfterBuildArg {
 
 #[derive(Args, Debug, Clone, Copy)]
 pub struct CreateSourceDirsArg {
-    /// Create a source_dirs.json file at the root of the monorepo, needed for Reanalyze.
-    #[arg(short, long, default_value_t = false, num_args = 0..=1)]
-    pub create_sourcedirs: bool,
+    /// Deprecated: source_dirs.json is now always created.
+    #[arg(short, long, num_args = 0..=1, default_missing_value = "true", hide = true)]
+    pub create_sourcedirs: Option<bool>,
 }
 
 #[derive(Args, Debug, Clone, Copy)]
@@ -488,11 +488,10 @@ impl Deref for AfterBuildArg {
     }
 }
 
-impl Deref for CreateSourceDirsArg {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.create_sourcedirs
+impl CreateSourceDirsArg {
+    /// Returns true if the flag was explicitly passed on the command line.
+    pub fn was_explicitly_set(&self) -> bool {
+        self.create_sourcedirs.is_some()
     }
 }
 
