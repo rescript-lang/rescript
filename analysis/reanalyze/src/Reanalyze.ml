@@ -173,11 +173,15 @@ let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
           | None -> ())
         | None -> ()
       done;
-      (* Merge local results into global results under mutex *)
-      Mutex.lock resultsMutex;
-      allDceData := !localDce @ !allDceData;
-      allExceptionData := !localExn @ !allExceptionData;
-      Mutex.unlock resultsMutex
+      (* Merge local results into global results under mutex.
+         Timed separately to measure time spent in (and waiting on) the
+         mutex-protected merge. Note: this is an aggregate across domains and
+         may exceed wall-clock time in parallel runs. *)
+      Timing.time_phase `ResultCollection (fun () ->
+          Mutex.lock resultsMutex;
+          allDceData := !localDce @ !allDceData;
+          allExceptionData := !localExn @ !allExceptionData;
+          Mutex.unlock resultsMutex)
     in
     (* Time the overall parallel processing *)
     Timing.time_phase `FileLoading (fun () ->

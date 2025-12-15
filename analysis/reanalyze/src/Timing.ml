@@ -54,18 +54,28 @@ let time_phase phase_name f =
 
 let report () =
   if !enabled then (
-    let cmt_total = times.file_loading +. times.result_collection in
+    (* NOTE about semantics:
+       - [file_loading] is treated as the WALL-CLOCK time for the overall
+         "CMT processing" phase (including per-file processing and any
+         synchronization).
+       - [result_collection] is an AGGREGATE metric across domains: time spent
+         in (and waiting on) the mutex-protected result merge/collection
+         section, summed across all worker domains. This may exceed wall-clock
+         time in parallel runs.
+       We do NOT add them together, otherwise we'd double-count. *)
+    let cmt_total = times.file_loading in
     let analysis_total = times.merging +. times.solving in
     let total = cmt_total +. analysis_total +. times.reporting in
     Printf.eprintf "\n=== Timing ===\n";
     Printf.eprintf "  CMT processing:     %.3fs (%.1f%%)\n" cmt_total
       (100.0 *. cmt_total /. total);
-    Printf.eprintf "    - File loading:     %.3fs\n" times.file_loading;
-    Printf.eprintf "    - Result collection: %.3fs\n" times.result_collection;
+    Printf.eprintf "    - Wall clock:        %.3fs\n" times.file_loading;
+    Printf.eprintf "    - Result collection: %.3fms (aggregate)\n"
+      (1000.0 *. times.result_collection);
     Printf.eprintf "  Analysis:           %.3fs (%.1f%%)\n" analysis_total
       (100.0 *. analysis_total /. total);
-    Printf.eprintf "    - Merging:          %.3fs\n" times.merging;
-    Printf.eprintf "    - Solving:          %.3fs\n" times.solving;
+    Printf.eprintf "    - Merging:          %.3fms\n" (1000.0 *. times.merging);
+    Printf.eprintf "    - Solving:          %.3fms\n" (1000.0 *. times.solving);
     Printf.eprintf "  Reporting:          %.3fs (%.1f%%)\n" times.reporting
       (100.0 *. times.reporting /. total);
     Printf.eprintf "  Total:              %.3fs\n" total)
