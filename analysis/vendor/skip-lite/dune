@@ -1,0 +1,8 @@
+; skip-lite vendor directory
+(dirs marshal_cache reactive_file_collection)
+
+; Test executable for CMT file support
+(executable
+ (name test_cmt)
+ (modules test_cmt)
+ (libraries marshal_cache ml))

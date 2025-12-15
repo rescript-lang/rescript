@@ -9,7 +9,10 @@ type cmt_file_result = {
 (** Process a cmt file and return its results.
     Conceptually: map over files, then merge results. *)
 let loadCmtFile ~config cmtFilePath : cmt_file_result option =
-  let cmt_infos = Cmt_format.read_cmt cmtFilePath in
+  let cmt_infos =
+    if !Cli.cmtCache then CmtCache.read_cmt cmtFilePath
+    else Cmt_format.read_cmt cmtFilePath
+  in
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
@@ -206,20 +209,26 @@ let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
     Conceptually: map process_cmt_file over all files. *)
 let processCmtFiles ~config ~cmtRoot : all_files_result =
   let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
-  let numDomains =
-    match !Cli.parallel with
-    | n when n > 0 -> n
-    | n when n < 0 ->
-      (* Auto-detect: use recommended domain count (number of cores) *)
-      Domain.recommended_domain_count ()
-    | _ -> 0
-  in
-  if numDomains > 0 then (
-    if !Cli.timing then
-      Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
-        (List.length cmtFilePaths);
-    processFilesParallel ~config ~numDomains cmtFilePaths)
-  else processFilesSequential ~config cmtFilePaths
+  (* Reactive mode: use incremental processing that skips unchanged files *)
+  if !Cli.reactive then
+    let result = ReactiveAnalysis.process_files_incremental ~config cmtFilePaths in
+    {dce_data_list = result.dce_data_list; exception_results = result.exception_results}
+  else begin
+    let numDomains =
+      match !Cli.parallel with
+      | n when n > 0 -> n
+      | n when n < 0 ->
+        (* Auto-detect: use recommended domain count (number of cores) *)
+        Domain.recommended_domain_count ()
+      | _ -> 0
+    in
+    if numDomains > 0 then (
+      if !Cli.timing then
+        Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
+          (List.length cmtFilePaths);
+      processFilesParallel ~config ~numDomains cmtFilePaths)
+    else processFilesSequential ~config cmtFilePaths
+  end
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -345,14 +354,22 @@ let runAnalysis ~dce_config ~cmtRoot =
 let runAnalysisAndReport ~cmtRoot =
   Log_.Color.setup ();
   Timing.enabled := !Cli.timing;
-  Timing.reset ();
   if !Cli.json then EmitJson.start ();
   let dce_config = DceConfig.current () in
-  runAnalysis ~dce_config ~cmtRoot;
-  Log_.Stats.report ~config:dce_config;
-  Log_.Stats.clear ();
-  if !Cli.json then EmitJson.finish ();
-  Timing.report ()
+  let numRuns = max 1 !Cli.runs in
+  for run = 1 to numRuns do
+    Timing.reset ();
+    if numRuns > 1 && !Cli.timing then
+      Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
+    runAnalysis ~dce_config ~cmtRoot;
+    if run = numRuns then begin
+      (* Only report on last run *)
+      Log_.Stats.report ~config:dce_config;
+      Log_.Stats.clear ()
+    end;
+    Timing.report ()
+  done;
+  if !Cli.json then EmitJson.finish ()
 
 let cli () =
   let analysisKindSet = ref false in
@@ -463,6 +480,16 @@ let cli () =
         "n Process files in parallel using n domains (0 = sequential, default; \
          -1 = auto-detect cores)" );
       ("-timing", Set Cli.timing, "Report internal timing of analysis phases");
+      ( "-cmt-cache",
+        Set Cli.cmtCache,
+        "Use mmap cache for CMT files (faster for repeated analysis)" );
+      ( "-reactive",
+        Set Cli.reactive,
+        "Use reactive analysis (caches processed file_data, skips unchanged \
+         files)" );
+      ( "-runs",
+        Int (fun n -> Cli.runs := n),
+        "n Run analysis n times (for benchmarking cache effectiveness)" );
       ("-version", Unit versionAndExit, "Show version information and exit");
       ("--version", Unit versionAndExit, "Show version information and exit");
     ]
