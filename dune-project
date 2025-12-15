@@ -16,14 +16,17 @@
 
 (package
  (name rescript)
- (synopsis "ReScript compiler"))
+ (synopsis "ReScript compiler")
+ (depends
+  (ocaml
+   (>= 5.0.1))))
 
 (package
  (name analysis)
  (synopsis "ReScript Analysis")
  (depends
   (ocaml
-   (>= 4.14))
+   (>= 5.0.1))
   (cppo
    (= 1.8.0))
   dune))
@@ -33,7 +36,7 @@
  (synopsis "ReScript Tools")
  (depends
   (ocaml
-   (>= 4.14))
+   (>= 5.0.1))
   (cmarkit
    (>= 0.3.0))
   (cppo
