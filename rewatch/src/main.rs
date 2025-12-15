@@ -46,12 +46,18 @@ fn main() -> Result<()> {
                 );
             }
 
+            if build_args.create_sourcedirs.was_explicitly_set() {
+                log::warn!(
+                    "`--create-sourcedirs` is deprecated: source_dirs.json is now always created. Please remove this flag from your command."
+                );
+            }
+
             match build::build(
                 &build_args.filter,
                 Path::new(&build_args.folder as &str),
                 show_progress,
                 build_args.no_timing,
-                *build_args.create_sourcedirs,
+                true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*build_args.warn_error).clone(),
             ) {
@@ -76,12 +82,18 @@ fn main() -> Result<()> {
                 );
             }
 
+            if watch_args.create_sourcedirs.was_explicitly_set() {
+                log::warn!(
+                    "`--create-sourcedirs` is deprecated: source_dirs.json is now always created. Please remove this flag from your command."
+                );
+            }
+
             match watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),
-                *watch_args.create_sourcedirs,
+                true, // create_sourcedirs is now always enabled
                 plain_output,
                 (*watch_args.warn_error).clone(),
             ) {

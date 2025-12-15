@@ -211,9 +211,14 @@ let processCmtFiles ~config ~cmtRoot : all_files_result =
   let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
   (* Reactive mode: use incremental processing that skips unchanged files *)
   if !Cli.reactive then
-    let result = ReactiveAnalysis.process_files_incremental ~config cmtFilePaths in
-    {dce_data_list = result.dce_data_list; exception_results = result.exception_results}
-  else begin
+    let result =
+      ReactiveAnalysis.process_files_incremental ~config cmtFilePaths
+    in
+    {
+      dce_data_list = result.dce_data_list;
+      exception_results = result.exception_results;
+    }
+  else
     let numDomains =
       match !Cli.parallel with
       | n when n > 0 -> n
@@ -228,7 +233,6 @@ let processCmtFiles ~config ~cmtRoot : all_files_result =
           (List.length cmtFilePaths);
       processFilesParallel ~config ~numDomains cmtFilePaths)
     else processFilesSequential ~config cmtFilePaths
-  end
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -362,11 +366,10 @@ let runAnalysisAndReport ~cmtRoot =
     if numRuns > 1 && !Cli.timing then
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
     runAnalysis ~dce_config ~cmtRoot;
-    if run = numRuns then begin
+    if run = numRuns then (
       (* Only report on last run *)
       Log_.Stats.report ~config:dce_config;
-      Log_.Stats.clear ()
-    end;
+      Log_.Stats.clear ());
     Timing.report ()
   done;
   if !Cli.json then EmitJson.finish ()

@@ -17,12 +17,8 @@ val clear : unit -> unit
 val invalidate : string -> unit
 (** Invalidate a specific path in the cache. *)
 
-type stats = {
-  entry_count: int;
-  mapped_bytes: int;
-}
+type stats = {entry_count: int; mapped_bytes: int}
 (** Cache statistics *)
 
 val stats : unit -> stats
 (** Get cache statistics *)
-

@@ -3,5 +3,6 @@
  (foreign_stubs
   (language cxx)
   (names marshal_cache_stubs)
-  (flags (:standard -std=c++17)))
+  (flags
+   (:standard -std=c++17)))
  (c_library_flags (-lstdc++)))
