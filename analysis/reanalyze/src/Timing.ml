@@ -13,13 +13,14 @@ type phase_times = {
   mutable reporting: float;
 }
 
-let times = {
-  file_loading = 0.0;
-  result_collection = 0.0;
-  merging = 0.0;
-  solving = 0.0;
-  reporting = 0.0;
-}
+let times =
+  {
+    file_loading = 0.0;
+    result_collection = 0.0;
+    merging = 0.0;
+    solving = 0.0;
+    reporting = 0.0;
+  }
 
 (* Mutex to protect timing updates from concurrent domains *)
 let timing_mutex = Mutex.create ()

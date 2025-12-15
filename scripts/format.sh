@@ -1,9 +1,11 @@
 #!/bin/bash
 
+set -e
+
 shopt -s extglob
 
 echo Formatting OCaml code...
-dune build @fmt --auto-promote
+opam exec -- dune build @fmt --auto-promote
 
 echo Formatting ReScript code...
 files=$(find packages tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/syntax_tests*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")

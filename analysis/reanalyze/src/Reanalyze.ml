@@ -245,7 +245,7 @@ let runAnalysis ~dce_config ~cmtRoot =
   in
   (* Analysis phase: merge data and solve *)
   let analysis_result =
-    if dce_config.DceConfig.run.dce then (
+    if dce_config.DceConfig.run.dce then
       (* Merging phase: combine all builders -> immutable data *)
       let annotations, decls, cross_file, refs, file_deps =
         Timing.time_phase `Merging (fun () ->
@@ -256,7 +256,8 @@ let runAnalysis ~dce_config ~cmtRoot =
             in
             let decls =
               Declarations.merge_all
-                (dce_data_list |> List.map (fun fd -> fd.DceFileProcessing.decls))
+                (dce_data_list
+                |> List.map (fun fd -> fd.DceFileProcessing.decls))
             in
             let cross_file =
               CrossFileItems.merge_all
@@ -271,11 +272,14 @@ let runAnalysis ~dce_config ~cmtRoot =
                    References.merge_into_builder ~from:fd.DceFileProcessing.refs
                      ~into:refs_builder;
                    FileDeps.merge_into_builder
-                     ~from:fd.DceFileProcessing.file_deps ~into:file_deps_builder);
+                     ~from:fd.DceFileProcessing.file_deps
+                     ~into:file_deps_builder);
             (* Compute type-label dependencies after merge *)
             DeadType.process_type_label_dependencies ~config:dce_config ~decls
               ~refs:refs_builder;
-            let find_exception = DeadException.find_exception_from_decls decls in
+            let find_exception =
+              DeadException.find_exception_from_decls decls
+            in
             (* Process cross-file exception refs *)
             CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
               ~file_deps:file_deps_builder ~find_exception ~config:dce_config;
@@ -300,7 +304,8 @@ let runAnalysis ~dce_config ~cmtRoot =
             | None -> true
           in
           let optional_args_state =
-            CrossFileItems.compute_optional_args_state cross_file ~decls ~is_live
+            CrossFileItems.compute_optional_args_state cross_file ~decls
+              ~is_live
           in
           (* Collect optional args issues only for live declarations *)
           let optional_args_issues =
@@ -316,7 +321,8 @@ let runAnalysis ~dce_config ~cmtRoot =
               decls []
             |> List.rev
           in
-          Some (AnalysisResult.add_issues analysis_result_core optional_args_issues)))
+          Some
+            (AnalysisResult.add_issues analysis_result_core optional_args_issues))
     else None
   in
   (* Reporting phase *)
