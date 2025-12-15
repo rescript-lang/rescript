@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Reanalyze: add parallel processing for CMT file analysis with new `-parallel` and `-timing` flags, plus benchmark infrastructure for performance testing. https://github.com/rescript-lang/rescript/pull/8089
+
 #### :bug: Bug fix
 
 - Reanalyze: make optional args analysis liveness-aware, preventing false positives when functions are only called from dead code. https://github.com/rescript-lang/rescript/pull/8082
