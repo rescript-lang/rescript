@@ -1,1 +1,1 @@
-(dirs ext ml res_syntax json flow_parser skip-lite)
+(dirs ext ml res_syntax json flow_parser)
