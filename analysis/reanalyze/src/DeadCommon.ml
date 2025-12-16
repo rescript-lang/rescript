@@ -337,6 +337,7 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
         config:DceConfig.t ->
         Decl.t ->
         Issue.t list) : AnalysisResult.t =
+  let t0 = Unix.gettimeofday () in
   let debug = config.DceConfig.cli.debug in
   let transitive = config.DceConfig.run.transitive in
   let is_live pos = Reactive.get live pos <> None in
@@ -354,15 +355,25 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
   let deadDeclarations = ref [] in
   let inline_issues = ref [] in
 
+  let t1 = Unix.gettimeofday () in
   (* For consistent debug output, collect and sort declarations *)
   let all_decls =
     DeclarationStore.fold (fun _pos decl acc -> decl :: acc) decl_store []
-    |> List.fast_sort Decl.compareForReporting
   in
+  let t2 = Unix.gettimeofday () in
+  let all_decls = all_decls |> List.fast_sort Decl.compareForReporting in
+  let t3 = Unix.gettimeofday () in
+  let num_decls = List.length all_decls in
+
+  (* Count operations in the loop *)
+  let num_live_checks = ref 0 in
+  let num_dead = ref 0 in
+  let num_live = ref 0 in
 
   all_decls
   |> List.iter (fun (decl : Decl.t) ->
          let pos = decl.pos in
+         incr num_live_checks;
          let is_live = is_live pos in
          let is_dead = not is_live in
 
@@ -389,6 +400,7 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
          decl.resolvedDead <- Some is_dead;
 
          if is_dead then (
+           incr num_dead;
            decl.path
            |> DeadModules.markDead ~config
                 ~isType:(decl.declKind |> Decl.Kind.isType)
@@ -396,6 +408,7 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
            if not (doReportDead ~ann_store decl.pos) then decl.report <- false;
            deadDeclarations := decl :: !deadDeclarations)
          else (
+           incr num_live;
            (* Collect optional args issues for live declarations *)
            checkOptionalArgFn ~optional_args_state ~ann_store ~config decl
            |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
@@ -415,10 +428,12 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
              |> Option.iter (fun mod_issue ->
                     inline_issues := mod_issue :: !inline_issues);
              inline_issues := issue :: !inline_issues)));
+  let t4 = Unix.gettimeofday () in
 
   let sortedDeadDeclarations =
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
+  let t5 = Unix.gettimeofday () in
 
   (* Collect issues from dead declarations *)
   let reporting_ctx = ReportingContext.create () in
@@ -427,7 +442,32 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
     |> List.concat_map (fun decl ->
            reportDeclaration ~config ~hasRefBelow reporting_ctx decl)
   in
+  let t6 = Unix.gettimeofday () in
   let all_issues = List.rev !inline_issues @ dead_issues in
+  let t7 = Unix.gettimeofday () in
+
+  Printf.eprintf
+    "  solveDeadReactive timing breakdown:\n\
+    \    setup:        %6.2fms\n\
+    \    collect:      %6.2fms (DeclarationStore.fold)\n\
+    \    sort:         %6.2fms (List.fast_sort %d decls)\n\
+    \    iterate:      %6.2fms (check liveness for %d decls: %d dead, %d live)\n\
+    \    sort_dead:    %6.2fms (sort %d dead decls)\n\
+    \    report:       %6.2fms (generate issues)\n\
+    \    combine:      %6.2fms\n\
+    \    TOTAL:        %6.2fms\n"
+    ((t1 -. t0) *. 1000.0)
+    ((t2 -. t1) *. 1000.0)
+    ((t3 -. t2) *. 1000.0)
+    num_decls
+    ((t4 -. t3) *. 1000.0)
+    !num_live_checks !num_dead !num_live
+    ((t5 -. t4) *. 1000.0)
+    !num_dead
+    ((t6 -. t5) *. 1000.0)
+    ((t7 -. t6) *. 1000.0)
+    ((t7 -. t0) *. 1000.0);
+
   AnalysisResult.add_issues AnalysisResult.empty all_issues
 
 (** Main entry point - uses forward solver. *)

@@ -245,7 +245,7 @@ let shuffle_list lst =
   Array.to_list arr
 
 let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-    ~reactive_liveness =
+    ~reactive_liveness:_ ~reactive_solver =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
     processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection
@@ -365,57 +365,62 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
       in
       (* Solving phase: run the solver and collect issues *)
       Timing.time_phase `Solving (fun () ->
-          let empty_optional_args_state = OptionalArgsState.create () in
-          let analysis_result_core =
-            match (reactive_merge, reactive_liveness) with
-            | Some merged, Some liveness_result ->
-              let live = liveness_result.ReactiveLiveness.live in
-              let roots = liveness_result.ReactiveLiveness.roots in
-              (* Pass value_refs_from for on-demand hasRefBelow (no freezing) *)
-              let value_refs_from =
-                if dce_config.DceConfig.run.transitive then None
-                else Some merged.ReactiveMerge.value_refs_from
-              in
-              DeadCommon.solveDeadReactive ~ann_store ~decl_store
-                ~value_refs_from ~live ~roots
-                ~optional_args_state:empty_optional_args_state
-                ~config:dce_config
-                ~checkOptionalArg:(fun
-                    ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
-            | _ ->
+          match reactive_solver with
+          | Some solver ->
+            (* Reactive solver: iterate dead_decls + live_decls *)
+            let t0 = Unix.gettimeofday () in
+            let issues =
+              ReactiveSolver.collect_issues ~t:solver ~config:dce_config
+                ~ann_store
+            in
+            let t1 = Unix.gettimeofday () in
+            let num_dead, num_live = ReactiveSolver.stats ~t:solver in
+            if !Cli.timing then
+              Printf.eprintf
+                "  ReactiveSolver: collect=%.3fms (dead=%d, live=%d, \
+                 issues=%d)\n"
+                ((t1 -. t0) *. 1000.0)
+                num_dead num_live (List.length issues);
+            (* TODO: add optional args to reactive pipeline *)
+            Some (AnalysisResult.add_issues AnalysisResult.empty issues)
+          | None ->
+            (* Non-reactive path: use old solver with optional args *)
+            let empty_optional_args_state = OptionalArgsState.create () in
+            let analysis_result_core =
               DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
                 ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
-          in
-          (* Compute liveness-aware optional args state *)
-          let is_live pos =
-            match DeclarationStore.find_opt decl_store pos with
-            | Some decl -> Decl.isLive decl
-            | None -> true
-          in
-          let optional_args_state =
-            CrossFileItemsStore.compute_optional_args_state cross_file_store
-              ~find_decl:(DeclarationStore.find_opt decl_store)
-              ~is_live
-          in
-          (* Collect optional args issues only for live declarations *)
-          let optional_args_issues =
-            DeclarationStore.fold
-              (fun _pos decl acc ->
-                if Decl.isLive decl then
-                  let issues =
-                    DeadOptionalArgs.check ~optional_args_state ~ann_store
-                      ~config:dce_config decl
-                  in
-                  List.rev_append issues acc
-                else acc)
-              decl_store []
-            |> List.rev
-          in
-          Some
-            (AnalysisResult.add_issues analysis_result_core optional_args_issues))
+            in
+            (* Compute liveness-aware optional args state *)
+            let is_live pos =
+              match DeclarationStore.find_opt decl_store pos with
+              | Some decl -> Decl.isLive decl
+              | None -> true
+            in
+            let optional_args_state =
+              CrossFileItemsStore.compute_optional_args_state cross_file_store
+                ~find_decl:(DeclarationStore.find_opt decl_store)
+                ~is_live
+            in
+            (* Collect optional args issues only for live declarations *)
+            let optional_args_issues =
+              DeclarationStore.fold
+                (fun _pos decl acc ->
+                  if Decl.isLive decl then
+                    let issues =
+                      DeadOptionalArgs.check ~optional_args_state ~ann_store
+                        ~config:dce_config decl
+                    in
+                    List.rev_append issues acc
+                  else acc)
+                decl_store []
+              |> List.rev
+            in
+            Some
+              (AnalysisResult.add_issues analysis_result_core
+                 optional_args_issues))
     else None
   in
   (* Reporting phase *)
@@ -460,6 +465,24 @@ let runAnalysisAndReport ~cmtRoot =
     | Some merged -> Some (ReactiveLiveness.create ~merged)
     | None -> None
   in
+  (* Create reactive solver once - sets up the reactive pipeline:
+     decls + live → dead_decls → issues
+     All downstream collections update automatically when inputs change. *)
+  let reactive_solver =
+    match (reactive_merge, reactive_liveness) with
+    | Some merged, Some liveness_result ->
+      (* Pass value_refs_from for hasRefBelow (needed when transitive=false) *)
+      let value_refs_from =
+        if dce_config.DceConfig.run.transitive then None
+        else Some merged.ReactiveMerge.value_refs_from
+      in
+      Some
+        (ReactiveSolver.create ~decls:merged.ReactiveMerge.decls
+           ~live:liveness_result.ReactiveLiveness.live
+           ~annotations:merged.ReactiveMerge.annotations ~value_refs_from
+           ~config:dce_config)
+    | _ -> None
+  in
   for run = 1 to numRuns do
     Timing.reset ();
     (* Clear stats at start of each run to avoid accumulation *)
@@ -467,7 +490,7 @@ let runAnalysisAndReport ~cmtRoot =
     if numRuns > 1 && !Cli.timing then
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
     runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-      ~reactive_liveness;
+      ~reactive_liveness ~reactive_solver;
     if run = numRuns then (
       (* Only report on last run *)
       Log_.Stats.report ~config:dce_config;

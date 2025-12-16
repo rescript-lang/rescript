@@ -60,7 +60,7 @@ time-reactive: generate build
 	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing 2>&1 | grep -E "=== Timing|CMT processing|File loading|Total:"
 	@echo ""
 	@echo "Reactive mode (3 runs - first is cold, subsequent are warm):"
-	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing -reactive -runs 3 2>/dev/null
+	@dune exec rescript-editor-analysis -- reanalyze -config -ci -timing -reactive -runs 3 >/dev/null
 
 .DEFAULT_GOAL := benchmark
 
