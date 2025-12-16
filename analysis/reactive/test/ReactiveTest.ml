@@ -1171,6 +1171,486 @@ let test_fixpoint_deltas () =
   (* 1, 2, 3, 4, 5 removed *)
   Printf.printf "PASSED\n\n"
 
+(* Test: Remove from init but still reachable via edges
+   This test reproduces a real bug found in the dead code analysis:
+   - A reference arrives before its declaration exists
+   - The reference target is incorrectly marked as "externally referenced" (a root)
+   - When the declaration arrives, the target is removed from roots
+   - But it should remain live because it's reachable from other live nodes
+   
+   Graph: root (true root) -> a -> b
+   Scenario:
+   1. Initially, b is spuriously in init (before we know it has a declaration)
+   2. Later, b is removed from init (when declaration is discovered)
+   3. Bug: b incorrectly removed from fixpoint
+   4. Correct: b should stay live (reachable via root -> a -> b) *)
+let test_fixpoint_remove_spurious_root () =
+  Printf.printf
+    "=== Test: fixpoint remove spurious root (still reachable) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, _ = create_mutable_collection () in
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Track all deltas *)
+  let added = ref [] in
+  let removed = ref [] in
+  fp.subscribe (function
+    | Set (k, ()) -> added := k :: !added
+    | Remove k -> removed := k :: !removed);
+
+  (* Step 1: "b" is spuriously marked as a root 
+     (in the real bug, this happens when a reference arrives before its declaration) *)
+  emit_init (Set ("b", ()));
+  Printf.printf "After spurious root b: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  assert (Reactive.get fp "b" = Some ());
+
+  (* Step 2: The real root "root" is added *)
+  emit_init (Set ("root", ()));
+  Printf.printf "After true root: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+
+  (* Step 3: Edge root -> a is added *)
+  emit_edges (Set ("root", ["a"]));
+  Printf.printf "After edge root->a: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  assert (Reactive.get fp "a" = Some ());
+
+  (* Step 4: Edge a -> b is added *)
+  emit_edges (Set ("a", ["b"]));
+  Printf.printf "After edge a->b: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+
+  (* At this point: root, a, b are all in fixpoint *)
+  assert (Reactive.length fp = 3);
+
+  (* Clear tracked changes *)
+  added := [];
+  removed := [];
+
+  (* Step 5: The spurious root "b" is REMOVED from init
+     (in real bug, this happens when declaration for b is discovered,
+      showing b is NOT externally referenced - just referenced by a)
+     
+     BUG: b gets removed from fixpoint
+     CORRECT: b should stay because it's still reachable via root -> a -> b *)
+  emit_init (Remove "b");
+
+  Printf.printf "After removing b from init: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+
+  (* b should NOT be removed - still reachable via a *)
+  assert (not (List.mem "b" !removed));
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.length fp = 3);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove entire edge entry but target still reachable via other source
+   
+   This tests the `Remove source` case in apply_edges_delta.
+   When an entire edge entry is removed, targets may still be reachable
+   via edges from OTHER sources.
+   
+   Graph: a -> b, c -> b (b has two derivations)
+   Scenario:
+   1. a and c are roots
+   2. Both derive b
+   3. Remove the entire edge entry for "a" (Remove "a" from edges)
+   4. b should stay (still reachable via c -> b) *)
+let test_fixpoint_remove_edge_entry_alternative_source () =
+  Printf.printf
+    "=== Test: fixpoint remove edge entry (alternative source) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Set up initial edges: a -> b, c -> b *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "c" ["b"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Track changes *)
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Add roots a and c *)
+  emit_init (Set ("a", ()));
+  emit_init (Set ("c", ()));
+
+  Printf.printf "Initial: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+
+  (* Should have a, b, c *)
+  assert (Reactive.length fp = 3);
+  assert (Reactive.get fp "a" = Some ());
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.get fp "c" = Some ());
+
+  removed := [];
+
+  (* Remove entire edge entry for "a" *)
+  emit_edges (Remove "a");
+
+  Printf.printf "After Remove edge entry 'a': fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+
+  (* b should NOT be removed - still reachable via c -> b *)
+  assert (not (List.mem "b" !removed));
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.length fp = 3);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove edge entry - target reachable via higher-ranked source
+   
+   This is the subtle case where re-derivation check matters.
+   When contraction removes an element, but a surviving source with
+   HIGHER rank still points to it, well-founded check fails but
+   re-derivation should save it.
+   
+   Graph: root -> a -> b -> c, a -> c (c reachable via b and directly from a)
+   Key: c is first reached via a (rank 1), not via b (rank 2)
+   When we remove a->c edge, c still has b->c, but rank[b] >= rank[c]
+   so well-founded check fails. But c should be re-derived from b.
+*)
+let test_fixpoint_remove_edge_rederivation () =
+  Printf.printf "=== Test: fixpoint remove edge (re-derivation needed) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, _ = create_mutable_collection () in
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Track changes *)
+  let removed = ref [] in
+  let added = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | Set (k, ()) -> added := k :: !added);
+
+  (* Add root *)
+  emit_init (Set ("root", ()));
+
+  (* Build graph: root -> a -> b -> c, a -> c *)
+  emit_edges (Set ("root", ["a"]));
+  emit_edges (Set ("a", ["b"; "c"]));
+  (* a reaches both b and c *)
+  emit_edges (Set ("b", ["c"]));
+
+  (* b also reaches c *)
+  Printf.printf "Initial: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+
+  (* Should have root, a, b, c *)
+  assert (Reactive.length fp = 4);
+
+  (* Check ranks: root=0, a=1, b=2, c=2 (reached from a at level 2) *)
+  (* Actually c could be rank 2 (from a) or rank 3 (from b) - depends on BFS order *)
+  removed := [];
+  added := [];
+
+  (* Remove the direct edge a -> c *)
+  emit_edges (Set ("a", ["b"]));
+
+  (* a now only reaches b *)
+  Printf.printf "After removing a->c: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  Printf.printf "Removed: [%s], Added: [%s]\n"
+    (String.concat ", " !removed)
+    (String.concat ", " !added);
+
+  (* c should still be in fixpoint - reachable via root -> a -> b -> c *)
+  assert (Reactive.get fp "c" = Some ());
+  assert (Reactive.length fp = 4);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove edge ENTRY (not Set) - re-derivation case
+   
+   This specifically tests the `Remove source` case which uses emit_edges (Remove ...)
+   rather than emit_edges (Set (..., [])).
+   
+   Graph: a -> c, b -> c (c reachable from both)
+   BFS: a (0), b (0), c (1)
+   Key: c has rank 1, both a and b have rank 0
+   
+   When we remove the entire edge entry for "a" via Remove (not Set),
+   c loses derivation from a but should survive via b -> c.
+   
+   With equal ranks, well-founded check should still find b as support.
+*)
+let test_fixpoint_remove_edge_entry_rederivation () =
+  Printf.printf "=== Test: fixpoint Remove edge entry (re-derivation) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Set up edges before creating fixpoint *)
+  Hashtbl.replace edges_tbl "a" ["c"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Track changes *)
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Add roots a and b *)
+  emit_init (Set ("a", ()));
+  emit_init (Set ("b", ()));
+
+  Printf.printf "Initial: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+
+  assert (Reactive.length fp = 3);
+
+  removed := [];
+
+  (* Remove entire edge entry for "a" using Remove delta *)
+  emit_edges (Remove "a");
+
+  Printf.printf "After Remove 'a' entry: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+
+  (* c should survive - b -> c still exists *)
+  assert (not (List.mem "c" !removed));
+  assert (Reactive.get fp "c" = Some ());
+  assert (Reactive.length fp = 3);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove edge entry - surviving predecessor has HIGHER rank
+   
+   This is the critical case where re-derivation is needed.
+   When well-founded check fails (rank[predecessor] >= rank[target]),
+   the target dies. But if the predecessor is surviving, target
+   should be re-derived with new rank.
+   
+   Graph: root -> a -> c, root -> b, b -> c
+   BFS order matters here:
+   - Level 0: root
+   - Level 1: a, b (both from root)
+   - Level 2: c (from a, since a is processed first)
+   
+   c has rank 2, b has rank 1
+   inv_index[c] = [a, b]
+   
+   When we remove "a" entry:
+   - c goes into contraction
+   - inv_index[c] = [b] 
+   - rank[b] = 1 < rank[c] = 2, so b provides support!
+   
+   Hmm, this still finds support because b has lower rank.
+   
+   Let me try: root -> a -> b -> c, a -> c
+   - Level 0: root
+   - Level 1: a
+   - Level 2: b, c (both from a, same level)
+   
+   c has rank 2, b has rank 2
+   When we remove a->c edge (not entry), c goes into contraction
+   inv_index[c] = [b] (after a removed), rank[b] = rank[c] = 2
+   NO support (2 < 2 is false), c dies
+   
+   But b -> c exists! c should be re-derived with rank 3.
+   
+   This is the Set case, not Remove. But the logic should be similar.
+*)
+let test_fixpoint_remove_edge_entry_higher_rank_support () =
+  Printf.printf "=== Test: fixpoint edge removal (higher rank support) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, _ = create_mutable_collection () in
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Track changes *)
+  let removed = ref [] in
+  let added = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | Set (k, ()) -> added := k :: !added);
+
+  (* Add root *)
+  emit_init (Set ("root", ()));
+
+  (* Build graph: root -> a -> b -> c, a -> c *)
+  emit_edges (Set ("root", ["a"]));
+  emit_edges (Set ("a", ["b"; "c"]));
+  (* a reaches both b and c at same level *)
+  emit_edges (Set ("b", ["c"]));
+
+  (* b also reaches c *)
+  Printf.printf "Initial: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+
+  assert (Reactive.length fp = 4);
+  assert (Reactive.get fp "c" = Some ());
+
+  removed := [];
+  added := [];
+
+  (* Remove direct edge a -> c, keeping a -> b *)
+  emit_edges (Set ("a", ["b"]));
+
+  Printf.printf "After removing a->c: fp=[%s]\n"
+    (let items = ref [] in
+     fp.iter (fun k _ -> items := k :: !items);
+     String.concat ", " (List.sort String.compare !items));
+  Printf.printf "Removed: [%s], Added: [%s]\n"
+    (String.concat ", " !removed)
+    (String.concat ", " !added);
+
+  (* c should still be in fixpoint via root -> a -> b -> c *)
+  (* The re-derivation check should save c even though rank[b] >= rank[c] *)
+  assert (Reactive.get fp "c" = Some ());
+  assert (Reactive.length fp = 4);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove edge ENTRY (Remove source) where re-derivation is required.
+
+   This is the classic counterexample: two paths to y, remove the shorter one.
+   Without the re-derivation step (reference implementation step 7), contraction
+   can incorrectly remove y because its stored rank is too low.
+
+   Graph:
+     r -> a -> y         (short path)
+     r -> b -> c -> x -> y (long path)
+
+   Scenario:
+   1) init = {r}
+   2) y is reachable (via a->y)
+   3) Remove edge entry for a (emit_edges (Remove "a")), which deletes the short path
+   4) y must remain reachable via x->y
+
+   Expected: y stays in fixpoint
+   Bug: y is removed if `apply_edges_delta` Remove-case lacks re-derivation. *)
+let test_fixpoint_remove_edge_entry_needs_rederivation () =
+  Printf.printf
+    "=== Test: fixpoint Remove edge entry (needs re-derivation) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Pre-populate edges so fixpoint initializes with them *)
+  Hashtbl.replace edges_tbl "r" ["a"; "b"];
+  Hashtbl.replace edges_tbl "a" ["y"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+  Hashtbl.replace edges_tbl "c" ["x"];
+  Hashtbl.replace edges_tbl "x" ["y"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Make r live *)
+  emit_init (Set ("r", ()));
+
+  (* Sanity: y initially reachable via short path *)
+  assert (Reactive.get fp "y" = Some ());
+  assert (Reactive.get fp "x" = Some ());
+
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Remove the entire edge entry for a (removes a->y) *)
+  emit_edges (Remove "a");
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+
+  (* Correct: y is still reachable via r->b->c->x->y *)
+  assert (Reactive.get fp "y" = Some ());
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove BASE element where re-derivation is required.
+
+   Same shape as the verified counterexample, but triggered by removing a base element.
+   Verified algorithm applies the re-derivation step after contraction for removed-from-base too.
+
+   Two roots r1 and r2.
+   Paths to y:
+     r1 -> a -> y            (short path, determines initial rank(y))
+     r2 -> b -> c -> x -> y  (long path, still reachable after removing r1)
+
+   Scenario:
+   1) init = {r1, r2}
+   2) y is reachable (via r1->a->y)
+   3) Remove r1 from init (emit_init (Remove "r1")), which deletes the short witness
+   4) y must remain reachable via r2->...->y *)
+let test_fixpoint_remove_base_needs_rederivation () =
+  Printf.printf
+    "=== Test: fixpoint Remove base element (needs re-derivation) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Pre-populate edges so fixpoint initializes with them *)
+  Hashtbl.replace edges_tbl "r1" ["a"];
+  Hashtbl.replace edges_tbl "a" ["y"];
+  Hashtbl.replace edges_tbl "r2" ["b"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+  Hashtbl.replace edges_tbl "c" ["x"];
+  Hashtbl.replace edges_tbl "x" ["y"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("r1", ()));
+  emit_init (Set ("r2", ()));
+
+  (* Sanity: y initially reachable *)
+  assert (Reactive.get fp "y" = Some ());
+  assert (Reactive.get fp "x" = Some ());
+
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Remove r1 from base: y should remain via r2 path *)
+  emit_init (Remove "r1");
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+
+  assert (Reactive.get fp "y" = Some ());
+  Printf.printf "PASSED\n\n"
+
 (* Test: Pre-existing data in init and edges *)
 let test_fixpoint_existing_data () =
   Printf.printf "=== Test: fixpoint with existing data ===\n";
@@ -1243,4 +1723,11 @@ let () =
   test_fixpoint_self_loop ();
   test_fixpoint_deltas ();
   test_fixpoint_existing_data ();
+  test_fixpoint_remove_spurious_root ();
+  test_fixpoint_remove_edge_entry_alternative_source ();
+  test_fixpoint_remove_edge_rederivation ();
+  test_fixpoint_remove_edge_entry_rederivation ();
+  test_fixpoint_remove_edge_entry_higher_rank_support ();
+  test_fixpoint_remove_edge_entry_needs_rederivation ();
+  test_fixpoint_remove_base_needs_rederivation ();
   Printf.printf "All tests passed!\n"

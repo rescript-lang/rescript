@@ -469,9 +469,6 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
     support to each other, ensuring unreachable cycles are correctly removed. *)
 
 module Fixpoint = struct
-  (* DEBUG: flag for verbose tracing *)
-  let trace_edges = false
-
   type 'k state = {
     current: ('k, unit) Hashtbl.t; (* Current fixpoint set *)
     rank: ('k, int) Hashtbl.t; (* BFS distance from base *)
@@ -648,12 +645,48 @@ module Fixpoint = struct
       if not (Hashtbl.mem state.base k) then ([], [])
         (* Not in base, no change *)
       else (
+        (* Mirror the verified algorithm's contraction+re-derivation pattern:
+           removing from base can invalidate the previously-shortest witness rank
+           for reachable nodes, so contraction alone can remove nodes incorrectly.
+           We contract first, then attempt to re-derive removed nodes via surviving
+           predecessors (using the inverse index), then expand. *)
         Hashtbl.remove state.base k;
-        (* Start contraction if k was in current *)
-        if Hashtbl.mem state.current k then
-          let removed = contract state ~worklist:[k] in
-          ([], removed)
-        else ([], []))
+
+        let contraction_worklist =
+          if Hashtbl.mem state.current k then [k] else []
+        in
+        let all_removed =
+          if contraction_worklist <> [] then
+            contract state ~worklist:contraction_worklist
+          else []
+        in
+
+        let expansion_frontier = ref [] in
+        let removed_set = Hashtbl.create (List.length all_removed) in
+        List.iter (fun x -> Hashtbl.replace removed_set x ()) all_removed;
+
+        if Hashtbl.length removed_set > 0 then
+          Hashtbl.iter
+            (fun y () ->
+              iter_step_inv state y (fun x ->
+                  if Hashtbl.mem state.current x then
+                    expansion_frontier := y :: !expansion_frontier))
+            removed_set;
+
+        let all_added =
+          if !expansion_frontier <> [] then
+            expand state ~frontier:!expansion_frontier
+          else []
+        in
+
+        let net_removed =
+          List.filter (fun x -> not (Hashtbl.mem state.current x)) all_removed
+        in
+        let net_added =
+          List.filter (fun x -> not (Hashtbl.mem removed_set x)) all_added
+        in
+
+        (net_added, net_removed))
 
   (* Compute edge diff between old and new successors *)
   let compute_edge_diff old_succs new_succs =
@@ -672,9 +705,6 @@ module Fixpoint = struct
   let apply_edges_delta state delta =
     match delta with
     | Set (source, new_succs) ->
-      if trace_edges && new_succs <> [] then
-        Printf.eprintf "EDGE: Set source with %d successors\n%!"
-          (List.length new_succs);
       let old_succs =
         match Hashtbl.find_opt state.edges source with
         | None -> []
@@ -758,13 +788,45 @@ module Fixpoint = struct
           then contraction_worklist := target :: !contraction_worklist)
         old_succs;
 
-      let removed =
+      let all_removed =
         if !contraction_worklist <> [] then
           contract state ~worklist:!contraction_worklist
         else []
       in
 
-      ([], removed)
+      (* Check if any removed element can be re-derived via remaining edges.
+         This mirrors the reference implementation's "step 7" re-derivation pass:
+         removing an edge can invalidate the previously-shortest witness rank for a
+         node while preserving reachability via a longer path. Contraction alone
+         can incorrectly remove such nodes because their stored rank is stale/too low. *)
+      let expansion_frontier = ref [] in
+
+      let removed_set = Hashtbl.create (List.length all_removed) in
+      List.iter (fun x -> Hashtbl.replace removed_set x ()) all_removed;
+
+      if Hashtbl.length removed_set > 0 then
+        Hashtbl.iter
+          (fun y () ->
+            iter_step_inv state y (fun x ->
+                if Hashtbl.mem state.current x then
+                  expansion_frontier := y :: !expansion_frontier))
+          removed_set;
+
+      let all_added =
+        if !expansion_frontier <> [] then
+          expand state ~frontier:!expansion_frontier
+        else []
+      in
+
+      (* Compute net changes *)
+      let net_removed =
+        List.filter (fun x -> not (Hashtbl.mem state.current x)) all_removed
+      in
+      let net_added =
+        List.filter (fun x -> not (Hashtbl.mem removed_set x)) all_added
+      in
+
+      (net_added, net_removed)
 end
 
 (** Compute transitive closure via incremental fixpoint.
@@ -815,9 +877,11 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
     state.edges;
 
   (* Then process init elements *)
+  let initial_frontier = ref [] in
   init.iter (fun k () ->
       Hashtbl.replace state.base k ();
-      ignore (Fixpoint.expand state ~frontier:[k]));
+      initial_frontier := k :: !initial_frontier);
+  ignore (Fixpoint.expand state ~frontier:!initial_frontier);
 
   {
     subscribe = (fun handler -> subscribers := handler :: !subscribers);
