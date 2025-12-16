@@ -7,15 +7,13 @@
     - dead_decls, live_decls = decls partitioned by liveness (reactive join)
     - dead_modules = modules with dead decls but no live decls (reactive anti-join)
     - dead_decls_by_file = dead decls grouped by file (reactive flatMap with merge)
+    - value_refs_from_by_file = refs grouped by source file (reactive flatMap with merge)
     - issues_by_file = per-file issue generation (reactive flatMap)
     - is_pos_live uses reactive live collection (no resolvedDead mutation)
     - shouldReport callback replaces report field mutation (no mutation needed)
     - isInsideReportedValue is per-file only, so files are independent
+    - hasRefBelow uses per-file refs: O(file_refs) per dead decl (was O(total_refs))
     - Module issues generated in collect_issues from dead_modules + modules_with_reported_values
-    
-    TODO for further optimization:
-    - hasRefBelow: uses O(total_refs) linear scan of refs_from per dead decl;
-      could use reactive refs_to index for O(1) lookup per decl
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -108,20 +106,26 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ()
   in
 
-  (* hasRefBelow callback - captured once, uses current state of value_refs_from *)
+  (* Reactive per-file grouping of value refs (for hasRefBelow optimization) *)
   let transitive = config.DceConfig.run.transitive in
-  let hasRefBelow =
+  let value_refs_from_by_file =
     match value_refs_from with
-    | None -> fun _ -> false
+    | None -> None
     | Some refs_from ->
-      DeadCommon.make_hasRefBelow ~transitive ~iter_value_refs_from:(fun f ->
-          Reactive.iter f refs_from)
+      Some (
+        Reactive.flatMap refs_from
+          ~f:(fun posFrom posToSet -> [(posFrom.Lexing.pos_fname, [(posFrom, posToSet)])])
+          ~merge:(fun refs1 refs2 -> refs1 @ refs2)
+          ()
+      )
   in
 
   (* Reactive per-file issues - recomputed when dead_decls_by_file changes.
      Returns (file, (value_issues, modules_with_reported_values)) where
      modules_with_reported_values are modules that have at least one reported dead value.
-     Module issues are generated separately in collect_issues using dead_modules. *)
+     Module issues are generated separately in collect_issues using dead_modules.
+     
+     hasRefBelow now uses per-file refs: O(file_refs) instead of O(total_refs). *)
   let issues_by_file =
     Reactive.flatMap dead_decls_by_file
       ~f:(fun file decls ->
@@ -139,6 +143,23 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         let checkModuleDead ~fileName:_ moduleName =
           Hashtbl.replace modules_with_values moduleName ();
           None (* Module issues generated separately *)
+        in
+        (* Per-file hasRefBelow: only scan refs from this file *)
+        let hasRefBelow =
+          if transitive then fun _ -> false
+          else
+            match value_refs_from_by_file with
+            | None -> fun _ -> false
+            | Some refs_by_file ->
+              let file_refs = Reactive.get refs_by_file file in
+              fun decl ->
+                match file_refs with
+                | None -> false
+                | Some refs_list ->
+                  List.exists (fun (posFrom, posToSet) ->
+                    PosSet.mem decl.Decl.pos posToSet &&
+                    DeadCommon.refIsBelow decl posFrom
+                  ) refs_list
         in
         (* Sort within file and generate issues *)
         let sorted = decls |> List.fast_sort Decl.compareForReporting in
