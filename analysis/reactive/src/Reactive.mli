@@ -142,22 +142,46 @@ val union :
 
 val fixpoint :
   init:('k, unit) t -> edges:('k, 'k list) t -> unit -> ('k, unit) t
-(** [fixpoint ~init ~edges ()] computes transitive closure.
+(** [fixpoint ~init ~edges ()] computes transitive closure incrementally.
     
     Starting from keys in [init], follows edges to discover all reachable keys.
     
-    - [init]: reactive collection of starting keys
+    - [init]: reactive collection of starting keys (base)
     - [edges]: reactive collection mapping each key to its successor keys
     - Returns: reactive collection of all reachable keys
     
-    When [init] or [edges] changes, the fixpoint recomputes.
+    {b Incremental Updates:}
     
-    {b Note}: Current implementation recomputes full fixpoint on any change.
-    Future versions will update incrementally.
+    When [init] or [edges] changes, the fixpoint updates efficiently:
+    
+    - {b Expansion}: When base grows or new edges are added, BFS from the
+      new frontier discovers newly reachable elements. O(new reachable).
+    
+    - {b Contraction}: When base shrinks or edges are removed, elements that
+      lost support are removed using well-founded derivation. Cycle members
+      have equal BFS ranks and cannot support each other, so unreachable
+      cycles are correctly removed. O(affected elements).
+    
+    {b Algorithm:}
+    
+    Each element has a rank (BFS distance from base). For contraction,
+    an element survives only if it has a "well-founded deriver" - an
+    element with strictly lower rank that derives it. This ensures:
+    - Direct base elements always survive (rank 0)
+    - Elements derived from survivors survive
+    - Cycles lose all members when disconnected from base
     
     {2 Example: Reachability}
     {[
       let roots = ...  (* keys that are initially reachable *)
       let graph = ...  (* key -> successor keys *)
       let reachable = Reactive.fixpoint ~init:roots ~edges:graph ()
+    ]}
+    
+    {2 Example: Dead code elimination}
+    {[
+      let live_roots = ...  (* @live annotations, external refs *)
+      let references = ...  (* decl -> referenced decls *)
+      let live = Reactive.fixpoint ~init:live_roots ~edges:references ()
+      (* Dead = all_decls - live *)
     ]} *)

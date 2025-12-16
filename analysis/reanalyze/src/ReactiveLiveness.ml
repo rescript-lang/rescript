@@ -42,30 +42,45 @@ let create ~(merged : ReactiveMerge.t) : (Lexing.position, unit) Reactive.t =
 
   (* Compute externally referenced positions reactively.
      A position is externally referenced if any reference to it comes from
-     a position that is NOT a declaration position.
+     a position that is NOT a declaration position (exact match).
      
-     We use join to check if posFrom is a decl position. *)
+     This matches the non-reactive algorithm which uses DeclarationStore.find_opt.
+     
+     We use flatMap and check decls synchronously within the function.
+     This works correctly regardless of delta arrival order because the check
+     happens at evaluation time when decls has current data. *)
+  (* Compute externally referenced positions reactively.
+     A position is externally referenced if any reference to it comes from
+     a position that is NOT a declaration position (exact match).
+     
+     This matches the non-reactive algorithm which uses DeclarationStore.find_opt.
+     
+     We use flatMap and check decls synchronously within the function.
+     This works correctly regardless of delta arrival order because the check
+     happens at evaluation time when decls has current data. *)
   let external_value_refs : (Lexing.position, unit) Reactive.t =
-    Reactive.join value_refs_from decls
-      ~key_of:(fun posFrom _targets -> posFrom)
-      ~f:(fun _posFrom targets decl_opt ->
-        match decl_opt with
-        | Some _ -> [] (* posFrom is a decl, not external *)
+    Reactive.flatMap value_refs_from
+      ~f:(fun posFrom targets ->
+        match decls.get posFrom with
+        | Some _ ->
+          (* posFrom IS a decl position, refs are internal *)
+          []
         | None ->
-          (* posFrom is not a decl, so all targets are externally referenced *)
+          (* posFrom is NOT a decl position, targets are externally referenced *)
           PosSet.elements targets |> List.map (fun posTo -> (posTo, ())))
       ~merge:(fun () () -> ())
       ()
   in
 
   let external_type_refs : (Lexing.position, unit) Reactive.t =
-    Reactive.join type_refs_from decls
-      ~key_of:(fun posFrom _targets -> posFrom)
-      ~f:(fun _posFrom targets decl_opt ->
-        match decl_opt with
-        | Some _ -> [] (* posFrom is a decl, not external *)
+    Reactive.flatMap type_refs_from
+      ~f:(fun posFrom targets ->
+        match decls.get posFrom with
+        | Some _ ->
+          (* posFrom IS a decl position, refs are internal *)
+          []
         | None ->
-          (* posFrom is not a decl, so all targets are externally referenced *)
+          (* posFrom is NOT a decl position, targets are externally referenced *)
           PosSet.elements targets |> List.map (fun posTo -> (posTo, ())))
       ~merge:(fun () () -> ())
       ()

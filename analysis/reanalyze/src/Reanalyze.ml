@@ -244,7 +244,8 @@ let shuffle_list lst =
   done;
   Array.to_list arr
 
-let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
+let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
+    ~reactive_liveness =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
     processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection
@@ -366,10 +367,10 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
       Timing.time_phase `Solving (fun () ->
           let empty_optional_args_state = OptionalArgsState.create () in
           let analysis_result_core =
-            match reactive_merge with
-            | Some merged ->
-              (* Reactive mode: use reactive liveness *)
-              let live = ReactiveLiveness.create ~merged in
+            match (reactive_merge, reactive_liveness) with
+            | Some merged, Some live_lazy ->
+              (* Reactive mode: use lazy reactive liveness (created on first force) *)
+              let live = Lazy.force live_lazy in
               (* Freeze refs for debug/transitive support in solver *)
               let refs = ReactiveMerge.freeze_refs merged in
               DeadCommon.solveDeadReactive ~ann_store ~decl_store ~refs ~live
@@ -377,7 +378,7 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
-            | None ->
+            | _ ->
               DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
                 ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
@@ -448,11 +449,20 @@ let runAnalysisAndReport ~cmtRoot =
       Some (ReactiveMerge.create file_data_collection)
     | None -> None
   in
+  (* Lazy reactive liveness - created on first force (after files processed) *)
+  let reactive_liveness =
+    match reactive_merge with
+    | Some merged -> Some (lazy (ReactiveLiveness.create ~merged))
+    | None -> None
+  in
   for run = 1 to numRuns do
     Timing.reset ();
+    (* Clear stats at start of each run to avoid accumulation *)
+    if run > 1 then Log_.Stats.clear ();
     if numRuns > 1 && !Cli.timing then
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
-    runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge;
+    runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
+      ~reactive_liveness;
     if run = numRuns then (
       (* Only report on last run *)
       Log_.Stats.report ~config:dce_config;
