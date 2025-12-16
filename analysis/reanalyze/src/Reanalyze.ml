@@ -288,38 +288,51 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
                     (dce_data_list
                     |> List.map (fun fd -> fd.DceFileProcessing.cross_file)) )
             in
-            (* Merge refs and file_deps into builders for cross-file items processing.
-               This still needs the file_data iteration for post-processing. *)
-            let refs_builder = References.create_builder () in
-            let file_deps_builder = FileDeps.create_builder () in
-            (match reactive_collection with
-            | Some collection ->
-              ReactiveAnalysis.iter_file_data collection (fun fd ->
-                  References.merge_into_builder ~from:fd.DceFileProcessing.refs
-                    ~into:refs_builder;
-                  FileDeps.merge_into_builder
-                    ~from:fd.DceFileProcessing.file_deps
-                    ~into:file_deps_builder)
-            | None ->
-              dce_data_list
-              |> List.iter (fun fd ->
-                     References.merge_into_builder
-                       ~from:fd.DceFileProcessing.refs ~into:refs_builder;
-                     FileDeps.merge_into_builder
-                       ~from:fd.DceFileProcessing.file_deps
-                       ~into:file_deps_builder));
-            (* Compute type-label dependencies after merge *)
-            DeadType.process_type_label_dependencies ~config:dce_config ~decls
-              ~refs:refs_builder;
-            let find_exception =
-              DeadException.find_exception_from_decls decls
+            (* Compute refs and file_deps.
+               In reactive mode, ReactiveMerge handles type deps and exception refs.
+               In non-reactive mode, use the imperative processing. *)
+            let refs, file_deps =
+              match reactive_merge with
+              | Some merged ->
+                (* Reactive mode: freeze_refs includes type deps and exception refs *)
+                let refs = ReactiveMerge.freeze_refs merged in
+                let file_deps = ReactiveMerge.freeze_file_deps merged in
+                (refs, file_deps)
+              | None ->
+                (* Non-reactive mode: build refs/file_deps imperatively *)
+                let refs_builder = References.create_builder () in
+                let file_deps_builder = FileDeps.create_builder () in
+                (match reactive_collection with
+                | Some collection ->
+                  ReactiveAnalysis.iter_file_data collection (fun fd ->
+                      References.merge_into_builder
+                        ~from:fd.DceFileProcessing.refs ~into:refs_builder;
+                      FileDeps.merge_into_builder
+                        ~from:fd.DceFileProcessing.file_deps
+                        ~into:file_deps_builder)
+                | None ->
+                  dce_data_list
+                  |> List.iter (fun fd ->
+                         References.merge_into_builder
+                           ~from:fd.DceFileProcessing.refs ~into:refs_builder;
+                         FileDeps.merge_into_builder
+                           ~from:fd.DceFileProcessing.file_deps
+                           ~into:file_deps_builder));
+                (* Compute type-label dependencies after merge *)
+                DeadType.process_type_label_dependencies ~config:dce_config
+                  ~decls ~refs:refs_builder;
+                let find_exception =
+                  DeadException.find_exception_from_decls decls
+                in
+                (* Process cross-file exception refs *)
+                CrossFileItems.process_exception_refs cross_file
+                  ~refs:refs_builder ~file_deps:file_deps_builder
+                  ~find_exception ~config:dce_config;
+                (* Freeze refs and file_deps for solver *)
+                let refs = References.freeze_builder refs_builder in
+                let file_deps = FileDeps.freeze_builder file_deps_builder in
+                (refs, file_deps)
             in
-            (* Process cross-file exception refs *)
-            CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
-              ~file_deps:file_deps_builder ~find_exception ~config:dce_config;
-            (* Freeze refs and file_deps for solver *)
-            let refs = References.freeze_builder refs_builder in
-            let file_deps = FileDeps.freeze_builder file_deps_builder in
             (annotations, decls, cross_file, refs, file_deps))
       in
       (* Solving phase: run the solver and collect issues *)

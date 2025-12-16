@@ -53,3 +53,7 @@ let is_annotated_gentype_or_dead (state : t) pos =
   match PosHash.find_opt state pos with
   | Some (Dead | GenType) -> true
   | Some Live | None -> false
+
+let length (t : t) = PosHash.length t
+
+let iter f (t : t) = PosHash.iter f t

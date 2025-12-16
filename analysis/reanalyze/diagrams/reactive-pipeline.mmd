@@ -1,51 +1,63 @@
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f4fd', 'primaryTextColor': '#1a1a1a', 'primaryBorderColor': '#4a90d9', 'lineColor': '#4a90d9', 'secondaryColor': '#f0f7e6', 'tertiaryColor': '#fff5e6'}}}%%
 flowchart TB
     subgraph FileLayer["File Layer"]
-        RFC[("ReactiveFileCollection<br/>(file change detection)")]
+        RFC[("RFC")]
     end
 
     subgraph FileData["Per-File Data"]
-        FD["file_data<br/>(path → file_data option)"]
+        FD["FD"]
     end
 
-    subgraph Extracted["Extracted Collections"]
-        DECLS["decls<br/>(pos → Decl.t)"]
-        ANNOT["annotations<br/>(pos → annotation)"]
-        EXCREF["exception_refs<br/>(path → loc_from)"]
+    subgraph Extracted["Extracted"]
+        DECLS["D"]
+        ANNOT["A"]
+        VREFS["VR"]
+        TREFS["TR"]
+        CFI["CFI"]
     end
 
     subgraph TypeDeps["ReactiveTypeDeps"]
-        DBP["decl_by_path<br/>(path → decl list)"]
-        SPR["same_path_refs<br/>(pos → PosSet)"]
-        CFR["cross_file_refs<br/>(pos → PosSet)"]
-        ATR["all_type_refs<br/>(pos → PosSet)"]
+        DBP["DBP"]
+        SPR["SPR"]
+        I2I["I2I"]
+        I2I2["I2I₂"]
+        INT2IMP["I→I"]
     end
 
     subgraph ExcDeps["ReactiveExceptionRefs"]
-        EXCDECL["exception_decls<br/>(path → loc)"]
-        RESOLVED["resolved_refs<br/>(pos → PosSet)"]
+        EXCREF["ER"]
+        EXCDECL["ED"]
+        RESOLVED["RR"]
     end
 
-    subgraph Output["Combined Output"]
-        REFS["All refs<br/>→ Ready for solver"]
+    subgraph Output["Output"]
+        REFS["REFS"]
     end
 
-    RFC -->|"process_files<br/>(detect changes)"| FD
-    FD -->|"flatMap<br/>(extract)"| DECLS
-    FD -->|"flatMap<br/>(extract)"| ANNOT
-    FD -->|"flatMap<br/>(extract)"| EXCREF
+    RFC -->|"process"| FD
+    FD -->|"flatMap"| DECLS
+    FD -->|"flatMap"| ANNOT
+    FD -->|"flatMap"| VREFS
+    FD -->|"flatMap"| TREFS
+    FD -->|"flatMap"| CFI
 
     DECLS -->|"flatMap"| DBP
     DBP -->|"flatMap"| SPR
-    DBP -->|"join"| CFR
-    SPR --> ATR
-    CFR --> ATR
+    DBP -->|"join"| I2I
+    DBP -->|"join"| I2I2
+    DBP -->|"join"| INT2IMP
 
+    CFI -->|"flatMap"| EXCREF
     DECLS -->|"flatMap"| EXCDECL
-    EXCDECL -->|"join"| RESOLVED
     EXCREF -->|"join"| RESOLVED
+    EXCDECL -->|"join"| RESOLVED
 
-    ATR --> REFS
+    VREFS --> REFS
+    TREFS --> REFS
+    SPR --> REFS
+    I2I --> REFS
+    I2I2 --> REFS
+    INT2IMP --> REFS
     RESOLVED --> REFS
 
     classDef fileLayer fill:#e8f4fd,stroke:#4a90d9,stroke-width:2px
@@ -55,8 +67,8 @@ flowchart TB
     classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
 
     class RFC,FD fileLayer
-    class DECLS,ANNOT,EXCREF extracted
-    class DBP,SPR,CFR,ATR typeDeps
-    class EXCDECL,RESOLVED excDeps
+    class DECLS,ANNOT,VREFS,TREFS,CFI extracted
+    class DBP,SPR,I2I,I2I2,INT2IMP typeDeps
+    class EXCREF,EXCDECL,RESOLVED excDeps
     class REFS output
 

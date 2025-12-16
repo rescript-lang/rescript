@@ -67,3 +67,7 @@ let create ~value_refs ~type_refs : t = {value_refs; type_refs}
 let find_value_refs (t : t) pos = findSet t.value_refs pos
 
 let find_type_refs (t : t) pos = findSet t.type_refs pos
+
+let value_refs_length (t : t) = PosHash.length t.value_refs
+
+let type_refs_length (t : t) = PosHash.length t.type_refs

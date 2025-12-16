@@ -31,7 +31,10 @@
 
 (** {1 Types} *)
 
-type t
+type t = {
+  exception_decls: (DcePath.t, Location.t) Reactive.t;
+  resolved_refs: (Lexing.position, PosSet.t) Reactive.t;
+}
 (** Reactive exception ref collections *)
 
 (** {1 Creation} *)
@@ -51,4 +54,3 @@ val add_to_refs_builder : t -> refs:References.builder -> unit
 
 val add_to_file_deps_builder : t -> file_deps:FileDeps.builder -> unit
 (** Add file dependencies for resolved refs. *)
-

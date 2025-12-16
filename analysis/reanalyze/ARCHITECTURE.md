@@ -159,6 +159,27 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 
 ![Reactive Pipeline](diagrams/reactive-pipeline.svg)
 
+**Legend:**
+
+| Symbol | Collection | Type |
+|--------|-----------|------|
+| **RFC** | `ReactiveFileCollection` | File change detection |
+| **FD** | `file_data` | `path → file_data option` |
+| **D** | `decls` | `pos → Decl.t` |
+| **A** | `annotations` | `pos → annotation` |
+| **VR** | `value_refs` | `pos → PosSet` (per-file) |
+| **TR** | `type_refs` | `pos → PosSet` (per-file) |
+| **CFI** | `cross_file_items` | `path → CrossFileItems.t` |
+| **DBP** | `decl_by_path` | `path → decl_info list` |
+| **SPR** | `same_path_refs` | Same-path duplicates |
+| **I2I** | `impl_to_intf_refs` | Impl → Interface links |
+| **I2I₂** | `impl_to_intf_refs_path2` | Impl → Interface (path2) |
+| **I→I** | `intf_to_impl_refs` | Interface → Impl links |
+| **ER** | `exception_refs` | Exception references |
+| **ED** | `exception_decls` | Exception declarations |
+| **RR** | `resolved_refs` | Resolved exception refs |
+| **REFS** | Output | Combined `References.t` |
+
 ### Delta Propagation
 
 > **Source**: [`diagrams/delta-propagation.mmd`](diagrams/delta-propagation.mmd)

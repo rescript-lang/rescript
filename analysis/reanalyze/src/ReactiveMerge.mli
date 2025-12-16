@@ -32,6 +32,9 @@ type t = {
   cross_file_items: (string, CrossFileItems.t) Reactive.t;
   file_deps_map: (string, FileSet.t) Reactive.t;
   files: (string, unit) Reactive.t;
+  (* Reactive type/exception dependencies *)
+  type_deps: ReactiveTypeDeps.t;
+  exception_refs: ReactiveExceptionRefs.t;
 }
 (** All derived reactive collections from per-file data *)
 
@@ -57,4 +60,3 @@ val collect_cross_file_items : t -> CrossFileItems.t
 
 val freeze_file_deps : t -> FileDeps.t
 (** Convert reactive file deps to FileDeps.t for solver *)
-

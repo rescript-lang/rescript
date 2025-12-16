@@ -16,7 +16,7 @@ let file_changed ~old_id ~new_id =
 type ('raw, 'v) internal = {
   cache: (string, file_id * 'v) Hashtbl.t;
   read_file: string -> 'raw;
-  process: 'raw -> 'v;
+  process: string -> 'raw -> 'v; (* path -> raw -> value *)
   mutable subscribers: ((string, 'v) Reactive.delta -> unit) list;
 }
 (** Internal state for file collection *)
@@ -61,7 +61,7 @@ let process_if_changed t path =
     false (* unchanged *)
   | _ ->
     let raw = t.internal.read_file path in
-    let value = t.internal.process raw in
+    let value = t.internal.process path raw in
     Hashtbl.replace t.internal.cache path (new_id, value);
     emit t (Reactive.Set (path, value));
     true (* changed *)
