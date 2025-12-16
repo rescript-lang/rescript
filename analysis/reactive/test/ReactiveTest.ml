@@ -555,6 +555,278 @@ let test_join_with_merge () =
   (* Only one left *)
   Printf.printf "PASSED\n\n"
 
+(* Test union *)
+let test_union_basic () =
+  Printf.printf "=== Test: union basic ===\n";
+
+  (* Left collection *)
+  let left_data : (string, int) Hashtbl.t = Hashtbl.create 16 in
+  let left_subs : ((string, int) delta -> unit) list ref = ref [] in
+  let left : (string, int) t =
+    {
+      subscribe = (fun h -> left_subs := h :: !left_subs);
+      iter = (fun f -> Hashtbl.iter f left_data);
+      get = (fun k -> Hashtbl.find_opt left_data k);
+      length = (fun () -> Hashtbl.length left_data);
+    }
+  in
+  let emit_left delta =
+    apply_delta left_data delta;
+    List.iter (fun h -> h delta) !left_subs
+  in
+
+  (* Right collection *)
+  let right_data : (string, int) Hashtbl.t = Hashtbl.create 16 in
+  let right_subs : ((string, int) delta -> unit) list ref = ref [] in
+  let right : (string, int) t =
+    {
+      subscribe = (fun h -> right_subs := h :: !right_subs);
+      iter = (fun f -> Hashtbl.iter f right_data);
+      get = (fun k -> Hashtbl.find_opt right_data k);
+      length = (fun () -> Hashtbl.length right_data);
+    }
+  in
+  let emit_right delta =
+    apply_delta right_data delta;
+    List.iter (fun h -> h delta) !right_subs
+  in
+
+  (* Create union without merge (right takes precedence) *)
+  let combined = Reactive.union left right () in
+
+  (* Initially empty *)
+  assert (length combined = 0);
+
+  (* Add to left *)
+  emit_left (Set ("a", 1));
+  Printf.printf "After left Set(a, 1): combined=%d\n" (length combined);
+  assert (length combined = 1);
+  assert (get combined "a" = Some 1);
+
+  (* Add different key to right *)
+  emit_right (Set ("b", 2));
+  Printf.printf "After right Set(b, 2): combined=%d\n" (length combined);
+  assert (length combined = 2);
+  assert (get combined "a" = Some 1);
+  assert (get combined "b" = Some 2);
+
+  (* Add same key to right (should override left) *)
+  emit_right (Set ("a", 10));
+  Printf.printf "After right Set(a, 10): combined a=%d\n"
+    (get combined "a" |> Option.value ~default:(-1));
+  assert (length combined = 2);
+  assert (get combined "a" = Some 10);
+
+  (* Right takes precedence *)
+
+  (* Remove from right (left value should show through) *)
+  emit_right (Remove "a");
+  Printf.printf "After right Remove(a): combined a=%d\n"
+    (get combined "a" |> Option.value ~default:(-1));
+  assert (get combined "a" = Some 1);
+
+  (* Left shows through *)
+
+  (* Remove from left *)
+  emit_left (Remove "a");
+  Printf.printf "After left Remove(a): combined=%d\n" (length combined);
+  assert (length combined = 1);
+  assert (get combined "a" = None);
+  assert (get combined "b" = Some 2);
+
+  Printf.printf "PASSED\n\n"
+
+let test_union_with_merge () =
+  Printf.printf "=== Test: union with merge ===\n";
+
+  (* Left collection *)
+  let left_data : (string, IntSet.t) Hashtbl.t = Hashtbl.create 16 in
+  let left_subs : ((string, IntSet.t) delta -> unit) list ref = ref [] in
+  let left : (string, IntSet.t) t =
+    {
+      subscribe = (fun h -> left_subs := h :: !left_subs);
+      iter = (fun f -> Hashtbl.iter f left_data);
+      get = (fun k -> Hashtbl.find_opt left_data k);
+      length = (fun () -> Hashtbl.length left_data);
+    }
+  in
+  let emit_left delta =
+    apply_delta left_data delta;
+    List.iter (fun h -> h delta) !left_subs
+  in
+
+  (* Right collection *)
+  let right_data : (string, IntSet.t) Hashtbl.t = Hashtbl.create 16 in
+  let right_subs : ((string, IntSet.t) delta -> unit) list ref = ref [] in
+  let right : (string, IntSet.t) t =
+    {
+      subscribe = (fun h -> right_subs := h :: !right_subs);
+      iter = (fun f -> Hashtbl.iter f right_data);
+      get = (fun k -> Hashtbl.find_opt right_data k);
+      length = (fun () -> Hashtbl.length right_data);
+    }
+  in
+  let emit_right delta =
+    apply_delta right_data delta;
+    List.iter (fun h -> h delta) !right_subs
+  in
+
+  (* Create union with set union as merge *)
+  let combined = Reactive.union left right ~merge:IntSet.union () in
+
+  (* Add to left: key "x" -> {1, 2} *)
+  emit_left (Set ("x", IntSet.of_list [1; 2]));
+  let v = get combined "x" |> Option.get in
+  Printf.printf "After left Set(x, {1,2}): {%s}\n"
+    (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
+  assert (IntSet.equal v (IntSet.of_list [1; 2]));
+
+  (* Add to right: key "x" -> {3, 4} (should merge) *)
+  emit_right (Set ("x", IntSet.of_list [3; 4]));
+  let v = get combined "x" |> Option.get in
+  Printf.printf "After right Set(x, {3,4}): {%s}\n"
+    (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
+  assert (IntSet.equal v (IntSet.of_list [1; 2; 3; 4]));
+
+  (* Update left: key "x" -> {1, 5} *)
+  emit_left (Set ("x", IntSet.of_list [1; 5]));
+  let v = get combined "x" |> Option.get in
+  Printf.printf "After left update to {1,5}: {%s}\n"
+    (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
+  assert (IntSet.equal v (IntSet.of_list [1; 3; 4; 5]));
+
+  (* Remove right *)
+  emit_right (Remove "x");
+  let v = get combined "x" |> Option.get in
+  Printf.printf "After right Remove(x): {%s}\n"
+    (IntSet.elements v |> List.map string_of_int |> String.concat ", ");
+  assert (IntSet.equal v (IntSet.of_list [1; 5]));
+
+  Printf.printf "PASSED\n\n"
+
+let test_union_existing_data () =
+  Printf.printf "=== Test: union on collections with existing data ===\n";
+
+  (* Create collections with existing data *)
+  let left_data : (int, string) Hashtbl.t = Hashtbl.create 16 in
+  Hashtbl.add left_data 1 "a";
+  Hashtbl.add left_data 2 "b";
+  let left_subs : ((int, string) delta -> unit) list ref = ref [] in
+  let left : (int, string) t =
+    {
+      subscribe = (fun h -> left_subs := h :: !left_subs);
+      iter = (fun f -> Hashtbl.iter f left_data);
+      get = (fun k -> Hashtbl.find_opt left_data k);
+      length = (fun () -> Hashtbl.length left_data);
+    }
+  in
+
+  let right_data : (int, string) Hashtbl.t = Hashtbl.create 16 in
+  Hashtbl.add right_data 2 "B";
+  (* Overlaps with left *)
+  Hashtbl.add right_data 3 "c";
+  let right_subs : ((int, string) delta -> unit) list ref = ref [] in
+  let right : (int, string) t =
+    {
+      subscribe = (fun h -> right_subs := h :: !right_subs);
+      iter = (fun f -> Hashtbl.iter f right_data);
+      get = (fun k -> Hashtbl.find_opt right_data k);
+      length = (fun () -> Hashtbl.length right_data);
+    }
+  in
+
+  (* Create union after both have data *)
+  let combined = Reactive.union left right () in
+
+  Printf.printf "Union has %d entries (expected 3)\n" (length combined);
+  assert (length combined = 3);
+  assert (get combined 1 = Some "a");
+  (* Only in left *)
+  assert (get combined 2 = Some "B");
+  (* Right takes precedence *)
+  assert (get combined 3 = Some "c");
+
+  (* Only in right *)
+  Printf.printf "PASSED\n\n"
+
+(* Test fixpoint *)
+let test_fixpoint () =
+  Printf.printf "Test: fixpoint\n";
+
+  (* Create mutable sources *)
+  let init_tbl = Hashtbl.create 16 in
+  let init_subscribers = ref [] in
+  let emit_init delta =
+    Hashtbl.iter (fun _ h -> h delta) (Hashtbl.create 1);
+    List.iter (fun h -> h delta) !init_subscribers
+  in
+  let init : (int, unit) Reactive.t =
+    {
+      subscribe = (fun h -> init_subscribers := h :: !init_subscribers);
+      iter = (fun f -> Hashtbl.iter f init_tbl);
+      get = (fun k -> Hashtbl.find_opt init_tbl k);
+      length = (fun () -> Hashtbl.length init_tbl);
+    }
+  in
+
+  let edges_tbl : (int, int list) Hashtbl.t = Hashtbl.create 16 in
+  let edges_subscribers = ref [] in
+  let emit_edges delta = List.iter (fun h -> h delta) !edges_subscribers in
+  let edges : (int, int list) Reactive.t =
+    {
+      subscribe = (fun h -> edges_subscribers := h :: !edges_subscribers);
+      iter = (fun f -> Hashtbl.iter f edges_tbl);
+      get = (fun k -> Hashtbl.find_opt edges_tbl k);
+      length = (fun () -> Hashtbl.length edges_tbl);
+    }
+  in
+
+  (* Set up graph: 1 -> [2, 3], 2 -> [4], 3 -> [4] *)
+  Hashtbl.replace edges_tbl 1 [2; 3];
+  Hashtbl.replace edges_tbl 2 [4];
+  Hashtbl.replace edges_tbl 3 [4];
+
+  (* Compute fixpoint *)
+  let reachable = Reactive.fixpoint ~init ~edges () in
+
+  (* Initially empty *)
+  Printf.printf "Initially: length=%d\n" (Reactive.length reachable);
+  assert (Reactive.length reachable = 0);
+
+  (* Add root 1 *)
+  Hashtbl.replace init_tbl 1 ();
+  emit_init (Set (1, ()));
+  Printf.printf "After adding root 1: length=%d\n" (Reactive.length reachable);
+  assert (Reactive.length reachable = 4);
+  (* 1, 2, 3, 4 *)
+  assert (Reactive.get reachable 1 = Some ());
+  assert (Reactive.get reachable 2 = Some ());
+  assert (Reactive.get reachable 3 = Some ());
+  assert (Reactive.get reachable 4 = Some ());
+  assert (Reactive.get reachable 5 = None);
+
+  (* Add another root 5 with edge 5 -> [6] *)
+  Hashtbl.replace edges_tbl 5 [6];
+  emit_edges (Set (5, [6]));
+  Hashtbl.replace init_tbl 5 ();
+  emit_init (Set (5, ()));
+  Printf.printf "After adding root 5: length=%d\n" (Reactive.length reachable);
+  assert (Reactive.length reachable = 6);
+
+  (* 1, 2, 3, 4, 5, 6 *)
+
+  (* Remove root 1 *)
+  Hashtbl.remove init_tbl 1;
+  emit_init (Remove 1);
+  Printf.printf "After removing root 1: length=%d\n" (Reactive.length reachable);
+  assert (Reactive.length reachable = 2);
+  (* 5, 6 *)
+  assert (Reactive.get reachable 1 = None);
+  assert (Reactive.get reachable 5 = Some ());
+  assert (Reactive.get reachable 6 = Some ());
+
+  Printf.printf "PASSED\n\n"
+
 let () =
   Printf.printf "\n====== Reactive Collection Tests ======\n\n";
   test_flatmap_basic ();
@@ -565,4 +837,8 @@ let () =
   test_lookup ();
   test_join ();
   test_join_with_merge ();
+  test_union_basic ();
+  test_union_with_merge ();
+  test_union_existing_data ();
+  test_fixpoint ();
   Printf.printf "All tests passed!\n"

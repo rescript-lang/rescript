@@ -20,8 +20,13 @@ val of_reactive :
   t
 (** Wrap reactive collections directly (no copy) *)
 
+(** {2 refs_to direction (for reporting)} *)
+
 val find_value_refs : t -> Lexing.position -> PosSet.t
-(** Find value references to a position *)
+(** Find who value-references this position *)
 
 val find_type_refs : t -> Lexing.position -> PosSet.t
-(** Find type references to a position *)
+(** Find who type-references this position *)
+
+val get_refs_opt : t -> References.t option
+(** Get underlying References.t for Frozen stores. Returns None for Reactive. *)

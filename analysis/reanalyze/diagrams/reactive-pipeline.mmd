@@ -8,67 +8,81 @@ flowchart TB
         FD["FD"]
     end
 
-    subgraph Extracted["Extracted"]
+    subgraph Extracted["Extracted (ReactiveMerge)"]
         DECLS["D"]
         ANNOT["A"]
-        VREFS["VR"]
-        TREFS["TR"]
+        VREFS_TO["VR→"]
+        TREFS_TO["TR→"]
+        VREFS_FROM["VR←"]
+        TREFS_FROM["TR←"]
         CFI["CFI"]
     end
 
     subgraph TypeDeps["ReactiveTypeDeps"]
         DBP["DBP"]
-        SPR["SPR"]
-        I2I["I2I"]
-        I2I2["I2I₂"]
-        INT2IMP["I→I"]
+        ATR["ATR←"]
     end
 
     subgraph ExcDeps["ReactiveExceptionRefs"]
         EXCREF["ER"]
         EXCDECL["ED"]
-        RESOLVED["RR"]
+        RESOLVED["RR←"]
     end
 
-    subgraph Output["Output"]
-        REFS["REFS"]
+    subgraph DeclRefs["ReactiveDeclRefs"]
+        DR["DR"]
+    end
+
+    subgraph Liveness["ReactiveLiveness"]
+        ROOTS["roots"]
+        EDGES["edges"]
+        FP["fixpoint"]
+        LIVE["LIVE"]
     end
 
     RFC -->|"process"| FD
     FD -->|"flatMap"| DECLS
     FD -->|"flatMap"| ANNOT
-    FD -->|"flatMap"| VREFS
-    FD -->|"flatMap"| TREFS
+    FD -->|"flatMap"| VREFS_TO
+    FD -->|"flatMap"| TREFS_TO
+    FD -->|"flatMap"| VREFS_FROM
+    FD -->|"flatMap"| TREFS_FROM
     FD -->|"flatMap"| CFI
 
     DECLS -->|"flatMap"| DBP
-    DBP -->|"flatMap"| SPR
-    DBP -->|"join"| I2I
-    DBP -->|"join"| I2I2
-    DBP -->|"join"| INT2IMP
+    DBP -->|"union+flatMap"| ATR
 
     CFI -->|"flatMap"| EXCREF
     DECLS -->|"flatMap"| EXCDECL
     EXCREF -->|"join"| RESOLVED
     EXCDECL -->|"join"| RESOLVED
 
-    VREFS --> REFS
-    TREFS --> REFS
-    SPR --> REFS
-    I2I --> REFS
-    I2I2 --> REFS
-    INT2IMP --> REFS
-    RESOLVED --> REFS
+    DECLS --> DR
+    VREFS_FROM --> DR
+    TREFS_FROM --> DR
+    ATR --> DR
+    RESOLVED --> DR
+
+    DECLS --> ROOTS
+    ANNOT --> ROOTS
+
+    DR -->|"flatMap"| EDGES
+    ROOTS --> FP
+    EDGES --> FP
+    FP -->|"fixpoint"| LIVE
 
     classDef fileLayer fill:#e8f4fd,stroke:#4a90d9,stroke-width:2px
     classDef extracted fill:#f0f7e6,stroke:#6b8e23,stroke-width:2px
     classDef typeDeps fill:#fff5e6,stroke:#d4a574,stroke-width:2px
     classDef excDeps fill:#f5e6ff,stroke:#9966cc,stroke-width:2px
+    classDef declRefs fill:#e6f0ff,stroke:#4a74d9,stroke-width:2px
+    classDef liveness fill:#ffe6e6,stroke:#cc6666,stroke-width:2px
     classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
 
     class RFC,FD fileLayer
-    class DECLS,ANNOT,VREFS,TREFS,CFI extracted
-    class DBP,SPR,I2I,I2I2,INT2IMP typeDeps
+    class DECLS,ANNOT,VREFS_TO,TREFS_TO,VREFS_FROM,TREFS_FROM,CFI extracted
+    class DBP,ATR typeDeps
     class EXCREF,EXCDECL,RESOLVED excDeps
-    class REFS output
-
+    class DR declRefs
+    class ROOTS,EDGES,FP liveness
+    class LIVE output

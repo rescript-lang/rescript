@@ -117,3 +117,47 @@ val join :
           | None -> [])
         ()
     ]} *)
+
+(** {1 Union} *)
+
+val union :
+  ('k, 'v) t -> ('k, 'v) t -> ?merge:('v -> 'v -> 'v) -> unit -> ('k, 'v) t
+(** [union left right ?merge ()] combines two collections.
+    
+    Returns a collection containing all entries from both [left] and [right].
+    When the same key exists in both collections:
+    - If [merge] is provided, values are combined with [merge left_val right_val]
+    - Otherwise, the value from [right] takes precedence
+    
+    When either collection changes, the union updates automatically.
+    
+    {2 Example: Combining reference sets}
+    {[
+      let value_refs = ...
+      let type_refs = ...
+      let all_refs = Reactive.union value_refs type_refs ~merge:PosSet.union ()
+    ]} *)
+
+(** {1 Fixpoint} *)
+
+val fixpoint :
+  init:('k, unit) t -> edges:('k, 'k list) t -> unit -> ('k, unit) t
+(** [fixpoint ~init ~edges ()] computes transitive closure.
+    
+    Starting from keys in [init], follows edges to discover all reachable keys.
+    
+    - [init]: reactive collection of starting keys
+    - [edges]: reactive collection mapping each key to its successor keys
+    - Returns: reactive collection of all reachable keys
+    
+    When [init] or [edges] changes, the fixpoint recomputes.
+    
+    {b Note}: Current implementation recomputes full fixpoint on any change.
+    Future versions will update incrementally.
+    
+    {2 Example: Reachability}
+    {[
+      let roots = ...  (* keys that are initially reachable *)
+      let graph = ...  (* key -> successor keys *)
+      let reachable = Reactive.fixpoint ~init:roots ~edges:graph ()
+    ]} *)

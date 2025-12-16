@@ -34,6 +34,9 @@
 type t = {
   exception_decls: (DcePath.t, Location.t) Reactive.t;
   resolved_refs: (Lexing.position, PosSet.t) Reactive.t;
+      (** refs_to direction: target -> sources *)
+  resolved_refs_from: (Lexing.position, PosSet.t) Reactive.t;
+      (** refs_from direction: source -> targets (for forward solver) *)
 }
 (** Reactive exception ref collections *)
 

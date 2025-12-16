@@ -12,6 +12,7 @@
 type t = {
   exception_decls: (DcePath.t, Location.t) Reactive.t;
   resolved_refs: (Lexing.position, PosSet.t) Reactive.t;
+  resolved_refs_from: (Lexing.position, PosSet.t) Reactive.t;
 }
 (** Reactive exception ref collections *)
 
@@ -48,7 +49,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~f:(fun _path loc_from loc_to_opt ->
         match loc_to_opt with
         | Some loc_to ->
-          (* Add value reference: pos_to -> pos_from *)
+          (* Add value reference: pos_to -> pos_from (refs_to direction) *)
           [
             ( loc_to.Location.loc_start,
               PosSet.singleton loc_from.Location.loc_start );
@@ -57,7 +58,16 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~merge:PosSet.union ()
   in
 
-  {exception_decls; resolved_refs}
+  (* Step 3: Create refs_from direction by inverting *)
+  let resolved_refs_from =
+    Reactive.flatMap resolved_refs
+      ~f:(fun posTo posFromSet ->
+        PosSet.elements posFromSet
+        |> List.map (fun posFrom -> (posFrom, PosSet.singleton posTo)))
+      ~merge:PosSet.union ()
+  in
+
+  {exception_decls; resolved_refs; resolved_refs_from}
 
 (** {1 Freezing} *)
 

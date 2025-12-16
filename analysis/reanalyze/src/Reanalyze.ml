@@ -268,7 +268,7 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
   let analysis_result =
     if dce_config.DceConfig.run.dce then
       (* Merging phase: combine all builders -> immutable data *)
-      let ann_store, decl_store, cross_file_store, ref_store, file_deps_store =
+      let ann_store, decl_store, cross_file_store, ref_store =
         Timing.time_phase `Merging (fun () ->
             (* Use reactive merge if available, otherwise list-based merge *)
             let ann_store, decl_store, cross_file_store =
@@ -298,25 +298,18 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
                        |> List.map (fun fd -> fd.DceFileProcessing.cross_file)))
                 )
             in
-            (* Compute refs and file_deps.
+            (* Compute refs.
                In reactive mode, use stores directly (skip freeze!).
                In non-reactive mode, use the imperative processing. *)
-            let ref_store, file_deps_store =
+            let ref_store =
               match reactive_merge with
               | Some merged ->
-                (* Reactive mode: use stores directly, skip freeze! *)
-                let ref_store =
-                  ReferenceStore.of_reactive ~value_refs:merged.value_refs
-                    ~type_refs:merged.type_refs ~type_deps:merged.type_deps
-                    ~exception_refs:merged.exception_refs
-                in
-                let file_deps_store =
-                  FileDepsStore.of_reactive ~files:merged.files
-                    ~deps:merged.file_deps_map
-                in
-                (ref_store, file_deps_store)
+                (* Reactive mode: use stores directly *)
+                ReferenceStore.of_reactive ~value_refs:merged.value_refs
+                  ~type_refs:merged.type_refs ~type_deps:merged.type_deps
+                  ~exception_refs:merged.exception_refs
               | None ->
-                (* Non-reactive mode: build refs/file_deps imperatively *)
+                (* Non-reactive mode: build refs imperatively *)
                 (* Need Declarations.t for type deps processing *)
                 let decls =
                   match decl_store with
@@ -361,23 +354,31 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
                 CrossFileItems.process_exception_refs cross_file
                   ~refs:refs_builder ~file_deps:file_deps_builder
                   ~find_exception ~config:dce_config;
-                (* Freeze refs and file_deps for solver *)
+                (* Freeze refs for solver *)
                 let refs = References.freeze_builder refs_builder in
-                let file_deps = FileDeps.freeze_builder file_deps_builder in
-                ( ReferenceStore.of_frozen refs,
-                  FileDepsStore.of_frozen file_deps )
+                ReferenceStore.of_frozen refs
             in
-            (ann_store, decl_store, cross_file_store, ref_store, file_deps_store))
+            (ann_store, decl_store, cross_file_store, ref_store))
       in
       (* Solving phase: run the solver and collect issues *)
       Timing.time_phase `Solving (fun () ->
           let empty_optional_args_state = OptionalArgsState.create () in
           let analysis_result_core =
-            DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
-              ~file_deps_store ~optional_args_state:empty_optional_args_state
-              ~config:dce_config
-              ~checkOptionalArg:(fun
-                  ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
+            match reactive_merge with
+            | Some merged ->
+              (* Reactive mode: use reactive liveness *)
+              let live = ReactiveLiveness.create ~merged in
+              DeadCommon.solveDeadReactive ~ann_store ~decl_store ~ref_store
+                ~live ~optional_args_state:empty_optional_args_state
+                ~config:dce_config
+                ~checkOptionalArg:(fun
+                    ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
+            | None ->
+              DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
+                ~optional_args_state:empty_optional_args_state
+                ~config:dce_config
+                ~checkOptionalArg:(fun
+                    ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
           in
           (* Compute liveness-aware optional args state *)
           let is_live pos =
