@@ -6,8 +6,14 @@
     
     Uses pure reactive combinators - no internal hashtables. *)
 
+type t = {
+  live: (Lexing.position, unit) Reactive.t;
+  edges: (Lexing.position, Lexing.position list) Reactive.t;
+  roots: (Lexing.position, unit) Reactive.t;
+}
+
 (** Compute reactive liveness from ReactiveMerge.t *)
-let create ~(merged : ReactiveMerge.t) : (Lexing.position, unit) Reactive.t =
+let create ~(merged : ReactiveMerge.t) : t =
   let decls = merged.decls in
   let annotations = merged.annotations in
 
@@ -46,22 +52,13 @@ let create ~(merged : ReactiveMerge.t) : (Lexing.position, unit) Reactive.t =
      
      This matches the non-reactive algorithm which uses DeclarationStore.find_opt.
      
-     We use flatMap and check decls synchronously within the function.
-     This works correctly regardless of delta arrival order because the check
-     happens at evaluation time when decls has current data. *)
-  (* Compute externally referenced positions reactively.
-     A position is externally referenced if any reference to it comes from
-     a position that is NOT a declaration position (exact match).
-     
-     This matches the non-reactive algorithm which uses DeclarationStore.find_opt.
-     
-     We use flatMap and check decls synchronously within the function.
-     This works correctly regardless of delta arrival order because the check
-     happens at evaluation time when decls has current data. *)
+     We use join to explicitly track the dependency on decls. When a decl at
+     position P arrives, any ref with posFrom=P will be reprocessed. *)
   let external_value_refs : (Lexing.position, unit) Reactive.t =
-    Reactive.flatMap value_refs_from
-      ~f:(fun posFrom targets ->
-        match decls.get posFrom with
+    Reactive.join value_refs_from decls
+      ~key_of:(fun posFrom _targets -> posFrom)
+      ~f:(fun _posFrom targets decl_opt ->
+        match decl_opt with
         | Some _ ->
           (* posFrom IS a decl position, refs are internal *)
           []
@@ -73,9 +70,10 @@ let create ~(merged : ReactiveMerge.t) : (Lexing.position, unit) Reactive.t =
   in
 
   let external_type_refs : (Lexing.position, unit) Reactive.t =
-    Reactive.flatMap type_refs_from
-      ~f:(fun posFrom targets ->
-        match decls.get posFrom with
+    Reactive.join type_refs_from decls
+      ~key_of:(fun posFrom _targets -> posFrom)
+      ~f:(fun _posFrom targets decl_opt ->
+        match decl_opt with
         | Some _ ->
           (* posFrom IS a decl position, refs are internal *)
           []
@@ -113,4 +111,5 @@ let create ~(merged : ReactiveMerge.t) : (Lexing.position, unit) Reactive.t =
   in
 
   (* Step 4: Compute fixpoint - all reachable positions from roots *)
-  Reactive.fixpoint ~init:all_roots ~edges ()
+  let live = Reactive.fixpoint ~init:all_roots ~edges () in
+  {live; edges; roots = all_roots}
