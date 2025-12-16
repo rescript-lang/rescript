@@ -22,5 +22,8 @@ val collect_issues :
   Issue.t list
 (** Collect issues. O(dead_decls + live_decls). *)
 
+val iter_live_decls : t:t -> (Decl.t -> unit) -> unit
+(** Iterate over live declarations *)
+
 val stats : t:t -> int * int
 (** (dead, live) counts *)

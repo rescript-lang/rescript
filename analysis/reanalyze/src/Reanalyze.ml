@@ -369,20 +369,54 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
           | Some solver ->
             (* Reactive solver: iterate dead_decls + live_decls *)
             let t0 = Unix.gettimeofday () in
-            let issues =
+            let dead_code_issues =
               ReactiveSolver.collect_issues ~t:solver ~config:dce_config
                 ~ann_store
             in
             let t1 = Unix.gettimeofday () in
+            (* Collect optional args issues from live declarations *)
+            let optional_args_issues =
+              match reactive_merge with
+              | Some merged ->
+                (* Create CrossFileItemsStore from reactive collection *)
+                let cross_file_store =
+                  CrossFileItemsStore.of_reactive merged.ReactiveMerge.cross_file_items
+                in
+                (* Compute optional args state using declaration liveness
+                   Note: is_live returns true if pos is not a declaration (matches non-reactive)
+                   Uses Decl.isLive which checks resolvedDead set by collect_issues *)
+                let is_live pos =
+                  match Reactive.get merged.ReactiveMerge.decls pos with
+                  | None -> true (* not a declaration, assume live *)
+                  | Some decl -> Decl.isLive decl
+                in
+                let find_decl pos = Reactive.get merged.ReactiveMerge.decls pos in
+                let optional_args_state =
+                  CrossFileItemsStore.compute_optional_args_state cross_file_store
+                    ~find_decl ~is_live
+                in
+                (* Iterate live declarations and check for optional args issues *)
+                let issues = ref [] in
+                ReactiveSolver.iter_live_decls ~t:solver (fun decl ->
+                    let decl_issues =
+                      DeadOptionalArgs.check ~optional_args_state ~ann_store
+                        ~config:dce_config decl
+                    in
+                    issues := List.rev_append decl_issues !issues);
+                List.rev !issues
+              | None -> []
+            in
+            let t2 = Unix.gettimeofday () in
+            let all_issues = dead_code_issues @ optional_args_issues in
             let num_dead, num_live = ReactiveSolver.stats ~t:solver in
             if !Cli.timing then
               Printf.eprintf
-                "  ReactiveSolver: collect=%.3fms (dead=%d, live=%d, \
+                "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, live=%d, \
                  issues=%d)\n"
                 ((t1 -. t0) *. 1000.0)
-                num_dead num_live (List.length issues);
-            (* TODO: add optional args to reactive pipeline *)
-            Some (AnalysisResult.add_issues AnalysisResult.empty issues)
+                ((t2 -. t1) *. 1000.0)
+                num_dead num_live (List.length all_issues);
+            Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
           | None ->
             (* Non-reactive path: use old solver with optional args *)
             let empty_optional_args_state = OptionalArgsState.create () in
