@@ -268,38 +268,71 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
   let analysis_result =
     if dce_config.DceConfig.run.dce then
       (* Merging phase: combine all builders -> immutable data *)
-      let annotations, decls, cross_file, refs, file_deps =
+      let ann_store, decl_store, cross_file_store, ref_store, file_deps_store =
         Timing.time_phase `Merging (fun () ->
             (* Use reactive merge if available, otherwise list-based merge *)
-            let annotations, decls, cross_file =
+            let ann_store, decl_store, cross_file_store =
               match reactive_merge with
               | Some merged ->
-                ( ReactiveMerge.freeze_annotations merged,
-                  ReactiveMerge.freeze_decls merged,
-                  ReactiveMerge.collect_cross_file_items merged )
+                (* Reactive mode: use stores directly, skip freeze! *)
+                ( AnnotationStore.of_reactive merged.ReactiveMerge.annotations,
+                  DeclarationStore.of_reactive merged.ReactiveMerge.decls,
+                  CrossFileItemsStore.of_reactive
+                    merged.ReactiveMerge.cross_file_items )
               | None ->
-                ( FileAnnotations.merge_all
-                    (dce_data_list
-                    |> List.map (fun fd -> fd.DceFileProcessing.annotations)),
+                (* Non-reactive mode: freeze into data, wrap in store *)
+                let decls =
                   Declarations.merge_all
                     (dce_data_list
-                    |> List.map (fun fd -> fd.DceFileProcessing.decls)),
-                  CrossFileItems.merge_all
-                    (dce_data_list
-                    |> List.map (fun fd -> fd.DceFileProcessing.cross_file)) )
+                    |> List.map (fun fd -> fd.DceFileProcessing.decls))
+                in
+                ( AnnotationStore.of_frozen
+                    (FileAnnotations.merge_all
+                       (dce_data_list
+                       |> List.map (fun fd -> fd.DceFileProcessing.annotations)
+                       )),
+                  DeclarationStore.of_frozen decls,
+                  CrossFileItemsStore.of_frozen
+                    (CrossFileItems.merge_all
+                       (dce_data_list
+                       |> List.map (fun fd -> fd.DceFileProcessing.cross_file)))
+                )
             in
             (* Compute refs and file_deps.
-               In reactive mode, ReactiveMerge handles type deps and exception refs.
+               In reactive mode, use stores directly (skip freeze!).
                In non-reactive mode, use the imperative processing. *)
-            let refs, file_deps =
+            let ref_store, file_deps_store =
               match reactive_merge with
               | Some merged ->
-                (* Reactive mode: freeze_refs includes type deps and exception refs *)
-                let refs = ReactiveMerge.freeze_refs merged in
-                let file_deps = ReactiveMerge.freeze_file_deps merged in
-                (refs, file_deps)
+                (* Reactive mode: use stores directly, skip freeze! *)
+                let ref_store =
+                  ReferenceStore.of_reactive ~value_refs:merged.value_refs
+                    ~type_refs:merged.type_refs ~type_deps:merged.type_deps
+                    ~exception_refs:merged.exception_refs
+                in
+                let file_deps_store =
+                  FileDepsStore.of_reactive ~files:merged.files
+                    ~deps:merged.file_deps_map
+                in
+                (ref_store, file_deps_store)
               | None ->
                 (* Non-reactive mode: build refs/file_deps imperatively *)
+                (* Need Declarations.t for type deps processing *)
+                let decls =
+                  match decl_store with
+                  | DeclarationStore.Frozen d -> d
+                  | DeclarationStore.Reactive _ ->
+                    failwith
+                      "unreachable: non-reactive path with reactive store"
+                in
+                (* Need CrossFileItems.t for exception refs processing *)
+                let cross_file =
+                  match cross_file_store with
+                  | CrossFileItemsStore.Frozen cfi -> cfi
+                  | CrossFileItemsStore.Reactive _ ->
+                    failwith
+                      "unreachable: non-reactive path with reactive store"
+                in
                 let refs_builder = References.create_builder () in
                 let file_deps_builder = FileDeps.create_builder () in
                 (match reactive_collection with
@@ -331,41 +364,44 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
                 (* Freeze refs and file_deps for solver *)
                 let refs = References.freeze_builder refs_builder in
                 let file_deps = FileDeps.freeze_builder file_deps_builder in
-                (refs, file_deps)
+                ( ReferenceStore.of_frozen refs,
+                  FileDepsStore.of_frozen file_deps )
             in
-            (annotations, decls, cross_file, refs, file_deps))
+            (ann_store, decl_store, cross_file_store, ref_store, file_deps_store))
       in
       (* Solving phase: run the solver and collect issues *)
       Timing.time_phase `Solving (fun () ->
           let empty_optional_args_state = OptionalArgsState.create () in
           let analysis_result_core =
-            DeadCommon.solveDead ~annotations ~decls ~refs ~file_deps
-              ~optional_args_state:empty_optional_args_state ~config:dce_config
+            DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
+              ~file_deps_store ~optional_args_state:empty_optional_args_state
+              ~config:dce_config
               ~checkOptionalArg:(fun
-                  ~optional_args_state:_ ~annotations:_ ~config:_ _ -> [])
+                  ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
           in
           (* Compute liveness-aware optional args state *)
           let is_live pos =
-            match Declarations.find_opt decls pos with
+            match DeclarationStore.find_opt decl_store pos with
             | Some decl -> Decl.isLive decl
             | None -> true
           in
           let optional_args_state =
-            CrossFileItems.compute_optional_args_state cross_file ~decls
+            CrossFileItemsStore.compute_optional_args_state cross_file_store
+              ~find_decl:(DeclarationStore.find_opt decl_store)
               ~is_live
           in
           (* Collect optional args issues only for live declarations *)
           let optional_args_issues =
-            Declarations.fold
+            DeclarationStore.fold
               (fun _pos decl acc ->
                 if Decl.isLive decl then
                   let issues =
-                    DeadOptionalArgs.check ~optional_args_state ~annotations
+                    DeadOptionalArgs.check ~optional_args_state ~ann_store
                       ~config:dce_config decl
                   in
                   List.rev_append issues acc
                 else acc)
-              decls []
+              decl_store []
             |> List.rev
           in
           Some

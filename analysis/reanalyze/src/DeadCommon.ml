@@ -88,11 +88,6 @@ let addValueReference ~config ~refs ~file_deps ~(binding : Location.t)
       FileDeps.add_dep file_deps ~from_file:effectiveFrom.loc_start.pos_fname
         ~to_file:locTo.loc_start.pos_fname)
 
-(* NOTE: iterFilesFromRootsToLeaves moved to FileDeps.iter_files_from_roots_to_leaves *)
-
-let iterFilesFromRootsToLeaves ~file_deps iterFun =
-  FileDeps.iter_files_from_roots_to_leaves file_deps iterFun
-
 let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
     ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Decl.Nothing)
     ~moduleLoc (name : Name.t) =
@@ -162,7 +157,7 @@ let isInsideReportedValue (ctx : ReportingContext.t) decl =
 
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
       Caller is responsible for logging. *)
-let reportDeclaration ~config ~refs (ctx : ReportingContext.t) decl :
+let reportDeclaration ~config ~ref_store (ctx : ReportingContext.t) decl :
     Issue.t list =
   let insideReportedValue = decl |> isInsideReportedValue ctx in
   if not decl.report then []
@@ -197,7 +192,7 @@ let reportDeclaration ~config ~refs (ctx : ReportingContext.t) decl :
         (WarningDeadType, "is a variant case which is never constructed")
     in
     let hasRefBelow () =
-      let decl_refs = References.find_value_refs refs decl.pos in
+      let decl_refs = ReferenceStore.find_value_refs ref_store decl.pos in
       let refIsBelow (pos : Lexing.position) =
         decl.pos.pos_fname <> pos.pos_fname
         || decl.pos.pos_cnum < pos.pos_cnum
@@ -227,20 +222,19 @@ let reportDeclaration ~config ~refs (ctx : ReportingContext.t) decl :
       | None -> [dead_value_issue]
     else []
 
-let declIsDead ~annotations ~refs decl =
+let declIsDead ~ann_store ~refs decl =
   let liveRefs =
     refs
     |> PosSet.filter (fun p ->
-           not (FileAnnotations.is_annotated_dead annotations p))
+           not (AnnotationStore.is_annotated_dead ann_store p))
   in
   liveRefs |> PosSet.cardinal = 0
-  && not
-       (FileAnnotations.is_annotated_gentype_or_live annotations decl.Decl.pos)
+  && not (AnnotationStore.is_annotated_gentype_or_live ann_store decl.Decl.pos)
 
-let doReportDead ~annotations pos =
-  not (FileAnnotations.is_annotated_gentype_or_dead annotations pos)
+let doReportDead ~ann_store pos =
+  not (AnnotationStore.is_annotated_gentype_or_dead ann_store pos)
 
-let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
+let rec resolveRecursiveRefs ~ref_store ~ann_store ~config ~decl_store
     ~checkOptionalArg:
       (checkOptionalArgFn : config:DceConfig.t -> Decl.t -> Issue.t list)
     ~deadDeclarations ~issues ~level ~orderedFiles ~refs ~refsBeingResolved decl
@@ -275,7 +269,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
                    (decl.path |> DcePath.toString);
                false)
              else
-               match Declarations.find_opt decls pos with
+               match DeclarationStore.find_opt decl_store pos with
                | None ->
                  if Config.recursiveDebug then
                    Log_.item "recursiveDebug can't find decl for %s@."
@@ -284,20 +278,20 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
                | Some xDecl ->
                  let xRefs =
                    match xDecl.declKind |> Decl.Kind.isType with
-                   | true -> References.find_type_refs all_refs pos
-                   | false -> References.find_value_refs all_refs pos
+                   | true -> ReferenceStore.find_type_refs ref_store pos
+                   | false -> ReferenceStore.find_value_refs ref_store pos
                  in
                  let xDeclIsDead =
                    xDecl
-                   |> resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
-                        ~checkOptionalArg:checkOptionalArgFn ~deadDeclarations
-                        ~issues ~level:(level + 1) ~orderedFiles ~refs:xRefs
-                        ~refsBeingResolved
+                   |> resolveRecursiveRefs ~ref_store ~ann_store ~config
+                        ~decl_store ~checkOptionalArg:checkOptionalArgFn
+                        ~deadDeclarations ~issues ~level:(level + 1)
+                        ~orderedFiles ~refs:xRefs ~refsBeingResolved
                  in
                  if xDecl.resolvedDead = None then allDepsResolved := false;
                  not xDeclIsDead)
     in
-    let isDead = decl |> declIsDead ~annotations ~refs:newRefs in
+    let isDead = decl |> declIsDead ~ann_store ~refs:newRefs in
     let isResolved = (not isDead) || !allDepsResolved || level = 0 in
     if isResolved then (
       decl.resolvedDead <- Some isDead;
@@ -306,7 +300,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
         |> DeadModules.markDead ~config
              ~isType:(decl.declKind |> Decl.Kind.isType)
              ~loc:decl.moduleLoc;
-        if not (doReportDead ~annotations decl.pos) then decl.report <- false;
+        if not (doReportDead ~ann_store decl.pos) then decl.report <- false;
         deadDeclarations := decl :: !deadDeclarations)
       else (
         (* Collect optional args issues *)
@@ -316,7 +310,7 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
         |> DeadModules.markLive ~config
              ~isType:(decl.declKind |> Decl.Kind.isType)
              ~loc:decl.moduleLoc;
-        if FileAnnotations.is_annotated_dead annotations decl.pos then (
+        if AnnotationStore.is_annotated_dead ann_store decl.pos then (
           (* Collect incorrect @dead annotation issue *)
           let issue =
             makeDeadIssue ~decl ~message:" is annotated @dead but is live"
@@ -342,22 +336,23 @@ let rec resolveRecursiveRefs ~all_refs ~annotations ~config ~decls
           refsString level);
     isDead
 
-let solveDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
+let solveDead ~ann_store ~config ~decl_store ~ref_store ~file_deps_store
+    ~optional_args_state
     ~checkOptionalArg:
       (checkOptionalArgFn :
         optional_args_state:OptionalArgsState.t ->
-        annotations:FileAnnotations.t ->
+        ann_store:AnnotationStore.t ->
         config:DceConfig.t ->
         Decl.t ->
         Issue.t list) : AnalysisResult.t =
   let iterDeclInOrder ~deadDeclarations ~issues ~orderedFiles decl =
     let decl_refs =
       match decl |> Decl.isValue with
-      | true -> References.find_value_refs refs decl.pos
-      | false -> References.find_type_refs refs decl.pos
+      | true -> ReferenceStore.find_value_refs ref_store decl.pos
+      | false -> ReferenceStore.find_type_refs ref_store decl.pos
     in
-    resolveRecursiveRefs ~all_refs:refs ~annotations ~config ~decls
-      ~checkOptionalArg:(checkOptionalArgFn ~optional_args_state ~annotations)
+    resolveRecursiveRefs ~ref_store ~ann_store ~config ~decl_store
+      ~checkOptionalArg:(checkOptionalArgFn ~optional_args_state ~ann_store)
       ~deadDeclarations ~issues ~level:0 ~orderedFiles
       ~refsBeingResolved:(ref PosSet.empty) ~refs:decl_refs decl
     |> ignore
@@ -365,7 +360,7 @@ let solveDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
   if config.DceConfig.cli.debug then (
     Log_.item "@.File References@.@.";
     let fileList = ref [] in
-    FileDeps.iter_deps file_deps (fun file files ->
+    FileDepsStore.iter_deps file_deps_store (fun file files ->
         fileList := (file, files) :: !fileList);
     !fileList
     |> List.sort (fun (f1, _) (f2, _) -> String.compare f1 f2)
@@ -375,12 +370,12 @@ let solveDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
              (files |> FileSet.elements |> List.map Filename.basename
             |> String.concat ", ")));
   let declarations =
-    Declarations.fold
+    DeclarationStore.fold
       (fun _pos decl declarations -> decl :: declarations)
-      decls []
+      decl_store []
   in
   let orderedFiles = Hashtbl.create 256 in
-  iterFilesFromRootsToLeaves ~file_deps
+  FileDepsStore.iter_files_from_roots_to_leaves file_deps_store
     (let current = ref 0 in
      fun fileName ->
        incr current;
@@ -402,7 +397,7 @@ let solveDead ~annotations ~config ~decls ~refs ~file_deps ~optional_args_state
   let dead_issues =
     sortedDeadDeclarations
     |> List.concat_map (fun decl ->
-           reportDeclaration ~config ~refs reporting_ctx decl)
+           reportDeclaration ~config ~ref_store reporting_ctx decl)
   in
   (* Combine all issues: inline issues first (they were logged during analysis),
      then dead declaration issues *)
