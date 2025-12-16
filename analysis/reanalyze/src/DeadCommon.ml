@@ -171,9 +171,10 @@ let make_hasRefBelow ~transitive ~iter_value_refs_from =
 
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
     [hasRefBelow] checks if there are references from "below" the declaration.
-    Only used when [config.run.transitive] is false. *)
-let reportDeclaration ~config ~hasRefBelow (ctx : ReportingContext.t) decl :
-    Issue.t list =
+    Only used when [config.run.transitive] is false.
+    [?checkModuleDead] optional callback for checking dead modules. Defaults to DeadModules.checkModuleDead. *)
+let reportDeclaration ~config ~hasRefBelow ?checkModuleDead
+    (ctx : ReportingContext.t) decl : Issue.t list =
   let insideReportedValue = decl |> isInsideReportedValue ctx in
   if not decl.report then []
   else
@@ -214,10 +215,14 @@ let reportDeclaration ~config ~hasRefBelow (ctx : ReportingContext.t) decl :
       && (config.DceConfig.run.transitive || not (hasRefBelow decl))
     in
     if shouldEmitWarning then
-      let dead_module_issue =
+      let moduleName =
         decl.path
         |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
-        |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+      in
+      let dead_module_issue =
+        match checkModuleDead with
+        | Some f -> f ~fileName:decl.pos.pos_fname moduleName
+        | None -> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname moduleName
       in
       let dead_value_issue = makeDeadIssue ~decl ~message deadWarning in
       (* Return in order: dead module first (if any), then dead value *)

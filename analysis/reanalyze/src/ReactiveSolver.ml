@@ -1,11 +1,11 @@
 (** Reactive dead code solver.
     
-    Reactive pipeline: decls + live → dead_decls, live_decls
+    Reactive pipeline: decls + live → dead_decls, live_decls, dead_modules
     
     Current status:
-    - dead_decls, live_decls are reactive (zero recomputation on cache hit)
-    - collect_issues iterates ALL dead_decls + live_decls every call
-      (linear in their total size, not in changes)
+    - dead_decls, live_decls, dead_modules are reactive (zero recomputation on cache hit)
+    - dead_modules = modules with dead decls but no live decls (reactive anti-join)
+    - collect_issues still iterates dead_decls + live_decls to set resolvedDead
     - Uses DeadCommon.reportDeclaration for isInsideReportedValue and hasRefBelow
     
     TODO for fully reactive issues:
@@ -13,8 +13,7 @@
       (currently relies on sequential iteration order via ReportingContext)
     - hasRefBelow: uses O(total_refs) linear scan of refs_from per dead decl;
       could use reactive refs_to index for O(1) lookup per decl
-    - Module marking: needs reactive module dead/live tracking
-      (currently uses mutable DeadModules.markDead/markLive)
+    - resolvedDead: still mutated on every call; could be computed on-demand
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -26,15 +25,19 @@ type t = {
   live_decls: (Lexing.position, Decl.t) Reactive.t;
   annotations: (Lexing.position, FileAnnotations.annotated_as) Reactive.t;
   value_refs_from: (Lexing.position, PosSet.t) Reactive.t option;
+  dead_modules: (Name.t, Location.t) Reactive.t;
+      (** Modules where all declarations are dead. Reactive anti-join. *)
 }
+
+(** Extract module name from a declaration *)
+let decl_module_name (decl : Decl.t) : Name.t =
+  decl.path |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
 
 let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(live : (Lexing.position, unit) Reactive.t)
     ~(annotations : (Lexing.position, FileAnnotations.annotated_as) Reactive.t)
     ~(value_refs_from : (Lexing.position, PosSet.t) Reactive.t option)
     ~(config : DceConfig.t) : t =
-  ignore config;
-
   (* dead_decls = decls where NOT in live (reactive join) *)
   let dead_decls =
     Reactive.join decls live
@@ -57,22 +60,72 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ()
   in
 
-  {dead_decls; live_decls; annotations; value_refs_from}
+  (* Reactive dead modules: modules with dead decls but no live decls *)
+  let dead_modules =
+    if not config.DceConfig.run.transitive then
+      (* Dead modules only reported in transitive mode *)
+      Reactive.flatMap dead_decls ~f:(fun _ _ -> []) ()
+    else
+      (* modules_with_dead: (moduleName, loc) for each module with dead decls *)
+      let modules_with_dead =
+        Reactive.flatMap dead_decls
+          ~f:(fun _pos decl -> [(decl_module_name decl, decl.moduleLoc)])
+          ~merge:(fun loc1 _loc2 -> loc1) (* keep first location *)
+          ()
+      in
+      (* modules_with_live: (moduleName, ()) for each module with live decls *)
+      let modules_with_live =
+        Reactive.flatMap live_decls
+          ~f:(fun _pos decl -> [(decl_module_name decl, ())])
+          ()
+      in
+      (* Anti-join: modules in dead but not in live *)
+      Reactive.join modules_with_dead modules_with_live
+        ~key_of:(fun modName _loc -> modName)
+        ~f:(fun modName loc live_opt ->
+          match live_opt with
+          | None -> [(modName, loc)] (* dead: no live decls *)
+          | Some () -> []) (* live: has at least one live decl *)
+        ()
+  in
+
+  {dead_decls; live_decls; annotations; value_refs_from; dead_modules}
+
+(** Check if a module is dead using reactive collection. Returns issue if dead.
+    Uses reported_modules set to avoid duplicate reports. *)
+let check_module_dead ~(dead_modules : (Name.t, Location.t) Reactive.t)
+    ~(reported_modules : (Name.t, unit) Hashtbl.t) ~fileName:pos_fname moduleName
+    : Issue.t option =
+  if Hashtbl.mem reported_modules moduleName then None
+  else
+    match Reactive.get dead_modules moduleName with
+    | Some loc ->
+      Hashtbl.replace reported_modules moduleName ();
+      let loc =
+        if loc.Location.loc_ghost then
+          let pos =
+            {Lexing.pos_fname; pos_lnum = 0; pos_bol = 0; pos_cnum = 0}
+          in
+          {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
+        else loc
+      in
+      Some (AnalysisResult.make_dead_module_issue ~loc ~moduleName)
+    | None -> None
 
 (** Collect issues from dead and live declarations.
-    Uses DeadCommon.reportDeclaration for correct filtering.
+    Uses reactive dead_modules instead of mutable DeadModules.
     O(dead_decls + live_decls), not O(all_decls). *)
 let collect_issues ~(t : t) ~(config : DceConfig.t)
     ~(ann_store : AnnotationStore.t) : Issue.t list =
-  (* Mark dead declarations and collect them *)
+  let t0 = Unix.gettimeofday () in
+  (* Track reported modules to avoid duplicates *)
+  let reported_modules = Hashtbl.create 64 in
+
+  (* Mark dead declarations and collect them (no DeadModules.markDead) *)
   let dead_list = ref [] in
   Reactive.iter
     (fun _pos (decl : Decl.t) ->
       decl.resolvedDead <- Some true;
-      decl.path
-      |> DeadModules.markDead ~config
-           ~isType:(decl.declKind |> Decl.Kind.isType)
-           ~loc:decl.moduleLoc;
       (* Check annotation to decide if we report.
          Don't report if @live, @genType, or @dead (user knows it's dead) *)
       let should_report =
@@ -86,16 +139,13 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
       if not should_report then decl.report <- false;
       dead_list := decl :: !dead_list)
     t.dead_decls;
+  let t1 = Unix.gettimeofday () in
 
-  (* Mark live declarations *)
+  (* Mark live declarations (no DeadModules.markLive) *)
   let incorrect_dead_issues = ref [] in
   Reactive.iter
     (fun _pos (decl : Decl.t) ->
       decl.resolvedDead <- Some false;
-      decl.path
-      |> DeadModules.markLive ~config
-           ~isType:(decl.declKind |> Decl.Kind.isType)
-           ~loc:decl.moduleLoc;
       (* Check for incorrect @dead annotation on live decl *)
       if AnnotationStore.is_annotated_dead ann_store decl.pos then (
         let issue =
@@ -103,16 +153,20 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
             ~message:" is annotated @dead but is live"
             Issue.IncorrectDeadAnnotation
         in
-        decl.path
-        |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
-        |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+        (* Check if module is dead using reactive collection *)
+        check_module_dead ~dead_modules:t.dead_modules ~reported_modules
+          ~fileName:decl.pos.pos_fname (decl_module_name decl)
         |> Option.iter (fun mod_issue ->
                incorrect_dead_issues := mod_issue :: !incorrect_dead_issues);
         incorrect_dead_issues := issue :: !incorrect_dead_issues))
     t.live_decls;
+  let t2 = Unix.gettimeofday () in
 
-  (* Sort and generate issues using DeadCommon.reportDeclaration *)
+  (* Sort dead declarations for isInsideReportedValue ordering *)
   let sorted_dead = !dead_list |> List.fast_sort Decl.compareForReporting in
+  let t3 = Unix.gettimeofday () in
+
+  (* Generate issues - use reactive dead_modules via callback *)
   let transitive = config.DceConfig.run.transitive in
   let hasRefBelow =
     match t.value_refs_from with
@@ -121,12 +175,28 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
       DeadCommon.make_hasRefBelow ~transitive ~iter_value_refs_from:(fun f ->
           Reactive.iter f refs_from)
   in
+  (* Callback for checking dead modules using reactive collection *)
+  let checkModuleDead ~fileName moduleName =
+    check_module_dead ~dead_modules:t.dead_modules ~reported_modules ~fileName
+      moduleName
+  in
   let reporting_ctx = DeadCommon.ReportingContext.create () in
   let dead_issues =
     sorted_dead
     |> List.concat_map (fun decl ->
-           DeadCommon.reportDeclaration ~config ~hasRefBelow reporting_ctx decl)
+           DeadCommon.reportDeclaration ~config ~hasRefBelow ~checkModuleDead
+             reporting_ctx decl)
   in
+  let t4 = Unix.gettimeofday () in
+
+  if !Cli.timing then
+    Printf.eprintf
+      "    collect_issues: iter_dead=%.2fms iter_live=%.2fms sort=%.2fms \
+       report=%.2fms\n"
+      ((t1 -. t0) *. 1000.0)
+      ((t2 -. t1) *. 1000.0)
+      ((t3 -. t2) *. 1000.0)
+      ((t4 -. t3) *. 1000.0);
 
   List.rev !incorrect_dead_issues @ dead_issues
 
