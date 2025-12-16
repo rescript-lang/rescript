@@ -119,3 +119,36 @@ let process_files ~(collection : t) ~config:_ cmtFilePaths : all_files_result =
 
 (** Get collection length *)
 let length (collection : t) = ReactiveFileCollection.length collection
+
+(** Get the underlying reactive collection for composition.
+    Returns (path, file_data option) suitable for ReactiveMerge. *)
+let to_file_data_collection (collection : t) :
+    (string, DceFileProcessing.file_data option) Reactive.t =
+  Reactive.flatMap
+    (ReactiveFileCollection.to_collection collection)
+    ~f:(fun path result_opt ->
+      match result_opt with
+      | Some {dce_data = Some data; _} -> [(path, Some data)]
+      | _ -> [(path, None)])
+    ()
+
+(** Iterate over all file_data in the collection *)
+let iter_file_data (collection : t) (f : DceFileProcessing.file_data -> unit) :
+    unit =
+  ReactiveFileCollection.iter
+    (fun _path result_opt ->
+      match result_opt with
+      | Some {dce_data = Some data; _} -> f data
+      | _ -> ())
+    collection
+
+(** Collect all exception results from the collection *)
+let collect_exception_results (collection : t) : Exception.file_result list =
+  let results = ref [] in
+  ReactiveFileCollection.iter
+    (fun _path result_opt ->
+      match result_opt with
+      | Some {exception_data = Some data; _} -> results := data :: !results
+      | _ -> ())
+    collection;
+  !results

@@ -50,6 +50,18 @@ let freeze_builder (builder : builder) : t =
   (* Zero-copy freeze - builder should not be used after this *)
   {value_refs = builder.value_refs; type_refs = builder.type_refs}
 
+(* ===== Builder extraction for reactive merge ===== *)
+
+let builder_value_refs_to_list (builder : builder) :
+    (Lexing.position * PosSet.t) list =
+  PosHash.fold (fun pos refs acc -> (pos, refs) :: acc) builder.value_refs []
+
+let builder_type_refs_to_list (builder : builder) :
+    (Lexing.position * PosSet.t) list =
+  PosHash.fold (fun pos refs acc -> (pos, refs) :: acc) builder.type_refs []
+
+let create ~value_refs ~type_refs : t = {value_refs; type_refs}
+
 (* ===== Read-only API ===== *)
 
 let find_value_refs (t : t) pos = findSet t.value_refs pos

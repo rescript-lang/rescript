@@ -244,10 +244,16 @@ let shuffle_list lst =
   done;
   Array.to_list arr
 
-let runAnalysis ~dce_config ~cmtRoot ~reactive_collection =
+let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
     processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection
+  in
+  (* Get exception results from reactive collection if available *)
+  let exception_results =
+    match reactive_collection with
+    | Some collection -> ReactiveAnalysis.collect_exception_results collection
+    | None -> exception_results
   in
   (* Optionally shuffle for order-independence testing *)
   let dce_data_list =
@@ -264,31 +270,44 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection =
       (* Merging phase: combine all builders -> immutable data *)
       let annotations, decls, cross_file, refs, file_deps =
         Timing.time_phase `Merging (fun () ->
-            let annotations =
-              FileAnnotations.merge_all
-                (dce_data_list
-                |> List.map (fun fd -> fd.DceFileProcessing.annotations))
+            (* Use reactive merge if available, otherwise list-based merge *)
+            let annotations, decls, cross_file =
+              match reactive_merge with
+              | Some merged ->
+                ( ReactiveMerge.freeze_annotations merged,
+                  ReactiveMerge.freeze_decls merged,
+                  ReactiveMerge.collect_cross_file_items merged )
+              | None ->
+                ( FileAnnotations.merge_all
+                    (dce_data_list
+                    |> List.map (fun fd -> fd.DceFileProcessing.annotations)),
+                  Declarations.merge_all
+                    (dce_data_list
+                    |> List.map (fun fd -> fd.DceFileProcessing.decls)),
+                  CrossFileItems.merge_all
+                    (dce_data_list
+                    |> List.map (fun fd -> fd.DceFileProcessing.cross_file)) )
             in
-            let decls =
-              Declarations.merge_all
-                (dce_data_list
-                |> List.map (fun fd -> fd.DceFileProcessing.decls))
-            in
-            let cross_file =
-              CrossFileItems.merge_all
-                (dce_data_list
-                |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
-            in
-            (* Merge refs and file_deps into builders for cross-file items processing *)
+            (* Merge refs and file_deps into builders for cross-file items processing.
+               This still needs the file_data iteration for post-processing. *)
             let refs_builder = References.create_builder () in
             let file_deps_builder = FileDeps.create_builder () in
-            dce_data_list
-            |> List.iter (fun fd ->
-                   References.merge_into_builder ~from:fd.DceFileProcessing.refs
-                     ~into:refs_builder;
-                   FileDeps.merge_into_builder
-                     ~from:fd.DceFileProcessing.file_deps
-                     ~into:file_deps_builder);
+            (match reactive_collection with
+            | Some collection ->
+              ReactiveAnalysis.iter_file_data collection (fun fd ->
+                  References.merge_into_builder ~from:fd.DceFileProcessing.refs
+                    ~into:refs_builder;
+                  FileDeps.merge_into_builder
+                    ~from:fd.DceFileProcessing.file_deps
+                    ~into:file_deps_builder)
+            | None ->
+              dce_data_list
+              |> List.iter (fun fd ->
+                     References.merge_into_builder
+                       ~from:fd.DceFileProcessing.refs ~into:refs_builder;
+                     FileDeps.merge_into_builder
+                       ~from:fd.DceFileProcessing.file_deps
+                       ~into:file_deps_builder));
             (* Compute type-label dependencies after merge *)
             DeadType.process_type_label_dependencies ~config:dce_config ~decls
               ~refs:refs_builder;
@@ -364,11 +383,22 @@ let runAnalysisAndReport ~cmtRoot =
     if !Cli.reactive then Some (ReactiveAnalysis.create ~config:dce_config)
     else None
   in
+  (* Create reactive merge once if reactive mode is enabled.
+     This automatically updates when reactive_collection changes. *)
+  let reactive_merge =
+    match reactive_collection with
+    | Some collection ->
+      let file_data_collection =
+        ReactiveAnalysis.to_file_data_collection collection
+      in
+      Some (ReactiveMerge.create file_data_collection)
+    | None -> None
+  in
   for run = 1 to numRuns do
     Timing.reset ();
     if numRuns > 1 && !Cli.timing then
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
-    runAnalysis ~dce_config ~cmtRoot ~reactive_collection;
+    runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge;
     if run = numRuns then (
       (* Only report on last run *)
       Log_.Stats.report ~config:dce_config;

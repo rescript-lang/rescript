@@ -9,6 +9,9 @@
 
 (** {2 Types} *)
 
+type annotated_as = GenType | Dead | Live
+(** Annotation type *)
+
 type t
 (** Immutable annotations - for solver (read-only) *)
 
@@ -24,6 +27,14 @@ val annotate_live : builder -> Lexing.position -> unit
 
 val merge_all : builder list -> t
 (** Merge all builders into one immutable result. Order doesn't matter. *)
+
+(** {2 Builder extraction for reactive merge} *)
+
+val builder_to_list : builder -> (Lexing.position * annotated_as) list
+(** Extract all annotations as a list for reactive merge *)
+
+val create_from_hashtbl : annotated_as PosHash.t -> t
+(** Create from hashtable for reactive merge *)
 
 (** {2 Read-only API for t - for solver} *)
 

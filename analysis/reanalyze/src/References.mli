@@ -32,6 +32,17 @@ val merge_all : builder list -> t
 val freeze_builder : builder -> t
 (** Convert builder to immutable t. Builder should not be used after this. *)
 
+(** {2 Builder extraction for reactive merge} *)
+
+val builder_value_refs_to_list : builder -> (Lexing.position * PosSet.t) list
+(** Extract all value refs as a list for reactive merge *)
+
+val builder_type_refs_to_list : builder -> (Lexing.position * PosSet.t) list
+(** Extract all type refs as a list for reactive merge *)
+
+val create : value_refs:PosSet.t PosHash.t -> type_refs:PosSet.t PosHash.t -> t
+(** Create a References.t from hashtables *)
+
 (** {2 Read-only API for t - for solver} *)
 
 val find_value_refs : t -> Lexing.position -> PosSet.t

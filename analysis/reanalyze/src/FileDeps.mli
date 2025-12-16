@@ -35,6 +35,22 @@ val freeze_builder : builder -> t
 val merge_all : builder list -> t
 (** Merge all builders into one immutable result. Order doesn't matter. *)
 
+(** {2 Builder extraction for reactive merge} *)
+
+val builder_files : builder -> FileSet.t
+(** Get files set from builder *)
+
+val builder_deps_to_list : builder -> (string * FileSet.t) list
+(** Extract all deps as a list for reactive merge *)
+
+(** {2 Internal types (for ReactiveMerge)} *)
+
+module FileHash : Hashtbl.S with type key = string
+(** File-keyed hashtable *)
+
+val create : files:FileSet.t -> deps:FileSet.t FileHash.t -> t
+(** Create a FileDeps.t from files set and deps hashtable *)
+
 (** {2 Read-only API for t - for analysis} *)
 
 val get_files : t -> FileSet.t
