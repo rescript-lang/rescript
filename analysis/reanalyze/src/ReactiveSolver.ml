@@ -5,7 +5,8 @@
     Current status:
     - dead_decls, live_decls, dead_modules are reactive (zero recomputation on cache hit)
     - dead_modules = modules with dead decls but no live decls (reactive anti-join)
-    - collect_issues still iterates dead_decls + live_decls to set resolvedDead
+    - is_pos_live uses reactive live collection (no resolvedDead mutation needed)
+    - collect_issues still iterates dead_decls + live_decls for annotations + sorting
     - Uses DeadCommon.reportDeclaration for isInsideReportedValue and hasRefBelow
     
     TODO for fully reactive issues:
@@ -13,7 +14,8 @@
       (currently relies on sequential iteration order via ReportingContext)
     - hasRefBelow: uses O(total_refs) linear scan of refs_from per dead decl;
       could use reactive refs_to index for O(1) lookup per decl
-    - resolvedDead: still mutated on every call; could be computed on-demand
+    - report field: still mutated to suppress annotated decls; could check in reportDeclaration
+    - Sorting: O(n log n) for isInsideReportedValue ordering; fundamentally sequential
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -21,6 +23,8 @@
     - Optional args: 18 (Redundant:6, Unused:12) *)
 
 type t = {
+  decls: (Lexing.position, Decl.t) Reactive.t;
+  live: (Lexing.position, unit) Reactive.t;
   dead_decls: (Lexing.position, Decl.t) Reactive.t;
   live_decls: (Lexing.position, Decl.t) Reactive.t;
   annotations: (Lexing.position, FileAnnotations.annotated_as) Reactive.t;
@@ -89,7 +93,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         ()
   in
 
-  {dead_decls; live_decls; annotations; value_refs_from; dead_modules}
+  {decls; live; dead_decls; live_decls; annotations; value_refs_from; dead_modules}
 
 (** Check if a module is dead using reactive collection. Returns issue if dead.
     Uses reported_modules set to avoid duplicate reports. *)
@@ -121,11 +125,10 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   (* Track reported modules to avoid duplicates *)
   let reported_modules = Hashtbl.create 64 in
 
-  (* Mark dead declarations and collect them (no DeadModules.markDead) *)
+  (* Collect dead declarations - NO resolvedDead mutation *)
   let dead_list = ref [] in
   Reactive.iter
     (fun _pos (decl : Decl.t) ->
-      decl.resolvedDead <- Some true;
       (* Check annotation to decide if we report.
          Don't report if @live, @genType, or @dead (user knows it's dead) *)
       let should_report =
@@ -141,11 +144,10 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
     t.dead_decls;
   let t1 = Unix.gettimeofday () in
 
-  (* Mark live declarations (no DeadModules.markLive) *)
+  (* Check live declarations for incorrect @dead - NO resolvedDead mutation *)
   let incorrect_dead_issues = ref [] in
   Reactive.iter
     (fun _pos (decl : Decl.t) ->
-      decl.resolvedDead <- Some false;
       (* Check for incorrect @dead annotation on live decl *)
       if AnnotationStore.is_annotated_dead ann_store decl.pos then (
         let issue =
@@ -203,6 +205,13 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
 (** Iterate over live declarations *)
 let iter_live_decls ~(t : t) (f : Decl.t -> unit) : unit =
   Reactive.iter (fun _pos decl -> f decl) t.live_decls
+
+(** Check if a position is live using the reactive collection.
+    Returns true if pos is not a declaration (matches non-reactive behavior). *)
+let is_pos_live ~(t : t) (pos : Lexing.position) : bool =
+  match Reactive.get t.decls pos with
+  | None -> true (* not a declaration, assume live *)
+  | Some _ -> Reactive.get t.live pos <> None
 
 (** Stats *)
 let stats ~(t : t) : int * int =
