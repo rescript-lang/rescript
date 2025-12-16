@@ -179,8 +179,9 @@ let isInsideReportedValue (ctx : ReportingContext.t) decl =
   insideReportedValue
 
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
-    [refs_to_opt] is only needed when [config.run.transitive] is false.
-    Caller is responsible for logging. *)
+    [refs_to_opt] is only needed when [config.run.transitive] is false, since the
+    non-transitive mode suppresses some warnings when there are references "below"
+    the declaration (requires inverse refs). Caller is responsible for logging. *)
 let reportDeclaration ~config ~refs_to_opt (ctx : ReportingContext.t) decl :
     Issue.t list =
   let insideReportedValue = decl |> isInsideReportedValue ctx in
@@ -267,9 +268,9 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
   let transitive = config.DceConfig.run.transitive in
   let live = Liveness.compute_forward ~debug ~decl_store ~refs ~ann_store in
 
-  (* Lazily compute refs_to only if needed for debug or transitive *)
+  (* Inverse refs are only needed for non-transitive reporting (hasRefBelow). *)
   let refs_to_opt =
-    if debug || not transitive then Some (RefsToLazy.compute refs) else None
+    if not transitive then Some (RefsToLazy.compute refs) else None
   in
 
   (* Process each declaration based on computed liveness *)
@@ -289,28 +290,18 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
          let is_live = Option.is_some live_reason in
          let is_dead = not is_live in
 
-         (* Debug output with reason *)
+         (* Debug output (forward model):
+            show reachability + why (root/propagated), without inverse refs. *)
          (if debug then
-            match refs_to_opt with
-            | Some refs_to ->
-              let refs_set =
-                match decl |> Decl.isValue with
-                | true -> RefsToLazy.find_value_refs refs_to pos
-                | false -> RefsToLazy.find_type_refs refs_to pos
-              in
-              let status =
-                match live_reason with
-                | None -> "Dead"
-                | Some reason ->
-                  Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
-              in
-              Log_.item "%s %s %s: %d references (%s)@." status
-                (decl.declKind |> Decl.Kind.toString)
-                (decl.path |> DcePath.toString)
-                (refs_set |> PosSet.cardinal)
-                (refs_set |> PosSet.elements |> List.map Pos.toString
-               |> String.concat ", ")
-            | None -> ());
+            let status =
+              match live_reason with
+              | None -> "Dead"
+              | Some reason ->
+                Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+            in
+            Log_.item "%s %s %s@." status
+              (decl.declKind |> Decl.Kind.toString)
+              (decl.path |> DcePath.toString));
 
          decl.resolvedDead <- Some is_dead;
 
@@ -358,7 +349,8 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
 
 (** Reactive solver using reactive liveness collection. *)
 let solveDeadReactive ~ann_store ~config ~decl_store ~refs
-    ~(live : (Lexing.position, unit) Reactive.t) ~optional_args_state
+    ~(live : (Lexing.position, unit) Reactive.t)
+    ~(roots : (Lexing.position, unit) Reactive.t) ~optional_args_state
     ~checkOptionalArg:
       (checkOptionalArgFn :
         optional_args_state:OptionalArgsState.t ->
@@ -370,9 +362,9 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~refs
   let transitive = config.DceConfig.run.transitive in
   let is_live pos = Reactive.get live pos <> None in
 
-  (* Lazily compute refs_to only if needed for debug or transitive *)
+  (* Inverse refs are only needed for non-transitive reporting (hasRefBelow). *)
   let refs_to_opt =
-    if debug || not transitive then Some (RefsToLazy.compute refs) else None
+    if not transitive then Some (RefsToLazy.compute refs) else None
   in
 
   (* Process each declaration based on computed liveness *)
@@ -391,19 +383,25 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~refs
          let is_live = is_live pos in
          let is_dead = not is_live in
 
-         (* Debug output *)
+         (* Debug output (forward model): derive root/propagated from [roots]. *)
          (if debug then
-            match refs_to_opt with
-            | Some refs_to ->
-              let refs_set = RefsToLazy.find_value_refs refs_to pos in
-              let status = if is_live then "Live" else "Dead" in
-              Log_.item "%s %s %s: %d references (%s)@." status
-                (decl.declKind |> Decl.Kind.toString)
-                (decl.path |> DcePath.toString)
-                (refs_set |> PosSet.cardinal)
-                (refs_set |> PosSet.elements |> List.map Pos.toString
-               |> String.concat ", ")
-            | None -> ());
+            let live_reason : Liveness.live_reason option =
+              if not is_live then None
+              else if Reactive.get roots pos <> None then
+                if AnnotationStore.is_annotated_gentype_or_live ann_store pos
+                then Some Liveness.Annotated
+                else Some Liveness.ExternalRef
+              else Some Liveness.Propagated
+            in
+            let status =
+              match live_reason with
+              | None -> "Dead"
+              | Some reason ->
+                Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+            in
+            Log_.item "%s %s %s@." status
+              (decl.declKind |> Decl.Kind.toString)
+              (decl.path |> DcePath.toString));
 
          decl.resolvedDead <- Some is_dead;
 
