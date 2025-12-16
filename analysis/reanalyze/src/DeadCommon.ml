@@ -228,7 +228,9 @@ let reportDeclaration ~config ~hasRefBelow ?checkModuleDead ?shouldReport
       let dead_module_issue =
         match checkModuleDead with
         | Some f -> f ~fileName:decl.pos.pos_fname moduleName
-        | None -> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname moduleName
+        | None ->
+          DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+            moduleName
       in
       let dead_value_issue = makeDeadIssue ~decl ~message deadWarning in
       (* Return in order: dead module first (if any), then dead value *)
