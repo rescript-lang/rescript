@@ -16,13 +16,10 @@
     - Module marking: needs reactive module dead/live tracking
       (currently uses mutable DeadModules.markDead/markLive)
     
-    Missing issues in reactive mode (18 total on deadcode test):
-    - Optional args: 18 issues missing (6 Redundant Optional Argument + 12 Unused Argument)
-      Needs reactive cross_file_items + liveness filtering
-    
-    Correct in reactive mode:
-    - Dead code issues: all match (362 issues)
-    - Incorrect @dead detection: matches (1 issue) *)
+    All issues now match between reactive and non-reactive modes (380 on deadcode test):
+    - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
+    - Incorrect @dead: 1
+    - Optional args: 18 (Redundant:6, Unused:12) *)
 
 type t = {
   dead_decls: (Lexing.position, Decl.t) Reactive.t;
@@ -131,6 +128,10 @@ let collect_issues ~(t : t) ~(config : DceConfig.t) ~(ann_store : AnnotationStor
   in
 
   List.rev !incorrect_dead_issues @ dead_issues
+
+(** Iterate over live declarations *)
+let iter_live_decls ~(t : t) (f : Decl.t -> unit) : unit =
+  Reactive.iter (fun _pos decl -> f decl) t.live_decls
 
 (** Stats *)
 let stats ~(t : t) : int * int =
