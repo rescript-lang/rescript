@@ -28,13 +28,6 @@ let fileIsImplementationOf s1 s2 =
 
 let liveAnnotation = "live"
 
-(* Helper functions for PosHash with PosSet values *)
-let posHashFindSet h k = try PosHash.find h k with Not_found -> PosSet.empty
-
-let posHashAddSet h k v =
-  let set = posHashFindSet h k in
-  PosHash.replace h k (PosSet.add v set)
-
 type decls = Decl.t PosHash.t
 (** type alias for declaration hashtables *)
 
@@ -54,30 +47,6 @@ module ReportingContext = struct
 end
 
 (* NOTE: Global TypeReferences removed - now using References.builder/t pattern *)
-
-(** Lazy computation of refs_to from refs_from.
-    Only computed when debug or transitive mode is enabled.
-    Zero cost in the common case. *)
-module RefsToLazy = struct
-  type t = {value_refs_to: PosSet.t PosHash.t; type_refs_to: PosSet.t PosHash.t}
-
-  (** Compute refs_to by inverting refs_from. O(total_refs) one-time cost. *)
-  let compute (refs : References.t) : t =
-    let value_refs_to = PosHash.create 256 in
-    let type_refs_to = PosHash.create 256 in
-    References.iter_value_refs_from refs (fun posFrom posToSet ->
-        PosSet.iter
-          (fun posTo -> posHashAddSet value_refs_to posTo posFrom)
-          posToSet);
-    References.iter_type_refs_from refs (fun posFrom posToSet ->
-        PosSet.iter
-          (fun posTo -> posHashAddSet type_refs_to posTo posFrom)
-          posToSet);
-    {value_refs_to; type_refs_to}
-
-  let find_value_refs (t : t) pos = posHashFindSet t.value_refs_to pos
-  let find_type_refs (t : t) pos = posHashFindSet t.type_refs_to pos
-end
 
 let declGetLoc decl =
   let loc_start =
@@ -178,11 +147,32 @@ let isInsideReportedValue (ctx : ReportingContext.t) decl =
         ReportingContext.set_max_end ctx decl.posEnd;
   insideReportedValue
 
+(** Check if a reference position is "below" the declaration.
+    A ref is below if it's in a different file, or comes after the declaration
+    (but not inside it, e.g. not a callback). *)
+let refIsBelow (decl : Decl.t) (posFrom : Lexing.position) =
+  decl.pos.pos_fname <> posFrom.pos_fname
+  || decl.pos.pos_cnum < posFrom.pos_cnum
+     &&
+     (* not a function defined inside a function, e.g. not a callback *)
+     decl.posEnd.pos_cnum < posFrom.pos_cnum
+
+(** Create hasRefBelow function using on-demand per-decl search.
+    [iter_value_refs_from] iterates over (posFrom, posToSet) pairs.
+    O(total_refs) per dead decl, but dead decls should be few. *)
+let make_hasRefBelow ~transitive ~iter_value_refs_from =
+  if transitive then fun _ -> false
+  else fun decl ->
+    let found = ref false in
+    iter_value_refs_from (fun posFrom posToSet ->
+        if (not !found) && PosSet.mem decl.Decl.pos posToSet then
+          if refIsBelow decl posFrom then found := true);
+    !found
+
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
-    [refs_to_opt] is only needed when [config.run.transitive] is false, since the
-    non-transitive mode suppresses some warnings when there are references "below"
-    the declaration (requires inverse refs). Caller is responsible for logging. *)
-let reportDeclaration ~config ~refs_to_opt (ctx : ReportingContext.t) decl :
+    [hasRefBelow] checks if there are references from "below" the declaration.
+    Only used when [config.run.transitive] is false. *)
+let reportDeclaration ~config ~hasRefBelow (ctx : ReportingContext.t) decl :
     Issue.t list =
   let insideReportedValue = decl |> isInsideReportedValue ctx in
   if not decl.report then []
@@ -216,26 +206,12 @@ let reportDeclaration ~config ~refs_to_opt (ctx : ReportingContext.t) decl :
       | VariantCase ->
         (WarningDeadType, "is a variant case which is never constructed")
     in
-    let hasRefBelow () =
-      match refs_to_opt with
-      | None -> false (* No refs_to available, assume no ref below *)
-      | Some refs_to ->
-        let decl_refs = RefsToLazy.find_value_refs refs_to decl.pos in
-        let refIsBelow (pos : Lexing.position) =
-          decl.pos.pos_fname <> pos.pos_fname
-          || decl.pos.pos_cnum < pos.pos_cnum
-             &&
-             (* not a function defined inside a function, e.g. not a callback *)
-             decl.posEnd.pos_cnum < pos.pos_cnum
-        in
-        decl_refs |> PosSet.exists refIsBelow
-    in
     let shouldEmitWarning =
       (not insideReportedValue)
       && (match decl.path with
          | name :: _ when name |> Name.isUnderscore -> Config.reportUnderscore
          | _ -> true)
-      && (config.DceConfig.run.transitive || not (hasRefBelow ()))
+      && (config.DceConfig.run.transitive || not (hasRefBelow decl))
     in
     if shouldEmitWarning then
       let dead_module_issue =
@@ -268,9 +244,10 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
   let transitive = config.DceConfig.run.transitive in
   let live = Liveness.compute_forward ~debug ~decl_store ~refs ~ann_store in
 
-  (* Inverse refs are only needed for non-transitive reporting (hasRefBelow). *)
-  let refs_to_opt =
-    if not transitive then Some (RefsToLazy.compute refs) else None
+  (* hasRefBelow uses on-demand search through refs_from *)
+  let hasRefBelow =
+    make_hasRefBelow ~transitive
+      ~iter_value_refs_from:(References.iter_value_refs_from refs)
   in
 
   (* Process each declaration based on computed liveness *)
@@ -342,13 +319,15 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
   let dead_issues =
     sortedDeadDeclarations
     |> List.concat_map (fun decl ->
-           reportDeclaration ~config ~refs_to_opt reporting_ctx decl)
+           reportDeclaration ~config ~hasRefBelow reporting_ctx decl)
   in
   let all_issues = List.rev !inline_issues @ dead_issues in
   AnalysisResult.add_issues AnalysisResult.empty all_issues
 
-(** Reactive solver using reactive liveness collection. *)
-let solveDeadReactive ~ann_store ~config ~decl_store ~refs
+(** Reactive solver using reactive liveness collection.
+    [value_refs_from] is only needed when [transitive=false] for hasRefBelow.
+    Pass [None] when [transitive=true] to avoid any refs computation. *)
+let solveDeadReactive ~ann_store ~config ~decl_store ~value_refs_from
     ~(live : (Lexing.position, unit) Reactive.t)
     ~(roots : (Lexing.position, unit) Reactive.t) ~optional_args_state
     ~checkOptionalArg:
@@ -362,9 +341,13 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~refs
   let transitive = config.DceConfig.run.transitive in
   let is_live pos = Reactive.get live pos <> None in
 
-  (* Inverse refs are only needed for non-transitive reporting (hasRefBelow). *)
-  let refs_to_opt =
-    if not transitive then Some (RefsToLazy.compute refs) else None
+  (* hasRefBelow uses on-demand search through value_refs_from *)
+  let hasRefBelow =
+    match value_refs_from with
+    | None -> fun _ -> false
+    | Some refs_from ->
+      make_hasRefBelow ~transitive ~iter_value_refs_from:(fun f ->
+          Reactive.iter f refs_from)
   in
 
   (* Process each declaration based on computed liveness *)
@@ -442,7 +425,7 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~refs
   let dead_issues =
     sortedDeadDeclarations
     |> List.concat_map (fun decl ->
-           reportDeclaration ~config ~refs_to_opt reporting_ctx decl)
+           reportDeclaration ~config ~hasRefBelow reporting_ctx decl)
   in
   let all_issues = List.rev !inline_issues @ dead_issues in
   AnalysisResult.add_issues AnalysisResult.empty all_issues

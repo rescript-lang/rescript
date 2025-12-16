@@ -371,10 +371,14 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             | Some merged, Some liveness_result ->
               let live = liveness_result.ReactiveLiveness.live in
               let roots = liveness_result.ReactiveLiveness.roots in
-              (* Freeze refs for debug/transitive support in solver *)
-              let refs = ReactiveMerge.freeze_refs merged in
-              DeadCommon.solveDeadReactive ~ann_store ~decl_store ~refs ~live
-                ~roots ~optional_args_state:empty_optional_args_state
+              (* Pass value_refs_from for on-demand hasRefBelow (no freezing) *)
+              let value_refs_from =
+                if dce_config.DceConfig.run.transitive then None
+                else Some merged.ReactiveMerge.value_refs_from
+              in
+              DeadCommon.solveDeadReactive ~ann_store ~decl_store
+                ~value_refs_from ~live ~roots
+                ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
