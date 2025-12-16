@@ -25,6 +25,14 @@ val replace_builder : builder -> Lexing.position -> Decl.t -> unit
 val merge_all : builder list -> t
 (** Merge all builders into one immutable result. Order doesn't matter. *)
 
+(** {2 Builder extraction for reactive merge} *)
+
+val builder_to_list : builder -> (Lexing.position * Decl.t) list
+(** Extract all declarations as a list for reactive merge *)
+
+val create_from_hashtbl : Decl.t PosHash.t -> t
+(** Create from hashtable for reactive merge *)
+
 (** {2 Read-only API for t - for solver} *)
 
 val find_opt : t -> Lexing.position -> Decl.t option

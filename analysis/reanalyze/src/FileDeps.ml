@@ -64,6 +64,16 @@ let merge_all (builders : builder list) : t =
   |> List.iter (fun b -> merge_into_builder ~from:b ~into:merged_builder);
   freeze_builder merged_builder
 
+(** {2 Builder extraction for reactive merge} *)
+
+let builder_files (builder : builder) : FileSet.t = builder.files
+
+let builder_deps_to_list (builder : builder) : (string * FileSet.t) list =
+  FileHash.fold (fun from_file to_files acc -> (from_file, to_files) :: acc)
+    builder.deps []
+
+let create ~files ~deps : t = {files; deps}
+
 (** {2 Read-only API} *)
 
 let get_files (t : t) = t.files

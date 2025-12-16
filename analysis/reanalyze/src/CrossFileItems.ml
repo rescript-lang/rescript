@@ -58,6 +58,15 @@ let merge_all (builders : builder list) : t =
   let function_refs = builders |> List.concat_map (fun b -> b.function_refs) in
   {exception_refs; optional_arg_calls; function_refs}
 
+(** {2 Builder extraction for reactive merge} *)
+
+let builder_to_t (builder : builder) : t =
+  {
+    exception_refs = builder.exception_refs;
+    optional_arg_calls = builder.optional_arg_calls;
+    function_refs = builder.function_refs;
+  }
+
 (** {2 Processing API} *)
 
 let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =

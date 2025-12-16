@@ -32,6 +32,14 @@ let merge_all (builders : builder list) : t =
            builder);
   result
 
+(* ===== Builder extraction for reactive merge ===== *)
+
+let builder_to_list (builder : builder) : (Lexing.position * annotated_as) list
+    =
+  PosHash.fold (fun pos value acc -> (pos, value) :: acc) builder []
+
+let create_from_hashtbl (h : annotated_as PosHash.t) : t = h
+
 (* ===== Read-only API ===== *)
 
 let is_annotated_dead (state : t) pos = PosHash.find_opt state pos = Some Dead

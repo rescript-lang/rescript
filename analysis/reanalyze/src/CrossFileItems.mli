@@ -5,9 +5,26 @@
     - [builder] - mutable, for AST processing
     - [t] - immutable, for processing after merge *)
 
+(** {2 Item types} *)
+
+type exception_ref = {exception_path: DcePath.t; loc_from: Location.t}
+
+type optional_arg_call = {
+  pos_from: Lexing.position;
+  pos_to: Lexing.position;
+  arg_names: string list;
+  arg_names_maybe: string list;
+}
+
+type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
+
 (** {2 Types} *)
 
-type t
+type t = {
+  exception_refs: exception_ref list;
+  optional_arg_calls: optional_arg_call list;
+  function_refs: function_ref list;
+}
 (** Immutable cross-file items - for processing after merge *)
 
 type builder
@@ -38,6 +55,11 @@ val add_function_reference :
 
 val merge_all : builder list -> t
 (** Merge all builders into one immutable result. Order doesn't matter. *)
+
+(** {2 Builder extraction for reactive merge} *)
+
+val builder_to_t : builder -> t
+(** Convert builder to t for reactive merge *)
 
 (** {2 Processing API - for after merge} *)
 
