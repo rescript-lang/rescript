@@ -42,3 +42,5 @@ let find_opt (t : t) pos = PosHash.find_opt t pos
 let fold f (t : t) init = PosHash.fold f t init
 
 let iter f (t : t) = PosHash.iter f t
+
+let length (t : t) = PosHash.length t

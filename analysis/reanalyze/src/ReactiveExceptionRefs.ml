@@ -49,7 +49,10 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         match loc_to_opt with
         | Some loc_to ->
           (* Add value reference: pos_to -> pos_from *)
-          [(loc_to.Location.loc_start, PosSet.singleton loc_from.Location.loc_start)]
+          [
+            ( loc_to.Location.loc_start,
+              PosSet.singleton loc_from.Location.loc_start );
+          ]
         | None -> [])
       ~merge:PosSet.union ()
   in
@@ -79,4 +82,3 @@ let add_to_file_deps_builder (t : t) ~(file_deps : FileDeps.builder) : unit =
             FileDeps.add_dep file_deps ~from_file ~to_file)
         posFromSet)
     t.resolved_refs
-

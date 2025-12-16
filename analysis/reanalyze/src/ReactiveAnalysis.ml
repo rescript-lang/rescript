@@ -20,7 +20,7 @@ type t = (Cmt_format.cmt_infos, cmt_file_result option) ReactiveFileCollection.t
 (** The reactive collection type *)
 
 (** Process cmt_infos into a file result *)
-let process_cmt_infos ~config cmt_infos : cmt_file_result option =
+let process_cmt_infos ~config ~cmtFilePath cmt_infos : cmt_file_result option =
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
@@ -54,7 +54,7 @@ let process_cmt_infos ~config cmt_infos : cmt_file_result option =
         Some
           (cmt_infos
           |> DceFileProcessing.process_cmt_file ~config ~file:dce_file_context
-               ~cmtFilePath:"")
+               ~cmtFilePath)
       else None
     in
     let exception_data =
@@ -70,7 +70,8 @@ let process_cmt_infos ~config cmt_infos : cmt_file_result option =
 (** Create a new reactive collection *)
 let create ~config : t =
   ReactiveFileCollection.create ~read_file:Cmt_format.read_cmt
-    ~process:(process_cmt_infos ~config)
+    ~process:(fun path cmt_infos ->
+      process_cmt_infos ~config ~cmtFilePath:path cmt_infos)
 
 (** Process all files incrementally using ReactiveFileCollection.
     First run processes all files. Subsequent runs only process changed files. *)

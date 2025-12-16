@@ -8,7 +8,7 @@
       (* Create file collection *)
       let files = ReactiveFileCollection.create
         ~read_file:Cmt_format.read_cmt
-        ~process:(fun cmt -> extract_data cmt)
+        ~process:(fun path cmt -> extract_data path cmt)
 
       (* Compose with flatMap *)
       let decls = Reactive.flatMap (ReactiveFileCollection.to_collection files)
@@ -27,8 +27,10 @@ type ('raw, 'v) t
 
 (** {1 Creation} *)
 
-val create : read_file:(string -> 'raw) -> process:('raw -> 'v) -> ('raw, 'v) t
-(** Create a new file collection. *)
+val create :
+  read_file:(string -> 'raw) -> process:(string -> 'raw -> 'v) -> ('raw, 'v) t
+(** Create a new file collection.
+    [process path raw] receives the file path and raw content to produce the value. *)
 
 (** {1 Composition} *)
 

@@ -47,3 +47,7 @@ val create : value_refs:PosSet.t PosHash.t -> type_refs:PosSet.t PosHash.t -> t
 
 val find_value_refs : t -> Lexing.position -> PosSet.t
 val find_type_refs : t -> Lexing.position -> PosSet.t
+
+val value_refs_length : t -> int
+
+val type_refs_length : t -> int

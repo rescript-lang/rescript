@@ -65,6 +65,12 @@ val iter_deps : t -> (string -> FileSet.t -> unit) -> unit
 val file_exists : t -> string -> bool
 (** Check if a file exists in the graph. *)
 
+val files_count : t -> int
+(** Count of files in the file set. *)
+
+val deps_count : t -> int
+(** Count of dependencies (number of from_file entries). *)
+
 (** {2 Topological ordering} *)
 
 val iter_files_from_roots_to_leaves : t -> (string -> unit) -> unit

@@ -200,8 +200,9 @@ let lookup (source : ('k, 'v) t) ~key : ('k, 'v) t =
     When either collection changes, affected entries are recomputed.
     This is more efficient than nested flatMap for join patterns. *)
 let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
-    ~(key_of : 'k1 -> 'v1 -> 'k2) ~(f : 'k1 -> 'v1 -> 'v2 option -> ('k3 * 'v3) list)
-    ?merge () : ('k3, 'v3) t =
+    ~(key_of : 'k1 -> 'v1 -> 'k2)
+    ~(f : 'k1 -> 'v1 -> 'v2 option -> ('k3 * 'v3) list) ?merge () : ('k3, 'v3) t
+    =
   let merge_fn =
     match merge with
     | Some m -> m
@@ -278,9 +279,9 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     let old_affected = remove_left_contributions k1 in
     (* Update right key tracking *)
     (match Hashtbl.find_opt left_to_right_key k1 with
-    | Some old_k2 ->
+    | Some old_k2 -> (
       Hashtbl.remove left_to_right_key k1;
-      (match Hashtbl.find_opt right_key_to_left_keys old_k2 with
+      match Hashtbl.find_opt right_key_to_left_keys old_k2 with
       | Some keys ->
         Hashtbl.replace right_key_to_left_keys old_k2
           (List.filter (fun k -> k <> k1) keys)
@@ -313,9 +314,9 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     let affected = remove_left_contributions k1 in
     (* Clean up tracking *)
     (match Hashtbl.find_opt left_to_right_key k1 with
-    | Some k2 ->
+    | Some k2 -> (
       Hashtbl.remove left_to_right_key k1;
-      (match Hashtbl.find_opt right_key_to_left_keys k2 with
+      match Hashtbl.find_opt right_key_to_left_keys k2 with
       | Some keys ->
         Hashtbl.replace right_key_to_left_keys k2
           (List.filter (fun k -> k <> k1) keys)
@@ -339,8 +340,8 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     (* When right changes, reprocess all left entries that depend on it *)
     let downstream =
       match delta with
-      | Set (k2, _) | Remove k2 ->
-        (match Hashtbl.find_opt right_key_to_left_keys k2 with
+      | Set (k2, _) | Remove k2 -> (
+        match Hashtbl.find_opt right_key_to_left_keys k2 with
         | None -> []
         | Some left_keys ->
           left_keys

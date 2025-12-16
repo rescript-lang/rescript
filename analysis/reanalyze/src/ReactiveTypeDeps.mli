@@ -29,8 +29,24 @@
 
 (** {1 Types} *)
 
-type t
+type t = {
+  decl_by_path: (DcePath.t, decl_info list) Reactive.t;
+  same_path_refs: (Lexing.position, PosSet.t) Reactive.t;
+  cross_file_refs: (Lexing.position, PosSet.t) Reactive.t;
+  all_type_refs: (Lexing.position, PosSet.t) Reactive.t;
+  (* Additional cross-file sources for complete coverage *)
+  impl_to_intf_refs_path2: (Lexing.position, PosSet.t) Reactive.t;
+  intf_to_impl_refs: (Lexing.position, PosSet.t) Reactive.t;
+}
 (** Reactive type-label dependency collections *)
+
+and decl_info = {
+  pos: Lexing.position;
+  pos_end: Lexing.position;
+  path: DcePath.t;
+  is_interface: bool;
+}
+(** Simplified decl info for type-label processing *)
 
 (** {1 Creation} *)
 
@@ -52,4 +68,3 @@ val add_to_refs_builder : t -> refs:References.builder -> unit
     
     Call this after processing files to get the current type refs.
     The builder will contain all type-label dependency refs. *)
-

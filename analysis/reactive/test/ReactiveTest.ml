@@ -244,7 +244,8 @@ let test_file_collection () =
 
   (* Create file collection: file -> word count map *)
   let files =
-    ReactiveFileCollection.create ~read_file:read_lines ~process:(fun lines ->
+    ReactiveFileCollection.create ~read_file:read_lines
+      ~process:(fun _path lines ->
         (* Count words within this file *)
         let counts = ref StringMap.empty in
         lines
@@ -357,7 +358,8 @@ let test_lookup () =
 
   (* Set foo=42 *)
   emit (Set ("foo", 42));
-  Printf.printf "After Set(foo, 42): lookup has %d entries\n" (length foo_lookup);
+  Printf.printf "After Set(foo, 42): lookup has %d entries\n"
+    (length foo_lookup);
   assert (length foo_lookup = 1);
   assert (get foo_lookup "foo" = Some 42);
 
@@ -381,7 +383,8 @@ let test_lookup () =
   emit (Set ("bar", 2));
   emit (Remove "foo");
 
-  Printf.printf "Subscription received %d updates (expected 2: Set+Remove for foo)\n"
+  Printf.printf
+    "Subscription received %d updates (expected 2: Set+Remove for foo)\n"
     (List.length !updates);
   assert (List.length !updates = 2);
 
@@ -441,13 +444,17 @@ let test_join () =
   (* Add declaration at path "A" with pos 100 *)
   emit_right (Set ("A", 100));
   Printf.printf "After right Set(A, 100): joined=%d\n" (length joined);
-  assert (length joined = 0); (* No left entries yet *)
+  assert (length joined = 0);
+
+  (* No left entries yet *)
 
   (* Add exception ref at path "A" from loc 1 *)
   emit_left (Set ("A", 1));
   Printf.printf "After left Set(A, 1): joined=%d\n" (length joined);
   assert (length joined = 1);
-  assert (get joined 100 = Some 1); (* decl_pos 100 -> loc_from 1 *)
+  assert (get joined 100 = Some 1);
+
+  (* decl_pos 100 -> loc_from 1 *)
 
   (* Add another exception ref at path "B" (no matching decl) *)
   emit_left (Set ("B", 2));
@@ -465,8 +472,11 @@ let test_join () =
   emit_right (Set ("B", 201));
   Printf.printf "After right Set(B, 201): joined=%d\n" (length joined);
   assert (length joined = 2);
-  assert (get joined 200 = None); (* Old key gone *)
-  assert (get joined 201 = Some 2); (* New key has the value *)
+  assert (get joined 200 = None);
+  (* Old key gone *)
+  assert (get joined 201 = Some 2);
+
+  (* New key has the value *)
 
   (* Remove left entry A *)
   emit_left (Remove "A");
@@ -528,18 +538,21 @@ let test_join_with_merge () =
 
   Printf.printf "Two entries looking up X (value 10): sum=%d\n"
     (get joined 0 |> Option.value ~default:0);
-  assert (get joined 0 = Some 20); (* 10 + 10 *)
+  assert (get joined 0 = Some 20);
 
+  (* 10 + 10 *)
   emit_right (Set ("X", 5));
   Printf.printf "After right changes to 5: sum=%d\n"
     (get joined 0 |> Option.value ~default:0);
-  assert (get joined 0 = Some 10); (* 5 + 5 *)
+  assert (get joined 0 = Some 10);
 
+  (* 5 + 5 *)
   emit_left (Remove 1);
   Printf.printf "After removing one left entry: sum=%d\n"
     (get joined 0 |> Option.value ~default:0);
-  assert (get joined 0 = Some 5); (* Only one left *)
+  assert (get joined 0 = Some 5);
 
+  (* Only one left *)
   Printf.printf "PASSED\n\n"
 
 let () =

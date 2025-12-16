@@ -69,7 +69,8 @@ let merge_all (builders : builder list) : t =
 let builder_files (builder : builder) : FileSet.t = builder.files
 
 let builder_deps_to_list (builder : builder) : (string * FileSet.t) list =
-  FileHash.fold (fun from_file to_files acc -> (from_file, to_files) :: acc)
+  FileHash.fold
+    (fun from_file to_files acc -> (from_file, to_files) :: acc)
     builder.deps []
 
 let create ~files ~deps : t = {files; deps}
@@ -86,6 +87,10 @@ let get_deps (t : t) file =
 let iter_deps (t : t) f = FileHash.iter f t.deps
 
 let file_exists (t : t) file = FileHash.mem t.deps file
+
+let files_count (t : t) = FileSet.cardinal t.files
+
+let deps_count (t : t) = FileHash.length t.deps
 
 (** {2 Topological ordering} *)
 

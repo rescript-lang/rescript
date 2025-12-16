@@ -9,8 +9,7 @@
 
 (** {2 Types} *)
 
-type annotated_as = GenType | Dead | Live
-(** Annotation type *)
+type annotated_as = GenType | Dead | Live  (** Annotation type *)
 
 type t
 (** Immutable annotations - for solver (read-only) *)
@@ -41,3 +40,5 @@ val create_from_hashtbl : annotated_as PosHash.t -> t
 val is_annotated_dead : t -> Lexing.position -> bool
 val is_annotated_gentype_or_live : t -> Lexing.position -> bool
 val is_annotated_gentype_or_dead : t -> Lexing.position -> bool
+val length : t -> int
+val iter : (Lexing.position -> annotated_as -> unit) -> t -> unit

@@ -38,3 +38,5 @@ val create_from_hashtbl : Decl.t PosHash.t -> t
 val find_opt : t -> Lexing.position -> Decl.t option
 val fold : (Lexing.position -> Decl.t -> 'a -> 'a) -> t -> 'a -> 'a
 val iter : (Lexing.position -> Decl.t -> unit) -> t -> unit
+
+val length : t -> int

@@ -13,6 +13,9 @@ type t = {
   cross_file_items: (string, CrossFileItems.t) Reactive.t;
   file_deps_map: (string, FileSet.t) Reactive.t;
   files: (string, unit) Reactive.t;
+  (* Reactive type/exception dependencies *)
+  type_deps: ReactiveTypeDeps.t;
+  exception_refs: ReactiveExceptionRefs.t;
 }
 (** All derived reactive collections from per-file data *)
 
@@ -38,7 +41,8 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
         match file_data_opt with
         | None -> []
         | Some file_data ->
-          FileAnnotations.builder_to_list file_data.DceFileProcessing.annotations)
+          FileAnnotations.builder_to_list
+            file_data.DceFileProcessing.annotations)
       ()
   in
 
@@ -96,21 +100,55 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
       ~merge:FileSet.union ()
   in
 
-  (* Files set: (path, ()) - just track which files exist *)
+  (* Files set: (source_path, ()) - just track which source files exist *)
   let files =
     Reactive.flatMap source
-      ~f:(fun path file_data_opt ->
+      ~f:(fun _cmt_path file_data_opt ->
         match file_data_opt with
         | None -> []
         | Some file_data ->
-          (* Include the file and all files it references *)
-          let file_set = FileDeps.builder_files file_data.DceFileProcessing.file_deps in
-          let entries = FileSet.fold (fun f acc -> (f, ()) :: acc) file_set [] in
-          (path, ()) :: entries)
+          (* Include all source files from file_deps (NOT the CMT path) *)
+          let file_set =
+            FileDeps.builder_files file_data.DceFileProcessing.file_deps
+          in
+          FileSet.fold (fun f acc -> (f, ()) :: acc) file_set [])
       ()
   in
 
-  {decls; annotations; value_refs; type_refs; cross_file_items; file_deps_map; files}
+  (* Extract exception_refs from cross_file_items for ReactiveExceptionRefs *)
+  let exception_refs_collection =
+    Reactive.flatMap cross_file_items
+      ~f:(fun _path items ->
+        items.CrossFileItems.exception_refs
+        |> List.map (fun (r : CrossFileItems.exception_ref) ->
+               (r.exception_path, r.loc_from)))
+      ()
+  in
+
+  (* Create reactive type-label dependencies *)
+  let type_deps =
+    ReactiveTypeDeps.create ~decls
+      ~report_types_dead_only_in_interface:
+        DeadCommon.Config.reportTypesDeadOnlyInInterface
+  in
+
+  (* Create reactive exception refs resolution *)
+  let exception_refs =
+    ReactiveExceptionRefs.create ~decls
+      ~exception_refs:exception_refs_collection
+  in
+
+  {
+    decls;
+    annotations;
+    value_refs;
+    type_refs;
+    cross_file_items;
+    file_deps_map;
+    files;
+    type_deps;
+    exception_refs;
+  }
 
 (** {1 Conversion to solver-ready format} *)
 
@@ -126,14 +164,41 @@ let freeze_annotations (t : t) : FileAnnotations.t =
   Reactive.iter (fun pos ann -> PosHash.replace result pos ann) t.annotations;
   FileAnnotations.create_from_hashtbl result
 
-(** Convert reactive refs to References.t for solver *)
+(** Convert reactive refs to References.t for solver.
+    Includes type-label deps and exception refs from reactive computations. *)
 let freeze_refs (t : t) : References.t =
   let value_refs = PosHash.create 256 in
   let type_refs = PosHash.create 256 in
+  (* Helper to merge refs into a hashtable *)
+  let merge_into tbl posTo posFromSet =
+    let existing =
+      match PosHash.find_opt tbl posTo with
+      | Some s -> s
+      | None -> PosSet.empty
+    in
+    PosHash.replace tbl posTo (PosSet.union existing posFromSet)
+  in
+  (* Merge per-file value refs *)
+  Reactive.iter (fun pos refs -> merge_into value_refs pos refs) t.value_refs;
+  (* Merge per-file type refs *)
+  Reactive.iter (fun pos refs -> merge_into type_refs pos refs) t.type_refs;
+  (* Add type-label dependency refs from all sources *)
   Reactive.iter
-    (fun pos refs -> PosHash.replace value_refs pos refs)
-    t.value_refs;
-  Reactive.iter (fun pos refs -> PosHash.replace type_refs pos refs) t.type_refs;
+    (fun pos refs -> merge_into type_refs pos refs)
+    t.type_deps.same_path_refs;
+  Reactive.iter
+    (fun pos refs -> merge_into type_refs pos refs)
+    t.type_deps.cross_file_refs;
+  Reactive.iter
+    (fun pos refs -> merge_into type_refs pos refs)
+    t.type_deps.impl_to_intf_refs_path2;
+  Reactive.iter
+    (fun pos refs -> merge_into type_refs pos refs)
+    t.type_deps.intf_to_impl_refs;
+  (* Add exception refs (to value refs) *)
+  Reactive.iter
+    (fun pos refs -> merge_into value_refs pos refs)
+    t.exception_refs.resolved_refs;
   References.create ~value_refs ~type_refs
 
 (** Collect all cross-file items *)
@@ -154,7 +219,8 @@ let collect_cross_file_items (t : t) : CrossFileItems.t =
     function_refs = !function_refs;
   }
 
-(** Convert reactive file deps to FileDeps.t for solver *)
+(** Convert reactive file deps to FileDeps.t for solver.
+    Includes file deps from exception refs. *)
 let freeze_file_deps (t : t) : FileDeps.t =
   let files =
     let result = ref FileSet.empty in
@@ -163,7 +229,24 @@ let freeze_file_deps (t : t) : FileDeps.t =
   in
   let deps = FileDeps.FileHash.create 256 in
   Reactive.iter
-    (fun from_file to_files -> FileDeps.FileHash.replace deps from_file to_files)
+    (fun from_file to_files ->
+      FileDeps.FileHash.replace deps from_file to_files)
     t.file_deps_map;
+  (* Add file deps from exception refs *)
+  Reactive.iter
+    (fun posTo posFromSet ->
+      PosSet.iter
+        (fun posFrom ->
+          let from_file = posFrom.Lexing.pos_fname in
+          let to_file = posTo.Lexing.pos_fname in
+          if from_file <> to_file then
+            let existing =
+              match FileDeps.FileHash.find_opt deps from_file with
+              | Some s -> s
+              | None -> FileSet.empty
+            in
+            FileDeps.FileHash.replace deps from_file
+              (FileSet.add to_file existing))
+        posFromSet)
+    t.exception_refs.resolved_refs;
   FileDeps.create ~files ~deps
-

@@ -36,6 +36,9 @@ type t = {
   same_path_refs: (Lexing.position, PosSet.t) Reactive.t;
   cross_file_refs: (Lexing.position, PosSet.t) Reactive.t;
   all_type_refs: (Lexing.position, PosSet.t) Reactive.t;
+  (* Additional cross-file sources for complete coverage *)
+  impl_to_intf_refs_path2: (Lexing.position, PosSet.t) Reactive.t;
+  intf_to_impl_refs: (Lexing.position, PosSet.t) Reactive.t;
 }
 (** All reactive collections for type-label dependencies *)
 
@@ -59,17 +62,17 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         match decls with
         | [] | [_] -> []
         | first :: rest ->
-          (* Connect each decl to the first one (and vice-versa if needed) *)
+          (* Connect each decl to the first one (and vice-versa if needed).
+             Original: extendTypeDependencies loc loc0 adds posTo=loc, posFrom=loc0
+             So: posTo=other, posFrom=first *)
           rest
           |> List.concat_map (fun other ->
-                 let refs =
-                   [(first.pos, PosSet.singleton other.pos);
-                    (other.pos, PosSet.singleton first.pos)]
-                 in
-                 if report_types_dead_only_in_interface then
-                   (* Only first -> other *)
-                   [(other.pos, PosSet.singleton first.pos)]
-                 else refs))
+                 (* Always add: other -> first (posTo=other, posFrom=first) *)
+                 let refs = [(other.pos, PosSet.singleton first.pos)] in
+                 if report_types_dead_only_in_interface then refs
+                 else
+                   (* Also add: first -> other (posTo=first, posFrom=other) *)
+                   (first.pos, PosSet.singleton other.pos) :: refs))
       ~merge:PosSet.union ()
   in
 
@@ -93,23 +96,22 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ()
   in
 
-  (* Join impl decls with decl_by_path to find intf *)
+  (* Join impl decls with decl_by_path to find intf.
+     Original: extendTypeDependencies loc loc1 where loc=impl, loc1=intf
+               adds posTo=impl, posFrom=intf *)
   let impl_to_intf_refs =
     Reactive.join impl_decls decl_by_path
       ~key_of:(fun _pos (_, intf_path1, _) -> intf_path1)
-      ~f:(fun _pos (info, _intf_path1, intf_path2) intf_decls_opt ->
+      ~f:(fun _pos (info, _intf_path1, _intf_path2) intf_decls_opt ->
         match intf_decls_opt with
         | Some (intf_info :: _) ->
-          (* Found at path1, connect impl <-> intf *)
-          if report_types_dead_only_in_interface then
-            [(intf_info.pos, PosSet.singleton info.pos)]
+          (* Found at path1: posTo=impl, posFrom=intf *)
+          let refs = [(info.pos, PosSet.singleton intf_info.pos)] in
+          if report_types_dead_only_in_interface then refs
           else
-            [(info.pos, PosSet.singleton intf_info.pos);
-             (intf_info.pos, PosSet.singleton info.pos)]
-        | _ ->
-          (* Try path2 - need second join, but for now return placeholder *)
-          (* We'll handle path2 with a separate join below *)
-          [(info.pos, (intf_path2, info))] |> List.filter_map (fun _ -> None))
+            (* Also: posTo=intf, posFrom=impl *)
+            (intf_info.pos, PosSet.singleton info.pos) :: refs
+        | _ -> [])
       ~merge:PosSet.union ()
   in
 
@@ -130,16 +132,19 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ~f:(fun _pos (info, _) intf_decls_opt ->
         match intf_decls_opt with
         | Some (intf_info :: _) ->
-          if report_types_dead_only_in_interface then
-            [(intf_info.pos, PosSet.singleton info.pos)]
-          else
-            [(info.pos, PosSet.singleton intf_info.pos);
-             (intf_info.pos, PosSet.singleton info.pos)]
+          (* posTo=impl, posFrom=intf *)
+          let refs = [(info.pos, PosSet.singleton intf_info.pos)] in
+          if report_types_dead_only_in_interface then refs
+          else (intf_info.pos, PosSet.singleton info.pos) :: refs
         | _ -> [])
       ~merge:PosSet.union ()
   in
 
-  (* Also handle intf -> impl direction *)
+  (* Also handle intf -> impl direction.
+     Original: extendTypeDependencies loc1 loc where loc=impl, loc1=intf
+               adds posTo=impl, posFrom=intf (note: same direction!)
+     The intf->impl code in original only runs when isInterface=true,
+     and the lookup is for finding the impl. *)
   let intf_decls =
     Reactive.flatMap decls
       ~f:(fun _pos decl ->
@@ -148,7 +153,9 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
           match info.path with
           | [] -> []
           | typeLabelName :: pathToType ->
-            let impl_path = typeLabelName :: DcePath.moduleToImplementation pathToType in
+            let impl_path =
+              typeLabelName :: DcePath.moduleToImplementation pathToType
+            in
             [(info.pos, (info, impl_path))])
         | _ -> [])
       ()
@@ -157,90 +164,48 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   let intf_to_impl_refs =
     Reactive.join intf_decls decl_by_path
       ~key_of:(fun _pos (_, impl_path) -> impl_path)
-      ~f:(fun _pos (info, _) impl_decls_opt ->
+      ~f:(fun _pos (intf_info, _) impl_decls_opt ->
         match impl_decls_opt with
         | Some (impl_info :: _) ->
-          if report_types_dead_only_in_interface then
-            [(info.pos, PosSet.singleton impl_info.pos)]
-          else
-            [(impl_info.pos, PosSet.singleton info.pos);
-             (info.pos, PosSet.singleton impl_info.pos)]
+          (* Original: extendTypeDependencies loc1 loc where loc1=intf, loc=impl
+             But wait, looking at the original code more carefully:
+             
+             if isInterface then
+               match find_one path1 with
+               | None -> ()
+               | Some loc1 ->
+                 extendTypeDependencies ~config ~refs loc1 loc;
+                 if not Config.reportTypesDeadOnlyInInterface then
+                   extendTypeDependencies ~config ~refs loc loc1
+             
+             Here loc is the current intf decl, loc1 is the found impl.
+             So extendTypeDependencies loc1 loc means posTo=loc1=impl, posFrom=loc=intf
+          *)
+          let refs = [(impl_info.pos, PosSet.singleton intf_info.pos)] in
+          if report_types_dead_only_in_interface then refs
+          else (intf_info.pos, PosSet.singleton impl_info.pos) :: refs
         | _ -> [])
       ~merge:PosSet.union ()
   in
 
-  (* Combine all cross-file refs *)
-  let cross_file_refs =
-    Reactive.flatMap impl_to_intf_refs
-      ~f:(fun pos refs -> [(pos, refs)])
-      ~merge:PosSet.union ()
-  in
-  (* Merge in path2 refs *)
-  let cross_file_refs =
-    Reactive.flatMap impl_to_intf_refs_path2
-      ~f:(fun pos refs -> [(pos, refs)])
-      ~merge:PosSet.union ()
-    |> fun refs2 ->
-    Reactive.flatMap cross_file_refs
-      ~f:(fun pos refs ->
-        let additional =
-          match Reactive.get refs2 pos with
-          | Some r -> r
-          | None -> PosSet.empty
-        in
-        [(pos, PosSet.union refs additional)])
-      ~merge:PosSet.union ()
-  in
-  (* Merge in intf->impl refs *)
-  let cross_file_refs =
-    Reactive.flatMap intf_to_impl_refs
-      ~f:(fun pos refs -> [(pos, refs)])
-      ~merge:PosSet.union ()
-    |> fun refs3 ->
-    Reactive.flatMap cross_file_refs
-      ~f:(fun pos refs ->
-        let additional =
-          match Reactive.get refs3 pos with
-          | Some r -> r
-          | None -> PosSet.empty
-        in
-        [(pos, PosSet.union refs additional)])
-      ~merge:PosSet.union ()
-  in
+  (* Cross-file refs are the combination of:
+     - impl_to_intf_refs (path1 matches)
+     - impl_to_intf_refs_path2 (path2 fallback)
+     - intf_to_impl_refs *)
+  let cross_file_refs = impl_to_intf_refs in
 
-  (* Step 4: Combine same-path and cross-file refs *)
-  let all_type_refs =
-    Reactive.flatMap same_path_refs
-      ~f:(fun pos refs ->
-        let cross =
-          match Reactive.get cross_file_refs pos with
-          | Some r -> r
-          | None -> PosSet.empty
-        in
-        [(pos, PosSet.union refs cross)])
-      ~merge:PosSet.union ()
-  in
-  (* Also include cross-file refs that don't have same-path refs *)
-  let all_type_refs =
-    Reactive.flatMap cross_file_refs
-      ~f:(fun pos refs ->
-        match Reactive.get same_path_refs pos with
-        | Some _ -> [] (* Already included above *)
-        | None -> [(pos, refs)])
-      ~merge:PosSet.union ()
-    |> fun extra_refs ->
-    Reactive.flatMap all_type_refs
-      ~f:(fun pos refs ->
-        let extra =
-          match Reactive.get extra_refs pos with
-          | Some r -> r
-          | None -> PosSet.empty
-        in
-        [(pos, PosSet.union refs extra)])
-      ~merge:PosSet.union ()
-  in
+  (* All type refs = same_path_refs + all cross-file sources.
+     We expose these separately and merge in freeze_refs. *)
+  let all_type_refs = same_path_refs in
 
-  {decl_by_path; same_path_refs; cross_file_refs; all_type_refs}
+  {
+    decl_by_path;
+    same_path_refs;
+    cross_file_refs;
+    all_type_refs;
+    impl_to_intf_refs_path2;
+    intf_to_impl_refs;
+  }
 
 (** {1 Freezing for solver} *)
 
@@ -252,4 +217,3 @@ let add_to_refs_builder (t : t) ~(refs : References.builder) : unit =
         (fun posFrom -> References.add_type_ref refs ~posTo ~posFrom)
         posFromSet)
     t.all_type_refs
-
