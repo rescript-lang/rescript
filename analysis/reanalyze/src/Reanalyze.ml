@@ -408,13 +408,14 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             let t2 = Unix.gettimeofday () in
             let all_issues = dead_code_issues @ optional_args_issues in
             let num_dead, num_live = ReactiveSolver.stats ~t:solver in
-            if !Cli.timing then
+            if !Cli.timing then (
               Printf.eprintf
                 "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, \
                  live=%d, issues=%d)\n"
                 ((t1 -. t0) *. 1000.0)
                 ((t2 -. t1) *. 1000.0)
                 num_dead num_live (List.length all_issues);
+              ReactiveSolver.print_stats ~t:solver);
             Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
           | None ->
             (* Non-reactive path: use old solver with optional args *)

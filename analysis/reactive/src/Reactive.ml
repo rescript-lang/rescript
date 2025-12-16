@@ -12,6 +12,12 @@ let apply_delta tbl = function
 
 let apply_deltas tbl deltas = List.iter (apply_delta tbl) deltas
 
+(** {1 Statistics} *)
+
+type stats = {mutable updates_received: int; mutable updates_emitted: int}
+
+let create_stats () = {updates_received = 0; updates_emitted = 0}
+
 (** {1 Reactive Collection} *)
 
 type ('k, 'v) t = {
@@ -19,15 +25,18 @@ type ('k, 'v) t = {
   iter: ('k -> 'v -> unit) -> unit;
   get: 'k -> 'v option;
   length: unit -> int;
+  stats: stats;
 }
 (** A reactive collection that can emit deltas and be read.
-    All collections share this interface, enabling composition. *)
+    All collections share this interface, enabling composition.
+    [stats] tracks updates received/emitted for diagnostics. *)
 
 (** {1 Collection operations} *)
 
 let iter f t = t.iter f
 let get t k = t.get k
 let length t = t.length ()
+let stats t = t.stats
 
 (** {1 FlatMap} *)
 
@@ -47,8 +56,12 @@ let flatMap (source : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
   in
   let target : ('k2, 'v2) Hashtbl.t = Hashtbl.create 256 in
   let subscribers : (('k2, 'v2) delta -> unit) list ref = ref [] in
+  let my_stats = create_stats () in
 
-  let emit delta = List.iter (fun h -> h delta) !subscribers in
+  let emit delta =
+    my_stats.updates_emitted <- my_stats.updates_emitted + 1;
+    List.iter (fun h -> h delta) !subscribers
+  in
 
   let recompute_target k2 =
     match Hashtbl.find_opt contributions k2 with
@@ -102,6 +115,7 @@ let flatMap (source : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
   in
 
   let handle_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     let downstream =
       match delta with
       | Remove k1 ->
@@ -135,6 +149,7 @@ let flatMap (source : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
     iter = (fun f -> Hashtbl.iter f target);
     get = (fun k -> Hashtbl.find_opt target k);
     length = (fun () -> Hashtbl.length target);
+    stats = my_stats;
   }
 
 (** {1 Lookup} *)
@@ -147,10 +162,15 @@ let flatMap (source : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
 let lookup (source : ('k, 'v) t) ~key : ('k, 'v) t =
   let current : ('k, 'v option) Hashtbl.t = Hashtbl.create 1 in
   let subscribers : (('k, 'v) delta -> unit) list ref = ref [] in
+  let my_stats = create_stats () in
 
-  let emit delta = List.iter (fun h -> h delta) !subscribers in
+  let emit delta =
+    my_stats.updates_emitted <- my_stats.updates_emitted + 1;
+    List.iter (fun h -> h delta) !subscribers
+  in
 
   let handle_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     match delta with
     | Set (k, v) when k = key ->
       Hashtbl.replace current key (Some v);
@@ -188,6 +208,7 @@ let lookup (source : ('k, 'v) t) ~key : ('k, 'v) t =
         match Hashtbl.find_opt current key with
         | Some (Some _) -> 1
         | _ -> 0);
+    stats = my_stats;
   }
 
 (** {1 Join} *)
@@ -221,8 +242,12 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
   in
   let target : ('k3, 'v3) Hashtbl.t = Hashtbl.create 256 in
   let subscribers : (('k3, 'v3) delta -> unit) list ref = ref [] in
+  let my_stats = create_stats () in
 
-  let emit delta = List.iter (fun h -> h delta) !subscribers in
+  let emit delta =
+    my_stats.updates_emitted <- my_stats.updates_emitted + 1;
+    List.iter (fun h -> h delta) !subscribers
+  in
 
   let recompute_target k3 =
     match Hashtbl.find_opt contributions k3 with
@@ -326,6 +351,7 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
   in
 
   let handle_left_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     let downstream =
       match delta with
       | Set (k1, v1) ->
@@ -337,6 +363,7 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
   in
 
   let handle_right_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     (* When right changes, reprocess all left entries that depend on it *)
     let downstream =
       match delta with
@@ -368,6 +395,7 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     iter = (fun f -> Hashtbl.iter f target);
     get = (fun k -> Hashtbl.find_opt target k);
     length = (fun () -> Hashtbl.length target);
+    stats = my_stats;
   }
 
 (** {1 Union} *)
@@ -388,8 +416,12 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
   let right_values : ('k, 'v) Hashtbl.t = Hashtbl.create 64 in
   let target : ('k, 'v) Hashtbl.t = Hashtbl.create 128 in
   let subscribers : (('k, 'v) delta -> unit) list ref = ref [] in
+  let my_stats = create_stats () in
 
-  let emit delta = List.iter (fun h -> h delta) !subscribers in
+  let emit delta =
+    my_stats.updates_emitted <- my_stats.updates_emitted + 1;
+    List.iter (fun h -> h delta) !subscribers
+  in
 
   let recompute_key k =
     match (Hashtbl.find_opt left_values k, Hashtbl.find_opt right_values k) with
@@ -406,6 +438,7 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
   in
 
   let handle_left_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     let downstream =
       match delta with
       | Set (k, v) ->
@@ -419,6 +452,7 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
   in
 
   let handle_right_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     let downstream =
       match delta with
       | Set (k, v) ->
@@ -448,6 +482,7 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
     iter = (fun f -> Hashtbl.iter f target);
     get = (fun k -> Hashtbl.find_opt target k);
     length = (fun () -> Hashtbl.length target);
+    stats = my_stats;
   }
 
 (** {1 Fixpoint} *)
@@ -840,8 +875,12 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
     =
   let state = Fixpoint.create () in
   let subscribers : (('k, unit) delta -> unit) list ref = ref [] in
+  let my_stats = create_stats () in
 
-  let emit delta = List.iter (fun h -> h delta) !subscribers in
+  let emit delta =
+    my_stats.updates_emitted <- my_stats.updates_emitted + 1;
+    List.iter (fun h -> h delta) !subscribers
+  in
 
   let emit_changes (added, removed) =
     List.iter (fun k -> emit (Set (k, ()))) added;
@@ -850,12 +889,14 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
 
   (* Handle init deltas *)
   let handle_init_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     let changes = Fixpoint.apply_init_delta state delta in
     emit_changes changes
   in
 
   (* Handle edges deltas *)
   let handle_edges_delta delta =
+    my_stats.updates_received <- my_stats.updates_received + 1;
     let changes = Fixpoint.apply_edges_delta state delta in
     emit_changes changes
   in
@@ -888,4 +929,5 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
     iter = (fun f -> Hashtbl.iter f state.current);
     get = (fun k -> Hashtbl.find_opt state.current k);
     length = (fun () -> Hashtbl.length state.current);
+    stats = my_stats;
   }

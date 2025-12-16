@@ -35,6 +35,7 @@ let test_flatmap_basic () =
       iter = (fun f -> Hashtbl.iter f data);
       get = (fun k -> Hashtbl.find_opt data k);
       length = (fun () -> Hashtbl.length data);
+      stats = create_stats ();
     }
   in
 
@@ -93,6 +94,7 @@ let test_flatmap_with_merge () =
       iter = (fun f -> Hashtbl.iter f data);
       get = (fun k -> Hashtbl.find_opt data k);
       length = (fun () -> Hashtbl.length data);
+      stats = create_stats ();
     }
   in
 
@@ -144,6 +146,7 @@ let test_composition () =
       iter = (fun f -> Hashtbl.iter f data);
       get = (fun k -> Hashtbl.find_opt data k);
       length = (fun () -> Hashtbl.length data);
+      stats = create_stats ();
     }
   in
 
@@ -211,6 +214,7 @@ let test_flatmap_on_existing_data () =
       iter = (fun f -> Hashtbl.iter f data);
       get = (fun k -> Hashtbl.find_opt data k);
       length = (fun () -> Hashtbl.length data);
+      stats = create_stats ();
     }
   in
 
@@ -341,6 +345,7 @@ let test_lookup () =
       iter = (fun f -> Hashtbl.iter f data);
       get = (fun k -> Hashtbl.find_opt data k);
       length = (fun () -> Hashtbl.length data);
+      stats = create_stats ();
     }
   in
 
@@ -402,6 +407,7 @@ let test_join () =
       iter = (fun f -> Hashtbl.iter f left_data);
       get = (fun k -> Hashtbl.find_opt left_data k);
       length = (fun () -> Hashtbl.length left_data);
+      stats = create_stats ();
     }
   in
   let emit_left delta =
@@ -418,6 +424,7 @@ let test_join () =
       iter = (fun f -> Hashtbl.iter f right_data);
       get = (fun k -> Hashtbl.find_opt right_data k);
       length = (fun () -> Hashtbl.length right_data);
+      stats = create_stats ();
     }
   in
   let emit_right delta =
@@ -498,6 +505,7 @@ let test_join_with_merge () =
       iter = (fun f -> Hashtbl.iter f left_data);
       get = (fun k -> Hashtbl.find_opt left_data k);
       length = (fun () -> Hashtbl.length left_data);
+      stats = create_stats ();
     }
   in
   let emit_left delta =
@@ -513,6 +521,7 @@ let test_join_with_merge () =
       iter = (fun f -> Hashtbl.iter f right_data);
       get = (fun k -> Hashtbl.find_opt right_data k);
       length = (fun () -> Hashtbl.length right_data);
+      stats = create_stats ();
     }
   in
   let emit_right delta =
@@ -568,6 +577,7 @@ let test_union_basic () =
       iter = (fun f -> Hashtbl.iter f left_data);
       get = (fun k -> Hashtbl.find_opt left_data k);
       length = (fun () -> Hashtbl.length left_data);
+      stats = create_stats ();
     }
   in
   let emit_left delta =
@@ -584,6 +594,7 @@ let test_union_basic () =
       iter = (fun f -> Hashtbl.iter f right_data);
       get = (fun k -> Hashtbl.find_opt right_data k);
       length = (fun () -> Hashtbl.length right_data);
+      stats = create_stats ();
     }
   in
   let emit_right delta =
@@ -648,6 +659,7 @@ let test_union_with_merge () =
       iter = (fun f -> Hashtbl.iter f left_data);
       get = (fun k -> Hashtbl.find_opt left_data k);
       length = (fun () -> Hashtbl.length left_data);
+      stats = create_stats ();
     }
   in
   let emit_left delta =
@@ -664,6 +676,7 @@ let test_union_with_merge () =
       iter = (fun f -> Hashtbl.iter f right_data);
       get = (fun k -> Hashtbl.find_opt right_data k);
       length = (fun () -> Hashtbl.length right_data);
+      stats = create_stats ();
     }
   in
   let emit_right delta =
@@ -718,6 +731,7 @@ let test_union_existing_data () =
       iter = (fun f -> Hashtbl.iter f left_data);
       get = (fun k -> Hashtbl.find_opt left_data k);
       length = (fun () -> Hashtbl.length left_data);
+      stats = create_stats ();
     }
   in
 
@@ -732,6 +746,7 @@ let test_union_existing_data () =
       iter = (fun f -> Hashtbl.iter f right_data);
       get = (fun k -> Hashtbl.find_opt right_data k);
       length = (fun () -> Hashtbl.length right_data);
+      stats = create_stats ();
     }
   in
 
@@ -753,7 +768,9 @@ let test_union_existing_data () =
 let create_mutable_collection () =
   let tbl = Hashtbl.create 16 in
   let subscribers = ref [] in
+  let my_stats = Reactive.create_stats () in
   let emit delta =
+    my_stats.updates_emitted <- my_stats.updates_emitted + 1;
     Reactive.apply_delta tbl delta;
     List.iter (fun h -> h delta) !subscribers
   in
@@ -763,6 +780,7 @@ let create_mutable_collection () =
       iter = (fun f -> Hashtbl.iter f tbl);
       get = (fun k -> Hashtbl.find_opt tbl k);
       length = (fun () -> Hashtbl.length tbl);
+      stats = my_stats;
     }
   in
   (collection, emit, tbl)
@@ -1665,6 +1683,7 @@ let test_fixpoint_existing_data () =
       iter = (fun f -> Hashtbl.iter f init_tbl);
       get = (fun k -> Hashtbl.find_opt init_tbl k);
       length = (fun () -> Hashtbl.length init_tbl);
+      stats = Reactive.create_stats ();
     }
   in
 
@@ -1678,6 +1697,7 @@ let test_fixpoint_existing_data () =
       iter = (fun f -> Hashtbl.iter f edges_tbl);
       get = (fun k -> Hashtbl.find_opt edges_tbl k);
       length = (fun () -> Hashtbl.length edges_tbl);
+      stats = Reactive.create_stats ();
     }
   in
 

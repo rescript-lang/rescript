@@ -331,3 +331,22 @@ let is_pos_live ~(t : t) (pos : Lexing.position) : bool =
 (** Stats *)
 let stats ~(t : t) : int * int =
   (Reactive.length t.dead_decls, Reactive.length t.live_decls)
+
+(** Print reactive collection update statistics *)
+let print_stats ~(t : t) : unit =
+  let print name (c : _ Reactive.t) =
+    let s = Reactive.stats c in
+    Printf.eprintf "  %s: recv=%d emit=%d len=%d\n" name s.updates_received
+      s.updates_emitted (Reactive.length c)
+  in
+  Printf.eprintf "ReactiveSolver collection stats:\n";
+  print "dead_decls" t.dead_decls;
+  print "live_decls" t.live_decls;
+  print "dead_modules" t.dead_modules;
+  print "dead_decls_by_file" t.dead_decls_by_file;
+  print "issues_by_file" t.issues_by_file;
+  print "incorrect_dead_decls" t.incorrect_dead_decls;
+  print "dead_module_issues" t.dead_module_issues;
+  match t.value_refs_from with
+  | Some refs -> print "value_refs_from" refs
+  | None -> ()

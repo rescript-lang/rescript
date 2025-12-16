@@ -27,13 +27,16 @@ type ('raw, 'v) t = {
 }
 (** A file collection is just a Reactive.t with some extra operations *)
 
-let emit t delta = List.iter (fun h -> h delta) t.internal.subscribers
+let emit t delta =
+  t.collection.stats.updates_emitted <- t.collection.stats.updates_emitted + 1;
+  List.iter (fun h -> h delta) t.internal.subscribers
 
 (** Create a new reactive file collection *)
 let create ~read_file ~process : ('raw, 'v) t =
   let internal =
     {cache = Hashtbl.create 256; read_file; process; subscribers = []}
   in
+  let my_stats = Reactive.create_stats () in
   let collection =
     {
       Reactive.subscribe =
@@ -46,6 +49,7 @@ let create ~read_file ~process : ('raw, 'v) t =
           | Some (_, v) -> Some v
           | None -> None);
       length = (fun () -> Hashtbl.length internal.cache);
+      stats = my_stats;
     }
   in
   {internal; collection}

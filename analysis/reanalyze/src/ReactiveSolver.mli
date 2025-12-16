@@ -28,3 +28,6 @@ val is_pos_live : t:t -> Lexing.position -> bool
 
 val stats : t:t -> int * int
 (** (dead, live) counts *)
+
+val print_stats : t:t -> unit
+(** Print update statistics for all reactive collections *)
