@@ -1,0 +1,11 @@
+{
+  "name": "@tests/deadcode-minimal",
+  "private": true,
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean"
+  },
+  "dependencies": {
+    "rescript": "workspace:^"
+  }
+}
