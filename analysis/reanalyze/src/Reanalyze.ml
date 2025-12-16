@@ -383,14 +383,10 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
                   CrossFileItemsStore.of_reactive
                     merged.ReactiveMerge.cross_file_items
                 in
-                (* Compute optional args state using declaration liveness
-                   Note: is_live returns true if pos is not a declaration (matches non-reactive)
-                   Uses Decl.isLive which checks resolvedDead set by collect_issues *)
-                let is_live pos =
-                  match Reactive.get merged.ReactiveMerge.decls pos with
-                  | None -> true (* not a declaration, assume live *)
-                  | Some decl -> Decl.isLive decl
-                in
+                (* Compute optional args state using reactive liveness check.
+                   Uses ReactiveSolver.is_pos_live which checks the reactive live collection
+                   instead of mutable resolvedDead field. *)
+                let is_live pos = ReactiveSolver.is_pos_live ~t:solver pos in
                 let find_decl pos =
                   Reactive.get merged.ReactiveMerge.decls pos
                 in

@@ -22,5 +22,9 @@ val collect_issues :
 val iter_live_decls : t:t -> (Decl.t -> unit) -> unit
 (** Iterate over live declarations *)
 
+val is_pos_live : t:t -> Lexing.position -> bool
+(** Check if a position is live using the reactive collection.
+    Returns true if pos is not a declaration (matches non-reactive behavior). *)
+
 val stats : t:t -> int * int
 (** (dead, live) counts *)
