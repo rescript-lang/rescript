@@ -39,11 +39,18 @@ flowchart TB
     end
 
     subgraph Solver["ReactiveSolver"]
-        DEAD["dead"]
-        ISSUES["issues"]
+        DEAD_DECLS["dead_decls"]
+        LIVE_DECLS["live_decls"]
+        DEAD_MODULES["dead_modules"]
+        DEAD_BY_FILE["dead_by_file"]
+        REFS_BY_FILE["refs_by_file"]
+        ISSUES_BY_FILE["issues_by_file"]
+        INCORRECT["incorrect_dead"]
+        MOD_REPORTED["mod_reported"]
+        MOD_ISSUES["mod_issues"]
     end
 
-    subgraph Report["Report"]
+    subgraph Report["Report (iter only)"]
         OUTPUT[("REPORT")]
     end
 
@@ -76,12 +83,31 @@ flowchart TB
     EDGES --> FP
     FP -->|"fixpoint"| LIVE
 
-    DECLS -->|"join"| DEAD
-    LIVE -->|"left-join, filter None"| DEAD
-    DEAD -->|"join"| ISSUES
-    ANNOT -->|"join"| ISSUES
+    DECLS -->|"join (NOT in live)"| DEAD_DECLS
+    LIVE -->|"join"| DEAD_DECLS
+    DECLS -->|"join (IN live)"| LIVE_DECLS
+    LIVE -->|"join"| LIVE_DECLS
 
-    ISSUES -->|"iter"| OUTPUT
+    DEAD_DECLS -->|"flatMap (anti-join)"| DEAD_MODULES
+    LIVE_DECLS -->|"flatMap (anti-join)"| DEAD_MODULES
+
+    DEAD_DECLS -->|"flatMap by file"| DEAD_BY_FILE
+    VREFS -->|"flatMap by file"| REFS_BY_FILE
+
+    DEAD_BY_FILE -->|"flatMap"| ISSUES_BY_FILE
+    ANNOT -->|"filter"| ISSUES_BY_FILE
+    REFS_BY_FILE -->|"hasRefBelow"| ISSUES_BY_FILE
+
+    LIVE_DECLS -->|"join (@dead)"| INCORRECT
+    ANNOT -->|"join (@dead)"| INCORRECT
+
+    ISSUES_BY_FILE -->|"flatMap"| MOD_REPORTED
+    DEAD_MODULES -->|"join"| MOD_ISSUES
+    MOD_REPORTED -->|"join"| MOD_ISSUES
+
+    ISSUES_BY_FILE -->|"iter"| OUTPUT
+    INCORRECT -->|"iter"| OUTPUT
+    MOD_ISSUES -->|"iter"| OUTPUT
 
     classDef fileLayer fill:#e8f4fd,stroke:#4a90d9,stroke-width:2px
     classDef extracted fill:#f0f7e6,stroke:#6b8e23,stroke-width:2px
@@ -98,5 +124,5 @@ flowchart TB
     class EXCREF,EXCDECL,RESOLVED excDeps
     class DR declRefs
     class ROOTS,EDGES,FP,LIVE liveness
-    class DEAD,ISSUES solver
+    class DEAD_DECLS,LIVE_DECLS,DEAD_MODULES,DEAD_BY_FILE,REFS_BY_FILE,ISSUES_BY_FILE,INCORRECT,MOD_REPORTED,MOD_ISSUES solver
     class OUTPUT output

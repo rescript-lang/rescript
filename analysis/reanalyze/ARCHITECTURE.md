@@ -164,13 +164,13 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 The reactive pipeline computes issues directly from source files with **zero recomputation on cache hits**:
 
 ```
-Files → file_data → decls, annotations, refs → live (fixpoint) → dead_decls → issues → REPORT
-         ↓              ↓                          ↓                ↓           ↓        ↓
-     ReactiveFile   ReactiveMerge          ReactiveLiveness   ReactiveSolver         iter
-     Collection         (flatMap)              (fixpoint)      (join+join)         (only)
+Files → file_data → decls, annotations, refs → live (fixpoint) → dead/live_decls → issues → REPORT
+         ↓              ↓                          ↓                    ↓              ↓        ↓
+     ReactiveFile   ReactiveMerge          ReactiveLiveness      ReactiveSolver            iter
+     Collection         (flatMap)              (fixpoint)      (multiple joins)          (only)
 ```
 
-**Key property**: When no files change, no computation happens. All reactive collections are stable. Only the final `collect_issues` call iterates (O(issues)).
+**Key property**: When no files change, no computation happens. All reactive collections are stable. Only the final `collect_issues` call iterates pre-computed collections (O(issues)).
 
 ### Pipeline Stages
 
@@ -179,11 +179,28 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead_de
 | **File Processing** | `.cmt` files | `file_data` | `ReactiveFileCollection` |
 | **Merge** | `file_data` | `decls`, `annotations`, `refs` | `flatMap` |
 | **Liveness** | `refs`, `annotations` | `live` (positions) | `fixpoint` |
-| **Dead Decls** | `decls`, `live` | `dead_decls` | `join` (left-join, filter `None`: decls where NOT in live) |
-| **Issues** | `dead_decls`, `annotations` | `issues` | `join` (filter by annotation, generate Issue.t) |
-| **Report** | `issues` | stdout | `iter` (ONLY iteration in entire pipeline) |
+| **Dead/Live Partition** | `decls`, `live` | `dead_decls`, `live_decls` | `join` (partition by liveness) |
+| **Dead Modules** | `dead_decls`, `live_decls` | `dead_modules` | `flatMap` + `join` (anti-join) |
+| **Per-File Grouping** | `dead_decls`, `refs` | `dead_decls_by_file`, `refs_by_file` | `flatMap` with merge |
+| **Per-File Issues** | `dead_decls_by_file`, `annotations` | `issues_by_file` | `flatMap` (sort + filter + generate) |
+| **Incorrect @dead** | `live_decls`, `annotations` | `incorrect_dead_decls` | `join` (live with Dead annotation) |
+| **Module Issues** | `dead_modules`, `issues_by_file` | `dead_module_issues` | `flatMap` + `join` |
+| **Report** | all issue collections | stdout | `iter` (ONLY iteration) |
 
-**Note**: Optional args analysis (unused/redundant arguments) is not yet in the reactive pipeline - it still uses the non-reactive path. TODO: Add `live_decls + cross_file_items → optional_args_issues` to the reactive pipeline.
+### ReactiveSolver Collections
+
+| Collection | Type | Description |
+|------------|------|-------------|
+| `dead_decls` | `(pos, Decl.t)` | Declarations NOT in live set |
+| `live_decls` | `(pos, Decl.t)` | Declarations IN live set |
+| `dead_modules` | `(Name.t, Location.t)` | Modules with only dead declarations (anti-join) |
+| `dead_decls_by_file` | `(file, Decl.t list)` | Dead decls grouped by file |
+| `value_refs_from_by_file` | `(file, (pos, PosSet.t) list)` | Refs grouped by source file (for hasRefBelow) |
+| `issues_by_file` | `(file, Issue.t list * Name.t list)` | Per-file issues + reported modules |
+| `incorrect_dead_decls` | `(pos, Decl.t)` | Live decls with @dead annotation |
+| `dead_module_issues` | `(Name.t, Issue.t)` | Module issues (join of dead_modules + modules_with_reported) |
+
+**Note**: Optional args analysis (unused/redundant arguments) is not yet in the reactive pipeline - it still uses the non-reactive path (~8-14ms). TODO: Add `live_decls + cross_file_items → optional_args_issues` to the reactive pipeline.
 
 ### Reactive Pipeline Diagram
 
@@ -192,59 +209,72 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead_de
 ![Reactive Pipeline](diagrams/reactive-pipeline.svg)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         REACTIVE ANALYSIS PIPELINE                          │
-│                                                                             │
-│  ┌──────────┐                                                               │
-│  │  .cmt    │                                                               │
-│  │  files   │                                                               │
-│  └────┬─────┘                                                               │
-│       │                                                                     │
-│       ▼                                                                     │
-│  ┌──────────────────────┐                                                   │
-│  │ ReactiveFileCollection│  File change detection + caching                 │
-│  │      file_data        │                                                  │
-│  └────┬─────────────────┘                                                   │
-│       │ flatMap                                                             │
-│       ▼                                                                     │
-│  ┌──────────────────────┐                                                   │
-│  │    ReactiveMerge     │  Derives collections from file_data               │
-│  │ ┌──────┐ ┌────────┐  │                                                   │
-│  │ │decls │ │  refs  │  │                                                   │
-│  │ └──┬───┘ └───┬────┘  │                                                   │
-│  │    │  ┌──────┴─────┐ │                                                   │
-│  │    │  │annotations │ │                                                   │
-│  │    │  └──────┬─────┘ │                                                   │
-│  └────┼─────────┼───────┘                                                   │
-│       │         │                                                           │
-│       │         ▼                                                           │
-│       │    ┌─────────────────────┐                                          │
-│       │    │  ReactiveLiveness   │  roots + edges → live (fixpoint)         │
-│       │    │  ┌──────┐ ┌──────┐  │                                          │
-│       │    │  │roots │→│ live │  │                                          │
-│       │    │  └──────┘ └──┬───┘  │                                          │
-│       │    └──────────────┼──────┘                                          │
-│       │                   │                                                 │
-│       ▼                   ▼                                                 │
-│  ┌─────────────────────────────────┐                                        │
-│  │        ReactiveSolver           │  Pure reactive joins (NO iteration)    │
-│  │                                 │                                        │
-│  │  decls ──┬──► dead_decls ──┬──► issues                                   │
-│  │          │        ↑        │       ↑                                     │
-│  │  live ───┘  (join, keep    │  (join with annotations)                    │
-│  │             if NOT in live)│                                             │
-│  │  annotations ──────────────┘                                             │
-│  │                                 │                                        │
-│  │  (Optional args: TODO - not yet reactive)                                │
-│  └─────────────────────────────────┘                                        │
-│                   │                                                         │
-│                   ▼                                                         │
-│  ┌─────────────────────────────────┐                                        │
-│  │           REPORT                │  ONLY iteration: O(issues)             │
-│  │   collect_issues → Log_.warning │  (linear in number of issues)          │
-│  └─────────────────────────────────┘                                        │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                           REACTIVE ANALYSIS PIPELINE                               │
+│                                                                                   │
+│  ┌──────────┐                                                                     │
+│  │  .cmt    │                                                                     │
+│  │  files   │                                                                     │
+│  └────┬─────┘                                                                     │
+│       │                                                                           │
+│       ▼                                                                           │
+│  ┌──────────────────────┐                                                         │
+│  │ ReactiveFileCollection│  File change detection + caching                       │
+│  │      file_data        │                                                        │
+│  └────┬─────────────────┘                                                         │
+│       │ flatMap                                                                   │
+│       ▼                                                                           │
+│  ┌──────────────────────┐                                                         │
+│  │    ReactiveMerge     │  Derives collections from file_data                     │
+│  │ ┌──────┐ ┌────────┐  │                                                         │
+│  │ │decls │ │  refs  │  │                                                         │
+│  │ └──┬───┘ └───┬────┘  │                                                         │
+│  │    │  ┌──────┴─────┐ │                                                         │
+│  │    │  │annotations │ │                                                         │
+│  │    │  └──────┬─────┘ │                                                         │
+│  └────┼─────────┼───────┘                                                         │
+│       │         │                                                                 │
+│       │         ▼                                                                 │
+│       │    ┌─────────────────────┐                                                │
+│       │    │  ReactiveLiveness   │  roots + edges → live (fixpoint)               │
+│       │    │  ┌──────┐ ┌──────┐  │                                                │
+│       │    │  │roots │→│ live │  │                                                │
+│       │    │  └──────┘ └──┬───┘  │                                                │
+│       │    └──────────────┼──────┘                                                │
+│       │                   │                                                       │
+│       ▼                   ▼                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐  │
+│  │                          ReactiveSolver                                     │  │
+│  │                                                                             │  │
+│  │  decls ──┬──► dead_decls ──┬──► dead_decls_by_file ──► issues_by_file       │  │
+│  │          │        │        │            │                    │              │  │
+│  │  live ───┤        │        │            │                    ▼              │  │
+│  │          │        ▼        │            │         modules_with_reported     │  │
+│  │          │   dead_modules ─┼────────────┼──────────────┬─────────┘          │  │
+│  │          │        ↑        │            │              │                    │  │
+│  │          └──► live_decls ──┼────────────┘              ▼                    │  │
+│  │                   │        │              dead_module_issues                │  │
+│  │                   │        │                                                │  │
+│  │  annotations ─────┼────────┴──► incorrect_dead_decls                        │  │
+│  │                   │                                                         │  │
+│  │  value_refs_from ─┴──► refs_by_file (used by issues_by_file for hasRefBelow)│  │
+│  │                                                                             │  │
+│  │  (Optional args: TODO - not yet reactive, ~8-14ms)                          │  │
+│  └─────────────────────────────────────────────────────────────────────────────┘  │
+│                   │                                                               │
+│                   ▼                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐  │
+│  │                              REPORT                                         │  │
+│  │                                                                             │  │
+│  │  collect_issues iterates pre-computed reactive collections:                 │  │
+│  │    - incorrect_dead_decls  (~0.04ms)                                        │  │
+│  │    - issues_by_file        (~0.6ms)                                         │  │
+│  │    - dead_module_issues    (~0.06ms)                                        │  │
+│  │                                                                             │  │
+│  │  Total dead_code solving: ~0.7ms on cache hit                               │  │
+│  └─────────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                   │
+└───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Delta Propagation
