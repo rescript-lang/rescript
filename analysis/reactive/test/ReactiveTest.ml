@@ -328,6 +328,220 @@ let test_file_collection () =
 
   Printf.printf "PASSED\n\n"
 
+let test_lookup () =
+  Printf.printf "=== Test: lookup (reactive single-key subscription) ===\n";
+
+  let data : (string, int) Hashtbl.t = Hashtbl.create 16 in
+  let subscribers : ((string, int) delta -> unit) list ref = ref [] in
+
+  let source : (string, int) t =
+    {
+      subscribe = (fun h -> subscribers := h :: !subscribers);
+      iter = (fun f -> Hashtbl.iter f data);
+      get = (fun k -> Hashtbl.find_opt data k);
+      length = (fun () -> Hashtbl.length data);
+    }
+  in
+
+  let emit delta =
+    apply_delta data delta;
+    List.iter (fun h -> h delta) !subscribers
+  in
+
+  (* Create lookup for key "foo" *)
+  let foo_lookup = lookup source ~key:"foo" in
+
+  (* Initially empty *)
+  assert (length foo_lookup = 0);
+  assert (get foo_lookup "foo" = None);
+
+  (* Set foo=42 *)
+  emit (Set ("foo", 42));
+  Printf.printf "After Set(foo, 42): lookup has %d entries\n" (length foo_lookup);
+  assert (length foo_lookup = 1);
+  assert (get foo_lookup "foo" = Some 42);
+
+  (* Set bar=100 (different key, lookup shouldn't change) *)
+  emit (Set ("bar", 100));
+  Printf.printf "After Set(bar, 100): lookup still has %d entries\n"
+    (length foo_lookup);
+  assert (length foo_lookup = 1);
+  assert (get foo_lookup "foo" = Some 42);
+
+  (* Update foo=99 *)
+  emit (Set ("foo", 99));
+  Printf.printf "After Set(foo, 99): lookup value updated\n";
+  assert (get foo_lookup "foo" = Some 99);
+
+  (* Track subscription updates *)
+  let updates = ref [] in
+  foo_lookup.subscribe (fun delta -> updates := delta :: !updates);
+
+  emit (Set ("foo", 1));
+  emit (Set ("bar", 2));
+  emit (Remove "foo");
+
+  Printf.printf "Subscription received %d updates (expected 2: Set+Remove for foo)\n"
+    (List.length !updates);
+  assert (List.length !updates = 2);
+
+  Printf.printf "PASSED\n\n"
+
+let test_join () =
+  Printf.printf "=== Test: join (reactive lookup/join) ===\n";
+
+  (* Left collection: exception refs (path -> loc_from) *)
+  let left_data : (string, int) Hashtbl.t = Hashtbl.create 16 in
+  let left_subs : ((string, int) delta -> unit) list ref = ref [] in
+  let left : (string, int) t =
+    {
+      subscribe = (fun h -> left_subs := h :: !left_subs);
+      iter = (fun f -> Hashtbl.iter f left_data);
+      get = (fun k -> Hashtbl.find_opt left_data k);
+      length = (fun () -> Hashtbl.length left_data);
+    }
+  in
+  let emit_left delta =
+    apply_delta left_data delta;
+    List.iter (fun h -> h delta) !left_subs
+  in
+
+  (* Right collection: decl index (path -> decl_pos) *)
+  let right_data : (string, int) Hashtbl.t = Hashtbl.create 16 in
+  let right_subs : ((string, int) delta -> unit) list ref = ref [] in
+  let right : (string, int) t =
+    {
+      subscribe = (fun h -> right_subs := h :: !right_subs);
+      iter = (fun f -> Hashtbl.iter f right_data);
+      get = (fun k -> Hashtbl.find_opt right_data k);
+      length = (fun () -> Hashtbl.length right_data);
+    }
+  in
+  let emit_right delta =
+    apply_delta right_data delta;
+    List.iter (fun h -> h delta) !right_subs
+  in
+
+  (* Join: for each (path, loc_from) in left, look up path in right *)
+  let joined =
+    join left right
+      ~key_of:(fun path _loc_from -> path)
+      ~f:(fun _path loc_from decl_pos_opt ->
+        match decl_pos_opt with
+        | Some decl_pos ->
+          (* Produce (decl_pos, loc_from) pairs *)
+          [(decl_pos, loc_from)]
+        | None -> [])
+      ()
+  in
+
+  (* Initially empty *)
+  assert (length joined = 0);
+
+  (* Add declaration at path "A" with pos 100 *)
+  emit_right (Set ("A", 100));
+  Printf.printf "After right Set(A, 100): joined=%d\n" (length joined);
+  assert (length joined = 0); (* No left entries yet *)
+
+  (* Add exception ref at path "A" from loc 1 *)
+  emit_left (Set ("A", 1));
+  Printf.printf "After left Set(A, 1): joined=%d\n" (length joined);
+  assert (length joined = 1);
+  assert (get joined 100 = Some 1); (* decl_pos 100 -> loc_from 1 *)
+
+  (* Add another exception ref at path "B" (no matching decl) *)
+  emit_left (Set ("B", 2));
+  Printf.printf "After left Set(B, 2): joined=%d (B has no decl)\n"
+    (length joined);
+  assert (length joined = 1);
+
+  (* Add declaration for path "B" *)
+  emit_right (Set ("B", 200));
+  Printf.printf "After right Set(B, 200): joined=%d\n" (length joined);
+  assert (length joined = 2);
+  assert (get joined 200 = Some 2);
+
+  (* Update right: change B's decl_pos *)
+  emit_right (Set ("B", 201));
+  Printf.printf "After right Set(B, 201): joined=%d\n" (length joined);
+  assert (length joined = 2);
+  assert (get joined 200 = None); (* Old key gone *)
+  assert (get joined 201 = Some 2); (* New key has the value *)
+
+  (* Remove left entry A *)
+  emit_left (Remove "A");
+  Printf.printf "After left Remove(A): joined=%d\n" (length joined);
+  assert (length joined = 1);
+  assert (get joined 100 = None);
+
+  Printf.printf "PASSED\n\n"
+
+let test_join_with_merge () =
+  Printf.printf "=== Test: join with merge ===\n";
+
+  (* Multiple left entries can map to same right key *)
+  let left_data : (int, string) Hashtbl.t = Hashtbl.create 16 in
+  let left_subs : ((int, string) delta -> unit) list ref = ref [] in
+  let left : (int, string) t =
+    {
+      subscribe = (fun h -> left_subs := h :: !left_subs);
+      iter = (fun f -> Hashtbl.iter f left_data);
+      get = (fun k -> Hashtbl.find_opt left_data k);
+      length = (fun () -> Hashtbl.length left_data);
+    }
+  in
+  let emit_left delta =
+    apply_delta left_data delta;
+    List.iter (fun h -> h delta) !left_subs
+  in
+
+  let right_data : (string, int) Hashtbl.t = Hashtbl.create 16 in
+  let right_subs : ((string, int) delta -> unit) list ref = ref [] in
+  let right : (string, int) t =
+    {
+      subscribe = (fun h -> right_subs := h :: !right_subs);
+      iter = (fun f -> Hashtbl.iter f right_data);
+      get = (fun k -> Hashtbl.find_opt right_data k);
+      length = (fun () -> Hashtbl.length right_data);
+    }
+  in
+  let emit_right delta =
+    apply_delta right_data delta;
+    List.iter (fun h -> h delta) !right_subs
+  in
+
+  (* Join with merge: all entries produce to key 0 *)
+  let joined =
+    join left right
+      ~key_of:(fun _id path -> path) (* Look up by path *)
+      ~f:(fun _id _path value_opt ->
+        match value_opt with
+        | Some v -> [(0, v)] (* All contribute to key 0 *)
+        | None -> [])
+      ~merge:( + ) (* Sum values *)
+      ()
+  in
+
+  emit_right (Set ("X", 10));
+  emit_left (Set (1, "X"));
+  emit_left (Set (2, "X"));
+
+  Printf.printf "Two entries looking up X (value 10): sum=%d\n"
+    (get joined 0 |> Option.value ~default:0);
+  assert (get joined 0 = Some 20); (* 10 + 10 *)
+
+  emit_right (Set ("X", 5));
+  Printf.printf "After right changes to 5: sum=%d\n"
+    (get joined 0 |> Option.value ~default:0);
+  assert (get joined 0 = Some 10); (* 5 + 5 *)
+
+  emit_left (Remove 1);
+  Printf.printf "After removing one left entry: sum=%d\n"
+    (get joined 0 |> Option.value ~default:0);
+  assert (get joined 0 = Some 5); (* Only one left *)
+
+  Printf.printf "PASSED\n\n"
+
 let () =
   Printf.printf "\n====== Reactive Collection Tests ======\n\n";
   test_flatmap_basic ();
@@ -335,4 +549,7 @@ let () =
   test_composition ();
   test_flatmap_on_existing_data ();
   test_file_collection ();
+  test_lookup ();
+  test_join ();
+  test_join_with_merge ();
   Printf.printf "All tests passed!\n"

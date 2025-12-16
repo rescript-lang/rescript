@@ -73,3 +73,47 @@ val flatMap :
     Defaults to last-write-wins.
     
     Derived collections can be further composed with [flatMap]. *)
+
+(** {1 Lookup} *)
+
+val lookup : ('k, 'v) t -> key:'k -> ('k, 'v) t
+(** [lookup source ~key] creates a reactive subscription to a single key.
+    
+    Returns a collection containing at most one entry (the value at [key]).
+    When [source]'s value at [key] changes, the lookup collection updates.
+    
+    Useful for reactive point queries. *)
+
+(** {1 Join} *)
+
+val join :
+  ('k1, 'v1) t ->
+  ('k2, 'v2) t ->
+  key_of:('k1 -> 'v1 -> 'k2) ->
+  f:('k1 -> 'v1 -> 'v2 option -> ('k3 * 'v3) list) ->
+  ?merge:('v3 -> 'v3 -> 'v3) ->
+  unit ->
+  ('k3, 'v3) t
+(** [join left right ~key_of ~f ()] joins two collections.
+    
+    For each entry [(k1, v1)] in [left]:
+    - Computes lookup key [k2 = key_of k1 v1]
+    - Looks up [k2] in [right] to get [v2_opt]
+    - Produces entries via [f k1 v1 v2_opt]
+    
+    When either [left] or [right] changes, affected entries are recomputed.
+    This is the reactive equivalent of a hash join.
+    
+    {2 Example: Exception refs lookup}
+    
+    {[
+      (* exception_refs: (path, loc_from) *)
+      (* decl_by_path: (path, decl list) *)
+      let resolved = Reactive.join exception_refs decl_by_path
+        ~key_of:(fun path _loc -> path)
+        ~f:(fun path loc decls_opt ->
+          match decls_opt with
+          | Some decls -> decls |> List.map (fun d -> (d.pos, loc))
+          | None -> [])
+        ()
+    ]} *)

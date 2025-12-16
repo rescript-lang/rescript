@@ -21,82 +21,9 @@ This design enables:
 
 ## Pipeline Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         DCE ANALYSIS PIPELINE                               │
-└─────────────────────────────────────────────────────────────────────────────┘
+> **Source**: [`diagrams/batch-pipeline.mmd`](diagrams/batch-pipeline.mmd)
 
-                              ┌─────────────┐
-                              │ DceConfig.t │ (explicit configuration)
-                              └──────┬──────┘
-                                     │
-    ╔════════════════════════════════╪════════════════════════════════════════╗
-    ║  PHASE 1: MAP (per-file)       │                                        ║
-    ╠════════════════════════════════╪════════════════════════════════════════╣
-    ║                                ▼                                        ║
-    ║  ┌──────────┐   process_cmt_file    ┌───────────────────────────────┐   ║
-    ║  │ file1.cmt├──────────────────────►│ file_data {                   │   ║
-    ║  └──────────┘                       │   annotations: builder        │   ║
-    ║  ┌──────────┐   process_cmt_file    │   decls: builder              │   ║
-    ║  │ file2.cmt├──────────────────────►│   refs: builder               │   ║
-    ║  └──────────┘                       │   file_deps: builder          │   ║
-    ║  ┌──────────┐   process_cmt_file    │   cross_file: builder         │   ║
-    ║  │ file3.cmt├──────────────────────►│ }                             │   ║
-    ║  └──────────┘                       └───────────────────────────────┘   ║
-    ║                                                  │                      ║
-    ║  Local mutable state OK                          │ file_data list       ║
-    ╚══════════════════════════════════════════════════╪══════════════════════╝
-                                                       │
-    ╔══════════════════════════════════════════════════╪══════════════════════╗
-    ║  PHASE 2: MERGE (combine builders)               │                      ║
-    ╠══════════════════════════════════════════════════╪══════════════════════╣
-    ║                                                  ▼                      ║
-    ║  ┌─────────────────────────────────────────────────────────────────┐   ║
-    ║  │ FileAnnotations.merge_all  → annotations: FileAnnotations.t     │   ║
-    ║  │ Declarations.merge_all     → decls: Declarations.t              │   ║
-    ║  │ References.merge_all       → refs: References.t                 │   ║
-    ║  │ FileDeps.merge_all         → file_deps: FileDeps.t              │   ║
-    ║  │ CrossFileItems.merge_all   → cross_file: CrossFileItems.t       │   ║
-    ║  │                                                                  │   ║
-    ║  │ CrossFileItems.compute_optional_args_state                       │   ║
-    ║  │                            → optional_args_state: State.t        │   ║
-    ║  └─────────────────────────────────────────────────────────────────┘   ║
-    ║                                                  │                      ║
-    ║  Pure functions, immutable output                │ merged data          ║
-    ╚══════════════════════════════════════════════════╪══════════════════════╝
-                                                       │
-    ╔══════════════════════════════════════════════════╪══════════════════════╗
-    ║  PHASE 3: SOLVE (pure deadness computation)      │                      ║
-    ╠══════════════════════════════════════════════════╪══════════════════════╣
-    ║                                                  ▼                      ║
-    ║  ┌─────────────────────────────────────────────────────────────────┐   ║
-    ║  │ Pass 1: DeadCommon.solveDead (core deadness)                    │   ║
-    ║  │   ~annotations ~decls ~refs ~file_deps ~config                  │   ║
-    ║  │   → AnalysisResult.t (dead/live status resolved)                │   ║
-    ║  │                                                                  │   ║
-    ║  │ Pass 2: Optional args analysis (liveness-aware)                 │   ║
-    ║  │   CrossFileItems.compute_optional_args_state ~is_live           │   ║
-    ║  │   DeadOptionalArgs.check (only for live decls)                  │   ║
-    ║  │   → AnalysisResult.t { issues: Issue.t list }                   │   ║
-    ║  └─────────────────────────────────────────────────────────────────┘   ║
-    ║                                                  │                      ║
-    ║  Pure functions: immutable in → immutable out    │ issues               ║
-    ╚══════════════════════════════════════════════════╪══════════════════════╝
-                                                       │
-    ╔══════════════════════════════════════════════════╪══════════════════════╗
-    ║  PHASE 4: REPORT (side effects at the edge)      │                      ║
-    ╠══════════════════════════════════════════════════╪══════════════════════╣
-    ║                                                  ▼                      ║
-    ║  ┌─────────────────────────────────────────────────────────────────┐   ║
-    ║  │ AnalysisResult.get_issues                                       │   ║
-    ║  │ |> List.iter (fun issue -> Log_.warning ~loc issue.description) │   ║
-    ║  │                                                                  │   ║
-    ║  │ (Optional: EmitJson for JSON output)                            │   ║
-    ║  └─────────────────────────────────────────────────────────────────┘   ║
-    ║                                                                        ║
-    ║  Side effects only here: logging, JSON output                          ║
-    ╚════════════════════════════════════════════════════════════════════════╝
-```
+![Batch Pipeline](diagrams/batch-pipeline.svg)
 
 ---
 
@@ -205,6 +132,59 @@ The architecture enables incremental updates when a file changes:
 4. Re-run Phase 3 (solve) - fast, pure function
 
 The key insight: **immutable data structures enable safe incremental updates** - you can swap one file's data without affecting others.
+
+---
+
+## Reactive Pipelines
+
+The reactive layer (`analysis/reactive/`) provides delta-based incremental updates. Instead of re-running entire phases, changes propagate automatically through derived collections.
+
+### Core Reactive Primitives
+
+| Primitive | Description |
+|-----------|-------------|
+| `Reactive.t ('k, 'v)` | Universal reactive collection interface |
+| `subscribe` | Register for delta notifications |
+| `iter` | Iterate current entries |
+| `get` | Lookup by key |
+| `delta` | Change notification: `Set (key, value)` or `Remove key` |
+| `flatMap` | Transform collection, optionally merge same-key values |
+| `join` | Hash join two collections with automatic updates |
+| `lookup` | Single-key subscription |
+| `ReactiveFileCollection` | File-backed collection with change detection |
+
+### Reactive Analysis Pipeline
+
+> **Source**: [`diagrams/reactive-pipeline.mmd`](diagrams/reactive-pipeline.mmd)
+
+![Reactive Pipeline](diagrams/reactive-pipeline.svg)
+
+### Delta Propagation
+
+> **Source**: [`diagrams/delta-propagation.mmd`](diagrams/delta-propagation.mmd)
+
+![Delta Propagation](diagrams/delta-propagation.svg)
+
+### Key Benefits
+
+| Aspect | Batch Pipeline | Reactive Pipeline |
+|--------|----------------|-------------------|
+| File change | Re-process all files | Re-process changed file only |
+| Merge | Re-merge all data | Update affected entries only |
+| Type deps | Rebuild entire index | Update affected paths only |
+| Exception refs | Re-resolve all | Re-resolve affected only |
+| Memory | O(N) per phase | O(N) total, shared |
+
+### Reactive Modules
+
+| Module | Responsibility |
+|--------|---------------|
+| `Reactive` | Core primitives: `flatMap`, `join`, `lookup`, delta types |
+| `ReactiveFileCollection` | File-backed collection with change detection |
+| `ReactiveAnalysis` | CMT processing with file caching |
+| `ReactiveMerge` | Derives decls, annotations, refs from file_data |
+| `ReactiveTypeDeps` | Type-label dependency resolution via join |
+| `ReactiveExceptionRefs` | Exception ref resolution via join |
 
 ---
 
