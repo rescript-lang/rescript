@@ -1,7 +1,7 @@
 (** Reactive dead code solver.
     
     Reactive pipeline: decls + live + annotations → dead_decls, live_decls, dead_modules,
-    dead_decls_by_file, issues_by_file, incorrect_dead_decls
+    dead_decls_by_file, issues_by_file, incorrect_dead_decls, dead_module_issues
     
     Current status:
     - All collections are reactive (zero recomputation on cache hit for unchanged files)
@@ -11,11 +11,11 @@
     - value_refs_from_by_file = refs grouped by source file (reactive flatMap with merge)
     - issues_by_file = per-file issue generation (reactive flatMap)
     - incorrect_dead_decls = live decls with @dead annotation (reactive join)
+    - dead_module_issues = dead_modules joined with modules_with_reported (reactive join)
     - is_pos_live uses reactive live collection (no resolvedDead mutation)
     - shouldReport callback replaces report field mutation (no mutation needed)
     - isInsideReportedValue is per-file only, so files are independent
     - hasRefBelow uses per-file refs: O(file_refs) per dead decl (was O(total_refs))
-    - Module issues generated in collect_issues from dead_modules + modules_with_reported_values
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -39,6 +39,8 @@ type t = {
           Second component: modules with at least one reported value (for module issue generation). *)
   incorrect_dead_decls: (Lexing.position, Decl.t) Reactive.t;
       (** Live declarations with @dead annotation. Reactive join of live_decls + annotations. *)
+  dead_module_issues: (Name.t, Issue.t) Reactive.t;
+      (** Dead module issues. Reactive join of dead_modules + modules_with_reported. *)
   config: DceConfig.t;
 }
 
@@ -193,6 +195,35 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
       ()
   in
 
+  (* Reactive modules_with_reported: modules that have at least one reported dead value *)
+  let modules_with_reported =
+    Reactive.flatMap issues_by_file
+      ~f:(fun _file (_issues, modules_list) ->
+        List.map (fun m -> (m, ())) modules_list)
+      ()
+  in
+
+  (* Reactive dead module issues: dead_modules joined with modules_with_reported *)
+  let dead_module_issues =
+    Reactive.join dead_modules modules_with_reported
+      ~key_of:(fun moduleName _loc -> moduleName)
+      ~f:(fun moduleName loc has_reported_opt ->
+        match has_reported_opt with
+        | Some () ->
+          let loc =
+            if loc.Location.loc_ghost then
+              let pos_fname = loc.loc_start.pos_fname in
+              let pos =
+                {Lexing.pos_fname; pos_lnum = 0; pos_bol = 0; pos_cnum = 0}
+              in
+              {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
+            else loc
+          in
+          [(moduleName, AnalysisResult.make_dead_module_issue ~loc ~moduleName)]
+        | None -> [])
+      ()
+  in
+
   {
     decls;
     live;
@@ -204,6 +235,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     dead_decls_by_file;
     issues_by_file;
     incorrect_dead_decls;
+    dead_module_issues;
     config;
   }
 
@@ -260,44 +292,18 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   (* Collect issues from reactive issues_by_file *)
   let num_files = ref 0 in
   let dead_issues = ref [] in
-  (* Track modules that have at least one reported value (for module issue generation) *)
-  let modules_with_reported_values : (Name.t, unit) Hashtbl.t =
-    Hashtbl.create 64
-  in
   Reactive.iter
-    (fun _file (file_issues, modules_list) ->
+    (fun _file (file_issues, _modules_list) ->
       incr num_files;
-      dead_issues := file_issues @ !dead_issues;
-      (* Collect modules that have reported values *)
-      List.iter
-        (fun moduleName ->
-          Hashtbl.replace modules_with_reported_values moduleName ())
-        modules_list)
+      dead_issues := file_issues @ !dead_issues)
     t.issues_by_file;
   let t2 = Unix.gettimeofday () in
 
-  (* Generate module issues: only for modules that are dead AND have a reported value *)
+  (* Collect module issues from reactive dead_module_issues *)
   let module_issues = ref [] in
-  let reported_modules : (Name.t, unit) Hashtbl.t = Hashtbl.create 64 in
   Reactive.iter
-    (fun moduleName loc ->
-      (* Only report if module has at least one reported dead value *)
-      if Hashtbl.mem modules_with_reported_values moduleName then
-        if not (Hashtbl.mem reported_modules moduleName) then (
-          Hashtbl.replace reported_modules moduleName ();
-          let loc =
-            if loc.Location.loc_ghost then
-              let pos_fname = loc.loc_start.pos_fname in
-              let pos =
-                {Lexing.pos_fname; pos_lnum = 0; pos_bol = 0; pos_cnum = 0}
-              in
-              {Location.loc_start = pos; loc_end = pos; loc_ghost = false}
-            else loc
-          in
-          module_issues :=
-            AnalysisResult.make_dead_module_issue ~loc ~moduleName
-            :: !module_issues))
-    t.dead_modules;
+    (fun _moduleName issue -> module_issues := issue :: !module_issues)
+    t.dead_module_issues;
   let t3 = Unix.gettimeofday () in
 
   if !Cli.timing then
