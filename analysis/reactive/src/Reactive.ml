@@ -469,6 +469,9 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
     support to each other, ensuring unreachable cycles are correctly removed. *)
 
 module Fixpoint = struct
+  (* DEBUG: flag for verbose tracing *)
+  let trace_edges = false
+
   type 'k state = {
     current: ('k, unit) Hashtbl.t; (* Current fixpoint set *)
     rank: ('k, int) Hashtbl.t; (* BFS distance from base *)
@@ -669,6 +672,9 @@ module Fixpoint = struct
   let apply_edges_delta state delta =
     match delta with
     | Set (source, new_succs) ->
+      if trace_edges && new_succs <> [] then
+        Printf.eprintf "EDGE: Set source with %d successors\n%!"
+          (List.length new_succs);
       let old_succs =
         match Hashtbl.find_opt state.edges source with
         | None -> []

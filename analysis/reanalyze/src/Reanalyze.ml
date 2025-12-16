@@ -368,9 +368,10 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
           let empty_optional_args_state = OptionalArgsState.create () in
           let analysis_result_core =
             match (reactive_merge, reactive_liveness) with
-            | Some merged, Some live_lazy ->
-              (* Reactive mode: use lazy reactive liveness (created on first force) *)
-              let live = Lazy.force live_lazy in
+            | Some merged, Some liveness_lazy ->
+              (* Force lazy liveness (after files processed) *)
+              let liveness_result = Lazy.force liveness_lazy in
+              let live = liveness_result.ReactiveLiveness.live in
               (* Freeze refs for debug/transitive support in solver *)
               let refs = ReactiveMerge.freeze_refs merged in
               DeadCommon.solveDeadReactive ~ann_store ~decl_store ~refs ~live
@@ -449,7 +450,10 @@ let runAnalysisAndReport ~cmtRoot =
       Some (ReactiveMerge.create file_data_collection)
     | None -> None
   in
-  (* Lazy reactive liveness - created on first force (after files processed) *)
+  (* Lazy reactive liveness - created on first force (after files processed).
+     Note: The reactive pipeline has an order-dependence issue where deltas
+     must be processed in a specific order. Using Lazy defers creation until
+     after all files are processed, ensuring correct results. *)
   let reactive_liveness =
     match reactive_merge with
     | Some merged -> Some (lazy (ReactiveLiveness.create ~merged))
