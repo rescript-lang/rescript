@@ -6,16 +6,15 @@
     - dead_decls, live_decls, dead_modules are reactive (zero recomputation on cache hit)
     - dead_modules = modules with dead decls but no live decls (reactive anti-join)
     - is_pos_live uses reactive live collection (no resolvedDead mutation needed)
-    - collect_issues still iterates dead_decls + live_decls for annotations + sorting
-    - Uses DeadCommon.reportDeclaration for isInsideReportedValue and hasRefBelow
+    - Per-file issue generation: group by file, sort within file, fresh ReportingContext per file
+    - isInsideReportedValue is per-file only, so files are independent
     
     TODO for fully reactive issues:
-    - isInsideReportedValue: needs reactive tracking of reported positions
-      (currently relies on sequential iteration order via ReportingContext)
+    - Make dead_decls_by_file a reactive collection (per-file grouping)
+    - Make per-file issues reactive (only recompute changed files)
     - hasRefBelow: uses O(total_refs) linear scan of refs_from per dead decl;
       could use reactive refs_to index for O(1) lookup per decl
     - report field: still mutated to suppress annotated decls; could check in reportDeclaration
-    - Sorting: O(n log n) for isInsideReportedValue ordering; fundamentally sequential
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -164,11 +163,18 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
     t.live_decls;
   let t2 = Unix.gettimeofday () in
 
-  (* Sort dead declarations for isInsideReportedValue ordering *)
-  let sorted_dead = !dead_list |> List.fast_sort Decl.compareForReporting in
+  (* Group dead declarations by file *)
+  let by_file : (string, Decl.t list) Hashtbl.t = Hashtbl.create 64 in
+  List.iter
+    (fun (decl : Decl.t) ->
+      let file = decl.pos.pos_fname in
+      let existing = Hashtbl.find_opt by_file file |> Option.value ~default:[] in
+      Hashtbl.replace by_file file (decl :: existing))
+    !dead_list;
   let t3 = Unix.gettimeofday () in
 
-  (* Generate issues - use reactive dead_modules via callback *)
+  (* Generate issues per-file with independent ReportingContext.
+     isInsideReportedValue only checks within same file, so files are independent. *)
   let transitive = config.DceConfig.run.transitive in
   let hasRefBelow =
     match t.value_refs_from with
@@ -182,23 +188,33 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
     check_module_dead ~dead_modules:t.dead_modules ~reported_modules ~fileName
       moduleName
   in
-  let reporting_ctx = DeadCommon.ReportingContext.create () in
   let dead_issues =
-    sorted_dead
-    |> List.concat_map (fun decl ->
-           DeadCommon.reportDeclaration ~config ~hasRefBelow ~checkModuleDead
-             reporting_ctx decl)
+    Hashtbl.fold
+      (fun _file decls acc ->
+        (* Sort within file for isInsideReportedValue *)
+        let sorted = decls |> List.fast_sort Decl.compareForReporting in
+        (* Fresh ReportingContext per file *)
+        let reporting_ctx = DeadCommon.ReportingContext.create () in
+        let file_issues =
+          sorted
+          |> List.concat_map (fun decl ->
+                 DeadCommon.reportDeclaration ~config ~hasRefBelow ~checkModuleDead
+                   reporting_ctx decl)
+        in
+        file_issues @ acc)
+      by_file []
   in
   let t4 = Unix.gettimeofday () in
 
   if !Cli.timing then
     Printf.eprintf
-      "    collect_issues: iter_dead=%.2fms iter_live=%.2fms sort=%.2fms \
-       report=%.2fms\n"
+      "    collect_issues: iter_dead=%.2fms iter_live=%.2fms group=%.2fms \
+       report=%.2fms (%d files)\n"
       ((t1 -. t0) *. 1000.0)
       ((t2 -. t1) *. 1000.0)
       ((t3 -. t2) *. 1000.0)
-      ((t4 -. t3) *. 1000.0);
+      ((t4 -. t3) *. 1000.0)
+      (Hashtbl.length by_file);
 
   List.rev !incorrect_dead_issues @ dead_issues
 
