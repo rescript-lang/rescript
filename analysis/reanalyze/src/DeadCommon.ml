@@ -14,7 +14,6 @@ module Config = struct
   let analyzeExternals = ref false
   let reportUnderscore = false
   let reportTypesDeadOnlyInInterface = false
-  let recursiveDebug = false
   let warnOnCircularDependencies = false
 end
 
@@ -222,122 +221,12 @@ let reportDeclaration ~config ~ref_store (ctx : ReportingContext.t) decl :
       | None -> [dead_value_issue]
     else []
 
-let declIsDead ~ann_store ~refs decl =
-  let liveRefs =
-    refs
-    |> PosSet.filter (fun p ->
-           not (AnnotationStore.is_annotated_dead ann_store p))
-  in
-  liveRefs |> PosSet.cardinal = 0
-  && not (AnnotationStore.is_annotated_gentype_or_live ann_store decl.Decl.pos)
-
 let doReportDead ~ann_store pos =
   not (AnnotationStore.is_annotated_gentype_or_dead ann_store pos)
 
-let rec resolveRecursiveRefs ~ref_store ~ann_store ~config ~decl_store
-    ~checkOptionalArg:
-      (checkOptionalArgFn : config:DceConfig.t -> Decl.t -> Issue.t list)
-    ~deadDeclarations ~issues ~level ~orderedFiles ~refs ~refsBeingResolved decl
-    : bool =
-  match decl.Decl.pos with
-  | _ when decl.resolvedDead <> None ->
-    if Config.recursiveDebug then
-      Log_.item "recursiveDebug %s [%d] already resolved@."
-        (decl.path |> DcePath.toString)
-        level;
-    (* Use the already-resolved value, not source annotations *)
-    Option.get decl.resolvedDead
-  | _ when PosSet.mem decl.pos !refsBeingResolved ->
-    if Config.recursiveDebug then
-      Log_.item "recursiveDebug %s [%d] is being resolved: assume dead@."
-        (decl.path |> DcePath.toString)
-        level;
-    true
-  | _ ->
-    if Config.recursiveDebug then
-      Log_.item "recursiveDebug resolving %s [%d]@."
-        (decl.path |> DcePath.toString)
-        level;
-    refsBeingResolved := PosSet.add decl.pos !refsBeingResolved;
-    let allDepsResolved = ref true in
-    let newRefs =
-      refs
-      |> PosSet.filter (fun pos ->
-             if pos = decl.pos then (
-               if Config.recursiveDebug then
-                 Log_.item "recursiveDebug %s ignoring reference to self@."
-                   (decl.path |> DcePath.toString);
-               false)
-             else
-               match DeclarationStore.find_opt decl_store pos with
-               | None ->
-                 if Config.recursiveDebug then
-                   Log_.item "recursiveDebug can't find decl for %s@."
-                     (pos |> Pos.toString);
-                 true
-               | Some xDecl ->
-                 let xRefs =
-                   match xDecl.declKind |> Decl.Kind.isType with
-                   | true -> ReferenceStore.find_type_refs ref_store pos
-                   | false -> ReferenceStore.find_value_refs ref_store pos
-                 in
-                 let xDeclIsDead =
-                   xDecl
-                   |> resolveRecursiveRefs ~ref_store ~ann_store ~config
-                        ~decl_store ~checkOptionalArg:checkOptionalArgFn
-                        ~deadDeclarations ~issues ~level:(level + 1)
-                        ~orderedFiles ~refs:xRefs ~refsBeingResolved
-                 in
-                 if xDecl.resolvedDead = None then allDepsResolved := false;
-                 not xDeclIsDead)
-    in
-    let isDead = decl |> declIsDead ~ann_store ~refs:newRefs in
-    let isResolved = (not isDead) || !allDepsResolved || level = 0 in
-    if isResolved then (
-      decl.resolvedDead <- Some isDead;
-      if isDead then (
-        decl.path
-        |> DeadModules.markDead ~config
-             ~isType:(decl.declKind |> Decl.Kind.isType)
-             ~loc:decl.moduleLoc;
-        if not (doReportDead ~ann_store decl.pos) then decl.report <- false;
-        deadDeclarations := decl :: !deadDeclarations)
-      else (
-        (* Collect optional args issues *)
-        checkOptionalArgFn ~config decl
-        |> List.iter (fun issue -> issues := issue :: !issues);
-        decl.path
-        |> DeadModules.markLive ~config
-             ~isType:(decl.declKind |> Decl.Kind.isType)
-             ~loc:decl.moduleLoc;
-        if AnnotationStore.is_annotated_dead ann_store decl.pos then (
-          (* Collect incorrect @dead annotation issue *)
-          let issue =
-            makeDeadIssue ~decl ~message:" is annotated @dead but is live"
-              IncorrectDeadAnnotation
-          in
-          decl.path
-          |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
-          |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
-          |> Option.iter (fun mod_issue -> issues := mod_issue :: !issues);
-          issues := issue :: !issues));
-      if config.DceConfig.cli.debug then
-        let refsString =
-          newRefs |> PosSet.elements |> List.map Pos.toString
-          |> String.concat ", "
-        in
-        Log_.item "%s %s %s: %d references (%s) [%d]@."
-          (match isDead with
-          | true -> "Dead"
-          | false -> "Live")
-          (decl.declKind |> Decl.Kind.toString)
-          (decl.path |> DcePath.toString)
-          (newRefs |> PosSet.cardinal)
-          refsString level);
-    isDead
-
-let solveDead ~ann_store ~config ~decl_store ~ref_store ~file_deps_store
-    ~optional_args_state
+(** Forward-based solver using refs_from direction.
+    Computes liveness via forward propagation, then processes declarations. *)
+let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
     ~checkOptionalArg:
       (checkOptionalArgFn :
         optional_args_state:OptionalArgsState.t ->
@@ -345,53 +234,167 @@ let solveDead ~ann_store ~config ~decl_store ~ref_store ~file_deps_store
         config:DceConfig.t ->
         Decl.t ->
         Issue.t list) : AnalysisResult.t =
-  let iterDeclInOrder ~deadDeclarations ~issues ~orderedFiles decl =
-    let decl_refs =
-      match decl |> Decl.isValue with
-      | true -> ReferenceStore.find_value_refs ref_store decl.pos
-      | false -> ReferenceStore.find_type_refs ref_store decl.pos
-    in
-    resolveRecursiveRefs ~ref_store ~ann_store ~config ~decl_store
-      ~checkOptionalArg:(checkOptionalArgFn ~optional_args_state ~ann_store)
-      ~deadDeclarations ~issues ~level:0 ~orderedFiles
-      ~refsBeingResolved:(ref PosSet.empty) ~refs:decl_refs decl
-    |> ignore
-  in
-  if config.DceConfig.cli.debug then (
-    Log_.item "@.File References@.@.";
-    let fileList = ref [] in
-    FileDepsStore.iter_deps file_deps_store (fun file files ->
-        fileList := (file, files) :: !fileList);
-    !fileList
-    |> List.sort (fun (f1, _) (f2, _) -> String.compare f1 f2)
-    |> List.iter (fun (file, files) ->
-           Log_.item "%s -->> %s@."
-             (file |> Filename.basename)
-             (files |> FileSet.elements |> List.map Filename.basename
-            |> String.concat ", ")));
-  let declarations =
-    DeclarationStore.fold
-      (fun _pos decl declarations -> decl :: declarations)
-      decl_store []
-  in
-  let orderedFiles = Hashtbl.create 256 in
-  FileDepsStore.iter_files_from_roots_to_leaves file_deps_store
-    (let current = ref 0 in
-     fun fileName ->
-       incr current;
-       Hashtbl.add orderedFiles fileName !current);
-  let orderedDeclarations =
-    (* analyze in reverse order *)
-    declarations |> List.fast_sort (Decl.compareUsingDependencies ~orderedFiles)
-  in
+  (* Compute liveness using forward propagation *)
+  let debug = config.DceConfig.cli.debug in
+  let live = Liveness.compute_forward ~debug ~decl_store ~refs ~ann_store in
+
+  (* Process each declaration based on computed liveness *)
   let deadDeclarations = ref [] in
   let inline_issues = ref [] in
-  orderedDeclarations
-  |> List.iter
-       (iterDeclInOrder ~orderedFiles ~deadDeclarations ~issues:inline_issues);
+
+  (* For consistent debug output, collect and sort declarations *)
+  let all_decls =
+    DeclarationStore.fold (fun _pos decl acc -> decl :: acc) decl_store []
+    |> List.fast_sort Decl.compareForReporting
+  in
+
+  all_decls
+  |> List.iter (fun (decl : Decl.t) ->
+         let pos = decl.pos in
+         let live_reason = Liveness.get_live_reason ~live pos in
+         let is_live = Option.is_some live_reason in
+         let is_dead = not is_live in
+
+         (* Debug output with reason *)
+         (if debug then
+            let refs_set =
+              match decl |> Decl.isValue with
+              | true -> References.find_value_refs refs pos
+              | false -> References.find_type_refs refs pos
+            in
+            let status =
+              match live_reason with
+              | None -> "Dead"
+              | Some reason ->
+                Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+            in
+            Log_.item "%s %s %s: %d references (%s)@." status
+              (decl.declKind |> Decl.Kind.toString)
+              (decl.path |> DcePath.toString)
+              (refs_set |> PosSet.cardinal)
+              (refs_set |> PosSet.elements |> List.map Pos.toString
+             |> String.concat ", "));
+
+         decl.resolvedDead <- Some is_dead;
+
+         if is_dead then (
+           decl.path
+           |> DeadModules.markDead ~config
+                ~isType:(decl.declKind |> Decl.Kind.isType)
+                ~loc:decl.moduleLoc;
+           if not (doReportDead ~ann_store decl.pos) then decl.report <- false;
+           deadDeclarations := decl :: !deadDeclarations)
+         else (
+           (* Collect optional args issues for live declarations *)
+           checkOptionalArgFn ~optional_args_state ~ann_store ~config decl
+           |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
+           decl.path
+           |> DeadModules.markLive ~config
+                ~isType:(decl.declKind |> Decl.Kind.isType)
+                ~loc:decl.moduleLoc;
+           if AnnotationStore.is_annotated_dead ann_store decl.pos then (
+             (* Collect incorrect @dead annotation issue *)
+             let issue =
+               makeDeadIssue ~decl ~message:" is annotated @dead but is live"
+                 IncorrectDeadAnnotation
+             in
+             decl.path
+             |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
+             |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+             |> Option.iter (fun mod_issue ->
+                    inline_issues := mod_issue :: !inline_issues);
+             inline_issues := issue :: !inline_issues)));
+
   let sortedDeadDeclarations =
     !deadDeclarations |> List.fast_sort Decl.compareForReporting
   in
+
+  (* Collect issues from dead declarations *)
+  let reporting_ctx = ReportingContext.create () in
+  let dead_issues =
+    sortedDeadDeclarations
+    |> List.concat_map (fun decl ->
+           reportDeclaration ~config
+             ~ref_store:(ReferenceStore.of_frozen refs)
+             reporting_ctx decl)
+  in
+  let all_issues = List.rev !inline_issues @ dead_issues in
+  AnalysisResult.add_issues AnalysisResult.empty all_issues
+
+(** Reactive solver using reactive liveness collection. *)
+let solveDeadReactive ~ann_store ~config ~decl_store ~ref_store
+    ~(live : (Lexing.position, unit) Reactive.t) ~optional_args_state
+    ~checkOptionalArg:
+      (checkOptionalArgFn :
+        optional_args_state:OptionalArgsState.t ->
+        ann_store:AnnotationStore.t ->
+        config:DceConfig.t ->
+        Decl.t ->
+        Issue.t list) : AnalysisResult.t =
+  let debug = config.DceConfig.cli.debug in
+  let is_live pos = Reactive.get live pos <> None in
+
+  (* Process each declaration based on computed liveness *)
+  let deadDeclarations = ref [] in
+  let inline_issues = ref [] in
+
+  (* For consistent debug output, collect and sort declarations *)
+  let all_decls =
+    DeclarationStore.fold (fun _pos decl acc -> decl :: acc) decl_store []
+    |> List.fast_sort Decl.compareForReporting
+  in
+
+  all_decls
+  |> List.iter (fun (decl : Decl.t) ->
+         let pos = decl.pos in
+         let is_live = is_live pos in
+         let is_dead = not is_live in
+
+         (* Debug output *)
+         (if debug then
+            let refs_set = ReferenceStore.find_value_refs ref_store pos in
+            let status = if is_live then "Live" else "Dead" in
+            Log_.item "%s %s %s: %d references (%s)@." status
+              (decl.declKind |> Decl.Kind.toString)
+              (decl.path |> DcePath.toString)
+              (refs_set |> PosSet.cardinal)
+              (refs_set |> PosSet.elements |> List.map Pos.toString
+             |> String.concat ", "));
+
+         decl.resolvedDead <- Some is_dead;
+
+         if is_dead then (
+           decl.path
+           |> DeadModules.markDead ~config
+                ~isType:(decl.declKind |> Decl.Kind.isType)
+                ~loc:decl.moduleLoc;
+           if not (doReportDead ~ann_store decl.pos) then decl.report <- false;
+           deadDeclarations := decl :: !deadDeclarations)
+         else (
+           (* Collect optional args issues for live declarations *)
+           checkOptionalArgFn ~optional_args_state ~ann_store ~config decl
+           |> List.iter (fun issue -> inline_issues := issue :: !inline_issues);
+           decl.path
+           |> DeadModules.markLive ~config
+                ~isType:(decl.declKind |> Decl.Kind.isType)
+                ~loc:decl.moduleLoc;
+           if AnnotationStore.is_annotated_dead ann_store decl.pos then (
+             (* Collect incorrect @dead annotation issue *)
+             let issue =
+               makeDeadIssue ~decl ~message:" is annotated @dead but is live"
+                 IncorrectDeadAnnotation
+             in
+             decl.path
+             |> DcePath.toModuleName ~isType:(decl.declKind |> Decl.Kind.isType)
+             |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
+             |> Option.iter (fun mod_issue ->
+                    inline_issues := mod_issue :: !inline_issues);
+             inline_issues := issue :: !inline_issues)));
+
+  let sortedDeadDeclarations =
+    !deadDeclarations |> List.fast_sort Decl.compareForReporting
+  in
+
   (* Collect issues from dead declarations *)
   let reporting_ctx = ReportingContext.create () in
   let dead_issues =
@@ -399,8 +402,17 @@ let solveDead ~ann_store ~config ~decl_store ~ref_store ~file_deps_store
     |> List.concat_map (fun decl ->
            reportDeclaration ~config ~ref_store reporting_ctx decl)
   in
-  (* Combine all issues: inline issues first (they were logged during analysis),
-     then dead declaration issues *)
   let all_issues = List.rev !inline_issues @ dead_issues in
-  (* Return result - caller is responsible for logging *)
   AnalysisResult.add_issues AnalysisResult.empty all_issues
+
+(** Main entry point - uses forward solver. *)
+let solveDead ~ann_store ~config ~decl_store ~ref_store ~optional_args_state
+    ~checkOptionalArg : AnalysisResult.t =
+  match ReferenceStore.get_refs_opt ref_store with
+  | Some refs ->
+    solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
+      ~checkOptionalArg
+  | None ->
+    failwith
+      "solveDead: ReferenceStore must be Frozen (use solveDeadReactive for \
+       reactive mode)"

@@ -369,3 +369,160 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     get = (fun k -> Hashtbl.find_opt target k);
     length = (fun () -> Hashtbl.length target);
   }
+
+(** {1 Union} *)
+
+(** Combine two collections into one.
+    
+    Returns a collection containing all entries from both [left] and [right].
+    When the same key exists in both, [merge] combines values (defaults to 
+    preferring right). *)
+let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
+  let merge_fn =
+    match merge with
+    | Some m -> m
+    | None -> fun _ v -> v
+  in
+  (* Track contributions from each side *)
+  let left_values : ('k, 'v) Hashtbl.t = Hashtbl.create 64 in
+  let right_values : ('k, 'v) Hashtbl.t = Hashtbl.create 64 in
+  let target : ('k, 'v) Hashtbl.t = Hashtbl.create 128 in
+  let subscribers : (('k, 'v) delta -> unit) list ref = ref [] in
+
+  let emit delta = List.iter (fun h -> h delta) !subscribers in
+
+  let recompute_key k =
+    match (Hashtbl.find_opt left_values k, Hashtbl.find_opt right_values k) with
+    | None, None ->
+      Hashtbl.remove target k;
+      Some (Remove k)
+    | Some v, None | None, Some v ->
+      Hashtbl.replace target k v;
+      Some (Set (k, v))
+    | Some v1, Some v2 ->
+      let merged = merge_fn v1 v2 in
+      Hashtbl.replace target k merged;
+      Some (Set (k, merged))
+  in
+
+  let handle_left_delta delta =
+    let downstream =
+      match delta with
+      | Set (k, v) ->
+        Hashtbl.replace left_values k v;
+        recompute_key k |> Option.to_list
+      | Remove k ->
+        Hashtbl.remove left_values k;
+        recompute_key k |> Option.to_list
+    in
+    List.iter emit downstream
+  in
+
+  let handle_right_delta delta =
+    let downstream =
+      match delta with
+      | Set (k, v) ->
+        Hashtbl.replace right_values k v;
+        recompute_key k |> Option.to_list
+      | Remove k ->
+        Hashtbl.remove right_values k;
+        recompute_key k |> Option.to_list
+    in
+    List.iter emit downstream
+  in
+
+  (* Subscribe to both sources *)
+  left.subscribe handle_left_delta;
+  right.subscribe handle_right_delta;
+
+  (* Initialize from existing entries *)
+  left.iter (fun k v ->
+      Hashtbl.replace left_values k v;
+      ignore (recompute_key k));
+  right.iter (fun k v ->
+      Hashtbl.replace right_values k v;
+      ignore (recompute_key k));
+
+  {
+    subscribe = (fun handler -> subscribers := handler :: !subscribers);
+    iter = (fun f -> Hashtbl.iter f target);
+    get = (fun k -> Hashtbl.find_opt target k);
+    length = (fun () -> Hashtbl.length target);
+  }
+
+(** {1 Fixpoint} *)
+
+(** Compute transitive closure via fixpoint.
+    
+    Starting from keys in [init], follows edges to discover all reachable keys.
+    
+    Current implementation: recomputes full fixpoint on any change.
+    Future: incremental updates. *)
+let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
+    =
+  (* Current fixpoint result *)
+  let result : ('k, unit) Hashtbl.t = Hashtbl.create 256 in
+  let subscribers : (('k, unit) delta -> unit) list ref = ref [] in
+
+  let emit delta = List.iter (fun h -> h delta) !subscribers in
+
+  (* Recompute the entire fixpoint from scratch *)
+  let recompute () =
+    (* Collect old keys to detect removals *)
+    let old_keys =
+      Hashtbl.fold (fun k () acc -> k :: acc) result []
+      |> List.fold_left
+           (fun set k ->
+             Hashtbl.replace set k ();
+             set)
+           (Hashtbl.create 256)
+    in
+
+    (* Clear and recompute *)
+    Hashtbl.clear result;
+
+    (* Worklist algorithm *)
+    let worklist = Queue.create () in
+
+    (* Add initial keys *)
+    init.iter (fun k () ->
+        if not (Hashtbl.mem result k) then (
+          Hashtbl.replace result k ();
+          Queue.push k worklist));
+
+    (* Propagate through edges *)
+    while not (Queue.is_empty worklist) do
+      let k = Queue.pop worklist in
+      match edges.get k with
+      | None -> ()
+      | Some successors ->
+        List.iter
+          (fun succ ->
+            if not (Hashtbl.mem result succ) then (
+              Hashtbl.replace result succ ();
+              Queue.push succ worklist))
+          successors
+    done;
+
+    (* Emit deltas: additions and removals *)
+    Hashtbl.iter
+      (fun k () -> if not (Hashtbl.mem old_keys k) then emit (Set (k, ())))
+      result;
+    Hashtbl.iter
+      (fun k () -> if not (Hashtbl.mem result k) then emit (Remove k))
+      old_keys
+  in
+
+  (* Subscribe to changes in init and edges *)
+  init.subscribe (fun _ -> recompute ());
+  edges.subscribe (fun _ -> recompute ());
+
+  (* Initial computation *)
+  recompute ();
+
+  {
+    subscribe = (fun handler -> subscribers := handler :: !subscribers);
+    iter = (fun f -> Hashtbl.iter f result);
+    get = (fun k -> Hashtbl.find_opt result k);
+    length = (fun () -> Hashtbl.length result);
+  }

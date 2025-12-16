@@ -85,14 +85,18 @@ let file_deps = FileDeps.merge_all (file_data_list |> List.map (fun fd -> fd.fil
 
 **Output**: `AnalysisResult.t` containing `Issue.t list`
 
-**Algorithm** (two-pass for liveness-aware optional args):
+**Algorithm** (forward fixpoint + liveness-aware optional args):
 
-**Pass 1: Core deadness resolution**
-1. Build file dependency order (roots to leaves)
-2. Sort declarations by dependency order
-3. For each declaration, resolve references recursively
-4. Determine dead/live status based on reference count
-5. Collect issues for dead declarations
+**Core liveness computation** (`Liveness.compute_forward`):
+1. Identify roots: declarations with `@live`/`@genType` annotations or referenced from outside any declaration
+2. Build index mapping each declaration to its outgoing references (refs_from direction)
+3. Run forward fixpoint: propagate liveness from roots through references
+4. Return set of all live positions
+
+**Pass 1: Deadness resolution**
+1. Compute liveness via forward propagation
+2. For each declaration, check if in live set
+3. Mark dead declarations, collect issues
 
 **Pass 2: Liveness-aware optional args analysis**
 1. Use `Decl.isLive` to build an `is_live` predicate from Pass 1 results
@@ -149,7 +153,9 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `get` | Lookup by key |
 | `delta` | Change notification: `Set (key, value)` or `Remove key` |
 | `flatMap` | Transform collection, optionally merge same-key values |
-| `join` | Hash join two collections with automatic updates |
+| `join` | Hash join two collections (left join behavior) |
+| `union` | Combine two collections, optionally merge same-key values |
+| `fixpoint` | Transitive closure: `init + edges → reachable` |
 | `lookup` | Single-key subscription |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 
@@ -167,18 +173,21 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | **FD** | `file_data` | `path → file_data option` |
 | **D** | `decls` | `pos → Decl.t` |
 | **A** | `annotations` | `pos → annotation` |
-| **VR** | `value_refs` | `pos → PosSet` (per-file) |
-| **TR** | `type_refs` | `pos → PosSet` (per-file) |
+| **VR→** | `value_refs` | `pos → PosSet` (refs_to: target → sources) |
+| **TR→** | `type_refs` | `pos → PosSet` (refs_to: target → sources) |
+| **VR←** | `value_refs_from` | `pos → PosSet` (refs_from: source → targets) |
+| **TR←** | `type_refs_from` | `pos → PosSet` (refs_from: source → targets) |
 | **CFI** | `cross_file_items` | `path → CrossFileItems.t` |
 | **DBP** | `decl_by_path` | `path → decl_info list` |
-| **SPR** | `same_path_refs` | Same-path duplicates |
-| **I2I** | `impl_to_intf_refs` | Impl → Interface links |
-| **I2I₂** | `impl_to_intf_refs_path2` | Impl → Interface (path2) |
-| **I→I** | `intf_to_impl_refs` | Interface → Impl links |
+| **ATR←** | `all_type_refs_from` | Combined type refs (refs_from direction) |
 | **ER** | `exception_refs` | Exception references |
 | **ED** | `exception_decls` | Exception declarations |
-| **RR** | `resolved_refs` | Resolved exception refs |
-| **REFS** | Output | Combined `References.t` |
+| **RR←** | `resolved_refs` | Resolved exception refs (refs_from direction) |
+| **DR** | `decl_refs` | `pos → (value_targets, type_targets)` |
+| **roots** | Root declarations | `@live`/`@genType` or externally referenced |
+| **edges** | Reference graph | Declaration → referenced declarations |
+| **fixpoint** | `Reactive.fixpoint` | Transitive closure combinator |
+| **LIVE** | Output | Set of live positions |
 
 ### Delta Propagation
 
@@ -200,12 +209,14 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 
 | Module | Responsibility |
 |--------|---------------|
-| `Reactive` | Core primitives: `flatMap`, `join`, `lookup`, delta types |
+| `Reactive` | Core primitives: `flatMap`, `join`, `union`, `fixpoint`, delta types |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 | `ReactiveAnalysis` | CMT processing with file caching |
-| `ReactiveMerge` | Derives decls, annotations, refs from file_data |
-| `ReactiveTypeDeps` | Type-label dependency resolution via join |
+| `ReactiveMerge` | Derives decls, annotations, refs (both directions) from file_data |
+| `ReactiveTypeDeps` | Type-label dependency resolution, produces `all_type_refs_from` |
 | `ReactiveExceptionRefs` | Exception ref resolution via join |
+| `ReactiveDeclRefs` | Maps declarations to their outgoing references |
+| `ReactiveLiveness` | Computes live positions via reactive fixpoint |
 
 ---
 
@@ -227,9 +238,10 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `Reanalyze` | Entry point, orchestrates pipeline |
 | `DceFileProcessing` | Phase 1: Per-file AST processing |
 | `DceConfig` | Configuration (CLI flags + run config) |
-| `DeadCommon` | Phase 3: Solver (`solveDead`) |
+| `DeadCommon` | Phase 3: Solver (`solveDead`, `solveDeadReactive`) |
+| `Liveness` | Forward fixpoint liveness computation |
 | `Declarations` | Declaration storage (builder/immutable) |
-| `References` | Reference tracking (builder/immutable) |
+| `References` | Reference tracking (both refs_to and refs_from directions) |
 | `FileAnnotations` | Source annotation tracking |
 | `FileDeps` | Cross-file dependency graph |
 | `CrossFileItems` | Cross-file optional args and exceptions |

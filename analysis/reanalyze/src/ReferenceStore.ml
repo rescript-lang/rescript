@@ -66,3 +66,9 @@ let find_type_refs t pos =
     |> PosSet.union from_cross_file
     |> PosSet.union from_impl_intf2
     |> PosSet.union from_intf_impl
+
+(** Get underlying References.t for Frozen stores. Used for forward liveness. *)
+let get_refs_opt t =
+  match t with
+  | Frozen refs -> Some refs
+  | Reactive _ -> None

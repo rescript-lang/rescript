@@ -31,12 +31,14 @@
 
 type t = {
   decl_by_path: (DcePath.t, decl_info list) Reactive.t;
+  (* refs_to direction: target -> sources *)
   same_path_refs: (Lexing.position, PosSet.t) Reactive.t;
   cross_file_refs: (Lexing.position, PosSet.t) Reactive.t;
   all_type_refs: (Lexing.position, PosSet.t) Reactive.t;
-  (* Additional cross-file sources for complete coverage *)
   impl_to_intf_refs_path2: (Lexing.position, PosSet.t) Reactive.t;
   intf_to_impl_refs: (Lexing.position, PosSet.t) Reactive.t;
+  (* refs_from direction: source -> targets (for forward solver) *)
+  all_type_refs_from: (Lexing.position, PosSet.t) Reactive.t;
 }
 (** Reactive type-label dependency collections *)
 

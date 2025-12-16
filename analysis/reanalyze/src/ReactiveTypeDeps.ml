@@ -33,12 +33,14 @@ let decl_to_info (decl : Decl.t) : decl_info option =
 
 type t = {
   decl_by_path: (DcePath.t, decl_info list) Reactive.t;
+  (* refs_to direction: target -> sources *)
   same_path_refs: (Lexing.position, PosSet.t) Reactive.t;
   cross_file_refs: (Lexing.position, PosSet.t) Reactive.t;
   all_type_refs: (Lexing.position, PosSet.t) Reactive.t;
-  (* Additional cross-file sources for complete coverage *)
   impl_to_intf_refs_path2: (Lexing.position, PosSet.t) Reactive.t;
   intf_to_impl_refs: (Lexing.position, PosSet.t) Reactive.t;
+  (* refs_from direction: source -> targets (for forward solver) *)
+  all_type_refs_from: (Lexing.position, PosSet.t) Reactive.t;
 }
 (** All reactive collections for type-label dependencies *)
 
@@ -198,6 +200,27 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
      We expose these separately and merge in freeze_refs. *)
   let all_type_refs = same_path_refs in
 
+  (* Create refs_from by combining and inverting all refs_to sources.
+     We use a single flatMap that iterates all sources once. *)
+  let all_type_refs_from =
+    (* Combine all refs_to sources using union *)
+    let combined_refs_to =
+      let u1 =
+        Reactive.union same_path_refs cross_file_refs ~merge:PosSet.union ()
+      in
+      let u2 =
+        Reactive.union u1 impl_to_intf_refs_path2 ~merge:PosSet.union ()
+      in
+      Reactive.union u2 intf_to_impl_refs ~merge:PosSet.union ()
+    in
+    (* Invert the combined refs_to to refs_from *)
+    Reactive.flatMap combined_refs_to
+      ~f:(fun posTo posFromSet ->
+        PosSet.elements posFromSet
+        |> List.map (fun posFrom -> (posFrom, PosSet.singleton posTo)))
+      ~merge:PosSet.union ()
+  in
+
   {
     decl_by_path;
     same_path_refs;
@@ -205,6 +228,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     all_type_refs;
     impl_to_intf_refs_path2;
     intf_to_impl_refs;
+    all_type_refs_from;
   }
 
 (** {1 Freezing for solver} *)
