@@ -4,11 +4,10 @@
     - [builder] - mutable, for AST processing
     - [t] - immutable, for solver (read-only access)
     
-    References are stored in BOTH directions:
-    - refs_to: posTo -> {sources that reference it}
+    References are stored in refs_from direction:
     - refs_from: posFrom -> {targets it references}
     
-    This enables gradual migration from backward to forward algorithms. *)
+    This is what the forward liveness algorithm needs. *)
 
 (** {2 Types} *)
 
@@ -24,11 +23,11 @@ val create_builder : unit -> builder
 
 val add_value_ref :
   builder -> posTo:Lexing.position -> posFrom:Lexing.position -> unit
-(** Add a value reference. Stores in both directions. *)
+(** Add a value reference. *)
 
 val add_type_ref :
   builder -> posTo:Lexing.position -> posFrom:Lexing.position -> unit
-(** Add a type reference. Stores in both directions. *)
+(** Add a type reference. *)
 
 val merge_into_builder : from:builder -> into:builder -> unit
 (** Merge one builder into another. *)
@@ -41,43 +40,25 @@ val freeze_builder : builder -> t
 
 (** {2 Builder extraction for reactive merge} *)
 
-val builder_value_refs_to_list : builder -> (Lexing.position * PosSet.t) list
-(** Extract value refs in refs_to direction (posTo -> sources) *)
-
-val builder_type_refs_to_list : builder -> (Lexing.position * PosSet.t) list
-(** Extract type refs in refs_to direction (posTo -> sources) *)
-
 val builder_value_refs_from_list : builder -> (Lexing.position * PosSet.t) list
-(** Extract value refs in refs_from direction (posFrom -> targets) *)
+(** Extract value refs (posFrom -> targets) *)
 
 val builder_type_refs_from_list : builder -> (Lexing.position * PosSet.t) list
-(** Extract type refs in refs_from direction (posFrom -> targets) *)
+(** Extract type refs (posFrom -> targets) *)
 
 val create :
-  value_refs_to:PosSet.t PosHash.t ->
-  type_refs_to:PosSet.t PosHash.t ->
-  value_refs_from:PosSet.t PosHash.t ->
-  type_refs_from:PosSet.t PosHash.t ->
-  t
-(** Create a References.t from hashtables (all four directions) *)
+  value_refs_from:PosSet.t PosHash.t -> type_refs_from:PosSet.t PosHash.t -> t
+(** Create a References.t from hashtables *)
 
-(** {2 Read-only API - refs_to direction (for reporting)} *)
-
-val find_value_refs : t -> Lexing.position -> PosSet.t
-(** Find who value-references this position *)
-
-val find_type_refs : t -> Lexing.position -> PosSet.t
-(** Find who type-references this position *)
-
-(** {2 Read-only API - refs_from direction (for liveness)} *)
+(** {2 Read-only API - for liveness} *)
 
 val iter_value_refs_from : t -> (Lexing.position -> PosSet.t -> unit) -> unit
-(** Iterate all value refs in refs_from direction *)
+(** Iterate all value refs *)
 
 val iter_type_refs_from : t -> (Lexing.position -> PosSet.t -> unit) -> unit
-(** Iterate all type refs in refs_from direction *)
+(** Iterate all type refs *)
 
 (** {2 Length} *)
 
-val value_refs_length : t -> int
-val type_refs_length : t -> int
+val value_refs_from_length : t -> int
+val type_refs_from_length : t -> int

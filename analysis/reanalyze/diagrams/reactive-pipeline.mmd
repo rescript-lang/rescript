@@ -11,22 +11,20 @@ flowchart TB
     subgraph Extracted["Extracted (ReactiveMerge)"]
         DECLS["D"]
         ANNOT["A"]
-        VREFS_TO["VR→"]
-        TREFS_TO["TR→"]
-        VREFS_FROM["VR←"]
-        TREFS_FROM["TR←"]
+        VREFS["VR"]
+        TREFS["TR"]
         CFI["CFI"]
     end
 
     subgraph TypeDeps["ReactiveTypeDeps"]
         DBP["DBP"]
-        ATR["ATR←"]
+        ATR["ATR"]
     end
 
     subgraph ExcDeps["ReactiveExceptionRefs"]
         EXCREF["ER"]
         EXCDECL["ED"]
-        RESOLVED["RR←"]
+        RESOLVED["RR"]
     end
 
     subgraph DeclRefs["ReactiveDeclRefs"]
@@ -43,10 +41,8 @@ flowchart TB
     RFC -->|"process"| FD
     FD -->|"flatMap"| DECLS
     FD -->|"flatMap"| ANNOT
-    FD -->|"flatMap"| VREFS_TO
-    FD -->|"flatMap"| TREFS_TO
-    FD -->|"flatMap"| VREFS_FROM
-    FD -->|"flatMap"| TREFS_FROM
+    FD -->|"flatMap"| VREFS
+    FD -->|"flatMap"| TREFS
     FD -->|"flatMap"| CFI
 
     DECLS -->|"flatMap"| DBP
@@ -58,8 +54,8 @@ flowchart TB
     EXCDECL -->|"join"| RESOLVED
 
     DECLS --> DR
-    VREFS_FROM --> DR
-    TREFS_FROM --> DR
+    VREFS --> DR
+    TREFS --> DR
     ATR --> DR
     RESOLVED --> DR
 
@@ -80,7 +76,7 @@ flowchart TB
     classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
 
     class RFC,FD fileLayer
-    class DECLS,ANNOT,VREFS_TO,TREFS_TO,VREFS_FROM,TREFS_FROM,CFI extracted
+    class DECLS,ANNOT,VREFS,TREFS,CFI extracted
     class DBP,ATR typeDeps
     class EXCREF,EXCDECL,RESOLVED excDeps
     class DR declRefs

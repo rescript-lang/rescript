@@ -305,8 +305,10 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
               match reactive_merge with
               | Some merged ->
                 (* Reactive mode: use stores directly *)
-                ReferenceStore.of_reactive ~value_refs:merged.value_refs
-                  ~type_refs:merged.type_refs ~type_deps:merged.type_deps
+                ReferenceStore.of_reactive
+                  ~value_refs_from:merged.value_refs_from
+                  ~type_refs_from:merged.type_refs_from
+                  ~type_deps:merged.type_deps
                   ~exception_refs:merged.exception_refs
               | None ->
                 (* Non-reactive mode: build refs imperatively *)
@@ -368,8 +370,10 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge =
             | Some merged ->
               (* Reactive mode: use reactive liveness *)
               let live = ReactiveLiveness.create ~merged in
-              DeadCommon.solveDeadReactive ~ann_store ~decl_store ~ref_store
-                ~live ~optional_args_state:empty_optional_args_state
+              (* Freeze refs for debug/transitive support in solver *)
+              let refs = ReactiveMerge.freeze_refs merged in
+              DeadCommon.solveDeadReactive ~ann_store ~decl_store ~refs ~live
+                ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
