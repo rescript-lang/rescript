@@ -9,10 +9,7 @@ type cmt_file_result = {
 (** Process a cmt file and return its results.
     Conceptually: map over files, then merge results. *)
 let loadCmtFile ~config cmtFilePath : cmt_file_result option =
-  let cmt_infos =
-    if !Cli.cmtCache then CmtCache.read_cmt cmtFilePath
-    else Cmt_format.read_cmt cmtFilePath
-  in
+  let cmt_infos = Cmt_format.read_cmt cmtFilePath in
   let excludePath sourceFile =
     config.DceConfig.cli.exclude_paths
     |> List.exists (fun prefix_ ->
@@ -489,9 +486,6 @@ let cli () =
         "n Process files in parallel using n domains (0 = sequential, default; \
          -1 = auto-detect cores)" );
       ("-timing", Set Cli.timing, "Report internal timing of analysis phases");
-      ( "-cmt-cache",
-        Set Cli.cmtCache,
-        "Use mmap cache for CMT files (faster for repeated analysis)" );
       ( "-reactive",
         Set Cli.reactive,
         "Use reactive analysis (caches processed file_data, skips unchanged \
