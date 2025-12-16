@@ -34,6 +34,15 @@ type ('k, 'v) delta = Set of 'k * 'v | Remove of 'k
 val apply_delta : ('k, 'v) Hashtbl.t -> ('k, 'v) delta -> unit
 val apply_deltas : ('k, 'v) Hashtbl.t -> ('k, 'v) delta list -> unit
 
+(** {1 Statistics} *)
+
+type stats = {
+  mutable updates_received: int;  (** Deltas received from upstream *)
+  mutable updates_emitted: int;  (** Deltas emitted downstream *)
+}
+
+val create_stats : unit -> stats
+
 (** {1 Reactive Collection} *)
 
 type ('k, 'v) t = {
@@ -41,9 +50,11 @@ type ('k, 'v) t = {
   iter: ('k -> 'v -> unit) -> unit;
   get: 'k -> 'v option;
   length: unit -> int;
+  stats: stats;
 }
 (** A reactive collection that can emit deltas and be read.
-    All collections share this interface, enabling composition. *)
+    All collections share this interface, enabling composition.
+    [stats] tracks updates received/emitted for diagnostics. *)
 
 (** {1 Collection operations} *)
 
@@ -55,6 +66,9 @@ val get : ('k, 'v) t -> 'k -> 'v option
 
 val length : ('k, 'v) t -> int
 (** Number of entries. *)
+
+val stats : ('k, 'v) t -> stats
+(** Get update statistics for this collection. *)
 
 (** {1 Composition} *)
 
