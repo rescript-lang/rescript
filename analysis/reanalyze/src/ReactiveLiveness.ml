@@ -113,3 +113,15 @@ let create ~(merged : ReactiveMerge.t) : t =
   (* Step 4: Compute fixpoint - all reachable positions from roots *)
   let live = Reactive.fixpoint ~init:all_roots ~edges () in
   {live; edges; roots = all_roots}
+
+(** Print reactive collection update statistics *)
+let print_stats ~(t : t) : unit =
+  let print name (c : _ Reactive.t) =
+    let s = Reactive.stats c in
+    Printf.eprintf "  %s: recv=%d emit=%d len=%d\n" name s.updates_received
+      s.updates_emitted (Reactive.length c)
+  in
+  Printf.eprintf "ReactiveLiveness collection stats:\n";
+  print "roots" t.roots;
+  print "edges" t.edges;
+  print "live (fixpoint)" t.live

@@ -17,3 +17,6 @@ val create : merged:ReactiveMerge.t -> t
     - roots: initial live positions (annotated + externally referenced)
     
     Updates automatically when any input changes. *)
+
+val print_stats : t:t -> unit
+(** Print update statistics for liveness collections (roots, edges, live fixpoint) *)

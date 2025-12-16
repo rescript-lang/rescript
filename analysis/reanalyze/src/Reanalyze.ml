@@ -245,7 +245,7 @@ let shuffle_list lst =
   Array.to_list arr
 
 let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-    ~reactive_liveness:_ ~reactive_solver =
+    ~reactive_liveness ~reactive_solver =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
     processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection
@@ -415,6 +415,9 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
                 ((t1 -. t0) *. 1000.0)
                 ((t2 -. t1) *. 1000.0)
                 num_dead num_live (List.length all_issues);
+              (match reactive_liveness with
+              | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
+              | None -> ());
               ReactiveSolver.print_stats ~t:solver);
             Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
           | None ->
