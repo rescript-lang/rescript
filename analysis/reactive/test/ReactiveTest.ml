@@ -749,37 +749,30 @@ let test_union_existing_data () =
   (* Only in right *)
   Printf.printf "PASSED\n\n"
 
-(* Test fixpoint *)
+(* Helper to create mutable reactive collections for testing *)
+let create_mutable_collection () =
+  let tbl = Hashtbl.create 16 in
+  let subscribers = ref [] in
+  let emit delta =
+    Reactive.apply_delta tbl delta;
+    List.iter (fun h -> h delta) !subscribers
+  in
+  let collection : ('k, 'v) Reactive.t =
+    {
+      subscribe = (fun h -> subscribers := h :: !subscribers);
+      iter = (fun f -> Hashtbl.iter f tbl);
+      get = (fun k -> Hashtbl.find_opt tbl k);
+      length = (fun () -> Hashtbl.length tbl);
+    }
+  in
+  (collection, emit, tbl)
+
+(* Test fixpoint basic *)
 let test_fixpoint () =
   Printf.printf "Test: fixpoint\n";
 
-  (* Create mutable sources *)
-  let init_tbl = Hashtbl.create 16 in
-  let init_subscribers = ref [] in
-  let emit_init delta =
-    Hashtbl.iter (fun _ h -> h delta) (Hashtbl.create 1);
-    List.iter (fun h -> h delta) !init_subscribers
-  in
-  let init : (int, unit) Reactive.t =
-    {
-      subscribe = (fun h -> init_subscribers := h :: !init_subscribers);
-      iter = (fun f -> Hashtbl.iter f init_tbl);
-      get = (fun k -> Hashtbl.find_opt init_tbl k);
-      length = (fun () -> Hashtbl.length init_tbl);
-    }
-  in
-
-  let edges_tbl : (int, int list) Hashtbl.t = Hashtbl.create 16 in
-  let edges_subscribers = ref [] in
-  let emit_edges delta = List.iter (fun h -> h delta) !edges_subscribers in
-  let edges : (int, int list) Reactive.t =
-    {
-      subscribe = (fun h -> edges_subscribers := h :: !edges_subscribers);
-      iter = (fun f -> Hashtbl.iter f edges_tbl);
-      get = (fun k -> Hashtbl.find_opt edges_tbl k);
-      length = (fun () -> Hashtbl.length edges_tbl);
-    }
-  in
+  let init, emit_init, _init_tbl = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
 
   (* Set up graph: 1 -> [2, 3], 2 -> [4], 3 -> [4] *)
   Hashtbl.replace edges_tbl 1 [2; 3];
@@ -794,7 +787,6 @@ let test_fixpoint () =
   assert (Reactive.length reachable = 0);
 
   (* Add root 1 *)
-  Hashtbl.replace init_tbl 1 ();
   emit_init (Set (1, ()));
   Printf.printf "After adding root 1: length=%d\n" (Reactive.length reachable);
   assert (Reactive.length reachable = 4);
@@ -806,9 +798,7 @@ let test_fixpoint () =
   assert (Reactive.get reachable 5 = None);
 
   (* Add another root 5 with edge 5 -> [6] *)
-  Hashtbl.replace edges_tbl 5 [6];
   emit_edges (Set (5, [6]));
-  Hashtbl.replace init_tbl 5 ();
   emit_init (Set (5, ()));
   Printf.printf "After adding root 5: length=%d\n" (Reactive.length reachable);
   assert (Reactive.length reachable = 6);
@@ -816,7 +806,6 @@ let test_fixpoint () =
   (* 1, 2, 3, 4, 5, 6 *)
 
   (* Remove root 1 *)
-  Hashtbl.remove init_tbl 1;
   emit_init (Remove 1);
   Printf.printf "After removing root 1: length=%d\n" (Reactive.length reachable);
   assert (Reactive.length reachable = 2);
@@ -824,6 +813,404 @@ let test_fixpoint () =
   assert (Reactive.get reachable 1 = None);
   assert (Reactive.get reachable 5 = Some ());
   assert (Reactive.get reachable 6 = Some ());
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Basic Expansion *)
+let test_fixpoint_basic_expansion () =
+  Printf.printf "=== Test: fixpoint basic expansion ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b -> c *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+
+  assert (Reactive.length fp = 3);
+  assert (Reactive.get fp "a" = Some ());
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.get fp "c" = Some ());
+  assert (Reactive.get fp "d" = None);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Multiple Roots *)
+let test_fixpoint_multiple_roots () =
+  Printf.printf "=== Test: fixpoint multiple roots ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b, c -> d (disconnected components) *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "c" ["d"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  emit_init (Set ("c", ()));
+
+  assert (Reactive.length fp = 4);
+  assert (Reactive.get fp "a" = Some ());
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.get fp "c" = Some ());
+  assert (Reactive.get fp "d" = Some ());
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Diamond Graph *)
+let test_fixpoint_diamond () =
+  Printf.printf "=== Test: fixpoint diamond ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b, a -> c, b -> d, c -> d *)
+  Hashtbl.replace edges_tbl "a" ["b"; "c"];
+  Hashtbl.replace edges_tbl "b" ["d"];
+  Hashtbl.replace edges_tbl "c" ["d"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+
+  assert (Reactive.length fp = 4);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Cycle *)
+let test_fixpoint_cycle () =
+  Printf.printf "=== Test: fixpoint cycle ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b -> c -> b (cycle from root) *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+  Hashtbl.replace edges_tbl "c" ["b"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+
+  assert (Reactive.length fp = 3);
+  assert (Reactive.get fp "a" = Some ());
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.get fp "c" = Some ());
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Add Base Element *)
+let test_fixpoint_add_base () =
+  Printf.printf "=== Test: fixpoint add base ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b, c -> d *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "c" ["d"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  assert (Reactive.length fp = 2);
+
+  (* a, b *)
+
+  (* Track changes via subscription *)
+  let added = ref [] in
+  let removed = ref [] in
+  fp.subscribe (function
+    | Set (k, ()) -> added := k :: !added
+    | Remove k -> removed := k :: !removed);
+
+  emit_init (Set ("c", ()));
+
+  Printf.printf "Added: [%s]\n" (String.concat ", " !added);
+  assert (List.length !added = 2);
+  (* c, d *)
+  assert (List.mem "c" !added);
+  assert (List.mem "d" !added);
+  assert (!removed = []);
+  assert (Reactive.length fp = 4);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove Base Element *)
+let test_fixpoint_remove_base () =
+  Printf.printf "=== Test: fixpoint remove base ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b -> c *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  assert (Reactive.length fp = 3);
+
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  emit_init (Remove "a");
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+  assert (List.length !removed = 3);
+  assert (Reactive.length fp = 0);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Add Edge *)
+let test_fixpoint_add_edge () =
+  Printf.printf "=== Test: fixpoint add edge ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, _ = create_mutable_collection () in
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  assert (Reactive.length fp = 1);
+
+  (* just a *)
+  let added = ref [] in
+  fp.subscribe (function
+    | Set (k, ()) -> added := k :: !added
+    | _ -> ());
+
+  (* Add edge a -> b *)
+  emit_edges (Set ("a", ["b"]));
+
+  Printf.printf "Added: [%s]\n" (String.concat ", " !added);
+  assert (List.mem "b" !added);
+  assert (Reactive.length fp = 2);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Remove Edge *)
+let test_fixpoint_remove_edge () =
+  Printf.printf "=== Test: fixpoint remove edge ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b -> c *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  assert (Reactive.length fp = 3);
+
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Remove edge a -> b *)
+  emit_edges (Set ("a", []));
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+  assert (List.length !removed = 2);
+  (* b, c *)
+  assert (Reactive.length fp = 1);
+
+  (* just a *)
+  Printf.printf "PASSED\n\n"
+
+(* Test: Cycle Removal (Well-Founded Derivation) *)
+let test_fixpoint_cycle_removal () =
+  Printf.printf "=== Test: fixpoint cycle removal (well-founded) ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b -> c -> b (b-c cycle reachable from a) *)
+  Hashtbl.replace edges_tbl "a" ["b"];
+  Hashtbl.replace edges_tbl "b" ["c"];
+  Hashtbl.replace edges_tbl "c" ["b"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  assert (Reactive.length fp = 3);
+
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Remove edge a -> b *)
+  emit_edges (Set ("a", []));
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+  (* Both b and c should be removed - cycle has no well-founded support *)
+  assert (List.length !removed = 2);
+  assert (List.mem "b" !removed);
+  assert (List.mem "c" !removed);
+  assert (Reactive.length fp = 1);
+
+  (* just a *)
+  Printf.printf "PASSED\n\n"
+
+(* Test: Alternative Support Keeps Element Alive *)
+let test_fixpoint_alternative_support () =
+  Printf.printf "=== Test: fixpoint alternative support ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> b, a -> c -> b
+     If we remove a -> b, b should survive via a -> c -> b *)
+  Hashtbl.replace edges_tbl "a" ["b"; "c"];
+  Hashtbl.replace edges_tbl "c" ["b"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+  assert (Reactive.length fp = 3);
+
+  let removed = ref [] in
+  fp.subscribe (function
+    | Remove k -> removed := k :: !removed
+    | _ -> ());
+
+  (* Remove direct edge a -> b (but keep a -> c) *)
+  emit_edges (Set ("a", ["c"]));
+
+  Printf.printf "Removed: [%s]\n" (String.concat ", " !removed);
+  (* b should NOT be removed - still reachable via c *)
+  assert (!removed = []);
+  assert (Reactive.length fp = 3);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Empty Base *)
+let test_fixpoint_empty_base () =
+  Printf.printf "=== Test: fixpoint empty base ===\n";
+
+  let init, _, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  Hashtbl.replace edges_tbl "a" ["b"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  assert (Reactive.length fp = 0);
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Self Loop *)
+let test_fixpoint_self_loop () =
+  Printf.printf "=== Test: fixpoint self loop ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, _, edges_tbl = create_mutable_collection () in
+
+  (* Graph: a -> a (self loop) *)
+  Hashtbl.replace edges_tbl "a" ["a"];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  emit_init (Set ("a", ()));
+
+  assert (Reactive.length fp = 1);
+  assert (Reactive.get fp "a" = Some ());
+
+  Printf.printf "PASSED\n\n"
+
+(* Test: Delta emissions for incremental updates *)
+let test_fixpoint_deltas () =
+  Printf.printf "=== Test: fixpoint delta emissions ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, edges_tbl = create_mutable_collection () in
+
+  Hashtbl.replace edges_tbl 1 [2; 3];
+  Hashtbl.replace edges_tbl 2 [4];
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  let all_deltas = ref [] in
+  fp.subscribe (fun d -> all_deltas := d :: !all_deltas);
+
+  (* Add root *)
+  emit_init (Set (1, ()));
+  Printf.printf "After add root: %d deltas\n" (List.length !all_deltas);
+  assert (List.length !all_deltas = 4);
+
+  (* 1, 2, 3, 4 *)
+  all_deltas := [];
+
+  (* Add edge 3 -> 5 *)
+  emit_edges (Set (3, [5]));
+  Printf.printf "After add edge 3->5: %d deltas\n" (List.length !all_deltas);
+  assert (List.length !all_deltas = 1);
+
+  (* 5 added *)
+  all_deltas := [];
+
+  (* Remove root (should remove all) *)
+  emit_init (Remove 1);
+  Printf.printf "After remove root: %d deltas\n" (List.length !all_deltas);
+  assert (List.length !all_deltas = 5);
+
+  (* 1, 2, 3, 4, 5 removed *)
+  Printf.printf "PASSED\n\n"
+
+(* Test: Pre-existing data in init and edges *)
+let test_fixpoint_existing_data () =
+  Printf.printf "=== Test: fixpoint with existing data ===\n";
+
+  (* Create with pre-existing data *)
+  let init_tbl = Hashtbl.create 16 in
+  Hashtbl.replace init_tbl "root" ();
+  let init_subs = ref [] in
+  let init : (string, unit) Reactive.t =
+    {
+      subscribe = (fun h -> init_subs := h :: !init_subs);
+      iter = (fun f -> Hashtbl.iter f init_tbl);
+      get = (fun k -> Hashtbl.find_opt init_tbl k);
+      length = (fun () -> Hashtbl.length init_tbl);
+    }
+  in
+
+  let edges_tbl = Hashtbl.create 16 in
+  Hashtbl.replace edges_tbl "root" ["a"; "b"];
+  Hashtbl.replace edges_tbl "a" ["c"];
+  let edges_subs = ref [] in
+  let edges : (string, string list) Reactive.t =
+    {
+      subscribe = (fun h -> edges_subs := h :: !edges_subs);
+      iter = (fun f -> Hashtbl.iter f edges_tbl);
+      get = (fun k -> Hashtbl.find_opt edges_tbl k);
+      length = (fun () -> Hashtbl.length edges_tbl);
+    }
+  in
+
+  (* Create fixpoint - should immediately have all reachable *)
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  Printf.printf "Fixpoint length: %d (expected 4)\n" (Reactive.length fp);
+  assert (Reactive.length fp = 4);
+  (* root, a, b, c *)
+  assert (Reactive.get fp "root" = Some ());
+  assert (Reactive.get fp "a" = Some ());
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.get fp "c" = Some ());
 
   Printf.printf "PASSED\n\n"
 
@@ -841,4 +1228,19 @@ let () =
   test_union_with_merge ();
   test_union_existing_data ();
   test_fixpoint ();
+  (* Incremental fixpoint tests *)
+  test_fixpoint_basic_expansion ();
+  test_fixpoint_multiple_roots ();
+  test_fixpoint_diamond ();
+  test_fixpoint_cycle ();
+  test_fixpoint_add_base ();
+  test_fixpoint_remove_base ();
+  test_fixpoint_add_edge ();
+  test_fixpoint_remove_edge ();
+  test_fixpoint_cycle_removal ();
+  test_fixpoint_alternative_support ();
+  test_fixpoint_empty_base ();
+  test_fixpoint_self_loop ();
+  test_fixpoint_deltas ();
+  test_fixpoint_existing_data ();
   Printf.printf "All tests passed!\n"

@@ -452,77 +452,370 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
 
 (** {1 Fixpoint} *)
 
-(** Compute transitive closure via fixpoint.
+(** Incremental Fixpoint Computation.
+
+    This implements the incremental fixpoint algorithm using:
+    - BFS for expansion (when base or edges grow)
+    - Well-founded derivation for contraction (when base or edges shrink)
+    
+    The fixpoint combinator maintains the least fixpoint of a monotone operator:
+    
+      F(S) = base ∪ step(S)
+      
+    where step(S) = ⋃{successors(x) | x ∈ S}
+    
+    Key insight: The rank of an element is its BFS distance from base.
+    Cycle members have equal ranks, so they cannot provide well-founded
+    support to each other, ensuring unreachable cycles are correctly removed. *)
+
+module Fixpoint = struct
+  type 'k state = {
+    current: ('k, unit) Hashtbl.t; (* Current fixpoint set *)
+    rank: ('k, int) Hashtbl.t; (* BFS distance from base *)
+    inv_index: ('k, 'k list) Hashtbl.t;
+        (* Inverse step relation: target → sources *)
+    base: ('k, unit) Hashtbl.t; (* Current base set *)
+    edges: ('k, 'k list) Hashtbl.t; (* Current edges snapshot *)
+  }
+
+  let create () =
+    {
+      current = Hashtbl.create 256;
+      rank = Hashtbl.create 256;
+      inv_index = Hashtbl.create 256;
+      base = Hashtbl.create 64;
+      edges = Hashtbl.create 256;
+    }
+
+  (* Inverse index helpers *)
+  let add_to_inv_index state ~source ~target =
+    let sources =
+      match Hashtbl.find_opt state.inv_index target with
+      | Some s -> s
+      | None -> []
+    in
+    if not (List.mem source sources) then
+      Hashtbl.replace state.inv_index target (source :: sources)
+
+  let remove_from_inv_index state ~source ~target =
+    match Hashtbl.find_opt state.inv_index target with
+    | None -> ()
+    | Some sources ->
+      let filtered = List.filter (fun s -> s <> source) sources in
+      if filtered = [] then Hashtbl.remove state.inv_index target
+      else Hashtbl.replace state.inv_index target filtered
+
+  let iter_step_inv state x f =
+    match Hashtbl.find_opt state.inv_index x with
+    | None -> ()
+    | Some sources -> List.iter f sources
+
+  (* Get successors from edges *)
+  let get_successors state x =
+    match Hashtbl.find_opt state.edges x with
+    | None -> []
+    | Some succs -> succs
+
+  (* Expansion: BFS from frontier, returns list of newly added elements *)
+  let expand state ~frontier =
+    let added = ref [] in
+    let current_frontier = Hashtbl.create 64 in
+    let next_frontier = Hashtbl.create 64 in
+
+    (* Initialize current frontier *)
+    List.iter (fun x -> Hashtbl.replace current_frontier x ()) frontier;
+
+    let r = ref 0 in
+
+    while Hashtbl.length current_frontier > 0 do
+      (* Add all frontier elements to current with rank r *)
+      Hashtbl.iter
+        (fun x () ->
+          if not (Hashtbl.mem state.current x) then (
+            Hashtbl.replace state.current x ();
+            Hashtbl.replace state.rank x !r;
+            added := x :: !added))
+        current_frontier;
+
+      (* Compute next frontier: successors not yet in current *)
+      Hashtbl.clear next_frontier;
+      Hashtbl.iter
+        (fun x () ->
+          let successors = get_successors state x in
+          List.iter
+            (fun y ->
+              (* Update inverse index: record that x derives y *)
+              add_to_inv_index state ~source:x ~target:y;
+              (* Add to next frontier if not already in current *)
+              if not (Hashtbl.mem state.current y) then
+                Hashtbl.replace next_frontier y ())
+            successors)
+        current_frontier;
+
+      (* Swap frontiers *)
+      Hashtbl.clear current_frontier;
+      Hashtbl.iter
+        (fun x () -> Hashtbl.replace current_frontier x ())
+        next_frontier;
+      incr r
+    done;
+
+    !added
+
+  (* Check if element has a well-founded deriver in the current set *)
+  let has_well_founded_deriver state x ~dying =
+    match Hashtbl.find_opt state.rank x with
+    | None -> false
+    | Some rx ->
+      let found = ref false in
+      iter_step_inv state x (fun y ->
+          if not !found then
+            let in_current = Hashtbl.mem state.current y in
+            let not_dying = not (Hashtbl.mem dying y) in
+            match Hashtbl.find_opt state.rank y with
+            | None -> ()
+            | Some ry ->
+              if in_current && not_dying && ry < rx then found := true);
+      !found
+
+  (* Contraction: remove elements that lost support, returns list of removed *)
+  let contract state ~worklist =
+    let dying = Hashtbl.create 64 in
+    let current_worklist = Hashtbl.create 64 in
+
+    (* Initialize worklist *)
+    List.iter (fun x -> Hashtbl.replace current_worklist x ()) worklist;
+
+    while Hashtbl.length current_worklist > 0 do
+      (* Pop an element from worklist *)
+      let x =
+        let result = ref None in
+        Hashtbl.iter
+          (fun k () -> if !result = None then result := Some k)
+          current_worklist;
+        match !result with
+        | None -> assert false (* worklist not empty *)
+        | Some k ->
+          Hashtbl.remove current_worklist k;
+          k
+      in
+
+      (* Skip if already dying or in base *)
+      if Hashtbl.mem dying x || Hashtbl.mem state.base x then ()
+      else
+        (* Check for well-founded deriver *)
+        let has_support = has_well_founded_deriver state x ~dying in
+
+        if not has_support then (
+          (* x dies: no well-founded support *)
+          Hashtbl.replace dying x ();
+
+          (* Find dependents: elements z such that x derives z *)
+          let successors = get_successors state x in
+          List.iter
+            (fun z ->
+              if Hashtbl.mem state.current z && not (Hashtbl.mem dying z) then
+                Hashtbl.replace current_worklist z ())
+            successors)
+    done;
+
+    (* Remove dying elements from current and rank *)
+    let removed = ref [] in
+    Hashtbl.iter
+      (fun x () ->
+        Hashtbl.remove state.current x;
+        Hashtbl.remove state.rank x;
+        removed := x :: !removed)
+      dying;
+
+    !removed
+
+  (* Apply a delta from init (base) collection *)
+  let apply_init_delta state delta =
+    match delta with
+    | Set (k, ()) ->
+      let was_in_base = Hashtbl.mem state.base k in
+      Hashtbl.replace state.base k ();
+      if was_in_base then ([], []) (* Already in base, no change *)
+      else
+        (* New base element: expand from it *)
+        let added = expand state ~frontier:[k] in
+        (added, [])
+    | Remove k ->
+      if not (Hashtbl.mem state.base k) then ([], [])
+        (* Not in base, no change *)
+      else (
+        Hashtbl.remove state.base k;
+        (* Start contraction if k was in current *)
+        if Hashtbl.mem state.current k then
+          let removed = contract state ~worklist:[k] in
+          ([], removed)
+        else ([], []))
+
+  (* Compute edge diff between old and new successors *)
+  let compute_edge_diff old_succs new_succs =
+    let old_set = Hashtbl.create (List.length old_succs) in
+    List.iter (fun x -> Hashtbl.replace old_set x ()) old_succs;
+    let new_set = Hashtbl.create (List.length new_succs) in
+    List.iter (fun x -> Hashtbl.replace new_set x ()) new_succs;
+
+    let removed =
+      List.filter (fun x -> not (Hashtbl.mem new_set x)) old_succs
+    in
+    let added = List.filter (fun x -> not (Hashtbl.mem old_set x)) new_succs in
+    (removed, added)
+
+  (* Apply a delta from edges collection *)
+  let apply_edges_delta state delta =
+    match delta with
+    | Set (source, new_succs) ->
+      let old_succs =
+        match Hashtbl.find_opt state.edges source with
+        | None -> []
+        | Some s -> s
+      in
+      Hashtbl.replace state.edges source new_succs;
+
+      let removed_targets, added_targets =
+        compute_edge_diff old_succs new_succs
+      in
+
+      (* Process removed edges *)
+      let contraction_worklist = ref [] in
+      List.iter
+        (fun target ->
+          remove_from_inv_index state ~source ~target;
+          if
+            Hashtbl.mem state.current source && Hashtbl.mem state.current target
+          then contraction_worklist := target :: !contraction_worklist)
+        removed_targets;
+
+      let all_removed =
+        if !contraction_worklist <> [] then
+          contract state ~worklist:!contraction_worklist
+        else []
+      in
+
+      (* Process added edges *)
+      let expansion_frontier = ref [] in
+      List.iter
+        (fun target ->
+          add_to_inv_index state ~source ~target;
+          if
+            Hashtbl.mem state.current source
+            && not (Hashtbl.mem state.current target)
+          then expansion_frontier := target :: !expansion_frontier)
+        added_targets;
+
+      (* Check if any removed element can be re-derived via remaining edges *)
+      let removed_set = Hashtbl.create (List.length all_removed) in
+      List.iter (fun x -> Hashtbl.replace removed_set x ()) all_removed;
+
+      if Hashtbl.length removed_set > 0 then
+        Hashtbl.iter
+          (fun y () ->
+            iter_step_inv state y (fun x ->
+                if Hashtbl.mem state.current x then
+                  expansion_frontier := y :: !expansion_frontier))
+          removed_set;
+
+      let all_added =
+        if !expansion_frontier <> [] then
+          expand state ~frontier:!expansion_frontier
+        else []
+      in
+
+      (* Compute net changes *)
+      let net_removed =
+        List.filter (fun x -> not (Hashtbl.mem state.current x)) all_removed
+      in
+      let net_added =
+        List.filter (fun x -> not (Hashtbl.mem removed_set x)) all_added
+      in
+
+      (net_added, net_removed)
+    | Remove source ->
+      let old_succs =
+        match Hashtbl.find_opt state.edges source with
+        | None -> []
+        | Some s -> s
+      in
+      Hashtbl.remove state.edges source;
+
+      (* All edges from source are removed *)
+      let contraction_worklist = ref [] in
+      List.iter
+        (fun target ->
+          remove_from_inv_index state ~source ~target;
+          if
+            Hashtbl.mem state.current source && Hashtbl.mem state.current target
+          then contraction_worklist := target :: !contraction_worklist)
+        old_succs;
+
+      let removed =
+        if !contraction_worklist <> [] then
+          contract state ~worklist:!contraction_worklist
+        else []
+      in
+
+      ([], removed)
+end
+
+(** Compute transitive closure via incremental fixpoint.
     
     Starting from keys in [init], follows edges to discover all reachable keys.
     
-    Current implementation: recomputes full fixpoint on any change.
-    Future: incremental updates. *)
+    When [init] or [edges] changes, the fixpoint updates incrementally:
+    - Expansion: BFS from new base elements or newly reachable successors
+    - Contraction: Well-founded cascade removal when elements lose support *)
 let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
     =
-  (* Current fixpoint result *)
-  let result : ('k, unit) Hashtbl.t = Hashtbl.create 256 in
+  let state = Fixpoint.create () in
   let subscribers : (('k, unit) delta -> unit) list ref = ref [] in
 
   let emit delta = List.iter (fun h -> h delta) !subscribers in
 
-  (* Recompute the entire fixpoint from scratch *)
-  let recompute () =
-    (* Collect old keys to detect removals *)
-    let old_keys =
-      Hashtbl.fold (fun k () acc -> k :: acc) result []
-      |> List.fold_left
-           (fun set k ->
-             Hashtbl.replace set k ();
-             set)
-           (Hashtbl.create 256)
-    in
-
-    (* Clear and recompute *)
-    Hashtbl.clear result;
-
-    (* Worklist algorithm *)
-    let worklist = Queue.create () in
-
-    (* Add initial keys *)
-    init.iter (fun k () ->
-        if not (Hashtbl.mem result k) then (
-          Hashtbl.replace result k ();
-          Queue.push k worklist));
-
-    (* Propagate through edges *)
-    while not (Queue.is_empty worklist) do
-      let k = Queue.pop worklist in
-      match edges.get k with
-      | None -> ()
-      | Some successors ->
-        List.iter
-          (fun succ ->
-            if not (Hashtbl.mem result succ) then (
-              Hashtbl.replace result succ ();
-              Queue.push succ worklist))
-          successors
-    done;
-
-    (* Emit deltas: additions and removals *)
-    Hashtbl.iter
-      (fun k () -> if not (Hashtbl.mem old_keys k) then emit (Set (k, ())))
-      result;
-    Hashtbl.iter
-      (fun k () -> if not (Hashtbl.mem result k) then emit (Remove k))
-      old_keys
+  let emit_changes (added, removed) =
+    List.iter (fun k -> emit (Set (k, ()))) added;
+    List.iter (fun k -> emit (Remove k)) removed
   in
 
-  (* Subscribe to changes in init and edges *)
-  init.subscribe (fun _ -> recompute ());
-  edges.subscribe (fun _ -> recompute ());
+  (* Handle init deltas *)
+  let handle_init_delta delta =
+    let changes = Fixpoint.apply_init_delta state delta in
+    emit_changes changes
+  in
 
-  (* Initial computation *)
-  recompute ();
+  (* Handle edges deltas *)
+  let handle_edges_delta delta =
+    let changes = Fixpoint.apply_edges_delta state delta in
+    emit_changes changes
+  in
+
+  (* Subscribe to changes *)
+  init.subscribe handle_init_delta;
+  edges.subscribe handle_edges_delta;
+
+  (* Initialize from existing data *)
+  (* First, load all edges so expansion works correctly *)
+  edges.iter (fun k succs -> Hashtbl.replace state.edges k succs);
+
+  (* Build inverse index for existing edges *)
+  Hashtbl.iter
+    (fun source succs ->
+      List.iter
+        (fun target -> Fixpoint.add_to_inv_index state ~source ~target)
+        succs)
+    state.edges;
+
+  (* Then process init elements *)
+  init.iter (fun k () ->
+      Hashtbl.replace state.base k ();
+      ignore (Fixpoint.expand state ~frontier:[k]));
 
   {
     subscribe = (fun handler -> subscribers := handler :: !subscribers);
-    iter = (fun f -> Hashtbl.iter f result);
-    get = (fun k -> Hashtbl.find_opt result k);
-    length = (fun () -> Hashtbl.length result);
+    iter = (fun f -> Hashtbl.iter f state.current);
+    get = (fun k -> Hashtbl.find_opt state.current k);
+    length = (fun () -> Hashtbl.length state.current);
   }
