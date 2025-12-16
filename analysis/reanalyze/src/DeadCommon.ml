@@ -55,6 +55,30 @@ end
 
 (* NOTE: Global TypeReferences removed - now using References.builder/t pattern *)
 
+(** Lazy computation of refs_to from refs_from.
+    Only computed when debug or transitive mode is enabled.
+    Zero cost in the common case. *)
+module RefsToLazy = struct
+  type t = {value_refs_to: PosSet.t PosHash.t; type_refs_to: PosSet.t PosHash.t}
+
+  (** Compute refs_to by inverting refs_from. O(total_refs) one-time cost. *)
+  let compute (refs : References.t) : t =
+    let value_refs_to = PosHash.create 256 in
+    let type_refs_to = PosHash.create 256 in
+    References.iter_value_refs_from refs (fun posFrom posToSet ->
+        PosSet.iter
+          (fun posTo -> posHashAddSet value_refs_to posTo posFrom)
+          posToSet);
+    References.iter_type_refs_from refs (fun posFrom posToSet ->
+        PosSet.iter
+          (fun posTo -> posHashAddSet type_refs_to posTo posFrom)
+          posToSet);
+    {value_refs_to; type_refs_to}
+
+  let find_value_refs (t : t) pos = posHashFindSet t.value_refs_to pos
+  let find_type_refs (t : t) pos = posHashFindSet t.type_refs_to pos
+end
+
 let declGetLoc decl =
   let loc_start =
     let offset =
@@ -155,8 +179,9 @@ let isInsideReportedValue (ctx : ReportingContext.t) decl =
   insideReportedValue
 
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
-      Caller is responsible for logging. *)
-let reportDeclaration ~config ~ref_store (ctx : ReportingContext.t) decl :
+    [refs_to_opt] is only needed when [config.run.transitive] is false.
+    Caller is responsible for logging. *)
+let reportDeclaration ~config ~refs_to_opt (ctx : ReportingContext.t) decl :
     Issue.t list =
   let insideReportedValue = decl |> isInsideReportedValue ctx in
   if not decl.report then []
@@ -191,15 +216,18 @@ let reportDeclaration ~config ~ref_store (ctx : ReportingContext.t) decl :
         (WarningDeadType, "is a variant case which is never constructed")
     in
     let hasRefBelow () =
-      let decl_refs = ReferenceStore.find_value_refs ref_store decl.pos in
-      let refIsBelow (pos : Lexing.position) =
-        decl.pos.pos_fname <> pos.pos_fname
-        || decl.pos.pos_cnum < pos.pos_cnum
-           &&
-           (* not a function defined inside a function, e.g. not a callback *)
-           decl.posEnd.pos_cnum < pos.pos_cnum
-      in
-      decl_refs |> PosSet.exists refIsBelow
+      match refs_to_opt with
+      | None -> false (* No refs_to available, assume no ref below *)
+      | Some refs_to ->
+        let decl_refs = RefsToLazy.find_value_refs refs_to decl.pos in
+        let refIsBelow (pos : Lexing.position) =
+          decl.pos.pos_fname <> pos.pos_fname
+          || decl.pos.pos_cnum < pos.pos_cnum
+             &&
+             (* not a function defined inside a function, e.g. not a callback *)
+             decl.posEnd.pos_cnum < pos.pos_cnum
+        in
+        decl_refs |> PosSet.exists refIsBelow
     in
     let shouldEmitWarning =
       (not insideReportedValue)
@@ -236,7 +264,13 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
         Issue.t list) : AnalysisResult.t =
   (* Compute liveness using forward propagation *)
   let debug = config.DceConfig.cli.debug in
+  let transitive = config.DceConfig.run.transitive in
   let live = Liveness.compute_forward ~debug ~decl_store ~refs ~ann_store in
+
+  (* Lazily compute refs_to only if needed for debug or transitive *)
+  let refs_to_opt =
+    if debug || not transitive then Some (RefsToLazy.compute refs) else None
+  in
 
   (* Process each declaration based on computed liveness *)
   let deadDeclarations = ref [] in
@@ -257,23 +291,26 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
 
          (* Debug output with reason *)
          (if debug then
-            let refs_set =
-              match decl |> Decl.isValue with
-              | true -> References.find_value_refs refs pos
-              | false -> References.find_type_refs refs pos
-            in
-            let status =
-              match live_reason with
-              | None -> "Dead"
-              | Some reason ->
-                Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
-            in
-            Log_.item "%s %s %s: %d references (%s)@." status
-              (decl.declKind |> Decl.Kind.toString)
-              (decl.path |> DcePath.toString)
-              (refs_set |> PosSet.cardinal)
-              (refs_set |> PosSet.elements |> List.map Pos.toString
-             |> String.concat ", "));
+            match refs_to_opt with
+            | Some refs_to ->
+              let refs_set =
+                match decl |> Decl.isValue with
+                | true -> RefsToLazy.find_value_refs refs_to pos
+                | false -> RefsToLazy.find_type_refs refs_to pos
+              in
+              let status =
+                match live_reason with
+                | None -> "Dead"
+                | Some reason ->
+                  Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+              in
+              Log_.item "%s %s %s: %d references (%s)@." status
+                (decl.declKind |> Decl.Kind.toString)
+                (decl.path |> DcePath.toString)
+                (refs_set |> PosSet.cardinal)
+                (refs_set |> PosSet.elements |> List.map Pos.toString
+               |> String.concat ", ")
+            | None -> ());
 
          decl.resolvedDead <- Some is_dead;
 
@@ -314,15 +351,13 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
   let dead_issues =
     sortedDeadDeclarations
     |> List.concat_map (fun decl ->
-           reportDeclaration ~config
-             ~ref_store:(ReferenceStore.of_frozen refs)
-             reporting_ctx decl)
+           reportDeclaration ~config ~refs_to_opt reporting_ctx decl)
   in
   let all_issues = List.rev !inline_issues @ dead_issues in
   AnalysisResult.add_issues AnalysisResult.empty all_issues
 
 (** Reactive solver using reactive liveness collection. *)
-let solveDeadReactive ~ann_store ~config ~decl_store ~ref_store
+let solveDeadReactive ~ann_store ~config ~decl_store ~refs
     ~(live : (Lexing.position, unit) Reactive.t) ~optional_args_state
     ~checkOptionalArg:
       (checkOptionalArgFn :
@@ -332,7 +367,13 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~ref_store
         Decl.t ->
         Issue.t list) : AnalysisResult.t =
   let debug = config.DceConfig.cli.debug in
+  let transitive = config.DceConfig.run.transitive in
   let is_live pos = Reactive.get live pos <> None in
+
+  (* Lazily compute refs_to only if needed for debug or transitive *)
+  let refs_to_opt =
+    if debug || not transitive then Some (RefsToLazy.compute refs) else None
+  in
 
   (* Process each declaration based on computed liveness *)
   let deadDeclarations = ref [] in
@@ -352,14 +393,17 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~ref_store
 
          (* Debug output *)
          (if debug then
-            let refs_set = ReferenceStore.find_value_refs ref_store pos in
-            let status = if is_live then "Live" else "Dead" in
-            Log_.item "%s %s %s: %d references (%s)@." status
-              (decl.declKind |> Decl.Kind.toString)
-              (decl.path |> DcePath.toString)
-              (refs_set |> PosSet.cardinal)
-              (refs_set |> PosSet.elements |> List.map Pos.toString
-             |> String.concat ", "));
+            match refs_to_opt with
+            | Some refs_to ->
+              let refs_set = RefsToLazy.find_value_refs refs_to pos in
+              let status = if is_live then "Live" else "Dead" in
+              Log_.item "%s %s %s: %d references (%s)@." status
+                (decl.declKind |> Decl.Kind.toString)
+                (decl.path |> DcePath.toString)
+                (refs_set |> PosSet.cardinal)
+                (refs_set |> PosSet.elements |> List.map Pos.toString
+               |> String.concat ", ")
+            | None -> ());
 
          decl.resolvedDead <- Some is_dead;
 
@@ -400,7 +444,7 @@ let solveDeadReactive ~ann_store ~config ~decl_store ~ref_store
   let dead_issues =
     sortedDeadDeclarations
     |> List.concat_map (fun decl ->
-           reportDeclaration ~config ~ref_store reporting_ctx decl)
+           reportDeclaration ~config ~refs_to_opt reporting_ctx decl)
   in
   let all_issues = List.rev !inline_issues @ dead_issues in
   AnalysisResult.add_issues AnalysisResult.empty all_issues

@@ -34,7 +34,7 @@ This design enables:
 | `DceFileProcessing.file_data` | Per-file collected data | Builders (mutable during AST walk) |
 | `FileAnnotations.t` | Source annotations (`@dead`, `@live`) | Immutable after merge |
 | `Declarations.t` | All exported declarations (pos → Decl.t) | Immutable after merge |
-| `References.t` | Value/type references (pos → PosSet.t) | Immutable after merge |
+| `References.t` | Value/type references (source → targets) | Immutable after merge |
 | `FileDeps.t` | Cross-file dependencies (file → FileSet.t) | Immutable after merge |
 | `OptionalArgsState.t` | Computed optional arg state per-decl | Immutable |
 | `AnalysisResult.t` | Solver output with Issue.t list | Immutable |
@@ -173,16 +173,14 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | **FD** | `file_data` | `path → file_data option` |
 | **D** | `decls` | `pos → Decl.t` |
 | **A** | `annotations` | `pos → annotation` |
-| **VR→** | `value_refs` | `pos → PosSet` (refs_to: target → sources) |
-| **TR→** | `type_refs` | `pos → PosSet` (refs_to: target → sources) |
-| **VR←** | `value_refs_from` | `pos → PosSet` (refs_from: source → targets) |
-| **TR←** | `type_refs_from` | `pos → PosSet` (refs_from: source → targets) |
+| **VR** | `value_refs_from` | `pos → PosSet` (source → targets) |
+| **TR** | `type_refs_from` | `pos → PosSet` (source → targets) |
 | **CFI** | `cross_file_items` | `path → CrossFileItems.t` |
 | **DBP** | `decl_by_path` | `path → decl_info list` |
-| **ATR←** | `all_type_refs_from` | Combined type refs (refs_from direction) |
+| **ATR** | `all_type_refs_from` | Combined type refs |
 | **ER** | `exception_refs` | Exception references |
 | **ED** | `exception_decls` | Exception declarations |
-| **RR←** | `resolved_refs` | Resolved exception refs (refs_from direction) |
+| **RR** | `resolved_refs_from` | Resolved exception refs |
 | **DR** | `decl_refs` | `pos → (value_targets, type_targets)` |
 | **roots** | Root declarations | `@live`/`@genType` or externally referenced |
 | **edges** | Reference graph | Declaration → referenced declarations |
@@ -212,7 +210,7 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `Reactive` | Core primitives: `flatMap`, `join`, `union`, `fixpoint`, delta types |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 | `ReactiveAnalysis` | CMT processing with file caching |
-| `ReactiveMerge` | Derives decls, annotations, refs (both directions) from file_data |
+| `ReactiveMerge` | Derives decls, annotations, refs from file_data |
 | `ReactiveTypeDeps` | Type-label dependency resolution, produces `all_type_refs_from` |
 | `ReactiveExceptionRefs` | Exception ref resolution via join |
 | `ReactiveDeclRefs` | Maps declarations to their outgoing references |
@@ -241,7 +239,7 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `DeadCommon` | Phase 3: Solver (`solveDead`, `solveDeadReactive`) |
 | `Liveness` | Forward fixpoint liveness computation |
 | `Declarations` | Declaration storage (builder/immutable) |
-| `References` | Reference tracking (both refs_to and refs_from directions) |
+| `References` | Reference tracking (source → targets) |
 | `FileAnnotations` | Source annotation tracking |
 | `FileDeps` | Cross-file dependency graph |
 | `CrossFileItems` | Cross-file optional args and exceptions |

@@ -8,8 +8,6 @@
 type t = {
   decls: (Lexing.position, Decl.t) Reactive.t;
   annotations: (Lexing.position, FileAnnotations.annotated_as) Reactive.t;
-  value_refs: (Lexing.position, PosSet.t) Reactive.t;
-  type_refs: (Lexing.position, PosSet.t) Reactive.t;
   value_refs_from: (Lexing.position, PosSet.t) Reactive.t;
   type_refs_from: (Lexing.position, PosSet.t) Reactive.t;
   cross_file_items: (string, CrossFileItems.t) Reactive.t;
@@ -46,28 +44,6 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
           FileAnnotations.builder_to_list
             file_data.DceFileProcessing.annotations)
       ()
-  in
-
-  (* Value refs: (posTo, PosSet) with PosSet.union merge *)
-  let value_refs =
-    Reactive.flatMap source
-      ~f:(fun _path file_data_opt ->
-        match file_data_opt with
-        | None -> []
-        | Some file_data ->
-          References.builder_value_refs_to_list file_data.DceFileProcessing.refs)
-      ~merge:PosSet.union ()
-  in
-
-  (* Type refs: (posTo, PosSet) with PosSet.union merge *)
-  let type_refs =
-    Reactive.flatMap source
-      ~f:(fun _path file_data_opt ->
-        match file_data_opt with
-        | None -> []
-        | Some file_data ->
-          References.builder_type_refs_to_list file_data.DceFileProcessing.refs)
-      ~merge:PosSet.union ()
   in
 
   (* Value refs_from: (posFrom, PosSet of targets) with PosSet.union merge *)
@@ -167,8 +143,6 @@ let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
   {
     decls;
     annotations;
-    value_refs;
-    type_refs;
     value_refs_from;
     type_refs_from;
     cross_file_items;
@@ -193,25 +167,12 @@ let freeze_annotations (t : t) : FileAnnotations.t =
   FileAnnotations.create_from_hashtbl result
 
 (** Convert reactive refs to References.t for solver.
-    Includes type-label deps and exception refs from reactive computations.
-    Builds both refs_to and refs_from directions. *)
+    Includes type-label deps and exception refs from reactive computations. *)
 let freeze_refs (t : t) : References.t =
-  let value_refs_to = PosHash.create 256 in
-  let type_refs_to = PosHash.create 256 in
   let value_refs_from = PosHash.create 256 in
   let type_refs_from = PosHash.create 256 in
 
-  (* Helper to merge refs into refs_to hashtable *)
-  let merge_into_to tbl posTo posFromSet =
-    let existing =
-      match PosHash.find_opt tbl posTo with
-      | Some s -> s
-      | None -> PosSet.empty
-    in
-    PosHash.replace tbl posTo (PosSet.union existing posFromSet)
-  in
-
-  (* Helper to add to refs_from hashtable (inverse direction) *)
+  (* Helper to add to refs_from hashtable *)
   let add_to_from tbl posFrom posTo =
     let existing =
       match PosHash.find_opt tbl posFrom with
@@ -221,50 +182,42 @@ let freeze_refs (t : t) : References.t =
     PosHash.replace tbl posFrom (PosSet.add posTo existing)
   in
 
-  (* Merge and invert per-file value refs *)
+  (* Merge per-file value refs_from *)
   Reactive.iter
-    (fun posTo posFromSet ->
-      merge_into_to value_refs_to posTo posFromSet;
+    (fun posFrom posToSet ->
       PosSet.iter
-        (fun posFrom -> add_to_from value_refs_from posFrom posTo)
-        posFromSet)
-    t.value_refs;
+        (fun posTo -> add_to_from value_refs_from posFrom posTo)
+        posToSet)
+    t.value_refs_from;
 
-  (* Merge and invert per-file type refs *)
+  (* Merge per-file type refs_from *)
   Reactive.iter
-    (fun posTo posFromSet ->
-      merge_into_to type_refs_to posTo posFromSet;
+    (fun posFrom posToSet ->
       PosSet.iter
-        (fun posFrom -> add_to_from type_refs_from posFrom posTo)
-        posFromSet)
-    t.type_refs;
+        (fun posTo -> add_to_from type_refs_from posFrom posTo)
+        posToSet)
+    t.type_refs_from;
 
-  (* Add and invert type-label dependency refs from all sources *)
-  let add_type_refs reactive =
+  (* Add type-label dependency refs from all sources *)
+  let add_type_refs_from reactive =
     Reactive.iter
-      (fun posTo posFromSet ->
-        merge_into_to type_refs_to posTo posFromSet;
+      (fun posFrom posToSet ->
         PosSet.iter
-          (fun posFrom -> add_to_from type_refs_from posFrom posTo)
-          posFromSet)
+          (fun posTo -> add_to_from type_refs_from posFrom posTo)
+          posToSet)
       reactive
   in
-  add_type_refs t.type_deps.same_path_refs;
-  add_type_refs t.type_deps.cross_file_refs;
-  add_type_refs t.type_deps.impl_to_intf_refs_path2;
-  add_type_refs t.type_deps.intf_to_impl_refs;
+  add_type_refs_from t.type_deps.all_type_refs_from;
 
-  (* Add and invert exception refs (to value refs) *)
+  (* Add exception refs (to value refs_from) *)
   Reactive.iter
-    (fun posTo posFromSet ->
-      merge_into_to value_refs_to posTo posFromSet;
+    (fun posFrom posToSet ->
       PosSet.iter
-        (fun posFrom -> add_to_from value_refs_from posFrom posTo)
-        posFromSet)
-    t.exception_refs.resolved_refs;
+        (fun posTo -> add_to_from value_refs_from posFrom posTo)
+        posToSet)
+    t.exception_refs.resolved_refs_from;
 
-  References.create ~value_refs_to ~type_refs_to ~value_refs_from
-    ~type_refs_from
+  References.create ~value_refs_from ~type_refs_from
 
 (** Collect all cross-file items *)
 let collect_cross_file_items (t : t) : CrossFileItems.t =
@@ -297,11 +250,11 @@ let freeze_file_deps (t : t) : FileDeps.t =
     (fun from_file to_files ->
       FileDeps.FileHash.replace deps from_file to_files)
     t.file_deps_map;
-  (* Add file deps from exception refs *)
+  (* Add file deps from exception refs - iterate value_refs_from *)
   Reactive.iter
-    (fun posTo posFromSet ->
+    (fun posFrom posToSet ->
       PosSet.iter
-        (fun posFrom ->
+        (fun posTo ->
           let from_file = posFrom.Lexing.pos_fname in
           let to_file = posTo.Lexing.pos_fname in
           if from_file <> to_file then
@@ -312,6 +265,6 @@ let freeze_file_deps (t : t) : FileDeps.t =
             in
             FileDeps.FileHash.replace deps from_file
               (FileSet.add to_file existing))
-        posFromSet)
-    t.exception_refs.resolved_refs;
+        posToSet)
+    t.exception_refs.resolved_refs_from;
   FileDeps.create ~files ~deps

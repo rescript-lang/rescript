@@ -27,14 +27,10 @@
 type t = {
   decls: (Lexing.position, Decl.t) Reactive.t;
   annotations: (Lexing.position, FileAnnotations.annotated_as) Reactive.t;
-  value_refs: (Lexing.position, PosSet.t) Reactive.t;
-      (** Value refs in refs_to direction: target -> sources *)
-  type_refs: (Lexing.position, PosSet.t) Reactive.t;
-      (** Type refs in refs_to direction: target -> sources *)
   value_refs_from: (Lexing.position, PosSet.t) Reactive.t;
-      (** Value refs in refs_from direction: source -> targets *)
+      (** Value refs: source -> targets *)
   type_refs_from: (Lexing.position, PosSet.t) Reactive.t;
-      (** Type refs in refs_from direction: source -> targets *)
+      (** Type refs: source -> targets *)
   cross_file_items: (string, CrossFileItems.t) Reactive.t;
   file_deps_map: (string, FileSet.t) Reactive.t;
   files: (string, unit) Reactive.t;
