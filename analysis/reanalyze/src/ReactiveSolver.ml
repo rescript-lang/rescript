@@ -62,8 +62,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 (** Collect issues from dead and live declarations.
     Uses DeadCommon.reportDeclaration for correct filtering.
     O(dead_decls + live_decls), not O(all_decls). *)
-let collect_issues ~(t : t) ~(config : DceConfig.t) ~(ann_store : AnnotationStore.t)
-    : Issue.t list =
+let collect_issues ~(t : t) ~(config : DceConfig.t)
+    ~(ann_store : AnnotationStore.t) : Issue.t list =
   (* Mark dead declarations and collect them *)
   let dead_list = ref [] in
   Reactive.iter
@@ -79,7 +79,8 @@ let collect_issues ~(t : t) ~(config : DceConfig.t) ~(ann_store : AnnotationStor
         match Reactive.get t.annotations decl.pos with
         | Some FileAnnotations.Live -> false
         | Some FileAnnotations.GenType -> false
-        | Some FileAnnotations.Dead -> false  (* @dead = user knows, don't warn *)
+        | Some FileAnnotations.Dead ->
+          false (* @dead = user knows, don't warn *)
         | None -> true
       in
       if not should_report then decl.report <- false;
@@ -96,7 +97,7 @@ let collect_issues ~(t : t) ~(config : DceConfig.t) ~(ann_store : AnnotationStor
            ~isType:(decl.declKind |> Decl.Kind.isType)
            ~loc:decl.moduleLoc;
       (* Check for incorrect @dead annotation on live decl *)
-      if AnnotationStore.is_annotated_dead ann_store decl.pos then
+      if AnnotationStore.is_annotated_dead ann_store decl.pos then (
         let issue =
           DeadCommon.makeDeadIssue ~decl
             ~message:" is annotated @dead but is live"
@@ -107,7 +108,7 @@ let collect_issues ~(t : t) ~(config : DceConfig.t) ~(ann_store : AnnotationStor
         |> DeadModules.checkModuleDead ~config ~fileName:decl.pos.pos_fname
         |> Option.iter (fun mod_issue ->
                incorrect_dead_issues := mod_issue :: !incorrect_dead_issues);
-        incorrect_dead_issues := issue :: !incorrect_dead_issues)
+        incorrect_dead_issues := issue :: !incorrect_dead_issues))
     t.live_decls;
 
   (* Sort and generate issues using DeadCommon.reportDeclaration *)

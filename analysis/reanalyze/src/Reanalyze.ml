@@ -380,7 +380,8 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
               | Some merged ->
                 (* Create CrossFileItemsStore from reactive collection *)
                 let cross_file_store =
-                  CrossFileItemsStore.of_reactive merged.ReactiveMerge.cross_file_items
+                  CrossFileItemsStore.of_reactive
+                    merged.ReactiveMerge.cross_file_items
                 in
                 (* Compute optional args state using declaration liveness
                    Note: is_live returns true if pos is not a declaration (matches non-reactive)
@@ -390,10 +391,12 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
                   | None -> true (* not a declaration, assume live *)
                   | Some decl -> Decl.isLive decl
                 in
-                let find_decl pos = Reactive.get merged.ReactiveMerge.decls pos in
+                let find_decl pos =
+                  Reactive.get merged.ReactiveMerge.decls pos
+                in
                 let optional_args_state =
-                  CrossFileItemsStore.compute_optional_args_state cross_file_store
-                    ~find_decl ~is_live
+                  CrossFileItemsStore.compute_optional_args_state
+                    cross_file_store ~find_decl ~is_live
                 in
                 (* Iterate live declarations and check for optional args issues *)
                 let issues = ref [] in
@@ -411,8 +414,8 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             let num_dead, num_live = ReactiveSolver.stats ~t:solver in
             if !Cli.timing then
               Printf.eprintf
-                "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, live=%d, \
-                 issues=%d)\n"
+                "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, \
+                 live=%d, issues=%d)\n"
                 ((t1 -. t0) *. 1000.0)
                 ((t2 -. t1) *. 1000.0)
                 num_dead num_live (List.length all_issues);
