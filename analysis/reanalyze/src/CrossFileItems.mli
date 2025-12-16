@@ -74,11 +74,6 @@ val process_exception_refs :
 
 (** {2 Optional Args State} *)
 
-val compute_optional_args_state :
-  t ->
-  decls:Declarations.t ->
-  is_live:(Lexing.position -> bool) ->
-  OptionalArgsState.t
 (** Compute final optional args state from calls and function references,
     taking into account caller liveness via the [is_live] predicate.
     Pure function - does not mutate declarations. *)
