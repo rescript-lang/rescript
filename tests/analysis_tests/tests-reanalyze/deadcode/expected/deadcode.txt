@@ -2158,647 +2158,647 @@ Forward Liveness Analysis
   
   45 declarations marked live via propagation
 
-  Dead VariantCase +AutoAnnotate.variant.R: 0 references ()
-  Dead RecordLabel +AutoAnnotate.record.variant: 0 references ()
-  Dead RecordLabel +AutoAnnotate.r2.r2: 0 references ()
-  Dead RecordLabel +AutoAnnotate.r3.r3: 0 references ()
-  Dead RecordLabel +AutoAnnotate.r4.r4: 0 references ()
-  Dead VariantCase +AutoAnnotate.annotatedVariant.R2: 0 references ()
-  Dead VariantCase +AutoAnnotate.annotatedVariant.R4: 0 references ()
-  Dead Value +BucklescriptAnnotations.+bar: 0 references ()
-  Dead Value +BucklescriptAnnotations.+f: 1 references (BucklescriptAnnotations.res:22:4)
-  Live (annotated) Value +ComponentAsProp.+make: 0 references ()
-  Live (external ref) RecordLabel +ComponentAsProp.props.title: 1 references (_none_:1:-1)
-  Live (external ref) RecordLabel +ComponentAsProp.props.description: 1 references (_none_:1:-1)
-  Live (external ref) RecordLabel +ComponentAsProp.props.button: 1 references (_none_:1:-1)
-  Live (external ref) Value +CreateErrorHandler1.Error1.+notification: 1 references (ErrorHandler.resi:3:2)
-  Live (external ref) Value +CreateErrorHandler2.Error2.+notification: 1 references (ErrorHandler.resi:3:2)
-  Live (external ref) Value +DeadCodeImplementation.M.+x: 1 references (DeadCodeInterface.res:2:2)
-  Live (external ref) Exception +DeadExn.Etoplevel: 1 references (DeadExn.res:8:16)
-  Live (external ref) Exception +DeadExn.Inside.Einside: 1 references (DeadExn.res:10:14)
-  Dead Exception +DeadExn.DeadE: 0 references ()
-  Dead Value +DeadExn.+eToplevel: 0 references ()
-  Live (external ref) Value +DeadExn.+eInside: 1 references (DeadExn.res:12:7)
-  Live (propagated) VariantCase +DeadRT.moduleAccessPath.Root: 1 references (DeadRT.resi:2:2)
-  Live (external ref) VariantCase +DeadRT.moduleAccessPath.Kaboom: 2 references (DeadRT.res:11:16, DeadRT.resi:3:2)
-  Dead Value +DeadRT.+emitModuleAccessPath: 0 references ()
-  Live (external ref) VariantCase DeadRT.moduleAccessPath.Root: 2 references (DeadRT.res:2:2, DeadTest.res:98:16)
-  Live (propagated) VariantCase DeadRT.moduleAccessPath.Kaboom: 1 references (DeadRT.res:3:2)
-  Dead Value +DeadTest.+fortytwo: 0 references ()
-  Live (annotated) Value +DeadTest.+fortyTwoButExported: 0 references ()
-  Live (external ref) Value +DeadTest.+thisIsUsedOnce: 1 references (DeadTest.res:8:7)
-  Live (external ref) Value +DeadTest.+thisIsUsedTwice: 2 references (DeadTest.res:11:7, DeadTest.res:12:7)
-  Dead Value +DeadTest.+thisIsMarkedDead: 0 references ()
-  Live (propagated) Value +DeadTest.+thisIsKeptAlive: 1 references (DeadTest.res:20:4)
-  Live (annotated) Value +DeadTest.+thisIsMarkedLive: 0 references ()
-  Dead Value +DeadTest.Inner.+thisIsAlsoMarkedDead: 0 references ()
-  Dead Value +DeadTest.M.+thisSignatureItemIsDead: 0 references ()
-  Dead Value +DeadTest.M.+thisSignatureItemIsDead: 1 references (DeadTest.res:28:2)
-  Live (propagated) VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A: 1 references (DeadTest.res:38:11)
-  Live (external ref) Value +DeadTest.VariantUsedOnlyInImplementation.+a: 1 references (DeadTest.res:42:17)
-  Live (external ref) VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A: 2 references (DeadTest.res:35:11, DeadTest.res:39:10)
-  Live (propagated) Value +DeadTest.VariantUsedOnlyInImplementation.+a: 1 references (DeadTest.res:36:2)
-  Dead Value +DeadTest.+_: 0 references ()
-  Dead Value +DeadTest.+_: 0 references ()
-  Live (external ref) RecordLabel +DeadTest.record.xxx: 1 references (DeadTest.res:52:13)
-  Live (external ref) RecordLabel +DeadTest.record.yyy: 1 references (DeadTest.res:53:9)
-  Dead Value +DeadTest.+_: 0 references ()
-  Dead Value +DeadTest.+_: 0 references ()
-  Dead Value +DeadTest.UnderscoreInside.+_: 0 references ()
-  Live (external ref) Value +DeadTest.MM.+x: 1 references (DeadTest.res:69:9)
-  Dead Value +DeadTest.MM.+y: 0 references ()
-  Live (propagated) Value +DeadTest.MM.+y: 2 references (DeadTest.res:61:2, DeadTest.res:64:6)
-  Live (propagated) Value +DeadTest.MM.+x: 1 references (DeadTest.res:60:2)
-  Dead Value +DeadTest.MM.+valueOnlyInImplementation: 0 references ()
-  Dead Value +DeadTest.+unusedRec: 1 references (DeadTest.res:75:8)
-  Dead Value +DeadTest.+split_map: 1 references (DeadTest.res:77:8)
-  Dead Value +DeadTest.+rec1: 1 references (DeadTest.res:83:4)
-  Dead Value +DeadTest.+rec2: 1 references (DeadTest.res:82:8)
-  Dead Value +DeadTest.+recWithCallback: 1 references (DeadTest.res:86:6)
-  Dead Value +DeadTest.+cb: 1 references (DeadTest.res:85:8)
-  Dead Value +DeadTest.+foo: 1 references (DeadTest.res:94:4)
-  Dead Value +DeadTest.+cb: 1 references (DeadTest.res:90:8)
-  Dead Value +DeadTest.+bar: 1 references (DeadTest.res:91:6)
-  Dead Value +DeadTest.+withDefaultValue: 0 references ()
-  Dead Value +DeadTest.+zzz: 0 references ()
-  Dead Value +DeadTest.+a1: 0 references ()
-  Dead Value +DeadTest.+a2: 0 references ()
-  Dead Value +DeadTest.+a3: 0 references ()
-  Dead Value +DeadTest.+second: 0 references ()
-  Dead Value +DeadTest.+deadRef: 0 references ()
-  Live (external ref) Value +DeadTest.+make: 1 references (DeadTest.res:119:16)
-  Live (external ref) RecordLabel +DeadTest.props.s: 1 references (_none_:1:-1)
-  Dead Value +DeadTest.+theSideEffectIsLogging: 0 references ()
-  Dead Value +DeadTest.+stringLengthNoSideEffects: 0 references ()
-  Live (annotated) Value +DeadTest.GloobLive.+globallyLive1: 0 references ()
-  Live (annotated) Value +DeadTest.GloobLive.+globallyLive2: 0 references ()
-  Live (annotated) Value +DeadTest.GloobLive.+globallyLive3: 0 references ()
-  Live (external ref) VariantCase +DeadTest.WithInclude.t.A: 2 references (DeadTest.res:137:13, DeadTest.res:142:7)
-  Live (propagated) VariantCase +DeadTest.WithInclude.t.A: 1 references (DeadTest.res:134:11)
-  Dead Value +DeadTest.+funWithInnerVars: 0 references ()
-  Dead Value +DeadTest.+x: 1 references (DeadTest.res:145:4)
-  Dead Value +DeadTest.+y: 1 references (DeadTest.res:145:4)
-  Dead RecordLabel +DeadTest.rc.a: 0 references ()
-  Live (external ref) Value +DeadTest.+deadIncorrect: 1 references (DeadTest.res:156:8)
-  Dead Value +DeadTest.+_: 0 references ()
-  Live (external ref) VariantCase +DeadTest.inlineRecord.IR: 1 references (DeadTest.res:163:20)
-  Dead RecordLabel +DeadTest.inlineRecord.IR.a: 0 references ()
-  Live (external ref) RecordLabel +DeadTest.inlineRecord.IR.b: 1 references (DeadTest.res:163:35)
-  Live (external ref) RecordLabel +DeadTest.inlineRecord.IR.c: 1 references (DeadTest.res:163:7)
-  Dead RecordLabel +DeadTest.inlineRecord.IR.d: 0 references ()
-  Live (annotated) RecordLabel +DeadTest.inlineRecord.IR.e: 0 references ()
-  Live (external ref) Value +DeadTest.+ira: 1 references (DeadTest.res:163:27)
-  Dead Value +DeadTest.+_: 0 references ()
-  Dead VariantCase +DeadTest.inlineRecord2.IR2: 0 references ()
-  Dead RecordLabel +DeadTest.inlineRecord2.IR2.a: 0 references ()
-  Dead RecordLabel +DeadTest.inlineRecord2.IR2.b: 0 references ()
-  Dead VariantCase +DeadTest.inlineRecord3.IR3: 0 references ()
-  Dead RecordLabel +DeadTest.inlineRecord3.IR3.a: 0 references ()
-  Dead RecordLabel +DeadTest.inlineRecord3.IR3.b: 0 references ()
-  Dead Value +DeadTestBlacklist.+x: 0 references ()
-  Dead Value +DeadTestWithInterface.Ext_buffer.+x: 0 references ()
-  Dead Value +DeadTestWithInterface.Ext_buffer.+x: 1 references (DeadTestWithInterface.res:2:2)
-  Live (external ref) VariantCase +DeadTypeTest.t.A: 2 references (DeadTypeTest.res:4:8, DeadTypeTest.resi:2:2)
-  Dead VariantCase +DeadTypeTest.t.B: 1 references (DeadTypeTest.resi:3:2)
-  Dead Value +DeadTypeTest.+a: 1 references (DeadTypeTest.resi:4:0)
-  Live (external ref) VariantCase +DeadTypeTest.deadType.OnlyInImplementation: 2 references (DeadTypeTest.res:12:8, DeadTypeTest.resi:7:2)
-  Live (propagated) VariantCase +DeadTypeTest.deadType.OnlyInInterface: 1 references (DeadTypeTest.resi:8:2)
-  Live (external ref) VariantCase +DeadTypeTest.deadType.InBoth: 2 references (DeadTypeTest.res:13:8, DeadTypeTest.resi:9:2)
-  Dead VariantCase +DeadTypeTest.deadType.InNeither: 1 references (DeadTypeTest.resi:10:2)
-  Dead Value +DeadTypeTest.+_: 0 references ()
-  Dead Value +DeadTypeTest.+_: 0 references ()
-  Live (annotated) RecordLabel +DeadTypeTest.record.x: 0 references ()
-  Live (annotated) RecordLabel +DeadTypeTest.record.y: 0 references ()
-  Live (annotated) RecordLabel +DeadTypeTest.record.z: 0 references ()
-  Live (propagated) VariantCase DeadTypeTest.t.A: 1 references (DeadTypeTest.res:2:2)
-  Dead VariantCase DeadTypeTest.t.B: 1 references (DeadTypeTest.res:3:2)
-  Dead Value DeadTypeTest.+a: 0 references ()
-  Live (propagated) VariantCase DeadTypeTest.deadType.OnlyInImplementation: 1 references (DeadTypeTest.res:7:2)
-  Live (external ref) VariantCase DeadTypeTest.deadType.OnlyInInterface: 2 references (DeadTest.res:44:8, DeadTypeTest.res:8:2)
-  Live (external ref) VariantCase DeadTypeTest.deadType.InBoth: 2 references (DeadTest.res:45:8, DeadTypeTest.res:9:2)
-  Dead VariantCase DeadTypeTest.deadType.InNeither: 1 references (DeadTypeTest.res:10:2)
-  Live (propagated) Value +DeadValueTest.+valueAlive: 1 references (DeadValueTest.resi:1:0)
-  Dead Value +DeadValueTest.+valueDead: 1 references (DeadValueTest.resi:2:0)
-  Dead Value +DeadValueTest.+valueOnlyInImplementation: 0 references ()
-  Dead Value +DeadValueTest.+subList: 1 references (DeadValueTest.res:10:8)
-  Dead Value +DeadValueTest.+tail: 1 references (DeadValueTest.res:6:8)
-  Live (external ref) Value DeadValueTest.+valueAlive: 1 references (DeadTest.res:73:16)
-  Dead Value DeadValueTest.+valueDead: 0 references ()
-  Live (annotated) Value +Docstrings.+flat: 0 references ()
-  Live (annotated) Value +Docstrings.+signMessage: 0 references ()
-  Live (annotated) Value +Docstrings.+one: 0 references ()
-  Live (annotated) Value +Docstrings.+two: 0 references ()
-  Live (annotated) Value +Docstrings.+tree: 0 references ()
-  Live (annotated) Value +Docstrings.+oneU: 0 references ()
-  Live (annotated) Value +Docstrings.+twoU: 0 references ()
-  Live (annotated) Value +Docstrings.+treeU: 0 references ()
-  Live (annotated) Value +Docstrings.+useParam: 0 references ()
-  Live (annotated) Value +Docstrings.+useParamU: 0 references ()
-  Live (annotated) Value +Docstrings.+unnamed1: 0 references ()
-  Live (annotated) Value +Docstrings.+unnamed1U: 0 references ()
-  Live (annotated) Value +Docstrings.+unnamed2: 0 references ()
-  Live (annotated) Value +Docstrings.+unnamed2U: 0 references ()
-  Live (annotated) Value +Docstrings.+grouped: 0 references ()
-  Live (annotated) Value +Docstrings.+unitArgWithoutConversion: 0 references ()
-  Live (annotated) Value +Docstrings.+unitArgWithoutConversionU: 0 references ()
-  Live (external ref) VariantCase +Docstrings.t.A: 2 references (Docstrings.res:64:34, Docstrings.res:67:39)
-  Dead VariantCase +Docstrings.t.B: 0 references ()
-  Live (annotated) Value +Docstrings.+unitArgWithConversion: 0 references ()
-  Live (annotated) Value +Docstrings.+unitArgWithConversionU: 0 references ()
-  Live (external ref) Value +DynamicallyLoadedComponent.+make: 1 references (DeadTest.res:110:17)
-  Live (external ref) RecordLabel +DynamicallyLoadedComponent.props.s: 1 references (_none_:1:-1)
-  Live (external ref) Value +EmptyArray.Z.+make: 1 references (EmptyArray.res:10:9)
-  Live (propagated) Value +ErrorHandler.Make.+notify: 1 references (ErrorHandler.resi:7:2)
-  Dead Value +ErrorHandler.+x: 1 references (ErrorHandler.resi:10:0)
-  Live (external ref) Value ErrorHandler.Make.+notify: 1 references (CreateErrorHandler1.res:8:0)
-  Dead Value ErrorHandler.+x: 0 references ()
-  Dead Value +EverythingLiveHere.+x: 0 references ()
-  Dead Value +EverythingLiveHere.+y: 0 references ()
-  Dead Value +EverythingLiveHere.+z: 0 references ()
-  Live (external ref) Value +FirstClassModules.M.+y: 1 references (FirstClassModules.res:20:2)
-  Live (external ref) Value +FirstClassModules.M.InnerModule2.+k: 1 references (FirstClassModules.res:10:4)
-  Live (external ref) Value +FirstClassModules.M.InnerModule3.+k3: 1 references (FirstClassModules.res:14:4)
-  Live (external ref) Value +FirstClassModules.M.Z.+u: 1 references (FirstClassModules.res:37:4)
-  Live (external ref) Value +FirstClassModules.M.+x: 1 references (FirstClassModules.res:2:2)
-  Live (annotated) Value +FirstClassModules.+firstClassModule: 0 references ()
-  Live (annotated) Value +FirstClassModules.+testConvert: 0 references ()
-  Live (external ref) Value +FirstClassModules.SomeFunctor.+ww: 1 references (FirstClassModules.res:57:2)
-  Live (annotated) Value +FirstClassModules.+someFunctorAsFunction: 0 references ()
-  Dead RecordLabel +FirstClassModulesInterface.record.x: 1 references (FirstClassModulesInterface.resi:3:2)
-  Dead RecordLabel +FirstClassModulesInterface.record.y: 1 references (FirstClassModulesInterface.resi:4:2)
-  Dead Value +FirstClassModulesInterface.+r: 1 references (FirstClassModulesInterface.resi:7:0)
-  Dead RecordLabel FirstClassModulesInterface.record.x: 1 references (FirstClassModulesInterface.res:2:2)
-  Dead RecordLabel FirstClassModulesInterface.record.y: 1 references (FirstClassModulesInterface.res:3:2)
-  Dead Value FirstClassModulesInterface.+r: 0 references ()
-  Live (external ref) RecordLabel +Hooks.vehicle.name: 5 references (Hooks.res:10:29, Hooks.res:29:66, Hooks.res:33:68, Hooks.res:47:2, Hooks.res:47:14)
-  Live (propagated) Value +Hooks.+make: 1 references (Hooks.res:25:4)
-  Live (external ref) RecordLabel +Hooks.props.vehicle: 1 references (_none_:1:-1)
-  Live (annotated) Value +Hooks.+default: 0 references ()
-  Live (annotated) Value +Hooks.Inner.+make: 0 references ()
-  Live (external ref) RecordLabel +Hooks.Inner.props.vehicle: 1 references (_none_:1:-1)
-  Live (annotated) Value +Hooks.Inner.Inner2.+make: 0 references ()
-  Live (external ref) RecordLabel +Hooks.Inner.Inner2.props.vehicle: 1 references (_none_:1:-1)
-  Live (annotated) Value +Hooks.NoProps.+make: 0 references ()
-  Live (annotated) Value +Hooks.+functionWithRenamedArgs: 0 references ()
-  Dead RecordLabel +Hooks.r.x: 0 references ()
-  Live (annotated) Value +Hooks.RenderPropRequiresConversion.+make: 0 references ()
-  Live (external ref) RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle: 1 references (_none_:1:-1)
-  Live (external ref) Value +Hooks.RenderPropRequiresConversion.+car: 1 references (Hooks.res:65:30)
-  Live (propagated) Value +ImmutableArray.+fromArray: 1 references (ImmutableArray.resi:9:0)
-  Dead Value +ImmutableArray.+toArray: 1 references (ImmutableArray.resi:12:0)
-  Dead Value +ImmutableArray.+length: 1 references (ImmutableArray.resi:14:0)
-  Dead Value +ImmutableArray.+size: 1 references (ImmutableArray.resi:17:0)
-  Live (propagated) Value +ImmutableArray.+get: 2 references (ImmutableArray.resi:6:2, ImmutableArray.resi:19:0)
-  Dead Value +ImmutableArray.+getExn: 1 references (ImmutableArray.resi:21:0)
-  Dead Value +ImmutableArray.+getUnsafe: 1 references (ImmutableArray.resi:23:0)
-  Dead Value +ImmutableArray.+getUndefined: 1 references (ImmutableArray.resi:25:0)
-  Dead Value +ImmutableArray.+shuffle: 1 references (ImmutableArray.resi:27:0)
-  Dead Value +ImmutableArray.+reverse: 1 references (ImmutableArray.resi:29:0)
-  Dead Value +ImmutableArray.+makeUninitialized: 1 references (ImmutableArray.resi:31:0)
-  Dead Value +ImmutableArray.+makeUninitializedUnsafe: 1 references (ImmutableArray.resi:33:0)
-  Dead Value +ImmutableArray.+make: 1 references (ImmutableArray.resi:35:0)
-  Dead Value +ImmutableArray.+range: 1 references (ImmutableArray.resi:37:0)
-  Dead Value +ImmutableArray.+rangeBy: 1 references (ImmutableArray.resi:39:0)
-  Dead Value +ImmutableArray.+makeByU: 1 references (ImmutableArray.resi:41:0)
-  Dead Value +ImmutableArray.+makeBy: 1 references (ImmutableArray.resi:42:0)
-  Dead Value +ImmutableArray.+makeByAndShuffleU: 1 references (ImmutableArray.resi:44:0)
-  Dead Value +ImmutableArray.+makeByAndShuffle: 1 references (ImmutableArray.resi:45:0)
-  Dead Value +ImmutableArray.+zip: 1 references (ImmutableArray.resi:47:0)
-  Dead Value +ImmutableArray.+zipByU: 1 references (ImmutableArray.resi:49:0)
-  Dead Value +ImmutableArray.+zipBy: 1 references (ImmutableArray.resi:50:0)
-  Dead Value +ImmutableArray.+unzip: 1 references (ImmutableArray.resi:52:0)
-  Dead Value +ImmutableArray.+concat: 1 references (ImmutableArray.resi:54:0)
-  Dead Value +ImmutableArray.+concatMany: 1 references (ImmutableArray.resi:56:0)
-  Dead Value +ImmutableArray.+slice: 1 references (ImmutableArray.resi:58:0)
-  Dead Value +ImmutableArray.+sliceToEnd: 1 references (ImmutableArray.resi:60:0)
-  Dead Value +ImmutableArray.+copy: 1 references (ImmutableArray.resi:62:0)
-  Dead Value +ImmutableArray.+forEachU: 1 references (ImmutableArray.resi:64:0)
-  Dead Value +ImmutableArray.+forEach: 1 references (ImmutableArray.resi:65:0)
-  Dead Value +ImmutableArray.+mapU: 1 references (ImmutableArray.resi:67:0)
-  Dead Value +ImmutableArray.+map: 1 references (ImmutableArray.resi:68:0)
-  Dead Value +ImmutableArray.+keepWithIndexU: 1 references (ImmutableArray.resi:70:0)
-  Dead Value +ImmutableArray.+keepWithIndex: 1 references (ImmutableArray.resi:71:0)
-  Dead Value +ImmutableArray.+keepMapU: 1 references (ImmutableArray.resi:73:0)
-  Dead Value +ImmutableArray.+keepMap: 1 references (ImmutableArray.resi:74:0)
-  Dead Value +ImmutableArray.+forEachWithIndexU: 1 references (ImmutableArray.resi:76:0)
-  Dead Value +ImmutableArray.+forEachWithIndex: 1 references (ImmutableArray.resi:77:0)
-  Dead Value +ImmutableArray.+mapWithIndexU: 1 references (ImmutableArray.resi:79:0)
-  Dead Value +ImmutableArray.+mapWithIndex: 1 references (ImmutableArray.resi:80:0)
-  Dead Value +ImmutableArray.+partitionU: 1 references (ImmutableArray.resi:82:0)
-  Dead Value +ImmutableArray.+partition: 1 references (ImmutableArray.resi:83:0)
-  Dead Value +ImmutableArray.+reduceU: 1 references (ImmutableArray.resi:85:0)
-  Dead Value +ImmutableArray.+reduce: 1 references (ImmutableArray.resi:86:0)
-  Dead Value +ImmutableArray.+reduceReverseU: 1 references (ImmutableArray.resi:88:0)
-  Dead Value +ImmutableArray.+reduceReverse: 1 references (ImmutableArray.resi:89:0)
-  Dead Value +ImmutableArray.+reduceReverse2U: 1 references (ImmutableArray.resi:91:0)
-  Dead Value +ImmutableArray.+reduceReverse2: 1 references (ImmutableArray.resi:92:0)
-  Dead Value +ImmutableArray.+someU: 1 references (ImmutableArray.resi:94:0)
-  Dead Value +ImmutableArray.+some: 1 references (ImmutableArray.resi:95:0)
-  Dead Value +ImmutableArray.+everyU: 1 references (ImmutableArray.resi:97:0)
-  Dead Value +ImmutableArray.+every: 1 references (ImmutableArray.resi:98:0)
-  Dead Value +ImmutableArray.+every2U: 1 references (ImmutableArray.resi:100:0)
-  Dead Value +ImmutableArray.+every2: 1 references (ImmutableArray.resi:101:0)
-  Dead Value +ImmutableArray.+some2U: 1 references (ImmutableArray.resi:103:0)
-  Dead Value +ImmutableArray.+some2: 1 references (ImmutableArray.resi:104:0)
-  Dead Value +ImmutableArray.+cmpU: 1 references (ImmutableArray.resi:106:0)
-  Dead Value +ImmutableArray.+cmp: 1 references (ImmutableArray.resi:107:0)
-  Dead Value +ImmutableArray.+eqU: 1 references (ImmutableArray.resi:109:0)
-  Dead Value +ImmutableArray.+eq: 1 references (ImmutableArray.resi:110:0)
-  Live (propagated) Value ImmutableArray.Array.+get: 1 references (TestImmutableArray.res:2:4)
-  Live (external ref) Value ImmutableArray.+fromArray: 1 references (DeadTest.res:1:15)
-  Dead Value ImmutableArray.+toArray: 0 references ()
-  Dead Value ImmutableArray.+length: 0 references ()
-  Dead Value ImmutableArray.+size: 0 references ()
-  Dead Value ImmutableArray.+get: 0 references ()
-  Dead Value ImmutableArray.+getExn: 0 references ()
-  Dead Value ImmutableArray.+getUnsafe: 0 references ()
-  Dead Value ImmutableArray.+getUndefined: 0 references ()
-  Dead Value ImmutableArray.+shuffle: 0 references ()
-  Dead Value ImmutableArray.+reverse: 0 references ()
-  Dead Value ImmutableArray.+makeUninitialized: 0 references ()
-  Dead Value ImmutableArray.+makeUninitializedUnsafe: 0 references ()
-  Dead Value ImmutableArray.+make: 0 references ()
-  Dead Value ImmutableArray.+range: 0 references ()
-  Dead Value ImmutableArray.+rangeBy: 0 references ()
-  Dead Value ImmutableArray.+makeByU: 0 references ()
-  Dead Value ImmutableArray.+makeBy: 0 references ()
-  Dead Value ImmutableArray.+makeByAndShuffleU: 0 references ()
-  Dead Value ImmutableArray.+makeByAndShuffle: 0 references ()
-  Dead Value ImmutableArray.+zip: 0 references ()
-  Dead Value ImmutableArray.+zipByU: 0 references ()
-  Dead Value ImmutableArray.+zipBy: 0 references ()
-  Dead Value ImmutableArray.+unzip: 0 references ()
-  Dead Value ImmutableArray.+concat: 0 references ()
-  Dead Value ImmutableArray.+concatMany: 0 references ()
-  Dead Value ImmutableArray.+slice: 0 references ()
-  Dead Value ImmutableArray.+sliceToEnd: 0 references ()
-  Dead Value ImmutableArray.+copy: 0 references ()
-  Dead Value ImmutableArray.+forEachU: 0 references ()
-  Dead Value ImmutableArray.+forEach: 0 references ()
-  Dead Value ImmutableArray.+mapU: 0 references ()
-  Dead Value ImmutableArray.+map: 0 references ()
-  Dead Value ImmutableArray.+keepWithIndexU: 0 references ()
-  Dead Value ImmutableArray.+keepWithIndex: 0 references ()
-  Dead Value ImmutableArray.+keepMapU: 0 references ()
-  Dead Value ImmutableArray.+keepMap: 0 references ()
-  Dead Value ImmutableArray.+forEachWithIndexU: 0 references ()
-  Dead Value ImmutableArray.+forEachWithIndex: 0 references ()
-  Dead Value ImmutableArray.+mapWithIndexU: 0 references ()
-  Dead Value ImmutableArray.+mapWithIndex: 0 references ()
-  Dead Value ImmutableArray.+partitionU: 0 references ()
-  Dead Value ImmutableArray.+partition: 0 references ()
-  Dead Value ImmutableArray.+reduceU: 0 references ()
-  Dead Value ImmutableArray.+reduce: 0 references ()
-  Dead Value ImmutableArray.+reduceReverseU: 0 references ()
-  Dead Value ImmutableArray.+reduceReverse: 0 references ()
-  Dead Value ImmutableArray.+reduceReverse2U: 0 references ()
-  Dead Value ImmutableArray.+reduceReverse2: 0 references ()
-  Dead Value ImmutableArray.+someU: 0 references ()
-  Dead Value ImmutableArray.+some: 0 references ()
-  Dead Value ImmutableArray.+everyU: 0 references ()
-  Dead Value ImmutableArray.+every: 0 references ()
-  Dead Value ImmutableArray.+every2U: 0 references ()
-  Dead Value ImmutableArray.+every2: 0 references ()
-  Dead Value ImmutableArray.+some2U: 0 references ()
-  Dead Value ImmutableArray.+some2: 0 references ()
-  Dead Value ImmutableArray.+cmpU: 0 references ()
-  Dead Value ImmutableArray.+cmp: 0 references ()
-  Dead Value ImmutableArray.+eqU: 0 references ()
-  Dead Value ImmutableArray.+eq: 0 references ()
-  Dead RecordLabel +ImportHookDefault.person.name: 0 references ()
-  Dead RecordLabel +ImportHookDefault.person.age: 0 references ()
-  Live (annotated) Value +ImportHookDefault.+make: 1 references (Hooks.res:17:5)
-  Live (annotated) RecordLabel +ImportHookDefault.props.person: 0 references ()
-  Live (annotated) RecordLabel +ImportHookDefault.props.children: 0 references ()
-  Live (annotated) RecordLabel +ImportHookDefault.props.renderMe: 0 references ()
-  Dead RecordLabel +ImportHooks.person.name: 0 references ()
-  Dead RecordLabel +ImportHooks.person.age: 0 references ()
-  Live (annotated) Value +ImportHooks.+make: 1 references (Hooks.res:14:5)
-  Live (annotated) RecordLabel +ImportHooks.props.person: 0 references ()
-  Live (annotated) RecordLabel +ImportHooks.props.children: 0 references ()
-  Live (annotated) RecordLabel +ImportHooks.props.renderMe: 0 references ()
-  Live (annotated) Value +ImportHooks.+foo: 0 references ()
-  Live (annotated) Value +ImportIndex.+make: 0 references ()
-  Live (annotated) RecordLabel +ImportIndex.props.method: 0 references ()
-  Live (annotated) Value +ImportJsValue.+round: 1 references (ImportJsValue.res:27:4)
-  Dead RecordLabel +ImportJsValue.point.x: 0 references ()
-  Dead RecordLabel +ImportJsValue.point.y: 0 references ()
-  Live (annotated) Value +ImportJsValue.+area: 1 references (ImportJsValue.res:30:4)
-  Live (annotated) Value +ImportJsValue.+returnMixedArray: 0 references ()
-  Live (annotated) Value +ImportJsValue.+roundedNumber: 0 references ()
-  Live (annotated) Value +ImportJsValue.+areaValue: 0 references ()
-  Live (propagated) Value +ImportJsValue.AbsoluteValue.+getAbs: 1 references (ImportJsValue.res:50:4)
-  Live (propagated) Value +ImportJsValue.AbsoluteValue.+getAbs: 1 references (ImportJsValue.res:40:6)
-  Live (annotated) Value +ImportJsValue.+useGetProp: 0 references ()
-  Live (annotated) Value +ImportJsValue.+useGetAbs: 0 references ()
-  Live (annotated) Value +ImportJsValue.+useColor: 0 references ()
-  Live (annotated) Value +ImportJsValue.+higherOrder: 1 references (ImportJsValue.res:64:4)
-  Live (annotated) Value +ImportJsValue.+returnedFromHigherOrder: 0 references ()
-  Dead VariantCase +ImportJsValue.variant.I: 0 references ()
-  Dead VariantCase +ImportJsValue.variant.S: 0 references ()
-  Live (annotated) Value +ImportJsValue.+convertVariant: 0 references ()
-  Live (annotated) Value +ImportJsValue.+polymorphic: 0 references ()
-  Live (annotated) Value +ImportJsValue.+default: 0 references ()
-  Dead RecordLabel +ImportMyBanner.message.text: 0 references ()
-  Live (annotated) Value +ImportMyBanner.+make: 1 references (ImportMyBanner.res:12:4)
-  Dead Value +ImportMyBanner.+make: 0 references ()
-  Live (propagated) VariantCase +InnerModuleTypes.I.t.Foo: 1 references (InnerModuleTypes.resi:2:11)
-  Live (external ref) VariantCase InnerModuleTypes.I.t.Foo: 2 references (InnerModuleTypes.res:2:11, TestInnedModuleTypes.res:1:8)
-  Live (external ref) Value +JsxV4.C.+make: 1 references (JsxV4.res:7:9)
-  Live (annotated) Value +LetPrivate.local_1.+x: 1 references (LetPrivate.res:7:4)
-  Live (annotated) Value +LetPrivate.+y: 0 references ()
-  Dead RecordLabel +ModuleAliases.Outer.Inner.innerT.inner: 0 references ()
-  Dead RecordLabel +ModuleAliases.Outer2.Inner2.InnerNested.t.nested: 0 references ()
-  Live (annotated) Value +ModuleAliases.+testNested: 0 references ()
-  Live (annotated) Value +ModuleAliases.+testInner: 0 references ()
-  Live (annotated) Value +ModuleAliases.+testInner2: 0 references ()
-  Dead RecordLabel +ModuleAliases2.record.x: 0 references ()
-  Dead RecordLabel +ModuleAliases2.record.y: 0 references ()
-  Dead RecordLabel +ModuleAliases2.Outer.outer.outer: 0 references ()
-  Dead RecordLabel +ModuleAliases2.Outer.Inner.inner.inner: 0 references ()
-  Dead Value +ModuleAliases2.+q: 0 references ()
-  Dead Value +ModuleExceptionBug.Dep.+customDouble: 0 references ()
-  Dead Exception +ModuleExceptionBug.MyOtherException: 0 references ()
-  Live (external ref) Value +ModuleExceptionBug.+ddjdj: 1 references (ModuleExceptionBug.res:8:7)
-  Live (annotated) Value +NestedModules.+notNested: 0 references ()
-  Live (annotated) Value +NestedModules.Universe.+theAnswer: 0 references ()
-  Dead Value +NestedModules.Universe.+notExported: 0 references ()
-  Dead Value +NestedModules.Universe.Nested2.+x: 0 references ()
-  Live (annotated) Value +NestedModules.Universe.Nested2.+nested2Value: 0 references ()
-  Dead Value +NestedModules.Universe.Nested2.+y: 0 references ()
-  Dead Value +NestedModules.Universe.Nested2.Nested3.+x: 0 references ()
-  Dead Value +NestedModules.Universe.Nested2.Nested3.+y: 0 references ()
-  Dead Value +NestedModules.Universe.Nested2.Nested3.+z: 0 references ()
-  Dead Value +NestedModules.Universe.Nested2.Nested3.+w: 0 references ()
-  Live (annotated) Value +NestedModules.Universe.Nested2.Nested3.+nested3Value: 0 references ()
-  Live (annotated) Value +NestedModules.Universe.Nested2.Nested3.+nested3Function: 0 references ()
-  Live (annotated) Value +NestedModules.Universe.Nested2.+nested2Function: 0 references ()
-  Dead VariantCase +NestedModules.Universe.variant.A: 0 references ()
-  Dead VariantCase +NestedModules.Universe.variant.B: 0 references ()
-  Live (annotated) Value +NestedModules.Universe.+someString: 0 references ()
-  Live (propagated) Value +NestedModulesInSignature.Universe.+theAnswer: 1 references (NestedModulesInSignature.resi:2:2)
-  Live (annotated) Value NestedModulesInSignature.Universe.+theAnswer: 0 references ()
-  Dead Value +Newsyntax.+x: 0 references ()
-  Dead Value +Newsyntax.+y: 0 references ()
-  Dead RecordLabel +Newsyntax.record.xxx: 0 references ()
-  Dead RecordLabel +Newsyntax.record.yyy: 0 references ()
-  Dead VariantCase +Newsyntax.variant.A: 0 references ()
-  Dead VariantCase +Newsyntax.variant.B: 0 references ()
-  Dead VariantCase +Newsyntax.variant.C: 0 references ()
-  Dead RecordLabel +Newsyntax.record2.xx: 0 references ()
-  Dead RecordLabel +Newsyntax.record2.yy: 0 references ()
-  Live (propagated) Value +Newton.+-: 4 references (Newton.res:9:8, Newton.res:16:8, Newton.res:25:4, Newton.res:27:4)
-  Live (propagated) Value +Newton.++: 1 references (Newton.res:25:4)
-  Live (propagated) Value +Newton.+*: 2 references (Newton.res:25:4, Newton.res:27:4)
-  Live (propagated) Value +Newton.+/: 1 references (Newton.res:16:8)
-  Live (propagated) Value +Newton.+newton: 1 references (Newton.res:29:4)
-  Live (propagated) Value +Newton.+current: 3 references (Newton.res:8:6, Newton.res:14:10, Newton.res:15:8)
-  Live (propagated) Value +Newton.+iterateMore: 1 references (Newton.res:14:10)
-  Live (propagated) Value +Newton.+delta: 1 references (Newton.res:8:6)
-  Live (propagated) Value +Newton.+loop: 2 references (Newton.res:6:4, Newton.res:14:10)
-  Live (propagated) Value +Newton.+previous: 2 references (Newton.res:14:10, Newton.res:16:8)
-  Live (propagated) Value +Newton.+next: 1 references (Newton.res:14:10)
-  Live (external ref) Value +Newton.+f: 2 references (Newton.res:29:4, Newton.res:31:16)
-  Live (propagated) Value +Newton.+fPrimed: 1 references (Newton.res:29:4)
-  Live (external ref) Value +Newton.+result: 2 references (Newton.res:31:8, Newton.res:31:18)
-  Dead VariantCase +Opaque.opaqueFromRecords.A: 0 references ()
-  Live (annotated) Value +Opaque.+noConversion: 0 references ()
-  Live (annotated) Value +Opaque.+testConvertNestedRecordFromOtherFile: 0 references ()
-  Live (external ref) Value +OptArg.+foo: 2 references (OptArg.res:5:7, OptArg.resi:1:0)
-  Live (external ref) Value +OptArg.+bar: 2 references (OptArg.res:7:7, OptArg.resi:2:0)
-  Live (external ref) Value +OptArg.+threeArgs: 2 references (OptArg.res:11:7, OptArg.res:12:7)
-  Live (external ref) Value +OptArg.+twoArgs: 1 references (OptArg.res:16:10)
-  Live (propagated) Value +OptArg.+oneArg: 1 references (OptArg.res:20:4)
-  Live (external ref) Value +OptArg.+wrapOneArg: 1 references (OptArg.res:22:7)
-  Live (propagated) Value +OptArg.+fourArgs: 1 references (OptArg.res:26:4)
-  Live (external ref) Value +OptArg.+wrapfourArgs: 2 references (OptArg.res:28:7, OptArg.res:29:7)
-  Dead Value OptArg.+foo: 0 references ()
-  Live (external ref) Value OptArg.+bar: 1 references (TestOptArg.res:1:7)
-  Live (propagated) Value +OptionalArgsLiveDead.+formatDate: 2 references (OptionalArgsLiveDead.res:3:4, OptionalArgsLiveDead.res:5:4)
-  Dead Value +OptionalArgsLiveDead.+deadCaller: 0 references ()
-  Live (external ref) Value +OptionalArgsLiveDead.+liveCaller: 1 references (OptionalArgsLiveDead.res:7:8)
-  Live (external ref) RecordLabel +Records.coord.x: 1 references (Records.res:14:19)
-  Live (external ref) RecordLabel +Records.coord.y: 1 references (Records.res:14:19)
-  Live (external ref) RecordLabel +Records.coord.z: 1 references (Records.res:14:19)
-  Live (annotated) Value +Records.+origin: 0 references ()
-  Live (annotated) Value +Records.+computeArea: 0 references ()
-  Live (annotated) Value +Records.+coord2d: 0 references ()
-  Dead RecordLabel +Records.person.name: 0 references ()
-  Dead RecordLabel +Records.person.age: 0 references ()
-  Live (external ref) RecordLabel +Records.person.address: 1 references (Records.res:51:42)
-  Dead RecordLabel +Records.business.name: 0 references ()
-  Live (external ref) RecordLabel +Records.business.owner: 1 references (Records.res:51:6)
-  Live (external ref) RecordLabel +Records.business.address: 2 references (Records.res:40:2, Records.res:50:6)
-  Live (propagated) Value +Records.+getOpt: 3 references (Records.res:39:4, Records.res:46:4, Records.res:96:4)
-  Live (annotated) Value +Records.+findAddress: 0 references ()
-  Live (annotated) Value +Records.+someBusiness: 0 references ()
-  Live (annotated) Value +Records.+findAllAddresses: 0 references ()
-  Dead RecordLabel +Records.payload.num: 0 references ()
-  Live (external ref) RecordLabel +Records.payload.payload: 3 references (Records.res:65:18, Records.res:74:24, Records.res:83:31)
-  Live (annotated) Value +Records.+getPayload: 0 references ()
-  Live (external ref) RecordLabel +Records.record.v: 1 references (Records.res:85:5)
-  Dead RecordLabel +Records.record.w: 0 references ()
-  Live (annotated) Value +Records.+getPayloadRecord: 0 references ()
-  Live (annotated) Value +Records.+recordValue: 1 references (Records.res:80:4)
-  Live (annotated) Value +Records.+payloadValue: 0 references ()
-  Live (annotated) Value +Records.+getPayloadRecordPlusOne: 0 references ()
-  Dead RecordLabel +Records.business2.name: 0 references ()
-  Dead RecordLabel +Records.business2.owner: 0 references ()
-  Live (external ref) RecordLabel +Records.business2.address2: 1 references (Records.res:97:2)
-  Live (annotated) Value +Records.+findAddress2: 0 references ()
-  Live (annotated) Value +Records.+someBusiness2: 0 references ()
-  Live (annotated) Value +Records.+computeArea3: 0 references ()
-  Live (annotated) Value +Records.+computeArea4: 0 references ()
-  Live (external ref) RecordLabel +Records.myRec.type_: 1 references (Records.res:127:30)
-  Live (annotated) Value +Records.+testMyRec: 0 references ()
-  Live (annotated) Value +Records.+testMyRec2: 0 references ()
-  Live (annotated) Value +Records.+testMyObj: 0 references ()
-  Live (annotated) Value +Records.+testMyObj2: 0 references ()
-  Live (external ref) RecordLabel +Records.myRecBsAs.type_: 1 references (Records.res:145:38)
-  Live (annotated) Value +Records.+testMyRecBsAs: 0 references ()
-  Live (annotated) Value +Records.+testMyRecBsAs2: 0 references ()
-  Live (annotated) Value +References.+create: 0 references ()
-  Live (annotated) Value +References.+access: 0 references ()
-  Live (annotated) Value +References.+update: 0 references ()
-  Live (propagated) Value +References.R.+get: 1 references (References.res:31:4)
-  Live (propagated) Value +References.R.+make: 1 references (References.res:34:4)
-  Live (propagated) Value +References.R.+set: 1 references (References.res:37:4)
-  Live (propagated) Value +References.R.+get: 1 references (References.res:17:2)
-  Live (propagated) Value +References.R.+make: 1 references (References.res:18:2)
-  Live (propagated) Value +References.R.+set: 1 references (References.res:19:2)
-  Live (annotated) Value +References.+get: 0 references ()
-  Live (annotated) Value +References.+make: 0 references ()
-  Live (annotated) Value +References.+set: 0 references ()
-  Dead RecordLabel +References.requiresConversion.x: 0 references ()
-  Live (annotated) Value +References.+destroysRefIdentity: 0 references ()
-  Live (annotated) Value +References.+preserveRefIdentity: 0 references ()
-  Dead RecordLabel +RepeatedLabel.userData.a: 0 references ()
-  Dead RecordLabel +RepeatedLabel.userData.b: 0 references ()
-  Live (external ref) RecordLabel +RepeatedLabel.tabState.a: 1 references (RepeatedLabel.res:12:16)
-  Live (external ref) RecordLabel +RepeatedLabel.tabState.b: 1 references (RepeatedLabel.res:12:16)
-  Dead RecordLabel +RepeatedLabel.tabState.f: 0 references ()
-  Live (external ref) Value +RepeatedLabel.+userData: 1 references (RepeatedLabel.res:14:7)
-  Live (annotated) Value +Shadow.+test: 0 references ()
-  Live (annotated) Value +Shadow.+test: 0 references ()
-  Live (annotated) Value +Shadow.M.+test: 0 references ()
-  Dead Value +Shadow.M.+test: 0 references ()
-  Live (annotated) Value +TestEmitInnerModules.Inner.+x: 0 references ()
-  Live (annotated) Value +TestEmitInnerModules.Inner.+y: 0 references ()
-  Live (annotated) Value +TestEmitInnerModules.Outer.Medium.Inner.+y: 0 references ()
-  Live (annotated) Value +TestFirstClassModules.+convert: 0 references ()
-  Live (annotated) Value +TestFirstClassModules.+convertInterface: 0 references ()
-  Live (annotated) Value +TestFirstClassModules.+convertRecord: 0 references ()
-  Live (annotated) Value +TestFirstClassModules.+convertFirstClassModuleWithTypeEquations: 0 references ()
-  Live (annotated) Value +TestImmutableArray.+testImmutableArrayGet: 0 references ()
-  Dead Value +TestImmutableArray.+testBeltArrayGet: 0 references ()
-  Dead Value +TestImmutableArray.+testBeltArraySet: 0 references ()
-  Live (annotated) Value +TestImport.+innerStuffContents: 1 references (TestImport.res:13:4)
-  Live (annotated) Value +TestImport.+innerStuffContentsAsEmptyObject: 0 references ()
-  Dead Value +TestImport.+innerStuffContents: 0 references ()
-  Live (annotated) Value +TestImport.+valueStartingWithUpperCaseLetter: 0 references ()
-  Live (annotated) Value +TestImport.+defaultValue: 0 references ()
-  Dead RecordLabel +TestImport.message.text: 0 references ()
-  Live (annotated) Value +TestImport.+make: 1 references (TestImport.res:27:4)
-  Dead Value +TestImport.+make: 0 references ()
-  Live (annotated) Value +TestImport.+defaultValue2: 0 references ()
-  Dead Value +TestInnedModuleTypes.+_: 0 references ()
-  Live (annotated) Value +TestModuleAliases.+testInner1: 0 references ()
-  Live (annotated) Value +TestModuleAliases.+testInner1Expanded: 0 references ()
-  Live (annotated) Value +TestModuleAliases.+testInner2: 0 references ()
-  Live (annotated) Value +TestModuleAliases.+testInner2Expanded: 0 references ()
-  Live (propagated) Value +TestOptArg.+foo: 1 references (TestOptArg.res:5:4)
-  Live (external ref) Value +TestOptArg.+bar: 1 references (TestOptArg.res:7:7)
-  Live (external ref) Value +TestOptArg.+notSuppressesOptArgs: 1 references (TestOptArg.res:11:8)
-  Live (annotated) Value +TestOptArg.+liveSuppressesOptArgs: 1 references (TestOptArg.res:16:8)
-  Dead RecordLabel +TestPromise.fromPayload.x: 0 references ()
-  Live (external ref) RecordLabel +TestPromise.fromPayload.s: 1 references (TestPromise.res:14:32)
-  Dead RecordLabel +TestPromise.toPayload.result: 0 references ()
-  Live (annotated) Value +TestPromise.+convert: 0 references ()
-  Dead Value +ToSuppress.+toSuppress: 0 references ()
-  Live (annotated) Value +TransitiveType1.+convert: 0 references ()
-  Live (annotated) Value +TransitiveType1.+convertAlias: 0 references ()
-  Dead Value +TransitiveType2.+convertT2: 0 references ()
-  Dead RecordLabel +TransitiveType3.t3.i: 0 references ()
-  Dead RecordLabel +TransitiveType3.t3.s: 0 references ()
-  Live (annotated) Value +TransitiveType3.+convertT3: 0 references ()
-  Live (annotated) Value +Tuples.+testTuple: 0 references ()
-  Live (annotated) Value +Tuples.+origin: 0 references ()
-  Live (annotated) Value +Tuples.+computeArea: 0 references ()
-  Live (annotated) Value +Tuples.+computeAreaWithIdent: 0 references ()
-  Live (annotated) Value +Tuples.+computeAreaNoConverters: 0 references ()
-  Live (annotated) Value +Tuples.+coord2d: 0 references ()
-  Live (external ref) RecordLabel +Tuples.person.name: 1 references (Tuples.res:43:49)
-  Live (external ref) RecordLabel +Tuples.person.age: 1 references (Tuples.res:49:84)
-  Live (annotated) Value +Tuples.+getFirstName: 0 references ()
-  Live (annotated) Value +Tuples.+marry: 0 references ()
-  Live (annotated) Value +Tuples.+changeSecondAge: 0 references ()
-  Dead Value +TypeParams1.+exportSomething: 0 references ()
-  Dead RecordLabel +TypeParams2.item.id: 0 references ()
-  Dead Value +TypeParams2.+exportSomething: 0 references ()
-  Live (annotated) Value +TypeParams3.+test: 0 references ()
-  Live (annotated) Value +TypeParams3.+test2: 0 references ()
-  Live (annotated) Value +Types.+someIntList: 0 references ()
-  Live (annotated) Value +Types.+map: 0 references ()
-  Dead VariantCase +Types.typeWithVars.A: 0 references ()
-  Dead VariantCase +Types.typeWithVars.B: 0 references ()
-  Live (annotated) Value +Types.+swap: 1 references (Types.res:23:8)
-  Live (external ref) RecordLabel +Types.selfRecursive.self: 1 references (Types.res:42:30)
-  Live (external ref) RecordLabel +Types.mutuallyRecursiveA.b: 1 references (Types.res:49:34)
-  Dead RecordLabel +Types.mutuallyRecursiveB.a: 0 references ()
-  Live (annotated) Value +Types.+selfRecursiveConverter: 0 references ()
-  Live (annotated) Value +Types.+mutuallyRecursiveConverter: 0 references ()
-  Live (annotated) Value +Types.+testFunctionOnOptionsAsArgument: 0 references ()
-  Dead VariantCase +Types.opaqueVariant.A: 0 references ()
-  Dead VariantCase +Types.opaqueVariant.B: 0 references ()
-  Live (annotated) Value +Types.+jsStringT: 0 references ()
-  Live (annotated) Value +Types.+jsString2T: 0 references ()
-  Live (annotated) Value +Types.+jsonStringify: 0 references ()
-  Dead RecordLabel +Types.record.i: 0 references ()
-  Dead RecordLabel +Types.record.s: 0 references ()
-  Live (annotated) Value +Types.+testConvertNull: 0 references ()
-  Live (annotated) Value +Types.+testMarshalFields: 0 references ()
-  Live (annotated) Value +Types.+setMatch: 0 references ()
-  Dead RecordLabel +Types.someRecord.id: 0 references ()
-  Live (annotated) Value +Types.+testInstantiateTypeParameter: 0 references ()
-  Live (annotated) Value +Types.+currentTime: 0 references ()
-  Live (annotated) Value +Types.+i64Const: 0 references ()
-  Live (annotated) Value +Types.+optFunction: 0 references ()
-  Dead Value +Types.ObjectId.+x: 0 references ()
-  Dead VariantCase +Unboxed.v1.A: 0 references ()
-  Dead VariantCase +Unboxed.v2.A: 0 references ()
-  Live (annotated) Value +Unboxed.+testV1: 0 references ()
-  Dead RecordLabel +Unboxed.r1.x: 0 references ()
-  Dead VariantCase +Unboxed.r2.B: 0 references ()
-  Dead RecordLabel +Unboxed.r2.B.g: 0 references ()
-  Live (annotated) Value +Unboxed.+r2Test: 0 references ()
-  Live (annotated) Value +Uncurried.+uncurried0: 0 references ()
-  Live (annotated) Value +Uncurried.+uncurried1: 0 references ()
-  Live (annotated) Value +Uncurried.+uncurried2: 0 references ()
-  Live (annotated) Value +Uncurried.+uncurried3: 0 references ()
-  Live (annotated) Value +Uncurried.+curried3: 0 references ()
-  Live (annotated) Value +Uncurried.+callback: 0 references ()
-  Live (external ref) RecordLabel +Uncurried.auth.login: 1 references (Uncurried.res:35:24)
-  Live (external ref) RecordLabel +Uncurried.authU.loginU: 1 references (Uncurried.res:38:25)
-  Live (annotated) Value +Uncurried.+callback2: 0 references ()
-  Live (annotated) Value +Uncurried.+callback2U: 0 references ()
-  Live (annotated) Value +Uncurried.+sumU: 0 references ()
-  Live (annotated) Value +Uncurried.+sumU2: 0 references ()
-  Live (annotated) Value +Uncurried.+sumCurried: 0 references ()
-  Live (annotated) Value +Uncurried.+sumLblCurried: 0 references ()
-  Live (external ref) VariantCase +Unison.break.IfNeed: 1 references (Unison.res:17:20)
-  Live (external ref) VariantCase +Unison.break.Never: 1 references (Unison.res:38:38)
-  Live (external ref) VariantCase +Unison.break.Always: 1 references (Unison.res:39:38)
-  Live (external ref) RecordLabel +Unison.t.break: 1 references (Unison.res:28:9)
-  Live (external ref) RecordLabel +Unison.t.doc: 2 references (Unison.res:23:9, Unison.res:28:9)
-  Live (external ref) VariantCase +Unison.stack.Empty: 3 references (Unison.res:37:20, Unison.res:38:53, Unison.res:39:52)
-  Live (external ref) VariantCase +Unison.stack.Cons: 2 references (Unison.res:38:20, Unison.res:39:20)
-  Live (external ref) Value +Unison.+group: 2 references (Unison.res:38:25, Unison.res:39:25)
-  Live (propagated) Value +Unison.+fits: 2 references (Unison.res:19:8, Unison.res:26:8)
-  Live (external ref) Value +Unison.+toString: 4 references (Unison.res:26:8, Unison.res:37:0, Unison.res:38:0, Unison.res:39:0)
-  Live (annotated) Value +UseImportJsValue.+useGetProp: 0 references ()
-  Live (annotated) Value +UseImportJsValue.+useTypeImportedInOtherModule: 0 references ()
-  Live (annotated) Value +Variants.+isWeekend: 0 references ()
-  Live (annotated) Value +Variants.+monday: 0 references ()
-  Live (annotated) Value +Variants.+saturday: 0 references ()
-  Live (annotated) Value +Variants.+sunday: 0 references ()
-  Live (annotated) Value +Variants.+onlySunday: 0 references ()
-  Live (annotated) Value +Variants.+swap: 0 references ()
-  Live (annotated) Value +Variants.+testConvert: 0 references ()
-  Live (annotated) Value +Variants.+fortytwoOK: 0 references ()
-  Live (annotated) Value +Variants.+fortytwoBAD: 0 references ()
-  Live (annotated) Value +Variants.+testConvert2: 0 references ()
-  Live (annotated) Value +Variants.+testConvert3: 0 references ()
-  Live (annotated) Value +Variants.+testConvert2to3: 0 references ()
-  Live (annotated) Value +Variants.+id1: 0 references ()
-  Live (annotated) Value +Variants.+id2: 0 references ()
-  Dead VariantCase +Variants.type_.Type: 0 references ()
-  Live (annotated) Value +Variants.+polyWithOpt: 0 references ()
-  Dead VariantCase +Variants.result1.Ok: 0 references ()
-  Dead VariantCase +Variants.result1.Error: 0 references ()
-  Live (annotated) Value +Variants.+restResult1: 0 references ()
-  Live (annotated) Value +Variants.+restResult2: 0 references ()
-  Live (annotated) Value +Variants.+restResult3: 0 references ()
-  Live (external ref) RecordLabel +VariantsWithPayload.payload.x: 2 references (VariantsWithPayload.res:26:57, VariantsWithPayload.res:44:55)
-  Live (external ref) RecordLabel +VariantsWithPayload.payload.y: 2 references (VariantsWithPayload.res:26:74, VariantsWithPayload.res:44:72)
-  Live (annotated) Value +VariantsWithPayload.+testWithPayload: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+printVariantWithPayload: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+testManyPayloads: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+printManyPayloads: 0 references ()
-  Dead VariantCase +VariantsWithPayload.simpleVariant.A: 0 references ()
-  Dead VariantCase +VariantsWithPayload.simpleVariant.B: 0 references ()
-  Dead VariantCase +VariantsWithPayload.simpleVariant.C: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+testSimpleVariant: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variantWithPayloads.A: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variantWithPayloads.B: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variantWithPayloads.C: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variantWithPayloads.D: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variantWithPayloads.E: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+testVariantWithPayloads: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+printVariantWithPayloads: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variant1Int.R: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+testVariant1Int: 0 references ()
-  Dead VariantCase +VariantsWithPayload.variant1Object.R: 0 references ()
-  Live (annotated) Value +VariantsWithPayload.+testVariant1Object: 0 references ()
+  Dead VariantCase +AutoAnnotate.variant.R
+  Dead RecordLabel +AutoAnnotate.record.variant
+  Dead RecordLabel +AutoAnnotate.r2.r2
+  Dead RecordLabel +AutoAnnotate.r3.r3
+  Dead RecordLabel +AutoAnnotate.r4.r4
+  Dead VariantCase +AutoAnnotate.annotatedVariant.R2
+  Dead VariantCase +AutoAnnotate.annotatedVariant.R4
+  Dead Value +BucklescriptAnnotations.+bar
+  Dead Value +BucklescriptAnnotations.+f
+  Live (annotated) Value +ComponentAsProp.+make
+  Live (external ref) RecordLabel +ComponentAsProp.props.title
+  Live (external ref) RecordLabel +ComponentAsProp.props.description
+  Live (external ref) RecordLabel +ComponentAsProp.props.button
+  Live (external ref) Value +CreateErrorHandler1.Error1.+notification
+  Live (external ref) Value +CreateErrorHandler2.Error2.+notification
+  Live (external ref) Value +DeadCodeImplementation.M.+x
+  Live (external ref) Exception +DeadExn.Etoplevel
+  Live (external ref) Exception +DeadExn.Inside.Einside
+  Dead Exception +DeadExn.DeadE
+  Dead Value +DeadExn.+eToplevel
+  Live (external ref) Value +DeadExn.+eInside
+  Live (propagated) VariantCase +DeadRT.moduleAccessPath.Root
+  Live (external ref) VariantCase +DeadRT.moduleAccessPath.Kaboom
+  Dead Value +DeadRT.+emitModuleAccessPath
+  Live (external ref) VariantCase DeadRT.moduleAccessPath.Root
+  Live (propagated) VariantCase DeadRT.moduleAccessPath.Kaboom
+  Dead Value +DeadTest.+fortytwo
+  Live (annotated) Value +DeadTest.+fortyTwoButExported
+  Live (external ref) Value +DeadTest.+thisIsUsedOnce
+  Live (external ref) Value +DeadTest.+thisIsUsedTwice
+  Dead Value +DeadTest.+thisIsMarkedDead
+  Live (propagated) Value +DeadTest.+thisIsKeptAlive
+  Live (annotated) Value +DeadTest.+thisIsMarkedLive
+  Dead Value +DeadTest.Inner.+thisIsAlsoMarkedDead
+  Dead Value +DeadTest.M.+thisSignatureItemIsDead
+  Dead Value +DeadTest.M.+thisSignatureItemIsDead
+  Live (propagated) VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
+  Live (external ref) Value +DeadTest.VariantUsedOnlyInImplementation.+a
+  Live (external ref) VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
+  Live (propagated) Value +DeadTest.VariantUsedOnlyInImplementation.+a
+  Dead Value +DeadTest.+_
+  Dead Value +DeadTest.+_
+  Live (external ref) RecordLabel +DeadTest.record.xxx
+  Live (external ref) RecordLabel +DeadTest.record.yyy
+  Dead Value +DeadTest.+_
+  Dead Value +DeadTest.+_
+  Dead Value +DeadTest.UnderscoreInside.+_
+  Live (external ref) Value +DeadTest.MM.+x
+  Dead Value +DeadTest.MM.+y
+  Live (propagated) Value +DeadTest.MM.+y
+  Live (propagated) Value +DeadTest.MM.+x
+  Dead Value +DeadTest.MM.+valueOnlyInImplementation
+  Dead Value +DeadTest.+unusedRec
+  Dead Value +DeadTest.+split_map
+  Dead Value +DeadTest.+rec1
+  Dead Value +DeadTest.+rec2
+  Dead Value +DeadTest.+recWithCallback
+  Dead Value +DeadTest.+cb
+  Dead Value +DeadTest.+foo
+  Dead Value +DeadTest.+cb
+  Dead Value +DeadTest.+bar
+  Dead Value +DeadTest.+withDefaultValue
+  Dead Value +DeadTest.+zzz
+  Dead Value +DeadTest.+a1
+  Dead Value +DeadTest.+a2
+  Dead Value +DeadTest.+a3
+  Dead Value +DeadTest.+second
+  Dead Value +DeadTest.+deadRef
+  Live (external ref) Value +DeadTest.+make
+  Live (external ref) RecordLabel +DeadTest.props.s
+  Dead Value +DeadTest.+theSideEffectIsLogging
+  Dead Value +DeadTest.+stringLengthNoSideEffects
+  Live (annotated) Value +DeadTest.GloobLive.+globallyLive1
+  Live (annotated) Value +DeadTest.GloobLive.+globallyLive2
+  Live (annotated) Value +DeadTest.GloobLive.+globallyLive3
+  Live (external ref) VariantCase +DeadTest.WithInclude.t.A
+  Live (propagated) VariantCase +DeadTest.WithInclude.t.A
+  Dead Value +DeadTest.+funWithInnerVars
+  Dead Value +DeadTest.+x
+  Dead Value +DeadTest.+y
+  Dead RecordLabel +DeadTest.rc.a
+  Live (external ref) Value +DeadTest.+deadIncorrect
+  Dead Value +DeadTest.+_
+  Live (external ref) VariantCase +DeadTest.inlineRecord.IR
+  Dead RecordLabel +DeadTest.inlineRecord.IR.a
+  Live (external ref) RecordLabel +DeadTest.inlineRecord.IR.b
+  Live (external ref) RecordLabel +DeadTest.inlineRecord.IR.c
+  Dead RecordLabel +DeadTest.inlineRecord.IR.d
+  Live (annotated) RecordLabel +DeadTest.inlineRecord.IR.e
+  Live (external ref) Value +DeadTest.+ira
+  Dead Value +DeadTest.+_
+  Dead VariantCase +DeadTest.inlineRecord2.IR2
+  Dead RecordLabel +DeadTest.inlineRecord2.IR2.a
+  Dead RecordLabel +DeadTest.inlineRecord2.IR2.b
+  Dead VariantCase +DeadTest.inlineRecord3.IR3
+  Dead RecordLabel +DeadTest.inlineRecord3.IR3.a
+  Dead RecordLabel +DeadTest.inlineRecord3.IR3.b
+  Dead Value +DeadTestBlacklist.+x
+  Dead Value +DeadTestWithInterface.Ext_buffer.+x
+  Dead Value +DeadTestWithInterface.Ext_buffer.+x
+  Live (external ref) VariantCase +DeadTypeTest.t.A
+  Dead VariantCase +DeadTypeTest.t.B
+  Dead Value +DeadTypeTest.+a
+  Live (external ref) VariantCase +DeadTypeTest.deadType.OnlyInImplementation
+  Live (propagated) VariantCase +DeadTypeTest.deadType.OnlyInInterface
+  Live (external ref) VariantCase +DeadTypeTest.deadType.InBoth
+  Dead VariantCase +DeadTypeTest.deadType.InNeither
+  Dead Value +DeadTypeTest.+_
+  Dead Value +DeadTypeTest.+_
+  Live (annotated) RecordLabel +DeadTypeTest.record.x
+  Live (annotated) RecordLabel +DeadTypeTest.record.y
+  Live (annotated) RecordLabel +DeadTypeTest.record.z
+  Live (propagated) VariantCase DeadTypeTest.t.A
+  Dead VariantCase DeadTypeTest.t.B
+  Dead Value DeadTypeTest.+a
+  Live (propagated) VariantCase DeadTypeTest.deadType.OnlyInImplementation
+  Live (external ref) VariantCase DeadTypeTest.deadType.OnlyInInterface
+  Live (external ref) VariantCase DeadTypeTest.deadType.InBoth
+  Dead VariantCase DeadTypeTest.deadType.InNeither
+  Live (propagated) Value +DeadValueTest.+valueAlive
+  Dead Value +DeadValueTest.+valueDead
+  Dead Value +DeadValueTest.+valueOnlyInImplementation
+  Dead Value +DeadValueTest.+subList
+  Dead Value +DeadValueTest.+tail
+  Live (external ref) Value DeadValueTest.+valueAlive
+  Dead Value DeadValueTest.+valueDead
+  Live (annotated) Value +Docstrings.+flat
+  Live (annotated) Value +Docstrings.+signMessage
+  Live (annotated) Value +Docstrings.+one
+  Live (annotated) Value +Docstrings.+two
+  Live (annotated) Value +Docstrings.+tree
+  Live (annotated) Value +Docstrings.+oneU
+  Live (annotated) Value +Docstrings.+twoU
+  Live (annotated) Value +Docstrings.+treeU
+  Live (annotated) Value +Docstrings.+useParam
+  Live (annotated) Value +Docstrings.+useParamU
+  Live (annotated) Value +Docstrings.+unnamed1
+  Live (annotated) Value +Docstrings.+unnamed1U
+  Live (annotated) Value +Docstrings.+unnamed2
+  Live (annotated) Value +Docstrings.+unnamed2U
+  Live (annotated) Value +Docstrings.+grouped
+  Live (annotated) Value +Docstrings.+unitArgWithoutConversion
+  Live (annotated) Value +Docstrings.+unitArgWithoutConversionU
+  Live (external ref) VariantCase +Docstrings.t.A
+  Dead VariantCase +Docstrings.t.B
+  Live (annotated) Value +Docstrings.+unitArgWithConversion
+  Live (annotated) Value +Docstrings.+unitArgWithConversionU
+  Live (external ref) Value +DynamicallyLoadedComponent.+make
+  Live (external ref) RecordLabel +DynamicallyLoadedComponent.props.s
+  Live (external ref) Value +EmptyArray.Z.+make
+  Live (propagated) Value +ErrorHandler.Make.+notify
+  Dead Value +ErrorHandler.+x
+  Live (external ref) Value ErrorHandler.Make.+notify
+  Dead Value ErrorHandler.+x
+  Dead Value +EverythingLiveHere.+x
+  Dead Value +EverythingLiveHere.+y
+  Dead Value +EverythingLiveHere.+z
+  Live (external ref) Value +FirstClassModules.M.+y
+  Live (external ref) Value +FirstClassModules.M.InnerModule2.+k
+  Live (external ref) Value +FirstClassModules.M.InnerModule3.+k3
+  Live (external ref) Value +FirstClassModules.M.Z.+u
+  Live (external ref) Value +FirstClassModules.M.+x
+  Live (annotated) Value +FirstClassModules.+firstClassModule
+  Live (annotated) Value +FirstClassModules.+testConvert
+  Live (external ref) Value +FirstClassModules.SomeFunctor.+ww
+  Live (annotated) Value +FirstClassModules.+someFunctorAsFunction
+  Dead RecordLabel +FirstClassModulesInterface.record.x
+  Dead RecordLabel +FirstClassModulesInterface.record.y
+  Dead Value +FirstClassModulesInterface.+r
+  Dead RecordLabel FirstClassModulesInterface.record.x
+  Dead RecordLabel FirstClassModulesInterface.record.y
+  Dead Value FirstClassModulesInterface.+r
+  Live (external ref) RecordLabel +Hooks.vehicle.name
+  Live (propagated) Value +Hooks.+make
+  Live (external ref) RecordLabel +Hooks.props.vehicle
+  Live (annotated) Value +Hooks.+default
+  Live (annotated) Value +Hooks.Inner.+make
+  Live (external ref) RecordLabel +Hooks.Inner.props.vehicle
+  Live (annotated) Value +Hooks.Inner.Inner2.+make
+  Live (external ref) RecordLabel +Hooks.Inner.Inner2.props.vehicle
+  Live (annotated) Value +Hooks.NoProps.+make
+  Live (annotated) Value +Hooks.+functionWithRenamedArgs
+  Dead RecordLabel +Hooks.r.x
+  Live (annotated) Value +Hooks.RenderPropRequiresConversion.+make
+  Live (external ref) RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
+  Live (external ref) Value +Hooks.RenderPropRequiresConversion.+car
+  Live (propagated) Value +ImmutableArray.+fromArray
+  Dead Value +ImmutableArray.+toArray
+  Dead Value +ImmutableArray.+length
+  Dead Value +ImmutableArray.+size
+  Live (propagated) Value +ImmutableArray.+get
+  Dead Value +ImmutableArray.+getExn
+  Dead Value +ImmutableArray.+getUnsafe
+  Dead Value +ImmutableArray.+getUndefined
+  Dead Value +ImmutableArray.+shuffle
+  Dead Value +ImmutableArray.+reverse
+  Dead Value +ImmutableArray.+makeUninitialized
+  Dead Value +ImmutableArray.+makeUninitializedUnsafe
+  Dead Value +ImmutableArray.+make
+  Dead Value +ImmutableArray.+range
+  Dead Value +ImmutableArray.+rangeBy
+  Dead Value +ImmutableArray.+makeByU
+  Dead Value +ImmutableArray.+makeBy
+  Dead Value +ImmutableArray.+makeByAndShuffleU
+  Dead Value +ImmutableArray.+makeByAndShuffle
+  Dead Value +ImmutableArray.+zip
+  Dead Value +ImmutableArray.+zipByU
+  Dead Value +ImmutableArray.+zipBy
+  Dead Value +ImmutableArray.+unzip
+  Dead Value +ImmutableArray.+concat
+  Dead Value +ImmutableArray.+concatMany
+  Dead Value +ImmutableArray.+slice
+  Dead Value +ImmutableArray.+sliceToEnd
+  Dead Value +ImmutableArray.+copy
+  Dead Value +ImmutableArray.+forEachU
+  Dead Value +ImmutableArray.+forEach
+  Dead Value +ImmutableArray.+mapU
+  Dead Value +ImmutableArray.+map
+  Dead Value +ImmutableArray.+keepWithIndexU
+  Dead Value +ImmutableArray.+keepWithIndex
+  Dead Value +ImmutableArray.+keepMapU
+  Dead Value +ImmutableArray.+keepMap
+  Dead Value +ImmutableArray.+forEachWithIndexU
+  Dead Value +ImmutableArray.+forEachWithIndex
+  Dead Value +ImmutableArray.+mapWithIndexU
+  Dead Value +ImmutableArray.+mapWithIndex
+  Dead Value +ImmutableArray.+partitionU
+  Dead Value +ImmutableArray.+partition
+  Dead Value +ImmutableArray.+reduceU
+  Dead Value +ImmutableArray.+reduce
+  Dead Value +ImmutableArray.+reduceReverseU
+  Dead Value +ImmutableArray.+reduceReverse
+  Dead Value +ImmutableArray.+reduceReverse2U
+  Dead Value +ImmutableArray.+reduceReverse2
+  Dead Value +ImmutableArray.+someU
+  Dead Value +ImmutableArray.+some
+  Dead Value +ImmutableArray.+everyU
+  Dead Value +ImmutableArray.+every
+  Dead Value +ImmutableArray.+every2U
+  Dead Value +ImmutableArray.+every2
+  Dead Value +ImmutableArray.+some2U
+  Dead Value +ImmutableArray.+some2
+  Dead Value +ImmutableArray.+cmpU
+  Dead Value +ImmutableArray.+cmp
+  Dead Value +ImmutableArray.+eqU
+  Dead Value +ImmutableArray.+eq
+  Live (propagated) Value ImmutableArray.Array.+get
+  Live (external ref) Value ImmutableArray.+fromArray
+  Dead Value ImmutableArray.+toArray
+  Dead Value ImmutableArray.+length
+  Dead Value ImmutableArray.+size
+  Dead Value ImmutableArray.+get
+  Dead Value ImmutableArray.+getExn
+  Dead Value ImmutableArray.+getUnsafe
+  Dead Value ImmutableArray.+getUndefined
+  Dead Value ImmutableArray.+shuffle
+  Dead Value ImmutableArray.+reverse
+  Dead Value ImmutableArray.+makeUninitialized
+  Dead Value ImmutableArray.+makeUninitializedUnsafe
+  Dead Value ImmutableArray.+make
+  Dead Value ImmutableArray.+range
+  Dead Value ImmutableArray.+rangeBy
+  Dead Value ImmutableArray.+makeByU
+  Dead Value ImmutableArray.+makeBy
+  Dead Value ImmutableArray.+makeByAndShuffleU
+  Dead Value ImmutableArray.+makeByAndShuffle
+  Dead Value ImmutableArray.+zip
+  Dead Value ImmutableArray.+zipByU
+  Dead Value ImmutableArray.+zipBy
+  Dead Value ImmutableArray.+unzip
+  Dead Value ImmutableArray.+concat
+  Dead Value ImmutableArray.+concatMany
+  Dead Value ImmutableArray.+slice
+  Dead Value ImmutableArray.+sliceToEnd
+  Dead Value ImmutableArray.+copy
+  Dead Value ImmutableArray.+forEachU
+  Dead Value ImmutableArray.+forEach
+  Dead Value ImmutableArray.+mapU
+  Dead Value ImmutableArray.+map
+  Dead Value ImmutableArray.+keepWithIndexU
+  Dead Value ImmutableArray.+keepWithIndex
+  Dead Value ImmutableArray.+keepMapU
+  Dead Value ImmutableArray.+keepMap
+  Dead Value ImmutableArray.+forEachWithIndexU
+  Dead Value ImmutableArray.+forEachWithIndex
+  Dead Value ImmutableArray.+mapWithIndexU
+  Dead Value ImmutableArray.+mapWithIndex
+  Dead Value ImmutableArray.+partitionU
+  Dead Value ImmutableArray.+partition
+  Dead Value ImmutableArray.+reduceU
+  Dead Value ImmutableArray.+reduce
+  Dead Value ImmutableArray.+reduceReverseU
+  Dead Value ImmutableArray.+reduceReverse
+  Dead Value ImmutableArray.+reduceReverse2U
+  Dead Value ImmutableArray.+reduceReverse2
+  Dead Value ImmutableArray.+someU
+  Dead Value ImmutableArray.+some
+  Dead Value ImmutableArray.+everyU
+  Dead Value ImmutableArray.+every
+  Dead Value ImmutableArray.+every2U
+  Dead Value ImmutableArray.+every2
+  Dead Value ImmutableArray.+some2U
+  Dead Value ImmutableArray.+some2
+  Dead Value ImmutableArray.+cmpU
+  Dead Value ImmutableArray.+cmp
+  Dead Value ImmutableArray.+eqU
+  Dead Value ImmutableArray.+eq
+  Dead RecordLabel +ImportHookDefault.person.name
+  Dead RecordLabel +ImportHookDefault.person.age
+  Live (annotated) Value +ImportHookDefault.+make
+  Live (annotated) RecordLabel +ImportHookDefault.props.person
+  Live (annotated) RecordLabel +ImportHookDefault.props.children
+  Live (annotated) RecordLabel +ImportHookDefault.props.renderMe
+  Dead RecordLabel +ImportHooks.person.name
+  Dead RecordLabel +ImportHooks.person.age
+  Live (annotated) Value +ImportHooks.+make
+  Live (annotated) RecordLabel +ImportHooks.props.person
+  Live (annotated) RecordLabel +ImportHooks.props.children
+  Live (annotated) RecordLabel +ImportHooks.props.renderMe
+  Live (annotated) Value +ImportHooks.+foo
+  Live (annotated) Value +ImportIndex.+make
+  Live (annotated) RecordLabel +ImportIndex.props.method
+  Live (annotated) Value +ImportJsValue.+round
+  Dead RecordLabel +ImportJsValue.point.x
+  Dead RecordLabel +ImportJsValue.point.y
+  Live (annotated) Value +ImportJsValue.+area
+  Live (annotated) Value +ImportJsValue.+returnMixedArray
+  Live (annotated) Value +ImportJsValue.+roundedNumber
+  Live (annotated) Value +ImportJsValue.+areaValue
+  Live (propagated) Value +ImportJsValue.AbsoluteValue.+getAbs
+  Live (propagated) Value +ImportJsValue.AbsoluteValue.+getAbs
+  Live (annotated) Value +ImportJsValue.+useGetProp
+  Live (annotated) Value +ImportJsValue.+useGetAbs
+  Live (annotated) Value +ImportJsValue.+useColor
+  Live (annotated) Value +ImportJsValue.+higherOrder
+  Live (annotated) Value +ImportJsValue.+returnedFromHigherOrder
+  Dead VariantCase +ImportJsValue.variant.I
+  Dead VariantCase +ImportJsValue.variant.S
+  Live (annotated) Value +ImportJsValue.+convertVariant
+  Live (annotated) Value +ImportJsValue.+polymorphic
+  Live (annotated) Value +ImportJsValue.+default
+  Dead RecordLabel +ImportMyBanner.message.text
+  Live (annotated) Value +ImportMyBanner.+make
+  Dead Value +ImportMyBanner.+make
+  Live (propagated) VariantCase +InnerModuleTypes.I.t.Foo
+  Live (external ref) VariantCase InnerModuleTypes.I.t.Foo
+  Live (external ref) Value +JsxV4.C.+make
+  Live (annotated) Value +LetPrivate.local_1.+x
+  Live (annotated) Value +LetPrivate.+y
+  Dead RecordLabel +ModuleAliases.Outer.Inner.innerT.inner
+  Dead RecordLabel +ModuleAliases.Outer2.Inner2.InnerNested.t.nested
+  Live (annotated) Value +ModuleAliases.+testNested
+  Live (annotated) Value +ModuleAliases.+testInner
+  Live (annotated) Value +ModuleAliases.+testInner2
+  Dead RecordLabel +ModuleAliases2.record.x
+  Dead RecordLabel +ModuleAliases2.record.y
+  Dead RecordLabel +ModuleAliases2.Outer.outer.outer
+  Dead RecordLabel +ModuleAliases2.Outer.Inner.inner.inner
+  Dead Value +ModuleAliases2.+q
+  Dead Value +ModuleExceptionBug.Dep.+customDouble
+  Dead Exception +ModuleExceptionBug.MyOtherException
+  Live (external ref) Value +ModuleExceptionBug.+ddjdj
+  Live (annotated) Value +NestedModules.+notNested
+  Live (annotated) Value +NestedModules.Universe.+theAnswer
+  Dead Value +NestedModules.Universe.+notExported
+  Dead Value +NestedModules.Universe.Nested2.+x
+  Live (annotated) Value +NestedModules.Universe.Nested2.+nested2Value
+  Dead Value +NestedModules.Universe.Nested2.+y
+  Dead Value +NestedModules.Universe.Nested2.Nested3.+x
+  Dead Value +NestedModules.Universe.Nested2.Nested3.+y
+  Dead Value +NestedModules.Universe.Nested2.Nested3.+z
+  Dead Value +NestedModules.Universe.Nested2.Nested3.+w
+  Live (annotated) Value +NestedModules.Universe.Nested2.Nested3.+nested3Value
+  Live (annotated) Value +NestedModules.Universe.Nested2.Nested3.+nested3Function
+  Live (annotated) Value +NestedModules.Universe.Nested2.+nested2Function
+  Dead VariantCase +NestedModules.Universe.variant.A
+  Dead VariantCase +NestedModules.Universe.variant.B
+  Live (annotated) Value +NestedModules.Universe.+someString
+  Live (propagated) Value +NestedModulesInSignature.Universe.+theAnswer
+  Live (annotated) Value NestedModulesInSignature.Universe.+theAnswer
+  Dead Value +Newsyntax.+x
+  Dead Value +Newsyntax.+y
+  Dead RecordLabel +Newsyntax.record.xxx
+  Dead RecordLabel +Newsyntax.record.yyy
+  Dead VariantCase +Newsyntax.variant.A
+  Dead VariantCase +Newsyntax.variant.B
+  Dead VariantCase +Newsyntax.variant.C
+  Dead RecordLabel +Newsyntax.record2.xx
+  Dead RecordLabel +Newsyntax.record2.yy
+  Live (propagated) Value +Newton.+-
+  Live (propagated) Value +Newton.++
+  Live (propagated) Value +Newton.+*
+  Live (propagated) Value +Newton.+/
+  Live (propagated) Value +Newton.+newton
+  Live (propagated) Value +Newton.+current
+  Live (propagated) Value +Newton.+iterateMore
+  Live (propagated) Value +Newton.+delta
+  Live (propagated) Value +Newton.+loop
+  Live (propagated) Value +Newton.+previous
+  Live (propagated) Value +Newton.+next
+  Live (external ref) Value +Newton.+f
+  Live (propagated) Value +Newton.+fPrimed
+  Live (external ref) Value +Newton.+result
+  Dead VariantCase +Opaque.opaqueFromRecords.A
+  Live (annotated) Value +Opaque.+noConversion
+  Live (annotated) Value +Opaque.+testConvertNestedRecordFromOtherFile
+  Live (external ref) Value +OptArg.+foo
+  Live (external ref) Value +OptArg.+bar
+  Live (external ref) Value +OptArg.+threeArgs
+  Live (external ref) Value +OptArg.+twoArgs
+  Live (propagated) Value +OptArg.+oneArg
+  Live (external ref) Value +OptArg.+wrapOneArg
+  Live (propagated) Value +OptArg.+fourArgs
+  Live (external ref) Value +OptArg.+wrapfourArgs
+  Dead Value OptArg.+foo
+  Live (external ref) Value OptArg.+bar
+  Live (propagated) Value +OptionalArgsLiveDead.+formatDate
+  Dead Value +OptionalArgsLiveDead.+deadCaller
+  Live (external ref) Value +OptionalArgsLiveDead.+liveCaller
+  Live (external ref) RecordLabel +Records.coord.x
+  Live (external ref) RecordLabel +Records.coord.y
+  Live (external ref) RecordLabel +Records.coord.z
+  Live (annotated) Value +Records.+origin
+  Live (annotated) Value +Records.+computeArea
+  Live (annotated) Value +Records.+coord2d
+  Dead RecordLabel +Records.person.name
+  Dead RecordLabel +Records.person.age
+  Live (external ref) RecordLabel +Records.person.address
+  Dead RecordLabel +Records.business.name
+  Live (external ref) RecordLabel +Records.business.owner
+  Live (external ref) RecordLabel +Records.business.address
+  Live (propagated) Value +Records.+getOpt
+  Live (annotated) Value +Records.+findAddress
+  Live (annotated) Value +Records.+someBusiness
+  Live (annotated) Value +Records.+findAllAddresses
+  Dead RecordLabel +Records.payload.num
+  Live (external ref) RecordLabel +Records.payload.payload
+  Live (annotated) Value +Records.+getPayload
+  Live (external ref) RecordLabel +Records.record.v
+  Dead RecordLabel +Records.record.w
+  Live (annotated) Value +Records.+getPayloadRecord
+  Live (annotated) Value +Records.+recordValue
+  Live (annotated) Value +Records.+payloadValue
+  Live (annotated) Value +Records.+getPayloadRecordPlusOne
+  Dead RecordLabel +Records.business2.name
+  Dead RecordLabel +Records.business2.owner
+  Live (external ref) RecordLabel +Records.business2.address2
+  Live (annotated) Value +Records.+findAddress2
+  Live (annotated) Value +Records.+someBusiness2
+  Live (annotated) Value +Records.+computeArea3
+  Live (annotated) Value +Records.+computeArea4
+  Live (external ref) RecordLabel +Records.myRec.type_
+  Live (annotated) Value +Records.+testMyRec
+  Live (annotated) Value +Records.+testMyRec2
+  Live (annotated) Value +Records.+testMyObj
+  Live (annotated) Value +Records.+testMyObj2
+  Live (external ref) RecordLabel +Records.myRecBsAs.type_
+  Live (annotated) Value +Records.+testMyRecBsAs
+  Live (annotated) Value +Records.+testMyRecBsAs2
+  Live (annotated) Value +References.+create
+  Live (annotated) Value +References.+access
+  Live (annotated) Value +References.+update
+  Live (propagated) Value +References.R.+get
+  Live (propagated) Value +References.R.+make
+  Live (propagated) Value +References.R.+set
+  Live (propagated) Value +References.R.+get
+  Live (propagated) Value +References.R.+make
+  Live (propagated) Value +References.R.+set
+  Live (annotated) Value +References.+get
+  Live (annotated) Value +References.+make
+  Live (annotated) Value +References.+set
+  Dead RecordLabel +References.requiresConversion.x
+  Live (annotated) Value +References.+destroysRefIdentity
+  Live (annotated) Value +References.+preserveRefIdentity
+  Dead RecordLabel +RepeatedLabel.userData.a
+  Dead RecordLabel +RepeatedLabel.userData.b
+  Live (external ref) RecordLabel +RepeatedLabel.tabState.a
+  Live (external ref) RecordLabel +RepeatedLabel.tabState.b
+  Dead RecordLabel +RepeatedLabel.tabState.f
+  Live (external ref) Value +RepeatedLabel.+userData
+  Live (annotated) Value +Shadow.+test
+  Live (annotated) Value +Shadow.+test
+  Live (annotated) Value +Shadow.M.+test
+  Dead Value +Shadow.M.+test
+  Live (annotated) Value +TestEmitInnerModules.Inner.+x
+  Live (annotated) Value +TestEmitInnerModules.Inner.+y
+  Live (annotated) Value +TestEmitInnerModules.Outer.Medium.Inner.+y
+  Live (annotated) Value +TestFirstClassModules.+convert
+  Live (annotated) Value +TestFirstClassModules.+convertInterface
+  Live (annotated) Value +TestFirstClassModules.+convertRecord
+  Live (annotated) Value +TestFirstClassModules.+convertFirstClassModuleWithTypeEquations
+  Live (annotated) Value +TestImmutableArray.+testImmutableArrayGet
+  Dead Value +TestImmutableArray.+testBeltArrayGet
+  Dead Value +TestImmutableArray.+testBeltArraySet
+  Live (annotated) Value +TestImport.+innerStuffContents
+  Live (annotated) Value +TestImport.+innerStuffContentsAsEmptyObject
+  Dead Value +TestImport.+innerStuffContents
+  Live (annotated) Value +TestImport.+valueStartingWithUpperCaseLetter
+  Live (annotated) Value +TestImport.+defaultValue
+  Dead RecordLabel +TestImport.message.text
+  Live (annotated) Value +TestImport.+make
+  Dead Value +TestImport.+make
+  Live (annotated) Value +TestImport.+defaultValue2
+  Dead Value +TestInnedModuleTypes.+_
+  Live (annotated) Value +TestModuleAliases.+testInner1
+  Live (annotated) Value +TestModuleAliases.+testInner1Expanded
+  Live (annotated) Value +TestModuleAliases.+testInner2
+  Live (annotated) Value +TestModuleAliases.+testInner2Expanded
+  Live (propagated) Value +TestOptArg.+foo
+  Live (external ref) Value +TestOptArg.+bar
+  Live (external ref) Value +TestOptArg.+notSuppressesOptArgs
+  Live (annotated) Value +TestOptArg.+liveSuppressesOptArgs
+  Dead RecordLabel +TestPromise.fromPayload.x
+  Live (external ref) RecordLabel +TestPromise.fromPayload.s
+  Dead RecordLabel +TestPromise.toPayload.result
+  Live (annotated) Value +TestPromise.+convert
+  Dead Value +ToSuppress.+toSuppress
+  Live (annotated) Value +TransitiveType1.+convert
+  Live (annotated) Value +TransitiveType1.+convertAlias
+  Dead Value +TransitiveType2.+convertT2
+  Dead RecordLabel +TransitiveType3.t3.i
+  Dead RecordLabel +TransitiveType3.t3.s
+  Live (annotated) Value +TransitiveType3.+convertT3
+  Live (annotated) Value +Tuples.+testTuple
+  Live (annotated) Value +Tuples.+origin
+  Live (annotated) Value +Tuples.+computeArea
+  Live (annotated) Value +Tuples.+computeAreaWithIdent
+  Live (annotated) Value +Tuples.+computeAreaNoConverters
+  Live (annotated) Value +Tuples.+coord2d
+  Live (external ref) RecordLabel +Tuples.person.name
+  Live (external ref) RecordLabel +Tuples.person.age
+  Live (annotated) Value +Tuples.+getFirstName
+  Live (annotated) Value +Tuples.+marry
+  Live (annotated) Value +Tuples.+changeSecondAge
+  Dead Value +TypeParams1.+exportSomething
+  Dead RecordLabel +TypeParams2.item.id
+  Dead Value +TypeParams2.+exportSomething
+  Live (annotated) Value +TypeParams3.+test
+  Live (annotated) Value +TypeParams3.+test2
+  Live (annotated) Value +Types.+someIntList
+  Live (annotated) Value +Types.+map
+  Dead VariantCase +Types.typeWithVars.A
+  Dead VariantCase +Types.typeWithVars.B
+  Live (annotated) Value +Types.+swap
+  Live (external ref) RecordLabel +Types.selfRecursive.self
+  Live (external ref) RecordLabel +Types.mutuallyRecursiveA.b
+  Dead RecordLabel +Types.mutuallyRecursiveB.a
+  Live (annotated) Value +Types.+selfRecursiveConverter
+  Live (annotated) Value +Types.+mutuallyRecursiveConverter
+  Live (annotated) Value +Types.+testFunctionOnOptionsAsArgument
+  Dead VariantCase +Types.opaqueVariant.A
+  Dead VariantCase +Types.opaqueVariant.B
+  Live (annotated) Value +Types.+jsStringT
+  Live (annotated) Value +Types.+jsString2T
+  Live (annotated) Value +Types.+jsonStringify
+  Dead RecordLabel +Types.record.i
+  Dead RecordLabel +Types.record.s
+  Live (annotated) Value +Types.+testConvertNull
+  Live (annotated) Value +Types.+testMarshalFields
+  Live (annotated) Value +Types.+setMatch
+  Dead RecordLabel +Types.someRecord.id
+  Live (annotated) Value +Types.+testInstantiateTypeParameter
+  Live (annotated) Value +Types.+currentTime
+  Live (annotated) Value +Types.+i64Const
+  Live (annotated) Value +Types.+optFunction
+  Dead Value +Types.ObjectId.+x
+  Dead VariantCase +Unboxed.v1.A
+  Dead VariantCase +Unboxed.v2.A
+  Live (annotated) Value +Unboxed.+testV1
+  Dead RecordLabel +Unboxed.r1.x
+  Dead VariantCase +Unboxed.r2.B
+  Dead RecordLabel +Unboxed.r2.B.g
+  Live (annotated) Value +Unboxed.+r2Test
+  Live (annotated) Value +Uncurried.+uncurried0
+  Live (annotated) Value +Uncurried.+uncurried1
+  Live (annotated) Value +Uncurried.+uncurried2
+  Live (annotated) Value +Uncurried.+uncurried3
+  Live (annotated) Value +Uncurried.+curried3
+  Live (annotated) Value +Uncurried.+callback
+  Live (external ref) RecordLabel +Uncurried.auth.login
+  Live (external ref) RecordLabel +Uncurried.authU.loginU
+  Live (annotated) Value +Uncurried.+callback2
+  Live (annotated) Value +Uncurried.+callback2U
+  Live (annotated) Value +Uncurried.+sumU
+  Live (annotated) Value +Uncurried.+sumU2
+  Live (annotated) Value +Uncurried.+sumCurried
+  Live (annotated) Value +Uncurried.+sumLblCurried
+  Live (external ref) VariantCase +Unison.break.IfNeed
+  Live (external ref) VariantCase +Unison.break.Never
+  Live (external ref) VariantCase +Unison.break.Always
+  Live (external ref) RecordLabel +Unison.t.break
+  Live (external ref) RecordLabel +Unison.t.doc
+  Live (external ref) VariantCase +Unison.stack.Empty
+  Live (external ref) VariantCase +Unison.stack.Cons
+  Live (external ref) Value +Unison.+group
+  Live (propagated) Value +Unison.+fits
+  Live (external ref) Value +Unison.+toString
+  Live (annotated) Value +UseImportJsValue.+useGetProp
+  Live (annotated) Value +UseImportJsValue.+useTypeImportedInOtherModule
+  Live (annotated) Value +Variants.+isWeekend
+  Live (annotated) Value +Variants.+monday
+  Live (annotated) Value +Variants.+saturday
+  Live (annotated) Value +Variants.+sunday
+  Live (annotated) Value +Variants.+onlySunday
+  Live (annotated) Value +Variants.+swap
+  Live (annotated) Value +Variants.+testConvert
+  Live (annotated) Value +Variants.+fortytwoOK
+  Live (annotated) Value +Variants.+fortytwoBAD
+  Live (annotated) Value +Variants.+testConvert2
+  Live (annotated) Value +Variants.+testConvert3
+  Live (annotated) Value +Variants.+testConvert2to3
+  Live (annotated) Value +Variants.+id1
+  Live (annotated) Value +Variants.+id2
+  Dead VariantCase +Variants.type_.Type
+  Live (annotated) Value +Variants.+polyWithOpt
+  Dead VariantCase +Variants.result1.Ok
+  Dead VariantCase +Variants.result1.Error
+  Live (annotated) Value +Variants.+restResult1
+  Live (annotated) Value +Variants.+restResult2
+  Live (annotated) Value +Variants.+restResult3
+  Live (external ref) RecordLabel +VariantsWithPayload.payload.x
+  Live (external ref) RecordLabel +VariantsWithPayload.payload.y
+  Live (annotated) Value +VariantsWithPayload.+testWithPayload
+  Live (annotated) Value +VariantsWithPayload.+printVariantWithPayload
+  Live (annotated) Value +VariantsWithPayload.+testManyPayloads
+  Live (annotated) Value +VariantsWithPayload.+printManyPayloads
+  Dead VariantCase +VariantsWithPayload.simpleVariant.A
+  Dead VariantCase +VariantsWithPayload.simpleVariant.B
+  Dead VariantCase +VariantsWithPayload.simpleVariant.C
+  Live (annotated) Value +VariantsWithPayload.+testSimpleVariant
+  Dead VariantCase +VariantsWithPayload.variantWithPayloads.A
+  Dead VariantCase +VariantsWithPayload.variantWithPayloads.B
+  Dead VariantCase +VariantsWithPayload.variantWithPayloads.C
+  Dead VariantCase +VariantsWithPayload.variantWithPayloads.D
+  Dead VariantCase +VariantsWithPayload.variantWithPayloads.E
+  Live (annotated) Value +VariantsWithPayload.+testVariantWithPayloads
+  Live (annotated) Value +VariantsWithPayload.+printVariantWithPayloads
+  Dead VariantCase +VariantsWithPayload.variant1Int.R
+  Live (annotated) Value +VariantsWithPayload.+testVariant1Int
+  Dead VariantCase +VariantsWithPayload.variant1Object.R
+  Live (annotated) Value +VariantsWithPayload.+testVariant1Object
 
   Incorrect Dead Annotation
   DeadTest.res:153:1-28

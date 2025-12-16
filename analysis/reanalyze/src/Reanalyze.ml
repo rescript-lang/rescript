@@ -370,10 +370,11 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             match (reactive_merge, reactive_liveness) with
             | Some merged, Some liveness_result ->
               let live = liveness_result.ReactiveLiveness.live in
+              let roots = liveness_result.ReactiveLiveness.roots in
               (* Freeze refs for debug/transitive support in solver *)
               let refs = ReactiveMerge.freeze_refs merged in
               DeadCommon.solveDeadReactive ~ann_store ~decl_store ~refs ~live
-                ~optional_args_state:empty_optional_args_state
+                ~roots ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
