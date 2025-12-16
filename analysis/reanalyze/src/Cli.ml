@@ -28,9 +28,6 @@ let parallel = ref 0
 (* timing: report internal timing of analysis phases *)
 let timing = ref false
 
-(* use mmap cache for CMT files *)
-let cmtCache = ref false
-
 (* use reactive/incremental analysis (caches processed file_data) *)
 let reactive = ref false
 

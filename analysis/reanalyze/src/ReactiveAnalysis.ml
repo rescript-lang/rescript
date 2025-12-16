@@ -1,5 +1,5 @@
 (** Reactive analysis service using ReactiveFileCollection.
-    
+
     This module provides incremental analysis that only re-processes
     files that have changed, using ReactiveFileCollection for efficient
     delta-based updates. *)
@@ -16,7 +16,7 @@ type all_files_result = {
 }
 (** Result of processing all CMT files *)
 
-type t = cmt_file_result option ReactiveFileCollection.t
+type t = (Cmt_format.cmt_infos, cmt_file_result option) ReactiveFileCollection.t
 (** The reactive collection type *)
 
 (** Process cmt_infos into a file result *)
@@ -69,12 +69,12 @@ let process_cmt_infos ~config cmt_infos : cmt_file_result option =
 
 (** Create a new reactive collection *)
 let create ~config : t =
-  ReactiveFileCollection.create ~process:(process_cmt_infos ~config)
+  ReactiveFileCollection.create ~read_file:Cmt_format.read_cmt
+    ~process:(process_cmt_infos ~config)
 
 (** Process all files incrementally using ReactiveFileCollection.
-    First run processes all files. Subsequent runs only process changed files
-    (detected via CmtCache's file change tracking). *)
-let process_files ~(collection : t) ~config cmtFilePaths : all_files_result =
+    First run processes all files. Subsequent runs only process changed files. *)
+let process_files ~(collection : t) ~config:_ cmtFilePaths : all_files_result =
   Timing.time_phase `FileLoading (fun () ->
       let processed = ref 0 in
       let from_cache = ref 0 in
@@ -85,16 +85,11 @@ let process_files ~(collection : t) ~config cmtFilePaths : all_files_result =
              let was_in_collection =
                ReactiveFileCollection.mem collection cmtFilePath
              in
-             (* Check if file changed using CmtCache *)
-             match CmtCache.read_cmt_if_changed cmtFilePath with
-             | None ->
-               (* File unchanged - already in collection *)
-               if was_in_collection then incr from_cache
-             | Some cmt_infos ->
-               (* File changed or new - process and update *)
-               let result = process_cmt_infos ~config cmt_infos in
-               ReactiveFileCollection.set collection cmtFilePath result;
-               incr processed);
+             let changed =
+               ReactiveFileCollection.process_if_changed collection cmtFilePath
+             in
+             if changed then incr processed
+             else if was_in_collection then incr from_cache);
 
       if !Cli.timing then
         Printf.eprintf "Reactive: %d files processed, %d from cache\n%!"
@@ -122,8 +117,5 @@ let process_files ~(collection : t) ~config cmtFilePaths : all_files_result =
         exception_results = List.rev !exception_results;
       })
 
-(** Get collection statistics *)
-let stats (collection : t) =
-  let file_count = ReactiveFileCollection.length collection in
-  let cmt_stats = CmtCache.stats () in
-  (file_count, cmt_stats)
+(** Get collection length *)
+let length (collection : t) = ReactiveFileCollection.length collection

@@ -62,7 +62,8 @@ let report () =
       (100.0 *. cmt_total /. total);
     (* Only show parallel-specific timing when used *)
     if times.result_collection > 0.0 then
-      Printf.eprintf "    - Parallel merge:   %.3fms (aggregate across domains)\n"
+      Printf.eprintf
+        "    - Parallel merge:   %.3fms (aggregate across domains)\n"
         (1000.0 *. times.result_collection);
     Printf.eprintf "  Analysis:           %.3fs (%.1f%%)\n" analysis_total
       (100.0 *. analysis_total /. total);
