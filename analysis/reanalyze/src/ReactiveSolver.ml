@@ -1,20 +1,21 @@
 (** Reactive dead code solver.
     
-    Reactive pipeline: decls + live → dead_decls, live_decls, dead_modules
+    Reactive pipeline: decls + live → dead_decls, live_decls, dead_modules, dead_decls_by_file
     
     Current status:
-    - dead_decls, live_decls, dead_modules are reactive (zero recomputation on cache hit)
+    - dead_decls, live_decls, dead_modules, dead_decls_by_file are all reactive
     - dead_modules = modules with dead decls but no live decls (reactive anti-join)
-    - is_pos_live uses reactive live collection (no resolvedDead mutation needed)
-    - Per-file issue generation: group by file, sort within file, fresh ReportingContext per file
+    - dead_decls_by_file = dead decls grouped by file (reactive flatMap with merge)
+    - is_pos_live uses reactive live collection (no resolvedDead mutation)
+    - shouldReport callback replaces report field mutation (no mutation needed)
+    - Per-file issue generation using reactive dead_decls_by_file
     - isInsideReportedValue is per-file only, so files are independent
     
     TODO for fully reactive issues:
-    - Make dead_decls_by_file a reactive collection (per-file grouping)
-    - Make per-file issues reactive (only recompute changed files)
+    - Make per-file issues a reactive collection (issues_by_file)
+      Currently we iterate dead_decls_by_file to generate issues
     - hasRefBelow: uses O(total_refs) linear scan of refs_from per dead decl;
       could use reactive refs_to index for O(1) lookup per decl
-    - report field: still mutated to suppress annotated decls; could check in reportDeclaration
     
     All issues now match between reactive and non-reactive modes (380 on deadcode test):
     - Dead code issues: 362 (Exception:2, Module:31, Type:87, Value:233, ValueWithSideEffects:8)
@@ -30,6 +31,8 @@ type t = {
   value_refs_from: (Lexing.position, PosSet.t) Reactive.t option;
   dead_modules: (Name.t, Location.t) Reactive.t;
       (** Modules where all declarations are dead. Reactive anti-join. *)
+  dead_decls_by_file: (string, Decl.t list) Reactive.t;
+      (** Dead declarations grouped by file. Reactive per-file grouping. *)
 }
 
 (** Extract module name from a declaration *)
@@ -92,7 +95,15 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
         ()
   in
 
-  {decls; live; dead_decls; live_decls; annotations; value_refs_from; dead_modules}
+  (* Reactive per-file grouping of dead declarations *)
+  let dead_decls_by_file =
+    Reactive.flatMap dead_decls
+      ~f:(fun _pos decl -> [(decl.pos.Lexing.pos_fname, [decl])])
+      ~merge:(fun decls1 decls2 -> decls1 @ decls2)
+      ()
+  in
+
+  {decls; live; dead_decls; live_decls; annotations; value_refs_from; dead_modules; dead_decls_by_file}
 
 (** Check if a module is dead using reactive collection. Returns issue if dead.
     Uses reported_modules set to avoid duplicate reports. *)
@@ -124,26 +135,7 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
   (* Track reported modules to avoid duplicates *)
   let reported_modules = Hashtbl.create 64 in
 
-  (* Collect dead declarations - NO resolvedDead mutation *)
-  let dead_list = ref [] in
-  Reactive.iter
-    (fun _pos (decl : Decl.t) ->
-      (* Check annotation to decide if we report.
-         Don't report if @live, @genType, or @dead (user knows it's dead) *)
-      let should_report =
-        match Reactive.get t.annotations decl.pos with
-        | Some FileAnnotations.Live -> false
-        | Some FileAnnotations.GenType -> false
-        | Some FileAnnotations.Dead ->
-          false (* @dead = user knows, don't warn *)
-        | None -> true
-      in
-      if not should_report then decl.report <- false;
-      dead_list := decl :: !dead_list)
-    t.dead_decls;
-  let t1 = Unix.gettimeofday () in
-
-  (* Check live declarations for incorrect @dead - NO resolvedDead mutation *)
+  (* Check live declarations for incorrect @dead *)
   let incorrect_dead_issues = ref [] in
   Reactive.iter
     (fun _pos (decl : Decl.t) ->
@@ -161,19 +153,9 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
                incorrect_dead_issues := mod_issue :: !incorrect_dead_issues);
         incorrect_dead_issues := issue :: !incorrect_dead_issues))
     t.live_decls;
-  let t2 = Unix.gettimeofday () in
+  let t1 = Unix.gettimeofday () in
 
-  (* Group dead declarations by file *)
-  let by_file : (string, Decl.t list) Hashtbl.t = Hashtbl.create 64 in
-  List.iter
-    (fun (decl : Decl.t) ->
-      let file = decl.pos.pos_fname in
-      let existing = Hashtbl.find_opt by_file file |> Option.value ~default:[] in
-      Hashtbl.replace by_file file (decl :: existing))
-    !dead_list;
-  let t3 = Unix.gettimeofday () in
-
-  (* Generate issues per-file with independent ReportingContext.
+  (* Generate issues per-file using reactive dead_decls_by_file.
      isInsideReportedValue only checks within same file, so files are independent. *)
   let transitive = config.DceConfig.run.transitive in
   let hasRefBelow =
@@ -188,10 +170,21 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
     check_module_dead ~dead_modules:t.dead_modules ~reported_modules ~fileName
       moduleName
   in
+  (* Callback to check if we should report a dead decl (no mutation) *)
+  let shouldReport (decl : Decl.t) =
+    match Reactive.get t.annotations decl.pos with
+    | Some FileAnnotations.Live -> false
+    | Some FileAnnotations.GenType -> false
+    | Some FileAnnotations.Dead -> false (* @dead = user knows, don't warn *)
+    | None -> true
+  in
+  let num_files = ref 0 in
   let dead_issues =
-    Hashtbl.fold
-      (fun _file decls acc ->
-        (* Sort within file for isInsideReportedValue *)
+    let issues = ref [] in
+    Reactive.iter
+      (fun _file decls ->
+        incr num_files;
+        (* Sort within file for isInsideReportedValue - pass ALL decls for correct context *)
         let sorted = decls |> List.fast_sort Decl.compareForReporting in
         (* Fresh ReportingContext per file *)
         let reporting_ctx = DeadCommon.ReportingContext.create () in
@@ -199,22 +192,20 @@ let collect_issues ~(t : t) ~(config : DceConfig.t)
           sorted
           |> List.concat_map (fun decl ->
                  DeadCommon.reportDeclaration ~config ~hasRefBelow ~checkModuleDead
-                   reporting_ctx decl)
+                   ~shouldReport reporting_ctx decl)
         in
-        file_issues @ acc)
-      by_file []
+        issues := file_issues @ !issues)
+      t.dead_decls_by_file;
+    !issues
   in
-  let t4 = Unix.gettimeofday () in
+  let t2 = Unix.gettimeofday () in
 
   if !Cli.timing then
     Printf.eprintf
-      "    collect_issues: iter_dead=%.2fms iter_live=%.2fms group=%.2fms \
-       report=%.2fms (%d files)\n"
+      "    collect_issues: iter_live=%.2fms per_file=%.2fms (%d files)\n"
       ((t1 -. t0) *. 1000.0)
       ((t2 -. t1) *. 1000.0)
-      ((t3 -. t2) *. 1000.0)
-      ((t4 -. t3) *. 1000.0)
-      (Hashtbl.length by_file);
+      !num_files;
 
   List.rev !incorrect_dead_issues @ dead_issues
 

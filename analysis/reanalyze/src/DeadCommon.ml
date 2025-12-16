@@ -172,11 +172,17 @@ let make_hasRefBelow ~transitive ~iter_value_refs_from =
 (** Report a dead declaration. Returns list of issues (dead module first, then dead value).
     [hasRefBelow] checks if there are references from "below" the declaration.
     Only used when [config.run.transitive] is false.
-    [?checkModuleDead] optional callback for checking dead modules. Defaults to DeadModules.checkModuleDead. *)
-let reportDeclaration ~config ~hasRefBelow ?checkModuleDead
+    [?checkModuleDead] optional callback for checking dead modules. Defaults to DeadModules.checkModuleDead.
+    [?shouldReport] optional callback to check if a decl should be reported. Defaults to checking decl.report. *)
+let reportDeclaration ~config ~hasRefBelow ?checkModuleDead ?shouldReport
     (ctx : ReportingContext.t) decl : Issue.t list =
   let insideReportedValue = decl |> isInsideReportedValue ctx in
-  if not decl.report then []
+  let should_report =
+    match shouldReport with
+    | Some f -> f decl
+    | None -> decl.report
+  in
+  if not should_report then []
   else
     let deadWarning, message =
       match decl.declKind with
