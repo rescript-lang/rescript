@@ -159,49 +159,119 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `lookup` | Single-key subscription |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 
-### Reactive Analysis Pipeline
+### Fully Reactive Analysis Pipeline
+
+The reactive pipeline computes issues directly from source files with **zero recomputation on cache hits**:
+
+```
+Files → file_data → decls, annotations, refs → live (fixpoint) → dead_decls → issues → REPORT
+         ↓              ↓                          ↓                ↓           ↓        ↓
+     ReactiveFile   ReactiveMerge          ReactiveLiveness   ReactiveSolver         iter
+     Collection         (flatMap)              (fixpoint)      (join+join)         (only)
+```
+
+**Key property**: When no files change, no computation happens. All reactive collections are stable. Only the final `collect_issues` call iterates (O(issues)).
+
+### Pipeline Stages
+
+| Stage | Input | Output | Combinator |
+|-------|-------|--------|------------|
+| **File Processing** | `.cmt` files | `file_data` | `ReactiveFileCollection` |
+| **Merge** | `file_data` | `decls`, `annotations`, `refs` | `flatMap` |
+| **Liveness** | `refs`, `annotations` | `live` (positions) | `fixpoint` |
+| **Dead Decls** | `decls`, `live` | `dead_decls` | `join` (left-join, filter `None`: decls where NOT in live) |
+| **Issues** | `dead_decls`, `annotations` | `issues` | `join` (filter by annotation, generate Issue.t) |
+| **Report** | `issues` | stdout | `iter` (ONLY iteration in entire pipeline) |
+
+**Note**: Optional args analysis (unused/redundant arguments) is not yet in the reactive pipeline - it still uses the non-reactive path. TODO: Add `live_decls + cross_file_items → optional_args_issues` to the reactive pipeline.
+
+### Reactive Pipeline Diagram
 
 > **Source**: [`diagrams/reactive-pipeline.mmd`](diagrams/reactive-pipeline.mmd)
 
 ![Reactive Pipeline](diagrams/reactive-pipeline.svg)
 
-**Legend:**
-
-| Symbol | Collection | Type |
-|--------|-----------|------|
-| **RFC** | `ReactiveFileCollection` | File change detection |
-| **FD** | `file_data` | `path → file_data option` |
-| **D** | `decls` | `pos → Decl.t` |
-| **A** | `annotations` | `pos → annotation` |
-| **VR** | `value_refs_from` | `pos → PosSet` (source → targets) |
-| **TR** | `type_refs_from` | `pos → PosSet` (source → targets) |
-| **CFI** | `cross_file_items` | `path → CrossFileItems.t` |
-| **DBP** | `decl_by_path` | `path → decl_info list` |
-| **ATR** | `all_type_refs_from` | Combined type refs |
-| **ER** | `exception_refs` | Exception references |
-| **ED** | `exception_decls` | Exception declarations |
-| **RR** | `resolved_refs_from` | Resolved exception refs |
-| **DR** | `decl_refs` | `pos → (value_targets, type_targets)` |
-| **roots** | Root declarations | `@live`/`@genType` or externally referenced |
-| **edges** | Reference graph | Declaration → referenced declarations |
-| **fixpoint** | `Reactive.fixpoint` | Transitive closure combinator |
-| **LIVE** | Output | Set of live positions |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         REACTIVE ANALYSIS PIPELINE                          │
+│                                                                             │
+│  ┌──────────┐                                                               │
+│  │  .cmt    │                                                               │
+│  │  files   │                                                               │
+│  └────┬─────┘                                                               │
+│       │                                                                     │
+│       ▼                                                                     │
+│  ┌──────────────────────┐                                                   │
+│  │ ReactiveFileCollection│  File change detection + caching                 │
+│  │      file_data        │                                                  │
+│  └────┬─────────────────┘                                                   │
+│       │ flatMap                                                             │
+│       ▼                                                                     │
+│  ┌──────────────────────┐                                                   │
+│  │    ReactiveMerge     │  Derives collections from file_data               │
+│  │ ┌──────┐ ┌────────┐  │                                                   │
+│  │ │decls │ │  refs  │  │                                                   │
+│  │ └──┬───┘ └───┬────┘  │                                                   │
+│  │    │  ┌──────┴─────┐ │                                                   │
+│  │    │  │annotations │ │                                                   │
+│  │    │  └──────┬─────┘ │                                                   │
+│  └────┼─────────┼───────┘                                                   │
+│       │         │                                                           │
+│       │         ▼                                                           │
+│       │    ┌─────────────────────┐                                          │
+│       │    │  ReactiveLiveness   │  roots + edges → live (fixpoint)         │
+│       │    │  ┌──────┐ ┌──────┐  │                                          │
+│       │    │  │roots │→│ live │  │                                          │
+│       │    │  └──────┘ └──┬───┘  │                                          │
+│       │    └──────────────┼──────┘                                          │
+│       │                   │                                                 │
+│       ▼                   ▼                                                 │
+│  ┌─────────────────────────────────┐                                        │
+│  │        ReactiveSolver           │  Pure reactive joins (NO iteration)    │
+│  │                                 │                                        │
+│  │  decls ──┬──► dead_decls ──┬──► issues                                   │
+│  │          │        ↑        │       ↑                                     │
+│  │  live ───┘  (join, keep    │  (join with annotations)                    │
+│  │             if NOT in live)│                                             │
+│  │  annotations ──────────────┘                                             │
+│  │                                 │                                        │
+│  │  (Optional args: TODO - not yet reactive)                                │
+│  └─────────────────────────────────┘                                        │
+│                   │                                                         │
+│                   ▼                                                         │
+│  ┌─────────────────────────────────┐                                        │
+│  │           REPORT                │  ONLY iteration: O(issues)             │
+│  │   collect_issues → Log_.warning │  (linear in number of issues)          │
+│  └─────────────────────────────────┘                                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Delta Propagation
 
-> **Source**: [`diagrams/delta-propagation.mmd`](diagrams/delta-propagation.mmd)
+When a file changes:
 
-![Delta Propagation](diagrams/delta-propagation.svg)
+1. `ReactiveFileCollection` detects change, emits delta for `file_data`
+2. `ReactiveMerge` receives delta, updates `decls`, `refs`, `annotations`
+3. `ReactiveLiveness` receives delta, updates `live` set via incremental fixpoint
+4. `ReactiveSolver` receives delta, updates `dead_decls` and `issues` via reactive joins
+5. **Only affected entries are recomputed** - untouched entries remain stable
 
-### Key Benefits
+When no files change:
+- **Zero computation** - all reactive collections are stable
+- Only `collect_issues` iterates (O(issues)) - this is the ONLY iteration in the entire pipeline
+- Reporting is linear in the number of issues
 
-| Aspect | Batch Pipeline | Reactive Pipeline |
-|--------|----------------|-------------------|
-| File change | Re-process all files | Re-process changed file only |
-| Merge | Re-merge all data | Update affected entries only |
-| Type deps | Rebuild entire index | Update affected paths only |
-| Exception refs | Re-resolve all | Re-resolve affected only |
-| Memory | O(N) per phase | O(N) total, shared |
+### Performance Characteristics
+
+| Scenario | Solving | Reporting | Total |
+|----------|---------|-----------|-------|
+| Cold start (4900 files) | ~2ms | ~3ms | ~7.7s |
+| Cache hit (0 files changed) | ~1-5ms | ~3-8ms | ~30ms |
+| Single file change | O(affected_decls) | O(issues) | minimal |
+
+**Key insight**: On cache hit, `Solving` time is just iterating the reactive `issues` collection.
+No joins are recomputed, no fixpoints are re-run - the reactive collections are stable.
 
 ### Reactive Modules
 
@@ -211,10 +281,11 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `ReactiveFileCollection` | File-backed collection with change detection |
 | `ReactiveAnalysis` | CMT processing with file caching |
 | `ReactiveMerge` | Derives decls, annotations, refs from file_data |
-| `ReactiveTypeDeps` | Type-label dependency resolution, produces `all_type_refs_from` |
+| `ReactiveTypeDeps` | Type-label dependency resolution |
 | `ReactiveExceptionRefs` | Exception ref resolution via join |
 | `ReactiveDeclRefs` | Maps declarations to their outgoing references |
 | `ReactiveLiveness` | Computes live positions via reactive fixpoint |
+| `ReactiveSolver` | Computes dead_decls and issues via reactive joins |
 
 ---
 
@@ -246,4 +317,5 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `AnalysisResult` | Immutable solver output |
 | `Issue` | Issue type definitions |
 | `Log_` | Phase 4: Logging output |
+| `ReactiveSolver` | Reactive dead_decls → issues computation |
 

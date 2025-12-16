@@ -38,6 +38,15 @@ flowchart TB
         LIVE["LIVE"]
     end
 
+    subgraph Solver["ReactiveSolver"]
+        DEAD["dead"]
+        ISSUES["issues"]
+    end
+
+    subgraph Report["Report"]
+        OUTPUT[("REPORT")]
+    end
+
     RFC -->|"process"| FD
     FD -->|"flatMap"| DECLS
     FD -->|"flatMap"| ANNOT
@@ -67,12 +76,20 @@ flowchart TB
     EDGES --> FP
     FP -->|"fixpoint"| LIVE
 
+    DECLS -->|"join"| DEAD
+    LIVE -->|"left-join, filter None"| DEAD
+    DEAD -->|"join"| ISSUES
+    ANNOT -->|"join"| ISSUES
+
+    ISSUES -->|"iter"| OUTPUT
+
     classDef fileLayer fill:#e8f4fd,stroke:#4a90d9,stroke-width:2px
     classDef extracted fill:#f0f7e6,stroke:#6b8e23,stroke-width:2px
     classDef typeDeps fill:#fff5e6,stroke:#d4a574,stroke-width:2px
     classDef excDeps fill:#f5e6ff,stroke:#9966cc,stroke-width:2px
     classDef declRefs fill:#e6f0ff,stroke:#4a74d9,stroke-width:2px
     classDef liveness fill:#ffe6e6,stroke:#cc6666,stroke-width:2px
+    classDef solver fill:#ffe6f0,stroke:#cc6699,stroke-width:2px
     classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
 
     class RFC,FD fileLayer
@@ -80,5 +97,6 @@ flowchart TB
     class DBP,ATR typeDeps
     class EXCREF,EXCDECL,RESOLVED excDeps
     class DR declRefs
-    class ROOTS,EDGES,FP liveness
-    class LIVE output
+    class ROOTS,EDGES,FP,LIVE liveness
+    class DEAD,ISSUES solver
+    class OUTPUT output
