@@ -29,10 +29,26 @@
 
 (** {1 Deltas} *)
 
-type ('k, 'v) delta = Set of 'k * 'v | Remove of 'k
+type ('k, 'v) delta =
+  | Set of 'k * 'v
+  | Remove of 'k
+  | Batch of ('k * 'v option) list
+      (** Batch of updates: (key, Some value) = set, (key, None) = remove.
+          Batches are processed atomically and emitted as batches downstream. *)
+
+(** Convenience constructors for batch entries *)
+
+val set : 'k -> 'v -> 'k * 'v option
+(** [set k v] creates a batch entry that sets key [k] to value [v] *)
+
+val remove : 'k -> 'k * 'v option
+(** [remove k] creates a batch entry that removes key [k] *)
 
 val apply_delta : ('k, 'v) Hashtbl.t -> ('k, 'v) delta -> unit
 val apply_deltas : ('k, 'v) Hashtbl.t -> ('k, 'v) delta list -> unit
+
+val delta_to_entries : ('k, 'v) delta -> ('k * 'v option) list
+(** Convert any delta to batch entry format *)
 
 (** {1 Statistics} *)
 

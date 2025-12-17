@@ -4,13 +4,34 @@
 
 (** {1 Deltas} *)
 
-type ('k, 'v) delta = Set of 'k * 'v | Remove of 'k
+type ('k, 'v) delta =
+  | Set of 'k * 'v
+  | Remove of 'k
+  | Batch of ('k * 'v option) list
+      (** Batch of updates: (key, Some value) = set, (key, None) = remove *)
+
+(** Convenience constructors for batch *)
+let set k v = (k, Some v)
+
+let remove k = (k, None)
 
 let apply_delta tbl = function
   | Set (k, v) -> Hashtbl.replace tbl k v
   | Remove k -> Hashtbl.remove tbl k
+  | Batch entries ->
+    entries
+    |> List.iter (fun (k, v_opt) ->
+           match v_opt with
+           | Some v -> Hashtbl.replace tbl k v
+           | None -> Hashtbl.remove tbl k)
 
 let apply_deltas tbl deltas = List.iter (apply_delta tbl) deltas
+
+(** Convert single deltas to batch entries *)
+let delta_to_entries = function
+  | Set (k, v) -> [(k, Some v)]
+  | Remove k -> [(k, None)]
+  | Batch entries -> entries
 
 (** {1 Statistics} *)
 
@@ -114,27 +135,63 @@ let flatMap (source : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
     target_keys
   in
 
+  (* Convert delta to batch entry for output *)
+  let delta_to_batch_entry = function
+    | Set (k, v) -> (k, Some v)
+    | Remove k -> (k, None)
+    | Batch _ -> assert false (* not used for output conversion *)
+  in
+
+  (* Process a single source entry, return affected target keys *)
+  let process_entry (k1, v1_opt) =
+    match v1_opt with
+    | None ->
+      (* Remove *)
+      remove_source k1
+    | Some v1 ->
+      (* Set *)
+      let old_affected = remove_source k1 in
+      let new_entries = f k1 v1 in
+      let new_affected = add_source k1 new_entries in
+      old_affected @ new_affected
+  in
+
   let handle_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    let downstream =
-      match delta with
-      | Remove k1 ->
-        let affected = remove_source k1 in
-        affected |> List.filter_map recompute_target
-      | Set (k1, v1) ->
-        let old_affected = remove_source k1 in
-        let new_entries = f k1 v1 in
-        let new_affected = add_source k1 new_entries in
-        let all_affected = old_affected @ new_affected in
-        let seen = Hashtbl.create (List.length all_affected) in
+    match delta with
+    | Remove k1 ->
+      let affected = remove_source k1 in
+      let downstream = affected |> List.filter_map recompute_target in
+      List.iter emit downstream
+    | Set (k1, v1) ->
+      let all_affected = process_entry (k1, Some v1) in
+      let seen = Hashtbl.create (List.length all_affected) in
+      let downstream =
         all_affected
         |> List.filter_map (fun k2 ->
                if Hashtbl.mem seen k2 then None
                else (
                  Hashtbl.replace seen k2 ();
                  recompute_target k2))
-    in
-    List.iter emit downstream
+      in
+      List.iter emit downstream
+    | Batch entries ->
+      (* Process all entries, collect all affected keys *)
+      let all_affected =
+        entries |> List.concat_map (fun entry -> process_entry entry)
+      in
+      (* Deduplicate and recompute *)
+      let seen = Hashtbl.create (List.length all_affected) in
+      let downstream_entries =
+        all_affected
+        |> List.filter_map (fun k2 ->
+               if Hashtbl.mem seen k2 then None
+               else (
+                 Hashtbl.replace seen k2 ();
+                 recompute_target k2 |> Option.map delta_to_batch_entry))
+      in
+      (* Emit as batch if non-empty *)
+      if downstream_entries <> [] then emit (Batch downstream_entries)
   in
 
   (* Subscribe to future deltas *)
@@ -169,6 +226,18 @@ let lookup (source : ('k, 'v) t) ~key : ('k, 'v) t =
     List.iter (fun h -> h delta) !subscribers
   in
 
+  let handle_entry (k, v_opt) =
+    if k = key then (
+      match v_opt with
+      | Some v ->
+        Hashtbl.replace current key (Some v);
+        Some (key, Some v)
+      | None ->
+        Hashtbl.remove current key;
+        Some (key, None))
+    else None
+  in
+
   let handle_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
     match delta with
@@ -178,6 +247,9 @@ let lookup (source : ('k, 'v) t) ~key : ('k, 'v) t =
     | Remove k when k = key ->
       Hashtbl.remove current key;
       emit (Remove key)
+    | Batch entries ->
+      let relevant = entries |> List.filter_map handle_entry in
+      if relevant <> [] then emit (Batch relevant)
     | _ -> () (* Ignore deltas for other keys *)
   in
 
@@ -350,34 +422,89 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     affected |> List.filter_map recompute_target
   in
 
+  (* Convert delta to batch entry for output *)
+  let delta_to_batch_entry = function
+    | Set (k, v) -> (k, Some v)
+    | Remove k -> (k, None)
+    | Batch _ -> assert false
+  in
+
+  (* Process a single left entry, return list of output deltas *)
+  let process_left_update (k1, v1_opt) =
+    match v1_opt with
+    | Some v1 ->
+      Hashtbl.replace left_entries k1 v1;
+      process_left_entry k1 v1
+    | None -> remove_left_entry k1
+  in
+
+  (* Process a right key change, return list of output deltas *)
+  let process_right_key k2 =
+    match Hashtbl.find_opt right_key_to_left_keys k2 with
+    | None -> []
+    | Some left_keys ->
+      left_keys
+      |> List.concat_map (fun k1 ->
+             match Hashtbl.find_opt left_entries k1 with
+             | Some v1 -> process_left_entry k1 v1
+             | None -> [])
+  in
+
   let handle_left_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    let downstream =
-      match delta with
-      | Set (k1, v1) ->
-        Hashtbl.replace left_entries k1 v1;
-        process_left_entry k1 v1
-      | Remove k1 -> remove_left_entry k1
-    in
-    List.iter emit downstream
+    match delta with
+    | Set (k1, v1) ->
+      Hashtbl.replace left_entries k1 v1;
+      let downstream = process_left_entry k1 v1 in
+      List.iter emit downstream
+    | Remove k1 ->
+      let downstream = remove_left_entry k1 in
+      List.iter emit downstream
+    | Batch entries ->
+      (* Process all left entries, collect all affected output keys *)
+      let all_downstream = entries |> List.concat_map process_left_update in
+      (* Deduplicate *)
+      let seen = Hashtbl.create (List.length all_downstream) in
+      let downstream_entries =
+        all_downstream
+        |> List.filter_map (fun d ->
+               let entry = delta_to_batch_entry d in
+               let k = fst entry in
+               if Hashtbl.mem seen k then None
+               else (
+                 Hashtbl.replace seen k ();
+                 Some entry))
+      in
+      if downstream_entries <> [] then emit (Batch downstream_entries)
   in
 
   let handle_right_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    (* When right changes, reprocess all left entries that depend on it *)
-    let downstream =
-      match delta with
-      | Set (k2, _) | Remove k2 -> (
-        match Hashtbl.find_opt right_key_to_left_keys k2 with
-        | None -> []
-        | Some left_keys ->
-          left_keys
-          |> List.concat_map (fun k1 ->
-                 match Hashtbl.find_opt left_entries k1 with
-                 | Some v1 -> process_left_entry k1 v1
-                 | None -> []))
-    in
-    List.iter emit downstream
+    match delta with
+    | Set (k2, _) | Remove k2 ->
+      let downstream = process_right_key k2 in
+      List.iter emit downstream
+    | Batch entries ->
+      (* Collect all affected right keys, then process *)
+      let right_keys =
+        entries
+        |> List.map (fun (k, _) -> k)
+        |> List.sort_uniq compare
+      in
+      let all_downstream = right_keys |> List.concat_map process_right_key in
+      (* Deduplicate *)
+      let seen = Hashtbl.create (List.length all_downstream) in
+      let downstream_entries =
+        all_downstream
+        |> List.filter_map (fun d ->
+               let entry = delta_to_batch_entry d in
+               let k = fst entry in
+               if Hashtbl.mem seen k then None
+               else (
+                 Hashtbl.replace seen k ();
+                 Some entry))
+      in
+      if downstream_entries <> [] then emit (Batch downstream_entries)
   in
 
   (* Subscribe to both sources *)
@@ -437,32 +564,81 @@ let union (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t =
       Some (Set (k, merged))
   in
 
+  (* Convert delta to batch entry *)
+  let delta_to_batch_entry = function
+    | Set (k, v) -> (k, Some v)
+    | Remove k -> (k, None)
+    | Batch _ -> assert false
+  in
+
+  (* Process a left entry, return affected key *)
+  let process_left_entry (k, v_opt) =
+    (match v_opt with
+    | Some v -> Hashtbl.replace left_values k v
+    | None -> Hashtbl.remove left_values k);
+    k
+  in
+
+  (* Process a right entry, return affected key *)
+  let process_right_entry (k, v_opt) =
+    (match v_opt with
+    | Some v -> Hashtbl.replace right_values k v
+    | None -> Hashtbl.remove right_values k);
+    k
+  in
+
   let handle_left_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    let downstream =
-      match delta with
-      | Set (k, v) ->
-        Hashtbl.replace left_values k v;
-        recompute_key k |> Option.to_list
-      | Remove k ->
-        Hashtbl.remove left_values k;
-        recompute_key k |> Option.to_list
-    in
-    List.iter emit downstream
+    match delta with
+    | Set (k, v) ->
+      Hashtbl.replace left_values k v;
+      let downstream = recompute_key k |> Option.to_list in
+      List.iter emit downstream
+    | Remove k ->
+      Hashtbl.remove left_values k;
+      let downstream = recompute_key k |> Option.to_list in
+      List.iter emit downstream
+    | Batch entries ->
+      (* Process all entries, collect affected keys *)
+      let affected_keys = entries |> List.map process_left_entry in
+      (* Deduplicate keys *)
+      let seen = Hashtbl.create (List.length affected_keys) in
+      let downstream_entries =
+        affected_keys
+        |> List.filter_map (fun k ->
+               if Hashtbl.mem seen k then None
+               else (
+                 Hashtbl.replace seen k ();
+                 recompute_key k |> Option.map delta_to_batch_entry))
+      in
+      if downstream_entries <> [] then emit (Batch downstream_entries)
   in
 
   let handle_right_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    let downstream =
-      match delta with
-      | Set (k, v) ->
-        Hashtbl.replace right_values k v;
-        recompute_key k |> Option.to_list
-      | Remove k ->
-        Hashtbl.remove right_values k;
-        recompute_key k |> Option.to_list
-    in
-    List.iter emit downstream
+    match delta with
+    | Set (k, v) ->
+      Hashtbl.replace right_values k v;
+      let downstream = recompute_key k |> Option.to_list in
+      List.iter emit downstream
+    | Remove k ->
+      Hashtbl.remove right_values k;
+      let downstream = recompute_key k |> Option.to_list in
+      List.iter emit downstream
+    | Batch entries ->
+      (* Process all entries, collect affected keys *)
+      let affected_keys = entries |> List.map process_right_entry in
+      (* Deduplicate keys *)
+      let seen = Hashtbl.create (List.length affected_keys) in
+      let downstream_entries =
+        affected_keys
+        |> List.filter_map (fun k ->
+               if Hashtbl.mem seen k then None
+               else (
+                 Hashtbl.replace seen k ();
+                 recompute_key k |> Option.map delta_to_batch_entry))
+      in
+      if downstream_entries <> [] then emit (Batch downstream_entries)
   in
 
   (* Subscribe to both sources *)
@@ -722,6 +898,9 @@ module Fixpoint = struct
         in
 
         (net_added, net_removed))
+    | Batch _ ->
+      (* Batch is handled at a higher level in handle_init_delta *)
+      ([], [])
 
   (* Compute edge diff between old and new successors *)
   let compute_edge_diff old_succs new_succs =
@@ -862,6 +1041,9 @@ module Fixpoint = struct
       in
 
       (net_added, net_removed)
+    | Batch _ ->
+      (* Batch is handled at a higher level in handle_edges_delta *)
+      ([], [])
 end
 
 (** Compute transitive closure via incremental fixpoint.
@@ -887,18 +1069,94 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
     List.iter (fun k -> emit (Remove k)) removed
   in
 
+  (* Emit changes as a batch *)
+  let emit_changes_batch (added, removed) =
+    let batch_entries =
+      List.map (fun k -> (k, Some ())) added
+      @ List.map (fun k -> (k, None)) removed
+    in
+    if batch_entries <> [] then emit (Batch batch_entries)
+  in
+
   (* Handle init deltas *)
   let handle_init_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    let changes = Fixpoint.apply_init_delta state delta in
-    emit_changes changes
+    match delta with
+    | Batch entries ->
+      (* Process all init entries as a batch *)
+      let all_added = ref [] in
+      let all_removed = ref [] in
+      entries
+      |> List.iter (fun (k, v_opt) ->
+             let d =
+               match v_opt with
+               | Some () -> Set (k, ())
+               | None -> Remove k
+             in
+             let added, removed = Fixpoint.apply_init_delta state d in
+             all_added := added @ !all_added;
+             all_removed := removed @ !all_removed);
+      (* Deduplicate and emit as batch *)
+      let added_set = Hashtbl.create (List.length !all_added) in
+      List.iter (fun k -> Hashtbl.replace added_set k ()) !all_added;
+      let removed_set = Hashtbl.create (List.length !all_removed) in
+      List.iter (fun k -> Hashtbl.replace removed_set k ()) !all_removed;
+      (* Net changes: added if in added_set but not removed_set, etc. *)
+      let net_added =
+        Hashtbl.fold
+          (fun k () acc ->
+            if Hashtbl.mem removed_set k then acc else k :: acc)
+          added_set []
+      in
+      let net_removed =
+        Hashtbl.fold
+          (fun k () acc -> if Hashtbl.mem added_set k then acc else k :: acc)
+          removed_set []
+      in
+      emit_changes_batch (net_added, net_removed)
+    | _ ->
+      let changes = Fixpoint.apply_init_delta state delta in
+      emit_changes changes
   in
 
   (* Handle edges deltas *)
   let handle_edges_delta delta =
     my_stats.updates_received <- my_stats.updates_received + 1;
-    let changes = Fixpoint.apply_edges_delta state delta in
-    emit_changes changes
+    match delta with
+    | Batch entries ->
+      (* Process all edge entries as a batch *)
+      let all_added = ref [] in
+      let all_removed = ref [] in
+      entries
+      |> List.iter (fun (k, v_opt) ->
+             let d =
+               match v_opt with
+               | Some succs -> Set (k, succs)
+               | None -> Remove k
+             in
+             let added, removed = Fixpoint.apply_edges_delta state d in
+             all_added := added @ !all_added;
+             all_removed := removed @ !all_removed);
+      (* Deduplicate and emit as batch *)
+      let added_set = Hashtbl.create (List.length !all_added) in
+      List.iter (fun k -> Hashtbl.replace added_set k ()) !all_added;
+      let removed_set = Hashtbl.create (List.length !all_removed) in
+      List.iter (fun k -> Hashtbl.replace removed_set k ()) !all_removed;
+      let net_added =
+        Hashtbl.fold
+          (fun k () acc ->
+            if Hashtbl.mem removed_set k then acc else k :: acc)
+          added_set []
+      in
+      let net_removed =
+        Hashtbl.fold
+          (fun k () acc -> if Hashtbl.mem added_set k then acc else k :: acc)
+          removed_set []
+      in
+      emit_changes_batch (net_added, net_removed)
+    | _ ->
+      let changes = Fixpoint.apply_edges_delta state delta in
+      emit_changes changes
   in
 
   (* Subscribe to changes *)
