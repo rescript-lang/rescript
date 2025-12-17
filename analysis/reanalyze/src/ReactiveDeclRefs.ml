@@ -43,8 +43,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   in
 
   let type_decl_refs : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.join ~name:"decl_refs.type_decl_refs" type_refs_from
-      decls_by_file
+    Reactive.join ~name:"decl_refs.type_decl_refs" type_refs_from decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
       ~f:(fun posFrom targets decls_opt ->
         match decls_opt with

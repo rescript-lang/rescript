@@ -44,8 +44,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* Step 2: Join exception_refs with exception_decls *)
   let resolved_refs =
-    Reactive.join ~name:"exc_refs.resolved_refs" exception_refs
-      exception_decls
+    Reactive.join ~name:"exc_refs.resolved_refs" exception_refs exception_decls
       ~key_of:(fun path _loc_from -> path)
       ~f:(fun _path loc_from loc_to_opt ->
         match loc_to_opt with

@@ -235,7 +235,7 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead/li
 
 ![Reactive Pipeline](diagrams/reactive-pipeline.svg)
 
-This is a high-level view (~25 nodes). See also the [full detailed diagram](diagrams/reactive-pipeline-full.svg) with all 44 nodes (auto-generated via `-mermaid` flag).
+This is a high-level view (~25 nodes). See also the [full detailed diagram source](diagrams/reactive-pipeline-full.mmd) with all 44 nodes (auto-generated via `-mermaid` flag).
 
 Key stages:
 
