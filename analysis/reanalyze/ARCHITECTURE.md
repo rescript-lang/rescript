@@ -235,7 +235,12 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead/li
 
 ![Reactive Pipeline](diagrams/reactive-pipeline.svg)
 
-The Mermaid diagram above shows all 44 reactive nodes. Key stages:
+This is a high-level view (~25 nodes). For the full detailed diagram with all 44 nodes, run:
+```bash
+dune exec rescript-editor-analysis -- reanalyze -dce -config -ci -reactive -mermaid
+```
+
+Key stages:
 
 1. **File Layer**: `file_collection` → `file_data` → extracted collections
 2. **TypeDeps**: `decl_by_path` → interface/implementation refs → `all_type_refs`
