@@ -11,7 +11,7 @@
         ~process:(fun path cmt -> extract_data path cmt)
 
       (* Compose with flatMap *)
-      let decls = Reactive.flatMap (ReactiveFileCollection.to_collection files)
+      let decls = Reactive.flatMap ~name:"decls" (ReactiveFileCollection.to_collection files)
         ~f:(fun _path data -> data.decls)
         ()
 

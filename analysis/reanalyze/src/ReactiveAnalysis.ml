@@ -125,7 +125,7 @@ let length (collection : t) = ReactiveFileCollection.length collection
     Returns (path, file_data option) suitable for ReactiveMerge. *)
 let to_file_data_collection (collection : t) :
     (string, DceFileProcessing.file_data option) Reactive.t =
-  Reactive.flatMap
+  Reactive.flatMap ~name:"file_data_collection"
     (ReactiveFileCollection.to_collection collection)
     ~f:(fun path result_opt ->
       match result_opt with

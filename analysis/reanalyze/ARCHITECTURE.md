@@ -159,6 +159,33 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `lookup` | Single-key subscription |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 
+### Glitch-Free Semantics via Topological Scheduling
+
+The reactive system implements **glitch-free propagation** using a topological scheduler. This ensures derived collections always see consistent parent states, similar to SKStore's approach.
+
+**How it works:**
+1. Each collection has a `level` (topological order):
+   - Source collections (e.g., `ReactiveFileCollection`) have `level = 0`
+   - Derived collections have `level = max(source levels) + 1`
+2. When a delta propagates, emissions are **scheduled by level**
+3. The scheduler processes all pending updates in level order
+4. This ensures: sources complete → level 1 → level 2 → ... → observers
+
+**Example ordering:**
+```
+Files (level 0) → file_data (level 1) → decls (level 2) → live (level 3) → issues (level 4)
+```
+
+When a batch of file changes arrives:
+1. All level 1 collections update first
+2. Then level 2, etc.
+3. A join never sees one parent updated while the other is stale
+
+The `Reactive.Scheduler` module provides:
+- `schedule ~level ~f` - Queue a thunk at a given level
+- `is_propagating ()` - Check if in propagation phase
+- Automatic propagation when scheduling outside of propagation
+
 ### Fully Reactive Analysis Pipeline
 
 The reactive pipeline computes issues directly from source files with **zero recomputation on cache hits**:

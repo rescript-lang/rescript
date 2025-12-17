@@ -123,6 +123,7 @@ let build_decl_refs_index ~(decl_store : DeclarationStore.t)
 let compute_forward ~debug ~(decl_store : DeclarationStore.t)
     ~(refs : References.t) ~(ann_store : AnnotationStore.t) :
     live_reason PosHash.t =
+  let t0 = Unix.gettimeofday () in
   let live = PosHash.create 256 in
   let worklist = Queue.create () in
   let root_count = ref 0 in
@@ -215,6 +216,14 @@ let compute_forward ~debug ~(decl_store : DeclarationStore.t)
   if debug then
     Log_.item "@.  %d declarations marked live via propagation@.@."
       !propagated_count;
+
+  let t1 = Unix.gettimeofday () in
+  if !Cli.timing then
+    Printf.eprintf
+      "  Liveness.compute_forward: %.3fms (roots=%d, propagated=%d, live=%d)\n\
+       %!"
+      ((t1 -. t0) *. 1000.0)
+      !root_count !propagated_count (PosHash.length live);
 
   live
 

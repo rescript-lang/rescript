@@ -14,7 +14,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     (Lexing.position, PosSet.t * PosSet.t) Reactive.t =
   (* Group declarations by file *)
   let decls_by_file : (string, (Lexing.position * Decl.t) list) Reactive.t =
-    Reactive.flatMap decls
+    Reactive.flatMap ~name:"decl_refs.decls_by_file" decls
       ~f:(fun pos decl -> [(pos.Lexing.pos_fname, [(pos, decl)])])
       ~merge:( @ ) ()
   in
@@ -28,7 +28,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   (* For each ref, find which decl(s) contain it and output (decl_pos, targets) *)
   let value_decl_refs : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.join value_refs_from decls_by_file
+    Reactive.join ~name:"decl_refs.value_decl_refs" value_refs_from
+      decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
       ~f:(fun posFrom targets decls_opt ->
         match decls_opt with
@@ -42,7 +43,8 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   in
 
   let type_decl_refs : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.join type_refs_from decls_by_file
+    Reactive.join ~name:"decl_refs.type_decl_refs" type_refs_from
+      decls_by_file
       ~key_of:(fun posFrom _targets -> posFrom.Lexing.pos_fname)
       ~f:(fun posFrom targets decls_opt ->
         match decls_opt with
@@ -58,7 +60,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   (* Combine value and type refs into (value_targets, type_targets) pairs.
      Use join to combine, with decls as the base to ensure all decls are present. *)
   let with_value_refs : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.join decls value_decl_refs
+    Reactive.join ~name:"decl_refs.with_value_refs" decls value_decl_refs
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos _decl refs_opt ->
         [(pos, Option.value refs_opt ~default:PosSet.empty)])
@@ -66,7 +68,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   in
 
   let with_type_refs : (Lexing.position, PosSet.t) Reactive.t =
-    Reactive.join decls type_decl_refs
+    Reactive.join ~name:"decl_refs.with_type_refs" decls type_decl_refs
       ~key_of:(fun pos _decl -> pos)
       ~f:(fun pos _decl refs_opt ->
         [(pos, Option.value refs_opt ~default:PosSet.empty)])
@@ -74,7 +76,7 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
   in
 
   (* Combine into final (value_targets, type_targets) pairs *)
-  Reactive.join with_value_refs with_type_refs
+  Reactive.join ~name:"decl_refs.combined" with_value_refs with_type_refs
     ~key_of:(fun pos _value_targets -> pos)
     ~f:(fun pos value_targets type_targets_opt ->
       let type_targets = Option.value type_targets_opt ~default:PosSet.empty in
