@@ -419,6 +419,8 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
               | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
               | None -> ());
               ReactiveSolver.print_stats ~t:solver);
+            if !Cli.mermaid then
+              Printf.eprintf "\n%s\n" (Reactive.to_mermaid ());
             Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
           | None ->
             (* Non-reactive path: use old solver with optional args *)
@@ -645,6 +647,7 @@ let cli () =
         "n Process files in parallel using n domains (0 = sequential, default; \
          -1 = auto-detect cores)" );
       ("-timing", Set Cli.timing, "Report internal timing of analysis phases");
+      ("-mermaid", Set Cli.mermaid, "Output Mermaid diagram of reactive pipeline");
       ( "-reactive",
         Set Cli.reactive,
         "Use reactive analysis (caches processed file_data, skips unchanged \
