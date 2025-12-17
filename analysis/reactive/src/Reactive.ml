@@ -97,6 +97,7 @@ module Registry = struct
 
   let nodes : (string, node_info) Hashtbl.t = Hashtbl.create 64
   let edges : (string * string, string) Hashtbl.t = Hashtbl.create 128
+
   (* Combinator nodes: (combinator_id, (shape, inputs, output)) *)
   let combinators : (string, string * string list * string) Hashtbl.t =
     Hashtbl.create 32
@@ -152,19 +153,27 @@ module Registry = struct
     Hashtbl.iter
       (fun comb_name (_, inputs, output) ->
         List.iter
-          (fun input -> Hashtbl.replace combinator_edges (input, output) comb_name)
+          (fun input ->
+            Hashtbl.replace combinator_edges (input, output) comb_name)
           inputs)
       combinators;
     (* Output regular nodes *)
     Hashtbl.iter
-      (fun name info ->
-        Buffer.add_string buf
-          (Printf.sprintf "    %s[%s L%d]\n" name name info.level))
+      (fun name _info ->
+        Buffer.add_string buf (Printf.sprintf "    %s[%s]\n" name name))
       nodes;
-    (* Output combinator nodes (diamond shape) *)
+    (* Output combinator nodes (diamond shape) with classes *)
+    let join_nodes = ref [] in
+    let union_nodes = ref [] in
+    let fixpoint_nodes = ref [] in
     Hashtbl.iter
       (fun comb_name (shape, _inputs, _output) ->
-        Buffer.add_string buf (Printf.sprintf "    %s{%s}\n" comb_name shape))
+        Buffer.add_string buf (Printf.sprintf "    %s{%s}\n" comb_name shape);
+        match shape with
+        | "join" -> join_nodes := comb_name :: !join_nodes
+        | "union" -> union_nodes := comb_name :: !union_nodes
+        | "fixpoint" -> fixpoint_nodes := comb_name :: !fixpoint_nodes
+        | _ -> ())
       combinators;
     (* Output edges *)
     Hashtbl.iter
@@ -194,8 +203,29 @@ module Registry = struct
     (* Output edges from combinators to their outputs *)
     Hashtbl.iter
       (fun comb_name (_shape, _inputs, output) ->
-        Buffer.add_string buf (Printf.sprintf "    %s --> %s\n" comb_name output))
+        Buffer.add_string buf
+          (Printf.sprintf "    %s --> %s\n" comb_name output))
       combinators;
+    (* Style definitions for combinator types *)
+    Buffer.add_string buf
+      "\n    classDef joinClass fill:#e6f3ff,stroke:#0066cc\n";
+    Buffer.add_string buf
+      "    classDef unionClass fill:#fff0e6,stroke:#cc6600\n";
+    Buffer.add_string buf
+      "    classDef fixpointClass fill:#e6ffe6,stroke:#006600\n";
+    (* Assign classes to combinator nodes *)
+    if !join_nodes <> [] then
+      Buffer.add_string buf
+        (Printf.sprintf "    class %s joinClass\n"
+           (String.concat "," !join_nodes));
+    if !union_nodes <> [] then
+      Buffer.add_string buf
+        (Printf.sprintf "    class %s unionClass\n"
+           (String.concat "," !union_nodes));
+    if !fixpoint_nodes <> [] then
+      Buffer.add_string buf
+        (Printf.sprintf "    class %s fixpointClass\n"
+           (String.concat "," !fixpoint_nodes));
     Buffer.contents buf
 
   (** Print timing stats for all nodes *)
