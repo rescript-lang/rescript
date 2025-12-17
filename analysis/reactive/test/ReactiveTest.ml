@@ -1759,13 +1759,7 @@ let test_batch_flatmap () =
     | Remove k -> received_entries := [(k, None)] @ !received_entries);
 
   (* Send a batch *)
-  emit
-    (Batch
-       [
-         Reactive.set "a" 1;
-         Reactive.set "b" 2;
-         Reactive.set "c" 3;
-       ]);
+  emit (Batch [Reactive.set "a" 1; Reactive.set "b" 2; Reactive.set "c" 3]);
 
   Printf.printf "Received batches: %d, entries: %d\n" !received_batches
     (List.length !received_entries);
