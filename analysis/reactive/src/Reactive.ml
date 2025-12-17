@@ -1081,25 +1081,42 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
     my_stats.updates_received <- my_stats.updates_received + 1;
     match delta with
     | Batch entries ->
-      (* Process all init entries as a batch *)
-      let all_added = ref [] in
-      let all_removed = ref [] in
+      (* OPTIMIZED: Process all entries with single BFS instead of per-entry BFS *)
+      (* Phase 1: Separate adds and removes, collect new roots *)
+      let new_roots = ref [] in
+      let removes = ref [] in
       entries
       |> List.iter (fun (k, v_opt) ->
-             let d =
-               match v_opt with
-               | Some () -> Set (k, ())
-               | None -> Remove k
+             match v_opt with
+             | Some () ->
+               if not (Hashtbl.mem state.base k) then begin
+                 Hashtbl.replace state.base k ();
+                 new_roots := k :: !new_roots
+               end
+             | None -> removes := k :: !removes);
+
+      (* Phase 2: Single BFS expansion from all new roots *)
+      let added_from_expansion =
+        if !new_roots <> [] then Fixpoint.expand state ~frontier:!new_roots
+        else []
+      in
+
+      (* Phase 3: Handle removes (may trigger contraction) *)
+      let all_added = ref added_from_expansion in
+      let all_removed = ref [] in
+      !removes
+      |> List.iter (fun k ->
+             let added, removed =
+               Fixpoint.apply_init_delta state (Remove k)
              in
-             let added, removed = Fixpoint.apply_init_delta state d in
              all_added := added @ !all_added;
              all_removed := removed @ !all_removed);
+
       (* Deduplicate and emit as batch *)
       let added_set = Hashtbl.create (List.length !all_added) in
       List.iter (fun k -> Hashtbl.replace added_set k ()) !all_added;
       let removed_set = Hashtbl.create (List.length !all_removed) in
       List.iter (fun k -> Hashtbl.replace removed_set k ()) !all_removed;
-      (* Net changes: added if in added_set but not removed_set, etc. *)
       let net_added =
         Hashtbl.fold
           (fun k () acc -> if Hashtbl.mem removed_set k then acc else k :: acc)
