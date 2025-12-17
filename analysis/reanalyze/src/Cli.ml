@@ -33,3 +33,6 @@ let reactive = ref false
 
 (* number of analysis runs (for benchmarking reactive mode) *)
 let runs = ref 1
+
+(* output mermaid diagram of reactive pipeline *)
+let mermaid = ref false

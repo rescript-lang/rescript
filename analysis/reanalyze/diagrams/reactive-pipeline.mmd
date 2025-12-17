@@ -1,113 +1,177 @@
 %%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f4fd', 'primaryTextColor': '#1a1a1a', 'primaryBorderColor': '#4a90d9', 'lineColor': '#4a90d9', 'secondaryColor': '#f0f7e6', 'tertiaryColor': '#fff5e6'}}}%%
 flowchart TB
     subgraph FileLayer["File Layer"]
-        RFC[("RFC")]
+        file_collection[("file_collection")]
     end
 
     subgraph FileData["Per-File Data"]
-        FD["FD"]
+        file_data[file_data]
+        files[files]
+        file_deps[file_deps]
     end
 
     subgraph Extracted["Extracted (ReactiveMerge)"]
-        DECLS["D"]
-        ANNOT["A"]
-        VREFS["VR"]
-        TREFS["TR"]
-        CFI["CFI"]
+        decls[decls]
+        annotations[annotations]
+        value_refs[value_refs]
+        type_refs[type_refs]
+        cross_file[cross_file<br/>items]
     end
 
     subgraph TypeDeps["ReactiveTypeDeps"]
-        DBP["DBP"]
-        ATR["ATR"]
+        decl_by_path[decl_by_path]
+        intf_decls[intf_decls]
+        impl_decls[impl_decls]
+        intf_to_impl[intf→impl]
+        impl_to_intf[impl→intf]
+        same_path[same_path]
+        combined_refs[combined<br/>refs_to]
+        all_type_refs[all_type<br/>refs_from]
     end
 
-    subgraph ExcDeps["ReactiveExceptionRefs"]
-        EXCREF["ER"]
-        EXCDECL["ED"]
-        RESOLVED["RR"]
+    subgraph ExcRefs["ReactiveExceptionRefs"]
+        exc_collection[exception<br/>refs]
+        exc_decls[exception<br/>decls]
+        resolved_refs[resolved<br/>refs]
+        resolved_from[resolved<br/>refs_from]
     end
 
     subgraph DeclRefs["ReactiveDeclRefs"]
-        DR["DR"]
+        decls_by_file[decls<br/>by_file]
+        value_decl_refs[value<br/>decl_refs]
+        type_decl_refs[type<br/>decl_refs]
+        with_value[with_value<br/>refs]
+        with_type[with_type<br/>refs]
+        combined[combined]
     end
 
     subgraph Liveness["ReactiveLiveness"]
-        ROOTS["roots"]
-        EDGES["edges"]
-        FP["fixpoint"]
-        LIVE["LIVE"]
+        value_refs_from[value<br/>refs_from]
+        type_refs_from[type<br/>refs_from]
+        ext_value_refs[external<br/>value_refs]
+        ext_type_refs[external<br/>type_refs]
+        ext_referenced[externally<br/>referenced]
+        annotated_roots[annotated<br/>roots]
+        all_roots[all_roots]
+        edges[edges]
+        live[live<br/>fixpoint]
     end
 
     subgraph Solver["ReactiveSolver"]
-        DEAD_DECLS["dead_decls"]
-        LIVE_DECLS["live_decls"]
-        DEAD_MODULES["dead_modules"]
-        DEAD_BY_FILE["dead_by_file"]
-        REFS_BY_FILE["refs_by_file"]
-        ISSUES_BY_FILE["issues_by_file"]
-        INCORRECT["incorrect_dead"]
-        MOD_REPORTED["mod_reported"]
-        MOD_ISSUES["mod_issues"]
+        dead_decls[dead_decls]
+        live_decls[live_decls]
+        modules_dead[modules<br/>with_dead]
+        modules_live[modules<br/>with_live]
+        dead_modules[dead<br/>modules]
+        dead_by_file[dead<br/>by_file]
+        issues_by_file[issues<br/>by_file]
+        incorrect_dead[incorrect<br/>dead]
+        modules_reported[modules<br/>reported]
+        module_issues[module<br/>issues]
     end
 
     subgraph Report["Report (iter only)"]
         OUTPUT[("REPORT")]
     end
 
-    RFC -->|"process"| FD
-    FD -->|"flatMap"| DECLS
-    FD -->|"flatMap"| ANNOT
-    FD -->|"flatMap"| VREFS
-    FD -->|"flatMap"| TREFS
-    FD -->|"flatMap"| CFI
+    %% File Layer
+    file_collection -->|process| file_data
+    file_data --> files
+    file_data --> file_deps
+    file_data --> decls
+    file_data --> annotations
+    file_data --> value_refs
+    file_data --> type_refs
+    file_data --> cross_file
 
-    DECLS -->|"flatMap"| DBP
-    DBP -->|"union+flatMap"| ATR
+    %% TypeDeps
+    decls --> decl_by_path
+    decls --> intf_decls
+    decls --> impl_decls
+    decl_by_path --> intf_to_impl
+    decl_by_path --> impl_to_intf
+    decl_by_path --> same_path
+    intf_decls --> intf_to_impl
+    impl_decls --> impl_to_intf
+    intf_to_impl --> combined_refs
+    impl_to_intf --> combined_refs
+    same_path --> combined_refs
+    combined_refs --> all_type_refs
 
-    CFI -->|"flatMap"| EXCREF
-    DECLS -->|"flatMap"| EXCDECL
-    EXCREF -->|"join"| RESOLVED
-    EXCDECL -->|"join"| RESOLVED
+    %% ExceptionRefs
+    cross_file --> exc_collection
+    decls --> exc_decls
+    exc_collection --> resolved_refs
+    exc_decls --> resolved_refs
+    resolved_refs --> resolved_from
 
-    DECLS --> DR
-    VREFS --> DR
-    TREFS --> DR
-    ATR --> DR
-    RESOLVED --> DR
+    %% DeclRefs
+    decls --> decls_by_file
+    decls --> with_value
+    decls --> with_type
+    decls_by_file --> value_decl_refs
+    decls_by_file --> type_decl_refs
+    value_decl_refs --> with_value
+    type_decl_refs --> with_type
+    with_value --> combined
+    with_type --> combined
 
-    DECLS --> ROOTS
-    ANNOT --> ROOTS
+    %% Liveness inputs
+    value_refs --> value_refs_from
+    type_refs --> type_refs_from
+    all_type_refs --> type_refs_from
+    resolved_from --> value_refs_from
 
-    DR -->|"flatMap"| EDGES
-    ROOTS --> FP
-    EDGES --> FP
-    FP -->|"fixpoint"| LIVE
+    %% Liveness external refs
+    decls --> ext_value_refs
+    decls --> ext_type_refs
+    value_refs_from --> ext_value_refs
+    type_refs_from --> ext_type_refs
+    value_refs_from --> value_decl_refs
+    type_refs_from --> type_decl_refs
+    ext_value_refs --> ext_referenced
+    ext_type_refs --> ext_referenced
 
-    DECLS -->|"join (NOT in live)"| DEAD_DECLS
-    LIVE -->|"join"| DEAD_DECLS
-    DECLS -->|"join (IN live)"| LIVE_DECLS
-    LIVE -->|"join"| LIVE_DECLS
+    %% Liveness roots
+    decls --> annotated_roots
+    annotations --> annotated_roots
+    ext_referenced --> all_roots
+    annotated_roots --> all_roots
 
-    DEAD_DECLS -->|"flatMap (anti-join)"| DEAD_MODULES
-    LIVE_DECLS -->|"flatMap (anti-join)"| DEAD_MODULES
+    %% Liveness fixpoint
+    combined --> edges
+    all_roots --> live
+    edges --> live
 
-    DEAD_DECLS -->|"flatMap by file"| DEAD_BY_FILE
-    VREFS -->|"flatMap by file"| REFS_BY_FILE
+    %% Solver partition
+    decls --> dead_decls
+    decls --> live_decls
+    live --> dead_decls
+    live --> live_decls
 
-    DEAD_BY_FILE -->|"flatMap"| ISSUES_BY_FILE
-    ANNOT -->|"filter"| ISSUES_BY_FILE
-    REFS_BY_FILE -->|"hasRefBelow"| ISSUES_BY_FILE
+    %% Solver modules
+    dead_decls --> modules_dead
+    live_decls --> modules_live
+    modules_dead --> dead_modules
+    modules_live --> dead_modules
 
-    LIVE_DECLS -->|"join (@dead)"| INCORRECT
-    ANNOT -->|"join (@dead)"| INCORRECT
+    %% Solver issues
+    dead_decls --> dead_by_file
+    dead_by_file --> issues_by_file
 
-    ISSUES_BY_FILE -->|"flatMap"| MOD_REPORTED
-    DEAD_MODULES -->|"join"| MOD_ISSUES
-    MOD_REPORTED -->|"join"| MOD_ISSUES
+    %% Solver incorrect @dead
+    live_decls --> incorrect_dead
+    annotations --> incorrect_dead
 
-    ISSUES_BY_FILE -->|"iter"| OUTPUT
-    INCORRECT -->|"iter"| OUTPUT
-    MOD_ISSUES -->|"iter"| OUTPUT
+    %% Solver module issues
+    issues_by_file --> modules_reported
+    dead_modules --> module_issues
+    modules_reported --> module_issues
+
+    %% Output
+    issues_by_file -->|iter| OUTPUT
+    incorrect_dead -->|iter| OUTPUT
+    module_issues -->|iter| OUTPUT
 
     classDef fileLayer fill:#e8f4fd,stroke:#4a90d9,stroke-width:2px
     classDef extracted fill:#f0f7e6,stroke:#6b8e23,stroke-width:2px
@@ -118,11 +182,11 @@ flowchart TB
     classDef solver fill:#ffe6f0,stroke:#cc6699,stroke-width:2px
     classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
 
-    class RFC,FD fileLayer
-    class DECLS,ANNOT,VREFS,TREFS,CFI extracted
-    class DBP,ATR typeDeps
-    class EXCREF,EXCDECL,RESOLVED excDeps
-    class DR declRefs
-    class ROOTS,EDGES,FP,LIVE liveness
-    class DEAD_DECLS,LIVE_DECLS,DEAD_MODULES,DEAD_BY_FILE,REFS_BY_FILE,ISSUES_BY_FILE,INCORRECT,MOD_REPORTED,MOD_ISSUES solver
+    class file_collection,file_data,files,file_deps fileLayer
+    class decls,annotations,value_refs,type_refs,cross_file extracted
+    class decl_by_path,intf_decls,impl_decls,intf_to_impl,impl_to_intf,same_path,combined_refs,all_type_refs typeDeps
+    class exc_collection,exc_decls,resolved_refs,resolved_from excDeps
+    class decls_by_file,value_decl_refs,type_decl_refs,with_value,with_type,combined declRefs
+    class value_refs_from,type_refs_from,ext_value_refs,ext_type_refs,ext_referenced,annotated_roots,all_roots,edges,live liveness
+    class dead_decls,live_decls,modules_dead,modules_live,dead_modules,dead_by_file,issues_by_file,incorrect_dead,modules_reported,module_issues solver
     class OUTPUT output
