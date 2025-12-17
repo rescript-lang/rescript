@@ -50,8 +50,7 @@ let decl_module_name (decl : Decl.t) : Name.t =
 
 let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
     ~(live : (Lexing.position, unit) Reactive.t)
-    ~(annotations :
-       (Lexing.position, FileAnnotations.annotated_as) Reactive.t)
+    ~(annotations : (Lexing.position, FileAnnotations.annotated_as) Reactive.t)
     ~(value_refs_from : (Lexing.position, PosSet.t) Reactive.t option)
     ~(config : DceConfig.t) : t =
   (* dead_decls = decls where NOT in live (reactive join) *)

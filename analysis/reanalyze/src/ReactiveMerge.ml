@@ -21,8 +21,8 @@ type t = {
 
 (** {1 Creation} *)
 
-let create (source : (string, DceFileProcessing.file_data option) Reactive.t)
-    : t =
+let create (source : (string, DceFileProcessing.file_data option) Reactive.t) :
+    t =
   (* Declarations: (pos, Decl.t) with last-write-wins *)
   let decls =
     Reactive.flatMap ~name:"decls" source
