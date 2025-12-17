@@ -70,9 +70,30 @@ let process_if_changed t path =
     emit t (Reactive.Set (path, value));
     true (* changed *)
 
-(** Process multiple files *)
+(** Process multiple files (emits individual deltas) *)
 let process_files t paths =
   List.iter (fun path -> ignore (process_if_changed t path)) paths
+
+(** Process a file without emitting. Returns batch entry if changed. *)
+let process_file_silent t path =
+  let new_id = get_file_id path in
+  match Hashtbl.find_opt t.internal.cache path with
+  | Some (old_id, _) when not (file_changed ~old_id ~new_id) ->
+    None (* unchanged *)
+  | _ ->
+    let raw = t.internal.read_file path in
+    let value = t.internal.process path raw in
+    Hashtbl.replace t.internal.cache path (new_id, value);
+    Some (Reactive.set path value)
+
+(** Process multiple files and emit as a single batch.
+    More efficient than process_files when processing many files at once. *)
+let process_files_batch t paths =
+  let entries =
+    paths |> List.filter_map (fun path -> process_file_silent t path)
+  in
+  if entries <> [] then emit t (Reactive.Batch entries);
+  List.length entries
 
 (** Remove a file *)
 let remove t path =

@@ -487,9 +487,7 @@ let join (left : ('k1, 'v1) t) (right : ('k2, 'v2) t)
     | Batch entries ->
       (* Collect all affected right keys, then process *)
       let right_keys =
-        entries
-        |> List.map (fun (k, _) -> k)
-        |> List.sort_uniq compare
+        entries |> List.map (fun (k, _) -> k) |> List.sort_uniq compare
       in
       let all_downstream = right_keys |> List.concat_map process_right_key in
       (* Deduplicate *)
@@ -1104,8 +1102,7 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
       (* Net changes: added if in added_set but not removed_set, etc. *)
       let net_added =
         Hashtbl.fold
-          (fun k () acc ->
-            if Hashtbl.mem removed_set k then acc else k :: acc)
+          (fun k () acc -> if Hashtbl.mem removed_set k then acc else k :: acc)
           added_set []
       in
       let net_removed =
@@ -1144,8 +1141,7 @@ let fixpoint ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () : ('k, unit) t
       List.iter (fun k -> Hashtbl.replace removed_set k ()) !all_removed;
       let net_added =
         Hashtbl.fold
-          (fun k () acc ->
-            if Hashtbl.mem removed_set k then acc else k :: acc)
+          (fun k () acc -> if Hashtbl.mem removed_set k then acc else k :: acc)
           added_set []
       in
       let net_removed =

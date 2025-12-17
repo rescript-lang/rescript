@@ -74,27 +74,27 @@ let create ~config : t =
       process_cmt_infos ~config ~cmtFilePath:path cmt_infos)
 
 (** Process all files incrementally using ReactiveFileCollection.
-    First run processes all files. Subsequent runs only process changed files. *)
+    First run processes all files. Subsequent runs only process changed files.
+    Uses batch processing to emit all changes as a single Batch delta. *)
 let process_files ~(collection : t) ~config:_ cmtFilePaths : all_files_result =
   Timing.time_phase `FileLoading (fun () ->
-      let processed = ref 0 in
-      let from_cache = ref 0 in
+      let total_files = List.length cmtFilePaths in
+      let cached_before =
+        cmtFilePaths
+        |> List.filter (fun p -> ReactiveFileCollection.mem collection p)
+        |> List.length
+      in
 
-      (* Add/update all files in the collection *)
-      cmtFilePaths
-      |> List.iter (fun cmtFilePath ->
-             let was_in_collection =
-               ReactiveFileCollection.mem collection cmtFilePath
-             in
-             let changed =
-               ReactiveFileCollection.process_if_changed collection cmtFilePath
-             in
-             if changed then incr processed
-             else if was_in_collection then incr from_cache);
+      (* Process all files as a batch - emits single Batch delta *)
+      let processed =
+        ReactiveFileCollection.process_files_batch collection cmtFilePaths
+      in
+      let from_cache = total_files - processed in
 
       if !Cli.timing then
-        Printf.eprintf "Reactive: %d files processed, %d from cache\n%!"
-          !processed !from_cache;
+        Printf.eprintf
+          "Reactive: %d files processed, %d from cache (was cached: %d)\n%!"
+          processed from_cache cached_before;
 
       (* Collect results from the collection *)
       let dce_data_list = ref [] in

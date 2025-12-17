@@ -40,7 +40,13 @@ val to_collection : ('raw, 'v) t -> (string, 'v) Reactive.t
 (** {1 Processing} *)
 
 val process_files : ('raw, 'v) t -> string list -> unit
-(** Process files, emitting deltas for changed files. *)
+(** Process files, emitting individual deltas for each changed file. *)
+
+val process_files_batch : ('raw, 'v) t -> string list -> int
+(** Process files, emitting a single [Batch] delta with all changes.
+    Returns the number of files that changed.
+    More efficient than [process_files] when processing many files at once,
+    as downstream combinators can process all changes together. *)
 
 val process_if_changed : ('raw, 'v) t -> string -> bool
 (** Process a file if changed. Returns true if file was processed. *)
