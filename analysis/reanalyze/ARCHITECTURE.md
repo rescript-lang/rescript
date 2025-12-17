@@ -151,40 +151,40 @@ The reactive layer (`analysis/reactive/`) provides delta-based incremental updat
 | `subscribe` | Register for delta notifications |
 | `iter` | Iterate current entries |
 | `get` | Lookup by key |
-| `delta` | Change notification: `Set (key, value)` or `Remove key` |
+| `delta` | Change notification: `Set (k, v)`, `Remove k`, or `Batch [(k, v option); ...]` |
+| `source` | Create a mutable source collection with emit function |
 | `flatMap` | Transform collection, optionally merge same-key values |
 | `join` | Hash join two collections (left join behavior) |
 | `union` | Combine two collections, optionally merge same-key values |
 | `fixpoint` | Transitive closure: `init + edges → reachable` |
-| `lookup` | Single-key subscription |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 
 ### Glitch-Free Semantics via Topological Scheduling
 
-The reactive system implements **glitch-free propagation** using a topological scheduler. This ensures derived collections always see consistent parent states, similar to SKStore's approach.
+The reactive system implements **glitch-free propagation** using an accumulate-then-propagate scheduler. This ensures derived collections always see consistent parent states, similar to SKStore's approach.
 
 **How it works:**
-1. Each collection has a `level` (topological order):
-   - Source collections (e.g., `ReactiveFileCollection`) have `level = 0`
-   - Derived collections have `level = max(source levels) + 1`
-2. When a delta propagates, emissions are **scheduled by level**
-3. The scheduler processes all pending updates in level order
-4. This ensures: sources complete → level 1 → level 2 → ... → observers
+1. Each node has a `level` (topological order):
+   - Source collections have `level = 0`
+   - Derived collections have `level = max(parent levels) + 1`
+2. Each combinator **accumulates** incoming deltas in pending buffers
+3. The scheduler visits dirty nodes in level order and calls `process()`
+4. Each node processes **once per wave** with complete input from all parents
 
 **Example ordering:**
 ```
-Files (level 0) → file_data (level 1) → decls (level 2) → live (level 3) → issues (level 4)
+file_collection (L0) → file_data (L1) → decls (L2) → live (L14) → dead_decls (L15)
 ```
 
 When a batch of file changes arrives:
-1. All level 1 collections update first
-2. Then level 2, etc.
-3. A join never sees one parent updated while the other is stale
+1. Deltas accumulate in pending buffers (no immediate processing)
+2. Scheduler processes level 0, then level 1, etc.
+3. A join processes only after **both** parents have updated
 
-The `Reactive.Scheduler` module provides:
-- `schedule ~level ~f` - Queue a thunk at a given level
-- `is_propagating ()` - Check if in propagation phase
-- Automatic propagation when scheduling outside of propagation
+The `Reactive.Registry` and `Reactive.Scheduler` modules provide:
+- Named nodes with stats tracking (use `-timing` flag to see stats)
+- `to_mermaid()` - Generate pipeline diagram (use `-mermaid` flag)
+- `print_stats()` - Show per-node timing and delta counts
 
 ### Fully Reactive Analysis Pipeline
 
@@ -235,74 +235,16 @@ Files → file_data → decls, annotations, refs → live (fixpoint) → dead/li
 
 ![Reactive Pipeline](diagrams/reactive-pipeline.svg)
 
-```
-┌───────────────────────────────────────────────────────────────────────────────────┐
-│                           REACTIVE ANALYSIS PIPELINE                               │
-│                                                                                   │
-│  ┌──────────┐                                                                     │
-│  │  .cmt    │                                                                     │
-│  │  files   │                                                                     │
-│  └────┬─────┘                                                                     │
-│       │                                                                           │
-│       ▼                                                                           │
-│  ┌──────────────────────┐                                                         │
-│  │ ReactiveFileCollection│  File change detection + caching                       │
-│  │      file_data        │                                                        │
-│  └────┬─────────────────┘                                                         │
-│       │ flatMap                                                                   │
-│       ▼                                                                           │
-│  ┌──────────────────────┐                                                         │
-│  │    ReactiveMerge     │  Derives collections from file_data                     │
-│  │ ┌──────┐ ┌────────┐  │                                                         │
-│  │ │decls │ │  refs  │  │                                                         │
-│  │ └──┬───┘ └───┬────┘  │                                                         │
-│  │    │  ┌──────┴─────┐ │                                                         │
-│  │    │  │annotations │ │                                                         │
-│  │    │  └──────┬─────┘ │                                                         │
-│  └────┼─────────┼───────┘                                                         │
-│       │         │                                                                 │
-│       │         ▼                                                                 │
-│       │    ┌─────────────────────┐                                                │
-│       │    │  ReactiveLiveness   │  roots + edges → live (fixpoint)               │
-│       │    │  ┌──────┐ ┌──────┐  │                                                │
-│       │    │  │roots │→│ live │  │                                                │
-│       │    │  └──────┘ └──┬───┘  │                                                │
-│       │    └──────────────┼──────┘                                                │
-│       │                   │                                                       │
-│       ▼                   ▼                                                       │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐  │
-│  │                          ReactiveSolver                                     │  │
-│  │                                                                             │  │
-│  │  decls ──┬──► dead_decls ──┬──► dead_decls_by_file ──► issues_by_file       │  │
-│  │          │        │        │            │                    │              │  │
-│  │  live ───┤        │        │            │                    ▼              │  │
-│  │          │        ▼        │            │         modules_with_reported     │  │
-│  │          │   dead_modules ─┼────────────┼──────────────┬─────────┘          │  │
-│  │          │        ↑        │            │              │                    │  │
-│  │          └──► live_decls ──┼────────────┘              ▼                    │  │
-│  │                   │        │              dead_module_issues                │  │
-│  │                   │        │                                                │  │
-│  │  annotations ─────┼────────┴──► incorrect_dead_decls                        │  │
-│  │                   │                                                         │  │
-│  │  value_refs_from ─┴──► refs_by_file (used by issues_by_file for hasRefBelow)│  │
-│  │                                                                             │  │
-│  │  (Optional args: TODO - not yet reactive, ~8-14ms)                          │  │
-│  └─────────────────────────────────────────────────────────────────────────────┘  │
-│                   │                                                               │
-│                   ▼                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐  │
-│  │                              REPORT                                         │  │
-│  │                                                                             │  │
-│  │  collect_issues iterates pre-computed reactive collections:                 │  │
-│  │    - incorrect_dead_decls  (~0.04ms)                                        │  │
-│  │    - issues_by_file        (~0.6ms)                                         │  │
-│  │    - dead_module_issues    (~0.06ms)                                        │  │
-│  │                                                                             │  │
-│  │  Total dead_code solving: ~0.7ms on cache hit                               │  │
-│  └─────────────────────────────────────────────────────────────────────────────┘  │
-│                                                                                   │
-└───────────────────────────────────────────────────────────────────────────────────┘
-```
+The Mermaid diagram above shows all 44 reactive nodes. Key stages:
+
+1. **File Layer**: `file_collection` → `file_data` → extracted collections
+2. **TypeDeps**: `decl_by_path` → interface/implementation refs → `all_type_refs`
+3. **ExceptionRefs**: `cross_file` → `resolved_refs` → `resolved_from`
+4. **DeclRefs**: Combines value/type refs → `combined` edges
+5. **Liveness**: `annotated_roots` + `externally_referenced` → `all_roots` + `edges` → `live` (fixpoint)
+6. **Solver**: `decls` + `live` → `dead_decls`/`live_decls` → per-file issues → module issues
+
+Use `-mermaid` flag to generate the current pipeline diagram from code.
 
 ### Delta Propagation
 
@@ -334,7 +276,7 @@ No joins are recomputed, no fixpoints are re-run - the reactive collections are 
 
 | Module | Responsibility |
 |--------|---------------|
-| `Reactive` | Core primitives: `flatMap`, `join`, `union`, `fixpoint`, delta types |
+| `Reactive` | Core primitives: `source`, `flatMap`, `join`, `union`, `fixpoint`, `Scheduler`, `Registry` |
 | `ReactiveFileCollection` | File-backed collection with change detection |
 | `ReactiveAnalysis` | CMT processing with file caching |
 | `ReactiveMerge` | Derives decls, annotations, refs from file_data |
@@ -343,6 +285,21 @@ No joins are recomputed, no fixpoints are re-run - the reactive collections are 
 | `ReactiveDeclRefs` | Maps declarations to their outgoing references |
 | `ReactiveLiveness` | Computes live positions via reactive fixpoint |
 | `ReactiveSolver` | Computes dead_decls and issues via reactive joins |
+
+### Stats Tracking
+
+Use `-timing` flag to see per-node statistics:
+
+| Stat | Description |
+|------|-------------|
+| `d_recv` | Deltas received (Set/Remove/Batch messages) |
+| `e_recv` | Entries received (after batch expansion) |
+| `+in` / `-in` | Adds/removes received from upstream |
+| `d_emit` | Deltas emitted downstream |
+| `e_emit` | Entries in emitted deltas |
+| `+out` / `-out` | Adds/removes emitted (non-zero `-out` indicates churn) |
+| `runs` | Times the node's `process()` was called |
+| `time_ms` | Cumulative processing time |
 
 ---
 
