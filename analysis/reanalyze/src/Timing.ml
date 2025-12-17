@@ -3,6 +3,8 @@
 let enabled = ref false
 
 type phase_times = {
+  (* Churn (file add/remove) *)
+  mutable churn: float;
   (* CMT processing sub-phases *)
   mutable file_loading: float;
   mutable result_collection: float;
@@ -15,6 +17,7 @@ type phase_times = {
 
 let times =
   {
+    churn = 0.0;
     file_loading = 0.0;
     result_collection = 0.0;
     merging = 0.0;
@@ -26,11 +29,14 @@ let times =
 let timing_mutex = Mutex.create ()
 
 let reset () =
+  times.churn <- 0.0;
   times.file_loading <- 0.0;
   times.result_collection <- 0.0;
   times.merging <- 0.0;
   times.solving <- 0.0;
   times.reporting <- 0.0
+
+let add_churn_time t = times.churn <- times.churn +. t
 
 let now () = Unix.gettimeofday ()
 
@@ -56,8 +62,11 @@ let report () =
   if !enabled then (
     let cmt_total = times.file_loading in
     let analysis_total = times.merging +. times.solving in
-    let total = cmt_total +. analysis_total +. times.reporting in
+    let total = times.churn +. cmt_total +. analysis_total +. times.reporting in
     Printf.eprintf "\n=== Timing ===\n";
+    if times.churn > 0.0 then
+      Printf.eprintf "  Churn:              %.3fs (%.1f%%)\n" times.churn
+        (100.0 *. times.churn /. total);
     Printf.eprintf "  CMT processing:     %.3fs (%.1f%%)\n" cmt_total
       (100.0 *. cmt_total /. total);
     (* Only show parallel-specific timing when used *)

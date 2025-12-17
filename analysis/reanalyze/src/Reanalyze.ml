@@ -204,8 +204,14 @@ let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
 
 (** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot ~reactive_collection : all_files_result =
-  let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
+let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
+    all_files_result =
+  let cmtFilePaths =
+    let all = collectCmtFilePaths ~cmtRoot in
+    match skip_file with
+    | Some should_skip -> List.filter (fun p -> not (should_skip p)) all
+    | None -> all
+  in
   (* Reactive mode: use incremental processing that skips unchanged files *)
   match reactive_collection with
   | Some collection ->
@@ -245,10 +251,10 @@ let shuffle_list lst =
   Array.to_list arr
 
 let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-    ~reactive_liveness ~reactive_solver =
+    ~reactive_liveness ~reactive_solver ~skip_file =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
-    processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection
+    processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection ~skip_file
   in
   (* Get exception results from reactive collection if available *)
   let exception_results =
@@ -522,20 +528,141 @@ let runAnalysisAndReport ~cmtRoot =
            ~config:dce_config)
     | _ -> None
   in
+  (* Collect CMT file paths once for churning *)
+  let cmtFilePaths =
+    if !Cli.churn > 0 then Some (collectCmtFilePaths ~cmtRoot) else None
+  in
+  (* Track previous issue count for diff reporting *)
+  let prev_issue_count = ref 0 in
+  (* Track currently removed files (to add them back on next run) *)
+  let removed_files = ref [] in
+  (* Set of removed files for filtering in processCmtFiles *)
+  let removed_set = Hashtbl.create 64 in
+  (* Aggregate stats for churn mode *)
+  let churn_times = ref [] in
+  let issues_added_list = ref [] in
+  let issues_removed_list = ref [] in
   for run = 1 to numRuns do
     Timing.reset ();
     (* Clear stats at start of each run to avoid accumulation *)
     if run > 1 then Log_.Stats.clear ();
+    (* Print run header first *)
     if numRuns > 1 && !Cli.timing then
       Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
+    (* Churn: alternate between remove and add phases *)
+    (if !Cli.churn > 0 then
+       match (reactive_collection, cmtFilePaths) with
+       | Some collection, Some paths ->
+         Reactive.reset_stats ();
+         if run > 1 && !removed_files <> [] then (
+           (* Add back previously removed files *)
+           let to_add = !removed_files in
+           removed_files := [];
+           (* Clear removed set so these files get processed again *)
+           List.iter (fun p -> Hashtbl.remove removed_set p) to_add;
+           let t0 = Unix.gettimeofday () in
+           let processed =
+             ReactiveFileCollection.process_files_batch
+               (collection
+                 : ReactiveAnalysis.t
+                 :> (_, _) ReactiveFileCollection.t)
+               to_add
+           in
+           let elapsed = Unix.gettimeofday () -. t0 in
+           Timing.add_churn_time elapsed;
+           churn_times := elapsed :: !churn_times;
+           if !Cli.timing then (
+             Printf.eprintf "  Added back %d files (%.3fs)\n%!" processed
+               elapsed;
+             (match reactive_liveness with
+             | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
+             | None -> ());
+             match reactive_solver with
+             | Some solver -> ReactiveSolver.print_stats ~t:solver
+             | None -> ()))
+         else if run > 1 then (
+           (* Remove new random files *)
+           let numChurn = min !Cli.churn (List.length paths) in
+           let shuffled = shuffle_list paths in
+           let to_remove = List.filteri (fun i _ -> i < numChurn) shuffled in
+           removed_files := to_remove;
+           (* Mark as removed so processCmtFiles skips them *)
+           List.iter (fun p -> Hashtbl.replace removed_set p ()) to_remove;
+           let t0 = Unix.gettimeofday () in
+           let removed =
+             ReactiveFileCollection.remove_batch
+               (collection
+                 : ReactiveAnalysis.t
+                 :> (_, _) ReactiveFileCollection.t)
+               to_remove
+           in
+           let elapsed = Unix.gettimeofday () -. t0 in
+           Timing.add_churn_time elapsed;
+           churn_times := elapsed :: !churn_times;
+           if !Cli.timing then (
+             Printf.eprintf "  Removed %d files (%.3fs)\n%!" removed elapsed;
+             (match reactive_liveness with
+             | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
+             | None -> ());
+             match reactive_solver with
+             | Some solver -> ReactiveSolver.print_stats ~t:solver
+             | None -> ()))
+       | _ -> ());
+    (* Skip removed files in reactive mode *)
+    let skip_file =
+      if Hashtbl.length removed_set > 0 then
+        Some (fun path -> Hashtbl.mem removed_set path)
+      else None
+    in
     runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-      ~reactive_liveness ~reactive_solver;
-    if run = numRuns then (
-      (* Only report on last run *)
+      ~reactive_liveness ~reactive_solver ~skip_file;
+    (* Report issue count with diff *)
+    let current_count = Log_.Stats.get_issue_count () in
+    if !Cli.churn > 0 then (
+      let diff = current_count - !prev_issue_count in
+      (* Track added/removed separately *)
+      if run > 1 then
+        if diff > 0 then
+          issues_added_list := float_of_int diff :: !issues_added_list
+        else if diff < 0 then
+          issues_removed_list := float_of_int (-diff) :: !issues_removed_list;
+      let diff_str =
+        if run = 1 then ""
+        else if diff >= 0 then Printf.sprintf " (+%d)" diff
+        else Printf.sprintf " (%d)" diff
+      in
       Log_.Stats.report ~config:dce_config;
-      Log_.Stats.clear ());
+      if !Cli.timing then
+        Printf.eprintf "  Total issues: %d%s\n%!" current_count diff_str;
+      prev_issue_count := current_count)
+    else if run = numRuns then
+      (* Only report on last run for non-churn mode *)
+      Log_.Stats.report ~config:dce_config;
+    Log_.Stats.clear ();
     Timing.report ()
   done;
+  (* Print aggregate churn stats *)
+  if !Cli.churn > 0 && !Cli.timing && List.length !churn_times > 0 then (
+    let calc_stats lst =
+      if lst = [] then (0.0, 0.0)
+      else
+        let n = float_of_int (List.length lst) in
+        let sum = List.fold_left ( +. ) 0.0 lst in
+        let mean = sum /. n in
+        let variance =
+          List.fold_left (fun acc x -> acc +. ((x -. mean) ** 2.0)) 0.0 lst /. n
+        in
+        (mean, sqrt variance)
+    in
+    let time_mean, time_std = calc_stats !churn_times in
+    let added_mean, added_std = calc_stats !issues_added_list in
+    let removed_mean, removed_std = calc_stats !issues_removed_list in
+    Printf.eprintf "\n=== Churn Summary ===\n";
+    Printf.eprintf "  Churn operations: %d\n" (List.length !churn_times);
+    Printf.eprintf "  Churn time: mean=%.3fs std=%.3fs\n" time_mean time_std;
+    Printf.eprintf "  Issues added: mean=%.0f std=%.0f\n" added_mean added_std;
+    Printf.eprintf "  Issues removed: mean=%.0f std=%.0f\n" removed_mean
+      removed_std);
   if !Cli.json then EmitJson.finish ()
 
 let cli () =
@@ -657,6 +784,10 @@ let cli () =
       ( "-runs",
         Int (fun n -> Cli.runs := n),
         "n Run analysis n times (for benchmarking cache effectiveness)" );
+      ( "-churn",
+        Int (fun n -> Cli.churn := n),
+        "n Remove and re-add n random files between runs (tests incremental \
+         correctness)" );
       ("-version", Unit versionAndExit, "Show version information and exit");
       ("--version", Unit versionAndExit, "Show version information and exit");
     ]

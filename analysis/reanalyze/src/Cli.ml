@@ -34,5 +34,8 @@ let reactive = ref false
 (* number of analysis runs (for benchmarking reactive mode) *)
 let runs = ref 1
 
+(* number of files to churn (remove/re-add) between runs for incremental testing *)
+let churn = ref 0
+
 (* output mermaid diagram of reactive pipeline *)
 let mermaid = ref false
