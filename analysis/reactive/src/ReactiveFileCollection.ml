@@ -17,45 +17,27 @@ type ('raw, 'v) internal = {
   cache: (string, file_id * 'v) Hashtbl.t;
   read_file: string -> 'raw;
   process: string -> 'raw -> 'v; (* path -> raw -> value *)
-  mutable subscribers: ((string, 'v) Reactive.delta -> unit) list;
 }
 (** Internal state for file collection *)
 
 type ('raw, 'v) t = {
   internal: ('raw, 'v) internal;
   collection: (string, 'v) Reactive.t;
+  emit: (string, 'v) Reactive.delta -> unit;
 }
 (** A file collection is just a Reactive.t with some extra operations *)
 
-let emit t delta =
-  t.collection.stats.updates_emitted <- t.collection.stats.updates_emitted + 1;
-  List.iter (fun h -> h delta) t.internal.subscribers
-
 (** Create a new reactive file collection *)
 let create ~read_file ~process : ('raw, 'v) t =
-  let internal =
-    {cache = Hashtbl.create 256; read_file; process; subscribers = []}
-  in
-  let my_stats = Reactive.create_stats () in
-  let collection =
-    {
-      Reactive.subscribe =
-        (fun handler -> internal.subscribers <- handler :: internal.subscribers);
-      iter =
-        (fun f -> Hashtbl.iter (fun path (_, v) -> f path v) internal.cache);
-      get =
-        (fun path ->
-          match Hashtbl.find_opt internal.cache path with
-          | Some (_, v) -> Some v
-          | None -> None);
-      length = (fun () -> Hashtbl.length internal.cache);
-      stats = my_stats;
-    }
-  in
-  {internal; collection}
+  let internal = {cache = Hashtbl.create 256; read_file; process} in
+  let collection, emit = Reactive.source ~name:"file_collection" () in
+  {internal; collection; emit}
 
 (** Get the collection interface for composition *)
 let to_collection t : (string, 'v) Reactive.t = t.collection
+
+(** Emit a delta *)
+let emit t delta = t.emit delta
 
 (** Process a file if changed. Emits delta to subscribers. *)
 let process_if_changed t path =
@@ -106,7 +88,11 @@ let clear t = Hashtbl.clear t.internal.cache
 (** Invalidate a path *)
 let invalidate t path = Hashtbl.remove t.internal.cache path
 
-let get t path = t.collection.get path
+let get t path =
+  match Hashtbl.find_opt t.internal.cache path with
+  | Some (_, v) -> Some v
+  | None -> None
+
 let mem t path = Hashtbl.mem t.internal.cache path
-let length t = t.collection.length ()
-let iter f t = t.collection.iter f
+let length t = Reactive.length t.collection
+let iter f t = Reactive.iter f t.collection

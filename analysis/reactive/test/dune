@@ -1,3 +1,14 @@
 (executable
  (name ReactiveTest)
+ (modules
+  ReactiveTest
+  TestHelpers
+  FlatMapTest
+  JoinTest
+  UnionTest
+  FixpointBasicTest
+  FixpointIncrementalTest
+  BatchTest
+  IntegrationTest
+  GlitchFreeTest)
  (libraries reactive))
