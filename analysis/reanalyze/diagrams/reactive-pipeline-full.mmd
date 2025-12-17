@@ -1,92 +1,128 @@
 graph TD
     annotations[annotations L2]
-    annotations -->|join| solver.incorrect_dead_decls
-    annotations -->|join| liveness.annotated_roots
     exc_refs.exception_decls[exc_refs.exception_decls L3]
-    exc_refs.exception_decls -->|join| exc_refs.resolved_refs
     type_deps.same_path_refs[type_deps.same_path_refs L4]
-    type_deps.same_path_refs -->|union| type_deps.u1
     file_collection[file_collection L0]
-    file_collection -->|flatMap| file_data_collection
     decl_refs.value_decl_refs[decl_refs.value_decl_refs L7]
-    decl_refs.value_decl_refs -->|join| decl_refs.with_value_refs
     type_deps.combined_refs_to[type_deps.combined_refs_to L7]
-    type_deps.combined_refs_to -->|flatMap| type_deps.all_type_refs_from
     type_deps.all_type_refs_from[type_deps.all_type_refs_from L8]
-    type_deps.all_type_refs_from -->|union| liveness.type_refs_from
     type_deps.impl_needing_path2[type_deps.impl_needing_path2 L4]
-    type_deps.impl_needing_path2 -->|join| type_deps.impl_to_intf_refs_path2
     exc_refs.resolved_refs_from[exc_refs.resolved_refs_from L5]
-    exc_refs.resolved_refs_from -->|union| liveness.value_refs_from
     exc_refs.resolved_refs[exc_refs.resolved_refs L4]
-    exc_refs.resolved_refs -->|flatMap| exc_refs.resolved_refs_from
     type_deps.impl_to_intf_refs_path2[type_deps.impl_to_intf_refs_path2 L5]
-    type_deps.impl_to_intf_refs_path2 -->|union| type_deps.u2
     file_deps_map[file_deps_map L2]
     decl_refs.with_value_refs[decl_refs.with_value_refs L8]
-    decl_refs.with_value_refs -->|join| decl_refs.combined
     type_deps.u1[type_deps.u1 L5]
-    type_deps.u1 -->|union| type_deps.u2
     cross_file_items[cross_file_items L2]
-    cross_file_items -->|flatMap| exception_refs_collection
     decl_refs.decls_by_file[decl_refs.decls_by_file L3]
-    decl_refs.decls_by_file -->|join| decl_refs.type_decl_refs
-    decl_refs.decls_by_file -->|join| decl_refs.value_decl_refs
     type_deps.impl_to_intf_refs[type_deps.impl_to_intf_refs L4]
-    type_deps.impl_to_intf_refs -->|union| type_deps.u1
     solver.issues_by_file[solver.issues_by_file L17]
-    solver.issues_by_file -->|flatMap| solver.modules_with_reported
     liveness.annotated_roots[liveness.annotated_roots L3]
-    liveness.annotated_roots -->|union| liveness.all_roots
     solver.incorrect_dead_decls[solver.incorrect_dead_decls L16]
     type_deps.intf_to_impl_refs[type_deps.intf_to_impl_refs L4]
-    type_deps.intf_to_impl_refs -->|union| type_deps.combined_refs_to
     type_deps.decl_by_path[type_deps.decl_by_path L3]
-    type_deps.decl_by_path -->|join| type_deps.intf_to_impl_refs
-    type_deps.decl_by_path -->|join| type_deps.impl_to_intf_refs_path2
-    type_deps.decl_by_path -->|join| type_deps.impl_needing_path2
-    type_deps.decl_by_path -->|join| type_deps.impl_to_intf_refs
-    type_deps.decl_by_path -->|flatMap| type_deps.same_path_refs
     type_deps.u2[type_deps.u2 L6]
-    type_deps.u2 -->|union| type_deps.combined_refs_to
     solver.live_decls[solver.live_decls L15]
-    solver.live_decls -->|join| solver.incorrect_dead_decls
-    solver.live_decls -->|flatMap| solver.modules_with_live
     type_deps.impl_decls[type_deps.impl_decls L3]
-    type_deps.impl_decls -->|join| type_deps.impl_needing_path2
-    type_deps.impl_decls -->|join| type_deps.impl_to_intf_refs
     liveness.all_roots[liveness.all_roots L12]
-    liveness.all_roots -->|roots| liveness.live
     solver.dead_modules[solver.dead_modules L17]
-    solver.dead_modules -->|join| solver.dead_module_issues
     liveness.external_type_refs[liveness.external_type_refs L10]
-    liveness.external_type_refs -->|union| liveness.externally_referenced
     decl_refs.combined[decl_refs.combined L12]
-    decl_refs.combined -->|flatMap| liveness.edges
     type_refs_from[type_refs_from L2]
-    type_refs_from -->|union| liveness.type_refs_from
     liveness.type_refs_from[liveness.type_refs_from L9]
-    liveness.type_refs_from -->|join| liveness.external_type_refs
-    liveness.type_refs_from -->|join| decl_refs.type_decl_refs
     solver.dead_decls_by_file[solver.dead_decls_by_file L16]
-    solver.dead_decls_by_file -->|flatMap| solver.issues_by_file
     liveness.external_value_refs[liveness.external_value_refs L7]
-    liveness.external_value_refs -->|union| liveness.externally_referenced
     liveness.value_refs_from[liveness.value_refs_from L6]
-    liveness.value_refs_from -->|join| liveness.external_value_refs
-    liveness.value_refs_from -->|join| decl_refs.value_decl_refs
     value_refs_from[value_refs_from L2]
-    value_refs_from -->|union| liveness.value_refs_from
     solver.modules_with_dead[solver.modules_with_dead L16]
-    solver.modules_with_dead -->|join| solver.dead_modules
     solver.dead_decls[solver.dead_decls L15]
+    exception_refs_collection[exception_refs_collection L3]
+    type_deps.intf_decls[type_deps.intf_decls L3]
+    file_data_collection[file_data_collection L1]
+    solver.dead_module_issues[solver.dead_module_issues L19]
+    decl_refs.with_type_refs[decl_refs.with_type_refs L11]
+    solver.modules_with_live[solver.modules_with_live L16]
+    decl_refs.type_decl_refs[decl_refs.type_decl_refs L10]
+    files[files L2]
+    solver.modules_with_reported[solver.modules_with_reported L18]
+    liveness.externally_referenced[liveness.externally_referenced L11]
+    liveness.edges[liveness.edges L13]
+    liveness.live[liveness.live L14]
+    decls[decls L2]
+    type_deps.intf_to_impl_refs_join{join}
+    liveness.external_value_refs_join{join}
+    type_deps.impl_to_intf_refs_path2_join{join}
+    solver.incorrect_dead_decls_join{join}
+    liveness.value_refs_from_union{union}
+    exc_refs.resolved_refs_join{join}
+    type_deps.combined_refs_to_union{union}
+    liveness.externally_referenced_union{union}
+    solver.dead_modules_join{join}
+    liveness.all_roots_union{union}
+    solver.dead_module_issues_join{join}
+    solver.dead_decls_join{join}
+    liveness.annotated_roots_join{join}
+    decl_refs.value_decl_refs_join{join}
+    type_deps.impl_to_intf_refs_join{join}
+    solver.live_decls_join{join}
+    decl_refs.with_value_refs_join{join}
+    liveness.type_refs_from_union{union}
+    type_deps.impl_needing_path2_join{join}
+    liveness.external_type_refs_join{join}
+    liveness.live_fp{fixpoint}
+    decl_refs.type_decl_refs_join{join}
+    type_deps.u2_union{union}
+    decl_refs.combined_join{join}
+    type_deps.u1_union{union}
+    decl_refs.with_type_refs_join{join}
+    annotations --> solver.incorrect_dead_decls_join
+    annotations --> liveness.annotated_roots_join
+    exc_refs.exception_decls --> exc_refs.resolved_refs_join
+    type_deps.same_path_refs --> type_deps.u1_union
+    file_collection -->|flatMap| file_data_collection
+    decl_refs.value_decl_refs --> decl_refs.with_value_refs_join
+    type_deps.combined_refs_to -->|flatMap| type_deps.all_type_refs_from
+    type_deps.all_type_refs_from --> liveness.type_refs_from_union
+    type_deps.impl_needing_path2 --> type_deps.impl_to_intf_refs_path2_join
+    exc_refs.resolved_refs_from --> liveness.value_refs_from_union
+    exc_refs.resolved_refs -->|flatMap| exc_refs.resolved_refs_from
+    type_deps.impl_to_intf_refs_path2 --> type_deps.u2_union
+    decl_refs.with_value_refs --> decl_refs.combined_join
+    type_deps.u1 --> type_deps.u2_union
+    cross_file_items -->|flatMap| exception_refs_collection
+    decl_refs.decls_by_file --> decl_refs.type_decl_refs_join
+    decl_refs.decls_by_file --> decl_refs.value_decl_refs_join
+    type_deps.impl_to_intf_refs --> type_deps.u1_union
+    solver.issues_by_file -->|flatMap| solver.modules_with_reported
+    liveness.annotated_roots --> liveness.all_roots_union
+    type_deps.intf_to_impl_refs --> type_deps.combined_refs_to_union
+    type_deps.decl_by_path --> type_deps.intf_to_impl_refs_join
+    type_deps.decl_by_path --> type_deps.impl_to_intf_refs_path2_join
+    type_deps.decl_by_path --> type_deps.impl_needing_path2_join
+    type_deps.decl_by_path --> type_deps.impl_to_intf_refs_join
+    type_deps.decl_by_path -->|flatMap| type_deps.same_path_refs
+    type_deps.u2 --> type_deps.combined_refs_to_union
+    solver.live_decls --> solver.incorrect_dead_decls_join
+    solver.live_decls -->|flatMap| solver.modules_with_live
+    type_deps.impl_decls --> type_deps.impl_needing_path2_join
+    type_deps.impl_decls --> type_deps.impl_to_intf_refs_join
+    liveness.all_roots --> liveness.live_fp
+    solver.dead_modules --> solver.dead_module_issues_join
+    liveness.external_type_refs --> liveness.externally_referenced_union
+    decl_refs.combined -->|flatMap| liveness.edges
+    type_refs_from --> liveness.type_refs_from_union
+    liveness.type_refs_from --> liveness.external_type_refs_join
+    liveness.type_refs_from --> decl_refs.type_decl_refs_join
+    solver.dead_decls_by_file -->|flatMap| solver.issues_by_file
+    liveness.external_value_refs --> liveness.externally_referenced_union
+    liveness.value_refs_from --> liveness.external_value_refs_join
+    liveness.value_refs_from --> decl_refs.value_decl_refs_join
+    value_refs_from --> liveness.value_refs_from_union
+    solver.modules_with_dead --> solver.dead_modules_join
     solver.dead_decls -->|flatMap| solver.dead_decls_by_file
     solver.dead_decls -->|flatMap| solver.modules_with_dead
-    exception_refs_collection[exception_refs_collection L3]
-    exception_refs_collection -->|join| exc_refs.resolved_refs
-    type_deps.intf_decls[type_deps.intf_decls L3]
-    type_deps.intf_decls -->|join| type_deps.intf_to_impl_refs
-    file_data_collection[file_data_collection L1]
+    exception_refs_collection --> exc_refs.resolved_refs_join
+    type_deps.intf_decls --> type_deps.intf_to_impl_refs_join
     file_data_collection -->|flatMap| files
     file_data_collection -->|flatMap| file_deps_map
     file_data_collection -->|flatMap| cross_file_items
@@ -94,34 +130,50 @@ graph TD
     file_data_collection -->|flatMap| value_refs_from
     file_data_collection -->|flatMap| annotations
     file_data_collection -->|flatMap| decls
-    solver.dead_module_issues[solver.dead_module_issues L19]
-    decl_refs.with_type_refs[decl_refs.with_type_refs L11]
-    decl_refs.with_type_refs -->|join| decl_refs.combined
-    solver.modules_with_live[solver.modules_with_live L16]
-    solver.modules_with_live -->|join| solver.dead_modules
-    decl_refs.type_decl_refs[decl_refs.type_decl_refs L10]
-    decl_refs.type_decl_refs -->|join| decl_refs.with_type_refs
-    files[files L2]
-    solver.modules_with_reported[solver.modules_with_reported L18]
-    solver.modules_with_reported -->|join| solver.dead_module_issues
-    liveness.externally_referenced[liveness.externally_referenced L11]
-    liveness.externally_referenced -->|union| liveness.all_roots
-    liveness.edges[liveness.edges L13]
-    liveness.edges -->|edges| liveness.live
-    liveness.live[liveness.live L14]
-    liveness.live -->|join| solver.live_decls
-    liveness.live -->|join| solver.dead_decls
-    decls[decls L2]
-    decls -->|join| solver.live_decls
-    decls -->|join| solver.dead_decls
-    decls -->|join| liveness.annotated_roots
-    decls -->|join| liveness.external_type_refs
-    decls -->|join| liveness.external_value_refs
-    decls -->|join| decl_refs.with_type_refs
-    decls -->|join| decl_refs.with_value_refs
+    decl_refs.with_type_refs --> decl_refs.combined_join
+    solver.modules_with_live --> solver.dead_modules_join
+    decl_refs.type_decl_refs --> decl_refs.with_type_refs_join
+    solver.modules_with_reported --> solver.dead_module_issues_join
+    liveness.externally_referenced --> liveness.all_roots_union
+    liveness.edges --> liveness.live_fp
+    liveness.live --> solver.live_decls_join
+    liveness.live --> solver.dead_decls_join
+    decls --> solver.live_decls_join
+    decls --> solver.dead_decls_join
+    decls --> liveness.annotated_roots_join
+    decls --> liveness.external_type_refs_join
+    decls --> liveness.external_value_refs_join
+    decls --> decl_refs.with_type_refs_join
+    decls --> decl_refs.with_value_refs_join
     decls -->|flatMap| decl_refs.decls_by_file
     decls -->|flatMap| exc_refs.exception_decls
     decls -->|flatMap| type_deps.intf_decls
     decls -->|flatMap| type_deps.impl_decls
     decls -->|flatMap| type_deps.decl_by_path
+    type_deps.intf_to_impl_refs_join --> type_deps.intf_to_impl_refs
+    liveness.external_value_refs_join --> liveness.external_value_refs
+    type_deps.impl_to_intf_refs_path2_join --> type_deps.impl_to_intf_refs_path2
+    solver.incorrect_dead_decls_join --> solver.incorrect_dead_decls
+    liveness.value_refs_from_union --> liveness.value_refs_from
+    exc_refs.resolved_refs_join --> exc_refs.resolved_refs
+    type_deps.combined_refs_to_union --> type_deps.combined_refs_to
+    liveness.externally_referenced_union --> liveness.externally_referenced
+    solver.dead_modules_join --> solver.dead_modules
+    liveness.all_roots_union --> liveness.all_roots
+    solver.dead_module_issues_join --> solver.dead_module_issues
+    solver.dead_decls_join --> solver.dead_decls
+    liveness.annotated_roots_join --> liveness.annotated_roots
+    decl_refs.value_decl_refs_join --> decl_refs.value_decl_refs
+    type_deps.impl_to_intf_refs_join --> type_deps.impl_to_intf_refs
+    solver.live_decls_join --> solver.live_decls
+    decl_refs.with_value_refs_join --> decl_refs.with_value_refs
+    liveness.type_refs_from_union --> liveness.type_refs_from
+    type_deps.impl_needing_path2_join --> type_deps.impl_needing_path2
+    liveness.external_type_refs_join --> liveness.external_type_refs
+    liveness.live_fp --> liveness.live
+    decl_refs.type_decl_refs_join --> decl_refs.type_decl_refs
+    type_deps.u2_union --> type_deps.u2
+    decl_refs.combined_join --> decl_refs.combined
+    type_deps.u1_union --> type_deps.u1
+    decl_refs.with_type_refs_join --> decl_refs.with_type_refs
 

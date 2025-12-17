@@ -97,6 +97,9 @@ module Registry = struct
 
   let nodes : (string, node_info) Hashtbl.t = Hashtbl.create 64
   let edges : (string * string, string) Hashtbl.t = Hashtbl.create 128
+  (* Combinator nodes: (combinator_id, (shape, inputs, output)) *)
+  let combinators : (string, string * string list * string) Hashtbl.t =
+    Hashtbl.create 32
   let dirty_nodes : string list ref = ref []
 
   let register ~name ~level ~process ~stats =
@@ -123,6 +126,10 @@ module Registry = struct
     | Some info -> info.upstream <- from_name :: info.upstream
     | None -> ()
 
+  (** Register a multi-input combinator (rendered as diamond in Mermaid) *)
+  let add_combinator ~name ~shape ~inputs ~output =
+    Hashtbl.replace combinators name (shape, inputs, output)
+
   let mark_dirty name =
     match Hashtbl.find_opt nodes name with
     | Some info when not info.dirty ->
@@ -133,33 +140,62 @@ module Registry = struct
   let clear () =
     Hashtbl.clear nodes;
     Hashtbl.clear edges;
+    Hashtbl.clear combinators;
     dirty_nodes := []
 
   (** Generate Mermaid diagram of the pipeline *)
   let to_mermaid () =
     let buf = Buffer.create 256 in
     Buffer.add_string buf "graph TD\n";
+    (* Collect edges that are part of combinators *)
+    let combinator_edges = Hashtbl.create 64 in
+    Hashtbl.iter
+      (fun comb_name (_, inputs, output) ->
+        List.iter
+          (fun input -> Hashtbl.replace combinator_edges (input, output) comb_name)
+          inputs)
+      combinators;
+    (* Output regular nodes *)
     Hashtbl.iter
       (fun name info ->
-        (* Node with level annotation *)
         Buffer.add_string buf
-          (Printf.sprintf "    %s[%s L%d]\n" name name info.level);
-        (* Edges with labels *)
+          (Printf.sprintf "    %s[%s L%d]\n" name name info.level))
+      nodes;
+    (* Output combinator nodes (diamond shape) *)
+    Hashtbl.iter
+      (fun comb_name (shape, _inputs, _output) ->
+        Buffer.add_string buf (Printf.sprintf "    %s{%s}\n" comb_name shape))
+      combinators;
+    (* Output edges *)
+    Hashtbl.iter
+      (fun name info ->
         List.iter
           (fun downstream ->
-            let label =
-              match Hashtbl.find_opt edges (name, downstream) with
-              | Some l -> l
-              | None -> ""
-            in
-            if label = "" then
+            (* Check if this edge is part of a combinator *)
+            match Hashtbl.find_opt combinator_edges (name, downstream) with
+            | Some comb_name ->
+              (* Edge goes to combinator node instead *)
               Buffer.add_string buf
-                (Printf.sprintf "    %s --> %s\n" name downstream)
-            else
-              Buffer.add_string buf
-                (Printf.sprintf "    %s -->|%s| %s\n" name label downstream))
+                (Printf.sprintf "    %s --> %s\n" name comb_name)
+            | None ->
+              let label =
+                match Hashtbl.find_opt edges (name, downstream) with
+                | Some l -> l
+                | None -> ""
+              in
+              if label = "" then
+                Buffer.add_string buf
+                  (Printf.sprintf "    %s --> %s\n" name downstream)
+              else
+                Buffer.add_string buf
+                  (Printf.sprintf "    %s -->|%s| %s\n" name label downstream))
           info.downstream)
       nodes;
+    (* Output edges from combinators to their outputs *)
+    Hashtbl.iter
+      (fun comb_name (_shape, _inputs, output) ->
+        Buffer.add_string buf (Printf.sprintf "    %s --> %s\n" comb_name output))
+      combinators;
     Buffer.contents buf
 
   (** Print timing stats for all nodes *)
@@ -711,6 +747,8 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
   in
   Registry.add_edge ~from_name:left.name ~to_name:name ~label:"join";
   Registry.add_edge ~from_name:right.name ~to_name:name ~label:"join";
+  Registry.add_combinator ~name:(name ^ "_join") ~shape:"join"
+    ~inputs:[left.name; right.name] ~output:name;
 
   (* Subscribe to sources: just accumulate *)
   left.subscribe (fun delta ->
@@ -844,6 +882,8 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
   in
   Registry.add_edge ~from_name:left.name ~to_name:name ~label:"union";
   Registry.add_edge ~from_name:right.name ~to_name:name ~label:"union";
+  Registry.add_combinator ~name:(name ^ "_union") ~shape:"union"
+    ~inputs:[left.name; right.name] ~output:name;
 
   (* Subscribe to sources: just accumulate *)
   left.subscribe (fun delta ->
@@ -1046,6 +1086,8 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   in
   Registry.add_edge ~from_name:init.name ~to_name:name ~label:"roots";
   Registry.add_edge ~from_name:edges.name ~to_name:name ~label:"edges";
+  Registry.add_combinator ~name:(name ^ "_fp") ~shape:"fixpoint"
+    ~inputs:[init.name; edges.name] ~output:name;
 
   (* Subscribe to sources: just accumulate *)
   init.subscribe (fun delta ->
