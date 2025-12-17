@@ -96,6 +96,7 @@ module Registry = struct
   }
 
   let nodes : (string, node_info) Hashtbl.t = Hashtbl.create 64
+  let edges : (string * string, string) Hashtbl.t = Hashtbl.create 128
   let dirty_nodes : string list ref = ref []
 
   let register ~name ~level ~process ~stats =
@@ -113,7 +114,8 @@ module Registry = struct
     Hashtbl.replace nodes name info;
     info
 
-  let add_edge ~from_name ~to_name =
+  let add_edge ~from_name ~to_name ~label =
+    Hashtbl.replace edges (from_name, to_name) label;
     (match Hashtbl.find_opt nodes from_name with
     | Some info -> info.downstream <- to_name :: info.downstream
     | None -> ());
@@ -130,6 +132,7 @@ module Registry = struct
 
   let clear () =
     Hashtbl.clear nodes;
+    Hashtbl.clear edges;
     dirty_nodes := []
 
   (** Generate Mermaid diagram of the pipeline *)
@@ -141,11 +144,20 @@ module Registry = struct
         (* Node with level annotation *)
         Buffer.add_string buf
           (Printf.sprintf "    %s[%s L%d]\n" name name info.level);
-        (* Edges *)
+        (* Edges with labels *)
         List.iter
           (fun downstream ->
-            Buffer.add_string buf
-              (Printf.sprintf "    %s --> %s\n" name downstream))
+            let label =
+              match Hashtbl.find_opt edges (name, downstream) with
+              | Some l -> l
+              | None -> ""
+            in
+            if label = "" then
+              Buffer.add_string buf
+                (Printf.sprintf "    %s --> %s\n" name downstream)
+            else
+              Buffer.add_string buf
+                (Printf.sprintf "    %s -->|%s| %s\n" name label downstream))
           info.downstream)
       nodes;
     Buffer.contents buf
@@ -458,7 +470,7 @@ let flatMap ~name (src : ('k1, 'v1) t) ~f ?merge () : ('k2, 'v2) t =
   let _info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
-  Registry.add_edge ~from_name:src.name ~to_name:name;
+  Registry.add_edge ~from_name:src.name ~to_name:name ~label:"flatMap";
 
   (* Subscribe to source: just accumulate *)
   src.subscribe (fun delta ->
@@ -697,8 +709,8 @@ let join ~name (left : ('k1, 'v1) t) (right : ('k2, 'v2) t) ~key_of ~f ?merge ()
   let _info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
-  Registry.add_edge ~from_name:left.name ~to_name:name;
-  Registry.add_edge ~from_name:right.name ~to_name:name;
+  Registry.add_edge ~from_name:left.name ~to_name:name ~label:"join";
+  Registry.add_edge ~from_name:right.name ~to_name:name ~label:"join";
 
   (* Subscribe to sources: just accumulate *)
   left.subscribe (fun delta ->
@@ -830,8 +842,8 @@ let union ~name (left : ('k, 'v) t) (right : ('k, 'v) t) ?merge () : ('k, 'v) t
   let _info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
-  Registry.add_edge ~from_name:left.name ~to_name:name;
-  Registry.add_edge ~from_name:right.name ~to_name:name;
+  Registry.add_edge ~from_name:left.name ~to_name:name ~label:"union";
+  Registry.add_edge ~from_name:right.name ~to_name:name ~label:"union";
 
   (* Subscribe to sources: just accumulate *)
   left.subscribe (fun delta ->
@@ -1032,8 +1044,8 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
   let _info =
     Registry.register ~name ~level:my_level ~process ~stats:my_stats
   in
-  Registry.add_edge ~from_name:init.name ~to_name:name;
-  Registry.add_edge ~from_name:edges.name ~to_name:name;
+  Registry.add_edge ~from_name:init.name ~to_name:name ~label:"roots";
+  Registry.add_edge ~from_name:edges.name ~to_name:name ~label:"edges";
 
   (* Subscribe to sources: just accumulate *)
   init.subscribe (fun delta ->
