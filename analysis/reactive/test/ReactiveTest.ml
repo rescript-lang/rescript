@@ -947,7 +947,13 @@ let test_fixpoint_add_base () =
   let removed = ref [] in
   fp.subscribe (function
     | Set (k, ()) -> added := k :: !added
-    | Remove k -> removed := k :: !removed);
+    | Remove k -> removed := k :: !removed
+    | Batch entries ->
+      entries
+      |> List.iter (fun (k, v_opt) ->
+             match v_opt with
+             | Some () -> added := k :: !added
+             | None -> removed := k :: !removed));
 
   emit_init (Set ("c", ()));
 
@@ -1216,7 +1222,13 @@ let test_fixpoint_remove_spurious_root () =
   let removed = ref [] in
   fp.subscribe (function
     | Set (k, ()) -> added := k :: !added
-    | Remove k -> removed := k :: !removed);
+    | Remove k -> removed := k :: !removed
+    | Batch entries ->
+      entries
+      |> List.iter (fun (k, v_opt) ->
+             match v_opt with
+             | Some () -> added := k :: !added
+             | None -> removed := k :: !removed));
 
   (* Step 1: "b" is spuriously marked as a root 
      (in the real bug, this happens when a reference arrives before its declaration) *)
@@ -1366,7 +1378,13 @@ let test_fixpoint_remove_edge_rederivation () =
   let added = ref [] in
   fp.subscribe (function
     | Remove k -> removed := k :: !removed
-    | Set (k, ()) -> added := k :: !added);
+    | Set (k, ()) -> added := k :: !added
+    | Batch entries ->
+      entries
+      |> List.iter (fun (k, v_opt) ->
+             match v_opt with
+             | Some () -> added := k :: !added
+             | None -> removed := k :: !removed));
 
   (* Add root *)
   emit_init (Set ("root", ()));
@@ -1520,7 +1538,13 @@ let test_fixpoint_remove_edge_entry_higher_rank_support () =
   let added = ref [] in
   fp.subscribe (function
     | Remove k -> removed := k :: !removed
-    | Set (k, ()) -> added := k :: !added);
+    | Set (k, ()) -> added := k :: !added
+    | Batch entries ->
+      entries
+      |> List.iter (fun (k, v_opt) ->
+             match v_opt with
+             | Some () -> added := k :: !added
+             | None -> removed := k :: !removed));
 
   (* Add root *)
   emit_init (Set ("root", ()));
@@ -1714,6 +1738,86 @@ let test_fixpoint_existing_data () =
 
   Printf.printf "PASSED\n\n"
 
+(* ==================== Batch Tests ==================== *)
+
+let test_batch_flatmap () =
+  Printf.printf "=== Test: batch flatmap ===\n";
+
+  let source, emit, _ = create_mutable_collection () in
+  let derived =
+    Reactive.flatMap source ~f:(fun k v -> [(k ^ "_derived", v * 2)]) ()
+  in
+
+  (* Subscribe to track what comes out *)
+  let received_batches = ref 0 in
+  let received_entries = ref [] in
+  derived.subscribe (function
+    | Batch entries ->
+      incr received_batches;
+      received_entries := entries @ !received_entries
+    | Set (k, v) -> received_entries := [(k, Some v)] @ !received_entries
+    | Remove k -> received_entries := [(k, None)] @ !received_entries);
+
+  (* Send a batch *)
+  emit
+    (Batch
+       [
+         Reactive.set "a" 1;
+         Reactive.set "b" 2;
+         Reactive.set "c" 3;
+       ]);
+
+  Printf.printf "Received batches: %d, entries: %d\n" !received_batches
+    (List.length !received_entries);
+  assert (!received_batches = 1);
+  assert (List.length !received_entries = 3);
+  assert (Reactive.get derived "a_derived" = Some 2);
+  assert (Reactive.get derived "b_derived" = Some 4);
+  assert (Reactive.get derived "c_derived" = Some 6);
+
+  Printf.printf "PASSED\n\n"
+
+let test_batch_fixpoint () =
+  Printf.printf "=== Test: batch fixpoint ===\n";
+
+  let init, emit_init, _ = create_mutable_collection () in
+  let edges, emit_edges, _ = create_mutable_collection () in
+
+  let fp = Reactive.fixpoint ~init ~edges () in
+
+  (* Track batches received *)
+  let batch_count = ref 0 in
+  let total_added = ref 0 in
+  fp.subscribe (function
+    | Batch entries ->
+      incr batch_count;
+      entries
+      |> List.iter (fun (_, v_opt) ->
+             match v_opt with
+             | Some () -> incr total_added
+             | None -> ())
+    | Set (_, ()) -> incr total_added
+    | Remove _ -> ());
+
+  (* Set up edges first *)
+  emit_edges (Set ("a", ["b"; "c"]));
+  emit_edges (Set ("b", ["d"]));
+
+  (* Send batch of roots *)
+  emit_init (Batch [Reactive.set "a" (); Reactive.set "x" ()]);
+
+  Printf.printf "Batch count: %d, total added: %d\n" !batch_count !total_added;
+  Printf.printf "fp length: %d\n" (Reactive.length fp);
+  (* Should have a, b, c, d (reachable from a) and x (standalone root) *)
+  assert (Reactive.length fp = 5);
+  assert (Reactive.get fp "a" = Some ());
+  assert (Reactive.get fp "b" = Some ());
+  assert (Reactive.get fp "c" = Some ());
+  assert (Reactive.get fp "d" = Some ());
+  assert (Reactive.get fp "x" = Some ());
+
+  Printf.printf "PASSED\n\n"
+
 let () =
   Printf.printf "\n====== Reactive Collection Tests ======\n\n";
   test_flatmap_basic ();
@@ -1750,4 +1854,7 @@ let () =
   test_fixpoint_remove_edge_entry_higher_rank_support ();
   test_fixpoint_remove_edge_entry_needs_rederivation ();
   test_fixpoint_remove_base_needs_rederivation ();
+  (* Batch tests *)
+  test_batch_flatmap ();
+  test_batch_fixpoint ();
   Printf.printf "All tests passed!\n"
