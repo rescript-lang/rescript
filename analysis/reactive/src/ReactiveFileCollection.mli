@@ -54,6 +54,10 @@ val process_if_changed : ('raw, 'v) t -> string -> bool
 val remove : ('raw, 'v) t -> string -> unit
 (** Remove a file from the collection. *)
 
+val remove_batch : ('raw, 'v) t -> string list -> int
+(** Remove multiple files as a batch. Returns the number of files removed.
+    More efficient than calling [remove] multiple times. *)
+
 (** {1 Cache Management} *)
 
 val invalidate : ('raw, 'v) t -> string -> unit

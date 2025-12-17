@@ -164,3 +164,6 @@ val print_stats : unit -> unit
 
 val reset : unit -> unit
 (** Clear all registered nodes (for tests) *)
+
+val reset_stats : unit -> unit
+(** Reset all node statistics to zero (keeps nodes intact) *)

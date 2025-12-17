@@ -144,6 +144,21 @@ module Registry = struct
     Hashtbl.clear combinators;
     dirty_nodes := []
 
+  let reset_stats () =
+    Hashtbl.iter
+      (fun _ info ->
+        info.stats.deltas_received <- 0;
+        info.stats.entries_received <- 0;
+        info.stats.adds_received <- 0;
+        info.stats.removes_received <- 0;
+        info.stats.process_count <- 0;
+        info.stats.process_time_ns <- 0L;
+        info.stats.deltas_emitted <- 0;
+        info.stats.entries_emitted <- 0;
+        info.stats.adds_emitted <- 0;
+        info.stats.removes_emitted <- 0)
+      nodes
+
   (** Generate Mermaid diagram of the pipeline *)
   let to_mermaid () =
     let buf = Buffer.create 256 in
@@ -1167,3 +1182,4 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
 let to_mermaid () = Registry.to_mermaid ()
 let print_stats () = Registry.print_stats ()
 let reset () = Registry.clear ()
+let reset_stats () = Registry.reset_stats ()

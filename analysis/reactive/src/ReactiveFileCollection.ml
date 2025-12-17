@@ -82,6 +82,19 @@ let remove t path =
   Hashtbl.remove t.internal.cache path;
   emit t (Reactive.Remove path)
 
+(** Remove multiple files as a batch *)
+let remove_batch t paths =
+  let entries =
+    paths
+    |> List.filter_map (fun path ->
+           if Hashtbl.mem t.internal.cache path then (
+             Hashtbl.remove t.internal.cache path;
+             Some (path, None))
+           else None)
+  in
+  if entries <> [] then emit t (Reactive.Batch entries);
+  List.length entries
+
 (** Clear all cached data *)
 let clear t = Hashtbl.clear t.internal.cache
 

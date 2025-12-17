@@ -197,6 +197,7 @@ module Stats = struct
   let issues = ref []
   let addIssue (issue : Issue.t) = issues := issue :: !issues
   let clear () = issues := []
+  let get_issue_count () = List.length !issues
 
   let getSortedIssues () =
     let counters2 = Hashtbl.create 1 in
