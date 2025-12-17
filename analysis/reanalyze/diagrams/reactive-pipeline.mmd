@@ -6,8 +6,6 @@ flowchart TB
 
     subgraph FileData["Per-File Data"]
         file_data[file_data]
-        files[files]
-        file_deps[file_deps]
     end
 
     subgraph Extracted["Extracted (ReactiveMerge)"]
@@ -15,44 +13,26 @@ flowchart TB
         annotations[annotations]
         value_refs[value_refs]
         type_refs[type_refs]
-        cross_file[cross_file<br/>items]
+        cross_file_items[cross_file_items]
     end
 
     subgraph TypeDeps["ReactiveTypeDeps"]
         decl_by_path[decl_by_path]
-        intf_decls[intf_decls]
-        impl_decls[impl_decls]
-        intf_to_impl[intf→impl]
-        impl_to_intf[impl→intf]
-        same_path[same_path]
-        combined_refs[combined<br/>refs_to]
-        all_type_refs[all_type<br/>refs_from]
+        all_type_refs[all_type_refs]
     end
 
     subgraph ExcRefs["ReactiveExceptionRefs"]
-        exc_collection[exception<br/>refs]
-        exc_decls[exception<br/>decls]
-        resolved_refs[resolved<br/>refs]
-        resolved_from[resolved<br/>refs_from]
+        exception_refs[exception_refs]
+        exception_decls[exception_decls]
+        resolved_refs[resolved_refs]
     end
 
     subgraph DeclRefs["ReactiveDeclRefs"]
-        decls_by_file[decls<br/>by_file]
-        value_decl_refs[value<br/>decl_refs]
-        type_decl_refs[type<br/>decl_refs]
-        with_value[with_value<br/>refs]
-        with_type[with_type<br/>refs]
-        combined[combined]
+        combined_refs[combined_refs]
     end
 
     subgraph Liveness["ReactiveLiveness"]
-        value_refs_from[value<br/>refs_from]
-        type_refs_from[type<br/>refs_from]
-        ext_value_refs[external<br/>value_refs]
-        ext_type_refs[external<br/>type_refs]
-        ext_referenced[externally<br/>referenced]
-        annotated_roots[annotated<br/>roots]
-        all_roots[all_roots]
+        roots[roots]
         edges[edges]
         live[live<br/>fixpoint]
     end
@@ -60,115 +40,62 @@ flowchart TB
     subgraph Solver["ReactiveSolver"]
         dead_decls[dead_decls]
         live_decls[live_decls]
-        modules_dead[modules<br/>with_dead]
-        modules_live[modules<br/>with_live]
-        dead_modules[dead<br/>modules]
-        dead_by_file[dead<br/>by_file]
-        issues_by_file[issues<br/>by_file]
-        incorrect_dead[incorrect<br/>dead]
-        modules_reported[modules<br/>reported]
-        module_issues[module<br/>issues]
+        dead_modules[dead_modules]
+        dead_by_file[dead_by_file]
+        issues_by_file[issues_by_file]
+        incorrect_dead[incorrect_dead]
+        module_issues[module_issues]
     end
 
     subgraph Report["Report (iter only)"]
         OUTPUT[("REPORT")]
     end
 
-    %% File Layer
     file_collection -->|process| file_data
-    file_data --> files
-    file_data --> file_deps
-    file_data --> decls
-    file_data --> annotations
-    file_data --> value_refs
-    file_data --> type_refs
-    file_data --> cross_file
+    file_data -->|flatMap| decls
+    file_data -->|flatMap| annotations
+    file_data -->|flatMap| value_refs
+    file_data -->|flatMap| type_refs
+    file_data -->|flatMap| cross_file_items
 
-    %% TypeDeps
-    decls --> decl_by_path
-    decls --> intf_decls
-    decls --> impl_decls
-    decl_by_path --> intf_to_impl
-    decl_by_path --> impl_to_intf
-    decl_by_path --> same_path
-    intf_decls --> intf_to_impl
-    impl_decls --> impl_to_intf
-    intf_to_impl --> combined_refs
-    impl_to_intf --> combined_refs
-    same_path --> combined_refs
-    combined_refs --> all_type_refs
+    decls -->|flatMap| decl_by_path
+    decl_by_path -->|union+join| all_type_refs
 
-    %% ExceptionRefs
-    cross_file --> exc_collection
-    decls --> exc_decls
-    exc_collection --> resolved_refs
-    exc_decls --> resolved_refs
-    resolved_refs --> resolved_from
+    cross_file_items -->|flatMap| exception_refs
+    decls -->|flatMap| exception_decls
+    exception_refs -->|join| resolved_refs
+    exception_decls -->|join| resolved_refs
 
-    %% DeclRefs
-    decls --> decls_by_file
-    decls --> with_value
-    decls --> with_type
-    decls_by_file --> value_decl_refs
-    decls_by_file --> type_decl_refs
-    value_decl_refs --> with_value
-    type_decl_refs --> with_type
-    with_value --> combined
-    with_type --> combined
+    decls --> combined_refs
+    value_refs --> combined_refs
+    type_refs --> combined_refs
+    all_type_refs --> combined_refs
+    resolved_refs --> combined_refs
 
-    %% Liveness inputs
-    value_refs --> value_refs_from
-    type_refs --> type_refs_from
-    all_type_refs --> type_refs_from
-    resolved_from --> value_refs_from
+    decls --> roots
+    annotations --> roots
 
-    %% Liveness external refs
-    decls --> ext_value_refs
-    decls --> ext_type_refs
-    value_refs_from --> ext_value_refs
-    type_refs_from --> ext_type_refs
-    value_refs_from --> value_decl_refs
-    type_refs_from --> type_decl_refs
-    ext_value_refs --> ext_referenced
-    ext_type_refs --> ext_referenced
-
-    %% Liveness roots
-    decls --> annotated_roots
-    annotations --> annotated_roots
-    ext_referenced --> all_roots
-    annotated_roots --> all_roots
-
-    %% Liveness fixpoint
-    combined --> edges
-    all_roots --> live
+    combined_refs -->|flatMap| edges
+    roots --> live
     edges --> live
 
-    %% Solver partition
-    decls --> dead_decls
-    decls --> live_decls
-    live --> dead_decls
-    live --> live_decls
+    decls -->|join| dead_decls
+    live -->|NOT in| dead_decls
+    decls -->|join| live_decls
+    live -->|IN| live_decls
 
-    %% Solver modules
-    dead_decls --> modules_dead
-    live_decls --> modules_live
-    modules_dead --> dead_modules
-    modules_live --> dead_modules
+    dead_decls --> dead_modules
+    live_decls --> dead_modules
 
-    %% Solver issues
-    dead_decls --> dead_by_file
-    dead_by_file --> issues_by_file
+    dead_decls -->|flatMap| dead_by_file
+    dead_by_file -->|flatMap| issues_by_file
 
-    %% Solver incorrect @dead
-    live_decls --> incorrect_dead
+    live_decls -->|join @dead| incorrect_dead
     annotations --> incorrect_dead
 
-    %% Solver module issues
-    issues_by_file --> modules_reported
-    dead_modules --> module_issues
-    modules_reported --> module_issues
+    dead_modules -->|join| module_issues
+    issues_by_file --> module_issues
 
-    %% Output
     issues_by_file -->|iter| OUTPUT
     incorrect_dead -->|iter| OUTPUT
     module_issues -->|iter| OUTPUT
@@ -182,11 +109,11 @@ flowchart TB
     classDef solver fill:#ffe6f0,stroke:#cc6699,stroke-width:2px
     classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
 
-    class file_collection,file_data,files,file_deps fileLayer
-    class decls,annotations,value_refs,type_refs,cross_file extracted
-    class decl_by_path,intf_decls,impl_decls,intf_to_impl,impl_to_intf,same_path,combined_refs,all_type_refs typeDeps
-    class exc_collection,exc_decls,resolved_refs,resolved_from excDeps
-    class decls_by_file,value_decl_refs,type_decl_refs,with_value,with_type,combined declRefs
-    class value_refs_from,type_refs_from,ext_value_refs,ext_type_refs,ext_referenced,annotated_roots,all_roots,edges,live liveness
-    class dead_decls,live_decls,modules_dead,modules_live,dead_modules,dead_by_file,issues_by_file,incorrect_dead,modules_reported,module_issues solver
+    class file_collection,file_data fileLayer
+    class decls,annotations,value_refs,type_refs,cross_file_items extracted
+    class decl_by_path,all_type_refs typeDeps
+    class exception_refs,exception_decls,resolved_refs excDeps
+    class combined_refs declRefs
+    class roots,edges,live liveness
+    class dead_decls,live_decls,dead_modules,dead_by_file,issues_by_file,incorrect_dead,module_issues solver
     class OUTPUT output
