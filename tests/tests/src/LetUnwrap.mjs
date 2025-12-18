@@ -30,19 +30,19 @@ function doNextStuffWithResult(s) {
 }
 
 function getXWithResult(s) {
-  let e = doStuffWithResult(s);
-  if (e.TAG !== "Ok") {
-    return e;
+  let y = doStuffWithResult(s);
+  if (y.TAG !== "Ok") {
+    return y;
   }
-  let y = e._0;
-  let e$1 = doNextStuffWithResult(y);
-  if (e$1.TAG === "Ok") {
+  let y$1 = y._0;
+  let x = doNextStuffWithResult(y$1);
+  if (x.TAG === "Ok") {
     return {
       TAG: "Ok",
-      _0: e$1._0 + y
+      _0: x._0 + y$1
     };
   } else {
-    return e$1;
+    return x;
   }
 }
 
@@ -67,15 +67,15 @@ function doNextStuffWithOption(s) {
 }
 
 function getXWithOption(s) {
-  let x = doStuffWithOption(s);
-  if (x === undefined) {
-    return x;
+  let y = doStuffWithOption(s);
+  if (y === undefined) {
+    return y;
   }
-  let x$1 = doNextStuffWithOption(x);
-  if (x$1 !== undefined) {
-    return x$1 + x;
+  let x = doNextStuffWithOption(y);
+  if (x !== undefined) {
+    return x + y;
   } else {
-    return x$1;
+    return x;
   }
 }
 
@@ -115,55 +115,55 @@ async function decodeResAsync(res) {
 }
 
 async function getXWithResultAsync(s) {
-  let e = await doStuffResultAsync(s);
-  if (e.TAG !== "Ok") {
-    return e;
+  let x = await doStuffResultAsync(s);
+  if (x.TAG !== "Ok") {
+    return x;
   }
-  let res = e._0;
+  let res = x._0;
   console.log(res.s);
-  let e$1 = await decodeResAsync(res);
-  if (e$1.TAG === "Ok") {
+  let x$1 = await decodeResAsync(res);
+  if (x$1.TAG === "Ok") {
     return {
       TAG: "Ok",
-      _0: e$1._0
+      _0: x$1._0
     };
   } else {
-    return e$1;
+    return x$1;
   }
 }
 
 function returnsAliasOnFirstError(s) {
-  let e = doStuffWithResult(s);
-  if (e.TAG === "Ok") {
+  let _y = doStuffWithResult(s);
+  if (_y.TAG === "Ok") {
     return {
       TAG: "Ok",
       _0: "ok"
     };
   } else {
-    return e;
+    return _y;
   }
 }
 
 function returnsAliasOnSecondError(s) {
-  let e = doStuffWithResult(s);
-  if (e.TAG !== "Ok") {
-    return e;
+  let y = doStuffWithResult(s);
+  if (y.TAG !== "Ok") {
+    return y;
   }
-  let e$1 = doNextStuffWithResult(e._0);
-  if (e$1.TAG === "Ok") {
+  let _x = doNextStuffWithResult(y._0);
+  if (_x.TAG === "Ok") {
     return {
       TAG: "Ok",
       _0: "ok"
     };
   } else {
-    return e$1;
+    return _x;
   }
 }
 
 function returnsAliasOnOk(s) {
-  let x = doStuffWithResult(s);
-  if (x.TAG === "Ok") {
-    return x;
+  let _e = doStuffWithResult(s);
+  if (_e.TAG === "Ok") {
+    return _e;
   } else {
     return {
       TAG: "Error",

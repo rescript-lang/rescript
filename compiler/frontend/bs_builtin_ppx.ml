@@ -216,6 +216,15 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         }
       in
       let loc = {pvb_pat.ppat_loc with loc_ghost = true} in
+      (* Extract the variable name from the pattern (e.g., myVar from Some(myVar)) *)
+      let var_name =
+        match pvb_pat.ppat_desc with
+        | Ppat_construct (_, Some inner_pat) -> (
+          match Ast_pat.is_single_variable_pattern_conservative inner_pat with
+          | Some name when name <> "" -> name
+          | _ -> "x")
+        | _ -> "x"
+      in
       let early_case =
         match variant with
         (* Result: continue on Ok(_), early-return on Error(e) *)
@@ -227,9 +236,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
                 (Ast_helper.Pat.construct ~loc
                    {txt = Lident "Error"; loc}
                    (Some (Ast_helper.Pat.any ~loc ())))
-                {txt = "e"; loc};
+                {txt = var_name; loc};
             pc_guard = None;
-            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "e"; loc};
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
           }
         (* Result: continue on Error(_), early-return on Ok(x) *)
         | `Result_Error ->
@@ -239,9 +248,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "Ok"; loc}
                    (Some (Ast_helper.Pat.any ~loc ())))
-                {txt = "x"; loc};
+                {txt = var_name; loc};
             pc_guard = None;
-            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "x"; loc};
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
           }
         (* Option: continue on Some(_), early-return on None *)
         | `Option_Some ->
@@ -250,9 +259,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
             pc_lhs =
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc} None)
-                {txt = "x"; loc};
+                {txt = var_name; loc};
             pc_guard = None;
-            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "x"; loc};
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
           }
         (* Option: continue on None, early-return on Some(x) *)
         | `Option_None ->
@@ -262,9 +271,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
               Ast_helper.Pat.alias
                 (Ast_helper.Pat.construct ~loc {txt = Lident "Some"; loc}
                    (Some (Ast_helper.Pat.any ~loc ())))
-                {txt = "x"; loc};
+                {txt = var_name; loc};
             pc_guard = None;
-            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "x"; loc};
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
           }
       in
       default_expr_mapper self

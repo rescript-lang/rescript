@@ -27,6 +27,7 @@
 - Fix `@val` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8098
 - Fix `@scope` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8100
 - Fix rewatch panic on duplicate module name. https://github.com/rescript-lang/rescript/pull/8102
+- Fix `let?` unwrap to use actual variable names from pattern instead of hardcoded "x"/"e". When using `let? Some(myVar) = ...`, the variable name `myVar` is now properly propagated in early returns. https://github.com/rescript-lang/rescript/issues/8085
 
 #### :memo: Documentation
 
