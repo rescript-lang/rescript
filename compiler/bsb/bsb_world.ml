@@ -65,8 +65,7 @@ let make_world_deps cwd (config : Bsb_config_types.t option)
            let _config : _ option =
              Bsb_ninja_regen.regenerate_ninja
                ~package_kind:(Dependency {package_specs; jsx})
-               ~per_proj_dir:proj_dir ~forced:false ~warn_legacy_config:false
-               ~warn_as_error:None
+               ~per_proj_dir:proj_dir ~forced:false ~warn_as_error:None
            in
            let command =
              {Bsb_unix.cmd = vendor_ninja; cwd = lib_bs_dir; args}

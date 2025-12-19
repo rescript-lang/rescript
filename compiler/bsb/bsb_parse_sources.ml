@@ -403,7 +403,7 @@ and walk_source_dir_map (cxt : walk_cxt) sub_dirs_field =
 let clean_re_js root =
   match
     Ext_json_parse.parse_json_from_file
-      (Filename.concat root Literals.bsconfig_json)
+      (Filename.concat root Literals.rescript_json)
   with
   | Obj {map} ->
     let ignored_dirs =

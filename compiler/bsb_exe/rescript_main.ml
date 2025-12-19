@@ -172,7 +172,7 @@ let build_subcommand ~start argv argv_len =
     let config_opt =
       Bsb_ninja_regen.regenerate_ninja ~package_kind:Toplevel
         ~per_proj_dir:Bsb_global_paths.cwd ~forced:!force_regenerate
-        ~warn_legacy_config:true ~warn_as_error
+        ~warn_as_error
     in
     if not !no_deps_mode then
       Bsb_world.make_world_deps Bsb_global_paths.cwd config_opt ninja_args;
@@ -204,8 +204,7 @@ let info_subcommand ~start argv =
       if !list_files then
         match
           Bsb_ninja_regen.regenerate_ninja ~package_kind:Toplevel
-            ~per_proj_dir:Bsb_global_paths.cwd ~forced:true
-            ~warn_legacy_config:true ~warn_as_error:None
+            ~per_proj_dir:Bsb_global_paths.cwd ~forced:true ~warn_as_error:None
         with
         | None -> assert false
         | Some {file_groups = {files}} ->
@@ -229,8 +228,7 @@ let () =
       (* specialize this path which is used in watcher *)
       let config_opt =
         Bsb_ninja_regen.regenerate_ninja ~package_kind:Toplevel
-          ~per_proj_dir:Bsb_global_paths.cwd ~forced:false
-          ~warn_legacy_config:true ~warn_as_error:None
+          ~per_proj_dir:Bsb_global_paths.cwd ~forced:false ~warn_as_error:None
       in
       Bsb_world.make_world_deps Bsb_global_paths.cwd config_opt [||];
       ninja_command_exit [||])

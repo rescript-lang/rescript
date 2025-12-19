@@ -26,7 +26,6 @@ val regenerate_ninja :
   package_kind:Bsb_package_kind.t ->
   forced:bool ->
   per_proj_dir:string ->
-  warn_legacy_config:bool ->
   warn_as_error:string option ->
   Bsb_config_types.t option
 (** Regenerate ninja file by need based on [.bsdeps]

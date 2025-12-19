@@ -268,7 +268,6 @@ let rec find_root_filename ~cwd filenames =
       Ext_fmt.failwithf ~loc:__LOC__ "%s not found from %s" (List.hd filenames)
         cwd
 
-let find_config_dir cwd =
-  find_root_filename ~cwd [Literals.rescript_json; Literals.bsconfig_json]
+let find_config_dir cwd = find_root_filename ~cwd [Literals.rescript_json]
 
 let package_dir = lazy (find_config_dir (Lazy.force cwd))

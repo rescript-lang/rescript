@@ -1,6 +1,6 @@
 ## ReScript build configuration
 
-This document contains a list of all bsconfig parameters with remarks, and whether they are already implemented in rewatch. It is based on https://rescript-lang.org/docs/manual/latest/build-configuration-schema.
+This document contains a list of all config parameters with remarks, and whether they are already implemented in rewatch. It is based on https://rescript-lang.org/docs/manual/latest/build-configuration-schema.
 
 | Parameter             | JSON type               | Remark | Implemented? |
 | --------------------- | ----------------------- | ------ | :----------: |

@@ -31,7 +31,7 @@ let ( // ) = Ext_path.combine
     otherwise return Some info
 *)
 let regenerate_ninja ~(package_kind : Bsb_package_kind.t) ~forced ~per_proj_dir
-    ~warn_legacy_config ~warn_as_error : Bsb_config_types.t option =
+    ~warn_as_error : Bsb_config_types.t option =
   let lib_artifacts_dir = Bsb_config.lib_bs in
   let lib_bs_dir = per_proj_dir // lib_artifacts_dir in
   let output_deps = lib_bs_dir // bsdeps in
@@ -39,9 +39,7 @@ let regenerate_ninja ~(package_kind : Bsb_package_kind.t) ~forced ~per_proj_dir
     Bsb_ninja_check.check ~package_kind ~per_proj_dir ~forced ~warn_as_error
       ~file:output_deps
   in
-  let config_filename, config_json =
-    Bsb_config_load.load_json ~per_proj_dir ~warn_legacy_config
-  in
+  let config_filename, config_json = Bsb_config_load.load_json ~per_proj_dir in
   match check_result with
   | Good -> None (* Fast path, no need regenerate ninja *)
   | Bsb_forced | Bsb_bsc_version_mismatch | Bsb_package_kind_inconsistent

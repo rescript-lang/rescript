@@ -103,13 +103,9 @@ let set_debug ~gtconf =
   | _ -> ()
 
 let compiler_config_file = "rescript.json"
-let legacy_compiler_config_file = "bsconfig.json"
 
 let rec find_project_root ~dir =
-  if
-    Sys.file_exists (Filename.concat dir compiler_config_file)
-    || Sys.file_exists (Filename.concat dir legacy_compiler_config_file)
-  then dir
+  if Sys.file_exists (Filename.concat dir compiler_config_file) then dir
   else
     let parent = dir |> Filename.dirname in
     if parent = dir then (
@@ -184,7 +180,7 @@ let read_config ~get_config_file ~namespace =
       | Some external_stdlib -> external_stdlib
     in
     if !Debug.config then (
-      Log_.item "Project roLiterals.bsconfig_jsonot: %s\n" project_root;
+      Log_.item "Project roLiterals.rescript_jsonot: %s\n" project_root;
       if bsb_project_root <> project_root then
         Log_.item "bsb project root: %s\n" bsb_project_root;
       Log_.item "Config module:%s shims:%d entries \n"
