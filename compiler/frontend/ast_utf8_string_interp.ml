@@ -64,13 +64,13 @@ type exn += Error of pos * pos * error
 
 let valid_lead_identifier_char x =
   match x with
-  | 'a' .. 'z' | '_' -> true
+  | 'a' .. 'z' | '_' | '$' -> true
   | _ -> false
 
 (** Invariant: [valid_lead_identifier] has to be [valid_identifier] *)
 let valid_identifier_char x =
   match x with
-  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '\'' -> true
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '\'' | '$' -> true
   | _ -> false
 
 let valid_identifier s =

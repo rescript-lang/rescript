@@ -406,11 +406,11 @@ let classify_ident_content ?(allow_uident = false) ?(allow_hyphen = false) txt =
         match String.unsafe_get txt i with
         | '\\' -> UppercaseExoticIdent
         | 'A' .. 'Z' when allow_uident -> loop (i + 1)
-        | 'a' .. 'z' | '_' -> loop (i + 1)
+        | 'a' .. 'z' | '_' | '$' -> loop (i + 1)
         | _ -> ExoticIdent
       else
         match String.unsafe_get txt i with
-        | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' -> loop (i + 1)
+        | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '\'' | '_' | '$' -> loop (i + 1)
         | '-' when allow_hyphen -> loop (i + 1)
         | _ -> ExoticIdent
     in

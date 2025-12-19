@@ -1,9 +1,9 @@
 open Mocha
 open Test_utils
 
-let \"$$" = (x, y) => x + y
+let $$ = (x, y) => x + y
 
-let v = \"$$"(1, 2)
+let v = $$(1, 2)
 
 let \"$$+" = (x, y) => x * y
 
