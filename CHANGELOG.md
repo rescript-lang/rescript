@@ -19,8 +19,8 @@
 #### :rocket: New Feature
 
 - Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
-
 - Reanalyze: add reactive incremental analysis (`-reactive`, `-runs`, `-churn`) and Mermaid pipeline dumping (`-mermaid`). https://github.com/rescript-lang/rescript/pull/8092
+- Allow `$` in identifiers. https://github.com/rescript-lang/rescript/pull/8095
 
 #### :bug: Bug fix
 
