@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Allow `$` in identifiers. https://github.com/rescript-lang/rescript/pull/8095
+
 #### :bug: Bug fix
 
 #### :memo: Documentation
