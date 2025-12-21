@@ -7,6 +7,12 @@ let process = globalThis.process;
 
 let proc = process;
 
+let New = {};
+
+function url(prim) {
+  return new URL(prim);
+}
+
 let Global = {};
 
 let $$parseInt = parseInt;
@@ -15,6 +21,8 @@ export {
   X,
   process,
   proc,
+  New,
+  url,
   Global,
   $$parseInt,
 }
