@@ -24,6 +24,7 @@
 
 - Reanalyze: make optional args analysis liveness-aware, preventing false positives when functions are only called from dead code. https://github.com/rescript-lang/rescript/pull/8082
 - Fix: do not warn for "editor" field in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8084
+- Fix `@val` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8098
 
 #### :memo: Documentation
 
