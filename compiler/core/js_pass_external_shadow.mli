@@ -22,5 +22,5 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(* Rewrites @val/@new shadowing to avoid reading a let before it is set. *)
+(* Rewrite to using globalThis when shadowing would break @val/@scope globals. *)
 val program : J.program -> J.program

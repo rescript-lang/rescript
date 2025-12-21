@@ -24,6 +24,8 @@
 
 module E = Js_exp_make
 
+module StringSet = Set.Make (String)
+
 let global_this = E.js_global "globalThis"
 
 (* Only rewrite for lexical bindings (let-style). *)
@@ -55,10 +57,34 @@ let rewrite_shadowed_global_in_expr ~(name : string) (expr : J.expression) :
   self.expression self expr
 
 let program (js : J.program) : J.program =
+  let shadowed_globals =
+    Ext_list.fold_left js.block StringSet.empty (fun acc (st : J.statement) ->
+        match st.statement_desc with
+        | Variable {ident; property}
+          when is_lexical_binding_kind property && should_rewrite_binding ident
+          ->
+          StringSet.add ident.name acc
+        | _ -> acc)
+  in
   let super = Js_record_map.super in
   let self =
     {
       super with
+      expression =
+        (fun self expr ->
+          match expr.expression_desc with
+          | Static_index (obj, field, pos) ->
+            let obj = self.expression self obj in
+            let obj =
+              match obj.expression_desc with
+              | Var (Id id)
+                when Ext_ident.is_js id
+                     && StringSet.mem id.name shadowed_globals ->
+                E.dot global_this id.name
+              | _ -> obj
+            in
+            {expr with expression_desc = Static_index (obj, field, pos)}
+          | _ -> super.expression self expr);
       variable_declaration =
         (fun self (vd : J.variable_declaration) ->
           match vd with
@@ -66,7 +92,7 @@ let program (js : J.program) : J.program =
             when is_lexical_binding_kind property
                  && should_rewrite_binding ident ->
             let expr = rewrite_shadowed_global_in_expr ~name:ident.name expr in
-            {vd with value = Some expr}
+            super.variable_declaration self {vd with value = Some expr}
           | _ -> super.variable_declaration self vd);
     }
   in
