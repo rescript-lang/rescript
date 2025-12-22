@@ -1,0 +1,11 @@
+{
+  "name": "js-with-dts-output-test",
+  "sources": "src",
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": true,
+      "dts": true
+    }
+  ]
+}

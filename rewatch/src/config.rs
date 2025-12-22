@@ -145,12 +145,49 @@ impl Source {
 
 impl Eq for Source {}
 
+/// Output language for code generation
+#[derive(Deserialize, Debug, Clone, PartialEq, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Language {
+    /// Plain JavaScript output (default)
+    #[default]
+    Js,
+    /// TypeScript output with inline type annotations (.ts files)
+    Typescript,
+}
+
+impl Language {
+    /// Returns the bsc flag for this language mode
+    pub fn to_bsc_flag(&self) -> Option<&'static str> {
+        match self {
+            Language::Js => None,
+            Language::Typescript => Some("-bs-typescript"),
+        }
+    }
+
+    /// Returns true if this language mode generates typed output
+    pub fn is_typed(&self) -> bool {
+        matches!(self, Language::Typescript)
+    }
+
+    /// Returns the default file suffix for this language
+    pub fn default_suffix(&self) -> &'static str {
+        match self {
+            Language::Js => ".js",
+            Language::Typescript => ".ts",
+        }
+    }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct PackageSpec {
     pub module: String,
     #[serde(rename = "in-source", default = "default_true")]
     pub in_source: bool,
     pub suffix: Option<String>,
+    /// Generate .d.ts declaration files (only for JS output, ignored for TypeScript)
+    #[serde(default)]
+    pub dts: bool,
 }
 
 impl PackageSpec {
@@ -168,6 +205,25 @@ impl PackageSpec {
 
     pub fn get_suffix(&self) -> Option<String> {
         self.suffix.to_owned()
+    }
+
+    /// Get language-aware suffix, using language's default if not explicitly set
+    pub fn get_suffix_with_language(&self, global_suffix: &Option<String>, language: &Language) -> String {
+        // Explicit suffix takes precedence
+        if let Some(suffix) = &self.suffix {
+            return suffix.clone();
+        }
+        if let Some(suffix) = global_suffix {
+            return suffix.clone();
+        }
+        // Default based on root language
+        language.default_suffix().to_string()
+    }
+
+    /// Check if .d.ts generation is enabled (only for JS output)
+    pub fn should_emit_dts(&self, language: &Language) -> bool {
+        // Only emit .d.ts for JS output, not for TypeScript (which already has types)
+        self.dts && *language == Language::Js
     }
 }
 
@@ -273,6 +329,9 @@ pub struct Config {
     pub package_specs: Option<OneOrMore<PackageSpec>>,
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
+    /// Output language for the entire project: "js" (default) or "typescript"
+    #[serde(default)]
+    pub language: Language,
     pub dependencies: Option<Vec<String>>,
     #[serde(rename = "dev-dependencies")]
     pub dev_dependencies: Option<Vec<String>>,
@@ -626,7 +685,8 @@ impl Config {
             None => vec![PackageSpec {
                 module: "commonjs".to_string(),
                 in_source: true,
-                suffix: Some(".js".to_string()),
+                suffix: None,
+                dts: false,
             }],
             Some(OneOrMore::Single(spec)) => vec![spec],
             Some(OneOrMore::Multiple(vec)) => vec,
@@ -634,9 +694,7 @@ impl Config {
     }
 
     pub fn get_suffix(&self, spec: &PackageSpec) -> String {
-        spec.get_suffix()
-            .or(self.suffix.clone())
-            .unwrap_or(".js".to_string())
+        spec.get_suffix_with_language(&self.suffix, &self.language)
     }
 
     pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {

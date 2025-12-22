@@ -102,6 +102,7 @@ and apply_coercion_result loc strict funct param arg cc_res =
                    ap_inlined = Default_inline;
                    ap_transformed_jsx = false;
                  });
+          fn_type = None;
         })
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
@@ -250,6 +251,7 @@ let rec compile_functor mexp coercion root_path loc =
         };
       loc;
       body;
+      fn_type = None;
     }
 
 (* Compile a module expression *)

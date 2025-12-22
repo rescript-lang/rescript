@@ -27,6 +27,8 @@
 (* TODO: sync up with {!Js_packages_info.module_system}  *)
 type format = Ext_module_system.t
 
+type language = Javascript | Typescript
+
 type spec = {format: format; in_source: bool; suffix: string}
 
 type t = spec list

@@ -467,6 +467,25 @@ pub fn compiler_args(
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
     let experimental_args = root_config.get_experimental_features_args();
+
+    // Get language args from root config
+    let specs = root_config.get_package_specs();
+    let language_args: Vec<String> = root_config
+        .language
+        .to_bsc_flag()
+        .map(|flag| vec![flag.to_string()])
+        .unwrap_or_default();
+    // Check if any package spec wants .d.ts generation
+    let dts_args: Vec<String> = {
+        if specs
+            .iter()
+            .any(|spec| spec.should_emit_dts(&root_config.language))
+        {
+            vec!["-bs-emit-dts".to_string()]
+        } else {
+            vec![]
+        }
+    };
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
     let read_cmi_args = match has_interface {
@@ -487,7 +506,6 @@ pub fn compiler_args(
         vec![]
     } else {
         debug!("Compiling file: {}", &module_name);
-        let specs = root_config.get_package_specs();
 
         specs
             .iter()
@@ -534,6 +552,8 @@ pub fn compiler_args(
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
+        language_args,
+        dts_args,
         experimental_args,
         // vec!["-warn-error".to_string(), "A".to_string()],
         // ^^ this one fails for bisect-ppx

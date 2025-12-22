@@ -147,8 +147,8 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
     | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
       Lam.apply (simplif l1) (Ext_list.map ll simplif) ap_info
         ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(simplif body) ~attr
+    | Lfunction {arity; params; body; attr; fn_type} ->
+      Lam.function_ ~arity ~params ~body:(simplif body) ~attr ~fn_type
     | Lconst _ -> lam
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings simplif) (simplif body)

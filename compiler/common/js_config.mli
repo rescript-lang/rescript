@@ -101,3 +101,13 @@ val jsx_module_of_string : string -> jsx_module
 val as_pp : bool ref
 
 val self_stack : string Stack.t
+
+(** TypeScript output mode *)
+type ts_output_mode =
+  | Ts_none  (** Plain JavaScript output (default) *)
+  | Ts_typescript  (** Full TypeScript output (.ts) *)
+
+val ts_output : ts_output_mode ref
+
+val emit_dts : bool ref
+(** Whether to emit .d.ts declaration files *)

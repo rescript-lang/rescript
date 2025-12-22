@@ -246,7 +246,36 @@ let continue f =
   P.string f L.continue;
   semi f
 
-let formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
+(** Print a single parameter with optional type annotation *)
+let formal_parameter_with_type cxt f (id : Ident.t) (ty : Ts.ts_type option) :
+    cxt =
+  let cxt = Ext_pp_scope.ident cxt f id in
+  (match (!Js_config.ts_output, ty) with
+  | Js_config.Ts_typescript, Some t -> Ts.pp_type_annotation f (Some t)
+  | _ -> ());
+  cxt
+
+(** Print formal parameters with type annotations from fn_type *)
+let formal_parameter_list_typed cxt f (params : Ident.t list)
+    (fn_type : Types.type_expr option) =
+  match !Js_config.ts_output with
+  | Js_config.Ts_none ->
+    (* Plain JS mode - no types *)
+    iter_lst cxt f params Ext_pp_scope.ident comma_sp
+  | Js_config.Ts_typescript ->
+    (* TypeScript mode - add type annotations *)
+    let typed_params = Ts.typed_idents_of_params params fn_type in
+    iter_lst cxt f typed_params
+      (fun cxt f {Ts.ident; ident_type} ->
+        formal_parameter_with_type cxt f ident ident_type)
+      comma_sp
+
+(** Print return type annotation if in TypeScript mode *)
+let pp_return_type f (fn_type : Types.type_expr option) : unit =
+  match !Js_config.ts_output with
+  | Js_config.Ts_typescript ->
+    Ts.pp_type_annotation f (Ts.return_type_of_fn_type fn_type)
+  | Js_config.Ts_none -> ()
 
 (* IdentMap *)
 (*
@@ -294,7 +323,7 @@ let rec try_optimize_curry cxt f len function_id =
   Curry_gen.pp_optimize_curry f len;
   P.paren_group f 1 (fun _ -> expression ~level:1 cxt f function_id)
 
-and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
+and pp_function ~return_unit ~async ~is_method ?directive ?fn_type cxt (f : P.t)
     ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
   match b with
   | [
@@ -374,8 +403,9 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
         | this :: arguments ->
           let cxt =
             P.paren_group f 1 (fun _ ->
-                formal_parameter_list inner_cxt f arguments)
+                formal_parameter_list_typed inner_cxt f arguments fn_type)
           in
+          pp_return_type f fn_type;
           P.space f;
           P.brace_vgroup f 1 (fun _ ->
               let cxt =
@@ -386,10 +416,22 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
       else
         let cxt =
           match l with
-          | [single] when arrow -> Ext_pp_scope.ident inner_cxt f single
+          | [single] when arrow ->
+            let cxt = Ext_pp_scope.ident inner_cxt f single in
+            (* Add type annotation for single arrow param in TS mode *)
+            (match (!Js_config.ts_output, fn_type) with
+            | Js_config.Ts_typescript, Some ty -> (
+              let typed_params = Ts.typed_idents_of_params [single] (Some ty) in
+              match typed_params with
+              | [{ident_type = Some t; _}] -> Ts.pp_type_annotation f (Some t)
+              | _ -> ())
+            | _ -> ());
+            cxt
           | l ->
-            P.paren_group f 1 (fun _ -> formal_parameter_list inner_cxt f l)
+            P.paren_group f 1 (fun _ ->
+                formal_parameter_list_typed inner_cxt f l fn_type)
         in
+        pp_return_type f fn_type;
         P.space f;
         if arrow then (
           P.string f L.arrow;
@@ -408,23 +450,32 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
               function_body ?directive ~return_unit cxt f b)
     in
     let enclose () =
+      let pp_type_params () =
+        match !Js_config.ts_output with
+        | Js_config.Ts_typescript -> Ts.pp_type_params_from_ml f fn_type
+        | Js_config.Ts_none -> ()
+      in
       let handle () =
         match fn_state with
         | Is_return ->
           return_sp f;
           P.string f (L.function_ ~async ~arrow);
+          pp_type_params ();
           param_body ()
         | No_name _ ->
           P.string f (L.function_ ~async ~arrow);
+          pp_type_params ();
           param_body ()
         | Name_non_top x ->
           ignore (pp_var_assign inner_cxt f x : cxt);
           P.string f (L.function_ ~async ~arrow);
+          pp_type_params ();
           param_body ();
           semi f
         | Name_top x ->
           P.string f (L.function_ ~async ~arrow);
           ignore (Ext_pp_scope.ident inner_cxt f x : cxt);
+          pp_type_params ();
           param_body ()
       in
       handle ()
@@ -511,9 +562,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
         let cxt = expression ~level:0 cxt f e1 in
         comma_sp f;
         expression ~level:0 cxt f e2)
-  | Fun {is_method; params; body; env; return_unit; async; directive} ->
+  | Fun {is_method; params; body; env; return_unit; async; directive; fn_type}
+    ->
     (* TODO: dump for comments *)
-    pp_function ?directive ~is_method ~return_unit ~async
+    pp_function ?directive ?fn_type ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
   (* TODO:
        when [e] is [Js_raw_code] with arity
@@ -661,10 +713,12 @@ and expression_desc cxt ~(level : int) f x : cxt =
                            return_unit;
                            async;
                            directive;
+                           fn_type;
                          };
                    };
                   ] ->
-                    pp_function ?directive ~is_method ~return_unit ~async
+                    pp_function ?directive ?fn_type ~is_method ~return_unit
+                      ~async
                       ~fn_state:(No_name {single_arg = true})
                       cxt f params body env
                   | _ ->
@@ -1299,8 +1353,10 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
       statement_desc top cxt f (J.Exp e)
     | _ -> (
       match e.expression_desc with
-      | Fun {is_method; params; body; env; return_unit; async; directive} ->
-        pp_function ?directive ~is_method ~return_unit ~async
+      | Fun
+          {is_method; params; body; env; return_unit; async; directive; fn_type}
+        ->
+        pp_function ?directive ?fn_type ~is_method ~return_unit ~async
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
       | _ ->
@@ -1501,9 +1557,10 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     cxt
   | Return e -> (
     match e.expression_desc with
-    | Fun {is_method; params; body; env; return_unit; async; directive} ->
+    | Fun {is_method; params; body; env; return_unit; async; directive; fn_type}
+      ->
       let cxt =
-        pp_function ?directive ~return_unit ~is_method ~async
+        pp_function ?directive ?fn_type ~return_unit ~is_method ~async
           ~fn_state:Is_return cxt f params body env
       in
       semi f;

@@ -146,9 +146,30 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
          let lambda, exports =
            Translmod.transl_implementation modulename typedtree_coercion
          in
+         (* Set the environment for @as type renaming lookups *)
+         let () =
+           if
+             !Js_config.ts_output = Js_config.Ts_typescript
+             || !Js_config.emit_dts
+           then Ts.set_env typedtree.str_final_env
+         in
+         (* Extract type declarations for TypeScript or .d.ts output *)
+         let type_decls =
+           if
+             !Js_config.ts_output = Js_config.Ts_typescript
+             || !Js_config.emit_dts
+           then Ts.extract_type_decls typedtree
+           else []
+         in
+         (* Extract value exports for .d.ts generation *)
+         let value_exports =
+           if !Js_config.emit_dts then Ts.extract_value_exports typedtree
+           else []
+         in
          let js_program =
            print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
-           |> Lam_compile_main.compile outputprefix exports
+           |> Lam_compile_main.compile outputprefix exports ~type_decls
+                ~value_exports
          in
          if not !Js_config.cmj_only then
            Lam_compile_main.lambda_as_module js_program outputprefix);

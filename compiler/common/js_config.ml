@@ -72,3 +72,13 @@ let jsx_module_of_string = function
 
 let as_pp = ref false
 let self_stack : string Stack.t = Stack.create ()
+
+(** TypeScript output mode *)
+type ts_output_mode =
+  | Ts_none  (** Plain JavaScript output (default) *)
+  | Ts_typescript  (** Full TypeScript output (.ts) *)
+
+let ts_output = ref Ts_none
+
+(** Whether to emit .d.ts declaration files *)
+let emit_dts = ref false

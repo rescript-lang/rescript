@@ -31,7 +31,7 @@ let empty_explanation =
 
 let program_is_empty (x : J.program) =
   match x with
-  | {block = []; exports = []; export_set = _} -> true
+  | {block = []; exports = []; export_set = _; type_exports = _} -> true
   | _ -> false
 
 let deps_program_is_empty (x : J.deps_program) =
@@ -104,6 +104,12 @@ let es6_program ~output_dir fmt f (x : J.deps_program) =
                  | _ -> None )))
   in
   let () = P.at_least_two_lines f in
+  (* Emit type declarations for TypeScript mode *)
+  let () =
+    match !Js_config.ts_output with
+    | Js_config.Ts_typescript -> Ts.pp_type_decls f x.program.type_exports
+    | Js_config.Ts_none -> ()
+  in
   let cxt = Js_dump.statements true cxt f x.program.block in
   Js_dump_import_export.es6_export cxt f x.program.exports
 

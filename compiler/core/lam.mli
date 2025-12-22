@@ -53,6 +53,7 @@ and lfunction = {
   params: ident list;
   body: t;
   attr: Lambda.function_attribute;
+  fn_type: Types.type_expr option;
 }
 
 and prim_info = private {
@@ -116,6 +117,7 @@ val function_ :
   arity:int ->
   params:ident list ->
   body:t ->
+  fn_type:Types.type_expr option ->
   t
 
 val let_ : Lam_compat.let_kind -> ident -> t -> t -> t

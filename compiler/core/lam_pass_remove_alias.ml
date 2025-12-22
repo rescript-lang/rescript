@@ -244,8 +244,8 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
     | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
       Lam.apply (simpl l1) (Ext_list.map ll simpl) ap_info ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(simpl body) ~attr
+    | Lfunction {arity; params; body; attr; fn_type} ->
+      Lam.function_ ~arity ~params ~body:(simpl body) ~attr ~fn_type
     | Lswitch
         ( l,
           {

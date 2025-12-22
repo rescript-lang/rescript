@@ -203,8 +203,8 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
       Lam.apply (simplif ap_func)
         (Ext_list.map ap_args simplif)
         ap_info ~ap_transformed_jsx
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(simplif body) ~attr
+    | Lfunction {arity; params; body; attr; fn_type} ->
+      Lam.function_ ~arity ~params ~body:(simplif body) ~attr ~fn_type
     | Llet (kind, v, l1, l2) -> Lam.let_ kind v (simplif l1) (simplif l2)
     | Lletrec (bindings, body) ->
       Lam.letrec (Ext_list.map_snd bindings simplif) (simplif body)

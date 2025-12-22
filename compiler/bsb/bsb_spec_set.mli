@@ -23,6 +23,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 type format = Ext_module_system.t
 
+type language = Javascript | Typescript
+
 type spec = {format: format; in_source: bool; suffix: string}
 
 type t = private spec list

@@ -1,0 +1,11 @@
+{
+  "name": "typescript-output-test",
+  "sources": "src",
+  "language": "typescript",
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": true
+    }
+  ]
+}
