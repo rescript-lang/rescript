@@ -58,6 +58,15 @@ type error =
   | InvalidVariantTagAnnotation
   | InvalidUntaggedVariantDefinition of untagged_error
   | TagFieldNameConflict of string * string * string
+  (* Errors for tagged variants with primitive catch-all (@as(int|float|string)) *)
+  | TaggedPrimitiveCatchAll_AtMostOneNumber
+  | TaggedPrimitiveCatchAll_AtMostOneString
+  | TaggedPrimitiveCatchAll_OnNullaryConstructor of string
+  | TaggedPrimitiveCatchAll_InlineRecordRequired of string
+  | TaggedPrimitiveCatchAll_MissingTagField of string * string
+  | TaggedPrimitiveCatchAll_TooManyTagFields of string * string
+  | TaggedPrimitiveCatchAll_TagFieldOptional of string * string
+  | TaggedPrimitiveCatchAll_TagFieldWrongType of string * string * string
 exception Error of Location.t * error
 
 let report_error ppf =
@@ -97,6 +106,41 @@ let report_error ppf =
        value of inline record field \"%s\". Use a different @tag name or \
        rename the field."
       constructor_name runtime_value field_name
+  | TaggedPrimitiveCatchAll_AtMostOneNumber ->
+    fprintf ppf
+      "At most one number catch-all (@as(int|float)) is allowed per variant"
+  | TaggedPrimitiveCatchAll_AtMostOneString ->
+    fprintf ppf
+      "At most one string catch-all (@as(string)) is allowed per variant"
+  | TaggedPrimitiveCatchAll_OnNullaryConstructor name ->
+    fprintf ppf
+      "Constructor \"%s\": primitive catch-all @as(int|float|string) is not \
+       allowed on nullary constructors"
+      name
+  | TaggedPrimitiveCatchAll_InlineRecordRequired name ->
+    fprintf ppf
+      "Constructor \"%s\": primitive catch-all requires an inline record \
+       payload"
+      name
+  | TaggedPrimitiveCatchAll_MissingTagField (name, tag_name) ->
+    fprintf ppf
+      "Constructor \"%s\": inline record must contain exactly one field named \
+       \"%s\" (or @as(\"%s\")) carrying the discriminant"
+      name tag_name tag_name
+  | TaggedPrimitiveCatchAll_TooManyTagFields (name, tag_name) ->
+    fprintf ppf
+      "Constructor \"%s\": inline record must contain exactly one field named \
+       \"%s\" (or @as(\"%s\")) carrying the discriminant"
+      name tag_name tag_name
+  | TaggedPrimitiveCatchAll_TagFieldOptional (name, field_name) ->
+    fprintf ppf
+      "Constructor \"%s\": field \"%s\" must not be optional for primitive \
+       catch-all"
+      name field_name
+  | TaggedPrimitiveCatchAll_TagFieldWrongType (name, field_name, expected) ->
+    fprintf ppf
+      "Constructor \"%s\": field \"%s\" must have type %s (direct builtin)" name
+      field_name expected
 
 (* Type of the runtime representation of an untagged block (case with payoad) *)
 type block_type =
@@ -207,12 +251,26 @@ let process_tag_type (attrs : Parsetree.attributes) =
           | None -> ()
           | Some (Lident "null") -> st := Some Null
           | Some (Lident "undefined") -> st := Some Undefined
+          | Some (Lident "int") -> st := Some (Untagged IntType)
+          | Some (Lident "float") -> st := Some (Untagged FloatType)
+          | Some (Lident "string") -> st := Some (Untagged StringType)
           | Some _ -> raise (Error (loc, InvalidVariantAsAnnotation)));
           if !st = None then raise (Error (loc, InvalidVariantAsAnnotation))
           else Used_attributes.mark_used_attribute attr)
         else raise (Error (loc, Duplicated_bs_as))
       | _ -> ());
   !st
+
+(* Helpers for tagged-variant primitive catch-alls *)
+let primitive_catchall_kind_of_attrs (attrs : Parsetree.attributes) :
+    block_type option =
+  match process_tag_type attrs with
+  | Some (Untagged IntType) | Some (Untagged FloatType) -> Some IntType
+  | Some (Untagged StringType) -> Some StringType
+  | _ -> None
+
+let has_primitive_catchall (attrs : Parsetree.attributes) : bool =
+  primitive_catchall_kind_of_attrs attrs |> Option.is_some
 
 let () =
   Location.register_error_of_exn (function
@@ -291,7 +349,9 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
 let get_block_type ~env (cstr : Types.constructor_declaration) :
     block_type option =
   match (process_untagged cstr.cd_attributes, cstr.cd_args) with
-  | false, _ -> None
+  | false, _ ->
+    (* Also surface block_type for tagged primitive catch-all constructors *)
+    primitive_catchall_kind_of_attrs cstr.cd_attributes
   | true, Cstr_tuple [t] when get_block_type_from_typ ~env t |> Option.is_some
     ->
     get_block_type_from_typ ~env t
@@ -478,26 +538,102 @@ let check_tag_field_conflicts (cstrs : Types.constructor_declaration list) =
         | Some explicit_tag -> explicit_tag
         | None -> constructor_name
       in
+      (* detect primitive catch-all on constructor *)
+      let primitive_catch_all_kind : block_type option =
+        primitive_catchall_kind_of_attrs cstr.cd_attributes
+      in
       match cstr.cd_args with
-      | Cstr_record fields ->
-        List.iter
-          (fun (field : Types.label_declaration) ->
+      | Cstr_record fields -> (
+        match primitive_catch_all_kind with
+        | None ->
+          (* Original conflict rule for regular tagged inline records *)
+          List.iter
+            (fun (field : Types.label_declaration) ->
+              let field_name = Ident.name field.ld_id in
+              let effective_field_name =
+                match process_tag_type field.ld_attributes with
+                | Some (String as_name) -> as_name
+                (* @as payload types other than string have no effect on record fields *)
+                | Some _ | None -> field_name
+              in
+              if effective_field_name = effective_tag_name then
+                raise
+                  (Error
+                     ( cstr.cd_loc,
+                       TagFieldNameConflict
+                         (constructor_name, field_name, effective_field_name) )))
+            fields
+        | Some kind -> (
+          (* Primitive catch-all: enforce exactly one tag field named as tag *)
+          let matching_fields =
+            List.filter
+              (fun (field : Types.label_declaration) ->
+                let field_name = Ident.name field.ld_id in
+                let effective_field_name =
+                  match process_tag_type field.ld_attributes with
+                  | Some (String as_name) -> as_name
+                  | Some _ | None -> field_name
+                in
+                effective_field_name = effective_tag_name)
+              fields
+          in
+          match matching_fields with
+          | [] ->
+            raise
+              (Error
+                 ( cstr.cd_loc,
+                   TaggedPrimitiveCatchAll_MissingTagField
+                     (constructor_name, effective_tag_name) ))
+          | _ :: _ :: _ ->
+            raise
+              (Error
+                 ( cstr.cd_loc,
+                   TaggedPrimitiveCatchAll_TooManyTagFields
+                     (constructor_name, effective_tag_name) ))
+          | [field] ->
             let field_name = Ident.name field.ld_id in
-            let effective_field_name =
-              match process_tag_type field.ld_attributes with
-              | Some (String as_name) -> as_name
-              (* @as payload types other than string have no effect on record fields *)
-              | Some _ | None -> field_name
-            in
-            (* Check if effective field name conflicts with tag *)
-            if effective_field_name = effective_tag_name then
+            if field.ld_optional then
               raise
                 (Error
                    ( cstr.cd_loc,
-                     TagFieldNameConflict
-                       (constructor_name, field_name, effective_field_name) )))
-          fields
-      | _ -> ())
+                     TaggedPrimitiveCatchAll_TagFieldOptional
+                       (constructor_name, field_name) ));
+            (* enforce exact builtin type, no alias/expansion *)
+            let expected, ok =
+              match kind with
+              | IntType -> (
+                match field.ld_type.desc with
+                | Tconstr (path, _, _) when Path.same path Predef.path_int ->
+                  ("int", true)
+                | _ -> ("int", false))
+              | StringType -> (
+                match field.ld_type.desc with
+                | Tconstr (path, _, _) when Path.same path Predef.path_string ->
+                  ("string", true)
+                | _ -> ("string", false))
+              | FloatType -> (
+                match field.ld_type.desc with
+                | Tconstr (path, _, _) when Path.same path Predef.path_float ->
+                  ("float", true)
+                | _ -> ("float", false))
+              | _ -> assert false
+            in
+            if not ok then
+              raise
+                (Error
+                   ( cstr.cd_loc,
+                     TaggedPrimitiveCatchAll_TagFieldWrongType
+                       (constructor_name, field_name, expected) ))))
+      | _ -> (
+        match primitive_catch_all_kind with
+        | None -> ()
+        | Some _ ->
+          (* Must be inline record for primitive catch-all *)
+          raise
+            (Error
+               ( cstr.cd_loc,
+                 TaggedPrimitiveCatchAll_InlineRecordRequired constructor_name
+               ))))
     cstrs
 
 type well_formedness_check = {
@@ -507,6 +643,30 @@ type well_formedness_check = {
 
 let check_well_formed ~env {is_untagged_def; cstrs} =
   check_tag_field_conflicts cstrs;
+  (* Perform duplicate primitive catch-all checks for tagged variants *)
+  let number_catchalls = ref 0 in
+  let string_catchalls = ref 0 in
+  List.iter
+    (fun (cstr : Types.constructor_declaration) ->
+      match
+        (is_nullary_variant cstr.cd_args, process_tag_type cstr.cd_attributes)
+      with
+      | true, Some (Untagged (IntType | FloatType | StringType)) ->
+        raise
+          (Error
+             ( cstr.cd_loc,
+               TaggedPrimitiveCatchAll_OnNullaryConstructor
+                 (Ident.name cstr.cd_id) ))
+      | _, Some (Untagged IntType) | _, Some (Untagged FloatType) ->
+        incr number_catchalls
+      | _, Some (Untagged StringType) -> incr string_catchalls
+      | _ -> ())
+    cstrs;
+  if not is_untagged_def then (
+    if !number_catchalls > 1 then
+      raise (Error (Location.none, TaggedPrimitiveCatchAll_AtMostOneNumber));
+    if !string_catchalls > 1 then
+      raise (Error (Location.none, TaggedPrimitiveCatchAll_AtMostOneString)));
   ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
