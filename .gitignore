@@ -12,6 +12,7 @@ _build_playground
 *.cmx
 *.cmt
 *.cmti
+*.resextra
 *.cma
 *.a
 *.cmxa

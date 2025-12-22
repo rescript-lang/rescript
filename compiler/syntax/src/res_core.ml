@@ -151,6 +151,7 @@ module ErrorMessages = struct
      `'A`"
 
   let attribute_without_node (attr : Parsetree.attribute) =
+    (* TODO: Be explicit about doc comments *)
     let {Asttypes.txt = attr_name}, _ = attr in
     "Did you forget to attach `" ^ attr_name
     ^ "` to an item?\n  Standalone attributes start with `@@` like: `@@"

@@ -48,6 +48,9 @@ type mapper = {
   open_description: mapper -> open_description -> open_description;
   pat: mapper -> pattern -> pattern;
   payload: mapper -> payload -> payload;
+  record_field:
+    mapper -> expression record_element -> expression record_element;
+  record_field_pat: mapper -> pattern record_element -> pattern record_element;
   signature: mapper -> signature -> signature;
   signature_item: mapper -> signature_item -> signature_item;
   structure: mapper -> structure -> structure;
@@ -57,6 +60,7 @@ type mapper = {
   type_extension: mapper -> type_extension -> type_extension;
   type_kind: mapper -> type_kind -> type_kind;
   value_binding: mapper -> value_binding -> value_binding;
+  value_bindings: mapper -> value_binding list -> value_binding list;
   value_description: mapper -> value_description -> value_description;
   with_constraint: mapper -> with_constraint -> with_constraint;
 }
@@ -247,7 +251,7 @@ module M = struct
     match desc with
     | Pstr_eval (x, attrs) ->
       eval ~loc ~attrs:(sub.attributes sub attrs) (sub.expr sub x)
-    | Pstr_value (r, vbs) -> value ~loc r (List.map (sub.value_binding sub) vbs)
+    | Pstr_value (r, vbs) -> value ~loc r (sub.value_bindings sub vbs)
     | Pstr_primitive vd -> primitive ~loc (sub.value_description sub vd)
     | Pstr_type (rf, l) -> type_ ~loc rf (List.map (sub.type_declaration sub) l)
     | Pstr_typext te -> type_extension ~loc (sub.type_extension sub te)
@@ -285,7 +289,7 @@ module E = struct
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs x
     | Pexp_let (r, vbs, e) ->
-      let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
+      let_ ~loc ~attrs r (sub.value_bindings sub vbs) (sub.expr sub e)
     | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
       ->
       fun_ ~loc ~attrs ~arity ~async lab
@@ -304,10 +308,7 @@ module E = struct
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (List.map
-           (fun {lid; x = exp; opt} ->
-             {lid = map_loc sub lid; x = sub.expr sub exp; opt})
-           l)
+        (List.map (sub.record_field sub) l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -390,12 +391,7 @@ module P = struct
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
-      record ~loc ~attrs
-        (List.map
-           (fun {lid; x = pat; opt} ->
-             {lid = map_loc sub lid; x = sub.pat sub pat; opt})
-           lpl)
-        cf
+      record ~loc ~attrs (List.map (sub.record_field_pat sub) lpl) cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)
     | Ppat_constraint (p, t) ->
@@ -473,6 +469,7 @@ let default_mapper =
         Vb.mk (this.pat this pvb_pat) (this.expr this pvb_expr)
           ~loc:(this.location this pvb_loc)
           ~attrs:(this.attributes this pvb_attributes));
+    value_bindings = (fun this l -> List.map (this.value_binding this) l);
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         Type.constructor (map_loc this pcd_name)
@@ -507,6 +504,12 @@ let default_mapper =
         | PSig x -> PSig (this.signature this x)
         | PTyp x -> PTyp (this.typ this x)
         | PPat (x, g) -> PPat (this.pat this x, map_opt (this.expr this) g));
+    record_field =
+      (fun this {lid; x; opt} ->
+        {lid = map_loc this lid; x = this.expr this x; opt});
+    record_field_pat =
+      (fun this {lid; x; opt} ->
+        {lid = map_loc this lid; x = this.pat this x; opt});
   }
 
 let rec extension_of_error {loc; msg; if_highlight; sub} =

@@ -389,6 +389,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  To fix this, change the highlighted code so it evaluates to a \
        @{<info>bool@}."
   | Some Await, _ ->
+    Actions.add_possible_action
+      {loc; action = RemoveAwait; description = "Remove await"};
     fprintf ppf
       "\n\n\
       \  You're trying to await something that is not a promise.\n\n\
@@ -415,6 +417,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | Some ComparisonOperator, _ ->
     fprintf ppf "\n\n  You can only compare things of the same type."
   | Some ArrayValue, _ ->
+    Actions.add_possible_action
+      {loc; action = RewriteArrayToTuple; description = "Rewrite to tuple"};
     fprintf ppf
       "\n\n\
       \  Arrays can only contain items of the same type.\n\n\
@@ -474,6 +478,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
             Some record
           | _ -> None)
     in
+    Actions.add_possible_action
+      {
+        loc;
+        action = RewriteObjectToRecord;
+        description = "Rewrite object to record";
+      };
     fprintf ppf
       "@,\
        @,\
@@ -487,6 +497,9 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | None -> "")
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
+    (* TODO: This should be aware of if we're in an async context or not? *)
+    Actions.add_possible_action
+      {loc; action = AddAwait; description = "Await promise"};
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, {Types.desc = Ttuple _})
     when Path.same p1 Predef.path_array ->
@@ -494,6 +507,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
           match exp.Parsetree.pexp_desc with
           | Pexp_array items ->
+            Actions.add_possible_action
+              {
+                loc;
+                action = RewriteArrayToTuple;
+                description = "Rewrite to tuple";
+              };
             Some {exp with Parsetree.pexp_desc = Pexp_tuple items}
           | _ -> None)
     in
@@ -519,6 +538,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     in
 
     let print_jsx_msg ?(extra = "") name target_fn =
+      Actions.add_possible_action
+        {
+          loc;
+          action = ApplyFunction {function_name = Longident.parse target_fn};
+          description = Printf.sprintf "Convert to %s with %s" name target_fn;
+        };
       fprintf ppf
         "@,\
          @,\
@@ -535,6 +560,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     | _ when Path.same p Predef.path_float ->
       print_jsx_msg "float" (with_configured_jsx_module "float")
     | [_] when Path.same p Predef.path_option ->
+      (* TODO(actions) Unwrap action? *)
       fprintf ppf
         "@,\
          @,\
@@ -563,6 +589,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (RecordField {optional = true; field_name; jsx = None}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
+    Actions.add_possible_action
+      {
+        loc;
+        action = ChangeRecordFieldOptional {optional = true};
+        description = "Pass field as optional";
+      };
     fprintf ppf
       "@,\
        @,\
@@ -581,6 +613,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (RecordField {optional = true; field_name; jsx = Some _}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
+    (* TODO(actions) JSX: Prepend with `?` *)
     fprintf ppf
       "@,\
        @,\
@@ -599,6 +632,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (FunctionArgument {optional = true}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
+    Actions.add_possible_action
+      {
+        loc;
+        action = RewriteArgType {to_type = `Optional};
+        description = "Make argument optional";
+      };
     fprintf ppf
       "@,\
        @,\
@@ -657,6 +696,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       in
       match (reprinted, List.mem string_value variant_constructors) with
       | Some reprinted, true ->
+        Actions.add_possible_action
+          {
+            loc;
+            action =
+              ReplaceWithPolymorphicVariantConstructor
+                {constructor_name = string_value};
+            description =
+              "Replace with polymorphic variant constructor " ^ string_value;
+          };
         fprintf ppf
           "\n\n\
           \  Possible solutions:\n\
@@ -715,6 +763,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         in
         match reprinted with
         | Some reprinted ->
+          Actions.add_possible_action
+            {
+              loc;
+              action =
+                ReplaceWithVariantConstructor
+                  {constructor_name = Longident.parse constructor_name};
+              description =
+                "Replace with variant constructor " ^ constructor_name;
+            };
           fprintf ppf
             "\n\n\
             \  Possible solutions:\n\
@@ -772,6 +829,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     in
 
     if can_show_coercion_message && not is_constant then (
+      Actions.add_possible_action
+        {
+          loc;
+          action =
+            ApplyCoercion
+              {coerce_to_name = target_type_string |> Longident.parse};
+          description = "Coerce to " ^ target_type_string;
+        };
       fprintf ppf
         "@,\
          @,\
@@ -849,6 +914,7 @@ let print_contextual_unification_error ppf t1 t2 =
   | Tconstr (p1, _, _), Tconstr (p2, _, _)
     when Path.same p1 Predef.path_option
          && Path.same p2 Predef.path_option <> true ->
+    (* TODO(actions) Remove `Some`/`None` *)
     fprintf ppf
       "@,\
        @\n\
@@ -859,6 +925,7 @@ let print_contextual_unification_error ppf t1 t2 =
   | Tconstr (p1, _, _), Tconstr (p2, _, _)
     when Path.same p2 Predef.path_option
          && Path.same p1 Predef.path_option <> true ->
+    (* TODO(actions) Add `Some` *)
     fprintf ppf
       "@,\
        @\n\
