@@ -18,6 +18,8 @@ let ts_input_file_suffix ~(config : Config.t) =
   | Some s when Filename.extension s <> "" (* double extension  *) -> s
   | _ -> generated_files_extension ~config ^ ".tsx"
 
+let ts_assertions_file_suffix = ".assertions.ts"
+
 let ts_output_file_suffix ~(config : Config.t) =
   generated_files_extension ~config ^ ".js"
 
