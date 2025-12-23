@@ -1,0 +1,1 @@
+Could not initialize build: Duplicate module name: DuplicateModule. Found in packages/main/src/dupe-a/DuplicateModule.res and packages/main/src/dupe-b/DuplicateModule.res. Rename one of the files.

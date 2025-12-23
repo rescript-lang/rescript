@@ -93,6 +93,14 @@ rewatch build &> ../tests/snapshots/dependency-cycle.txt
 normalize_paths ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
 
+# it should show an error for duplicate module names
+mkdir -p packages/main/src/dupe-a packages/main/src/dupe-b
+echo 'let value = 1' > packages/main/src/dupe-a/DuplicateModule.res
+echo 'let value = 2' > packages/main/src/dupe-b/DuplicateModule.res
+rewatch build &> ../tests/snapshots/duplicate-module-name.txt
+normalize_paths ../tests/snapshots/duplicate-module-name.txt
+rm -rf packages/main/src/dupe-a packages/main/src/dupe-b
+
 # this should not compile because  "@rescript/webapi" is part of dev-dependencies
 # and FileToTest.res is not listed as "type":"dev"
 echo 'open WebAPI' >> packages/with-dev-deps/src/FileToTest.res
