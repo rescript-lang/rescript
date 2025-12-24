@@ -766,7 +766,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                         std::mem::swap(&mut first, &mut second);
                                     }
                                     return Err(anyhow!(
-                                        "Duplicate module name: {module_name}. Found in {} and {}. Rename one of the files.",
+                                        "Duplicate module name: {module_name}. Found in {} and {}. Rename one of these files.",
                                         first,
                                         second
                                     ));
