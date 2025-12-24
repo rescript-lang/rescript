@@ -760,10 +760,15 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                         existing_path.strip_prefix(&root).unwrap_or(&existing_path);
                                     let duplicate_display =
                                         duplicate_path.strip_prefix(&root).unwrap_or(&duplicate_path);
+                                    let mut first = existing_display.to_string_lossy().to_string();
+                                    let mut second = duplicate_display.to_string_lossy().to_string();
+                                    if second < first {
+                                        std::mem::swap(&mut first, &mut second);
+                                    }
                                     return Err(anyhow!(
                                         "Duplicate module name: {module_name}. Found in {} and {}. Rename one of the files.",
-                                        existing_display.to_string_lossy(),
-                                        duplicate_display.to_string_lossy()
+                                        first,
+                                        second
                                     ));
                                 }
                                 source_file.implementation.path = file.to_owned();
