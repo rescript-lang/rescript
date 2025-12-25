@@ -736,9 +736,6 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
             );
         });
 
-        let root_path = build_state.get_root_config().path.clone();
-        let root = root_path.parent().map(PathBuf::from).unwrap_or(root_path);
-
         debug!("Building source file-tree for package: {}", package.name);
         if let Some(source_files) = &package.source_files {
             for (file, metadata) in source_files.iter() {
@@ -748,27 +745,16 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                 let module_name = helpers::file_path_to_module_name(file, &namespace);
 
                 if helpers::is_implementation_file(extension) {
+                    // Store duplicate paths in an Option so we can build the error after the entry borrow ends.
+                    let mut duplicate_paths: Option<(PathBuf, PathBuf)> = None;
                     match build_state.modules.entry(module_name.to_string()) {
                         Entry::Occupied(mut entry) => {
                             let module = entry.get_mut();
                             if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                                 if &source_file.implementation.path != file {
-                                    let existing_path =
-                                        Path::new(&package.path).join(&source_file.implementation.path);
-                                    let duplicate_path = Path::new(&package.path).join(file);
-                                    let existing_display =
-                                        existing_path.strip_prefix(&root).unwrap_or(&existing_path);
-                                    let duplicate_display =
-                                        duplicate_path.strip_prefix(&root).unwrap_or(&duplicate_path);
-                                    let mut first = existing_display.to_string_lossy().to_string();
-                                    let mut second = duplicate_display.to_string_lossy().to_string();
-                                    if second < first {
-                                        std::mem::swap(&mut first, &mut second);
-                                    }
-                                    return Err(anyhow!(
-                                        "Duplicate module name: {module_name}. Found in {} and {}. Rename one of these files.",
-                                        first,
-                                        second
+                                    duplicate_paths = Some((
+                                        Path::new(&package.path).join(&source_file.implementation.path),
+                                        Path::new(&package.path).join(file),
                                     ));
                                 }
                                 source_file.implementation.path = file.to_owned();
@@ -798,6 +784,22 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                 is_type_dev: metadata.is_type_dev,
                             });
                         }
+                    }
+                    if let Some((existing_path, duplicate_path)) = duplicate_paths {
+                        let root_path = build_state.get_root_config().path.clone();
+                        let root = root_path.parent().map(PathBuf::from).unwrap_or(root_path);
+                        let existing_display = existing_path.strip_prefix(&root).unwrap_or(&existing_path);
+                        let duplicate_display = duplicate_path.strip_prefix(&root).unwrap_or(&duplicate_path);
+                        let mut first = existing_display.to_string_lossy().to_string();
+                        let mut second = duplicate_display.to_string_lossy().to_string();
+                        if second < first {
+                            std::mem::swap(&mut first, &mut second);
+                        }
+                        return Err(anyhow!(
+                            "Duplicate module name: {module_name}. Found in {} and {}. Rename one of these files.",
+                            first,
+                            second
+                        ));
                     }
                 } else {
                     // remove last character of string: resi -> res
