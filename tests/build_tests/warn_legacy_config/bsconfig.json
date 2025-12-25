@@ -1,8 +1,0 @@
-{
-  "name": "warn_legacy_config",
-  "version": "0.1.0",
-  "sources": {
-    "dir": "src",
-    "subdirs": true
-  }
-}

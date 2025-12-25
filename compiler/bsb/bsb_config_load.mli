@@ -1,2 +1,1 @@
-val load_json :
-  per_proj_dir:string -> warn_legacy_config:bool -> string * Ext_json_types.t
+val load_json : per_proj_dir:string -> string * Ext_json_types.t

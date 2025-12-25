@@ -323,8 +323,6 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
 
 let deps_from_bsconfig () =
   let cwd = Bsb_global_paths.cwd in
-  match
-    Bsb_config_load.load_json ~per_proj_dir:cwd ~warn_legacy_config:false
-  with
+  match Bsb_config_load.load_json ~per_proj_dir:cwd with
   | _, Obj {map} -> (Bsb_package_specs.from_map ~cwd map, Bsb_jsx.from_map map)
   | _, _ -> assert false

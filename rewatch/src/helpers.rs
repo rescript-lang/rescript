@@ -513,7 +513,7 @@ pub fn compute_file_hash(path: &Path) -> Option<blake3::Hash> {
 }
 
 fn has_rescript_config(path: &Path) -> bool {
-    path.join("bsconfig.json").exists() || path.join("rescript.json").exists()
+    path.join("rescript.json").exists()
 }
 
 // traverse up the directory tree until we find a config.json, if not return None

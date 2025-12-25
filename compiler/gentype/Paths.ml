@@ -89,10 +89,6 @@ let get_config_file ~project_root =
   let config = concat project_root Config.compiler_config_file in
   match config |> Sys.file_exists with
   | true -> Some config
-  | false -> (
-    let config = concat project_root Config.legacy_compiler_config_file in
-    match config |> Sys.file_exists with
-    | true -> Some config
-    | false -> None)
+  | false -> None
 
 let read_config ~namespace = Config.read_config ~get_config_file ~namespace
