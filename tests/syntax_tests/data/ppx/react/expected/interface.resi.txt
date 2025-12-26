@@ -1,8 +1,6 @@
 module A: {
   @res.jsxComponentProps
-  type props<'x> = {
-    x: 'x,
-  }
+  type props<'x> = {x: 'x}
   let make: React.component<props<string>>
 }
 

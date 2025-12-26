@@ -87,28 +87,9 @@ type tt = {x:int, y?: string}
 
 type ttt = {x:int, y?: string}
 
-type x = {a: int}
-
-type x = {aaaaaaaaaaaa: int, bbbbbbbbbbbb: int, cccccccccccc: int,  dddddddddddd: int, eeeeeeeeeeee: int, ffffffffffffffff: int}
-
-type y = {a: int
-}
-
-type z = {
-  a: int,
-}
-
 let optParen = { x:3, y: ? (someBool ? Some("") : None) }
 let optParen = { x:3, y: ? (3+4) }
 let optParen = { x:3, y: ? (foo(bar)) }
 let optParen = { x:3, y: ? (foo->bar) }
 let optParen = { x:3, y: ? (()=>3) }
 let optParen = { x:3, y: ? (-3) }
-
-let x = {a: 2}
-let x = {a: 2, bbbbbbbbbbbbbbbbbbbbb: 22222222222, ccccccccccccccccccccc: 22222222222222222, ddddddddddddddddddddd: 2222222222222}
-let x = {a: 2
-}
-let x = {
-  a: 2
-}

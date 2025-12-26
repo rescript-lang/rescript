@@ -1,8 +1,4 @@
-@res.jsxComponentProps
-type props<'x, 'ref> = {
-  x: 'x,
-  ref?: 'ref,
-}
+@res.jsxComponentProps type props<'x, 'ref> = {x: 'x, ref?: 'ref}
 let make = (
   {x, _}: props<string, ReactDOM.Ref.currentDomRef>,
   ref: Js.Nullable.t<ReactDOM.Ref.currentDomRef>,

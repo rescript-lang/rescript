@@ -53,6 +53,4 @@ type t = {.}
 type t = private {.}
 
 type t = constr<{.}, {.}, {.}>
-type t = {
-  hr: React.component<{.}>,
-}
+type t = {hr: React.component<{.}>}

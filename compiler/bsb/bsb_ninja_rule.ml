@@ -145,10 +145,6 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     (match ppx_files with
     | [] -> ()
     | _ ->
-      Ext_list.iter ppx_files (fun x ->
-          match string_of_float (Unix.stat x.name).st_mtime with
-          | exception _ -> ()
-          | st -> Ext_buffer.add_char_string buf ',' st);
       Ext_buffer.add_char_string buf ' ' (Bsb_build_util.ppx_flags ppx_files));
     (match pp_file with
     | None -> ()

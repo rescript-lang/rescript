@@ -141,6 +141,56 @@ let rewrite_underscore_apply expr =
     }
   | _ -> expr
 
+(* For pipe RHS: (__x) => f(__x, a, b) -----> f(a, b)
+   Note: Ppat_var "__x" and Pexp_ident "__x" represent `_` placeholders in user code.
+   Omits the first __x argument only if it's the sole occurrence.
+   If multiple __x exist (e.g., f(__x, __x, b)), keeps all to preserve semantics. *)
+let rewrite_underscore_apply_in_pipe expr =
+  let is_underscore_arg = function
+    | _, {pexp_desc = Pexp_ident {txt = Longident.Lident "__x"}} -> true
+    | _ -> false
+  in
+  let convert_underscore_to_placeholder arg =
+    match arg with
+    | ( lbl,
+        ({pexp_desc = Pexp_ident ({txt = Longident.Lident "__x"} as lid)} as
+         arg_expr) ) ->
+      ( lbl,
+        {
+          arg_expr with
+          pexp_desc = Pexp_ident {lid with txt = Longident.Lident "_"};
+        } )
+    | arg -> arg
+  in
+  match expr.pexp_desc with
+  | Pexp_fun
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply {funct; args}} as e;
+      } -> (
+    match args with
+    | first_arg :: rest_args when is_underscore_arg first_arg ->
+      if List.exists is_underscore_arg rest_args then
+        (* Multiple __x - keep all to preserve semantics *)
+        rewrite_underscore_apply expr
+      else
+        (* Single __x in first position - safe to omit *)
+        {
+          e with
+          pexp_desc =
+            Pexp_apply
+              {
+                funct;
+                args = List.map convert_underscore_to_placeholder rest_args;
+                partial = false;
+                transformed_jsx = false;
+              };
+        }
+    | _ -> rewrite_underscore_apply expr)
+  | _ -> expr
+
 type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
