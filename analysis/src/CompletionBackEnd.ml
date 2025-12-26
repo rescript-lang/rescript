@@ -756,6 +756,38 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
         findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
       | None -> []))
 
+let completionsForThrow ~(env : QueryEnv.t) ~full =
+  let exn_typ = Predef.type_exn in
+  let names_from_cmt =
+    let moduleName = env.file.moduleName in
+    match Hashtbl.find_opt full.package.pathsForModule moduleName with
+    | None -> []
+    | Some paths ->
+      let uri = getUri paths in
+      let cmt_path = getCmtPath ~uri paths in
+      ProcessCmt.exceptionsForCmt ~cmt:cmt_path
+  in
+  let completions_from_cmt =
+    names_from_cmt
+    |> List.map (fun (name, hasArgs) ->
+           let insertText =
+             if hasArgs then Printf.sprintf "throw(%s($0))" name
+             else Printf.sprintf "throw(%s)" name
+           in
+           Completion.create
+             (Printf.sprintf "throw(%s)" name)
+             ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+             ~insertText ~filterText:"throw")
+  in
+  Completion.create "JsError.throwWithMessage" ~env
+    ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+    ~detail:"Throw a JavaScript error, example: `throw new Error(str)`"
+    ~insertText:"JsError.throwWithMessage(\"$0\")"
+  :: Completion.create "JsExn.throw" ~env ~kind:(Completion.Value exn_typ)
+       ~includesSnippets:true ~insertText:"JsExn.throw($0)"
+       ~detail:"Throw any JavaScript value, example: `throw 100`"
+  :: completions_from_cmt
+
 (** Completions intended for piping, from a completion path. *)
 let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos
     ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath =
@@ -1010,7 +1042,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | Some (Tpromise (env, typ), _env) ->
       [Completion.create "dummy" ~env ~kind:(Completion.Value typ)]
     | _ -> [])
-  | CPId {path; completionContext; loc} ->
+  | CPId {path; completionContext; loc} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPId";
     (* Looks up the type of an identifier.
 
@@ -1048,7 +1080,10 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | _ -> byPath
       else byPath
     in
-    result
+    match (result, path) with
+    | [], [prefix] when Utils.startsWith "throw" prefix ->
+      completionsForThrow ~env ~full
+    | _ -> result)
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
     match

@@ -98,6 +98,16 @@ Path CompletionSupport.TestComponent.make
       "filePath": "src/CompletionJsxProps.res"
     }
   }, {
+    "label": "Throw",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Throw",
+    "documentation": null,
+    "data": {
+      "modulePath": "Throw",
+      "filePath": "src/CompletionJsxProps.res"
+    }
+  }, {
     "label": "TypeArgCtx",
     "kind": 9,
     "tags": [],
