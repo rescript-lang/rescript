@@ -16,6 +16,8 @@
 
 #### :eyeglasses: Spec Compliance
 
+- Wrap variables in curly braces inside JSX children. https://github.com/rescript-lang/rescript/pull/7863
+
 #### :rocket: New Feature
 
 - Reanalyze: add parallel processing for CMT file analysis with new `-parallel` and `-timing` flags, plus benchmark infrastructure for performance testing. https://github.com/rescript-lang/rescript/pull/8089
