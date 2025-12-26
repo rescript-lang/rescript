@@ -32,8 +32,6 @@
 
 #### :nail_care: Polish
 
-- Formatter: Improve multiline printing of record types and values. https://github.com/rescript-lang/rescript/pull/7993
-
 #### :house: Internal
 
 - Reanalyze: refactor DCE to pure pipeline architecture for order-independence and incremental update support. https://github.com/rescript-lang/rescript/pull/8043

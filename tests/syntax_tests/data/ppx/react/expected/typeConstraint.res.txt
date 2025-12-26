@@ -2,10 +2,7 @@
 
 module V4A = {
   @res.jsxComponentProps
-  type props<'a, 'b> = {
-    a: 'a,
-    b: 'b,
-  }
+  type props<'a, 'b> = {a: 'a, b: 'b}
 
   let make = (type a, {a, b, _}: props<_, _>): React.element => ReactDOM.jsx("div", {})
   let make = {
