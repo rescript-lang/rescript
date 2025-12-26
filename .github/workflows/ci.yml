@@ -107,7 +107,7 @@ jobs:
 
       - name: Restore rewatch build cache
         id: rewatch-build-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: rewatch/target
           key: rewatch-build-v3-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
@@ -161,7 +161,7 @@ jobs:
 
       - name: Restore OPAM environment
         id: cache-opam-env
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -197,7 +197,7 @@ jobs:
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -255,7 +255,7 @@ jobs:
       - name: Restore compiler build state
         if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
         id: compiler-build-state
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             C:\.cache\dune
@@ -285,7 +285,7 @@ jobs:
 
       - name: Save compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             C:\.cache\dune
@@ -298,7 +298,7 @@ jobs:
 
       - name: Restore ninja build cache
         id: ninja-build-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ninja/ninja${{ matrix.exe-suffix }}
           key: ninja-build-v2-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
@@ -386,7 +386,7 @@ jobs:
       #
       # - name: Restore previous benchmark data
       #   if: matrix.benchmarks
-      #   uses: actions/cache/restore@v4
+      #   uses: actions/cache/restore@v5
       #   with:
       #     path: ./tests/benchmark-cache
       #     key: syntax-benchmark-v1
@@ -407,7 +407,7 @@ jobs:
 
       # - name: Save benchmark data as new baseline
       #   if: matrix.benchmarks && github.ref == 'refs/heads/master'
-      #   uses: actions/cache/save@v4
+      #   uses: actions/cache/save@v5
       #   with:
       #     path: ./tests/benchmark-cache
       #     key: syntax-benchmark-v1
