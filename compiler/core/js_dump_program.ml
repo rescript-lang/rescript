@@ -87,7 +87,23 @@ let node_program ~output_dir f (x : J.deps_program) =
   in
   program f cxt x.program
 
-let es6_program ~output_dir fmt f (x : J.deps_program) =
+let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
+  (* For TypeScript mode, initialize type state first to collect runtime types *)
+  let () =
+    match !Js_config.ts_output with
+    | Js_config.Ts_typescript ->
+      Ts.init_type_decls ~module_name x.program.type_exports;
+      (* Also collect runtime types from value exports for variable type annotations *)
+      Ts.collect_runtime_types_from_value_exports x.program.value_exports
+    | Js_config.Ts_none -> ()
+  in
+  (* Print runtime type import first (before regular imports) *)
+  let () =
+    match !Js_config.ts_output with
+    | Js_config.Ts_typescript -> Ts.pp_runtime_type_import f
+    | Js_config.Ts_none -> ()
+  in
+  (* Print regular imports *)
   let cxt =
     Js_dump_import_export.imports Ext_pp_scope.empty f
       (* Not be emitted in import statements *)
@@ -103,11 +119,16 @@ let es6_program ~output_dir fmt f (x : J.deps_program) =
                  | External {import_attributes} -> import_attributes
                  | _ -> None )))
   in
+  (* Ensure blank line after imports *)
   let () = P.at_least_two_lines f in
   (* Emit type declarations for TypeScript mode *)
   let () =
     match !Js_config.ts_output with
-    | Js_config.Ts_typescript -> Ts.pp_type_decls f x.program.type_exports
+    | Js_config.Ts_typescript ->
+      Ts.pp_type_decls_only f x.program.type_exports;
+      (* Set up exported value types and module paths for variable annotation lookup *)
+      Ts.set_exported_modules x.program.type_exports;
+      Ts.set_exported_types x.program.value_exports
     | Js_config.Ts_none -> ()
   in
   let cxt = Js_dump.statements true cxt f x.program.block in
@@ -132,9 +153,11 @@ let pp_deps_program ~(output_prefix : string)
         P.string f comment;
         P.newline f);
     let output_dir = Filename.dirname output_prefix in
+    let module_name = Filename.basename output_prefix in
     ignore
       (match kind with
-      | Esmodule | Es6_global -> es6_program ~output_dir kind f program
+      | Esmodule | Es6_global ->
+        es6_program ~output_dir ~module_name kind f program
       | Commonjs -> node_program ~output_dir f program);
     P.newline f;
     P.string f

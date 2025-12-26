@@ -55,6 +55,10 @@ module E = Js_exp_make
 module S = Js_stmt_make
 module L = Js_dump_lit
 
+(** Current function return type for TypeScript as-assertion on return statements.
+    Set when entering a function, cleared when exiting. *)
+let current_fn_return_type : Types.type_expr option ref = ref None
+
 (* There modules are dynamically inserted in the last stage
    {Caml_curry}
    {Caml_option}
@@ -175,6 +179,12 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
 
+(** Check if an expression needs parentheses when followed by an 'as' assertion. *)
+let exp_need_paren_for_as (e : J.expression) : bool =
+  match e.expression_desc with
+  | Bin _ | String_append _ | Seq _ | Cond _ | In _ -> true
+  | _ -> false
+
 (** Print as underscore for unused vars, may not be 
     needed in the future *)
 (* let ipp_ident cxt f id (un_used : bool) =
@@ -192,6 +202,12 @@ let pp_var_assign cxt f id =
   P.string f L.eq;
   P.space f;
   acxt
+
+(** Print `let id` without the `=` sign, for use with type annotations *)
+let pp_var_declare_name cxt f id =
+  P.string f L.let_;
+  P.space f;
+  Ext_pp_scope.ident cxt f id
 
 let pp_var_assign_this cxt f id =
   let cxt = pp_var_assign cxt f id in
@@ -443,11 +459,27 @@ and pp_function ~return_unit ~async ~is_method ?directive ?fn_type cxt (f : P.t)
           P.string f "}"
         | ([{statement_desc = Return e}] | [{statement_desc = Exp e}])
           when arrow && directive == None ->
+          let return_type = Ts.return_type_expr_of_fn_type fn_type in
+          let needs_opaque =
+            match !Js_config.ts_output with
+            | Js_config.Ts_typescript ->
+              Ts.needs_opaque_return_assertion return_type
+            | Js_config.Ts_none -> false
+          in
           (if exp_need_paren ~arrow e then P.paren_group f 0 else P.group f 0)
-            (fun _ -> ignore (expression ~level:0 cxt f e))
+            (fun _ ->
+              ignore
+                (P.cond_paren_group f
+                   (needs_opaque && exp_need_paren_for_as e)
+                   (fun _ -> expression ~level:0 cxt f e));
+              if needs_opaque then Ts.pp_opaque_return_assertion f return_type)
         | _ ->
+          (* Set return type for nested Return statements to use *)
+          let old_return_type = !current_fn_return_type in
+          current_fn_return_type := Ts.return_type_expr_of_fn_type fn_type;
           P.brace_vgroup f 1 (fun _ ->
-              function_body ?directive ~return_unit cxt f b)
+              function_body ?directive ~return_unit cxt f b);
+          current_fn_return_type := old_return_type
     in
     let enclose () =
       let pp_type_params () =
@@ -1345,7 +1377,8 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
   match variable with
   | {ident = i; value = None; ident_info; _} ->
     if ident_info.used_stats = Dead_pure then cxt else pp_var_declare cxt f i
-  | {ident = name; value = Some e; ident_info = {used_stats; _}} -> (
+  | {ident = name; value = Some e; ident_info = {used_stats; _}; ident_type}
+    -> (
     match used_stats with
     | Dead_pure -> cxt
     | Dead_non_pure ->
@@ -1360,8 +1393,36 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
       | _ ->
-        let cxt = pp_var_assign cxt f name in
+        (* For TypeScript mode, print type annotation between name and = *)
+        let ty, cxt =
+          match !Js_config.ts_output with
+          | Js_config.Ts_typescript ->
+            let cxt = pp_var_declare_name cxt f name in
+            let ident_name = Ident.name name in
+            (* Try ident_type first, then exported value types, then module types *)
+            let ty =
+              match ident_type with
+              | Some _ -> ident_type
+              | None -> Ts.get_exported_type ident_name
+            in
+            (match ty with
+            | Some _ -> Ts.pp_type_annotation_from_ml f ty
+            | None -> (
+              (* Try module type path for module declarations *)
+              match Ts.get_module_type_path ident_name with
+              | Some type_path ->
+                P.string f ": ";
+                P.string f type_path
+              | None -> ()));
+            P.space f;
+            P.string f L.eq;
+            P.space f;
+            (ty, cxt)
+          | Js_config.Ts_none -> (None, pp_var_assign cxt f name)
+        in
         let cxt = expression ~level:1 cxt f e in
+        (* Print as assertion for opaque types in TypeScript mode *)
+        Ts.pp_as_assertion f ty;
         semi f;
         cxt))
 
@@ -1573,7 +1634,19 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       return_sp f;
       (* P.string f "return ";(\* ASI -- when there is a comment*\) *)
       P.group f 0 (fun _ ->
-          let cxt = expression ~level:0 cxt f e in
+          let needs_opaque =
+            match !Js_config.ts_output with
+            | Js_config.Ts_typescript ->
+              Ts.needs_opaque_return_assertion !current_fn_return_type
+            | Js_config.Ts_none -> false
+          in
+          let cxt =
+            P.cond_paren_group f
+              (needs_opaque && exp_need_paren_for_as e)
+              (fun _ -> expression ~level:0 cxt f e)
+          in
+          if needs_opaque then
+            Ts.pp_opaque_return_assertion f !current_fn_return_type;
           semi f;
           cxt)
       (* There MUST be a space between the return and its

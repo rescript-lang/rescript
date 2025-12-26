@@ -144,6 +144,18 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
+     * Execute TypeScript check
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    tsc(args = [], options = {}) {
+      const projectPath = path.join(cwd, "tsconfig.json");
+      return exec("yarn", ["tsc", "--project", projectPath, ...args], options);
+    },
+
+    /**
      * Execute Mocha CLI
      *
      * @param {string[]} [args]

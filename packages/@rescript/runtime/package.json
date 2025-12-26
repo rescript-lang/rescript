@@ -31,9 +31,17 @@
     "provenance": true
   },
   "files": [
-    "lib"
+    "lib/es6/*.js",
+    "lib/es6/*.d.ts",
+    "lib/js/*.js",
+    "lib/js/*.d.ts",
+    "types.d.ts",
+    "*.res"
   ],
   "exports": {
+    "./types": {
+      "types": "./types.d.ts"
+    },
     "./lib/es6/*": "./lib/es6/*",
     "./lib/js/*": "./lib/js/*",
     "./package.json": "./package.json"

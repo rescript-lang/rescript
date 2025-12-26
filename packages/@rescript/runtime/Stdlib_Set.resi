@@ -7,7 +7,7 @@ See [`Set`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Gl
 /**
 Type representing an instance of `Set`.
 */
-@notUndefined
+@notUndefined @external("Set")
 type t<'a>
 
 /**

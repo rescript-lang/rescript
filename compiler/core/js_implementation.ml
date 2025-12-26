@@ -161,9 +161,12 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
            then Ts.extract_type_decls typedtree
            else []
          in
-         (* Extract value exports for .d.ts generation *)
+         (* Extract value exports for TypeScript or .d.ts generation *)
          let value_exports =
-           if !Js_config.emit_dts then Ts.extract_value_exports typedtree
+           if
+             !Js_config.ts_output = Js_config.Ts_typescript
+             || !Js_config.emit_dts
+           then Ts.extract_value_exports typedtree
            else []
          in
          let js_program =

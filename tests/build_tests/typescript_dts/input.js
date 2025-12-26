@@ -2,7 +2,7 @@
 
 import { setup } from "#dev/process";
 
-const { execBuild } = setup(import.meta.dirname);
+const { execBuild, tsc } = setup(import.meta.dirname);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
@@ -10,3 +10,4 @@ if (process.platform === "win32") {
 }
 
 await execBuild();
+await tsc();

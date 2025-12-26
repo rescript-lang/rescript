@@ -335,7 +335,8 @@ let lambda_as_module
              base ^ js_to_dts ext
            in
            let output_dir = Filename.dirname target_file in
-           (* Compute imports for .d.ts file *)
+           (* Compute imports for .d.ts file - keep .js extension for imports
+              since TypeScript will automatically resolve to .d.ts *)
            let dts_imports =
              Ext_list.filter_map lambda_output.modules (fun (m : J.module_id) ->
                  if m.dynamic_import then None
@@ -345,16 +346,12 @@ let lambda_as_module
                      Js_name_of_module_id.string_of_module_id m ~output_dir
                        module_system
                    in
-                   let dts_path =
-                     let base = Ext_filename.chop_extension_maybe module_path in
-                     let ext = Ext_filename.get_extension_maybe module_path in
-                     base ^ js_to_dts ext
-                   in
-                   Some Ts.{module_name; module_path = dts_path})
+                   Some Ts.{module_name; module_path})
            in
+           let module_name = Filename.basename output_prefix in
            Ext_pervasives.with_file_as_chan dts_file (fun chan ->
                let f = Ext_pp.from_channel chan in
-               Ts.pp_dts_file f dts_imports
+               Ts.pp_dts_file ~module_name f dts_imports
                  lambda_output.program.type_exports
                  lambda_output.program.value_exports));
         if !Warnings.has_warnings  then begin

@@ -13,10 +13,6 @@ function identity(x) {
   return x;
 }
 
-async function asyncIdentity(x) {
-  return x;
-}
-
 function processOption(opt) {
   if (opt !== undefined) {
     return opt;
@@ -24,6 +20,65 @@ function processOption(opt) {
     return 0;
   }
 }
+
+function getUnit() {
+  
+}
+
+function getValue() {
+  return 42;
+}
+
+let jsObj = {
+  name: "Alice",
+  age: 30
+};
+
+function withLabels(name, age) {
+  return name + " is " + age.toString();
+}
+
+function withOptional(name, prefix) {
+  if (prefix !== undefined) {
+    return prefix + name;
+  } else {
+    return name;
+  }
+}
+
+function handler_onClick() {
+  
+}
+
+function handler_getValue() {
+  return 42;
+}
+
+function handler_transform(n) {
+  return n.toString();
+}
+
+let handler = {
+  onClick: handler_onClick,
+  getValue: handler_getValue,
+  transform: handler_transform
+};
+
+let myRecord = {
+  foo: "hello",
+  bar: 42
+};
+
+let myColor = "red";
+
+let myRgb = {
+  NAME: "rgb",
+  VAL: [
+    255,
+    0,
+    0
+  ]
+};
 
 let myNumber = 42;
 
@@ -33,9 +88,17 @@ export {
   add,
   greet,
   identity,
-  asyncIdentity,
   processOption,
+  getUnit,
+  getValue,
+  myRecord,
+  myColor,
+  myRgb,
+  jsObj,
+  withLabels,
+  withOptional,
   myNumber,
   myString,
+  handler,
 }
 /* No side effect */

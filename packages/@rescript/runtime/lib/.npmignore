@@ -1,5 +1,0 @@
-bs/
-*.ast
-*.iast
-rescript.lock
-.compiler.log
