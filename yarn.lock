@@ -1311,7 +1311,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fetchdts@npm:^0.1.6":
+"fetchdts@npm:^0.1.7":
   version: 0.1.7
   resolution: "fetchdts@npm:0.1.7"
   checksum: 10c0/7497671ee28b3e7cc49d037a7c11e6f98e53e6e2abd85f26e8fac3fae4142c3c0d91352dc46198530f73b16480585605c63e3d112c34210ff2c75be1199668a0
@@ -1539,20 +1539,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"h3@npm:2.0.0-beta.4":
-  version: 2.0.0-beta.4
-  resolution: "h3@npm:2.0.0-beta.4"
+"h3@npm:2.0.0-rc.1":
+  version: 2.0.0-rc.1
+  resolution: "h3@npm:2.0.0-rc.1"
   dependencies:
     cookie-es: "npm:^2.0.0"
-    fetchdts: "npm:^0.1.6"
-    rou3: "npm:^0.7.3"
-    srvx: "npm:^0.8.7"
+    fetchdts: "npm:^0.1.7"
+    rou3: "npm:^0.7.7"
+    srvx: "npm:^0.8.13"
   peerDependencies:
     crossws: ^0.4.1
   peerDependenciesMeta:
     crossws:
       optional: true
-  checksum: 10c0/ac40213784bab18a96509048d82338763484dddab303763ab549c1fc2e41c8c83a00013154fd9861042b9016f91dc0be3e6c12e553e7450910dc692c17e59403
+  checksum: 10c0/54cca8dd47029707150ca016c41dba95b29eb36b8790278a07f2a1668fdc1932034d832a78acbcb3c72acc3b757867d5febb0c3013561581e0ad3b9d32dd8b4c
   languageName: node
   linkType: hard
 
@@ -2467,7 +2467,7 @@ __metadata:
     "@rescript/react": "npm:^0.13.1"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
     glob: "npm:^11.0.1"
-    h3: "npm:2.0.0-beta.4"
+    h3: "npm:2.0.0-rc.1"
     rescript: "workspace:^"
     rollup: "npm:^4.32.0"
   languageName: unknown
@@ -2736,10 +2736,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rou3@npm:^0.7.3":
-  version: 0.7.3
-  resolution: "rou3@npm:0.7.3"
-  checksum: 10c0/f20224a724838c8a0cbdd8b37462ad684b59f87a8314aa7e6a1a892f96d806bcf504bcb9108f9d812cdb6194e1a347adc15f2c379238bfbc3b723e33dc71ca46
+"rou3@npm:^0.7.7":
+  version: 0.7.12
+  resolution: "rou3@npm:0.7.12"
+  checksum: 10c0/2ea87ddd91a5d0f9d9671fa2bb714f57566eae33ecb24e8a61bb298aca8c226483e59cafe1c60297ac9aa58b2b6ad506447374cdbff4e99cf0f9f72a9dae09dc
   languageName: node
   linkType: hard
 
@@ -2902,14 +2902,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"srvx@npm:^0.8.7":
-  version: 0.8.7
-  resolution: "srvx@npm:0.8.7"
-  dependencies:
-    cookie-es: "npm:^2.0.0"
+"srvx@npm:^0.8.13":
+  version: 0.8.16
+  resolution: "srvx@npm:0.8.16"
   bin:
     srvx: bin/srvx.mjs
-  checksum: 10c0/67b0b0acbb660df966dd0486e93eba456535190b38a8817f45afbfc4a8892146d69bf8183cdc270bfbbc360169df26f4b636d29ca6b28a4c5eec20d3432ab317
+  checksum: 10c0/901669736c0bb7353775128c571c6d0745a260db36bcdfce3c3edc6502a7bddd66208ac7361c4f68e128252be2e95b69b18768576bca28381b76001ad90a808d
   languageName: node
   linkType: hard
 
