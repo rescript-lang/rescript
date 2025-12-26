@@ -15,8 +15,8 @@ for await (const file of glob(`${LIB_DIR}/es6/*.js`, { withFileTypes: false })) 
   input.push(file);
 }
 
-if (!entryPoint) {
-  throw new Error("No entry point found in playground");
+if (input.length === 0) {
+  throw new Error("No entry points found in playground");
 }
 
 export default {
