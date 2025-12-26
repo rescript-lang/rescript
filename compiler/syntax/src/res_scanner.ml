@@ -190,7 +190,7 @@ let scan_identifier scanner =
   let start_off = scanner.offset in
   let rec skip_good_chars scanner =
     match scanner.ch with
-    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' ->
+    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '$' ->
       next scanner;
       skip_good_chars scanner
     | _ -> ()
@@ -751,7 +751,7 @@ let rec scan scanner =
   let token =
     match scanner.ch with
     (* peeking 0 char *)
-    | 'A' .. 'Z' | 'a' .. 'z' -> scan_identifier scanner
+    | 'A' .. 'Z' | 'a' .. 'z' | '$' -> scan_identifier scanner
     | '0' .. '9' -> scan_number scanner
     | '`' ->
       next scanner;

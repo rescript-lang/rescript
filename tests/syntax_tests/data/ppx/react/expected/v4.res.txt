@@ -57,11 +57,11 @@ module Rec = {
   type props = {}
 
   let rec make = {
-    let \"make$Internal" = (_: props): React.element => {
+    let make$Internal = (_: props): React.element => {
       make(({}: props))
     }
     let make = {
-      let \"V4$Rec" = props => \"make$Internal"(props)
+      let \"V4$Rec" = props => make$Internal(props)
 
       \"V4$Rec"
     }
@@ -74,11 +74,11 @@ module Rec1 = {
   type props = {}
 
   let rec make = {
-    let \"make$Internal" = (_: props): React.element => {
+    let make$Internal = (_: props): React.element => {
       React.null
     }
     let make = {
-      let \"V4$Rec1" = props => \"make$Internal"(props)
+      let \"V4$Rec1" = props => make$Internal(props)
 
       \"V4$Rec1"
     }
@@ -91,11 +91,11 @@ module Rec2 = {
   type props = {}
 
   let rec make = {
-    let \"make$Internal" = (_: props): React.element => {
+    let make$Internal = (_: props): React.element => {
       mm(({}: props))
     }
     let make = {
-      let \"V4$Rec2" = props => \"make$Internal"(props)
+      let \"V4$Rec2" = props => make$Internal(props)
 
       \"V4$Rec2"
     }
