@@ -82,7 +82,7 @@ jobs:
           git config --system core.longpaths true
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -474,7 +474,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -506,7 +506,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout rescript-lang.org
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: rescript-lang/rescript-lang.org
           ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
@@ -563,7 +563,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -623,7 +623,7 @@ jobs:
           node-version: 20
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Make test directory
         id: tmp-dir
@@ -665,7 +665,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -695,7 +695,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Use Node.js
         uses: actions/setup-node@v6
