@@ -413,6 +413,10 @@ module AllInstanceofTypes = {
     | BigInt64Array(BigInt64Array.t)
     | BigUint64Array(BigUint64Array.t)
     | DataView(DataView.t)
+    | Set(Set.t<string>)
+    | Map(Map.t<string, unknown>)
+    | WeakSet(WeakSet.t<string>)
+    | WeakMap(WeakMap.t<string, unknown>)
 
   let classifyAll = async (t: t) =>
     switch t {
@@ -437,6 +441,10 @@ module AllInstanceofTypes = {
     | BigInt64Array(_) => Console.log("BigInt64Array")
     | BigUint64Array(_) => Console.log("BigUint64Array")
     | DataView(_) => Console.log("DataView")
+    | Set(_) => Console.log("Set")
+    | Map(_) => Console.log("Map")
+    | WeakSet(_) => Console.log("WeakSet")
+    | WeakMap(_) => Console.log("WeakMap")
     }
 }
 
