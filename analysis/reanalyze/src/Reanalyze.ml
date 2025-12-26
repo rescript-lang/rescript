@@ -204,22 +204,39 @@ let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
 
 (** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot : all_files_result =
-  let cmtFilePaths = collectCmtFilePaths ~cmtRoot in
-  let numDomains =
-    match !Cli.parallel with
-    | n when n > 0 -> n
-    | n when n < 0 ->
-      (* Auto-detect: use recommended domain count (number of cores) *)
-      Domain.recommended_domain_count ()
-    | _ -> 0
+let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
+    all_files_result =
+  let cmtFilePaths =
+    let all = collectCmtFilePaths ~cmtRoot in
+    match skip_file with
+    | Some should_skip -> List.filter (fun p -> not (should_skip p)) all
+    | None -> all
   in
-  if numDomains > 0 then (
-    if !Cli.timing then
-      Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
-        (List.length cmtFilePaths);
-    processFilesParallel ~config ~numDomains cmtFilePaths)
-  else processFilesSequential ~config cmtFilePaths
+  (* Reactive mode: use incremental processing that skips unchanged files *)
+  match reactive_collection with
+  | Some collection ->
+    let result =
+      ReactiveAnalysis.process_files ~collection ~config cmtFilePaths
+    in
+    {
+      dce_data_list = result.dce_data_list;
+      exception_results = result.exception_results;
+    }
+  | None ->
+    let numDomains =
+      match !Cli.parallel with
+      | n when n > 0 -> n
+      | n when n < 0 ->
+        (* Auto-detect: use recommended domain count (number of cores) *)
+        Domain.recommended_domain_count ()
+      | _ -> 0
+    in
+    if numDomains > 0 then (
+      if !Cli.timing then
+        Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
+          (List.length cmtFilePaths);
+      processFilesParallel ~config ~numDomains cmtFilePaths)
+    else processFilesSequential ~config cmtFilePaths
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -233,10 +250,17 @@ let shuffle_list lst =
   done;
   Array.to_list arr
 
-let runAnalysis ~dce_config ~cmtRoot =
+let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
+    ~reactive_liveness ~reactive_solver ~skip_file =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
-    processCmtFiles ~config:dce_config ~cmtRoot
+    processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection ~skip_file
+  in
+  (* Get exception results from reactive collection if available *)
+  let exception_results =
+    match reactive_collection with
+    | Some collection -> ReactiveAnalysis.collect_exception_results collection
+    | None -> exception_results
   in
   (* Optionally shuffle for order-independence testing *)
   let dce_data_list =
@@ -251,82 +275,197 @@ let runAnalysis ~dce_config ~cmtRoot =
   let analysis_result =
     if dce_config.DceConfig.run.dce then
       (* Merging phase: combine all builders -> immutable data *)
-      let annotations, decls, cross_file, refs, file_deps =
+      let ann_store, decl_store, cross_file_store, ref_store =
         Timing.time_phase `Merging (fun () ->
-            let annotations =
-              FileAnnotations.merge_all
-                (dce_data_list
-                |> List.map (fun fd -> fd.DceFileProcessing.annotations))
+            (* Use reactive merge if available, otherwise list-based merge *)
+            let ann_store, decl_store, cross_file_store =
+              match reactive_merge with
+              | Some merged ->
+                (* Reactive mode: use stores directly, skip freeze! *)
+                ( AnnotationStore.of_reactive merged.ReactiveMerge.annotations,
+                  DeclarationStore.of_reactive merged.ReactiveMerge.decls,
+                  CrossFileItemsStore.of_reactive
+                    merged.ReactiveMerge.cross_file_items )
+              | None ->
+                (* Non-reactive mode: freeze into data, wrap in store *)
+                let decls =
+                  Declarations.merge_all
+                    (dce_data_list
+                    |> List.map (fun fd -> fd.DceFileProcessing.decls))
+                in
+                ( AnnotationStore.of_frozen
+                    (FileAnnotations.merge_all
+                       (dce_data_list
+                       |> List.map (fun fd -> fd.DceFileProcessing.annotations)
+                       )),
+                  DeclarationStore.of_frozen decls,
+                  CrossFileItemsStore.of_frozen
+                    (CrossFileItems.merge_all
+                       (dce_data_list
+                       |> List.map (fun fd -> fd.DceFileProcessing.cross_file)))
+                )
             in
-            let decls =
-              Declarations.merge_all
-                (dce_data_list
-                |> List.map (fun fd -> fd.DceFileProcessing.decls))
+            (* Compute refs.
+               In reactive mode, use stores directly (skip freeze!).
+               In non-reactive mode, use the imperative processing. *)
+            let ref_store =
+              match reactive_merge with
+              | Some merged ->
+                (* Reactive mode: use stores directly *)
+                ReferenceStore.of_reactive
+                  ~value_refs_from:merged.value_refs_from
+                  ~type_refs_from:merged.type_refs_from
+                  ~type_deps:merged.type_deps
+                  ~exception_refs:merged.exception_refs
+              | None ->
+                (* Non-reactive mode: build refs imperatively *)
+                (* Need Declarations.t for type deps processing *)
+                let decls =
+                  match decl_store with
+                  | DeclarationStore.Frozen d -> d
+                  | DeclarationStore.Reactive _ ->
+                    failwith
+                      "unreachable: non-reactive path with reactive store"
+                in
+                (* Need CrossFileItems.t for exception refs processing *)
+                let cross_file =
+                  match cross_file_store with
+                  | CrossFileItemsStore.Frozen cfi -> cfi
+                  | CrossFileItemsStore.Reactive _ ->
+                    failwith
+                      "unreachable: non-reactive path with reactive store"
+                in
+                let refs_builder = References.create_builder () in
+                let file_deps_builder = FileDeps.create_builder () in
+                (match reactive_collection with
+                | Some collection ->
+                  ReactiveAnalysis.iter_file_data collection (fun fd ->
+                      References.merge_into_builder
+                        ~from:fd.DceFileProcessing.refs ~into:refs_builder;
+                      FileDeps.merge_into_builder
+                        ~from:fd.DceFileProcessing.file_deps
+                        ~into:file_deps_builder)
+                | None ->
+                  dce_data_list
+                  |> List.iter (fun fd ->
+                         References.merge_into_builder
+                           ~from:fd.DceFileProcessing.refs ~into:refs_builder;
+                         FileDeps.merge_into_builder
+                           ~from:fd.DceFileProcessing.file_deps
+                           ~into:file_deps_builder));
+                (* Compute type-label dependencies after merge *)
+                DeadType.process_type_label_dependencies ~config:dce_config
+                  ~decls ~refs:refs_builder;
+                let find_exception =
+                  DeadException.find_exception_from_decls decls
+                in
+                (* Process cross-file exception refs *)
+                CrossFileItems.process_exception_refs cross_file
+                  ~refs:refs_builder ~file_deps:file_deps_builder
+                  ~find_exception ~config:dce_config;
+                (* Freeze refs for solver *)
+                let refs = References.freeze_builder refs_builder in
+                ReferenceStore.of_frozen refs
             in
-            let cross_file =
-              CrossFileItems.merge_all
-                (dce_data_list
-                |> List.map (fun fd -> fd.DceFileProcessing.cross_file))
-            in
-            (* Merge refs and file_deps into builders for cross-file items processing *)
-            let refs_builder = References.create_builder () in
-            let file_deps_builder = FileDeps.create_builder () in
-            dce_data_list
-            |> List.iter (fun fd ->
-                   References.merge_into_builder ~from:fd.DceFileProcessing.refs
-                     ~into:refs_builder;
-                   FileDeps.merge_into_builder
-                     ~from:fd.DceFileProcessing.file_deps
-                     ~into:file_deps_builder);
-            (* Compute type-label dependencies after merge *)
-            DeadType.process_type_label_dependencies ~config:dce_config ~decls
-              ~refs:refs_builder;
-            let find_exception =
-              DeadException.find_exception_from_decls decls
-            in
-            (* Process cross-file exception refs *)
-            CrossFileItems.process_exception_refs cross_file ~refs:refs_builder
-              ~file_deps:file_deps_builder ~find_exception ~config:dce_config;
-            (* Freeze refs and file_deps for solver *)
-            let refs = References.freeze_builder refs_builder in
-            let file_deps = FileDeps.freeze_builder file_deps_builder in
-            (annotations, decls, cross_file, refs, file_deps))
+            (ann_store, decl_store, cross_file_store, ref_store))
       in
       (* Solving phase: run the solver and collect issues *)
       Timing.time_phase `Solving (fun () ->
-          let empty_optional_args_state = OptionalArgsState.create () in
-          let analysis_result_core =
-            DeadCommon.solveDead ~annotations ~decls ~refs ~file_deps
-              ~optional_args_state:empty_optional_args_state ~config:dce_config
-              ~checkOptionalArg:(fun
-                  ~optional_args_state:_ ~annotations:_ ~config:_ _ -> [])
-          in
-          (* Compute liveness-aware optional args state *)
-          let is_live pos =
-            match Declarations.find_opt decls pos with
-            | Some decl -> Decl.isLive decl
-            | None -> true
-          in
-          let optional_args_state =
-            CrossFileItems.compute_optional_args_state cross_file ~decls
-              ~is_live
-          in
-          (* Collect optional args issues only for live declarations *)
-          let optional_args_issues =
-            Declarations.fold
-              (fun _pos decl acc ->
-                if Decl.isLive decl then
-                  let issues =
-                    DeadOptionalArgs.check ~optional_args_state ~annotations
-                      ~config:dce_config decl
-                  in
-                  List.rev_append issues acc
-                else acc)
-              decls []
-            |> List.rev
-          in
-          Some
-            (AnalysisResult.add_issues analysis_result_core optional_args_issues))
+          match reactive_solver with
+          | Some solver ->
+            (* Reactive solver: iterate dead_decls + live_decls *)
+            let t0 = Unix.gettimeofday () in
+            let dead_code_issues =
+              ReactiveSolver.collect_issues ~t:solver ~config:dce_config
+                ~ann_store
+            in
+            let t1 = Unix.gettimeofday () in
+            (* Collect optional args issues from live declarations *)
+            let optional_args_issues =
+              match reactive_merge with
+              | Some merged ->
+                (* Create CrossFileItemsStore from reactive collection *)
+                let cross_file_store =
+                  CrossFileItemsStore.of_reactive
+                    merged.ReactiveMerge.cross_file_items
+                in
+                (* Compute optional args state using reactive liveness check.
+                   Uses ReactiveSolver.is_pos_live which checks the reactive live collection
+                   instead of mutable resolvedDead field. *)
+                let is_live pos = ReactiveSolver.is_pos_live ~t:solver pos in
+                let find_decl pos =
+                  Reactive.get merged.ReactiveMerge.decls pos
+                in
+                let optional_args_state =
+                  CrossFileItemsStore.compute_optional_args_state
+                    cross_file_store ~find_decl ~is_live
+                in
+                (* Iterate live declarations and check for optional args issues *)
+                let issues = ref [] in
+                ReactiveSolver.iter_live_decls ~t:solver (fun decl ->
+                    let decl_issues =
+                      DeadOptionalArgs.check ~optional_args_state ~ann_store
+                        ~config:dce_config decl
+                    in
+                    issues := List.rev_append decl_issues !issues);
+                List.rev !issues
+              | None -> []
+            in
+            let t2 = Unix.gettimeofday () in
+            let all_issues = dead_code_issues @ optional_args_issues in
+            let num_dead, num_live = ReactiveSolver.stats ~t:solver in
+            if !Cli.timing then (
+              Printf.eprintf
+                "  ReactiveSolver: dead_code=%.3fms opt_args=%.3fms (dead=%d, \
+                 live=%d, issues=%d)\n"
+                ((t1 -. t0) *. 1000.0)
+                ((t2 -. t1) *. 1000.0)
+                num_dead num_live (List.length all_issues);
+              (match reactive_liveness with
+              | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
+              | None -> ());
+              ReactiveSolver.print_stats ~t:solver);
+            if !Cli.mermaid then
+              Printf.eprintf "\n%s\n" (Reactive.to_mermaid ());
+            Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
+          | None ->
+            (* Non-reactive path: use old solver with optional args *)
+            let empty_optional_args_state = OptionalArgsState.create () in
+            let analysis_result_core =
+              DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
+                ~optional_args_state:empty_optional_args_state
+                ~config:dce_config
+                ~checkOptionalArg:(fun
+                    ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
+            in
+            (* Compute liveness-aware optional args state *)
+            let is_live pos =
+              match DeclarationStore.find_opt decl_store pos with
+              | Some decl -> Decl.isLive decl
+              | None -> true
+            in
+            let optional_args_state =
+              CrossFileItemsStore.compute_optional_args_state cross_file_store
+                ~find_decl:(DeclarationStore.find_opt decl_store)
+                ~is_live
+            in
+            (* Collect optional args issues only for live declarations *)
+            let optional_args_issues =
+              DeclarationStore.fold
+                (fun _pos decl acc ->
+                  if Decl.isLive decl then
+                    let issues =
+                      DeadOptionalArgs.check ~optional_args_state ~ann_store
+                        ~config:dce_config decl
+                    in
+                    List.rev_append issues acc
+                  else acc)
+                decl_store []
+              |> List.rev
+            in
+            Some
+              (AnalysisResult.add_issues analysis_result_core
+                 optional_args_issues))
     else None
   in
   (* Reporting phase *)
@@ -345,14 +484,186 @@ let runAnalysis ~dce_config ~cmtRoot =
 let runAnalysisAndReport ~cmtRoot =
   Log_.Color.setup ();
   Timing.enabled := !Cli.timing;
-  Timing.reset ();
   if !Cli.json then EmitJson.start ();
   let dce_config = DceConfig.current () in
-  runAnalysis ~dce_config ~cmtRoot;
-  Log_.Stats.report ~config:dce_config;
-  Log_.Stats.clear ();
-  if !Cli.json then EmitJson.finish ();
-  Timing.report ()
+  let numRuns = max 1 !Cli.runs in
+  (* Create reactive collection once, reuse across runs *)
+  let reactive_collection =
+    if !Cli.reactive then Some (ReactiveAnalysis.create ~config:dce_config)
+    else None
+  in
+  (* Create reactive merge once if reactive mode is enabled.
+     This automatically updates when reactive_collection changes. *)
+  let reactive_merge =
+    match reactive_collection with
+    | Some collection ->
+      let file_data_collection =
+        ReactiveAnalysis.to_file_data_collection collection
+      in
+      Some (ReactiveMerge.create file_data_collection)
+    | None -> None
+  in
+  (* Create reactive liveness. This is created before files are processed,
+     so it receives deltas as files are processed incrementally. *)
+  let reactive_liveness =
+    match reactive_merge with
+    | Some merged -> Some (ReactiveLiveness.create ~merged)
+    | None -> None
+  in
+  (* Create reactive solver once - sets up the reactive pipeline:
+     decls + live → dead_decls → issues
+     All downstream collections update automatically when inputs change. *)
+  let reactive_solver =
+    match (reactive_merge, reactive_liveness) with
+    | Some merged, Some liveness_result ->
+      (* Pass value_refs_from for hasRefBelow (needed when transitive=false) *)
+      let value_refs_from =
+        if dce_config.DceConfig.run.transitive then None
+        else Some merged.ReactiveMerge.value_refs_from
+      in
+      Some
+        (ReactiveSolver.create ~decls:merged.ReactiveMerge.decls
+           ~live:liveness_result.ReactiveLiveness.live
+           ~annotations:merged.ReactiveMerge.annotations ~value_refs_from
+           ~config:dce_config)
+    | _ -> None
+  in
+  (* Collect CMT file paths once for churning *)
+  let cmtFilePaths =
+    if !Cli.churn > 0 then Some (collectCmtFilePaths ~cmtRoot) else None
+  in
+  (* Track previous issue count for diff reporting *)
+  let prev_issue_count = ref 0 in
+  (* Track currently removed files (to add them back on next run) *)
+  let removed_files = ref [] in
+  (* Set of removed files for filtering in processCmtFiles *)
+  let removed_set = Hashtbl.create 64 in
+  (* Aggregate stats for churn mode *)
+  let churn_times = ref [] in
+  let issues_added_list = ref [] in
+  let issues_removed_list = ref [] in
+  for run = 1 to numRuns do
+    Timing.reset ();
+    (* Clear stats at start of each run to avoid accumulation *)
+    if run > 1 then Log_.Stats.clear ();
+    (* Print run header first *)
+    if numRuns > 1 && !Cli.timing then
+      Printf.eprintf "\n=== Run %d/%d ===\n%!" run numRuns;
+    (* Churn: alternate between remove and add phases *)
+    (if !Cli.churn > 0 then
+       match (reactive_collection, cmtFilePaths) with
+       | Some collection, Some paths ->
+         Reactive.reset_stats ();
+         if run > 1 && !removed_files <> [] then (
+           (* Add back previously removed files *)
+           let to_add = !removed_files in
+           removed_files := [];
+           (* Clear removed set so these files get processed again *)
+           List.iter (fun p -> Hashtbl.remove removed_set p) to_add;
+           let t0 = Unix.gettimeofday () in
+           let processed =
+             ReactiveFileCollection.process_files_batch
+               (collection
+                 : ReactiveAnalysis.t
+                 :> (_, _) ReactiveFileCollection.t)
+               to_add
+           in
+           let elapsed = Unix.gettimeofday () -. t0 in
+           Timing.add_churn_time elapsed;
+           churn_times := elapsed :: !churn_times;
+           if !Cli.timing then (
+             Printf.eprintf "  Added back %d files (%.3fs)\n%!" processed
+               elapsed;
+             (match reactive_liveness with
+             | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
+             | None -> ());
+             match reactive_solver with
+             | Some solver -> ReactiveSolver.print_stats ~t:solver
+             | None -> ()))
+         else if run > 1 then (
+           (* Remove new random files *)
+           let numChurn = min !Cli.churn (List.length paths) in
+           let shuffled = shuffle_list paths in
+           let to_remove = List.filteri (fun i _ -> i < numChurn) shuffled in
+           removed_files := to_remove;
+           (* Mark as removed so processCmtFiles skips them *)
+           List.iter (fun p -> Hashtbl.replace removed_set p ()) to_remove;
+           let t0 = Unix.gettimeofday () in
+           let removed =
+             ReactiveFileCollection.remove_batch
+               (collection
+                 : ReactiveAnalysis.t
+                 :> (_, _) ReactiveFileCollection.t)
+               to_remove
+           in
+           let elapsed = Unix.gettimeofday () -. t0 in
+           Timing.add_churn_time elapsed;
+           churn_times := elapsed :: !churn_times;
+           if !Cli.timing then (
+             Printf.eprintf "  Removed %d files (%.3fs)\n%!" removed elapsed;
+             (match reactive_liveness with
+             | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
+             | None -> ());
+             match reactive_solver with
+             | Some solver -> ReactiveSolver.print_stats ~t:solver
+             | None -> ()))
+       | _ -> ());
+    (* Skip removed files in reactive mode *)
+    let skip_file =
+      if Hashtbl.length removed_set > 0 then
+        Some (fun path -> Hashtbl.mem removed_set path)
+      else None
+    in
+    runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
+      ~reactive_liveness ~reactive_solver ~skip_file;
+    (* Report issue count with diff *)
+    let current_count = Log_.Stats.get_issue_count () in
+    if !Cli.churn > 0 then (
+      let diff = current_count - !prev_issue_count in
+      (* Track added/removed separately *)
+      if run > 1 then
+        if diff > 0 then
+          issues_added_list := float_of_int diff :: !issues_added_list
+        else if diff < 0 then
+          issues_removed_list := float_of_int (-diff) :: !issues_removed_list;
+      let diff_str =
+        if run = 1 then ""
+        else if diff >= 0 then Printf.sprintf " (+%d)" diff
+        else Printf.sprintf " (%d)" diff
+      in
+      Log_.Stats.report ~config:dce_config;
+      if !Cli.timing then
+        Printf.eprintf "  Total issues: %d%s\n%!" current_count diff_str;
+      prev_issue_count := current_count)
+    else if run = numRuns then
+      (* Only report on last run for non-churn mode *)
+      Log_.Stats.report ~config:dce_config;
+    Log_.Stats.clear ();
+    Timing.report ()
+  done;
+  (* Print aggregate churn stats *)
+  if !Cli.churn > 0 && !Cli.timing && List.length !churn_times > 0 then (
+    let calc_stats lst =
+      if lst = [] then (0.0, 0.0)
+      else
+        let n = float_of_int (List.length lst) in
+        let sum = List.fold_left ( +. ) 0.0 lst in
+        let mean = sum /. n in
+        let variance =
+          List.fold_left (fun acc x -> acc +. ((x -. mean) ** 2.0)) 0.0 lst /. n
+        in
+        (mean, sqrt variance)
+    in
+    let time_mean, time_std = calc_stats !churn_times in
+    let added_mean, added_std = calc_stats !issues_added_list in
+    let removed_mean, removed_std = calc_stats !issues_removed_list in
+    Printf.eprintf "\n=== Churn Summary ===\n";
+    Printf.eprintf "  Churn operations: %d\n" (List.length !churn_times);
+    Printf.eprintf "  Churn time: mean=%.3fs std=%.3fs\n" time_mean time_std;
+    Printf.eprintf "  Issues added: mean=%.0f std=%.0f\n" added_mean added_std;
+    Printf.eprintf "  Issues removed: mean=%.0f std=%.0f\n" removed_mean
+      removed_std);
+  if !Cli.json then EmitJson.finish ()
 
 let cli () =
   let analysisKindSet = ref false in
@@ -463,6 +774,20 @@ let cli () =
         "n Process files in parallel using n domains (0 = sequential, default; \
          -1 = auto-detect cores)" );
       ("-timing", Set Cli.timing, "Report internal timing of analysis phases");
+      ( "-mermaid",
+        Set Cli.mermaid,
+        "Output Mermaid diagram of reactive pipeline" );
+      ( "-reactive",
+        Set Cli.reactive,
+        "Use reactive analysis (caches processed file_data, skips unchanged \
+         files)" );
+      ( "-runs",
+        Int (fun n -> Cli.runs := n),
+        "n Run analysis n times (for benchmarking cache effectiveness)" );
+      ( "-churn",
+        Int (fun n -> Cli.churn := n),
+        "n Remove and re-add n random files between runs (tests incremental \
+         correctness)" );
       ("-version", Unit versionAndExit, "Show version information and exit");
       ("--version", Unit versionAndExit, "Show version information and exit");
     ]

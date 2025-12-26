@@ -28,6 +28,13 @@ let merge_all (builders : builder list) : t =
          PosHash.iter (fun pos decl -> PosHash.replace result pos decl) builder);
   result
 
+(* ===== Builder extraction for reactive merge ===== *)
+
+let builder_to_list (builder : builder) : (Lexing.position * Decl.t) list =
+  PosHash.fold (fun pos decl acc -> (pos, decl) :: acc) builder []
+
+let create_from_hashtbl (h : Decl.t PosHash.t) : t = h
+
 (* ===== Read-only API ===== *)
 
 let find_opt (t : t) pos = PosHash.find_opt t pos
@@ -35,3 +42,5 @@ let find_opt (t : t) pos = PosHash.find_opt t pos
 let fold f (t : t) init = PosHash.fold f t init
 
 let iter f (t : t) = PosHash.iter f t
+
+let length (t : t) = PosHash.length t

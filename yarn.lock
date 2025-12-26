@@ -452,6 +452,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/react@workspace:tests/dependencies/rescript-react":
+  version: 0.0.0-use.local
+  resolution: "@rescript/react@workspace:tests/dependencies/rescript-react"
+  languageName: unknown
+  linkType: soft
+
 "@rescript/runtime@workspace:packages/@rescript/runtime":
   version: 0.0.0-use.local
   resolution: "@rescript/runtime@workspace:packages/@rescript/runtime"
@@ -721,12 +727,6 @@ __metadata:
   resolution: "@tests/reanalyze-termination@workspace:tests/analysis_tests/tests-reanalyze/termination"
   dependencies:
     rescript: "workspace:^"
-  languageName: unknown
-  linkType: soft
-
-"@tests/rescript-react@workspace:tests/dependencies/rescript-react":
-  version: 0.0.0-use.local
-  resolution: "@tests/rescript-react@workspace:tests/dependencies/rescript-react"
   languageName: unknown
   linkType: soft
 

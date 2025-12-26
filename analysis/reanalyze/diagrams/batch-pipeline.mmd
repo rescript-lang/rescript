@@ -1,0 +1,53 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f4fd', 'primaryTextColor': '#1a1a1a', 'primaryBorderColor': '#4a90d9', 'lineColor': '#4a90d9'}}}%%
+flowchart TB
+    subgraph Phase1["PHASE 1: MAP (per-file)"]
+        CMT1["file1.cmt"]
+        CMT2["file2.cmt"]
+        CMT3["file3.cmt"]
+        PROC["process_cmt_file"]
+        FD1["file_data₁"]
+        FD2["file_data₂"]
+        FD3["file_data₃"]
+        
+        CMT1 --> PROC
+        CMT2 --> PROC
+        CMT3 --> PROC
+        PROC --> FD1
+        PROC --> FD2
+        PROC --> FD3
+    end
+
+    subgraph Phase2["PHASE 2: MERGE"]
+        MERGE["merge_all"]
+        MERGED["merged {<br/>annotations,<br/>decls,<br/>refs,<br/>file_deps<br/>}"]
+        
+        FD1 --> MERGE
+        FD2 --> MERGE
+        FD3 --> MERGE
+        MERGE --> MERGED
+    end
+
+    subgraph Phase3["PHASE 3: SOLVE"]
+        SOLVE["solveDead"]
+        RESULT["AnalysisResult {<br/>issues: Issue.t list<br/>}"]
+        
+        MERGED --> SOLVE
+        SOLVE --> RESULT
+    end
+
+    subgraph Phase4["PHASE 4: REPORT"]
+        REPORT["Log_.warning"]
+        
+        RESULT --> REPORT
+    end
+
+    classDef phase1 fill:#e8f4fd,stroke:#4a90d9
+    classDef phase2 fill:#f0f7e6,stroke:#6b8e23
+    classDef phase3 fill:#fff5e6,stroke:#d4a574
+    classDef phase4 fill:#ffe6e6,stroke:#cc6666
+
+    class CMT1,CMT2,CMT3,PROC,FD1,FD2,FD3 phase1
+    class MERGE,MERGED phase2
+    class SOLVE,RESULT phase3
+    class REPORT phase4
+
