@@ -1282,7 +1282,7 @@ and print_type_declaration ~state ~name ~equal_sign ~rec_flag i
           manifest;
           Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
           print_private_flag td.ptype_private;
-          print_record_declaration ~record_loc:td.ptype_loc ~state lds cmt_tbl;
+          print_record_declaration ~state lds cmt_tbl;
         ]
     | Ptype_variant cds ->
       let manifest =
@@ -1370,8 +1370,8 @@ and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
             manifest;
             Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
             print_private_flag td.ptype_private;
-            print_record_declaration ?inline_record_definitions
-              ~record_loc:td.ptype_loc ~state lds cmt_tbl;
+            print_record_declaration ?inline_record_definitions ~state lds
+              cmt_tbl;
           ]
     | Ptype_variant cds ->
       let manifest =
@@ -1465,22 +1465,12 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
   Doc.concat [printed_variance; print_typ_expr ~state typ cmt_tbl]
 
 and print_record_declaration ?check_break_from_loc ?inline_record_definitions
-    ?record_loc ~state (lds : Parsetree.label_declaration list) cmt_tbl =
-  let get_field_start_line (ld : Parsetree.label_declaration) =
-    (* For spread fields (...), use the type location instead of pld_loc
-       because pld_loc may incorrectly include preceding whitespace *)
-    if ld.pld_name.txt = "..." then ld.pld_type.ptyp_loc.loc_start.pos_lnum
-    else ld.pld_loc.loc_start.pos_lnum
-  in
+    ~state (lds : Parsetree.label_declaration list) cmt_tbl =
   let force_break =
-    match (check_break_from_loc, record_loc, lds) with
+    match (check_break_from_loc, lds, List.rev lds) with
     | Some loc, _, _ -> loc.Location.loc_start.pos_lnum < loc.loc_end.pos_lnum
-    | None, Some loc, first :: _ ->
-      (* Check if first field is on a different line than the opening brace *)
-      loc.loc_start.pos_lnum < get_field_start_line first
-    | None, None, first :: _ ->
-      let last = List.hd (List.rev lds) in
-      get_field_start_line first < last.pld_loc.loc_end.pos_lnum
+    | _, first :: _, last :: _ ->
+      first.pld_loc.loc_start.pos_lnum < last.pld_loc.loc_end.pos_lnum
     | _, _, _ -> false
   in
   Doc.breakable_group ~force_break
@@ -3233,14 +3223,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
          *   b: 2,
          *  }` -> record is written on multiple lines, break the group *)
         let force_break =
-          match (spread_expr, rows) with
-          | Some expr, _ ->
-            (* If there's a spread, compare with spread expression's location *)
-            e.pexp_loc.loc_start.pos_lnum < expr.pexp_loc.loc_start.pos_lnum
-          | None, first_row :: _ ->
-            (* Otherwise, compare with the first row's location *)
-            e.pexp_loc.loc_start.pos_lnum < first_row.lid.loc.loc_start.pos_lnum
-          | None, [] -> false
+          e.pexp_loc.loc_start.pos_lnum < e.pexp_loc.loc_end.pos_lnum
         in
         let punning_allowed =
           match (spread_expr, rows) with
@@ -4002,6 +3985,11 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
     ->
     let lhs_has_comment_below = has_comment_below cmt_tbl lhs.pexp_loc in
     let lhs_doc = print_operand ~is_lhs:true ~is_multiline:false lhs op in
+    (* For pipe RHS, use pipe-specific rewrite to omit redundant first underscore *)
+    let rhs =
+      if op = "->" then ParsetreeViewer.rewrite_underscore_apply_in_pipe rhs
+      else rhs
+    in
     let rhs_doc = print_operand ~is_lhs:false ~is_multiline:false rhs op in
     Doc.group
       (Doc.concat

@@ -76,3 +76,9 @@ let status =
     json
     ->optional(field("status", string, _), _)
     ->Option.mapOr(Status.Active, Status.fromString)
+
+a->map2(_, fn)
+
+a->map2(fn)
+
+a->f(_, _, b)

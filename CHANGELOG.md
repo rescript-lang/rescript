@@ -26,14 +26,14 @@
 - Fix: do not warn for "editor" field in `rescript.json`. https://github.com/rescript-lang/rescript/pull/8084
 - Fix `@val` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8098
 - Fix `@scope` shadowing (rewrite using `globalThis`). https://github.com/rescript-lang/rescript/pull/8100
+- Formatter: normalize underscore placeholders in pipe expressions to canonical form (e.g., `a->map2(_, fn)` formats to `a->map2(fn)`). https://github.com/rescript-lang/rescript/pull/8033
 - Fix rewatch panic on duplicate module name. https://github.com/rescript-lang/rescript/pull/8102
+- Fix `let?` unwrap to use actual variable names from pattern instead of hardcoded "x"/"e". When using `let? Some(myVar) = ...`, the variable name `myVar` is now properly propagated in early returns. https://github.com/rescript-lang/rescript/issues/8085
 - Fix 'Ill-formed list of warnings' errors for ppx's with rescript-legacy. https://github.com/rescript-lang/rescript/pull/8103
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
-
-- Formatter: Improve multiline printing of record types and values. https://github.com/rescript-lang/rescript/pull/7993
 
 #### :house: Internal
 
