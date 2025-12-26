@@ -9,10 +9,10 @@ const LIB_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "packages", "@rescript", "
 const PACKAGES_DIR = path.join(import.meta.dirname, "packages");
 const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins", "stdlib");
 
-let entryPoint = null;
+let input = [];
 
 for await (const file of glob(`${LIB_DIR}/es6/*.js`, { withFileTypes: false })) {
-  entryPoint = file;
+  input.push(file);
 }
 
 if (!entryPoint) {
@@ -20,7 +20,7 @@ if (!entryPoint) {
 }
 
 export default {
-  input: entryPoint,
+  input,
   output: {
     dir: outputFolder,
     format: "esm",
