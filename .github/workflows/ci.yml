@@ -98,7 +98,7 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.0
         with:
           # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
           # plus OPAM wants cmake
