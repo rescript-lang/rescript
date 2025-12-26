@@ -356,13 +356,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[React, e]
 Path React.e
-[{
-    "label": "element",
-    "kind": 22,
-    "tags": [],
-    "detail": "type element",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype element = Jsx.element\n```"}
-  }]
+[]
 
 Complete src/Jsx2.res 96:20
 posCursor:[96:20] posNoWhite:[96:19] Found pattern:[96:7->99:6]
@@ -472,17 +466,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] x
 Path ReactDOM.domProps
-Path JsxDOM.domProps
-[{
-    "label": "\"\"",
-    "kind": 12,
-    "tags": [],
-    "detail": "string",
-    "documentation": null,
-    "sortText": "A",
-    "insertText": "{\"$0\"}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/Jsx2.res 150:21
 posCursor:[150:21] posNoWhite:[150:20] Found expr:[150:11->150:32]

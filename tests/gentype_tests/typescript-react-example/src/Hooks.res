@@ -101,7 +101,7 @@ module ForwardRef = {
 
 @genType type testReactContext = React.Context.t<int>
 
-@genType type testReactRef = React.Ref.t<int>
+@genType type testReactRef = React.ref<int>
 
 @genType type testDomRef = ReactDOM.domRef
 
