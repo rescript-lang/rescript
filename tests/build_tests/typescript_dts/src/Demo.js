@@ -68,6 +68,10 @@ function manyParams(firstName, lastName, _age, _email, _phone, _address) {
   return firstName + " " + lastName;
 }
 
+function processDate(d) {
+  return d;
+}
+
 let myRecord = {
   foo: "hello",
   bar: 42
@@ -105,5 +109,6 @@ export {
   myString,
   handler,
   manyParams,
+  processDate,
 }
 /* No side effect */

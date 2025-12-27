@@ -1,13 +1,13 @@
 import type * as rescript from "@rescript/runtime/types";
-import type * as C from "./C.js";
+import type * as Belt_internalBucketsType from "./Belt_internalBucketsType.js";
 
 export interface bucket<A, B> {
   key: A;
   value: B;
-  next: C.opt<bucket<A, B>>;
+  next: Belt_internalBucketsType.opt<bucket<A, B>>;
 }
 
-export type t<Hash, Eq, A, B> = C.container<Hash, Eq, bucket<A, B>>;
+export type t<Hash, Eq, A, B> = Belt_internalBucketsType.container<Hash, Eq, bucket<A, B>>;
 
 export function copy<Hash, Eq, A, B>(x: t<Hash, Eq, A, B>): t<Hash, Eq, A, B>;
 

@@ -1,11 +1,11 @@
-import type * as C from "./C.js";
+import type * as Belt_internalBucketsType from "./Belt_internalBucketsType.js";
 
 export interface bucket<A> {
   key: A;
-  next: C.opt<bucket<A>>;
+  next: Belt_internalBucketsType.opt<bucket<A>>;
 }
 
-export type t<Hash, Eq, A> = C.container<Hash, Eq, bucket<A>>;
+export type t<Hash, Eq, A> = Belt_internalBucketsType.container<Hash, Eq, bucket<A>>;
 
 export function copy<Hash, Eq, A>(x: t<Hash, Eq, A>): t<Hash, Eq, A>;
 

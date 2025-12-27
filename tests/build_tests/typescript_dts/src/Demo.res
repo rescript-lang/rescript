@@ -73,3 +73,7 @@ type complexCallback = (
   ~optional2: option<int>=?,
   ~optional3: option<bool>=?,
 ) => string
+
+// Type-only import from runtime
+type jsDate = Js.Date.t
+let processDate = (d: jsDate) => d

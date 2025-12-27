@@ -281,6 +281,8 @@ module State = struct
     mutable local_type_qualifiers_by_name: string list StringMap.t;
     mutable exported_types: Types.type_expr StringMap.t;
     mutable exported_modules: string StringMap.t;
+    (* Module aliases: maps alias name to target path *)
+    mutable module_aliases: Path.t StringMap.t;
     (* Context *)
     mutable module_name: string;
     mutable module_path: string list;
@@ -299,6 +301,7 @@ module State = struct
       local_type_qualifiers_by_name = StringMap.empty;
       exported_types = StringMap.empty;
       exported_modules = StringMap.empty;
+      module_aliases = StringMap.empty;
       module_name = "";
       module_path = [];
       env = None;
@@ -316,6 +319,7 @@ module State = struct
     state.local_type_qualifiers_by_name <- StringMap.empty;
     state.exported_types <- StringMap.empty;
     state.exported_modules <- StringMap.empty;
+    state.module_aliases <- StringMap.empty;
     state.module_name <- "";
     state.module_path <- [];
     state.env <- None
@@ -576,6 +580,20 @@ module State = struct
     let get_type_path name = StringMap.find_opt name state.exported_modules
   end
 
+  (** {2 Module Aliases}
+      
+      Tracks module aliases like "module Inner = Outer".
+      Used to resolve type paths like Inner.t to Outer.t *)
+  module ModuleAliases = struct
+    let reset () = state.module_aliases <- StringMap.empty
+
+    let add alias_name target_path =
+      state.module_aliases <-
+        StringMap.add alias_name target_path state.module_aliases
+
+    let find alias_name = StringMap.find_opt alias_name state.module_aliases
+  end
+
   (** {2 Context}
       
       Current context for code generation including module name, path, and environment. *)
@@ -614,6 +632,7 @@ module ExternalTypeImports = State.ExternalTypeImports
 module LocalTypeQualifier = State.LocalTypeQualifier
 module ExportedTypes = State.ExportedTypes
 module ExportedModules = State.ExportedModules
+module ModuleAliases = State.ModuleAliases
 
 (** Context accessors exposed at top level for convenience *)
 let set_module_name = State.Context.set_module_name
@@ -1589,15 +1608,40 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
 
 and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
   (* Normalize the path to resolve module aliases.
-     For example, Stdlib.Dict.t becomes Stdlib_Dict.t *)
+     For example, Stdlib.Dict.t becomes Stdlib_Dict.t
+     and C.opt (where module C = Belt_internalBucketsType) becomes Belt_internalBucketsType.opt *)
   let rec normalize_type_path env p =
     match p with
     | Path.Pdot (prefix, name, pos) ->
       let normalized_prefix =
-        try Env.normalize_path None env prefix
-        with _ -> normalize_type_path env prefix
+        (* First try our tracked module aliases *)
+        match prefix with
+        | Path.Pident id -> (
+          match ModuleAliases.find (Ident.name id) with
+          | Some alias_path -> alias_path
+          | None -> (
+            (* Fall back to Env.normalize_path *)
+            try Env.normalize_path None env prefix
+            with _ -> normalize_type_path env prefix))
+        | _ -> (
+          try Env.normalize_path None env prefix
+          with _ -> normalize_type_path env prefix)
       in
       Path.Pdot (normalized_prefix, name, pos)
+    | Path.Pident id -> (
+      (* For simple identifiers, try to resolve module aliases.
+         E.g., if we have "module C = Belt_internalBucketsType",
+         Pident(C) should become the path to Belt_internalBucketsType. *)
+      (* First check our tracked module aliases *)
+      match ModuleAliases.find (Ident.name id) with
+      | Some alias_path -> alias_path
+      | None -> (
+        (* Fall back to Env.find_module *)
+        try
+          match Env.find_module p env with
+          | {md_type = Mty_alias (_, alias_path)} -> alias_path
+          | _ -> p
+        with Not_found -> p))
     | _ -> p
   in
   let normalized_path =
@@ -2679,6 +2723,21 @@ let rec extract_type_decls ~(interface_sig : Types.signature)
     (str : Typedtree.structure) : type_decl list =
   (* Reset LocalTypeQualifier at the start of extraction *)
   LocalTypeQualifier.reset ();
+  (* Reset module aliases *)
+  ModuleAliases.reset ();
+  (* Extract module aliases from structure items.
+     This handles patterns like "module C = Belt_internalBucketsType" *)
+  List.iter
+    (fun (str_item : Typedtree.structure_item) ->
+      match str_item.str_desc with
+      | Typedtree.Tstr_module mb -> (
+        match mb.mb_expr.mod_desc with
+        | Typedtree.Tmod_ident (path, _) ->
+          (* This is a module alias: module X = SomeOtherModule *)
+          ModuleAliases.add (Ident.name mb.mb_id) path
+        | _ -> ())
+      | _ -> ())
+    str.str_items;
   let decls = ref [] in
   (* Use interface_sig (from .resi/.cmi) if available, otherwise fall back to str_type.
      This ensures we only export what's in the interface. *)
@@ -5630,10 +5689,18 @@ let rec collect_local_module_names (decls : type_decl list) : StringSet.t =
       | _ -> acc)
     StringSet.empty decls
 
+type resolve_module_path = string -> string option
+(** Type for resolving type-only module import paths.
+    This is passed from the caller to avoid circular dependencies.
+    Returns None if the module cannot be resolved (e.g., local module aliases). *)
+
 (** Generate the complete .d.ts file content
-    @param suffix The JS file suffix to use for missing imports (e.g., ".js", ".mjs")
+    @param module_name The current module name
+    @param resolve_module_path Function to resolve import path for a module name
+    @param suffix The JS file suffix (e.g., ".js", ".mjs")
     TODO(refactor): Move it to a part of dump program *)
-let pp_dts_file ~(module_name : string) ~(suffix : string) (f : P.t)
+let pp_dts_file ~(module_name : string)
+    ~(resolve_module_path : resolve_module_path) ~(suffix : string) (f : P.t)
     (imports : dts_import list) (type_decls : type_decl list)
     (value_exports : value_export list) : unit =
   (* Save the environment that was set during extraction.
@@ -5676,10 +5743,14 @@ let pp_dts_file ~(module_name : string) ~(suffix : string) (f : P.t)
         required_modules
     in
     let missing_imports =
-      List.map
-        (fun module_name ->
-          (* Generate import path using the configured suffix *)
-          {module_name; module_path = "./" ^ module_name ^ suffix})
+      List.filter_map
+        (fun mod_name ->
+          (* Use the provided resolver to get the import path.
+             Skip modules that can't be resolved - these are local module aliases
+             (e.g., "module C = Belt_internalBucketsType") that don't need imports. *)
+          match resolve_module_path mod_name with
+          | Some path -> Some {module_name = mod_name; module_path = path}
+          | None -> None)
         missing_modules
     in
     used_provided @ missing_imports
