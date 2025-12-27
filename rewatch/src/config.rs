@@ -829,6 +829,7 @@ pub mod tests {
             package_specs: None,
             warnings: None,
             suffix: None,
+            language: Language::default(),
             dependencies: Some(args.bs_deps),
             dev_dependencies: Some(args.build_dev_deps),
             bs_dependencies: None,
