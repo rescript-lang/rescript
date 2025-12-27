@@ -1,0 +1,25 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export type hash<A, Id> = rescript.opaque<"Belt_Id.hash", [A, Id]>;
+
+export type eq<A, Id> = rescript.opaque<"Belt_Id.eq", [A, Id]>;
+
+export type cmp<A, Id> = rescript.opaque<"Belt_Id.cmp", [A, Id]>;
+
+export type comparable<Key, Id> = rescript.opaque<"Belt_Id.comparable", [Key, Id], any>;
+
+export type hashable<Key, Id> = rescript.opaque<"Belt_Id.hashable", [Key, Id], any>;
+
+export function comparable<A>(cmp: (arg0: A, arg1: A) => number): any;
+
+export function hashable<A>(
+  hash: (arg0: A) => number,
+  eq: (arg0: A, arg1: A) => boolean,
+): any;
+
+export function comparableU<A>(cmp: (arg0: A, arg1: A) => number): any;
+
+export function hashableU<A>(
+  hash: (arg0: A) => number,
+  eq: (arg0: A, arg1: A) => boolean,
+): any;

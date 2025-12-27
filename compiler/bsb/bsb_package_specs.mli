@@ -24,7 +24,11 @@
 
 type t
 
-val from_map : cwd:string -> Ext_json_types.t Map_string.t -> t
+val from_map :
+  cwd:string ->
+  language:Bsb_spec_set.language ->
+  Ext_json_types.t Map_string.t ->
+  t
 
 val get_list_of_output_js : t -> string -> string list
 

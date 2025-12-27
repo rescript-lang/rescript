@@ -83,6 +83,7 @@ val string_switch :
 val declare_variable :
   ?comment:string ->
   ?ident_info:J.ident_info ->
+  ?ident_type:Types.type_expr ->
   kind:Lam_compat.let_kind ->
   Ident.t ->
   t
@@ -92,6 +93,7 @@ val declare_variable :
 val define_variable :
   ?comment:string ->
   ?ident_info:J.ident_info ->
+  ?ident_type:Types.type_expr ->
   kind:Lam_compat.let_kind ->
   Ident.t ->
   J.expression ->

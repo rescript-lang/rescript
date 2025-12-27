@@ -7,7 +7,7 @@ See [`RegExp`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference
 /**
 Type representing an instantiated `RegExp`.
 */
-@notUndefined
+@notUndefined @external("RegExp")
 type t
 
 module Result: {

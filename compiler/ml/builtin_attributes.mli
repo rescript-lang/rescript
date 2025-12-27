@@ -95,3 +95,5 @@ val immediate : Parsetree.attributes -> bool
 
 val has_unboxed : Parsetree.attributes -> bool
 val has_boxed : Parsetree.attributes -> bool
+val has_external : Parsetree.attributes -> bool
+val has_opaque : Parsetree.attributes -> bool

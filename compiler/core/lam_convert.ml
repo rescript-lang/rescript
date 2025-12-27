@@ -405,19 +405,19 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         (Ext_list.map args convert_aux)
         {ap_loc = loc; ap_inlined; ap_status = App_uncurry}
         ~ap_transformed_jsx
-    | Lfunction {params; body; attr} ->
+    | Lfunction {params; body; attr; fn_type} ->
       let new_map, body =
         rename_optional_parameters Map_ident.empty params body
       in
       if Map_ident.is_empty new_map then
         Lam.function_ ~attr ~arity:(List.length params) ~params
-          ~body:(convert_aux body)
+          ~body:(convert_aux body) ~fn_type
       else
         let params =
           Ext_list.map params (fun x -> Map_ident.find_default new_map x x)
         in
         Lam.function_ ~attr ~arity:(List.length params) ~params
-          ~body:(convert_aux body)
+          ~body:(convert_aux body) ~fn_type
     | Llet (_, _, _, Lprim (Pgetglobal id, args, _), _body) when dynamic_import
       ->
       (*

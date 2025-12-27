@@ -1,0 +1,22 @@
+import type * as Stdlib_Global from "./Stdlib_Global.js";
+import type * as Primitive_js_extern from "./Primitive_js_extern.js";
+import type * as Stdlib_Date from "./Stdlib_Date.js";
+import type * as Stdlib_Lazy from "./Stdlib_Lazy.js";
+
+export type timeoutId = Stdlib_Global.timeoutId;
+
+export type intervalId = Stdlib_Global.intervalId;
+
+export type date = Stdlib_Date.t;
+
+export type null_<A> = Primitive_js_extern.null_<A>;
+
+export type undefined_<A> = Primitive_js_extern.undefined_<A>;
+
+export type nullable<A> = Primitive_js_extern.nullable<A>;
+
+export type lazy_t<A> = Stdlib_Lazy.t<A>;
+
+export function panic<A>(arg0: string): A;
+
+export function assertEqual<A>(a: A, b: A): void;

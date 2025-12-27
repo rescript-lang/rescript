@@ -79,5 +79,6 @@ val make_custom_rules :
   dpkg_incls:string ->
   lib_incls:string ->
   dev_incls:string ->
+  language:Bsb_spec_set.language ->
   command Map_string.t ->
   builtin

@@ -259,6 +259,12 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       string_call ignore,
       "*internal* Set jsx mode, this is no longer used and is a no-op." );
     ("-bs-jsx-preserve", set Js_config.jsx_preserve, "*internal* Preserve jsx");
+    ( "-bs-typescript",
+      unit_call (fun _ -> Js_config.ts_output := Js_config.Ts_typescript),
+      "*internal* Generate TypeScript output with type annotations" );
+    ( "-bs-emit-dts",
+      unit_call (fun _ -> Js_config.emit_dts := true),
+      "*internal* Emit .d.ts declaration files alongside JavaScript output" );
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \

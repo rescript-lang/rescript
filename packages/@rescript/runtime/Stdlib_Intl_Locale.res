@@ -2,7 +2,7 @@
 Bindings to JavaScript's `Intl.Locale`.
 */
 
-@notUndefined
+@notUndefined @external("Intl.Locale")
 type t
 
 type options = {

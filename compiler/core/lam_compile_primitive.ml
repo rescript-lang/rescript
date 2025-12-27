@@ -64,7 +64,8 @@ let wrap_then import value =
   let arg = Ident.create "m" in
   E.call ~info:call_info (E.dot import "then")
     [
-      E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [arg]
+      E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false
+        ~fn_type:None [arg]
         [{statement_desc = J.Return (E.dot (E.var arg) value); comment = None}];
     ]
 

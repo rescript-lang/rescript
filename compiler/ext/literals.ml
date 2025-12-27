@@ -115,6 +115,8 @@ let suffix_d = ".d"
 
 let suffix_js = ".js"
 
+let suffix_ts = ".ts"
+
 let suffix_gen_js = ".gen.js"
 
 let suffix_gen_tsx = ".gen.tsx"

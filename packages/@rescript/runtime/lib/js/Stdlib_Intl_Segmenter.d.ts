@@ -1,0 +1,31 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
+
+export type t = Intl.Segmenter;
+
+export type granularity =
+  | "word"
+  | "grapheme"
+  | "sentence";
+
+export interface options {
+  readonly localeMatcher?: rescript.option<Stdlib_Intl_Common.localeMatcher>;
+  readonly granularity?: rescript.option<granularity>;
+}
+
+export type pluralCategories =
+  | "many"
+  | "zero"
+  | "one"
+  | "other"
+  | "few"
+  | "two";
+
+export interface resolvedOptions {
+  readonly locale: string;
+  readonly granularity: granularity;
+}
+
+export interface supportedLocalesOptions {
+  readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
+}

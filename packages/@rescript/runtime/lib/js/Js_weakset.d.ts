@@ -1,0 +1,3 @@
+import type * as Stdlib_WeakSet from "./Stdlib_WeakSet.js";
+
+export type t<A> = Stdlib_WeakSet.t<A>;

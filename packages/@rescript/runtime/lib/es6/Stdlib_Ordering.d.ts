@@ -1,0 +1,11 @@
+export type t = number;
+
+export function isLess(ord: number): boolean;
+
+export function isEqual(ord: number): boolean;
+
+export function isGreater(ord: number): boolean;
+
+export function invert(ord: number): number;
+
+export function fromInt(n: number): number;

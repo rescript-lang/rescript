@@ -1,0 +1,12 @@
+import type * as Js_promise2 from "./Js_promise2.js";
+
+export type t<A> = Promise<A>;
+
+export type error = Js_promise2.error;
+
+export function then_<A, B>(arg1: (arg0: A) => Promise<B>, obj: Promise<A>): Promise<B>;
+
+export function $$catch<A>(
+  arg1: (arg0: error) => Promise<A>,
+  obj: Promise<A>,
+): Promise<A>;

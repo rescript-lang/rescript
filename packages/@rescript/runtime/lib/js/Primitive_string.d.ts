@@ -1,0 +1,11 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export function compare(s1: string, s2: string): number;
+
+export function min(x: string, y: string): string;
+
+export function max(x: string, y: string): string;
+
+export function getChar(s: string, i: number): rescript.option<number>;
+
+export function make(n: number, ch: number): string;

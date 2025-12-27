@@ -374,6 +374,7 @@ and lfunction = {
   body: lambda;
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
+  fn_type: Types.type_expr option; (* function type for typed codegen *)
 }
 
 and lambda_apply = {
@@ -652,8 +653,8 @@ let subst_lambda s lam =
           ap_func = subst ap.ap_func;
           ap_args = List.map subst ap.ap_args;
         }
-    | Lfunction {params; body; attr; loc} ->
-      Lfunction {params; body = subst body; attr; loc}
+    | Lfunction {params; body; attr; loc; fn_type} ->
+      Lfunction {params; body = subst body; attr; loc; fn_type}
     | Llet (str, k, id, arg, body) -> Llet (str, k, id, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
     | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)

@@ -293,7 +293,15 @@ class fold =
       list (fun _self -> _self#statement) _self
 
     method program : program -> 'self_type =
-      fun {block = _x0; exports = _x1; export_set = _x2} ->
+      fun {
+            block = _x0;
+            exports = _x1;
+            export_set = _x2;
+            type_exports = _x3;
+            value_exports = _x4;
+          } ->
+        let _ = _x3 in
+        let _ = _x4 in
         let _self = _self#block _x0 in
         _self
 

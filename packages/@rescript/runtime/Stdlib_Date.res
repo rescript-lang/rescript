@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Date")
 type t
 
 type msSinceEpoch = float

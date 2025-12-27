@@ -1,0 +1,171 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
+import type * as Stdlib_Intl_NumberFormat_Grouping from "./Stdlib_Intl_NumberFormat_Grouping.js";
+
+export type t = Intl.NumberFormat;
+
+export type currency = string;
+
+export type currencyDisplay =
+  | "code"
+  | "narrowSymbol"
+  | "symbol"
+  | "name";
+
+export type currencySign =
+  | "accounting"
+  | "standard";
+
+export type notation =
+  | "engineering"
+  | "standard"
+  | "scientific"
+  | "compact";
+
+export type compactDisplay =
+  | "long"
+  | "short";
+
+export type signDisplay =
+  | "exceptZero"
+  | "always"
+  | "negative"
+  | "auto"
+  | "never";
+
+export type style =
+  | "decimal"
+  | "unit"
+  | "percent"
+  | "currency";
+
+export type unitSystem = string;
+
+export type unitDisplay =
+  | "narrow"
+  | "long"
+  | "short";
+
+export type rounding =
+  | "floor"
+  | "halfFloor"
+  | "halfExpand"
+  | "halfCeil"
+  | "ceil"
+  | "halfEven"
+  | "halfTrunc"
+  | "trunc"
+  | "expand";
+
+export type roundingPriority =
+  | "morePrecision"
+  | "lessPrecision"
+  | "auto";
+
+export type roundingIncrement =
+  | "2500"
+  | "10"
+  | "1000"
+  | "5"
+  | "2"
+  | "20"
+  | "1"
+  | "50"
+  | "100"
+  | "5000"
+  | "25"
+  | "500"
+  | "200"
+  | "2000"
+  | "250";
+
+export type trailingZeroDisplay =
+  | "lessPrecision"
+  | "auto"
+  | "stripIfInteger";
+
+export interface options {
+  readonly compactDisplay?: rescript.option<compactDisplay>;
+  readonly numberingSystem?: rescript.option<Stdlib_Intl_Common.numberingSystem>;
+  readonly currency?: rescript.option<currency>;
+  readonly currencyDisplay?: rescript.option<currencyDisplay>;
+  readonly currencySign?: rescript.option<currencySign>;
+  readonly localeMatcher?: rescript.option<Stdlib_Intl_Common.localeMatcher>;
+  readonly notation?: rescript.option<notation>;
+  readonly signDisplay?: rescript.option<signDisplay>;
+  readonly style?: rescript.option<style>;
+  readonly unit?: rescript.option<unitSystem>;
+  readonly unitDisplay?: rescript.option<unitDisplay>;
+  readonly useGrouping?: rescript.option<Stdlib_Intl_NumberFormat_Grouping.t>;
+  readonly roundingMode?: rescript.option<rounding>;
+  readonly roundingPriority?: rescript.option<roundingPriority>;
+  readonly roundingIncrement?: rescript.option<roundingIncrement>;
+  readonly trailingZeroDisplay?: rescript.option<trailingZeroDisplay>;
+  readonly minimumIntegerDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly minimumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly maximumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly minimumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly maximumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+}
+
+export interface resolvedOptions {
+  readonly currency?: rescript.option<currency>;
+  readonly currencyDisplay?: rescript.option<currencyDisplay>;
+  readonly currencySign?: rescript.option<currencySign>;
+  readonly compactDisplay?: rescript.option<compactDisplay>;
+  readonly unit: unitSystem;
+  readonly unitDisplay: unitDisplay;
+  readonly roundingMode?: rescript.option<rounding>;
+  readonly roundingPriority?: rescript.option<roundingPriority>;
+  readonly roundingIncrement?: rescript.option<roundingIncrement>;
+  readonly minimumIntegerDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly minimumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly maximumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly minimumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly maximumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly locale: string;
+  readonly notation: notation;
+  readonly numberingSystem: Stdlib_Intl_Common.numberingSystem;
+  readonly signDisplay: signDisplay;
+  readonly style: style;
+  readonly useGrouping: Stdlib_Intl_NumberFormat_Grouping.t;
+}
+
+export interface supportedLocalesOptions {
+  readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
+}
+
+export type numberFormatPartType =
+  | "literal"
+  | "infinity"
+  | "integer"
+  | "group"
+  | "fraction"
+  | "exponentSeparator"
+  | "nan"
+  | "exponentInteger"
+  | "decimal"
+  | "unit"
+  | "minusSign"
+  | "percentSign"
+  | "exponentMinusSign"
+  | "compact"
+  | "unknown"
+  | "plusSign"
+  | "currency";
+
+export interface numberFormatPart {
+  readonly type: numberFormatPartType;
+  readonly value: string;
+}
+
+export type rangeSource =
+  | "endRange"
+  | "startRange"
+  | "shared";
+
+export interface numberFormatRangePart {
+  readonly type: numberFormatPartType;
+  readonly value: string;
+  readonly source: rangeSource;
+}

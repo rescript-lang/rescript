@@ -5,7 +5,7 @@ Weak sets store references to objects without preventing those objects from bein
 */
 
 /** Mutable weak set storing object references of type `'a`. */
-@notUndefined
+@notUndefined @external("WeakSet")
 type t<'a>
 
 /**

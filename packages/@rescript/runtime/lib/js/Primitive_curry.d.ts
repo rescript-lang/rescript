@@ -1,0 +1,66 @@
+export function __1<A, B, C>(o: (arg0: A, arg1: B) => C, arg0: A, arg1: B): C;
+
+export function __2<A, B, C>(o: (arg0: A, arg1: A, arg2: B) => C, arg0: A, arg1: A, arg2: B): C;
+
+export function __3<A, B, C>(
+  o: (arg0: A, arg1: A, arg2: A, arg3: B) => C,
+  arg0: A,
+  arg1: A,
+  arg2: A,
+  arg3: B,
+): C;
+
+export function __4<A, B, C>(
+  o: (arg0: A, arg1: A, arg2: A, arg3: A, arg4: B) => C,
+  arg0: A,
+  arg1: A,
+  arg2: A,
+  arg3: A,
+  arg4: B,
+): C;
+
+export function __5<A, B, C>(
+  o: (arg0: A, arg1: A, arg2: A, arg3: A, arg4: A, arg5: B) => C,
+  arg0: A,
+  arg1: A,
+  arg2: A,
+  arg3: A,
+  arg4: A,
+  arg5: B,
+): C;
+
+export function __6<A, B, C>(
+  o: (arg0: A, arg1: A, arg2: A, arg3: A, arg4: A, arg5: A, arg6: B) => C,
+  arg0: A,
+  arg1: A,
+  arg2: A,
+  arg3: A,
+  arg4: A,
+  arg5: A,
+  arg6: B,
+): C;
+
+export function __7<A, B, C>(
+  o: (arg0: A, arg1: A, arg2: A, arg3: A, arg4: A, arg5: A, arg6: A, arg7: B) => C,
+  arg0: A,
+  arg1: A,
+  arg2: A,
+  arg3: A,
+  arg4: A,
+  arg5: A,
+  arg6: A,
+  arg7: B,
+): C;
+
+export function __8<A, B, C>(
+  o: (arg0: A, arg1: A, arg2: A, arg3: A, arg4: A, arg5: A, arg6: A, arg7: A, arg8: B) => C,
+  arg0: A,
+  arg1: A,
+  arg2: A,
+  arg3: A,
+  arg4: A,
+  arg5: A,
+  arg6: A,
+  arg7: A,
+  arg8: B,
+): C;

@@ -27,3 +27,5 @@ val is_js_keyword : string -> bool
 val is_js_special_word : string -> bool
 
 val is_js_global : string -> bool
+
+val is_ts_keyword : string -> bool

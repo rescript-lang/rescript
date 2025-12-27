@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Intl.ListFormat")
 type t
 
 type listType = [

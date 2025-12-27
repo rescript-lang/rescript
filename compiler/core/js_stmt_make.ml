@@ -52,7 +52,8 @@ let rec exp ?comment (e : E.t) : t =
   (* | _ when is_pure e ->  block [] *)
   | _ -> {statement_desc = Exp e; comment}
 
-let declare_variable ?comment ?ident_info ~kind (ident : Ident.t) : t =
+let declare_variable ?comment ?ident_info ?ident_type ~kind (ident : Ident.t) :
+    t =
   let property : J.property = kind in
   let ident_info : J.ident_info =
     match ident_info with
@@ -60,14 +61,15 @@ let declare_variable ?comment ?ident_info ~kind (ident : Ident.t) : t =
     | Some x -> x
   in
   {
-    statement_desc = Variable {ident; value = None; property; ident_info};
+    statement_desc =
+      Variable {ident; value = None; property; ident_info; ident_type};
     comment;
   }
 
-let define_variable ?comment ?ident_info ~kind (v : Ident.t)
+let define_variable ?comment ?ident_info ?ident_type ~kind (v : Ident.t)
     (exp : J.expression) : t =
   match exp.expression_desc with
-  | Undefined _ -> declare_variable ?comment ?ident_info ~kind v
+  | Undefined _ -> declare_variable ?comment ?ident_info ?ident_type ~kind v
   | _ ->
     let property : J.property = kind in
     let ident_info : J.ident_info =
@@ -77,7 +79,7 @@ let define_variable ?comment ?ident_info ~kind (v : Ident.t)
     in
     {
       statement_desc =
-        Variable {ident = v; value = Some exp; property; ident_info};
+        Variable {ident = v; value = Some exp; property; ident_info; ident_type};
       comment;
     }
 

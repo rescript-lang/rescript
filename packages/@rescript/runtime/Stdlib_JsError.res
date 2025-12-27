@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Error")
 type t
 
 @get external stack: t => option<string> = "stack"

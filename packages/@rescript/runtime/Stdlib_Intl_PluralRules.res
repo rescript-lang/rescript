@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Intl.PluralRules")
 type t
 
 type localeType = [#cardinal | #ordinal]

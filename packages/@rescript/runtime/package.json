@@ -31,9 +31,22 @@
     "provenance": true
   },
   "files": [
-    "lib"
+    "lib/es6/*.js",
+    "lib/es6/*.d.ts",
+    "lib/js/*.js",
+    "lib/js/*.d.ts",
+    "lib/ocaml/*.res",
+    "lib/ocaml/*.resi",
+    "lib/ocaml/*.cmt",
+    "lib/ocaml/*.cmti",
+    "lib/ocaml/*.cmi",
+    "lib/ocaml/*.cmj",
+    "types.d.ts"
   ],
   "exports": {
+    "./types": {
+      "types": "./types.d.ts"
+    },
     "./lib/es6/*": "./lib/es6/*",
     "./lib/js/*": "./lib/js/*",
     "./package.json": "./package.json"

@@ -1,0 +1,35 @@
+export type t = Error;
+
+export type EvalError = {
+  throwWithMessage: (arg0: string) => A;
+};
+export const $$EvalError: EvalError;
+
+export type RangeError = {
+  throwWithMessage: (arg0: string) => A;
+};
+export const $$RangeError: RangeError;
+
+export type ReferenceError = {
+  throwWithMessage: (arg0: string) => A;
+};
+export const $$ReferenceError: ReferenceError;
+
+export type SyntaxError = {
+  throwWithMessage: (arg0: string) => A;
+};
+export const $$SyntaxError: SyntaxError;
+
+export type TypeError = {
+  throwWithMessage: (arg0: string) => A;
+};
+export const $$TypeError: TypeError;
+
+export type URIError = {
+  throwWithMessage: (arg0: string) => A;
+};
+export const $$URIError: URIError;
+
+export function throwWithMessage<A>(str: string): A;
+
+export function panic<A>(msg: string): A;

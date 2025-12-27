@@ -286,17 +286,37 @@ let statement : statement fn =
   {statement_desc = _x0; comment = _x1}
 
 let variable_declaration : variable_declaration fn =
- fun _self {ident = _x0; value = _x1; property = _x2; ident_info = _x3} ->
+ fun _self
+     {
+       ident = _x0;
+       value = _x1;
+       property = _x2;
+       ident_info = _x3;
+       ident_type = _x4;
+     } ->
   let _x0 = _self.ident _self _x0 in
   let _x1 = option _self.expression _self _x1 in
-  {ident = _x0; value = _x1; property = _x2; ident_info = _x3}
+  {ident = _x0; value = _x1; property = _x2; ident_info = _x3; ident_type = _x4}
 
 let block : block fn = fun _self arg -> list _self.statement _self arg
 
 let program : program fn =
- fun _self {block = _x0; exports = _x1; export_set = _x2} ->
+ fun _self
+     {
+       block = _x0;
+       exports = _x1;
+       export_set = _x2;
+       type_exports = _x3;
+       value_exports = _x4;
+     } ->
   let _x0 = _self.block _self _x0 in
-  {block = _x0; exports = _x1; export_set = _x2}
+  {
+    block = _x0;
+    exports = _x1;
+    export_set = _x2;
+    type_exports = _x3;
+    value_exports = _x4;
+  }
 
 let deps_program : deps_program fn =
  fun _self {program = _x0; modules = _x1; side_effect = _x2} ->

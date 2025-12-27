@@ -104,6 +104,7 @@ val ocaml_fun :
   return_unit:bool ->
   async:bool ->
   one_unit_arg:bool ->
+  fn_type:Types.type_expr option ->
   J.ident list ->
   J.block ->
   t
@@ -113,6 +114,7 @@ val method_ :
   ?immutable_mask:bool array ->
   async:bool ->
   return_unit:bool ->
+  fn_type:Types.type_expr option ->
   J.ident list ->
   J.block ->
   t

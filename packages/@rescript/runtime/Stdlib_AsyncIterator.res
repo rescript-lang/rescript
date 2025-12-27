@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("AsyncIterator")
 type t<'a>
 
 type value<'a> = {

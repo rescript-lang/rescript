@@ -1,0 +1,3 @@
+import type * as Stdlib_WeakMap from "./Stdlib_WeakMap.js";
+
+export type t<K, V> = Stdlib_WeakMap.t<K, V>;

@@ -35,3 +35,5 @@ yarn.lock
 
 .tmp/
 .buildstamp
+
+*.res.js

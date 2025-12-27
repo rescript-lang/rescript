@@ -65,9 +65,9 @@ let string_of_format (x : Ext_module_system.t) =
   | Esmodule -> Literals.esmodule
   | Es6_global -> Literals.es6_global
 
-let js_suffix_regexp = Str.regexp "[A-Za-z0-9-_.]*\\.[cm]?js"
+let suffix_regexp = Str.regexp "[A-Za-z0-9-_.]*\\.[cm]?[jt]s"
 
-let validate_js_suffix suffix = Str.string_match js_suffix_regexp suffix 0
+let validate_suffix suffix = Str.string_match suffix_regexp suffix 0
 
 let rec from_array suffix (arr : Ext_json_types.t array) : Spec_set.t =
   let spec = ref Spec_set.empty in
@@ -98,16 +98,15 @@ and from_json_single suffix (x : Ext_json_types.t) : Bsb_spec_set.spec =
       in
       let suffix =
         match map.?(Bsb_build_schemas.suffix) with
-        | Some (Str {str = suffix; _}) when validate_js_suffix suffix -> suffix
+        | Some (Str {str = suffix; _}) when validate_suffix suffix -> suffix
         | Some (Str {str; loc}) ->
           Bsb_exception.errorf ~loc
-            "invalid suffix \"%s\". The suffix and may contain letters, \
-             digits, \"-\", \"_\" and \".\" and must end with .js, .mjs or \
-             .cjs."
+            "invalid suffix \"%s\". The suffix must end with .js, .mjs, .cjs, \
+             .ts, .mts, or .cts."
             str
         | Some _ ->
           Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
-            "expected a string extension like \".js\""
+            "expected a string extension like \".js\" or \".ts\""
         | None -> suffix
       in
       {format = supported_format format loc; in_source; suffix}
@@ -192,20 +191,26 @@ let list_dirs_by (package_specs : t) (f : string -> unit) =
 
 type json_map = Ext_json_types.t Map_string.t
 
-let extract_js_suffix_exn (map : json_map) : string =
+let extract_suffix_exn ~(language : Bsb_spec_set.language) (map : json_map) :
+    string =
+  let default_suffix =
+    match language with
+    | Bsb_spec_set.Javascript -> Literals.suffix_js
+    | Bsb_spec_set.Typescript -> Literals.suffix_ts
+  in
   match map.?(Bsb_build_schemas.suffix) with
-  | None -> Literals.suffix_js
-  | Some (Str {str = suffix; _}) when validate_js_suffix suffix -> suffix
+  | None -> default_suffix
+  | Some (Str {str = suffix; _}) when validate_suffix suffix -> suffix
   | Some (Str {str; _} as config) ->
     Bsb_exception.config_error config
       ("invalid suffix \"" ^ str
-     ^ "\". The suffix and may contain letters, digits, \"-\", \"_\" and \".\" \
-        and must end with .js, .mjs or .cjs.")
+     ^ "\". The suffix must end with .js, .mjs, .cjs, .ts, .mts, or .cts.")
   | Some config ->
-    Bsb_exception.config_error config "expected a string extension like \".js\""
+    Bsb_exception.config_error config
+      "expected a string extension like \".js\" or \".ts\""
 
-let from_map ~(cwd : string) map =
-  let suffix = extract_js_suffix_exn map in
+let from_map ~(cwd : string) ~(language : Bsb_spec_set.language) map =
+  let suffix = extract_suffix_exn ~language map in
   let modules =
     match map.?(Bsb_build_schemas.package_specs) with
     | Some x -> from_json suffix x

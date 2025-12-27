@@ -76,6 +76,10 @@ let emit_external_warnings : iterator =
         if Ast_core_type.is_builtin_rank0_type txt then
           Location.raise_errorf ~loc:ptyp.ptype_loc
             "built-in type `%s` can not be redefined " txt;
+        (* Mark @as attribute as used on type declarations for type renaming in .d.ts *)
+        Ext_list.iter ptyp.ptype_attributes (fun ((attr_name, _) as attr) ->
+            if attr_name.txt = "as" then
+              Used_attributes.mark_used_attribute attr);
         super.type_declaration self ptyp);
     attribute = (fun _ attr -> warn_unused_attribute attr);
     structure_item =

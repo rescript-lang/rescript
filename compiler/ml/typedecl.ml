@@ -54,6 +54,7 @@ type error =
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
   | Boxed_and_unboxed
+  | External_and_opaque
   | Nonrec_gadt
   | Variant_runtime_representation_mismatch of Variant_coercion.variant_error
   | Variant_spread_fail of Variant_type_spread.variant_type_spread_error
@@ -74,6 +75,13 @@ let get_unboxed_from_attributes sdecl =
   | false, true, _ -> unboxed_true_default_false
   | false, false, false -> unboxed_false_default_true
   | false, false, true -> unboxed_true_default_true
+
+(* Check that @external and @opaque are not both present *)
+let check_external_opaque_conflict sdecl =
+  let has_external = Builtin_attributes.has_external sdecl.ptype_attributes in
+  let has_opaque = Builtin_attributes.has_opaque sdecl.ptype_attributes in
+  if has_external && has_opaque then
+    raise (Error (sdecl.ptype_loc, External_and_opaque))
 
 (* Enter all declared types in the environment as abstract types *)
 
@@ -378,6 +386,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
       sdecl.ptype_cstrs
   in
   let raw_status = get_unboxed_from_attributes sdecl in
+  check_external_opaque_conflict sdecl;
 
   let check_untagged_variant () =
     match sdecl.ptype_kind with
@@ -2268,6 +2277,9 @@ let report_error ppf = function
     fprintf ppf "@[This type cannot be unboxed because@ %s.@]" msg
   | Boxed_and_unboxed ->
     fprintf ppf "@[A type cannot be boxed and unboxed at the same time.@]"
+  | External_and_opaque ->
+    fprintf ppf
+      "@[A type cannot have both @@external and @@opaque attributes.@]"
   | Nonrec_gadt ->
     fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
   | Variant_runtime_representation_mismatch

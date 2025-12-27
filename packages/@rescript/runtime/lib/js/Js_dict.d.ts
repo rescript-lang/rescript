@@ -1,0 +1,19 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export type t<A> = rescript.dict<A>;
+
+export type key = string;
+
+export function get<A>(dict: t<A>, k: key): rescript.option<A>;
+
+export function unsafeDeleteKey(arg0: t<string>, arg1: string): void;
+
+export function entries<A>(dict: t<A>): [key, A][];
+
+export function values<A>(dict: t<A>): A[];
+
+export function fromList<A>(entries: rescript.list<[key, A]>): t<A>;
+
+export function fromArray<A>(entries: [key, A][]): t<A>;
+
+export function map<A, B>(f: (arg0: A) => B, source: t<A>): t<B>;

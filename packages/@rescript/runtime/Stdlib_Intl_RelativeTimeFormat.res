@@ -3,7 +3,7 @@ Bindings to JavaScript's `Intl.RelativeTimeFormat`.
 
 See [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat) for API details.
 */
-@notUndefined
+@notUndefined @external("Intl.RelativeTimeFormat")
 type t
 
 type numeric = [#always | #auto]

@@ -1,0 +1,3 @@
+import type * as Stdlib_Set from "./Stdlib_Set.js";
+
+export type t<A> = Stdlib_Set.t<A>;

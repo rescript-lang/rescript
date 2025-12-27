@@ -44,7 +44,8 @@ _build_playground
 .idea
 .DS_Store
 
-node_modules
+**/node_modules/
+!tests/build_tests/*/node_modules/
 *.dump
 coverage
 
@@ -52,6 +53,7 @@ coverage
 .bsdeps
 .bsbuild
 lib/ocaml
+/lib/
 tests/build_tests/*/lib/
 #ignore temporary directory
 *.goog.js

@@ -7,7 +7,7 @@ See [`Iterator`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 /**
 The type representing an iterator.
 */
-@notUndefined
+@notUndefined @external("Iterator")
 type t<'a>
 
 /**

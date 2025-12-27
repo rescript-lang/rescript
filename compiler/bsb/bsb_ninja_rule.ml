@@ -92,7 +92,8 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     ~(namespace : string option) ~package_name ~warnings
     ~(ppx_files : Bsb_config_types.ppx list) ~bsc_flags ~(dpkg_incls : string)
     ~(lib_incls : string) ~(dev_incls : string)
-    (custom_rules : command Map_string.t) : builtin =
+    ~(language : Bsb_spec_set.language) (custom_rules : command Map_string.t) :
+    builtin =
   let bs_dep = Ext_filename.maybe_quote Bsb_global_paths.vendor_bsdep in
   let bsc = Ext_filename.maybe_quote Bsb_global_paths.vendor_bsc in
   (* FIXME: We don't need set [-o ${out}] when building ast
@@ -122,6 +123,9 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     (match gentype_config with
     | false -> ()
     | true -> Ext_buffer.add_string buf " -bs-gentype");
+    (match language with
+    | Bsb_spec_set.Typescript -> Ext_buffer.add_string buf " -bs-typescript"
+    | Bsb_spec_set.Javascript -> ());
     if read_cmi <> `is_cmi then (
       Ext_buffer.add_string buf " -bs-package-name ";
       Ext_buffer.add_string buf (Ext_filename.maybe_quote package_name);

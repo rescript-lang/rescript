@@ -1,0 +1,162 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
+
+export type t = Intl.DateTimeFormat;
+
+export type dateStyle =
+  | "full"
+  | "long"
+  | "medium"
+  | "short";
+
+export type timeStyle =
+  | "full"
+  | "long"
+  | "medium"
+  | "short";
+
+export type dayPeriod =
+  | "narrow"
+  | "long"
+  | "short";
+
+export type weekday =
+  | "narrow"
+  | "long"
+  | "short";
+
+export type era =
+  | "narrow"
+  | "long"
+  | "short";
+
+export type year =
+  | "numeric"
+  | "2-digit";
+
+export type month =
+  | "numeric"
+  | "narrow"
+  | "2-digit"
+  | "long"
+  | "short";
+
+export type day =
+  | "numeric"
+  | "2-digit";
+
+export type hour =
+  | "numeric"
+  | "2-digit";
+
+export type minute =
+  | "numeric"
+  | "2-digit";
+
+export type second =
+  | "numeric"
+  | "2-digit";
+
+export type timeZoneName =
+  | "shortOffset"
+  | "longOffset"
+  | "long"
+  | "longGeneric"
+  | "shortGeneric"
+  | "short";
+
+export type hourCycle =
+  | "h24"
+  | "h23"
+  | "h12"
+  | "h11";
+
+export type formatMatcher =
+  | "best fit"
+  | "basic";
+
+export type fractionalSecondDigits =
+  | "2"
+  | "1"
+  | "0"
+  | "3";
+
+export interface options {
+  readonly dateStyle?: rescript.option<dateStyle>;
+  readonly timeStyle?: rescript.option<timeStyle>;
+  readonly calendar?: rescript.option<Stdlib_Intl_Common.calendar>;
+  readonly dayPeriod?: rescript.option<dayPeriod>;
+  readonly numberingSystem?: rescript.option<Stdlib_Intl_Common.numberingSystem>;
+  readonly localeMatcher?: rescript.option<Stdlib_Intl_Common.localeMatcher>;
+  readonly timeZone?: rescript.option<string>;
+  readonly hour12?: rescript.option<boolean>;
+  readonly hourCycle?: rescript.option<hourCycle>;
+  readonly formatMatcher?: rescript.option<formatMatcher>;
+  readonly weekday?: rescript.option<weekday>;
+  readonly era?: rescript.option<era>;
+  readonly year?: rescript.option<year>;
+  readonly month?: rescript.option<month>;
+  readonly day?: rescript.option<day>;
+  readonly hour?: rescript.option<hour>;
+  readonly minute?: rescript.option<minute>;
+  readonly second?: rescript.option<second>;
+  readonly fractionalSecondDigits?: rescript.option<fractionalSecondDigits>;
+  readonly timeZoneName?: rescript.option<timeZoneName>;
+}
+
+export interface resolvedOptions {
+  readonly dateStyle?: rescript.option<dateStyle>;
+  readonly timeStyle?: rescript.option<timeStyle>;
+  readonly weekday?: rescript.option<weekday>;
+  readonly era?: rescript.option<era>;
+  readonly year?: rescript.option<year>;
+  readonly month?: rescript.option<month>;
+  readonly day?: rescript.option<day>;
+  readonly hour?: rescript.option<hour>;
+  readonly minute?: rescript.option<minute>;
+  readonly second?: rescript.option<second>;
+  readonly fractionalSecondDigits?: rescript.option<fractionalSecondDigits>;
+  readonly timeZoneName?: rescript.option<timeZoneName>;
+  readonly calendar: Stdlib_Intl_Common.calendar;
+  readonly hour12: boolean;
+  readonly hourCycle: hourCycle;
+  readonly locale: string;
+  readonly numberingSystem: Stdlib_Intl_Common.numberingSystem;
+  readonly timeZone: string;
+}
+
+export interface supportedLocalesOptions {
+  readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
+}
+
+export type dateTimeComponent =
+  | "weekday"
+  | "yearName"
+  | "month"
+  | "second"
+  | "literal"
+  | "day"
+  | "era"
+  | "relatedYear"
+  | "minute"
+  | "dayPeriod"
+  | "hour"
+  | "year"
+  | "timeZone"
+  | "fractionalSecond";
+
+export interface dateTimePart {
+  readonly type: dateTimeComponent;
+  readonly value: string;
+}
+
+export type dateTimeRangeSource =
+  | "endRange"
+  | "startRange"
+  | "shared";
+
+export interface dateTimeRangePart {
+  readonly type: dateTimeComponent;
+  readonly value: string;
+  readonly source: dateTimeRangeSource;
+}
