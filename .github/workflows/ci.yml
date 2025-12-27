@@ -173,7 +173,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.4.6
+        uses: ocaml/setup-ocaml@v3.4.8
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
