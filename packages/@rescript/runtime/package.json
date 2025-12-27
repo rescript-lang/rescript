@@ -35,8 +35,13 @@
     "lib/es6/*.d.ts",
     "lib/js/*.js",
     "lib/js/*.d.ts",
-    "types.d.ts",
-    "*.res"
+    "lib/ocaml/*.res",
+    "lib/ocaml/*.resi",
+    "lib/ocaml/*.cmt",
+    "lib/ocaml/*.cmti",
+    "lib/ocaml/*.cmi",
+    "lib/ocaml/*.cmj",
+    "types.d.ts"
   ],
   "exports": {
     "./types": {
