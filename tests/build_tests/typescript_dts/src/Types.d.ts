@@ -18,15 +18,15 @@ export type result2 =
 
 export type event =
   | {
-      readonly TAG: "Click";
-      readonly x: number;
-      readonly y: number;
-    }
+    readonly TAG: "Click";
+    readonly x: number;
+    readonly y: number;
+  }
   | {
-      readonly TAG: "KeyPress";
-      readonly key: string;
-      readonly shift: boolean;
-    }
+    readonly TAG: "KeyPress";
+    readonly key: string;
+    readonly shift: boolean;
+  }
   | "NoData";
 
 export type action =

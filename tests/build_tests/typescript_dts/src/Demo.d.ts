@@ -7,12 +7,12 @@ export interface record {
   readonly bar: number;
 }
 
-export type color = 
+export type color =
   | "blue"
   | "green"
   | "red";
 
-export type colorWithPayload = 
+export type colorWithPayload =
   | {
     readonly NAME: "rgb";
     readonly VAL: [number, number, number];
@@ -27,6 +27,14 @@ export interface eventHandler {
   readonly getValue: () => number;
   readonly transform: (arg0: number) => string;
 }
+
+export type complexCallback = (
+  name: string,
+  value: number,
+  optional1?: rescript.option<string>,
+  optional2?: rescript.option<number>,
+  optional3?: rescript.option<boolean>,
+) => string;
 
 export function add(a: number, b: number): number;
 
@@ -47,9 +55,9 @@ export const myColor: color;
 export const myRgb: colorWithPayload;
 
 export const jsObj: {
-    name: string;
-    age: number;
-  };
+  age: number;
+  name: string;
+};
 
 export function withLabels(name: string, age: number): string;
 
@@ -60,3 +68,12 @@ export const myNumber: number;
 export const myString: string;
 
 export const handler: eventHandler;
+
+export function manyParams(
+  firstName: string,
+  lastName: string,
+  _age: number,
+  _email: string,
+  _phone?: string,
+  _address?: string,
+): string;

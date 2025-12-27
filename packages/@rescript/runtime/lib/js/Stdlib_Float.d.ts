@@ -8,4 +8,8 @@ export const Constants: Constants;
 
 export function fromString(i: string): rescript.option<number>;
 
-export function clamp(min?: number, max?: number, value: number): number;
+export function clamp(
+  min: number | undefined,
+  max: number | undefined,
+  value: number,
+): number;

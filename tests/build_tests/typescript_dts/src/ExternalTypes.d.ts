@@ -16,17 +16,17 @@ export type observable<A> = Observable<A>;
 export type subscriptionShape = rescript.external<
   Subscription,
   {
-    readonly unsubscribe: () => void;
-    readonly closed: boolean;
-  }
+  readonly unsubscribe: () => void;
+  readonly closed: boolean;
+}
 >;
 
 export type subscription = rescript.external<
   Subscription,
   {
-    readonly unsubscribe: () => void;
-    readonly closed: boolean;
-  },
+  readonly unsubscribe: () => void;
+  readonly closed: boolean;
+},
   true
 >;
 

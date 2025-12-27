@@ -3026,6 +3026,105 @@ let pp_property_name (f : P.t) (name : string) : unit =
     P.string f "\"")
   else P.string f name
 
+(** Threshold for multi-line function formatting *)
+let function_line_width_threshold = 80
+
+(** Estimate the length of a ts_type when printed *)
+let rec estimate_ts_type_length (ty : ts_type) : int =
+  match ty with
+  | Any -> 3
+  | Unknown -> 7
+  | Never -> 5
+  | Void -> 4
+  | Null -> 4
+  | Undefined -> 9
+  | Boolean -> 7
+  | Number -> 6
+  | Bigint -> 6
+  | String -> 6
+  | Symbol -> 6
+  | Array elem -> estimate_ts_type_length elem + 2 (* [] *)
+  | Tuple types ->
+    List.fold_left ( + ) 2
+      (List.map (fun t -> estimate_ts_type_length t + 2) types)
+  | Object {properties; _} ->
+    List.fold_left ( + ) 4
+      (List.map
+         (fun p ->
+           String.length p.prop_name + estimate_ts_type_length p.prop_type + 4)
+         properties)
+  | Function {fn_params; fn_return; _} ->
+    let params_len =
+      List.fold_left ( + ) 0
+        (List.map (fun p -> estimate_ts_type_length p.param_type + 4) fn_params)
+    in
+    params_len + estimate_ts_type_length fn_return + 6 (* () =>  *)
+  | Union types | Intersection types ->
+    List.fold_left ( + ) 0
+      (List.map (fun t -> estimate_ts_type_length t + 3) types)
+  | TypeRef {name; args} ->
+    String.length name
+    + List.fold_left ( + ) 0
+        (List.map (fun t -> estimate_ts_type_length t + 2) args)
+  | TypeVar name -> String.length name
+  | Literal (LitString s) -> String.length s + 2
+  | Literal (LitNumber n) -> String.length (string_of_float n)
+  | Literal (LitBigint s) -> String.length s + 1
+  | Literal (LitBoolean _) -> 5
+  | Readonly ty -> estimate_ts_type_length ty + 9
+  | Promise ty -> estimate_ts_type_length ty + 8
+  | RuntimeType {rt_name; rt_args} ->
+    String.length rt_name + 5
+    + List.fold_left ( + ) 0
+        (List.map (fun t -> estimate_ts_type_length t + 2) rt_args)
+
+(** Estimate the length of a param_type when printed *)
+let estimate_param_length (p : param_type) ~(use_undefined_union : bool) : int =
+  let name_len =
+    match p.param_name with
+    | Some n -> String.length n
+    | None -> 4
+  in
+  let optional_len =
+    if p.param_optional then
+      if use_undefined_union then 12 (* " | undefined" *) else 1 (* "?" *)
+    else 0
+  in
+  name_len + 2 + estimate_ts_type_length p.param_type + optional_len (* ": " *)
+
+(** Estimate the length of a fn_type when printed as a type expression *)
+let estimate_fn_type_length (fn : fn_type) : int =
+  let use_undefined_union =
+    let rec check seen_optional = function
+      | [] -> false
+      | p :: rest ->
+        if seen_optional && not p.param_optional then true
+        else check (seen_optional || p.param_optional) rest
+    in
+    check false fn.fn_params
+  in
+  let type_params_len =
+    if fn.fn_type_params = [] then 0
+    else
+      List.fold_left ( + ) 2
+        (List.map (fun p -> String.length p.tp_name + 2) fn.fn_type_params)
+  in
+  let params_len =
+    List.fold_left ( + ) 0
+      (List.mapi
+         (fun i p ->
+           estimate_param_length p ~use_undefined_union + if i > 0 then 2 else 0)
+         fn.fn_params)
+  in
+  let rest_len =
+    match fn.fn_rest with
+    | Some r -> 5 + estimate_ts_type_length r.param_type (* "...: " + type *)
+    | None -> 0
+  in
+  type_params_len + 2 + params_len + rest_len + 5
+  + estimate_ts_type_length fn.fn_return
+(* "()" + " => " + return type *)
+
 (** Print a TypeScript type to the pretty printer *)
 let rec pp_ts_type (f : P.t) (ty : ts_type) : unit =
   match ty with
@@ -3175,12 +3274,16 @@ and pp_object_type (f : P.t) (obj : object_type) : unit =
     P.string f "}")
 
 and pp_fn_type (f : P.t) (fn : fn_type) : unit =
+  (* Don't use multiline formatting for function types - they can appear nested
+     inside other types (e.g., as parameter types) where multiline would break
+     indentation. Multiline formatting is handled at the declaration level
+     via pp_fn_type_toplevel. *)
   if fn.fn_type_params <> [] then (
     P.string f "<";
     pp_type_params f fn.fn_type_params;
     P.string f ">");
   P.string f "(";
-  pp_params f fn.fn_params;
+  pp_params f fn.fn_params ~use_multiline:false;
   (match fn.fn_rest with
   | Some rest ->
     if fn.fn_params <> [] then P.string f ", ";
@@ -3194,19 +3297,72 @@ and pp_fn_type (f : P.t) (fn : fn_type) : unit =
   P.string f ") => ";
   pp_ts_type f fn.fn_return
 
-and pp_params (f : P.t) (params : param_type list) : unit =
-  let unnamed_counter = ref 0 in
-  let rec loop = function
-    | [] -> ()
-    | [p] -> pp_param f p ~unnamed_counter
-    | p :: rest ->
-      pp_param f p ~unnamed_counter;
-      P.string f ", ";
-      loop rest
+(** Print a function type at the top level (e.g., type alias body) with
+    multiline formatting support when the line would be too long. *)
+and pp_fn_type_toplevel (f : P.t) (fn : fn_type) : unit =
+  let use_multiline =
+    estimate_fn_type_length fn > function_line_width_threshold
   in
-  loop params
+  if fn.fn_type_params <> [] then (
+    P.string f "<";
+    pp_type_params f fn.fn_type_params;
+    P.string f ">");
+  P.string f "(";
+  pp_params f fn.fn_params ~use_multiline;
+  (match fn.fn_rest with
+  | Some rest ->
+    if fn.fn_params <> [] then
+      if use_multiline then P.string f "," else P.string f ", ";
+    if use_multiline then (
+      P.newline f;
+      P.string f "  ");
+    P.string f "...";
+    (match rest.param_name with
+    | Some n -> P.string f n
+    | None -> P.string f "args");
+    P.string f ": ";
+    pp_ts_type f rest.param_type
+  | None -> ());
+  if use_multiline then P.newline f;
+  P.string f ") => ";
+  pp_ts_type f fn.fn_return
 
-and pp_param (f : P.t) (p : param_type) ~(unnamed_counter : int ref) : unit =
+(** Check if there are required params after optional ones in a param list *)
+and has_required_after_optional_params (params : param_type list) : bool =
+  let rec check seen_optional = function
+    | [] -> false
+    | p :: rest ->
+      if seen_optional && not p.param_optional then true
+      else check (seen_optional || p.param_optional) rest
+  in
+  check false params
+
+and pp_params (f : P.t) (params : param_type list) ~(use_multiline : bool) :
+    unit =
+  let unnamed_counter = ref 0 in
+  let use_undefined_union = has_required_after_optional_params params in
+  let rec loop first = function
+    | [] -> ()
+    | [p] ->
+      if use_multiline then (
+        P.newline f;
+        P.string f "  ")
+      else if not first then P.string f ", ";
+      pp_param f p ~unnamed_counter ~use_undefined_union;
+      if use_multiline then P.string f ","
+    | p :: rest ->
+      if use_multiline then (
+        P.newline f;
+        P.string f "  ")
+      else if not first then P.string f ", ";
+      pp_param f p ~unnamed_counter ~use_undefined_union;
+      if use_multiline then P.string f ",";
+      loop false rest
+  in
+  loop true params
+
+and pp_param (f : P.t) (p : param_type) ~(unnamed_counter : int ref)
+    ~(use_undefined_union : bool) : unit =
   (match p.param_name with
   | Some name -> P.string f name
   | None ->
@@ -3214,9 +3370,12 @@ and pp_param (f : P.t) (p : param_type) ~(unnamed_counter : int ref) : unit =
     P.string f "arg";
     P.string f (string_of_int !unnamed_counter);
     incr unnamed_counter);
-  if p.param_optional then P.string f "?";
+  (* Use ? syntax only if no required params follow optional ones *)
+  if p.param_optional && not use_undefined_union then P.string f "?";
   P.string f ": ";
-  pp_ts_type f p.param_type
+  pp_ts_type f p.param_type;
+  (* Add | undefined for optional params when we can't use ? syntax *)
+  if p.param_optional && use_undefined_union then P.string f " | undefined"
 
 and pp_type_params (f : P.t) (params : type_param list) : unit =
   match params with
@@ -3968,12 +4127,16 @@ and pp_object_type_qualified (f : P.t) ~(module_path : string)
 
 and pp_fn_type_qualified (f : P.t) ~(module_path : string)
     ~(local_types : StringSet.t) (fn : fn_type) : unit =
+  (* Don't use multiline formatting for function types - they can appear nested
+     inside other types (e.g., as parameter types) where multiline would break
+     indentation. Multiline formatting is handled at the declaration level. *)
   if fn.fn_type_params <> [] then (
     P.string f "<";
     pp_type_params f fn.fn_type_params;
     P.string f ">");
   P.string f "(";
-  pp_params_qualified f ~module_path ~local_types fn.fn_params;
+  pp_params_qualified f ~module_path ~local_types fn.fn_params
+    ~use_multiline:false;
   (match fn.fn_rest with
   | Some rest ->
     if fn.fn_params <> [] then P.string f ", ";
@@ -3988,30 +4151,47 @@ and pp_fn_type_qualified (f : P.t) ~(module_path : string)
   pp_ts_type_qualified f ~module_path ~local_types fn.fn_return
 
 and pp_params_qualified (f : P.t) ~(module_path : string)
-    ~(local_types : StringSet.t) (params : param_type list) : unit =
+    ~(local_types : StringSet.t) (params : param_type list)
+    ~(use_multiline : bool) : unit =
   let unnamed_counter = ref 0 in
-  let rec loop = function
+  let use_undefined_union = has_required_after_optional_params params in
+  let rec loop first = function
     | [] -> ()
-    | [p] -> pp_param_qualified f ~module_path ~local_types p ~unnamed_counter
+    | [p] ->
+      if use_multiline then (
+        P.newline f;
+        P.string f "  ")
+      else if not first then P.string f ", ";
+      pp_param_qualified f ~module_path ~local_types p ~unnamed_counter
+        ~use_undefined_union;
+      if use_multiline then P.string f ","
     | p :: rest ->
-      pp_param_qualified f ~module_path ~local_types p ~unnamed_counter;
-      P.string f ", ";
-      loop rest
+      if use_multiline then (
+        P.newline f;
+        P.string f "  ")
+      else if not first then P.string f ", ";
+      pp_param_qualified f ~module_path ~local_types p ~unnamed_counter
+        ~use_undefined_union;
+      if use_multiline then P.string f ",";
+      loop false rest
   in
-  loop params
+  loop true params
 
 and pp_param_qualified (f : P.t) ~(module_path : string)
-    ~(local_types : StringSet.t) (p : param_type) ~(unnamed_counter : int ref) :
-    unit =
+    ~(local_types : StringSet.t) (p : param_type) ~(unnamed_counter : int ref)
+    ~(use_undefined_union : bool) : unit =
   (match p.param_name with
   | Some name -> P.string f name
   | None ->
     P.string f "arg";
     P.string f (string_of_int !unnamed_counter);
     incr unnamed_counter);
-  if p.param_optional then P.string f "?";
+  (* Use ? syntax only if no required params follow optional ones *)
+  if p.param_optional && not use_undefined_union then P.string f "?";
   P.string f ": ";
-  pp_ts_type_qualified f ~module_path ~local_types p.param_type
+  pp_ts_type_qualified f ~module_path ~local_types p.param_type;
+  (* Add | undefined for optional params when we can't use ? syntax *)
+  if p.param_optional && use_undefined_union then P.string f " | undefined"
 
 (** Forward reference for module printing (to break mutual recursion) *)
 let pp_module_decl_ref : (P.t -> module_decl -> unit) ref = ref (fun _ _ -> ())
@@ -4045,6 +4225,10 @@ let pp_type_decl (f : P.t) (decl : type_decl) : unit =
        | Union types, None ->
          (* Print union types with newlines for readability *)
          P.group f 1 (fun () -> pp_union_multiline f types)
+       | Function fn, None ->
+         (* Print function types with multiline support at top level *)
+         P.string f " ";
+         pp_fn_type_toplevel f fn
        | _ ->
          P.string f " ";
          pp_type_body_with_external f type_params body external_type);
@@ -4394,57 +4578,32 @@ let is_function_type (ty : Types.type_expr) : bool =
   in
   check ty
 
-(** Threshold for multi-line function formatting *)
-let function_line_width_threshold = 80
-
-(** Estimate the length of a ts_type when printed *)
-let rec estimate_ts_type_length (ty : ts_type) : int =
+(** Check if there are any required (non-optional) parameters following 
+    any optional parameter in the function type. If so, we cannot use
+    TypeScript's optional parameter syntax (?) and must use `| undefined` instead. *)
+let has_required_after_optional (ty : Types.type_expr option) : bool =
   match ty with
-  | Any -> 3
-  | Unknown -> 7
-  | Never -> 5
-  | Void -> 4
-  | Null -> 4
-  | Undefined -> 9
-  | Boolean -> 7
-  | Number -> 6
-  | Bigint -> 6
-  | String -> 6
-  | Symbol -> 6
-  | Array elem -> estimate_ts_type_length elem + 2 (* [] *)
-  | Tuple types ->
-    List.fold_left ( + ) 2
-      (List.map (fun t -> estimate_ts_type_length t + 2) types)
-  | Object {properties; _} ->
-    List.fold_left ( + ) 4
-      (List.map
-         (fun p ->
-           String.length p.prop_name + estimate_ts_type_length p.prop_type + 4)
-         properties)
-  | Function {fn_params; fn_return; _} ->
-    let params_len =
-      List.fold_left ( + ) 0
-        (List.map (fun p -> estimate_ts_type_length p.param_type + 4) fn_params)
+  | None -> false
+  | Some ty ->
+    let rec check seen_optional ty =
+      match ty.Types.desc with
+      | Types.Tarrow ({lbl; typ = arg_type}, return_type, _, _) ->
+        (* Skip unit parameters *)
+        if lbl = Nolabel && is_unit_type arg_type then
+          check seen_optional return_type
+        else
+          let is_optional =
+            match lbl with
+            | Asttypes.Optional _ -> true
+            | _ -> false
+          in
+          if seen_optional && not is_optional then true
+          else check (seen_optional || is_optional) return_type
+      | Types.Tlink ty | Types.Tsubst ty | Types.Tpoly (ty, _) ->
+        check seen_optional ty
+      | _ -> false
     in
-    params_len + estimate_ts_type_length fn_return + 6 (* () =>  *)
-  | Union types | Intersection types ->
-    List.fold_left ( + ) 0
-      (List.map (fun t -> estimate_ts_type_length t + 3) types)
-  | TypeRef {name; args} ->
-    String.length name
-    + List.fold_left ( + ) 0
-        (List.map (fun t -> estimate_ts_type_length t + 2) args)
-  | TypeVar name -> String.length name
-  | Literal (LitString s) -> String.length s + 2
-  | Literal (LitNumber n) -> String.length (string_of_float n)
-  | Literal (LitBigint s) -> String.length s + 1
-  | Literal (LitBoolean _) -> 5
-  | Readonly ty -> estimate_ts_type_length ty + 9
-  | Promise ty -> estimate_ts_type_length ty + 8
-  | RuntimeType {rt_name; rt_args} ->
-    String.length rt_name + 5
-    + List.fold_left ( + ) 0
-        (List.map (fun t -> estimate_ts_type_length t + 2) rt_args)
+    check false ty
 
 (** Estimate the total length of a function declaration *)
 let estimate_function_decl_length (name : string) (param_names : string list)
@@ -4454,6 +4613,8 @@ let estimate_function_decl_length (name : string) (param_names : string list)
   match fn_type with
   | None -> base_len
   | Some ty ->
+    (* Check if we need to use | undefined for optional params *)
+    let use_undefined_union = has_required_after_optional (Some ty) in
     let param_names_ref = ref param_names in
     let unnamed_counter = ref 0 in
     let get_next_param_name () =
@@ -4484,6 +4645,11 @@ let estimate_function_decl_length (name : string) (param_names : string list)
               ignore (get_next_param_name ());
               txt
           in
+          let is_optional =
+            match lbl with
+            | Asttypes.Optional _ -> true
+            | _ -> false
+          in
           let actual_type =
             match lbl with
             | Asttypes.Optional _ -> (
@@ -4492,9 +4658,14 @@ let estimate_function_decl_length (name : string) (param_names : string list)
               | None -> arg_type)
             | _ -> arg_type
           in
+          (* Account for | undefined suffix when needed *)
+          let optional_suffix_len =
+            if is_optional && use_undefined_union then 12 (* " | undefined" *)
+            else 0
+          in
           String.length param_name + 2
           + estimate_ts_type_length (ts_type_of_type_expr actual_type)
-          + 2 (* ", " *)
+          + optional_suffix_len + 2 (* ", " *)
           + count_params_length return_type
       | Types.Tlink ty | Types.Tsubst ty -> count_params_length ty
       | _ -> 0
@@ -4515,6 +4686,8 @@ let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
     estimate_function_decl_length name param_names fn_type
     > function_line_width_threshold
   in
+  (* If there are required params after optional ones, we cannot use TS optional syntax *)
+  let use_undefined_union = has_required_after_optional fn_type in
   P.string f (if use_export then "export function " else "declare function ");
   (* Don't escape function name - it must match the JavaScript export name exactly *)
   P.string f name;
@@ -4554,14 +4727,19 @@ let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
             P.newline f;
             P.string f "  ")
           else if not first then P.string f ", ";
+          let is_optional =
+            match lbl with
+            | Asttypes.Optional _ -> true
+            | _ -> false
+          in
           (match lbl with
           | Asttypes.Nolabel -> P.string f (get_next_param_name ())
           | Asttypes.Labelled {txt} | Asttypes.Optional {txt} ->
             ignore (get_next_param_name ());
             P.string f (escape_ts_reserved txt));
-          (match lbl with
-          | Asttypes.Optional _ -> P.string f "?"
-          | _ -> ());
+          (* Use ? syntax only if we can (no required params after optional) 
+             and this param is optional *)
+          if is_optional && not use_undefined_union then P.string f "?";
           P.string f ": ";
           (* For optional params, unwrap option<T> to just T *)
           let actual_type =
@@ -4573,6 +4751,8 @@ let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
             | _ -> arg_type
           in
           pp_ts_type f (ts_type_of_type_expr actual_type);
+          (* Add | undefined for optional params when we can't use ? syntax *)
+          if is_optional && use_undefined_union then P.string f " | undefined";
           if use_multiline then P.string f ",";
           print_params false return_type)
       | Types.Tlink ty | Types.Tsubst ty | Types.Tpoly (ty, _) ->
@@ -4677,6 +4857,10 @@ let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
        | Union types, None ->
          (* Print union types with newlines for readability *)
          P.group f 1 (fun () -> pp_union_multiline f types)
+       | Function fn, None ->
+         (* Print function types with multiline support at top level *)
+         P.string f " ";
+         pp_fn_type_toplevel f fn
        | _ ->
          P.string f " ";
          pp_type_body_with_external f type_params body external_type);
@@ -5447,9 +5631,11 @@ let rec collect_local_module_names (decls : type_decl list) : StringSet.t =
     StringSet.empty decls
 
 (** Generate the complete .d.ts file content
+    @param suffix The JS file suffix to use for missing imports (e.g., ".js", ".mjs")
     TODO(refactor): Move it to a part of dump program *)
-let pp_dts_file ~(module_name : string) (f : P.t) (imports : dts_import list)
-    (type_decls : type_decl list) (value_exports : value_export list) : unit =
+let pp_dts_file ~(module_name : string) ~(suffix : string) (f : P.t)
+    (imports : dts_import list) (type_decls : type_decl list)
+    (value_exports : value_export list) : unit =
   (* Save the environment that was set during extraction.
      We need it to resolve module aliases in type paths. *)
   let saved_env = State.state.env in
@@ -5492,8 +5678,8 @@ let pp_dts_file ~(module_name : string) (f : P.t) (imports : dts_import list)
     let missing_imports =
       List.map
         (fun module_name ->
-          (* Generate import path: ./ModuleName.js *)
-          {module_name; module_path = "./" ^ module_name ^ ".js"})
+          (* Generate import path using the configured suffix *)
+          {module_name; module_path = "./" ^ module_name ^ suffix})
         missing_modules
     in
     used_provided @ missing_imports

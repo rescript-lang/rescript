@@ -14,7 +14,7 @@ export type Math = {
   add: (arg0: number, arg1: number) => number;
   multiply: (arg0: number, arg1: number) => number;
 };
-export const Math: Math;
+export const $$Math: Math;
 
 declare namespace Outer {
   namespace Nested {

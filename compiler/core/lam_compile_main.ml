@@ -351,7 +351,7 @@ let lambda_as_module
            let module_name = Filename.basename output_prefix in
            Ext_pervasives.with_file_as_chan dts_file (fun chan ->
                let f = Ext_pp.from_channel chan in
-               Ts.pp_dts_file ~module_name f dts_imports
+               Ts.pp_dts_file ~module_name ~suffix f dts_imports
                  lambda_output.program.type_exports
                  lambda_output.program.value_exports));
         if !Warnings.has_warnings  then begin

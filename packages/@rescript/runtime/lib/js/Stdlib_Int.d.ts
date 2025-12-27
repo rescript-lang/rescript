@@ -40,4 +40,8 @@ export function rangeWithOptions(
   options: rangeOptions,
 ): number[];
 
-export function clamp(min?: number, max?: number, value: number): number;
+export function clamp(
+  min: number | undefined,
+  max: number | undefined,
+  value: number,
+): number;

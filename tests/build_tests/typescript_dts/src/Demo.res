@@ -54,3 +54,22 @@ let handler: eventHandler = {
   getValue: () => 42,
   transform: n => Int.toString(n),
 }
+
+// Function with many parameters (should trigger multiline formatting)
+let manyParams = (
+  ~firstName: string,
+  ~lastName: string,
+  ~_age: int,
+  ~_email: string,
+  ~_phone: option<string>=?,
+  ~_address: option<string>=?,
+) => firstName ++ " " ++ lastName
+
+// Function type with many optional parameters
+type complexCallback = (
+  ~name: string,
+  ~value: int,
+  ~optional1: option<string>=?,
+  ~optional2: option<int>=?,
+  ~optional3: option<bool>=?,
+) => string

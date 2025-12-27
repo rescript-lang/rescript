@@ -64,6 +64,10 @@ let handler = {
   transform: handler_transform
 };
 
+function manyParams(firstName, lastName, _age, _email, _phone, _address) {
+  return firstName + " " + lastName;
+}
+
 let myRecord = {
   foo: "hello",
   bar: 42
@@ -100,5 +104,6 @@ export {
   myNumber,
   myString,
   handler,
+  manyParams,
 }
 /* No side effect */
