@@ -160,18 +160,19 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
                  | External {import_attributes} -> import_attributes
                  | _ -> None )))
   in
-  (* Ensure blank line after all imports *)
-  let () = P.at_least_two_lines f in
   (* Emit type declarations for TypeScript mode *)
-  let () =
+  let has_type_exports =
     match !Js_config.ts_output with
     | Js_config.Ts_typescript ->
       Ts.pp_type_decls_only f x.program.type_exports;
       (* Set up exported value types and module paths for variable annotation lookup *)
       Ts.set_exported_modules x.program.type_exports;
-      Ts.set_exported_types x.program.value_exports
-    | Js_config.Ts_none -> ()
+      Ts.set_exported_types x.program.value_exports;
+      x.program.type_exports <> []
+    | Js_config.Ts_none -> false
   in
+  (* Add blank line after imports/type exports before code *)
+  let () = if not has_type_exports then P.at_least_two_lines f in
   let cxt = Js_dump.statements true cxt f x.program.block in
   Js_dump_import_export.es6_export cxt f x.program.exports
 
@@ -184,7 +185,7 @@ let pp_deps_program ~(output_prefix : string)
          P.newline f);
   if not !Js_config.no_version_header then (
     P.string f Bs_version.header;
-    P.newline f);
+    P.at_least_two_lines f);
 
   if deps_program_is_empty program then P.string f empty_explanation
     (* This is empty module, it won't be referred anywhere *)

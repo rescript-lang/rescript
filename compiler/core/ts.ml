@@ -4266,7 +4266,7 @@ let pp_runtime_type_import (f : P.t) : unit =
     P.string f "import type * as ";
     P.string f runtime_types_namespace;
     P.string f " from \"@rescript/runtime/types\";";
-    P.at_least_two_lines f)
+    P.newline f)
 
 (** Get the list of modules that need type-only imports.
     @param value_imported_modules Set of module names already imported for values
@@ -5497,8 +5497,14 @@ let pp_dts_file ~(module_name : string) (f : P.t) (imports : dts_import list)
     in
     used_provided @ missing_imports
   in
-  P.string f Bs_version.header;
-  P.at_least_two_lines f;
+  (if not !Js_config.no_version_header then (
+     P.string f Bs_version.header;
+     (* Only add blank line after header if there's content following *)
+     let has_content =
+       type_imports <> [] || has_runtime_types || has_external_type_imports
+       || type_decls <> [] || value_exports <> []
+     in
+     if has_content then P.at_least_two_lines f));
   pp_runtime_types_import_dts f;
   pp_external_type_imports f;
   List.iter
@@ -5528,4 +5534,5 @@ let pp_dts_file ~(module_name : string) (f : P.t) (imports : dts_import list)
       print_items rest
   in
   print_items all_items;
+  P.newline f;
   P.flush f ()
