@@ -123,6 +123,9 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
       let type_only_modules =
         Ts.get_type_only_modules ~value_imported_modules ~local_modules
       in
+      (* Add blank line before type-only imports if no runtime types were printed *)
+      if type_only_modules <> [] && not (Ts.RuntimeTypes.has_any ()) then
+        P.at_least_two_lines f;
       List.iter
         (fun mod_name ->
           (* Try to find the path from value modules first *)
@@ -185,7 +188,7 @@ let pp_deps_program ~(output_prefix : string)
          P.newline f);
   if not !Js_config.no_version_header then (
     P.string f Bs_version.header;
-    P.at_least_two_lines f);
+    P.newline f);
 
   if deps_program_is_empty program then P.string f empty_explanation
     (* This is empty module, it won't be referred anywhere *)

@@ -4263,6 +4263,7 @@ let pp_type_decls_ts (f : P.t) (decls : type_decl list) : unit =
 (** Print runtime type import based on collected types *)
 let pp_runtime_type_import (f : P.t) : unit =
   if RuntimeTypes.has_any () then (
+    P.at_least_two_lines f;
     P.string f "import type * as ";
     P.string f runtime_types_namespace;
     P.string f " from \"@rescript/runtime/types\";";
