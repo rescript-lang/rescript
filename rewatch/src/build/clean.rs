@@ -39,6 +39,19 @@ fn remove_mjs_file(source_file: &Path, suffix: &str) {
     ));
 }
 
+/// Remove TypeScript declaration file (.d.ts or .d.mts) corresponding to a source file
+fn remove_dts_file(source_file: &Path, suffix: &str) {
+    // Derive the .d.ts extension from the JS suffix
+    // .js -> .d.ts, .mjs -> .d.mts, .cjs -> .d.cts
+    // .ts -> .d.ts, .mts -> .d.mts, .cts -> .d.cts
+    let dts_ext = match suffix {
+        ".mjs" | ".mts" => "d.mts",
+        ".cjs" | ".cts" => "d.cts",
+        _ => "d.ts",
+    };
+    let _ = std::fs::remove_file(source_file.with_extension(dts_ext));
+}
+
 fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
@@ -77,26 +90,33 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
                             if spec.in_source {
                                 Some((
                                     package.path.join(&source_file.implementation.path),
-                                    match spec.suffix {
+                                    match &spec.suffix {
                                         None => root_config.get_suffix(&spec),
-                                        Some(suffix) => suffix,
+                                        Some(suffix) => suffix.clone(),
                                     },
+                                    spec.should_emit_dts(&root_config.language),
                                 ))
                             } else {
                                 None
                             }
                         })
-                        .collect::<Vec<(PathBuf, String)>>()
+                        .collect::<Vec<(PathBuf, String, bool)>>()
                 })
             }
             _ => None,
         })
         .flatten()
-        .collect::<Vec<(PathBuf, String)>>();
+        .collect::<Vec<(PathBuf, String, bool)>>();
 
     rescript_file_locations
         .par_iter()
-        .for_each(|(rescript_file_location, suffix)| remove_mjs_file(rescript_file_location, suffix));
+        .for_each(|(rescript_file_location, suffix, should_emit_dts)| {
+            remove_mjs_file(rescript_file_location, suffix);
+            // Also remove .d.ts files if dts generation was enabled
+            if *should_emit_dts {
+                remove_dts_file(rescript_file_location, suffix);
+            }
+        });
 }
 
 // TODO: change to scan_previous_build => CompileAssetsState
@@ -139,6 +159,8 @@ pub fn cleanup_previous_build(
                 .expect("Could not find package");
             remove_compile_assets(package, res_file_location);
             remove_mjs_file(res_file_location, suffix);
+            // Also remove .d.ts file if it exists
+            remove_dts_file(res_file_location, suffix);
             remove_iast(package, res_file_location);
             remove_ast(package, res_file_location);
             match helpers::get_extension(ast_file_path).as_str() {
