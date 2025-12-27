@@ -343,8 +343,6 @@ type walk_cxt = {
   traverse: bool;
   ignored_dirs: Set_string.t;
   gentype_language: string;
-  language: string;
-      (* top-level language setting: "javascript" or "typescript" *)
 }
 
 let rec walk_sources (cxt : walk_cxt) (sources : Ext_json_types.t) =
@@ -371,46 +369,13 @@ and walk_source_dir_map (cxt : walk_cxt) sub_dirs_field =
   let working_dir = Filename.concat cxt.root cxt.cwd in
   if not (Set_string.mem cxt.ignored_dirs cxt.cwd) then (
     let file_array = Sys.readdir working_dir in
-    (* Remove generated files during clean up:
-       - .gen.js/.gen.tsx (gentype)
-       - .d.ts/.d.mts/.d.cts (TypeScript declarations, only if corresponding .res exists)
-       - .ts/.mts/.cts (TypeScript output mode, only if corresponding .res exists) *)
+    (* Remove .gen.js/.gen.tsx during clean up *)
     Ext_array.iter file_array (fun file ->
-        let is_gentype_typescript = cxt.gentype_language = "typescript" in
-        let is_typescript_output = cxt.language = "typescript" in
-        (* Helper to get base name without extension *)
-        let get_base_name suffix_len =
-          String.sub file 0 (String.length file - suffix_len)
-        in
-        let has_res_file base =
-          Sys.file_exists
-            (Filename.concat working_dir (base ^ Literals.suffix_res))
-        in
-        (* Check if this is a TypeScript output file that corresponds to a .res file *)
-        let is_ts_output_file =
-          is_typescript_output
-          && (Ext_string.ends_with file Literals.suffix_ts
-              && has_res_file (get_base_name 3)
-             || Ext_string.ends_with file Literals.suffix_mts
-                && has_res_file (get_base_name 4)
-             || Ext_string.ends_with file Literals.suffix_cts
-                && has_res_file (get_base_name 4))
-        in
-        (* Check if this is a .d.ts file that corresponds to a .res file *)
-        let is_dts_output_file =
-          Ext_string.ends_with file Literals.suffix_d_ts
-          && has_res_file (get_base_name 5)
-          || Ext_string.ends_with file Literals.suffix_d_mts
-             && has_res_file (get_base_name 6)
-          || Ext_string.ends_with file Literals.suffix_d_cts
-             && has_res_file (get_base_name 6)
-        in
+        let is_typescript = cxt.gentype_language = "typescript" in
         if
-          (not is_gentype_typescript)
+          (not is_typescript)
           && Ext_string.ends_with file Literals.suffix_gen_js
-          || is_gentype_typescript
-             && Ext_string.ends_with file Literals.suffix_gen_tsx
-          || is_dts_output_file || is_ts_output_file
+          || (is_typescript && Ext_string.ends_with file Literals.suffix_gen_tsx)
         then Sys.remove (Filename.concat working_dir file));
     let cxt_traverse = cxt.traverse in
     match (sub_dirs_field, cxt_traverse) with
@@ -436,13 +401,10 @@ and walk_source_dir_map (cxt : walk_cxt) sub_dirs_field =
    TODO: make it configurable
 *)
 let clean_re_js root =
-  (* Try rescript.json first, fall back to bsconfig.json *)
-  let config_file =
-    let rescript_json = Filename.concat root Literals.rescript_json in
-    if Sys.file_exists rescript_json then rescript_json
-    else Filename.concat root Literals.bsconfig_json
-  in
-  match Ext_json_parse.parse_json_from_file config_file with
+  match
+    Ext_json_parse.parse_json_from_file
+      (Filename.concat root Literals.bsconfig_json)
+  with
   | Obj {map} ->
     let ignored_dirs =
       match map.?(Bsb_build_schemas.ignored_dirs) with
@@ -460,11 +422,6 @@ let clean_re_js root =
         | Some _ -> "")
       | Some _ -> ""
     in
-    let language =
-      match map.?(Bsb_build_schemas.language) with
-      | Some (Str {str}) -> str
-      | _ -> "javascript"
-    in
     Ext_option.iter map.?(Bsb_build_schemas.sources) (fun config ->
         try
           walk_sources
@@ -474,7 +431,6 @@ let clean_re_js root =
               cwd = Filename.current_dir_name;
               ignored_dirs;
               gentype_language;
-              language;
             }
             config
         with _ -> ())
