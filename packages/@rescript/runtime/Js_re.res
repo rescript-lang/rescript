@@ -44,16 +44,10 @@ type result
 An `array` of the match and captures, the first is the full match and the
 remaining are the substring captures.
 */
-@deprecated({
-  reason: "Use `RegExp.Result.matches` instead.",
-  migrate: RegExp.Result.matches(),
-})
+@deprecated("Use `RegExp.Result.t` instead.")
 external captures: result => array<Js_null_undefined.t<string>> = "%identity"
 
-@deprecated({
-  reason: "Use `RegExp.Result.matches` instead.",
-  migrate: RegExp.Result.matches(),
-})
+@deprecated("Use `RegExp.Result.t` instead.")
 external matches: result => array<string> = "%identity"
 
 /** 0-based index of the match in the input string. */
