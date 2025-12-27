@@ -10,7 +10,7 @@
     "serve-bundle": "node serve-bundle.mjs"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.1",
+    "@rescript/react": "^0.14.0",
     "rescript": "workspace:^"
   },
   "devDependencies": {
