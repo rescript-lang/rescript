@@ -3,7 +3,7 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_Locale.t", []>;
+export type t = Intl.Locale;
 
 export interface options {
   readonly baseName?: rescript.option<string>;

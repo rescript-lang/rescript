@@ -34,7 +34,7 @@ export interface signatureDetails {
 export type detail =
   | { readonly kind: "record"; readonly items: field[] }
   | { readonly kind: "variant"; readonly items: constructor[] }
-  | { readonly kind: "alias"; readonly details: signatureDetails };
+  | { readonly kind: "signature"; readonly details: signatureDetails };
 
 export interface source {
   readonly filepath: string;
@@ -44,52 +44,52 @@ export interface source {
 
 export type item =
   | {
-      readonly kind: "value";
-      readonly id: string;
-      readonly docstrings: string[];
-      readonly signature: string;
-      readonly name: string;
-      readonly deprecated?: rescript.option<string>;
-      readonly source: source;
-      readonly detail?: rescript.option<detail>;
-    }
+    readonly kind: "value";
+    readonly id: string;
+    readonly docstrings: string[];
+    readonly signature: string;
+    readonly name: string;
+    readonly deprecated?: rescript.option<string>;
+    readonly source: source;
+    readonly detail?: rescript.option<detail>;
+  }
   | {
-      readonly kind: "type";
-      readonly id: string;
-      readonly docstrings: string[];
-      readonly signature: string;
-      readonly name: string;
-      readonly deprecated?: rescript.option<string>;
-      readonly source: source;
-      readonly detail?: rescript.option<detail>;
-    }
+    readonly kind: "type";
+    readonly id: string;
+    readonly docstrings: string[];
+    readonly signature: string;
+    readonly name: string;
+    readonly deprecated?: rescript.option<string>;
+    readonly source: source;
+    readonly detail?: rescript.option<detail>;
+  }
   | {
-      readonly kind: "module";
-      readonly id: string;
-      readonly docstrings: string[];
-      readonly deprecated?: rescript.option<string>;
-      readonly name: string;
-      readonly moduletypeid?: rescript.option<string>;
-      readonly source: source;
-      readonly items: item[];
-    }
+    readonly kind: "module";
+    readonly id: string;
+    readonly docstrings: string[];
+    readonly deprecated?: rescript.option<string>;
+    readonly name: string;
+    readonly moduletypeid?: rescript.option<string>;
+    readonly source: source;
+    readonly items: item[];
+  }
   | {
-      readonly kind: "moduleType";
-      readonly id: string;
-      readonly docstrings: string[];
-      readonly deprecated?: rescript.option<string>;
-      readonly name: string;
-      readonly source: source;
-      readonly items: item[];
-    }
+    readonly kind: "moduleType";
+    readonly id: string;
+    readonly docstrings: string[];
+    readonly deprecated?: rescript.option<string>;
+    readonly name: string;
+    readonly source: source;
+    readonly items: item[];
+  }
   | {
-      readonly kind: "moduleAlias";
-      readonly id: string;
-      readonly docstrings: string[];
-      readonly name: string;
-      readonly source: source;
-      readonly items: item[];
-    };
+    readonly kind: "moduleAlias";
+    readonly id: string;
+    readonly docstrings: string[];
+    readonly name: string;
+    readonly source: source;
+    readonly items: item[];
+  };
 
 export interface doc {
   readonly name: string;

@@ -5,7 +5,7 @@ import type * as Stdlib_Null from "./Stdlib_Null.js";
 
 export type t =
   | boolean
-  | "Null"
+  | null
   | string
   | number
   | rescript.dict<t>
@@ -16,38 +16,26 @@ export type replacer =
   | ((arg0: string, arg1: t) => t);
 
 declare namespace Classify {
-  type t = | { readonly TAG: "Bool"; readonly _0: boolean } | "Null" | { readonly TAG: "String"; readonly _0: string } | { readonly TAG: "Number"; readonly _0: number } | { readonly TAG: "Object"; readonly _0: rescript.dict<t> } | { readonly TAG: "Array"; readonly _0: t[] };
+  type t =
+    | { readonly TAG: "Bool"; readonly _0: boolean }
+    | "Null"
+    | { readonly TAG: "String"; readonly _0: string }
+    | { readonly TAG: "Number"; readonly _0: number }
+    | { readonly TAG: "Object"; readonly _0: rescript.dict<t> }
+    | { readonly TAG: "Array"; readonly _0: t[] };
 }
 export type Classify = {
-  _internalClass: (arg0: A) => string;
-  _asBool: (arg0: A) => boolean;
-  _asString: (arg0: A) => string;
-  _asFloat: (arg0: A) => number;
-  _asArray: (arg0: A) => Stdlib_JSON.Classify.t[];
-  _asDict: (arg0: A) => rescript.dict<Stdlib_JSON.Classify.t>;
-  classify: (arg0: any) => Classify.t;
+  classify: (arg0: A) => Classify.t;
 };
 export const Classify: Classify;
 
 export type Encode = {
-  bool: (arg0: boolean) => t;
-  null: t;
-  string: (arg0: string) => t;
-  int: (arg0: number) => t;
-  float: (arg0: number) => t;
-  object: (arg0: rescript.dict<t>) => t;
-  array: (arg0: t[]) => t;
-  stringArray: (arg0: string[]) => t;
-  floatArray: (arg0: number[]) => t;
-  intArray: (arg0: number[]) => t;
-  boolArray: (arg0: boolean[]) => t;
-  objectArray: (arg0: rescript.dict<t>[]) => t;
 };
 export const Encode: Encode;
 
 export type Decode = {
   bool: (arg0: t) => rescript.option<boolean>;
-  null: (arg0: t) => rescript.option<Stdlib_Null.t<any>>;
+  $$null: (arg0: t) => rescript.option<Stdlib_Null.t<A>>;
   string: (arg0: t) => rescript.option<string>;
   float: (arg0: t) => rescript.option<number>;
   object: (arg0: t) => rescript.option<rescript.dict<t>>;

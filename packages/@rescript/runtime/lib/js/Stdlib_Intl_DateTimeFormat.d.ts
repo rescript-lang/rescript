@@ -3,63 +3,63 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_DateTimeFormat.t", []>;
+export type t = Intl.DateTimeFormat;
 
-export type dateStyle = 
+export type dateStyle =
   | "full"
   | "long"
   | "medium"
   | "short";
 
-export type timeStyle = 
+export type timeStyle =
   | "full"
   | "long"
   | "medium"
   | "short";
 
-export type dayPeriod = 
+export type dayPeriod =
   | "narrow"
   | "long"
   | "short";
 
-export type weekday = 
+export type weekday =
   | "narrow"
   | "long"
   | "short";
 
-export type era = 
+export type era =
   | "narrow"
   | "long"
   | "short";
 
-export type year = 
+export type year =
   | "numeric"
   | "2-digit";
 
-export type month = 
+export type month =
   | "numeric"
   | "narrow"
   | "2-digit"
   | "long"
   | "short";
 
-export type day = 
+export type day =
   | "numeric"
   | "2-digit";
 
-export type hour = 
+export type hour =
   | "numeric"
   | "2-digit";
 
-export type minute = 
+export type minute =
   | "numeric"
   | "2-digit";
 
-export type second = 
+export type second =
   | "numeric"
   | "2-digit";
 
-export type timeZoneName = 
+export type timeZoneName =
   | "shortOffset"
   | "longOffset"
   | "long"
@@ -67,17 +67,17 @@ export type timeZoneName =
   | "shortGeneric"
   | "short";
 
-export type hourCycle = 
+export type hourCycle =
   | "h24"
   | "h23"
   | "h12"
   | "h11";
 
-export type formatMatcher = 
+export type formatMatcher =
   | "best fit"
   | "basic";
 
-export type fractionalSecondDigits = 
+export type fractionalSecondDigits =
   | "2"
   | "1"
   | "0"
@@ -131,7 +131,7 @@ export interface supportedLocalesOptions {
   readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
 }
 
-export type dateTimeComponent = 
+export type dateTimeComponent =
   | "weekday"
   | "yearName"
   | "month"
@@ -152,7 +152,7 @@ export interface dateTimePart {
   readonly value: string;
 }
 
-export type dateTimeRangeSource = 
+export type dateTimeRangeSource =
   | "endRange"
   | "startRange"
   | "shared";

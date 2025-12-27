@@ -4,8 +4,8 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type t<A> =
   | A
-  | "Null"
-  | "Undefined";
+  | null
+  | undefined;
 
 export function bind<A, B>(x: t<A>, f: (arg0: A) => B): t<B>;
 

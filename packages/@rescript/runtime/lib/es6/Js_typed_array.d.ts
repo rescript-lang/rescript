@@ -10,10 +10,8 @@ declare namespace ArrayBuffer {
   type t = array_buffer;
 }
 export type ArrayBuffer = {
-  make: (arg0: number) => ArrayBuffer.t;
-  byteLength: (arg0: ArrayBuffer.t) => number;
 };
-export const ArrayBuffer: ArrayBuffer;
+export const $$ArrayBuffer: ArrayBuffer;
 
 declare namespace Int8Array {
   type elt = number;
@@ -21,24 +19,8 @@ declare namespace Int8Array {
   type t = Int8Array.typed_array<Int8Array.elt>;
 }
 export type Int8Array = {
-  unsafe_get: (arg0: Int8Array.t, arg1: number) => Int8Array.elt;
-  unsafe_set: (arg0: Int8Array.t, arg1: number, arg2: Int8Array.elt) => void;
-  buffer: (arg0: Int8Array.t) => array_buffer;
-  byteLength: (arg0: Int8Array.t) => number;
-  byteOffset: (arg0: Int8Array.t) => number;
-  length: (arg0: Int8Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Int8Array.t;
-  slice: (start: number, end_: number) => Int8Array.t;
-  subarray: (start: number, end_: number) => Int8Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Int8Array.elt[]) => Int8Array.t;
-  fromBuffer: (arg0: array_buffer) => Int8Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Int8Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Int8Array.t;
-  fromLength: (arg0: number) => Int8Array.t;
-  from: (arg0: array_like<Int8Array.elt>) => Int8Array.t;
 };
-export const Int8Array: Int8Array;
+export const $$Int8Array: Int8Array;
 
 declare namespace Uint8Array {
   type elt = number;
@@ -46,24 +28,8 @@ declare namespace Uint8Array {
   type t = Uint8Array.typed_array<Uint8Array.elt>;
 }
 export type Uint8Array = {
-  unsafe_get: (arg0: Uint8Array.t, arg1: number) => Uint8Array.elt;
-  unsafe_set: (arg0: Uint8Array.t, arg1: number, arg2: Uint8Array.elt) => void;
-  buffer: (arg0: Uint8Array.t) => array_buffer;
-  byteLength: (arg0: Uint8Array.t) => number;
-  byteOffset: (arg0: Uint8Array.t) => number;
-  length: (arg0: Uint8Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Uint8Array.t;
-  slice: (start: number, end_: number) => Uint8Array.t;
-  subarray: (start: number, end_: number) => Uint8Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Uint8Array.elt[]) => Uint8Array.t;
-  fromBuffer: (arg0: array_buffer) => Uint8Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Uint8Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Uint8Array.t;
-  fromLength: (arg0: number) => Uint8Array.t;
-  from: (arg0: array_like<Uint8Array.elt>) => Uint8Array.t;
 };
-export const Uint8Array: Uint8Array;
+export const $$Uint8Array: Uint8Array;
 
 declare namespace Uint8ClampedArray {
   type elt = number;
@@ -71,24 +37,8 @@ declare namespace Uint8ClampedArray {
   type t = Uint8ClampedArray.typed_array<Uint8ClampedArray.elt>;
 }
 export type Uint8ClampedArray = {
-  unsafe_get: (arg0: Uint8ClampedArray.t, arg1: number) => Uint8ClampedArray.elt;
-  unsafe_set: (arg0: Uint8ClampedArray.t, arg1: number, arg2: Uint8ClampedArray.elt) => void;
-  buffer: (arg0: Uint8ClampedArray.t) => array_buffer;
-  byteLength: (arg0: Uint8ClampedArray.t) => number;
-  byteOffset: (arg0: Uint8ClampedArray.t) => number;
-  length: (arg0: Uint8ClampedArray.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Uint8ClampedArray.t;
-  slice: (start: number, end_: number) => Uint8ClampedArray.t;
-  subarray: (start: number, end_: number) => Uint8ClampedArray.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Uint8ClampedArray.elt[]) => Uint8ClampedArray.t;
-  fromBuffer: (arg0: array_buffer) => Uint8ClampedArray.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Uint8ClampedArray.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Uint8ClampedArray.t;
-  fromLength: (arg0: number) => Uint8ClampedArray.t;
-  from: (arg0: array_like<Uint8ClampedArray.elt>) => Uint8ClampedArray.t;
 };
-export const Uint8ClampedArray: Uint8ClampedArray;
+export const $$Uint8ClampedArray: Uint8ClampedArray;
 
 declare namespace Int16Array {
   type elt = number;
@@ -96,24 +46,8 @@ declare namespace Int16Array {
   type t = Int16Array.typed_array<Int16Array.elt>;
 }
 export type Int16Array = {
-  unsafe_get: (arg0: Int16Array.t, arg1: number) => Int16Array.elt;
-  unsafe_set: (arg0: Int16Array.t, arg1: number, arg2: Int16Array.elt) => void;
-  buffer: (arg0: Int16Array.t) => array_buffer;
-  byteLength: (arg0: Int16Array.t) => number;
-  byteOffset: (arg0: Int16Array.t) => number;
-  length: (arg0: Int16Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Int16Array.t;
-  slice: (start: number, end_: number) => Int16Array.t;
-  subarray: (start: number, end_: number) => Int16Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Int16Array.elt[]) => Int16Array.t;
-  fromBuffer: (arg0: array_buffer) => Int16Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Int16Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Int16Array.t;
-  fromLength: (arg0: number) => Int16Array.t;
-  from: (arg0: array_like<Int16Array.elt>) => Int16Array.t;
 };
-export const Int16Array: Int16Array;
+export const $$Int16Array: Int16Array;
 
 declare namespace Uint16Array {
   type elt = number;
@@ -121,24 +55,8 @@ declare namespace Uint16Array {
   type t = Uint16Array.typed_array<Uint16Array.elt>;
 }
 export type Uint16Array = {
-  unsafe_get: (arg0: Uint16Array.t, arg1: number) => Uint16Array.elt;
-  unsafe_set: (arg0: Uint16Array.t, arg1: number, arg2: Uint16Array.elt) => void;
-  buffer: (arg0: Uint16Array.t) => array_buffer;
-  byteLength: (arg0: Uint16Array.t) => number;
-  byteOffset: (arg0: Uint16Array.t) => number;
-  length: (arg0: Uint16Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Uint16Array.t;
-  slice: (start: number, end_: number) => Uint16Array.t;
-  subarray: (start: number, end_: number) => Uint16Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Uint16Array.elt[]) => Uint16Array.t;
-  fromBuffer: (arg0: array_buffer) => Uint16Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Uint16Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Uint16Array.t;
-  fromLength: (arg0: number) => Uint16Array.t;
-  from: (arg0: array_like<Uint16Array.elt>) => Uint16Array.t;
 };
-export const Uint16Array: Uint16Array;
+export const $$Uint16Array: Uint16Array;
 
 declare namespace Int32Array {
   type elt = number;
@@ -146,26 +64,8 @@ declare namespace Int32Array {
   type t = Int32Array.typed_array<Int32Array.elt>;
 }
 export type Int32Array = {
-  unsafe_get: (arg0: Int32Array.t, arg1: number) => Int32Array.elt;
-  unsafe_set: (arg0: Int32Array.t, arg1: number, arg2: Int32Array.elt) => void;
-  buffer: (arg0: Int32Array.t) => array_buffer;
-  byteLength: (arg0: Int32Array.t) => number;
-  byteOffset: (arg0: Int32Array.t) => number;
-  length: (arg0: Int32Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Int32Array.t;
-  slice: (start: number, end_: number) => Int32Array.t;
-  subarray: (start: number, end_: number) => Int32Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Int32Array.elt[]) => Int32Array.t;
-  fromBuffer: (arg0: array_buffer) => Int32Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Int32Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Int32Array.t;
-  fromLength: (arg0: number) => Int32Array.t;
-  from: (arg0: array_like<Int32Array.elt>) => Int32Array.t;
-  create: (arg0: number[]) => Int32Array.t;
-  of_buffer: (arg0: array_buffer) => Int32Array.t;
 };
-export const Int32Array: Int32Array;
+export const $$Int32Array: Int32Array;
 
 declare namespace Uint32Array {
   type elt = number;
@@ -173,24 +73,8 @@ declare namespace Uint32Array {
   type t = Uint32Array.typed_array<Uint32Array.elt>;
 }
 export type Uint32Array = {
-  unsafe_get: (arg0: Uint32Array.t, arg1: number) => Uint32Array.elt;
-  unsafe_set: (arg0: Uint32Array.t, arg1: number, arg2: Uint32Array.elt) => void;
-  buffer: (arg0: Uint32Array.t) => array_buffer;
-  byteLength: (arg0: Uint32Array.t) => number;
-  byteOffset: (arg0: Uint32Array.t) => number;
-  length: (arg0: Uint32Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Uint32Array.t;
-  slice: (start: number, end_: number) => Uint32Array.t;
-  subarray: (start: number, end_: number) => Uint32Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Uint32Array.elt[]) => Uint32Array.t;
-  fromBuffer: (arg0: array_buffer) => Uint32Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Uint32Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Uint32Array.t;
-  fromLength: (arg0: number) => Uint32Array.t;
-  from: (arg0: array_like<Uint32Array.elt>) => Uint32Array.t;
 };
-export const Uint32Array: Uint32Array;
+export const $$Uint32Array: Uint32Array;
 
 declare namespace Float32Array {
   type elt = number;
@@ -198,26 +82,8 @@ declare namespace Float32Array {
   type t = Float32Array.typed_array<Float32Array.elt>;
 }
 export type Float32Array = {
-  unsafe_get: (arg0: Float32Array.t, arg1: number) => Float32Array.elt;
-  unsafe_set: (arg0: Float32Array.t, arg1: number, arg2: Float32Array.elt) => void;
-  buffer: (arg0: Float32Array.t) => array_buffer;
-  byteLength: (arg0: Float32Array.t) => number;
-  byteOffset: (arg0: Float32Array.t) => number;
-  length: (arg0: Float32Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Float32Array.t;
-  slice: (start: number, end_: number) => Float32Array.t;
-  subarray: (start: number, end_: number) => Float32Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Float32Array.elt[]) => Float32Array.t;
-  fromBuffer: (arg0: array_buffer) => Float32Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Float32Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Float32Array.t;
-  fromLength: (arg0: number) => Float32Array.t;
-  from: (arg0: array_like<Float32Array.elt>) => Float32Array.t;
-  create: (arg0: number[]) => Float32Array.t;
-  of_buffer: (arg0: array_buffer) => Float32Array.t;
 };
-export const Float32Array: Float32Array;
+export const $$Float32Array: Float32Array;
 
 declare namespace Float64Array {
   type elt = number;
@@ -225,65 +91,12 @@ declare namespace Float64Array {
   type t = Float64Array.typed_array<Float64Array.elt>;
 }
 export type Float64Array = {
-  unsafe_get: (arg0: Float64Array.t, arg1: number) => Float64Array.elt;
-  unsafe_set: (arg0: Float64Array.t, arg1: number, arg2: Float64Array.elt) => void;
-  buffer: (arg0: Float64Array.t) => array_buffer;
-  byteLength: (arg0: Float64Array.t) => number;
-  byteOffset: (arg0: Float64Array.t) => number;
-  length: (arg0: Float64Array.t) => number;
-  copyWithinFromRange: (to_: number, start: number, end_: number) => Float64Array.t;
-  slice: (start: number, end_: number) => Float64Array.t;
-  subarray: (start: number, end_: number) => Float64Array.t;
-  _BYTES_PER_ELEMENT: number;
-  make: (arg0: Float64Array.elt[]) => Float64Array.t;
-  fromBuffer: (arg0: array_buffer) => Float64Array.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => Float64Array.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => Float64Array.t;
-  fromLength: (arg0: number) => Float64Array.t;
-  from: (arg0: array_like<Float64Array.elt>) => Float64Array.t;
-  create: (arg0: number[]) => Float64Array.t;
-  of_buffer: (arg0: array_buffer) => Float64Array.t;
 };
-export const Float64Array: Float64Array;
+export const $$Float64Array: Float64Array;
 
 declare namespace DataView {
   type t = Js_typed_array2.DataView.t;
 }
 export type DataView = {
-  make: (arg0: array_buffer) => DataView.t;
-  fromBuffer: (arg0: array_buffer) => DataView.t;
-  fromBufferOffset: (arg0: array_buffer, arg1: number) => DataView.t;
-  fromBufferRange: (arg0: array_buffer, offset: number, length: number) => DataView.t;
-  buffer: (arg0: DataView.t) => array_buffer;
-  byteLength: (arg0: DataView.t) => number;
-  byteOffset: (arg0: DataView.t) => number;
-  getInt8: (arg0: DataView.t, arg1: number) => number;
-  getUint8: (arg0: DataView.t, arg1: number) => number;
-  getInt16: (arg0: DataView.t, arg1: number) => number;
-  getInt16LittleEndian: (arg0: DataView.t, arg1: number) => number;
-  getUint16: (arg0: DataView.t, arg1: number) => number;
-  getUint16LittleEndian: (arg0: DataView.t, arg1: number) => number;
-  getInt32: (arg0: DataView.t, arg1: number) => number;
-  getInt32LittleEndian: (arg0: DataView.t, arg1: number) => number;
-  getUint32: (arg0: DataView.t, arg1: number) => number;
-  getUint32LittleEndian: (arg0: DataView.t, arg1: number) => number;
-  getFloat32: (arg0: DataView.t, arg1: number) => number;
-  getFloat32LittleEndian: (arg0: DataView.t, arg1: number) => number;
-  getFloat64: (arg0: DataView.t, arg1: number) => number;
-  getFloat64LittleEndian: (arg0: DataView.t, arg1: number) => number;
-  setInt8: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setUint8: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setInt16: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setInt16LittleEndian: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setUint16: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setUint16LittleEndian: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setInt32: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setInt32LittleEndian: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setUint32: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setUint32LittleEndian: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setFloat32: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setFloat32LittleEndian: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setFloat64: (arg0: DataView.t, arg1: number, arg2: number) => void;
-  setFloat64LittleEndian: (arg0: DataView.t, arg1: number, arg2: number) => void;
 };
-export const DataView: DataView;
+export const $$DataView: DataView;

@@ -2,8 +2,8 @@
 
 import type * as Types from "./Types.js";
 
-export function createUser(name: string, age: number): Types.user;
+export function createUser(name: string, age: number): Types.User;
 
-export function greetUser(user: Types.user): string;
+export function greetUser(user: Types.User): string;
 
-export function getDefaultUser(): Types.user;
+export function getDefaultUser(): Types.User;

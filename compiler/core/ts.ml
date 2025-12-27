@@ -109,9 +109,17 @@ type variant_payload =
   | InlineRecord of property_sig list
       (** Inline record: named fields flattened *)
 
+(** The kind of tag for a variant constructor *)
+type tag_kind =
+  | TagString of string  (** String literal tag, e.g. "Ok" *)
+  | TagNull  (** @as(null) - the literal null value *)
+  | TagUndefined  (** @as(undefined) - the literal undefined value *)
+  | TagInt of int  (** @as(123) - numeric literal *)
+  | TagBool of bool  (** @as(true) or @as(false) *)
+
 type variant_case = {
   vc_name: string;
-  vc_tag: string;  (** The TAG value, e.g. "Ok", "Error" *)
+  vc_tag: tag_kind;  (** The TAG value and its kind *)
   vc_payload: variant_payload;  (** Payload representation *)
 }
 (** Variant constructor for tagged unions *)
@@ -124,12 +132,21 @@ type variant_config = {
 
 type gadt_case = {
   gc_name: string;  (** Constructor name *)
-  gc_tag: string;  (** The TAG value *)
+  gc_tag: tag_kind;  (** The TAG value and its kind *)
   gc_payload: variant_payload;  (** Payload representation *)
   gc_result_type: ts_type;
       (** The specific result type for this constructor (e.g., t<int> for Int constructor) *)
+  gc_result_key: string option;
+      (** The key for grouping (e.g., "int", "bool") derived from result type arg.
+          None for existential types like expr<'a> *)
 }
 (** GADT constructor - each constructor has its own result type constraint *)
+
+type gadt_sub_union = {
+  gsu_key: string;  (** The key (e.g., "int", "bool") *)
+  gsu_constructors: string list;  (** Constructor names in this group *)
+}
+(** A phantom-constrained sub-union grouping constructors by result type *)
 
 (** How to import an external type *)
 type ext_import_kind =
@@ -173,11 +190,20 @@ type type_decl =
       name: string;
       type_params: type_param list;
       cases: gadt_case list;
+      sub_unions: gadt_sub_union list;
+          (** Phantom-constrained sub-unions grouping constructors by result type.
+              E.g., for expr: [{ key="int"; constructors=["IntLit";"Add"] }] *)
+      constraints: ts_type option list;
+          (** Constraints for each type parameter position.
+              Used for filtering GADT-related type variables from function signatures.
+              E.g., for number<_> with Int: number<int> | Float: number<float>,
+              constraints = [Some (number | number)] i.e., the union of all result types. *)
       config: variant_config;
     }
       (** GADT type - generates separate type for each constructor.
           For: type t<_> = Int(int): t<int> | Float(float): t<float>
-          Generates: type t$Int = ...; type t$Float = ...; type t = t$Int | t$Float *)
+          Generates: type t$Int = ...; type t$Float = ...; type t = t$Int | t$Float.
+          Constructor types are NOT exported. *)
   | OpaqueType of {
       name: string;
       type_params: type_param list;
@@ -248,6 +274,8 @@ module State = struct
     mutable opaque_decls: (string * int * ts_type option) list;
     (* GADT type parameter constraints: type name -> list of (param position, constraint) *)
     mutable gadt_constraints: ts_type option list StringMap.t;
+    (* GADT sub-unions: type name -> list of (key, constructor names) *)
+    mutable gadt_sub_unions: (string * string list) list StringMap.t;
     (* Name resolution *)
     mutable local_type_qualifiers_by_stamp: string IntMap.t;
     mutable local_type_qualifiers_by_name: string list StringMap.t;
@@ -266,6 +294,7 @@ module State = struct
       external_type_imports = StringMap.empty;
       opaque_decls = [];
       gadt_constraints = StringMap.empty;
+      gadt_sub_unions = StringMap.empty;
       local_type_qualifiers_by_stamp = IntMap.empty;
       local_type_qualifiers_by_name = StringMap.empty;
       exported_types = StringMap.empty;
@@ -282,6 +311,7 @@ module State = struct
     state.external_type_imports <- StringMap.empty;
     state.opaque_decls <- [];
     state.gadt_constraints <- StringMap.empty;
+    state.gadt_sub_unions <- StringMap.empty;
     state.local_type_qualifiers_by_stamp <- IntMap.empty;
     state.local_type_qualifiers_by_name <- StringMap.empty;
     state.exported_types <- StringMap.empty;
@@ -406,6 +436,40 @@ module State = struct
     let get_constraint_at name pos =
       match StringMap.find_opt name state.gadt_constraints with
       | Some constraints -> List.nth_opt constraints pos |> Option.join
+      | None -> None
+  end
+
+  (** {2 GADT Sub-Unions}
+      
+      Tracks GADT sub-unions for transforming type references.
+      Maps type name to list of (key, constructor names) pairs.
+      E.g., "expr" -> [("int", ["IntLit"; "Add"]); ("bool", ["BoolLit"; "Eq"])] *)
+  module GadtSubUnions = struct
+    let reset () = state.gadt_sub_unions <- StringMap.empty
+
+    (** Register sub-unions for a GADT type.
+        @param name The type name (e.g., "expr")
+        @param sub_unions List of (key, constructor names) pairs *)
+    let add name sub_unions =
+      state.gadt_sub_unions <-
+        StringMap.add name sub_unions state.gadt_sub_unions
+
+    (** Check if a type is a GADT *)
+    let is_gadt name = StringMap.mem name state.gadt_sub_unions
+
+    (** Get sub-unions for a GADT type *)
+    let get name = StringMap.find_opt name state.gadt_sub_unions
+
+    (** Get the sub-union key for a type if one exists.
+        @param gadt_name The GADT type name (e.g., "expr")
+        @param type_arg_key The type argument key (e.g., "int", "bool")
+        @return Some key if a sub-union exists, None otherwise *)
+    let get_sub_union_key gadt_name type_arg_key =
+      match StringMap.find_opt gadt_name state.gadt_sub_unions with
+      | Some sub_unions ->
+        if List.exists (fun (k, _) -> k = type_arg_key) sub_unions then
+          Some type_arg_key
+        else None
       | None -> None
   end
 
@@ -545,6 +609,7 @@ module RuntimeTypes = State.RuntimeTypes
 module TypeModuleDeps = State.TypeModuleDeps
 module OpaqueTypes = State.OpaqueTypes
 module GadtConstraints = State.GadtConstraints
+module GadtSubUnions = State.GadtSubUnions
 module ExternalTypeImports = State.ExternalTypeImports
 module LocalTypeQualifier = State.LocalTypeQualifier
 module ExportedTypes = State.ExportedTypes
@@ -749,9 +814,8 @@ let rec collect_type_deps_decl (decl : type_decl) : unit =
         | InlineRecord props ->
           List.iter (fun p -> collect_type_deps p.prop_type) props)
       cases
-  | GadtType {name; type_params; cases; _} ->
+  | GadtType {name; constraints; cases; _} ->
     (* Register GADT constraints for function signature generation *)
-    let constraints = List.map (fun tp -> tp.tp_constraint) type_params in
     GadtConstraints.add name constraints;
     List.iter
       (fun (case : gadt_case) ->
@@ -1128,17 +1192,29 @@ let get_type_as_name (env : Env.t) (path : Path.t) : string option =
     For local type references (Pident), tries to qualify using:
     1. current_module_path if set (for code generated within a module context)
     2. LocalTypeQualifier mapping by stamp (for hoisted implementation code)
-    3. LocalTypeQualifier mapping by name (if unambiguous) *)
+    3. LocalTypeQualifier mapping by name (if unambiguous)
+    
+    For qualified paths (Pdot), module aliases are resolved to their actual
+    module names so that TypeScript imports work correctly. For example,
+    if `module N = Belt_internalBuckets`, then `N.t` becomes `Belt_internalBuckets.t`. *)
 let type_display_name (path : Path.t) : string =
   match get_env () with
   | None -> Path.name path
   | Some env -> (
     (* Split path into module prefix and type name *)
     match path with
-    | Path.Pdot (prefix, _type_name, _pos) -> (
-      match get_type_as_name env path with
-      | Some renamed -> Path.name prefix ^ "." ^ renamed
-      | None -> Path.name path)
+    | Path.Pdot (prefix, type_name, pos) -> (
+      (* Normalize the prefix path to resolve module aliases.
+         For example, if `module N = Belt_internalBuckets` and we have `N.t`,
+         this will resolve to `Belt_internalBuckets.t`. *)
+      let normalized_prefix =
+        try Env.normalize_path None env prefix with _ -> prefix
+      in
+
+      let normalized_path = Path.Pdot (normalized_prefix, type_name, pos) in
+      match get_type_as_name env normalized_path with
+      | Some renamed -> Path.name normalized_prefix ^ "." ^ renamed
+      | None -> Path.name normalized_path)
     | Path.Pident id -> (
       let base_name =
         match get_type_as_name env path with
@@ -1226,6 +1302,72 @@ let process_polyvar_fields (row_fields : (string * Types.row_field) list) :
   in
   loop ~nullary:[] ~with_payload:[] ~has_unknown:false row_fields
 
+(** Map from type variable name to the GADT type it's used with.
+    Used to convert type variables in return position to GADT union types.
+    Populated by collect_type_vars_with_constraints. *)
+let gadt_type_var_map : string StringMap.t ref = ref StringMap.empty
+
+(** Check if a type variable is GADT-constrained and get the GADT type name *)
+let get_gadt_for_type_var (var_name : string) : string option =
+  StringMap.find_opt var_name !gadt_type_var_map
+
+(** Check if a type name conflicts with TypeScript reserved words.
+    These need to be escaped to avoid syntax errors.
+    Includes primitive types and keywords that cannot be used as type alias names. *)
+let is_ts_reserved_type_name name =
+  match name with
+  (* Primitive types *)
+  | "number" | "string" | "boolean" | "symbol" | "object" | "bigint" | "never"
+  | "unknown" | "any" | "void" | "null" | "undefined"
+  (* Reserved keywords that cannot be type alias names *)
+  | "function" | "class" | "enum" | "interface" | "type" | "namespace"
+  | "module" | "declare" | "abstract" | "as" | "implements" | "extends"
+  | "public" | "private" | "protected" | "static" | "readonly" ->
+    true
+  | _ -> false
+
+(** Escape a type name if it conflicts with TypeScript reserved words *)
+let escape_ts_type_name name =
+  if is_ts_reserved_type_name name then name ^ "_" else name
+
+(** Collect type variables from a function type expression.
+    Returns a list of type_param for all free type variables in the function.
+    Used to add generic type parameters to function types like <A>(x: A) => string. *)
+let collect_fn_type_vars (ty : Types.type_expr) : type_param list =
+  let seen = Hashtbl.create 16 in
+  let vars = ref [] in
+  let rec collect ty =
+    match ty.Types.desc with
+    | Types.Tvar (Some name) ->
+      let var_name = String.capitalize_ascii name in
+      if not (Hashtbl.mem seen var_name) then (
+        Hashtbl.add seen var_name ();
+        vars :=
+          {tp_name = var_name; tp_constraint = None; tp_default = None} :: !vars)
+    | Types.Tvar None ->
+      (* Anonymous type var - use id as key *)
+      let key = Printf.sprintf "_anon_%d" ty.Types.id in
+      if not (Hashtbl.mem seen key) then (
+        Hashtbl.add seen key ();
+        (* Generate a name based on position *)
+        let name =
+          match Hashtbl.find_opt anon_type_var_names ty.Types.id with
+          | Some n -> n
+          | None -> Printf.sprintf "T%d" (Hashtbl.length seen)
+        in
+        vars :=
+          {tp_name = name; tp_constraint = None; tp_default = None} :: !vars)
+    | Types.Tarrow ({typ = arg_type; _}, return_type, _, _) ->
+      collect arg_type;
+      collect return_type
+    | Types.Ttuple types -> List.iter collect types
+    | Types.Tconstr (_, args, _) -> List.iter collect args
+    | Types.Tlink ty | Types.Tsubst ty -> collect ty
+    | _ -> ()
+  in
+  collect ty;
+  List.rev !vars
+
 (** Convert ML type expression to TypeScript type.
     This is the core function for type annotation generation.
     Note: Set current_env before calling this for @as renaming support. *)
@@ -1234,69 +1376,102 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
   | Tvar None -> (
     (* Look up the generated name for this anonymous type variable *)
     match Hashtbl.find_opt anon_type_var_names ty.id with
-    | Some name -> TypeVar name
+    | Some name -> (
+      (* Check if this is a GADT-constrained type variable *)
+      match get_gadt_for_type_var name with
+      | Some gadt_name -> (
+        (* Use the GADT constraint type (e.g., number | boolean) instead of the GADT union.
+           The constraint represents the actual types that can be returned. *)
+        match GadtConstraints.get_constraint_at gadt_name 0 with
+        | Some constraint_ty -> constraint_ty
+        | None -> TypeRef {name = gadt_name; args = []})
+      | None -> TypeVar name)
     | None -> Any (* Fallback if not collected *))
-  | Tvar (Some name) -> TypeVar (String.capitalize_ascii name)
-  | Tarrow ({lbl; typ = arg_type}, return_type, _, _) -> (
-    (* Check if this is a unit parameter that should be skipped *)
-    let is_unit_param = lbl = Nolabel && is_unit_type arg_type in
-    (* For optional labeled params, unwrap option<T> to just T *)
-    let actual_type =
-      match lbl with
-      | Optional _ -> (
-        match remove_option_wrapper lbl arg_type with
-        | Some inner -> inner
-        | None -> arg_type)
-      | _ -> arg_type
+  | Tvar (Some name) -> (
+    let var_name = String.capitalize_ascii name in
+    (* Check if this is a GADT-constrained type variable *)
+    match get_gadt_for_type_var var_name with
+    | Some gadt_name -> (
+      (* Use the GADT constraint type (e.g., number | boolean) instead of the GADT union.
+         The constraint represents the actual types that can be returned. *)
+      match GadtConstraints.get_constraint_at gadt_name 0 with
+      | Some constraint_ty -> constraint_ty
+      | None -> TypeRef {name = gadt_name; args = []})
+    | None -> TypeVar var_name)
+  | Tarrow _ ->
+    (* Convert arrow type to function.
+       Note: We do NOT collect type params here - that's done at the declaration
+       site via collect_type_vars_with_constraints. Nested arrow types (callbacks)
+       should not have their own type parameters. *)
+    let rec build_fn_type ty =
+      match ty.Types.desc with
+      | Types.Tarrow ({lbl; typ = arg_type}, return_type, _, _) -> (
+        (* Check if this is a unit parameter that should be skipped *)
+        let is_unit_param = lbl = Nolabel && is_unit_type arg_type in
+        (* For optional labeled params, unwrap option<T> to just T *)
+        let actual_type =
+          match lbl with
+          | Optional _ -> (
+            match remove_option_wrapper lbl arg_type with
+            | Some inner -> inner
+            | None -> arg_type)
+          | _ -> arg_type
+        in
+        let param =
+          if is_unit_param then None
+          else
+            Some
+              {
+                param_name =
+                  (match lbl with
+                  | Nolabel -> None
+                  | Labelled {txt} | Optional {txt} -> Some txt);
+                param_type = ts_type_of_type_expr actual_type;
+                param_optional =
+                  (match lbl with
+                  | Optional _ -> true
+                  | _ -> false);
+              }
+        in
+        (* Recursively process nested arrows *)
+        match build_fn_type return_type with
+        | Function {fn_params; fn_rest; fn_return; fn_async; _} ->
+          Function
+            {
+              fn_params =
+                (match param with
+                | Some p -> p :: fn_params
+                | None -> fn_params);
+              fn_rest;
+              fn_return;
+              fn_type_params = [];
+              (* No type params for nested functions *)
+              fn_async;
+            }
+        | return_ts ->
+          Function
+            {
+              fn_params =
+                (match param with
+                | Some p -> [p]
+                | None -> []);
+              fn_rest = None;
+              fn_return = return_ts;
+              fn_type_params = [];
+              (* No type params for nested functions *)
+              fn_async = false;
+            })
+      | Types.Tlink t | Types.Tsubst t -> build_fn_type t
+      | _ -> ts_type_of_type_expr ty
     in
-    let param =
-      if is_unit_param then None
-      else
-        Some
-          {
-            param_name =
-              (match lbl with
-              | Nolabel -> None
-              | Labelled {txt} | Optional {txt} -> Some txt);
-            param_type = ts_type_of_type_expr actual_type;
-            param_optional =
-              (match lbl with
-              | Optional _ -> true
-              | _ -> false);
-          }
-    in
-    (* Flatten nested arrows into a single function type *)
-    match ts_type_of_type_expr return_type with
-    | Function {fn_params; fn_rest; fn_return; fn_type_params; fn_async} ->
-      Function
-        {
-          fn_params =
-            (match param with
-            | Some p -> p :: fn_params
-            | None -> fn_params);
-          fn_rest;
-          fn_return;
-          fn_type_params;
-          fn_async = false;
-        }
-    | return_ts ->
-      Function
-        {
-          fn_params =
-            (match param with
-            | Some p -> [p]
-            | None -> []);
-          fn_rest = None;
-          fn_return = return_ts;
-          fn_type_params = [];
-          fn_async = false;
-        })
+    build_fn_type ty
   | Ttuple types -> Tuple (List.map ts_type_of_type_expr types)
   | Tconstr (path, args, _) -> ts_type_of_constr path args
   | Tlink ty | Tsubst ty -> ts_type_of_type_expr ty
   | Tpoly (ty, type_vars) -> (
     (* Polymorphic type with locally abstract types: type a. t<a> => unit
-       Extract type variables and add them to the function's type params *)
+       Extract type variables and add them to the function's type params.
+       This is for explicitly polymorphic callback functions. *)
     match ts_type_of_type_expr ty with
     | Function fn when type_vars <> [] ->
       (* Extract type parameter names from the locally abstract types *)
@@ -1317,7 +1492,7 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
             | _ -> None)
           type_vars
       in
-      Function {fn with fn_type_params = extra_type_params @ fn.fn_type_params}
+      Function {fn with fn_type_params = extra_type_params}
     | other -> other)
   | Tvariant row_desc -> (
     (* Polymorphic variants *)
@@ -1390,107 +1565,129 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
   | Tunivar None -> (
     (* Look up the generated name for this anonymous type variable *)
     match Hashtbl.find_opt anon_type_var_names ty.id with
-    | Some name -> TypeVar name
+    | Some name -> (
+      (* Check if this is a GADT-constrained type variable *)
+      match get_gadt_for_type_var name with
+      | Some gadt_name -> (
+        (* Use the GADT constraint type instead of the GADT union *)
+        match GadtConstraints.get_constraint_at gadt_name 0 with
+        | Some constraint_ty -> constraint_ty
+        | None -> TypeRef {name = gadt_name; args = []})
+      | None -> TypeVar name)
     | None -> Any (* Fallback if not collected *))
-  | Tunivar (Some name) -> TypeVar (String.capitalize_ascii name)
+  | Tunivar (Some name) -> (
+    let var_name = String.capitalize_ascii name in
+    (* Check if this is a GADT-constrained type variable *)
+    match get_gadt_for_type_var var_name with
+    | Some gadt_name -> (
+      (* Use the GADT constraint type instead of the GADT union *)
+      match GadtConstraints.get_constraint_at gadt_name 0 with
+      | Some constraint_ty -> constraint_ty
+      | None -> TypeRef {name = gadt_name; args = []})
+    | None -> TypeVar var_name)
   | Tpackage _ -> Any
 
 and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
+  (* Normalize the path to resolve module aliases.
+     For example, Stdlib.Dict.t becomes Stdlib_Dict.t *)
+  let rec normalize_type_path env p =
+    match p with
+    | Path.Pdot (prefix, name, pos) ->
+      let normalized_prefix =
+        try Env.normalize_path None env prefix
+        with _ -> normalize_type_path env prefix
+      in
+      Path.Pdot (normalized_prefix, name, pos)
+    | _ -> p
+  in
+  let normalized_path =
+    match get_env () with
+    | Some env -> normalize_type_path env path
+    | None -> path
+  in
   (* Handle built-in types specially using path list for better matching *)
-  let path_list = path_to_list path in
+  let path_list = path_to_list normalized_path in
   match (List.rev path_list, args) with
-  | (["int"] | ["float"]), [] -> Number
+  | (["int"] | ["float"] | ["char"]), [] -> Number
   | ["bool"], [] -> Boolean
-  | ( ( ["string"]
-      | ["String"; "t"]
-      | ["Js"; "String"; "t"]
-      | ["Js"; "String2"; "t"] ),
-      [] ) ->
-    String
+  | ["string"], [] -> String
   | ["unit"], [] -> Void
-  | (["bigint"] | ["BigInt"; "t"] | ["Js"; "Types"; "bigint_val"]), [] -> Bigint
-  | (["symbol"] | ["Symbol"; "t"]), [] -> Symbol
-  | (["Js"; "Date"; "t"] | ["Date"; "t"]), [] ->
-    TypeRef {name = "Date"; args = []}
-  | (["Js"; "Re"; "t"] | ["RegExp"; "t"]), [] ->
-    TypeRef {name = "RegExp"; args = []}
-  | (["Js"; "Exn"; "t"] | ["Error"; "t"] | ["JsError"; "t"]), [] ->
-    TypeRef {name = "Error"; args = []}
-  | (["array"] | ["Array"; "t"]), [elem] -> Array (ts_type_of_type_expr elem)
-  | ( ( ["dict"]
-      | ["Dict"; "t"]
-      | ["Stdlib"; "Dict"; "t"]
-      | ["Js"; "Dict"; "t"]
-      | ["Js_dict"; "t"] ),
-      [value] ) ->
+  | ["bigint"], [] -> Bigint
+  | ["symbol"], [] -> Symbol
+  | ["array"], [elem] -> Array (ts_type_of_type_expr elem)
+  | ["dict"], [value] ->
     RuntimeType {rt_name = "dict"; rt_args = [ts_type_of_type_expr value]}
-  | ["Map"; "t"], [key; value] ->
-    TypeRef
-      {
-        name = "Map";
-        args = [ts_type_of_type_expr key; ts_type_of_type_expr value];
-      }
-  | ["WeakMap"; "t"], [key; value] ->
-    TypeRef
-      {
-        name = "WeakMap";
-        args = [ts_type_of_type_expr key; ts_type_of_type_expr value];
-      }
-  | ["Set"; "t"], [elem] ->
-    TypeRef {name = "Set"; args = [ts_type_of_type_expr elem]}
-  | ["WeakSet"; "t"], [elem] ->
-    TypeRef {name = "WeakSet"; args = [ts_type_of_type_expr elem]}
-  | ( ( ["option"]
-      | ["Option"; "t"]
-      | ["Stdlib"; "Option"; "t"]
-      | ["Js"; "undefined"]
-      | ["Js"; "Undefined"; "t"]
-      | ["Js_undefined"; "t"] ),
-      [elem] ) ->
+  | ["option"], [elem] ->
     RuntimeType {rt_name = "option"; rt_args = [ts_type_of_type_expr elem]}
-  | ( ( ["null"]
-      | ["Null"; "t"]
-      | ["Stdlib"; "Null"; "t"]
-      | ["Js"; "null"]
-      | ["Js"; "Null"; "t"]
-      | ["Js_null"; "t"] ),
-      [elem] ) ->
-    RuntimeType {rt_name = "null_"; rt_args = [ts_type_of_type_expr elem]}
-  | ( ( ["nullable"]
-      | ["Nullable"; "t"]
-      | ["Stdlib"; "Nullable"; "t"]
-      | ["Js"; "nullable"]
-      | ["Js"; "null_undefined"]
-      | ["Js"; "Nullable"; "t"]
-      | ["Js_nullable"; "t"]
-      | ["Js_null_undefined"; "t"] ),
-      [elem] ) ->
-    RuntimeType {rt_name = "nullable"; rt_args = [ts_type_of_type_expr elem]}
-  | (["promise"] | ["Promise"; "t"] | ["Js"; "Promise"; "t"]), [elem] ->
-    Promise (ts_type_of_type_expr elem)
-  | (["promise"] | ["Promise"; "t"] | ["Js"; "Promise"; "t"]), [] -> Promise Any
-  | ["Iterator"; "t"], [elem] ->
-    TypeRef {name = "Iterator"; args = [ts_type_of_type_expr elem]}
-  | ["AsyncIterator"; "t"], [elem] ->
-    TypeRef {name = "AsyncIterator"; args = [ts_type_of_type_expr elem]}
-  | (["result"] | ["Result"; "t"] | ["Stdlib"; "Result"; "t"]), [ok; err] ->
+  | ["promise"], [elem] -> Promise (ts_type_of_type_expr elem)
+  | ["promise"], [] -> Promise Any
+  | ["result"], [ok; err] ->
     RuntimeType
       {
         rt_name = "result";
         rt_args = [ts_type_of_type_expr ok; ts_type_of_type_expr err];
       }
-  | ( (["ref"] | ["Ref"; "t"] | ["Stdlib"; "Ref"; "t"] | ["Pervasives"; "ref"]),
-      [elem] ) ->
-    RuntimeType {rt_name = "ref"; rt_args = [ts_type_of_type_expr elem]}
-  | (["list"] | ["List"; "t"] | ["Stdlib"; "List"; "t"]), [elem] ->
+  | ["list"], [elem] ->
     RuntimeType {rt_name = "list"; rt_args = [ts_type_of_type_expr elem]}
-  | (["Js"; "Json"; "t"] | ["JSON"; "t"]), [] -> Unknown
-  | (["Obj"; "t"] | ["Primitive_object"; "t"]), [] -> Any
-  | ["Js"; "t"], [inner] -> ts_type_of_type_expr inner
+  | ["exn"], [] -> RuntimeType {rt_name = "exn"; rt_args = []}
+  | ["unknown"], [] -> Unknown
   | _ ->
-    (* Generic type reference with @as renaming applied *)
-    TypeRef
-      {name = type_display_name path; args = List.map ts_type_of_type_expr args}
+    (* Generic type reference with @as renaming applied.
+       Module aliases are resolved in type_display_name. *)
+    let type_name = type_display_name normalized_path in
+    let simple_name = Path.last normalized_path in
+    (* For GADT lookup, we need to check with escaped names since GADTs are registered
+       with escaped names (e.g., "number_" for a GADT named "number") *)
+    let escaped_simple_name = escape_ts_type_name simple_name in
+    let escaped_type_name = escape_ts_type_name type_name in
+    (* Check if this is a GADT type - if so, handle specially
+       Try both qualified and simple names since registration uses escaped name *)
+    if
+      GadtSubUnions.is_gadt escaped_type_name
+      || GadtSubUnions.is_gadt escaped_simple_name
+    then
+      let gadt_name =
+        if GadtSubUnions.is_gadt escaped_type_name then escaped_type_name
+        else escaped_simple_name
+      in
+      (* For GADT types, check if we can use a sub-union *)
+      match args with
+      | [arg] -> (
+        (* Single type argument - try to find matching sub-union *)
+        let key =
+          match arg.Types.desc with
+          | Types.Tconstr (arg_path, [], _) ->
+            Some (String.lowercase_ascii (Path.last arg_path))
+          | Types.Tlink t | Types.Tsubst t -> (
+            match t.Types.desc with
+            | Types.Tconstr (arg_path, [], _) ->
+              Some (String.lowercase_ascii (Path.last arg_path))
+            | _ -> None)
+          | _ -> None
+        in
+        match key with
+        | Some k when GadtSubUnions.get_sub_union_key gadt_name k <> None ->
+          (* Use sub-union type *)
+          TypeRef {name = gadt_name ^ "$" ^ k; args = []}
+        | _ ->
+          (* No sub-union, use main union type without args *)
+          TypeRef {name = gadt_name; args = []})
+      | _ ->
+        (* No args or multiple args - use main union type *)
+        TypeRef {name = gadt_name; args = []}
+    else
+      (* Normal type reference.
+         We need to escape the last component if it's a TS reserved name,
+         because the type declaration would have been escaped. *)
+      let final_name =
+        if is_ts_reserved_type_name simple_name then
+          (* Escape the last component of the path *)
+          match String.rindex_opt type_name '.' with
+          | Some idx -> String.sub type_name 0 (idx + 1) ^ simple_name ^ "_"
+          | None -> simple_name ^ "_"
+        else type_name
+      in
+      TypeRef {name = final_name; args = List.map ts_type_of_type_expr args}
 
 (** {1 Utility Functions} *)
 
@@ -1634,23 +1831,27 @@ let collect_type_vars (fn_type : Types.type_expr option) : string list =
 
 (** Collect type variables with GADT constraints from a type expression.
     For each type variable, looks up constraints from GADT types it's used with.
-    Returns list of type_param with constraints. *)
+    Returns list of type_param with constraints.
+    Also populates gadt_type_var_map for return type conversion. *)
 let collect_type_vars_with_constraints (fn_type : Types.type_expr option) :
     type_param list =
   Hashtbl.clear anon_type_var_names;
+  gadt_type_var_map := StringMap.empty;
   match fn_type with
   | None -> []
   | Some ty ->
-    (* Map from type var name to constraint *)
+    (* Map from type var name to (constraint option, gadt_type_name option) *)
     let var_constraints : ts_type option StringMap.t ref =
       ref StringMap.empty
     in
+    (* Track which type variables are used with GADT types *)
+    let gadt_vars : string StringMap.t ref = ref StringMap.empty in
     let vars = ref [] in
     let seen_named = Hashtbl.create 16 in
     let seen_anon = Hashtbl.create 16 in
     let anon_counter = ref 0 in
-    (* Get var name for a type expression *)
-    let get_var_name tv =
+    (* Get var name for a type expression, following Tlink/Tsubst *)
+    let rec get_var_name tv =
       match tv.Types.desc with
       | Types.Tvar (Some name) | Types.Tunivar (Some name) ->
         Some (String.capitalize_ascii name)
@@ -1658,6 +1859,7 @@ let collect_type_vars_with_constraints (fn_type : Types.type_expr option) :
         match Hashtbl.find_opt anon_type_var_names tv.Types.id with
         | Some name -> Some name
         | None -> None)
+      | Types.Tlink t | Types.Tsubst t -> get_var_name t
       | _ -> None
     in
     let rec collect ty =
@@ -1680,12 +1882,16 @@ let collect_type_vars_with_constraints (fn_type : Types.type_expr option) :
       | Types.Tconstr (path, args, _) ->
         (* Check if any args are type vars and look up constraints *)
         let type_name = Path.last path in
-        (match GadtConstraints.get type_name with
+        (* Escape to match how GADT is registered *)
+        let escaped_type_name = escape_ts_type_name type_name in
+        (match GadtConstraints.get escaped_type_name with
         | Some constraints ->
           List.iteri
             (fun i arg ->
               match get_var_name arg with
               | Some var_name -> (
+                (* Track that this type var is used with this GADT (with escaped name) *)
+                gadt_vars := StringMap.add var_name escaped_type_name !gadt_vars;
                 match List.nth_opt constraints i |> Option.join with
                 | Some constraint_ty ->
                   (* Merge constraints: if var already has constraint, union them *)
@@ -1741,16 +1947,37 @@ let collect_type_vars_with_constraints (fn_type : Types.type_expr option) :
       | _ -> ()
     in
     collect ty;
+    (* Store the GADT type var map for later use in return type conversion *)
+    gadt_type_var_map := !gadt_vars;
+    (* Filter out type variables that are GADT-constrained *)
+    let non_gadt_vars =
+      List.filter (fun name -> not (StringMap.mem name !gadt_vars)) !vars
+    in
     (* Convert to type_param list with constraints *)
-    List.rev_map
-      (fun name ->
-        {
-          tp_name = name;
-          tp_constraint =
-            StringMap.find_opt name !var_constraints |> Option.join;
-          tp_default = None;
-        })
-      !vars
+    let result =
+      List.rev_map
+        (fun name ->
+          {
+            tp_name = name;
+            tp_constraint =
+              StringMap.find_opt name !var_constraints |> Option.join;
+            tp_default = None;
+          })
+        non_gadt_vars
+    in
+    (* Deduplicate result - there may be duplicates if the same name appears
+       in multiple places (e.g., 'a in Tvar and a in Tpoly type_vars) *)
+    let seen_in_result = Hashtbl.create 16 in
+    let deduped_result =
+      List.filter
+        (fun tp ->
+          if Hashtbl.mem seen_in_result tp.tp_name then false
+          else (
+            Hashtbl.add seen_in_result tp.tp_name ();
+            true))
+        result
+    in
+    deduped_result
 
 (** {1 Type Declaration Extraction} *)
 
@@ -1763,6 +1990,35 @@ let extract_gadt_type_args (res_ty : Types.type_expr) : ts_type list =
     | Types.Tlink t | Types.Tsubst t -> unwrap t
     | Types.Tconstr (_, args, _) -> List.map ts_type_of_type_expr args
     | _ -> []
+  in
+  unwrap res_ty
+
+(** Extract a simple key from a GADT result type's type argument (from Types.type_expr).
+    Returns Some key for concrete types (int, float, bool, string, or named types).
+    Returns None for type variables or complex types where sub-union grouping doesn't make sense.
+    Uses original type_expr to preserve distinction between int/float. *)
+let gadt_result_key_of_type_expr (ty : Types.type_expr) : string option =
+  let rec extract ty =
+    match ty.Types.desc with
+    | Types.Tconstr (path, [], _) ->
+      (* Concrete type without arguments *)
+      Some (String.lowercase_ascii (Path.last path))
+    | Types.Tlink t | Types.Tsubst t -> extract t
+    | Types.Tvar _ -> None (* Type variable - can't group *)
+    | _ -> None
+  in
+  extract ty
+
+(** Extract the first type argument from a GADT constructor's result type.
+    For a result type like t<int>, returns Some int_type_expr.
+    For a result type like t<'a>, returns Some 'a_type_expr. *)
+let extract_gadt_first_type_arg (res_ty : Types.type_expr) :
+    Types.type_expr option =
+  let rec unwrap ty =
+    match ty.Types.desc with
+    | Types.Tlink t | Types.Tsubst t -> unwrap t
+    | Types.Tconstr (_, first_arg :: _, _) -> Some first_arg
+    | _ -> None
   in
   unwrap res_ty
 
@@ -1790,18 +2046,168 @@ let compute_gadt_constraints (constructors : Types.constructor_declaration list)
         let types_at_pos =
           List.filter_map (fun args -> List.nth_opt args i) all_args
         in
+        (* Filter out type variables - they represent existential types and shouldn't
+           be part of the constraint. Only concrete types matter for the constraint union. *)
+        let concrete_types =
+          List.filter
+            (fun ty ->
+              match ty with
+              | TypeVar _ -> false
+              | _ -> true)
+            types_at_pos
+        in
         (* Remove duplicates and create union if multiple types *)
         let unique_types =
           List.fold_left
             (fun acc ty ->
               if List.exists (fun t -> t = ty) acc then acc else ty :: acc)
-            [] types_at_pos
+            [] concrete_types
           |> List.rev
         in
         match unique_types with
         | [] -> None
         | [single] -> Some single
         | multiple -> Some (Union multiple))
+
+(** Compute sub-unions for GADT types.
+    Groups constructors by their result type's first type argument.
+    For expr<_> with IntLit: expr<int>, Add: expr<int>, BoolLit: expr<bool>:
+    Returns [{key="int"; constructors=["IntLit";"Add"]}; {key="bool"; constructors=["BoolLit"]}]
+    Only creates sub-unions for concrete type arguments (not type variables). *)
+let compute_gadt_sub_unions (cases : gadt_case list) : gadt_sub_union list =
+  (* Group cases by their result key *)
+  let groups = Hashtbl.create 16 in
+  List.iter
+    (fun (case : gadt_case) ->
+      match case.gc_result_key with
+      | Some key ->
+        let existing =
+          match Hashtbl.find_opt groups key with
+          | Some l -> l
+          | None -> []
+        in
+        Hashtbl.replace groups key (case.gc_name :: existing)
+      | None -> ())
+    cases;
+  (* Convert to list, only keeping groups with 1+ constructors *)
+  Hashtbl.fold
+    (fun key constructors acc ->
+      {gsu_key = key; gsu_constructors = List.rev constructors} :: acc)
+    groups []
+  |> List.sort (fun a b -> String.compare a.gsu_key b.gsu_key)
+
+(** Transform a ts_type to use sub-union references for GADT payload types.
+    Replaces TypeRef nodes like expr<number> with expr$int if a sub-union exists.
+    @param gadt_name The name of the GADT type (e.g., "expr")
+    @param sub_unions List of available sub-unions with their keys *)
+let rec transform_gadt_payload_type ~(gadt_name : string)
+    ~(sub_unions : gadt_sub_union list) (ty : ts_type) : ts_type =
+  match ty with
+  | TypeRef {name; args = [arg]} when name = gadt_name -> (
+    (* This is a reference to the GADT type with one type argument *)
+    (* Try to find the corresponding sub-union key *)
+    let key =
+      match arg with
+      | Number -> Some "int"
+      | Boolean -> Some "bool"
+      | String -> Some "string"
+      | Bigint -> Some "bigint"
+      | TypeRef {name = tname; args = []} -> Some (String.lowercase_ascii tname)
+      | _ -> None
+    in
+    match key with
+    | Some k when List.exists (fun su -> su.gsu_key = k) sub_unions ->
+      (* Found a sub-union, use it *)
+      TypeRef {name = gadt_name ^ "$" ^ k; args = []}
+    | _ ->
+      (* No sub-union for this key, use the full union type without args *)
+      TypeRef {name = gadt_name; args = []})
+  | TypeRef {name; args} when name = gadt_name ->
+    (* GADT reference without single arg - just use the union type *)
+    TypeRef {name = gadt_name; args = []}
+  | Array elem ->
+    Array (transform_gadt_payload_type ~gadt_name ~sub_unions elem)
+  | Tuple types ->
+    Tuple (List.map (transform_gadt_payload_type ~gadt_name ~sub_unions) types)
+  | Object {properties; index_sig; call_sig} ->
+    Object
+      {
+        properties =
+          List.map
+            (fun p ->
+              {
+                p with
+                prop_type =
+                  transform_gadt_payload_type ~gadt_name ~sub_unions p.prop_type;
+              })
+            properties;
+        index_sig =
+          Option.map
+            (fun is ->
+              {
+                index_key =
+                  transform_gadt_payload_type ~gadt_name ~sub_unions
+                    is.index_key;
+                index_value =
+                  transform_gadt_payload_type ~gadt_name ~sub_unions
+                    is.index_value;
+              })
+            index_sig;
+        call_sig;
+      }
+  | Function fn ->
+    Function
+      {
+        fn with
+        fn_params =
+          List.map
+            (fun p ->
+              {
+                p with
+                param_type =
+                  transform_gadt_payload_type ~gadt_name ~sub_unions
+                    p.param_type;
+              })
+            fn.fn_params;
+        fn_return =
+          transform_gadt_payload_type ~gadt_name ~sub_unions fn.fn_return;
+      }
+  | Union types ->
+    Union (List.map (transform_gadt_payload_type ~gadt_name ~sub_unions) types)
+  | Intersection types ->
+    Intersection
+      (List.map (transform_gadt_payload_type ~gadt_name ~sub_unions) types)
+  | Readonly t ->
+    Readonly (transform_gadt_payload_type ~gadt_name ~sub_unions t)
+  | Promise t -> Promise (transform_gadt_payload_type ~gadt_name ~sub_unions t)
+  | RuntimeType {rt_name; rt_args} ->
+    RuntimeType
+      {
+        rt_name;
+        rt_args =
+          List.map (transform_gadt_payload_type ~gadt_name ~sub_unions) rt_args;
+      }
+  | _ -> ty
+
+(** Transform a variant_payload to use sub-union references *)
+let transform_gadt_payload ~(gadt_name : string)
+    ~(sub_unions : gadt_sub_union list) (payload : variant_payload) :
+    variant_payload =
+  match payload with
+  | NoPayload -> NoPayload
+  | TuplePayload types ->
+    TuplePayload
+      (List.map (transform_gadt_payload_type ~gadt_name ~sub_unions) types)
+  | InlineRecord properties ->
+    InlineRecord
+      (List.map
+         (fun p ->
+           {
+             p with
+             prop_type =
+               transform_gadt_payload_type ~gadt_name ~sub_unions p.prop_type;
+           })
+         properties)
 
 (** Convert type parameters from Types.type_expr list to type_param list *)
 let type_params_of_type_exprs (params : Types.type_expr list) : type_param list
@@ -1829,7 +2235,9 @@ let type_params_of_type_exprs (params : Types.type_expr list) : type_param list
         })
     params
 
-(** Convert type parameters with GADT constraints *)
+(** Convert type parameters with GADT constraints.
+    For GADT types, we set the default equal to the constraint so the type
+    can be used without explicit type args (e.g., `expr` instead of `expr<number | boolean>`). *)
 let type_params_of_type_exprs_with_constraints (params : Types.type_expr list)
     (constraints : ts_type option list) : type_param list =
   List.mapi
@@ -1839,24 +2247,26 @@ let type_params_of_type_exprs_with_constraints (params : Types.type_expr list)
         | Some c -> c
         | None -> None
       in
+      (* Set default equal to constraint so GADT types can be used without type args *)
+      let default_opt = constraint_opt in
       match param.Types.desc with
       | Types.Tvar (Some name) ->
         {
           tp_name = String.capitalize_ascii name;
           tp_constraint = constraint_opt;
-          tp_default = None;
+          tp_default = default_opt;
         }
       | Types.Tvar None ->
         {
           tp_name = Printf.sprintf "T%d" i;
           tp_constraint = constraint_opt;
-          tp_default = None;
+          tp_default = default_opt;
         }
       | _ ->
         {
           tp_name = Printf.sprintf "T%d" i;
           tp_constraint = constraint_opt;
-          tp_default = None;
+          tp_default = default_opt;
         })
     params
 
@@ -1864,11 +2274,13 @@ let type_params_of_type_exprs_with_constraints (params : Types.type_expr list)
 let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
     : type_decl option =
   let type_params = type_params_of_type_exprs decl.type_params in
-  let type_name =
+  let raw_type_name =
     match get_as_string decl.type_attributes with
     | Some renamed -> renamed
     | None -> Ident.name id
   in
+  (* Escape type names that conflict with TypeScript primitives *)
+  let type_name = escape_ts_type_name raw_type_name in
   (* Check for @external attribute upfront for types with shapes *)
   let external_type_info = get_external_type decl.type_attributes in
   match decl.type_kind with
@@ -1966,12 +2378,15 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
                 match
                   Ast_untagged_variants.process_tag_type cd.cd_attributes
                 with
-                | Some (Ast_untagged_variants.String s) -> s
-                | Some (Ast_untagged_variants.Int i) -> string_of_int i
+                | Some (Ast_untagged_variants.String s) -> TagString s
+                | Some (Ast_untagged_variants.Int i) -> TagInt i
+                | Some Ast_untagged_variants.Null -> TagNull
+                | Some Ast_untagged_variants.Undefined -> TagUndefined
+                | Some (Ast_untagged_variants.Bool b) -> TagBool b
                 | _ -> (
                   match get_as_string cd.cd_attributes with
-                  | Some renamed -> renamed
-                  | None -> name)
+                  | Some renamed -> TagString renamed
+                  | None -> TagString name)
               in
               let payload =
                 match cd.cd_args with
@@ -2037,12 +2452,15 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
                 match
                   Ast_untagged_variants.process_tag_type cd.cd_attributes
                 with
-                | Some (Ast_untagged_variants.String s) -> s
-                | Some (Ast_untagged_variants.Int i) -> string_of_int i
+                | Some (Ast_untagged_variants.String s) -> TagString s
+                | Some (Ast_untagged_variants.Int i) -> TagInt i
+                | Some Ast_untagged_variants.Null -> TagNull
+                | Some Ast_untagged_variants.Undefined -> TagUndefined
+                | Some (Ast_untagged_variants.Bool b) -> TagBool b
                 | _ -> (
                   match get_as_string cd.cd_attributes with
-                  | Some renamed -> renamed
-                  | None -> name)
+                  | Some renamed -> TagString renamed
+                  | None -> TagString name)
               in
               let payload =
                 match cd.cd_args with
@@ -2070,34 +2488,63 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
                   InlineRecord properties
               in
               (* For GADT, get the result type from cd_res *)
-              let result_type =
+              let result_type, result_key =
                 match cd.cd_res with
-                | Some res_ty -> ts_type_of_type_expr res_ty
+                | Some res_ty ->
+                  let ts_ty = ts_type_of_type_expr res_ty in
+                  (* Extract the key from original type_expr to preserve int/float distinction *)
+                  let key =
+                    match extract_gadt_first_type_arg res_ty with
+                    | Some first_arg -> gadt_result_key_of_type_expr first_arg
+                    | None -> None
+                  in
+                  (ts_ty, key)
                 | None ->
                   (* Constructor without result type annotation - use base type *)
-                  TypeRef
-                    {
-                      name = type_name;
-                      args =
-                        List.map
-                          (fun tp -> TypeVar tp.tp_name)
-                          type_params_with_constraints;
-                    }
+                  ( TypeRef
+                      {
+                        name = type_name;
+                        args =
+                          List.map
+                            (fun tp -> TypeVar tp.tp_name)
+                            type_params_with_constraints;
+                      },
+                    None )
               in
               {
                 gc_name = name;
                 gc_tag = tag;
                 gc_payload = payload;
                 gc_result_type = result_type;
+                gc_result_key = result_key;
               })
             constructors
+        in
+        (* Compute sub-unions grouping constructors by result type *)
+        let sub_unions = compute_gadt_sub_unions cases in
+        (* Register sub-unions in state for type reference transformation *)
+        GadtSubUnions.add type_name
+          (List.map (fun su -> (su.gsu_key, su.gsu_constructors)) sub_unions);
+        (* Transform payload types to use sub-unions *)
+        let transformed_cases =
+          List.map
+            (fun (case : gadt_case) ->
+              {
+                case with
+                gc_payload =
+                  transform_gadt_payload ~gadt_name:type_name ~sub_unions
+                    case.gc_payload;
+              })
+            cases
         in
         Some
           (GadtType
              {
                name = type_name;
                type_params = type_params_with_constraints;
-               cases;
+               cases = transformed_cases;
+               sub_unions;
+               constraints;
                config;
              }))
       else
@@ -2111,13 +2558,16 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
                 match
                   Ast_untagged_variants.process_tag_type cd.cd_attributes
                 with
-                | Some (Ast_untagged_variants.String s) -> s
-                | Some (Ast_untagged_variants.Int i) -> string_of_int i
+                | Some (Ast_untagged_variants.String s) -> TagString s
+                | Some (Ast_untagged_variants.Int i) -> TagInt i
+                | Some Ast_untagged_variants.Null -> TagNull
+                | Some Ast_untagged_variants.Undefined -> TagUndefined
+                | Some (Ast_untagged_variants.Bool b) -> TagBool b
                 | _ -> (
                   (* Fall back to @as or constructor name *)
                   match get_as_string cd.cd_attributes with
-                  | Some renamed -> renamed
-                  | None -> name)
+                  | Some renamed -> TagString renamed
+                  | None -> TagString name)
               in
               let payload =
                 match cd.cd_args with
@@ -2221,70 +2671,33 @@ let register_local_type ~(prefix : string) (id : Ident.t)
   LocalTypeQualifier.add ~stamp ~name ~qualified
 
 (** Extract all type declarations from a Typedtree structure.
+    Uses interface_sig (from .resi file) if available to determine what to export,
+    ensuring that private items are not included in .d.ts output.
+    Falls back to str_type if no interface signature is provided.
     Also populates LocalTypeQualifier for stamp-based type lookup. *)
-let rec extract_type_decls (str : Typedtree.structure) : type_decl list =
+let rec extract_type_decls ~(interface_sig : Types.signature)
+    (str : Typedtree.structure) : type_decl list =
   (* Reset LocalTypeQualifier at the start of extraction *)
   LocalTypeQualifier.reset ();
   let decls = ref [] in
+  (* Use interface_sig (from .resi/.cmi) if available, otherwise fall back to str_type.
+     This ensures we only export what's in the interface. *)
+  let sig_to_use = interface_sig in
   List.iter
-    (fun (item : Typedtree.structure_item) ->
-      match item.str_desc with
-      | Typedtree.Tstr_type (_, type_decls) ->
-        List.iter
-          (fun (td : Typedtree.type_declaration) ->
-            register_local_type ~prefix:"" td.typ_id td.typ_type;
-            match type_decl_of_type_declaration td.typ_id td.typ_type with
-            | Some decl -> decls := decl :: !decls
-            | None -> ())
-          type_decls
-      | Typedtree.Tstr_module mb -> (
-        (* Extract module as a type declaration *)
-        match extract_module_decl ~prefix:"" mb with
+    (fun (sig_item : Types.signature_item) ->
+      match sig_item with
+      | Types.Sig_type (id, decl, _) -> (
+        register_local_type ~prefix:"" id decl;
+        match type_decl_of_type_declaration id decl with
+        | Some type_decl -> decls := type_decl :: !decls
+        | None -> ())
+      | Types.Sig_module (id, md, _) -> (
+        match extract_module_decl_from_sig ~prefix:"" id md with
         | Some mod_decl -> decls := ModuleDecl mod_decl :: !decls
         | None -> ())
       | _ -> ())
-    str.str_items;
+    sig_to_use;
   List.rev !decls
-
-(** Extract a module declaration from a module binding *)
-and extract_module_decl ~(prefix : string) (mb : Typedtree.module_binding) :
-    module_decl option =
-  let name = Ident.name mb.mb_id in
-  let module_prefix = if prefix = "" then name else prefix ^ "." ^ name in
-  match mb.mb_expr.mod_type with
-  | Types.Mty_signature sig_items ->
-    let types = ref [] in
-    let values = ref [] in
-    let submodules = ref [] in
-    List.iter
-      (fun (sig_item : Types.signature_item) ->
-        match sig_item with
-        | Types.Sig_type (id, decl, _) -> (
-          register_local_type ~prefix:module_prefix id decl;
-          match type_decl_of_type_declaration id decl with
-          | Some td -> types := td :: !types
-          | None -> ())
-        | Types.Sig_value (id, vd) ->
-          values :=
-            {
-              mv_name = Ident.name id;
-              mv_type = ts_type_of_type_expr vd.val_type;
-            }
-            :: !values
-        | Types.Sig_module (id, md, _) -> (
-          match extract_module_decl_from_sig ~prefix:module_prefix id md with
-          | Some sub -> submodules := sub :: !submodules
-          | None -> ())
-        | _ -> ())
-      sig_items;
-    Some
-      {
-        mod_name = name;
-        mod_types = List.rev !types;
-        mod_values = List.rev !values;
-        mod_submodules = List.rev !submodules;
-      }
-  | _ -> None
 
 (** Extract a module declaration from a signature module declaration *)
 and extract_module_decl_from_sig ~(prefix : string) (id : Ident.t)
@@ -2304,13 +2717,17 @@ and extract_module_decl_from_sig ~(prefix : string) (id : Ident.t)
           match type_decl_of_type_declaration id decl with
           | Some td -> types := td :: !types
           | None -> ())
-        | Types.Sig_value (id, vd) ->
-          values :=
-            {
-              mv_name = Ident.name id;
-              mv_type = ts_type_of_type_expr vd.val_type;
-            }
-            :: !values
+        | Types.Sig_value (id, vd) -> (
+          (* Skip externals (Val_prim) as they don't generate JS code *)
+          match vd.val_kind with
+          | Types.Val_prim _ -> ()
+          | Types.Val_reg ->
+            values :=
+              {
+                mv_name = Ident.name id;
+                mv_type = ts_type_of_type_expr vd.val_type;
+              }
+              :: !values)
         | Types.Sig_module (id, md, _) -> (
           match extract_module_decl_from_sig ~prefix:module_prefix id md with
           | Some sub -> submodules := sub :: !submodules
@@ -2330,6 +2747,8 @@ type value_export = {
   ve_name: string;
   ve_type: Types.type_expr;
   ve_params: string list;
+  ve_alias: string option;
+      (** If this is an alias like `let x = y`, stores "y" *)
 }
 (** Value export with its type for .d.ts generation *)
 
@@ -2352,6 +2771,12 @@ let rec extract_param_names (expr : Typedtree.expression) : string list =
     Ident.name param :: extract_param_names case.c_rhs
   | _ -> []
 
+(** Extract alias target if expression is just an identifier *)
+let extract_alias_target (expr : Typedtree.expression) : string option =
+  match expr.exp_desc with
+  | Typedtree.Texp_ident (path, _, _) -> Some (Path.last path)
+  | _ -> None
+
 (** Extract the identifier from a pattern, handling Tpat_var and Tpat_alias.
     Note: Tpat_constraint is in pat_extra, not pat_desc, so we just need to handle
     the core patterns. *)
@@ -2371,8 +2796,24 @@ let extract_constraint_type (pat : Typedtree.pattern) : Types.type_expr =
   in
   find_constraint pat.pat_extra
 
-(** Extract all value exports from a Typedtree structure *)
-let extract_value_exports (str : Typedtree.structure) : value_export list =
+(** Extract all value exports from a Typedtree structure.
+    Uses interface_sig (from .resi file) if available to filter what to export,
+    ensuring that private items are not included in .d.ts output.
+    Falls back to str_type if no interface signature is provided. *)
+let extract_value_exports ~(interface_sig : Types.signature)
+    (str : Typedtree.structure) : value_export list =
+  (* Build a map of value names to their types from the public signature.
+     Use interface_sig to get the correct types as declared in the interface. *)
+  let sig_to_use = interface_sig in
+  let public_values =
+    List.fold_left
+      (fun acc (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_value (id, vd) ->
+          Map_string.add acc (Ident.name id) vd.val_type
+        | _ -> acc)
+      Map_string.empty sig_to_use
+  in
   let exports = ref [] in
   List.iter
     (fun (item : Typedtree.structure_item) ->
@@ -2381,18 +2822,24 @@ let extract_value_exports (str : Typedtree.structure) : value_export list =
         List.iter
           (fun (vb : Typedtree.value_binding) ->
             match extract_pat_ident vb.vb_pat with
-            | Some id ->
-              let params = extract_param_names vb.vb_expr in
-              (* Use constraint type from pat_extra if present (explicit type annotation),
-                 otherwise fall back to pat_type. This ensures `let f: a => b = x => x`
-                 gets type `a => b`, not the unified/inferred type. *)
-              exports :=
-                {
-                  ve_name = Ident.name id;
-                  ve_type = extract_constraint_type vb.vb_pat;
-                  ve_params = params;
-                }
-                :: !exports
+            | Some id -> (
+              let name = Ident.name id in
+              (* Only export if the value is in the public signature *)
+              match Map_string.find_opt public_values name with
+              | Some interface_type ->
+                let params = extract_param_names vb.vb_expr in
+                let alias = extract_alias_target vb.vb_expr in
+                (* Use type from interface signature, not implementation.
+                   This ensures types match what's declared in .resi files. *)
+                exports :=
+                  {
+                    ve_name = name;
+                    ve_type = interface_type;
+                    ve_params = params;
+                    ve_alias = alias;
+                  }
+                  :: !exports
+              | None -> ())
             | None -> ())
           bindings
       | Typedtree.Tstr_primitive _ ->
@@ -2541,6 +2988,44 @@ let is_ts_reserved_word name =
 let escape_ts_reserved name =
   if is_ts_reserved_word name then name ^ "_" else name
 
+(** Check if a property name needs to be quoted in TypeScript.
+    Property names need quotes if they contain characters other than
+    alphanumerics, underscore, or dollar sign, or if they start with a digit. *)
+let needs_property_quotes name =
+  let len = String.length name in
+  if len = 0 then true
+  else
+    let first = name.[0] in
+    (* Must start with letter, underscore, or dollar *)
+    let valid_start =
+      (first >= 'a' && first <= 'z')
+      || (first >= 'A' && first <= 'Z')
+      || first = '_' || first = '$'
+    in
+    if not valid_start then true
+    else
+      try
+        for i = 1 to len - 1 do
+          let c = name.[i] in
+          let valid =
+            (c >= 'a' && c <= 'z')
+            || (c >= 'A' && c <= 'Z')
+            || (c >= '0' && c <= '9')
+            || c = '_' || c = '$'
+          in
+          if not valid then raise_notrace Exit
+        done;
+        false
+      with Exit -> true
+
+(** Print a property name, quoting if necessary *)
+let pp_property_name (f : P.t) (name : string) : unit =
+  if needs_property_quotes name then (
+    P.string f "\"";
+    P.string f name;
+    P.string f "\"")
+  else P.string f name
+
 (** Print a TypeScript type to the pretty printer *)
 let rec pp_ts_type (f : P.t) (ty : ts_type) : unit =
   match ty with
@@ -2646,34 +3131,34 @@ and pp_object_type (f : P.t) (obj : object_type) : unit =
   let use_multiline = prop_count > 1 || has_index in
   if use_multiline then (
     P.string f "{";
-    List.iter
-      (fun prop ->
-        P.newline f;
-        P.string f "    ";
-        if prop.prop_readonly then P.string f "readonly ";
-        P.string f prop.prop_name;
-        if prop.prop_optional then P.string f "?";
-        P.string f ": ";
-        pp_ts_type f prop.prop_type;
-        P.string f ";")
-      obj.properties;
-    (match obj.index_sig with
-    | Some {index_key; index_value} ->
-      P.newline f;
-      P.string f "    [key: ";
-      pp_ts_type f index_key;
-      P.string f "]: ";
-      pp_ts_type f index_value;
-      P.string f ";"
-    | None -> ());
+    P.group f 1 (fun () ->
+        List.iter
+          (fun prop ->
+            P.newline f;
+            if prop.prop_readonly then P.string f "readonly ";
+            pp_property_name f prop.prop_name;
+            if prop.prop_optional then P.string f "?";
+            P.string f ": ";
+            pp_ts_type f prop.prop_type;
+            P.string f ";")
+          obj.properties;
+        match obj.index_sig with
+        | Some {index_key; index_value} ->
+          P.newline f;
+          P.string f "[key: ";
+          pp_ts_type f index_key;
+          P.string f "]: ";
+          pp_ts_type f index_value;
+          P.string f ";"
+        | None -> ());
     P.newline f;
-    P.string f "  }")
+    P.string f "}")
   else (
     P.string f "{ ";
     List.iter
       (fun prop ->
         if prop.prop_readonly then P.string f "readonly ";
-        P.string f prop.prop_name;
+        pp_property_name f prop.prop_name;
         if prop.prop_optional then P.string f "?";
         P.string f ": ";
         pp_ts_type f prop.prop_type;
@@ -2754,6 +3239,44 @@ and pp_type_param (f : P.t) (p : type_param) : unit =
     P.string f " = ";
     pp_ts_type f d
   | None -> ()
+
+(** Print type parameters for GADT union types with proper formatting.
+    When constraints exist, formats with newlines for readability. *)
+and pp_gadt_type_params (f : P.t) ~(indent : string) (params : type_param list)
+    : unit =
+  match params with
+  | [] -> ()
+  | _ ->
+    let has_constraints =
+      List.exists (fun p -> p.tp_constraint <> None) params
+    in
+    if has_constraints then (
+      (* Multi-line format for complex constraints *)
+      P.string f "<";
+      P.newline f;
+      let rec print_params = function
+        | [] -> ()
+        | [p] ->
+          P.string f indent;
+          P.string f "  ";
+          pp_type_param f p;
+          P.newline f
+        | p :: rest ->
+          P.string f indent;
+          P.string f "  ";
+          pp_type_param f p;
+          P.string f ",";
+          P.newline f;
+          print_params rest
+      in
+      print_params params;
+      P.string f indent;
+      P.string f ">")
+    else (
+      (* Simple inline format *)
+      P.string f "<";
+      pp_type_params f params;
+      P.string f ">")
 
 (* Initialize the forward reference for pp_ts_type *)
 let () = pp_ts_type_ref := pp_ts_type
@@ -2839,48 +3362,302 @@ let pp_type_params_from_ml (f : P.t) (fn_type : Types.type_expr option) : unit =
     pp_type_params f type_params;
     P.string f ">"
 
+(** {1 GADT Function Overloads}
+    
+    For functions that take GADT types as parameters and return the GADT's type parameter,
+    we generate TypeScript function overloads. This allows TypeScript to narrow the return
+    type based on the specific GADT constructor passed.
+    
+    For example, for:
+      let eval: type a. expr<a> => a
+    
+    We generate:
+      function eval(expr: expr$int): number;
+      function eval(expr: expr$bool): boolean;
+      function eval(expr: expr): number | boolean { ... }
+*)
+
+type gadt_param_info = {
+  gadt_name: string;
+  param_index: int;
+  sub_unions: (string * string list) list;
+}
+(** Information about a GADT parameter in a function type.
+    @field gadt_name The name of the GADT type (e.g., "expr")
+    @field param_index The index of this parameter in the function
+    @field sub_unions List of (key, constructor names) pairs for this GADT *)
+
+(** Detect GADT parameters in a function type.
+    Returns information about each parameter that is a GADT type.
+    Only detects GADTs where the return type uses the GADT's type parameter. *)
+let detect_gadt_params (fn_type : Types.type_expr option) : gadt_param_info list
+    =
+  match fn_type with
+  | None -> []
+  | Some ty ->
+    let params = ref [] in
+    let param_index = ref 0 in
+    let return_type_var = ref None in
+    (* First pass: find the return type variable *)
+    let rec find_return_var ty =
+      match ty.Types.desc with
+      | Types.Tarrow (_, return_type, _, _) -> find_return_var return_type
+      | Types.Tlink ty | Types.Tsubst ty | Types.Tpoly (ty, _) ->
+        find_return_var ty
+      | Types.Tvar (Some name) | Types.Tunivar (Some name) ->
+        return_type_var := Some (String.capitalize_ascii name)
+      | Types.Tvar None | Types.Tunivar None -> (
+        match Hashtbl.find_opt anon_type_var_names ty.Types.id with
+        | Some name -> return_type_var := Some name
+        | None -> ())
+      | _ -> ()
+    in
+    find_return_var ty;
+    (* Second pass: find GADT parameters *)
+    let rec collect ty =
+      match ty.Types.desc with
+      | Types.Tarrow ({typ = arg_type; _}, return_type, _, _) ->
+        (* Check if this argument is a GADT *)
+        (match arg_type.Types.desc with
+        | Types.Tconstr (path, args, _) -> (
+          let type_name = Path.last path in
+          let escaped_name = escape_ts_type_name type_name in
+          match GadtSubUnions.get escaped_name with
+          | Some sub_unions when List.length sub_unions > 0 ->
+            (* This is a GADT with sub-unions *)
+            (* Check if the type argument matches the return type variable *)
+            let matches_return =
+              match (args, !return_type_var) with
+              | [arg], Some ret_var -> (
+                match arg.Types.desc with
+                | Types.Tvar (Some name) | Types.Tunivar (Some name) ->
+                  String.capitalize_ascii name = ret_var
+                | Types.Tvar None | Types.Tunivar None -> (
+                  match Hashtbl.find_opt anon_type_var_names arg.Types.id with
+                  | Some name -> name = ret_var
+                  | None -> false)
+                | Types.Tlink t | Types.Tsubst t -> (
+                  match t.Types.desc with
+                  | Types.Tvar (Some name) | Types.Tunivar (Some name) ->
+                    String.capitalize_ascii name = ret_var
+                  | _ -> false)
+                | _ -> false)
+              | _ -> false
+            in
+            if matches_return then
+              params :=
+                {
+                  gadt_name = escaped_name;
+                  param_index = !param_index;
+                  sub_unions;
+                }
+                :: !params
+          | _ -> ())
+        | Types.Tlink t | Types.Tsubst t -> (
+          match t.Types.desc with
+          | Types.Tconstr (path, args, _) -> (
+            let type_name = Path.last path in
+            let escaped_name = escape_ts_type_name type_name in
+            match GadtSubUnions.get escaped_name with
+            | Some sub_unions when List.length sub_unions > 0 ->
+              let matches_return =
+                match (args, !return_type_var) with
+                | [arg], Some ret_var -> (
+                  match arg.Types.desc with
+                  | Types.Tvar (Some name) | Types.Tunivar (Some name) ->
+                    String.capitalize_ascii name = ret_var
+                  | Types.Tvar None | Types.Tunivar None -> (
+                    match Hashtbl.find_opt anon_type_var_names arg.Types.id with
+                    | Some name -> name = ret_var
+                    | None -> false)
+                  | Types.Tlink t | Types.Tsubst t -> (
+                    match t.Types.desc with
+                    | Types.Tvar (Some name) | Types.Tunivar (Some name) ->
+                      String.capitalize_ascii name = ret_var
+                    | _ -> false)
+                  | _ -> false)
+                | _ -> false
+              in
+              if matches_return then
+                params :=
+                  {
+                    gadt_name = escaped_name;
+                    param_index = !param_index;
+                    sub_unions;
+                  }
+                  :: !params
+            | _ -> ())
+          | _ -> ())
+        | _ -> ());
+        incr param_index;
+        collect return_type
+      | Types.Tlink ty | Types.Tsubst ty | Types.Tpoly (ty, _) -> collect ty
+      | _ -> ()
+    in
+    collect ty;
+    List.rev !params
+
+(** Get the constraint type for a GADT sub-union key.
+    @param gadt_name The GADT type name
+    @param key The sub-union key (e.g., "int", "bool")
+    @return The constraint type (e.g., Number for "int", Boolean for "bool") *)
+let get_constraint_for_key (gadt_name : string) (key : string) : ts_type option
+    =
+  match GadtConstraints.get gadt_name with
+  | Some constraints -> (
+    (* The constraint is a union of all possible return types.
+       For a specific key, we need to map key -> type:
+       "int" -> Number, "bool" -> Boolean, etc. *)
+    match key with
+    | "int" | "float" -> Some Number
+    | "bool" -> Some Boolean
+    | "string" -> Some String
+    | "bigint" -> Some Bigint
+    | _ ->
+      (* For other keys, try to find a matching type in constraints *)
+      let rec find_matching constraints =
+        match constraints with
+        | [] -> None
+        | Some (TypeRef {name; args = []}) :: _
+          when String.lowercase_ascii name = key ->
+          Some (TypeRef {name; args = []})
+        | _ :: rest -> find_matching rest
+      in
+      find_matching constraints)
+  | None -> None
+
+(** Check if a function needs GADT overloads.
+    Returns true if the function has GADT parameters that would benefit from overloads. *)
+let needs_gadt_overloads (fn_type : Types.type_expr option) : bool =
+  match detect_gadt_params fn_type with
+  | [] -> false
+  | _ -> true
+
+(** Print a single overload signature for a GADT function.
+    @param f The printer
+    @param name The function name
+    @param param_names The parameter names
+    @param fn_type The function type
+    @param gadt_param The GADT parameter info
+    @param sub_union_key The sub-union key for this overload (e.g., "int") *)
+let pp_gadt_overload_signature (f : P.t) (name : string)
+    (param_names : string list) (fn_type : Types.type_expr option)
+    (gadt_param : gadt_param_info) (sub_union_key : string) : unit =
+  (* Get the constraint type for this sub-union key *)
+  let return_type = get_constraint_for_key gadt_param.gadt_name sub_union_key in
+  match return_type with
+  | None -> () (* Skip if we can't determine the return type *)
+  | Some ret_ty ->
+    P.string f "function ";
+    P.string f name;
+    (* Name is already escaped by caller *)
+    P.string f "(";
+    (* Print parameters, substituting the GADT parameter with sub-union type *)
+    (match fn_type with
+    | None -> ()
+    | Some ty ->
+      let param_names_ref = ref param_names in
+      let param_idx = ref 0 in
+      let first = ref true in
+      let rec print_params ty =
+        match ty.Types.desc with
+        | Types.Tarrow ({lbl; typ = arg_type}, return_type, _, _) ->
+          (* Skip unit parameters *)
+          if not (lbl = Nolabel && is_unit_type arg_type) then (
+            if not !first then P.string f ", ";
+            first := false;
+            let pname =
+              match !param_names_ref with
+              | n :: rest ->
+                param_names_ref := rest;
+                if n = "_" then "arg" ^ string_of_int !param_idx
+                else escape_ts_reserved n
+              | [] -> "arg" ^ string_of_int !param_idx
+            in
+            P.string f pname;
+            P.string f ": ";
+            (* Use sub-union type if this is the GADT parameter *)
+            if !param_idx = gadt_param.param_index then (
+              P.string f gadt_param.gadt_name;
+              P.string f "$";
+              P.string f sub_union_key)
+            else pp_ts_type f (ts_type_of_type_expr arg_type));
+          incr param_idx;
+          print_params return_type
+        | Types.Tlink ty | Types.Tsubst ty | Types.Tpoly (ty, _) ->
+          print_params ty
+        | _ -> ()
+      in
+      print_params ty);
+    P.string f "): ";
+    pp_ts_type f ret_ty;
+    P.string f ";";
+    P.newline f
+
+(** Print all GADT overload signatures for a function.
+    Should be called before printing the function implementation.
+    @param f The printer
+    @param name The function name
+    @param param_names The parameter names
+    @param fn_type The function type *)
+let pp_gadt_overloads (f : P.t) (name : string) (param_names : string list)
+    (fn_type : Types.type_expr option) : unit =
+  let gadt_params = detect_gadt_params fn_type in
+  match gadt_params with
+  | [] -> ()
+  | gadt_param :: _ ->
+    (* For now, only handle the first GADT parameter *)
+    (* Print an overload for each sub-union *)
+    List.iter
+      (fun (key, _constructors) ->
+        pp_gadt_overload_signature f name param_names fn_type gadt_param key)
+      gadt_param.sub_unions
+
 (** {1 Type Declaration Printing} *)
+
+(** Forward declaration for pp_tag_kind - will be defined after this function.
+    This is needed because pp_variant_case uses pp_tag_kind but is defined before it. *)
+let pp_tag_kind_fwd : (P.t -> tag_kind -> unit) ref = ref (fun _ _ -> ())
 
 (** Print a variant case for tagged unions.
     @param tag_name The tag field name (default Js_dump_lit.tag, can be customized with @tag)
     @param case The variant case to print *)
+
 let pp_variant_case (f : P.t) ~(tag_name : string) (case : variant_case) : unit
     =
   match case.vc_payload with
   | NoPayload ->
-    (* Nullary constructor - just the tag string literal *)
-    P.string f "\"";
-    P.string f case.vc_tag;
-    P.string f "\""
+    (* Nullary constructor - just the tag literal (string, null, undefined, etc.) *)
+    !pp_tag_kind_fwd f case.vc_tag
   | TuplePayload types ->
     (* Tuple payload: { readonly TAG: "Name"; readonly _0: T0; ... } *)
     (* Use multiline when there's more than 1 payload field *)
     let use_multiline = List.length types > 1 in
     if use_multiline then (
       P.string f "{";
-      P.newline f;
-      P.string f "      readonly ";
-      P.string f tag_name;
-      P.string f ": \"";
-      P.string f case.vc_tag;
-      P.string f "\";";
-      List.iteri
-        (fun i ty ->
+      P.group f 1 (fun () ->
           P.newline f;
-          P.string f "      readonly _";
-          P.string f (string_of_int i);
+          P.string f "readonly ";
+          P.string f tag_name;
           P.string f ": ";
-          pp_ts_type f ty;
-          P.string f ";")
-        types;
+          !pp_tag_kind_fwd f case.vc_tag;
+          P.string f ";";
+          List.iteri
+            (fun i ty ->
+              P.newline f;
+              P.string f "readonly _";
+              P.string f (string_of_int i);
+              P.string f ": ";
+              pp_ts_type f ty;
+              P.string f ";")
+            types);
       P.newline f;
-      P.string f "    }")
+      P.string f "}")
     else (
       P.string f "{ readonly ";
       P.string f tag_name;
-      P.string f ": \"";
-      P.string f case.vc_tag;
-      P.string f "\"";
+      P.string f ": ";
+      !pp_tag_kind_fwd f case.vc_tag;
       List.iteri
         (fun i ty ->
           P.string f "; readonly _";
@@ -2895,41 +3672,64 @@ let pp_variant_case (f : P.t) ~(tag_name : string) (case : variant_case) : unit
     let use_multiline = List.length props > 1 in
     if use_multiline then (
       P.string f "{";
-      P.newline f;
-      P.string f "      readonly ";
-      P.string f tag_name;
-      P.string f ": \"";
-      P.string f case.vc_tag;
-      P.string f "\";";
-      List.iter
-        (fun prop ->
+      P.group f 1 (fun () ->
           P.newline f;
-          P.string f "      ";
-          if prop.prop_readonly then P.string f "readonly ";
-          P.string f prop.prop_name;
-          if prop.prop_optional then P.string f "?";
+          P.string f "readonly ";
+          P.string f tag_name;
           P.string f ": ";
-          pp_ts_type f prop.prop_type;
-          P.string f ";")
-        props;
+          !pp_tag_kind_fwd f case.vc_tag;
+          P.string f ";";
+          List.iter
+            (fun prop ->
+              P.newline f;
+              if prop.prop_readonly then P.string f "readonly ";
+              pp_property_name f prop.prop_name;
+              if prop.prop_optional then P.string f "?";
+              P.string f ": ";
+              pp_ts_type f prop.prop_type;
+              P.string f ";")
+            props);
       P.newline f;
-      P.string f "    }")
+      P.string f "}")
     else (
       P.string f "{ readonly ";
       P.string f tag_name;
-      P.string f ": \"";
-      P.string f case.vc_tag;
-      P.string f "\"";
+      P.string f ": ";
+      !pp_tag_kind_fwd f case.vc_tag;
       List.iter
         (fun prop ->
           P.string f "; ";
           if prop.prop_readonly then P.string f "readonly ";
-          P.string f prop.prop_name;
+          pp_property_name f prop.prop_name;
           if prop.prop_optional then P.string f "?";
           P.string f ": ";
           pp_ts_type f prop.prop_type)
         props;
       P.string f " }")
+
+(** Print a tag_kind value for TypeScript *)
+let pp_tag_kind (f : P.t) (tag : tag_kind) : unit =
+  match tag with
+  | TagString s ->
+    P.string f "\"";
+    P.string f s;
+    P.string f "\""
+  | TagNull -> P.string f "null"
+  | TagUndefined -> P.string f "undefined"
+  | TagInt i -> P.string f (string_of_int i)
+  | TagBool b -> P.string f (if b then "true" else "false")
+
+(* Initialize forward reference for pp_variant_case *)
+let () = pp_tag_kind_fwd := pp_tag_kind
+
+(** Get the string representation of a tag_kind for use in object literals *)
+let tag_kind_to_string (tag : tag_kind) : string =
+  match tag with
+  | TagString s -> "\"" ^ s ^ "\""
+  | TagNull -> "null"
+  | TagUndefined -> "undefined"
+  | TagInt i -> string_of_int i
+  | TagBool b -> if b then "true" else "false"
 
 (** Print a variant case for @unboxed variants.
     Just prints the payload type directly.
@@ -2937,10 +3737,8 @@ let pp_variant_case (f : P.t) ~(tag_name : string) (case : variant_case) : unit
 let pp_unboxed_variant_case (f : P.t) (case : variant_case) : unit =
   match case.vc_payload with
   | NoPayload ->
-    (* Nullary constructor - just the tag string literal *)
-    P.string f "\"";
-    P.string f case.vc_tag;
-    P.string f "\""
+    (* Nullary constructor - just the tag literal *)
+    pp_tag_kind f case.vc_tag
   | TuplePayload [single_type] ->
     (* Single payload - just the type directly, parenthesizing if needed *)
     pp_ts_type_in_union f single_type
@@ -2951,17 +3749,18 @@ let pp_unboxed_variant_case (f : P.t) (case : variant_case) : unit =
     (* Inline record - as object type *)
     pp_object_type f {properties = props; index_sig = None; call_sig = None}
 
-(** Print a union type with each member on its own line (for type aliases) *)
+(** Print a union type with each member on its own line (for type aliases).
+    Expects to be called within a P.group context that handles indentation. *)
 let rec pp_union_multiline (f : P.t) (types : ts_type list) : unit =
   match types with
   | [] -> P.string f "never"
   | [ty] ->
     P.newline f;
-    P.string f "  | ";
+    P.string f "| ";
     pp_ts_type_in_union f ty
   | ty :: rest ->
     P.newline f;
-    P.string f "  | ";
+    P.string f "| ";
     pp_ts_type_in_union f ty;
     pp_union_multiline f rest
 
@@ -3129,7 +3928,7 @@ and pp_object_type_qualified (f : P.t) ~(module_path : string)
         P.newline f;
         P.string f "    ";
         if prop.prop_readonly then P.string f "readonly ";
-        P.string f prop.prop_name;
+        pp_property_name f prop.prop_name;
         if prop.prop_optional then P.string f "?";
         P.string f ": ";
         pp_ts_type_qualified f ~module_path ~local_types prop.prop_type;
@@ -3151,7 +3950,7 @@ and pp_object_type_qualified (f : P.t) ~(module_path : string)
     List.iter
       (fun prop ->
         if prop.prop_readonly then P.string f "readonly ";
-        P.string f prop.prop_name;
+        pp_property_name f prop.prop_name;
         if prop.prop_optional then P.string f "?";
         P.string f ": ";
         pp_ts_type_qualified f ~module_path ~local_types prop.prop_type;
@@ -3231,21 +4030,24 @@ let pp_type_decl (f : P.t) (decl : type_decl) : unit =
       P.string f "<";
       pp_type_params f type_params;
       P.string f ">");
-    P.string f " = ";
-    (if is_opaque then
+    P.string f " =";
+    (if is_opaque then (
+       P.string f " ";
        (* Opaque type: wrap with $res.opaque<"brand", params, body> *)
        let brand_name =
          match OpaqueTypes.get_full_name name with
          | Some full_name -> full_name
          | None -> name
        in
-       pp_opaque_type f ~brand_name ~type_params ~underlying:(Some body)
+       pp_opaque_type f ~brand_name ~type_params ~underlying:(Some body))
      else
        match (body, external_type) with
        | Union types, None ->
          (* Print union types with newlines for readability *)
-         pp_union_multiline f types
-       | _ -> pp_type_body_with_external f type_params body external_type);
+         P.group f 1 (fun () -> pp_union_multiline f types)
+       | _ ->
+         P.string f " ";
+         pp_type_body_with_external f type_params body external_type);
     P.string f ";"
   | Interface {name; type_params; extends; body} ->
     P.string f "export interface ";
@@ -3282,7 +4084,7 @@ let pp_type_decl (f : P.t) (decl : type_decl) : unit =
           (fun prop ->
             P.newline f;
             if prop.prop_readonly then P.string f "readonly ";
-            P.string f prop.prop_name;
+            pp_property_name f prop.prop_name;
             if prop.prop_optional then P.string f "?";
             P.string f ": ";
             pp_ts_type f prop.prop_type;
@@ -3307,25 +4109,60 @@ let pp_type_decl (f : P.t) (decl : type_decl) : unit =
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
-    List.iter
-      (fun case ->
-        P.newline f;
-        P.string f "  | ";
-        if config.vc_unboxed then pp_unboxed_variant_case f case
-        else pp_variant_case f ~tag_name:config.vc_tag_name case)
-      cases;
+    P.group f 1 (fun () ->
+        List.iter
+          (fun case ->
+            P.newline f;
+            P.string f "| ";
+            if config.vc_unboxed then pp_unboxed_variant_case f case
+            else pp_variant_case f ~tag_name:config.vc_tag_name case)
+          cases);
     P.string f ";"
-  | GadtType {name; type_params; cases; config} ->
-    (* GADT generates separate types for each constructor, then a union.
-       For: type t<_> = Int(int): t<int> | Float(float): t<float>
+  | GadtType {name; type_params; cases; sub_unions; config} ->
+    (* GADT generates:
+       1. Phantom-constrained sub-unions (internal, not exported)
+       2. Separate type for each constructor (internal, not exported)
+       3. Main union type (exported with type params for constraint)
+       
+       For: type expr<_> = IntLit(int): expr<int> | Add(...): expr<int> | BoolLit(bool): expr<bool>
        Generates:
-         export type t$Int = { TAG: "Int"; _0: number };
-         export type t$Float = { TAG: "Float"; _0: number };
-         export type t<A> = t$Int | t$Float; *)
-    (* First, generate a type for each GADT constructor *)
+         type expr$int = expr$IntLit | expr$Add;
+         type expr$bool = expr$BoolLit;
+         type expr$IntLit = { TAG: "IntLit"; _0: number };
+         type expr$Add = { TAG: "Add"; _0: expr$int; _1: expr$int };
+         type expr$BoolLit = { TAG: "BoolLit"; _0: boolean };
+         export type expr<_ extends number | boolean> = expr$IntLit | expr$Add | expr$BoolLit; *)
+
+    (* First, generate phantom-constrained sub-unions (not exported) *)
+    List.iter
+      (fun (sub : gadt_sub_union) ->
+        P.string f "type ";
+        P.string f name;
+        P.string f "$";
+        P.string f sub.gsu_key;
+        P.string f " = ";
+        (match sub.gsu_constructors with
+        | [] -> P.string f "never"
+        | first :: rest ->
+          P.string f name;
+          P.string f "$";
+          P.string f first;
+          List.iter
+            (fun ctor ->
+              P.string f " | ";
+              P.string f name;
+              P.string f "$";
+              P.string f ctor)
+            rest);
+        P.string f ";";
+        P.newline f)
+      sub_unions;
+    if sub_unions <> [] then P.newline f;
+
+    (* Second, generate a type for each GADT constructor (not exported) *)
     List.iter
       (fun (case : gadt_case) ->
-        P.string f "export type ";
+        P.string f "type ";
         P.string f name;
         P.string f "$";
         P.string f case.gc_name;
@@ -3347,23 +4184,27 @@ let pp_type_decl (f : P.t) (decl : type_decl) : unit =
         P.string f ";";
         P.newline f)
       cases;
-    (* Then generate the union type *)
+
+    (* Finally, generate the main union type (exported with type params) *)
     P.newline f;
     P.string f "export type ";
     P.string f name;
-    if type_params <> [] then (
+    (match type_params with
+    | [] -> ()
+    | _ ->
       P.string f "<";
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
-    List.iter
-      (fun (case : gadt_case) ->
-        P.newline f;
-        P.string f "  | ";
-        P.string f name;
-        P.string f "$";
-        P.string f case.gc_name)
-      cases;
+    P.group f 1 (fun () ->
+        List.iter
+          (fun (case : gadt_case) ->
+            P.newline f;
+            P.string f "| ";
+            P.string f name;
+            P.string f "$";
+            P.string f case.gc_name)
+          cases);
     P.string f ";"
   | OpaqueType {name; type_params; underlying} ->
     (* For .ts files, generate: export type t = $res.opaque<"Brand", underlying> *)
@@ -3427,6 +4268,22 @@ let pp_runtime_type_import (f : P.t) : unit =
     P.string f " from \"@rescript/runtime/types\";";
     P.at_least_two_lines f)
 
+(** Get the list of modules that need type-only imports.
+    @param value_imported_modules Set of module names already imported for values
+    @param local_modules Set of locally defined module names (should not be imported)
+    @return List of module names that need type-only imports *)
+let get_type_only_modules ~(value_imported_modules : StringSet.t)
+    ~(local_modules : StringSet.t) : string list =
+  let required_modules = TypeModuleDeps.get_used () in
+  (* Filter out modules that are:
+     1. Already imported for values
+     2. Locally defined in this file *)
+  List.filter
+    (fun m ->
+      (not (StringSet.mem m value_imported_modules))
+      && not (StringSet.mem m local_modules))
+    required_modules
+
 (** Print type declarations only (without collecting runtime types).
     Uses pp_type_decl_ts which doesn't emit const for modules. *)
 let pp_type_decls_only (f : P.t) (decls : type_decl list) : unit =
@@ -3486,13 +4343,34 @@ let collect_opaque_types ~(module_name : string) (decls : type_decl list) : unit
     =
   collect_opaque_types_with_prefix ~prefix:(Some module_name) decls
 
+(** Collect GADT sub-unions from type declarations.
+    This re-registers GADT sub-unions after reset_state() is called. *)
+let rec collect_gadt_sub_unions (decls : type_decl list) : unit =
+  List.iter
+    (fun decl ->
+      match decl with
+      | GadtType {name; sub_unions; _} ->
+        GadtSubUnions.add name
+          (List.map (fun su -> (su.gsu_key, su.gsu_constructors)) sub_unions)
+      | ModuleDecl {mod_types; mod_submodules; _} ->
+        collect_gadt_sub_unions mod_types;
+        List.iter
+          (fun sub -> collect_gadt_sub_unions [ModuleDecl sub])
+          mod_submodules
+      | _ -> ())
+    decls
+
 (** Initialize state and collect type information without printing.
-    Call this before printing runtime import and type declarations separately. *)
+    Call this before printing runtime import and type declarations separately.
+    Preserves the environment that was set before. *)
 let init_type_decls ~(module_name : string) (decls : type_decl list) : unit =
+  let saved_env = State.state.env in
   reset_state ();
+  State.state.env <- saved_env;
   set_module_name module_name;
   List.iter collect_runtime_types_decl decls;
-  collect_opaque_types ~module_name decls
+  collect_opaque_types ~module_name decls;
+  collect_gadt_sub_unions decls
 
 (** Print all type declarations with runtime type imports.
     @param module_name The module name for opaque type brand prefixing *)
@@ -3628,16 +4506,17 @@ let estimate_function_decl_length (name : string) (param_names : string list)
     in
     base_len + params_len + return_len
 
-(** Print a function declaration for .d.ts *)
-let pp_dts_function_decl (f : P.t) (name : string) (param_names : string list)
-    (fn_type : Types.type_expr option) : unit =
+(** Print a function declaration for .d.ts 
+    @param use_export if true, prints "export function", otherwise "declare function" *)
+let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
+    (param_names : string list) (fn_type : Types.type_expr option) : unit =
   let use_multiline =
     estimate_function_decl_length name param_names fn_type
     > function_line_width_threshold
   in
-  P.string f "export function ";
-  (* Escape function name if it's a reserved word *)
-  P.string f (escape_ts_reserved name);
+  P.string f (if use_export then "export function " else "declare function ");
+  (* Don't escape function name - it must match the JavaScript export name exactly *)
+  P.string f name;
   (* Print type parameters *)
   pp_type_params_from_ml f fn_type;
   (* Print parameters *)
@@ -3710,19 +4589,67 @@ let pp_dts_function_decl (f : P.t) (name : string) (param_names : string list)
   | None -> ());
   P.string f ";"
 
-(** Print a value declaration for .d.ts *)
-let pp_dts_value_decl (f : P.t) (name : string) (ty : ts_type) : unit =
-  P.string f "export const ";
-  P.string f (escape_ts_reserved name);
+(** Simplify types with free type variables for const declarations.
+    TypeScript doesn't support polymorphic constants, so we need to 
+    replace option<A> (where A is a free type variable) with undefined. *)
+let rec simplify_const_type (ty : ts_type) : ts_type =
+  match ty with
+  | RuntimeType {rt_name = "option"; rt_args = [TypeVar _]} ->
+    (* option<A> with free type var -> undefined (e.g., Js.undefined<'a>) *)
+    Undefined
+  | RuntimeType {rt_name; rt_args} ->
+    RuntimeType {rt_name; rt_args = List.map simplify_const_type rt_args}
+  | Array elem -> Array (simplify_const_type elem)
+  | Tuple elems -> Tuple (List.map simplify_const_type elems)
+  | Union types -> Union (List.map simplify_const_type types)
+  | Intersection types -> Intersection (List.map simplify_const_type types)
+  | TypeRef {name; args} ->
+    TypeRef {name; args = List.map simplify_const_type args}
+  | Readonly ty -> Readonly (simplify_const_type ty)
+  | Promise ty -> Promise (simplify_const_type ty)
+  | _ -> ty
+
+(** Print a value declaration for .d.ts 
+    @param use_export if true, prints "export const", otherwise "declare const" *)
+let pp_dts_value_decl ?(use_export = true) (f : P.t) (name : string)
+    (ty : ts_type) : unit =
+  P.string f (if use_export then "export const " else "declare const ");
+  (* Don't escape value name - it must match the JavaScript export name exactly *)
+  P.string f name;
   P.string f ": ";
-  pp_ts_type f ty;
+  (* Simplify types with free type variables since TypeScript can't express them *)
+  pp_ts_type f (simplify_const_type ty);
   P.string f ";"
 
 (** Print a single value export as either function or const declaration *)
 let pp_dts_value_export (f : P.t) (ve : value_export) : unit =
-  if is_function_type ve.ve_type then
-    pp_dts_function_decl f ve.ve_name ve.ve_params (Some ve.ve_type)
-  else pp_dts_value_decl f ve.ve_name (ts_type_of_type_expr ve.ve_type)
+  let name = ve.ve_name in
+  (* Special handling for "default" - it's the ES module default export. *)
+  if name = "default" then
+    match ve.ve_alias with
+    | Some target ->
+      (* Simple case: let default = someFunction, just re-export *)
+      P.string f "export default ";
+      P.string f target;
+      P.string f ";"
+    | None ->
+      (* Complex case: need to declare and export *)
+      if is_function_type ve.ve_type then (
+        pp_dts_function_decl ~use_export:false f "$$default" ve.ve_params
+          (Some ve.ve_type);
+        P.newline f;
+        P.string f "export default $$default;")
+      else (
+        pp_dts_value_decl ~use_export:false f "$$default"
+          (ts_type_of_type_expr ve.ve_type);
+        P.newline f;
+        P.string f "export default $$default;")
+  else
+    (* Use Ext_ident.convert to match JS export name (e.g., catch -> $$catch) *)
+    let export_name = Ext_ident.convert name in
+    if is_function_type ve.ve_type then
+      pp_dts_function_decl f export_name ve.ve_params (Some ve.ve_type)
+    else pp_dts_value_decl f export_name (ts_type_of_type_expr ve.ve_type)
 
 (** Print a type declaration for .d.ts *)
 let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
@@ -3734,21 +4661,24 @@ let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
       P.string f "<";
       pp_type_params f type_params;
       P.string f ">");
-    P.string f " = ";
-    (if is_opaque then
+    P.string f " =";
+    (if is_opaque then (
+       P.string f " ";
        (* Opaque type: wrap with $res.opaque<"brand", params, body> *)
        let brand_name =
          match OpaqueTypes.get_full_name name with
          | Some full_name -> full_name
          | None -> name
        in
-       pp_opaque_type f ~brand_name ~type_params ~underlying:(Some body)
+       pp_opaque_type f ~brand_name ~type_params ~underlying:(Some body))
      else
        match (body, external_type) with
        | Union types, None ->
          (* Print union types with newlines for readability *)
-         pp_union_multiline f types
-       | _ -> pp_type_body_with_external f type_params body external_type);
+         P.group f 1 (fun () -> pp_union_multiline f types)
+       | _ ->
+         P.string f " ";
+         pp_type_body_with_external f type_params body external_type);
     P.string f ";"
   | Interface {name; type_params; extends; body} ->
     P.string f "export interface ";
@@ -3785,7 +4715,7 @@ let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
           (fun prop ->
             P.newline f;
             if prop.prop_readonly then P.string f "readonly ";
-            P.string f prop.prop_name;
+            pp_property_name f prop.prop_name;
             if prop.prop_optional then P.string f "?";
             P.string f ": ";
             pp_ts_type f prop.prop_type;
@@ -3810,19 +4740,49 @@ let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
-    List.iter
-      (fun case ->
-        P.newline f;
-        P.string f "  | ";
-        if config.vc_unboxed then pp_unboxed_variant_case f case
-        else pp_variant_case f ~tag_name:config.vc_tag_name case)
-      cases;
+    P.group f 1 (fun () ->
+        List.iter
+          (fun case ->
+            P.newline f;
+            P.string f "| ";
+            if config.vc_unboxed then pp_unboxed_variant_case f case
+            else pp_variant_case f ~tag_name:config.vc_tag_name case)
+          cases);
     P.string f ";"
-  | GadtType {name; type_params; cases; config} ->
-    (* GADT: generate separate types for each constructor, then a union *)
+  | GadtType {name; type_params; cases; sub_unions; config} ->
+    (* GADT: generate sub-unions, constructor types, then main union.
+       Sub-unions and constructor types are NOT exported. *)
+
+    (* First, generate phantom-constrained sub-unions (not exported) *)
+    List.iter
+      (fun (sub : gadt_sub_union) ->
+        P.string f "type ";
+        P.string f name;
+        P.string f "$";
+        P.string f sub.gsu_key;
+        P.string f " = ";
+        (match sub.gsu_constructors with
+        | [] -> P.string f "never"
+        | first :: rest ->
+          P.string f name;
+          P.string f "$";
+          P.string f first;
+          List.iter
+            (fun ctor ->
+              P.string f " | ";
+              P.string f name;
+              P.string f "$";
+              P.string f ctor)
+            rest);
+        P.string f ";";
+        P.newline f)
+      sub_unions;
+    if sub_unions <> [] then P.newline f;
+
+    (* Second, generate constructor types (not exported) *)
     List.iter
       (fun (case : gadt_case) ->
-        P.string f "export type ";
+        P.string f "type ";
         P.string f name;
         P.string f "$";
         P.string f case.gc_name;
@@ -3844,22 +4804,27 @@ let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
         P.string f ";";
         P.newline f)
       cases;
+
+    (* Finally, generate the main union type (exported with type params) *)
     P.newline f;
     P.string f "export type ";
     P.string f name;
-    if type_params <> [] then (
+    (match type_params with
+    | [] -> ()
+    | _ ->
       P.string f "<";
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
-    List.iter
-      (fun (case : gadt_case) ->
-        P.newline f;
-        P.string f "  | ";
-        P.string f name;
-        P.string f "$";
-        P.string f case.gc_name)
-      cases;
+    P.group f 1 (fun () ->
+        List.iter
+          (fun (case : gadt_case) ->
+            P.newline f;
+            P.string f "| ";
+            P.string f name;
+            P.string f "$";
+            P.string f case.gc_name)
+          cases);
     P.string f ";"
   | OpaqueType {name; type_params; underlying} ->
     (* Generate: export type name<params> = $res.opaque<"name", params, underlying> *)
@@ -3965,7 +4930,8 @@ and pp_module_decl_with_path (f : P.t) ~(parent_path : string option)
     (fun (name, ty) ->
       P.newline f;
       P.string f "  ";
-      P.string f name;
+      (* Use Ext_ident.convert to match JS property name (e.g., null -> $$null) *)
+      P.string f (Ext_ident.convert name);
       P.string f ": ";
       pp_ts_type_qualified f ~module_path
         ~local_types:local_types_with_submodules ty;
@@ -3977,7 +4943,8 @@ and pp_module_decl_with_path (f : P.t) ~(parent_path : string option)
   if emit_const then (
     P.newline f;
     P.string f "export const ";
-    P.string f mod_name;
+    (* Use Ext_ident.convert to match JS export name (e.g., EvalError -> $$EvalError) *)
+    P.string f (Ext_ident.convert mod_name);
     P.string f ": ";
     P.string f mod_name;
     P.string f ";")
@@ -4001,8 +4968,14 @@ and pp_namespace_type_decl_with_path (f : P.t) ~(module_path : string)
       P.string f "<";
       pp_type_params f type_params;
       P.string f ">");
-    P.string f " = ";
-    pp_ts_type f body;
+    P.string f " =";
+    (match body with
+    | Union types ->
+      (* Print union types with newlines for readability *)
+      P.group f 1 (fun () -> pp_union_multiline f types)
+    | _ ->
+      P.string f " ";
+      pp_ts_type f body);
     P.string f ";"
   | Interface {name; type_params; body; _} ->
     P.string f "interface ";
@@ -4015,7 +4988,7 @@ and pp_namespace_type_decl_with_path (f : P.t) ~(module_path : string)
     List.iter
       (fun prop ->
         if prop.prop_readonly then P.string f "readonly ";
-        P.string f prop.prop_name;
+        pp_property_name f prop.prop_name;
         if prop.prop_optional then P.string f "?";
         P.string f ": ";
         pp_ts_type f prop.prop_type;
@@ -4030,17 +5003,24 @@ and pp_namespace_type_decl_with_path (f : P.t) ~(module_path : string)
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
+    (* Print variant cases on separate lines for readability *)
     List.iter
       (fun case ->
-        P.string f " | ";
+        P.newline f;
+        P.string f "    | ";
         if config.vc_unboxed then pp_unboxed_variant_case f case
         else pp_variant_case f ~tag_name:config.vc_tag_name case)
       cases;
     P.string f ";"
   | GadtType {name; type_params; cases; config} ->
-    (* GADT inside module namespace: generate inline *)
+    (* GADT inside module namespace: generate case types on separate lines *)
+    let is_first = ref true in
     List.iter
       (fun (case : gadt_case) ->
+        if !is_first then is_first := false
+        else (
+          P.newline f;
+          P.string f "  ");
         P.string f "type ";
         P.string f name;
         P.string f "$";
@@ -4060,18 +5040,18 @@ and pp_namespace_type_decl_with_path (f : P.t) ~(module_path : string)
               vc_tag = case.gc_tag;
               vc_payload = case.gc_payload;
             };
-        P.string f "; ")
+        P.string f ";")
       cases;
-    P.string f "type ";
+    (* Print the union type on a new line *)
+    P.newline f;
+    P.string f "  type ";
     P.string f name;
-    if type_params <> [] then (
-      P.string f "<";
-      pp_type_params f type_params;
-      P.string f ">");
+    pp_gadt_type_params f ~indent:"  " type_params;
     P.string f " =";
     List.iter
       (fun (case : gadt_case) ->
-        P.string f " | ";
+        P.newline f;
+        P.string f "    | ";
         P.string f name;
         P.string f "$";
         P.string f case.gc_name)
@@ -4167,7 +5147,8 @@ and pp_nested_module_decl_with_path (f : P.t) (mod_decl : module_decl)
       P.newline f;
       P.string f indent_str;
       P.string f "  ";
-      P.string f name;
+      (* Use Ext_ident.convert to match JS property name (e.g., null -> $$null) *)
+      P.string f (Ext_ident.convert name);
       P.string f ": ";
       pp_ts_type_qualified f ~module_path
         ~local_types:local_types_with_submodules ty;
@@ -4187,8 +5168,14 @@ and pp_namespace_type_decl (f : P.t) (decl : type_decl) : unit =
       P.string f "<";
       pp_type_params f type_params;
       P.string f ">");
-    P.string f " = ";
-    pp_ts_type f body;
+    P.string f " =";
+    (match body with
+    | Union types ->
+      (* Print union types with newlines for readability *)
+      P.group f 1 (fun () -> pp_union_multiline f types)
+    | _ ->
+      P.string f " ";
+      pp_ts_type f body);
     P.string f ";"
   | Interface {name; type_params; body; _} ->
     P.string f "interface ";
@@ -4201,7 +5188,7 @@ and pp_namespace_type_decl (f : P.t) (decl : type_decl) : unit =
     List.iter
       (fun prop ->
         if prop.prop_readonly then P.string f "readonly ";
-        P.string f prop.prop_name;
+        pp_property_name f prop.prop_name;
         if prop.prop_optional then P.string f "?";
         P.string f ": ";
         pp_ts_type f prop.prop_type;
@@ -4216,17 +5203,24 @@ and pp_namespace_type_decl (f : P.t) (decl : type_decl) : unit =
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
+    (* Print variant cases on separate lines for readability *)
     List.iter
       (fun case ->
-        P.string f " | ";
+        P.newline f;
+        P.string f "    | ";
         if config.vc_unboxed then pp_unboxed_variant_case f case
         else pp_variant_case f ~tag_name:config.vc_tag_name case)
       cases;
     P.string f ";"
   | GadtType {name; type_params; cases; config} ->
-    (* GADT in namespace: generate inline *)
+    (* GADT in namespace: generate case types on separate lines *)
+    let is_first = ref true in
     List.iter
       (fun (case : gadt_case) ->
+        if !is_first then is_first := false
+        else (
+          P.newline f;
+          P.string f "  ");
         P.string f "type ";
         P.string f name;
         P.string f "$";
@@ -4246,18 +5240,18 @@ and pp_namespace_type_decl (f : P.t) (decl : type_decl) : unit =
               vc_tag = case.gc_tag;
               vc_payload = case.gc_payload;
             };
-        P.string f "; ")
+        P.string f ";")
       cases;
-    P.string f "type ";
+    (* Print the union type on a new line *)
+    P.newline f;
+    P.string f "  type ";
     P.string f name;
-    if type_params <> [] then (
-      P.string f "<";
-      pp_type_params f type_params;
-      P.string f ">");
+    pp_gadt_type_params f ~indent:"  " type_params;
     P.string f " =";
     List.iter
       (fun (case : gadt_case) ->
-        P.string f " | ";
+        P.newline f;
+        P.string f "    | ";
         P.string f name;
         P.string f "$";
         P.string f case.gc_name)
@@ -4345,7 +5339,8 @@ and pp_nested_module_decl (f : P.t) (mod_decl : module_decl) ~(indent : int) :
       P.newline f;
       P.string f indent_str;
       P.string f "  ";
-      P.string f name;
+      (* Use Ext_ident.convert to match JS property name (e.g., null -> $$null) *)
+      P.string f (Ext_ident.convert name);
       P.string f ": ";
       pp_ts_type f ty;
       P.string f ";")
@@ -4454,7 +5449,12 @@ let rec collect_local_module_names (decls : type_decl list) : StringSet.t =
     TODO(refactor): Move it to a part of dump program *)
 let pp_dts_file ~(module_name : string) (f : P.t) (imports : dts_import list)
     (type_decls : type_decl list) (value_exports : value_export list) : unit =
+  (* Save the environment that was set during extraction.
+     We need it to resolve module aliases in type paths. *)
+  let saved_env = State.state.env in
   reset_state ();
+  (* Restore the environment for module alias resolution *)
+  State.state.env <- saved_env;
   List.iter collect_type_deps_decl type_decls;
   List.iter
     (fun ve -> collect_type_deps (ts_type_of_type_expr ve.ve_type))

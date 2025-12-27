@@ -6,35 +6,29 @@ import type * as Stdlib_Exn from "./Stdlib_Exn.js";
 export type t = Stdlib_Exn.t;
 
 export type EvalError = {
-  make: (arg0: string) => t;
 };
-export const EvalError: EvalError;
+export const $$EvalError: EvalError;
 
 export type RangeError = {
-  make: (arg0: string) => t;
 };
-export const RangeError: RangeError;
+export const $$RangeError: RangeError;
 
 export type ReferenceError = {
-  make: (arg0: string) => t;
 };
-export const ReferenceError: ReferenceError;
+export const $$ReferenceError: ReferenceError;
 
 export type SyntaxError = {
-  make: (arg0: string) => t;
 };
-export const SyntaxError: SyntaxError;
+export const $$SyntaxError: SyntaxError;
 
 export type TypeError = {
-  make: (arg0: string) => t;
 };
-export const TypeError: TypeError;
+export const $$TypeError: TypeError;
 
 export type URIError = {
-  make: (arg0: string) => t;
 };
-export const URIError: URIError;
+export const $$URIError: URIError;
 
-export function fromException(exn: exn): rescript.option<t>;
+export function fromException(exn: rescript.exn): rescript.option<t>;
 
 export function panic<A>(msg: string): A;

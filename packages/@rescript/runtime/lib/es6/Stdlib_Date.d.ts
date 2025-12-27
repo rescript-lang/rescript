@@ -3,7 +3,7 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Ordering from "./Stdlib_Ordering.js";
 
-export type t = rescript.opaque<"Stdlib_Date.t", []>;
+export type t = Date;
 
 export type msSinceEpoch = number;
 
@@ -22,12 +22,6 @@ export interface localeOptions {
 }
 
 export type UTC = {
-  makeWithYM: (year: number, month: number) => msSinceEpoch;
-  makeWithYMD: (year: number, month: number, day: number) => msSinceEpoch;
-  makeWithYMDH: (year: number, month: number, day: number, hours: number) => msSinceEpoch;
-  makeWithYMDHM: (year: number, month: number, day: number, hours: number, minutes: number) => msSinceEpoch;
-  makeWithYMDHMS: (year: number, month: number, day: number, hours: number, minutes: number, seconds: number) => msSinceEpoch;
-  makeWithYMDHMSM: (year: number, month: number, day: number, hours: number, minutes: number, seconds: number, milliseconds: number) => msSinceEpoch;
 };
 export const UTC: UTC;
 

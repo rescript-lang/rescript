@@ -4,26 +4,35 @@ import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Symbol from "./Stdlib_Symbol.js";
 import type * as Stdlib_Type from "./Stdlib_Type.js";
 
-export type symbol = Stdlib_Symbol.t;
+export type symbol_ = Stdlib_Symbol.t;
 
-export type obj_val = Stdlib_Type.Classify.object;
+export type obj_val = Stdlib_Type.Classify.object_;
 
 export type undefined_val = rescript.opaque<"Js_types.undefined_val", []>;
 
 export type null_val = rescript.opaque<"Js_types.null_val", []>;
 
-export type function_val = Stdlib_Type.Classify.function;
+export type function_val = Stdlib_Type.Classify.function_;
 
-export type t$Undefined = "Undefined";
-export type t$Null = "Null";
-export type t$Boolean = "Boolean";
-export type t$Number = "Number";
-export type t$String = "String";
-export type t$Function = "Function";
-export type t$Object = "Object";
-export type t$Symbol = "Symbol";
-export type t$BigInt = "BigInt";
-export type t<_ extends undefined_val | null_val | boolean | number | string | function_val | obj_val | symbol | bigint> =
+type t$bigint = t$BigInt;
+type t$bool = t$Boolean;
+type t$float = t$Number;
+type t$function_val = t$Function;
+type t$null_val = t$Null;
+type t$obj_val = t$Object;
+type t$string = t$String;
+type t$symbol = t$Symbol;
+type t$undefined_val = t$Undefined;
+type t$Undefined = "Undefined";
+type t$Null = "Null";
+type t$Boolean = "Boolean";
+type t$Number = "Number";
+type t$String = "String";
+type t$Function = "Function";
+type t$Object = "Object";
+type t$Symbol = "Symbol";
+type t$BigInt = "BigInt";
+export type t<_ extends undefined_val | null_val | boolean | number | string | function_val | obj_val | symbol | bigint = undefined_val | null_val | boolean | number | string | function_val | obj_val | symbol | bigint> =
   | t$Undefined
   | t$Null
   | t$Boolean
@@ -48,4 +57,4 @@ export type tagged_t =
 
 export function classify<A>(x: A): tagged_t;
 
-export function test<A, A>(x: A, v: t<A>): boolean;
+export function test<A>(x: A, v: t<undefined_val | null_val | boolean | number | string | function_val | obj_val | symbol | bigint>): boolean;

@@ -4,55 +4,47 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type t<A> = A[];
 
-export function get_<A>(arr: t<A>, i: number): rescript.option<A>;
+export function get<A>(arr: t<A>, i: number): rescript.option<A>;
 
 export function getOrThrow<A>(arr: t<A>, i: number): A;
 
 export function getExn<A>(arg0: t<A>, arg1: number): A;
 
-export function set_<A>(arr: t<A>, i: number, v: A): boolean;
+export function set<A>(arr: t<A>, i: number, v: A): boolean;
 
 export function setOrThrow<A>(arr: t<A>, i: number, v: A): void;
 
 export function setExn<A>(arg0: t<A>, arg1: number, arg2: A): void;
 
-export function swapUnsafe<A>(xs: t<A>, i: number, j: number): void;
-
 export function shuffleInPlace<A>(xs: t<A>): void;
 
 export function shuffle<A>(xs: t<A>): t<A>;
 
-export function reverseAux<A>(xs: t<A>, ofs: number, len: number): void;
-
 export function reverseInPlace<A>(xs: t<A>): void;
 
-export function reverse<A>(xs: t<A>): A[];
+export function reverse<A>(xs: t<A>): t<A>;
 
-export function make<A>(l: number, f: A): A[];
+export function make<A>(l: number, f: A): t<A>;
 
-export function makeBy<A>(l: number, f: (arg0: number) => A): A[];
+export function makeBy<A>(l: number, f: (arg0: number) => A): t<A>;
 
-export function makeByAndShuffle<A>(l: number, f: (arg0: number) => A): A[];
+export function makeByAndShuffle<A>(l: number, f: (arg0: number) => A): t<A>;
 
 export function range(start: number, finish: number): number[];
 
 export function rangeBy(start: number, finish: number, step: number): number[];
 
-export function zip<A, B>(xs: t<A>, ys: t<B>): [A, B][];
+export function zip<A, B>(xs: t<A>, ys: B[]): [A, B][];
 
-export function zipBy<A, B, C>(
-  xs: t<A>,
-  ys: t<B>,
-  f: (arg0: A, arg1: B) => C,
-): C[];
+export function zipBy<A, B, C>(xs: t<A>, ys: B[], f: (arg0: A, arg1: B) => C): C[];
 
-export function concat<A>(a1: t<A>, a2: t<A>): A[];
+export function concat<A>(a1: t<A>, a2: t<A>): t<A>;
 
-export function concatMany<A>(arrs: t<t<A>>): A[];
+export function concatMany<A>(arrs: t<A>[]): t<A>;
 
-export function slice<A>(a: t<A>, offset: number, len: number): A[];
+export function slice<A>(a: t<A>, offset: number, len: number): t<A>;
 
-export function sliceToEnd<A>(a: t<A>, offset: number): A[];
+export function sliceToEnd<A>(a: t<A>, offset: number): t<A>;
 
 export function fill<A>(a: t<A>, offset: number, len: number, v: A): void;
 
@@ -76,7 +68,7 @@ export function forEach<A>(a: t<A>, f: (arg0: A) => void): void;
 
 export function map<A, B>(a: t<A>, f: (arg0: A) => B): B[];
 
-export function flatMap<A, B>(a: t<A>, f: (arg0: A) => t<B>): B[];
+export function flatMap<A, B>(a: t<A>, f: (arg0: A) => B[]): B[];
 
 export function getBy<A>(a: t<A>, p: (arg0: A) => boolean): rescript.option<A>;
 
@@ -85,33 +77,23 @@ export function getIndexBy<A>(
   p: (arg0: A) => boolean,
 ): rescript.option<number>;
 
-export function keep<A>(a: t<A>, f: (arg0: A) => boolean): A[];
+export function keep<A>(a: t<A>, f: (arg0: A) => boolean): t<A>;
 
-export function keepWithIndex<A>(
-  a: t<A>,
-  f: (arg0: A, arg1: number) => boolean,
-): A[];
+export function keepWithIndex<A>(a: t<A>, f: (arg0: A, arg1: number) => boolean): t<A>;
 
 export function keepMap<A, B>(a: t<A>, f: (arg0: A) => rescript.option<B>): B[];
 
-export function forEachWithIndex<A>(
-  a: t<A>,
-  f: (arg0: number, arg1: A) => void,
-): void;
+export function forEachWithIndex<A>(a: t<A>, f: (arg0: number, arg1: A) => void): void;
 
 export function mapWithIndex<A, B>(a: t<A>, f: (arg0: number, arg1: A) => B): B[];
 
-export function reduce<A, B>(a: t<A>, x: B, f: (arg0: B, arg1: A) => B): B;
+export function reduce<B, A>(a: B[], x: A, f: (arg0: A, arg1: B) => A): A;
 
-export function reduceReverse<A, B>(
-  a: t<A>,
-  x: B,
-  f: (arg0: B, arg1: A) => B,
-): B;
+export function reduceReverse<B, A>(a: B[], x: A, f: (arg0: A, arg1: B) => A): A;
 
 export function reduceReverse2<A, B, C>(
   a: t<A>,
-  b: t<B>,
+  b: B[],
   x: C,
   f: (arg0: C, arg1: A, arg2: B) => C,
 ): C;
@@ -122,78 +104,21 @@ export function reduceWithIndex<A, B>(
   f: (arg0: B, arg1: A, arg2: number) => B,
 ): B;
 
-export function everyAux<A>(
-  arr: t<A>,
-  i: number,
-  b: (arg0: A) => boolean,
-  len: number,
-): boolean;
-
-export function someAux<A>(
-  arr: t<A>,
-  i: number,
-  b: (arg0: A) => boolean,
-  len: number,
-): boolean;
-
 export function every<A>(arr: t<A>, b: (arg0: A) => boolean): boolean;
 
 export function some<A>(arr: t<A>, b: (arg0: A) => boolean): boolean;
 
-export function everyAux2<A, B>(
-  arr1: t<A>,
-  arr2: t<B>,
-  i: number,
-  b: (arg0: A, arg1: B) => boolean,
-  len: number,
-): boolean;
+export function every2<A, B>(a: t<A>, b: B[], p: (arg0: A, arg1: B) => boolean): boolean;
 
-export function someAux2<A, B>(
-  arr1: t<A>,
-  arr2: t<B>,
-  i: number,
-  b: (arg0: A, arg1: B) => boolean,
-  len: number,
-): boolean;
+export function some2<A, B>(a: t<A>, b: B[], p: (arg0: A, arg1: B) => boolean): boolean;
 
-export function every2<A, B>(
-  a: t<A>,
-  b: t<B>,
-  p: (arg0: A, arg1: B) => boolean,
-): boolean;
+export function eq<A>(a: t<A>, b: t<A>, p: (arg0: A, arg1: A) => boolean): boolean;
 
-export function some2<A, B>(
-  a: t<A>,
-  b: t<B>,
-  p: (arg0: A, arg1: B) => boolean,
-): boolean;
+export function cmp<A>(a: t<A>, b: t<A>, p: (arg0: A, arg1: A) => number): number;
 
-export function eq<A, B>(
-  a: t<A>,
-  b: t<B>,
-  p: (arg0: A, arg1: B) => boolean,
-): boolean;
+export function partition<A>(a: t<A>, f: (arg0: A) => boolean): [t<A>, t<A>];
 
-export function everyCmpAux2<A, B>(
-  arr1: t<A>,
-  arr2: t<B>,
-  i: number,
-  b: (arg0: A, arg1: B) => number,
-  len: number,
-): number;
-
-export function cmp<A, B>(
-  a: t<A>,
-  b: t<B>,
-  p: (arg0: A, arg1: B) => number,
-): number;
-
-export function partition<A>(
-  a: t<A>,
-  f: (arg0: A) => boolean,
-): [A[], A[]];
-
-export function unzip<A, B>(a: t<[A, B]>): [A[], B[]];
+export function unzip<A, B>(a: [A, B][]): [t<A>, B[]];
 
 export function joinWith<A>(
   a: t<A>,
@@ -201,29 +126,29 @@ export function joinWith<A>(
   toString: (arg0: A) => string,
 ): string;
 
-export function init<A>(n: number, f: (arg0: number) => A): A[];
+export function init<A>(n: number, f: (arg0: number) => A): t<A>;
 
-export function cmpU<A, B>(
+export function cmpU<A>(
   arg0: t<A>,
-  arg1: t<B>,
-  arg2: (arg0: A, arg1: B) => number,
+  arg1: t<A>,
+  arg2: (arg0: A, arg1: A) => number,
 ): number;
 
-export function eqU<A, B>(
+export function eqU<A>(
   arg0: t<A>,
-  arg1: t<B>,
-  arg2: (arg0: A, arg1: B) => boolean,
+  arg1: t<A>,
+  arg2: (arg0: A, arg1: A) => boolean,
 ): boolean;
 
 export function every2U<A, B>(
   arg0: t<A>,
-  arg1: t<B>,
+  arg1: B[],
   arg2: (arg0: A, arg1: B) => boolean,
 ): boolean;
 
 export function everyU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): boolean;
 
-export function flatMapU<A, B>(arg0: t<A>, arg1: (arg0: A) => t<B>): B[];
+export function flatMapU<A, B>(arg0: t<A>, arg1: (arg0: A) => B[]): B[];
 
 export function forEachU<A>(arg0: t<A>, arg1: (arg0: A) => void): void;
 
@@ -232,17 +157,14 @@ export function forEachWithIndexU<A>(
   arg1: (arg0: number, arg1: A) => void,
 ): void;
 
-export function getByU<A>(
-  arg0: t<A>,
-  arg1: (arg0: A) => boolean,
-): rescript.option<A>;
+export function getByU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): rescript.option<A>;
 
 export function getIndexByU<A>(
   arg0: t<A>,
   arg1: (arg0: A) => boolean,
 ): rescript.option<number>;
 
-export function initU<A>(arg0: number, arg1: (arg0: number) => A): A[];
+export function initU<A>(arg0: number, arg1: (arg0: number) => A): t<A>;
 
 export function joinWithU<A>(
   arg0: t<A>,
@@ -250,55 +172,38 @@ export function joinWithU<A>(
   arg2: (arg0: A) => string,
 ): string;
 
-export function keepMapU<A, B>(
-  arg0: t<A>,
-  arg1: (arg0: A) => rescript.option<B>,
-): B[];
+export function keepMapU<A, B>(arg0: t<A>, arg1: (arg0: A) => rescript.option<B>): B[];
 
-export function keepU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): A[];
+export function keepU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): t<A>;
 
 export function keepWithIndexU<A>(
   arg0: t<A>,
   arg1: (arg0: A, arg1: number) => boolean,
-): A[];
+): t<A>;
 
-export function makeByAndShuffleU<A>(
-  arg0: number,
-  arg1: (arg0: number) => A,
-): A[];
+export function makeByAndShuffleU<A>(arg0: number, arg1: (arg0: number) => A): t<A>;
 
-export function makeByU<A>(arg0: number, arg1: (arg0: number) => A): A[];
+export function makeByU<A>(arg0: number, arg1: (arg0: number) => A): t<A>;
 
 export function mapU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): B[];
 
-export function mapWithIndexU<A, B>(
-  arg0: t<A>,
-  arg1: (arg0: number, arg1: A) => B,
-): B[];
+export function mapWithIndexU<A, B>(arg0: t<A>, arg1: (arg0: number, arg1: A) => B): B[];
 
 export function partitionU<A>(
   arg0: t<A>,
   arg1: (arg0: A) => boolean,
-): [A[], A[]];
+): [t<A>, t<A>];
 
 export function reduceReverse2U<A, B, C>(
   arg0: t<A>,
-  arg1: t<B>,
+  arg1: B[],
   arg2: C,
   arg3: (arg0: C, arg1: A, arg2: B) => C,
 ): C;
 
-export function reduceReverseU<A, B>(
-  arg0: t<A>,
-  arg1: B,
-  arg2: (arg0: B, arg1: A) => B,
-): B;
+export function reduceReverseU<B, A>(arg0: B[], arg1: A, arg2: (arg0: A, arg1: B) => A): A;
 
-export function reduceU<A, B>(
-  arg0: t<A>,
-  arg1: B,
-  arg2: (arg0: B, arg1: A) => B,
-): B;
+export function reduceU<B, A>(arg0: B[], arg1: A, arg2: (arg0: A, arg1: B) => A): A;
 
 export function reduceWithIndexU<A, B>(
   arg0: t<A>,
@@ -308,14 +213,10 @@ export function reduceWithIndexU<A, B>(
 
 export function some2U<A, B>(
   arg0: t<A>,
-  arg1: t<B>,
+  arg1: B[],
   arg2: (arg0: A, arg1: B) => boolean,
 ): boolean;
 
 export function someU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): boolean;
 
-export function zipByU<A, B, C>(
-  arg0: t<A>,
-  arg1: t<B>,
-  arg2: (arg0: A, arg1: B) => C,
-): C[];
+export function zipByU<A, B, C>(arg0: t<A>, arg1: B[], arg2: (arg0: A, arg1: B) => C): C[];

@@ -2,25 +2,14 @@
 
 import type * as rescript from "@rescript/runtime/types";
 
+export interface js_error {
+  readonly cause: rescript.exn;
+}
+
 export interface t {
   readonly RE_EXN_ID: string;
 }
 
-export interface js_error {
-  readonly cause: exn;
-}
-
-export type Dict = {
-  empty: () => rescript.dict<A>;
-  set: (arg0: rescript.dict<A>, arg1: string, arg2: A) => void;
-  dangerouslyGetNonOption: (arg0: rescript.dict<A>, arg1: string) => rescript.option<A>;
-};
-export const Dict: Dict;
-
-export function isExtension<A>(e: A): boolean;
-
-export function internalToException(e: unknown): exn;
-
-export const idMap: rescript.dict<number>;
+export function internalToException(e: unknown): rescript.exn;
 
 export function create(str: string): string;

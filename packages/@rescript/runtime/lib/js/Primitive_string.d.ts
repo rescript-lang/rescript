@@ -8,6 +8,6 @@ export function min(x: string, y: string): string;
 
 export function max(x: string, y: string): string;
 
-export function getChar(s: string, i: number): rescript.option<char>;
+export function getChar(s: string, i: number): rescript.option<number>;
 
-export function make(n: number, ch: char): string;
+export function make(n: number, ch: number): string;

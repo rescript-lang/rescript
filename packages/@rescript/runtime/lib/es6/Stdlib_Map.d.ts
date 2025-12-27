@@ -2,4 +2,4 @@
 
 export type t<K, V> = Map<K, V>;
 
-export function isEmpty<A, B>(map: t<A, B>): boolean;
+export function isEmpty<K, V>(map: t<K, V>): boolean;

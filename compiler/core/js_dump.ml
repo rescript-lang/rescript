@@ -505,6 +505,14 @@ and pp_function ~return_unit ~async ~is_method ?directive ?fn_type cxt (f : P.t)
           param_body ();
           semi f
         | Name_top x ->
+          (* For TypeScript mode, print GADT overloads before the function *)
+          (match !Js_config.ts_output with
+          | Js_config.Ts_typescript ->
+            let param_names = List.map Ident.name l in
+            (* Use the converted name (e.g., eval -> $$eval) for overloads *)
+            let js_name = Ext_ident.convert (Ident.name x) in
+            Ts.pp_gadt_overloads f js_name param_names fn_type
+          | Js_config.Ts_none -> ());
           P.string f (L.function_ ~async ~arrow);
           ignore (Ext_pp_scope.ident inner_cxt f x : cxt);
           pp_type_params ();

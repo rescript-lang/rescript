@@ -6,9 +6,7 @@ export type t<A> = rescript.dict<A>;
 
 export type key = string;
 
-export function .!()<A>(arg0: t<A>, arg1: key): A;
-
-export function get_<A>(dict: t<A>, k: key): rescript.option<A>;
+export function get<A>(dict: t<A>, k: key): rescript.option<A>;
 
 export function unsafeDeleteKey(arg0: t<string>, arg1: string): void;
 

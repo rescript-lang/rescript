@@ -2,23 +2,9 @@
 
 import type * as rescript from "@rescript/runtime/types";
 
-export type t = unknown;
+export type t = rescript.opaque<"Stdlib_Exn.t", []>;
 
-export type error = rescript.opaque<"Stdlib_Exn.error", []>;
-
-export type eval_error = rescript.opaque<"Stdlib_Exn.eval_error", []>;
-
-export type range_error = rescript.opaque<"Stdlib_Exn.range_error", []>;
-
-export type reference_error = rescript.opaque<"Stdlib_Exn.reference_error", []>;
-
-export type syntax_error = rescript.opaque<"Stdlib_Exn.syntax_error", []>;
-
-export type type_error = rescript.opaque<"Stdlib_Exn.type_error", []>;
-
-export type uri_error = rescript.opaque<"Stdlib_Exn.uri_error", []>;
-
-export function asJsExn(exn: exn): rescript.option<t>;
+export function asJsExn(exn: rescript.exn): rescript.option<t>;
 
 export function raiseError<A>(str: string): A;
 

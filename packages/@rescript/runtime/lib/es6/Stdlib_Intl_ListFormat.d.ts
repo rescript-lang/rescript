@@ -3,14 +3,14 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_ListFormat.t", []>;
+export type t = Intl.ListFormat;
 
-export type listType = 
+export type listType =
   | "conjunction"
   | "disjunction"
   | "unit";
 
-export type style = 
+export type style =
   | "narrow"
   | "long"
   | "short";
@@ -21,7 +21,7 @@ export interface options {
   readonly style?: rescript.option<style>;
 }
 
-export type listPartComponentType = 
+export type listPartComponentType =
   | "literal"
   | "element";
 

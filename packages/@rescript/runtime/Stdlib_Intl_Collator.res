@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Intl.Collator")
 type t
 
 type usage = [#sort | #search]

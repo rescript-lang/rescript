@@ -4,7 +4,7 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type t<A> =
   | A
-  | "Null";
+  | null;
 
 export function test<A>(x: t<A>): boolean;
 

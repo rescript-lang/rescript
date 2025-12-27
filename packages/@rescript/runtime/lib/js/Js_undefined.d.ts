@@ -3,7 +3,7 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Primitive_js_extern from "./Primitive_js_extern.js";
 
-export type t<A> = Primitive_js_extern.undefined<A>;
+export type t<A> = Primitive_js_extern.undefined_<A>;
 
 export function to_opt<A>(arg0: t<A>): rescript.option<A>;
 

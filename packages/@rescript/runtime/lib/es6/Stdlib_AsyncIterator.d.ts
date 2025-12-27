@@ -9,9 +9,9 @@ export interface value<A> {
   readonly value: rescript.option<A>;
 }
 
-export function value<A>(v: A): value<A>;
+export function value<Value>(v: Value): value<Value>;
 
-export function done<A>(finalValue?: A): value<A>;
+export function done<Value>(finalValue?: Value): value<Value>;
 
 export function forEach<A>(
   iterator: t<A>,

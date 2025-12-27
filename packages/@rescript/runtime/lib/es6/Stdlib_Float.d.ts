@@ -5,15 +5,9 @@ import type * as rescript from "@rescript/runtime/types";
 export type t = number;
 
 export type Constants = {
-  nan: number;
-  epsilon: number;
-  positiveInfinity: number;
-  negativeInfinity: number;
-  minValue: number;
-  maxValue: number;
 };
 export const Constants: Constants;
 
-export function fromString<A>(i: A): rescript.option<number>;
+export function fromString(i: string): rescript.option<number>;
 
 export function clamp(min?: number, max?: number, value: number): number;

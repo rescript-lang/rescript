@@ -3,19 +3,19 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_Collator.t", []>;
+export type t = Intl.Collator;
 
-export type usage = 
+export type usage =
   | "search"
   | "sort";
 
-export type sensitivity = 
+export type sensitivity =
   | "variant"
   | "accent"
   | "case"
   | "base";
 
-export type caseFirst = 
+export type caseFirst =
   | "lower"
   | "false"
   | "upper";

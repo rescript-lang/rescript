@@ -2,18 +2,18 @@
 
 import * as Types from "./Types.js";
 
-function createUser(name: string, age: number): Types.user {
+function createUser(name: string, age: number): Types.User {
   return {
     user_name: name,
     user_age: age
   };
 }
 
-function greetUser(user: Types.user): string {
+function greetUser(user: Types.User): string {
   return "Hello, " + user.user_name;
 }
 
-function getDefaultUser(): Types.user {
+function getDefaultUser(): Types.User {
   return Types.defaultUser;
 }
 

@@ -7,11 +7,9 @@ export type timeoutId = rescript.opaque<"Stdlib_Global.timeoutId", []>;
 export type intervalId = rescript.opaque<"Stdlib_Global.intervalId", []>;
 
 export type TimeoutId = {
-  ignore: (arg0: timeoutId) => void;
 };
 export const TimeoutId: TimeoutId;
 
 export type IntervalId = {
-  ignore: (arg0: intervalId) => void;
 };
 export const IntervalId: IntervalId;

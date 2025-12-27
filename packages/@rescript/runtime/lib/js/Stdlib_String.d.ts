@@ -5,7 +5,7 @@ import type * as Stdlib_RegExp from "./Stdlib_RegExp.js";
 
 export type t = string;
 
-export type normalizeForm = 
+export type normalizeForm =
   | "NFC"
   | "NFD"
   | "NFKC"

@@ -4,7 +4,7 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type t<A> = rescript.dict<A>;
 
-export function delete_<A>(dict: rescript.dict<A>, string_: string): void;
+export function $$delete<A>(dict: rescript.dict<A>, string_: string): void;
 
 export function forEach<A>(arg0: rescript.dict<A>, arg1: (arg0: A) => void): void;
 

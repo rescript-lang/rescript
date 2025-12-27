@@ -5,6 +5,5 @@ import type * as Stdlib_TypedArray from "./Stdlib_TypedArray.js";
 export type t = Stdlib_TypedArray.t<number>;
 
 export type Constants = {
-  bytesPerElement: number;
 };
 export const Constants: Constants;

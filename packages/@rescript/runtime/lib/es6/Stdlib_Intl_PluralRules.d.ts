@@ -3,9 +3,9 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_PluralRules.t", []>;
+export type t = Intl.PluralRules;
 
-export type localeType = 
+export type localeType =
   | "ordinal"
   | "cardinal";
 
@@ -19,7 +19,7 @@ export interface options {
   readonly maximumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
 }
 
-export type pluralCategories = 
+export type pluralCategories =
   | "many"
   | "zero"
   | "one"
@@ -42,7 +42,7 @@ export interface supportedLocalesOptions {
   readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
 }
 
-export type rule = 
+export type rule =
   | "many"
   | "zero"
   | "one"

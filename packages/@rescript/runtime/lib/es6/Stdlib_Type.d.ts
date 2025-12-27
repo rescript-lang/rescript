@@ -3,7 +3,7 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Symbol from "./Stdlib_Symbol.js";
 
-export type t = 
+export type t =
   | "undefined"
   | "symbol"
   | "bigint"
@@ -14,19 +14,20 @@ export type t =
   | "boolean";
 
 declare namespace Classify {
-  type function = rescript.opaque<"Stdlib_Type.Classify.function", []>;
-  type object = rescript.opaque<"Stdlib_Type.Classify.object", []>;
-  type t = | { readonly TAG: "Bool"; readonly _0: boolean } | "Null" | "Undefined" | { readonly TAG: "String"; readonly _0: string } | { readonly TAG: "Number"; readonly _0: number } | { readonly TAG: "Object"; readonly _0: Classify.object } | { readonly TAG: "Function"; readonly _0: Classify.function } | { readonly TAG: "Symbol"; readonly _0: Stdlib_Symbol.t } | { readonly TAG: "BigInt"; readonly _0: bigint };
+  type function_ = rescript.opaque<"Stdlib_Type.Classify.function_", []>;
+  type object_ = rescript.opaque<"Stdlib_Type.Classify.object_", []>;
+  type t =
+    | { readonly TAG: "Bool"; readonly _0: boolean }
+    | "Null"
+    | "Undefined"
+    | { readonly TAG: "String"; readonly _0: string }
+    | { readonly TAG: "Number"; readonly _0: number }
+    | { readonly TAG: "Object"; readonly _0: Classify.object_ }
+    | { readonly TAG: "Function"; readonly _0: Classify.function_ }
+    | { readonly TAG: "Symbol"; readonly _0: Stdlib_Symbol.t }
+    | { readonly TAG: "BigInt"; readonly _0: bigint };
 }
 export type Classify = {
-  _internalClass: (arg0: A) => string;
-  _asBool: (arg0: A) => boolean;
-  _asString: (arg0: A) => string;
-  _asFloat: (arg0: A) => number;
-  _asObject: (arg0: A) => Classify.object;
-  _asFunction: (arg0: A) => Classify.function;
-  _asSymbol: (arg0: A) => Stdlib_Symbol.t;
-  _asBigInt: (arg0: A) => bigint;
-  classify: (arg0: any) => Classify.t;
+  classify: (arg0: A) => Classify.t;
 };
 export const Classify: Classify;

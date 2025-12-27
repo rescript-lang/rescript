@@ -43,7 +43,7 @@ export type invalid = rescript.opaque<"Types.invalid", []>;
 
 export type validated<S> = rescript.opaque<"Types.validated", [S], string>;
 
-export const defaultUser: user;
+export const defaultUser: User;
 
 export function validate(s: validated<invalid>): validated<valid>;
 

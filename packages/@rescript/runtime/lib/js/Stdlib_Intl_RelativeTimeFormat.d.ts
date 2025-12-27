@@ -3,18 +3,18 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_RelativeTimeFormat.t", []>;
+export type t = Intl.RelativeTimeFormat;
 
-export type numeric = 
+export type numeric =
   | "always"
   | "auto";
 
-export type style = 
+export type style =
   | "narrow"
   | "long"
   | "short";
 
-export type timeUnit = 
+export type timeUnit =
   | "month"
   | "second"
   | "day"
@@ -41,7 +41,7 @@ export interface resolvedOptions {
   readonly numberingSystem: string;
 }
 
-export type relativeTimePartComponent = 
+export type relativeTimePartComponent =
   | "literal"
   | "integer";
 

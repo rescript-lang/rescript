@@ -2,7 +2,7 @@
 Bindings to JavaScript's `Intl.DateTimeFormat`.
 */
 
-@notUndefined
+@notUndefined @external("Intl.DateTimeFormat")
 type t
 
 type dateStyle = [#full | #long | #medium | #short]

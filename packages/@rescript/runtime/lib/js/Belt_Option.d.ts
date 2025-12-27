@@ -19,10 +19,7 @@ export function mapWithDefault<A, B>(
   f: (arg0: A) => B,
 ): B;
 
-export function map<A, B>(
-  opt: rescript.option<A>,
-  f: (arg0: A) => B,
-): rescript.option<B>;
+export function map<A, B>(opt: rescript.option<A>, f: (arg0: A) => B): rescript.option<B>;
 
 export function flatMap<A, B>(
   opt: rescript.option<A>,
@@ -69,20 +66,14 @@ export function flatMapU<A, B>(
   arg1: (arg0: A) => rescript.option<B>,
 ): rescript.option<B>;
 
-export function forEachU<A>(
-  arg0: rescript.option<A>,
-  arg1: (arg0: A) => void,
-): void;
+export function forEachU<A>(arg0: rescript.option<A>, arg1: (arg0: A) => void): void;
 
 export function keepU<A>(
   arg0: rescript.option<A>,
   arg1: (arg0: A) => boolean,
 ): rescript.option<A>;
 
-export function mapU<A, B>(
-  arg0: rescript.option<A>,
-  arg1: (arg0: A) => B,
-): rescript.option<B>;
+export function mapU<A, B>(arg0: rescript.option<A>, arg1: (arg0: A) => B): rescript.option<B>;
 
 export function mapWithDefaultU<A, B>(
   arg0: rescript.option<A>,

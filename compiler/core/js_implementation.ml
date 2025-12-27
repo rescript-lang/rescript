@@ -133,7 +133,7 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       Lam_compile_env.reset ();
       let env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
-      let typedtree, coercion, _, _ =
+      let typedtree, coercion, _, interface_sig =
         Typemod.type_implementation_more
           ?check_exists:(if !Js_config.force_cmi then None else Some ())
           !Location.input_name outputprefix modulename env ast
@@ -153,20 +153,31 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
              || !Js_config.emit_dts
            then Ts.set_env typedtree.str_final_env
          in
-         (* Extract type declarations for TypeScript or .d.ts output *)
+         (* Extract type declarations for TypeScript or .d.ts output.
+            Use interface_sig if available (from .resi file), otherwise use str_type. *)
          let type_decls =
            if
              !Js_config.ts_output = Js_config.Ts_typescript
              || !Js_config.emit_dts
-           then Ts.extract_type_decls typedtree
+           then Ts.extract_type_decls ~interface_sig typedtree
            else []
          in
-         (* Extract value exports for TypeScript or .d.ts generation *)
+         (* Extract value exports for TypeScript or .d.ts generation.
+            Filter to only include identifiers that are actually exported in JS. *)
          let value_exports =
            if
              !Js_config.ts_output = Js_config.Ts_typescript
              || !Js_config.emit_dts
-           then Ts.extract_value_exports typedtree
+           then
+             let export_names =
+               List.fold_left
+                 (fun acc id -> Set_string.add acc (Ident.name id))
+                 Set_string.empty exports
+             in
+             List.filter
+               (fun (ve : Ts.value_export) ->
+                 Set_string.mem export_names ve.ve_name)
+               (Ts.extract_value_exports ~interface_sig typedtree)
            else []
          in
          let js_program =

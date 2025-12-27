@@ -5,7 +5,7 @@ Weak maps keep key/value pairs where keys must be objects and the references do 
 */
 
 /** Mutable weak map storing values of type `'v` with object keys `'k`. */
-@notUndefined
+@notUndefined @external("WeakMap")
 type t<'k, 'v>
 
 /**

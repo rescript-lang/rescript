@@ -37,7 +37,7 @@ export const epsilon_float: number;
 
 export function classify_float(x: number): fpclass;
 
-export function char_of_int(n: number): char;
+export function char_of_int(n: number): number;
 
 export function string_of_bool(b: boolean): string;
 
@@ -47,4 +47,4 @@ export function bool_of_string_opt(param: string): rescript.option<boolean>;
 
 export function int_of_string_opt(s: string): rescript.option<number>;
 
-export function @<A>(l1: rescript.list<A>, l2: rescript.list<A>): rescript.list<A>;
+export function $at<A>(l1: rescript.list<A>, l2: rescript.list<A>): rescript.list<A>;

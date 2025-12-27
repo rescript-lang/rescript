@@ -5,14 +5,6 @@ import type * as Stdlib_Ordering from "./Stdlib_Ordering.js";
 
 export type t<A> = rescript.list<A>;
 
-export type A = {
-  makeUninitializedUnsafe: (arg0: number) => A[];
-  min: (arg0: A, arg1: A) => A;
-  reduceReverseU: (arg0: any[], arg1: any, arg2: (arg0: any, arg1: any) => any) => any;
-  reduceReverse2U: (arg0: any[], arg1: any[], arg2: any, arg3: (arg0: any, arg1: any, arg2: any) => any) => any;
-};
-export const A: A;
-
 export function head<A>(x: rescript.list<A>): rescript.option<A>;
 
 export function headOrThrow<A>(x: rescript.list<A>): A;
@@ -27,120 +19,15 @@ export function tailExn<A>(arg0: rescript.list<A>): rescript.list<A>;
 
 export function add<A>(xs: rescript.list<A>, x: A): rescript.list<A>;
 
-export function nthAux<A>(x: rescript.list<A>, n: number): rescript.option<A>;
-
-export function nthAuxAssert<A>(x: rescript.list<A>, n: number): A;
-
-export function get_<A>(x: rescript.list<A>, n: number): rescript.option<A>;
+export function get<A>(x: rescript.list<A>, n: number): rescript.option<A>;
 
 export function getOrThrow<A>(x: rescript.list<A>, n: number): A;
 
 export function getExn<A>(arg0: rescript.list<A>, arg1: number): A;
 
-export function partitionAux<A>(
-  p: (arg0: A) => boolean,
-  cell: rescript.list<A>,
-  precX: rescript.list<A>,
-  precY: rescript.list<A>,
-): void;
+export function take<A>(lst: rescript.list<A>, n: number): rescript.option<rescript.list<A>>;
 
-export function splitAux<A, B>(
-  cell: rescript.list<[A, B]>,
-  precX: rescript.list<A>,
-  precY: rescript.list<B>,
-): void;
-
-export function copyAuxCont<A>(
-  cellX: rescript.list<A>,
-  prec: rescript.list<A>,
-): rescript.list<A>;
-
-export function copyAuxWitFilter<A>(
-  f: (arg0: A) => boolean,
-  cellX: rescript.list<A>,
-  prec: rescript.list<A>,
-): void;
-
-export function copyAuxWithFilterIndex<A>(
-  f: (arg0: A, arg1: number) => boolean,
-  cellX: rescript.list<A>,
-  prec: rescript.list<A>,
-  i: number,
-): void;
-
-export function copyAuxWitFilterMap<A, B>(
-  f: (arg0: A) => rescript.option<B>,
-  cellX: rescript.list<A>,
-  prec: rescript.list<B>,
-): void;
-
-export function removeAssocAuxWithMap<A, B, C>(
-  cellX: rescript.list<[A, B]>,
-  x: C,
-  prec: rescript.list<[A, B]>,
-  f: (arg0: A, arg1: C) => boolean,
-): boolean;
-
-export function setAssocAuxWithMap<A, B>(
-  cellX: rescript.list<[A, B]>,
-  x: A,
-  k: B,
-  prec: rescript.list<[A, B]>,
-  eq: (arg0: A, arg1: A) => boolean,
-): boolean;
-
-export function copyAuxWithMap<A, B>(
-  cellX: rescript.list<A>,
-  prec: rescript.list<B>,
-  f: (arg0: A) => B,
-): void;
-
-export function zipAux<A, B>(
-  cellX: rescript.list<A>,
-  cellY: rescript.list<B>,
-  prec: rescript.list<[A, B]>,
-): void;
-
-export function copyAuxWithMap2<A, B, C>(
-  f: (arg0: A, arg1: B) => C,
-  cellX: rescript.list<A>,
-  cellY: rescript.list<B>,
-  prec: rescript.list<C>,
-): void;
-
-export function copyAuxWithMapI<A, B>(
-  f: (arg0: A, arg1: number) => B,
-  i: number,
-  cellX: rescript.list<A>,
-  prec: rescript.list<B>,
-): void;
-
-export function takeAux<A>(
-  n: number,
-  cell: rescript.list<A>,
-  prec: rescript.list<A>,
-): boolean;
-
-export function splitAtAux<A>(
-  n: number,
-  cell: rescript.list<A>,
-  prec: rescript.list<A>,
-): rescript.option<rescript.list<A>>;
-
-export function take<A>(
-  lst: rescript.list<A>,
-  n: number,
-): rescript.option<rescript.list<A>>;
-
-export function dropAux<A>(
-  l: rescript.list<A>,
-  n: number,
-): rescript.option<rescript.list<A>>;
-
-export function drop<A>(
-  lst: rescript.list<A>,
-  n: number,
-): rescript.option<rescript.list<A>>;
+export function drop<A>(lst: rescript.list<A>, n: number): rescript.option<rescript.list<A>>;
 
 export function splitAt<A>(
   lst: rescript.list<A>,
@@ -169,19 +56,9 @@ export function fromInitializer<A>(
 
 export function make<A>(length: number, v: A): rescript.list<A>;
 
-export function lengthAux<A>(x: rescript.list<A>, acc: number): number;
-
 export function length<A>(xs: rescript.list<A>): number;
 
 export function size<A>(arg0: rescript.list<A>): number;
-
-export function fillAux<A>(arr: A[], i: number, x: rescript.list<A>): void;
-
-export function fromArrayAux<A>(
-  a: A[],
-  i: number,
-  res: rescript.list<A>,
-): rescript.list<A>;
 
 export function fromArray<A>(a: A[]): rescript.list<A>;
 
@@ -198,50 +75,20 @@ export function reverseConcat<A>(
 
 export function reverse<A>(l: rescript.list<A>): rescript.list<A>;
 
-export function flatAux<A>(
-  prec: rescript.list<A>,
-  xs: rescript.list<rescript.list<A>>,
-): void;
-
 export function flat<A>(xs: rescript.list<rescript.list<A>>): rescript.list<A>;
 
 export function concatMany<A>(xs: rescript.list<A>[]): rescript.list<A>;
 
-export function mapRevAux<A, B>(
-  f: (arg0: A) => B,
-  accu: rescript.list<B>,
-  xs: rescript.list<A>,
-): rescript.list<B>;
-
-export function mapReverse<A, B>(
-  l: rescript.list<A>,
-  f: (arg0: A) => B,
-): rescript.list<B>;
+export function mapReverse<A, B>(l: rescript.list<A>, f: (arg0: A) => B): rescript.list<B>;
 
 export function forEach<A>(xs: rescript.list<A>, f: (arg0: A) => void): void;
-
-export function forEachWithIndexAux<A>(
-  xs: rescript.list<A>,
-  f: (arg0: A, arg1: number) => void,
-  i: number,
-): void;
 
 export function forEachWithIndex<A>(
   l: rescript.list<A>,
   f: (arg0: A, arg1: number) => void,
 ): void;
 
-export function reduce<A, B>(
-  l: rescript.list<A>,
-  accu: B,
-  f: (arg0: B, arg1: A) => B,
-): B;
-
-export function reduceReverseUnsafe<A, B>(
-  l: rescript.list<A>,
-  accu: B,
-  f: (arg0: B, arg1: A) => B,
-): B;
+export function reduce<A, B>(l: rescript.list<A>, accu: B, f: (arg0: B, arg1: A) => B): B;
 
 export function reduceReverse<A, B>(
   l: rescript.list<A>,
@@ -249,25 +96,11 @@ export function reduceReverse<A, B>(
   f: (arg0: B, arg1: A) => B,
 ): B;
 
-export function reduceWithIndexAux<A, B>(
-  l: rescript.list<A>,
-  acc: B,
-  f: (arg0: B, arg1: A, arg2: number) => B,
-  i: number,
-): B;
-
 export function reduceWithIndex<A, B>(
   l: rescript.list<A>,
   acc: B,
   f: (arg0: B, arg1: A, arg2: number) => B,
 ): B;
-
-export function mapRevAux2<A, B, C>(
-  l1: rescript.list<A>,
-  l2: rescript.list<B>,
-  accu: rescript.list<C>,
-  f: (arg0: A, arg1: B) => C,
-): rescript.list<C>;
 
 export function mapReverse2<A, B, C>(
   l1: rescript.list<A>,
@@ -281,19 +114,12 @@ export function forEach2<A, B, C>(
   f: (arg0: A, arg1: B) => C,
 ): void;
 
-export function reduce2<A, B, C>(
-  l1: rescript.list<A>,
-  l2: rescript.list<B>,
-  accu: C,
-  f: (arg0: C, arg1: A, arg2: B) => C,
-): C;
-
-export function reduceReverse2Unsafe<A, B, C>(
-  l1: rescript.list<A>,
-  l2: rescript.list<B>,
-  accu: C,
-  f: (arg0: C, arg1: A, arg2: B) => C,
-): C;
+export function reduce2<B, C, A>(
+  l1: rescript.list<B>,
+  l2: rescript.list<C>,
+  accu: A,
+  f: (arg0: A, arg1: B, arg2: C) => A,
+): A;
 
 export function reduceReverse2<A, B, C>(
   l1: rescript.list<A>,
@@ -312,18 +138,21 @@ export function every2<A, B>(
   p: (arg0: A, arg1: B) => boolean,
 ): boolean;
 
-export function compareLength<A, B>(l1: rescript.list<A>, l2: rescript.list<B>): number;
-
-export function compare<A, B>(
+export function compareLength<A>(
   l1: rescript.list<A>,
-  l2: rescript.list<B>,
-  p: (arg0: A, arg1: B) => number,
-): number;
+  l2: rescript.list<A>,
+): Stdlib_Ordering.t;
 
-export function equal<A, B>(
+export function compare<A>(
   l1: rescript.list<A>,
-  l2: rescript.list<B>,
-  p: (arg0: A, arg1: B) => boolean,
+  l2: rescript.list<A>,
+  p: (arg0: A, arg1: A) => Stdlib_Ordering.t,
+): Stdlib_Ordering.t;
+
+export function equal<A>(
+  l1: rescript.list<A>,
+  l2: rescript.list<A>,
+  p: (arg0: A, arg1: A) => boolean,
 ): boolean;
 
 export function some2<A, B>(
@@ -338,45 +167,39 @@ export function has<A, B>(
   eq: (arg0: A, arg1: B) => boolean,
 ): boolean;
 
-export function getAssoc<A, B, C>(
-  xs: rescript.list<[A, B]>,
-  x: C,
-  eq: (arg0: A, arg1: C) => boolean,
-): rescript.option<B>;
+export function getAssoc<A, C, B>(
+  xs: rescript.list<[A, C]>,
+  x: B,
+  eq: (arg0: A, arg1: B) => boolean,
+): rescript.option<C>;
 
-export function hasAssoc<A, B, C>(
-  xs: rescript.list<[A, B]>,
-  x: C,
-  eq: (arg0: A, arg1: C) => boolean,
+export function hasAssoc<A, C, B>(
+  xs: rescript.list<[A, C]>,
+  x: B,
+  eq: (arg0: A, arg1: B) => boolean,
 ): boolean;
 
-export function removeAssoc<A, B, C>(
-  xs: rescript.list<[A, B]>,
-  x: C,
-  eq: (arg0: A, arg1: C) => boolean,
-): rescript.list<[A, B]>;
+export function removeAssoc<A, C, B>(
+  xs: rescript.list<[A, C]>,
+  x: B,
+  eq: (arg0: A, arg1: B) => boolean,
+): rescript.list<[A, C]>;
 
-export function setAssoc<A, B>(
-  xs: rescript.list<[A, B]>,
+export function setAssoc<A, C>(
+  xs: rescript.list<[A, C]>,
   x: A,
-  k: B,
+  k: C,
   eq: (arg0: A, arg1: A) => boolean,
-): rescript.list<[A, B]>;
+): rescript.list<[A, C]>;
 
 export function sort<A>(
   xs: rescript.list<A>,
   cmp: (arg0: A, arg1: A) => Stdlib_Ordering.t,
 ): rescript.list<A>;
 
-export function find<A>(
-  xs: rescript.list<A>,
-  p: (arg0: A) => boolean,
-): rescript.option<A>;
+export function find<A>(xs: rescript.list<A>, p: (arg0: A) => boolean): rescript.option<A>;
 
-export function filter<A>(
-  xs: rescript.list<A>,
-  p: (arg0: A) => boolean,
-): rescript.list<A>;
+export function filter<A>(xs: rescript.list<A>, p: (arg0: A) => boolean): rescript.list<A>;
 
 export function filterWithIndex<A>(
   xs: rescript.list<A>,
@@ -393,11 +216,6 @@ export function partition<A>(
   p: (arg0: A) => boolean,
 ): [rescript.list<A>, rescript.list<A>];
 
-export function unzip<A, B>(
-  xs: rescript.list<[A, B]>,
-): [rescript.list<A>, rescript.list<B>];
+export function unzip<A, B>(xs: rescript.list<[A, B]>): [rescript.list<A>, rescript.list<B>];
 
-export function zip<A, B>(
-  l1: rescript.list<A>,
-  l2: rescript.list<B>,
-): rescript.list<[A, B]>;
+export function zip<A, B>(l1: rescript.list<A>, l2: rescript.list<B>): rescript.list<[A, B]>;

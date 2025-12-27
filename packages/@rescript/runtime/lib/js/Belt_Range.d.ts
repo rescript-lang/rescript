@@ -12,13 +12,6 @@ export function every(
   p: (arg0: number) => boolean,
 ): boolean;
 
-export function everyByAux(
-  s: number,
-  f: number,
-  step: number,
-  p: (arg0: number) => boolean,
-): boolean;
-
 export function everyBy(
   s: number,
   f: number,
@@ -29,13 +22,6 @@ export function everyBy(
 export function some(
   s: number,
   f: number,
-  p: (arg0: number) => boolean,
-): boolean;
-
-export function someByAux(
-  s: number,
-  f: number,
-  step: number,
   p: (arg0: number) => boolean,
 ): boolean;
 

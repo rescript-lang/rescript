@@ -103,6 +103,47 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
     | Js_config.Ts_typescript -> Ts.pp_runtime_type_import f
     | Js_config.Ts_none -> ()
   in
+  (* Build a map of module names to their import paths for value imports *)
+  let value_module_paths =
+    Ext_list.fold_left x.modules Map_string.empty (fun acc m ->
+        let name = Ident.name m.id in
+        let path = Js_name_of_module_id.string_of_module_id m ~output_dir fmt in
+        Map_string.add acc name path)
+  in
+  let value_imported_modules =
+    Map_string.fold value_module_paths Ts.StringSet.empty (fun k _ acc ->
+        Ts.StringSet.add k acc)
+  in
+  (* Get locally defined modules from type exports *)
+  let local_modules = Ts.collect_local_module_names x.program.type_exports in
+  (* Print type-only imports for modules needed by type annotations but not imported for values *)
+  let () =
+    match !Js_config.ts_output with
+    | Js_config.Ts_typescript ->
+      let type_only_modules =
+        Ts.get_type_only_modules ~value_imported_modules ~local_modules
+      in
+      List.iter
+        (fun mod_name ->
+          (* Try to find the path from value modules first *)
+          let path =
+            match Map_string.find_opt value_module_paths mod_name with
+            | Some p -> p
+            | None ->
+              (* For modules not in value imports, use runtime package path.
+                 This handles stdlib modules like Stdlib, Pervasives, Js, etc. *)
+              let js_file = mod_name ^ ".js" in
+              Js_packages_info.runtime_package_path fmt js_file
+          in
+          P.string f "import type * as ";
+          P.string f mod_name;
+          P.string f " from \"";
+          P.string f path;
+          P.string f "\";";
+          P.newline f)
+        type_only_modules
+    | Js_config.Ts_none -> ()
+  in
   (* Print regular imports *)
   let cxt =
     Js_dump_import_export.imports Ext_pp_scope.empty f
@@ -119,7 +160,7 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
                  | External {import_attributes} -> import_attributes
                  | _ -> None )))
   in
-  (* Ensure blank line after imports *)
+  (* Ensure blank line after all imports *)
   let () = P.at_least_two_lines f in
   (* Emit type declarations for TypeScript mode *)
   let () =

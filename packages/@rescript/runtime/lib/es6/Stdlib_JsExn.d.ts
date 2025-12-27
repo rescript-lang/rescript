@@ -4,9 +4,7 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type t = unknown;
 
-export function fromException(exn: exn): rescript.option<t>;
-
-export function getOrUndefined(arg0: string, arg1: t): rescript.option<string>;
+export function fromException(exn: rescript.exn): rescript.option<t>;
 
 export function stack(arg0: t): rescript.option<string>;
 

@@ -3,9 +3,9 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
 
-export type t = rescript.opaque<"Stdlib_Intl_Segmenter.t", []>;
+export type t = Intl.Segmenter;
 
-export type granularity = 
+export type granularity =
   | "word"
   | "grapheme"
   | "sentence";
@@ -15,7 +15,7 @@ export interface options {
   readonly granularity?: rescript.option<granularity>;
 }
 
-export type pluralCategories = 
+export type pluralCategories =
   | "many"
   | "zero"
   | "one"
