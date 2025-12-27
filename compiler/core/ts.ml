@@ -5497,14 +5497,14 @@ let pp_dts_file ~(module_name : string) (f : P.t) (imports : dts_import list)
     in
     used_provided @ missing_imports
   in
-  (if not !Js_config.no_version_header then (
-     P.string f Bs_version.header;
-     (* Only add blank line after header if there's content following *)
-     let has_content =
-       type_imports <> [] || has_runtime_types || has_external_type_imports
-       || type_decls <> [] || value_exports <> []
-     in
-     if has_content then P.at_least_two_lines f));
+  if not !Js_config.no_version_header then (
+    P.string f Bs_version.header;
+    (* Only add blank line after header if there's content following *)
+    let has_content =
+      type_imports <> [] || has_runtime_types || has_external_type_imports
+      || type_decls <> [] || value_exports <> []
+    in
+    if has_content then P.at_least_two_lines f);
   pp_runtime_types_import_dts f;
   pp_external_type_imports f;
   List.iter
