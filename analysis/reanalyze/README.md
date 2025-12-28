@@ -23,20 +23,12 @@ rescript-editor-analysis reanalyze -all
 
 ## Performance Options
 
-### CMT Cache (Experimental)
-
-Use memory-mapped cache for CMT file reading:
-
-```bash
-reanalyze -config -cmt-cache
-```
-
 ### Reactive Mode (Experimental)
 
 Cache processed file data and skip unchanged files on subsequent runs:
 
 ```bash
-reanalyze -config -reactive
+rescript-editor-analysis reanalyze -config -reactive
 ```
 
 This provides significant speedup for repeated analysis (e.g., in a watch mode or service):
@@ -51,7 +43,7 @@ This provides significant speedup for repeated analysis (e.g., in a watch mode o
 Run analysis multiple times to measure cache effectiveness:
 
 ```bash
-reanalyze -config -reactive -timing -runs 3
+rescript-editor-analysis reanalyze -config -reactive -timing -runs 3
 ```
 
 ## CLI Flags
@@ -63,10 +55,11 @@ reanalyze -config -reactive -timing -runs 3
 | `-exception` | Run exception analysis |
 | `-termination` | Run termination analysis |
 | `-all` | Run all analyses |
-| `-cmt-cache` | Use mmap cache for CMT files |
 | `-reactive` | Cache processed file_data, skip unchanged files |
 | `-runs n` | Run analysis n times (for benchmarking) |
+| `-churn n` | Remove/re-add n random files between runs (incremental correctness/perf testing) |
 | `-timing` | Report timing of analysis phases |
+| `-mermaid` | Output Mermaid diagram of reactive pipeline (to stderr) |
 | `-debug` | Print debug information |
 | `-json` | Output in JSON format |
 | `-ci` | Internal flag for CI mode |
@@ -86,7 +79,7 @@ This design enables order-independence and incremental updates.
 
 ## Reactive Analysis
 
-The reactive mode (`-reactive`) uses skip-lite's Marshal_cache to efficiently detect file changes:
+The reactive mode (`-reactive`) caches processed per-file results and efficiently skips unchanged files on subsequent runs:
 
 1. **First run**: All files are processed and results cached
 2. **Subsequent runs**: Only changed files are re-processed

@@ -1,10 +1,10 @@
-# Reactive Reanalyze: Using skip-lite for Incremental Analysis
+# Reactive Reanalyze: Incremental Analysis Design Notes
 
 ## Executive Summary
 
-This document investigates how skip-lite's reactive collections can be used to create an analysis service that stays on and reacts to file changes, dramatically speeding up CMT processing for repeated analysis runs.
+This document is an early design exploration of making `reanalyze` incremental: keeping state between runs and reacting to file changes.
 
-**Key Insight**: The benchmark results from skip-lite show a **950x speedup** when processing only changed files vs. re-reading all files. Applied to reanalyze with ~4900 files (50 copies benchmark), this could reduce CMT processing from ~780ms to ~1-2ms for typical incremental changes.
+**Note**: The current implementation lives in `analysis/reactive/` and `analysis/reanalyze/src/Reactive*` and differs from some details below (e.g. no `-parallel` flag; caching is implemented in OCaml, not via a C++ `Marshal_cache`).
 
 ## Current Architecture
 
@@ -49,14 +49,14 @@ This document investigates how skip-lite's reactive collections can be used to c
 
 ### Current Bottleneck
 
-From the benchmark (50 copies, ~4900 files, 12 cores):
+From the benchmark (50 copies, ~4900 files):
 
-| Phase | Sequential | Parallel | % of Total |
-|-------|-----------|----------|------------|
-| File loading | 779ms | 422ms | 77% / 64% |
-| Merging | 81ms | 94ms | 8% / 14% |
-| Solving | 146ms | 148ms | 15% / 22% |
-| Total | 1007ms | 664ms | 100% |
+| Phase | Time | % of Total |
+|-------|------|------------|
+| File loading | ~779ms | ~77% |
+| Merging | ~81ms | ~8% |
+| Solving | ~146ms | ~15% |
+| Total | ~1007ms | 100% |
 
 **CMT file loading is the dominant cost** because each file requires:
 1. System call to open file
@@ -74,46 +74,29 @@ From the benchmark (50 copies, ~4900 files, 12 cores):
 4. **Cached results** - Keep processed `file_data` in memory
 5. **Fast iteration** - Sub-10ms response for typical edits
 
-### Integration with skip-lite
+### Integration via reactive collections
 
-skip-lite provides two key primitives:
+The implementation uses reactive collections and file-backed collections to cache processed per-file results and propagate changes incrementally.
 
-#### 1. `Marshal_cache` - Efficient CMT Loading
-
-```ocaml
-(* Instead of Cmt_format.read_cmt which does file I/O every time *)
-let load_cmt path =
-  Marshal_cache.with_unmarshalled_file path (fun cmt_infos ->
-    DceFileProcessing.process_cmt_file ~config ~file ~cmtFilePath cmt_infos
-  )
-```
-
-**Benefits**:
-- Memory-mapped, off-heap storage (not GC-scanned)
-- LRU eviction for memory management
-- Automatic invalidation on file change
-
-#### 2. `Reactive_file_collection` - Delta-Based Processing
+#### `ReactiveFileCollection` - Delta-Based Processing
 
 ```ocaml
 (* Create collection that maps CMT paths to processed file_data *)
-let cmt_collection = Reactive_file_collection.create
+let cmt_collection = ReactiveFileCollection.create
   ~process:(fun (cmt_infos : Cmt_format.cmt_infos) ->
     (* This is called only when file changes *)
     process_cmt_for_dce ~config cmt_infos
   )
 
 (* Initial load - process all files once *)
-List.iter (Reactive_file_collection.add cmt_collection) all_cmt_paths
+List.iter (ReactiveFileCollection.process_file cmt_collection) all_cmt_paths
 
 (* On file watcher event - only process changed files *)
-Reactive_file_collection.apply cmt_collection [
-  Modified "lib/bs/src/MyModule.cmt";
-  Modified "lib/bs/src/MyModule.cmti";
-]
+(* In practice, reanalyze uses batch processing for bulk load and explicit remove/add
+   operations for churn testing. *)
 
 (* Get all processed data for analysis *)
-let file_data_list = Reactive_file_collection.values cmt_collection
+let file_data_list = ReactiveFileCollection.values cmt_collection
 ```
 
 ### Service Architecture
