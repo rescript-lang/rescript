@@ -145,63 +145,6 @@ let processFilesSequential ~config (cmtFilePaths : string list) :
              | None -> ());
       {dce_data_list = !dce_data_list; exception_results = !exception_results})
 
-(** Process files in parallel using OCaml 5 Domains *)
-let processFilesParallel ~config ~numDomains (cmtFilePaths : string list) :
-    all_files_result =
-  let numFiles = List.length cmtFilePaths in
-  if numFiles = 0 then {dce_data_list = []; exception_results = []}
-  else
-    let filesArray = Array.of_list cmtFilePaths in
-    let numDomains = min numDomains numFiles in
-    (* Divide files among domains *)
-    let chunkSize = (numFiles + numDomains - 1) / numDomains in
-    (* Thread-safe results accumulator using Mutex *)
-    let resultsMutex = Mutex.create () in
-    let allDceData = ref [] in
-    let allExceptionData = ref [] in
-    let processChunk startIdx endIdx =
-      let localDce = ref [] in
-      let localExn = ref [] in
-      for i = startIdx to endIdx - 1 do
-        match loadCmtFile ~config filesArray.(i) with
-        | Some {dce_data; exception_data} -> (
-          (match dce_data with
-          | Some data -> localDce := data :: !localDce
-          | None -> ());
-          match exception_data with
-          | Some data -> localExn := data :: !localExn
-          | None -> ())
-        | None -> ()
-      done;
-      (* Merge local results into global results under mutex.
-         Timed separately to measure time spent in (and waiting on) the
-         mutex-protected merge. Note: this is an aggregate across domains and
-         may exceed wall-clock time in parallel runs. *)
-      Timing.time_phase `ResultCollection (fun () ->
-          Mutex.lock resultsMutex;
-          allDceData := !localDce @ !allDceData;
-          allExceptionData := !localExn @ !allExceptionData;
-          Mutex.unlock resultsMutex)
-    in
-    (* Time the overall parallel processing *)
-    Timing.time_phase `FileLoading (fun () ->
-        (* Spawn domains for parallel processing *)
-        let domains =
-          Array.init numDomains (fun i ->
-              let startIdx = i * chunkSize in
-              let endIdx = min ((i + 1) * chunkSize) numFiles in
-              if startIdx < numFiles then
-                Some (Domain.spawn (fun () -> processChunk startIdx endIdx))
-              else None)
-        in
-        (* Wait for all domains to complete *)
-        Array.iter
-          (function
-            | Some d -> Domain.join d
-            | None -> ())
-          domains);
-    {dce_data_list = !allDceData; exception_results = !allExceptionData}
-
 (** Process all cmt files and return results for DCE and Exception analysis.
     Conceptually: map process_cmt_file over all files. *)
 let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
@@ -222,21 +165,7 @@ let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
       dce_data_list = result.dce_data_list;
       exception_results = result.exception_results;
     }
-  | None ->
-    let numDomains =
-      match !Cli.parallel with
-      | n when n > 0 -> n
-      | n when n < 0 ->
-        (* Auto-detect: use recommended domain count (number of cores) *)
-        Domain.recommended_domain_count ()
-      | _ -> 0
-    in
-    if numDomains > 0 then (
-      if !Cli.timing then
-        Printf.eprintf "Using %d parallel domains for %d files\n%!" numDomains
-          (List.length cmtFilePaths);
-      processFilesParallel ~config ~numDomains cmtFilePaths)
-    else processFilesSequential ~config cmtFilePaths
+  | None -> processFilesSequential ~config cmtFilePaths
 
 (* Shuffle a list using Fisher-Yates algorithm *)
 let shuffle_list lst =
@@ -769,10 +698,6 @@ let cli () =
         Set Cli.testShuffle,
         "Test flag: shuffle file processing order to verify order-independence"
       );
-      ( "-parallel",
-        Int (fun n -> Cli.parallel := n),
-        "n Process files in parallel using n domains (0 = sequential, default; \
-         -1 = auto-detect cores)" );
       ("-timing", Set Cli.timing, "Report internal timing of analysis phases");
       ( "-mermaid",
         Set Cli.mermaid,

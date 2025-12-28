@@ -20,19 +20,21 @@
 
 - Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
 
+- Reanalyze: add reactive incremental analysis (`-reactive`, `-runs`, `-churn`) and Mermaid pipeline dumping (`-mermaid`). https://github.com/rescript-lang/rescript/pull/8092
+
 #### :bug: Bug fix
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
+- Rewatch: enable `--create-sourcedirs` by default (now deprecated when explicitly used). https://github.com/rescript-lang/rescript/pull/8092
+
 #### :house: Internal
 
 # 12.0.2
 
 #### :rocket: New Feature
-
-- Reanalyze: add parallel processing for CMT file analysis with new `-parallel` and `-timing` flags, plus benchmark infrastructure for performance testing. https://github.com/rescript-lang/rescript/pull/8089
 
 #### :bug: Bug fix
 

@@ -23,18 +23,6 @@ rescript-editor-analysis reanalyze -all
 
 ## Performance Options
 
-### Parallel Processing
-
-Use multiple CPU cores for faster analysis:
-
-```bash
-# Use 4 parallel domains
-reanalyze -config -parallel 4
-
-# Auto-detect number of cores
-reanalyze -config -parallel -1
-```
-
 ### CMT Cache (Experimental)
 
 Use memory-mapped cache for CMT file reading:
@@ -75,7 +63,6 @@ reanalyze -config -reactive -timing -runs 3
 | `-exception` | Run exception analysis |
 | `-termination` | Run termination analysis |
 | `-all` | Run all analyses |
-| `-parallel n` | Use n parallel domains (0=sequential, -1=auto) |
 | `-cmt-cache` | Use mmap cache for CMT files |
 | `-reactive` | Cache processed file_data, skip unchanged files |
 | `-runs n` | Run analysis n times (for benchmarking) |
@@ -95,7 +82,7 @@ The DCE analysis is structured as a pure pipeline:
 3. **SOLVE** - Compute dead/live status → issues
 4. **REPORT** - Output issues
 
-This design enables order-independence, parallelization, and incremental updates.
+This design enables order-independence and incremental updates.
 
 ## Reactive Analysis
 
@@ -117,9 +104,6 @@ make test-reanalyze
 
 # Run with shuffled file order (order-independence test)
 make test-reanalyze-order-independence
-
-# Run parallel mode test
-make test-reanalyze-parallel
 ```
 
 ### Benchmarking
@@ -129,7 +113,7 @@ The benchmark project generates ~5000 files to measure analysis performance:
 ```bash
 cd tests/analysis_tests/tests-reanalyze/deadcode-benchmark
 
-# Generate files, build, and run sequential vs parallel benchmark
+# Generate files, build, and run benchmark
 make benchmark
 
 # Compare CMT cache effectiveness (cold vs warm)
