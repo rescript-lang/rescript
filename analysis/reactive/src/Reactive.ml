@@ -82,6 +82,11 @@ let count_changes entries =
     entries;
   (!adds, !removes)
 
+(** {1 Debug} *)
+
+let debug_enabled = ref false
+let set_debug b = debug_enabled := b
+
 (** {1 Node Registry} *)
 
 module Registry = struct
@@ -247,6 +252,26 @@ module Registry = struct
   let print_stats () =
     let all = Hashtbl.fold (fun _ info acc -> info :: acc) nodes [] in
     let sorted = List.sort (fun a b -> compare a.level b.level) all in
+    let by_time =
+      List.sort
+        (fun a b ->
+          Int64.compare b.stats.process_time_ns a.stats.process_time_ns)
+        all
+    in
+    let top =
+      by_time
+      |> List.filter (fun info -> info.stats.process_time_ns <> 0L)
+      |> List.filteri (fun i _ -> i < 5)
+    in
+    if top <> [] then (
+      Printf.eprintf "Top nodes by process time:\n";
+      List.iter
+        (fun info ->
+          let time_ms = Int64.to_float info.stats.process_time_ns /. 1e6 in
+          Printf.eprintf "  - %s (L%d): %.2fms (runs=%d)\n" info.name info.level
+            time_ms info.stats.process_count)
+        top;
+      Printf.eprintf "\n");
     Printf.eprintf "Node statistics:\n";
     Printf.eprintf "  %-30s | %8s %8s %5s %5s | %8s %8s %5s %5s | %5s %8s\n"
       "name" "d_recv" "e_recv" "+in" "-in" "d_emit" "e_emit" "+out" "-out"
@@ -273,6 +298,47 @@ module Scheduler = struct
 
   let is_propagating () = !propagating
 
+  type stats_snapshot = {
+    deltas_received: int;
+    entries_received: int;
+    adds_received: int;
+    removes_received: int;
+    deltas_emitted: int;
+    entries_emitted: int;
+    adds_emitted: int;
+    removes_emitted: int;
+    process_count: int;
+    process_time_ns: int64;
+  }
+
+  let snapshot_stats (s : stats) : stats_snapshot =
+    {
+      deltas_received = s.deltas_received;
+      entries_received = s.entries_received;
+      adds_received = s.adds_received;
+      removes_received = s.removes_received;
+      deltas_emitted = s.deltas_emitted;
+      entries_emitted = s.entries_emitted;
+      adds_emitted = s.adds_emitted;
+      removes_emitted = s.removes_emitted;
+      process_count = s.process_count;
+      process_time_ns = s.process_time_ns;
+    }
+
+  let diff_stats (before : stats_snapshot) (after_ : stats) =
+    let d_int x y = x - y in
+    let d_time x y = Int64.sub x y in
+    ( d_int after_.deltas_received before.deltas_received,
+      d_int after_.entries_received before.entries_received,
+      d_int after_.adds_received before.adds_received,
+      d_int after_.removes_received before.removes_received,
+      d_int after_.deltas_emitted before.deltas_emitted,
+      d_int after_.entries_emitted before.entries_emitted,
+      d_int after_.adds_emitted before.adds_emitted,
+      d_int after_.removes_emitted before.removes_emitted,
+      d_int after_.process_count before.process_count,
+      d_time after_.process_time_ns before.process_time_ns )
+
   (** Process all dirty nodes in level order *)
   let propagate () =
     if !propagating then
@@ -280,6 +346,11 @@ module Scheduler = struct
     else (
       propagating := true;
       incr wave_counter;
+      let wave_id = !wave_counter in
+      let wave_start = Unix.gettimeofday () in
+      let processed_nodes = ref 0 in
+      if !debug_enabled then
+        Printf.eprintf "\n=== Reactive wave %d ===\n%!" wave_id;
 
       while !Registry.dirty_nodes <> [] do
         (* Get all dirty nodes, sort by level *)
@@ -319,6 +390,10 @@ module Scheduler = struct
           List.iter
             (fun (_, _, info) ->
               info.Registry.dirty <- false;
+              let before =
+                if !debug_enabled then Some (snapshot_stats info.stats)
+                else None
+              in
               let start = Sys.time () in
               info.Registry.process ();
               let elapsed = Sys.time () -. start in
@@ -326,10 +401,40 @@ module Scheduler = struct
                 Int64.add info.Registry.stats.process_time_ns
                   (Int64.of_float (elapsed *. 1e9));
               info.Registry.stats.process_count <-
-                info.Registry.stats.process_count + 1)
+                info.Registry.stats.process_count + 1;
+              if !debug_enabled then (
+                incr processed_nodes;
+                match before with
+                | None -> ()
+                | Some b ->
+                  let ( d_recv,
+                        e_recv,
+                        add_in,
+                        rem_in,
+                        d_emit,
+                        e_emit,
+                        add_out,
+                        rem_out,
+                        runs,
+                        dt_ns ) =
+                    diff_stats b info.Registry.stats
+                  in
+                  (* runs should always be 1 here, but keep the check defensive *)
+                  if runs <> 0 then
+                    Printf.eprintf
+                      "  %-30s (L%d): recv d/e/+/-=%d/%d/%d/%d emit \
+                       d/e/+/-=%d/%d/%d/%d time=%.2fms\n\
+                       %!"
+                      info.Registry.name info.Registry.level d_recv e_recv
+                      add_in rem_in d_emit e_emit add_out rem_out
+                      (Int64.to_float dt_ns /. 1e6)))
             at_level
       done;
 
+      (if !debug_enabled then
+         let wave_elapsed_ms = (Unix.gettimeofday () -. wave_start) *. 1000.0 in
+         Printf.eprintf "Wave %d: processed_nodes=%d wall=%.2fms\n%!" wave_id
+           !processed_nodes wave_elapsed_ms);
       propagating := false)
 
   let wave_count () = !wave_counter
@@ -1181,5 +1286,6 @@ let fixpoint ~name ~(init : ('k, unit) t) ~(edges : ('k, 'k list) t) () :
 
 let to_mermaid () = Registry.to_mermaid ()
 let print_stats () = Registry.print_stats ()
+let set_debug = set_debug
 let reset () = Registry.clear ()
 let reset_stats () = Registry.reset_stats ()

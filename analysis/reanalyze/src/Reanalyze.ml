@@ -353,7 +353,9 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
               (match reactive_liveness with
               | Some liveness -> ReactiveLiveness.print_stats ~t:liveness
               | None -> ());
-              ReactiveSolver.print_stats ~t:solver);
+              ReactiveSolver.print_stats ~t:solver;
+              (* Print full reactive node stats, including Top-N by time. *)
+              Reactive.print_stats ());
             if !Cli.mermaid then
               Printf.eprintf "\n%s\n" (Reactive.to_mermaid ());
             Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
@@ -413,6 +415,9 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
 let runAnalysisAndReport ~cmtRoot =
   Log_.Color.setup ();
   Timing.enabled := !Cli.timing;
+  (* Reactive scheduler debug output: keep surface area minimal by reusing -timing.
+     (-debug is already very verbose for DCE per-decl logging.) *)
+  Reactive.set_debug !Cli.timing;
   if !Cli.json then EmitJson.start ();
   let dce_config = DceConfig.current () in
   let numRuns = max 1 !Cli.runs in

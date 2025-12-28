@@ -162,6 +162,9 @@ val to_mermaid : unit -> string
 val print_stats : unit -> unit
 (** Print per-node timing statistics *)
 
+val set_debug : bool -> unit
+(** Enable or disable reactive scheduler debug output (per-wave summaries). *)
+
 val reset : unit -> unit
 (** Clear all registered nodes (for tests) *)
 
