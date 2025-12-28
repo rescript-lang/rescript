@@ -1,7 +1,7 @@
 {
   "name": "@rescript/react",
   "private": true,
-  "version": "12.0.2",
+  "version": "12.1.0",
   "homepage": "https://rescript-lang.org",
   "bugs": "https://github.com/rescript-lang/rescript/issues",
   "repository": {
