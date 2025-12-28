@@ -99,6 +99,8 @@ make test-reanalyze
 make test-reanalyze-order-independence
 ```
 
+The order-independence test uses the test-only CLI flag `-test-shuffle`, which randomizes the per-file processing order to ensure results don’t depend on traversal order.
+
 ### Benchmarking
 
 The benchmark project generates ~5000 files to measure analysis performance:
