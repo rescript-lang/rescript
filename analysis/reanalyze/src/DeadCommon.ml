@@ -255,7 +255,40 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
   (* Compute liveness using forward propagation *)
   let debug = config.DceConfig.cli.debug in
   let transitive = config.DceConfig.run.transitive in
-  let live = Liveness.compute_forward ~debug ~decl_store ~refs ~ann_store in
+  let live, decl_refs_index =
+    Liveness.compute_forward ~debug ~decl_store ~refs ~ann_store
+  in
+
+  (* For debug logging: invert decl_refs_index to get incoming deps between
+     declarations. This is useful for understanding why something is dead
+     ("who points to it?") even though the solver itself is forward. *)
+  let incoming_decl_deps : PosSet.t PosHash.t =
+    if not debug then PosHash.create 0
+    else
+      let incoming = PosHash.create 256 in
+      let add_incoming ~target ~source =
+        let existing =
+          match PosHash.find_opt incoming target with
+          | Some s -> s
+          | None -> PosSet.empty
+        in
+        PosHash.replace incoming target (PosSet.add source existing)
+      in
+      PosHash.iter
+        (fun source_pos (value_targets, type_targets) ->
+          let add_targets targets =
+            PosSet.iter
+              (fun target_pos ->
+                match DeclarationStore.find_opt decl_store target_pos with
+                | Some _ -> add_incoming ~target:target_pos ~source:source_pos
+                | None -> ())
+              targets
+          in
+          add_targets value_targets;
+          add_targets type_targets)
+        decl_refs_index;
+      incoming
+  in
 
   (* hasRefBelow uses on-demand search through refs_from *)
   let hasRefBelow =
@@ -281,17 +314,99 @@ let solveDeadForward ~ann_store ~config ~decl_store ~refs ~optional_args_state
          let is_dead = not is_live in
 
          (* Debug output (forward model):
-            show reachability + why (root/propagated), without inverse refs. *)
-         (if debug then
-            let status =
-              match live_reason with
-              | None -> "Dead"
-              | Some reason ->
-                Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
-            in
-            Log_.item "%s %s %s@." status
-              (decl.declKind |> Decl.Kind.toString)
-              (decl.path |> DcePath.toString));
+            show reachability + why (root/propagated), and a compact dependency
+            summary (incoming/outgoing declaration edges). *)
+         if debug then (
+           let status =
+             match live_reason with
+             | None -> "Dead"
+             | Some reason ->
+               Printf.sprintf "Live (%s)" (Liveness.reason_to_string reason)
+           in
+           Log_.item "%s %s %s@." status
+             (decl.declKind |> Decl.Kind.toString)
+             (decl.path |> DcePath.toString);
+           (* Print dependency context to help understand why a decl is (not) live.
+               This is declaration-to-declaration deps only, derived from refs_from. *)
+           let outgoing_to_decls =
+             match PosHash.find_opt decl_refs_index pos with
+             | None -> 0
+             | Some (value_targets, type_targets) ->
+               let count_targets targets =
+                 PosSet.fold
+                   (fun target acc ->
+                     match DeclarationStore.find_opt decl_store target with
+                     | Some _ -> acc + 1
+                     | None -> acc)
+                   targets 0
+               in
+               count_targets value_targets + count_targets type_targets
+           in
+           let incoming_from_decls, incoming_from_live_decls =
+             match PosHash.find_opt incoming_decl_deps pos with
+             | None -> (0, 0)
+             | Some sources ->
+               let total = PosSet.cardinal sources in
+               let live_src =
+                 PosSet.fold
+                   (fun src acc ->
+                     if PosHash.mem live src then acc + 1 else acc)
+                   sources 0
+               in
+               (total, live_src)
+           in
+           if incoming_from_decls > 0 || outgoing_to_decls > 0 then
+             Log_.item "    deps: in=%d (live=%d dead=%d) out=%d@."
+               incoming_from_decls incoming_from_live_decls
+               (incoming_from_decls - incoming_from_live_decls)
+               outgoing_to_decls;
+           (* For debugging, print a small sample of incoming/outgoing decl deps.
+               This is meant to answer: "what would make this decl live?" *)
+           let max_show = 3 in
+           (match PosHash.find_opt incoming_decl_deps pos with
+           | None -> ()
+           | Some sources ->
+             let shown = ref 0 in
+             PosSet.iter
+               (fun src_pos ->
+                 if !shown < max_show then (
+                   incr shown;
+                   match DeclarationStore.find_opt decl_store src_pos with
+                   | Some src_decl ->
+                     let src_status =
+                       if PosHash.mem live src_pos then "live" else "dead"
+                     in
+                     Log_.item "      <- %s (%s)@."
+                       (src_decl.path |> DcePath.toString)
+                       src_status
+                   | None -> ()))
+               sources;
+             if PosSet.cardinal sources > max_show then
+               Log_.item "      <- ... (%d more)@."
+                 (PosSet.cardinal sources - max_show));
+           match PosHash.find_opt decl_refs_index pos with
+           | None -> ()
+           | Some (value_targets, type_targets) ->
+             let show_target target =
+               match DeclarationStore.find_opt decl_store target with
+               | None -> false
+               | Some target_decl ->
+                 Log_.item "      -> %s@." (target_decl.path |> DcePath.toString);
+                 true
+             in
+             let shown = ref 0 in
+             let try_show targets =
+               PosSet.iter
+                 (fun target ->
+                   if !shown < max_show then
+                     if show_target target then incr shown)
+                 targets
+             in
+             try_show value_targets;
+             try_show type_targets;
+             if outgoing_to_decls > max_show then
+               Log_.item "      -> ... (%d more)@."
+                 (outgoing_to_decls - max_show));
 
          decl.resolvedDead <- Some is_dead;
 

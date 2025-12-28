@@ -23,9 +23,11 @@ val compute_forward :
   decl_store:DeclarationStore.t ->
   refs:References.t ->
   ann_store:AnnotationStore.t ->
-  live_reason PosHash.t
+  live_reason PosHash.t * (PosSet.t * PosSet.t) PosHash.t
 (** Compute liveness using forward propagation.
     Returns a hashtable mapping live positions to their [live_reason].
+    Also returns the precomputed declaration dependency index:
+    decl_pos -> (value_targets, type_targets).
     Pass [~debug:true] for verbose output. *)
 
 val is_live_forward : live:live_reason PosHash.t -> Lexing.position -> bool

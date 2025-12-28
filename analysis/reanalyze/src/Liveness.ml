@@ -122,7 +122,7 @@ let build_decl_refs_index ~(decl_store : DeclarationStore.t)
     Returns a hashtable mapping positions to their live reason. *)
 let compute_forward ~debug ~(decl_store : DeclarationStore.t)
     ~(refs : References.t) ~(ann_store : AnnotationStore.t) :
-    live_reason PosHash.t =
+    live_reason PosHash.t * (PosSet.t * PosSet.t) PosHash.t =
   let t0 = Unix.gettimeofday () in
   let live = PosHash.create 256 in
   let worklist = Queue.create () in
@@ -135,7 +135,35 @@ let compute_forward ~debug ~(decl_store : DeclarationStore.t)
   (* Pre-compute index: decl_pos -> (value_targets, type_targets) *)
   let decl_refs_index = build_decl_refs_index ~decl_store ~refs in
 
-  if debug then Log_.item "@.Forward Liveness Analysis@.@.";
+  if debug then (
+    (* Compute some high-level stats about the dependency graph. Note: this is
+       declaration-to-declaration deps only (after mapping ref posFrom into the
+       containing declaration). *)
+    let decls_with_out = ref 0 in
+    let out_edges_to_decls = ref 0 in
+    PosHash.iter
+      (fun _decl_pos (value_targets, type_targets) ->
+        incr decls_with_out;
+        let count_targets targets =
+          PosSet.fold
+            (fun target acc ->
+              match DeclarationStore.find_opt decl_store target with
+              | Some _ -> acc + 1
+              | None -> acc)
+            targets 0
+        in
+        out_edges_to_decls :=
+          !out_edges_to_decls
+          + count_targets value_targets
+          + count_targets type_targets)
+      decl_refs_index;
+    Log_.item "@.Forward Liveness Analysis@.@.";
+    Log_.item "  decls: %d@."
+      (DeclarationStore.fold (fun _ _ acc -> acc + 1) decl_store 0);
+    Log_.item "  roots(external targets): %d@."
+      (PosHash.length externally_referenced);
+    Log_.item "  decl-deps: decls_with_out=%d edges_to_decls=%d@.@."
+      !decls_with_out !out_edges_to_decls);
 
   (* Initialize with roots *)
   DeclarationStore.iter
@@ -225,7 +253,7 @@ let compute_forward ~debug ~(decl_store : DeclarationStore.t)
       ((t1 -. t0) *. 1000.0)
       !root_count !propagated_count (PosHash.length live);
 
-  live
+  (live, decl_refs_index)
 
 (** Check if a position is live according to forward-computed liveness *)
 let is_live_forward ~(live : live_reason PosHash.t) (pos : Lexing.position) :

@@ -1807,6 +1807,10 @@
   
 Forward Liveness Analysis
 
+    decls: 641
+    roots(external targets): 122
+    decl-deps: decls_with_out=371 edges_to_decls=248
+
     Root (annotated): Value +Hooks.+default
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
@@ -2166,59 +2170,168 @@ Forward Liveness Analysis
   Dead VariantCase +AutoAnnotate.annotatedVariant.R2
   Dead VariantCase +AutoAnnotate.annotatedVariant.R4
   Dead Value +BucklescriptAnnotations.+bar
+      deps: in=0 (live=0 dead=0) out=1
+        -> +BucklescriptAnnotations.+f
   Dead Value +BucklescriptAnnotations.+f
+      deps: in=1 (live=0 dead=1) out=0
+        <- +BucklescriptAnnotations.+bar (dead)
   Live (annotated) Value +ComponentAsProp.+make
+      deps: in=0 (live=0 dead=0) out=3
+        -> +ComponentAsProp.props.title
+        -> +ComponentAsProp.props.description
+        -> +ComponentAsProp.props.button
   Live (external ref) RecordLabel +ComponentAsProp.props.title
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ComponentAsProp.+make (live)
   Live (external ref) RecordLabel +ComponentAsProp.props.description
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ComponentAsProp.+make (live)
   Live (external ref) RecordLabel +ComponentAsProp.props.button
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ComponentAsProp.+make (live)
   Live (external ref) Value +CreateErrorHandler1.Error1.+notification
   Live (external ref) Value +CreateErrorHandler2.Error2.+notification
   Live (external ref) Value +DeadCodeImplementation.M.+x
   Live (external ref) Exception +DeadExn.Etoplevel
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadExn.+eToplevel (dead)
   Live (external ref) Exception +DeadExn.Inside.Einside
+      deps: in=1 (live=1 dead=0) out=0
+        <- +DeadExn.+eInside (live)
   Dead Exception +DeadExn.DeadE
   Dead Value +DeadExn.+eToplevel
+      deps: in=0 (live=0 dead=0) out=2
+        -> +DeadExn.Etoplevel
+        -> +DeadExn.Etoplevel
   Live (external ref) Value +DeadExn.+eInside
+      deps: in=0 (live=0 dead=0) out=2
+        -> +DeadExn.Inside.Einside
+        -> +DeadExn.Inside.Einside
   Live (propagated) VariantCase +DeadRT.moduleAccessPath.Root
+      deps: in=1 (live=1 dead=0) out=1
+        <- DeadRT.moduleAccessPath.Root (live)
+        -> DeadRT.moduleAccessPath.Root
   Live (external ref) VariantCase +DeadRT.moduleAccessPath.Kaboom
+      deps: in=1 (live=1 dead=0) out=1
+        <- DeadRT.moduleAccessPath.Kaboom (live)
+        -> DeadRT.moduleAccessPath.Kaboom
   Dead Value +DeadRT.+emitModuleAccessPath
   Live (external ref) VariantCase DeadRT.moduleAccessPath.Root
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadRT.moduleAccessPath.Root (live)
+        -> +DeadRT.moduleAccessPath.Root
   Live (propagated) VariantCase DeadRT.moduleAccessPath.Kaboom
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadRT.moduleAccessPath.Kaboom (live)
+        -> +DeadRT.moduleAccessPath.Kaboom
   Dead Value +DeadTest.+fortytwo
   Live (annotated) Value +DeadTest.+fortyTwoButExported
   Live (external ref) Value +DeadTest.+thisIsUsedOnce
   Live (external ref) Value +DeadTest.+thisIsUsedTwice
   Dead Value +DeadTest.+thisIsMarkedDead
   Live (propagated) Value +DeadTest.+thisIsKeptAlive
+      deps: in=1 (live=1 dead=0) out=0
+        <- +DeadTest.+thisIsMarkedLive (live)
   Live (annotated) Value +DeadTest.+thisIsMarkedLive
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.+thisIsKeptAlive
   Dead Value +DeadTest.Inner.+thisIsAlsoMarkedDead
   Dead Value +DeadTest.M.+thisSignatureItemIsDead
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.M.+thisSignatureItemIsDead
   Dead Value +DeadTest.M.+thisSignatureItemIsDead
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.M.+thisSignatureItemIsDead (dead)
   Live (propagated) VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTest.VariantUsedOnlyInImplementation.t.A (live)
+        -> +DeadTest.VariantUsedOnlyInImplementation.t.A
   Live (external ref) Value +DeadTest.VariantUsedOnlyInImplementation.+a
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.VariantUsedOnlyInImplementation.+a
   Live (external ref) VariantCase +DeadTest.VariantUsedOnlyInImplementation.t.A
+      deps: in=2 (live=2 dead=0) out=1
+        <- +DeadTest.VariantUsedOnlyInImplementation.t.A (live)
+        <- +DeadTest.VariantUsedOnlyInImplementation.+a (live)
+        -> +DeadTest.VariantUsedOnlyInImplementation.t.A
   Live (propagated) Value +DeadTest.VariantUsedOnlyInImplementation.+a
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTest.VariantUsedOnlyInImplementation.+a (live)
+        -> +DeadTest.VariantUsedOnlyInImplementation.t.A
   Dead Value +DeadTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> DeadTypeTest.deadType.OnlyInInterface
   Dead Value +DeadTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> DeadTypeTest.deadType.InBoth
   Live (external ref) RecordLabel +DeadTest.record.xxx
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Live (external ref) RecordLabel +DeadTest.record.yyy
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Dead Value +DeadTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.record.xxx
   Dead Value +DeadTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.record.yyy
   Dead Value +DeadTest.UnderscoreInside.+_
   Live (external ref) Value +DeadTest.MM.+x
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.MM.+x
   Dead Value +DeadTest.MM.+y
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.MM.+y
   Live (propagated) Value +DeadTest.MM.+y
+      deps: in=2 (live=1 dead=1) out=0
+        <- +DeadTest.MM.+y (dead)
+        <- +DeadTest.MM.+x (live)
   Live (propagated) Value +DeadTest.MM.+x
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTest.MM.+x (live)
+        -> +DeadTest.MM.+y
   Dead Value +DeadTest.MM.+valueOnlyInImplementation
   Dead Value +DeadTest.+unusedRec
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTest.+unusedRec (dead)
+        -> +DeadTest.+unusedRec
   Dead Value +DeadTest.+split_map
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTest.+split_map (dead)
+        -> +DeadTest.+split_map
   Dead Value +DeadTest.+rec1
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTest.+rec2 (dead)
+        -> +DeadTest.+rec2
   Dead Value +DeadTest.+rec2
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTest.+rec1 (dead)
+        -> +DeadTest.+rec1
   Dead Value +DeadTest.+recWithCallback
+      deps: in=2 (live=0 dead=2) out=2
+        <- +DeadTest.+recWithCallback (dead)
+        <- +DeadTest.+cb (dead)
+        -> +DeadTest.+recWithCallback
+        -> +DeadTest.+cb
   Dead Value +DeadTest.+cb
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTest.+recWithCallback (dead)
+        -> +DeadTest.+recWithCallback
   Dead Value +DeadTest.+foo
+      deps: in=1 (live=0 dead=1) out=2
+        <- +DeadTest.+bar (dead)
+        -> +DeadTest.+cb
+        -> +DeadTest.+bar
   Dead Value +DeadTest.+cb
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTest.+foo (dead)
+        -> +DeadTest.+bar
   Dead Value +DeadTest.+bar
+      deps: in=2 (live=0 dead=2) out=1
+        <- +DeadTest.+foo (dead)
+        <- +DeadTest.+cb (dead)
+        -> +DeadTest.+foo
   Dead Value +DeadTest.+withDefaultValue
   Dead Value +DeadTest.+zzz
   Dead Value +DeadTest.+a1
@@ -2227,28 +2340,62 @@ Forward Liveness Analysis
   Dead Value +DeadTest.+second
   Dead Value +DeadTest.+deadRef
   Live (external ref) Value +DeadTest.+make
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.props.s
   Live (external ref) RecordLabel +DeadTest.props.s
+      deps: in=1 (live=1 dead=0) out=0
+        <- +DeadTest.+make (live)
   Dead Value +DeadTest.+theSideEffectIsLogging
   Dead Value +DeadTest.+stringLengthNoSideEffects
   Live (annotated) Value +DeadTest.GloobLive.+globallyLive1
   Live (annotated) Value +DeadTest.GloobLive.+globallyLive2
   Live (annotated) Value +DeadTest.GloobLive.+globallyLive3
   Live (external ref) VariantCase +DeadTest.WithInclude.t.A
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTest.WithInclude.t.A (live)
+        -> +DeadTest.WithInclude.t.A
   Live (propagated) VariantCase +DeadTest.WithInclude.t.A
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTest.WithInclude.t.A (live)
+        -> +DeadTest.WithInclude.t.A
   Dead Value +DeadTest.+funWithInnerVars
+      deps: in=0 (live=0 dead=0) out=2
+        -> +DeadTest.+x
+        -> +DeadTest.+y
   Dead Value +DeadTest.+x
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+funWithInnerVars (dead)
   Dead Value +DeadTest.+y
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+funWithInnerVars (dead)
   Dead RecordLabel +DeadTest.rc.a
   Live (external ref) Value +DeadTest.+deadIncorrect
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Dead Value +DeadTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTest.+deadIncorrect
   Live (external ref) VariantCase +DeadTest.inlineRecord.IR
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Dead RecordLabel +DeadTest.inlineRecord.IR.a
   Live (external ref) RecordLabel +DeadTest.inlineRecord.IR.b
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Live (external ref) RecordLabel +DeadTest.inlineRecord.IR.c
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Dead RecordLabel +DeadTest.inlineRecord.IR.d
   Live (annotated) RecordLabel +DeadTest.inlineRecord.IR.e
   Live (external ref) Value +DeadTest.+ira
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTest.+_ (dead)
   Dead Value +DeadTest.+_
+      deps: in=0 (live=0 dead=0) out=4
+        -> +DeadTest.+ira
+        -> +DeadTest.inlineRecord.IR
+        -> +DeadTest.inlineRecord.IR.b
+        -> ... (1 more)
   Dead VariantCase +DeadTest.inlineRecord2.IR2
   Dead RecordLabel +DeadTest.inlineRecord2.IR2.a
   Dead RecordLabel +DeadTest.inlineRecord2.IR2.b
@@ -2257,33 +2404,103 @@ Forward Liveness Analysis
   Dead RecordLabel +DeadTest.inlineRecord3.IR3.b
   Dead Value +DeadTestBlacklist.+x
   Dead Value +DeadTestWithInterface.Ext_buffer.+x
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTestWithInterface.Ext_buffer.+x
   Dead Value +DeadTestWithInterface.Ext_buffer.+x
+      deps: in=1 (live=0 dead=1) out=0
+        <- +DeadTestWithInterface.Ext_buffer.+x (dead)
   Live (external ref) VariantCase +DeadTypeTest.t.A
+      deps: in=2 (live=1 dead=1) out=1
+        <- +DeadTypeTest.+a (dead)
+        <- DeadTypeTest.t.A (live)
+        -> DeadTypeTest.t.A
   Dead VariantCase +DeadTypeTest.t.B
+      deps: in=1 (live=0 dead=1) out=1
+        <- DeadTypeTest.t.B (dead)
+        -> DeadTypeTest.t.B
   Dead Value +DeadTypeTest.+a
+      deps: in=1 (live=0 dead=1) out=1
+        <- DeadTypeTest.+a (dead)
+        -> +DeadTypeTest.t.A
   Live (external ref) VariantCase +DeadTypeTest.deadType.OnlyInImplementation
+      deps: in=2 (live=1 dead=1) out=1
+        <- +DeadTypeTest.+_ (dead)
+        <- DeadTypeTest.deadType.OnlyInImplementation (live)
+        -> DeadTypeTest.deadType.OnlyInImplementation
   Live (propagated) VariantCase +DeadTypeTest.deadType.OnlyInInterface
+      deps: in=1 (live=1 dead=0) out=1
+        <- DeadTypeTest.deadType.OnlyInInterface (live)
+        -> DeadTypeTest.deadType.OnlyInInterface
   Live (external ref) VariantCase +DeadTypeTest.deadType.InBoth
+      deps: in=2 (live=1 dead=1) out=1
+        <- +DeadTypeTest.+_ (dead)
+        <- DeadTypeTest.deadType.InBoth (live)
+        -> DeadTypeTest.deadType.InBoth
   Dead VariantCase +DeadTypeTest.deadType.InNeither
+      deps: in=1 (live=0 dead=1) out=1
+        <- DeadTypeTest.deadType.InNeither (dead)
+        -> DeadTypeTest.deadType.InNeither
   Dead Value +DeadTypeTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTypeTest.deadType.OnlyInImplementation
   Dead Value +DeadTypeTest.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTypeTest.deadType.InBoth
   Live (annotated) RecordLabel +DeadTypeTest.record.x
   Live (annotated) RecordLabel +DeadTypeTest.record.y
   Live (annotated) RecordLabel +DeadTypeTest.record.z
   Live (propagated) VariantCase DeadTypeTest.t.A
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTypeTest.t.A (live)
+        -> +DeadTypeTest.t.A
   Dead VariantCase DeadTypeTest.t.B
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTypeTest.t.B (dead)
+        -> +DeadTypeTest.t.B
   Dead Value DeadTypeTest.+a
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadTypeTest.+a
   Live (propagated) VariantCase DeadTypeTest.deadType.OnlyInImplementation
+      deps: in=1 (live=1 dead=0) out=1
+        <- +DeadTypeTest.deadType.OnlyInImplementation (live)
+        -> +DeadTypeTest.deadType.OnlyInImplementation
   Live (external ref) VariantCase DeadTypeTest.deadType.OnlyInInterface
+      deps: in=2 (live=1 dead=1) out=1
+        <- +DeadTest.+_ (dead)
+        <- +DeadTypeTest.deadType.OnlyInInterface (live)
+        -> +DeadTypeTest.deadType.OnlyInInterface
   Live (external ref) VariantCase DeadTypeTest.deadType.InBoth
+      deps: in=2 (live=1 dead=1) out=1
+        <- +DeadTest.+_ (dead)
+        <- +DeadTypeTest.deadType.InBoth (live)
+        -> +DeadTypeTest.deadType.InBoth
   Dead VariantCase DeadTypeTest.deadType.InNeither
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadTypeTest.deadType.InNeither (dead)
+        -> +DeadTypeTest.deadType.InNeither
   Live (propagated) Value +DeadValueTest.+valueAlive
+      deps: in=1 (live=1 dead=0) out=0
+        <- DeadValueTest.+valueAlive (live)
   Dead Value +DeadValueTest.+valueDead
+      deps: in=1 (live=0 dead=1) out=0
+        <- DeadValueTest.+valueDead (dead)
   Dead Value +DeadValueTest.+valueOnlyInImplementation
   Dead Value +DeadValueTest.+subList
+      deps: in=2 (live=0 dead=2) out=2
+        <- +DeadValueTest.+subList (dead)
+        <- +DeadValueTest.+tail (dead)
+        -> +DeadValueTest.+subList
+        -> +DeadValueTest.+tail
   Dead Value +DeadValueTest.+tail
+      deps: in=1 (live=0 dead=1) out=1
+        <- +DeadValueTest.+subList (dead)
+        -> +DeadValueTest.+subList
   Live (external ref) Value DeadValueTest.+valueAlive
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadValueTest.+valueAlive
   Dead Value DeadValueTest.+valueDead
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DeadValueTest.+valueDead
   Live (annotated) Value +Docstrings.+flat
   Live (annotated) Value +Docstrings.+signMessage
   Live (annotated) Value +Docstrings.+one
@@ -2302,16 +2519,35 @@ Forward Liveness Analysis
   Live (annotated) Value +Docstrings.+unitArgWithoutConversion
   Live (annotated) Value +Docstrings.+unitArgWithoutConversionU
   Live (external ref) VariantCase +Docstrings.t.A
+      deps: in=2 (live=2 dead=0) out=0
+        <- +Docstrings.+unitArgWithConversion (live)
+        <- +Docstrings.+unitArgWithConversionU (live)
   Dead VariantCase +Docstrings.t.B
   Live (annotated) Value +Docstrings.+unitArgWithConversion
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Docstrings.t.A
   Live (annotated) Value +Docstrings.+unitArgWithConversionU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Docstrings.t.A
   Live (external ref) Value +DynamicallyLoadedComponent.+make
+      deps: in=0 (live=0 dead=0) out=1
+        -> +DynamicallyLoadedComponent.props.s
   Live (external ref) RecordLabel +DynamicallyLoadedComponent.props.s
+      deps: in=1 (live=1 dead=0) out=0
+        <- +DynamicallyLoadedComponent.+make (live)
   Live (external ref) Value +EmptyArray.Z.+make
   Live (propagated) Value +ErrorHandler.Make.+notify
+      deps: in=1 (live=1 dead=0) out=0
+        <- ErrorHandler.Make.+notify (live)
   Dead Value +ErrorHandler.+x
+      deps: in=1 (live=0 dead=1) out=0
+        <- ErrorHandler.+x (dead)
   Live (external ref) Value ErrorHandler.Make.+notify
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ErrorHandler.Make.+notify
   Dead Value ErrorHandler.+x
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ErrorHandler.+x
   Dead Value +EverythingLiveHere.+x
   Dead Value +EverythingLiveHere.+y
   Dead Value +EverythingLiveHere.+z
@@ -2325,155 +2561,453 @@ Forward Liveness Analysis
   Live (external ref) Value +FirstClassModules.SomeFunctor.+ww
   Live (annotated) Value +FirstClassModules.+someFunctorAsFunction
   Dead RecordLabel +FirstClassModulesInterface.record.x
+      deps: in=1 (live=0 dead=1) out=1
+        <- FirstClassModulesInterface.record.x (dead)
+        -> FirstClassModulesInterface.record.x
   Dead RecordLabel +FirstClassModulesInterface.record.y
+      deps: in=1 (live=0 dead=1) out=1
+        <- FirstClassModulesInterface.record.y (dead)
+        -> FirstClassModulesInterface.record.y
   Dead Value +FirstClassModulesInterface.+r
+      deps: in=1 (live=0 dead=1) out=0
+        <- FirstClassModulesInterface.+r (dead)
   Dead RecordLabel FirstClassModulesInterface.record.x
+      deps: in=1 (live=0 dead=1) out=1
+        <- +FirstClassModulesInterface.record.x (dead)
+        -> +FirstClassModulesInterface.record.x
   Dead RecordLabel FirstClassModulesInterface.record.y
+      deps: in=1 (live=0 dead=1) out=1
+        <- +FirstClassModulesInterface.record.y (dead)
+        -> +FirstClassModulesInterface.record.y
   Dead Value FirstClassModulesInterface.+r
+      deps: in=0 (live=0 dead=0) out=1
+        -> +FirstClassModulesInterface.+r
   Live (external ref) RecordLabel +Hooks.vehicle.name
+      deps: in=4 (live=4 dead=0) out=0
+        <- +Hooks.+make (live)
+        <- +Hooks.Inner.+make (live)
+        <- +Hooks.Inner.Inner2.+make (live)
+        <- ... (1 more)
   Live (propagated) Value +Hooks.+make
+      deps: in=1 (live=1 dead=0) out=4
+        <- +Hooks.+default (live)
+        -> +Hooks.props.vehicle
+        -> +ImportHookDefault.+make
+        -> +ImportHooks.+make
+        -> ... (1 more)
   Live (external ref) RecordLabel +Hooks.props.vehicle
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.+make (live)
   Live (annotated) Value +Hooks.+default
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Hooks.+make
   Live (annotated) Value +Hooks.Inner.+make
+      deps: in=0 (live=0 dead=0) out=2
+        -> +Hooks.Inner.props.vehicle
+        -> +Hooks.vehicle.name
   Live (external ref) RecordLabel +Hooks.Inner.props.vehicle
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.Inner.+make (live)
   Live (annotated) Value +Hooks.Inner.Inner2.+make
+      deps: in=0 (live=0 dead=0) out=2
+        -> +Hooks.Inner.Inner2.props.vehicle
+        -> +Hooks.vehicle.name
   Live (external ref) RecordLabel +Hooks.Inner.Inner2.props.vehicle
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.Inner.Inner2.+make (live)
   Live (annotated) Value +Hooks.NoProps.+make
   Live (annotated) Value +Hooks.+functionWithRenamedArgs
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Hooks.vehicle.name
   Dead RecordLabel +Hooks.r.x
   Live (annotated) Value +Hooks.RenderPropRequiresConversion.+make
+      deps: in=0 (live=0 dead=0) out=2
+        -> +Hooks.RenderPropRequiresConversion.props.renderVehicle
+        -> +Hooks.RenderPropRequiresConversion.+car
   Live (external ref) RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.RenderPropRequiresConversion.+make (live)
   Live (external ref) Value +Hooks.RenderPropRequiresConversion.+car
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.RenderPropRequiresConversion.+make (live)
   Live (propagated) Value +ImmutableArray.+fromArray
+      deps: in=1 (live=1 dead=0) out=0
+        <- ImmutableArray.+fromArray (live)
   Dead Value +ImmutableArray.+toArray
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+toArray (dead)
   Dead Value +ImmutableArray.+length
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+length (dead)
   Dead Value +ImmutableArray.+size
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+size (dead)
   Live (propagated) Value +ImmutableArray.+get
+      deps: in=2 (live=1 dead=1) out=0
+        <- ImmutableArray.Array.+get (live)
+        <- ImmutableArray.+get (dead)
   Dead Value +ImmutableArray.+getExn
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+getExn (dead)
   Dead Value +ImmutableArray.+getUnsafe
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+getUnsafe (dead)
   Dead Value +ImmutableArray.+getUndefined
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+getUndefined (dead)
   Dead Value +ImmutableArray.+shuffle
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+shuffle (dead)
   Dead Value +ImmutableArray.+reverse
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reverse (dead)
   Dead Value +ImmutableArray.+makeUninitialized
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+makeUninitialized (dead)
   Dead Value +ImmutableArray.+makeUninitializedUnsafe
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+makeUninitializedUnsafe (dead)
   Dead Value +ImmutableArray.+make
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+make (dead)
   Dead Value +ImmutableArray.+range
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+range (dead)
   Dead Value +ImmutableArray.+rangeBy
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+rangeBy (dead)
   Dead Value +ImmutableArray.+makeByU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+makeByU (dead)
   Dead Value +ImmutableArray.+makeBy
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+makeBy (dead)
   Dead Value +ImmutableArray.+makeByAndShuffleU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+makeByAndShuffleU (dead)
   Dead Value +ImmutableArray.+makeByAndShuffle
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+makeByAndShuffle (dead)
   Dead Value +ImmutableArray.+zip
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+zip (dead)
   Dead Value +ImmutableArray.+zipByU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+zipByU (dead)
   Dead Value +ImmutableArray.+zipBy
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+zipBy (dead)
   Dead Value +ImmutableArray.+unzip
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+unzip (dead)
   Dead Value +ImmutableArray.+concat
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+concat (dead)
   Dead Value +ImmutableArray.+concatMany
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+concatMany (dead)
   Dead Value +ImmutableArray.+slice
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+slice (dead)
   Dead Value +ImmutableArray.+sliceToEnd
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+sliceToEnd (dead)
   Dead Value +ImmutableArray.+copy
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+copy (dead)
   Dead Value +ImmutableArray.+forEachU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+forEachU (dead)
   Dead Value +ImmutableArray.+forEach
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+forEach (dead)
   Dead Value +ImmutableArray.+mapU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+mapU (dead)
   Dead Value +ImmutableArray.+map
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+map (dead)
   Dead Value +ImmutableArray.+keepWithIndexU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+keepWithIndexU (dead)
   Dead Value +ImmutableArray.+keepWithIndex
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+keepWithIndex (dead)
   Dead Value +ImmutableArray.+keepMapU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+keepMapU (dead)
   Dead Value +ImmutableArray.+keepMap
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+keepMap (dead)
   Dead Value +ImmutableArray.+forEachWithIndexU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+forEachWithIndexU (dead)
   Dead Value +ImmutableArray.+forEachWithIndex
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+forEachWithIndex (dead)
   Dead Value +ImmutableArray.+mapWithIndexU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+mapWithIndexU (dead)
   Dead Value +ImmutableArray.+mapWithIndex
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+mapWithIndex (dead)
   Dead Value +ImmutableArray.+partitionU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+partitionU (dead)
   Dead Value +ImmutableArray.+partition
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+partition (dead)
   Dead Value +ImmutableArray.+reduceU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reduceU (dead)
   Dead Value +ImmutableArray.+reduce
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reduce (dead)
   Dead Value +ImmutableArray.+reduceReverseU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reduceReverseU (dead)
   Dead Value +ImmutableArray.+reduceReverse
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reduceReverse (dead)
   Dead Value +ImmutableArray.+reduceReverse2U
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reduceReverse2U (dead)
   Dead Value +ImmutableArray.+reduceReverse2
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+reduceReverse2 (dead)
   Dead Value +ImmutableArray.+someU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+someU (dead)
   Dead Value +ImmutableArray.+some
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+some (dead)
   Dead Value +ImmutableArray.+everyU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+everyU (dead)
   Dead Value +ImmutableArray.+every
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+every (dead)
   Dead Value +ImmutableArray.+every2U
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+every2U (dead)
   Dead Value +ImmutableArray.+every2
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+every2 (dead)
   Dead Value +ImmutableArray.+some2U
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+some2U (dead)
   Dead Value +ImmutableArray.+some2
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+some2 (dead)
   Dead Value +ImmutableArray.+cmpU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+cmpU (dead)
   Dead Value +ImmutableArray.+cmp
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+cmp (dead)
   Dead Value +ImmutableArray.+eqU
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+eqU (dead)
   Dead Value +ImmutableArray.+eq
+      deps: in=1 (live=0 dead=1) out=0
+        <- ImmutableArray.+eq (dead)
   Live (propagated) Value ImmutableArray.Array.+get
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TestImmutableArray.+testImmutableArrayGet (live)
+        -> +ImmutableArray.+get
   Live (external ref) Value ImmutableArray.+fromArray
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+fromArray
   Dead Value ImmutableArray.+toArray
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+toArray
   Dead Value ImmutableArray.+length
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+length
   Dead Value ImmutableArray.+size
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+size
   Dead Value ImmutableArray.+get
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+get
   Dead Value ImmutableArray.+getExn
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+getExn
   Dead Value ImmutableArray.+getUnsafe
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+getUnsafe
   Dead Value ImmutableArray.+getUndefined
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+getUndefined
   Dead Value ImmutableArray.+shuffle
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+shuffle
   Dead Value ImmutableArray.+reverse
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reverse
   Dead Value ImmutableArray.+makeUninitialized
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+makeUninitialized
   Dead Value ImmutableArray.+makeUninitializedUnsafe
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+makeUninitializedUnsafe
   Dead Value ImmutableArray.+make
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+make
   Dead Value ImmutableArray.+range
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+range
   Dead Value ImmutableArray.+rangeBy
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+rangeBy
   Dead Value ImmutableArray.+makeByU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+makeByU
   Dead Value ImmutableArray.+makeBy
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+makeBy
   Dead Value ImmutableArray.+makeByAndShuffleU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+makeByAndShuffleU
   Dead Value ImmutableArray.+makeByAndShuffle
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+makeByAndShuffle
   Dead Value ImmutableArray.+zip
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+zip
   Dead Value ImmutableArray.+zipByU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+zipByU
   Dead Value ImmutableArray.+zipBy
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+zipBy
   Dead Value ImmutableArray.+unzip
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+unzip
   Dead Value ImmutableArray.+concat
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+concat
   Dead Value ImmutableArray.+concatMany
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+concatMany
   Dead Value ImmutableArray.+slice
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+slice
   Dead Value ImmutableArray.+sliceToEnd
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+sliceToEnd
   Dead Value ImmutableArray.+copy
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+copy
   Dead Value ImmutableArray.+forEachU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+forEachU
   Dead Value ImmutableArray.+forEach
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+forEach
   Dead Value ImmutableArray.+mapU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+mapU
   Dead Value ImmutableArray.+map
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+map
   Dead Value ImmutableArray.+keepWithIndexU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+keepWithIndexU
   Dead Value ImmutableArray.+keepWithIndex
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+keepWithIndex
   Dead Value ImmutableArray.+keepMapU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+keepMapU
   Dead Value ImmutableArray.+keepMap
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+keepMap
   Dead Value ImmutableArray.+forEachWithIndexU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+forEachWithIndexU
   Dead Value ImmutableArray.+forEachWithIndex
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+forEachWithIndex
   Dead Value ImmutableArray.+mapWithIndexU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+mapWithIndexU
   Dead Value ImmutableArray.+mapWithIndex
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+mapWithIndex
   Dead Value ImmutableArray.+partitionU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+partitionU
   Dead Value ImmutableArray.+partition
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+partition
   Dead Value ImmutableArray.+reduceU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reduceU
   Dead Value ImmutableArray.+reduce
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reduce
   Dead Value ImmutableArray.+reduceReverseU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reduceReverseU
   Dead Value ImmutableArray.+reduceReverse
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reduceReverse
   Dead Value ImmutableArray.+reduceReverse2U
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reduceReverse2U
   Dead Value ImmutableArray.+reduceReverse2
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+reduceReverse2
   Dead Value ImmutableArray.+someU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+someU
   Dead Value ImmutableArray.+some
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+some
   Dead Value ImmutableArray.+everyU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+everyU
   Dead Value ImmutableArray.+every
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+every
   Dead Value ImmutableArray.+every2U
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+every2U
   Dead Value ImmutableArray.+every2
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+every2
   Dead Value ImmutableArray.+some2U
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+some2U
   Dead Value ImmutableArray.+some2
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+some2
   Dead Value ImmutableArray.+cmpU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+cmpU
   Dead Value ImmutableArray.+cmp
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+cmp
   Dead Value ImmutableArray.+eqU
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+eqU
   Dead Value ImmutableArray.+eq
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImmutableArray.+eq
   Dead RecordLabel +ImportHookDefault.person.name
   Dead RecordLabel +ImportHookDefault.person.age
   Live (annotated) Value +ImportHookDefault.+make
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.+make (live)
   Live (annotated) RecordLabel +ImportHookDefault.props.person
   Live (annotated) RecordLabel +ImportHookDefault.props.children
   Live (annotated) RecordLabel +ImportHookDefault.props.renderMe
   Dead RecordLabel +ImportHooks.person.name
   Dead RecordLabel +ImportHooks.person.age
   Live (annotated) Value +ImportHooks.+make
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Hooks.+make (live)
   Live (annotated) RecordLabel +ImportHooks.props.person
   Live (annotated) RecordLabel +ImportHooks.props.children
   Live (annotated) RecordLabel +ImportHooks.props.renderMe
@@ -2481,19 +3015,38 @@ Forward Liveness Analysis
   Live (annotated) Value +ImportIndex.+make
   Live (annotated) RecordLabel +ImportIndex.props.method
   Live (annotated) Value +ImportJsValue.+round
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ImportJsValue.+roundedNumber (live)
   Dead RecordLabel +ImportJsValue.point.x
   Dead RecordLabel +ImportJsValue.point.y
   Live (annotated) Value +ImportJsValue.+area
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ImportJsValue.+areaValue (live)
   Live (annotated) Value +ImportJsValue.+returnMixedArray
   Live (annotated) Value +ImportJsValue.+roundedNumber
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImportJsValue.+round
   Live (annotated) Value +ImportJsValue.+areaValue
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImportJsValue.+area
   Live (propagated) Value +ImportJsValue.AbsoluteValue.+getAbs
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ImportJsValue.+useGetAbs (live)
+        -> +ImportJsValue.AbsoluteValue.+getAbs
   Live (propagated) Value +ImportJsValue.AbsoluteValue.+getAbs
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ImportJsValue.AbsoluteValue.+getAbs (live)
   Live (annotated) Value +ImportJsValue.+useGetProp
   Live (annotated) Value +ImportJsValue.+useGetAbs
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImportJsValue.AbsoluteValue.+getAbs
   Live (annotated) Value +ImportJsValue.+useColor
   Live (annotated) Value +ImportJsValue.+higherOrder
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ImportJsValue.+returnedFromHigherOrder (live)
   Live (annotated) Value +ImportJsValue.+returnedFromHigherOrder
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImportJsValue.+higherOrder
   Dead VariantCase +ImportJsValue.variant.I
   Dead VariantCase +ImportJsValue.variant.S
   Live (annotated) Value +ImportJsValue.+convertVariant
@@ -2501,12 +3054,27 @@ Forward Liveness Analysis
   Live (annotated) Value +ImportJsValue.+default
   Dead RecordLabel +ImportMyBanner.message.text
   Live (annotated) Value +ImportMyBanner.+make
+      deps: in=1 (live=0 dead=1) out=0
+        <- +ImportMyBanner.+make (dead)
   Dead Value +ImportMyBanner.+make
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ImportMyBanner.+make
   Live (propagated) VariantCase +InnerModuleTypes.I.t.Foo
+      deps: in=1 (live=1 dead=0) out=1
+        <- InnerModuleTypes.I.t.Foo (live)
+        -> InnerModuleTypes.I.t.Foo
   Live (external ref) VariantCase InnerModuleTypes.I.t.Foo
+      deps: in=2 (live=1 dead=1) out=1
+        <- +InnerModuleTypes.I.t.Foo (live)
+        <- +TestInnedModuleTypes.+_ (dead)
+        -> +InnerModuleTypes.I.t.Foo
   Live (external ref) Value +JsxV4.C.+make
   Live (annotated) Value +LetPrivate.local_1.+x
+      deps: in=1 (live=1 dead=0) out=0
+        <- +LetPrivate.+y (live)
   Live (annotated) Value +LetPrivate.+y
+      deps: in=0 (live=0 dead=0) out=1
+        -> +LetPrivate.local_1.+x
   Dead RecordLabel +ModuleAliases.Outer.Inner.innerT.inner
   Dead RecordLabel +ModuleAliases.Outer2.Inner2.InnerNested.t.nested
   Live (annotated) Value +ModuleAliases.+testNested
@@ -2537,7 +3105,11 @@ Forward Liveness Analysis
   Dead VariantCase +NestedModules.Universe.variant.B
   Live (annotated) Value +NestedModules.Universe.+someString
   Live (propagated) Value +NestedModulesInSignature.Universe.+theAnswer
+      deps: in=1 (live=1 dead=0) out=0
+        <- NestedModulesInSignature.Universe.+theAnswer (live)
   Live (annotated) Value NestedModulesInSignature.Universe.+theAnswer
+      deps: in=0 (live=0 dead=0) out=1
+        -> +NestedModulesInSignature.Universe.+theAnswer
   Dead Value +Newsyntax.+x
   Dead Value +Newsyntax.+y
   Dead RecordLabel +Newsyntax.record.xxx
@@ -2548,96 +3120,272 @@ Forward Liveness Analysis
   Dead RecordLabel +Newsyntax.record2.xx
   Dead RecordLabel +Newsyntax.record2.yy
   Live (propagated) Value +Newton.+-
+      deps: in=7 (live=7 dead=0) out=0
+        <- +Newton.+newton (live)
+        <- +Newton.+iterateMore (live)
+        <- +Newton.+delta (live)
+        <- ... (4 more)
   Live (propagated) Value +Newton.++
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Newton.+f (live)
   Live (propagated) Value +Newton.+*
+      deps: in=2 (live=2 dead=0) out=0
+        <- +Newton.+f (live)
+        <- +Newton.+fPrimed (live)
   Live (propagated) Value +Newton.+/
+      deps: in=3 (live=3 dead=0) out=0
+        <- +Newton.+newton (live)
+        <- +Newton.+loop (live)
+        <- +Newton.+next (live)
   Live (propagated) Value +Newton.+newton
+      deps: in=1 (live=1 dead=0) out=8
+        <- +Newton.+result (live)
+        -> +Newton.+-
+        -> +Newton.+/
+        -> +Newton.+current
+        -> ... (5 more)
   Live (propagated) Value +Newton.+current
+      deps: in=4 (live=4 dead=0) out=0
+        <- +Newton.+newton (live)
+        <- +Newton.+iterateMore (live)
+        <- +Newton.+loop (live)
+        <- ... (1 more)
   Live (propagated) Value +Newton.+iterateMore
+      deps: in=2 (live=2 dead=0) out=3
+        <- +Newton.+newton (live)
+        <- +Newton.+loop (live)
+        -> +Newton.+-
+        -> +Newton.+current
+        -> +Newton.+delta
   Live (propagated) Value +Newton.+delta
+      deps: in=2 (live=2 dead=0) out=1
+        <- +Newton.+newton (live)
+        <- +Newton.+iterateMore (live)
+        -> +Newton.+-
   Live (propagated) Value +Newton.+loop
+      deps: in=2 (live=2 dead=0) out=7
+        <- +Newton.+newton (live)
+        <- +Newton.+loop (live)
+        -> +Newton.+-
+        -> +Newton.+/
+        -> +Newton.+current
+        -> ... (4 more)
   Live (propagated) Value +Newton.+previous
+      deps: in=3 (live=3 dead=0) out=1
+        <- +Newton.+newton (live)
+        <- +Newton.+loop (live)
+        <- +Newton.+next (live)
+        -> +Newton.+current
   Live (propagated) Value +Newton.+next
+      deps: in=2 (live=2 dead=0) out=3
+        <- +Newton.+newton (live)
+        <- +Newton.+loop (live)
+        -> +Newton.+-
+        -> +Newton.+/
+        -> +Newton.+previous
   Live (external ref) Value +Newton.+f
+      deps: in=1 (live=1 dead=0) out=3
+        <- +Newton.+result (live)
+        -> +Newton.+-
+        -> +Newton.++
+        -> +Newton.+*
   Live (propagated) Value +Newton.+fPrimed
+      deps: in=1 (live=1 dead=0) out=2
+        <- +Newton.+result (live)
+        -> +Newton.+-
+        -> +Newton.+*
   Live (external ref) Value +Newton.+result
+      deps: in=0 (live=0 dead=0) out=3
+        -> +Newton.+newton
+        -> +Newton.+f
+        -> +Newton.+fPrimed
   Dead VariantCase +Opaque.opaqueFromRecords.A
   Live (annotated) Value +Opaque.+noConversion
   Live (annotated) Value +Opaque.+testConvertNestedRecordFromOtherFile
   Live (external ref) Value +OptArg.+foo
+      deps: in=1 (live=0 dead=1) out=0
+        <- OptArg.+foo (dead)
   Live (external ref) Value +OptArg.+bar
+      deps: in=1 (live=1 dead=0) out=0
+        <- OptArg.+bar (live)
   Live (external ref) Value +OptArg.+threeArgs
   Live (external ref) Value +OptArg.+twoArgs
   Live (propagated) Value +OptArg.+oneArg
+      deps: in=1 (live=1 dead=0) out=0
+        <- +OptArg.+wrapOneArg (live)
   Live (external ref) Value +OptArg.+wrapOneArg
+      deps: in=0 (live=0 dead=0) out=1
+        -> +OptArg.+oneArg
   Live (propagated) Value +OptArg.+fourArgs
+      deps: in=1 (live=1 dead=0) out=0
+        <- +OptArg.+wrapfourArgs (live)
   Live (external ref) Value +OptArg.+wrapfourArgs
+      deps: in=0 (live=0 dead=0) out=1
+        -> +OptArg.+fourArgs
   Dead Value OptArg.+foo
+      deps: in=0 (live=0 dead=0) out=1
+        -> +OptArg.+foo
   Live (external ref) Value OptArg.+bar
+      deps: in=0 (live=0 dead=0) out=1
+        -> +OptArg.+bar
   Live (propagated) Value +OptionalArgsLiveDead.+formatDate
+      deps: in=2 (live=1 dead=1) out=0
+        <- +OptionalArgsLiveDead.+deadCaller (dead)
+        <- +OptionalArgsLiveDead.+liveCaller (live)
   Dead Value +OptionalArgsLiveDead.+deadCaller
+      deps: in=0 (live=0 dead=0) out=1
+        -> +OptionalArgsLiveDead.+formatDate
   Live (external ref) Value +OptionalArgsLiveDead.+liveCaller
+      deps: in=0 (live=0 dead=0) out=1
+        -> +OptionalArgsLiveDead.+formatDate
   Live (external ref) RecordLabel +Records.coord.x
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+computeArea (live)
   Live (external ref) RecordLabel +Records.coord.y
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+computeArea (live)
   Live (external ref) RecordLabel +Records.coord.z
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+computeArea (live)
   Live (annotated) Value +Records.+origin
   Live (annotated) Value +Records.+computeArea
+      deps: in=0 (live=0 dead=0) out=3
+        -> +Records.coord.x
+        -> +Records.coord.y
+        -> +Records.coord.z
   Live (annotated) Value +Records.+coord2d
   Dead RecordLabel +Records.person.name
   Dead RecordLabel +Records.person.age
   Live (external ref) RecordLabel +Records.person.address
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+findAllAddresses (live)
   Dead RecordLabel +Records.business.name
   Live (external ref) RecordLabel +Records.business.owner
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+findAllAddresses (live)
   Live (external ref) RecordLabel +Records.business.address
+      deps: in=2 (live=2 dead=0) out=0
+        <- +Records.+findAddress (live)
+        <- +Records.+findAllAddresses (live)
   Live (propagated) Value +Records.+getOpt
+      deps: in=3 (live=3 dead=0) out=0
+        <- +Records.+findAddress (live)
+        <- +Records.+findAllAddresses (live)
+        <- +Records.+findAddress2 (live)
   Live (annotated) Value +Records.+findAddress
+      deps: in=0 (live=0 dead=0) out=2
+        -> +Records.+getOpt
+        -> +Records.business.address
   Live (annotated) Value +Records.+someBusiness
   Live (annotated) Value +Records.+findAllAddresses
+      deps: in=0 (live=0 dead=0) out=4
+        -> +Records.+getOpt
+        -> +Records.person.address
+        -> +Records.business.owner
+        -> ... (1 more)
   Dead RecordLabel +Records.payload.num
   Live (external ref) RecordLabel +Records.payload.payload
+      deps: in=3 (live=3 dead=0) out=0
+        <- +Records.+getPayload (live)
+        <- +Records.+getPayloadRecord (live)
+        <- +Records.+getPayloadRecordPlusOne (live)
   Live (annotated) Value +Records.+getPayload
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Records.payload.payload
   Live (external ref) RecordLabel +Records.record.v
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+getPayloadRecordPlusOne (live)
   Dead RecordLabel +Records.record.w
   Live (annotated) Value +Records.+getPayloadRecord
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Records.payload.payload
   Live (annotated) Value +Records.+recordValue
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+payloadValue (live)
   Live (annotated) Value +Records.+payloadValue
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Records.+recordValue
   Live (annotated) Value +Records.+getPayloadRecordPlusOne
+      deps: in=0 (live=0 dead=0) out=2
+        -> +Records.payload.payload
+        -> +Records.record.v
   Dead RecordLabel +Records.business2.name
   Dead RecordLabel +Records.business2.owner
   Live (external ref) RecordLabel +Records.business2.address2
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+findAddress2 (live)
   Live (annotated) Value +Records.+findAddress2
+      deps: in=0 (live=0 dead=0) out=2
+        -> +Records.+getOpt
+        -> +Records.business2.address2
   Live (annotated) Value +Records.+someBusiness2
   Live (annotated) Value +Records.+computeArea3
   Live (annotated) Value +Records.+computeArea4
   Live (external ref) RecordLabel +Records.myRec.type_
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+testMyRec (live)
   Live (annotated) Value +Records.+testMyRec
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Records.myRec.type_
   Live (annotated) Value +Records.+testMyRec2
   Live (annotated) Value +Records.+testMyObj
   Live (annotated) Value +Records.+testMyObj2
   Live (external ref) RecordLabel +Records.myRecBsAs.type_
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Records.+testMyRecBsAs (live)
   Live (annotated) Value +Records.+testMyRecBsAs
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Records.myRecBsAs.type_
   Live (annotated) Value +Records.+testMyRecBsAs2
   Live (annotated) Value +References.+create
   Live (annotated) Value +References.+access
   Live (annotated) Value +References.+update
   Live (propagated) Value +References.R.+get
+      deps: in=1 (live=1 dead=0) out=1
+        <- +References.+get (live)
+        -> +References.R.+get
   Live (propagated) Value +References.R.+make
+      deps: in=1 (live=1 dead=0) out=1
+        <- +References.+make (live)
+        -> +References.R.+make
   Live (propagated) Value +References.R.+set
+      deps: in=1 (live=1 dead=0) out=1
+        <- +References.+set (live)
+        -> +References.R.+set
   Live (propagated) Value +References.R.+get
+      deps: in=1 (live=1 dead=0) out=0
+        <- +References.R.+get (live)
   Live (propagated) Value +References.R.+make
+      deps: in=1 (live=1 dead=0) out=0
+        <- +References.R.+make (live)
   Live (propagated) Value +References.R.+set
+      deps: in=1 (live=1 dead=0) out=0
+        <- +References.R.+set (live)
   Live (annotated) Value +References.+get
+      deps: in=0 (live=0 dead=0) out=1
+        -> +References.R.+get
   Live (annotated) Value +References.+make
+      deps: in=0 (live=0 dead=0) out=1
+        -> +References.R.+make
   Live (annotated) Value +References.+set
+      deps: in=0 (live=0 dead=0) out=1
+        -> +References.R.+set
   Dead RecordLabel +References.requiresConversion.x
   Live (annotated) Value +References.+destroysRefIdentity
   Live (annotated) Value +References.+preserveRefIdentity
   Dead RecordLabel +RepeatedLabel.userData.a
   Dead RecordLabel +RepeatedLabel.userData.b
   Live (external ref) RecordLabel +RepeatedLabel.tabState.a
+      deps: in=1 (live=1 dead=0) out=0
+        <- +RepeatedLabel.+userData (live)
   Live (external ref) RecordLabel +RepeatedLabel.tabState.b
+      deps: in=1 (live=1 dead=0) out=0
+        <- +RepeatedLabel.+userData (live)
   Dead RecordLabel +RepeatedLabel.tabState.f
   Live (external ref) Value +RepeatedLabel.+userData
+      deps: in=0 (live=0 dead=0) out=2
+        -> +RepeatedLabel.tabState.a
+        -> +RepeatedLabel.tabState.b
   Live (annotated) Value +Shadow.+test
   Live (annotated) Value +Shadow.+test
   Live (annotated) Value +Shadow.M.+test
@@ -2650,30 +3398,50 @@ Forward Liveness Analysis
   Live (annotated) Value +TestFirstClassModules.+convertRecord
   Live (annotated) Value +TestFirstClassModules.+convertFirstClassModuleWithTypeEquations
   Live (annotated) Value +TestImmutableArray.+testImmutableArrayGet
+      deps: in=0 (live=0 dead=0) out=1
+        -> ImmutableArray.Array.+get
   Dead Value +TestImmutableArray.+testBeltArrayGet
   Dead Value +TestImmutableArray.+testBeltArraySet
   Live (annotated) Value +TestImport.+innerStuffContents
+      deps: in=1 (live=0 dead=1) out=0
+        <- +TestImport.+innerStuffContents (dead)
   Live (annotated) Value +TestImport.+innerStuffContentsAsEmptyObject
   Dead Value +TestImport.+innerStuffContents
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TestImport.+innerStuffContents
   Live (annotated) Value +TestImport.+valueStartingWithUpperCaseLetter
   Live (annotated) Value +TestImport.+defaultValue
   Dead RecordLabel +TestImport.message.text
   Live (annotated) Value +TestImport.+make
+      deps: in=1 (live=0 dead=1) out=0
+        <- +TestImport.+make (dead)
   Dead Value +TestImport.+make
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TestImport.+make
   Live (annotated) Value +TestImport.+defaultValue2
   Dead Value +TestInnedModuleTypes.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> InnerModuleTypes.I.t.Foo
   Live (annotated) Value +TestModuleAliases.+testInner1
   Live (annotated) Value +TestModuleAliases.+testInner1Expanded
   Live (annotated) Value +TestModuleAliases.+testInner2
   Live (annotated) Value +TestModuleAliases.+testInner2Expanded
   Live (propagated) Value +TestOptArg.+foo
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TestOptArg.+bar (live)
   Live (external ref) Value +TestOptArg.+bar
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TestOptArg.+foo
   Live (external ref) Value +TestOptArg.+notSuppressesOptArgs
   Live (annotated) Value +TestOptArg.+liveSuppressesOptArgs
   Dead RecordLabel +TestPromise.fromPayload.x
   Live (external ref) RecordLabel +TestPromise.fromPayload.s
+      deps: in=1 (live=1 dead=0) out=0
+        <- +TestPromise.+convert (live)
   Dead RecordLabel +TestPromise.toPayload.result
   Live (annotated) Value +TestPromise.+convert
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TestPromise.fromPayload.s
   Dead Value +ToSuppress.+toSuppress
   Live (annotated) Value +TransitiveType1.+convert
   Live (annotated) Value +TransitiveType1.+convertAlias
@@ -2688,10 +3456,18 @@ Forward Liveness Analysis
   Live (annotated) Value +Tuples.+computeAreaNoConverters
   Live (annotated) Value +Tuples.+coord2d
   Live (external ref) RecordLabel +Tuples.person.name
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Tuples.+getFirstName (live)
   Live (external ref) RecordLabel +Tuples.person.age
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Tuples.+changeSecondAge (live)
   Live (annotated) Value +Tuples.+getFirstName
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Tuples.person.name
   Live (annotated) Value +Tuples.+marry
   Live (annotated) Value +Tuples.+changeSecondAge
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Tuples.person.age
   Dead Value +TypeParams1.+exportSomething
   Dead RecordLabel +TypeParams2.item.id
   Dead Value +TypeParams2.+exportSomething
@@ -2702,11 +3478,22 @@ Forward Liveness Analysis
   Dead VariantCase +Types.typeWithVars.A
   Dead VariantCase +Types.typeWithVars.B
   Live (annotated) Value +Types.+swap
+      deps: in=1 (live=1 dead=0) out=1
+        <- +Types.+swap (live)
+        -> +Types.+swap
   Live (external ref) RecordLabel +Types.selfRecursive.self
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Types.+selfRecursiveConverter (live)
   Live (external ref) RecordLabel +Types.mutuallyRecursiveA.b
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Types.+mutuallyRecursiveConverter (live)
   Dead RecordLabel +Types.mutuallyRecursiveB.a
   Live (annotated) Value +Types.+selfRecursiveConverter
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Types.selfRecursive.self
   Live (annotated) Value +Types.+mutuallyRecursiveConverter
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Types.mutuallyRecursiveA.b
   Live (annotated) Value +Types.+testFunctionOnOptionsAsArgument
   Dead VariantCase +Types.opaqueVariant.A
   Dead VariantCase +Types.opaqueVariant.B
@@ -2738,23 +3525,51 @@ Forward Liveness Analysis
   Live (annotated) Value +Uncurried.+curried3
   Live (annotated) Value +Uncurried.+callback
   Live (external ref) RecordLabel +Uncurried.auth.login
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Uncurried.+callback2 (live)
   Live (external ref) RecordLabel +Uncurried.authU.loginU
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Uncurried.+callback2U (live)
   Live (annotated) Value +Uncurried.+callback2
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Uncurried.auth.login
   Live (annotated) Value +Uncurried.+callback2U
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Uncurried.authU.loginU
   Live (annotated) Value +Uncurried.+sumU
   Live (annotated) Value +Uncurried.+sumU2
   Live (annotated) Value +Uncurried.+sumCurried
   Live (annotated) Value +Uncurried.+sumLblCurried
   Live (external ref) VariantCase +Unison.break.IfNeed
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Unison.+group (live)
   Live (external ref) VariantCase +Unison.break.Never
   Live (external ref) VariantCase +Unison.break.Always
   Live (external ref) RecordLabel +Unison.t.break
+      deps: in=1 (live=1 dead=0) out=0
+        <- +Unison.+toString (live)
   Live (external ref) RecordLabel +Unison.t.doc
+      deps: in=2 (live=2 dead=0) out=0
+        <- +Unison.+fits (live)
+        <- +Unison.+toString (live)
   Live (external ref) VariantCase +Unison.stack.Empty
   Live (external ref) VariantCase +Unison.stack.Cons
   Live (external ref) Value +Unison.+group
+      deps: in=0 (live=0 dead=0) out=1
+        -> +Unison.break.IfNeed
   Live (propagated) Value +Unison.+fits
+      deps: in=2 (live=2 dead=0) out=2
+        <- +Unison.+fits (live)
+        <- +Unison.+toString (live)
+        -> +Unison.+fits
+        -> +Unison.t.doc
   Live (external ref) Value +Unison.+toString
+      deps: in=1 (live=1 dead=0) out=4
+        <- +Unison.+toString (live)
+        -> +Unison.+fits
+        -> +Unison.+toString
+        -> +Unison.t.break
+        -> ... (1 more)
   Live (annotated) Value +UseImportJsValue.+useGetProp
   Live (annotated) Value +UseImportJsValue.+useTypeImportedInOtherModule
   Live (annotated) Value +Variants.+isWeekend
@@ -2779,11 +3594,23 @@ Forward Liveness Analysis
   Live (annotated) Value +Variants.+restResult2
   Live (annotated) Value +Variants.+restResult3
   Live (external ref) RecordLabel +VariantsWithPayload.payload.x
+      deps: in=2 (live=2 dead=0) out=0
+        <- +VariantsWithPayload.+printVariantWithPayload (live)
+        <- +VariantsWithPayload.+printManyPayloads (live)
   Live (external ref) RecordLabel +VariantsWithPayload.payload.y
+      deps: in=2 (live=2 dead=0) out=0
+        <- +VariantsWithPayload.+printVariantWithPayload (live)
+        <- +VariantsWithPayload.+printManyPayloads (live)
   Live (annotated) Value +VariantsWithPayload.+testWithPayload
   Live (annotated) Value +VariantsWithPayload.+printVariantWithPayload
+      deps: in=0 (live=0 dead=0) out=2
+        -> +VariantsWithPayload.payload.x
+        -> +VariantsWithPayload.payload.y
   Live (annotated) Value +VariantsWithPayload.+testManyPayloads
   Live (annotated) Value +VariantsWithPayload.+printManyPayloads
+      deps: in=0 (live=0 dead=0) out=2
+        -> +VariantsWithPayload.payload.x
+        -> +VariantsWithPayload.payload.y
   Dead VariantCase +VariantsWithPayload.simpleVariant.A
   Dead VariantCase +VariantsWithPayload.simpleVariant.B
   Dead VariantCase +VariantsWithPayload.simpleVariant.C
