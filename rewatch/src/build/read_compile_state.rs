@@ -82,6 +82,10 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                     let module_name = helpers::file_path_to_module_name(path, package_namespace);
 
                     if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
+                        let package_specs = root_config.get_package_specs();
+                        let first_spec = package_specs.first().unwrap();
+                        let suffix = root_config.get_suffix(first_spec);
+                        let dts = first_spec.should_emit_dts(&root_config.language);
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {
@@ -91,8 +95,8 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                                 last_modified: last_modified.to_owned(),
                                 ast_file_path: path.to_path_buf(),
                                 is_root: *package_is_root,
-                                suffix: root_config
-                                    .get_suffix(root_config.get_package_specs().first().unwrap()),
+                                suffix,
+                                dts,
                             },
                         );
                         let _ = ast_rescript_file_locations.insert(res_file_path_buf);
