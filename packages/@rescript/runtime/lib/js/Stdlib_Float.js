@@ -3,14 +3,11 @@
 
 let Constants = {};
 
-function fromString(i) {
-  let i$1 = parseFloat(i);
-  if (Number.isNaN(i$1)) {
-    return;
-  } else {
-    return i$1;
-  }
-}
+let fromString = (str => {
+  if (!str || !str.trim()) return;
+  let num = +str;
+  return isNaN(num) ? undefined : num;
+});
 
 function clamp(min, max, value) {
   let value$1 = max !== undefined && max < value ? max : value;
