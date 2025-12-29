@@ -4678,11 +4678,27 @@ let rec collect_opaque_types_with_prefix ~(prefix : string option)
       | _ -> ())
     decls
 
+(** Convert a namespaced module name to a brand-friendly format.
+    Namespace separator hyphen is converted to dot for readability.
+    e.g., "Module-Namespace" -> "Namespace.Module" *)
+let module_name_to_brand (name : string) : string =
+  match String.index_opt name '-' with
+  | Some idx ->
+    (* Has namespace: "Module-Namespace" -> "Namespace.Module" *)
+    let module_part = String.sub name 0 idx in
+    let namespace_part =
+      String.sub name (idx + 1) (String.length name - idx - 1)
+    in
+    namespace_part ^ "." ^ module_part
+  | None -> name
+
 (** Collect opaque types from type declarations for $res.opaque brand generation.
     @param module_name The file module name (e.g., "Modules") to prefix all brands *)
 let collect_opaque_types ~(module_name : string) (decls : type_decl list) : unit
     =
-  collect_opaque_types_with_prefix ~prefix:(Some module_name) decls
+  (* Convert module name to brand format (e.g., Module-Namespace -> Namespace.Module) *)
+  let brand_module_name = module_name_to_brand module_name in
+  collect_opaque_types_with_prefix ~prefix:(Some brand_module_name) decls
 
 (** Collect GADT sub-unions from type declarations.
     This re-registers GADT sub-unions after reset_state() is called. *)
@@ -4708,7 +4724,8 @@ let init_type_decls ~(module_name : string) (decls : type_decl list) : unit =
   let saved_env = State.state.env in
   reset_state ();
   State.state.env <- saved_env;
-  set_module_name module_name;
+  (* Store brand-friendly module name (Namespace.Module format) *)
+  set_module_name (module_name_to_brand module_name);
   List.iter collect_runtime_types_decl decls;
   collect_opaque_types ~module_name decls;
   collect_gadt_sub_unions decls
@@ -5874,7 +5891,8 @@ let pp_dts_file ~(module_name : string)
     @ List.map (fun ve -> `Value ve) value_exports
   in
   collect_opaque_types ~module_name type_decls;
-  set_module_name module_name;
+  (* Store brand-friendly module name (Namespace.Module format) *)
+  set_module_name (module_name_to_brand module_name);
   let rec print_items = function
     | [] -> ()
     | [`Type decl] -> pp_dts_type_decl f decl
