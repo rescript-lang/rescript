@@ -26,13 +26,16 @@ let rec findProjectRoot ~dir =
 
 let runConfig = RunConfig.runConfig
 
+let setProjectRootFromCwd () =
+  runConfig.projectRoot <- findProjectRoot ~dir:(Sys.getcwd ());
+  runConfig.bsbProjectRoot <-
+    (match Sys.getenv_opt "BSB_PROJECT_ROOT" with
+    | None -> runConfig.projectRoot
+    | Some s -> s)
+
 let setReScriptProjectRoot =
   lazy
-    (runConfig.projectRoot <- findProjectRoot ~dir:(Sys.getcwd ());
-     runConfig.bsbProjectRoot <-
-       (match Sys.getenv_opt "BSB_PROJECT_ROOT" with
-       | None -> runConfig.projectRoot
-       | Some s -> s))
+    (setProjectRootFromCwd ())
 
 module Config = struct
   let readSuppress conf =
@@ -84,7 +87,7 @@ module Config = struct
 
   (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
   let processBsconfig () =
-    Lazy.force setReScriptProjectRoot;
+    setProjectRootFromCwd ();
     let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in
     let bsconfigFile = Filename.concat runConfig.projectRoot bsconfig in
 

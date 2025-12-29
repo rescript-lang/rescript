@@ -85,7 +85,85 @@ The reactive mode (`-reactive`) caches processed per-file results and efficientl
 2. **Subsequent runs**: Only changed files are re-processed
 3. **Unchanged files**: Return cached `file_data` immediately (no I/O or unmarshalling)
 
-This is the foundation for a persistent analysis service that can respond to file changes in milliseconds.
+This is the foundation for the **reanalyze-server** — a persistent analysis service that keeps reactive state warm across requests.
+
+## Reanalyze Server
+
+A long-lived server process that keeps reactive analysis state warm across multiple requests. This enables fast incremental analysis for editor integration.
+
+### Transparent Server Delegation
+
+When a server is running on the default socket (`/tmp/rescript-reanalyze.sock`), the regular `reanalyze` command **automatically delegates** to it. This means:
+
+1. **Start the server once** (in the background)
+2. **Use the editor normally** — all `reanalyze` calls go through the server
+3. **Enjoy fast incremental analysis** — typically 10x faster after the first run
+
+This works transparently with the VS Code extension's "Start Code Analyzer" command.
+
+### Quick Start
+
+```bash
+# In your project directory, start the server:
+rescript-editor-analysis reanalyze-server --cwd . -- -config -ci -json
+
+# Now any reanalyze call will automatically use the server:
+rescript-editor-analysis reanalyze -config -ci -json  # → delegates to server
+```
+
+### Starting the Server
+
+```bash
+rescript-editor-analysis reanalyze-server [--socket <path>] [--cwd <dir>] [--once] -- <reanalyze args...>
+```
+
+Options:
+- `--socket <path>` — Unix domain socket path (default: `/tmp/rescript-reanalyze.sock`)
+- `--cwd <dir>` — Working directory for analysis (useful when launched from a different directory)
+- `--once` — Handle one request then exit (for testing)
+- `-- <args>` — Reanalyze arguments the server will accept (e.g., `-config -ci -json`)
+
+Examples:
+
+```bash
+# Start server with default socket (recommended)
+rescript-editor-analysis reanalyze-server \
+  --cwd /path/to/my-project \
+  -- -config -ci -json
+
+# With custom socket path
+rescript-editor-analysis reanalyze-server \
+  --socket /tmp/my-custom.sock \
+  --cwd /path/to/my-project \
+  -- -config -ci -json
+```
+
+### Explicit Requests
+
+You can also send requests explicitly (useful for testing or custom socket paths):
+
+```bash
+rescript-editor-analysis reanalyze-server-request \
+  --cwd /path/to/my-project \
+  -- -config -ci -json
+```
+
+### Behavior
+
+- **Transparent delegation**: Regular `reanalyze` calls automatically use the server if running
+- **Default socket**: `/tmp/rescript-reanalyze.sock` (used by both server and client)
+- **Reactive mode forced**: The server always runs with `-reactive` enabled internally
+- **Strict argv matching**: Requests must use the same arguments the server was started with
+- **Same output**: stdout/stderr/exit-code match what a direct CLI invocation would produce
+- **Incremental updates**: When source files change and the project is rebuilt, subsequent requests reflect the updated analysis
+
+### Typical Workflow
+
+1. **Start server** (once, in background)
+2. **Edit source files**
+3. **Rebuild project** (`yarn build` / `rescript build`)
+4. **Use editor** — analysis requests automatically go through the server
+5. **Stop server** when done (or leave running)
 
 ## Development
 

@@ -361,40 +361,40 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
           | None ->
             (* Non-reactive path: use old solver with optional args *)
-            let empty_optional_args_state = OptionalArgsState.create () in
-            let analysis_result_core =
+          let empty_optional_args_state = OptionalArgsState.create () in
+          let analysis_result_core =
               DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
                 ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
-            in
-            (* Compute liveness-aware optional args state *)
-            let is_live pos =
-              match DeclarationStore.find_opt decl_store pos with
-              | Some decl -> Decl.isLive decl
-              | None -> true
-            in
-            let optional_args_state =
-              CrossFileItemsStore.compute_optional_args_state cross_file_store
-                ~find_decl:(DeclarationStore.find_opt decl_store)
-                ~is_live
-            in
-            (* Collect optional args issues only for live declarations *)
-            let optional_args_issues =
-              DeclarationStore.fold
-                (fun _pos decl acc ->
-                  if Decl.isLive decl then
-                    let issues =
-                      DeadOptionalArgs.check ~optional_args_state ~ann_store
-                        ~config:dce_config decl
-                    in
-                    List.rev_append issues acc
-                  else acc)
-                decl_store []
-              |> List.rev
-            in
-            Some
+          in
+          (* Compute liveness-aware optional args state *)
+          let is_live pos =
+            match DeclarationStore.find_opt decl_store pos with
+            | Some decl -> Decl.isLive decl
+            | None -> true
+          in
+          let optional_args_state =
+            CrossFileItemsStore.compute_optional_args_state cross_file_store
+              ~find_decl:(DeclarationStore.find_opt decl_store)
+              ~is_live
+          in
+          (* Collect optional args issues only for live declarations *)
+          let optional_args_issues =
+            DeclarationStore.fold
+              (fun _pos decl acc ->
+                if Decl.isLive decl then
+                  let issues =
+                    DeadOptionalArgs.check ~optional_args_state ~ann_store
+                      ~config:dce_config decl
+                  in
+                  List.rev_append issues acc
+                else acc)
+              decl_store []
+            |> List.rev
+          in
+          Some
               (AnalysisResult.add_issues analysis_result_core
                  optional_args_issues))
     else None
@@ -599,7 +599,7 @@ let runAnalysisAndReport ~cmtRoot =
       removed_std);
   if !Cli.json then EmitJson.finish ()
 
-let cli () =
+let parse_argv (argv : string array) : string option =
   let analysisKindSet = ref false in
   let cmtRootRef = ref None in
   let usage = "reanalyze version " ^ Version.version in
@@ -722,10 +722,427 @@ let cli () =
       ("--version", Unit versionAndExit, "Show version information and exit");
     ]
   in
-  Arg.parse speclist print_endline usage;
+  let current = ref 0 in
+  Arg.parse_argv ~current argv speclist print_endline usage;
   if !analysisKindSet = false then setConfig ();
-  let cmtRoot = !cmtRootRef in
-  runAnalysisAndReport ~cmtRoot
+  !cmtRootRef
+
+(** Default socket path for the reanalyze server.
+    Used by both server (if --socket not specified) and client (for auto-delegation). *)
+let default_socket_path = "/tmp/rescript-reanalyze.sock"
+
+module ReanalyzeIpc = struct
+  type request = {
+    cwd: string option;
+    argv: string array;
+  }
+
+  type response = {
+    exit_code: int;
+    stdout: string;
+    stderr: string;
+  }
+
+  (** Try to send a request to a running server. Returns None if no server is running. *)
+  let try_request ~socket_path ~cwd ~argv : response option =
+    if not (Sys.file_exists socket_path) then None
+    else
+      let sockaddr = Unix.ADDR_UNIX socket_path in
+      let sock = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+      try
+        Unix.connect sock sockaddr;
+        let ic = Unix.in_channel_of_descr sock in
+        let oc = Unix.out_channel_of_descr sock in
+        Fun.protect
+          ~finally:(fun () ->
+            close_out_noerr oc;
+            close_in_noerr ic)
+          (fun () ->
+            let req : request = {cwd; argv} in
+            Marshal.to_channel oc req [Marshal.No_sharing];
+            flush oc;
+            let (resp : response) = Marshal.from_channel ic in
+            Some resp)
+      with _ ->
+        (try Unix.close sock with _ -> ());
+        None
+end
+
+module ReanalyzeServer = struct
+  let ( let* ) x f =
+    match x with
+    | Ok v -> f v
+    | Error _ as e -> e
+
+  let errorf fmt = Printf.ksprintf (fun s -> Error s) fmt
+
+  type server_config = {
+    socket_path: string;
+    once: bool;
+    cwd: string option;
+    expected_reanalyze_args: string list;
+  }
+
+  type server_state = {
+    config: server_config;
+    cmtRoot: string option;
+    dce_config: DceConfig.t;
+    reactive_collection: ReactiveAnalysis.t;
+    reactive_merge: ReactiveMerge.t;
+    reactive_liveness: ReactiveLiveness.t;
+    reactive_solver: ReactiveSolver.t;
+  }
+
+  let usage () =
+    Printf.eprintf
+      {|Usage:
+  rescript-editor-analysis reanalyze-server --socket <path> [--once] -- <reanalyze args...>
+
+Examples:
+  rescript-editor-analysis reanalyze-server --socket /tmp/rescript-reanalyze.sock -- -config -ci -json
+|}
+
+  let parse_cli_args () : (server_config, string) result =
+    let args = Array.to_list Sys.argv |> List.tl in
+    let rec loop socket_path once cwd rest =
+      match rest with
+      | "--socket" :: path :: tl -> loop (Some path) once cwd tl
+      | "--once" :: tl -> loop socket_path true cwd tl
+      | "--cwd" :: dir :: tl -> loop socket_path once (Some dir) tl
+      | "--" :: tl ->
+        (* Use default socket path if not specified *)
+        let socket_path =
+          match socket_path with
+          | Some p -> p
+          | None -> default_socket_path
+        in
+        (* Normalize cwd to canonical absolute path for consistent comparison *)
+        let cwd =
+          match cwd with
+          | Some dir ->
+            (* Use Unix.realpath to get canonical path *)
+            let abs_dir =
+              try Unix.realpath dir
+              with Unix.Unix_error _ ->
+                (* Fallback if realpath fails *)
+                if Filename.is_relative dir then Filename.concat (Sys.getcwd ()) dir
+                else dir
+            in
+            Some abs_dir
+          | None -> None
+        in
+        Ok {socket_path; once; cwd; expected_reanalyze_args = tl}
+      | [] -> errorf "Missing -- separator before reanalyze args"
+      | x :: _ when String.length x > 0 && x.[0] = '-' ->
+        errorf "Unknown server option: %s" x
+      | x :: _ -> errorf "Unexpected argument before --: %s" x
+    in
+    loop None false None args
+
+  let normalize_request_argv (argv : string array) : string array =
+    let drop n =
+      let len = Array.length argv in
+      if len <= n then [||] else Array.sub argv n (len - n)
+    in
+    match Array.to_list argv with
+    | "reanalyze" :: _ -> drop 1
+    | "rescript-editor-analysis" :: "reanalyze" :: _ -> drop 2
+    | _ -> argv
+
+  let unlink_if_exists path =
+    match Sys.file_exists path with
+    | true -> (try Sys.remove path with Sys_error _ -> ())
+    | false -> ()
+
+  let with_cwd (cwd_opt : string option) f =
+    match cwd_opt with
+    | None -> f ()
+    | Some cwd ->
+      let old = Sys.getcwd () in
+      Sys.chdir cwd;
+      Fun.protect ~finally:(fun () -> Sys.chdir old) f
+
+  let capture_stdout_stderr (f : unit -> unit) :
+      (string * string, string) result =
+    let tmp_dir =
+      match Sys.getenv_opt "TMPDIR" with
+      | Some d -> d
+      | None -> Filename.get_temp_dir_name ()
+    in
+    let stdout_path =
+      Filename.temp_file ~temp_dir:tmp_dir "reanalyze" ".stdout"
+    and stderr_path =
+      Filename.temp_file ~temp_dir:tmp_dir "reanalyze" ".stderr"
+    in
+    let orig_out = Unix.dup Unix.stdout
+    and orig_err = Unix.dup Unix.stderr in
+    let out_fd =
+      Unix.openfile stdout_path [Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY] 0o644
+    in
+    let err_fd =
+      Unix.openfile stderr_path [Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY] 0o644
+    in
+    let restore () =
+      (try Unix.dup2 orig_out Unix.stdout with _ -> ());
+      (try Unix.dup2 orig_err Unix.stderr with _ -> ());
+      (try Unix.close orig_out with _ -> ());
+      (try Unix.close orig_err with _ -> ());
+      (try Unix.close out_fd with _ -> ());
+      try Unix.close err_fd with _ -> ()
+    in
+    let read_all path =
+      try
+        let ic = open_in_bin path in
+        Fun.protect
+          ~finally:(fun () -> close_in_noerr ic)
+          (fun () ->
+            let len = in_channel_length ic in
+            really_input_string ic len)
+      with _ -> ""
+    in
+    let run () =
+      Unix.dup2 out_fd Unix.stdout;
+      Unix.dup2 err_fd Unix.stderr;
+      try
+        f ();
+        flush_all ();
+        Ok (read_all stdout_path, read_all stderr_path)
+      with exn ->
+        flush_all ();
+        let bt = Printexc.get_backtrace () in
+        let msg =
+          if bt = "" then Printexc.to_string exn
+          else Printf.sprintf "%s\n%s" (Printexc.to_string exn) bt
+        in
+        Error msg
+    in
+    Fun.protect
+      ~finally:(fun () ->
+        restore ();
+        unlink_if_exists stdout_path;
+        unlink_if_exists stderr_path)
+      run
+
+  let init_state (config : server_config) : (server_state, string) result =
+    Printexc.record_backtrace true;
+    with_cwd config.cwd (fun () ->
+        let reanalyze_argv =
+          Array.of_list ("reanalyze" :: config.expected_reanalyze_args)
+        in
+        let cmtRoot = parse_argv reanalyze_argv in
+        (* Force reactive mode in server. *)
+        Cli.reactive := true;
+        (* Keep server requests single-run and deterministic. *)
+        if !Cli.runs <> 1 then
+          errorf
+            "reanalyze-server does not support -runs (got %d). Start the server with \
+             editor-like args only."
+            !Cli.runs
+        else if !Cli.churn <> 0 then
+          errorf
+            "reanalyze-server does not support -churn (got %d). Start the server with \
+             editor-like args only."
+            !Cli.churn
+        else
+          let dce_config = DceConfig.current () in
+          let reactive_collection = ReactiveAnalysis.create ~config:dce_config in
+          let file_data_collection =
+            ReactiveAnalysis.to_file_data_collection reactive_collection
+          in
+          let reactive_merge = ReactiveMerge.create file_data_collection in
+          let reactive_liveness = ReactiveLiveness.create ~merged:reactive_merge in
+          let value_refs_from =
+            if dce_config.DceConfig.run.transitive then None
+            else Some reactive_merge.ReactiveMerge.value_refs_from
+          in
+          let reactive_solver =
+            ReactiveSolver.create ~decls:reactive_merge.ReactiveMerge.decls
+              ~live:reactive_liveness.ReactiveLiveness.live
+              ~annotations:reactive_merge.ReactiveMerge.annotations
+              ~value_refs_from ~config:dce_config
+          in
+          Ok
+            {
+              config;
+              cmtRoot;
+              dce_config;
+              reactive_collection;
+              reactive_merge;
+              reactive_liveness;
+              reactive_solver;
+            })
+
+  let run_one_request (state : server_state) (req : ReanalyzeIpc.request) :
+      ReanalyzeIpc.response =
+    let expected = Array.of_list state.config.expected_reanalyze_args in
+    let got = normalize_request_argv req.argv in
+    if got <> expected then
+      let expected_s = String.concat " " state.config.expected_reanalyze_args in
+      let got_s = String.concat " " (Array.to_list got) in
+      {
+        exit_code = 2;
+        stdout = "";
+        stderr =
+          Printf.sprintf
+            "reanalyze-server argv mismatch.\nExpected: %s\nGot: %s\n" expected_s
+            got_s;
+      }
+    else if state.config.cwd <> None && req.cwd <> state.config.cwd then
+      {
+        exit_code = 2;
+        stdout = "";
+        stderr =
+          Printf.sprintf
+            "reanalyze-server cwd mismatch.\nExpected: %s\nGot: %s\n"
+            (match state.config.cwd with Some s -> s | None -> "<none>")
+            (match req.cwd with Some s -> s | None -> "<none>");
+      }
+    else
+      let response_of_result res =
+        match res with
+        | Ok (stdout, stderr) -> {ReanalyzeIpc.exit_code = 0; stdout; stderr}
+        | Error err ->
+          {ReanalyzeIpc.exit_code = 1; stdout = ""; stderr = err ^ "\n"}
+      in
+      with_cwd (if state.config.cwd <> None then state.config.cwd else req.cwd)
+        (fun () ->
+          capture_stdout_stderr (fun () ->
+              Log_.Color.setup ();
+              Timing.enabled := !Cli.timing;
+              Reactive.set_debug !Cli.timing;
+              Timing.reset ();
+              Log_.Stats.clear ();
+              if !Cli.json then (
+                (* Match direct CLI output (a leading newline before the JSON array). *)
+                Printf.printf "\n";
+                EmitJson.start ());
+              runAnalysis ~dce_config:state.dce_config ~cmtRoot:state.cmtRoot
+                ~reactive_collection:(Some state.reactive_collection)
+                ~reactive_merge:(Some state.reactive_merge)
+                ~reactive_liveness:(Some state.reactive_liveness)
+                ~reactive_solver:(Some state.reactive_solver) ~skip_file:None;
+              Log_.Stats.report ~config:state.dce_config;
+              Log_.Stats.clear ();
+              if !Cli.json then EmitJson.finish ())
+          |> response_of_result)
+
+  let serve (state : server_state) : unit =
+    unlink_if_exists state.config.socket_path;
+    let sockaddr = Unix.ADDR_UNIX state.config.socket_path in
+    let sock = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+    Unix.bind sock sockaddr;
+    Unix.listen sock 10;
+    Printf.eprintf "reanalyze-server listening on %s\n%!" state.config.socket_path;
+    let rec loop () =
+      let client, _ = Unix.accept sock in
+      let ic = Unix.in_channel_of_descr client in
+      let oc = Unix.out_channel_of_descr client in
+      Fun.protect
+        ~finally:(fun () ->
+          close_out_noerr oc;
+          close_in_noerr ic)
+        (fun () ->
+          let (req : ReanalyzeIpc.request) = Marshal.from_channel ic in
+          let resp = run_one_request state req in
+          Marshal.to_channel oc resp [Marshal.No_sharing];
+          flush oc);
+      if state.config.once then ()
+      else loop ()
+    in
+    loop ()
+
+  let cli () =
+    match parse_cli_args () with
+    | Ok config -> (
+      match init_state config with
+      | Ok state -> serve state
+      | Error msg ->
+        Printf.eprintf "reanalyze-server: %s\n%!" msg;
+        usage ();
+        exit 2)
+    | Error msg ->
+      Printf.eprintf "reanalyze-server: %s\n%!" msg;
+      usage ();
+      exit 2
+end
+
+let reanalyze_server_cli () = ReanalyzeServer.cli ()
+
+let reanalyze_server_request_cli () =
+  let args = Array.to_list Sys.argv |> List.tl in
+  let rec parse socket cwd rest =
+    match rest with
+    | "--socket" :: path :: tl -> parse (Some path) cwd tl
+    | "--cwd" :: dir :: tl -> parse socket (Some dir) tl
+    | "--" :: tl ->
+      (* Use default socket path if not specified *)
+      let socket_path =
+        match socket with
+        | Some p -> p
+        | None -> default_socket_path
+      in
+      `Ok (socket_path, cwd, tl)
+    | [] -> `Error "Missing -- separator before reanalyze args"
+    | x :: _ when String.length x > 0 && x.[0] = '-' ->
+      `Error (Printf.sprintf "Unknown request option: %s" x)
+    | x :: _ -> `Error (Printf.sprintf "Unexpected argument before --: %s" x)
+  in
+  match parse None None args with
+  | `Error msg ->
+    Printf.eprintf "reanalyze-server-request: %s\n%!" msg;
+    exit 2
+  | `Ok (socket_path, cwd, reanalyze_args) ->
+    let sockaddr = Unix.ADDR_UNIX socket_path in
+    let sock = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
+    (try Unix.connect sock sockaddr
+     with exn ->
+       Printf.eprintf "reanalyze-server-request: %s\n%!"
+         (Printexc.to_string exn);
+       exit 2);
+    let ic = Unix.in_channel_of_descr sock in
+    let oc = Unix.out_channel_of_descr sock in
+    Fun.protect
+      ~finally:(fun () ->
+        close_out_noerr oc;
+        close_in_noerr ic)
+      (fun () ->
+        let req : ReanalyzeIpc.request =
+          {cwd; argv = Array.of_list reanalyze_args}
+        in
+        Marshal.to_channel oc req [Marshal.No_sharing];
+        flush oc;
+        let (resp : ReanalyzeIpc.response) = Marshal.from_channel ic in
+        output_string stdout resp.stdout;
+        output_string stderr resp.stderr;
+        flush stdout;
+        flush stderr;
+        exit resp.exit_code)
+
+let cli () =
+  (* Check if a server is running on the default socket - if so, delegate to it *)
+  let argv_for_server =
+    (* Strip "reanalyze" prefix if present *)
+    let args = Array.to_list Sys.argv in
+    match args with
+    | _ :: "reanalyze" :: rest -> Array.of_list rest
+    | _ :: rest -> Array.of_list rest
+    | [] -> [||]
+  in
+  match
+    ReanalyzeIpc.try_request ~socket_path:default_socket_path
+      ~cwd:(Some (Sys.getcwd ())) ~argv:argv_for_server
+  with
+  | Some resp ->
+    (* Server handled the request *)
+    output_string stdout resp.stdout;
+    output_string stderr resp.stderr;
+    flush stdout;
+    flush stderr;
+    exit resp.exit_code
+  | None ->
+    (* No server running - run analysis directly *)
+    let cmtRoot = parse_argv Sys.argv in
+    runAnalysisAndReport ~cmtRoot
 [@@raises exit]
 
 module RunConfig = RunConfig

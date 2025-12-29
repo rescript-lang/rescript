@@ -11,6 +11,16 @@ test: build node_modules/.bin/rescript
 test-reanalyze-order-independence: build node_modules/.bin/rescript
 	./test-order-independence.sh
 
+# Reactive server test - tests incremental analysis correctness
+# Starts server, makes source changes, verifies delta matches expectation
+test-reactive-server: build node_modules/.bin/rescript
+	./test-reactive-server.sh --iterations 3
+
+# Same test on the benchmark project (larger codebase)
+test-reactive-server-benchmark:
+	cd ../deadcode-benchmark && yarn build
+	./test-reactive-server.sh --project ../deadcode-benchmark --iterations 1
+
 # Benchmark: time analysis on existing compiled files
 benchmark: build
 	@echo "=== Benchmark on existing test files ==="
@@ -23,4 +33,4 @@ clean:
 
 .DEFAULT_GOAL := build
 
-.PHONY: build clean test test-reanalyze-order-independence benchmark
+.PHONY: build clean test test-reanalyze-order-independence test-reactive-server test-reactive-server-benchmark benchmark
