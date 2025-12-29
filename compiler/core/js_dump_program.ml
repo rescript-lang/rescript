@@ -139,7 +139,7 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
               Js_packages_info.runtime_package_path fmt js_file
           in
           P.string f "import type * as ";
-          P.string f mod_name;
+          P.string f (Ext_ident.convert mod_name);
           P.string f " from \"";
           P.string f path;
           P.string f "\";";

@@ -1207,6 +1207,15 @@ let get_type_as_name (env : Env.t) (path : Path.t) : string option =
     get_as_string decl.type_attributes
   with Not_found -> None
 
+(** Convert a Path.t to a valid JavaScript identifier string.
+    This handles namespace separators (hyphens) by converting them to '$'.
+    For example, "Module-Namespace.t" becomes "Module$Namespace.t". *)
+let rec js_path_name (path : Path.t) : string =
+  match path with
+  | Path.Pident id -> Ext_ident.convert (Ident.name id)
+  | Path.Pdot (p, s, _pos) -> js_path_name p ^ "." ^ s
+  | Path.Papply (p1, p2) -> js_path_name p1 ^ "(" ^ js_path_name p2 ^ ")"
+
 (** Compute the display name for a type path, applying @as renaming if available.
     For local type references (Pident), tries to qualify using:
     1. current_module_path if set (for code generated within a module context)
@@ -1218,7 +1227,7 @@ let get_type_as_name (env : Env.t) (path : Path.t) : string option =
     if `module N = Belt_internalBuckets`, then `N.t` becomes `Belt_internalBuckets.t`. *)
 let type_display_name (path : Path.t) : string =
   match get_env () with
-  | None -> Path.name path
+  | None -> js_path_name path
   | Some env -> (
     (* Split path into module prefix and type name *)
     match path with
@@ -1232,8 +1241,8 @@ let type_display_name (path : Path.t) : string =
 
       let normalized_path = Path.Pdot (normalized_prefix, type_name, pos) in
       match get_type_as_name env normalized_path with
-      | Some renamed -> Path.name normalized_prefix ^ "." ^ renamed
-      | None -> Path.name normalized_path)
+      | Some renamed -> js_path_name normalized_prefix ^ "." ^ renamed
+      | None -> js_path_name normalized_path)
     | Path.Pident id -> (
       let base_name =
         match get_type_as_name env path with
@@ -1255,7 +1264,7 @@ let type_display_name (path : Path.t) : string =
           match LocalTypeQualifier.get_qualified_by_name base_name with
           | Some qualified -> qualified
           | None -> base_name)))
-    | Path.Papply _ -> Path.name path)
+    | Path.Papply _ -> js_path_name path)
 
 (** Mapping from anonymous type variable IDs to generated names.
     This is populated by collect_type_vars and used by ts_type_of_type_expr. *)
