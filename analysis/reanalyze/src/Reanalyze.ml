@@ -361,40 +361,40 @@ let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
             Some (AnalysisResult.add_issues AnalysisResult.empty all_issues)
           | None ->
             (* Non-reactive path: use old solver with optional args *)
-          let empty_optional_args_state = OptionalArgsState.create () in
-          let analysis_result_core =
+            let empty_optional_args_state = OptionalArgsState.create () in
+            let analysis_result_core =
               DeadCommon.solveDead ~ann_store ~decl_store ~ref_store
                 ~optional_args_state:empty_optional_args_state
                 ~config:dce_config
                 ~checkOptionalArg:(fun
                     ~optional_args_state:_ ~ann_store:_ ~config:_ _ -> [])
-          in
-          (* Compute liveness-aware optional args state *)
-          let is_live pos =
-            match DeclarationStore.find_opt decl_store pos with
-            | Some decl -> Decl.isLive decl
-            | None -> true
-          in
-          let optional_args_state =
-            CrossFileItemsStore.compute_optional_args_state cross_file_store
-              ~find_decl:(DeclarationStore.find_opt decl_store)
-              ~is_live
-          in
-          (* Collect optional args issues only for live declarations *)
-          let optional_args_issues =
-            DeclarationStore.fold
-              (fun _pos decl acc ->
-                if Decl.isLive decl then
-                  let issues =
-                    DeadOptionalArgs.check ~optional_args_state ~ann_store
-                      ~config:dce_config decl
-                  in
-                  List.rev_append issues acc
-                else acc)
-              decl_store []
-            |> List.rev
-          in
-          Some
+            in
+            (* Compute liveness-aware optional args state *)
+            let is_live pos =
+              match DeclarationStore.find_opt decl_store pos with
+              | Some decl -> Decl.isLive decl
+              | None -> true
+            in
+            let optional_args_state =
+              CrossFileItemsStore.compute_optional_args_state cross_file_store
+                ~find_decl:(DeclarationStore.find_opt decl_store)
+                ~is_live
+            in
+            (* Collect optional args issues only for live declarations *)
+            let optional_args_issues =
+              DeclarationStore.fold
+                (fun _pos decl acc ->
+                  if Decl.isLive decl then
+                    let issues =
+                      DeadOptionalArgs.check ~optional_args_state ~ann_store
+                        ~config:dce_config decl
+                    in
+                    List.rev_append issues acc
+                  else acc)
+                decl_store []
+              |> List.rev
+            in
+            Some
               (AnalysisResult.add_issues analysis_result_core
                  optional_args_issues))
     else None
@@ -732,16 +732,9 @@ let parse_argv (argv : string array) : string option =
 let default_socket_path = "/tmp/rescript-reanalyze.sock"
 
 module ReanalyzeIpc = struct
-  type request = {
-    cwd: string option;
-    argv: string array;
-  }
+  type request = {cwd: string option; argv: string array}
 
-  type response = {
-    exit_code: int;
-    stdout: string;
-    stderr: string;
-  }
+  type response = {exit_code: int; stdout: string; stderr: string}
 
   (** Try to send a request to a running server. Returns None if no server is running. *)
   let try_request ~socket_path ~cwd ~argv : response option =
@@ -825,7 +818,8 @@ Examples:
               try Unix.realpath dir
               with Unix.Unix_error _ ->
                 (* Fallback if realpath fails *)
-                if Filename.is_relative dir then Filename.concat (Sys.getcwd ()) dir
+                if Filename.is_relative dir then
+                  Filename.concat (Sys.getcwd ()) dir
                 else dir
             in
             Some abs_dir
@@ -851,7 +845,7 @@ Examples:
 
   let unlink_if_exists path =
     match Sys.file_exists path with
-    | true -> (try Sys.remove path with Sys_error _ -> ())
+    | true -> ( try Sys.remove path with Sys_error _ -> ())
     | false -> ()
 
   let with_cwd (cwd_opt : string option) f =
@@ -869,18 +863,20 @@ Examples:
       | Some d -> d
       | None -> Filename.get_temp_dir_name ()
     in
-    let stdout_path =
-      Filename.temp_file ~temp_dir:tmp_dir "reanalyze" ".stdout"
+    let stdout_path = Filename.temp_file ~temp_dir:tmp_dir "reanalyze" ".stdout"
     and stderr_path =
       Filename.temp_file ~temp_dir:tmp_dir "reanalyze" ".stderr"
     in
-    let orig_out = Unix.dup Unix.stdout
-    and orig_err = Unix.dup Unix.stderr in
+    let orig_out = Unix.dup Unix.stdout and orig_err = Unix.dup Unix.stderr in
     let out_fd =
-      Unix.openfile stdout_path [Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY] 0o644
+      Unix.openfile stdout_path
+        [Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY]
+        0o644
     in
     let err_fd =
-      Unix.openfile stderr_path [Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY] 0o644
+      Unix.openfile stderr_path
+        [Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY]
+        0o644
     in
     let restore () =
       (try Unix.dup2 orig_out Unix.stdout with _ -> ());
@@ -935,22 +931,26 @@ Examples:
         (* Keep server requests single-run and deterministic. *)
         if !Cli.runs <> 1 then
           errorf
-            "reanalyze-server does not support -runs (got %d). Start the server with \
-             editor-like args only."
+            "reanalyze-server does not support -runs (got %d). Start the \
+             server with editor-like args only."
             !Cli.runs
         else if !Cli.churn <> 0 then
           errorf
-            "reanalyze-server does not support -churn (got %d). Start the server with \
-             editor-like args only."
+            "reanalyze-server does not support -churn (got %d). Start the \
+             server with editor-like args only."
             !Cli.churn
         else
           let dce_config = DceConfig.current () in
-          let reactive_collection = ReactiveAnalysis.create ~config:dce_config in
+          let reactive_collection =
+            ReactiveAnalysis.create ~config:dce_config
+          in
           let file_data_collection =
             ReactiveAnalysis.to_file_data_collection reactive_collection
           in
           let reactive_merge = ReactiveMerge.create file_data_collection in
-          let reactive_liveness = ReactiveLiveness.create ~merged:reactive_merge in
+          let reactive_liveness =
+            ReactiveLiveness.create ~merged:reactive_merge
+          in
           let value_refs_from =
             if dce_config.DceConfig.run.transitive then None
             else Some reactive_merge.ReactiveMerge.value_refs_from
@@ -984,8 +984,8 @@ Examples:
         stdout = "";
         stderr =
           Printf.sprintf
-            "reanalyze-server argv mismatch.\nExpected: %s\nGot: %s\n" expected_s
-            got_s;
+            "reanalyze-server argv mismatch.\nExpected: %s\nGot: %s\n"
+            expected_s got_s;
       }
     else if state.config.cwd <> None && req.cwd <> state.config.cwd then
       {
@@ -994,8 +994,12 @@ Examples:
         stderr =
           Printf.sprintf
             "reanalyze-server cwd mismatch.\nExpected: %s\nGot: %s\n"
-            (match state.config.cwd with Some s -> s | None -> "<none>")
-            (match req.cwd with Some s -> s | None -> "<none>");
+            (match state.config.cwd with
+            | Some s -> s
+            | None -> "<none>")
+            (match req.cwd with
+            | Some s -> s
+            | None -> "<none>");
       }
     else
       let response_of_result res =
@@ -1004,7 +1008,8 @@ Examples:
         | Error err ->
           {ReanalyzeIpc.exit_code = 1; stdout = ""; stderr = err ^ "\n"}
       in
-      with_cwd (if state.config.cwd <> None then state.config.cwd else req.cwd)
+      with_cwd
+        (if state.config.cwd <> None then state.config.cwd else req.cwd)
         (fun () ->
           capture_stdout_stderr (fun () ->
               Log_.Color.setup ();
@@ -1032,7 +1037,8 @@ Examples:
     let sock = Unix.socket Unix.PF_UNIX Unix.SOCK_STREAM 0 in
     Unix.bind sock sockaddr;
     Unix.listen sock 10;
-    Printf.eprintf "reanalyze-server listening on %s\n%!" state.config.socket_path;
+    Printf.eprintf "reanalyze-server listening on %s\n%!"
+      state.config.socket_path;
     let rec loop () =
       let client, _ = Unix.accept sock in
       let ic = Unix.in_channel_of_descr client in
@@ -1046,8 +1052,7 @@ Examples:
           let resp = run_one_request state req in
           Marshal.to_channel oc resp [Marshal.No_sharing];
           flush oc);
-      if state.config.once then ()
-      else loop ()
+      if state.config.once then () else loop ()
     in
     loop ()
 
@@ -1130,7 +1135,8 @@ let cli () =
   in
   match
     ReanalyzeIpc.try_request ~socket_path:default_socket_path
-      ~cwd:(Some (Sys.getcwd ())) ~argv:argv_for_server
+      ~cwd:(Some (Sys.getcwd ()))
+      ~argv:argv_for_server
   with
   | Some resp ->
     (* Server handled the request *)

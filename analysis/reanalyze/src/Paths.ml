@@ -33,9 +33,7 @@ let setProjectRootFromCwd () =
     | None -> runConfig.projectRoot
     | Some s -> s)
 
-let setReScriptProjectRoot =
-  lazy
-    (setProjectRootFromCwd ())
+let setReScriptProjectRoot = lazy (setProjectRootFromCwd ())
 
 module Config = struct
   let readSuppress conf =
