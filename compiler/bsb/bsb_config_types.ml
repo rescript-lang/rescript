@@ -29,7 +29,6 @@ type dependencies = dependency list
 type gentype_config = bool
 type command = string
 type ppx = {name: string; args: string list}
-type language = Bsb_spec_set.language = Javascript | Typescript
 
 type t = {
   package_name: string;
@@ -57,6 +56,5 @@ type t = {
   cut_generators: bool;
   (* note when used as a dev mode, we will always ignore it *)
   gentype_config: gentype_config;
-  language: language;
   filename: string;
 }

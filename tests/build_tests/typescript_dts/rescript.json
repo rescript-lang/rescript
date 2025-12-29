@@ -1,12 +1,15 @@
 {
-  "name": "js-with-dts-output-test",
+  "name": "typescript-dts",
   "sources": "src",
-  "package-specs": [
-    {
-      "module": "esmodule",
-      "in-source": true,
-      "dts": true
-    }
-  ],
-  "dependencies": ["test-module"]
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "dts": true
+  },
+  "dependencies": [
+    "test-module",
+    "mock-default",
+    "mock-namespace",
+    "mock-named"
+  ]
 }

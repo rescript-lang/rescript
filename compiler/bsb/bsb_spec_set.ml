@@ -22,26 +22,51 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-[@@@warning "+9"]
+type spec =
+  | Commonjs of {in_source: bool; suffix: string; emit_dts: bool}
+  | Esmodule of {in_source: bool; suffix: string; emit_dts: bool}
+  | Typescript of {in_source: bool; suffix: string}
+      (** TypeScript has inline types, no need for emit_dts *)
 
-(* TODO: sync up with {!Js_packages_info.module_system}  *)
-type format = Ext_module_system.t
+let in_source = function
+  | Commonjs {in_source; _}
+  | Esmodule {in_source; _}
+  | Typescript {in_source; _} ->
+    in_source
 
-type language = Javascript | Typescript
+let suffix = function
+  | Commonjs {suffix; _} | Esmodule {suffix; _} | Typescript {suffix; _} ->
+    suffix
 
-type spec = {format: format; in_source: bool; suffix: string; dts: bool}
+let emit_dts = function
+  | Commonjs {emit_dts; _} | Esmodule {emit_dts; _} -> emit_dts
+  | Typescript _ -> false
+
+let is_typescript = function
+  | Typescript _ -> true
+  | Commonjs _ | Esmodule _ -> false
+
+let module_system = function
+  | Commonjs _ -> Ext_module_system.Commonjs
+  | Esmodule _ -> Ext_module_system.Esmodule
+  | Typescript _ -> Ext_module_system.Typescript
+
+let format_name = function
+  | Commonjs _ -> Literals.commonjs
+  | Esmodule _ -> Literals.esmodule
+  | Typescript _ -> Literals.typescript
 
 type t = spec list
 
-let cmp (s1 : spec) ({format; in_source; suffix; dts} : spec) =
-  let v = compare s1.format format in
+let cmp s1 s2 =
+  let v = compare (module_system s1) (module_system s2) in
   if v <> 0 then v
   else
-    let v = compare s1.in_source in_source in
+    let v = compare (in_source s1) (in_source s2) in
     if v <> 0 then v
     else
-      let v = compare s1.suffix suffix in
-      if v <> 0 then v else compare s1.dts dts
+      let v = compare (suffix s1) (suffix s2) in
+      if v <> 0 then v else compare (emit_dts s1) (emit_dts s2)
 
 let empty = []
 

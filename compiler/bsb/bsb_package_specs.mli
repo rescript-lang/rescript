@@ -24,11 +24,7 @@
 
 type t
 
-val from_map :
-  cwd:string ->
-  language:Bsb_spec_set.language ->
-  Ext_json_types.t Map_string.t ->
-  t
+val from_map : cwd:string -> Ext_json_types.t Map_string.t -> t
 
 val get_list_of_output_js : t -> string -> string list
 
@@ -36,3 +32,14 @@ val package_flag_of_package_specs : t -> dirname:string -> string
 
 (* used to ensure each dir does exist *)
 val list_dirs_by : t -> (string -> unit) -> unit
+
+val has_typescript_module : t -> bool
+(** Check if any spec uses TypeScript module format *)
+
+val has_dts_output : t -> bool
+(** Check if any spec has dts: true *)
+
+val for_dependency_build : t -> t
+(** Convert package specs for dependency builds.
+    TypeScript specs are converted to Esmodule with dts output,
+    since dependencies should produce standard JS + .d.ts files. *)

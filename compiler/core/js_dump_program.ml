@@ -201,7 +201,7 @@ let pp_deps_program ~(output_prefix : string)
     let module_name = Filename.basename output_prefix in
     ignore
       (match kind with
-      | Esmodule | Es6_global ->
+      | Esmodule | Es6_global | Typescript ->
         es6_program ~output_dir ~module_name kind f program
       | Commonjs -> node_program ~output_dir f program);
     P.newline f;

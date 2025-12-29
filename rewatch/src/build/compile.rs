@@ -468,23 +468,31 @@ pub fn compiler_args(
     let gentype_arg = config.get_gentype_arg();
     let experimental_args = root_config.get_experimental_features_args();
 
-    // Get language args from root config
-    let specs = root_config.get_package_specs();
-    let language_args: Vec<String> = root_config
-        .language
-        .to_bsc_flag()
-        .map(|flag| vec![flag.to_string()])
-        .unwrap_or_default();
+    // Get language args from root config package specs
+    // For dependencies (non-local), TypeScript specs are converted to Esmodule + dts
+    let specs = if is_local_dep {
+        root_config.get_package_specs().to_vec()
+    } else {
+        root_config.get_package_specs_for_dependency()
+    };
+    let language_args: Vec<String> = if is_local_dep && root_config.has_typescript_output() {
+        // Only root/local packages output TypeScript directly
+        vec!["-bs-typescript".to_string()]
+    } else {
+        vec![]
+    };
     // Check if any package spec wants .d.ts generation
-    let dts_args: Vec<String> = {
-        if specs
-            .iter()
-            .any(|spec| spec.should_emit_dts(&root_config.language))
-        {
+    let dts_args: Vec<String> = if is_local_dep {
+        if root_config.has_dts_output() {
             vec!["-bs-emit-dts".to_string()]
         } else {
             vec![]
         }
+    } else if root_config.has_dts_output_for_dependency() {
+        // Dependencies emit dts if root uses TypeScript or dts
+        vec!["-bs-emit-dts".to_string()]
+    } else {
+        vec![]
     };
     let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
@@ -514,20 +522,20 @@ pub fn compiler_args(
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
-                        spec.module,
-                        if spec.in_source {
+                        spec.module_name(),
+                        if spec.in_source() {
                             file_path.parent().unwrap().to_str().unwrap().to_string()
                         } else {
                             Path::new("lib")
                                 .join(Path::join(
-                                    Path::new(&spec.get_out_of_source_dir()),
+                                    Path::new(spec.out_of_source_dir()),
                                     file_path.parent().unwrap(),
                                 ))
                                 .to_str()
                                 .unwrap()
                                 .to_string()
                         },
-                        root_config.get_suffix(spec),
+                        spec.suffix(),
                     ),
                 ]
             })
@@ -814,7 +822,7 @@ fn compile_file(
 
             // copy js file
             root_config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source
+                if spec.in_source()
                     && let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
                         ..
@@ -822,11 +830,11 @@ fn compile_file(
                 {
                     let source = helpers::get_source_file_from_rescript_file(
                         &Path::new(&package.path).join(path),
-                        &root_config.get_suffix(spec),
+                        spec.suffix(),
                     );
                     let destination = helpers::get_source_file_from_rescript_file(
                         &package.get_build_path().join(path),
-                        &root_config.get_suffix(spec),
+                        spec.suffix(),
                     );
 
                     if source.exists() {

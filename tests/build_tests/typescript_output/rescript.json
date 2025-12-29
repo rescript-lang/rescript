@@ -1,11 +1,14 @@
 {
-  "name": "typescript-output-test",
+  "name": "typescript-output",
   "sources": "src",
-  "language": "typescript",
-  "package-specs": [
-    {
-      "module": "esmodule",
-      "in-source": true
-    }
+  "package-specs": {
+    "module": "typescript",
+    "in-source": true
+  },
+  "dependencies": [
+    "test-module",
+    "mock-default",
+    "mock-namespace",
+    "mock-named"
   ]
 }

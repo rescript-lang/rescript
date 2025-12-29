@@ -153,7 +153,6 @@ let output_ninja_and_namespace_map ~per_proj_dir ~package_kind
        namespace;
        warning;
        gentype_config;
-       language;
        filename = _;
      } :
       Bsb_config_types.t) : unit =
@@ -199,7 +198,7 @@ let output_ninja_and_namespace_map ~per_proj_dir ~package_kind
       ~dpkg_incls (* dev dependencies *)
       ~lib_incls (* its own libs *)
       ~dev_incls (* its own devs *)
-      ~language generators
+      generators
   in
 
   let oc = open_out_bin (cwd_lib_bs // Literals.build_ninja) in

@@ -85,14 +85,11 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
                 build_state.packages.get(&module.package_name).map(|package| {
                     root_config
                         .get_package_specs()
-                        .into_iter()
+                        .iter()
                         .filter_map(|spec| {
-                            if spec.in_source {
-                                let suffix = match &spec.suffix {
-                                    None => root_config.get_suffix(&spec),
-                                    Some(s) => s.clone(),
-                                };
-                                let dts = spec.should_emit_dts(&root_config.language);
+                            if spec.in_source() {
+                                let suffix = spec.suffix().to_string();
+                                let dts = spec.emit_dts();
                                 Some((package.path.join(&source_file.implementation.path), suffix, dts))
                             } else {
                                 None
@@ -391,23 +388,21 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
     packages::parse_packages(&mut build_state)?;
     let root_config = build_state.get_root_config();
-    let suffix_for_print = match root_config.package_specs {
-        None => match &root_config.suffix {
-            None => String::from(".js"),
-            Some(suffix) => suffix.clone(),
-        },
-        Some(_) => root_config
-            .get_package_specs()
-            .into_iter()
+    let package_specs = root_config.get_package_specs();
+    let suffix_for_print = if package_specs.is_empty() {
+        root_config.suffix.clone().unwrap_or_else(|| String::from(".js"))
+    } else {
+        package_specs
+            .iter()
             .filter_map(|spec| {
-                if spec.in_source {
-                    spec.suffix.or_else(|| root_config.suffix.clone())
+                if spec.in_source() {
+                    Some(spec.suffix().to_string())
                 } else {
                     None
                 }
             })
             .collect::<Vec<String>>()
-            .join(", "),
+            .join(", ")
     };
 
     if !plain_output && show_progress {

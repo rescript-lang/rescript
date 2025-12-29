@@ -84,8 +84,8 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                     if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
                         let package_specs = root_config.get_package_specs();
                         let first_spec = package_specs.first().unwrap();
-                        let suffix = root_config.get_suffix(first_spec);
-                        let dts = first_spec.should_emit_dts(&root_config.language);
+                        let suffix = first_spec.suffix().to_string();
+                        let dts = first_spec.emit_dts();
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {

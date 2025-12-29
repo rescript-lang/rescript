@@ -27,17 +27,18 @@ let vendor_ninja = Bsb_global_paths.vendor_ninja
 
 let make_world_deps cwd (config : Bsb_config_types.t option)
     (ninja_args : string array) =
-  let package_specs, jsx, language =
+  let package_specs, jsx =
     match config with
     | None ->
       (* When this running bsb does not read rescript.json,
          we will read such json file to know which [package-specs]
          it wants
       *)
-      let package_specs, jsx = Bsb_config_parse.deps_from_bsconfig () in
-      (package_specs, jsx, Bsb_spec_set.Javascript)
-    | Some config -> (config.package_specs, config.jsx, config.language)
+      Bsb_config_parse.deps_from_bsconfig ()
+    | Some config -> (config.package_specs, config.jsx)
   in
+  (* Convert TypeScript specs to Esmodule + dts for dependencies *)
+  let package_specs = Bsb_package_specs.for_dependency_build package_specs in
   let args =
     if Ext_array.is_empty ninja_args then [|vendor_ninja|]
     else Array.append [|vendor_ninja|] ninja_args
@@ -65,7 +66,7 @@ let make_world_deps cwd (config : Bsb_config_types.t option)
            Bsb_build_util.mkp lib_bs_dir;
            let _config : _ option =
              Bsb_ninja_regen.regenerate_ninja
-               ~package_kind:(Dependency {package_specs; jsx; language})
+               ~package_kind:(Dependency {package_specs; jsx})
                ~per_proj_dir:proj_dir ~forced:false ~warn_legacy_config:false
                ~warn_as_error:None
            in

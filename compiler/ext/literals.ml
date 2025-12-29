@@ -139,6 +139,8 @@ let esmodule = "esmodule"
 
 let commonjs = "commonjs"
 
+let typescript = "typescript"
+
 let es6 = "es6"
 (* [@@deprecated "Will be removed in v12"] *)
 

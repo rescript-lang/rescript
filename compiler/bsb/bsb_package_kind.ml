@@ -22,11 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type dep_payload = {
-  package_specs: Bsb_package_specs.t;
-  jsx: Bsb_jsx.t;
-  language: Bsb_spec_set.language;
-}
+type dep_payload = {package_specs: Bsb_package_specs.t; jsx: Bsb_jsx.t}
 
 type t = Toplevel | Dependency of dep_payload
 (* This package specs comes from the toplevel to

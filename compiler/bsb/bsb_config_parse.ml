@@ -283,14 +283,6 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
         | Dependency x -> ({jsx with version = x.jsx.version}, bsc_flags)
         | Toplevel -> (jsx, bsc_flags)
       in
-      let language : Bsb_spec_set.language =
-        match package_kind with
-        | Dependency x -> x.language
-        | Toplevel -> (
-          match map.?(Bsb_build_schemas.language) with
-          | Some (Str {str = "typescript"}) -> Typescript
-          | Some _ | None -> Javascript)
-      in
       {
         gentype_config;
         package_name;
@@ -316,15 +308,13 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
         js_post_build_cmd = extract_js_post_build map per_proj_dir;
         package_specs =
           (match package_kind with
-          | Toplevel ->
-            Bsb_package_specs.from_map ~cwd:per_proj_dir ~language map
+          | Toplevel -> Bsb_package_specs.from_map ~cwd:per_proj_dir map
           | Dependency x -> x.package_specs);
         file_groups = groups;
         files_to_install = Queue.create ();
         jsx;
         generators = extract_generators map;
         cut_generators;
-        language;
         filename;
       }
     | None -> Bsb_exception.invalid_spec ("no sources specified in " ^ filename)
@@ -333,15 +323,8 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
 
 let deps_from_bsconfig () =
   let cwd = Bsb_global_paths.cwd in
-  let ( .?() ) = Map_string.find_opt in
   match
     Bsb_config_load.load_json ~per_proj_dir:cwd ~warn_legacy_config:false
   with
-  | _, Obj {map} ->
-    let language : Bsb_spec_set.language =
-      match map.?(Bsb_build_schemas.language) with
-      | Some (Str {str = "typescript"}) -> Typescript
-      | Some _ | None -> Javascript
-    in
-    (Bsb_package_specs.from_map ~cwd ~language map, Bsb_jsx.from_map map)
+  | _, Obj {map} -> (Bsb_package_specs.from_map ~cwd map, Bsb_jsx.from_map map)
   | _, _ -> assert false

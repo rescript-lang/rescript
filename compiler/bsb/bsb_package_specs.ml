@@ -24,11 +24,8 @@
 
 let ( // ) = Ext_path.combine
 
-(*FIXME: use assoc list instead *)
-module Spec_set = Bsb_spec_set
-
 type t = {
-  modules: Spec_set.t;
+  modules: Bsb_spec_set.t;
   runtime: string option;
       (* This has to be resolved as early as possible, since
          the path will be inherited in sub projects
@@ -40,62 +37,74 @@ let ( .?() ) = Map_string.find_opt
 let bad_module_format_message_exn ~loc format =
   Bsb_exception.errorf ~loc
     "package-specs: `%s` isn't a valid output module format. It has to be one \
-     of:  %s or %s"
-    format Literals.esmodule Literals.commonjs
-
-let supported_format (x : string) loc : Ext_module_system.t =
-  let _ =
-    if x = Literals.es6 || x = Literals.es6_global then
-      let loc_end =
-        {loc with Lexing.pos_cnum = loc.Lexing.pos_cnum + String.length x}
-      in
-      let loc = {Warnings.loc_start = loc; loc_end; loc_ghost = false} in
-      Location.deprecated ~can_be_automigrated:false loc
-        (Printf.sprintf "Option \"%s\" is deprecated. Use \"%s\" instead." x
-           Literals.esmodule)
-  in
-  if x = Literals.es6 || x = Literals.esmodule then Esmodule
-  else if x = Literals.commonjs then Commonjs
-  else if x = Literals.es6_global then Es6_global
-  else bad_module_format_message_exn ~loc x
-
-let string_of_format (x : Ext_module_system.t) =
-  match x with
-  | Commonjs -> Literals.commonjs
-  | Esmodule -> Literals.esmodule
-  | Es6_global -> Literals.es6_global
+     of:  %s, %s, or %s"
+    format Literals.esmodule Literals.commonjs Literals.typescript
 
 let suffix_regexp = Str.regexp "[A-Za-z0-9-_.]*\\.[cm]?[jt]s"
 
 let validate_suffix suffix = Str.string_match suffix_regexp suffix 0
 
-let rec from_array suffix (arr : Ext_json_types.t array) : Spec_set.t =
-  let spec = ref Spec_set.empty in
+(* Valid suffixes for TypeScript module format *)
+let valid_typescript_suffixes =
+  [".ts"; ".tsx"; ".mts"; ".cts"; ".mtsx"; ".ctsx"]
+
+let validate_typescript_suffix suffix =
+  List.mem suffix valid_typescript_suffixes
+
+let rec from_array suffix (arr : Ext_json_types.t array) : Bsb_spec_set.t =
+  let spec = ref Bsb_spec_set.empty in
   let has_in_source = ref false in
   Ext_array.iter arr (fun x ->
       let result = from_json_single suffix x in
-      if result.in_source then
+      if Bsb_spec_set.in_source result then
         if not !has_in_source then has_in_source := true
         else
           Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
             "package-specs: detected two module formats that are both \
              configured to be in-source.";
-      spec := Spec_set.add result !spec);
+      spec := Bsb_spec_set.add result !spec);
   !spec
 
 (* TODO: FIXME: better API without mutating *)
 and from_json_single suffix (x : Ext_json_types.t) : Bsb_spec_set.spec =
   match x with
-  | Str {str = format; loc} ->
-    {
-      format = supported_format format loc;
-      in_source = false;
-      suffix;
-      dts = false;
-    }
+  | Str {str = format; loc} -> (
+    let _ =
+      if format = Literals.es6 || format = Literals.es6_global then
+        let loc =
+          {Warnings.loc_start = loc; loc_end = loc; loc_ghost = false}
+        in
+        Location.deprecated ~can_be_automigrated:false loc
+          (Printf.sprintf "Option \"%s\" is deprecated. Use \"%s\" instead."
+             format Literals.esmodule)
+    in
+    match format with
+    | s when s = Literals.commonjs ->
+      Bsb_spec_set.Commonjs {in_source = false; suffix; emit_dts = false}
+    | s
+      when s = Literals.esmodule || s = Literals.es6 || s = Literals.es6_global
+      ->
+      Bsb_spec_set.Esmodule {in_source = false; suffix; emit_dts = false}
+    | s when s = Literals.typescript ->
+      Bsb_spec_set.Typescript {in_source = false; suffix = Literals.suffix_ts}
+    | _ -> bad_module_format_message_exn ~loc format)
   | Obj {map; loc} -> (
     match map.?("module") with
-    | Some (Str {str = format}) ->
+    | Some (Str {str = format; loc = format_loc}) -> (
+      let _ =
+        if format = Literals.es6 || format = Literals.es6_global then
+          let loc =
+            {
+              Warnings.loc_start = format_loc;
+              loc_end = format_loc;
+              loc_ghost = false;
+            }
+          in
+          Location.deprecated ~can_be_automigrated:false loc
+            (Printf.sprintf "Option \"%s\" is deprecated. Use \"%s\" instead."
+               format Literals.esmodule)
+      in
+      let is_ts_module = format = "typescript" in
       let in_source =
         match map.?(Bsb_build_schemas.in_source) with
         | Some (True _) -> true
@@ -103,23 +112,45 @@ and from_json_single suffix (x : Ext_json_types.t) : Bsb_spec_set.spec =
       in
       let suffix =
         match map.?(Bsb_build_schemas.suffix) with
-        | Some (Str {str = suffix; _}) when validate_suffix suffix -> suffix
-        | Some (Str {str; loc}) ->
-          Bsb_exception.errorf ~loc
-            "invalid suffix \"%s\". The suffix must end with .js, .mjs, .cjs, \
-             .ts, .mts, or .cts."
-            str
+        | Some (Str {str = suffix; loc = suffix_loc}) ->
+          if is_ts_module then
+            if validate_typescript_suffix suffix then suffix
+            else
+              Bsb_exception.errorf ~loc:suffix_loc
+                "invalid suffix \"%s\" for typescript module. Allowed: %s"
+                suffix
+                (String.concat ", " valid_typescript_suffixes)
+          else if validate_suffix suffix then suffix
+          else
+            Bsb_exception.errorf ~loc:suffix_loc
+              "invalid suffix \"%s\". The suffix must end with .js, .mjs, \
+               .cjs, .ts, .mts, or .cts."
+              suffix
         | Some _ ->
           Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
             "expected a string extension like \".js\" or \".ts\""
-        | None -> suffix
+        | None -> if is_ts_module then Literals.suffix_ts else suffix
       in
-      let dts =
+      let emit_dts =
         match map.?(Bsb_build_schemas.dts) with
-        | Some (True _) -> true
+        | Some (True dts_loc) ->
+          if is_ts_module then
+            Bsb_exception.errorf ~loc:dts_loc
+              "dts: true is not allowed with module: typescript (TypeScript \
+               already has types)"
+          else true
         | Some _ | None -> false
       in
-      {format = supported_format format loc; in_source; suffix; dts}
+      match format with
+      | s when s = Literals.commonjs ->
+        Bsb_spec_set.Commonjs {in_source; suffix; emit_dts}
+      | s
+        when s = Literals.esmodule || s = Literals.es6
+             || s = Literals.es6_global ->
+        Bsb_spec_set.Esmodule {in_source; suffix; emit_dts}
+      | s when s = Literals.typescript ->
+        Bsb_spec_set.Typescript {in_source; suffix}
+      | _ -> bad_module_format_message_exn ~loc:format_loc format)
     | Some _ ->
       Bsb_exception.errorf ~loc
         "package-specs: when the configuration is an object, `module` field \
@@ -134,24 +165,33 @@ and from_json_single suffix (x : Ext_json_types.t) : Bsb_spec_set.spec =
     Bsb_exception.errorf ~loc:(Ext_json.loc_of x)
       "package-specs: expected either a string or an object."
 
-let from_json suffix (x : Ext_json_types.t) : Spec_set.t =
+let from_json suffix (x : Ext_json_types.t) : Bsb_spec_set.t =
   match x with
   | Arr {content; _} -> from_array suffix content
-  | _ -> Spec_set.singleton (from_json_single suffix x)
+  | _ -> Bsb_spec_set.singleton (from_json_single suffix x)
 
 let bs_package_output = "-bs-package-output"
 
-[@@@warning "+9"]
-
-let package_flag ({format; in_source; suffix; dts} : Bsb_spec_set.spec) dir =
+let package_flag (spec : Bsb_spec_set.spec) dir =
+  let module_system = Bsb_spec_set.module_system spec in
+  let in_source = Bsb_spec_set.in_source spec in
+  let suffix = Bsb_spec_set.suffix spec in
   let base =
     Ext_string.inter2 bs_package_output
-      (Ext_string.concat5 (string_of_format format) Ext_string.single_colon
+      (Ext_string.concat5
+         (Bsb_spec_set.format_name spec)
+         Ext_string.single_colon
          (if in_source then dir
-          else Bsb_config.top_prefix_of_format format // dir)
+          else Bsb_config.top_prefix_of_format module_system // dir)
          Ext_string.single_colon suffix)
   in
-  if dts then Ext_string.inter2 base "-bs-emit-dts" else base
+  let base =
+    if Bsb_spec_set.is_typescript spec then
+      Ext_string.inter2 base "-bs-typescript"
+    else base
+  in
+  if Bsb_spec_set.emit_dts spec then Ext_string.inter2 base "-bs-emit-dts"
+  else base
 
 (* FIXME: we should adapt it *)
 let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
@@ -168,7 +208,7 @@ let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
       Ext_string.inter4 Ext_string.empty (package_flag a dirname)
         (package_flag b dirname) (package_flag c dirname)
     | _ ->
-      Spec_set.fold
+      Bsb_spec_set.fold
         (fun format acc -> Ext_string.inter2 acc (package_flag format dirname))
         package_specs.modules Ext_string.empty
   in
@@ -178,7 +218,8 @@ let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
 
 let default_package_specs suffix =
   (* TODO: swap default to Esmodule in v12 *)
-  Spec_set.singleton {format = Commonjs; in_source = false; suffix; dts = false}
+  Bsb_spec_set.singleton
+    (Bsb_spec_set.Commonjs {in_source = false; suffix; emit_dts = false})
 
 (**
     [get_list_of_output_js specs "src/hi/hello"]
@@ -186,34 +227,64 @@ let default_package_specs suffix =
 *)
 let get_list_of_output_js (package_specs : t)
     (output_file_sans_extension : string) =
-  Spec_set.fold
+  Bsb_spec_set.fold
     (fun (spec : Bsb_spec_set.spec) acc ->
       let basename =
         Ext_namespace.change_ext_ns_suffix output_file_sans_extension
-          spec.suffix
+          (Bsb_spec_set.suffix spec)
       in
-      (if spec.in_source then Bsb_config.rev_lib_bs_prefix basename
-       else Bsb_config.lib_bs_prefix_of_format spec.format // basename)
+      (if Bsb_spec_set.in_source spec then Bsb_config.rev_lib_bs_prefix basename
+       else
+         Bsb_config.lib_bs_prefix_of_format (Bsb_spec_set.module_system spec)
+         // basename)
       :: acc)
     package_specs.modules []
 
 let list_dirs_by (package_specs : t) (f : string -> unit) =
-  Spec_set.iter
+  Bsb_spec_set.iter
     (fun (spec : Bsb_spec_set.spec) ->
-      if not spec.in_source then f (Bsb_config.top_prefix_of_format spec.format))
+      if not (Bsb_spec_set.in_source spec) then
+        f (Bsb_config.top_prefix_of_format (Bsb_spec_set.module_system spec)))
     package_specs.modules
+
+(** Check if any spec uses TypeScript module format *)
+let has_typescript_module (package_specs : t) : bool =
+  Bsb_spec_set.fold
+    (fun (spec : Bsb_spec_set.spec) acc ->
+      acc || Bsb_spec_set.is_typescript spec)
+    package_specs.modules false
+
+(** Check if any spec has dts: true *)
+let has_dts_output (package_specs : t) : bool =
+  Bsb_spec_set.fold
+    (fun (spec : Bsb_spec_set.spec) acc -> acc || Bsb_spec_set.emit_dts spec)
+    package_specs.modules false
+
+(** Convert package specs for dependency builds.
+    TypeScript specs are converted to Esmodule with dts output,
+    since dependencies should produce standard JS + .d.ts files. *)
+let for_dependency_build (package_specs : t) : t =
+  let modules =
+    Bsb_spec_set.fold
+      (fun (spec : Bsb_spec_set.spec) acc ->
+        let converted =
+          match spec with
+          | Bsb_spec_set.Typescript {in_source; suffix = _} ->
+            (* Convert TypeScript to Esmodule with dts *)
+            Bsb_spec_set.Esmodule
+              {in_source; suffix = Literals.suffix_js; emit_dts = true}
+          | other -> other
+        in
+        Bsb_spec_set.add converted acc)
+      package_specs.modules Bsb_spec_set.empty
+  in
+  {package_specs with modules}
 
 type json_map = Ext_json_types.t Map_string.t
 
-let extract_suffix_exn ~(language : Bsb_spec_set.language) (map : json_map) :
-    string =
-  let default_suffix =
-    match language with
-    | Bsb_spec_set.Javascript -> Literals.suffix_js
-    | Bsb_spec_set.Typescript -> Literals.suffix_ts
-  in
+let extract_suffix_exn (map : json_map) : string =
   match map.?(Bsb_build_schemas.suffix) with
-  | None -> default_suffix
+  | None -> Literals.suffix_js
   | Some (Str {str = suffix; _}) when validate_suffix suffix -> suffix
   | Some (Str {str; _} as config) ->
     Bsb_exception.config_error config
@@ -223,8 +294,8 @@ let extract_suffix_exn ~(language : Bsb_spec_set.language) (map : json_map) :
     Bsb_exception.config_error config
       "expected a string extension like \".js\" or \".ts\""
 
-let from_map ~(cwd : string) ~(language : Bsb_spec_set.language) map =
-  let suffix = extract_suffix_exn ~language map in
+let from_map ~(cwd : string) map =
+  let suffix = extract_suffix_exn map in
   let modules =
     match map.?(Bsb_build_schemas.package_specs) with
     | Some x -> from_json suffix x

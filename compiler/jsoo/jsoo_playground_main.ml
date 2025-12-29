@@ -96,6 +96,7 @@ module BundleConfig = struct
     | Ext_module_system.Commonjs -> "nodejs"
     | Esmodule -> "es6"
     | Es6_global -> "es6_global"
+    | Typescript -> "typescript"
 end
 
 type loc_err_info = {

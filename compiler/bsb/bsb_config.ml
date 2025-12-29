@@ -49,14 +49,14 @@ let lib_bs_prefix_of_format (x : Ext_module_system.t) =
   //
   match x with
   | Commonjs -> "js"
-  | Esmodule -> "es6"
+  | Esmodule | Typescript -> "es6"
   | Es6_global -> "es6_global"
 
 (* lib/js, lib/es6, lib/es6_global *)
 let top_prefix_of_format (x : Ext_module_system.t) =
   match x with
   | Commonjs -> lib_js
-  | Esmodule -> lib_es6
+  | Esmodule | Typescript -> lib_es6
   | Es6_global -> lib_es6_global
 
 let rev_lib_bs_prefix p = rev_lib_bs // p
