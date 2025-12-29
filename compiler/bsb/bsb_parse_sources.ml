@@ -401,16 +401,17 @@ and walk_source_dir_map (cxt : walk_cxt) sub_dirs_field =
    TODO: make it configurable
 *)
 let clean_re_js root =
-  match
-    Ext_json_parse.parse_json_from_file
-      (Filename.concat root Literals.rescript_json)
-  with
+  let rescript_json = Filename.concat root Literals.rescript_json in
+  match Ext_json_parse.parse_json_from_file rescript_json with
   | Obj {map} ->
     let ignored_dirs =
+      (* Always ignore node_modules to avoid symlink loops *)
+      let base_ignored = Set_string.singleton Literals.node_modules in
       match map.?(Bsb_build_schemas.ignored_dirs) with
       | Some (Arr {content = x}) ->
-        Set_string.of_list (Bsb_build_util.get_list_string x)
-      | Some _ | None -> Set_string.empty
+        Set_string.union base_ignored
+          (Set_string.of_list (Bsb_build_util.get_list_string x))
+      | Some _ | None -> base_ignored
     in
     let gentype_language =
       match map.?(Bsb_build_schemas.gentypeconfig) with
