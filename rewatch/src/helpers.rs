@@ -220,23 +220,19 @@ pub fn try_package_path(
     } else if path_from_root.exists() {
         cache_package_tap(project_context, &cache_key, path_from_root)
     } else {
-        // As a last resort, when we're in a Single project context, traverse upwards
-        // starting from the parent of the package root (package_config.path.parent().parent())
+        // As a last resort, traverse upwards starting from the package root's parent directory
         // and probe each ancestor's node_modules for the dependency. This covers hoisted
-        // workspace setups when building a package standalone.
-        if project_context.monorepo_context.is_none() {
-            match package_config.path.parent().and_then(|p| p.parent()) {
-                Some(start_dir) => {
-                    return find_dep_in_upward_node_modules(project_context, start_dir, package_name)
-                        .and_then(|p| cache_package_tap(project_context, &cache_key, p));
-                }
-                None => {
-                    log::debug!(
-                        "try_package_path: cannot compute start directory for upward traversal from '{}'",
-                        package_config.path.to_string_lossy()
-                    );
-                }
-            }
+        // workspace setups when building a package standalone, or when dependencies are
+        // hoisted in a monorepo (e.g., when cleaning from a subpackage).
+        let start_dir = package_config.path.parent().and_then(|p| p.parent());
+        if let Some(start_dir) = start_dir {
+            return find_dep_in_upward_node_modules(project_context, start_dir, package_name)
+                .and_then(|p| cache_package_tap(project_context, &cache_key, p));
+        } else {
+            log::debug!(
+                "try_package_path: cannot compute start directory for upward traversal from '{}'",
+                package_config.path.to_string_lossy()
+            );
         }
 
         Err(anyhow!(
