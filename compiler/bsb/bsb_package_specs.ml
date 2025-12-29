@@ -87,7 +87,12 @@ let rec from_array suffix (arr : Ext_json_types.t array) : Spec_set.t =
 and from_json_single suffix (x : Ext_json_types.t) : Bsb_spec_set.spec =
   match x with
   | Str {str = format; loc} ->
-    {format = supported_format format loc; in_source = false; suffix}
+    {
+      format = supported_format format loc;
+      in_source = false;
+      suffix;
+      dts = false;
+    }
   | Obj {map; loc} -> (
     match map.?("module") with
     | Some (Str {str = format}) ->
@@ -109,7 +114,12 @@ and from_json_single suffix (x : Ext_json_types.t) : Bsb_spec_set.spec =
             "expected a string extension like \".js\" or \".ts\""
         | None -> suffix
       in
-      {format = supported_format format loc; in_source; suffix}
+      let dts =
+        match map.?(Bsb_build_schemas.dts) with
+        | Some (True _) -> true
+        | Some _ | None -> false
+      in
+      {format = supported_format format loc; in_source; suffix; dts}
     | Some _ ->
       Bsb_exception.errorf ~loc
         "package-specs: when the configuration is an object, `module` field \
@@ -133,11 +143,15 @@ let bs_package_output = "-bs-package-output"
 
 [@@@warning "+9"]
 
-let package_flag ({format; in_source; suffix} : Bsb_spec_set.spec) dir =
-  Ext_string.inter2 bs_package_output
-    (Ext_string.concat5 (string_of_format format) Ext_string.single_colon
-       (if in_source then dir else Bsb_config.top_prefix_of_format format // dir)
-       Ext_string.single_colon suffix)
+let package_flag ({format; in_source; suffix; dts} : Bsb_spec_set.spec) dir =
+  let base =
+    Ext_string.inter2 bs_package_output
+      (Ext_string.concat5 (string_of_format format) Ext_string.single_colon
+         (if in_source then dir
+          else Bsb_config.top_prefix_of_format format // dir)
+         Ext_string.single_colon suffix)
+  in
+  if dts then Ext_string.inter2 base "-bs-emit-dts" else base
 
 (* FIXME: we should adapt it *)
 let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
@@ -164,7 +178,7 @@ let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
 
 let default_package_specs suffix =
   (* TODO: swap default to Esmodule in v12 *)
-  Spec_set.singleton {format = Commonjs; in_source = false; suffix}
+  Spec_set.singleton {format = Commonjs; in_source = false; suffix; dts = false}
 
 (**
     [get_list_of_output_js specs "src/hi/hello"]

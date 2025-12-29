@@ -29,16 +29,19 @@ type format = Ext_module_system.t
 
 type language = Javascript | Typescript
 
-type spec = {format: format; in_source: bool; suffix: string}
+type spec = {format: format; in_source: bool; suffix: string; dts: bool}
 
 type t = spec list
 
-let cmp (s1 : spec) ({format; in_source; suffix} : spec) =
+let cmp (s1 : spec) ({format; in_source; suffix; dts} : spec) =
   let v = compare s1.format format in
   if v <> 0 then v
   else
     let v = compare s1.in_source in_source in
-    if v <> 0 then v else compare s1.suffix suffix
+    if v <> 0 then v
+    else
+      let v = compare s1.suffix suffix in
+      if v <> 0 then v else compare s1.dts dts
 
 let empty = []
 

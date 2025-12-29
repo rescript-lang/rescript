@@ -25,7 +25,7 @@ type format = Ext_module_system.t
 
 type language = Javascript | Typescript
 
-type spec = {format: format; in_source: bool; suffix: string}
+type spec = {format: format; in_source: bool; suffix: string; dts: bool}
 
 type t = private spec list
 
