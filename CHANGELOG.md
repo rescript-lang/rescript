@@ -14,8 +14,6 @@
 
 #### :boom: Breaking Change
 
-- Output format is `esmoule` by default. https://github.com/rescript-lang/rescript/pull/8128
-
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
