@@ -93,9 +93,8 @@ module BundleConfig = struct
 
   let string_of_module_system m =
     match m with
-    | Ext_module_system.Commonjs -> "nodejs"
-    | Esmodule -> "es6"
-    | Es6_global -> "es6_global"
+    | Ext_module_system.Commonjs -> "commonjs"
+    | Esmodule -> "esmodule"
 end
 
 type loc_err_info = {
@@ -604,10 +603,10 @@ module Export = struct
     let config = BundleConfig.make () in
     let set_module_system value =
       match value with
-      | "esmodule" | "es6" ->
+      | "esmodule" ->
         config.module_system <- Ext_module_system.Esmodule;
         true
-      | "commonjs" | "nodejs" ->
+      | "commonjs" ->
         config.module_system <- Commonjs;
         true
       | _ -> false

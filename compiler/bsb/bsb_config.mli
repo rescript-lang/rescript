@@ -28,13 +28,11 @@ val proj_rel : string -> string
 
 val lib_lit : string
 
-val lib_js : string
-
 val lib_bs : string
 
-val lib_es6 : string [@@ocaml.deprecated "will be removed in v12"]
+val lib_commonjs : string
 
-val lib_es6_global : string [@@ocaml.deprecated "will be removed in v12"]
+val lib_esmodule : string
 
 val lib_ocaml : string
 
