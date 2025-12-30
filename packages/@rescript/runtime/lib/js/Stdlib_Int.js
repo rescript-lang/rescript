@@ -1,13 +1,18 @@
 'use strict';
 
 let Stdlib_Array = require("./Stdlib_Array.js");
+let Stdlib_Float = require("./Stdlib_Float.js");
 
-function fromString(x, radix) {
-  let maybeInt = radix !== undefined ? parseInt(x, radix) : parseInt(x);
-  if (Number.isNaN(maybeInt) || maybeInt > 2147483647 || maybeInt < -2147483648) {
-    return;
+function fromString(str) {
+  let num = Stdlib_Float.fromString(str);
+  if (num !== undefined) {
+    if (num === (num | 0) && isFinite(num)) {
+      return num | 0;
+    } else {
+      return;
+    }
   } else {
-    return maybeInt | 0;
+    return num;
   }
 }
 
