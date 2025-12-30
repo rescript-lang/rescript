@@ -624,7 +624,7 @@ impl Config {
     pub fn get_package_specs(&self) -> Vec<PackageSpec> {
         match self.package_specs.clone() {
             None => vec![PackageSpec {
-                module: "commonjs".to_string(),
+                module: "es6".to_string(),
                 in_source: true,
                 suffix: Some(".js".to_string()),
             }],
