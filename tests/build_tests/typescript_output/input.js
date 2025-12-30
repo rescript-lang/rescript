@@ -9,5 +9,5 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-await execBuild();
+await execBuild(["-with-deps"]);
 await tsc();
