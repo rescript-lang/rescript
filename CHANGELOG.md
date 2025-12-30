@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- `Int.fromString` and `Float.fromString` use stricter number parsing and no longer uses an explicit radix argument, but instead supports parsing hexadecimal, binary and exponential notation.
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
