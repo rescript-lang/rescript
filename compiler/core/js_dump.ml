@@ -432,17 +432,20 @@ and pp_function ~return_unit ~async ~is_method ?directive ?fn_type cxt (f : P.t)
       else
         let cxt =
           match l with
-          | [single] when arrow ->
-            let cxt = Ext_pp_scope.ident inner_cxt f single in
-            (* Add type annotation for single arrow param in TS mode *)
-            (match (!Js_config.ts_output, fn_type) with
+          | [single] when arrow -> (
+            (* In TypeScript mode, single arrow param with type annotation needs parens: (x: T) => ... *)
+            match (!Js_config.ts_output, fn_type) with
             | Js_config.Ts_typescript, Some ty -> (
               let typed_params = Ts.typed_idents_of_params [single] (Some ty) in
               match typed_params with
-              | [{ident_type = Some t; _}] -> Ts.pp_type_annotation f (Some t)
-              | _ -> ())
-            | _ -> ());
-            cxt
+              | [{ident_type = Some t; _}] ->
+                (* Need parens when we have a type annotation *)
+                P.paren_group f 1 (fun _ ->
+                    let cxt = Ext_pp_scope.ident inner_cxt f single in
+                    Ts.pp_type_annotation f (Some t);
+                    cxt)
+              | _ -> Ext_pp_scope.ident inner_cxt f single)
+            | _ -> Ext_pp_scope.ident inner_cxt f single)
           | l ->
             P.paren_group f 1 (fun _ ->
                 formal_parameter_list_typed inner_cxt f l fn_type)
