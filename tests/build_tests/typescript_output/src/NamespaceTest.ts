@@ -3,34 +3,40 @@
 import type * as rescript from "@rescript/runtime/types";
 
 declare namespace Actions {
-  type t = rescript.opaque<"NamespaceTest.Actions.t", []>;
+  type t = rescript.opaque<"NamespaceTest.Actions.t", [], string>;
   type target =
     | "This"
-    | { readonly kind: "CssSelector"; readonly selector: string };
+    | {
+      readonly kind: "CssSelector";
+      readonly selector: string;
+    };
   type action =
     | {
-  readonly kind: "ToggleClass";
-  readonly target: Actions.target;
-  readonly className: string;
-}
+      readonly kind: "ToggleClass";
+      readonly target: Actions.target;
+      readonly className: string;
+    }
     | {
-  readonly kind: "RemoveClass";
-  readonly target: Actions.target;
-  readonly className: string;
-}
+      readonly kind: "RemoveClass";
+      readonly target: Actions.target;
+      readonly className: string;
+    }
     | {
-  readonly kind: "AddClass";
-  readonly target: Actions.target;
-  readonly className: string;
-}
-    | { readonly kind: "RemoveElement"; readonly target: Actions.target };
+      readonly kind: "AddClass";
+      readonly target: Actions.target;
+      readonly className: string;
+    }
+    | {
+      readonly kind: "RemoveElement";
+      readonly target: Actions.target;
+    };
 }
 export type Actions = {
   make: (arg0: Actions.action[]) => Actions.t;
 };
 
-function make(actions: Actions.action[]): string {
-  return JSON.stringify(actions);
+function make(actions: Actions.action[]): Actions.t {
+  return JSON.stringify(actions) as Actions.t;
 }
 
 let Actions: Actions = {

@@ -4,8 +4,14 @@ import type * as rescript from "@rescript/runtime/types";
 
 type number_$float = number_$Float;
 type number_$int = number_$Int;
-type number_$Int = { readonly TAG: "Int"; readonly _0: number };
-type number_$Float = { readonly TAG: "Float"; readonly _0: number };
+type number_$Int = {
+  readonly TAG: "Int";
+  readonly _0: number;
+};
+type number_$Float = {
+  readonly TAG: "Float";
+  readonly _0: number;
+};
 export type number_<_ extends number = number> =
   | number_$Int
   | number_$Float;
@@ -28,8 +34,14 @@ export type timezone<_ extends standard | daylight = standard | daylight> =
 
 type expr$bool = expr$BoolLit | expr$Eq;
 type expr$int = expr$IntLit | expr$Add;
-type expr$IntLit = { readonly TAG: "IntLit"; readonly _0: number };
-type expr$BoolLit = { readonly TAG: "BoolLit"; readonly _0: boolean };
+type expr$IntLit = {
+  readonly TAG: "IntLit";
+  readonly _0: number;
+};
+type expr$BoolLit = {
+  readonly TAG: "BoolLit";
+  readonly _0: boolean;
+};
 type expr$Add = {
   readonly TAG: "Add";
   readonly _0: expr$int;

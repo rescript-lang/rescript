@@ -289,6 +289,9 @@ module State = struct
     (* Inline record definitions: maps type path string to type declaration
        for types with res.inlineRecordDefinition attribute *)
     mutable inline_record_defs: Types.type_declaration StringMap.t;
+    (* Implementation type declarations: maps qualified type name to implementation decl.
+       Used to find underlying types for abstract types in signatures. *)
+    mutable impl_type_decls: Types.type_declaration StringMap.t;
     (* Context *)
     mutable module_name: string;
     mutable module_path: string list;
@@ -309,6 +312,7 @@ module State = struct
       exported_modules = StringMap.empty;
       module_aliases = StringMap.empty;
       inline_record_defs = StringMap.empty;
+      impl_type_decls = StringMap.empty;
       module_name = "";
       module_path = [];
       env = None;
@@ -328,6 +332,7 @@ module State = struct
     state.exported_modules <- StringMap.empty;
     state.module_aliases <- StringMap.empty;
     state.inline_record_defs <- StringMap.empty;
+    state.impl_type_decls <- StringMap.empty;
     state.module_name <- "";
     state.module_path <- [];
     state.env <- None
@@ -620,6 +625,22 @@ module State = struct
 
     let is_inline_record type_name =
       StringMap.mem type_name state.inline_record_defs
+  end
+
+  (** {2 Implementation Type Declarations}
+      
+      Tracks implementation type declarations from Typedtree.structure.
+      Maps qualified type name (e.g., "Actions.t") to implementation type declaration.
+      Used to find underlying types for abstract types in module signatures. *)
+  module ImplTypeDecls = struct
+    let reset () = state.impl_type_decls <- StringMap.empty
+
+    let add qualified_name decl =
+      state.impl_type_decls <-
+        StringMap.add qualified_name decl state.impl_type_decls
+
+    let find qualified_name =
+      StringMap.find_opt qualified_name state.impl_type_decls
   end
 
   (** {2 Context}
@@ -1077,16 +1098,73 @@ let get_as_string (attrs : Parsetree.attributes) : string option =
     attrs;
   !result
 
+(** Convert a simple Parsetree.core_type to ts_type.
+    Only handles basic types that make sense for @opaque underlying types. *)
+let rec ts_type_of_core_type (ct : Parsetree.core_type) : ts_type option =
+  match ct.ptyp_desc with
+  | Parsetree.Ptyp_constr ({txt = Longident.Lident name; _}, args) -> (
+    match (name, args) with
+    | "string", [] -> Some String
+    | "int", [] | "float", [] -> Some Number
+    | "bigint", [] -> Some Bigint
+    | "bool", [] -> Some Boolean
+    | "symbol", [] -> Some Symbol
+    | "array", [elem] -> (
+      match ts_type_of_core_type elem with
+      | Some elem_ty -> Some (Array elem_ty)
+      | None -> None)
+    | _ -> None)
+  | Parsetree.Ptyp_tuple elems ->
+    let elem_types = List.filter_map ts_type_of_core_type elems in
+    if List.length elem_types = List.length elems then Some (Tuple elem_types)
+    else None
+  | _ -> None
+
+(** Check if type declaration has @opaque attribute and extract optional underlying type.
+    Returns (has_opaque, underlying_type_opt) where underlying_type_opt is:
+    - None if @opaque has no argument or unsupported type
+    - Some ts_type if @opaque(T) where T is a supported type
+    Marks the attribute as used to prevent "unused attribute" warnings. *)
+let get_opaque_attr (attrs : Parsetree.attributes) : bool * ts_type option =
+  let result = ref (false, None) in
+  List.iter
+    (fun (({txt}, payload) as attr : Parsetree.attribute) ->
+      if txt = "opaque" then (
+        Used_attributes.mark_used_attribute attr;
+        let underlying =
+          match payload with
+          (* Handle @opaque(: type) syntax with PTyp *)
+          | Parsetree.PTyp core_type -> ts_type_of_core_type core_type
+          (* Handle legacy @opaque(primitive) syntax with identifier *)
+          | Parsetree.PStr
+              [
+                {
+                  pstr_desc =
+                    Pstr_eval
+                      ( {
+                          pexp_desc =
+                            Pexp_ident {txt = Longident.Lident prim_name; _};
+                          _;
+                        },
+                        _ );
+                  _;
+                };
+              ] -> (
+            match prim_name with
+            | "string" -> Some String
+            | "number" -> Some Number
+            | "symbol" -> Some Symbol
+            | _ -> None)
+          | _ -> None
+        in
+        result := (true, underlying)))
+    attrs;
+  !result
+
 (** Check if type declaration has @opaque attribute.
     Marks the attribute as used to prevent "unused attribute" warnings. *)
 let has_opaque_attr (attrs : Parsetree.attributes) : bool =
-  List.exists
-    (fun (({txt}, _) as attr : Parsetree.attribute) ->
-      if txt = "opaque" then (
-        Used_attributes.mark_used_attribute attr;
-        true)
-      else false)
-    attrs
+  fst (get_opaque_attr attrs)
 
 (** Check if type declaration is a synthetic inline record definition.
     These are generated by the parser for inline record fields like:
@@ -2403,14 +2481,84 @@ let type_params_of_type_exprs_with_constraints (params : Types.type_expr list)
         })
     params
 
-(** Extract a type declaration from Types.type_declaration *)
-let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
-    : type_decl option =
+(** Convert a tag_kind to a ts_type literal *)
+let tag_kind_to_ts_type (tag : tag_kind) : ts_type =
+  match tag with
+  | TagString s -> Literal (LitString s)
+  | TagInt i -> Literal (LitNumber (float_of_int i))
+  | TagBool b -> Literal (LitBoolean b)
+  | TagNull -> Null
+  | TagUndefined -> Undefined
+
+(** Convert a variant_case to a ts_type for use in underlying opaque types.
+    This handles both regular and unboxed variants. *)
+let variant_case_to_ts_type ~(config : variant_config) (case : variant_case) :
+    ts_type =
+  if config.vc_unboxed then
+    (* Unboxed variant: the type IS the payload directly *)
+    match case.vc_payload with
+    | NoPayload -> tag_kind_to_ts_type case.vc_tag
+    | TuplePayload [t] -> t
+    | TuplePayload ts -> Tuple ts
+    | InlineRecord props ->
+      Object {properties = props; index_sig = None; call_sig = None}
+  else
+    (* Tagged variant: { TAG: "Name", ...payload } *)
+    match case.vc_payload with
+    | NoPayload ->
+      (* Nullary constructor - just the tag literal *)
+      tag_kind_to_ts_type case.vc_tag
+    | TuplePayload types ->
+      (* Tuple payload: { readonly TAG: "Name"; readonly _0: T0; ... } *)
+      let tag_prop =
+        {
+          prop_name = config.vc_tag_name;
+          prop_type = tag_kind_to_ts_type case.vc_tag;
+          prop_optional = false;
+          prop_readonly = true;
+        }
+      in
+      let payload_props =
+        List.mapi
+          (fun i ty ->
+            {
+              prop_name = "_" ^ string_of_int i;
+              prop_type = ty;
+              prop_optional = false;
+              prop_readonly = true;
+            })
+          types
+      in
+      Object
+        {
+          properties = tag_prop :: payload_props;
+          index_sig = None;
+          call_sig = None;
+        }
+    | InlineRecord props ->
+      (* Inline record: { readonly TAG: "Name"; field1: T1; ... } *)
+      let tag_prop =
+        {
+          prop_name = config.vc_tag_name;
+          prop_type = tag_kind_to_ts_type case.vc_tag;
+          prop_optional = false;
+          prop_readonly = true;
+        }
+      in
+      Object {properties = tag_prop :: props; index_sig = None; call_sig = None}
+
+(** Extract a type declaration from Types.type_declaration.
+    @param prefix The module prefix (e.g., "Actions" or "") for looking up implementation types *)
+let type_decl_of_type_declaration ~(prefix : string) (id : Ident.t)
+    (decl : Types.type_declaration) : type_decl option =
   let type_params = type_params_of_type_exprs decl.type_params in
   let raw_type_name =
     match get_as_string decl.type_attributes with
     | Some renamed -> renamed
     | None -> Ident.name id
+  in
+  let qualified_name =
+    if prefix = "" then raw_type_name else prefix ^ "." ^ raw_type_name
   in
   (* Check if this is an inline record definition (has res.inlineRecordDefinition attribute
      or has a dotted name like "input.create"). These should not be emitted as separate
@@ -2749,10 +2897,12 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
           Some (VariantType {name = type_name; type_params; cases; config}))
     | Types.Type_abstract -> (
       let external_type_info = get_external_type decl.type_attributes in
-      let is_opaque_attr = has_opaque_attr decl.type_attributes in
+      let is_opaque_attr, opaque_underlying =
+        get_opaque_attr decl.type_attributes
+      in
       match decl.type_manifest with
       | Some ty when is_opaque_attr ->
-        (* @opaque type t = string - branded opaque type with underlying type *)
+        (* @opaque type t = string - branded opaque type with underlying type from manifest *)
         let body = ts_type_of_type_expr ty in
         Some
           (OpaqueType {name = type_name; type_params; underlying = Some body})
@@ -2804,7 +2954,118 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
                  external_import_kind = ext_import_kind;
                })
         | None ->
-          Some (OpaqueType {name = type_name; type_params; underlying = None})))
+          (* Try to infer underlying type:
+             1. First check @opaque(: T) attribute
+             2. Then look up implementation type from module constraint *)
+          let underlying =
+            match opaque_underlying with
+            | Some _ -> opaque_underlying
+            | None -> (
+              match State.ImplTypeDecls.find qualified_name with
+              | Some impl_decl -> (
+                match impl_decl.type_manifest with
+                | Some ty -> Some (ts_type_of_type_expr ty)
+                | None -> (
+                  (* No manifest - check if it's a record or variant type definition *)
+                  match impl_decl.type_kind with
+                  | Types.Type_record (labels, _) ->
+                    (* Convert record fields to object type *)
+                    let properties =
+                      List.map
+                        (fun (ld : Types.label_declaration) ->
+                          let name =
+                            match get_as_string ld.ld_attributes with
+                            | Some renamed -> renamed
+                            | None -> Ident.name ld.ld_id
+                          in
+                          {
+                            prop_name = name;
+                            prop_type = ts_type_of_type_expr ld.ld_type;
+                            prop_optional = ld.ld_optional;
+                            prop_readonly = ld.ld_mutable = Asttypes.Immutable;
+                          })
+                        labels
+                    in
+                    Some
+                      (Object {properties; index_sig = None; call_sig = None})
+                  | Types.Type_variant constructors ->
+                    (* Convert variant to union type using type_decl_of_type_declaration logic *)
+                    let is_unboxed =
+                      Ast_untagged_variants.has_untagged
+                        impl_decl.type_attributes
+                    in
+                    let tag_name =
+                      match
+                        Ast_untagged_variants.process_tag_name
+                          impl_decl.type_attributes
+                      with
+                      | Some custom_tag -> custom_tag
+                      | None -> Js_dump_lit.tag
+                    in
+                    let cases =
+                      List.map
+                        (fun (cd : Types.constructor_declaration) ->
+                          let name = Ident.name cd.cd_id in
+                          let tag =
+                            match
+                              Ast_untagged_variants.process_tag_type
+                                cd.cd_attributes
+                            with
+                            | Some (Ast_untagged_variants.String s) ->
+                              TagString s
+                            | Some (Ast_untagged_variants.Int i) -> TagInt i
+                            | Some Ast_untagged_variants.Null -> TagNull
+                            | Some Ast_untagged_variants.Undefined ->
+                              TagUndefined
+                            | Some (Ast_untagged_variants.Bool b) -> TagBool b
+                            | _ -> (
+                              match get_as_string cd.cd_attributes with
+                              | Some renamed -> TagString renamed
+                              | None -> TagString name)
+                          in
+                          let payload =
+                            match cd.cd_args with
+                            | Cstr_tuple [] -> NoPayload
+                            | Cstr_tuple [arg] ->
+                              TuplePayload [ts_type_of_type_expr arg]
+                            | Cstr_tuple args ->
+                              TuplePayload (List.map ts_type_of_type_expr args)
+                            | Cstr_record labels ->
+                              let properties =
+                                List.map
+                                  (fun (ld : Types.label_declaration) ->
+                                    let field_name =
+                                      match get_as_string ld.ld_attributes with
+                                      | Some renamed -> renamed
+                                      | None -> Ident.name ld.ld_id
+                                    in
+                                    {
+                                      prop_name = field_name;
+                                      prop_type =
+                                        ts_type_of_type_expr ld.ld_type;
+                                      prop_optional = ld.ld_optional;
+                                      prop_readonly =
+                                        ld.ld_mutable = Asttypes.Immutable;
+                                    })
+                                  labels
+                              in
+                              InlineRecord properties
+                          in
+                          {vc_name = name; vc_tag = tag; vc_payload = payload})
+                        constructors
+                    in
+                    let config =
+                      {vc_unboxed = is_unboxed; vc_tag_name = tag_name}
+                    in
+                    (* Convert variant cases to union of ts_types *)
+                    let case_types =
+                      List.map (variant_case_to_ts_type ~config) cases
+                    in
+                    Some (Union case_types)
+                  | Types.Type_abstract | Types.Type_open -> None))
+              | None -> None)
+          in
+          Some (OpaqueType {name = type_name; type_params; underlying})))
     | Types.Type_open -> None (* Open types not supported *)
 
 (** Register a type in LocalTypeQualifier with its stamp and qualified path.
@@ -2823,6 +3084,42 @@ let register_local_type ~(prefix : string) (id : Ident.t)
   let qualified = if prefix = "" then name else prefix ^ "." ^ name in
   LocalTypeQualifier.add ~stamp ~name ~qualified
 
+(** Collect implementation type declarations from a Typedtree.structure.
+    This populates State.ImplTypeDecls for looking up underlying types
+    when abstract types are encountered in module signatures. *)
+let rec collect_impl_type_decls ~(prefix : string) (str : Typedtree.structure) :
+    unit =
+  List.iter
+    (fun (str_item : Typedtree.structure_item) ->
+      match str_item.str_desc with
+      | Typedtree.Tstr_type (_, decls) ->
+        List.iter
+          (fun (td : Typedtree.type_declaration) ->
+            let name = Ident.name td.typ_id in
+            let qualified = if prefix = "" then name else prefix ^ "." ^ name in
+            State.ImplTypeDecls.add qualified td.typ_type)
+          decls
+      | Typedtree.Tstr_module mb ->
+        let mod_name = Ident.name mb.mb_id in
+        let mod_prefix =
+          if prefix = "" then mod_name else prefix ^ "." ^ mod_name
+        in
+        collect_impl_type_decls_from_mod_expr ~prefix:mod_prefix mb.mb_expr
+      | _ -> ())
+    str.str_items
+
+and collect_impl_type_decls_from_mod_expr ~(prefix : string)
+    (mod_expr : Typedtree.module_expr) : unit =
+  match mod_expr.mod_desc with
+  | Typedtree.Tmod_structure str -> collect_impl_type_decls ~prefix str
+  | Typedtree.Tmod_constraint (inner_expr, _, _, _) ->
+    (* Module with constraint: module M : S = struct ... end *)
+    collect_impl_type_decls_from_mod_expr ~prefix inner_expr
+  | Typedtree.Tmod_functor _ | Typedtree.Tmod_apply _ | Typedtree.Tmod_ident _
+  | Typedtree.Tmod_unpack _ ->
+    (* These don't have inline type declarations we can extract *)
+    ()
+
 (** Extract all type declarations from a Typedtree structure.
     Uses interface_sig (from .resi file) if available to determine what to export,
     ensuring that private items are not included in .d.ts output.
@@ -2836,6 +3133,9 @@ let rec extract_type_decls ~(interface_sig : Types.signature)
   ModuleAliases.reset ();
   (* Reset inline record definitions *)
   State.InlineRecordDefs.reset ();
+  (* Reset and collect implementation type declarations *)
+  State.ImplTypeDecls.reset ();
+  collect_impl_type_decls ~prefix:"" str;
   (* Extract module aliases from structure items.
      This handles patterns like "module C = Belt_internalBucketsType" *)
   List.iter
@@ -2858,7 +3158,7 @@ let rec extract_type_decls ~(interface_sig : Types.signature)
       match sig_item with
       | Types.Sig_type (id, decl, _) -> (
         register_local_type ~prefix:"" id decl;
-        match type_decl_of_type_declaration id decl with
+        match type_decl_of_type_declaration ~prefix:"" id decl with
         | Some type_decl -> decls := type_decl :: !decls
         | None -> ())
       | Types.Sig_module (id, md, _) -> (
@@ -2884,7 +3184,7 @@ and extract_module_decl_from_sig ~(prefix : string) (id : Ident.t)
         match sig_item with
         | Types.Sig_type (id, decl, _) -> (
           register_local_type ~prefix:module_prefix id decl;
-          match type_decl_of_type_declaration id decl with
+          match type_decl_of_type_declaration ~prefix:module_prefix id decl with
           | Some td -> types := td :: !types
           | None -> ())
         | Types.Sig_value (id, vd) -> (
@@ -3960,8 +4260,8 @@ let pp_variant_case (f : P.t) ~(tag_name : string) (case : variant_case) : unit
     !pp_tag_kind_fwd f case.vc_tag
   | TuplePayload types ->
     (* Tuple payload: { readonly TAG: "Name"; readonly _0: T0; ... } *)
-    (* Use multiline when there's more than 1 payload field *)
-    let use_multiline = List.length types > 1 in
+    (* Use multiline when there's at least 1 payload field (tag + 1 payload = 2 fields total) *)
+    let use_multiline = List.length types >= 1 in
     if use_multiline then (
       P.string f "{";
       P.group f 1 (fun () ->
@@ -3997,8 +4297,8 @@ let pp_variant_case (f : P.t) ~(tag_name : string) (case : variant_case) : unit
       P.string f " }")
   | InlineRecord props ->
     (* Inline record: { readonly TAG: "Name"; field1: T1; ... } *)
-    (* Use multiline when there's more than 1 field *)
-    let use_multiline = List.length props > 1 in
+    (* Use multiline when there's at least 1 field (tag + 1 field = 2 fields total) *)
+    let use_multiline = List.length props >= 1 in
     if use_multiline then (
       P.string f "{";
       P.group f 1 (fun () ->
@@ -5384,14 +5684,16 @@ and pp_namespace_type_decl_with_path (f : P.t) ~(module_path : string)
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
-    (* Print variant cases on separate lines for readability *)
-    List.iter
-      (fun case ->
-        P.newline f;
-        P.string f "    | ";
-        if config.vc_unboxed then pp_unboxed_variant_case f case
-        else pp_variant_case f ~tag_name:config.vc_tag_name case)
-      cases;
+    (* Print variant cases on separate lines for readability
+       Use group with indent 2 (4 spaces) to align multiline case bodies *)
+    P.group f 2 (fun () ->
+        List.iter
+          (fun case ->
+            P.newline f;
+            P.string f "| ";
+            if config.vc_unboxed then pp_unboxed_variant_case f case
+            else pp_variant_case f ~tag_name:config.vc_tag_name case)
+          cases);
     P.string f ";"
   | GadtType {name; type_params; cases; config} ->
     (* GADT inside module namespace: generate case types on separate lines *)
@@ -5589,14 +5891,16 @@ and pp_namespace_type_decl (f : P.t) (decl : type_decl) : unit =
       pp_type_params f type_params;
       P.string f ">");
     P.string f " =";
-    (* Print variant cases on separate lines for readability *)
-    List.iter
-      (fun case ->
-        P.newline f;
-        P.string f "    | ";
-        if config.vc_unboxed then pp_unboxed_variant_case f case
-        else pp_variant_case f ~tag_name:config.vc_tag_name case)
-      cases;
+    (* Print variant cases on separate lines for readability
+       Use group with indent 2 (4 spaces) to align multiline case bodies *)
+    P.group f 2 (fun () ->
+        List.iter
+          (fun case ->
+            P.newline f;
+            P.string f "| ";
+            if config.vc_unboxed then pp_unboxed_variant_case f case
+            else pp_variant_case f ~tag_name:config.vc_tag_name case)
+          cases);
     P.string f ";"
   | GadtType {name; type_params; cases; config} ->
     (* GADT in namespace: generate case types on separate lines *)

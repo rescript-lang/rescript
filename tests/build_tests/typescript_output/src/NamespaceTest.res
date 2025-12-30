@@ -13,7 +13,6 @@ module Actions: {
 
   let make: array<action> => t
 } = {
-  @opaque
   type t = string
 
   @tag("kind")
@@ -26,7 +25,7 @@ module Actions: {
     | AddClass({target: target, className: string})
     | RemoveElement({target: target})
 
-  external stringifyActions: array<action> => string = "JSON.stringify"
+  external stringifyActions: array<action> => t = "JSON.stringify"
 
   let make = actions => stringifyActions(actions)
 }

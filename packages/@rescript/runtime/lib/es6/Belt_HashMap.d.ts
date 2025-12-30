@@ -1,7 +1,7 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Belt_Id from "./Belt_Id.js";
 
-export type t<Key, Value, Id> = rescript.opaque<"Belt_HashMap.t", [Key, Value, Id]>;
+export type t<Key, Value, Id> = rescript.opaque<"Belt_HashMap.t", [Key, Value, Id], Belt_internalBuckets.t<hash<A, Id>, eq<A, Id>, A, B>>;
 
 export type id<A, Id> = Belt_Id.hashable<A, Id>;
 

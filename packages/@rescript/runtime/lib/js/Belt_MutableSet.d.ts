@@ -2,7 +2,10 @@ import type * as rescript from "@rescript/runtime/types";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
-export type t<Value, Identity> = rescript.opaque<"Belt_MutableSet.t", [Value, Identity]>;
+export type t<Value, Identity> = rescript.opaque<"Belt_MutableSet.t", [Value, Identity], {
+  readonly cmp: cmp<Value, Id>;
+  data: Belt_internalAVLset.t<Value>;
+}>;
 
 export type id<Value, Id> = Belt_Id.comparable<Value, Id>;
 

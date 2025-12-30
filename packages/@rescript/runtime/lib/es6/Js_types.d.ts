@@ -46,12 +46,30 @@ export type tagged_t =
   | "JSTrue"
   | "JSNull"
   | "JSUndefined"
-  | { readonly TAG: "JSNumber"; readonly _0: number }
-  | { readonly TAG: "JSString"; readonly _0: string }
-  | { readonly TAG: "JSFunction"; readonly _0: function_val }
-  | { readonly TAG: "JSObject"; readonly _0: obj_val }
-  | { readonly TAG: "JSSymbol"; readonly _0: symbol }
-  | { readonly TAG: "JSBigInt"; readonly _0: bigint };
+  | {
+    readonly TAG: "JSNumber";
+    readonly _0: number;
+  }
+  | {
+    readonly TAG: "JSString";
+    readonly _0: string;
+  }
+  | {
+    readonly TAG: "JSFunction";
+    readonly _0: function_val;
+  }
+  | {
+    readonly TAG: "JSObject";
+    readonly _0: obj_val;
+  }
+  | {
+    readonly TAG: "JSSymbol";
+    readonly _0: symbol;
+  }
+  | {
+    readonly TAG: "JSBigInt";
+    readonly _0: bigint;
+  };
 
 export function classify<A>(x: A): tagged_t;
 

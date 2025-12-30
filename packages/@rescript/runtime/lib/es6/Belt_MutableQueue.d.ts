@@ -1,7 +1,11 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Js from "./Js.js";
 
-export type t<A> = rescript.opaque<"Belt_MutableQueue.t", [A]>;
+export type t<A> = rescript.opaque<"Belt_MutableQueue.t", [A], {
+  length: number;
+  first: cell<A>;
+  last: cell<A>;
+}>;
 
 export function make<A>(): t<A>;
 

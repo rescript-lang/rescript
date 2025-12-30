@@ -1,10 +1,10 @@
 import type * as rescript from "@rescript/runtime/types";
 
-export type hash<A, Id> = rescript.opaque<"Belt_Id.hash", [A, Id]>;
+export type hash<A, Id> = rescript.opaque<"Belt_Id.hash", [A, Id], (arg0: A) => number>;
 
-export type eq<A, Id> = rescript.opaque<"Belt_Id.eq", [A, Id]>;
+export type eq<A, Id> = rescript.opaque<"Belt_Id.eq", [A, Id], (arg0: A, arg1: A) => boolean>;
 
-export type cmp<A, Id> = rescript.opaque<"Belt_Id.cmp", [A, Id]>;
+export type cmp<A, Id> = rescript.opaque<"Belt_Id.cmp", [A, Id], (arg0: A, arg1: A) => number>;
 
 export type comparable<Key, Id> = rescript.opaque<"Belt_Id.comparable", [Key, Id], any>;
 

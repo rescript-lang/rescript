@@ -2,7 +2,10 @@ import type * as rescript from "@rescript/runtime/types";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
-export type t<K, V, Id> = rescript.opaque<"Belt_MutableMap.t", [K, V, Id]>;
+export type t<K, V, Id> = rescript.opaque<"Belt_MutableMap.t", [K, V, Id], {
+  readonly cmp: cmp<K, Id>;
+  data: Belt_internalAVLtree.t<K, V>;
+}>;
 
 export type id<Key, Id> = Belt_Id.comparable<Key, Id>;
 

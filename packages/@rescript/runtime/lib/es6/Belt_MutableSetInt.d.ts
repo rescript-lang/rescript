@@ -3,7 +3,7 @@ import type * as Js from "./Js.js";
 
 export type value = number;
 
-export type t = rescript.opaque<"Belt_MutableSetInt.t", []>;
+export type t = rescript.opaque<"Belt_MutableSetInt.t", [], { data: Belt_internalSetInt.t; }>;
 
 export function remove(d: t, v: value): void;
 

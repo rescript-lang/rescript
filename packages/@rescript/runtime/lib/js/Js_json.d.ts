@@ -37,10 +37,22 @@ export type tagged_t =
   | "JSONFalse"
   | "JSONTrue"
   | "JSONNull"
-  | { readonly TAG: "JSONString"; readonly _0: string }
-  | { readonly TAG: "JSONNumber"; readonly _0: number }
-  | { readonly TAG: "JSONObject"; readonly _0: rescript.dict<t> }
-  | { readonly TAG: "JSONArray"; readonly _0: t[] };
+  | {
+    readonly TAG: "JSONString";
+    readonly _0: string;
+  }
+  | {
+    readonly TAG: "JSONNumber";
+    readonly _0: number;
+  }
+  | {
+    readonly TAG: "JSONObject";
+    readonly _0: rescript.dict<t>;
+  }
+  | {
+    readonly TAG: "JSONArray";
+    readonly _0: t[];
+  };
 
 export function classify(x: t): tagged_t;
 

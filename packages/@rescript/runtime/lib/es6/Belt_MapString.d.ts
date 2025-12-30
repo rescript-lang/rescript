@@ -3,7 +3,7 @@ import type * as Js from "./Js.js";
 
 export type key = string;
 
-export type t<Value> = rescript.opaque<"Belt_MapString.t", [Value]>;
+export type t<Value> = rescript.opaque<"Belt_MapString.t", [Value], Belt_internalAVLtree.t<key, A>>;
 
 export const empty: t<V>;
 

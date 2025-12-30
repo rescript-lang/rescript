@@ -3,7 +3,7 @@ import type * as Js from "./Js.js";
 
 export type value = string;
 
-export type t = rescript.opaque<"Belt_SetString.t", []>;
+export type t = rescript.opaque<"Belt_SetString.t", [], Belt_internalSetString.t>;
 
 export const empty: t;
 

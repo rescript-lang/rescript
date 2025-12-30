@@ -2,7 +2,7 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type key = number;
 
-export type t = rescript.opaque<"Belt_HashSetInt.t", []>;
+export type t = rescript.opaque<"Belt_HashSetInt.t", [], Belt_internalSetBuckets.t<void, void, key>>;
 
 export function remove(h: t, key: key): void;
 

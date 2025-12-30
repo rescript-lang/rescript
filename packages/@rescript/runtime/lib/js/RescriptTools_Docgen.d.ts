@@ -9,7 +9,10 @@ export interface field {
 }
 
 export type constructorPayload =
-  | { readonly kind: "inlineRecord"; readonly fields: field[] };
+  | {
+    readonly kind: "inlineRecord";
+    readonly fields: field[];
+  };
 
 export interface constructor {
   readonly name: string;
@@ -30,9 +33,18 @@ export interface signatureDetails {
 }
 
 export type detail =
-  | { readonly kind: "record"; readonly items: field[] }
-  | { readonly kind: "variant"; readonly items: constructor[] }
-  | { readonly kind: "signature"; readonly details: signatureDetails };
+  | {
+    readonly kind: "record";
+    readonly items: field[];
+  }
+  | {
+    readonly kind: "variant";
+    readonly items: constructor[];
+  }
+  | {
+    readonly kind: "signature";
+    readonly details: signatureDetails;
+  };
 
 export interface source {
   readonly filepath: string;

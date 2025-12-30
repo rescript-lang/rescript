@@ -15,12 +15,27 @@ export type replacer =
 
 declare namespace Classify {
   type t =
-    | { readonly TAG: "Bool"; readonly _0: boolean }
+    | {
+      readonly TAG: "Bool";
+      readonly _0: boolean;
+    }
     | "Null"
-    | { readonly TAG: "String"; readonly _0: string }
-    | { readonly TAG: "Number"; readonly _0: number }
-    | { readonly TAG: "Object"; readonly _0: rescript.dict<t> }
-    | { readonly TAG: "Array"; readonly _0: t[] };
+    | {
+      readonly TAG: "String";
+      readonly _0: string;
+    }
+    | {
+      readonly TAG: "Number";
+      readonly _0: number;
+    }
+    | {
+      readonly TAG: "Object";
+      readonly _0: rescript.dict<t>;
+    }
+    | {
+      readonly TAG: "Array";
+      readonly _0: t[];
+    };
 }
 export type Classify = {
   classify: (arg0: A) => Classify.t;

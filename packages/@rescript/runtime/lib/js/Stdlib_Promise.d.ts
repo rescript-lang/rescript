@@ -9,7 +9,13 @@ export interface promiseAndResolvers<A> {
 }
 
 export type settledResult<A> =
-  | { readonly status: "fulfilled"; readonly value: A }
-  | { readonly status: "rejected"; readonly reason: rescript.exn };
+  | {
+    readonly status: "fulfilled";
+    readonly value: A;
+  }
+  | {
+    readonly status: "rejected";
+    readonly reason: rescript.exn;
+  };
 
 export function $$catch<A>(promise: t<A>, callback: (arg0: rescript.exn) => t<A>): t<A>;

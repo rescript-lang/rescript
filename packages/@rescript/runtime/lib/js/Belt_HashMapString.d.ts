@@ -2,7 +2,7 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type key = string;
 
-export type t<B> = rescript.opaque<"Belt_HashMapString.t", [B]>;
+export type t<B> = rescript.opaque<"Belt_HashMapString.t", [B], Belt_internalBuckets.t<void, void, key, B>>;
 
 export function set<A>(h: t<A>, key: key, value: A): void;
 
