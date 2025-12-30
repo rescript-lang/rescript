@@ -797,6 +797,12 @@ and simple_expr ctxt f x =
       let expression = expression ctxt in
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
+    | Pexp_for_of (s, e1, e2) ->
+      let fmt : (_, _, _) format =
+        "@[<hv0>@[<hv2>@[<2>for %a of@;%a@;do@]@;%a@]@;done@]"
+      in
+      let expression = expression ctxt in
+      pp f fmt (pattern ctxt) s expression e1 expression e2
     | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
       pp f "<>%a</>" (list (simple_expr ctxt)) children
     | Pexp_jsx_element

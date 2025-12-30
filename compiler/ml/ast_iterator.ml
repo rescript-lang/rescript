@@ -337,6 +337,10 @@ module E = struct
       sub.expr sub e1;
       sub.expr sub e2;
       sub.expr sub e3
+    | Pexp_for_of (p, e1, e2) ->
+      sub.pat sub p;
+      sub.expr sub e1;
+      sub.expr sub e2
     | Pexp_coerce (e, (), t2) ->
       sub.expr sub e;
       sub.typ sub t2

@@ -62,6 +62,9 @@ let check file lam =
       check_staticfails e1 cxt;
       check_staticfails e2 cxt;
       check_staticfails e3 Set_int.empty
+    | Lfor_of (_v, e1, e2) ->
+      check_staticfails e1 cxt;
+      check_staticfails e2 Set_int.empty
     | Llet (_str, _id, arg, body) -> check_list [arg; body] cxt
     | Lletrec (decl, body) ->
       check_list_snd decl cxt;
@@ -146,6 +149,10 @@ let check file lam =
       iter e2;
       def v;
       iter e3
+    | Lfor_of (v, e1, e2) ->
+      iter e1;
+      def v;
+      iter e2
     | Lassign (id, e) ->
       use id;
       iter e
