@@ -1,6 +1,8 @@
 let isDev = true
 
-let loadStaticFiles: unit => promise<array<string>> = %raw(`() => Promise.resolve(["public/foo.js", "dist/bar.js"])`)
+let loadStaticFiles: unit => promise<
+  array<string>,
+> = %raw(`() => Promise.resolve(["public/foo.js", "dist/bar.js"])`)
 
 let test = async () => {
   let files = await loadStaticFiles()

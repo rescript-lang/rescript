@@ -350,21 +350,21 @@ let lambda_as_module
            in
            let module_name = Filename.basename output_prefix in
            (* Resolver function for type-only module imports.
-              Returns None for modules that can't be found (e.g., local module aliases). *)
-           let resolve_module_path mod_name =
-             let dep_id = Ident.create mod_name in
-             let dep_module_id = Lam_module_ident.of_ml dep_id in
-             (* Check if the CMJ file exists before trying to resolve *)
-             let cmj_file = mod_name ^ Literals.suffix_cmj in
-             match Config_util.find_opt cmj_file with
-             | None ->
-               (* CMJ not found - likely a local module alias *)
-               None
-             | Some _ ->
-               Some
-                 (Js_name_of_module_id.string_of_module_id dep_module_id
-                    ~output_dir module_system)
-           in
+               Returns None for modules that can't be found (e.g., local module aliases). *)
+            let resolve_module_path mod_name =
+              let dep_id = Ident.create mod_name in
+              let dep_module_id = Lam_module_ident.of_ml dep_id in
+              (* Check if the CMJ file exists before trying to resolve *)
+              let cmj_file = mod_name ^ Literals.suffix_cmj in
+              match Config_util.find_opt cmj_file with
+              | None ->
+                (* CMJ not found - likely a local module alias *)
+                None
+              | Some _ ->
+                Some
+                  (Js_name_of_module_id.string_of_module_id dep_module_id
+                     ~output_dir module_system)
+            in
            Ext_pervasives.with_file_as_chan dts_file (fun chan ->
                let f = Ext_pp.from_channel chan in
                Ts.pp_dts_file ~module_name ~resolve_module_path ~suffix f

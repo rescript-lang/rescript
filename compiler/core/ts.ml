@@ -12,6 +12,9 @@ type type_ref = {
   name: string;
       (** Display name for the type (may include module path and @as renaming) *)
   args: ts_type list;  (** Type arguments *)
+  source_module: string option;
+      (** Original module name (unmangled) for dependency tracking.
+          None for local types or built-in types. *)
 }
 (**
   Simplified type representation for TypeScript output.
@@ -740,14 +743,6 @@ let has_phantom_params (type_params : type_param list) (body : ts_type) : bool =
     (* If any declared param is not used in the body, we have phantom params *)
     not (StringSet.subset declared_params used_params)
 
-(** Extract module name from a qualified type path.
-    e.g., "Stdlib_Array.arrayLike" -> Some "Stdlib_Array"
-          "arrayLike" -> None *)
-let extract_module_from_type_path (path : string) : string option =
-  match String.index_opt path '.' with
-  | Some idx -> Some (String.sub path 0 idx)
-  | None -> None
-
 (** Forward reference for printing a ts_type (set later to break cyclic dependency) *)
 let pp_ts_type_ref : (Ext_pp.t -> ts_type -> unit) ref = ref (fun _ _ -> ())
 
@@ -796,9 +791,9 @@ let rec collect_type_deps (ty : ts_type) : unit =
     | None -> ())
   | Function fn -> collect_type_deps_fn fn
   | Union types | Intersection types -> List.iter collect_type_deps types
-  | TypeRef {name; args} ->
-    (* Track module dependency from qualified type names *)
-    (match extract_module_from_type_path name with
+  | TypeRef {source_module; args; _} ->
+    (* Track module dependency using source_module directly *)
+    (match source_module with
     | Some module_name -> TypeModuleDeps.add module_name
     | None -> ());
     List.iter collect_type_deps args
@@ -1448,7 +1443,7 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
            The constraint represents the actual types that can be returned. *)
         match GadtConstraints.get_constraint_at gadt_name 0 with
         | Some constraint_ty -> constraint_ty
-        | None -> TypeRef {name = gadt_name; args = []})
+        | None -> TypeRef {name = gadt_name; args = []; source_module = None})
       | None -> TypeVar name)
     | None -> Any (* Fallback if not collected *))
   | Tvar (Some name) -> (
@@ -1460,7 +1455,7 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
          The constraint represents the actual types that can be returned. *)
       match GadtConstraints.get_constraint_at gadt_name 0 with
       | Some constraint_ty -> constraint_ty
-      | None -> TypeRef {name = gadt_name; args = []})
+      | None -> TypeRef {name = gadt_name; args = []; source_module = None})
     | None -> TypeVar var_name)
   | Tarrow _ ->
     (* Convert arrow type to function.
@@ -1636,7 +1631,7 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
         (* Use the GADT constraint type instead of the GADT union *)
         match GadtConstraints.get_constraint_at gadt_name 0 with
         | Some constraint_ty -> constraint_ty
-        | None -> TypeRef {name = gadt_name; args = []})
+        | None -> TypeRef {name = gadt_name; args = []; source_module = None})
       | None -> TypeVar name)
     | None -> Any (* Fallback if not collected *))
   | Tunivar (Some name) -> (
@@ -1647,7 +1642,7 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
       (* Use the GADT constraint type instead of the GADT union *)
       match GadtConstraints.get_constraint_at gadt_name 0 with
       | Some constraint_ty -> constraint_ty
-      | None -> TypeRef {name = gadt_name; args = []})
+      | None -> TypeRef {name = gadt_name; args = []; source_module = None})
     | None -> TypeVar var_name)
   | Tpackage _ -> Any
 
@@ -1757,13 +1752,13 @@ and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
         match key with
         | Some k when GadtSubUnions.get_sub_union_key gadt_name k <> None ->
           (* Use sub-union type *)
-          TypeRef {name = gadt_name ^ "$" ^ k; args = []}
+          TypeRef {name = gadt_name ^ "$" ^ k; args = []; source_module = None}
         | _ ->
           (* No sub-union, use main union type without args *)
-          TypeRef {name = gadt_name; args = []})
+          TypeRef {name = gadt_name; args = []; source_module = None})
       | _ ->
         (* No args or multiple args - use main union type *)
-        TypeRef {name = gadt_name; args = []}
+        TypeRef {name = gadt_name; args = []; source_module = None}
     else
       (* Check if this is an inline record definition that should be inlined.
          These have dotted names like "input.create" and were registered during
@@ -1807,7 +1802,25 @@ and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
             | None -> simple_name ^ "_"
           else type_name
         in
-        TypeRef {name = final_name; args = List.map ts_type_of_type_expr args})
+        (* Extract source module from path for dependency tracking.
+           Only external types (Pdot) have a source module; local types (Pident) don't. *)
+        let source_module =
+          let rec get_root_module p =
+            match p with
+            | Path.Pident id -> Some (Ident.name id)
+            | Path.Pdot (parent, _, _) -> get_root_module parent
+            | Path.Papply _ -> None
+          in
+          match normalized_path with
+          | Path.Pdot _ -> get_root_module normalized_path
+          | _ -> None
+        in
+        TypeRef
+          {
+            name = final_name;
+            args = List.map ts_type_of_type_expr args;
+            source_module;
+          })
 
 (** {1 Utility Functions} *)
 
@@ -2238,13 +2251,13 @@ let rec transform_gadt_payload_type ~(gadt_name : string)
     match key with
     | Some k when List.exists (fun su -> su.gsu_key = k) sub_unions ->
       (* Found a sub-union, use it *)
-      TypeRef {name = gadt_name ^ "$" ^ k; args = []}
+      TypeRef {name = gadt_name ^ "$" ^ k; args = []; source_module = None}
     | _ ->
       (* No sub-union for this key, use the full union type without args *)
-      TypeRef {name = gadt_name; args = []})
+      TypeRef {name = gadt_name; args = []; source_module = None})
   | TypeRef {name; args} when name = gadt_name ->
     (* GADT reference without single arg - just use the union type *)
-    TypeRef {name = gadt_name; args = []}
+    TypeRef {name = gadt_name; args = []; source_module = None}
   | Array elem ->
     Array (transform_gadt_payload_type ~gadt_name ~sub_unions elem)
   | Tuple types ->
@@ -2642,6 +2655,7 @@ let type_decl_of_type_declaration (id : Ident.t) (decl : Types.type_declaration)
                             List.map
                               (fun tp -> TypeVar tp.tp_name)
                               type_params_with_constraints;
+                          source_module = None;
                         },
                       None )
                 in
@@ -3835,7 +3849,7 @@ let get_constraint_for_key (gadt_name : string) (key : string) : ts_type option
         | [] -> None
         | Some (TypeRef {name; args = []}) :: _
           when String.lowercase_ascii name = key ->
-          Some (TypeRef {name; args = []})
+          Some (TypeRef {name; args = []; source_module = None})
         | _ :: rest -> find_matching rest
       in
       find_matching constraints)
@@ -4719,11 +4733,15 @@ let rec collect_gadt_sub_unions (decls : type_decl list) : unit =
 
 (** Initialize state and collect type information without printing.
     Call this before printing runtime import and type declarations separately.
-    Preserves the environment that was set before. *)
+    Preserves the environment and LocalTypeQualifier that were set before. *)
 let init_type_decls ~(module_name : string) (decls : type_decl list) : unit =
   let saved_env = State.state.env in
+  let saved_qualifiers_by_stamp = State.state.local_type_qualifiers_by_stamp in
+  let saved_qualifiers_by_name = State.state.local_type_qualifiers_by_name in
   reset_state ();
   State.state.env <- saved_env;
+  State.state.local_type_qualifiers_by_stamp <- saved_qualifiers_by_stamp;
+  State.state.local_type_qualifiers_by_name <- saved_qualifiers_by_name;
   (* Store brand-friendly module name (Namespace.Module format) *)
   set_module_name (module_name_to_brand module_name);
   List.iter collect_runtime_types_decl decls;
@@ -4957,8 +4975,8 @@ let rec simplify_const_type (ty : ts_type) : ts_type =
   | Tuple elems -> Tuple (List.map simplify_const_type elems)
   | Union types -> Union (List.map simplify_const_type types)
   | Intersection types -> Intersection (List.map simplify_const_type types)
-  | TypeRef {name; args} ->
-    TypeRef {name; args = List.map simplify_const_type args}
+  | TypeRef {name; args; source_module} ->
+    TypeRef {name; args = List.map simplify_const_type args; source_module}
   | Readonly ty -> Readonly (simplify_const_type ty)
   | Promise ty -> Promise (simplify_const_type ty)
   | _ -> ty
@@ -5281,7 +5299,12 @@ and pp_module_decl_with_path (f : P.t) ~(parent_path : string option)
     @ List.map
         (fun sub ->
           ( sub.mod_name,
-            TypeRef {name = mod_name ^ "." ^ sub.mod_name; args = []} ))
+            TypeRef
+              {
+                name = mod_name ^ "." ^ sub.mod_name;
+                args = [];
+                source_module = None;
+              } ))
         mod_submodules
   in
   List.iter
@@ -5497,7 +5520,12 @@ and pp_nested_module_decl_with_path (f : P.t) (mod_decl : module_decl)
     @ List.map
         (fun sub ->
           ( sub.mod_name,
-            TypeRef {name = mod_name ^ "." ^ sub.mod_name; args = []} ))
+            TypeRef
+              {
+                name = mod_name ^ "." ^ sub.mod_name;
+                args = [];
+                source_module = None;
+              } ))
         mod_submodules
   in
   List.iter
@@ -5689,7 +5717,12 @@ and pp_nested_module_decl (f : P.t) (mod_decl : module_decl) ~(indent : int) :
     @ List.map
         (fun sub ->
           ( sub.mod_name,
-            TypeRef {name = mod_name ^ "." ^ sub.mod_name; args = []} ))
+            TypeRef
+              {
+                name = mod_name ^ "." ^ sub.mod_name;
+                args = [];
+                source_module = None;
+              } ))
         mod_submodules
   in
   List.iter
@@ -5715,7 +5748,7 @@ let () = pp_module_decl_ts_ref := pp_module_decl_ts
 let pp_dts_import (f : P.t) (module_name : string) (module_path : string) : unit
     =
   P.string f "import type * as ";
-  P.string f module_name;
+  P.string f (Ext_ident.convert module_name);
   P.string f " from \"";
   P.string f module_path;
   P.string f "\";"
@@ -5817,12 +5850,17 @@ let pp_dts_file ~(module_name : string)
     ~(resolve_module_path : resolve_module_path) ~(suffix : string) (f : P.t)
     (imports : dts_import list) (type_decls : type_decl list)
     (value_exports : value_export list) : unit =
-  (* Save the environment that was set during extraction.
-     We need it to resolve module aliases in type paths. *)
+  (* Save the environment and LocalTypeQualifier that were set during extraction.
+     We need env to resolve module aliases in type paths.
+     We need LocalTypeQualifier to qualify local type references. *)
   let saved_env = State.state.env in
+  let saved_qualifiers_by_stamp = State.state.local_type_qualifiers_by_stamp in
+  let saved_qualifiers_by_name = State.state.local_type_qualifiers_by_name in
   reset_state ();
-  (* Restore the environment for module alias resolution *)
+  (* Restore the environment and LocalTypeQualifier for type resolution *)
   State.state.env <- saved_env;
+  State.state.local_type_qualifiers_by_stamp <- saved_qualifiers_by_stamp;
+  State.state.local_type_qualifiers_by_name <- saved_qualifiers_by_name;
   List.iter collect_type_deps_decl type_decls;
   List.iter
     (fun ve -> collect_type_deps (ts_type_of_type_expr ve.ve_type))

@@ -6,10 +6,5 @@
     "in-source": true,
     "dts": true
   },
-  "dependencies": [
-    "test-module",
-    "mock-default",
-    "mock-namespace",
-    "mock-named"
-  ]
+  "dependencies": ["test-module"]
 }

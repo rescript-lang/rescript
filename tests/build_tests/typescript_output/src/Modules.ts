@@ -87,7 +87,7 @@ let $$Math: Math = {
   multiply: multiply
 };
 
-function greet(name: t): string {
+function greet(name: Outer.Nested.t): string {
   return "Hello, " + name;
 }
 
@@ -99,13 +99,13 @@ let Outer: Outer = {
   Nested: Nested
 };
 
-function make(rawEmail: string): rescript.option<t> {
+function make(rawEmail: string): rescript.option<Email.t> {
   if (rawEmail.includes("@")) {
-    return rawEmail as t;
+    return rawEmail as Email.t;
   }
 }
 
-function toString(email: t): string {
+function toString(email: Email.t): string {
   return email;
 }
 
@@ -114,11 +114,11 @@ let Email: Email = {
   toString: toString
 };
 
-function make$1(id: number): t {
-  return id as t;
+function make$1(id: number): UserId.t {
+  return id as UserId.t;
 }
 
-function toInt(id: t): number {
+function toInt(id: UserId.t): number {
   return id;
 }
 
@@ -148,11 +148,11 @@ let PrintableInt: PrintableInt = {
   toString: toString$1
 };
 
-function create(s: string): t {
-  return ("token:" + s) as t;
+function create(s: string): Outer2.Token.t {
+  return ("token:" + s) as Outer2.Token.t;
 }
 
-function value(t: t): string {
+function value(t: Outer2.Token.t): string {
   return t;
 }
 
