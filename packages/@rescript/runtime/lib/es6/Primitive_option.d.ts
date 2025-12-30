@@ -6,7 +6,11 @@ export interface nested {
   readonly BS_PRIVATE_NESTED_SOME_NONE: number;
 }
 
-export type poly = rescript.opaque<"Primitive_option.poly", [], { readonly VAL: Primitive_object_extern.t; }>;
+export type poly = rescript.opaque<
+  "Primitive_option.poly",
+  [],
+  { readonly VAL: Primitive_object_extern.t; }
+>;
 
 export function isNested(x: Primitive_object_extern.t): boolean;
 

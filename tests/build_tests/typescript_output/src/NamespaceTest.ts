@@ -3,7 +3,11 @@
 import type * as rescript from "@rescript/runtime/types";
 
 declare namespace Actions {
-  type t = rescript.opaque<"NamespaceTest.Actions.t", [], string>;
+  type t = rescript.opaque<
+  "NamespaceTest.Actions.t",
+  [],
+  string
+>;
   type target =
     | "This"
     | {

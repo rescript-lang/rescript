@@ -3,10 +3,14 @@ import type * as Belt_MapDict from "./Belt_MapDict.js";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
-export type t<Key, Value, Identity> = rescript.opaque<"Belt_Map.t", [Key, Value, Identity], {
-  readonly cmp: cmp<K, Id>;
-  readonly data: Belt_MapDict.t<K, V, Id>;
-}>;
+export type t<Key, Value, Identity> = rescript.opaque<
+  "Belt_Map.t",
+  [Key, Value, Identity],
+  {
+    readonly cmp: cmp<K, Id>;
+    readonly data: Belt_MapDict.t<K, V, Id>;
+  }
+>;
 
 export type id<Key, Id> = Belt_Id.comparable<Key, Id>;
 

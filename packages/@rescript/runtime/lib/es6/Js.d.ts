@@ -1,7 +1,11 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Js_undefined from "./Js_undefined.js";
 
-export type t<T0> = rescript.opaque<"Js.t", [T0], { }>;
+export type t<T0> = rescript.opaque<
+  "Js.t",
+  [T0],
+  { }
+>;
 
 export type null_<A> =
   | A
@@ -16,6 +20,9 @@ export type nullable<A> =
 
 export type null_undefined<A> = nullable<A>;
 
-export type promise<A, E> = rescript.opaque<"Js.promise", [A, E]>;
+export type promise<A, E> = rescript.opaque<
+  "Js.promise",
+  [A, E]
+>;
 
 export function undefinedToOption<A>(arg0: undefined_<A>): rescript.option<A>;

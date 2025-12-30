@@ -28,7 +28,11 @@ export type Outer = {
 };
 
 declare namespace Email {
-  type t = rescript.opaque<"Modules.Email.t", [], string>;
+  type t = rescript.opaque<
+  "Modules.Email.t",
+  [],
+  string
+>;
 }
 export type Email = {
   make: (arg0: string) => rescript.option<Email.t>;
@@ -36,7 +40,11 @@ export type Email = {
 };
 
 declare namespace UserId {
-  type t = rescript.opaque<"Modules.UserId.t", [], number>;
+  type t = rescript.opaque<
+  "Modules.UserId.t",
+  [],
+  number
+>;
 }
 export type UserId = {
   make: (arg0: number) => UserId.t;
@@ -59,7 +67,11 @@ export type PrintableInt = {
 
 declare namespace Outer2 {
   namespace Token {
-    type t = rescript.opaque<"Modules.Outer2.Token.t", [], string>;
+    type t = rescript.opaque<
+  "Modules.Outer2.Token.t",
+  [],
+  string
+>;
   }
   type Token = {
     create: (arg0: string) => Outer2.Token.t;

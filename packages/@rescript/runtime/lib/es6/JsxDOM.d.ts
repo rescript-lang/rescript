@@ -5,7 +5,10 @@ import type * as JsxEvent from "./JsxEvent.js";
 
 export type style = JsxDOMStyle.t;
 
-export type domRef = rescript.opaque<"JsxDOM.domRef", []>;
+export type domRef = rescript.opaque<
+  "JsxDOM.domRef",
+  []
+>;
 
 export type popover =
   | "auto"

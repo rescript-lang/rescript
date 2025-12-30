@@ -1,6 +1,9 @@
 import type * as rescript from "@rescript/runtime/types";
 
-export type t = rescript.opaque<"Stdlib_Intl_NumberFormat_Grouping.t", []>;
+export type t = rescript.opaque<
+  "Stdlib_Intl_NumberFormat_Grouping.t",
+  []
+>;
 
 export type parsed =
   | "min2"

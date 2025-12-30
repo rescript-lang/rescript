@@ -3,7 +3,11 @@ import type * as Js from "./Js.js";
 
 export type key = string;
 
-export type t<A> = rescript.opaque<"Belt_MutableMapString.t", [A], { data: Belt_internalMapString.t<A>; }>;
+export type t<A> = rescript.opaque<
+  "Belt_MutableMapString.t",
+  [A],
+  { data: Belt_internalMapString.t<A>; }
+>;
 
 export function make<A>(): t<A>;
 

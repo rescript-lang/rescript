@@ -16,9 +16,15 @@ export type number_<_ extends number = number> =
   | number_$Int
   | number_$Float;
 
-export type standard = rescript.opaque<"Gadt.standard", []>;
+export type standard = rescript.opaque<
+  "Gadt.standard",
+  []
+>;
 
-export type daylight = rescript.opaque<"Gadt.daylight", []>;
+export type daylight = rescript.opaque<
+  "Gadt.daylight",
+  []
+>;
 
 type timezone$daylight = timezone$EDT | timezone$CDT;
 type timezone$standard = timezone$EST | timezone$CST;

@@ -67,11 +67,21 @@ export type optionOfArray = rescript.option<number[]>;
 
 export type myIntArray = intArray;
 
-export type valid = rescript.opaque<"Types.valid", []>;
+export type valid = rescript.opaque<
+  "Types.valid",
+  []
+>;
 
-export type invalid = rescript.opaque<"Types.invalid", []>;
+export type invalid = rescript.opaque<
+  "Types.invalid",
+  []
+>;
 
-export type validated<S> = rescript.opaque<"Types.validated", [S], string>;
+export type validated<S> = rescript.opaque<
+  "Types.validated",
+  [S],
+  string
+>;
 
 let myIntArray: intArray = [
   1,

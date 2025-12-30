@@ -2,7 +2,11 @@ import type * as rescript from "@rescript/runtime/types";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
-export type t<Key, Value, Id> = rescript.opaque<"Belt_MapDict.t", [Key, Value, Id], Belt_internalAVLtree.t<Key, A>>;
+export type t<Key, Value, Id> = rescript.opaque<
+  "Belt_MapDict.t",
+  [Key, Value, Id],
+  Belt_internalAVLtree.t<Key, A>
+>;
 
 export type cmp<Key, Id> = Belt_Id.cmp<Key, Id>;
 

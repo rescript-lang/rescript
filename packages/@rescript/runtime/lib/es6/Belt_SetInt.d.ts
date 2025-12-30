@@ -3,7 +3,11 @@ import type * as Js from "./Js.js";
 
 export type value = number;
 
-export type t = rescript.opaque<"Belt_SetInt.t", [], Belt_internalSetInt.t>;
+export type t = rescript.opaque<
+  "Belt_SetInt.t",
+  [],
+  Belt_internalSetInt.t
+>;
 
 export const empty: t;
 

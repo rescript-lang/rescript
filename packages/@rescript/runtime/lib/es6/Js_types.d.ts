@@ -6,9 +6,15 @@ export type symbol_ = Stdlib_Symbol.t;
 
 export type obj_val = Stdlib_Type.Classify.object_;
 
-export type undefined_val = rescript.opaque<"Js_types.undefined_val", []>;
+export type undefined_val = rescript.opaque<
+  "Js_types.undefined_val",
+  []
+>;
 
-export type null_val = rescript.opaque<"Js_types.null_val", []>;
+export type null_val = rescript.opaque<
+  "Js_types.null_val",
+  []
+>;
 
 export type function_val = Stdlib_Type.Classify.function_;
 

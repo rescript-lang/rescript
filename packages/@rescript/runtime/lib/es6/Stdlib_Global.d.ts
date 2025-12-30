@@ -1,8 +1,14 @@
 import type * as rescript from "@rescript/runtime/types";
 
-export type timeoutId = rescript.opaque<"Stdlib_Global.timeoutId", []>;
+export type timeoutId = rescript.opaque<
+  "Stdlib_Global.timeoutId",
+  []
+>;
 
-export type intervalId = rescript.opaque<"Stdlib_Global.intervalId", []>;
+export type intervalId = rescript.opaque<
+  "Stdlib_Global.intervalId",
+  []
+>;
 
 export type TimeoutId = {
 };

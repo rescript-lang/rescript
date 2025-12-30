@@ -12,8 +12,14 @@ export type t =
   | "boolean";
 
 declare namespace Classify {
-  type function_ = rescript.opaque<"Stdlib_Type.Classify.function_", []>;
-  type object_ = rescript.opaque<"Stdlib_Type.Classify.object_", []>;
+  type function_ = rescript.opaque<
+  "Stdlib_Type.Classify.function_",
+  []
+>;
+  type object_ = rescript.opaque<
+  "Stdlib_Type.Classify.object_",
+  []
+>;
   type t =
     | {
       readonly TAG: "Bool";

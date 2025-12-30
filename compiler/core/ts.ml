@@ -775,21 +775,27 @@ let pp_opaque_type (f : Ext_pp.t) ~(brand_name : string)
     ~(type_params : type_param list) ~(underlying : ts_type option) : unit =
   RuntimeTypes.add "opaque";
   Ext_pp.string f runtime_types_namespace;
-  Ext_pp.string f ".opaque<\"";
-  Ext_pp.string f brand_name;
-  Ext_pp.string f "\", [";
-  (* Print type params as tuple for phantom type support *)
-  (if type_params <> [] then
-     let param_names =
-       List.map (fun (tp : type_param) -> tp.tp_name) type_params
-     in
-     Ext_pp.string f (String.concat ", " param_names));
-  Ext_pp.string f "]";
-  (match underlying with
-  | Some ty ->
-    Ext_pp.string f ", ";
-    !pp_ts_type_ref f ty
-  | None -> ());
+  Ext_pp.string f ".opaque<";
+  Ext_pp.group f 1 (fun () ->
+      Ext_pp.newline f;
+      Ext_pp.string f "\"";
+      Ext_pp.string f brand_name;
+      Ext_pp.string f "\",";
+      Ext_pp.newline f;
+      Ext_pp.string f "[";
+      (if type_params <> [] then
+         let param_names =
+           List.map (fun (tp : type_param) -> tp.tp_name) type_params
+         in
+         Ext_pp.string f (String.concat ", " param_names));
+      Ext_pp.string f "]";
+      match underlying with
+      | Some ty ->
+        Ext_pp.string f ",";
+        Ext_pp.newline f;
+        !pp_ts_type_ref f ty
+      | None -> ());
+  Ext_pp.newline f;
   Ext_pp.string f ">"
 
 (** Collect runtime types and module dependencies from a ts_type *)

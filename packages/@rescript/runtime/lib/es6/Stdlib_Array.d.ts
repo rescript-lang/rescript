@@ -3,7 +3,10 @@ import type * as Stdlib_Ordering from "./Stdlib_Ordering.js";
 
 export type t<A> = A[];
 
-export type arrayLike<A> = rescript.opaque<"Stdlib_Array.arrayLike", [A]>;
+export type arrayLike<A> = rescript.opaque<
+  "Stdlib_Array.arrayLike",
+  [A]
+>;
 
 export function make<A>(length: number, x: A): A[];
 

@@ -3,7 +3,11 @@ import type * as Js from "./Js.js";
 
 export type key = number;
 
-export type t<A> = rescript.opaque<"Belt_MutableMapInt.t", [A], { data: Belt_internalMapInt.t<A>; }>;
+export type t<A> = rescript.opaque<
+  "Belt_MutableMapInt.t",
+  [A],
+  { data: Belt_internalMapInt.t<A>; }
+>;
 
 export function make<A>(): t<A>;
 

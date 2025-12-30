@@ -3,10 +3,14 @@ import type * as Belt_SetDict from "./Belt_SetDict.js";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
-export type t<Value, Identity> = rescript.opaque<"Belt_Set.t", [Value, Identity], {
-  readonly cmp: cmp<Value, Id>;
-  readonly data: Belt_SetDict.t<Value, Id>;
-}>;
+export type t<Value, Identity> = rescript.opaque<
+  "Belt_Set.t",
+  [Value, Identity],
+  {
+    readonly cmp: cmp<Value, Id>;
+    readonly data: Belt_SetDict.t<Value, Id>;
+  }
+>;
 
 export type id<Value, Id> = Belt_Id.comparable<Value, Id>;
 
