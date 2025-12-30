@@ -30,7 +30,11 @@ export type Outer = {
 export const Outer: Outer;
 
 declare namespace Email {
-  type t = rescript.opaque<"Modules.Email.t", []>;
+  type t = rescript.opaque<
+  "Modules.Email.t",
+  [],
+  string
+>;
 }
 export type Email = {
   make: (arg0: string) => rescript.option<Email.t>;
@@ -39,7 +43,11 @@ export type Email = {
 export const Email: Email;
 
 declare namespace UserId {
-  type t = rescript.opaque<"Modules.UserId.t", []>;
+  type t = rescript.opaque<
+  "Modules.UserId.t",
+  [],
+  number
+>;
 }
 export type UserId = {
   make: (arg0: number) => UserId.t;

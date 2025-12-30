@@ -13,8 +13,14 @@ export type status =
   | "pending_review";
 
 export type result2 =
-  | { readonly TAG: "Ok2"; readonly _0: number }
-  | { readonly TAG: "Error2"; readonly _0: string };
+  | {
+    readonly TAG: "Ok2";
+    readonly _0: number;
+  }
+  | {
+    readonly TAG: "Error2";
+    readonly _0: string;
+  };
 
 export type event =
   | {
@@ -30,18 +36,31 @@ export type event =
   | "NoData";
 
 export type action =
-  | { readonly type: "Navigate"; readonly _0: string }
+  | {
+    readonly type: "Navigate";
+    readonly _0: string;
+  }
   | "Submit";
 
 export type stringOrInt =
   | string
   | number;
 
-export type valid = rescript.opaque<"Types.valid", []>;
+export type valid = rescript.opaque<
+  "Types.valid",
+  []
+>;
 
-export type invalid = rescript.opaque<"Types.invalid", []>;
+export type invalid = rescript.opaque<
+  "Types.invalid",
+  []
+>;
 
-export type validated<S> = rescript.opaque<"Types.validated", [S], string>;
+export type validated<S> = rescript.opaque<
+  "Types.validated",
+  [S],
+  string
+>;
 
 export const defaultUser: User;
 
