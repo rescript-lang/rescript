@@ -137,6 +137,10 @@ let expression_desc : 'a. ('a, expression_desc) fn =
     let st = _self.expression _self st _x0 in
     let st = list _self.expression _self st _x1 in
     st
+  | Template_literal (_x0, _x1) ->
+    let st = list _self.expression _self st _x0 in
+    let st = list _self.expression _self st _x1 in
+    st
   | Tagged_template (_xo, _x1, _x2) ->
     let st = _self.expression _self st _xo in
     let st = list _self.expression _self st _x1 in

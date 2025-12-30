@@ -148,6 +148,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   match exp_desc with
   | Texp_ident _ -> ()
   | Texp_constant _ -> ()
+  | Texp_template {expressions; _} -> List.iter (sub.expr sub) expressions
   | Texp_let (rec_flag, list, exp) ->
     sub.value_bindings sub (rec_flag, list);
     sub.expr sub exp

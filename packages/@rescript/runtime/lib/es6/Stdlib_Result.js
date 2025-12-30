@@ -1,13 +1,12 @@
 
 
-import * as Stdlib_JsError from "./Stdlib_JsError.js";
 
 function getOrThrow(x, message) {
   if (x.TAG === "Ok") {
     return x._0;
-  } else {
-    return Stdlib_JsError.panic(message !== undefined ? message : "Result.getOrThrow called for Error value");
   }
+  let msg = message !== undefined ? message : "Result.getOrThrow called for Error value";
+  throw new Error(`Panic! ${msg}`);
 }
 
 function mapOr(opt, $$default, f) {

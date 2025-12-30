@@ -219,6 +219,7 @@ and expression_desc =
        M.x
     *)
   | Pexp_constant of constant (* 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Pexp_template of template_literal
   | Pexp_let of rec_flag * value_binding list * expression
     (* let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
@@ -316,6 +317,13 @@ and expression_desc =
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
+
+and template_literal = {
+  tag: expression option;
+  prefix: string option;
+  strings: string list;
+  expressions: expression list;
+}
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}

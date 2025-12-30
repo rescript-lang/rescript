@@ -59,14 +59,15 @@ try {
   if (e$2.RE_EXN_ID === "JsExn") {
     let e$3 = e$2._1;
     let message = Stdlib_Option.map(Stdlib_JsExn.message(e$3), prim => prim.toLowerCase());
-    let exit = 0;
-    if (message === "invalid key : someinvalidkey") {
-      console.log("Caught expected error");
+    if (message !== undefined) {
+      if (message === "invalid key : someinvalidkey") {
+        console.log("Caught expected error");
+      } else {
+        console.warn(`Unexpected error message: "${message}"`);
+        throw e$3;
+      }
     } else {
-      exit = 1;
-    }
-    if (exit === 1) {
-      console.warn(`Unexpected error message: "` + message + `"`);
+      console.warn(`Unexpected error message: "${message}"`);
       throw e$3;
     }
   } else {

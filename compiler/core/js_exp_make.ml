@@ -79,6 +79,9 @@ let tagged_template ?comment call_expr string_args value_args : t =
     comment;
   }
 
+let template_literal ?comment string_args value_args : t =
+  {expression_desc = Template_literal (string_args, value_args); comment}
+
 let runtime_var_dot ?comment (x : string) (e1 : string) : J.expression =
   {
     expression_desc =

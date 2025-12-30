@@ -24,6 +24,10 @@
 
 type t = Parsetree.payload
 
+let template_literal_delim = function
+  | None -> Some "bq"
+  | Some prefix -> Some prefix
+
 let is_single_string (x : t) =
   match x with
   (* TODO also need detect empty phrase case *)
@@ -37,6 +41,22 @@ let is_single_string (x : t) =
         };
       ] ->
     Some (name, dec)
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc =
+                    Pexp_template
+                      {tag = None; prefix; strings = [name]; expressions = []};
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+    Some (name, template_literal_delim prefix)
   | _ -> None
 
 let is_single_string_as_ast (x : t) : Parsetree.expression option =
@@ -52,6 +72,27 @@ let is_single_string_as_ast (x : t) : Parsetree.expression option =
         };
       ] ->
     Some e
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( ({
+                   pexp_desc =
+                     Pexp_template
+                       {tag = None; prefix; strings = [name]; expressions = []};
+                   pexp_loc = _;
+                 } as e),
+                _ );
+          _;
+        };
+      ] ->
+    Some
+      {
+        e with
+        pexp_desc =
+          Pexp_constant (Pconst_string (name, template_literal_delim prefix));
+      }
   | _ -> None
 
 let is_single_int (x : t) : int option =

@@ -110,6 +110,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pnegint -> fprintf ppf "~-"
   | Paddint -> fprintf ppf "+"
   | Pstringadd -> fprintf ppf "+*"
+  | Pstringtemplate _ -> fprintf ppf "template"
   | Psubint -> fprintf ppf "-"
   | Pmulint -> fprintf ppf "*"
   | Pdivint -> fprintf ppf "/"

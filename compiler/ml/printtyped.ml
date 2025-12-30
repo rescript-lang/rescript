@@ -274,6 +274,9 @@ and expression i ppf x =
   match x.exp_desc with
   | Texp_ident (li, _, _) -> line i ppf "Texp_ident %a\n" fmt_path li
   | Texp_constant c -> line i ppf "Texp_constant %a\n" fmt_constant c
+  | Texp_template {expressions; _} ->
+    line i ppf "Texp_template\n";
+    List.iter (expression (i + 1) ppf) expressions
   | Texp_let (rf, l, e) ->
     line i ppf "Texp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;

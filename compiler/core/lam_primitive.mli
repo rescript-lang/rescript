@@ -120,6 +120,7 @@ type t =
   | Pstringrefu
   | Pstringrefs
   | Pstringadd
+  | Pstringtemplate of string list
   | Pstringcomp of Lam_compat.comparison
   | Pstringorder
   | Pstringmin

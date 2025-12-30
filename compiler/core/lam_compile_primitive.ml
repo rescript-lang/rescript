@@ -146,6 +146,9 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [a; b] -> E.string_append a b
     | _ -> assert false)
+  | Pstringtemplate strings ->
+    let string_args = List.map E.str strings in
+    E.template_literal string_args args
   | Pinit_mod -> E.runtime_call Primitive_modules.module_ "init" args
   | Pupdate_mod -> E.runtime_call Primitive_modules.module_ "update" args
   | Psome -> (

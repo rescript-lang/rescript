@@ -5,10 +5,7 @@ let truth = false
 let constructor = None
 let longidentConstructor = Option.None
 let txt = {js|a string|js}
-let otherTxt =
-  (((((({js|foo bar |js})[@res.template ]) ++ txt)[@res.template ]) ++
-      (({js||js})[@res.template ]))
-  [@res.template ])
+let otherTxt = ((("foo bar " ++ txt) ++ "")[@res.template ])
 let ident = myIdent
 let aList = [1; 2]
 let anArray = [|1;2|]

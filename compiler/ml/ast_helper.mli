@@ -122,6 +122,7 @@ module Exp : sig
 
   val ident : ?loc:loc -> ?attrs:attrs -> lid -> expression
   val constant : ?loc:loc -> ?attrs:attrs -> constant -> expression
+  val template : ?loc:loc -> ?attrs:attrs -> template_literal -> expression
   val let_ :
     ?loc:loc ->
     ?attrs:attrs ->
