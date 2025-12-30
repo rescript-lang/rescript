@@ -1,5 +1,8 @@
 {
   "name": "@rescript/runtime",
+  "experimental-features": {
+    "LetUnwrap": true
+  },
   "sources": [
     {
       "dir": "."
