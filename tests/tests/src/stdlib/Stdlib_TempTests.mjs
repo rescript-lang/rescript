@@ -85,7 +85,7 @@ console.log((10.2).toFixed(2));
 
 console.log((10).toFixed(2));
 
-console.log(Stdlib_Int.fromString("0", undefined));
+console.log(Stdlib_Int.fromString("0"));
 
 console.log(Stdlib_Float.fromString("0.1"));
 
@@ -282,15 +282,15 @@ console.log({
 
 let Bugfix = {};
 
-console.log(Stdlib_Int.fromString("1231231", undefined));
+console.log(Stdlib_Int.fromString("1231231"));
 
-console.log(Stdlib_Int.fromString("12.22", undefined));
+console.log(Stdlib_Int.fromString("12.22"));
 
-console.log(Stdlib_Int.fromString("99999999999999999", undefined));
+console.log(Stdlib_Int.fromString("99999999999999999"));
 
-console.log(Stdlib_Int.fromString("99999999999999999", undefined));
+console.log(Stdlib_Int.fromString("99999999999999999"));
 
-console.log(Stdlib_Int.fromString("010101", 2));
+console.log(Stdlib_Int.fromString("0b010101"));
 
 let _collator = Stdlib_IntlTests._collator;
 

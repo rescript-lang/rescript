@@ -295,18 +295,20 @@ Int.fromFloat(0.9999) == 0
 external fromFloat: float => int = "%intoffloat"
 
 /**
-`fromString(str, ~radix=?)` return an `option<int>` representing the given value
-`str`. `~radix` specifies the radix base to use for the formatted number.
+`fromString(str)` return an `option<int>` representing the given value
+`str`. Hexadecimal, binary and exponential notation is supported.
 
 ## Examples
 
 ```rescript
 Int.fromString("0") == Some(0)
+Int.fromString("0x6") == Some(6)
+Int.fromString("2.5e2") == Some(250)
 Int.fromString("NaN") == None
-Int.fromString("6", ~radix=2) == None
+Int.fromString("0b6") == None
 ```
 */
-let fromString: (string, ~radix: int=?) => option<int>
+let fromString: string => option<int>
 
 /**
 `mod(n1, n2)` calculates the modulo (remainder after division) of two integers.

@@ -7,7 +7,7 @@ let group = {
 };
 
 function fn(str) {
-  group.nested.field = Stdlib_Int.fromString(str, undefined);
+  group.nested.field = Stdlib_Int.fromString(str);
 }
 
 let WithNestedMutableFields = {
