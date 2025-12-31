@@ -4,7 +4,7 @@ export type key = number;
 
 export type t<B> = rescript.opaque<
   "Belt_HashMapInt.t",
-  [B],
+  [],
   Belt_internalBuckets.t<void, void, key, B>
 >;
 

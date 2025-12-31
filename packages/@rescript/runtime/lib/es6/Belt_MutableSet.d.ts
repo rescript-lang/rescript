@@ -4,7 +4,7 @@ import type * as Js from "./Js.js";
 
 export type t<Value, Identity> = rescript.opaque<
   "Belt_MutableSet.t",
-  [Value, Identity],
+  [Identity],
   {
     readonly cmp: cmp<Value, Id>;
     data: Belt_internalAVLset.t<Value>;

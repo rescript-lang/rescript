@@ -4,7 +4,7 @@ import type * as Js from "./Js.js";
 
 export type t<K, V, Id> = rescript.opaque<
   "Belt_MutableMap.t",
-  [K, V, Id],
+  [],
   {
     readonly cmp: cmp<K, Id>;
     data: Belt_internalAVLtree.t<K, V>;

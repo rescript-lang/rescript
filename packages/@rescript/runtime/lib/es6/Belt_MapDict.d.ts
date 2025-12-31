@@ -4,7 +4,7 @@ import type * as Js from "./Js.js";
 
 export type t<Key, Value, Id> = rescript.opaque<
   "Belt_MapDict.t",
-  [Key, Value, Id],
+  [Value, Id],
   Belt_internalAVLtree.t<Key, A>
 >;
 

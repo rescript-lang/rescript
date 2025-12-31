@@ -3,7 +3,7 @@ import type * as Js from "./Js.js";
 
 export type t<A> = rescript.opaque<
   "Belt_MutableQueue.t",
-  [A],
+  [],
   {
     length: number;
     first: cell<A>;

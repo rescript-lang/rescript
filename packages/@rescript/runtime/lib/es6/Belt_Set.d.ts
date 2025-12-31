@@ -5,7 +5,7 @@ import type * as Js from "./Js.js";
 
 export type t<Value, Identity> = rescript.opaque<
   "Belt_Set.t",
-  [Value, Identity],
+  [Identity],
   {
     readonly cmp: cmp<Value, Id>;
     readonly data: Belt_SetDict.t<Value, Id>;

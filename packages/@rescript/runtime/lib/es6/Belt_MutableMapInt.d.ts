@@ -5,7 +5,7 @@ export type key = number;
 
 export type t<A> = rescript.opaque<
   "Belt_MutableMapInt.t",
-  [A],
+  [],
   { data: Belt_internalMapInt.t<A>; }
 >;
 

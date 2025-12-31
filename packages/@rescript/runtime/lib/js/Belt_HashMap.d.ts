@@ -3,7 +3,7 @@ import type * as Belt_Id from "./Belt_Id.js";
 
 export type t<Key, Value, Id> = rescript.opaque<
   "Belt_HashMap.t",
-  [Key, Value, Id],
+  [Key, Value],
   Belt_internalBuckets.t<hash<A, Id>, eq<A, Id>, A, B>
 >;
 

@@ -34,7 +34,19 @@ type valid
 type invalid
 
 // Opaque type with phantom type parameter
+// 's is phantom (not used in underlying "string")
 type validated<'s> = string
+
+// Phantom type with multiple params - only unused ones should be phantom
+// 'a is used in underlying, 'id is phantom
+type tagged<'a, 'id> = 'a => int
+
+// Multiple params, some used, some phantom
+// 'a and 'b are used, 'phantom is not
+type mixed<'a, 'b, 'phantom> = ('a, 'b) => 'a
+
+// All params used - no phantom params (but still opaque due to branding)
+type allUsed<'a, 'b> = ('a, 'b)
 
 // Function using opaque types
 let validate: validated<invalid> => validated<valid> = s => s

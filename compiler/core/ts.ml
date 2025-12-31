@@ -767,13 +767,32 @@ let has_phantom_params (type_params : type_param list) (body : ts_type) : bool =
 (** Forward reference for printing a ts_type (set later to break cyclic dependency) *)
 let pp_ts_type_ref : (Ext_pp.t -> ts_type -> unit) ref = ref (fun _ _ -> ())
 
-(** Print opaque type using $res.opaque<"Brand", Params, Underlying> format.
+(** Print opaque type using $res.opaque<"Brand", PhantomParams, Underlying> format.
     @param brand_name The full brand name (e.g., "Email.t" or "Outer.Nested.t")
-    @param type_params Type parameters for phantom type support
-    @param underlying Optional underlying type; if None, only brand is used *)
+    @param type_params All type parameters declared on the type
+    @param underlying Optional underlying type; if None, only brand is used
+    
+    Note: Only truly phantom parameters (those NOT used in the underlying type)
+    are included in the phantom params array. Parameters that appear in the
+    underlying type are consumed and should not be in the phantom array.
+    
+    Example: type hash<'a, 'id> = 'a => int
+    - 'a is used in underlying ('a => int), so it's NOT phantom
+    - 'id is NOT used in underlying, so it IS phantom
+    - Output: rescript.opaque<"hash", [Id], (arg0: A) => number> *)
 let pp_opaque_type (f : Ext_pp.t) ~(brand_name : string)
     ~(type_params : type_param list) ~(underlying : ts_type option) : unit =
   RuntimeTypes.add "opaque";
+  (* Calculate which params are actually phantom (not used in underlying) *)
+  let phantom_params =
+    match underlying with
+    | Some ty ->
+      let used_vars = collect_type_vars ty in
+      List.filter
+        (fun (tp : type_param) -> not (StringSet.mem tp.tp_name used_vars))
+        type_params
+    | None -> type_params (* No underlying = all params are phantom *)
+  in
   Ext_pp.string f runtime_types_namespace;
   Ext_pp.string f ".opaque<";
   Ext_pp.group f 1 (fun () ->
@@ -783,9 +802,9 @@ let pp_opaque_type (f : Ext_pp.t) ~(brand_name : string)
       Ext_pp.string f "\",";
       Ext_pp.newline f;
       Ext_pp.string f "[";
-      (if type_params <> [] then
+      (if phantom_params <> [] then
          let param_names =
-           List.map (fun (tp : type_param) -> tp.tp_name) type_params
+           List.map (fun (tp : type_param) -> tp.tp_name) phantom_params
          in
          Ext_pp.string f (String.concat ", " param_names));
       Ext_pp.string f "]";

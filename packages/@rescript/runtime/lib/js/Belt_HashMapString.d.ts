@@ -4,7 +4,7 @@ export type key = string;
 
 export type t<B> = rescript.opaque<
   "Belt_HashMapString.t",
-  [B],
+  [],
   Belt_internalBuckets.t<void, void, key, B>
 >;
 

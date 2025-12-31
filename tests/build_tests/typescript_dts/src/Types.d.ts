@@ -62,6 +62,20 @@ export type validated<S> = rescript.opaque<
   string
 >;
 
+export type tagged<A, Id> = rescript.opaque<
+  "Types.tagged",
+  [Id],
+  (arg0: A) => number
+>;
+
+export type mixed<A, B, Phantom> = rescript.opaque<
+  "Types.mixed",
+  [Phantom],
+  (arg0: A, arg1: B) => A
+>;
+
+export type allUsed<A, B> = [A, B];
+
 export const defaultUser: User;
 
 export function validate(s: validated<invalid>): validated<valid>;

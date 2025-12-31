@@ -3,7 +3,7 @@ import type * as Js from "./Js.js";
 
 export type t<A> = rescript.opaque<
   "Belt_MutableStack.t",
-  [A],
+  [],
   { root: opt_cell<A>; }
 >;
 
