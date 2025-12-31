@@ -830,6 +830,10 @@ and rename_type_vars_fn (var_map : string StringMap.t) (fn : fn_type) : fn_type
 (** Forward reference for printing a ts_type (set later to break cyclic dependency) *)
 let pp_ts_type_ref : (Ext_pp.t -> ts_type -> unit) ref = ref (fun _ _ -> ())
 
+(** Forward reference for multiline union printing (set later to break cyclic dependency) *)
+let pp_union_multiline_ref : (Ext_pp.t -> ts_type list -> unit) ref =
+  ref (fun _ _ -> ())
+
 (** Print opaque type using $res.opaque<"Brand", PhantomParams, Underlying> format.
     @param brand_name The full brand name (e.g., "Email.t" or "Outer.Nested.t")
     @param type_params All type parameters declared on the type
@@ -872,6 +876,10 @@ let pp_opaque_type (f : Ext_pp.t) ~(brand_name : string)
          Ext_pp.string f (String.concat ", " param_names));
       Ext_pp.string f "]";
       match underlying with
+      | Some (Union types) ->
+        (* For unions, use multiline formatting for better readability *)
+        Ext_pp.string f ",";
+        !pp_union_multiline_ref f types
       | Some ty ->
         Ext_pp.string f ",";
         Ext_pp.newline f;
@@ -4547,6 +4555,9 @@ let rec pp_union_multiline (f : P.t) (types : ts_type list) : unit =
     P.string f "| ";
     pp_ts_type_in_union f ty;
     pp_union_multiline f rest
+
+(* Initialize the forward reference for pp_union_multiline *)
+let () = pp_union_multiline_ref := pp_union_multiline
 
 (** Helper to print the type body with optional external type wrapping *)
 let pp_type_body_with_external (f : P.t) (type_params : type_param list)

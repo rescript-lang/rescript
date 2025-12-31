@@ -5,10 +5,14 @@ import type * as Primitive_object_extern from "./Primitive_object_extern.js";
 export type shape = rescript.opaque<
   "Primitive_module.shape",
   [],
-  "Function" | "Lazy" | "Class" | {
+  | "Function"
+  | "Lazy"
+  | "Class"
+  | {
     readonly TAG: "Module";
     readonly _0: [shape, string][];
-  } | {
+  }
+  | {
     readonly TAG: "Value";
     readonly _0: Primitive_object_extern.t;
   }
