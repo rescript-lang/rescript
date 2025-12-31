@@ -2,29 +2,41 @@ import type * as rescript from "@rescript/runtime/types";
 
 export type t<A> = rescript.list<A>;
 
-export function head<A>(x: t<A>): rescript.option<A>;
+export function length<A>(xs: t<A>): number;
 
-export function headOrThrow<A>(x: t<A>): A;
+export function size<A>(arg0: t<A>): number;
+
+export function head<A>(x: t<A>): rescript.option<A>;
 
 export function headExn<A>(arg0: t<A>): A;
 
+export function headOrThrow<A>(x: t<A>): A;
+
 export function tail<A>(x: t<A>): rescript.option<t<A>>;
 
-export function tailOrThrow<A>(x: t<A>): t<A>;
-
 export function tailExn<A>(arg0: t<A>): t<A>;
+
+export function tailOrThrow<A>(x: t<A>): t<A>;
 
 export function add<A>(xs: t<A>, x: A): t<A>;
 
 export function get<A>(x: t<A>, n: number): rescript.option<A>;
 
-export function getOrThrow<A>(x: t<A>, n: number): A;
-
 export function getExn<A>(arg0: t<A>, arg1: number): A;
 
-export function take<A>(lst: t<A>, n: number): rescript.option<t<A>>;
+export function getOrThrow<A>(x: t<A>, n: number): A;
+
+export function make<A>(n: number, v: A): t<A>;
+
+export function makeByU<A>(arg0: number, arg1: (arg0: number) => A): t<A>;
+
+export function makeBy<A>(n: number, f: (arg0: number) => A): t<A>;
+
+export function shuffle<A>(xs: t<A>): t<A>;
 
 export function drop<A>(lst: t<A>, n: number): rescript.option<t<A>>;
+
+export function take<A>(lst: t<A>, n: number): rescript.option<t<A>>;
 
 export function splitAt<A>(
   lst: t<A>,
@@ -33,43 +45,56 @@ export function splitAt<A>(
 
 export function concat<A>(xs: t<A>, ys: t<A>): t<A>;
 
+export function concatMany<A>(xs: t<A>[]): t<A>;
+
+export function reverseConcat<A>(l1: t<A>, l2: t<A>): t<A>;
+
+export function flatten<A>(xs: t<t<A>>): t<A>;
+
+export function mapU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): t<B>;
+
 export function map<A, B>(xs: t<A>, f: (arg0: A) => B): t<B>;
+
+export function zip<A, B>(l1: t<A>, l2: t<B>): t<[A, B]>;
+
+export function zipByU<A, B, C>(arg0: t<A>, arg1: t<B>, arg2: (arg0: A, arg1: B) => C): t<C>;
 
 export function zipBy<A, B, C>(l1: t<A>, l2: t<B>, f: (arg0: A, arg1: B) => C): t<C>;
 
+export function mapWithIndexU<A, B>(arg0: t<A>, arg1: (arg0: number, arg1: A) => B): t<B>;
+
 export function mapWithIndex<A, B>(xs: t<A>, f: (arg0: number, arg1: A) => B): t<B>;
-
-export function makeBy<A>(n: number, f: (arg0: number) => A): t<A>;
-
-export function make<A>(n: number, v: A): t<A>;
-
-export function length<A>(xs: t<A>): number;
-
-export function size<A>(arg0: t<A>): number;
 
 export function fromArray<A>(a: A[]): t<A>;
 
 export function toArray<A>(x: t<A>): A[];
 
-export function shuffle<A>(xs: t<A>): t<A>;
-
-export function reverseConcat<A>(l1: t<A>, l2: t<A>): t<A>;
-
 export function reverse<A>(l: t<A>): t<A>;
 
-export function flatten<A>(xs: t<t<A>>): t<A>;
-
-export function concatMany<A>(xs: t<A>[]): t<A>;
+export function mapReverseU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): t<B>;
 
 export function mapReverse<A, B>(l: t<A>, f: (arg0: A) => B): t<B>;
 
+export function forEachU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): void;
+
 export function forEach<A, B>(xs: t<A>, f: (arg0: A) => B): void;
+
+export function forEachWithIndexU<A, B>(
+  arg0: t<A>,
+  arg1: (arg0: number, arg1: A) => B,
+): void;
 
 export function forEachWithIndex<A, B>(l: t<A>, f: (arg0: number, arg1: A) => B): void;
 
+export function reduceU<A, B>(arg0: t<A>, arg1: B, arg2: (arg0: B, arg1: A) => B): B;
+
 export function reduce<A, B>(l: t<A>, accu: B, f: (arg0: B, arg1: A) => B): B;
 
-export function reduceReverse<A, B>(l: t<A>, acc: B, f: (arg0: B, arg1: A) => B): B;
+export function reduceWithIndexU<A, B>(
+  arg0: t<A>,
+  arg1: B,
+  arg2: (arg0: B, arg1: A, arg2: number) => B,
+): B;
 
 export function reduceWithIndex<A, B>(
   l: t<A>,
@@ -77,155 +102,13 @@ export function reduceWithIndex<A, B>(
   f: (arg0: B, arg1: A, arg2: number) => B,
 ): B;
 
-export function mapReverse2<A, B, C>(l1: t<A>, l2: t<B>, f: (arg0: A, arg1: B) => C): t<C>;
-
-export function forEach2<A, B, C>(l1: t<A>, l2: t<B>, f: (arg0: A, arg1: B) => C): void;
-
-export function reduce2<B, C, A>(
-  l1: t<B>,
-  l2: t<C>,
-  accu: A,
-  f: (arg0: A, arg1: B, arg2: C) => A,
-): A;
-
-export function reduceReverse2<A, B, C>(
-  l1: t<A>,
-  l2: t<B>,
-  acc: C,
-  f: (arg0: C, arg1: A, arg2: B) => C,
-): C;
-
-export function every<A>(xs: t<A>, p: (arg0: A) => boolean): boolean;
-
-export function some<A>(xs: t<A>, p: (arg0: A) => boolean): boolean;
-
-export function every2<A, B>(
-  l1: t<A>,
-  l2: t<B>,
-  p: (arg0: A, arg1: B) => boolean,
-): boolean;
-
-export function cmpByLength<A>(l1: t<A>, l2: t<A>): number;
-
-export function cmp<A>(l1: t<A>, l2: t<A>, p: (arg0: A, arg1: A) => number): number;
-
-export function eq<A>(l1: t<A>, l2: t<A>, p: (arg0: A, arg1: A) => boolean): boolean;
-
-export function some2<A, B>(l1: t<A>, l2: t<B>, p: (arg0: A, arg1: B) => boolean): boolean;
-
-export function has<A, B>(xs: t<A>, x: B, eq: (arg0: A, arg1: B) => boolean): boolean;
-
-export function getAssoc<A, C, B>(
-  xs: t<[A, C]>,
-  x: B,
-  eq: (arg0: A, arg1: B) => boolean,
-): rescript.option<C>;
-
-export function hasAssoc<A, C, B>(
-  xs: t<[A, C]>,
-  x: B,
-  eq: (arg0: A, arg1: B) => boolean,
-): boolean;
-
-export function removeAssoc<A, C, B>(
-  xs: t<[A, C]>,
-  x: B,
-  eq: (arg0: A, arg1: B) => boolean,
-): t<[A, C]>;
-
-export function setAssoc<A, C>(
-  xs: t<[A, C]>,
-  x: A,
-  k: C,
-  eq: (arg0: A, arg1: A) => boolean,
-): t<[A, C]>;
-
-export function sort<A>(xs: t<A>, cmp: (arg0: A, arg1: A) => number): t<A>;
-
-export function getBy<A>(xs: t<A>, p: (arg0: A) => boolean): rescript.option<A>;
-
-export function keep<A>(xs: t<A>, p: (arg0: A) => boolean): t<A>;
-
-export function filter<A>(arg0: t<A>, arg1: (arg0: A) => boolean): t<A>;
-
-export function keepWithIndex<A>(xs: t<A>, p: (arg0: A, arg1: number) => boolean): t<A>;
-
-export function filterWithIndex<A>(
-  arg0: t<A>,
-  arg1: (arg0: A, arg1: number) => boolean,
-): t<A>;
-
-export function keepMap<A, B>(xs: t<A>, p: (arg0: A) => rescript.option<B>): t<B>;
-
-export function partition<A>(l: t<A>, p: (arg0: A) => boolean): [t<A>, t<A>];
-
-export function unzip<A, B>(xs: t<[A, B]>): [t<A>, t<B>];
-
-export function zip<A, B>(l1: t<A>, l2: t<B>): t<[A, B]>;
-
-export function cmpU<A>(
-  arg0: t<A>,
-  arg1: t<A>,
-  arg2: (arg0: A, arg1: A) => number,
-): number;
-
-export function eqU<A>(
-  arg0: t<A>,
-  arg1: t<A>,
-  arg2: (arg0: A, arg1: A) => boolean,
-): boolean;
-
-export function every2U<A, B>(
-  arg0: t<A>,
-  arg1: t<B>,
-  arg2: (arg0: A, arg1: B) => boolean,
-): boolean;
-
-export function everyU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): boolean;
-
-export function forEach2U<A, B, C>(
-  arg0: t<A>,
-  arg1: t<B>,
-  arg2: (arg0: A, arg1: B) => C,
-): void;
-
-export function forEachU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): void;
-
-export function forEachWithIndexU<A, B>(
-  arg0: t<A>,
-  arg1: (arg0: number, arg1: A) => B,
-): void;
-
-export function getAssocU<A, C, B>(
-  arg0: t<[A, C]>,
-  arg1: B,
-  arg2: (arg0: A, arg1: B) => boolean,
-): rescript.option<C>;
-
-export function getByU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): rescript.option<A>;
-
-export function hasAssocU<A, C, B>(
-  arg0: t<[A, C]>,
-  arg1: B,
-  arg2: (arg0: A, arg1: B) => boolean,
-): boolean;
-
-export function hasU<A, B>(
+export function reduceReverseU<A, B>(
   arg0: t<A>,
   arg1: B,
-  arg2: (arg0: A, arg1: B) => boolean,
-): boolean;
+  arg2: (arg0: B, arg1: A) => B,
+): B;
 
-export function keepMapU<A, B>(arg0: t<A>, arg1: (arg0: A) => rescript.option<B>): t<B>;
-
-export function keepU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): t<A>;
-
-export function keepWithIndexU<A>(
-  arg0: t<A>,
-  arg1: (arg0: A, arg1: number) => boolean,
-): t<A>;
-
-export function makeByU<A>(arg0: number, arg1: (arg0: number) => A): t<A>;
+export function reduceReverse<A, B>(l: t<A>, acc: B, f: (arg0: B, arg1: A) => B): B;
 
 export function mapReverse2U<A, B, C>(
   arg0: t<A>,
@@ -233,22 +116,28 @@ export function mapReverse2U<A, B, C>(
   arg2: (arg0: A, arg1: B) => C,
 ): t<C>;
 
-export function mapReverseU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): t<B>;
+export function mapReverse2<A, B, C>(l1: t<A>, l2: t<B>, f: (arg0: A, arg1: B) => C): t<C>;
 
-export function mapU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): t<B>;
-
-export function mapWithIndexU<A, B>(arg0: t<A>, arg1: (arg0: number, arg1: A) => B): t<B>;
-
-export function partitionU<A>(
+export function forEach2U<A, B, C>(
   arg0: t<A>,
-  arg1: (arg0: A) => boolean,
-): [t<A>, t<A>];
+  arg1: t<B>,
+  arg2: (arg0: A, arg1: B) => C,
+): void;
+
+export function forEach2<A, B, C>(l1: t<A>, l2: t<B>, f: (arg0: A, arg1: B) => C): void;
 
 export function reduce2U<B, C, A>(
   arg0: t<B>,
   arg1: t<C>,
   arg2: A,
   arg3: (arg0: A, arg1: B, arg2: C) => A,
+): A;
+
+export function reduce2<B, C, A>(
+  l1: t<B>,
+  l2: t<C>,
+  accu: A,
+  f: (arg0: A, arg1: B, arg2: C) => A,
 ): A;
 
 export function reduceReverse2U<A, B, C>(
@@ -258,24 +147,136 @@ export function reduceReverse2U<A, B, C>(
   arg3: (arg0: C, arg1: A, arg2: B) => C,
 ): C;
 
-export function reduceReverseU<A, B>(
+export function reduceReverse2<A, B, C>(
+  l1: t<A>,
+  l2: t<B>,
+  acc: C,
+  f: (arg0: C, arg1: A, arg2: B) => C,
+): C;
+
+export function everyU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): boolean;
+
+export function every<A>(xs: t<A>, p: (arg0: A) => boolean): boolean;
+
+export function someU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): boolean;
+
+export function some<A>(xs: t<A>, p: (arg0: A) => boolean): boolean;
+
+export function every2U<A, B>(
+  arg0: t<A>,
+  arg1: t<B>,
+  arg2: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function every2<A, B>(
+  l1: t<A>,
+  l2: t<B>,
+  p: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function some2U<A, B>(
+  arg0: t<A>,
+  arg1: t<B>,
+  arg2: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function some2<A, B>(l1: t<A>, l2: t<B>, p: (arg0: A, arg1: B) => boolean): boolean;
+
+export function cmpByLength<A>(l1: t<A>, l2: t<A>): number;
+
+export function cmpU<A>(
+  arg0: t<A>,
+  arg1: t<A>,
+  arg2: (arg0: A, arg1: A) => number,
+): number;
+
+export function cmp<A>(l1: t<A>, l2: t<A>, p: (arg0: A, arg1: A) => number): number;
+
+export function eqU<A>(
+  arg0: t<A>,
+  arg1: t<A>,
+  arg2: (arg0: A, arg1: A) => boolean,
+): boolean;
+
+export function eq<A>(l1: t<A>, l2: t<A>, p: (arg0: A, arg1: A) => boolean): boolean;
+
+export function hasU<A, B>(
   arg0: t<A>,
   arg1: B,
-  arg2: (arg0: B, arg1: A) => B,
-): B;
+  arg2: (arg0: A, arg1: B) => boolean,
+): boolean;
 
-export function reduceU<A, B>(arg0: t<A>, arg1: B, arg2: (arg0: B, arg1: A) => B): B;
+export function has<A, B>(xs: t<A>, x: B, eq: (arg0: A, arg1: B) => boolean): boolean;
 
-export function reduceWithIndexU<A, B>(
+export function getByU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): rescript.option<A>;
+
+export function getBy<A>(xs: t<A>, p: (arg0: A) => boolean): rescript.option<A>;
+
+export function keepU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): t<A>;
+
+export function keep<A>(xs: t<A>, p: (arg0: A) => boolean): t<A>;
+
+export function filter<A>(arg0: t<A>, arg1: (arg0: A) => boolean): t<A>;
+
+export function keepWithIndexU<A>(
   arg0: t<A>,
+  arg1: (arg0: A, arg1: number) => boolean,
+): t<A>;
+
+export function keepWithIndex<A>(xs: t<A>, p: (arg0: A, arg1: number) => boolean): t<A>;
+
+export function filterWithIndex<A>(
+  arg0: t<A>,
+  arg1: (arg0: A, arg1: number) => boolean,
+): t<A>;
+
+export function keepMapU<A, B>(arg0: t<A>, arg1: (arg0: A) => rescript.option<B>): t<B>;
+
+export function keepMap<A, B>(xs: t<A>, p: (arg0: A) => rescript.option<B>): t<B>;
+
+export function partitionU<A>(
+  arg0: t<A>,
+  arg1: (arg0: A) => boolean,
+): [t<A>, t<A>];
+
+export function partition<A>(l: t<A>, p: (arg0: A) => boolean): [t<A>, t<A>];
+
+export function unzip<A, B>(xs: t<[A, B]>): [t<A>, t<B>];
+
+export function getAssocU<A, C, B>(
+  arg0: t<[A, C]>,
   arg1: B,
-  arg2: (arg0: B, arg1: A, arg2: number) => B,
-): B;
+  arg2: (arg0: A, arg1: B) => boolean,
+): rescript.option<C>;
+
+export function getAssoc<A, C, B>(
+  xs: t<[A, C]>,
+  x: B,
+  eq: (arg0: A, arg1: B) => boolean,
+): rescript.option<C>;
+
+export function hasAssocU<A, C, B>(
+  arg0: t<[A, C]>,
+  arg1: B,
+  arg2: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function hasAssoc<A, C, B>(
+  xs: t<[A, C]>,
+  x: B,
+  eq: (arg0: A, arg1: B) => boolean,
+): boolean;
 
 export function removeAssocU<A, C, B>(
   arg0: t<[A, C]>,
   arg1: B,
   arg2: (arg0: A, arg1: B) => boolean,
+): t<[A, C]>;
+
+export function removeAssoc<A, C, B>(
+  xs: t<[A, C]>,
+  x: B,
+  eq: (arg0: A, arg1: B) => boolean,
 ): t<[A, C]>;
 
 export function setAssocU<A, C>(
@@ -285,14 +286,13 @@ export function setAssocU<A, C>(
   arg3: (arg0: A, arg1: A) => boolean,
 ): t<[A, C]>;
 
-export function some2U<A, B>(
-  arg0: t<A>,
-  arg1: t<B>,
-  arg2: (arg0: A, arg1: B) => boolean,
-): boolean;
-
-export function someU<A>(arg0: t<A>, arg1: (arg0: A) => boolean): boolean;
+export function setAssoc<A, C>(
+  xs: t<[A, C]>,
+  x: A,
+  k: C,
+  eq: (arg0: A, arg1: A) => boolean,
+): t<[A, C]>;
 
 export function sortU<A>(arg0: t<A>, arg1: (arg0: A, arg1: A) => number): t<A>;
 
-export function zipByU<A, B, C>(arg0: t<A>, arg1: t<B>, arg2: (arg0: A, arg1: B) => C): t<C>;
+export function sort<A>(xs: t<A>, cmp: (arg0: A, arg1: A) => number): t<A>;

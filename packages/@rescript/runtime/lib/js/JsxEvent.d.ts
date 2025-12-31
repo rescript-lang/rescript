@@ -5,6 +5,11 @@ export type synthetic<A> = rescript.opaque<
   [A]
 >;
 
+export function MakeEventWithType<T>(
+  Type: {
+  }
+): { };
+
 declare namespace Synthetic {
   type tag = rescript.opaque<
   "JsxEvent.Synthetic.tag",

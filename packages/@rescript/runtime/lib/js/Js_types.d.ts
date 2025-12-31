@@ -47,6 +47,8 @@ export type t<_ extends undefined_val | null_val | boolean | number | string | f
   | t$Symbol
   | t$BigInt;
 
+export function test<A>(x: A, v: t<undefined_val | null_val | boolean | number | string | function_val | obj_val | symbol | bigint>): boolean;
+
 export type tagged_t =
   | "JSFalse"
   | "JSTrue"
@@ -78,5 +80,3 @@ export type tagged_t =
   };
 
 export function classify<A>(x: A): tagged_t;
-
-export function test<A>(x: A, v: t<undefined_val | null_val | boolean | number | string | function_val | obj_val | symbol | bigint>): boolean;

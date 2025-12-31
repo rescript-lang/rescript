@@ -3,9 +3,9 @@ import type * as Stdlib_Ordering from "./Stdlib_Ordering.js";
 
 export type t<Res, Err> = rescript.result<Res, Err>;
 
-export function getOrThrow<A, B>(x: rescript.result<A, B>, message?: string): A;
-
 export function getExn<A, B>(arg0: rescript.result<A, B>, message?: string): A;
+
+export function getOrThrow<A, B>(x: rescript.result<A, B>, message?: string): A;
 
 export function mapOr<A, C, B>(opt: rescript.result<A, C>, default_: B, f: (arg0: A) => B): B;
 

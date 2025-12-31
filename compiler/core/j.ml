@@ -306,10 +306,8 @@ and program = {
   block: block;
   exports: exports;
   export_set: Set_ident.t;
-  type_exports: Ts.type_decl list;
-      (** Exported type declarations for TypeScript output *)
-  value_exports: Ts.value_export list;
-      (** Exported values with types for .d.ts generation *)
+  dts_exports: Ts.dts_export list;
+      (** All exports for .d.ts generation in source order *)
 }
 
 and deps_program = {

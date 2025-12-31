@@ -41,6 +41,9 @@ and ts_type =
   | Intersection of ts_type list
   | TypeRef of type_ref  (** Reference to a named type *)
   | TypeVar of string  (** Type variable 'a -> A *)
+  | ExistentialVar of string
+      (** Existential type variable for unconstrained abstract types in first-class modules.
+          Rendered as Existential$Name in function signatures, unknown in const declarations. *)
   | Literal of literal_type
   | Readonly of ts_type
   | Promise of ts_type
@@ -223,6 +226,8 @@ type type_decl =
       external_import_kind: ext_import_kind;  (** How to import this type *)
     }  (** Abstract external TypeScript type binding via @external *)
   | ModuleDecl of module_decl  (** Module with types and values *)
+  | ModuleTypeDecl of module_type_decl
+      (** Module type declaration - generates TypeScript interface *)
 
 and module_decl = {
   mod_name: string;
@@ -233,7 +238,69 @@ and module_decl = {
 (** Module declaration - represents a ReScript module as TypeScript namespace + type *)
 
 and module_value = {mv_name: string; mv_type: ts_type}
+
+and module_type_decl = {
+  mtd_name: string;  (** Interface name (e.g., "Comparable") *)
+  mtd_type_params: string list;
+      (** Abstract type names that become generic params (e.g., ["Identity"; "T"]) *)
+  mtd_members: module_type_member list;  (** Interface members *)
+}
+(** Module type declaration - represents a ReScript module type as TypeScript interface.
+    For example:
+      module type Comparable = { type identity; type t; let cmp: cmp<t, identity> }
+    Generates:
+      interface Comparable<Identity, T> { readonly cmp: cmp<T, Identity> } *)
+
 (** A value in a module *)
+and module_type_member =
+  | MtdValue of {mtv_name: string; mtv_type: ts_type}
+      (** A value member: readonly name: type *)
+
+(** {1 Export Types for .d.ts Generation} *)
+
+type value_export = {
+  ve_name: string;
+  ve_type: Types.type_expr;
+  ve_params: string list;
+  ve_alias: string option;
+      (** If this is an alias like `let x = y`, stores "y" *)
+  ve_existential_params: string list;
+      (** Existential type names for first-class module return types.
+          e.g., ["Identity"] for functions returning module(Comparable with type t = 'a) *)
+}
+(** Value export with its type for .d.ts generation *)
+
+type functor_param = {
+  fp_name: string;  (** Parameter name (e.g., "M" in module Make(M: {...})) *)
+  fp_type: ts_type;  (** Parameter type (object with module members) *)
+}
+(** A single functor parameter with its name and type *)
+
+type functor_export = {
+  fe_name: string;
+  fe_params: functor_param list;  (** Functor parameters (can be multiple) *)
+  fe_result_type: ts_type;  (** Result type (interface reference) *)
+  fe_type_params: type_param list;
+      (** Type parameters from functor params (e.g., T from M.t) *)
+  fe_existential_params: string list;
+      (** Existential type names (capitalized) that become branded params (e.g., ["Identity"]).
+          These are abstract types in the module type but not constrained by the functor params. *)
+}
+(** Functor export - compiled to a function in JavaScript.
+    
+    Existential types (abstract types in module type but not constrained by functor param)
+    become branded type parameters with `const X extends rescript.opaque<string>` syntax.
+    For example:
+      module MakeComparable: (M: {type t; ...}) => Comparable with type t = M.t
+    The `identity` type is existential (not provided by M), so it becomes:
+      function MakeComparable<const Identity extends rescript.opaque<string>, T>(...): Comparable<Identity, T> *)
+
+(** Unified export item for .d.ts generation.
+    Preserves source order by combining all export types into a single list. *)
+type dts_export =
+  | DtsTypeExport of type_decl
+  | DtsValueExport of value_export
+  | DtsFunctorExport of functor_export
 
 (** {1 Runtime Type Collection} *)
 
@@ -292,6 +359,10 @@ module State = struct
     (* Implementation type declarations: maps qualified type name to implementation decl.
        Used to find underlying types for abstract types in signatures. *)
     mutable impl_type_decls: Types.type_declaration StringMap.t;
+    (* Module type declarations: maps module type path to (abstract type names, value names).
+       Used to determine existential types when processing Tpackage and to match
+       functor result signatures against known module types. *)
+    mutable module_type_decls: (string list * StringSet.t) StringMap.t;
     (* Context *)
     mutable module_name: string;
     mutable module_path: string list;
@@ -313,6 +384,7 @@ module State = struct
       module_aliases = StringMap.empty;
       inline_record_defs = StringMap.empty;
       impl_type_decls = StringMap.empty;
+      module_type_decls = StringMap.empty;
       module_name = "";
       module_path = [];
       env = None;
@@ -333,6 +405,7 @@ module State = struct
     state.module_aliases <- StringMap.empty;
     state.inline_record_defs <- StringMap.empty;
     state.impl_type_decls <- StringMap.empty;
+    state.module_type_decls <- StringMap.empty;
     state.module_name <- "";
     state.module_path <- [];
     state.env <- None
@@ -643,6 +716,35 @@ module State = struct
       StringMap.find_opt qualified_name state.impl_type_decls
   end
 
+  (** {2 Module Type Declarations}
+      
+      Tracks module type declarations (module type X = ...).
+      Maps module type path (e.g., "Belt_Id.Comparable") to list of abstract type names
+      (e.g., ["identity"; "t"]). Used to determine existential types when processing Tpackage. *)
+  module ModuleTypeDecls = struct
+    let reset () = state.module_type_decls <- StringMap.empty
+
+    let add path abstract_types =
+      state.module_type_decls <-
+        StringMap.add path abstract_types state.module_type_decls
+
+    let find path = StringMap.find_opt path state.module_type_decls
+
+    (** Get the abstract type names for a module type path.
+        Returns empty list if not found. *)
+    let get_abstract_types path =
+      match find path with
+      | Some (types, _) -> types
+      | None -> []
+
+    (** Get the value names for a module type path.
+        Returns empty set if not found. *)
+    let get_value_names path =
+      match find path with
+      | Some (_, values) -> values
+      | None -> StringSet.empty
+  end
+
   (** {2 Context}
       
       Current context for code generation including module name, path, and environment. *)
@@ -682,6 +784,7 @@ module LocalTypeQualifier = State.LocalTypeQualifier
 module ExportedTypes = State.ExportedTypes
 module ExportedModules = State.ExportedModules
 module ModuleAliases = State.ModuleAliases
+module ModuleTypeDecls = State.ModuleTypeDecls
 
 (** Context accessors exposed at top level for convenience *)
 let set_module_name = State.Context.set_module_name
@@ -733,6 +836,7 @@ let rec collect_type_vars (ty : ts_type) : StringSet.t =
     List.fold_left
       (fun acc t -> StringSet.union acc (collect_type_vars t))
       StringSet.empty rt_args
+  | ExistentialVar name -> StringSet.singleton name
   | Literal _ | Any | Unknown | Never | Void | Null | Undefined | Boolean
   | Number | Bigint | String | Symbol ->
     StringSet.empty
@@ -802,11 +906,25 @@ let rec rename_type_vars (var_map : string StringMap.t) (ty : ts_type) : ts_type
           | None -> None);
       }
   | Function fn -> Function (rename_type_vars_fn var_map fn)
-  | TypeRef tr ->
-    TypeRef {tr with args = List.map (rename_type_vars var_map) tr.args}
+  | TypeRef tr -> (
+    (* If the TypeRef name matches a type variable mapping (e.g., abstract type in module type),
+       convert it to a TypeVar. This handles cases like `cmp<t, identity>` where `t` and `identity`
+       are abstract types that should become type parameters `T` and `Identity`. *)
+    match StringMap.find_opt tr.name var_map with
+    | Some new_name when tr.args = [] && tr.source_module = None ->
+      (* Simple type reference to abstract type -> convert to TypeVar *)
+      TypeVar new_name
+    | _ ->
+      (* Keep as TypeRef but recurse into args *)
+      TypeRef {tr with args = List.map (rename_type_vars var_map) tr.args})
   | RuntimeType rt ->
     RuntimeType
       {rt with rt_args = List.map (rename_type_vars var_map) rt.rt_args}
+  | ExistentialVar name -> (
+    (* Check if existential should be renamed *)
+    match StringMap.find_opt name var_map with
+    | Some new_name -> ExistentialVar new_name
+    | None -> ty)
   | Literal _ | Any | Unknown | Never | Void | Null | Undefined | Boolean
   | Number | Bigint | String | Symbol ->
     ty
@@ -915,8 +1033,8 @@ let rec collect_type_deps (ty : ts_type) : unit =
     | None -> ());
     List.iter collect_type_deps args
   | Readonly ty | Promise ty -> collect_type_deps ty
-  | Literal _ | TypeVar _ | Any | Unknown | Never | Void | Null | Undefined
-  | Boolean | Number | Bigint | String | Symbol ->
+  | Literal _ | TypeVar _ | ExistentialVar _ | Any | Unknown | Never | Void
+  | Null | Undefined | Boolean | Number | Bigint | String | Symbol ->
     ()
 
 and collect_type_deps_fn (fn : fn_type) : unit =
@@ -1009,6 +1127,13 @@ let rec collect_type_deps_decl (decl : type_decl) : unit =
     List.iter
       (fun sub -> collect_type_deps_decl (ModuleDecl sub))
       mod_submodules
+  | ModuleTypeDecl {mtd_members; _} ->
+    (* Collect dependencies from module type members *)
+    List.iter
+      (fun member ->
+        match member with
+        | MtdValue {mtv_type; _} -> collect_type_deps mtv_type)
+      mtd_members
 
 (** Legacy alias for collect_type_deps_decl *)
 let collect_runtime_types_decl = collect_type_deps_decl
@@ -1766,7 +1891,58 @@ let rec ts_type_of_type_expr (ty : Types.type_expr) : ts_type =
       | Some constraint_ty -> constraint_ty
       | None -> TypeRef {name = gadt_name; args = []; source_module = None})
     | None -> TypeVar var_name)
-  | Tpackage _ -> Any
+  | Tpackage (path, lids, type_args) -> ts_type_of_tpackage path lids type_args
+
+(** Convert a first-class module type (Tpackage) to TypeScript.
+    The Tpackage has:
+    - path: Path to module type (e.g., Belt_Id.Comparable)
+    - lids: List of constrained type names (e.g., ["t"; "identity"])
+    - type_args: Types for each constraint (e.g., ['key; 'id])
+    
+    We convert this to a TypeRef to the interface with the constrained types
+    as arguments in the order the interface expects them. *)
+and ts_type_of_tpackage (path : Path.t) (lids : Longident.t list)
+    (type_args : Types.type_expr list) : ts_type =
+  (* Get the interface name from the path *)
+  let interface_name = Path.last path in
+  (* Get the full path for looking up abstract types.
+     For local module types (Pident), prepend the current module name
+     since that's how they were registered. *)
+  let full_path =
+    match path with
+    | Path.Pdot (prefix, name, _) -> Path.name prefix ^ "." ^ name
+    | Path.Pident id ->
+      let module_name = get_module_name () in
+      let type_name = Ident.name id in
+      if module_name = "" then type_name else module_name ^ "." ^ type_name
+    | _ -> interface_name
+  in
+  (* Look up the module type to get all abstract types *)
+  match ModuleTypeDecls.find full_path with
+  | Some (abstract_types, _value_names) ->
+    (* Build a map from constraint name to its type *)
+    let constraint_map =
+      List.fold_left2
+        (fun acc lid ty ->
+          let name = Longident.last lid in
+          Map_string.add acc name ty)
+        Map_string.empty lids type_args
+    in
+    (* Build type arguments in the order the interface defines them *)
+    let args =
+      List.map
+        (fun param_name ->
+          match Map_string.find_opt constraint_map param_name with
+          | Some ty -> ts_type_of_type_expr ty
+          | None ->
+            (* Unconstrained abstract type is existential *)
+            ExistentialVar (String.capitalize_ascii param_name))
+        abstract_types
+    in
+    TypeRef {name = interface_name; args; source_module = None}
+  | None ->
+    (* Module type not found in our registry - fall back to any *)
+    Any
 
 and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
   (* Normalize the path to resolve module aliases.
@@ -3393,6 +3569,18 @@ let rec extract_type_decls ~(module_name : string)
   (* Use interface_sig (from .resi/.cmi) if available, otherwise fall back to str_type.
      This ensures we only export what's in the interface. *)
   let sig_to_use = interface_sig in
+  (* First pass: register all module types so Tpackage can reference them.
+     This must happen before processing Sig_type because types may reference
+     module types via Tpackage (e.g., type comparable<'k,'id> = module(Comparable with type t = 'k))
+     Note: We only register here, actual declaration is done in second pass to preserve order. *)
+  List.iter
+    (fun (sig_item : Types.signature_item) ->
+      match sig_item with
+      | Types.Sig_modtype (id, mtd) ->
+        ignore (extract_module_type_decl ~prefix:"" id mtd)
+      | _ -> ())
+    sig_to_use;
+  (* Second pass: process all items in source order *)
   List.iter
     (fun (sig_item : Types.signature_item) ->
       match sig_item with
@@ -3400,6 +3588,10 @@ let rec extract_type_decls ~(module_name : string)
         register_local_type ~prefix:"" id decl;
         match type_decl_of_type_declaration ~prefix:"" id decl with
         | Some type_decl -> decls := type_decl :: !decls
+        | None -> ())
+      | Types.Sig_modtype (id, mtd) -> (
+        match extract_module_type_decl ~prefix:"" id mtd with
+        | Some mt_decl -> decls := ModuleTypeDecl mt_decl :: !decls
         | None -> ())
       | Types.Sig_module (id, md, _) -> (
         match extract_module_decl_from_sig ~prefix:"" id md with
@@ -3409,16 +3601,124 @@ let rec extract_type_decls ~(module_name : string)
     sig_to_use;
   List.rev !decls
 
-(** Extract a module declaration from a signature module declaration *)
+(** Extract a module type declaration (e.g., module type Comparable = { ... })
+    @param prefix Path prefix for nested module types
+    @param id The module type identifier
+    @param mtd The module type declaration from the signature *)
+and extract_module_type_decl ~(prefix : string) (id : Ident.t)
+    (mtd : Types.modtype_declaration) : module_type_decl option =
+  let name = Ident.name id in
+  (* Use module name for top-level registration path (e.g., "Belt_Id.Comparable") *)
+  let registration_path =
+    let module_name = get_module_name () in
+    if prefix = "" then
+      if module_name = "" then name else module_name ^ "." ^ name
+    else prefix ^ "." ^ name
+  in
+  match mtd.mtd_type with
+  | Some (Types.Mty_signature sig_items) ->
+    (* Extract abstract types as generic type parameters *)
+    let abstract_types = ref [] in
+    let value_members = ref [] in
+    List.iter
+      (fun (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_type (type_id, type_decl, _) -> (
+          (* Check if this is an abstract type (no manifest) *)
+          match type_decl.type_manifest with
+          | None ->
+            (* Abstract type becomes a type parameter *)
+            abstract_types := Ident.name type_id :: !abstract_types
+          | Some _ ->
+            (* Type with manifest - could be a type alias, ignore for now *)
+            ())
+        | Types.Sig_value (val_id, vd) -> (
+          match vd.val_kind with
+          | Types.Val_prim _ -> () (* Skip externals *)
+          | Types.Val_reg ->
+            value_members :=
+              MtdValue
+                {
+                  mtv_name = Ident.name val_id;
+                  mtv_type = ts_type_of_type_expr vd.val_type;
+                }
+              :: !value_members)
+        | _ -> ())
+      sig_items;
+    (* Register module type's abstract types and value names for Tpackage processing.
+       Keep original lowercase names for registration/lookup. *)
+    let abstract_type_names = List.rev !abstract_types in
+    let value_names =
+      List.fold_left
+        (fun acc member ->
+          match member with
+          | MtdValue {mtv_name; _} -> StringSet.add mtv_name acc)
+        StringSet.empty !value_members
+    in
+    ModuleTypeDecls.add registration_path (abstract_type_names, value_names);
+    (* Capitalize type params for TypeScript interface declaration *)
+    let capitalized_params =
+      List.map String.capitalize_ascii abstract_type_names
+    in
+    (* Build a substitution map to capitalize type variable references in member types.
+       E.g., { "t" -> "T", "identity" -> "Identity" } *)
+    let capitalization_map =
+      List.fold_left
+        (fun acc name -> StringMap.add name (String.capitalize_ascii name) acc)
+        StringMap.empty abstract_type_names
+    in
+    (* Apply capitalization to member types *)
+    let capitalized_members =
+      List.rev_map
+        (fun member ->
+          match member with
+          | MtdValue {mtv_name; mtv_type} ->
+            MtdValue
+              {
+                mtv_name;
+                mtv_type = rename_type_vars capitalization_map mtv_type;
+              })
+        !value_members
+    in
+    Some
+      {
+        mtd_name = name;
+        mtd_type_params = capitalized_params;
+        mtd_members = capitalized_members;
+      }
+  | _ -> None
+
+(** Check if a module declaration is a functor (compiled to a JS function) *)
+and is_functor (md : Types.module_declaration) : bool =
+  match md.md_type with
+  | Types.Mty_functor _ -> true
+  | _ -> false
+
+(** Extract a module declaration from a signature module declaration.
+    Returns None for functors since they are handled as value exports. *)
 and extract_module_decl_from_sig ~(prefix : string) (id : Ident.t)
     (md : Types.module_declaration) : module_decl option =
   let name = Ident.name id in
   let module_prefix = if prefix = "" then name else prefix ^ "." ^ name in
   match md.md_type with
+  | Types.Mty_functor _ ->
+    (* Functors are compiled to JS functions, handled in extract_functor_exports *)
+    None
   | Types.Mty_signature sig_items ->
     let types = ref [] in
     let values = ref [] in
     let submodules = ref [] in
+    (* First pass: register module types so Tpackage can reference them *)
+    List.iter
+      (fun (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_modtype (id, mtd) -> (
+          match extract_module_type_decl ~prefix:module_prefix id mtd with
+          | Some mt_decl -> types := ModuleTypeDecl mt_decl :: !types
+          | None -> ())
+        | _ -> ())
+      sig_items;
+    (* Second pass: process types, values, and submodules *)
     List.iter
       (fun (sig_item : Types.signature_item) ->
         match sig_item with
@@ -3452,15 +3752,6 @@ and extract_module_decl_from_sig ~(prefix : string) (id : Ident.t)
         mod_submodules = List.rev !submodules;
       }
   | _ -> None
-
-type value_export = {
-  ve_name: string;
-  ve_type: Types.type_expr;
-  ve_params: string list;
-  ve_alias: string option;
-      (** If this is an alias like `let x = y`, stores "y" *)
-}
-(** Value export with its type for .d.ts generation *)
 
 (** Collect runtime types from value exports.
     This processes all exported value types to ensure runtime type imports 
@@ -3506,6 +3797,45 @@ let extract_constraint_type (pat : Typedtree.pattern) : Types.type_expr =
   in
   find_constraint pat.pat_extra
 
+(** Extract existential type parameter names from a function's return type.
+    If the function returns a first-class module (Tpackage), finds which abstract
+    types in the module type are not constrained (i.e., existential).
+    Returns capitalized names like ["Identity"] *)
+let rec extract_existential_params_from_return_type (ty : Types.type_expr) :
+    string list =
+  match ty.desc with
+  | Types.Tarrow ({typ = _arg_type}, return_type, _, _) ->
+    extract_existential_params_from_return_type return_type
+  | Types.Tlink ty | Types.Tsubst ty | Types.Tpoly (ty, _) ->
+    extract_existential_params_from_return_type ty
+  | Types.Tpackage (path, lids, _type_args) -> (
+    (* First-class module type - find existential types *)
+    let full_path =
+      let module_name = get_module_name () in
+      match path with
+      | Path.Pdot (prefix, name, _) -> Path.name prefix ^ "." ^ name
+      | Path.Pident id ->
+        let type_name = Ident.name id in
+        if module_name = "" then type_name else module_name ^ "." ^ type_name
+      | _ -> Path.last path
+    in
+    match ModuleTypeDecls.find full_path with
+    | Some (abstract_types, _) ->
+      (* Build set of constrained type names *)
+      let constrained =
+        List.fold_left
+          (fun acc lid -> StringSet.add (Longident.last lid) acc)
+          StringSet.empty lids
+      in
+      (* Existential = abstract but not constrained *)
+      List.filter_map
+        (fun abs_name ->
+          if StringSet.mem abs_name constrained then None
+          else Some (String.capitalize_ascii abs_name))
+        abstract_types
+    | None -> [])
+  | _ -> []
+
 (** Extract all value exports from a Typedtree structure.
     Uses interface_sig (from .resi file) if available to filter what to export,
     ensuring that private items are not included in .d.ts output.
@@ -3539,6 +3869,9 @@ let extract_value_exports ~(interface_sig : Types.signature)
               | Some interface_type ->
                 let params = extract_param_names vb.vb_expr in
                 let alias = extract_alias_target vb.vb_expr in
+                let existential_params =
+                  extract_existential_params_from_return_type interface_type
+                in
                 (* Use type from interface signature, not implementation.
                    This ensures types match what's declared in .resi files. *)
                 exports :=
@@ -3547,6 +3880,7 @@ let extract_value_exports ~(interface_sig : Types.signature)
                     ve_type = interface_type;
                     ve_params = params;
                     ve_alias = alias;
+                    ve_existential_params = existential_params;
                   }
                   :: !exports
               | None -> ())
@@ -3558,6 +3892,533 @@ let extract_value_exports ~(interface_sig : Types.signature)
       | _ -> ())
     str.str_items;
   List.rev !exports
+
+(** Convert a module signature to a TypeScript object type.
+    Used for functor parameter types and result types.
+    @param abstract_types List of abstract type names to convert to TypeVars
+    @param type_alias_map Optional map from type alias names to their resolved TypeVar names.
+           Used for result types where type aliases point to functor parameter types. *)
+let module_sig_to_object_type ~(abstract_types : string list)
+    ?(type_alias_map : string StringMap.t = StringMap.empty)
+    (sig_items : Types.signature) : ts_type =
+  (* Build a map from abstract type stamps to TypeVar names *)
+  let abstract_type_stamps =
+    List.fold_left
+      (fun acc (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_type (id, decl, _) -> (
+          match decl.type_manifest with
+          | None ->
+            let name = Ident.name id in
+            if List.mem name abstract_types then
+              IntMap.add id.Ident.stamp (String.capitalize_ascii name) acc
+            else acc
+          | Some _ -> acc)
+        | _ -> acc)
+      IntMap.empty sig_items
+  in
+  (* Build a map from type alias stamps to their resolved TypeVar names *)
+  let type_alias_stamps =
+    List.fold_left
+      (fun acc (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_type (id, _decl, _) -> (
+          let name = Ident.name id in
+          match StringMap.find_opt name type_alias_map with
+          | Some resolved_name -> IntMap.add id.Ident.stamp resolved_name acc
+          | None -> acc)
+        | _ -> acc)
+      IntMap.empty sig_items
+  in
+  (* Replace abstract type references with TypeVars in a type *)
+  let rec substitute_abstract_types (ty : ts_type) : ts_type =
+    match ty with
+    | TypeRef {name; args; source_module} ->
+      (* Check if this is a reference to an abstract type in the parameter *)
+      TypeRef
+        {name; args = List.map substitute_abstract_types args; source_module}
+    | Function fn ->
+      Function
+        {
+          fn with
+          fn_params =
+            List.map
+              (fun p ->
+                {p with param_type = substitute_abstract_types p.param_type})
+              fn.fn_params;
+          fn_return = substitute_abstract_types fn.fn_return;
+        }
+    | Array elem -> Array (substitute_abstract_types elem)
+    | Tuple elems -> Tuple (List.map substitute_abstract_types elems)
+    | Union types -> Union (List.map substitute_abstract_types types)
+    | Object obj ->
+      Object
+        {
+          obj with
+          properties =
+            List.map
+              (fun p ->
+                {p with prop_type = substitute_abstract_types p.prop_type})
+              obj.properties;
+        }
+    | _ -> ty
+  in
+  (* Convert type expression, substituting abstract types and type aliases with their TypeVar names *)
+  let convert_type_with_substitution (ty : Types.type_expr) : ts_type =
+    let rec convert ty =
+      match ty.Types.desc with
+      | Types.Tconstr (Path.Pident id, [], _) -> (
+        (* First check abstract types, then type aliases *)
+        match IntMap.find_opt id.Ident.stamp abstract_type_stamps with
+        | Some var_name -> TypeVar var_name
+        | None -> (
+          match IntMap.find_opt id.Ident.stamp type_alias_stamps with
+          | Some var_name -> TypeVar var_name
+          | None -> ts_type_of_type_expr ty))
+      | Types.Tarrow ({lbl; typ = arg_type}, return_type, _, _) -> (
+        let param =
+          {
+            param_name =
+              (match lbl with
+              | Nolabel -> None
+              | Labelled {txt} | Optional {txt} -> Some txt);
+            param_type = convert arg_type;
+            param_optional =
+              (match lbl with
+              | Optional _ -> true
+              | _ -> false);
+          }
+        in
+        let ret = convert return_type in
+        match ret with
+        | Function fn -> Function {fn with fn_params = param :: fn.fn_params}
+        | _ ->
+          Function
+            {
+              fn_params = [param];
+              fn_rest = None;
+              fn_return = ret;
+              fn_type_params = [];
+              fn_async = false;
+            })
+      | Types.Tlink ty | Types.Tsubst ty -> convert ty
+      | _ -> ts_type_of_type_expr ty
+    in
+    substitute_abstract_types (convert ty)
+  in
+  let properties =
+    List.filter_map
+      (fun (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_value (id, vd) -> (
+          match vd.val_kind with
+          | Types.Val_prim _ -> None (* Skip externals *)
+          | Types.Val_reg ->
+            Some
+              {
+                prop_name = Ident.name id;
+                prop_type = convert_type_with_substitution vd.val_type;
+                prop_optional = false;
+                prop_readonly = true;
+              })
+        | _ -> None)
+      sig_items
+  in
+  Object {properties; index_sig = None; call_sig = None}
+
+(** Extract type parameters from a functor's parameter and result types.
+    This collects abstract types from the parameter module that are used in the result. *)
+let extract_functor_type_params (param_sig : Types.signature)
+    (result_type : Types.module_type) : type_param list =
+  (* Collect abstract types from parameter signature *)
+  let abstract_types =
+    List.filter_map
+      (fun (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_type (id, decl, _) -> (
+          match decl.type_manifest with
+          | None -> Some (Ident.name id) (* Abstract type *)
+          | Some _ -> None)
+        | _ -> None)
+      param_sig
+  in
+  (* Convert to type params with capitalized names *)
+  List.map
+    (fun name ->
+      {
+        tp_name = String.capitalize_ascii name;
+        tp_constraint = None;
+        tp_default = None;
+      })
+    abstract_types
+
+(** Try to find the module type path from a typedtree module_type.
+    Returns Some path if the module type is Tmty_with(Tmty_ident path, _)
+    or Tmty_ident path. Returns None otherwise. *)
+let rec find_module_type_path (mty : Typedtree.module_type) : Path.t option =
+  match mty.mty_desc with
+  | Typedtree.Tmty_ident (path, _) -> Some path
+  | Typedtree.Tmty_with (base_mty, _) -> find_module_type_path base_mty
+  | _ -> None
+
+(** Recursively collect functor parameters from a nested Mty_functor.
+    Returns (params, param_abstract_types, result_type) where:
+    - params: list of (param_name, param_sig) pairs
+    - param_abstract_types: list of (param_name, abstract_type_names) pairs
+    - result_type: the final result module type *)
+let rec collect_functor_params (mty : Types.module_type) :
+    (string * Types.signature) list
+    * (string * string list) list
+    * Types.module_type =
+  match mty with
+  | Types.Mty_functor (param_id, Some (Mty_signature param_sig), result_type) ->
+    let param_name = Ident.name param_id in
+    (* Collect abstract type names from this parameter *)
+    let abstract_types =
+      List.filter_map
+        (fun (si : Types.signature_item) ->
+          match si with
+          | Types.Sig_type (type_id, decl, _) -> (
+            match decl.type_manifest with
+            | None -> Some (Ident.name type_id)
+            | Some _ -> None)
+          | _ -> None)
+        param_sig
+    in
+    (* Recursively collect from nested functors *)
+    let rest_params, rest_param_abstract_types, final_result =
+      collect_functor_params result_type
+    in
+    ( (param_name, param_sig) :: rest_params,
+      (param_name, abstract_types) :: rest_param_abstract_types,
+      final_result )
+  | _ -> ([], [], mty)
+
+(** Generate unique type parameter names for functor parameters.
+    When multiple parameters have the same abstract type name (like 't'),
+    we prefix with the parameter name to disambiguate:
+    - If only one parameter has 't', use 'T'
+    - If multiple parameters have 't', use 'Left$T', 'Right$T', etc.
+    Uses '$' separator to avoid conflicts with user-defined identifiers.
+    Returns a list of (original_name, unique_ts_name) mappings for each parameter *)
+let generate_unique_type_params
+    (param_abstract_types : (string * string list) list) :
+    (string * (string * string) list) list =
+  (* First, count how many times each abstract type name appears across all params *)
+  let type_counts =
+    List.fold_left
+      (fun acc (_, abs_types) ->
+        List.fold_left
+          (fun acc2 type_name ->
+            let count =
+              try StringMap.find type_name acc2 with Not_found -> 0
+            in
+            StringMap.add type_name (count + 1) acc2)
+          acc abs_types)
+      StringMap.empty param_abstract_types
+  in
+  (* Generate unique names for each parameter's types *)
+  List.map
+    (fun (param_name, abs_types) ->
+      let mappings =
+        List.map
+          (fun type_name ->
+            let count = StringMap.find type_name type_counts in
+            let unique_name =
+              if count > 1 then
+                (* Multiple params have this type, prefix with param name *)
+                param_name ^ "$" ^ String.capitalize_ascii type_name
+              else
+                (* Only one param has this type, just capitalize *)
+                String.capitalize_ascii type_name
+            in
+            (type_name, unique_name))
+          abs_types
+      in
+      (param_name, mappings))
+    param_abstract_types
+
+(** Extract functor exports from the interface signature.
+    Functors are compiled to JavaScript functions, so we need to generate
+    function type signatures for them.
+    
+    @param interface_sig The Types.signature from the interface
+    @param cmti_path Optional path to .cmti file for extracting module type info *)
+let extract_functor_exports ~(interface_sig : Types.signature)
+    ?(cmti_path : string option) () : functor_export list =
+  (* Try to load the typedtree signature from .cmti to get module type paths *)
+  let typedtree_sig =
+    match cmti_path with
+    | Some path when Sys.file_exists path -> (
+      try
+        let cmt = Cmt_format.read_cmt path in
+        match cmt.Cmt_format.cmt_annots with
+        | Cmt_format.Interface sig_tree -> Some sig_tree.sig_items
+        | _ -> None
+      with _ -> None)
+    | _ -> None
+  in
+  (* Build a map from functor name to its result module type path from typedtree *)
+  let functor_result_types =
+    match typedtree_sig with
+    | Some items ->
+      List.fold_left
+        (fun acc (item : Typedtree.signature_item) ->
+          match item.sig_desc with
+          | Typedtree.Tsig_module md -> (
+            match md.md_type.mty_desc with
+            | Typedtree.Tmty_functor (_, _, _, result_mty) -> (
+              match find_module_type_path result_mty with
+              | Some path -> StringMap.add (Ident.name md.md_id) path acc
+              | None -> acc)
+            | _ -> acc)
+          | _ -> acc)
+        StringMap.empty items
+    | None -> StringMap.empty
+  in
+  (* Helper to compute result type and existential params *)
+  let compute_result_type ~functor_name ~abstract_type_names ~type_params
+      ~unique_type_params (result_mty : Types.module_type) =
+    let param_abstract_types =
+      List.fold_left
+        (fun acc name -> StringSet.add name acc)
+        StringSet.empty abstract_type_names
+    in
+    (* Build a map from "ParamName.typeName" to unique TypeVar name *)
+    let param_type_map =
+      List.fold_left
+        (fun acc (param_name, mappings) ->
+          List.fold_left
+            (fun acc2 (orig_name, unique_name) ->
+              let key = param_name ^ "." ^ orig_name in
+              StringMap.add key unique_name acc2)
+            acc mappings)
+        StringMap.empty unique_type_params
+    in
+    let get_existential_names (module_type_abstract_types : string list) =
+      List.filter_map
+        (fun abs_type_name ->
+          if StringSet.mem abs_type_name param_abstract_types then None
+          else Some (String.capitalize_ascii abs_type_name))
+        module_type_abstract_types
+    in
+    match result_mty with
+    | Types.Mty_ident path -> (
+      let full_path =
+        let module_name = get_module_name () in
+        match path with
+        | Path.Pdot (prefix, name, _) -> Path.name prefix ^ "." ^ name
+        | Path.Pident id ->
+          let type_name = Ident.name id in
+          if module_name = "" then type_name else module_name ^ "." ^ type_name
+        | _ -> Path.last path
+      in
+      match ModuleTypeDecls.find full_path with
+      | Some (abs_types, _value_names) ->
+        let existential_names = get_existential_names abs_types in
+        let existential_set =
+          List.fold_left
+            (fun acc n -> StringSet.add n acc)
+            StringSet.empty existential_names
+        in
+        let args =
+          List.map
+            (fun n ->
+              let cap_name = String.capitalize_ascii n in
+              if StringSet.mem cap_name existential_set then
+                ExistentialVar cap_name
+              else TypeVar cap_name)
+            abs_types
+        in
+        ( TypeRef {name = Path.last path; args; source_module = None},
+          existential_names )
+      | None ->
+        let args = List.map (fun tp -> TypeVar tp.tp_name) type_params in
+        (TypeRef {name = Path.last path; args; source_module = None}, []))
+    | Types.Mty_signature sig_items -> (
+      let result_types =
+        List.fold_left
+          (fun acc (si : Types.signature_item) ->
+            match si with
+            | Types.Sig_type (type_id, decl, _) ->
+              let type_name = Ident.name type_id in
+              let has_manifest = decl.type_manifest <> None in
+              StringMap.add type_name has_manifest acc
+            | _ -> acc)
+          StringMap.empty sig_items
+      in
+      let matching_module_type =
+        match StringMap.find_opt functor_name functor_result_types with
+        | Some path -> (
+          let module_name = get_module_name () in
+          let full_path =
+            match path with
+            | Path.Pdot (prefix, type_name, _) ->
+              Path.name prefix ^ "." ^ type_name
+            | Path.Pident id ->
+              let type_name = Ident.name id in
+              if module_name = "" then type_name
+              else module_name ^ "." ^ type_name
+            | _ -> Path.last path
+          in
+          match ModuleTypeDecls.find full_path with
+          | Some (abs_types, _) -> Some (Path.last path, abs_types)
+          | None ->
+            let type_name = Path.last path in
+            ModuleTypeDecls.find type_name
+            |> Option.map (fun (abs_types, _) -> (type_name, abs_types)))
+        | None -> None
+      in
+      match matching_module_type with
+      | Some (interface_name, abs_types) ->
+        let existential_names =
+          List.filter_map
+            (fun abs_name ->
+              match StringMap.find_opt abs_name result_types with
+              | Some false | None -> Some (String.capitalize_ascii abs_name)
+              | Some true -> None)
+            abs_types
+        in
+        let existential_set =
+          List.fold_left
+            (fun acc n -> StringSet.add n acc)
+            StringSet.empty existential_names
+        in
+        let args =
+          List.map
+            (fun abs_name ->
+              let cap_name = String.capitalize_ascii abs_name in
+              if StringSet.mem cap_name existential_set then
+                ExistentialVar cap_name
+              else TypeVar cap_name)
+            abs_types
+        in
+        let result_type =
+          TypeRef {name = interface_name; args; source_module = None}
+        in
+        (result_type, existential_names)
+      | None ->
+        (* Build type_alias_map for type aliases that point to functor param types
+           e.g., "type left = Left.t" maps "left" -> "Left$T" *)
+        let type_alias_map =
+          List.fold_left
+            (fun acc (si : Types.signature_item) ->
+              match si with
+              | Types.Sig_type (type_id, decl, _) -> (
+                match decl.type_manifest with
+                | Some manifest_ty -> (
+                  (* Check if manifest is a reference to ParamName.typeName *)
+                  match manifest_ty.Types.desc with
+                  | Types.Tconstr
+                      (Path.Pdot (Path.Pident param_id, type_name, _), [], _)
+                    -> (
+                    let param_name = Ident.name param_id in
+                    let key = param_name ^ "." ^ type_name in
+                    match StringMap.find_opt key param_type_map with
+                    | Some resolved_name ->
+                      StringMap.add (Ident.name type_id) resolved_name acc
+                    | None -> acc)
+                  | _ -> acc)
+                | None -> acc)
+              | _ -> acc)
+            StringMap.empty sig_items
+        in
+        let result_type =
+          module_sig_to_object_type ~abstract_types:abstract_type_names
+            ~type_alias_map sig_items
+        in
+        (result_type, []))
+    | _ -> (Any, [])
+  in
+  List.filter_map
+    (fun (sig_item : Types.signature_item) ->
+      match sig_item with
+      | Types.Sig_module (id, md, _) -> (
+        match md.md_type with
+        | Types.Mty_functor _ ->
+          let name = Ident.name id in
+          (* Collect all functor parameters recursively *)
+          let params_with_sigs, param_abstract_types, final_result =
+            collect_functor_params md.md_type
+          in
+          if params_with_sigs = [] then None
+          else
+            (* Generate unique type param names *)
+            let unique_type_params =
+              generate_unique_type_params param_abstract_types
+            in
+            (* Flatten to get all unique type param names *)
+            let all_unique_names =
+              List.concat_map
+                (fun (_, mappings) -> List.map snd mappings)
+                unique_type_params
+            in
+            (* Create type params from unique names *)
+            let type_params =
+              List.map
+                (fun unique_name ->
+                  {
+                    tp_name = unique_name;
+                    tp_constraint = None;
+                    tp_default = None;
+                  })
+                all_unique_names
+            in
+            (* Build a per-parameter mapping from original name to unique name *)
+            let param_mappings =
+              List.fold_left
+                (fun acc (param_name, mappings) ->
+                  StringMap.add param_name mappings acc)
+                StringMap.empty unique_type_params
+            in
+            (* Convert each parameter to functor_param with its own mapping *)
+            let fe_params =
+              List.map
+                (fun (param_name, param_sig) ->
+                  let mappings =
+                    match StringMap.find_opt param_name param_mappings with
+                    | Some m -> m
+                    | None -> []
+                  in
+                  (* Convert mappings to abstract_types format for module_sig_to_object_type *)
+                  let abstract_types = List.map fst mappings in
+                  (* Create a rename map for this parameter
+                     module_sig_to_object_type capitalizes type names, so use capitalized keys *)
+                  let rename_map =
+                    List.fold_left
+                      (fun acc (orig, unique) ->
+                        StringMap.add (String.capitalize_ascii orig) unique acc)
+                      StringMap.empty mappings
+                  in
+                  let obj_type =
+                    module_sig_to_object_type ~abstract_types param_sig
+                  in
+                  (* Rename type vars according to mapping *)
+                  let renamed_type = rename_type_vars rename_map obj_type in
+                  {fp_name = param_name; fp_type = renamed_type})
+                params_with_sigs
+            in
+            (* Flatten abstract type names for existential param calculation *)
+            let abstract_type_names =
+              List.concat_map
+                (fun (_, abs_types) -> abs_types)
+                param_abstract_types
+            in
+            let result_ts_type, existential_params =
+              compute_result_type ~functor_name:name ~abstract_type_names
+                ~type_params ~unique_type_params final_result
+            in
+            Some
+              {
+                fe_name = name;
+                fe_params;
+                fe_result_type = result_ts_type;
+                fe_type_params = type_params;
+                fe_existential_params = existential_params;
+              }
+        | _ -> None)
+      | _ -> None)
+    interface_sig
 
 (** {1 Exported Value Type Tracking} *)
 
@@ -3584,6 +4445,374 @@ let set_exported_modules (decls : type_decl list) : unit =
       | ModuleDecl mod_decl -> register_module_with_prefix "" mod_decl
       | _ -> ())
     decls
+
+(** Extract all exports (types, values, functors) in source order.
+    This creates a unified list that preserves the declaration order from the interface. *)
+let extract_all_exports ~(module_name : string)
+    ~(interface_sig : Types.signature) ?(cmti_path : string option)
+    (str : Typedtree.structure) : dts_export list =
+  set_module_name module_name;
+  LocalTypeQualifier.reset ();
+  ModuleAliases.reset ();
+  State.InlineRecordDefs.reset ();
+  State.ImplTypeDecls.reset ();
+  collect_impl_type_decls ~prefix:"" str;
+  (* Extract module aliases *)
+  List.iter
+    (fun (str_item : Typedtree.structure_item) ->
+      match str_item.str_desc with
+      | Typedtree.Tstr_module mb -> (
+        match mb.mb_expr.mod_desc with
+        | Typedtree.Tmod_ident (path, _) ->
+          ModuleAliases.add (Ident.name mb.mb_id) path
+        | _ -> ())
+      | _ -> ())
+    str.str_items;
+  (* Build maps for quick lookup *)
+  let public_values =
+    List.fold_left
+      (fun acc (sig_item : Types.signature_item) ->
+        match sig_item with
+        | Types.Sig_value (id, vd) ->
+          Map_string.add acc (Ident.name id) vd.val_type
+        | _ -> acc)
+      Map_string.empty interface_sig
+  in
+  (* Build map of value bindings from structure for param extraction *)
+  let value_bindings =
+    List.fold_left
+      (fun acc (item : Typedtree.structure_item) ->
+        match item.str_desc with
+        | Typedtree.Tstr_value (_, bindings) ->
+          List.fold_left
+            (fun acc (vb : Typedtree.value_binding) ->
+              match extract_pat_ident vb.vb_pat with
+              | Some id -> Map_string.add acc (Ident.name id) vb
+              | None -> acc)
+            acc bindings
+        | _ -> acc)
+      Map_string.empty str.str_items
+  in
+  (* Load typedtree signature from .cmti for functor module type paths *)
+  let typedtree_sig =
+    match cmti_path with
+    | Some path when Sys.file_exists path -> (
+      try
+        let cmt = Cmt_format.read_cmt path in
+        match cmt.Cmt_format.cmt_annots with
+        | Cmt_format.Interface sig_tree -> Some sig_tree.sig_items
+        | _ -> None
+      with _ -> None)
+    | _ -> None
+  in
+  let functor_result_types =
+    match typedtree_sig with
+    | Some items ->
+      List.fold_left
+        (fun acc (item : Typedtree.signature_item) ->
+          match item.sig_desc with
+          | Typedtree.Tsig_module md -> (
+            match md.md_type.mty_desc with
+            | Typedtree.Tmty_functor (_, _, _, result_mty) -> (
+              match find_module_type_path result_mty with
+              | Some path -> StringMap.add (Ident.name md.md_id) path acc
+              | None -> acc)
+            | _ -> acc)
+          | _ -> acc)
+        StringMap.empty items
+    | None -> StringMap.empty
+  in
+  (* First pass: register module types for Tpackage resolution *)
+  List.iter
+    (fun (sig_item : Types.signature_item) ->
+      match sig_item with
+      | Types.Sig_modtype (id, mtd) ->
+        ignore (extract_module_type_decl ~prefix:"" id mtd)
+      | _ -> ())
+    interface_sig;
+  (* Second pass: process all items in source order *)
+  let exports = ref [] in
+  List.iter
+    (fun (sig_item : Types.signature_item) ->
+      match sig_item with
+      | Types.Sig_type (id, decl, _) -> (
+        register_local_type ~prefix:"" id decl;
+        match type_decl_of_type_declaration ~prefix:"" id decl with
+        | Some type_decl -> exports := DtsTypeExport type_decl :: !exports
+        | None -> ())
+      | Types.Sig_modtype (id, mtd) -> (
+        match extract_module_type_decl ~prefix:"" id mtd with
+        | Some mt_decl ->
+          exports := DtsTypeExport (ModuleTypeDecl mt_decl) :: !exports
+        | None -> ())
+      | Types.Sig_module (id, md, _) -> (
+        match md.md_type with
+        | Types.Mty_functor _ ->
+          (* Functor - extract as DtsFunctorExport *)
+          let name = Ident.name id in
+          let params_with_sigs, param_abstract_types_list, final_result =
+            collect_functor_params md.md_type
+          in
+          if params_with_sigs <> [] then
+            (* Generate unique type param names *)
+            let unique_type_params =
+              generate_unique_type_params param_abstract_types_list
+            in
+            (* Flatten to get all unique type param names *)
+            let all_unique_names =
+              List.concat_map
+                (fun (_, mappings) -> List.map snd mappings)
+                unique_type_params
+            in
+            (* Create type params from unique names *)
+            let type_params =
+              List.map
+                (fun unique_name ->
+                  {
+                    tp_name = unique_name;
+                    tp_constraint = None;
+                    tp_default = None;
+                  })
+                all_unique_names
+            in
+            (* Build a per-parameter mapping from original name to unique name *)
+            let param_mappings =
+              List.fold_left
+                (fun acc (param_name, mappings) ->
+                  StringMap.add param_name mappings acc)
+                StringMap.empty unique_type_params
+            in
+            (* Convert each parameter to functor_param with its own mapping *)
+            let fe_params =
+              List.map
+                (fun (param_name, param_sig) ->
+                  let mappings =
+                    match StringMap.find_opt param_name param_mappings with
+                    | Some m -> m
+                    | None -> []
+                  in
+                  let abstract_types = List.map fst mappings in
+                  (* module_sig_to_object_type capitalizes type names, so use capitalized keys *)
+                  let rename_map =
+                    List.fold_left
+                      (fun acc (orig, unique) ->
+                        StringMap.add (String.capitalize_ascii orig) unique acc)
+                      StringMap.empty mappings
+                  in
+                  let obj_type =
+                    module_sig_to_object_type ~abstract_types param_sig
+                  in
+                  let renamed_type = rename_type_vars rename_map obj_type in
+                  {fp_name = param_name; fp_type = renamed_type})
+                params_with_sigs
+            in
+            (* Flatten abstract type names for existential param calculation *)
+            let abstract_type_names =
+              List.concat_map
+                (fun (_, abs_types) -> abs_types)
+                param_abstract_types_list
+            in
+            let param_abstract_types_set =
+              List.fold_left
+                (fun acc n -> StringSet.add n acc)
+                StringSet.empty abstract_type_names
+            in
+            let get_existential_names (module_type_abstract_types : string list)
+                =
+              List.filter_map
+                (fun abs_type_name ->
+                  if StringSet.mem abs_type_name param_abstract_types_set then
+                    None
+                  else Some (String.capitalize_ascii abs_type_name))
+                module_type_abstract_types
+            in
+            let result_ts_type, existential_params =
+              match final_result with
+              | Types.Mty_ident path -> (
+                let full_path =
+                  let mn = get_module_name () in
+                  match path with
+                  | Path.Pdot (prefix, n, _) -> Path.name prefix ^ "." ^ n
+                  | Path.Pident id ->
+                    let type_name = Ident.name id in
+                    if mn = "" then type_name else mn ^ "." ^ type_name
+                  | _ -> Path.last path
+                in
+                match ModuleTypeDecls.find full_path with
+                | Some (abs_types, _value_names) ->
+                  let existential_names = get_existential_names abs_types in
+                  let existential_set =
+                    List.fold_left
+                      (fun acc n -> StringSet.add n acc)
+                      StringSet.empty existential_names
+                  in
+                  let args =
+                    List.map
+                      (fun n ->
+                        let cap_name = String.capitalize_ascii n in
+                        if StringSet.mem cap_name existential_set then
+                          ExistentialVar cap_name
+                        else TypeVar cap_name)
+                      abs_types
+                  in
+                  ( TypeRef {name = Path.last path; args; source_module = None},
+                    existential_names )
+                | None ->
+                  let args =
+                    List.map (fun tp -> TypeVar tp.tp_name) type_params
+                  in
+                  ( TypeRef {name = Path.last path; args; source_module = None},
+                    [] ))
+              | Types.Mty_signature sig_items -> (
+                let result_types =
+                  List.fold_left
+                    (fun acc (si : Types.signature_item) ->
+                      match si with
+                      | Types.Sig_type (tid, decl, _) ->
+                        let has_manifest = decl.type_manifest <> None in
+                        StringMap.add (Ident.name tid) has_manifest acc
+                      | _ -> acc)
+                    StringMap.empty sig_items
+                in
+                let matching_module_type =
+                  match StringMap.find_opt name functor_result_types with
+                  | Some path -> (
+                    let full_path =
+                      let mn = get_module_name () in
+                      match path with
+                      | Path.Pdot (prefix, n, _) -> Path.name prefix ^ "." ^ n
+                      | Path.Pident tid ->
+                        let type_name = Ident.name tid in
+                        if mn = "" then type_name else mn ^ "." ^ type_name
+                      | _ -> Path.last path
+                    in
+                    match ModuleTypeDecls.find full_path with
+                    | Some (abs_types, _) -> Some (Path.last path, abs_types)
+                    | None ->
+                      let type_name = Path.last path in
+                      ModuleTypeDecls.find type_name
+                      |> Option.map (fun (abs_types, _) ->
+                             (type_name, abs_types)))
+                  | None -> None
+                in
+                match matching_module_type with
+                | Some (interface_name, abs_types) ->
+                  let existential_names =
+                    List.filter_map
+                      (fun abs_name ->
+                        match StringMap.find_opt abs_name result_types with
+                        | Some false | None ->
+                          Some (String.capitalize_ascii abs_name)
+                        | Some true -> None)
+                      abs_types
+                  in
+                  let existential_set =
+                    List.fold_left
+                      (fun acc n -> StringSet.add n acc)
+                      StringSet.empty existential_names
+                  in
+                  let args =
+                    List.map
+                      (fun abs_name ->
+                        let cap_name = String.capitalize_ascii abs_name in
+                        if StringSet.mem cap_name existential_set then
+                          ExistentialVar cap_name
+                        else TypeVar cap_name)
+                      abs_types
+                  in
+                  let rt =
+                    TypeRef {name = interface_name; args; source_module = None}
+                  in
+                  (rt, existential_names)
+                | None ->
+                  (* Build param_type_map for type alias resolution *)
+                  let param_type_map =
+                    List.fold_left
+                      (fun acc (param_name, mappings) ->
+                        List.fold_left
+                          (fun acc2 (orig_name, unique_name) ->
+                            let key = param_name ^ "." ^ orig_name in
+                            StringMap.add key unique_name acc2)
+                          acc mappings)
+                      StringMap.empty unique_type_params
+                  in
+                  (* Build type_alias_map for type aliases that point to functor param types *)
+                  let type_alias_map =
+                    List.fold_left
+                      (fun acc (si : Types.signature_item) ->
+                        match si with
+                        | Types.Sig_type (type_id, decl, _) -> (
+                          match decl.type_manifest with
+                          | Some manifest_ty -> (
+                            match manifest_ty.Types.desc with
+                            | Types.Tconstr
+                                ( Path.Pdot (Path.Pident param_id, type_name, _),
+                                  [],
+                                  _ ) -> (
+                              let param_name = Ident.name param_id in
+                              let key = param_name ^ "." ^ type_name in
+                              match StringMap.find_opt key param_type_map with
+                              | Some resolved_name ->
+                                StringMap.add (Ident.name type_id) resolved_name
+                                  acc
+                              | None -> acc)
+                            | _ -> acc)
+                          | None -> acc)
+                        | _ -> acc)
+                      StringMap.empty sig_items
+                  in
+                  let rt =
+                    module_sig_to_object_type
+                      ~abstract_types:abstract_type_names ~type_alias_map
+                      sig_items
+                  in
+                  (rt, []))
+              | _ -> (Any, [])
+            in
+            exports :=
+              DtsFunctorExport
+                {
+                  fe_name = name;
+                  fe_params;
+                  fe_result_type = result_ts_type;
+                  fe_type_params = type_params;
+                  fe_existential_params = existential_params;
+                }
+              :: !exports
+        | _ -> (
+          (* Regular module - extract as type decl *)
+          match extract_module_decl_from_sig ~prefix:"" id md with
+          | Some mod_decl ->
+            exports := DtsTypeExport (ModuleDecl mod_decl) :: !exports
+          | None -> ()))
+      | Types.Sig_value (id, _vd) -> (
+        let name = Ident.name id in
+        match Map_string.find_opt public_values name with
+        | Some interface_type -> (
+          match Map_string.find_opt value_bindings name with
+          | Some vb ->
+            let params = extract_param_names vb.vb_expr in
+            let alias = extract_alias_target vb.vb_expr in
+            let existential_params =
+              extract_existential_params_from_return_type interface_type
+            in
+            exports :=
+              DtsValueExport
+                {
+                  ve_name = name;
+                  ve_type = interface_type;
+                  ve_params = params;
+                  ve_alias = alias;
+                  ve_existential_params = existential_params;
+                }
+              :: !exports
+          | None ->
+            (* Value in sig but not in structure - might be an external, skip *)
+            ())
+        | None -> ())
+      | _ -> ())
+    interface_sig;
+  List.rev !exports
 
 (** Get the type for an exported value by name *)
 let get_exported_type (name : string) : Types.type_expr option =
@@ -3700,6 +4929,7 @@ let rec estimate_ts_type_length (ty : ts_type) : int =
     + List.fold_left ( + ) 0
         (List.map (fun t -> estimate_ts_type_length t + 2) args)
   | TypeVar name -> String.length name
+  | ExistentialVar name -> String.length name + 11 (* Existential$ prefix *)
   | Literal (LitString s) -> String.length s + 2
   | Literal (LitNumber n) -> String.length (string_of_float n)
   | Literal (LitBigint s) -> String.length s + 1
@@ -3790,6 +5020,10 @@ let rec pp_ts_type (f : P.t) (ty : ts_type) : unit =
       pp_ts_type_list f args;
       P.string f ">")
   | TypeVar name -> P.string f (String.capitalize_ascii name)
+  | ExistentialVar name ->
+    (* Render as Existential$Name for function signatures *)
+    P.string f "Existential$";
+    P.string f name
   | Literal lit -> pp_literal f lit
   | Readonly ty ->
     P.string f "Readonly<";
@@ -4606,7 +5840,8 @@ let get_module_type_names (mod_decl : module_decl) : StringSet.t =
       | VariantType {name; _}
       | GadtType {name; _}
       | OpaqueType {name; _}
-      | ExternalType {name; _} ->
+      | ExternalType {name; _}
+      | ModuleTypeDecl {mtd_name = name; _} ->
         StringSet.add name acc
       | ModuleDecl _ -> acc)
     StringSet.empty mod_decl.mod_types
@@ -4670,6 +5905,9 @@ let rec pp_ts_type_qualified (f : P.t) ~(module_path : string)
   | String -> P.string f "string"
   | Symbol -> P.string f "symbol"
   | TypeVar name -> P.string f (String.capitalize_ascii name)
+  | ExistentialVar name ->
+    P.string f "Existential$";
+    P.string f name
   | Literal lit -> pp_literal f lit
 
 and pp_ts_type_list_qualified (f : P.t) ~(module_path : string)
@@ -5062,6 +6300,28 @@ let pp_type_decl (f : P.t) (decl : type_decl) : unit =
       P.string f (String.concat ", " param_names);
       P.string f ">");
     P.string f ";"
+  | ModuleTypeDecl {mtd_name; mtd_type_params; mtd_members} ->
+    (* Module type declaration: export interface Comparable<Identity, T> { ... } *)
+    P.string f "export interface ";
+    P.string f mtd_name;
+    if mtd_type_params <> [] then (
+      P.string f "<";
+      P.string f (String.concat ", " mtd_type_params);
+      P.string f ">");
+    P.string f " {";
+    List.iter
+      (fun member ->
+        match member with
+        | MtdValue {mtv_name; mtv_type} ->
+          P.newline f;
+          P.string f "  readonly ";
+          P.string f mtv_name;
+          P.string f ": ";
+          pp_ts_type f mtv_type;
+          P.string f ";")
+      mtd_members;
+    P.newline f;
+    P.string f "}"
   | ModuleDecl mod_decl -> !pp_module_decl_ref f mod_decl
 
 (** Print a type declaration for combined .ts files.
@@ -5336,9 +6596,11 @@ let estimate_function_decl_length (name : string) (param_names : string list)
     base_len + params_len + return_len
 
 (** Print a function declaration for .d.ts 
-    @param use_export if true, prints "export function", otherwise "declare function" *)
-let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
-    (param_names : string list) (fn_type : Types.type_expr option) : unit =
+    @param use_export if true, prints "export function", otherwise "declare function"
+    @param existential_params extra type params for first-class module returns (e.g., ["Identity"]) *)
+let pp_dts_function_decl ?(use_export = true) ?(existential_params = [])
+    (f : P.t) (name : string) (param_names : string list)
+    (fn_type : Types.type_expr option) : unit =
   let use_multiline =
     estimate_function_decl_length name param_names fn_type
     > function_line_width_threshold
@@ -5348,8 +6610,23 @@ let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
   P.string f (if use_export then "export function " else "declare function ");
   (* Don't escape function name - it must match the JavaScript export name exactly *)
   P.string f name;
-  (* Print type parameters *)
-  pp_type_params_from_ml f fn_type;
+  (* Print type parameters: existential params first, then ML-derived params *)
+  let has_existential = existential_params <> [] in
+  let ml_params = collect_type_vars_with_constraints fn_type in
+  let has_ml_params = ml_params <> [] in
+  if has_existential || has_ml_params then (
+    P.string f "<";
+    (* Print existential params: Existential$Name *)
+    List.iteri
+      (fun i param_name ->
+        if i > 0 then P.string f ", ";
+        P.string f "Existential$";
+        P.string f param_name)
+      existential_params;
+    if has_existential && has_ml_params then P.string f ", ";
+    (* Print ML-derived params *)
+    pp_type_params f ml_params;
+    P.string f ">");
   (* Print parameters *)
   P.string f "(";
   (match fn_type with
@@ -5429,9 +6706,13 @@ let pp_dts_function_decl ?(use_export = true) (f : P.t) (name : string)
 
 (** Simplify types with free type variables for const declarations.
     TypeScript doesn't support polymorphic constants, so we need to 
-    replace option<A> (where A is a free type variable) with undefined. *)
+    replace option<A> (where A is a free type variable) with undefined,
+    and existential type vars with unknown. *)
 let rec simplify_const_type (ty : ts_type) : ts_type =
   match ty with
+  | ExistentialVar _ ->
+    (* Existential type vars can't be expressed in const declarations *)
+    Unknown
   | RuntimeType {rt_name = "option"; rt_args = [TypeVar _]} ->
     (* option<A> with free type var -> undefined (e.g., Js.undefined<'a>) *)
     Undefined
@@ -5473,8 +6754,9 @@ let pp_dts_value_export (f : P.t) (ve : value_export) : unit =
     | None ->
       (* Complex case: need to declare and export *)
       if is_function_type ve.ve_type then (
-        pp_dts_function_decl ~use_export:false f "$$default" ve.ve_params
-          (Some ve.ve_type);
+        pp_dts_function_decl ~use_export:false
+          ~existential_params:ve.ve_existential_params f "$$default"
+          ve.ve_params (Some ve.ve_type);
         P.newline f;
         P.string f "export default $$default;")
       else (
@@ -5486,8 +6768,75 @@ let pp_dts_value_export (f : P.t) (ve : value_export) : unit =
     (* Use Ext_ident.convert to match JS export name (e.g., catch -> $$catch) *)
     let export_name = Ext_ident.convert name in
     if is_function_type ve.ve_type then
-      pp_dts_function_decl f export_name ve.ve_params (Some ve.ve_type)
+      pp_dts_function_decl ~existential_params:ve.ve_existential_params f
+        export_name ve.ve_params (Some ve.ve_type)
     else pp_dts_value_decl f export_name (ts_type_of_type_expr ve.ve_type)
+
+(** Print an object type always in multiline format for functor params *)
+let pp_object_type_multiline (f : P.t) (obj : object_type) : unit =
+  P.string f "{";
+  P.group f 1 (fun () ->
+      List.iter
+        (fun prop ->
+          P.newline f;
+          P.string f "  ";
+          if prop.prop_readonly then P.string f "readonly ";
+          pp_property_name f prop.prop_name;
+          if prop.prop_optional then P.string f "?";
+          P.string f ": ";
+          pp_ts_type f prop.prop_type;
+          P.string f ";")
+        obj.properties;
+      match obj.index_sig with
+      | Some {index_key; index_value} ->
+        P.newline f;
+        P.string f "  [key: ";
+        pp_ts_type f index_key;
+        P.string f "]: ";
+        pp_ts_type f index_value;
+        P.string f ";"
+      | None -> ());
+  P.newline f;
+  P.string f "  }"
+
+(** Print a functor export as a function declaration *)
+let pp_dts_functor_export (f : P.t) (fe : functor_export) : unit =
+  P.string f "export function ";
+  P.string f fe.fe_name;
+  (* Print type parameters: existential params first, then regular params *)
+  let has_existential = fe.fe_existential_params <> [] in
+  let has_regular = fe.fe_type_params <> [] in
+  if has_existential || has_regular then (
+    P.string f "<";
+    (* Existential params: Existential$Name *)
+    List.iteri
+      (fun i name ->
+        if i > 0 then P.string f ", ";
+        P.string f "Existential$";
+        P.string f name)
+      fe.fe_existential_params;
+    (* Regular type params *)
+    if has_existential && has_regular then P.string f ", ";
+    pp_type_params f fe.fe_type_params;
+    P.string f ">");
+  (* Print parameters - use multiline format for object types *)
+  P.string f "(";
+  List.iteri
+    (fun i fp ->
+      P.newline f;
+      P.string f "  ";
+      P.string f fp.fp_name;
+      P.string f ": ";
+      (match fp.fp_type with
+      | Object obj -> pp_object_type_multiline f obj
+      | _ -> pp_ts_type f fp.fp_type);
+      if i < List.length fe.fe_params - 1 then P.string f ",")
+    fe.fe_params;
+  P.newline f;
+  P.string f "): ";
+  (* Print return type *)
+  pp_ts_type f fe.fe_result_type;
+  P.string f ";"
 
 (** Print a type declaration for .d.ts *)
 let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
@@ -5707,6 +7056,28 @@ let rec pp_dts_type_decl (f : P.t) (decl : type_decl) : unit =
       P.string f (String.concat ", " param_names);
       P.string f ">");
     P.string f ";"
+  | ModuleTypeDecl {mtd_name; mtd_type_params; mtd_members} ->
+    (* Module type declaration: export interface Comparable<Identity, T> { ... } *)
+    P.string f "export interface ";
+    P.string f mtd_name;
+    if mtd_type_params <> [] then (
+      P.string f "<";
+      P.string f (String.concat ", " mtd_type_params);
+      P.string f ">");
+    P.string f " {";
+    List.iter
+      (fun member ->
+        match member with
+        | MtdValue {mtv_name; mtv_type} ->
+          P.newline f;
+          P.string f "  readonly ";
+          P.string f mtv_name;
+          P.string f ": ";
+          pp_ts_type f mtv_type;
+          P.string f ";")
+      mtd_members;
+    P.newline f;
+    P.string f "}"
   | ModuleDecl mod_decl -> pp_module_decl f mod_decl
 
 (** Print a module declaration as namespace + type + const.
@@ -5935,6 +7306,26 @@ and pp_namespace_type_decl_with_path (f : P.t) ~(module_path : string)
       P.string f (String.concat ", " param_names);
       P.string f ">");
     P.string f ";"
+  | ModuleTypeDecl {mtd_name; mtd_type_params; mtd_members} ->
+    (* Module type inside namespace: interface Comparable<Identity, T> { ... } *)
+    P.string f "interface ";
+    P.string f mtd_name;
+    if mtd_type_params <> [] then (
+      P.string f "<";
+      P.string f (String.concat ", " mtd_type_params);
+      P.string f ">");
+    P.string f " { ";
+    List.iter
+      (fun member ->
+        match member with
+        | MtdValue {mtv_name; mtv_type} ->
+          P.string f "readonly ";
+          P.string f mtv_name;
+          P.string f ": ";
+          pp_ts_type f mtv_type;
+          P.string f "; ")
+      mtd_members;
+    P.string f "}"
   | ModuleDecl sub ->
     pp_nested_module_decl_with_path f sub ~indent:0 ~parent_path:module_path
       ~emit_const
@@ -6147,6 +7538,26 @@ and pp_namespace_type_decl (f : P.t) (decl : type_decl) : unit =
       P.string f (String.concat ", " param_names);
       P.string f ">");
     P.string f ";"
+  | ModuleTypeDecl {mtd_name; mtd_type_params; mtd_members} ->
+    (* Module type inside namespace: interface Comparable<Identity, T> { ... } *)
+    P.string f "interface ";
+    P.string f mtd_name;
+    if mtd_type_params <> [] then (
+      P.string f "<";
+      P.string f (String.concat ", " mtd_type_params);
+      P.string f ">");
+    P.string f " { ";
+    List.iter
+      (fun member ->
+        match member with
+        | MtdValue {mtv_name; mtv_type} ->
+          P.string f "readonly ";
+          P.string f mtv_name;
+          P.string f ": ";
+          pp_ts_type f mtv_type;
+          P.string f "; ")
+      mtd_members;
+    P.string f "}"
   | ModuleDecl sub -> pp_nested_module_decl f sub ~indent:0
 
 (** Print a nested module declaration with indentation *)
@@ -6318,23 +7729,40 @@ type resolve_module_path = string -> string option
     TODO(refactor): Move it to a part of dump program *)
 let pp_dts_file ~(module_name : string)
     ~(resolve_module_path : resolve_module_path) ~(suffix : string) (f : P.t)
-    (imports : dts_import list) (type_decls : type_decl list)
-    (value_exports : value_export list) : unit =
+    (imports : dts_import list) (dts_exports : dts_export list) : unit =
+  (* Extract type_decls, value_exports, functor_exports from unified list *)
+  let type_decls, value_exports, functor_exports =
+    List.fold_right
+      (fun export (types, values, functors) ->
+        match export with
+        | DtsTypeExport td -> (td :: types, values, functors)
+        | DtsValueExport ve -> (types, ve :: values, functors)
+        | DtsFunctorExport fe -> (types, values, fe :: functors))
+      dts_exports ([], [], [])
+  in
   (* Save the environment and LocalTypeQualifier that were set during extraction.
      We need env to resolve module aliases in type paths.
-     We need LocalTypeQualifier to qualify local type references. *)
+     We need LocalTypeQualifier to qualify local type references.
+     We also need module_type_decls for Tpackage resolution. *)
   let saved_env = State.state.env in
   let saved_qualifiers_by_stamp = State.state.local_type_qualifiers_by_stamp in
   let saved_qualifiers_by_name = State.state.local_type_qualifiers_by_name in
+  let saved_module_type_decls = State.state.module_type_decls in
   reset_state ();
-  (* Restore the environment and LocalTypeQualifier for type resolution *)
+  (* Restore the environment, LocalTypeQualifier, and module_type_decls for type resolution *)
   State.state.env <- saved_env;
   State.state.local_type_qualifiers_by_stamp <- saved_qualifiers_by_stamp;
   State.state.local_type_qualifiers_by_name <- saved_qualifiers_by_name;
+  State.state.module_type_decls <- saved_module_type_decls;
   List.iter collect_type_deps_decl type_decls;
   List.iter
     (fun ve -> collect_type_deps (ts_type_of_type_expr ve.ve_type))
     value_exports;
+  List.iter
+    (fun fe ->
+      List.iter (fun fp -> collect_type_deps fp.fp_type) fe.fe_params;
+      collect_type_deps fe.fe_result_type)
+    functor_exports;
   let has_runtime_types = RuntimeTypes.has_any () in
   let has_external_type_imports = ExternalTypeImports.has_any () in
   let required_modules = TypeModuleDeps.get_used () in
@@ -6394,9 +7822,15 @@ let pp_dts_file ~(module_name : string)
     type_imports;
   if type_imports <> [] || has_runtime_types || has_external_type_imports then
     P.at_least_two_lines f;
+  (* Use the original dts_exports order to preserve source ordering *)
   let all_items =
-    List.map (fun decl -> `Type decl) type_decls
-    @ List.map (fun ve -> `Value ve) value_exports
+    List.map
+      (fun export ->
+        match export with
+        | DtsTypeExport td -> `Type td
+        | DtsValueExport ve -> `Value ve
+        | DtsFunctorExport fe -> `Functor fe)
+      dts_exports
   in
   collect_opaque_types ~module_name type_decls;
   (* Store brand-friendly module name (Namespace.Module format) *)
@@ -6405,12 +7839,17 @@ let pp_dts_file ~(module_name : string)
     | [] -> ()
     | [`Type decl] -> pp_dts_type_decl f decl
     | [`Value ve] -> pp_dts_value_export f ve
+    | [`Functor fe] -> pp_dts_functor_export f fe
     | `Type decl :: rest ->
       pp_dts_type_decl f decl;
       P.at_least_two_lines f;
       print_items rest
     | `Value ve :: rest ->
       pp_dts_value_export f ve;
+      P.at_least_two_lines f;
+      print_items rest
+    | `Functor fe :: rest ->
+      pp_dts_functor_export f fe;
       P.at_least_two_lines f;
       print_items rest
   in

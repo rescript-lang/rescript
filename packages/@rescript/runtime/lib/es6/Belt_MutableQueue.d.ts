@@ -15,44 +15,44 @@ export function make<A>(): t<A>;
 
 export function clear<A>(q: t<A>): void;
 
+export function isEmpty<A>(q: t<A>): boolean;
+
+export function fromArray<A>(arr: A[]): t<A>;
+
 export function add<A>(q: t<A>, x: A): void;
 
 export function peek<A>(q: t<A>): rescript.option<A>;
 
 export function peekUndefined<A>(q: t<A>): Js.undefined_<A>;
 
-export function peekOrThrow<A>(q: t<A>): A;
-
 export function peekExn<A>(arg0: t<A>): A;
+
+export function peekOrThrow<A>(q: t<A>): A;
 
 export function pop<A>(q: t<A>): rescript.option<A>;
 
-export function popOrThrow<A>(q: t<A>): A;
+export function popUndefined<A>(q: t<A>): Js.undefined_<A>;
 
 export function popExn<A>(arg0: t<A>): A;
 
-export function popUndefined<A>(q: t<A>): Js.undefined_<A>;
+export function popOrThrow<A>(q: t<A>): A;
 
 export function copy<A>(q: t<A>): t<A>;
 
-export function map<A, B>(q: t<A>, f: (arg0: A) => B): t<B>;
-
-export function isEmpty<A>(q: t<A>): boolean;
-
 export function size<A>(q: t<A>): number;
 
+export function mapU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): t<B>;
+
+export function map<A, B>(q: t<A>, f: (arg0: A) => B): t<B>;
+
+export function forEachU<A>(arg0: t<A>, arg1: (arg0: A) => void): void;
+
 export function forEach<A>(q: t<A>, f: (arg0: A) => void): void;
+
+export function reduceU<A, B>(arg0: t<A>, arg1: B, arg2: (arg0: B, arg1: A) => B): B;
 
 export function reduce<A, B>(q: t<A>, accu: B, f: (arg0: B, arg1: A) => B): B;
 
 export function transfer<A>(q1: t<A>, q2: t<A>): void;
 
 export function toArray<A>(x: t<A>): A[];
-
-export function fromArray<A>(arr: A[]): t<A>;
-
-export function forEachU<A>(arg0: t<A>, arg1: (arg0: A) => void): void;
-
-export function mapU<A, B>(arg0: t<A>, arg1: (arg0: A) => B): t<B>;
-
-export function reduceU<A, B>(arg0: t<A>, arg1: B, arg2: (arg0: B, arg1: A) => B): B;

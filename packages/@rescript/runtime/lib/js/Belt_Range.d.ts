@@ -1,32 +1,24 @@
+export function forEachU(
+  arg0: number,
+  arg1: number,
+  arg2: (arg0: number) => void,
+): void;
+
 export function forEach(
   s: number,
   f: number,
   action: (arg0: number) => void,
 ): void;
 
+export function everyU(
+  arg0: number,
+  arg1: number,
+  arg2: (arg0: number) => boolean,
+): boolean;
+
 export function every(
   s: number,
   f: number,
-  p: (arg0: number) => boolean,
-): boolean;
-
-export function everyBy(
-  s: number,
-  f: number,
-  step: number,
-  p: (arg0: number) => boolean,
-): boolean;
-
-export function some(
-  s: number,
-  f: number,
-  p: (arg0: number) => boolean,
-): boolean;
-
-export function someBy(
-  s: number,
-  f: number,
-  step: number,
   p: (arg0: number) => boolean,
 ): boolean;
 
@@ -37,17 +29,24 @@ export function everyByU(
   arg3: (arg0: number) => boolean,
 ): boolean;
 
-export function everyU(
+export function everyBy(
+  s: number,
+  f: number,
+  step: number,
+  p: (arg0: number) => boolean,
+): boolean;
+
+export function someU(
   arg0: number,
   arg1: number,
   arg2: (arg0: number) => boolean,
 ): boolean;
 
-export function forEachU(
-  arg0: number,
-  arg1: number,
-  arg2: (arg0: number) => void,
-): void;
+export function some(
+  s: number,
+  f: number,
+  p: (arg0: number) => boolean,
+): boolean;
 
 export function someByU(
   arg0: number,
@@ -56,8 +55,9 @@ export function someByU(
   arg3: (arg0: number) => boolean,
 ): boolean;
 
-export function someU(
-  arg0: number,
-  arg1: number,
-  arg2: (arg0: number) => boolean,
+export function someBy(
+  s: number,
+  f: number,
+  step: number,
+  p: (arg0: number) => boolean,
 ): boolean;

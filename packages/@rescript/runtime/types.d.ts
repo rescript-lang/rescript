@@ -39,6 +39,10 @@ declare const $opaque: unique symbol;
 /**
  * Utility type for opaque types
  */
-export type opaque<Brand extends string, PhantomParams extends readonly any[], Underlying = {}> = Underlying & {
+export type opaque<
+  Brand extends string, 
+  PhantomParams extends readonly any[] = any[], 
+  Underlying = {}
+> = Underlying & {
   [$opaque]: { [K in Brand]: PhantomParams }
 }

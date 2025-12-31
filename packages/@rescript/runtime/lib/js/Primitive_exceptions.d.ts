@@ -8,6 +8,6 @@ export interface t {
   readonly RE_EXN_ID: string;
 }
 
-export function internalToException(e: unknown): rescript.exn;
-
 export function create(str: string): string;
+
+export function internalToException(e: unknown): rescript.exn;

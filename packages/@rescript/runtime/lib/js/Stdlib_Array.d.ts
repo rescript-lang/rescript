@@ -12,8 +12,6 @@ export function make<A>(length: number, x: A): A[];
 
 export function fromInitializer<A>(length: number, f: (arg0: number) => A): A[];
 
-export function isEmpty<A>(arr: A[]): boolean;
-
 export function equal<A>(a: A[], b: A[], eq: (arg0: A, arg1: A) => boolean): boolean;
 
 export function compare<A>(
@@ -21,6 +19,8 @@ export function compare<A>(
   b: A[],
   cmp: (arg0: A, arg1: A) => Stdlib_Ordering.t,
 ): Stdlib_Ordering.t;
+
+export function isEmpty<A>(arr: A[]): boolean;
 
 export function indexOfOpt<A>(arr: A[], item: A): rescript.option<number>;
 
@@ -52,18 +52,18 @@ export function findLastIndexOpt<A>(
   finder: (arg0: A) => boolean,
 ): rescript.option<number>;
 
-export function shuffle<A>(xs: A[]): void;
-
-export function toShuffled<A>(xs: A[]): A[];
-
 export function filterMap<A, B>(a: A[], f: (arg0: A) => rescript.option<B>): B[];
-
-export function keepSome<A>(__x: rescript.option<A>[]): A[];
 
 export function filterMapWithIndex<A, B>(
   a: A[],
   f: (arg0: A, arg1: number) => rescript.option<B>,
 ): B[];
+
+export function keepSome<A>(__x: rescript.option<A>[]): A[];
+
+export function toShuffled<A>(xs: A[]): A[];
+
+export function shuffle<A>(xs: A[]): void;
 
 export function findMap<A, B>(
   arr: A[],

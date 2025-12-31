@@ -18,9 +18,9 @@ export function copy<A>(n: t<A>): t<A>;
 
 export function create<A>(l: t<A>, v: A, r: t<A>): t<A>;
 
-export function singleton<A>(x: A): t<A>;
-
 export function bal<A>(l: t<A>, v: A, r: t<A>): t<A>;
+
+export function singleton<A>(x: A): t<A>;
 
 export function minimum<A>(n: t<A>): rescript.option<A>;
 
@@ -51,10 +51,16 @@ export function joinShared<A>(ln: t<A>, v: A, rn: t<A>): t<A>;
 
 export function concatShared<A>(t1: t<A>, t2: t<A>): t<A>;
 
+export function keepShared<A>(n: t<A>, p: (arg0: A) => boolean): t<A>;
+
+export function keepCopy<A>(n: t<A>, p: (arg0: A) => boolean): t<A>;
+
 export function partitionShared<A>(
   n: t<A>,
   p: (arg0: A) => boolean,
 ): [t<A>, t<A>];
+
+export function partitionCopy<A>(n: t<A>, p: (arg0: A) => boolean): [t<A>, t<A>];
 
 export function lengthNode<A>(n: node<A>): number;
 
@@ -68,21 +74,15 @@ export function fillArray<A>(n: node<A>, i: number, arr: A[]): number;
 
 export function toArray<A>(n: t<A>): A[];
 
+export function fromSortedArrayAux<A>(arr: A[], off: number, len: number): t<A>;
+
 export function fromSortedArrayRevAux<A>(
   arr: A[],
   off: number,
   len: number,
 ): t<A>;
 
-export function fromSortedArrayAux<A>(arr: A[], off: number, len: number): t<A>;
-
 export function fromSortedArrayUnsafe<A>(arr: A[]): t<A>;
-
-export function keepShared<A>(n: t<A>, p: (arg0: A) => boolean): t<A>;
-
-export function keepCopy<A>(n: t<A>, p: (arg0: A) => boolean): t<A>;
-
-export function partitionCopy<A>(n: t<A>, p: (arg0: A) => boolean): [t<A>, t<A>];
 
 export function has<A, B>(t: t<A>, x: A, cmp: cmp<A, B>): boolean;
 
@@ -98,10 +98,10 @@ export function getUndefined<A, B>(n: t<A>, x: A, cmp: cmp<A, B>): Js.undefined_
 
 export function getOrThrow<A, B>(n: t<A>, x: A, cmp: cmp<A, B>): A;
 
-export function balMutate<A>(nt: node<A>): node<A>;
+export function fromArray<A, B>(xs: A[], cmp: cmp<A, B>): t<A>;
 
 export function addMutate<A, B>(cmp: cmp<A, B>, t: t<A>, x: A): t<A>;
 
-export function fromArray<A, B>(xs: A[], cmp: cmp<A, B>): t<A>;
+export function balMutate<A>(nt: node<A>): node<A>;
 
 export function removeMinAuxWithRootMutate<A>(nt: node<A>, n: node<A>): t<A>;

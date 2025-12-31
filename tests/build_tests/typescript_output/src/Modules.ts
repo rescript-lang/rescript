@@ -58,6 +58,10 @@ export type ExtendedMath = {
   divide: (arg0: number, arg1: number) => number;
 };
 
+export interface Printable<T> {
+  readonly toString: (arg0: T) => string;
+}
+
 declare namespace PrintableInt {
   type t = number;
 }

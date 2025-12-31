@@ -70,8 +70,8 @@ export function decodeBoolean(json: t): rescript.option<boolean>;
 
 export function decodeNull(json: t): rescript.option<Js_null.t<Js_string.t | number | rescript.dict<Kind.json> | Kind.json[] | boolean | Js_types.null_val>>;
 
-export function serializeExn<A>(
-  x: A,
-): string;
+export function deserializeUnsafe<A>(
+  s: string,
+): A;
 
-export function deserializeUnsafe<A>(s: string): A;
+export function serializeExn<A>(x: A): string;

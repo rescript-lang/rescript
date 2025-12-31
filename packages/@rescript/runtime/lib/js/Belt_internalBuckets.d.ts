@@ -19,8 +19,6 @@ export function reduce<A, B, C>(
   f: (arg0: C, arg1: A, arg2: B) => C,
 ): C;
 
-export function getBucketHistogram<A, B, C, D>(h: t<A, B, C, D>): number[];
-
 export function logStats<A, B, C, D>(h: t<A, B, C, D>): void;
 
 export function keepMapInPlace<A, B>(
@@ -39,3 +37,5 @@ export function keysToArray<A, B, C>(h: t<A, B, A, C>): A[];
 export function valuesToArray<A, B, C>(h: t<A, B, C, B>): B[];
 
 export function toArray<A, B>(h: t<A, B, A, B>): [A, B][];
+
+export function getBucketHistogram<A, B, C, D>(h: t<A, B, C, D>): number[];

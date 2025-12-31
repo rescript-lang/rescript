@@ -124,8 +124,7 @@ let _j = Js_pass_debug.dump
 let compile
     (output_prefix : string)
     export_idents
-    ~(type_decls : Ts.type_decl list)
-    ~(value_exports : Ts.value_export list)
+    ~(dts_exports : Ts.dts_export list)
     (lam : Lambda.lambda)  = 
   let export_ident_sets = Set_ident.of_list export_idents in 
   (* To make toplevel happy - reentrant for js-demo *)
@@ -240,8 +239,7 @@ let js : J.program =
     exports = meta_exports;
     export_set;
     block = body;
-    type_exports = type_decls;
-    value_exports;
+    dts_exports;
   }
 in
 js 
@@ -368,8 +366,7 @@ let lambda_as_module
            Ext_pervasives.with_file_as_chan dts_file (fun chan ->
                let f = Ext_pp.from_channel chan in
                Ts.pp_dts_file ~module_name ~resolve_module_path ~suffix f
-                 dts_imports lambda_output.program.type_exports
-                 lambda_output.program.value_exports));
+                 dts_imports lambda_output.program.dts_exports));
         if !Warnings.has_warnings  then begin
           Warnings.has_warnings := false ;
 #ifndef BROWSER

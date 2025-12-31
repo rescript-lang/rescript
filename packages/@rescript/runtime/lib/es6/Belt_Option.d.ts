@@ -1,15 +1,28 @@
 import type * as rescript from "@rescript/runtime/types";
 
+export function keepU<A>(
+  arg0: rescript.option<A>,
+  arg1: (arg0: A) => boolean,
+): rescript.option<A>;
+
 export function keep<A>(
   opt: rescript.option<A>,
   p: (arg0: A) => boolean,
 ): rescript.option<A>;
 
+export function forEachU<A>(arg0: rescript.option<A>, arg1: (arg0: A) => void): void;
+
 export function forEach<A>(opt: rescript.option<A>, f: (arg0: A) => void): void;
+
+export function getExn<A>(arg0: rescript.option<A>): A;
 
 export function getOrThrow<A>(x: rescript.option<A>): A;
 
-export function getExn<A>(arg0: rescript.option<A>): A;
+export function mapWithDefaultU<A, B>(
+  arg0: rescript.option<A>,
+  arg1: B,
+  arg2: (arg0: A) => B,
+): B;
 
 export function mapWithDefault<A, B>(
   opt: rescript.option<A>,
@@ -17,7 +30,14 @@ export function mapWithDefault<A, B>(
   f: (arg0: A) => B,
 ): B;
 
+export function mapU<A, B>(arg0: rescript.option<A>, arg1: (arg0: A) => B): rescript.option<B>;
+
 export function map<A, B>(opt: rescript.option<A>, f: (arg0: A) => B): rescript.option<B>;
+
+export function flatMapU<A, B>(
+  arg0: rescript.option<A>,
+  arg1: (arg0: A) => rescript.option<B>,
+): rescript.option<B>;
 
 export function flatMap<A, B>(
   opt: rescript.option<A>,
@@ -35,17 +55,17 @@ export function isSome<A>(x: rescript.option<A>): boolean;
 
 export function isNone<A>(x: rescript.option<A>): boolean;
 
+export function eqU<A, B>(
+  arg0: rescript.option<A>,
+  arg1: rescript.option<B>,
+  arg2: (arg0: A, arg1: B) => boolean,
+): boolean;
+
 export function eq<A, B>(
   a: rescript.option<A>,
   b: rescript.option<B>,
   f: (arg0: A, arg1: B) => boolean,
 ): boolean;
-
-export function cmp<A, B>(
-  a: rescript.option<A>,
-  b: rescript.option<B>,
-  f: (arg0: A, arg1: B) => number,
-): number;
 
 export function cmpU<A, B>(
   arg0: rescript.option<A>,
@@ -53,28 +73,8 @@ export function cmpU<A, B>(
   arg2: (arg0: A, arg1: B) => number,
 ): number;
 
-export function eqU<A, B>(
-  arg0: rescript.option<A>,
-  arg1: rescript.option<B>,
-  arg2: (arg0: A, arg1: B) => boolean,
-): boolean;
-
-export function flatMapU<A, B>(
-  arg0: rescript.option<A>,
-  arg1: (arg0: A) => rescript.option<B>,
-): rescript.option<B>;
-
-export function forEachU<A>(arg0: rescript.option<A>, arg1: (arg0: A) => void): void;
-
-export function keepU<A>(
-  arg0: rescript.option<A>,
-  arg1: (arg0: A) => boolean,
-): rescript.option<A>;
-
-export function mapU<A, B>(arg0: rescript.option<A>, arg1: (arg0: A) => B): rescript.option<B>;
-
-export function mapWithDefaultU<A, B>(
-  arg0: rescript.option<A>,
-  arg1: B,
-  arg2: (arg0: A) => B,
-): B;
+export function cmp<A, B>(
+  a: rescript.option<A>,
+  b: rescript.option<B>,
+  f: (arg0: A, arg1: B) => number,
+): number;

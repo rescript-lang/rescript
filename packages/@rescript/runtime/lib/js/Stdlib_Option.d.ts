@@ -10,9 +10,9 @@ export function filter<A>(
 
 export function forEach<A>(opt: rescript.option<A>, f: (arg0: A) => void): void;
 
-export function getOrThrow<A>(x: rescript.option<A>, message?: string): A;
-
 export function getExn<A>(arg0: rescript.option<A>, message?: string): A;
+
+export function getOrThrow<A>(x: rescript.option<A>, message?: string): A;
 
 export function mapOr<A, B>(opt: rescript.option<A>, default_: B, f: (arg0: A) => B): B;
 

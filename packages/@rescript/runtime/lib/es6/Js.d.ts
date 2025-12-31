@@ -20,9 +20,9 @@ export type nullable<A> =
 
 export type null_undefined<A> = nullable<A>;
 
+export function undefinedToOption<A>(arg0: undefined_<A>): rescript.option<A>;
+
 export type promise<A, E> = rescript.opaque<
   "Js.promise",
   [A, E]
 >;
-
-export function undefinedToOption<A>(arg0: undefined_<A>): rescript.option<A>;

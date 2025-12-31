@@ -4,12 +4,18 @@ export type array_buffer = Js_typed_array2.array_buffer;
 
 export type array_like<A> = Js_typed_array2.array_like<A>;
 
+export interface Type<T> {
+}
+
 declare namespace ArrayBuffer {
   type t = array_buffer;
 }
 export type ArrayBuffer = {
 };
 export const $$ArrayBuffer: ArrayBuffer;
+
+export interface S<Elt, Typed_array> {
+}
 
 declare namespace Int8Array {
   type elt = number;

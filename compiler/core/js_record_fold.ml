@@ -298,15 +298,8 @@ let block : 'a. ('a, block) fn =
 
 let program : 'a. ('a, program) fn =
  fun _self st
-     {
-       block = _x0;
-       exports = _x1;
-       export_set = _x2;
-       type_exports = _x3;
-       value_exports = _x4;
-     } ->
+     {block = _x0; exports = _x1; export_set = _x2; dts_exports = _x3} ->
   ignore _x3;
-  ignore _x4;
   let st = _self.block _self st _x0 in
   st
 

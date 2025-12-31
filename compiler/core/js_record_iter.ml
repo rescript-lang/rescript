@@ -215,16 +215,8 @@ let variable_declaration : variable_declaration fn =
 let block : block fn = fun _self arg -> list _self.statement _self arg
 
 let program : program fn =
- fun _self
-     {
-       block = _x0;
-       exports = _x1;
-       export_set = _x2;
-       type_exports = _x3;
-       value_exports = _x4;
-     } ->
+ fun _self {block = _x0; exports = _x1; export_set = _x2; dts_exports = _x3} ->
   ignore _x3;
-  ignore _x4;
   _self.block _self _x0
 
 let deps_program : deps_program fn =

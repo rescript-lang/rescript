@@ -30,8 +30,7 @@
 val compile :
   string ->
   Ident.t list ->
-  type_decls:Ts.type_decl list ->
-  value_exports:Ts.value_export list ->
+  dts_exports:Ts.dts_export list ->
   Lambda.lambda ->
   J.deps_program
 (** For toplevel, [filename] is [""] which is the same as

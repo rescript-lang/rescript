@@ -153,39 +153,41 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
              || !Js_config.emit_dts
            then Ts.set_env typedtree.str_final_env
          in
-         (* Extract type declarations for TypeScript or .d.ts output.
+         (* Extract all exports (types, values, functors) in source order.
             Use interface_sig if available (from .resi file), otherwise use str_type. *)
-         let type_decls =
+         let dts_exports =
            if
              !Js_config.ts_output = Js_config.Ts_typescript
              || !Js_config.emit_dts
            then
-             Ts.extract_type_decls ~module_name:modulename ~interface_sig
-               typedtree
-           else []
-         in
-         (* Extract value exports for TypeScript or .d.ts generation.
-            Filter to only include identifiers that are actually exported in JS. *)
-         let value_exports =
-           if
-             !Js_config.ts_output = Js_config.Ts_typescript
-             || !Js_config.emit_dts
-           then
+             let cmti_path =
+               let cmti = outputprefix ^ ".cmti" in
+               if Sys.file_exists cmti then Some cmti else None
+             in
+             let all_exports =
+               Ts.extract_all_exports ~module_name:modulename ~interface_sig
+                 ?cmti_path typedtree
+             in
+             (* Filter to only include identifiers that are actually exported in JS *)
              let export_names =
                List.fold_left
                  (fun acc id -> Set_string.add acc (Ident.name id))
                  Set_string.empty exports
              in
              List.filter
-               (fun (ve : Ts.value_export) ->
-                 Set_string.mem export_names ve.ve_name)
-               (Ts.extract_value_exports ~interface_sig typedtree)
+               (fun (export : Ts.dts_export) ->
+                 match export with
+                 | Ts.DtsTypeExport _ -> true (* Types are always exported *)
+                 | Ts.DtsValueExport ve ->
+                   Set_string.mem export_names ve.ve_name
+                 | Ts.DtsFunctorExport fe ->
+                   Set_string.mem export_names fe.fe_name)
+               all_exports
            else []
          in
          let js_program =
            print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
-           |> Lam_compile_main.compile outputprefix exports ~type_decls
-                ~value_exports
+           |> Lam_compile_main.compile outputprefix exports ~dts_exports
          in
          if not !Js_config.cmj_only then
            Lam_compile_main.lambda_as_module js_program outputprefix);

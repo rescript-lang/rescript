@@ -3,42 +3,6 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Js_date from "@rescript/runtime/lib/es6/Js_date.js";
 
-export interface record {
-  readonly foo: string;
-  readonly bar: number;
-}
-
-export type color =
-  | "blue"
-  | "green"
-  | "red";
-
-export type colorWithPayload =
-  | {
-    readonly NAME: "rgb";
-    readonly VAL: [number, number, number];
-  }
-  | {
-    readonly NAME: "hex";
-    readonly VAL: string;
-  };
-
-export interface eventHandler {
-  readonly onClick: () => void;
-  readonly getValue: () => number;
-  readonly transform: (arg0: number) => string;
-}
-
-export type complexCallback = (
-  name: string,
-  value: number,
-  optional1?: rescript.option<string>,
-  optional2?: rescript.option<number>,
-  optional3?: rescript.option<boolean>,
-) => string;
-
-export type jsDate = Js_date.t;
-
 export function add(a: number, b: number): number;
 
 export function greet(name: string): string;
@@ -51,9 +15,29 @@ export function getUnit(): void;
 
 export function getValue(): number;
 
+export interface record {
+  readonly foo: string;
+  readonly bar: number;
+}
+
 export const myRecord: record;
 
+export type color =
+  | "blue"
+  | "green"
+  | "red";
+
 export const myColor: color;
+
+export type colorWithPayload =
+  | {
+    readonly NAME: "rgb";
+    readonly VAL: [number, number, number];
+  }
+  | {
+    readonly NAME: "hex";
+    readonly VAL: string;
+  };
 
 export const myRgb: colorWithPayload;
 
@@ -70,6 +54,12 @@ export const myNumber: number;
 
 export const myString: string;
 
+export interface eventHandler {
+  readonly onClick: () => void;
+  readonly getValue: () => number;
+  readonly transform: (arg0: number) => string;
+}
+
 export const handler: eventHandler;
 
 export function manyParams(
@@ -80,5 +70,15 @@ export function manyParams(
   _phone?: string,
   _address?: string,
 ): string;
+
+export type complexCallback = (
+  name: string,
+  value: number,
+  optional1?: rescript.option<string>,
+  optional2?: rescript.option<number>,
+  optional3?: rescript.option<boolean>,
+) => string;
+
+export type jsDate = Js_date.t;
 
 export function processDate(d: jsDate): jsDate;

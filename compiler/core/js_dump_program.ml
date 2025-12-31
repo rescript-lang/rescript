@@ -31,7 +31,7 @@ let empty_explanation =
 
 let program_is_empty (x : J.program) =
   match x with
-  | {block = []; exports = []; export_set = _; type_exports = _} -> true
+  | {block = []; exports = []; export_set = _; dts_exports = _} -> true
   | _ -> false
 
 let deps_program_is_empty (x : J.deps_program) =
@@ -88,13 +88,23 @@ let node_program ~output_dir f (x : J.deps_program) =
   program f cxt x.program
 
 let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
+  (* Extract type_decls and value_exports from unified dts_exports *)
+  let type_decls, value_exports =
+    List.fold_right
+      (fun export (types, values) ->
+        match export with
+        | Ts.DtsTypeExport td -> (td :: types, values)
+        | Ts.DtsValueExport ve -> (types, ve :: values)
+        | Ts.DtsFunctorExport _ -> (types, values))
+      x.program.dts_exports ([], [])
+  in
   (* For TypeScript mode, initialize type state first to collect runtime types *)
   let () =
     match !Js_config.ts_output with
     | Js_config.Ts_typescript ->
-      Ts.init_type_decls ~module_name x.program.type_exports;
+      Ts.init_type_decls ~module_name type_decls;
       (* Also collect runtime types from value exports for variable type annotations *)
-      Ts.collect_runtime_types_from_value_exports x.program.value_exports
+      Ts.collect_runtime_types_from_value_exports value_exports
     | Js_config.Ts_none -> ()
   in
   (* Print runtime type import first (before regular imports) *)
@@ -115,7 +125,7 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
         Ts.StringSet.add k acc)
   in
   (* Get locally defined modules from type exports *)
-  let local_modules = Ts.collect_local_module_names x.program.type_exports in
+  let local_modules = Ts.collect_local_module_names type_decls in
   (* Print type-only imports for modules needed by type annotations but not imported for values *)
   let () =
     match !Js_config.ts_output with
@@ -167,11 +177,11 @@ let es6_program ~output_dir ~module_name fmt f (x : J.deps_program) =
   let has_type_exports =
     match !Js_config.ts_output with
     | Js_config.Ts_typescript ->
-      Ts.pp_type_decls_only f x.program.type_exports;
+      Ts.pp_type_decls_only f type_decls;
       (* Set up exported value types and module paths for variable annotation lookup *)
-      Ts.set_exported_modules x.program.type_exports;
-      Ts.set_exported_types x.program.value_exports;
-      x.program.type_exports <> []
+      Ts.set_exported_modules type_decls;
+      Ts.set_exported_types value_exports;
+      type_decls <> []
     | Js_config.Ts_none -> false
   in
   (* Add blank line after imports/type exports before code *)

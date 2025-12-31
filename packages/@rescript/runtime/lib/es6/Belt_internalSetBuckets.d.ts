@@ -17,6 +17,6 @@ export function toArray<A, B>(h: t<A, B, A>): A[];
 
 export function reduce<A, B>(h: t<A, B, A>, init: B, f: (arg0: B, arg1: A) => B): B;
 
-export function getBucketHistogram<A, B, C>(h: t<A, B, C>): number[];
-
 export function logStats<A, B, C>(h: t<A, B, C>): void;
+
+export function getBucketHistogram<A, B, C>(h: t<A, B, C>): number[];

@@ -4,6 +4,12 @@ export function strictlySortedLength(xs: element[]): number;
 
 export function isSorted(a: element[]): boolean;
 
+export function stableSortInPlace(a: element[]): void;
+
+export function stableSort(a: element[]): element[];
+
+export function binarySearch(sorted: element[], key: element): number;
+
 export function union(
   src: element[],
   src1ofs: number,
@@ -36,9 +42,3 @@ export function diff(
   dst: element[],
   dstofs: number,
 ): number;
-
-export function stableSortInPlace(a: element[]): void;
-
-export function stableSort(a: element[]): element[];
-
-export function binarySearch(sorted: element[], key: element): number;

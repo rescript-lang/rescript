@@ -46,6 +46,8 @@ export type stringOrInt =
   | string
   | number;
 
+export const defaultUser: User;
+
 export type valid = rescript.opaque<
   "Types.valid",
   []
@@ -75,8 +77,6 @@ export type mixed<A, B, Phantom> = rescript.opaque<
 >;
 
 export type allUsed<A, B> = [A, B];
-
-export const defaultUser: User;
 
 export function validate(s: validated<invalid>): validated<valid>;
 

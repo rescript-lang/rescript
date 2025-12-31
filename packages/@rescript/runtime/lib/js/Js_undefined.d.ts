@@ -3,10 +3,6 @@ import type * as Primitive_js_extern from "./Primitive_js_extern.js";
 
 export type t<A> = Primitive_js_extern.undefined_<A>;
 
-export function to_opt<A>(arg0: t<A>): rescript.option<A>;
-
-export function toOption<A>(arg0: t<A>): rescript.option<A>;
-
 export function test<A>(x: t<A>): boolean;
 
 export function testAny<A>(x: A): boolean;
@@ -20,3 +16,7 @@ export function iter<A>(x: t<A>, f: (arg0: A) => void): void;
 export function fromOption<A>(x: rescript.option<A>): t<A>;
 
 export function from_opt<A>(arg0: rescript.option<A>): t<A>;
+
+export function toOption<A>(arg0: t<A>): rescript.option<A>;
+
+export function to_opt<A>(arg0: t<A>): rescript.option<A>;

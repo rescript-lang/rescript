@@ -19,11 +19,11 @@ export function copy<K, V>(n: t<K, V>): t<K, V>;
 
 export function create<A, B>(l: t<A, B>, x: A, d: B, r: t<A, B>): t<A, B>;
 
+export function bal<A, B>(l: t<A, B>, x: A, d: B, r: t<A, B>): t<A, B>;
+
 export function singleton<A, B>(x: A, d: B): t<A, B>;
 
 export function updateValue<K, V>(n: node<K, V>, newValue: V): node<K, V>;
-
-export function bal<A, B>(l: t<A, B>, x: A, d: B, r: t<A, B>): t<A, B>;
 
 export function minKey<A, B>(n: t<A, B>): rescript.option<A>;
 
@@ -110,13 +110,13 @@ export function keysToArray<A, B>(n: t<A, B>): A[];
 
 export function valuesToArray<A, B>(n: t<A, B>): B[];
 
-export function fromSortedArrayRevAux<A, B>(
+export function fromSortedArrayAux<A, B>(
   arr: [A, B][],
   off: number,
   len: number,
 ): t<A, B>;
 
-export function fromSortedArrayAux<A, B>(
+export function fromSortedArrayRevAux<A, B>(
   arr: [A, B][],
   off: number,
   len: number,
@@ -146,13 +146,13 @@ export function getUndefined<A, B>(
   cmp: cmp<A, A>,
 ): Js.undefined_<B>;
 
-export function getOrThrow<A, B>(n: t<A, B>, x: A, cmp: cmp<A, A>): B;
-
 export function getWithDefault<A, B>(n: t<A, B>, x: A, def: B, cmp: cmp<A, A>): B;
+
+export function getOrThrow<A, B>(n: t<A, B>, x: A, cmp: cmp<A, A>): B;
 
 export function has<A, B>(n: t<A, B>, x: A, cmp: cmp<A, A>): boolean;
 
-export function balMutate<A, B>(nt: node<A, B>): node<A, B>;
+export function fromArray<A, B, Id>(xs: [A, B][], cmp: cmp<A, Id>): t<A, B>;
 
 export function updateMutate<A, B, Id>(
   t: t<A, B>,
@@ -161,7 +161,7 @@ export function updateMutate<A, B, Id>(
   cmp: cmp<A, Id>,
 ): t<A, B>;
 
-export function fromArray<A, B, Id>(xs: [A, B][], cmp: cmp<A, Id>): t<A, B>;
+export function balMutate<A, B>(nt: node<A, B>): node<A, B>;
 
 export function removeMinAuxWithRootMutate<A, B>(
   nt: node<A, B>,

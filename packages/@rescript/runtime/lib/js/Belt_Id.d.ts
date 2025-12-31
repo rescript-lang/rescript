@@ -18,28 +18,59 @@ export type cmp<A, Id> = rescript.opaque<
   (arg0: A, arg1: A) => number
 >;
 
-export type comparable<Key, Id> = rescript.opaque<
-  "Belt_Id.comparable",
-  [Key, Id],
-  any
->;
+export interface Comparable<Identity, T> {
+  readonly cmp: cmp<T, Identity>;
+}
 
-export type hashable<Key, Id> = rescript.opaque<
-  "Belt_Id.hashable",
-  [Key, Id],
-  any
->;
+export type comparable<Key, Id> = Comparable<Id, Key>;
 
-export function comparable<A>(cmp: (arg0: A, arg1: A) => number): any;
+export function MakeComparableU<Existential$Identity, T>(
+  M: {
+    readonly cmp: (arg0: T, arg1: T) => number;
+  }
+): Comparable<Existential$Identity, T>;
 
-export function hashable<A>(
+export function MakeComparable<Existential$Identity, T>(
+  M: {
+    readonly cmp: (arg0: T, arg1: T) => number;
+  }
+): Comparable<Existential$Identity, T>;
+
+export function comparableU<Existential$Identity, A>(
+  cmp: (arg0: A, arg1: A) => number,
+): Comparable<Existential$Identity, A>;
+
+export function comparable<Existential$Identity, A>(
+  cmp: (arg0: A, arg1: A) => number,
+): Comparable<Existential$Identity, A>;
+
+export interface Hashable<Identity, T> {
+  readonly hash: hash<T, Identity>;
+  readonly eq: eq<T, Identity>;
+}
+
+export type hashable<Key, Id> = Hashable<Id, Key>;
+
+export function MakeHashableU<Existential$Identity, T>(
+  M: {
+    readonly hash: (arg0: T) => number;
+    readonly eq: (arg0: T, arg1: T) => boolean;
+  }
+): Hashable<Existential$Identity, T>;
+
+export function MakeHashable<Existential$Identity, T>(
+  M: {
+    readonly hash: (arg0: T) => number;
+    readonly eq: (arg0: T, arg1: T) => boolean;
+  }
+): Hashable<Existential$Identity, T>;
+
+export function hashableU<Existential$Identity, A>(
   hash: (arg0: A) => number,
   eq: (arg0: A, arg1: A) => boolean,
-): any;
+): Hashable<Existential$Identity, A>;
 
-export function comparableU<A>(cmp: (arg0: A, arg1: A) => number): any;
-
-export function hashableU<A>(
+export function hashable<Existential$Identity, A>(
   hash: (arg0: A) => number,
   eq: (arg0: A, arg1: A) => boolean,
-): any;
+): Hashable<Existential$Identity, A>;
