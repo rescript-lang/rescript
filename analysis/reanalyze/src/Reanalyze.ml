@@ -146,8 +146,10 @@ let processFilesSequential ~config (cmtFilePaths : string list) :
       {dce_data_list = !dce_data_list; exception_results = !exception_results})
 
 (** Process all cmt files and return results for DCE and Exception analysis.
-    Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
+    Conceptually: map process_cmt_file over all files.
+    If file_stats is provided, it will be updated with processing statistics. *)
+let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file
+    ?(file_stats : ReactiveAnalysis.processing_stats option) () :
     all_files_result =
   let cmtFilePaths =
     let all = collectCmtFilePaths ~cmtRoot in
@@ -158,9 +160,15 @@ let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
   (* Reactive mode: use incremental processing that skips unchanged files *)
   match reactive_collection with
   | Some collection ->
-    let result =
+    let result, stats =
       ReactiveAnalysis.process_files ~collection ~config cmtFilePaths
     in
+    (match file_stats with
+    | Some fs ->
+      fs.total_files <- stats.total_files;
+      fs.processed <- stats.processed;
+      fs.from_cache <- stats.from_cache
+    | None -> ());
     {
       dce_data_list = result.dce_data_list;
       exception_results = result.exception_results;
@@ -180,10 +188,11 @@ let shuffle_list lst =
   Array.to_list arr
 
 let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-    ~reactive_liveness ~reactive_solver ~skip_file =
+    ~reactive_liveness ~reactive_solver ~skip_file ?file_stats () =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
     processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection ~skip_file
+      ?file_stats ()
   in
   (* Get exception results from reactive collection if available *)
   let exception_results =
@@ -549,7 +558,7 @@ let runAnalysisAndReport ~cmtRoot =
       else None
     in
     runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-      ~reactive_liveness ~reactive_solver ~skip_file;
+      ~reactive_liveness ~reactive_solver ~skip_file ();
     (* Report issue count with diff *)
     let current_count = Log_.Stats.get_issue_count () in
     if !Cli.churn > 0 then (
@@ -776,6 +785,8 @@ module ReanalyzeServer = struct
     expected_reanalyze_args: string list;
   }
 
+  type server_stats = {mutable request_count: int}
+
   type server_state = {
     config: server_config;
     cmtRoot: string option;
@@ -784,6 +795,7 @@ module ReanalyzeServer = struct
     reactive_merge: ReactiveMerge.t;
     reactive_liveness: ReactiveLiveness.t;
     reactive_solver: ReactiveSolver.t;
+    stats: server_stats;
   }
 
   let usage () =
@@ -970,15 +982,21 @@ Examples:
               reactive_merge;
               reactive_liveness;
               reactive_solver;
+              stats = {request_count = 0};
             })
 
   let run_one_request (state : server_state) (req : ReanalyzeIpc.request) :
       ReanalyzeIpc.response =
+    state.stats.request_count <- state.stats.request_count + 1;
+    let req_num = state.stats.request_count in
+    let t_start = Unix.gettimeofday () in
     let expected = Array.of_list state.config.expected_reanalyze_args in
     let got = normalize_request_argv req.argv in
-    if got <> expected then
+    if got <> expected then (
       let expected_s = String.concat " " state.config.expected_reanalyze_args in
       let got_s = String.concat " " (Array.to_list got) in
+      Printf.eprintf "[request #%d] argv mismatch (expected: %s, got: %s)\n%!"
+        req_num expected_s got_s;
       {
         exit_code = 2;
         stdout = "";
@@ -986,8 +1004,9 @@ Examples:
           Printf.sprintf
             "reanalyze-server argv mismatch.\nExpected: %s\nGot: %s\n"
             expected_s got_s;
-      }
-    else if state.config.cwd <> None && req.cwd <> state.config.cwd then
+      })
+    else if state.config.cwd <> None && req.cwd <> state.config.cwd then (
+      Printf.eprintf "[request #%d] cwd mismatch\n%!" req_num;
       {
         exit_code = 2;
         stdout = "";
@@ -1000,7 +1019,7 @@ Examples:
             (match req.cwd with
             | Some s -> s
             | None -> "<none>");
-      }
+      })
     else
       let response_of_result res =
         match res with
@@ -1008,28 +1027,50 @@ Examples:
         | Error err ->
           {ReanalyzeIpc.exit_code = 1; stdout = ""; stderr = err ^ "\n"}
       in
-      with_cwd
-        (if state.config.cwd <> None then state.config.cwd else req.cwd)
-        (fun () ->
-          capture_stdout_stderr (fun () ->
-              Log_.Color.setup ();
-              Timing.enabled := !Cli.timing;
-              Reactive.set_debug !Cli.timing;
-              Timing.reset ();
-              Log_.Stats.clear ();
-              if !Cli.json then (
-                (* Match direct CLI output (a leading newline before the JSON array). *)
-                Printf.printf "\n";
-                EmitJson.start ());
-              runAnalysis ~dce_config:state.dce_config ~cmtRoot:state.cmtRoot
-                ~reactive_collection:(Some state.reactive_collection)
-                ~reactive_merge:(Some state.reactive_merge)
-                ~reactive_liveness:(Some state.reactive_liveness)
-                ~reactive_solver:(Some state.reactive_solver) ~skip_file:None;
-              Log_.Stats.report ~config:state.dce_config;
-              Log_.Stats.clear ();
-              if !Cli.json then EmitJson.finish ())
-          |> response_of_result)
+      let issue_count = ref 0 in
+      let dead_count = ref 0 in
+      let live_count = ref 0 in
+      let file_stats : ReactiveAnalysis.processing_stats =
+        {total_files = 0; processed = 0; from_cache = 0}
+      in
+      let resp =
+        with_cwd
+          (if state.config.cwd <> None then state.config.cwd else req.cwd)
+          (fun () ->
+            capture_stdout_stderr (fun () ->
+                Log_.Color.setup ();
+                Timing.enabled := !Cli.timing;
+                Reactive.set_debug !Cli.timing;
+                Timing.reset ();
+                Log_.Stats.clear ();
+                if !Cli.json then (
+                  (* Match direct CLI output (a leading newline before the JSON array). *)
+                  Printf.printf "\n";
+                  EmitJson.start ());
+                runAnalysis ~dce_config:state.dce_config ~cmtRoot:state.cmtRoot
+                  ~reactive_collection:(Some state.reactive_collection)
+                  ~reactive_merge:(Some state.reactive_merge)
+                  ~reactive_liveness:(Some state.reactive_liveness)
+                  ~reactive_solver:(Some state.reactive_solver) ~skip_file:None
+                  ~file_stats ();
+                issue_count := Log_.Stats.get_issue_count ();
+                let d, l = ReactiveSolver.stats ~t:state.reactive_solver in
+                dead_count := d;
+                live_count := l;
+                Log_.Stats.report ~config:state.dce_config;
+                Log_.Stats.clear ();
+                if !Cli.json then EmitJson.finish ())
+            |> response_of_result)
+      in
+      let t_end = Unix.gettimeofday () in
+      let elapsed_ms = (t_end -. t_start) *. 1000.0 in
+      Printf.eprintf
+        "[request #%d] %.1fms | issues: %d | dead: %d | live: %d | files: %d \
+         processed, %d cached\n\
+         %!"
+        req_num elapsed_ms !issue_count !dead_count !live_count
+        file_stats.processed file_stats.from_cache;
+      resp
 
   let serve (state : server_state) : unit =
     unlink_if_exists state.config.socket_path;
