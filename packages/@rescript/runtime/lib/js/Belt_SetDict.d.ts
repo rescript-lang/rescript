@@ -1,11 +1,12 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalAVLset from "./Belt_internalAVLset.js";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
 export type t<Value, Identity> = rescript.opaque<
   "Belt_SetDict.t",
-  [Value, Identity],
-  Belt_internalAVLset.t<K>
+  [Identity],
+  Belt_internalAVLset.t<Value>
 >;
 
 export type cmp<Value, Id> = Belt_Id.cmp<Value, Id>;

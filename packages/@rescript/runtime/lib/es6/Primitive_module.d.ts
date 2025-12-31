@@ -1,5 +1,6 @@
 import type * as rescript from "@rescript/runtime/types";
 import type * as Primitive_object from "./Primitive_object.js";
+import type * as Primitive_object_extern from "./Primitive_object_extern.js";
 
 export type shape = rescript.opaque<
   "Primitive_module.shape",

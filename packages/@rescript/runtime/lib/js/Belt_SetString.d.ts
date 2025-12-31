@@ -1,4 +1,5 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalSetString from "./Belt_internalSetString.js";
 import type * as Js from "./Js.js";
 
 export type value = string;

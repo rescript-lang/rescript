@@ -5,9 +5,9 @@ import type * as Js from "./Js.js";
 
 export type t<Key, Value, Identity> = rescript.opaque<
   "Belt_Map.t",
-  [Key, Value, Identity],
+  [Value, Identity],
   {
-    readonly cmp: cmp<K, Id>;
+    readonly cmp: Belt_Id.cmp<Key, Id>;
     readonly data: Belt_MapDict.t<K, V, Id>;
   }
 >;

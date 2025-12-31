@@ -6,8 +6,8 @@ export type t<A> = rescript.opaque<
   [],
   {
     length: number;
-    first: cell<A>;
-    last: cell<A>;
+    first: rescript.option<node<A>>;
+    last: rescript.option<node<A>>;
   }
 >;
 

@@ -764,6 +764,69 @@ let has_phantom_params (type_params : type_param list) (body : ts_type) : bool =
     (* If any declared param is not used in the body, we have phantom params *)
     not (StringSet.subset declared_params used_params)
 
+(** Rename type variables in a ts_type according to a mapping.
+    Used to align implementation type variable names with signature type variable names. *)
+let rec rename_type_vars (var_map : string StringMap.t) (ty : ts_type) : ts_type
+    =
+  match ty with
+  | TypeVar name -> (
+    match StringMap.find_opt name var_map with
+    | Some new_name -> TypeVar new_name
+    | None -> ty)
+  | Array elem -> Array (rename_type_vars var_map elem)
+  | Readonly elem -> Readonly (rename_type_vars var_map elem)
+  | Promise elem -> Promise (rename_type_vars var_map elem)
+  | Tuple types -> Tuple (List.map (rename_type_vars var_map) types)
+  | Union types -> Union (List.map (rename_type_vars var_map) types)
+  | Intersection types ->
+    Intersection (List.map (rename_type_vars var_map) types)
+  | Object {properties; index_sig; call_sig} ->
+    Object
+      {
+        properties =
+          List.map
+            (fun p -> {p with prop_type = rename_type_vars var_map p.prop_type})
+            properties;
+        index_sig =
+          (match index_sig with
+          | Some {index_key; index_value} ->
+            Some
+              {
+                index_key = rename_type_vars var_map index_key;
+                index_value = rename_type_vars var_map index_value;
+              }
+          | None -> None);
+        call_sig =
+          (match call_sig with
+          | Some fn -> Some (rename_type_vars_fn var_map fn)
+          | None -> None);
+      }
+  | Function fn -> Function (rename_type_vars_fn var_map fn)
+  | TypeRef tr ->
+    TypeRef {tr with args = List.map (rename_type_vars var_map) tr.args}
+  | RuntimeType rt ->
+    RuntimeType
+      {rt with rt_args = List.map (rename_type_vars var_map) rt.rt_args}
+  | Literal _ | Any | Unknown | Never | Void | Null | Undefined | Boolean
+  | Number | Bigint | String | Symbol ->
+    ty
+
+and rename_type_vars_fn (var_map : string StringMap.t) (fn : fn_type) : fn_type
+    =
+  {
+    fn with
+    fn_params =
+      List.map
+        (fun p -> {p with param_type = rename_type_vars var_map p.param_type})
+        fn.fn_params;
+    fn_rest =
+      (match fn.fn_rest with
+      | Some p ->
+        Some {p with param_type = rename_type_vars var_map p.param_type}
+      | None -> None);
+    fn_return = rename_type_vars var_map fn.fn_return;
+  }
+
 (** Forward reference for printing a ts_type (set later to break cyclic dependency) *)
 let pp_ts_type_ref : (Ext_pp.t -> ts_type -> unit) ref = ref (fun _ _ -> ())
 
@@ -911,7 +974,12 @@ let rec collect_type_deps_decl (decl : type_decl) : unit =
           List.iter (fun p -> collect_type_deps p.prop_type) props);
         collect_type_deps case.gc_result_type)
       cases
-  | OpaqueType _ -> RuntimeTypes.use_opaque ()
+  | OpaqueType {underlying; _} -> (
+    RuntimeTypes.use_opaque ();
+    (* Collect dependencies from underlying type if present *)
+    match underlying with
+    | Some ty -> collect_type_deps ty
+    | None -> ())
   | ExternalType {external_name; external_module; external_import_kind; _} -> (
     (* Track external type imports for types from external packages *)
     match external_module with
@@ -1722,7 +1790,7 @@ and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
       match ModuleAliases.find (Ident.name id) with
       | Some alias_path -> alias_path
       | None -> (
-        (* Fall back to Env.find_module *)
+        (* Fall back to Env.find_module for module aliases *)
         try
           match Env.find_module p env with
           | {md_type = Mty_alias (_, alias_path)} -> alias_path
@@ -1762,111 +1830,280 @@ and ts_type_of_constr (path : Path.t) (args : Types.type_expr list) : ts_type =
   | ["exn"], [] -> RuntimeType {rt_name = "exn"; rt_args = []}
   | ["unknown"], [] -> Unknown
   | _ -> (
-    (* Generic type reference with @as renaming applied.
-       Module aliases are resolved in type_display_name. *)
-    let type_name = type_display_name normalized_path in
-    let simple_name = Path.last normalized_path in
-    (* For GADT lookup, we need to check with escaped names since GADTs are registered
-       with escaped names (e.g., "number_" for a GADT named "number") *)
-    let escaped_simple_name = escape_ts_type_name simple_name in
-    let escaped_type_name = escape_ts_type_name type_name in
-    (* Check if this is a GADT type - if so, handle specially
-       Try both qualified and simple names since registration uses escaped name *)
-    if
-      GadtSubUnions.is_gadt escaped_type_name
-      || GadtSubUnions.is_gadt escaped_simple_name
-    then
-      let gadt_name =
-        if GadtSubUnions.is_gadt escaped_type_name then escaped_type_name
-        else escaped_simple_name
+    (* For local types (Pident) that are NOT exported in the signature,
+       try to expand the type alias by using its manifest.
+       This handles cases like Belt_HashMap where implementation has
+       "type hash<'a, 'id> = Belt_Id.hash<'a, 'id>" but hash is not exported. *)
+    match normalized_path with
+    | Path.Pident id -> (
+      let stamp = Ident.binding_time id in
+      let type_name_str = Ident.name id in
+      (* Check if type is exported by stamp OR by name.
+         We need to check by name because implementation types have different
+         stamps than signature types, but if the name is unambiguously exported,
+         we should treat it as exported. *)
+      let is_exported =
+        LocalTypeQualifier.get_qualified_by_stamp stamp <> None
+        || LocalTypeQualifier.get_qualified_by_name type_name_str <> None
       in
-      (* For GADT types, check if we can use a sub-union *)
-      match args with
-      | [arg] -> (
-        (* Single type argument - try to find matching sub-union *)
-        let key =
-          match arg.Types.desc with
-          | Types.Tconstr (arg_path, [], _) ->
-            Some (String.lowercase_ascii (Path.last arg_path))
-          | Types.Tlink t | Types.Tsubst t -> (
-            match t.Types.desc with
+      if not is_exported then
+        (* Type is not exported - try to expand by following manifest *)
+        match get_env () with
+        | Some env -> (
+          try
+            let decl = Env.find_type normalized_path env in
+            match decl.type_manifest with
+            | Some manifest_ty ->
+              (* Substitute type parameters in the manifest.
+                 decl.type_params are the formal params, args are the actual args *)
+              let substituted =
+                if List.length decl.type_params = List.length args then
+                  (* Create a substitution from formal params to actual args *)
+                  let subst =
+                    List.fold_left2
+                      (fun acc formal actual ->
+                        match formal.Types.desc with
+                        | Types.Tvar _ -> (formal.Types.id, actual) :: acc
+                        | _ -> acc)
+                      [] decl.type_params args
+                  in
+                  (* Apply substitution to the manifest *)
+                  let rec apply_subst ty =
+                    match List.assoc_opt ty.Types.id subst with
+                    | Some replacement -> replacement
+                    | None -> (
+                      match ty.Types.desc with
+                      | Types.Tlink t | Types.Tsubst t -> apply_subst t
+                      | _ -> ty)
+                  in
+                  apply_subst manifest_ty
+                else manifest_ty
+              in
+              ts_type_of_type_expr substituted
+            | None ->
+              (* No manifest, fall through to normal handling *)
+              raise Not_found
+          with Not_found ->
+            (* Fall through to normal handling *)
+            let type_name = type_display_name normalized_path in
+            let simple_name = Path.last normalized_path in
+            let final_name =
+              if is_ts_reserved_type_name simple_name then simple_name ^ "_"
+              else type_name
+            in
+            TypeRef
+              {
+                name = final_name;
+                args = List.map ts_type_of_type_expr args;
+                source_module = None;
+              })
+        | None ->
+          (* No env, fall through to normal handling *)
+          let type_name = type_display_name normalized_path in
+          let simple_name = Path.last normalized_path in
+          let final_name =
+            if is_ts_reserved_type_name simple_name then simple_name ^ "_"
+            else type_name
+          in
+          TypeRef
+            {
+              name = final_name;
+              args = List.map ts_type_of_type_expr args;
+              source_module = None;
+            }
+      else
+        (* Type is exported, use normal handling below *)
+        let type_name = type_display_name normalized_path in
+        let simple_name = Path.last normalized_path in
+        let escaped_simple_name = escape_ts_type_name simple_name in
+        let escaped_type_name = escape_ts_type_name type_name in
+        if
+          GadtSubUnions.is_gadt escaped_type_name
+          || GadtSubUnions.is_gadt escaped_simple_name
+        then
+          let gadt_name =
+            if GadtSubUnions.is_gadt escaped_type_name then escaped_type_name
+            else escaped_simple_name
+          in
+          match args with
+          | [arg] -> (
+            let key =
+              match arg.Types.desc with
+              | Types.Tconstr (arg_path, [], _) ->
+                Some (String.lowercase_ascii (Path.last arg_path))
+              | Types.Tlink t | Types.Tsubst t -> (
+                match t.Types.desc with
+                | Types.Tconstr (arg_path, [], _) ->
+                  Some (String.lowercase_ascii (Path.last arg_path))
+                | _ -> None)
+              | _ -> None
+            in
+            match key with
+            | Some k when GadtSubUnions.get_sub_union_key gadt_name k <> None ->
+              TypeRef
+                {name = gadt_name ^ "$" ^ k; args = []; source_module = None}
+            | _ -> TypeRef {name = gadt_name; args = []; source_module = None})
+          | _ -> TypeRef {name = gadt_name; args = []; source_module = None}
+        else
+          let path_name = Path.name normalized_path in
+          match State.InlineRecordDefs.find path_name with
+          | Some inline_decl -> (
+            match inline_decl.type_kind with
+            | Types.Type_record (labels, _) ->
+              let properties =
+                List.map
+                  (fun (ld : Types.label_declaration) ->
+                    let name =
+                      match get_as_string ld.ld_attributes with
+                      | Some renamed -> renamed
+                      | None -> Ident.name ld.ld_id
+                    in
+                    {
+                      prop_name = name;
+                      prop_type = ts_type_of_type_expr ld.ld_type;
+                      prop_optional = ld.ld_optional;
+                      prop_readonly = ld.ld_mutable = Asttypes.Immutable;
+                    })
+                  labels
+              in
+              Object {properties; index_sig = None; call_sig = None}
+            | _ -> Any)
+          | None ->
+            let final_name =
+              if is_ts_reserved_type_name simple_name then
+                match String.rindex_opt type_name '.' with
+                | Some idx ->
+                  String.sub type_name 0 (idx + 1) ^ simple_name ^ "_"
+                | None -> simple_name ^ "_"
+              else type_name
+            in
+            let source_module =
+              match String.index_opt final_name '.' with
+              | Some idx -> Some (String.sub final_name 0 idx)
+              | None -> None
+            in
+            TypeRef
+              {
+                name = final_name;
+                args = List.map ts_type_of_type_expr args;
+                source_module;
+              })
+    | _ -> (
+      (* Not a Pident - use normal handling *)
+      (* Generic type reference with @as renaming applied.
+         Module aliases are resolved in type_display_name. *)
+      let type_name = type_display_name normalized_path in
+      let simple_name = Path.last normalized_path in
+      (* For GADT lookup, we need to check with escaped names since GADTs are registered
+       with escaped names (e.g., "number_" for a GADT named "number") *)
+      let escaped_simple_name = escape_ts_type_name simple_name in
+      let escaped_type_name = escape_ts_type_name type_name in
+      (* Check if this is a GADT type - if so, handle specially
+       Try both qualified and simple names since registration uses escaped name *)
+      if
+        GadtSubUnions.is_gadt escaped_type_name
+        || GadtSubUnions.is_gadt escaped_simple_name
+      then
+        let gadt_name =
+          if GadtSubUnions.is_gadt escaped_type_name then escaped_type_name
+          else escaped_simple_name
+        in
+        (* For GADT types, check if we can use a sub-union *)
+        match args with
+        | [arg] -> (
+          (* Single type argument - try to find matching sub-union *)
+          let key =
+            match arg.Types.desc with
             | Types.Tconstr (arg_path, [], _) ->
               Some (String.lowercase_ascii (Path.last arg_path))
-            | _ -> None)
-          | _ -> None
-        in
-        match key with
-        | Some k when GadtSubUnions.get_sub_union_key gadt_name k <> None ->
-          (* Use sub-union type *)
-          TypeRef {name = gadt_name ^ "$" ^ k; args = []; source_module = None}
+            | Types.Tlink t | Types.Tsubst t -> (
+              match t.Types.desc with
+              | Types.Tconstr (arg_path, [], _) ->
+                Some (String.lowercase_ascii (Path.last arg_path))
+              | _ -> None)
+            | _ -> None
+          in
+          match key with
+          | Some k when GadtSubUnions.get_sub_union_key gadt_name k <> None ->
+            (* Use sub-union type *)
+            TypeRef
+              {name = gadt_name ^ "$" ^ k; args = []; source_module = None}
+          | _ ->
+            (* No sub-union, use main union type without args *)
+            TypeRef {name = gadt_name; args = []; source_module = None})
         | _ ->
-          (* No sub-union, use main union type without args *)
-          TypeRef {name = gadt_name; args = []; source_module = None})
-      | _ ->
-        (* No args or multiple args - use main union type *)
-        TypeRef {name = gadt_name; args = []; source_module = None}
-    else
-      (* Check if this is an inline record definition that should be inlined.
+          (* No args or multiple args - use main union type *)
+          TypeRef {name = gadt_name; args = []; source_module = None}
+      else
+        (* Check if this is an inline record definition that should be inlined.
          These have dotted names like "input.create" and were registered during
          type extraction. Instead of generating an invalid TypeRef with dots,
          we inline the record type structure. *)
-      let path_name = Path.name normalized_path in
-      match State.InlineRecordDefs.find path_name with
-      | Some inline_decl -> (
-        (* Found an inline record - convert its record type to inline Object type *)
-        match inline_decl.type_kind with
-        | Types.Type_record (labels, _) ->
-          let properties =
-            List.map
-              (fun (ld : Types.label_declaration) ->
-                let name =
-                  match get_as_string ld.ld_attributes with
-                  | Some renamed -> renamed
-                  | None -> Ident.name ld.ld_id
-                in
-                {
-                  prop_name = name;
-                  prop_type = ts_type_of_type_expr ld.ld_type;
-                  prop_optional = ld.ld_optional;
-                  prop_readonly = ld.ld_mutable = Asttypes.Immutable;
-                })
-              labels
-          in
-          Object {properties; index_sig = None; call_sig = None}
-        | _ ->
-          (* Not a record type - shouldn't happen for inline records, but handle gracefully *)
-          Any)
-      | None ->
-        (* Normal type reference.
+        let path_name = Path.name normalized_path in
+        match State.InlineRecordDefs.find path_name with
+        | Some inline_decl -> (
+          (* Found an inline record - convert its record type to inline Object type *)
+          match inline_decl.type_kind with
+          | Types.Type_record (labels, _) ->
+            let properties =
+              List.map
+                (fun (ld : Types.label_declaration) ->
+                  let name =
+                    match get_as_string ld.ld_attributes with
+                    | Some renamed -> renamed
+                    | None -> Ident.name ld.ld_id
+                  in
+                  {
+                    prop_name = name;
+                    prop_type = ts_type_of_type_expr ld.ld_type;
+                    prop_optional = ld.ld_optional;
+                    prop_readonly = ld.ld_mutable = Asttypes.Immutable;
+                  })
+                labels
+            in
+            Object {properties; index_sig = None; call_sig = None}
+          | _ ->
+            (* Not a record type - shouldn't happen for inline records, but handle gracefully *)
+            Any)
+        | None ->
+          (* Normal type reference.
            We need to escape the last component if it's a TS reserved name,
            because the type declaration would have been escaped. *)
-        let final_name =
-          if is_ts_reserved_type_name simple_name then
-            (* Escape the last component of the path *)
-            match String.rindex_opt type_name '.' with
-            | Some idx -> String.sub type_name 0 (idx + 1) ^ simple_name ^ "_"
-            | None -> simple_name ^ "_"
-          else type_name
-        in
-        (* Extract source module from path for dependency tracking.
-           Only external types (Pdot) have a source module; local types (Pident) don't. *)
-        let source_module =
-          let rec get_root_module p =
-            match p with
-            | Path.Pident id -> Some (Ident.name id)
-            | Path.Pdot (parent, _, _) -> get_root_module parent
-            | Path.Papply _ -> None
+          let final_name =
+            if is_ts_reserved_type_name simple_name then
+              (* Escape the last component of the path *)
+              match String.rindex_opt type_name '.' with
+              | Some idx -> String.sub type_name 0 (idx + 1) ^ simple_name ^ "_"
+              | None -> simple_name ^ "_"
+            else type_name
           in
-          match normalized_path with
-          | Path.Pdot _ -> get_root_module normalized_path
-          | _ -> None
-        in
-        TypeRef
-          {
-            name = final_name;
-            args = List.map ts_type_of_type_expr args;
-            source_module;
-          })
+          (* Extract source module from path for dependency tracking.
+           For Pdot paths, extract from the path.
+           For Pident paths, if the type_name contains a module qualifier (e.g., "Belt_HashMap.hash"),
+           extract the module name from there. *)
+          let source_module =
+            let rec get_root_module p =
+              match p with
+              | Path.Pident id -> Some (Ident.name id)
+              | Path.Pdot (parent, _, _) -> get_root_module parent
+              | Path.Papply _ -> None
+            in
+            match normalized_path with
+            | Path.Pdot _ -> get_root_module normalized_path
+            | Path.Pident _ -> (
+              (* For local types that got qualified via LocalTypeQualifier,
+               extract the module name from the qualified name *)
+              match String.index_opt final_name '.' with
+              | Some idx -> Some (String.sub final_name 0 idx)
+              | None -> None)
+            | _ -> None
+          in
+          TypeRef
+            {
+              name = final_name;
+              args = List.map ts_type_of_type_expr args;
+              source_module;
+            }))
 
 (** {1 Utility Functions} *)
 
@@ -2920,12 +3157,47 @@ let type_decl_of_type_declaration ~(prefix : string) (id : Ident.t)
                  external_import_kind = ext_import_kind;
                })
         | None ->
-          (* Try to infer underlying type from implementation type *)
+          (* Try to infer underlying type from implementation type.
+             If the implementation has different type variable names than the
+             signature (e.g., impl uses 'a,'b but signature has 'key,'value),
+             we rename them to match the signature's names by position. *)
           let underlying =
             match State.ImplTypeDecls.find qualified_name with
             | Some impl_decl -> (
               match impl_decl.type_manifest with
-              | Some ty -> Some (ts_type_of_type_expr ty)
+              | Some ty ->
+                let inferred = ts_type_of_type_expr ty in
+                (* Build a mapping from impl type params to signature type params by position.
+                   impl_decl.type_params is a type_expr list where each should be Tvar. *)
+                let get_type_var_name (te : Types.type_expr) : string option =
+                  match te.desc with
+                  | Types.Tvar (Some name) ->
+                    Some (String.capitalize_ascii name)
+                  | Types.Tvar None -> None
+                  | _ -> None
+                in
+                let impl_params = impl_decl.type_params in
+                let var_map =
+                  if List.length impl_params <> List.length type_params then
+                    StringMap.empty (* Length mismatch, skip renaming *)
+                  else
+                    List.fold_left2
+                      (fun acc impl_param sig_param ->
+                        match get_type_var_name impl_param with
+                        | Some impl_name ->
+                          let sig_name = sig_param.tp_name in
+                          if impl_name <> sig_name then
+                            StringMap.add impl_name sig_name acc
+                          else acc
+                        | None -> acc)
+                      StringMap.empty impl_params type_params
+                in
+                (* Rename type variables in the inferred type to match signature *)
+                let renamed =
+                  if StringMap.is_empty var_map then inferred
+                  else rename_type_vars var_map inferred
+                in
+                Some renamed
               | None -> (
                 (* No manifest - check if it's a record or variant type definition *)
                 match impl_decl.type_kind with
@@ -3080,9 +3352,13 @@ and collect_impl_type_decls_from_mod_expr ~(prefix : string)
     Uses interface_sig (from .resi file) if available to determine what to export,
     ensuring that private items are not included in .d.ts output.
     Falls back to str_type if no interface signature is provided.
-    Also populates LocalTypeQualifier for stamp-based type lookup. *)
-let rec extract_type_decls ~(interface_sig : Types.signature)
-    (str : Typedtree.structure) : type_decl list =
+    Also populates LocalTypeQualifier for stamp-based type lookup.
+    @param module_name The current module name (e.g., "Belt_HashMap") for qualifying types *)
+let rec extract_type_decls ~(module_name : string)
+    ~(interface_sig : Types.signature) (str : Typedtree.structure) :
+    type_decl list =
+  (* Store module_name for use in ts_type_of_constr *)
+  set_module_name module_name;
   (* Reset LocalTypeQualifier at the start of extraction *)
   LocalTypeQualifier.reset ();
   (* Reset module aliases *)

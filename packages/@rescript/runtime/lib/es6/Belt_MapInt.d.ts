@@ -1,12 +1,13 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalAVLtree from "./Belt_internalAVLtree.js";
 import type * as Js from "./Js.js";
 
 export type key = number;
 
 export type t<Value> = rescript.opaque<
   "Belt_MapInt.t",
-  [Value],
-  Belt_internalAVLtree.t<key, A>
+  [],
+  Belt_internalAVLtree.t<key, Value>
 >;
 
 export const empty: t<V>;

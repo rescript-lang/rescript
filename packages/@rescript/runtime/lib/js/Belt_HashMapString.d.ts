@@ -1,4 +1,5 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalBuckets from "./Belt_internalBuckets.js";
 
 export type key = string;
 

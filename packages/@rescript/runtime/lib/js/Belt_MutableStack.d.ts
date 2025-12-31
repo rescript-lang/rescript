@@ -4,7 +4,7 @@ import type * as Js from "./Js.js";
 export type t<A> = rescript.opaque<
   "Belt_MutableStack.t",
   [],
-  { root: opt_cell<A>; }
+  { root: rescript.option<cell<A>>; }
 >;
 
 export function make<A>(): t<A>;

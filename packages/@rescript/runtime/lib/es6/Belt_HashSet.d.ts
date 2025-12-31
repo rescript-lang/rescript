@@ -1,10 +1,11 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalSetBuckets from "./Belt_internalSetBuckets.js";
 import type * as Belt_Id from "./Belt_Id.js";
 
 export type t<A, Id> = rescript.opaque<
   "Belt_HashSet.t",
   [],
-  Belt_internalSetBuckets.t<hash<A, Id>, eq<A, Id>, A>
+  Belt_internalSetBuckets.t<Belt_Id.hash<A, Id>, Belt_Id.eq<A, Id>, A>
 >;
 
 export type id<A, Id> = Belt_Id.hashable<A, Id>;

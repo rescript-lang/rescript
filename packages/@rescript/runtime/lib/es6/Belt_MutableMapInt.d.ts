@@ -1,4 +1,5 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalMapInt from "./Belt_internalMapInt.js";
 import type * as Js from "./Js.js";
 
 export type key = number;

@@ -1,4 +1,5 @@
 import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalAVLset from "./Belt_internalAVLset.js";
 import type * as Belt_Id from "./Belt_Id.js";
 import type * as Js from "./Js.js";
 
@@ -6,7 +7,7 @@ export type t<Value, Identity> = rescript.opaque<
   "Belt_MutableSet.t",
   [Identity],
   {
-    readonly cmp: cmp<Value, Id>;
+    readonly cmp: Belt_Id.cmp<Key, Id>;
     data: Belt_internalAVLset.t<Value>;
   }
 >;

@@ -159,7 +159,9 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
            if
              !Js_config.ts_output = Js_config.Ts_typescript
              || !Js_config.emit_dts
-           then Ts.extract_type_decls ~interface_sig typedtree
+           then
+             Ts.extract_type_decls ~module_name:modulename ~interface_sig
+               typedtree
            else []
          in
          (* Extract value exports for TypeScript or .d.ts generation.
