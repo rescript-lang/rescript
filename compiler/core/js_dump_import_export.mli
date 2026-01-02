@@ -26,7 +26,8 @@ val default_export : string
 
 val exports : Ext_pp_scope.t -> Ext_pp.t -> Ident.t list -> Ext_pp_scope.t
 
-val es6_export : Ext_pp_scope.t -> Ext_pp.t -> Ident.t list -> Ext_pp_scope.t
+val esmodule_export :
+  Ext_pp_scope.t -> Ext_pp.t -> Ident.t list -> Ext_pp_scope.t
 
 val requires :
   string ->

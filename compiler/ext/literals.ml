@@ -123,12 +123,6 @@ let esmodule = "esmodule"
 
 let commonjs = "commonjs"
 
-let es6 = "es6"
-(* [@@deprecated "Will be removed in v12"] *)
-
-let es6_global = "es6-global"
-(* [@@deprecated "Will be removed in v12"] *)
-
 let unused_attribute = "Unused attribute "
 
 (** Used when produce node compatible paths *)

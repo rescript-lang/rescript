@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "definitions": {
     "module-format": {
-      "enum": ["esmodule", "commonjs", "es6", "es6-global"],
-      "description": "es6 and es6-global are deprecated. Default: commonjs."
+      "enum": ["esmodule", "commonjs"],
+      "description": "Output module format. Default: commonjs."
     },
     "suffix-spec": {
       "type": "string",

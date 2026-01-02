@@ -797,7 +797,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ]
         }
@@ -807,7 +807,7 @@ pub mod tests {
         let specs = config.get_package_specs();
         assert_eq!(specs.len(), 1);
         let spec = specs.first().unwrap();
-        assert_eq!(spec.module, "es6");
+        assert_eq!(spec.module, "esmodule");
         assert_eq!(config.get_suffix(spec), ".mjs");
     }
 
@@ -884,7 +884,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "gentypeconfig": {
@@ -905,7 +905,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": {
@@ -934,7 +934,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": { "version": 4, "preserve": true }
@@ -966,7 +966,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -992,7 +992,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1017,7 +1017,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1042,7 +1042,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1067,7 +1067,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1150,7 +1150,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1185,7 +1185,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],

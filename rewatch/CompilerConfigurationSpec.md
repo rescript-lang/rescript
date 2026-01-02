@@ -147,7 +147,7 @@ Currently supported features:
 
 ### Module-Format
 
-enum: "commonjs" | "es6" | "es6-global"
+enum: "commonjs" | "esmodule"
 
 ### Suffix
 

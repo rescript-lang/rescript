@@ -25,17 +25,15 @@ let ( // ) = Ext_path.combine
 
 let lib_lit = "lib"
 
-let lib_js = lib_lit // "js"
-
 let lib_ocaml = lib_lit // "ocaml"
 
 let lib_bs = lib_lit // "bs"
 
-let lib_es6 = lib_lit // "es6"
+let lib_commonjs = lib_lit // "js"
 
-let lib_es6_global = lib_lit // "es6_global"
+let lib_esmodule = lib_lit // "es6"
 
-let all_lib_artifacts = [lib_js; lib_ocaml; lib_bs; lib_es6; lib_es6_global]
+let all_lib_artifacts = [lib_ocaml; lib_bs; lib_commonjs; lib_esmodule]
 
 let rev_lib_bs = ".." // ".."
 
@@ -50,14 +48,12 @@ let lib_bs_prefix_of_format (x : Ext_module_system.t) =
   match x with
   | Commonjs -> "js"
   | Esmodule -> "es6"
-  | Es6_global -> "es6_global"
 
-(* lib/js, lib/es6, lib/es6_global *)
+(* lib/js, lib/es6 *)
 let top_prefix_of_format (x : Ext_module_system.t) =
   match x with
-  | Commonjs -> lib_js
-  | Esmodule -> lib_es6
-  | Es6_global -> lib_es6_global
+  | Commonjs -> lib_commonjs
+  | Esmodule -> lib_esmodule
 
 let rev_lib_bs_prefix p = rev_lib_bs // p
 

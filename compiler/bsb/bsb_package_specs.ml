@@ -44,26 +44,15 @@ let bad_module_format_message_exn ~loc format =
     format Literals.esmodule Literals.commonjs
 
 let supported_format (x : string) loc : Ext_module_system.t =
-  let _ =
-    if x = Literals.es6 || x = Literals.es6_global then
-      let loc_end =
-        {loc with Lexing.pos_cnum = loc.Lexing.pos_cnum + String.length x}
-      in
-      let loc = {Warnings.loc_start = loc; loc_end; loc_ghost = false} in
-      Location.deprecated ~can_be_automigrated:false loc
-        (Printf.sprintf "Option \"%s\" is deprecated. Use \"%s\" instead." x
-           Literals.esmodule)
-  in
-  if x = Literals.es6 || x = Literals.esmodule then Esmodule
-  else if x = Literals.commonjs then Commonjs
-  else if x = Literals.es6_global then Es6_global
-  else bad_module_format_message_exn ~loc x
+  match x with
+  | x when x = Literals.esmodule -> Esmodule
+  | x when x = Literals.commonjs -> Commonjs
+  | _ -> bad_module_format_message_exn ~loc x
 
 let string_of_format (x : Ext_module_system.t) =
   match x with
   | Commonjs -> Literals.commonjs
   | Esmodule -> Literals.esmodule
-  | Es6_global -> Literals.es6_global
 
 let js_suffix_regexp = Str.regexp "[A-Za-z0-9-_.]*\\.[cm]?js"
 
