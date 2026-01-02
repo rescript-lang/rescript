@@ -49,6 +49,8 @@ let after_parsing_sig ppf outputprefix ast =
     if !Js_config.syntax_only then Warnings.check_fatal ()
     else
       let modulename = module_of_filename outputprefix in
+      Res_extra.set_is_interface true;
+      Res_extra.set_current_outputprefix (Some outputprefix);
       Lam_compile_env.reset ();
       let initial_env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
@@ -65,7 +67,9 @@ let after_parsing_sig ppf outputprefix ast =
       in
       Typemod.save_signature modulename tsg outputprefix !Location.input_name
         initial_env sg;
-      process_with_gentype (outputprefix ^ ".cmti"))
+      process_with_gentype (outputprefix ^ ".cmti");
+      (* Persist any collected code actions to .resextra sidecar *)
+      Res_extra.save ())
 
 let interface ~parser ppf ?outputprefix fname =
   let outputprefix =
@@ -130,6 +134,8 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
     if !Js_config.syntax_only then Warnings.check_fatal ()
     else
       let modulename = Ext_filename.module_name outputprefix in
+      Res_extra.set_is_interface false;
+      Res_extra.set_current_outputprefix (Some outputprefix);
       Lam_compile_env.reset ();
       let env = Res_compmisc.initial_env ~modulename () in
       Env.set_unit_name modulename;
@@ -152,7 +158,9 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
          in
          if not !Js_config.cmj_only then
            Lam_compile_main.lambda_as_module js_program outputprefix);
-      process_with_gentype (outputprefix ^ ".cmt"))
+      process_with_gentype (outputprefix ^ ".cmt");
+      (* Persist any collected code actions to .resextra sidecar *)
+      Res_extra.save ())
 
 let implementation ~parser ppf ?outputprefix fname =
   let outputprefix =

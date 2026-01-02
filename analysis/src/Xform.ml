@@ -897,6 +897,28 @@ let parseInterface ~filename =
 let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
   let pos = startPos in
   let codeActions = ref [] in
+  let add_actions_from_extras ~path ~pos ~package ~codeActions =
+    let map_extra_action (a : Actions.action) =
+      match a.action with
+      | Actions.RemoveOpen ->
+        let range = Loc.rangeOfLoc a.loc in
+        let newText = "" in
+        Some
+          (CodeActions.make ~title:a.description ~kind:RefactorRewrite ~uri:path
+             ~newText ~range)
+      | _ -> None
+    in
+    match Resextra.loadActionsFromPackage ~path ~package with
+    | None -> ()
+    | Some actions ->
+      let relevant =
+        actions
+        |> List.filter (fun (a : Actions.action) -> Loc.hasPos ~pos a.loc)
+      in
+      relevant
+      |> List.filter_map map_extra_action
+      |> List.iter (fun ca -> codeActions := ca :: !codeActions)
+  in
   match Files.classifySourceFile currentFile with
   | Res ->
     let structure, printExpr, printStructureItem, printStandaloneStructure =
@@ -920,7 +942,8 @@ let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
           ~pos:
             (if startPos = endPos then Single startPos
              else Range (startPos, endPos))
-          ~full ~structure ~codeActions ~debug ~currentFile
+          ~full ~structure ~codeActions ~debug ~currentFile;
+        add_actions_from_extras ~path ~pos ~package:full.package ~codeActions
       | None -> ()
     in
 
@@ -929,5 +952,8 @@ let extractCodeActions ~path ~startPos ~endPos ~currentFile ~debug =
     let signature, printSignatureItem = parseInterface ~filename:currentFile in
     AddDocTemplate.Interface.xform ~pos ~codeActions ~path ~signature
       ~printSignatureItem;
+    (match Packages.getPackage ~uri:(Uri.fromPath path) with
+    | Some package -> add_actions_from_extras ~path ~pos ~package ~codeActions
+    | None -> ());
     !codeActions
   | Other -> []

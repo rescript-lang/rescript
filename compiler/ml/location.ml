@@ -153,6 +153,7 @@ let default_warning_printer loc ppf w =
   | `Inactive -> ()
   | `Active {Warnings.number = _; message = _; is_error; sub_locs = _} ->
     setup_colors ();
+    !Warnings.emit_possible_actions_from_warning loc w;
     let message_kind = if is_error then `warning_as_error else `warning in
     Format.fprintf ppf "@[<v>@,  %a@,  %s@,@]@."
       (print ~message_kind

@@ -41,9 +41,13 @@ type error =
   | Cannot_quantify of string * type_expr
   | Multiple_constraints_on_type of Longident.t
   | Method_mismatch of string * type_expr * type_expr
-  | Unbound_value of Longident.t
+  | Unbound_value of Longident.t * Location.t
   | Unbound_constructor of Longident.t
-  | Unbound_label of Longident.t * type_expr option
+  | Unbound_label of {
+      loc: Location.t;
+      field_name: Longident.t;
+      from_type: type_expr option;
+    }
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
   | Ill_typed_functor_application of Longident.t
@@ -129,13 +133,17 @@ let find_constructor =
 let find_all_constructors =
   find_component Env.lookup_all_constructors (fun lid ->
       Unbound_constructor lid)
-let find_all_labels =
-  find_component Env.lookup_all_labels (fun lid -> Unbound_label (lid, None))
+let find_all_labels env loc =
+  find_component Env.lookup_all_labels
+    (fun lid -> Unbound_label {loc; field_name = lid; from_type = None})
+    env loc
 
 let find_value ?deprecated_context env loc lid =
   Env.check_value_name (Longident.last lid) loc;
   let ((path, decl) as r) =
-    find_component Env.lookup_value (fun lid -> Unbound_value lid) env loc lid
+    find_component Env.lookup_value
+      (fun lid -> Unbound_value (lid, loc))
+      env loc lid
   in
   Builtin_attributes.check_deprecated ?deprecated_context loc
     decl.val_attributes (Path.name path);
@@ -168,8 +176,9 @@ let unbound_constructor_error ?from_type env lid =
       Unbound_constructor lid)
 
 let unbound_label_error ?from_type env lid =
+  let lid_with_loc = lid in
   narrow_unbound_lid_error env lid.loc lid.txt (fun lid ->
-      Unbound_label (lid, from_type))
+      Unbound_label {loc = lid_with_loc.loc; field_name = lid; from_type})
 
 (* Support for first-class modules. *)
 
@@ -722,20 +731,20 @@ let transl_type_scheme env styp =
 open Format
 open Printtyp
 
-let did_you_mean ppf choices : bool =
+let did_you_mean ppf choices : bool * string list =
   (* flush now to get the error report early, in the (unheard of) case
      where the linear search would take a bit of time; in the worst
      case, the user has seen the error, she can interrupt the process
      before the spell-checking terminates. *)
   Format.fprintf ppf "@?";
   match choices () with
-  | [] -> false
-  | last :: rev_rest ->
+  | [] -> (false, [])
+  | last :: rev_rest as choices ->
     Format.fprintf ppf "@[<v 2>@,@,@{<info>Hint: Did you mean %s%s%s?@}@]"
       (String.concat ", " (List.rev rev_rest))
       (if rev_rest = [] then "" else " or ")
       last;
-    true
+    (true, choices)
 
 let super_spellcheck ppf fold env lid =
   let choices path name : string list =
@@ -743,7 +752,7 @@ let super_spellcheck ppf fold env lid =
     Misc.spellcheck env name
   in
   match lid with
-  | Longident.Lapply _ -> false
+  | Longident.Lapply _ -> (false, [])
   | Longident.Lident s -> did_you_mean ppf (fun _ -> choices None s)
   | Longident.Ldot (r, s) -> did_you_mean ppf (fun _ -> choices (Some r) s)
 
@@ -775,8 +784,9 @@ let report_error env ppf = function
     (* modified *)
     Format.fprintf ppf "@[<v>This type constructor, `%a`, can't be found.@ "
       Printtyp.longident lid;
-    let has_candidate = super_spellcheck ppf Env.fold_types env lid in
+    let has_candidate, _ = super_spellcheck ppf Env.fold_types env lid in
     if not has_candidate then
+      (* TODO(actions) Add rec flag by first checking the let bindings for matching name *)
       Format.fprintf ppf
         "If you wanted to write a recursive type, don't forget the `rec` in \
          `type rec`@]"
@@ -784,6 +794,7 @@ let report_error env ppf = function
     fprintf ppf "The type constructor@ %a@ is not yet completely defined" path p
   | Type_arity_mismatch (lid, expected, provided) ->
     if expected == 0 then
+      (* TODO(actions) Remove type parameters *)
       fprintf ppf
         "@[The type %a is not generic so expects no arguments,@ but is here \
          applied to %i argument(s).@ Have you tried removing the angular \
@@ -845,7 +856,7 @@ let report_error env ppf = function
         Printtyp.reset_and_mark_loops_list [ty; ty'];
         fprintf ppf "@[<hov>Method '%s' has type %a,@ which should be %a@]" l
           Printtyp.type_expr ty Printtyp.type_expr ty')
-  | Unbound_value lid -> (
+  | Unbound_value (lid, loc) -> (
     (* modified *)
     (match lid with
     | Ldot (outer, inner) ->
@@ -854,29 +865,50 @@ let report_error env ppf = function
     | other_ident ->
       Format.fprintf ppf "The value %a can't be found" Printtyp.longident
         other_ident);
-    let did_spellcheck = super_spellcheck ppf Env.fold_values env lid in
+    let did_spellcheck, choices =
+      super_spellcheck ppf Env.fold_values env lid
+    in
+    if did_spellcheck then
+      choices
+      |> List.iter (fun choice ->
+             Actions.add_possible_action
+               {
+                 loc;
+                 action = Actions.RewriteIdent {new_ident = Lident choice};
+                 description = "Change to `" ^ choice ^ "`";
+               });
     (* For cases such as when the user refers to something that's a value with 
       a lowercase identifier in JS but a module in ReScript.
       
       'Console' is a typical example, where JS is `console.log` and ReScript is `Console.log`. *)
-    (* TODO(codemods) Add codemod for refering to the module instead. *)
-    let as_module =
+    let as_module_name =
       match lid with
-      | Lident name -> (
+      | Lident name -> Some (String.capitalize_ascii name)
+      | _ -> None
+    in
+    let as_module =
+      match as_module_name with
+      | Some name -> (
         try
           Some
             (env
             |> Env.lookup_module ~load:false
                  (Lident (String.capitalize_ascii name)))
         with _ -> None)
-      | _ -> None
+      | None -> None
     in
-    match as_module with
-    | None -> ()
-    | Some module_path ->
+    match (as_module, as_module_name) with
+    | Some module_path, Some as_module_name ->
+      Actions.add_possible_action
+        {
+          loc;
+          action = Actions.RewriteIdentToModule {module_name = as_module_name};
+          description = "Change to `" ^ as_module_name ^ "`";
+        };
       Format.fprintf ppf "@,@[<v 2>@,@[%s to use the module @{<info>%a@}?@]@]"
         (if did_spellcheck then "Or did you mean" else "Maybe you meant")
-        Printtyp.path module_path)
+        Printtyp.path module_path
+    | _ -> ())
   | Unbound_module lid ->
     (* modified *)
     (match lid with
@@ -913,10 +945,17 @@ let report_error env ppf = function
        = Bar@}.@]@]"
       Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid;
     spellcheck ppf fold_constructors env lid
-  | Unbound_label (lid, from_type) ->
+  | Unbound_label {loc; field_name; from_type} ->
     (* modified *)
     (match from_type with
     | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_option ->
+      Actions.add_possible_action
+        {
+          loc;
+          action = UnwrapOptionMapRecordField {field_name};
+          description =
+            "Unwrap the option first before accessing the record field";
+        };
       (* TODO: Extend for nullable/null? *)
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
@@ -928,14 +967,15 @@ let report_error env ppf = function
          @{<info>xx->Option.map(field => field.%a)@}@]@,\
          @[- Or use @{<info>Option.getOr@} with a default: \
          @{<info>xx->Option.getOr(defaultRecord).%a@}@]@]"
-        Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid
+        Printtyp.longident field_name Printtyp.longident field_name
+        Printtyp.longident field_name
     | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_array ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
          value you're trying to access it on is an @{<info>array@}.@ You need \
          to access an individual element of the array if you want to access an \
          individual record field.@]"
-        Printtyp.longident lid
+        Printtyp.longident field_name
     | Some ({desc = Tconstr (_p, _, _)} as t1) ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
@@ -944,7 +984,7 @@ let report_error env ppf = function
          %a@,\n\
          @,\
          Only records have fields that can be accessed with dot notation.@]"
-        Printtyp.longident lid Error_message_utils.type_expr t1
+        Printtyp.longident field_name Error_message_utils.type_expr t1
     | None | Some _ ->
       Format.fprintf ppf
         "@[<v>@{<info>%a@} refers to a record field, but no corresponding \
@@ -955,8 +995,9 @@ let report_error env ppf = function
          @{<info>TheModule.%a@}@]@,\
          @[- Or specifying the record type explicitly:@ @{<info>let theValue: \
          TheModule.theType = {%a: VALUE}@}@]@]"
-        Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid);
-    spellcheck ppf fold_labels env lid
+        Printtyp.longident field_name Printtyp.longident field_name
+        Printtyp.longident field_name);
+    spellcheck ppf fold_labels env field_name
   | Unbound_modtype lid ->
     fprintf ppf "Unbound module type %a" longident lid;
     spellcheck ppf fold_modtypes env lid
