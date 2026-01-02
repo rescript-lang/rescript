@@ -34,7 +34,6 @@ let getReScriptVersion () =
 
 let newBsPackage ~rootPath =
   let rescriptJson = Filename.concat rootPath "rescript.json" in
-  let bsconfigJson = Filename.concat rootPath "bsconfig.json" in
 
   let parseRaw raw =
     let libBs =
@@ -192,23 +191,17 @@ let newBsPackage ~rootPath =
 
   match Files.readFile rescriptJson with
   | Some raw -> parseRaw raw
-  | None -> (
+  | None ->
     Log.log ("Unable to read " ^ rescriptJson);
-    match Files.readFile bsconfigJson with
-    | Some raw -> parseRaw raw
-    | None ->
-      Log.log ("Unable to read " ^ bsconfigJson);
-      None)
+    None
 
 let findRoot ~uri packagesByRoot =
   let path = Uri.toPath uri in
   let rec loop path =
     if path = "/" then None
     else if Hashtbl.mem packagesByRoot path then Some (`Root path)
-    else if
-      Files.exists (Filename.concat path "rescript.json")
-      || Files.exists (Filename.concat path "bsconfig.json")
-    then Some (`Bs path)
+    else if Files.exists (Filename.concat path "rescript.json") then
+      Some (`Bs path)
     else
       let parent = Filename.dirname path in
       if parent = path then (* reached root *) None else loop parent

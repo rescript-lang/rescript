@@ -150,9 +150,7 @@ let pp_packages_rev ppf lst =
 
 let rec walk_all_deps_aux (visited : string Hash_string.t) (paths : string list)
     ~(top : top) (dir : string) (queue : _ Queue.t) =
-  match
-    Bsb_config_load.load_json ~per_proj_dir:dir ~warn_legacy_config:false
-  with
+  match Bsb_config_load.load_json ~per_proj_dir:dir with
   | _, Obj {map; loc} ->
     let cur_package_name =
       match Map_string.find_opt map Bsb_build_schemas.name with

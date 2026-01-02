@@ -241,7 +241,6 @@ let findDependencyFiles base config =
                (ModuleResolution.resolveNodeModulePath ~startPath:base name)
                (fun path ->
                  let rescriptJsonPath = path /+ "rescript.json" in
-                 let bsconfigJsonPath = path /+ "bsconfig.json" in
 
                  let parseText text =
                    match Json.parse text with
@@ -272,10 +271,7 @@ let findDependencyFiles base config =
 
                  match Files.readFile rescriptJsonPath with
                  | Some text -> parseText text
-                 | None -> (
-                   match Files.readFile bsconfigJsonPath with
-                   | Some text -> parseText text
-                   | None -> None))
+                 | None -> None)
            in
 
            match result with

@@ -190,11 +190,7 @@ function watch(args) {
   let webSocketHost = "localhost";
   let webSocketPort = 9999;
 
-  let resConfig = "rescript.json";
-  if (!fs.existsSync(resConfig)) {
-    resConfig = "bsconfig.json";
-  }
-
+  const resConfig = "rescript.json";
   const sourcedirs = path.join("lib", "bs", ".sourcedirs.json");
 
   let LAST_SUCCESS_BUILD_STAMP = 0;
