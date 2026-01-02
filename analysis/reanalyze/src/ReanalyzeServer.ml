@@ -82,6 +82,20 @@ module Server = struct
 
   type server_stats = {mutable request_count: int}
 
+  let skip_compact =
+    Sys.getenv_opt "RESCRIPT_REANALYZE_SERVER_SKIP_COMPACT" = Some "1"
+
+  let bytes_per_word = Sys.word_size / 8
+
+  let mb_of_words (words : int) : float =
+    float_of_int words *. float_of_int bytes_per_word /. (1024.0 *. 1024.0)
+
+  let pp_mb (mb : float) : string = Printf.sprintf "%.1fMB" mb
+
+  let gc_live_mb () : float =
+    let s = Gc.quick_stat () in
+    mb_of_words s.live_words
+
   type server_state = {
     parse_argv: string array -> string option;
     run_analysis:
@@ -103,6 +117,16 @@ module Server = struct
     reactive_liveness: ReactiveLiveness.t;
     reactive_solver: ReactiveSolver.t;
     stats: server_stats;
+  }
+
+  type request_info = {
+    req_num: int;
+    elapsed_ms: float;
+    issue_count: int;
+    dead_count: int;
+    live_count: int;
+    processed_files: int;
+    cached_files: int;
   }
 
   let usage () =
@@ -302,7 +326,8 @@ Examples:
               stats = {request_count = 0};
             })
 
-  let run_one_request (state : server_state) (_req : request) : response =
+  let run_one_request (state : server_state) (_req : request) :
+      request_info * response =
     state.stats.request_count <- state.stats.request_count + 1;
     let req_num = state.stats.request_count in
     let t_start = Unix.gettimeofday () in
@@ -350,13 +375,16 @@ Examples:
     in
     let t_end = Unix.gettimeofday () in
     let elapsed_ms = (t_end -. t_start) *. 1000.0 in
-    Printf.eprintf
-      "[request #%d] %.1fms | issues: %d | dead: %d | live: %d | files: %d \
-       processed, %d cached\n\
-       %!"
-      req_num elapsed_ms !issue_count !dead_count !live_count
-      file_stats.processed file_stats.from_cache;
-    resp
+    ( {
+        req_num;
+        elapsed_ms;
+        issue_count = !issue_count;
+        dead_count = !dead_count;
+        live_count = !live_count;
+        processed_files = file_stats.processed;
+        cached_files = file_stats.from_cache;
+      },
+      resp )
 
   let serve (state : server_state) : unit =
     with_cwd state.config.cwd (fun () ->
@@ -376,15 +404,29 @@ Examples:
               let client, _ = Unix.accept sock in
               let ic = Unix.in_channel_of_descr client in
               let oc = Unix.out_channel_of_descr client in
+              let info_ref : request_info option ref = ref None in
               Fun.protect
                 ~finally:(fun () ->
                   close_out_noerr oc;
                   close_in_noerr ic)
                 (fun () ->
                   let (req : request) = Marshal.from_channel ic in
-                  let resp = run_one_request state req in
+                  let info, resp = run_one_request state req in
                   Marshal.to_channel oc resp [Marshal.No_sharing];
-                  flush oc);
+                  flush oc;
+                  info_ref := Some info);
+              (match !info_ref with
+              | None -> ()
+              | Some info ->
+                if not skip_compact then Gc.compact ();
+                let live_mb = gc_live_mb () in
+                Printf.eprintf
+                  "[request #%d] %.1fms | issues: %d | dead: %d | live: %d | \
+                   files: %d processed, %d cached | mem: %s\n\
+                   %!"
+                  info.req_num info.elapsed_ms info.issue_count info.dead_count
+                  info.live_count info.processed_files info.cached_files
+                  (pp_mb live_mb));
               loop ()
             in
             loop ()))

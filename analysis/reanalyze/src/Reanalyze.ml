@@ -747,7 +747,7 @@ let cli () =
   runAnalysisAndReport ~cmtRoot
 [@@raises exit]
 
-(* Re-export server module for external callers (e.g. analysis/bin/main.ml).
+(* Re-export server module for external callers (e.g. tools/bin/main.ml).
    This keeps the wrapped-library layering intact: Reanalyze depends on internal
    modules, not the other way around. *)
 module ReanalyzeServer = ReanalyzeServer
