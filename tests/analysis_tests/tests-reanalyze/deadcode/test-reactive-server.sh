@@ -27,10 +27,7 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
-ANALYSIS_BIN="$REPO_ROOT/_build/default/analysis/bin/main.exe"
-# Use a unique socket path for tests to avoid interfering with any running server
-# and to ensure standalone runs don't accidentally use the server
-SOCKET_PATH="/tmp/rescript-reanalyze-test-$$.sock"
+TOOLS_BIN="$REPO_ROOT/_build/default/tools/bin/main.exe"
 SERVER_PID=""
 ITERATIONS=3
 VERBOSE=0
@@ -39,7 +36,7 @@ TIMING=1
 # Project-specific settings (can be overridden with --project)
 PROJECT_DIR="$SCRIPT_DIR"
 TEST_FILE=""  # Will be set based on project
-REANALYZE_ARGS="-config -ci -json"
+REANALYZE_ARGS="-json"
 EXISTING_DEAD_VALUE=""  # A value that exists and is dead, to make live in scenario B
 
 # Timing helpers - use bash built-in EPOCHREALTIME for low overhead
@@ -61,6 +58,7 @@ time_end() {
 }
 
 BACKUP_FILE="/tmp/reactive-test-backup.$$"
+DEFAULT_SOCKET_FILE=""
 
 # Cleanup function
 cleanup() {
@@ -74,8 +72,10 @@ cleanup() {
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
-  # Remove socket
-  rm -f "$SOCKET_PATH"
+  # Best-effort cleanup of default socket (server should also clean this up)
+  if [[ -n "${DEFAULT_SOCKET_FILE:-}" ]]; then
+    rm -f "$DEFAULT_SOCKET_FILE" 2>/dev/null || true
+  fi
 }
 trap cleanup EXIT
 
@@ -173,18 +173,15 @@ configure_project() {
   case "$project_name" in
     deadcode)
       TEST_FILE="$PROJECT_DIR/src/DeadValueTest.res"
-      REANALYZE_ARGS="-config -ci -json -exclude-paths src/exception"
       EXISTING_DEAD_VALUE="subList"
       ;;
     deadcode-benchmark)
       TEST_FILE="$PROJECT_DIR/src/AutoAnnotate_1.res"
-      REANALYZE_ARGS="-config -ci -json"
       EXISTING_DEAD_VALUE=""  # Will skip scenario B
       ;;
     *)
       # Generic fallback - try to find a .res file
       TEST_FILE="$(find "$PROJECT_DIR/src" -name "*.res" -type f | head -1)"
-      REANALYZE_ARGS="-config -ci -json"
       EXISTING_DEAD_VALUE=""
       ;;
   esac
@@ -200,9 +197,9 @@ configure_project
 # Ensure we're in the project directory
 cd "$PROJECT_DIR"
 
-# Check that the analysis binary exists
-if [[ ! -x "$ANALYSIS_BIN" ]]; then
-  log_error "Analysis binary not found: $ANALYSIS_BIN"
+# Check that the tools binary exists
+if [[ ! -x "$TOOLS_BIN" ]]; then
+  log_error "Tools binary not found: $TOOLS_BIN"
   log_error "Run 'make' from the repo root to build it."
   exit 1
 fi
@@ -220,21 +217,19 @@ cp "$TEST_FILE" "$BACKUP_FILE"
 
 # Start the server
 start_server() {
-  log_server "Starting on $SOCKET_PATH..."
-  rm -f "$SOCKET_PATH"
-  
+  DEFAULT_SOCKET_FILE="$PROJECT_DIR/.rescript-reanalyze.sock"
+  log_server "Starting (socket: $DEFAULT_SOCKET_FILE)..."
+  rm -f "$DEFAULT_SOCKET_FILE" 2>/dev/null || true
+
   time_start
   # shellcheck disable=SC2086
-  # Use explicit socket path for test isolation
-  "$ANALYSIS_BIN" reanalyze-server \
-    --socket "$SOCKET_PATH" \
-    --cwd "$PROJECT_DIR" \
-    -- $REANALYZE_ARGS > /tmp/reanalyze-server-$$.log 2>&1 &
+  "$TOOLS_BIN" reanalyze-server \
+    > /tmp/reanalyze-server-$$.log 2>&1 &
   SERVER_PID=$!
   
   # Wait for socket to appear
   for i in {1..30}; do
-    if [[ -S "$SOCKET_PATH" ]]; then
+    if [[ -S "$DEFAULT_SOCKET_FILE" ]]; then
       time_end "server_startup"
       log_verbose "Server ready (socket exists)"
       return 0
@@ -253,7 +248,9 @@ stop_server() {
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
-  rm -f "$SOCKET_PATH"
+  if [[ -n "${DEFAULT_SOCKET_FILE:-}" ]]; then
+    rm -f "$DEFAULT_SOCKET_FILE" 2>/dev/null || true
+  fi
   SERVER_PID=""
 }
 
@@ -264,11 +261,7 @@ send_request() {
   local label="${2:-reactive}"
   time_start
   # shellcheck disable=SC2086
-  # Use explicit socket path for test isolation
-  "$ANALYSIS_BIN" reanalyze-server-request \
-    --socket "$SOCKET_PATH" \
-    --cwd "$PROJECT_DIR" \
-    -- $REANALYZE_ARGS > "$output_file" 2>/dev/null
+  "$TOOLS_BIN" reanalyze $REANALYZE_ARGS > "$output_file" 2>/dev/null
   time_end "$label"
 }
 
@@ -277,7 +270,7 @@ run_standalone_analysis() {
   local output_file="$1"
   time_start
   # shellcheck disable=SC2086
-  "$ANALYSIS_BIN" reanalyze $REANALYZE_ARGS > "$output_file" 2>/dev/null
+  RESCRIPT_REANALYZE_NO_SERVER=1 "$TOOLS_BIN" reanalyze $REANALYZE_ARGS > "$output_file" 2>/dev/null
   time_end "standalone"
 }
 

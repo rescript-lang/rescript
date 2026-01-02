@@ -191,49 +191,6 @@ let main () =
     in
     Printf.printf "\"%s\"" res
   | [_; "diagnosticSyntax"; path] -> Commands.diagnosticSyntax ~path
-  | _ :: "reanalyze" :: _ -> (
-    (* Transparent delegation: if a reanalyze-server is running for this project,
-       delegate to it; otherwise run reanalyze locally. *)
-    let argv_for_server =
-      let args = Array.to_list Sys.argv in
-      match args with
-      | _ :: "reanalyze" :: rest -> Array.of_list rest
-      | _ :: rest -> Array.of_list rest
-      | [] -> [||]
-    in
-    match
-      Reanalyze.ReanalyzeServer.try_request_default
-        ~cwd:(Some (Sys.getcwd ()))
-        ~argv:argv_for_server
-    with
-    | Some resp ->
-      output_string stdout resp.stdout;
-      output_string stderr resp.stderr;
-      flush stdout;
-      flush stderr;
-      exit resp.exit_code
-    | None ->
-      let len = Array.length Sys.argv in
-      for i = 1 to len - 2 do
-        Sys.argv.(i) <- Sys.argv.(i + 1)
-      done;
-      Sys.argv.(len - 1) <- "";
-      Reanalyze.cli ())
-  | _ :: "reanalyze-server" :: _ ->
-    let len = Array.length Sys.argv in
-    for i = 1 to len - 2 do
-      Sys.argv.(i) <- Sys.argv.(i + 1)
-    done;
-    Sys.argv.(len - 1) <- "";
-    Reanalyze.ReanalyzeServer.server_cli ~parse_argv:Reanalyze.parse_argv
-      ~run_analysis:Reanalyze.runAnalysis ()
-  | _ :: "reanalyze-server-request" :: _ ->
-    let len = Array.length Sys.argv in
-    for i = 1 to len - 2 do
-      Sys.argv.(i) <- Sys.argv.(i + 1)
-    done;
-    Sys.argv.(len - 1) <- "";
-    Reanalyze.ReanalyzeServer.request_cli ()
   | [_; "references"; path; line; col] ->
     Commands.references ~path
       ~pos:(int_of_string line, int_of_string col)

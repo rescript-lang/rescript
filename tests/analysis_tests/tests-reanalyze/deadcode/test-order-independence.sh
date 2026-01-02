@@ -18,12 +18,12 @@ fi
 
 # Run analysis without shuffle (baseline)
 baseline_output=$(mktemp)
-dune exec rescript-editor-analysis -- reanalyze -dce -ci -exclude-paths $exclude_dirs -live-names globallyLive1 -live-names globallyLive2,globallyLive3 -suppress $suppress > "$baseline_output" 2>&1
+dune exec rescript-tools -- reanalyze -dce -ci -exclude-paths $exclude_dirs -live-names globallyLive1 -live-names globallyLive2,globallyLive3 -suppress $suppress > "$baseline_output" 2>&1
 
 # Run analysis with shuffle (3 times to increase confidence)
 for i in 1 2 3; do
   shuffled_output=$(mktemp)
-  dune exec rescript-editor-analysis -- reanalyze -dce -ci -test-shuffle -exclude-paths $exclude_dirs -live-names globallyLive1 -live-names globallyLive2,globallyLive3 -suppress $suppress > "$shuffled_output" 2>&1
+  dune exec rescript-tools -- reanalyze -dce -ci -test-shuffle -exclude-paths $exclude_dirs -live-names globallyLive1 -live-names globallyLive2,globallyLive3 -suppress $suppress > "$shuffled_output" 2>&1
   
   # Compare outputs
   if ! diff -q "$baseline_output" "$shuffled_output" > /dev/null 2>&1; then

@@ -26,7 +26,7 @@ benchmark: build
 	@echo "=== Benchmark on existing test files ==="
 	@echo ""
 	@echo "Sequential:"
-	@time dune exec rescript-editor-analysis -- reanalyze -config -ci 2>/dev/null | grep "Analysis reported"
+	@time dune exec rescript-tools -- reanalyze -config -ci 2>/dev/null | grep "Analysis reported"
 
 clean:
 	yarn clean

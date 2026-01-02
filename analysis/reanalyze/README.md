@@ -12,13 +12,13 @@ Dead code analysis and other experimental analyses for ReScript.
 
 ```bash
 # Run DCE analysis on current project (reads rescript.json)
-rescript-editor-analysis reanalyze -config
+rescript-tools reanalyze -config
 
 # Run DCE analysis on specific CMT directory
-rescript-editor-analysis reanalyze -dce-cmt path/to/lib/bs
+rescript-tools reanalyze -dce-cmt path/to/lib/bs
 
 # Run all analyses
-rescript-editor-analysis reanalyze -all
+rescript-tools reanalyze -all
 ```
 
 ## Performance Options
@@ -28,7 +28,7 @@ rescript-editor-analysis reanalyze -all
 Cache processed file data and skip unchanged files on subsequent runs:
 
 ```bash
-rescript-editor-analysis reanalyze -config -reactive
+rescript-tools reanalyze -config -reactive
 ```
 
 This provides significant speedup for repeated analysis (e.g., in a watch mode or service):
@@ -43,7 +43,7 @@ This provides significant speedup for repeated analysis (e.g., in a watch mode o
 Run analysis multiple times to measure cache effectiveness:
 
 ```bash
-rescript-editor-analysis reanalyze -config -reactive -timing -runs 3
+rescript-tools reanalyze -config -reactive -timing -runs 3
 ```
 
 ## CLI Flags
@@ -104,48 +104,31 @@ This works transparently with the VS Code extension's "Start Code Analyzer" comm
 ### Quick Start
 
 ```bash
-# From anywhere inside your project, start the server (VS Code uses `reanalyze -json`):
-rescript-editor-analysis reanalyze-server --cwd . -- -json
+# From anywhere inside your project, start the server:
+rescript-tools reanalyze-server
 
 # Now any reanalyze call will automatically use the server:
-rescript-editor-analysis reanalyze -json  # → delegates to server
+rescript-tools reanalyze -json  # → delegates to server
 ```
 
 ### Starting the Server
 
 ```bash
-rescript-editor-analysis reanalyze-server [--socket <path>] [--cwd <dir>] [--once] -- <reanalyze args...>
+rescript-tools reanalyze-server [--socket <path>]
 ```
 
 Options:
 - `--socket <path>` — Unix domain socket path (default: `<projectRoot>/.rescript-reanalyze.sock`)
-- `--cwd <dir>` — Any directory inside the project (used to locate the project root; default: current directory)
-- `--once` — Handle one request then exit (for testing)
-- `-- <args>` — Reanalyze arguments the server will accept (for VS Code: `-json`)
 
 Examples:
 
 ```bash
 # Start server with default socket (recommended)
-rescript-editor-analysis reanalyze-server \
-  --cwd /path/to/my-project \
-  -- -json
+rescript-tools reanalyze-server \
 
 # With custom socket path
-rescript-editor-analysis reanalyze-server \
+rescript-tools reanalyze-server \
   --socket /tmp/my-custom.sock \
-  --cwd /path/to/my-project \
-  -- -json
-```
-
-### Explicit Requests
-
-You can also send requests explicitly (useful for testing or custom socket paths):
-
-```bash
-rescript-editor-analysis reanalyze-server-request \
-  --cwd /path/to/my-project \
-  -- -json
 ```
 
 ### Behavior
@@ -154,7 +137,6 @@ rescript-editor-analysis reanalyze-server-request \
 - **Default socket**: `<projectRoot>/.rescript-reanalyze.sock` (used by both server and client)
 - **Socket location invariant**: socket is always in the project root; `reanalyze` may be called from anywhere inside the project
 - **Reactive mode forced**: The server always runs with `-reactive` enabled internally
-- **Strict argv matching**: Requests must use the same arguments the server was started with
 - **Same output**: stdout/stderr/exit-code match what a direct CLI invocation would produce
 - **Incremental updates**: When source files change and the project is rebuilt, subsequent requests reflect the updated analysis
 
