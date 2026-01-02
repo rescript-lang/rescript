@@ -93,7 +93,7 @@ A long-lived server process that keeps reactive analysis state warm across multi
 
 ### Transparent Server Delegation
 
-When a server is running on the default socket (`/tmp/rescript-reanalyze.sock`), the regular `reanalyze` command **automatically delegates** to it. This means:
+When a server is running on the default socket (`<projectRoot>/.rescript-reanalyze.sock`), the regular `reanalyze` command **automatically delegates** to it. This means:
 
 1. **Start the server once** (in the background)
 2. **Use the editor normally** — all `reanalyze` calls go through the server
@@ -104,11 +104,11 @@ This works transparently with the VS Code extension's "Start Code Analyzer" comm
 ### Quick Start
 
 ```bash
-# In your project directory, start the server:
-rescript-editor-analysis reanalyze-server --cwd . -- -config -ci -json
+# From anywhere inside your project, start the server (VS Code uses `reanalyze -json`):
+rescript-editor-analysis reanalyze-server --cwd . -- -json
 
 # Now any reanalyze call will automatically use the server:
-rescript-editor-analysis reanalyze -config -ci -json  # → delegates to server
+rescript-editor-analysis reanalyze -json  # → delegates to server
 ```
 
 ### Starting the Server
@@ -118,10 +118,10 @@ rescript-editor-analysis reanalyze-server [--socket <path>] [--cwd <dir>] [--onc
 ```
 
 Options:
-- `--socket <path>` — Unix domain socket path (default: `/tmp/rescript-reanalyze.sock`)
-- `--cwd <dir>` — Working directory for analysis (useful when launched from a different directory)
+- `--socket <path>` — Unix domain socket path (default: `<projectRoot>/.rescript-reanalyze.sock`)
+- `--cwd <dir>` — Any directory inside the project (used to locate the project root; default: current directory)
 - `--once` — Handle one request then exit (for testing)
-- `-- <args>` — Reanalyze arguments the server will accept (e.g., `-config -ci -json`)
+- `-- <args>` — Reanalyze arguments the server will accept (for VS Code: `-json`)
 
 Examples:
 
@@ -129,13 +129,13 @@ Examples:
 # Start server with default socket (recommended)
 rescript-editor-analysis reanalyze-server \
   --cwd /path/to/my-project \
-  -- -config -ci -json
+  -- -json
 
 # With custom socket path
 rescript-editor-analysis reanalyze-server \
   --socket /tmp/my-custom.sock \
   --cwd /path/to/my-project \
-  -- -config -ci -json
+  -- -json
 ```
 
 ### Explicit Requests
@@ -145,13 +145,14 @@ You can also send requests explicitly (useful for testing or custom socket paths
 ```bash
 rescript-editor-analysis reanalyze-server-request \
   --cwd /path/to/my-project \
-  -- -config -ci -json
+  -- -json
 ```
 
 ### Behavior
 
 - **Transparent delegation**: Regular `reanalyze` calls automatically use the server if running
-- **Default socket**: `/tmp/rescript-reanalyze.sock` (used by both server and client)
+- **Default socket**: `<projectRoot>/.rescript-reanalyze.sock` (used by both server and client)
+- **Socket location invariant**: socket is always in the project root; `reanalyze` may be called from anywhere inside the project
 - **Reactive mode forced**: The server always runs with `-reactive` enabled internally
 - **Strict argv matching**: Requests must use the same arguments the server was started with
 - **Same output**: stdout/stderr/exit-code match what a direct CLI invocation would produce
