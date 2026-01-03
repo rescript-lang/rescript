@@ -261,9 +261,10 @@ pub fn incremental_build(
     let result_asts = parse::generate_asts(build_state, || pb.inc(1));
     let timing_ast_elapsed = timing_ast.elapsed();
 
-    match result_asts {
-        Ok(_ast) => {
+    let parse_warnings = match result_asts {
+        Ok(warnings) => {
             pb.finish();
+            warnings
         }
         Err(err) => {
             logs::finalize(&build_state.packages);
@@ -285,7 +286,7 @@ pub fn incremental_build(
                 plain_output,
             });
         }
-    }
+    };
     let deleted_modules = build_state.deleted_modules.clone();
     deps::get_deps(build_state, &deleted_modules);
     let timing_parse_total = timing_parse_start.elapsed();
@@ -303,6 +304,9 @@ pub fn incremental_build(
                 default_timing.unwrap_or(timing_parse_total).as_secs_f64()
             );
         }
+    }
+    if helpers::contains_ascii_characters(&parse_warnings) {
+        println!("{}", &parse_warnings);
     }
 
     mark_modules_with_expired_deps_dirty(build_state);
