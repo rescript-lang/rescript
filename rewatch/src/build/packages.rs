@@ -811,6 +811,20 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                     };
                     match source_files.get(&implementation_filename) {
                         None => {
+                            if let Some(implementation_path) = source_files.keys().find(|path| {
+                                let extension = path.extension().and_then(|ext| ext.to_str());
+                                matches!(extension, Some(ext) if helpers::is_implementation_file(ext))
+                                    && helpers::file_path_to_module_name(path, &namespace) == module_name
+                            }) {
+                                let implementation_display =
+                                    implementation_path.to_string_lossy().to_string();
+                                let interface_display = file.to_string_lossy().to_string();
+                                return Err(anyhow!(
+                                    "Implementation and interface have different path names or different cases: `{}` vs `{}`",
+                                    implementation_display,
+                                    interface_display
+                                ));
+                            }
                             println!(
                                 "{} No implementation file found for interface file (skipping): {}",
                                 LINE_CLEAR,

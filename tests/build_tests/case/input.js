@@ -2,18 +2,16 @@ import * as assert from "node:assert";
 import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
+const { execBuild } = setup(import.meta.dirname);
 
-const { stderr } = await execBuildLegacy();
+const { stdout } = await execBuild();
 
 if (
   ![
-    "Error: Invalid rescript.json: implementation and interface have different path names or different cases src/demo vs src/Demo\n",
+    "Could not initialize build: Implementation and interface have different path names or different cases: `src/demo.res` vs `src/Demo.resi`\n",
     // Windows: path separator
-    "Error: Invalid rescript.json: implementation and interface have different path names or different cases src\\demo vs src\\Demo\n",
-    // Linux: files are parsed in different order
-    "Error: Invalid rescript.json: implementation and interface have different path names or different cases src/Demo vs src/demo\n",
-  ].includes(normalizeNewlines(stderr))
+    "Could not initialize build: Implementation and interface have different path names or different cases: `src\\demo.res` vs `src\\Demo.resi`\n",
+  ].includes(normalizeNewlines(stdout))
 ) {
-  assert.fail(stderr);
+  assert.fail(stdout);
 }
