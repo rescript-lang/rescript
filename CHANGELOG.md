@@ -31,6 +31,7 @@
 #### :nail_care: Polish
 
 - Rewatch: enable `--create-sourcedirs` by default (now deprecated when explicitly used). https://github.com/rescript-lang/rescript/pull/8092
+- Rewatch: check if filename case for interface and implementation matches. https://github.com/rescript-lang/rescript/pull/8144
 
 #### :house: Internal
 
