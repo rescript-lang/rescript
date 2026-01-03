@@ -3,7 +3,7 @@
 import * as fs from "node:fs/promises";
 import { setup } from "#dev/process";
 
-const { execBuild, execClean } = setup(import.meta.dirname);
+const { execBuildLegacy, execCleanLegacy } = setup(import.meta.dirname);
 
 const expectedFilePath = "./out.expected";
 
@@ -22,8 +22,8 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-await execClean();
-const { stderr } = await execBuild();
+await execCleanLegacy();
+const { stderr } = await execBuildLegacy();
 
 const actualErrorOutput = postProcessErrorOutput(stderr.toString());
 if (updateTests) {

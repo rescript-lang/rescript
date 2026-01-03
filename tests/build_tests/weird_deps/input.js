@@ -4,9 +4,9 @@ import * as assert from "node:assert";
 import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { execBuild } = setup(import.meta.dirname);
+const { execBuildLegacy } = setup(import.meta.dirname);
 
-const out = await execBuild();
+const out = await execBuildLegacy();
 if (out.stdout !== "") {
   assert.fail(out.stdout);
 } else {

@@ -5,16 +5,16 @@ import { existsSync } from "node:fs";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuild, execClean } = setup(import.meta.dirname);
+const { execBuildLegacy, execCleanLegacy } = setup(import.meta.dirname);
 
-await execClean();
-await execBuild(["-install"]);
+await execCleanLegacy();
+await execBuildLegacy(["-install"]);
 
 let fooExists = existsSync(path.join("lib", "ocaml", "Foo.cmi"));
 assert.ok(!fooExists);
 
-await execBuild();
-await execBuild(["-install"]);
+await execBuildLegacy();
+await execBuildLegacy(["-install"]);
 
 fooExists = existsSync(path.join("lib", "ocaml", "Foo.cmi"));
 assert.ok(fooExists);

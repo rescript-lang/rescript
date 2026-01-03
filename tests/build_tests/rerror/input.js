@@ -3,10 +3,10 @@
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
 
-const { execBuild, execClean } = setup(import.meta.dirname);
+const { execBuildLegacy, execCleanLegacy } = setup(import.meta.dirname);
 
-await execClean();
-const output = await execBuild([]);
+await execCleanLegacy();
+const output = await execBuildLegacy([]);
 
 // verify the output is in reason syntax
 const u = output.stdout.match(/=>/g);

@@ -4,7 +4,7 @@ import * as assert from "node:assert";
 import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { rescript } = setup(import.meta.dirname);
+const { rescriptLegacy } = setup(import.meta.dirname);
 
 const cliHelp =
   "Usage: rescript <options> <subcommand>\n" +
@@ -69,7 +69,7 @@ const dumpHelp =
  * @param {{ stdout: string; stderr: string; status: number; }} expected
  */
 async function test(params, expected) {
-  const out = await rescript("", params);
+  const out = await rescriptLegacy("", params);
 
   assert.equal(normalizeNewlines(out.stdout), expected.stdout);
   assert.equal(normalizeNewlines(out.stderr), expected.stderr);

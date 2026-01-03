@@ -13,11 +13,11 @@ import {
 
 import {
   execBin,
-  execBuild,
-  execClean,
+  execBuildLegacy,
+  execCleanLegacy,
   mocha,
   node,
-  rescript,
+  rescriptLegacy,
   shell,
 } from "#dev/process";
 
@@ -73,12 +73,12 @@ if (ounitTest) {
 }
 
 if (mochaTest) {
-  await execClean([], {
+  await execCleanLegacy([], {
     cwd: compilerTestDir,
     stdio: "inherit",
   });
 
-  await execBuild([], {
+  await execBuildLegacy([], {
     cwd: compilerTestDir,
     stdio: "inherit",
   });
@@ -159,12 +159,12 @@ if (runtimeDocstrings) {
       "generated_mocha_test.res",
     );
 
-    await execClean([], {
+    await execCleanLegacy([], {
       cwd: docstringTestDir,
       stdio: "inherit",
     });
 
-    await execBuild([], {
+    await execBuildLegacy([], {
       cwd: docstringTestDir,
       stdio: "inherit",
     });
@@ -176,14 +176,14 @@ if (runtimeDocstrings) {
     });
 
     // Build again to check if generated_mocha_test.res has syntax or type erros
-    await execBuild([], {
+    await execBuildLegacy([], {
       cwd: docstringTestDir,
       stdio: "inherit",
     });
 
     // Format generated_mocha_test.res
     console.log("Formatting generated_mocha_test.res");
-    await rescript("format", [generated_mocha_test_res], {
+    await rescriptLegacy("format", [generated_mocha_test_res], {
       cwd: projectDir,
       stdio: "inherit",
     });

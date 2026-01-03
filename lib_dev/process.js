@@ -29,10 +29,10 @@ export const {
   yarn,
   mocha,
   bsc,
-  rescript,
   execBin,
-  execBuild,
-  execClean,
+  rescriptLegacy,
+  execBuildLegacy,
+  execCleanLegacy,
 } = setup();
 
 /**
@@ -157,7 +157,18 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `rescript` CLI
+     * `bsc` CLI
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    bsc(args = [], options = {}) {
+      return exec(bsc_exe, args, options);
+    },
+
+    /**
+     * `rescript` legacy CLI
      *
      * @param {(
      *   | "build"
@@ -170,7 +181,7 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    rescript(command, args = [], options = {}) {
+    rescriptLegacy(command, args = [], options = {}) {
       const cliPath = path.join(
         import.meta.dirname,
         "../cli/rescript-legacy.js",
@@ -179,35 +190,24 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `bsc` CLI
+     * Execute ReScript legacy `build` command directly
      *
      * @param {string[]} [args]
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    bsc(args = [], options = {}) {
-      return exec(bsc_exe, args, options);
-    },
-
-    /**
-     * Execute ReScript `build` command directly
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    execBuild(args = [], options = {}) {
+    execBuildLegacy(args = [], options = {}) {
       return exec(rescript_legacy_exe, ["build", ...args], options);
     },
 
     /**
-     * Execute ReScript `clean` command directly
+     * Execute ReScript legacy `clean` command directly
      *
      * @param {string[]} [args]
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    execClean(args = [], options = {}) {
+    execCleanLegacy(args = [], options = {}) {
       return exec(rescript_legacy_exe, ["clean", ...args], options);
     },
 
