@@ -13,11 +13,11 @@ import {
 
 import {
   execBin,
-  execBuildLegacy,
-  execCleanLegacy,
+  execBuild,
+  execClean,
   mocha,
   node,
-  rescriptLegacy,
+  rescript,
   shell,
 } from "#dev/process";
 
@@ -73,12 +73,9 @@ if (ounitTest) {
 }
 
 if (mochaTest) {
-  await execCleanLegacy([], {
-    cwd: compilerTestDir,
-    stdio: "inherit",
-  });
-
-  await execBuildLegacy([], {
+  // No need to clean beforehand, rewatch detects changes to the compiler binary
+  // and rebuilds automatically in that case.
+  await execBuild([], {
     cwd: compilerTestDir,
     stdio: "inherit",
   });
@@ -87,7 +84,7 @@ if (mochaTest) {
     [
       "-t",
       "10000",
-      "tests/tests/**/*_test.mjs",
+      "tests/tests/src/**/*_test.mjs",
       // Ignore the preserve_jsx_test.mjs file.
       // I can't run because Mocha doesn't support jsx.
       // We also want to keep the output as is.
@@ -159,12 +156,12 @@ if (runtimeDocstrings) {
       "generated_mocha_test.res",
     );
 
-    await execCleanLegacy([], {
+    await execClean([], {
       cwd: docstringTestDir,
       stdio: "inherit",
     });
 
-    await execBuildLegacy([], {
+    await execBuild([], {
       cwd: docstringTestDir,
       stdio: "inherit",
     });
@@ -176,14 +173,14 @@ if (runtimeDocstrings) {
     });
 
     // Build again to check if generated_mocha_test.res has syntax or type erros
-    await execBuildLegacy([], {
+    await execBuild([], {
       cwd: docstringTestDir,
       stdio: "inherit",
     });
 
     // Format generated_mocha_test.res
     console.log("Formatting generated_mocha_test.res");
-    await rescriptLegacy("format", [generated_mocha_test_res], {
+    await rescript("format", [generated_mocha_test_res], {
       cwd: projectDir,
       stdio: "inherit",
     });

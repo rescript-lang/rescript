@@ -1,7 +1,7 @@
 import * as child_process from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { bsc_exe, rescript_legacy_exe } from "#cli/bins";
+import { bsc_exe, rescript_exe, rescript_legacy_exe } from "#cli/bins";
 
 /**
  * @typedef {{
@@ -30,6 +30,9 @@ export const {
   mocha,
   bsc,
   execBin,
+  rescript,
+  execBuild,
+  execClean,
   rescriptLegacy,
   execBuildLegacy,
   execCleanLegacy,
@@ -165,6 +168,46 @@ export function setup(cwd = process.cwd()) {
      */
     bsc(args = [], options = {}) {
       return exec(bsc_exe, args, options);
+    },
+
+    /**
+     * `rescript` CLI
+     *
+     * @param {(
+     *   | "build"
+     *   | "clean"
+     *   | "format"
+     *   | (string & {})
+     * )} command
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    rescript(command, args = [], options = {}) {
+      const cliPath = path.join(import.meta.dirname, "../cli/rescript.js");
+      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
+    },
+
+    /**
+     * Execute ReScript `build` command directly
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    execBuild(args = [], options = {}) {
+      return exec(rescript_exe, ["build", ...args], options);
+    },
+
+    /**
+     * Execute ReScript `clean` command directly
+     *
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    execClean(args = [], options = {}) {
+      return exec(rescript_exe, ["clean", ...args], options);
     },
 
     /**
