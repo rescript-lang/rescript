@@ -462,7 +462,7 @@ fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_n
 
 fn log_deprecated_package_specs_module(module_name: &str) {
     let warning = format!("deprecated: Option \"{module_name}\" is deprecated. Use \"esmodule\" instead.");
-    println!("\n{}", style(warning).yellow());
+    eprintln!("\n{}", style(warning).yellow());
 }
 
 fn log_unsupported_config_field(package_name: &str, field_name: &str) {
