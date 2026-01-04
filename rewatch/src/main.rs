@@ -10,11 +10,24 @@ fn main() -> Result<()> {
 
     let log_level_filter = cli.verbose.log_level_filter();
 
-    env_logger::Builder::new()
+    let stdout_logger = env_logger::Builder::new()
         .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
         .filter_level(log_level_filter)
         .target(env_logger::fmt::Target::Stdout)
-        .init();
+        .build();
+
+    let stderr_logger = env_logger::Builder::new()
+        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+        .filter_level(log_level_filter)
+        .target(env_logger::fmt::Target::Stderr)
+        .build();
+
+    log::set_max_level(log_level_filter);
+    log::set_boxed_logger(Box::new(SplitLogger {
+        stdout: stdout_logger,
+        stderr: stderr_logger,
+    }))
+    .expect("Failed to initialize logger");
 
     let mut command = cli.command;
 
@@ -62,7 +75,7 @@ fn main() -> Result<()> {
                 (*build_args.warn_error).clone(),
             ) {
                 Err(e) => {
-                    println!("{:#}", e);
+                    eprintln!("{:#}", e);
                     std::process::exit(1)
                 }
                 Ok(_) => {
@@ -98,7 +111,7 @@ fn main() -> Result<()> {
                 (*watch_args.warn_error).clone(),
             ) {
                 Err(e) => {
-                    println!("{:#}", e);
+                    eprintln!("{:#}", e);
                     std::process::exit(1)
                 }
                 Ok(_) => Ok(()),
@@ -134,9 +147,33 @@ fn main() -> Result<()> {
 fn get_lock(folder: &str) -> lock::Lock {
     match lock::get(folder) {
         lock::Lock::Error(error) => {
-            println!("Could not start ReScript build: {error}");
+            eprintln!("Could not start ReScript build: {error}");
             std::process::exit(1);
         }
         acquired_lock => acquired_lock,
+    }
+}
+
+struct SplitLogger {
+    stdout: env_logger::Logger,
+    stderr: env_logger::Logger,
+}
+
+impl log::Log for SplitLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        self.stdout.enabled(metadata) || self.stderr.enabled(metadata)
+    }
+
+    fn log(&self, record: &log::Record) {
+        if record.level() == log::Level::Error {
+            self.stderr.log(record);
+        } else {
+            self.stdout.log(record);
+        }
+    }
+
+    fn flush(&self) {
+        self.stdout.flush();
+        self.stderr.flush();
     }
 }

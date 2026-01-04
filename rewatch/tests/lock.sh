@@ -25,7 +25,7 @@ success "Watcher Started"
 
 sleep 2
 
-if rewatch build | grep 'Could not start ReScript build:' &> /dev/null;
+if rewatch build 2>&1 | grep 'Could not start ReScript build:' &> /dev/null;
 then
   success "Lock is correctly set"
   exit_watcher

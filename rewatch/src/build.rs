@@ -270,7 +270,7 @@ pub fn incremental_build(
             logs::finalize(&build_state.packages);
 
             if !plain_output && show_progress {
-                println!(
+                eprintln!(
                     "{}{} {}Error parsing source files in {:.2}s",
                     LINE_CLEAR,
                     format_step(current_step, total_steps),
@@ -280,7 +280,7 @@ pub fn incremental_build(
                 pb.finish();
             }
 
-            println!("{}", &err);
+            eprintln!("{}", &err);
             return Err(IncrementalBuildError {
                 kind: IncrementalBuildErrorKind::SourceFileParseError,
                 plain_output,
@@ -358,9 +358,9 @@ pub fn incremental_build(
     if !compile_errors.is_empty() {
         if show_progress {
             if plain_output {
-                println!("Compiled {num_compiled_modules} modules")
+                eprintln!("Compiled {num_compiled_modules} modules")
             } else {
-                println!(
+                eprintln!(
                     "{}{} {}Compiled {} modules in {:.2}s",
                     LINE_CLEAR,
                     format_step(current_step, total_steps),
@@ -377,7 +377,7 @@ pub fn incremental_build(
             log_config_warnings(build_state);
         }
         if helpers::contains_ascii_characters(&compile_errors) {
-            println!("{}", &compile_errors);
+            eprintln!("{}", &compile_errors);
         }
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
