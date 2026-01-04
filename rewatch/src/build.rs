@@ -428,6 +428,12 @@ fn log_config_warnings(build_state: &BuildCommandState) {
                     config::DeprecationWarning::BscFlags => {
                         log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
                     }
+                    config::DeprecationWarning::PackageSpecsEs6 => {
+                        log_deprecated_package_specs_module("es6");
+                    }
+                    config::DeprecationWarning::PackageSpecsEs6Global => {
+                        log_deprecated_package_specs_module("es6-global");
+                    }
                 },
             );
 
@@ -452,6 +458,11 @@ fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_n
         Use '{new_field_name}' instead."
     );
     eprintln!("\n{}", style(warning).yellow());
+}
+
+fn log_deprecated_package_specs_module(module_name: &str) {
+    let warning = format!("deprecated: Option \"{module_name}\" is deprecated. Use \"esmodule\" instead.");
+    println!("\n{}", style(warning).yellow());
 }
 
 fn log_unsupported_config_field(package_name: &str, field_name: &str) {

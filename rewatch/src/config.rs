@@ -224,6 +224,8 @@ pub enum DeprecationWarning {
     BsDependencies,
     BsDevDependencies,
     BscFlags,
+    PackageSpecsEs6,
+    PackageSpecsEs6Global,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -746,6 +748,23 @@ impl Config {
             self.deprecation_warnings.push(DeprecationWarning::BscFlags);
         }
 
+        let (has_es6, has_es6_global) = match &self.package_specs {
+            None => (false, false),
+            Some(OneOrMore::Single(spec)) => (spec.module == "es6", spec.module == "es6-global"),
+            Some(OneOrMore::Multiple(specs)) => (
+                specs.iter().any(|spec| spec.module == "es6"),
+                specs.iter().any(|spec| spec.module == "es6-global"),
+            ),
+        };
+        if has_es6 {
+            self.deprecation_warnings
+                .push(DeprecationWarning::PackageSpecsEs6);
+        }
+        if has_es6_global {
+            self.deprecation_warnings
+                .push(DeprecationWarning::PackageSpecsEs6Global);
+        }
+
         Ok(())
     }
 }
@@ -1079,6 +1098,55 @@ pub mod tests {
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
         assert!(config.get_deprecations().is_empty());
+    }
+
+    #[test]
+    fn test_package_specs_es6_global_deprecation() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6-global",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(
+            config.get_deprecations(),
+            [DeprecationWarning::PackageSpecsEs6Global]
+        );
+    }
+
+    #[test]
+    fn test_package_specs_es6_deprecation() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::PackageSpecsEs6]);
     }
 
     #[test]
