@@ -24,6 +24,7 @@
 #### :bug: Bug fix
 
 - Fix rewatch swallowing parse warnings (%todo). https://github.com/rescript-lang/rescript/pull/8135
+- Rewatch: log errors to `stderr`. https://github.com/rescript-lang/rescript/pull/8147
 
 #### :memo: Documentation
 
