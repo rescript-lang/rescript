@@ -297,7 +297,9 @@ let block : 'a. ('a, block) fn =
  fun _self st arg -> list _self.statement _self st arg
 
 let program : 'a. ('a, program) fn =
- fun _self st {block = _x0; exports = _x1; export_set = _x2} ->
+ fun _self st
+     {block = _x0; exports = _x1; export_set = _x2; dts_exports = _x3} ->
+  ignore _x3;
   let st = _self.block _self st _x0 in
   st
 

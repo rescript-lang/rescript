@@ -1,0 +1,9 @@
+{
+  "name": "typescript-output",
+  "sources": "src",
+  "package-specs": {
+    "module": "typescript",
+    "in-source": true
+  },
+  "dependencies": ["test-module"]
+}

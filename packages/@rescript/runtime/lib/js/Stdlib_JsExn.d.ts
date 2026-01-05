@@ -1,0 +1,13 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export type t = unknown;
+
+export function fromException(exn: rescript.exn): rescript.option<t>;
+
+export function stack(arg0: t): rescript.option<string>;
+
+export function message(arg0: t): rescript.option<string>;
+
+export function name(arg0: t): rescript.option<string>;
+
+export function fileName(arg0: t): rescript.option<string>;

@@ -153,6 +153,7 @@ let output_ninja_and_namespace_map ~per_proj_dir ~package_kind
        namespace;
        warning;
        gentype_config;
+       filename = _;
      } :
       Bsb_config_types.t) : unit =
   let lib_artifacts_dir = Bsb_config.lib_bs in

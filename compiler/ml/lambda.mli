@@ -345,6 +345,7 @@ and lfunction = {
   body: lambda;
   attr: function_attribute; (* specified with [@inline] attribute *)
   loc: Location.t;
+  fn_type: Types.type_expr option; (* function type for typed codegen *)
 }
 
 and lambda_apply = {

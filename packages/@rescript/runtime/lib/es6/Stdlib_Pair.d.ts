@@ -1,0 +1,15 @@
+export type t<A, B> = [A, B];
+
+export function equal<A, B, C, D>(
+  param: [A, B],
+  param: [C, D],
+  eq1: (arg0: A, arg1: C) => boolean,
+  eq2: (arg0: B, arg1: D) => boolean,
+): boolean;
+
+export function compare<A, B, C, D>(
+  param: [A, B],
+  param: [C, D],
+  cmp1: (arg0: A, arg1: C) => number,
+  cmp2: (arg0: B, arg1: D) => number,
+): number;

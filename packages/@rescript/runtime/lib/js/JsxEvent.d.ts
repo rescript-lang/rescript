@@ -1,0 +1,187 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export type synthetic<A> = rescript.opaque<
+  "JsxEvent.synthetic",
+  [A]
+>;
+
+export function MakeEventWithType<T>(
+  Type: {
+  }
+): { };
+
+declare namespace Synthetic {
+  type tag = rescript.opaque<
+  "JsxEvent.Synthetic.tag",
+  []
+>;
+  type t = synthetic<Synthetic.tag>;
+}
+export type Synthetic = {
+};
+export const Synthetic: Synthetic;
+
+declare namespace Clipboard {
+  type tag = rescript.opaque<
+  "JsxEvent.Clipboard.tag",
+  []
+>;
+  type t = synthetic<Clipboard.tag>;
+}
+export type Clipboard = {
+};
+export const Clipboard: Clipboard;
+
+declare namespace Composition {
+  type tag = rescript.opaque<
+  "JsxEvent.Composition.tag",
+  []
+>;
+  type t = synthetic<Composition.tag>;
+}
+export type Composition = {
+};
+export const Composition: Composition;
+
+declare namespace Keyboard {
+  type tag = rescript.opaque<
+  "JsxEvent.Keyboard.tag",
+  []
+>;
+  type t = synthetic<Keyboard.tag>;
+}
+export type Keyboard = {
+};
+export const Keyboard: Keyboard;
+
+declare namespace Focus {
+  type tag = rescript.opaque<
+  "JsxEvent.Focus.tag",
+  []
+>;
+  type t = synthetic<Focus.tag>;
+}
+export type Focus = {
+};
+export const Focus: Focus;
+
+declare namespace Form {
+  type tag = rescript.opaque<
+  "JsxEvent.Form.tag",
+  []
+>;
+  type t = synthetic<Form.tag>;
+}
+export type Form = {
+};
+export const Form: Form;
+
+declare namespace Mouse {
+  type tag = rescript.opaque<
+  "JsxEvent.Mouse.tag",
+  []
+>;
+  type t = synthetic<Mouse.tag>;
+}
+export type Mouse = {
+};
+export const Mouse: Mouse;
+
+declare namespace Pointer {
+  type tag = rescript.opaque<
+  "JsxEvent.Pointer.tag",
+  []
+>;
+  type t = synthetic<Pointer.tag>;
+}
+export type Pointer = {
+};
+export const Pointer: Pointer;
+
+declare namespace Selection {
+  type tag = rescript.opaque<
+  "JsxEvent.Selection.tag",
+  []
+>;
+  type t = synthetic<Selection.tag>;
+}
+export type Selection = {
+};
+export const Selection: Selection;
+
+declare namespace Touch {
+  type tag = rescript.opaque<
+  "JsxEvent.Touch.tag",
+  []
+>;
+  type t = synthetic<Touch.tag>;
+}
+export type Touch = {
+};
+export const Touch: Touch;
+
+declare namespace UI {
+  type tag = rescript.opaque<
+  "JsxEvent.UI.tag",
+  []
+>;
+  type t = synthetic<UI.tag>;
+}
+export type UI = {
+};
+export const UI: UI;
+
+declare namespace Wheel {
+  type tag = rescript.opaque<
+  "JsxEvent.Wheel.tag",
+  []
+>;
+  type t = synthetic<Wheel.tag>;
+}
+export type Wheel = {
+};
+export const Wheel: Wheel;
+
+declare namespace Media {
+  type tag = rescript.opaque<
+  "JsxEvent.Media.tag",
+  []
+>;
+  type t = synthetic<Media.tag>;
+}
+export type Media = {
+};
+export const Media: Media;
+
+declare namespace Image {
+  type tag = rescript.opaque<
+  "JsxEvent.Image.tag",
+  []
+>;
+  type t = synthetic<Image.tag>;
+}
+export type Image = {
+};
+export const Image: Image;
+
+declare namespace Animation {
+  type tag = rescript.opaque<
+  "JsxEvent.Animation.tag",
+  []
+>;
+  type t = synthetic<Animation.tag>;
+}
+export type Animation = {
+};
+export const Animation: Animation;
+
+declare namespace Transition {
+  type tag = rescript.opaque<
+  "JsxEvent.Transition.tag",
+  []
+>;
+  type t = synthetic<Transition.tag>;
+}
+export type Transition = {
+};
+export const Transition: Transition;

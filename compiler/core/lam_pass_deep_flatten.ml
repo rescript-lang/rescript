@@ -229,8 +229,8 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     | Lprim {primitive; args; loc} ->
       let args = Ext_list.map args aux in
       Lam.prim ~primitive ~args loc
-    | Lfunction {arity; params; body; attr} ->
-      Lam.function_ ~arity ~params ~body:(aux body) ~attr
+    | Lfunction {arity; params; body; attr; fn_type} ->
+      Lam.function_ ~arity ~params ~body:(aux body) ~attr ~fn_type
     | Lswitch
         ( l,
           {

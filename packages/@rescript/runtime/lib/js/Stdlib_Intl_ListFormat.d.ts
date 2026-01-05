@@ -1,0 +1,39 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
+
+export type t = Intl.ListFormat;
+
+export type listType =
+  | "conjunction"
+  | "disjunction"
+  | "unit";
+
+export type style =
+  | "narrow"
+  | "long"
+  | "short";
+
+export interface options {
+  readonly localeMatcher?: rescript.option<Stdlib_Intl_Common.localeMatcher>;
+  readonly type?: rescript.option<listType>;
+  readonly style?: rescript.option<style>;
+}
+
+export type listPartComponentType =
+  | "literal"
+  | "element";
+
+export interface listPart {
+  readonly type: listPartComponentType;
+  readonly value: string;
+}
+
+export interface resolvedOptions {
+  readonly locale: string;
+  readonly style: style;
+  readonly type: listType;
+}
+
+export interface supportedLocalesOptions {
+  readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
+}

@@ -60,7 +60,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
           Ext_list.init (x - len) (fun _ -> Ext_ident.create "param")
         in
         E.ocaml_fun params ~return_unit:false (* unknown info *)
-          ~async:false ~one_unit_arg:false
+          ~async:false ~one_unit_arg:false ~fn_type:None
           [
             S.return_stmt
               (E.call ~info:Js_call_info.ml_full_call fn
@@ -329,7 +329,12 @@ let compile output_prefix =
       (id : Ident.t) (arg : Lam.t) : Js_output.t * initialization =
     match arg with
     | Lfunction
-        {params; body; attr = {return_unit; async; one_unit_arg; directive}} ->
+        {
+          params;
+          body;
+          attr = {return_unit; async; one_unit_arg; directive};
+          fn_type;
+        } ->
       (* TODO: Think about recursive value
          {[
            let rec v = ref (fun _ ...
@@ -368,7 +373,7 @@ let compile output_prefix =
              it will be renamed into [method]
              when it is detected by a primitive
           *)
-            ~return_unit ~async ~one_unit_arg ?directive
+            ~return_unit ~async ~one_unit_arg ?directive ~fn_type
             ~immutable_mask:ret.immutable_mask
             (Ext_list.map params (fun x ->
                  Map_ident.find_default ret.new_params x x))
@@ -382,7 +387,7 @@ let compile output_prefix =
           (* TODO:  save computation of length several times *)
           E.ocaml_fun params
             (Js_output.output_as_block output)
-            ~return_unit ~async ~one_unit_arg ?directive
+            ~return_unit ~async ~one_unit_arg ?directive ~fn_type
       in
       ( Js_output.output_of_expression
           (Declare (Alias, id))
@@ -1623,9 +1628,9 @@ let compile output_prefix =
     | {primitive = Pjs_unsafe_downgrade _; args} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
-      | [Lfunction {params; body; attr = {return_unit; async}}] ->
+      | [Lfunction {params; body; attr = {return_unit; async}; fn_type}] ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation []
-          (E.method_ ~async ~return_unit params
+          (E.method_ ~async ~return_unit ~fn_type params
              (* Invariant:  jmp_table can not across function boundary,
                 here we share env
              *)
@@ -1740,10 +1745,16 @@ let compile output_prefix =
       Js_output.t =
     match cur_lam with
     | Lfunction
-        {params; body; attr = {return_unit; async; one_unit_arg; directive}} ->
+        {
+          params;
+          body;
+          attr = {return_unit; async; one_unit_arg; directive};
+          fn_type;
+        } ->
       Js_output.output_of_expression lambda_cxt.continuation
         ~no_effects:no_effects_const
         (E.ocaml_fun params ~return_unit ~async ~one_unit_arg ?directive
+           ~fn_type
            (* Invariant:  jmp_table can not across function boundary,
               here we share env
            *)

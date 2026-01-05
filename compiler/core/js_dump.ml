@@ -55,6 +55,10 @@ module E = Js_exp_make
 module S = Js_stmt_make
 module L = Js_dump_lit
 
+(** Current function return type for TypeScript as-assertion on return statements.
+    Set when entering a function, cleared when exiting. *)
+let current_fn_return_type : Types.type_expr option ref = ref None
+
 (* There modules are dynamically inserted in the last stage
    {Caml_curry}
    {Caml_option}
@@ -175,6 +179,12 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
 
+(** Check if an expression needs parentheses when followed by an 'as' assertion. *)
+let exp_need_paren_for_as (e : J.expression) : bool =
+  match e.expression_desc with
+  | Bin _ | String_append _ | Seq _ | Cond _ | In _ -> true
+  | _ -> false
+
 (** Print as underscore for unused vars, may not be 
     needed in the future *)
 (* let ipp_ident cxt f id (un_used : bool) =
@@ -192,6 +202,12 @@ let pp_var_assign cxt f id =
   P.string f L.eq;
   P.space f;
   acxt
+
+(** Print `let id` without the `=` sign, for use with type annotations *)
+let pp_var_declare_name cxt f id =
+  P.string f L.let_;
+  P.space f;
+  Ext_pp_scope.ident cxt f id
 
 let pp_var_assign_this cxt f id =
   let cxt = pp_var_assign cxt f id in
@@ -246,7 +262,36 @@ let continue f =
   P.string f L.continue;
   semi f
 
-let formal_parameter_list cxt f l = iter_lst cxt f l Ext_pp_scope.ident comma_sp
+(** Print a single parameter with optional type annotation *)
+let formal_parameter_with_type cxt f (id : Ident.t) (ty : Ts.ts_type option) :
+    cxt =
+  let cxt = Ext_pp_scope.ident cxt f id in
+  (match (!Js_config.ts_output, ty) with
+  | Js_config.Ts_typescript, Some t -> Ts.pp_type_annotation f (Some t)
+  | _ -> ());
+  cxt
+
+(** Print formal parameters with type annotations from fn_type *)
+let formal_parameter_list_typed cxt f (params : Ident.t list)
+    (fn_type : Types.type_expr option) =
+  match !Js_config.ts_output with
+  | Js_config.Ts_none ->
+    (* Plain JS mode - no types *)
+    iter_lst cxt f params Ext_pp_scope.ident comma_sp
+  | Js_config.Ts_typescript ->
+    (* TypeScript mode - add type annotations *)
+    let typed_params = Ts.typed_idents_of_params params fn_type in
+    iter_lst cxt f typed_params
+      (fun cxt f {Ts.ident; ident_type} ->
+        formal_parameter_with_type cxt f ident ident_type)
+      comma_sp
+
+(** Print return type annotation if in TypeScript mode *)
+let pp_return_type f (fn_type : Types.type_expr option) : unit =
+  match !Js_config.ts_output with
+  | Js_config.Ts_typescript ->
+    Ts.pp_type_annotation f (Ts.return_type_of_fn_type fn_type)
+  | Js_config.Ts_none -> ()
 
 (* IdentMap *)
 (*
@@ -294,7 +339,7 @@ let rec try_optimize_curry cxt f len function_id =
   Curry_gen.pp_optimize_curry f len;
   P.paren_group f 1 (fun _ -> expression ~level:1 cxt f function_id)
 
-and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
+and pp_function ~return_unit ~async ~is_method ?directive ?fn_type cxt (f : P.t)
     ~fn_state (l : Ident.t list) (b : J.block) (env : Js_fun_env.t) : cxt =
   match b with
   | [
@@ -374,8 +419,9 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
         | this :: arguments ->
           let cxt =
             P.paren_group f 1 (fun _ ->
-                formal_parameter_list inner_cxt f arguments)
+                formal_parameter_list_typed inner_cxt f arguments fn_type)
           in
+          pp_return_type f fn_type;
           P.space f;
           P.brace_vgroup f 1 (fun _ ->
               let cxt =
@@ -386,10 +432,25 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
       else
         let cxt =
           match l with
-          | [single] when arrow -> Ext_pp_scope.ident inner_cxt f single
+          | [single] when arrow -> (
+            (* In TypeScript mode, single arrow param with type annotation needs parens: (x: T) => ... *)
+            match (!Js_config.ts_output, fn_type) with
+            | Js_config.Ts_typescript, Some ty -> (
+              let typed_params = Ts.typed_idents_of_params [single] (Some ty) in
+              match typed_params with
+              | [{ident_type = Some t; _}] ->
+                (* Need parens when we have a type annotation *)
+                P.paren_group f 1 (fun _ ->
+                    let cxt = Ext_pp_scope.ident inner_cxt f single in
+                    Ts.pp_type_annotation f (Some t);
+                    cxt)
+              | _ -> Ext_pp_scope.ident inner_cxt f single)
+            | _ -> Ext_pp_scope.ident inner_cxt f single)
           | l ->
-            P.paren_group f 1 (fun _ -> formal_parameter_list inner_cxt f l)
+            P.paren_group f 1 (fun _ ->
+                formal_parameter_list_typed inner_cxt f l fn_type)
         in
+        pp_return_type f fn_type;
         P.space f;
         if arrow then (
           P.string f L.arrow;
@@ -401,30 +462,63 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
           P.string f "}"
         | ([{statement_desc = Return e}] | [{statement_desc = Exp e}])
           when arrow && directive == None ->
+          let return_type = Ts.return_type_expr_of_fn_type fn_type in
+          let needs_opaque =
+            match !Js_config.ts_output with
+            | Js_config.Ts_typescript ->
+              Ts.needs_opaque_return_assertion return_type
+            | Js_config.Ts_none -> false
+          in
           (if exp_need_paren ~arrow e then P.paren_group f 0 else P.group f 0)
-            (fun _ -> ignore (expression ~level:0 cxt f e))
+            (fun _ ->
+              ignore
+                (P.cond_paren_group f
+                   (needs_opaque && exp_need_paren_for_as e)
+                   (fun _ -> expression ~level:0 cxt f e));
+              if needs_opaque then Ts.pp_opaque_return_assertion f return_type)
         | _ ->
+          (* Set return type for nested Return statements to use *)
+          let old_return_type = !current_fn_return_type in
+          current_fn_return_type := Ts.return_type_expr_of_fn_type fn_type;
           P.brace_vgroup f 1 (fun _ ->
-              function_body ?directive ~return_unit cxt f b)
+              function_body ?directive ~return_unit cxt f b);
+          current_fn_return_type := old_return_type
     in
     let enclose () =
+      let pp_type_params () =
+        match !Js_config.ts_output with
+        | Js_config.Ts_typescript -> Ts.pp_type_params_from_ml f fn_type
+        | Js_config.Ts_none -> ()
+      in
       let handle () =
         match fn_state with
         | Is_return ->
           return_sp f;
           P.string f (L.function_ ~async ~arrow);
+          pp_type_params ();
           param_body ()
         | No_name _ ->
           P.string f (L.function_ ~async ~arrow);
+          pp_type_params ();
           param_body ()
         | Name_non_top x ->
           ignore (pp_var_assign inner_cxt f x : cxt);
           P.string f (L.function_ ~async ~arrow);
+          pp_type_params ();
           param_body ();
           semi f
         | Name_top x ->
+          (* For TypeScript mode, print GADT overloads before the function *)
+          (match !Js_config.ts_output with
+          | Js_config.Ts_typescript ->
+            let param_names = List.map Ident.name l in
+            (* Use the converted name (e.g., eval -> $$eval) for overloads *)
+            let js_name = Ext_ident.convert (Ident.name x) in
+            Ts.pp_gadt_overloads f js_name param_names fn_type
+          | Js_config.Ts_none -> ());
           P.string f (L.function_ ~async ~arrow);
           ignore (Ext_pp_scope.ident inner_cxt f x : cxt);
+          pp_type_params ();
           param_body ()
       in
       handle ()
@@ -511,9 +605,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
         let cxt = expression ~level:0 cxt f e1 in
         comma_sp f;
         expression ~level:0 cxt f e2)
-  | Fun {is_method; params; body; env; return_unit; async; directive} ->
+  | Fun {is_method; params; body; env; return_unit; async; directive; fn_type}
+    ->
     (* TODO: dump for comments *)
-    pp_function ?directive ~is_method ~return_unit ~async
+    pp_function ?directive ?fn_type ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
   (* TODO:
        when [e] is [Js_raw_code] with arity
@@ -661,10 +756,12 @@ and expression_desc cxt ~(level : int) f x : cxt =
                            return_unit;
                            async;
                            directive;
+                           fn_type;
                          };
                    };
                   ] ->
-                    pp_function ?directive ~is_method ~return_unit ~async
+                    pp_function ?directive ?fn_type ~is_method ~return_unit
+                      ~async
                       ~fn_state:(No_name {single_arg = true})
                       cxt f params body env
                   | _ ->
@@ -1291,7 +1388,8 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
   match variable with
   | {ident = i; value = None; ident_info; _} ->
     if ident_info.used_stats = Dead_pure then cxt else pp_var_declare cxt f i
-  | {ident = name; value = Some e; ident_info = {used_stats; _}} -> (
+  | {ident = name; value = Some e; ident_info = {used_stats; _}; ident_type}
+    -> (
     match used_stats with
     | Dead_pure -> cxt
     | Dead_non_pure ->
@@ -1299,13 +1397,43 @@ and variable_declaration top cxt f (variable : J.variable_declaration) : cxt =
       statement_desc top cxt f (J.Exp e)
     | _ -> (
       match e.expression_desc with
-      | Fun {is_method; params; body; env; return_unit; async; directive} ->
-        pp_function ?directive ~is_method ~return_unit ~async
+      | Fun
+          {is_method; params; body; env; return_unit; async; directive; fn_type}
+        ->
+        pp_function ?directive ?fn_type ~is_method ~return_unit ~async
           ~fn_state:(if top then Name_top name else Name_non_top name)
           cxt f params body env
       | _ ->
-        let cxt = pp_var_assign cxt f name in
+        (* For TypeScript mode, print type annotation between name and = *)
+        let ty, cxt =
+          match !Js_config.ts_output with
+          | Js_config.Ts_typescript ->
+            let cxt = pp_var_declare_name cxt f name in
+            let ident_name = Ident.name name in
+            (* Try ident_type first, then exported value types, then module types *)
+            let ty =
+              match ident_type with
+              | Some _ -> ident_type
+              | None -> Ts.get_exported_type ident_name
+            in
+            (match ty with
+            | Some _ -> Ts.pp_type_annotation_from_ml f ty
+            | None -> (
+              (* Try module type path for module declarations *)
+              match Ts.get_module_type_path ident_name with
+              | Some type_path ->
+                P.string f ": ";
+                P.string f type_path
+              | None -> ()));
+            P.space f;
+            P.string f L.eq;
+            P.space f;
+            (ty, cxt)
+          | Js_config.Ts_none -> (None, pp_var_assign cxt f name)
+        in
         let cxt = expression ~level:1 cxt f e in
+        (* Print as assertion for opaque types in TypeScript mode *)
+        Ts.pp_as_assertion f ty;
         semi f;
         cxt))
 
@@ -1501,9 +1629,10 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     cxt
   | Return e -> (
     match e.expression_desc with
-    | Fun {is_method; params; body; env; return_unit; async; directive} ->
+    | Fun {is_method; params; body; env; return_unit; async; directive; fn_type}
+      ->
       let cxt =
-        pp_function ?directive ~return_unit ~is_method ~async
+        pp_function ?directive ?fn_type ~return_unit ~is_method ~async
           ~fn_state:Is_return cxt f params body env
       in
       semi f;
@@ -1516,7 +1645,19 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
       return_sp f;
       (* P.string f "return ";(\* ASI -- when there is a comment*\) *)
       P.group f 0 (fun _ ->
-          let cxt = expression ~level:0 cxt f e in
+          let needs_opaque =
+            match !Js_config.ts_output with
+            | Js_config.Ts_typescript ->
+              Ts.needs_opaque_return_assertion !current_fn_return_type
+            | Js_config.Ts_none -> false
+          in
+          let cxt =
+            P.cond_paren_group f
+              (needs_opaque && exp_need_paren_for_as e)
+              (fun _ -> expression ~level:0 cxt f e)
+          in
+          if needs_opaque then
+            Ts.pp_opaque_return_assertion f !current_fn_return_type;
           semi f;
           cxt)
       (* There MUST be a space between the return and its

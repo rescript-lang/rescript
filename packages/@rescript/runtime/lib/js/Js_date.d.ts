@@ -1,0 +1,3 @@
+import type * as Stdlib_Date from "./Stdlib_Date.js";
+
+export type t = Stdlib_Date.t;

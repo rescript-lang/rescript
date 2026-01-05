@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("RegExp")
 type t
 
 module Result = {

@@ -37,6 +37,8 @@ let make_world_deps cwd (config : Bsb_config_types.t option)
       Bsb_config_parse.deps_from_bsconfig ()
     | Some config -> (config.package_specs, config.jsx)
   in
+  (* Convert TypeScript specs to Esmodule + dts for dependencies *)
+  let package_specs = Bsb_package_specs.for_dependency_build package_specs in
   let args =
     if Ext_array.is_empty ninja_args then [|vendor_ninja|]
     else Array.append [|vendor_ninja|] ninja_args

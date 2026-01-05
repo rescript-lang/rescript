@@ -461,6 +461,7 @@ let transl_primitive loc p env ty =
           attr = default_function_attribute;
           loc;
           body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc);
+          fn_type = Some ty;
         }
     | _ -> assert false)
   | _ ->
@@ -483,6 +484,7 @@ let transl_primitive loc p env ty =
           attr = default_function_attribute;
           loc;
           body = Lprim (prim, List.map (fun id -> Lvar id) params, loc);
+          fn_type = Some ty;
         }
 
 let transl_primitive_application loc prim env ty args =
@@ -685,7 +687,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       }
     in
     let loc = e.exp_loc in
-    let lambda = Lfunction {params; body; attr; loc} in
+    let fn_type = Some e.exp_type in
+    let lambda = Lfunction {params; body; attr; loc; fn_type} in
     match arity with
     | Some arity ->
       let prim =
@@ -981,8 +984,8 @@ and transl_apply ?(inlined = Default_inline)
       and id_arg = Ident.create "param" in
       let body =
         match build_apply handle ((Lvar id_arg, optional) :: args') l with
-        | Lfunction {params = ids; body = lam; attr; loc} ->
-          Lfunction {params = id_arg :: ids; body = lam; attr; loc}
+        | Lfunction {params = ids; body = lam; attr; loc; fn_type} ->
+          Lfunction {params = id_arg :: ids; body = lam; attr; loc; fn_type}
         | lam ->
           Lfunction
             {
@@ -990,6 +993,7 @@ and transl_apply ?(inlined = Default_inline)
               body = lam;
               attr = default_function_attribute;
               loc;
+              fn_type = None;
             }
       in
       List.fold_left
@@ -1031,6 +1035,7 @@ and transl_apply ?(inlined = Default_inline)
         body = l0;
         attr = default_function_attribute;
         loc;
+        fn_type = None;
       }
   | _ ->
     (build_apply lam []

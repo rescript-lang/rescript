@@ -48,6 +48,15 @@ let fix_path_for_windows : string -> string =
   if Ext_sys.is_windows_or_cygwin then Ext_string.replace_backward_slash
   else fun s -> s 
 
+(** Map TypeScript suffixes to JavaScript suffixes for imports.
+    TypeScript requires imports to use .js extension even when source is .ts,
+    because at runtime the files will be .js *)
+let ts_suffix_to_js_suffix (suffix : string) : string =
+  match suffix with
+  | ".ts" -> ".js"
+  | ".mts" -> ".mjs"
+  | ".cts" -> ".cjs"
+  | _ -> suffix
 
 (* dependency is runtime module *)  
 let get_runtime_module_path 
@@ -77,7 +86,7 @@ let get_runtime_module_path
         *)
     else  
       match module_system with 
-      | Commonjs | Esmodule -> 
+      | Commonjs | Esmodule | Typescript -> 
         Js_packages_info.runtime_package_path module_system js_file              
       (* Note we did a post-processing when working on Windows *)
       | Es6_global 
@@ -139,12 +148,12 @@ let string_of_module_id
         | Package_found ({suffix} as pkg), Package_script 
           ->    
           let js_file =  
-            Ext_namespace.js_name_of_modulename dep_module_id.id.name case suffix in 
+            Ext_namespace.js_name_of_modulename dep_module_id.id.name case (ts_suffix_to_js_suffix suffix) in 
           pkg.pkg_rel_path // js_file
         | Package_found ({suffix } as dep_pkg),
           Package_found cur_pkg -> 
           let js_file =  
-            Ext_namespace.js_name_of_modulename dep_module_id.id.name case suffix in 
+            Ext_namespace.js_name_of_modulename dep_module_id.id.name case (ts_suffix_to_js_suffix suffix) in 
 
           if  Js_packages_info.same_package_by_name current_package_info  dep_package_info then 
             Ext_path.node_rebase_file
@@ -159,7 +168,7 @@ let string_of_module_id
             get_runtime_module_path dep_module_id current_package_info module_system
           else 
             begin match module_system with 
-              | Commonjs | Esmodule -> 
+              | Commonjs | Esmodule | Typescript -> 
                 dep_pkg.pkg_rel_path // js_file
               (* Note we did a post-processing when working on Windows *)
               | Es6_global 

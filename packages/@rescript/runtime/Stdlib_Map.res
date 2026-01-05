@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Map")
 type t<'k, 'v>
 
 @new external make: unit => t<'k, 'v> = "Map"

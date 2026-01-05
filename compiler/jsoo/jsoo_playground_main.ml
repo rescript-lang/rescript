@@ -96,6 +96,7 @@ module BundleConfig = struct
     | Ext_module_system.Commonjs -> "nodejs"
     | Esmodule -> "es6"
     | Es6_global -> "es6_global"
+    | Typescript -> "typescript"
 end
 
 type loc_err_info = {
@@ -521,7 +522,7 @@ module Compile = struct
       let () =
         Js_dump_program.pp_deps_program ~output_prefix:""
           (* does not matter here *) module_system
-          (Lam_compile_main.compile "" exports lam)
+          (Lam_compile_main.compile "" exports ~dts_exports:[] lam)
           (Ext_pp.from_buffer buffer)
       in
       let v = Buffer.contents buffer in

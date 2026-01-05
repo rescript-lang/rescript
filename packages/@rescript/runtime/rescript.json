@@ -8,11 +8,13 @@
   "package-specs": [
     {
       "module": "commonjs",
-      "in-source": false
+      "in-source": false,
+      "dts": true
     },
     {
       "module": "esmodule",
-      "in-source": false
+      "in-source": false,
+      "dts": true
     }
   ],
   "compiler-flags": [

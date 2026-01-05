@@ -1,0 +1,77 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Ordering from "./Stdlib_Ordering.js";
+
+export type t<A> = rescript.option<A>;
+
+export function filter<A>(
+  opt: rescript.option<A>,
+  p: (arg0: A) => boolean,
+): rescript.option<A>;
+
+export function forEach<A>(opt: rescript.option<A>, f: (arg0: A) => void): void;
+
+export function getExn<A>(arg0: rescript.option<A>, message?: string): A;
+
+export function getOrThrow<A>(x: rescript.option<A>, message?: string): A;
+
+export function mapOr<A, B>(opt: rescript.option<A>, default_: B, f: (arg0: A) => B): B;
+
+export function mapWithDefault<A, B>(
+  arg0: rescript.option<A>,
+  arg1: B,
+  arg2: (arg0: A) => B,
+): B;
+
+export function map<A, B>(opt: rescript.option<A>, f: (arg0: A) => B): rescript.option<B>;
+
+export function flatMap<A, B>(
+  opt: rescript.option<A>,
+  f: (arg0: A) => rescript.option<B>,
+): rescript.option<B>;
+
+export function getOr<A>(opt: rescript.option<A>, default_: A): A;
+
+export function getWithDefault<A>(arg0: rescript.option<A>, arg1: A): A;
+
+export function orElse<A>(
+  opt: rescript.option<A>,
+  other: rescript.option<A>,
+): rescript.option<A>;
+
+export function isSome<A>(x: rescript.option<A>): boolean;
+
+export function isNone<A>(x: rescript.option<A>): boolean;
+
+export function equal<A, B>(
+  a: rescript.option<A>,
+  b: rescript.option<B>,
+  eq: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function compare<A, B>(
+  a: rescript.option<A>,
+  b: rescript.option<B>,
+  cmp: (arg0: A, arg1: B) => Stdlib_Ordering.t,
+): Stdlib_Ordering.t;
+
+export function all<A>(options: rescript.option<A>[]): rescript.option<A[]>;
+
+export function all2<A, B>(
+  param: [rescript.option<A>, rescript.option<B>],
+): rescript.option<[A, B]>;
+
+export function all3<A, B, C>(
+  param: [rescript.option<A>, rescript.option<B>, rescript.option<C>],
+): rescript.option<[A, B, C]>;
+
+export function all4<A, B, C, D>(
+  param: [rescript.option<A>, rescript.option<B>, rescript.option<C>, rescript.option<D>],
+): rescript.option<[A, B, C, D]>;
+
+export function all5<A, B, C, D, E>(
+  param: [rescript.option<A>, rescript.option<B>, rescript.option<C>, rescript.option<D>, rescript.option<E>],
+): rescript.option<[A, B, C, D, E]>;
+
+export function all6<A, B, C, D, E, F>(
+  param: [rescript.option<A>, rescript.option<B>, rescript.option<C>, rescript.option<D>, rescript.option<E>, rescript.option<F>],
+): rescript.option<[A, B, C, D, E, F]>;

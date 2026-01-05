@@ -21,9 +21,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
-type format = Ext_module_system.t
 
-type spec = {format: format; in_source: bool; suffix: string}
+type spec =
+  | Commonjs of {in_source: bool; suffix: string; emit_dts: bool}
+  | Esmodule of {in_source: bool; suffix: string; emit_dts: bool}
+  | Typescript of {in_source: bool; suffix: string}
+      (** TypeScript has inline types, no need for emit_dts *)
 
 type t = private spec list
 
@@ -36,3 +39,15 @@ val singleton : spec -> t
 val fold : (spec -> 'a -> 'a) -> t -> 'a -> 'a
 
 val iter : (spec -> unit) -> t -> unit
+
+val in_source : spec -> bool
+
+val suffix : spec -> string
+
+val emit_dts : spec -> bool
+
+val is_typescript : spec -> bool
+
+val module_system : spec -> Ext_module_system.t
+
+val format_name : spec -> string

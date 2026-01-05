@@ -1,0 +1,134 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_ArrayBuffer from "./Stdlib_ArrayBuffer.js";
+
+export type array_buffer = Stdlib_ArrayBuffer.t;
+
+export type array_like<A> = rescript.opaque<
+  "Js_typed_array2.array_like",
+  [A]
+>;
+
+declare namespace ArrayBuffer {
+  type t = array_buffer;
+}
+export type ArrayBuffer = {
+};
+export const $$ArrayBuffer: ArrayBuffer;
+
+declare namespace Int8Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Int8Array.typed_array",
+  [A]
+>;
+  type t = Int8Array.typed_array<Int8Array.elt>;
+}
+export type Int8Array = {
+};
+export const $$Int8Array: Int8Array;
+
+declare namespace Uint8Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Uint8Array.typed_array",
+  [A]
+>;
+  type t = Uint8Array.typed_array<Uint8Array.elt>;
+}
+export type Uint8Array = {
+};
+export const $$Uint8Array: Uint8Array;
+
+declare namespace Uint8ClampedArray {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Uint8ClampedArray.typed_array",
+  [A]
+>;
+  type t = Uint8ClampedArray.typed_array<Uint8ClampedArray.elt>;
+}
+export type Uint8ClampedArray = {
+};
+export const $$Uint8ClampedArray: Uint8ClampedArray;
+
+declare namespace Int16Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Int16Array.typed_array",
+  [A]
+>;
+  type t = Int16Array.typed_array<Int16Array.elt>;
+}
+export type Int16Array = {
+};
+export const $$Int16Array: Int16Array;
+
+declare namespace Uint16Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Uint16Array.typed_array",
+  [A]
+>;
+  type t = Uint16Array.typed_array<Uint16Array.elt>;
+}
+export type Uint16Array = {
+};
+export const $$Uint16Array: Uint16Array;
+
+declare namespace Int32Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Int32Array.typed_array",
+  [A]
+>;
+  type t = Int32Array.typed_array<Int32Array.elt>;
+}
+export type Int32Array = {
+};
+export const $$Int32Array: Int32Array;
+
+declare namespace Uint32Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Uint32Array.typed_array",
+  [A]
+>;
+  type t = Uint32Array.typed_array<Uint32Array.elt>;
+}
+export type Uint32Array = {
+};
+export const $$Uint32Array: Uint32Array;
+
+declare namespace Float32Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Float32Array.typed_array",
+  [A]
+>;
+  type t = Float32Array.typed_array<Float32Array.elt>;
+}
+export type Float32Array = {
+};
+export const $$Float32Array: Float32Array;
+
+declare namespace Float64Array {
+  type elt = number;
+  type typed_array<A> = rescript.opaque<
+  "Js_typed_array2.Float64Array.typed_array",
+  [A]
+>;
+  type t = Float64Array.typed_array<Float64Array.elt>;
+}
+export type Float64Array = {
+};
+export const $$Float64Array: Float64Array;
+
+declare namespace DataView {
+  type t = rescript.opaque<
+  "Js_typed_array2.DataView.t",
+  []
+>;
+}
+export type DataView = {
+};
+export const $$DataView: DataView;

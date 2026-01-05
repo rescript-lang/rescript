@@ -3,7 +3,7 @@ Bindings to JavaScript's `Intl.Segmenter`.
 
 See [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter) for API details.
 */
-@notUndefined
+@notUndefined @external("Intl.Segmenter")
 type t
 
 type granularity = [#grapheme | #word | #sentence]

@@ -212,6 +212,8 @@ pub struct AstModule {
     pub ast_file_path: PathBuf,
     pub is_root: bool,
     pub suffix: String,
+    /// Whether .d.ts generation was enabled when this module was compiled
+    pub dts: bool,
 }
 
 #[derive(Debug)]

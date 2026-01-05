@@ -1,0 +1,11 @@
+export function escaped(param: number): string;
+
+export function lowercase_ascii(c: number): number;
+
+export function uppercase_ascii(c: number): number;
+
+export type t = number;
+
+export function compare(c1: t, c2: t): number;
+
+export function equal(c1: t, c2: t): boolean;

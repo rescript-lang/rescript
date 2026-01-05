@@ -121,9 +121,10 @@ let _j = Js_pass_debug.dump
 (** Actually simplify_lets is kind of global optimization since it requires you to know whether 
     it's used or not 
 *)
-let compile  
+let compile
     (output_prefix : string)
     export_idents
+    ~(dts_exports : Ts.dts_export list)
     (lam : Lambda.lambda)  = 
   let export_ident_sets = Set_ident.of_list export_idents in 
   (* To make toplevel happy - reentrant for js-demo *)
@@ -233,11 +234,13 @@ let () = Ext_log.dwarn ~__POS__ "\n@[[TIME:]Post-compile: %f@]@."  (Sys.time () 
 (* Ext_marshal.to_file (Ext_path.chop_extension filename ^ ".mj")  js; *)
 let meta_exports = meta.exports in 
 let export_set = Set_ident.of_list meta_exports in 
-let js : J.program = 
-  { 
-    exports = meta_exports ; 
-    export_set; 
-    block = body}
+let js : J.program =
+  {
+    exports = meta_exports;
+    export_set;
+    block = body;
+    dts_exports;
+  }
 in
 js 
 |> _j "initial"
@@ -288,33 +291,83 @@ js
 
 let (//) = Filename.concat  
 
-let lambda_as_module 
+let lambda_as_module
     (lambda_output : J.deps_program)
     (output_prefix : string)
-  : unit = 
-  let package_info = Js_packages_state.get_packages_info () in 
-  if Js_packages_info.is_empty package_info && !Js_config.js_stdout then begin    
+  : unit =
+  let package_info = Js_packages_state.get_packages_info () in
+  if Js_packages_info.is_empty package_info && !Js_config.js_stdout then begin
     Js_dump_program.dump_deps_program ~output_prefix Commonjs (lambda_output) stdout
   end else
-    Js_packages_info.iter package_info (fun {module_system; path; suffix} -> 
-        let output_chan chan  = 
+    Js_packages_info.iter package_info (fun {module_system; path; suffix} ->
+        let output_chan chan  =
           Js_dump_program.dump_deps_program ~output_prefix
-            module_system 
+            module_system
             (lambda_output)
             chan in
-        let basename =  
+        let basename =
           Ext_namespace.change_ext_ns_suffix (Filename.basename output_prefix) suffix
         in
-        let target_file = 
+        let target_file =
           (Lazy.force Ext_path.package_dir //
            path //
            basename
            (* #913 only generate little-case js file *)
-          ) in     
-        (if not !Clflags.dont_write_files then 
+          ) in
+        (if not !Clflags.dont_write_files then
            Ext_pervasives.with_file_as_chan
              target_file output_chan );
-        if !Warnings.has_warnings  then begin 
+        (* Generate .d.ts file when emit_dts is enabled *)
+        (if (not !Clflags.dont_write_files) && !Js_config.emit_dts then
+           (* Convert JS suffix to .d.ts suffix:
+              .js -> .d.ts, .mjs -> .d.mts, .cjs -> .d.cts, .res.js -> .res.d.ts *)
+           let js_to_dts ext =
+             match ext with
+             | ".mjs" -> ".d.mts"
+             | ".cjs" -> ".d.cts"
+             | _ -> ".d.ts"
+           in
+           let dts_file =
+             let base = Ext_filename.chop_extension_maybe target_file in
+             let ext = Ext_filename.get_extension_maybe target_file in
+             base ^ js_to_dts ext
+           in
+           let output_dir = Filename.dirname target_file in
+           (* Compute imports for .d.ts file - keep .js extension for imports
+              since TypeScript will automatically resolve to .d.ts *)
+           let dts_imports =
+             Ext_list.filter_map lambda_output.modules (fun (m : J.module_id) ->
+                 if m.dynamic_import then None
+                 else
+                   let module_name = Ident.name m.id in
+                   let module_path =
+                     Js_name_of_module_id.string_of_module_id m ~output_dir
+                       module_system
+                   in
+                   Some Ts.{module_name; module_path})
+           in
+           let module_name = Filename.basename output_prefix in
+           (* Resolver function for type-only module imports.
+               Returns None for modules that can't be found (e.g., local module aliases). *)
+            let resolve_module_path mod_name =
+              let dep_id = Ident.create mod_name in
+              let dep_module_id = Lam_module_ident.of_ml dep_id in
+              (* Check if the CMJ file exists before trying to resolve *)
+              let cmj_file = mod_name ^ Literals.suffix_cmj in
+              match Config_util.find_opt cmj_file with
+              | None ->
+                (* CMJ not found - likely a local module alias *)
+                None
+              | Some _ ->
+                Some
+                  (Js_name_of_module_id.string_of_module_id dep_module_id
+                     ~output_dir module_system)
+            in
+           Ext_pervasives.with_file_as_chan dts_file (fun chan ->
+               let f = Ext_pp.from_channel chan in
+               Ts.pp_dts_file ~module_name ~resolve_module_path ~suffix f
+                 dts_imports lambda_output.program.dts_exports));
+        if !Warnings.has_warnings  then begin
           Warnings.has_warnings := false ;
 #ifndef BROWSER
           (* 5206: When there were warnings found during the compilation, we want the file
@@ -323,11 +376,11 @@ let lambda_as_module
              (Do *not* set the timestamp of the JS output file instead
              as that does not play well with every bundler.) *)
           let ast_file = output_prefix ^ Literals.suffix_ast in
-          if Sys.file_exists ast_file then begin 
+          if Sys.file_exists ast_file then begin
             Bs_hash_stubs.set_as_old_file ast_file
-          end          
-#endif          
-        end             
+          end
+#endif
+        end
       )
 
 

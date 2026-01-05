@@ -1,0 +1,13 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export interface js_error {
+  readonly cause: rescript.exn;
+}
+
+export interface t {
+  readonly RE_EXN_ID: string;
+}
+
+export function create(str: string): string;
+
+export function internalToException(e: unknown): rescript.exn;

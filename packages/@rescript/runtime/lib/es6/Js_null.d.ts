@@ -1,0 +1,17 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export type t<A> =
+  | A
+  | null;
+
+export function test<A>(x: t<A>): boolean;
+
+export function getExn<A>(f: t<A>): A;
+
+export function bind<A, B>(x: t<A>, f: (arg0: A) => B): t<B>;
+
+export function iter<A>(x: t<A>, f: (arg0: A) => void): void;
+
+export function fromOption<A>(x: rescript.option<A>): t<A>;
+
+export function from_opt<A>(arg0: rescript.option<A>): t<A>;

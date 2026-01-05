@@ -88,10 +88,10 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       in
       let body = aux body in
       Lam.letrec bindings body
-    | Lfunction {arity; params; body; attr} ->
+    | Lfunction {arity; params; body; attr; fn_type} ->
       let params = Ext_list.map params rebind in
       let body = aux body in
-      Lam.function_ ~arity ~params ~body ~attr
+      Lam.function_ ~arity ~params ~body ~attr ~fn_type
     | Lstaticcatch (l1, (i, xs), l2) ->
       let l1 = aux l1 in
       let xs = Ext_list.map xs rebind in

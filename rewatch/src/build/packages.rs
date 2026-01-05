@@ -640,7 +640,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
         let root_config = build_state.get_root_config();
 
         root_config.get_package_specs().iter().for_each(|spec| {
-            if !spec.in_source {
+            if !spec.in_source() {
                 // we don't want to calculate this if we don't have out of source specs
                 // we do this twice, but we almost never have multiple package specs
                 // so this optimization is less important

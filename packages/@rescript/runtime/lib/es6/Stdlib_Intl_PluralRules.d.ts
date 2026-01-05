@@ -1,0 +1,49 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Intl_Common from "./Stdlib_Intl_Common.js";
+
+export type t = Intl.PluralRules;
+
+export type localeType =
+  | "ordinal"
+  | "cardinal";
+
+export interface options {
+  readonly localeMatcher?: rescript.option<Stdlib_Intl_Common.localeMatcher>;
+  readonly type?: rescript.option<localeType>;
+  readonly minimumIntegerDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly minimumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly maximumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly minimumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly maximumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+}
+
+export type pluralCategories =
+  | "many"
+  | "zero"
+  | "one"
+  | "other"
+  | "few"
+  | "two";
+
+export interface resolvedOptions {
+  readonly locale: string;
+  readonly pluralCategories: pluralCategories[];
+  readonly type: localeType;
+  readonly minimumIntegerDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly minimumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly maximumFractionDigits?: rescript.option<Stdlib_Intl_Common.zeroTo20>;
+  readonly minimumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+  readonly maximumSignificantDigits?: rescript.option<Stdlib_Intl_Common.oneTo21>;
+}
+
+export interface supportedLocalesOptions {
+  readonly localeMatcher: Stdlib_Intl_Common.localeMatcher;
+}
+
+export type rule =
+  | "many"
+  | "zero"
+  | "one"
+  | "other"
+  | "few"
+  | "two";

@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Iterator")
 type t<'a>
 
 type value<'a> = {

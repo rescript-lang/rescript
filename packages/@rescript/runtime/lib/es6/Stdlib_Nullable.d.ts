@@ -1,0 +1,35 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Ordering from "./Stdlib_Ordering.js";
+
+export type t<A> =
+  | A
+  | null
+  | undefined;
+
+export function equal<A, B>(a: t<A>, b: t<B>, eq: (arg0: A, arg1: B) => boolean): boolean;
+
+export function compare<A, B>(
+  a: t<A>,
+  b: t<B>,
+  cmp: (arg0: A, arg1: B) => Stdlib_Ordering.t,
+): Stdlib_Ordering.t;
+
+export function fromOption<A>(option: rescript.option<A>): t<A>;
+
+export function getOr<A>(value: t<A>, default_: A): A;
+
+export function getWithDefault<A>(arg0: t<A>, arg1: A): A;
+
+export function getExn<A>(arg0: t<A>): A;
+
+export function getOrThrow<A>(value: t<A>): A;
+
+export function forEach<A>(value: t<A>, f: (arg0: A) => void): void;
+
+export function map<A, B>(value: t<A>, f: (arg0: A) => B): t<B>;
+
+export function mapOr<A, B>(value: t<A>, default_: B, f: (arg0: A) => B): B;
+
+export function mapWithDefault<A, B>(arg0: t<A>, arg1: B, arg2: (arg0: A) => B): B;
+
+export function flatMap<A, B>(value: t<A>, f: (arg0: A) => t<B>): t<B>;

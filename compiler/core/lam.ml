@@ -22,6 +22,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
+(* Alias to avoid shadowing by local Types module *)
+module Ml_types = Types
+
 type ident = Ident.t
 type apply_status = App_na | App_infer_full | App_uncurry
 
@@ -47,6 +50,7 @@ module Types = struct
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
+    fn_type: Ml_types.type_expr option;
   }
 
   (*
@@ -138,6 +142,7 @@ module X = struct
     params: ident list;
     body: t;
     attr: Lambda.function_attribute;
+    fn_type: Ml_types.type_expr option;
   }
 
   and t = Types.t =
@@ -173,9 +178,9 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let ap_func = f ap_func in
     let ap_args = Ext_list.map ap_args f in
     Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx}
-  | Lfunction {body; arity; params; attr} ->
+  | Lfunction {body; arity; params; attr; fn_type} ->
     let body = f body in
-    Lfunction {body; arity; params; attr}
+    Lfunction {body; arity; params; attr; fn_type}
   | Llet (str, id, arg, body) ->
     let arg = f arg in
     let body = f body in
@@ -451,8 +456,8 @@ let global_module ?(dynamic_import = false) id =
   Lglobal_module (id, dynamic_import)
 let const ct : t = Lconst ct
 
-let function_ ~attr ~arity ~params ~body : t =
-  Lfunction {arity; params; body; attr}
+let function_ ~attr ~arity ~params ~body ~fn_type : t =
+  Lfunction {arity; params; body; attr; fn_type}
 
 let let_ kind id e body : t = Llet (kind, id, e, body)
 let letrec bindings body : t = Lletrec (bindings, body)

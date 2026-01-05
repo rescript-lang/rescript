@@ -1,0 +1,57 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Stdlib_Null from "./Stdlib_Null.js";
+
+export type t =
+  | boolean
+  | null
+  | string
+  | number
+  | rescript.dict<t>
+  | t[];
+
+export type replacer =
+  | string[]
+  | ((arg0: string, arg1: t) => t);
+
+declare namespace Classify {
+  type t =
+    | {
+      readonly TAG: "Bool";
+      readonly _0: boolean;
+    }
+    | "Null"
+    | {
+      readonly TAG: "String";
+      readonly _0: string;
+    }
+    | {
+      readonly TAG: "Number";
+      readonly _0: number;
+    }
+    | {
+      readonly TAG: "Object";
+      readonly _0: rescript.dict<t>;
+    }
+    | {
+      readonly TAG: "Array";
+      readonly _0: t[];
+    };
+}
+export type Classify = {
+  classify: (arg0: A) => Classify.t;
+};
+export const Classify: Classify;
+
+export type Encode = {
+};
+export const Encode: Encode;
+
+export type Decode = {
+  bool: (arg0: t) => rescript.option<boolean>;
+  $$null: (arg0: t) => rescript.option<Stdlib_Null.t<A>>;
+  string: (arg0: t) => rescript.option<string>;
+  float: (arg0: t) => rescript.option<number>;
+  object: (arg0: t) => rescript.option<rescript.dict<t>>;
+  array: (arg0: t) => rescript.option<t[]>;
+};
+export const Decode: Decode;

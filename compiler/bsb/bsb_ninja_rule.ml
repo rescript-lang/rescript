@@ -122,6 +122,7 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     (match gentype_config with
     | false -> ()
     | true -> Ext_buffer.add_string buf " -bs-gentype");
+    (* -bs-typescript flag is now handled per-spec in package_flag_of_package_specs *)
     if read_cmi <> `is_cmi then (
       Ext_buffer.add_string buf " -bs-package-name ";
       Ext_buffer.add_string buf (Ext_filename.maybe_quote package_name);

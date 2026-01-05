@@ -252,3 +252,7 @@ let check l (x, _) = List.mem x.txt l
 let has_unboxed attr = List.exists (check ["ocaml.unboxed"; "unboxed"]) attr
 
 let has_boxed attr = List.exists (check ["ocaml.boxed"; "boxed"]) attr
+
+let has_external attr = List.exists (check ["external"]) attr
+
+let has_opaque attr = List.exists (check ["opaque"]) attr

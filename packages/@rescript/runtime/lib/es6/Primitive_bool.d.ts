@@ -1,0 +1,5 @@
+export function compare(x: boolean, y: boolean): number;
+
+export function min(x: boolean, y: boolean): boolean;
+
+export function max(x: boolean, y: boolean): boolean;

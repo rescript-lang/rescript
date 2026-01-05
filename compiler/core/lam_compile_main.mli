@@ -27,7 +27,12 @@
 (** Compile and register the hook of function to compile  a lambda to JS IR 
 *)
 
-val compile : string -> Ident.t list -> Lambda.lambda -> J.deps_program
+val compile :
+  string ->
+  Ident.t list ->
+  dts_exports:Ts.dts_export list ->
+  Lambda.lambda ->
+  J.deps_program
 (** For toplevel, [filename] is [""] which is the same as
     {!Env.get_unit_name ()}
 *)

@@ -236,7 +236,7 @@ let unit : t = {expression_desc = Undefined {is_unit = true}; comment = None}
 *)
 
 let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
-    ~one_unit_arg params body : t =
+    ~one_unit_arg ~fn_type params body : t =
   let params = if one_unit_arg then [] else params in
   let len = List.length params in
   {
@@ -250,11 +250,13 @@ let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
           return_unit;
           async;
           directive;
+          fn_type;
         };
     comment;
   }
 
-let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
+let method_ ?comment ?immutable_mask ~async ~return_unit ~fn_type params body :
+    t =
   let len = List.length params in
   {
     expression_desc =
@@ -267,6 +269,7 @@ let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
           return_unit;
           async;
           directive = None;
+          fn_type;
         };
     comment;
   }
@@ -1722,6 +1725,7 @@ let of_block ?comment ?e block : t =
             return_unit;
             async = false;
             directive = None;
+            fn_type = None;
           };
     }
     []

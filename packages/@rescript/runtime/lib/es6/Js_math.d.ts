@@ -1,0 +1,13 @@
+export function unsafe_ceil(arg0: number): number;
+
+export function ceil_int(f: number): number;
+
+export function ceil(arg0: number): number;
+
+export function unsafe_floor(arg0: number): number;
+
+export function floor_int(f: number): number;
+
+export function floor(arg0: number): number;
+
+export function random_int(min: number, max: number): number;

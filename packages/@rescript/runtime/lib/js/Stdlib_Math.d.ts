@@ -1,0 +1,10 @@
+export type Constants = {
+};
+export const Constants: Constants;
+
+export type Int = {
+  floor: (arg0: number) => number;
+  ceil: (arg0: number) => number;
+  random: (arg0: number, arg1: number) => number;
+};
+export const Int: Int;

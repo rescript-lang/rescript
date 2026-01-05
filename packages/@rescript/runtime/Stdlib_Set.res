@@ -1,4 +1,4 @@
-@notUndefined
+@notUndefined @external("Set")
 type t<'a>
 
 @new external make: unit => t<'a> = "Set"

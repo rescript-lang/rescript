@@ -115,6 +115,22 @@ let suffix_d = ".d"
 
 let suffix_js = ".js"
 
+let suffix_mjs = ".mjs"
+
+let suffix_cjs = ".cjs"
+
+let suffix_ts = ".ts"
+
+let suffix_mts = ".mts"
+
+let suffix_cts = ".cts"
+
+let suffix_d_ts = ".d.ts"
+
+let suffix_d_mts = ".d.mts"
+
+let suffix_d_cts = ".d.cts"
+
 let suffix_gen_js = ".gen.js"
 
 let suffix_gen_tsx = ".gen.tsx"
@@ -122,6 +138,8 @@ let suffix_gen_tsx = ".gen.tsx"
 let esmodule = "esmodule"
 
 let commonjs = "commonjs"
+
+let typescript = "typescript"
 
 let es6 = "es6"
 (* [@@deprecated "Will be removed in v12"] *)

@@ -138,6 +138,7 @@ and expression_desc =
       return_unit: bool;
       async: bool;
       directive: string option;
+      fn_type: Types.type_expr option;
     }
   | Str of {delim: delim; txt: string}
   (* A string is UTF-8 encoded, and may contain
@@ -293,13 +294,21 @@ and variable_declaration = {
   value: expression option;
   property: property;
   ident_info: ident_info;
+  ident_type: Types.type_expr option;
+      (** Type annotation for TypeScript output *)
 }
 
 (* TODO: For efficency: block should not be a list, it should be able to
    be concatenated in both ways
 *)
 and block = statement list
-and program = {block: block; exports: exports; export_set: Set_ident.t}
+and program = {
+  block: block;
+  exports: exports;
+  export_set: Set_ident.t;
+  dts_exports: Ts.dts_export list;
+      (** All exports for .d.ts generation in source order *)
+}
 
 and deps_program = {
   program: program;

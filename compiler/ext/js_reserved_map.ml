@@ -241,3 +241,33 @@ let js_globals = STbl.of_array [|
 |]
 
 let is_js_global s = STbl.mem js_globals s
+
+(** TypeScript specific keywords *)
+let ts_keywords = STbl.of_array
+  [|
+    "any";
+    "boolean";
+    "number";
+    "string";
+    "symbol";
+    "abstract";
+    "as";
+    "async";
+    "await";
+    "declare";
+    "from";
+    "get";
+    "is";
+    "module";
+    "namespace";
+    "never";
+    "readonly";
+    "require";
+    "set";
+    "type";
+    "undefined";
+    "unique";
+    "unknown";
+  |]
+
+let is_ts_keyword s = STbl.mem ts_keywords s

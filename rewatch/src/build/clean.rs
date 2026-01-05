@@ -39,6 +39,19 @@ fn remove_mjs_file(source_file: &Path, suffix: &str) {
     ));
 }
 
+/// Remove TypeScript declaration file (.d.ts, .d.mts, or .d.cts) corresponding to a source file
+fn remove_dts_file(source_file: &Path, suffix: &str) {
+    // Derive the .d.ts extension from the JS/TS suffix
+    // .js -> .d.ts, .mjs -> .d.mts, .cjs -> .d.cts
+    // .ts -> .d.ts, .mts -> .d.mts, .cts -> .d.cts
+    let dts_ext = match suffix {
+        ".mjs" | ".mts" => "d.mts",
+        ".cjs" | ".cts" => "d.cts",
+        _ => "d.ts",
+    };
+    let _ = std::fs::remove_file(source_file.with_extension(dts_ext));
+}
+
 fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
@@ -63,7 +76,7 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
 }
 
 fn clean_source_files(build_state: &BuildState, root_config: &Config) {
-    // get all rescript file locations
+    // get all rescript file locations with their output settings
     let rescript_file_locations = build_state
         .modules
         .values()
@@ -72,31 +85,33 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
                 build_state.packages.get(&module.package_name).map(|package| {
                     root_config
                         .get_package_specs()
-                        .into_iter()
+                        .iter()
                         .filter_map(|spec| {
-                            if spec.in_source {
-                                Some((
-                                    package.path.join(&source_file.implementation.path),
-                                    match spec.suffix {
-                                        None => root_config.get_suffix(&spec),
-                                        Some(suffix) => suffix,
-                                    },
-                                ))
+                            if spec.in_source() {
+                                let suffix = spec.suffix().to_string();
+                                let dts = spec.emit_dts();
+                                Some((package.path.join(&source_file.implementation.path), suffix, dts))
                             } else {
                                 None
                             }
                         })
-                        .collect::<Vec<(PathBuf, String)>>()
+                        .collect::<Vec<(PathBuf, String, bool)>>()
                 })
             }
             _ => None,
         })
         .flatten()
-        .collect::<Vec<(PathBuf, String)>>();
+        .collect::<Vec<(PathBuf, String, bool)>>();
 
     rescript_file_locations
         .par_iter()
-        .for_each(|(rescript_file_location, suffix)| remove_mjs_file(rescript_file_location, suffix));
+        .for_each(|(rescript_file_location, suffix, dts)| {
+            remove_mjs_file(rescript_file_location, suffix);
+            // Remove .d.ts files only if dts generation was enabled
+            if *dts {
+                remove_dts_file(rescript_file_location, suffix);
+            }
+        });
 }
 
 // TODO: change to scan_previous_build => CompileAssetsState
@@ -127,6 +142,7 @@ pub fn cleanup_previous_build(
                 package_name,
                 ast_file_path,
                 suffix,
+                dts,
                 ..
             } = compile_assets_state
                 .ast_modules
@@ -139,6 +155,10 @@ pub fn cleanup_previous_build(
                 .expect("Could not find package");
             remove_compile_assets(package, res_file_location);
             remove_mjs_file(res_file_location, suffix);
+            // Remove .d.ts files only if dts generation was enabled
+            if *dts {
+                remove_dts_file(res_file_location, suffix);
+            }
             remove_iast(package, res_file_location);
             remove_ast(package, res_file_location);
             match helpers::get_extension(ast_file_path).as_str() {
@@ -368,23 +388,21 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
     packages::parse_packages(&mut build_state)?;
     let root_config = build_state.get_root_config();
-    let suffix_for_print = match root_config.package_specs {
-        None => match &root_config.suffix {
-            None => String::from(".js"),
-            Some(suffix) => suffix.clone(),
-        },
-        Some(_) => root_config
-            .get_package_specs()
-            .into_iter()
+    let package_specs = root_config.get_package_specs();
+    let suffix_for_print = if package_specs.is_empty() {
+        root_config.suffix.clone().unwrap_or_else(|| String::from(".js"))
+    } else {
+        package_specs
+            .iter()
             .filter_map(|spec| {
-                if spec.in_source {
-                    spec.suffix.or_else(|| root_config.suffix.clone())
+                if spec.in_source() {
+                    Some(spec.suffix().to_string())
                 } else {
                     None
                 }
             })
             .collect::<Vec<String>>()
-            .join(", "),
+            .join(", ")
     };
 
     if !plain_output && show_progress {

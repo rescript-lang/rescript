@@ -1,0 +1,10 @@
+import type * as rescript from "@rescript/runtime/types";
+
+export type element = rescript.opaque<
+  "Jsx.element",
+  []
+>;
+
+export type componentLike<Props, Return> = (arg0: Props) => Return;
+
+export type component<Props> = componentLike<Props, element>;

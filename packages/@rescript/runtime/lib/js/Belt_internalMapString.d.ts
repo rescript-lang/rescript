@@ -1,0 +1,102 @@
+import type * as rescript from "@rescript/runtime/types";
+import type * as Belt_internalAVLtree from "./Belt_internalAVLtree.js";
+import type * as Js from "./Js.js";
+
+export type key = string;
+
+export type t<A> = Belt_internalAVLtree.t<key, A>;
+
+export function add<A>(
+  t: Belt_internalAVLtree.t<key, A>,
+  x: key,
+  data: A,
+): Belt_internalAVLtree.t<key, A>;
+
+export function get<A>(
+  n: Belt_internalAVLtree.t<key, A>,
+  x: key,
+): rescript.option<A>;
+
+export function getUndefined<A>(
+  n: Belt_internalAVLtree.t<key, A>,
+  x: key,
+): Js.undefined_<A>;
+
+export function getOrThrow<A>(n: Belt_internalAVLtree.t<key, A>, x: key): A;
+
+export function getWithDefault<A>(
+  n: Belt_internalAVLtree.t<key, A>,
+  x: key,
+  def: A,
+): A;
+
+export function has<A>(n: Belt_internalAVLtree.t<key, A>, x: key): boolean;
+
+export function remove<A>(
+  n: Belt_internalAVLtree.t<key, A>,
+  x: key,
+): Belt_internalAVLtree.t<key, A>;
+
+export function splitAux<A>(
+  x: key,
+  n: Belt_internalAVLtree.node<key, A>,
+): [t<A>, rescript.option<A>, t<A>];
+
+export function split<A>(
+  x: key,
+  n: rescript.option<Belt_internalAVLtree.node<key, A>>,
+): [t<A>, rescript.option<A>, t<A>];
+
+export function merge<A, B, C>(
+  s1: Belt_internalAVLtree.t<key, A>,
+  s2: t<B>,
+  f: (arg0: key, arg1: rescript.option<A>, arg2: rescript.option<B>) => rescript.option<C>,
+): Belt_internalAVLtree.t<key, C>;
+
+export function compareAux<A, B>(
+  e1: rescript.list<Belt_internalAVLtree.node<key, A>>,
+  e2: rescript.list<Belt_internalAVLtree.node<key, B>>,
+  vcmp: (arg0: A, arg1: B) => number,
+): number;
+
+export function cmp<A, B>(
+  s1: Belt_internalAVLtree.t<key, A>,
+  s2: Belt_internalAVLtree.t<key, B>,
+  cmp: (arg0: A, arg1: B) => number,
+): number;
+
+export function eqAux<A, B>(
+  e1: rescript.list<Belt_internalAVLtree.node<key, A>>,
+  e2: rescript.list<Belt_internalAVLtree.node<key, B>>,
+  eq: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function eq<A, B>(
+  s1: Belt_internalAVLtree.t<key, A>,
+  s2: Belt_internalAVLtree.t<key, B>,
+  eq: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function addMutate<A>(t: t<A>, x: key, data: A): t<A>;
+
+export function fromArray<A>(
+  xs: [key, A][],
+): Belt_internalAVLtree.t<key, A>;
+
+export function cmpU<A, B>(
+  arg0: Belt_internalAVLtree.t<key, A>,
+  arg1: Belt_internalAVLtree.t<key, B>,
+  arg2: (arg0: A, arg1: B) => number,
+): number;
+
+export function eqU<A, B>(
+  arg0: Belt_internalAVLtree.t<key, A>,
+  arg1: Belt_internalAVLtree.t<key, B>,
+  arg2: (arg0: A, arg1: B) => boolean,
+): boolean;
+
+export function mergeU<A, B, C>(
+  arg0: Belt_internalAVLtree.t<key, A>,
+  arg1: t<B>,
+  arg2: (arg0: key, arg1: rescript.option<A>, arg2: rescript.option<B>) => rescript.option<C>,
+): Belt_internalAVLtree.t<key, C>;

@@ -145,29 +145,147 @@ impl Source {
 
 impl Eq for Source {}
 
+/// Module format for output code generation.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ModuleFormat {
+    /// CommonJS module format (.js, .cjs)
+    CommonJs {
+        in_source: bool,
+        suffix: String,
+        /// Generate .d.ts declaration files
+        emit_dts: bool,
+    },
+    /// ES Module format (.js, .mjs)
+    EsModule {
+        in_source: bool,
+        suffix: String,
+        /// Generate .d.ts declaration files
+        emit_dts: bool,
+    },
+    /// TypeScript output with inline type annotations (.ts, .tsx, .mts, .cts)
+    /// Note: dts is not applicable for TypeScript (types are inline)
+    Typescript { in_source: bool, suffix: String },
+}
+
+impl ModuleFormat {
+    /// Valid suffixes for TypeScript module format
+    const VALID_TS_SUFFIXES: &'static [&'static str] = &[".ts", ".tsx", ".mts", ".cts", ".mtsx", ".ctsx"];
+
+    /// Parse module format from JSON fields
+    pub fn from_json(module: &str, in_source: bool, suffix: Option<&str>, dts: bool) -> Result<Self, String> {
+        match module {
+            "commonjs" => {
+                let suffix = suffix.unwrap_or(".js").to_string();
+                Ok(ModuleFormat::CommonJs {
+                    in_source,
+                    suffix,
+                    emit_dts: dts,
+                })
+            }
+            "esmodule" | "es6" | "es6-global" => {
+                let suffix = suffix.unwrap_or(".js").to_string();
+                Ok(ModuleFormat::EsModule {
+                    in_source,
+                    suffix,
+                    emit_dts: dts,
+                })
+            }
+            "typescript" => {
+                // Validate: dts is not allowed with typescript
+                if dts {
+                    return Err("dts: true is not allowed with module: typescript".to_string());
+                }
+                // Validate suffix
+                let suffix = suffix.unwrap_or(".ts");
+                if !Self::VALID_TS_SUFFIXES.contains(&suffix) {
+                    return Err(format!(
+                        "Invalid suffix '{}' for typescript module. Allowed: {}",
+                        suffix,
+                        Self::VALID_TS_SUFFIXES.join(", ")
+                    ));
+                }
+                Ok(ModuleFormat::Typescript {
+                    in_source,
+                    suffix: suffix.to_string(),
+                })
+            }
+            other => Err(format!(
+                "'{}' isn't a valid output module format. It has to be one of: esmodule, commonjs, or typescript",
+                other
+            )),
+        }
+    }
+
+    /// Returns the module name for -bs-package-output flag
+    pub fn module_name(&self) -> &'static str {
+        match self {
+            ModuleFormat::CommonJs { .. } => "commonjs",
+            ModuleFormat::EsModule { .. } => "esmodule",
+            ModuleFormat::Typescript { .. } => "typescript",
+        }
+    }
+
+    /// Returns whether output is in-source
+    pub fn in_source(&self) -> bool {
+        match self {
+            ModuleFormat::CommonJs { in_source, .. }
+            | ModuleFormat::EsModule { in_source, .. }
+            | ModuleFormat::Typescript { in_source, .. } => *in_source,
+        }
+    }
+
+    /// Returns the file suffix
+    pub fn suffix(&self) -> &str {
+        match self {
+            ModuleFormat::CommonJs { suffix, .. }
+            | ModuleFormat::EsModule { suffix, .. }
+            | ModuleFormat::Typescript { suffix, .. } => suffix,
+        }
+    }
+
+    /// Returns whether .d.ts generation is enabled
+    pub fn emit_dts(&self) -> bool {
+        match self {
+            ModuleFormat::CommonJs { emit_dts, .. } | ModuleFormat::EsModule { emit_dts, .. } => *emit_dts,
+            ModuleFormat::Typescript { .. } => false, // TypeScript has inline types
+        }
+    }
+
+    /// Returns whether this is TypeScript output
+    pub fn is_typescript(&self) -> bool {
+        matches!(self, ModuleFormat::Typescript { .. })
+    }
+
+    /// Returns whether this is CommonJS output
+    pub fn is_common_js(&self) -> bool {
+        matches!(self, ModuleFormat::CommonJs { .. })
+    }
+
+    /// Returns the out-of-source directory name
+    pub fn out_of_source_dir(&self) -> &'static str {
+        match self {
+            ModuleFormat::CommonJs { .. } => "js",
+            ModuleFormat::EsModule { .. } | ModuleFormat::Typescript { .. } => "es6",
+        }
+    }
+}
+
+/// Raw package spec as parsed from JSON (before validation)
 #[derive(Deserialize, Debug, Clone)]
-pub struct PackageSpec {
+pub struct PackageSpecRaw {
     pub module: String,
     #[serde(rename = "in-source", default = "default_true")]
     pub in_source: bool,
     pub suffix: Option<String>,
+    #[serde(default)]
+    pub dts: bool,
 }
 
-impl PackageSpec {
-    pub fn get_out_of_source_dir(&self) -> String {
-        match self.module.as_str() {
-            "commonjs" => "js",
-            _ => "es6",
-        }
-        .to_string()
-    }
-
-    pub fn is_common_js(&self) -> bool {
-        self.module.as_str() == "commonjs"
-    }
-
-    pub fn get_suffix(&self) -> Option<String> {
-        self.suffix.to_owned()
+impl PackageSpecRaw {
+    /// Convert to validated ModuleFormat
+    pub fn to_module_format(&self, global_suffix: &Option<String>) -> Result<ModuleFormat, String> {
+        let suffix = self.suffix.as_deref().or(global_suffix.as_deref());
+        ModuleFormat::from_json(&self.module, self.in_source, suffix, self.dts)
     }
 }
 
@@ -270,7 +388,7 @@ pub struct Config {
     // just be sources in packages
     pub sources: Option<OneOrMore<Source>>,
     #[serde(rename = "package-specs")]
-    pub package_specs: Option<OneOrMore<PackageSpec>>,
+    package_specs_raw: Option<OneOrMore<PackageSpecRaw>>,
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
     pub dependencies: Option<Vec<String>>,
@@ -306,6 +424,10 @@ pub struct Config {
     // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "allowed-dependents")]
     pub allowed_dependents: Option<Vec<String>>,
+
+    // Validated package specs (populated after handle_deprecations)
+    #[serde(skip)]
+    package_specs: Vec<ModuleFormat>,
 
     // Holds all deprecation warnings for the config struct
     #[serde(skip)]
@@ -621,22 +743,52 @@ impl Config {
         }
     }
 
-    pub fn get_package_specs(&self) -> Vec<PackageSpec> {
-        match self.package_specs.clone() {
-            None => vec![PackageSpec {
-                module: "commonjs".to_string(),
-                in_source: true,
-                suffix: Some(".js".to_string()),
-            }],
-            Some(OneOrMore::Single(spec)) => vec![spec],
-            Some(OneOrMore::Multiple(vec)) => vec,
-        }
+    pub fn get_package_specs(&self) -> &[ModuleFormat] {
+        &self.package_specs
     }
 
-    pub fn get_suffix(&self, spec: &PackageSpec) -> String {
-        spec.get_suffix()
-            .or(self.suffix.clone())
-            .unwrap_or(".js".to_string())
+    /// Check if any package spec uses TypeScript module format
+    pub fn has_typescript_output(&self) -> bool {
+        self.package_specs.iter().any(|spec| spec.is_typescript())
+    }
+
+    /// Check if any package spec has .d.ts generation enabled
+    pub fn has_dts_output(&self) -> bool {
+        self.package_specs.iter().any(|spec| spec.emit_dts())
+    }
+
+    /// Get package specs converted for dependency builds.
+    /// TypeScript specs are converted to Esmodule with dts output,
+    /// since dependencies should produce standard JS + .d.ts files.
+    pub fn get_package_specs_for_dependency(&self) -> Vec<ModuleFormat> {
+        self.package_specs
+            .iter()
+            .map(|spec| match spec {
+                ModuleFormat::Typescript { in_source, suffix: _ } => {
+                    // Convert TypeScript to Esmodule with dts
+                    ModuleFormat::EsModule {
+                        in_source: *in_source,
+                        suffix: ".js".to_string(),
+                        emit_dts: true,
+                    }
+                }
+                other => other.clone(),
+            })
+            .collect()
+    }
+
+    /// Check if any package spec uses TypeScript module format (for dependency builds)
+    pub fn has_typescript_output_for_dependency(&self) -> bool {
+        // Dependencies never output TypeScript directly - they use JS + .d.ts
+        false
+    }
+
+    /// Check if any package spec has .d.ts generation enabled (for dependency builds)
+    pub fn has_dts_output_for_dependency(&self) -> bool {
+        // If root uses TypeScript output, dependencies need dts
+        self.package_specs
+            .iter()
+            .any(|spec| spec.emit_dts() || spec.is_typescript())
     }
 
     pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {
@@ -711,6 +863,7 @@ impl Config {
             "external-stdlib",
             "bs-external-includes",
             "reanalyze",
+            "language", // Removed: use module: "typescript" in package-specs instead
         ];
 
         let top_level = field.split(|c| ['.', '['].contains(&c)).next().unwrap_or(field);
@@ -746,7 +899,48 @@ impl Config {
             self.deprecation_warnings.push(DeprecationWarning::BscFlags);
         }
 
+        // Parse and validate package specs
+        self.package_specs = self.parse_package_specs()?;
+
         Ok(())
+    }
+
+    fn parse_package_specs(&self) -> Result<Vec<ModuleFormat>> {
+        match &self.package_specs_raw {
+            None => {
+                // Default: commonjs, in-source, .js suffix
+                Ok(vec![ModuleFormat::CommonJs {
+                    in_source: true,
+                    suffix: self.suffix.clone().unwrap_or_else(|| ".js".to_string()),
+                    emit_dts: false,
+                }])
+            }
+            Some(OneOrMore::Single(spec)) => {
+                let format = spec
+                    .to_module_format(&self.suffix)
+                    .map_err(|e| anyhow!("Invalid package-specs: {}", e))?;
+                Ok(vec![format])
+            }
+            Some(OneOrMore::Multiple(specs)) => {
+                let mut formats = Vec::with_capacity(specs.len());
+                let mut has_in_source = false;
+                for spec in specs {
+                    let format = spec
+                        .to_module_format(&self.suffix)
+                        .map_err(|e| anyhow!("Invalid package-specs: {}", e))?;
+                    if format.in_source() {
+                        if has_in_source {
+                            bail!(
+                                "Invalid package-specs: detected two module formats that are both configured to be in-source."
+                            );
+                        }
+                        has_in_source = true;
+                    }
+                    formats.push(format);
+                }
+                Ok(formats)
+            }
+        }
     }
 }
 
@@ -763,12 +957,12 @@ pub mod tests {
     }
 
     pub fn create_config(args: CreateConfigArgs) -> Config {
-        Config {
+        let mut config = Config {
             name: args.name,
             sources: Some(crate::config::OneOrMore::Single(Source::Shorthand(String::from(
                 "Source",
             )))),
-            package_specs: None,
+            package_specs_raw: None,
             warnings: None,
             suffix: None,
             dependencies: Some(args.bs_deps),
@@ -787,8 +981,16 @@ pub mod tests {
             experimental_features: None,
             allowed_dependents: args.allowed_dependents,
             unknown_fields: vec![],
+            package_specs: vec![],
             path: args.path,
-        }
+        };
+        // Set default package specs
+        config.package_specs = vec![ModuleFormat::CommonJs {
+            in_source: true,
+            suffix: ".js".to_string(),
+            emit_dts: false,
+        }];
+        config
     }
 
     #[test]
@@ -797,18 +999,18 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ]
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
+        let config = Config::new_from_json_string(json).unwrap();
         let specs = config.get_package_specs();
         assert_eq!(specs.len(), 1);
         let spec = specs.first().unwrap();
-        assert_eq!(spec.module, "es6");
-        assert_eq!(config.get_suffix(spec), ".mjs");
+        assert!(matches!(spec, ModuleFormat::EsModule { .. }));
+        assert_eq!(spec.suffix(), ".mjs");
     }
 
     #[test]
@@ -834,7 +1036,7 @@ pub mod tests {
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
+        let config = Config::new_from_json_string(json).unwrap();
         if let Some(OneOrMore::Single(source)) = config.sources {
             let source = source.to_qualified_without_children(None);
             assert_eq!(source.type_, Some(String::from("dev")));
@@ -866,7 +1068,7 @@ pub mod tests {
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
+        let config = Config::new_from_json_string(json).unwrap();
         if let Some(OneOrMore::Multiple(sources)) = config.sources {
             assert_eq!(sources.len(), 2);
             let test_dir = sources[1].to_qualified_without_children(None);
@@ -884,7 +1086,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "gentypeconfig": {
@@ -894,7 +1096,7 @@ pub mod tests {
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
+        let config = Config::new_from_json_string(json).unwrap();
         assert!(config.gentype_config.is_some());
         assert_eq!(config.get_gentype_arg(), vec!["-bs-gentype".to_string()]);
     }
@@ -905,7 +1107,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": {
@@ -914,7 +1116,7 @@ pub mod tests {
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
+        let config = Config::new_from_json_string(json).unwrap();
         assert!(config.jsx.is_some());
         assert_eq!(
             config.jsx.unwrap(),
@@ -934,14 +1136,14 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": { "version": 4, "preserve": true }
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
+        let config = Config::new_from_json_string(json).unwrap();
         assert!(config.jsx.is_some());
         assert_eq!(
             config.jsx.unwrap(),
@@ -966,7 +1168,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -974,11 +1176,8 @@ pub mod tests {
         }
         "#;
 
-        let config = serde_json::from_str::<Config>(json).unwrap();
-        assert_eq!(
-            config.get_suffix(config.get_package_specs().first().unwrap()),
-            ".mjs"
-        );
+        let config = Config::new_from_json_string(json).unwrap();
+        assert_eq!(config.get_package_specs().first().unwrap().suffix(), ".mjs");
     }
 
     #[test]
@@ -992,7 +1191,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1017,7 +1216,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1042,7 +1241,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1067,7 +1266,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1118,6 +1317,24 @@ pub mod tests {
     }
 
     #[test]
+    fn test_language_field_is_unsupported() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "language": "typescript"
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.get_unsupported_fields(), vec!["language".to_string()]);
+        assert!(config.get_unknown_fields().is_empty());
+    }
+
+    #[test]
     fn test_editor_field_supported() {
         let json = r#"
         {
@@ -1150,7 +1367,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1185,7 +1402,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1199,11 +1416,16 @@ pub mod tests {
     }
 
     fn test_find_is_type_dev(source: OneOrMore<Source>, path: &Path, expected: bool) {
-        let config = Config {
+        let mut config = Config {
             name: String::from("testrepo"),
             sources: Some(source),
             ..Default::default()
         };
+        config.package_specs = vec![ModuleFormat::CommonJs {
+            in_source: true,
+            suffix: ".js".to_string(),
+            emit_dts: false,
+        }];
         let result = config.find_is_type_dev_for_path(path);
         assert_eq!(result, expected);
     }
