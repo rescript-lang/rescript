@@ -102,28 +102,61 @@ let collectCmtFilePaths ~cmtRoot : string list =
     walkSubDirs ""
   | None ->
     Lazy.force Paths.setReScriptProjectRoot;
-    let lib_bs = runConfig.projectRoot +++ ("lib" +++ "bs") in
-    let sourceDirs =
-      Paths.readSourceDirs ~configSources:None |> List.sort String.compare
-    in
-    sourceDirs
-    |> List.iter (fun sourceDir ->
-           let libBsSourceDir = Filename.concat lib_bs sourceDir in
-           let files =
-             match Sys.readdir libBsSourceDir |> Array.to_list with
-             | files -> files
-             | exception Sys_error _ -> []
-           in
-           let cmtFiles =
-             files
-             |> List.filter (fun x ->
-                    Filename.check_suffix x ".cmt"
-                    || Filename.check_suffix x ".cmti")
-           in
-           cmtFiles |> List.sort String.compare
-           |> List.iter (fun cmtFile ->
-                  let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
-                  paths := cmtFilePath :: !paths)));
+    (* Prefer explicit scan plan emitted by rewatch (v2 `.sourcedirs.json`).
+       This supports monorepos without reanalyze-side package resolution. *)
+    let scan_plan = Paths.readCmtScan () in
+    if scan_plan <> [] then
+      let seen = Hashtbl.create 256 in
+      let add_dir (absDir : string) =
+        let files =
+          match Sys.readdir absDir |> Array.to_list with
+          | files -> files
+          | exception Sys_error _ -> []
+        in
+        files
+        |> List.filter (fun x ->
+               Filename.check_suffix x ".cmt" || Filename.check_suffix x ".cmti")
+        |> List.sort String.compare
+        |> List.iter (fun f ->
+               let p = Filename.concat absDir f in
+               if not (Hashtbl.mem seen p) then (
+                 Hashtbl.add seen p ();
+                 paths := p :: !paths))
+      in
+      scan_plan
+      |> List.iter (fun (entry : Paths.cmt_scan_entry) ->
+             let build_root_abs =
+               Filename.concat runConfig.projectRoot entry.build_root
+             in
+             (* Scan configured subdirs. *)
+             entry.scan_dirs
+             |> List.iter (fun d -> add_dir (Filename.concat build_root_abs d));
+             (* Optionally scan build root itself for namespace/mlmap `.cmt`s. *)
+             if entry.also_scan_build_root then add_dir build_root_abs)
+    else
+      (* Legacy behavior: scan `<projectRoot>/lib/bs/<sourceDir>` based on source dirs. *)
+      let lib_bs = runConfig.projectRoot +++ ("lib" +++ "bs") in
+      let sourceDirs =
+        Paths.readSourceDirs ~configSources:None |> List.sort String.compare
+      in
+      sourceDirs
+      |> List.iter (fun sourceDir ->
+             let libBsSourceDir = Filename.concat lib_bs sourceDir in
+             let files =
+               match Sys.readdir libBsSourceDir |> Array.to_list with
+               | files -> files
+               | exception Sys_error _ -> []
+             in
+             let cmtFiles =
+               files
+               |> List.filter (fun x ->
+                      Filename.check_suffix x ".cmt"
+                      || Filename.check_suffix x ".cmti")
+             in
+             cmtFiles |> List.sort String.compare
+             |> List.iter (fun cmtFile ->
+                    let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
+                    paths := cmtFilePath :: !paths)));
   !paths |> List.rev
 
 (** Process files sequentially *)

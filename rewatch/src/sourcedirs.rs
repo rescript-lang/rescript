@@ -13,11 +13,32 @@ type PackageName = String;
 type AbsolutePath = PathBuf;
 type Pkg = (PackageName, AbsolutePath);
 
-#[derive(Serialize, Debug, Clone, PartialEq, Hash)]
-pub struct SourceDirs<'a> {
-    pub dirs: &'a Vec<Dir>,
-    pub pkgs: &'a Vec<Pkg>,
-    pub generated: &'a Vec<String>,
+/// `reanalyze` consumes `.sourcedirs.json` to find `.cmt/.cmti` files.
+///
+/// Historically, this file contained a single `"dirs"` list which was interpreted as being
+/// under the *root* `lib/bs/`. That doesn't hold for `rewatch` monorepos, where each package has
+/// its own `lib/bs/`.
+///
+/// To avoid reanalyze-side "package resolution", v2 includes an explicit `cmt_scan` plan:
+/// a list of build roots (`.../lib/bs`) and the subdirectories within those roots to scan.
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CmtScanEntry {
+    /// Path to a `lib/bs` directory, relative to the workspace root.
+    pub build_root: PathBuf,
+    /// Subdirectories (relative to `build_root`) to scan for `.cmt/.cmti`.
+    pub scan_dirs: Vec<PathBuf>,
+    /// Whether to also scan `build_root` itself for `.cmt/.cmti` (namespaces/mlmap often land here).
+    pub also_scan_build_root: bool,
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SourceDirs {
+    pub version: u8,
+    pub dirs: Vec<Dir>,
+    pub pkgs: Vec<Pkg>,
+    pub generated: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cmt_scan: Option<Vec<CmtScanEntry>>,
 }
 
 fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir> {
@@ -54,6 +75,11 @@ fn write_sourcedirs_files(path: &Path, source_dirs: &SourceDirs) -> Result<usize
     source_dirs_json.write(json!(source_dirs).to_string().as_bytes())
 }
 
+fn sort_paths(mut v: Vec<PathBuf>) -> Vec<PathBuf> {
+    v.sort_by(|a, b| a.to_string_lossy().cmp(&b.to_string_lossy()));
+    v
+}
+
 pub fn print(buildstate: &BuildState) {
     // Find Root Package
     let (_name, root_package) = buildstate
@@ -62,10 +88,21 @@ pub fn print(buildstate: &BuildState) {
         .find(|(_name, package)| package.is_root)
         .expect("Could not find root package");
 
+    // We only support a single `.sourcedirs.json` at the workspace root.
+    // Remove any stale per-package `.sourcedirs.json` from older builds to avoid confusion.
+    buildstate
+        .packages
+        .iter()
+        .filter(|(_name, package)| !package.is_root)
+        .for_each(|(_name, package)| {
+            let path = package.get_build_path().join(".sourcedirs.json");
+            let _ = std::fs::remove_file(&path);
+        });
+
     // Take all local packages with source files.
     // In the case of a monorepo, the root package typically won't have any source files.
     // But in the case of a single package, it will be both local, root and have source files.
-    let (dirs, pkgs): (Vec<AHashSet<Dir>>, Vec<AHashMap<PackageName, AbsolutePath>>) = buildstate
+    let collected: Vec<(AHashSet<Dir>, AHashMap<PackageName, AbsolutePath>, CmtScanEntry)> = buildstate
         .packages
         .par_iter()
         .filter(|(_name, package)| package.is_local_dep && package.source_files.is_some())
@@ -78,23 +115,49 @@ pub fn print(buildstate: &BuildState) {
                 .into_iter()
                 .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));
 
-            // Write sourcedirs.json
-            write_sourcedirs_files(
-                &package.get_build_path(),
-                &SourceDirs {
-                    dirs: &dirs.clone().into_iter().collect::<Vec<Dir>>(),
-                    pkgs: &pkgs.clone().flatten().collect::<Vec<Pkg>>(),
-                    generated: &vec![],
-                },
-            )
-            .expect("Could not write sourcedirs.json");
+            // Build scan plan entry for the root `.sourcedirs.json`.
+            // `build_root` is `<pkg_rel_to_root>/lib/bs`.
+            let pkg_rel = package
+                .path
+                .strip_prefix(&root_package.path)
+                .unwrap_or(Path::new(""))
+                .to_path_buf();
+            let build_root = pkg_rel.join("lib").join("bs");
+            let scan_dirs = sort_paths(
+                package
+                    .dirs
+                    .as_ref()
+                    .unwrap_or(&AHashSet::new())
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>(),
+            );
+
+            // NOTE: We intentionally do NOT write per-package `.sourcedirs.json`.
+            // The root package's `.sourcedirs.json` contains a complete `cmt_scan` plan
+            // and is the only file `reanalyze` needs for root-level monorepo analysis.
 
             (
                 dirs,
                 pkgs.flatten().collect::<AHashMap<PackageName, AbsolutePath>>(),
+                CmtScanEntry {
+                    build_root,
+                    scan_dirs,
+                    // Namespaces/mlmap artifacts can land in `lib/bs` itself; scanning it is cheap and avoids misses.
+                    also_scan_build_root: true,
+                },
             )
         })
-        .unzip();
+        .collect();
+
+    let mut dirs: Vec<AHashSet<Dir>> = Vec::with_capacity(collected.len());
+    let mut pkgs: Vec<AHashMap<PackageName, AbsolutePath>> = Vec::with_capacity(collected.len());
+    let mut cmt_scan_entries: Vec<CmtScanEntry> = Vec::with_capacity(collected.len());
+    for (d, p, s) in collected {
+        dirs.push(d);
+        pkgs.push(p);
+        cmt_scan_entries.push(s);
+    }
 
     let mut merged_dirs: AHashSet<Dir> = AHashSet::new();
     let mut merged_pkgs: AHashMap<PackageName, AbsolutePath> = AHashMap::new();
@@ -102,14 +165,27 @@ pub fn print(buildstate: &BuildState) {
     dirs.into_iter().for_each(|dir_set| merged_dirs.extend(dir_set));
     pkgs.into_iter().for_each(|pkg_set| merged_pkgs.extend(pkg_set));
 
-    // Write sourcedirs.json
-    write_sourcedirs_files(
-        &root_package.get_build_path(),
-        &SourceDirs {
-            dirs: &merged_dirs.into_iter().collect::<Vec<Dir>>(),
-            pkgs: &merged_pkgs.into_iter().collect::<Vec<Pkg>>(),
-            generated: &vec![],
+    // Root `.sourcedirs.json`: merged view + explicit scan plan for reanalyze.
+    let root_sourcedirs = SourceDirs {
+        version: 2,
+        dirs: sort_paths(merged_dirs.into_iter().collect::<Vec<Dir>>()),
+        pkgs: {
+            let mut v = merged_pkgs.into_iter().collect::<Vec<Pkg>>();
+            v.sort_by(|(a, _), (b, _)| a.cmp(b));
+            v
         },
-    )
-    .expect("Could not write sourcedirs.json");
+        generated: vec![],
+        cmt_scan: Some({
+            // Ensure deterministic order (use the serialized string form).
+            let mut v = cmt_scan_entries;
+            v.sort_by(|a, b| {
+                a.build_root
+                    .to_string_lossy()
+                    .cmp(&b.build_root.to_string_lossy())
+            });
+            v
+        }),
+    };
+    write_sourcedirs_files(&root_package.get_build_path(), &root_sourcedirs)
+        .expect("Could not write sourcedirs.json");
 }
