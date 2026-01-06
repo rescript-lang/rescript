@@ -8,7 +8,7 @@ const o1 = await execBuild();
 // biome-ignore lint/suspicious/noControlCharactersInRegex: strip ANSI color codes from output
 const stripAnsi = s => s.replace(/\x1b\[[0-9;]*m/g, "");
 
-const first_message = stripAnsi(o1.stdout)
+const first_message = stripAnsi(o1.stderr)
   .split("\n")
   .map(s => s.trim())
   .find(s => s === "Warning number 110");
