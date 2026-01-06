@@ -25,6 +25,7 @@
 
 - Fix rewatch swallowing parse warnings (%todo). https://github.com/rescript-lang/rescript/pull/8135
 - Rewatch: log errors and warnings to `stderr`. https://github.com/rescript-lang/rescript/pull/8147 https://github.com/rescript-lang/rescript/pull/8148
+- Rewatch: warn about deprecated package specs `es6`/`es6-global`. https://github.com/rescript-lang/rescript/pull/8146
 
 #### :memo: Documentation
 
