@@ -219,6 +219,13 @@ pub struct JsxSpecs {
 /// We do not care about the internal structure because the gentype config is loaded by bsc.
 pub type GenTypeConfig = serde_json::Value;
 
+/// Configuration for running a command after each JavaScript file is compiled.
+/// Note: Unlike bsb, rewatch passes absolute paths to the command for clarity.
+#[derive(Deserialize, Debug, Clone)]
+pub struct JsPostBuild {
+    pub cmd: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DeprecationWarning {
     BsDependencies,
@@ -299,6 +306,8 @@ pub struct Config {
     pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
+    #[serde(rename = "js-post-build")]
+    pub js_post_build: Option<JsPostBuild>,
     // Used by the VS Code extension; ignored by rewatch but should not emit warnings.
     // Payload is not validated here, only in the VS Code extension.
     pub editor: Option<serde_json::Value>,
@@ -707,7 +716,6 @@ impl Config {
             "generators",
             "cut-generators",
             "pp-flags",
-            "js-post-build",
             "entries",
             "use-stdlib",
             "external-stdlib",
@@ -800,6 +808,7 @@ pub mod tests {
             namespace: None,
             jsx: None,
             gentype_config: None,
+            js_post_build: None,
             editor: None,
             namespace_entry: None,
             deprecation_warnings: vec![],

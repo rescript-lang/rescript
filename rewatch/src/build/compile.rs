@@ -21,6 +21,33 @@ use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
 
+/// Execute js-post-build command for a compiled JavaScript file.
+/// Unlike bsb which passes relative paths, rewatch passes absolute paths for clarity.
+fn execute_post_build_command(cmd: &str, js_file_path: &Path) -> Result<()> {
+    let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd").args(["/C", &full_command]).output()
+    } else {
+        Command::new("sh").args(["-c", &full_command]).output()
+    };
+
+    match output {
+        Ok(output) if !output.status.success() => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Err(anyhow!(
+                "js-post-build command failed for {}: {}{}",
+                js_file_path.display(),
+                stderr,
+                stdout
+            ))
+        }
+        Err(e) => Err(anyhow!("Failed to execute js-post-build command: {}", e)),
+        Ok(_) => Ok(()),
+    }
+}
+
 pub fn compile(
     build_state: &mut BuildCommandState,
     show_progress: bool,
@@ -814,6 +841,29 @@ fn compile_file(
                     }
                 }
             });
+
+            // Execute js-post-build command if configured
+            // Only run for implementation files (not interfaces)
+            if !is_interface
+                && let Some(js_post_build) = &package.config.js_post_build
+                && let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
+            {
+                // Execute post-build command for each package spec (each output format)
+                for spec in root_config.get_package_specs() {
+                    let js_file = helpers::get_source_file_from_rescript_file(
+                        &package.get_build_path().join(path),
+                        &root_config.get_suffix(&spec),
+                    );
+
+                    if js_file.exists() {
+                        // Fail the build if post-build command fails (matches bsb behavior with &&)
+                        execute_post_build_command(&js_post_build.cmd, &js_file)?;
+                    }
+                }
+            }
 
             if helpers::contains_ascii_characters(&err) {
                 if package.is_local_dep {
