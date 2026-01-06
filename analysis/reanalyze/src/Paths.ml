@@ -205,3 +205,72 @@ let readSourceDirs ~configSources =
       Log_.item "Types for cross-references will not be found.\n");
     dirs := readDirsFromConfig ~configSources);
   !dirs
+
+type cmt_scan_entry = {
+  build_root: string;
+  scan_dirs: string list;
+  also_scan_build_root: bool;
+}
+(** Read explicit `.cmt/.cmti` scan plan from `.sourcedirs.json`.
+
+    This is a v2 extension produced by `rewatch` to support monorepos without requiring
+    reanalyze-side package resolution.
+
+    The scan plan is a list of build roots (usually `<pkg>/lib/bs`) relative to the project root,
+    plus a list of subdirectories (relative to that build root) to scan for `.cmt/.cmti`.
+
+    If missing, returns the empty list and callers should fall back to legacy behavior. *)
+
+let readCmtScan () =
+  let sourceDirsFile =
+    ["lib"; "bs"; ".sourcedirs.json"]
+    |> List.fold_left Filename.concat runConfig.bsbProjectRoot
+  in
+  let entries = ref [] in
+  let read_entry (json : Ext_json_types.t) =
+    match json with
+    | Ext_json_types.Obj {map} -> (
+      let build_root =
+        match StringMap.find_opt map "build_root" with
+        | Some (Ext_json_types.Str {str}) -> Some str
+        | _ -> None
+      in
+      let scan_dirs =
+        match StringMap.find_opt map "scan_dirs" with
+        | Some (Ext_json_types.Arr {content = arr}) ->
+          arr |> Array.to_list
+          |> List.filter_map (fun x ->
+                 match x with
+                 | Ext_json_types.Str {str} -> Some str
+                 | _ -> None)
+        | _ -> []
+      in
+      let also_scan_build_root =
+        match StringMap.find_opt map "also_scan_build_root" with
+        | Some (Ext_json_types.True _) -> true
+        | Some (Ext_json_types.False _) -> false
+        | _ -> false
+      in
+      match build_root with
+      | Some build_root ->
+        entries := {build_root; scan_dirs; also_scan_build_root} :: !entries
+      | None -> ())
+    | _ -> ()
+  in
+  let read_cmt_scan (json : Ext_json_types.t) =
+    match json with
+    | Ext_json_types.Obj {map} -> (
+      match StringMap.find_opt map "cmt_scan" with
+      | Some (Ext_json_types.Arr {content = arr}) ->
+        arr |> Array.iter read_entry
+      | _ -> ())
+    | _ -> ()
+  in
+  if sourceDirsFile |> Sys.file_exists then (
+    let jsonOpt = sourceDirsFile |> Ext_json_parse.parse_json_from_file in
+    match jsonOpt with
+    | exception _ -> []
+    | json ->
+      read_cmt_scan json;
+      !entries |> List.rev)
+  else []
