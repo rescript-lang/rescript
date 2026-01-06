@@ -306,7 +306,7 @@ pub fn incremental_build(
         }
     }
     if helpers::contains_ascii_characters(&parse_warnings) {
-        println!("{}", &parse_warnings);
+        eprintln!("{}", &parse_warnings);
     }
 
     mark_modules_with_expired_deps_dirty(build_state);
@@ -371,7 +371,7 @@ pub fn incremental_build(
             }
         }
         if helpers::contains_ascii_characters(&compile_warnings) {
-            println!("{}", &compile_warnings);
+            eprintln!("{}", &compile_warnings);
         }
         if initial_build {
             log_config_warnings(build_state);
@@ -400,7 +400,7 @@ pub fn incremental_build(
         }
 
         if helpers::contains_ascii_characters(&compile_warnings) {
-            println!("{}", &compile_warnings);
+            eprintln!("{}", &compile_warnings);
         }
         if initial_build {
             log_config_warnings(build_state);
@@ -451,21 +451,21 @@ fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_n
         "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
         Use '{new_field_name}' instead."
     );
-    println!("\n{}", style(warning).yellow());
+    eprintln!("\n{}", style(warning).yellow());
 }
 
 fn log_unsupported_config_field(package_name: &str, field_name: &str) {
     let warning = format!(
         "The field '{field_name}' found in the package config of '{package_name}' is not supported by ReScript 12's new build system."
     );
-    println!("\n{}", style(warning).yellow());
+    eprintln!("\n{}", style(warning).yellow());
 }
 
 fn log_unknown_config_field(package_name: &str, field_name: &str) {
     let warning = format!(
         "Unknown field '{field_name}' found in the package config of '{package_name}'. This option will be ignored."
     );
-    println!("\n{}", style(warning).yellow());
+    eprintln!("\n{}", style(warning).yellow());
 }
 
 // write build.ninja files in the packages after a non-incremental build

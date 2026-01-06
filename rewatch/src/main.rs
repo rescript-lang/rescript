@@ -165,10 +165,9 @@ impl log::Log for SplitLogger {
     }
 
     fn log(&self, record: &log::Record) {
-        if record.level() == log::Level::Error {
-            self.stderr.log(record);
-        } else {
-            self.stdout.log(record);
+        match record.level() {
+            log::Level::Error | log::Level::Warn => self.stderr.log(record),
+            _ => self.stdout.log(record),
         }
     }
 
