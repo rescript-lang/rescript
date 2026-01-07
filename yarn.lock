@@ -783,6 +783,7 @@ __metadata:
   resolution: "@tests/tools@workspace:tests/tools_tests"
   dependencies:
     "@rescript/react": "link:../dependencies/rescript-react"
+    deprecatedlib: "link:../dependencies/deprecatedlib"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -1212,6 +1213,20 @@ __metadata:
   checksum: 10c0/5ca376cb527d9474336ad76dd302d06367a7163379dda26558258de26f85861e696d0b7bb19ee3c6b8456bb7c95cdc0e4e4d45c2aa487e61b2d3b60d80c10648
   languageName: node
   linkType: hard
+
+"deprecatedlib@link:../dependencies/deprecatedlib::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests":
+  version: 0.0.0-use.local
+  resolution: "deprecatedlib@link:../dependencies/deprecatedlib::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests"
+  languageName: node
+  linkType: soft
+
+"deprecatedlib@workspace:tests/dependencies/deprecatedlib":
+  version: 0.0.0-use.local
+  resolution: "deprecatedlib@workspace:tests/dependencies/deprecatedlib"
+  dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
 
 "diff@npm:^7.0.0":
   version: 7.0.0
