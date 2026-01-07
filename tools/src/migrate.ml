@@ -744,10 +744,6 @@ let migrate ~entryPointFile ~outputMode =
   in
   let result =
     if Filename.check_suffix path ".res" then
-      let parser =
-        Res_driver.parsing_engine.parse_implementation ~for_printer:true
-      in
-      let {Res_driver.parsetree; comments; source} = parser ~filename:path in
       match Cmt.loadCmtInfosFromPath ~path with
       | None ->
         Error
@@ -755,7 +751,17 @@ let migrate ~entryPointFile ~outputMode =
              "error: failed to run migration for %s because build artifacts \
               could not be found. try to build the project"
              path)
+      | Some {cmt_extra_info = {deprecated_used = []}} -> (
+        match outputMode with
+        | `Stdout ->
+          let source = Res_io.read_file ~filename:path in
+          Ok (`Unchanged source)
+        | `File -> Ok (`Unchanged ""))
       | Some {cmt_extra_info = {deprecated_used}} ->
+        let parser =
+          Res_driver.parsing_engine.parse_implementation ~for_printer:true
+        in
+        let {Res_driver.parsetree; comments; source} = parser ~filename:path in
         let mapper = makeMapper deprecated_used in
         let astMapped = mapper.structure mapper parsetree in
         (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
@@ -769,18 +775,13 @@ let migrate ~entryPointFile ~outputMode =
         let astTransformed =
           apply_transforms.structure apply_transforms astMapped
         in
-        Ok
-          ( Res_printer.print_implementation
-              ~width:Res_printer.default_print_width astTransformed ~comments,
-            source )
+        let contents =
+          Res_printer.print_implementation
+            ~width:Res_printer.default_print_width astTransformed ~comments
+        in
+        if contents = source then Ok (`Unchanged source)
+        else Ok (`Changed contents)
     else if Filename.check_suffix path ".resi" then
-      let parser =
-        Res_driver.parsing_engine.parse_interface ~for_printer:true
-      in
-      let {Res_driver.parsetree = signature; comments; source} =
-        parser ~filename:path
-      in
-
       match Cmt.loadCmtInfosFromPath ~path with
       | None ->
         Error
@@ -788,10 +789,25 @@ let migrate ~entryPointFile ~outputMode =
              "error: failed to run migration for %s because build artifacts \
               could not be found. try to build the project"
              path)
+      | Some {cmt_extra_info = {deprecated_used = []}} -> (
+        match outputMode with
+        | `Stdout ->
+          let source = Res_io.read_file ~filename:path in
+          Ok (`Unchanged source)
+        | `File -> Ok (`Unchanged ""))
       | Some {cmt_extra_info = {deprecated_used}} ->
+        let parser =
+          Res_driver.parsing_engine.parse_interface ~for_printer:true
+        in
+        let {Res_driver.parsetree = signature; comments; source} =
+          parser ~filename:path
+        in
+
         let mapper = makeMapper deprecated_used in
         let astMapped = mapper.signature mapper signature in
-        Ok (Res_printer.print_interface astMapped ~comments, source)
+        let contents = Res_printer.print_interface astMapped ~comments in
+        if contents = source then Ok (`Unchanged source)
+        else Ok (`Changed contents)
     else
       Error
         (Printf.sprintf
@@ -800,15 +816,17 @@ let migrate ~entryPointFile ~outputMode =
   in
   match result with
   | Error e -> Error e
-  | Ok (contents, source) when contents <> source -> (
+  | Ok (`Unchanged source) -> (
     match outputMode with
-    | `Stdout -> Ok contents
+    | `Stdout -> Ok (`Unchanged source)
+    | `File ->
+      Ok (`Unchanged (Filename.basename path ^ ": File did not need migration"))
+    )
+  | Ok (`Changed contents) -> (
+    match outputMode with
+    | `Stdout -> Ok (`Changed contents)
     | `File ->
       let oc = open_out path in
       Printf.fprintf oc "%s" contents;
       close_out oc;
-      Ok (Filename.basename path ^ ": File migrated successfully"))
-  | Ok (contents, _) -> (
-    match outputMode with
-    | `Stdout -> Ok contents
-    | `File -> Ok (Filename.basename path ^ ": File did not need migration"))
+      Ok (`Changed (Filename.basename path ^ ": File migrated successfully")))

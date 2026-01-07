@@ -1,4 +1,4 @@
 val migrate :
   entryPointFile:string ->
   outputMode:[`File | `Stdout] ->
-  (string, string) result
+  ([`Changed of string | `Unchanged of string], string) result
