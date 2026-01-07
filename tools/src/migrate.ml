@@ -3,6 +3,23 @@ open Analysis
 module StringMap = Map.Make (String)
 module StringSet = Set.Make (String)
 module IntSet = Set.Make (Int)
+module FileSet = SharedTypes.FileSet
+
+let filter_deprecations_for_project ~entryPointFile deprecated_used =
+  let canonical p = try Unix.realpath p with _ -> p in
+  let uri = Uri.fromPath entryPointFile in
+  match Packages.getPackage ~uri with
+  | None -> deprecated_used
+  | Some package ->
+    let dependency_paths =
+      FileSet.fold
+        (fun p acc -> acc |> StringSet.add p |> StringSet.add (canonical p))
+        package.dependenciesFiles StringSet.empty
+    in
+    deprecated_used
+    |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
+           let loc_path = canonical d.source_loc.Location.loc_start.pos_fname in
+           not (StringSet.mem loc_path dependency_paths))
 
 (* Public API: migrate ~entryPointFile ~outputMode *)
 
@@ -751,36 +768,42 @@ let migrate ~entryPointFile ~outputMode =
              "error: failed to run migration for %s because build artifacts \
               could not be found. try to build the project"
              path)
-      | Some {cmt_extra_info = {deprecated_used = []}} -> (
-        match outputMode with
-        | `Stdout ->
-          let source = Res_io.read_file ~filename:path in
-          Ok (`Unchanged source)
-        | `File -> Ok (`Unchanged ""))
       | Some {cmt_extra_info = {deprecated_used}} ->
-        let parser =
-          Res_driver.parsing_engine.parse_implementation ~for_printer:true
+        let deprecated_used =
+          filter_deprecations_for_project ~entryPointFile:path deprecated_used
         in
-        let {Res_driver.parsetree; comments; source} = parser ~filename:path in
-        let mapper = makeMapper deprecated_used in
-        let astMapped = mapper.structure mapper parsetree in
-        (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
-        let apply_transforms =
-          let expr mapper (e : Parsetree.expression) =
-            let e = Ast_mapper.default_mapper.expr mapper e in
-            MapperUtils.ApplyTransforms.apply_on_self e
+        if Ext_list.is_empty deprecated_used then
+          match outputMode with
+          | `Stdout ->
+            let source = Res_io.read_file ~filename:path in
+            Ok (`Unchanged source)
+          | `File -> Ok (`Unchanged "")
+        else
+          let parser =
+            Res_driver.parsing_engine.parse_implementation ~for_printer:true
           in
-          {Ast_mapper.default_mapper with expr}
-        in
-        let astTransformed =
-          apply_transforms.structure apply_transforms astMapped
-        in
-        let contents =
-          Res_printer.print_implementation
-            ~width:Res_printer.default_print_width astTransformed ~comments
-        in
-        if contents = source then Ok (`Unchanged source)
-        else Ok (`Changed contents)
+          let {Res_driver.parsetree; comments; source} =
+            parser ~filename:path
+          in
+          let mapper = makeMapper deprecated_used in
+          let astMapped = mapper.structure mapper parsetree in
+          (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
+          let apply_transforms =
+            let expr mapper (e : Parsetree.expression) =
+              let e = Ast_mapper.default_mapper.expr mapper e in
+              MapperUtils.ApplyTransforms.apply_on_self e
+            in
+            {Ast_mapper.default_mapper with expr}
+          in
+          let astTransformed =
+            apply_transforms.structure apply_transforms astMapped
+          in
+          let contents =
+            Res_printer.print_implementation
+              ~width:Res_printer.default_print_width astTransformed ~comments
+          in
+          if contents = source then Ok (`Unchanged source)
+          else Ok (`Changed contents)
     else if Filename.check_suffix path ".resi" then
       match Cmt.loadCmtInfosFromPath ~path with
       | None ->
@@ -789,25 +812,29 @@ let migrate ~entryPointFile ~outputMode =
              "error: failed to run migration for %s because build artifacts \
               could not be found. try to build the project"
              path)
-      | Some {cmt_extra_info = {deprecated_used = []}} -> (
-        match outputMode with
-        | `Stdout ->
-          let source = Res_io.read_file ~filename:path in
-          Ok (`Unchanged source)
-        | `File -> Ok (`Unchanged ""))
       | Some {cmt_extra_info = {deprecated_used}} ->
-        let parser =
-          Res_driver.parsing_engine.parse_interface ~for_printer:true
+        let deprecated_used =
+          filter_deprecations_for_project ~entryPointFile:path deprecated_used
         in
-        let {Res_driver.parsetree = signature; comments; source} =
-          parser ~filename:path
-        in
+        if Ext_list.is_empty deprecated_used then
+          match outputMode with
+          | `Stdout ->
+            let source = Res_io.read_file ~filename:path in
+            Ok (`Unchanged source)
+          | `File -> Ok (`Unchanged "")
+        else
+          let parser =
+            Res_driver.parsing_engine.parse_interface ~for_printer:true
+          in
+          let {Res_driver.parsetree = signature; comments; source} =
+            parser ~filename:path
+          in
 
-        let mapper = makeMapper deprecated_used in
-        let astMapped = mapper.signature mapper signature in
-        let contents = Res_printer.print_interface astMapped ~comments in
-        if contents = source then Ok (`Unchanged source)
-        else Ok (`Changed contents)
+          let mapper = makeMapper deprecated_used in
+          let astMapped = mapper.signature mapper signature in
+          let contents = Res_printer.print_interface astMapped ~comments in
+          if contents = source then Ok (`Unchanged source)
+          else Ok (`Changed contents)
     else
       Error
         (Printf.sprintf
