@@ -101,7 +101,7 @@ module Types = struct
     | Lstringswitch of t * (string * t) list * t option
     | Lstaticraise of int * t list
     | Lstaticcatch of t * (int * ident list) * t
-    | Ltrywith of t * ident * t
+    | Ltrywith of t * ident * t option * t option
     | Lifthenelse of t * t * t
     | Lsequence of t * t
     | Lwhile of t * t
@@ -153,7 +153,7 @@ module X = struct
     | Lstringswitch of t * (string * t) list * t option
     | Lstaticraise of int * t list
     | Lstaticcatch of t * (int * ident list) * t
-    | Ltrywith of t * ident * t
+    | Ltrywith of t * ident * t option * t option
     | Lifthenelse of t * t * t
     | Lsequence of t * t
     | Lwhile of t * t
@@ -224,10 +224,11 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
     let e1 = f e1 in
     let e2 = f e2 in
     Lstaticcatch (e1, vars, e2)
-  | Ltrywith (e1, exn, e2) ->
+  | Ltrywith (e1, exn, e2, finally_expr) ->
     let e1 = f e1 in
-    let e2 = f e2 in
-    Ltrywith (e1, exn, e2)
+    let e2 = Ext_option.map e2 f in
+    let finally_expr = Ext_option.map finally_expr f in
+    Ltrywith (e1, exn, e2, finally_expr)
   | Lifthenelse (e1, e2, e3) ->
     let e1 = f e1 in
     let e2 = f e2 in
@@ -457,7 +458,8 @@ let function_ ~attr ~arity ~params ~body : t =
 let let_ kind id e body : t = Llet (kind, id, e, body)
 let letrec bindings body : t = Lletrec (bindings, body)
 let while_ a b : t = Lwhile (a, b)
-let try_ body id handler : t = Ltrywith (body, id, handler)
+let try_ body id handler finally_expr : t =
+  Ltrywith (body, id, handler, finally_expr)
 let for_ v e1 e2 dir e3 : t = Lfor (v, e1, e2, dir, e3)
 let assign v l : t = Lassign (v, l)
 let staticcatch a b c : t = Lstaticcatch (a, b, c)

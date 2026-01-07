@@ -81,9 +81,10 @@ let check file lam =
     | Lstaticcatch (e1, (j, _vars), e2) ->
       check_staticfails e1 (Set_int.add cxt j);
       check_staticfails e2 cxt
-    | Ltrywith (e1, _exn, e2) ->
+    | Ltrywith (e1, _exn, e2, finally_expr) ->
       check_staticfails e1 cxt;
-      check_staticfails e2 cxt
+      Ext_option.iter e2 (fun expr -> check_staticfails expr cxt);
+      Ext_option.iter finally_expr (fun expr -> check_staticfails expr cxt)
     | Lifthenelse (e1, e2, e3) -> check_list [e1; e2; e3] cxt
     | Lsequence (e1, e2) -> check_list [e1; e2] cxt
     | Lassign (_id, e) -> check_staticfails e cxt
@@ -127,10 +128,11 @@ let check file lam =
       iter e1;
       List.iter def vars;
       iter e2
-    | Ltrywith (e1, exn, e2) ->
+    | Ltrywith (e1, exn, e2, finally_expr) ->
       iter e1;
       def exn;
-      iter e2
+      Ext_option.iter e2 iter;
+      Ext_option.iter finally_expr iter
     | Lifthenelse (e1, e2, e3) ->
       iter e1;
       iter e2;
