@@ -1893,9 +1893,22 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         typ_expr.ptyp_loc.Location.loc_start.pos_lnum
         < typ_expr.ptyp_loc.loc_end.pos_lnum
       in
-      let print_row_field = function
+      let print_row_field i = function
         | Parsetree.Rtag ({txt; loc}, attrs, true, []) ->
-          let doc =
+          let comment_attrs, attrs =
+            ParsetreeViewer.partition_doc_comment_attributes attrs
+          in
+          let comment_doc =
+            match comment_attrs with
+            | [] -> Doc.nil
+            | comment_attrs ->
+              print_doc_comments ~sep:Doc.hard_line ~state cmt_tbl comment_attrs
+          in
+          let bar =
+            if i > 0 || comment_attrs <> [] then Doc.text "| "
+            else Doc.if_breaks (Doc.text "| ") Doc.nil
+          in
+          let tag_doc =
             Doc.group
               (Doc.concat
                  [
@@ -1903,8 +1916,21 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
                    Doc.concat [Doc.text "#"; print_poly_var_ident txt];
                  ])
           in
-          print_comments doc cmt_tbl loc
-        | Rtag ({txt}, attrs, truth, types) ->
+          Doc.concat [comment_doc; bar; print_comments tag_doc cmt_tbl loc]
+        | Rtag ({txt; loc}, attrs, truth, types) ->
+          let comment_attrs, attrs =
+            ParsetreeViewer.partition_doc_comment_attributes attrs
+          in
+          let comment_doc =
+            match comment_attrs with
+            | [] -> Doc.nil
+            | comment_attrs ->
+              print_doc_comments ~sep:Doc.hard_line ~state cmt_tbl comment_attrs
+          in
+          let bar =
+            if i > 0 || comment_attrs <> [] then Doc.text "| "
+            else Doc.if_breaks (Doc.text "| ") Doc.nil
+          in
           let do_type t =
             match t.Parsetree.ptyp_desc with
             | Ptyp_tuple _ -> print_typ_expr ~state t cmt_tbl
@@ -1919,21 +1945,25 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
           let cases =
             if truth then Doc.concat [Doc.line; Doc.text "& "; cases] else cases
           in
-          Doc.group
-            (Doc.concat
-               [
-                 print_attributes ~state attrs cmt_tbl;
-                 Doc.concat [Doc.text "#"; print_poly_var_ident txt];
-                 cases;
-               ])
-        | Rinherit core_type -> print_typ_expr ~state core_type cmt_tbl
+          let tag_doc =
+            Doc.group
+              (Doc.concat
+                 [
+                   print_attributes ~state attrs cmt_tbl;
+                   Doc.concat [Doc.text "#"; print_poly_var_ident txt];
+                   cases;
+                 ])
+          in
+          Doc.concat [comment_doc; bar; print_comments tag_doc cmt_tbl loc]
+        | Rinherit core_type ->
+          let bar =
+            if i > 0 then Doc.text "| "
+            else Doc.if_breaks (Doc.text "| ") Doc.nil
+          in
+          Doc.concat [bar; print_typ_expr ~state core_type cmt_tbl]
       in
-      let docs = List.map print_row_field row_fields in
-      let cases = Doc.join ~sep:(Doc.concat [Doc.line; Doc.text "| "]) docs in
-      let cases =
-        if docs = [] then cases
-        else Doc.concat [Doc.if_breaks (Doc.text "| ") Doc.nil; cases]
-      in
+      let docs = List.mapi print_row_field row_fields in
+      let cases = Doc.join ~sep:Doc.line docs in
       let opening_symbol =
         if closed_flag = Open then Doc.concat [Doc.greater_than; Doc.line]
         else if labels_opt = None then Doc.soft_line

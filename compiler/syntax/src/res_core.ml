@@ -5904,15 +5904,47 @@ and parse_tag_spec_full p =
     Parsetree.Rinherit typ
 
 and parse_tag_specs p =
+  let is_tag_with_bar p =
+    Parser.lookahead p (fun state ->
+        match state.Parser.token with
+        | DocComment _ -> (
+          Parser.next state;
+          match state.token with
+          | Bar -> true
+          | _ -> false)
+        | Bar -> true
+        | _ -> false)
+  in
   match p.Parser.token with
-  | Bar ->
-    Parser.next p;
-    let row_field = parse_tag_spec p in
-    row_field :: parse_tag_specs p
+  | (Bar | DocComment _) when is_tag_with_bar p ->
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    Parser.expect Bar p;
+    let tag = parse_tag_spec p in
+    let tag_with_doc =
+      match tag with
+      | Parsetree.Rtag (name, attrs, contains_constant, types) ->
+        Parsetree.Rtag
+          (name, doc_comment_attrs @ attrs, contains_constant, types)
+      | Rinherit _ -> tag
+    in
+    tag_with_doc :: parse_tag_specs p
   | _ -> []
 
 and parse_tag_spec p =
-  let attrs = parse_attributes p in
+  let doc_comment_attrs =
+    match p.Parser.token with
+    | DocComment (loc, s) ->
+      Parser.next p;
+      [doc_comment_to_attribute loc s]
+    | _ -> []
+  in
+  let attrs = doc_comment_attrs @ parse_attributes p in
   match p.Parser.token with
   | Hash -> parse_polymorphic_variant_type_spec_hash ~attrs ~full:false p
   | _ ->
@@ -5920,14 +5952,55 @@ and parse_tag_spec p =
     Parsetree.Rinherit typ
 
 and parse_tag_spec_first p =
-  let attrs = parse_attributes p in
+  let is_tag_with_bar p =
+    Parser.lookahead p (fun state ->
+        match state.Parser.token with
+        | DocComment _ -> (
+          Parser.next state;
+          match state.token with
+          | Bar -> true
+          | _ -> false)
+        | Bar -> true
+        | _ -> false)
+  in
   match p.Parser.token with
-  | Bar ->
-    Parser.next p;
-    [parse_tag_spec p]
-  | Hash -> [parse_polymorphic_variant_type_spec_hash ~attrs ~full:false p]
+  | (Bar | DocComment _) when is_tag_with_bar p ->
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    Parser.expect Bar p;
+    let tag = parse_tag_spec p in
+    (match tag with
+    | Parsetree.Rtag (name, attrs, contains_constant, types) ->
+      Parsetree.Rtag (name, doc_comment_attrs @ attrs, contains_constant, types)
+    | Rinherit _ -> tag)
+    :: parse_tag_specs p
+  | DocComment _ | Hash | At -> (
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    let attrs = doc_comment_attrs @ parse_attributes p in
+    match p.Parser.token with
+    | Hash -> [parse_polymorphic_variant_type_spec_hash ~attrs ~full:false p]
+    | _ -> (
+      let typ = parse_typ_expr ~attrs p in
+      match p.token with
+      | Rbracket ->
+        (* example: [ListStyleType.t] *)
+        [Parsetree.Rinherit typ]
+      | _ ->
+        Parser.expect Bar p;
+        [Parsetree.Rinherit typ; parse_tag_spec p]))
   | _ -> (
-    let typ = parse_typ_expr ~attrs p in
+    let typ = parse_typ_expr p in
     match p.token with
     | Rbracket ->
       (* example: [ListStyleType.t] *)
