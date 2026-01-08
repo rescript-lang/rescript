@@ -72,9 +72,9 @@ let main () =
     let isStdout = List.mem "--stdout" opts in
     let outputMode = if isStdout then `Stdout else `File in
     let base = Filename.basename file in
-    match Tools.Migrate.migrate ~entryPointFile:file ~outputMode with
-    | Ok (`Changed content) when isStdout -> print_endline content
-    | Ok (`Unchanged content) when isStdout -> print_endline content
+    match Tools.Migrate.migrate file ~outputMode with
+    | Ok (`Changed content | `Unchanged content) when isStdout ->
+      print_endline content
     | Ok (`Changed _) -> logAndExit (Ok (base ^ ": File migrated successfully"))
     | Ok (`Unchanged _) ->
       logAndExit (Ok (base ^ ": File did not need migration"))
@@ -109,7 +109,7 @@ let main () =
       if total = 0 then logAndExit (Ok "No source files found to migrate")
       else
         let process_one file =
-          (file, Tools.Migrate.migrate ~entryPointFile:file ~outputMode:`File)
+          (file, Tools.Migrate.migrate file ~package ~outputMode:`File)
         in
         let results = List.map process_one files in
         let migrated, unchanged, failures =

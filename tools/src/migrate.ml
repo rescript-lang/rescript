@@ -5,10 +5,16 @@ module StringSet = Set.Make (String)
 module IntSet = Set.Make (Int)
 module FileSet = SharedTypes.FileSet
 
-let filter_deprecations_for_project ~entryPointFile deprecated_used =
+let filter_deprecations_for_project ~entryPointFile ?package deprecated_used =
   let canonical p = try Unix.realpath p with _ -> p in
-  let uri = Uri.fromPath entryPointFile in
-  match Packages.getPackage ~uri with
+  let package =
+    match package with
+    | Some p -> Some p
+    | None ->
+      let uri = Uri.fromPath entryPointFile in
+      Packages.getPackage ~uri
+  in
+  match package with
   | None -> deprecated_used
   | Some package ->
     let dependency_paths =
@@ -753,7 +759,7 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
   in
   mapper
 
-let migrate ~entryPointFile ~outputMode =
+let migrate ~outputMode ?package entryPointFile =
   let path =
     match Filename.is_relative entryPointFile with
     | true -> Unix.realpath entryPointFile
@@ -771,6 +777,7 @@ let migrate ~entryPointFile ~outputMode =
       | Some {cmt_extra_info = {deprecated_used}} ->
         let deprecated_used =
           filter_deprecations_for_project ~entryPointFile:path deprecated_used
+            ?package
         in
         if Ext_list.is_empty deprecated_used then
           match outputMode with
@@ -815,6 +822,7 @@ let migrate ~entryPointFile ~outputMode =
       | Some {cmt_extra_info = {deprecated_used}} ->
         let deprecated_used =
           filter_deprecations_for_project ~entryPointFile:path deprecated_used
+            ?package
         in
         if Ext_list.is_empty deprecated_used then
           match outputMode with
