@@ -5265,24 +5265,25 @@ and parse_constr_decl_args p =
   in
   (constr_args, res)
 
+(* Helper to check if current token is a bar or doc comment followed by a bar *)
+and is_bar_or_doc_comment_then_bar p =
+  Parser.lookahead p (fun state ->
+      match state.Parser.token with
+      | DocComment _ -> (
+        Parser.next state;
+        match state.token with
+        | Bar -> true
+        | _ -> false)
+      | Bar -> true
+      | _ -> false)
+
 (* constr-decl ::=
  *  | constr-name
  *  | attrs constr-name
  *  | constr-name const-args
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
-  let is_constructor_with_bar p =
-    Parser.lookahead p (fun state ->
-        match state.Parser.token with
-        | DocComment _ -> (
-          Parser.next state;
-          match state.token with
-          | Bar -> true
-          | _ -> false)
-        | Bar -> true
-        | _ -> false)
-  in
-  if is_constructor_with_bar p then (
+  if is_bar_or_doc_comment_then_bar p then (
     let doc_comment_attrs =
       match p.Parser.token with
       | DocComment (loc, s) ->
@@ -5904,19 +5905,8 @@ and parse_tag_spec_full p =
     Parsetree.Rinherit typ
 
 and parse_tag_specs p =
-  let is_tag_with_bar p =
-    Parser.lookahead p (fun state ->
-        match state.Parser.token with
-        | DocComment _ -> (
-          Parser.next state;
-          match state.token with
-          | Bar -> true
-          | _ -> false)
-        | Bar -> true
-        | _ -> false)
-  in
   match p.Parser.token with
-  | (Bar | DocComment _) when is_tag_with_bar p ->
+  | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
     let doc_comment_attrs =
       match p.Parser.token with
       | DocComment (loc, s) ->
@@ -5952,19 +5942,8 @@ and parse_tag_spec p =
     Parsetree.Rinherit typ
 
 and parse_tag_spec_first p =
-  let is_tag_with_bar p =
-    Parser.lookahead p (fun state ->
-        match state.Parser.token with
-        | DocComment _ -> (
-          Parser.next state;
-          match state.token with
-          | Bar -> true
-          | _ -> false)
-        | Bar -> true
-        | _ -> false)
-  in
   match p.Parser.token with
-  | (Bar | DocComment _) when is_tag_with_bar p ->
+  | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
     let doc_comment_attrs =
       match p.Parser.token with
       | DocComment (loc, s) ->
