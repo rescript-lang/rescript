@@ -61,8 +61,8 @@ let x = 1
 
 let x =
   <div \"aria-foo"=\"type">
-    \"module"
-    \"let"
+    {\"module"}
+    {\"let"}
   </div>
 
 type dict = {
