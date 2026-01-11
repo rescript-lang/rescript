@@ -18,7 +18,7 @@ import * as BinsJs from "../../cli/common/bins.js";
 
 let rescript_tools_exe = BinsJs.rescript_tools_exe;
 
-let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
+let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node")), "Failed to convert node version to Int");
 
 let ignoreRuntimeTests = [
   [
