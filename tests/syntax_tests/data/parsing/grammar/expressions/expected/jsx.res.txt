@@ -252,9 +252,8 @@ let _ = <div style=((getStyle ())
   [@res.braces ])>((ReasonReact.string {js|BugTest|js})[@res.braces ])</div>
 let _ =
   <div>((let left = limit -> Int.toString in
-         (((((({js||js})[@res.template ]) ++ left)[@res.template ]) ++
-             (({js| characters left|js})[@res.template ]))
-           [@res.template ]) -> React.string)
+         (((("" ++ left) ++ " characters left")[@res.template ])) ->
+           React.string)
   [@res.braces ])</div>
 let _ =
   <View style=(styles#backgroundImageWrapper)>((let uri =

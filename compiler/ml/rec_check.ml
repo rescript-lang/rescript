@@ -197,7 +197,7 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
   | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
   | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_extension_constructor _
-    ->
+  | Texp_template _ ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
@@ -291,6 +291,7 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_function {case = case_} ->
     Use.delay (list (case ~scrutinee:Use.empty) env [case_])
   | Texp_extension_constructor _ -> Use.empty
+  | Texp_template {expressions} -> Use.guard (list expression env expressions)
 
 and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =
  fun f env -> value_default (f env) ~default:Use.empty

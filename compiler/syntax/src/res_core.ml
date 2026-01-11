@@ -228,9 +228,6 @@ let template_literal_attr = (Location.mknoloc "res.template", Parsetree.PStr [])
 let make_pat_variant_spread_attr =
   (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
 
-let tagged_template_literal_attr =
-  (Location.mknoloc "res.taggedTemplate", Parsetree.PStr [])
-
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 
 type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
@@ -2273,14 +2270,17 @@ and parse_primary_expr ~operand ?(no_call = false) p =
       when no_call = false && p.prev_end_pos.pos_lnum == p.start_pos.pos_lnum
       -> (
       match expr.pexp_desc with
-      | Pexp_ident long_ident -> parse_template_expr ~prefix:long_ident p
+      | Pexp_ident long_ident ->
+        let template_expr = parse_template_expr ~prefix:long_ident p in
+        {template_expr with pexp_loc = mk_loc start_pos p.prev_end_pos}
       | _ ->
         Parser.err ~start_pos:expr.pexp_loc.loc_start
           ~end_pos:expr.pexp_loc.loc_end p
           (Diagnostics.message
              "Tagged template literals are currently restricted to names like: \
               myTagFunction`foo ${bar}`.");
-        parse_template_expr p)
+        let template_expr = parse_template_expr p in
+        {template_expr with pexp_loc = mk_loc start_pos p.prev_end_pos})
     | _ -> expr
   in
   loop p operand
@@ -2446,96 +2446,56 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
 (* ) *)
 
 and parse_template_expr ?prefix p =
-  let part_prefix =
-    (* we could stop treating json prefix as something special
-       but we would first need to remove @as(json`true`) feature *)
-    match prefix with
-    | Some {txt = Longident.Lident ("json" as prefix); _} -> Some prefix
-    | _ -> Some "js"
-  in
-
   let parse_parts p =
-    let rec aux acc =
-      let start_pos = p.Parser.start_pos in
+    let rec aux strings values =
       Parser.next_template_literal_token p;
       match p.token with
-      | TemplateTail (txt, last_pos) ->
+      | TemplateTail (txt, _last_pos) ->
         Parser.next p;
-        let loc = mk_loc start_pos last_pos in
-        let str =
-          Ast_helper.Exp.constant ~attrs:[template_literal_attr] ~loc
-            (Pconst_string (txt, part_prefix))
-        in
-        List.rev ((str, None) :: acc)
-      | TemplatePart (txt, last_pos) ->
+        (List.rev (txt :: strings), List.rev values)
+      | TemplatePart (txt, _last_pos) ->
         Parser.next p;
-        let loc = mk_loc start_pos last_pos in
         let expr = parse_expr_block p in
-        let str =
-          Ast_helper.Exp.constant ~attrs:[template_literal_attr] ~loc
-            (Pconst_string (txt, part_prefix))
-        in
-        aux ((str, Some expr) :: acc)
+        aux (txt :: strings) (expr :: values)
       | token ->
         Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-        []
+        ([""], [])
     in
-    aux []
+    aux [] []
   in
-  let parts = parse_parts p in
-  let strings = List.map fst parts in
-  let values = Ext_list.filter_map parts snd in
-
-  let gen_tagged_template_call (lident_loc : Longident.t Location.loc) =
-    let ident = Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc in
-    let strings_array =
-      Ast_helper.Exp.array ~attrs:[] ~loc:Location.none strings
+  let strings, values = parse_parts p in
+  let prefix_value =
+    match prefix with
+    | Some {txt = Longident.Lident "json"; _} -> Some "json"
+    | _ -> None
+  in
+  let template_literal_const txt =
+    let delim =
+      match prefix_value with
+      | None -> Some "js"
+      | Some prefix -> Some prefix
     in
-    let values_array =
-      Ast_helper.Exp.array ~attrs:[] ~loc:Location.none values
-    in
-    Ast_helper.Exp.apply
-      ~attrs:[tagged_template_literal_attr]
-      ~loc:lident_loc.loc ident
-      [(Nolabel, strings_array); (Nolabel, values_array)]
+    let expr = Ast_helper.Exp.constant (Pconst_string (txt, delim)) in
+    {expr with pexp_attributes = [template_literal_attr]}
   in
-
-  let hidden_operator =
-    let op = Location.mknoloc (Longident.Lident "++") in
-    Ast_helper.Exp.ident op
-  in
-  let concat (e1 : Parsetree.expression) (e2 : Parsetree.expression) =
-    let loc = mk_loc e1.pexp_loc.loc_start e2.pexp_loc.loc_end in
-    Ast_helper.Exp.apply ~attrs:[template_literal_attr] ~loc hidden_operator
-      [(Nolabel, e1); (Nolabel, e2)]
-  in
-  let gen_interpolated_string () =
-    let subparts =
-      List.flatten
-        (List.map
-           (fun part ->
-             match part with
-             | s, Some v -> [s; v]
-             | s, None -> [s])
-           parts)
-    in
-    let expr_option =
-      List.fold_left
-        (fun acc subpart ->
-          Some
-            (match acc with
-            | Some expr -> concat expr subpart
-            | None -> subpart))
-        None subparts
-    in
-    match expr_option with
-    | Some expr -> expr
-    | None -> Ast_helper.Exp.constant (Pconst_string ("", None))
-  in
-
   match prefix with
-  | Some {txt = Longident.Lident "json"; _} | None -> gen_interpolated_string ()
-  | Some lident_loc -> gen_tagged_template_call lident_loc
+  | Some {txt = Longident.Lident "json"; _} | None -> (
+    match values with
+    | [] -> (
+      match strings with
+      | [txt] -> template_literal_const txt
+      | _ ->
+        Ast_helper.Exp.template
+          {tag = None; prefix = prefix_value; strings; expressions = values})
+    | _ ->
+      Ast_helper.Exp.template
+        {tag = None; prefix = prefix_value; strings; expressions = values})
+  | Some lident_loc ->
+    let tag_expr =
+      Ast_helper.Exp.ident ~attrs:[] ~loc:lident_loc.loc lident_loc
+    in
+    Ast_helper.Exp.template
+      {tag = Some tag_expr; prefix = None; strings; expressions = values}
 
 (* Overparse: let f = a : int => a + 1, is it (a : int) => or (a): int =>
  * Also overparse constraints:

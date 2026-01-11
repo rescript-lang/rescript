@@ -243,6 +243,8 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pstringmin -> prim ~primitive:Pstringmin ~args loc
   | Pstringmax -> prim ~primitive:Pstringmax ~args loc
   | Pstringadd -> prim ~primitive:Pstringadd ~args loc
+  | Pstringtemplate strings ->
+    prim ~primitive:(Pstringtemplate strings) ~args loc
   | Pabsfloat -> assert false
   | Pstringrefs -> prim ~primitive:Pstringrefs ~args loc
   | Pisint -> prim ~primitive:Pisint ~args loc

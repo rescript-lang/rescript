@@ -344,6 +344,66 @@ module E = struct
       let list_expr = Ast_helper.Exp.make_list_expression loc xs None in
       sub.expr sub list_expr
 
+  let template_literal_attr = (Location.mknoloc "res.template", Pt.PStr [])
+
+  let tagged_template_literal_attr =
+    (Location.mknoloc "res.taggedTemplate", Pt.PStr [])
+
+  let make_string_expr ~loc ?prefix txt =
+    Exp.constant ~loc (Pt.Pconst_string (txt, prefix))
+
+  let rec interleave_string_value_parts strings values =
+    match (strings, values) with
+    | [], [] -> []
+    | string_expr :: rest_strings, value_expr :: rest_values ->
+      string_expr :: value_expr
+      :: interleave_string_value_parts rest_strings rest_values
+    | string_expr :: rest_strings, [] -> string_expr :: rest_strings
+    | [], _ -> []
+
+  let rec fold_string_concat ~loc op_expr parts =
+    match parts with
+    | [] -> make_string_expr ~loc ""
+    | [part] -> part
+    | part1 :: part2 :: rest ->
+      let expr =
+        Exp.apply ~loc op_expr
+          [(Asttypes.Noloc.Nolabel, part1); (Asttypes.Noloc.Nolabel, part2)]
+      in
+      fold_string_concat ~loc op_expr (expr :: rest)
+
+  let map_template_literal sub ~loc ~attrs
+      {Parsetree.tag; prefix; strings; expressions} =
+    match tag with
+    | Some tag_expr ->
+      let call_expr = sub.expr sub tag_expr in
+      let string_exprs =
+        List.map (make_string_expr ~loc ?prefix:None) strings
+      in
+      let value_exprs = List.map (sub.expr sub) expressions in
+      let strings_array = Exp.array ~loc string_exprs in
+      let values_array = Exp.array ~loc value_exprs in
+      Exp.apply ~loc
+        ~attrs:(tagged_template_literal_attr :: attrs)
+        call_expr
+        [
+          (Asttypes.Noloc.Nolabel, strings_array);
+          (Asttypes.Noloc.Nolabel, values_array);
+        ]
+    | None ->
+      let string_exprs =
+        match strings with
+        | [] -> [make_string_expr ~loc ?prefix ""]
+        | first :: rest ->
+          make_string_expr ~loc ?prefix first
+          :: List.map (make_string_expr ~loc ?prefix:None) rest
+      in
+      let value_exprs = List.map (sub.expr sub) expressions in
+      let parts = interleave_string_value_parts string_exprs value_exprs in
+      let concat_op = Exp.ident ~loc {txt = Longident.Lident "^"; loc} in
+      let expr = fold_string_concat ~loc concat_op parts in
+      {expr with pexp_attributes = template_literal_attr :: attrs}
+
   (* Value expressions for the core language *)
 
   let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
@@ -351,6 +411,8 @@ module E = struct
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
+    | Pexp_template template_literal ->
+      map_template_literal sub ~loc ~attrs template_literal
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->

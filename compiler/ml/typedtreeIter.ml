@@ -223,6 +223,7 @@ end = struct
     (match exp.exp_desc with
     | Texp_ident _ -> ()
     | Texp_constant _ -> ()
+    | Texp_template {expressions; _} -> List.iter iter_expression expressions
     | Texp_let (rec_flag, list, exp) ->
       iter_bindings rec_flag list;
       iter_expression exp

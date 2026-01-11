@@ -228,6 +228,7 @@ type primitive =
   | Pstringmin
   | Pstringmax
   | Pstringadd
+  | Pstringtemplate of string list
   (* Array operations *)
   | Pmakearray of mutable_flag
   | Parraylength

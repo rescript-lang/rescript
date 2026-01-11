@@ -220,6 +220,7 @@ let primitive ppf = function
   | Pstringmin -> fprintf ppf "min"
   | Pstringmax -> fprintf ppf "max"
   | Pstringadd -> fprintf ppf "string.concat"
+  | Pstringtemplate _ -> fprintf ppf "string.template"
   | Parraylength -> fprintf ppf "array.length"
   | Pmakearray Mutable -> fprintf ppf "makearray"
   | Pmakearray Immutable -> fprintf ppf "makearray_imm"

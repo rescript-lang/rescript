@@ -192,6 +192,9 @@ let expr sub x =
   let exp_desc =
     match x.exp_desc with
     | (Texp_ident _ | Texp_constant _) as d -> d
+    | Texp_template {prefix; strings; expressions} ->
+      Texp_template
+        {prefix; strings; expressions = List.map (sub.expr sub) expressions}
     | Texp_let (rec_flag, list, exp) ->
       let rec_flag, list = sub.value_bindings sub (rec_flag, list) in
       Texp_let (rec_flag, list, sub.expr sub exp)

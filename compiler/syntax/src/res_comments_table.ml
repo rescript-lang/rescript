@@ -1239,7 +1239,7 @@ and walk_expression expr t comments =
     | None -> attach t.trailing longident.loc trailing)
   | Pexp_variant (_label, None) -> ()
   | Pexp_variant (_label, Some expr) -> walk_expression expr t comments
-  | Pexp_array exprs | Pexp_tuple exprs ->
+  | Pexp_array exprs | Pexp_tuple exprs | Pexp_template {expressions = exprs} ->
     walk_list (exprs |> List.map (fun e -> Expression e)) t comments
   | Pexp_record (rows, spread_expr) ->
     if rows = [] then attach t.inside expr.pexp_loc comments

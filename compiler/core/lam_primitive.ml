@@ -125,6 +125,7 @@ type t =
   | Pstringrefu
   | Pstringrefs
   | Pstringadd
+  | Pstringtemplate of string list
   | Pstringcomp of Lam_compat.comparison
   | Pstringorder
   | Pstringmin
@@ -213,8 +214,8 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Ppowbigint | Pnotbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint
   | Pasrbigint | Pbigintorder | Pbigintmin | Pbigintmax
   (* string primitives *)
-  | Pstringlength | Pstringrefu | Pstringrefs | Pstringadd | Pstringcomp _
-  | Pstringorder | Pstringmin | Pstringmax
+  | Pstringlength | Pstringrefu | Pstringrefs | Pstringadd | Pstringtemplate _
+  | Pstringcomp _ | Pstringorder | Pstringmin | Pstringmax
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)

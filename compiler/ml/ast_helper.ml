@@ -159,6 +159,7 @@ module Exp = struct
 
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
+  let template ?loc ?attrs a = mk ?loc ?attrs (Pexp_template a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
   let fun_ ?loc ?attrs ?(async = false) ~arity a b c d =
     mk ?loc ?attrs

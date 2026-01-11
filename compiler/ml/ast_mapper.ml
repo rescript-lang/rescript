@@ -343,6 +343,10 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_template {tag; prefix; strings; expressions} ->
+      let tag = map_opt (sub.expr sub) tag in
+      let expressions = List.map (sub.expr sub) expressions in
+      template ~loc ~attrs {tag; prefix; strings; expressions}
     | Pexp_await e -> await ~loc ~attrs (sub.expr sub e)
     | Pexp_jsx_element
         (Jsx_fragment

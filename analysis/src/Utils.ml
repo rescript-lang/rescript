@@ -112,6 +112,7 @@ let identifyPexp pexp =
   | Pexp_open _ -> "Pexp_open"
   | Pexp_await _ -> "Pexp_await"
   | Pexp_jsx_element _ -> "Pexp_jsx_element"
+  | Pexp_template _ -> "Pexp_template"
 
 let identifyPpat pat =
   match pat with

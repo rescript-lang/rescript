@@ -70,7 +70,7 @@ async function extractDocFromFile(file) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {
       console.error(e._1);
-      return Stdlib_JsError.panic(`Failed to extract code blocks from ` + file);
+      return Stdlib_JsError.panic(`Failed to extract code blocks from ${file}`);
     }
     throw e;
   }
@@ -93,7 +93,7 @@ async function extractExamples() {
       return false;
     }
   });
-  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime files...`);
+  console.log(`Extracting examples from ${docFiles.length.toString()} runtime files...`);
   let examples = [];
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
     let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
@@ -102,7 +102,7 @@ async function extractExamples() {
       return;
     }
     console.error(doc._0);
-    return Stdlib_JsError.panic(`Error extracting code blocks for ` + f);
+    return Stdlib_JsError.panic(`Error extracting code blocks for ${f}`);
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   return examples;
@@ -130,23 +130,23 @@ async function main() {
         }
       });
       if (ignoreExample) {
-        console.warn(`Ignoring ` + example.id + ` tests. Not supported by Node ` + nodeVersion.toString());
+        console.warn(`Ignoring ${example.id} tests. Not supported by Node ${nodeVersion.toString()}`);
         return;
       }
       let code = example.code;
       if (code.length === 0) {
         return;
       } else if (code.includes("await")) {
-        return `testAsync("` + example.name + `", async () => {
+        return `testAsync("${example.name}", async () => {
   module Test = {
-    ` + code + `
+    ${code}
   }
   ()
 })`;
       } else {
-        return `test("` + example.name + `", () => {
+        return `test("${example.name}", () => {
   module Test = {
-    ` + code + `
+    ${code}
   }
   ()
 })`;
@@ -155,8 +155,8 @@ async function main() {
     if (codeExamples.length === 0) {
       return;
     }
-    let content = `describe("` + key + `", () => {
-` + codeExamples.join("\n") + `
+    let content = `describe("${key}", () => {
+${codeExamples.join("\n")}
  })`;
     output.push(content);
   });
@@ -165,7 +165,7 @@ async function main() {
   let fileContent = `open Mocha
 @@warning("-32-34-60-37-109-3-44")
 
-` + output.join("\n");
+${output.join("\n")}`;
   return await Promises.writeFile(filepath, fileContent);
 }
 

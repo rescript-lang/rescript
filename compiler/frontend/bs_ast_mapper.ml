@@ -406,6 +406,10 @@ module E = struct
       jsx_container_element ~loc ~attrs name (map_jsx_props sub props) ote
         (map_jsx_children sub children)
         closing_tag
+    | Pexp_template {tag; prefix; strings; expressions} ->
+      let tag = map_opt (sub.expr sub) tag in
+      let expressions = List.map (sub.expr sub) expressions in
+      template ~loc ~attrs {tag; prefix; strings; expressions}
 end
 
 module P = struct

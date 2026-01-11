@@ -350,6 +350,18 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_template {tag; prefix; strings; expressions} ->
+    line i ppf "Pexp_template\n";
+    (match prefix with
+    | None -> ()
+    | Some prefix -> line (i + 1) ppf "prefix \"%s\"\n" prefix);
+    (match tag with
+    | None -> ()
+    | Some expr ->
+      line (i + 1) ppf "tag\n";
+      expression (i + 2) ppf expr);
+    List.iter (fun s -> line (i + 1) ppf "string %S\n" s) strings;
+    List.iter (expression (i + 1) ppf) expressions
   | Pexp_await e ->
     line i ppf "Pexp_await\n";
     expression i ppf e

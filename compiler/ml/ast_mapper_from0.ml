@@ -310,6 +310,88 @@ module E = struct
         | _ -> true)
       attrs
 
+  let has_template_literal_attr attrs =
+    List.exists
+      (function
+        | {Location.txt = "res.template"}, _ -> true
+        | _ -> false)
+      attrs
+
+  let remove_template_literal_attr attrs =
+    List.filter
+      (function
+        | {Location.txt = "res.template"}, _ -> false
+        | _ -> true)
+      attrs
+
+  let has_tagged_template_literal_attr attrs =
+    List.exists
+      (function
+        | {Location.txt = "res.taggedTemplate"}, _ -> true
+        | _ -> false)
+      attrs
+
+  let remove_tagged_template_literal_attr attrs =
+    List.filter
+      (function
+        | {Location.txt = "res.taggedTemplate"}, _ -> false
+        | _ -> true)
+      attrs
+
+  type template_part =
+    | Template_string of string * string option
+    | Template_expr of expression
+
+  let is_concat_operator expr =
+    match expr.pexp_desc with
+    | Pexp_ident {txt = Longident.Lident ("^" | "++")} -> true
+    | _ -> false
+
+  let rec collect_template_parts expr =
+    match expr.pexp_desc with
+    | Pexp_apply (op, [(Nolabel, lhs); (Nolabel, rhs)])
+      when is_concat_operator op ->
+      collect_template_parts lhs @ collect_template_parts rhs
+    | Pexp_constant (Pconst_string (txt, delim)) ->
+      [Template_string (txt, delim)]
+    | _ -> [Template_expr expr]
+
+  let template_literal_of_parts sub parts =
+    let prefix = ref None in
+    let strings_rev = ref [] in
+    let expressions_rev = ref [] in
+    let last_was_expr = ref false in
+    let add_string s =
+      match (!strings_rev, !last_was_expr) with
+      | last :: rest, false -> strings_rev := (last ^ s) :: rest
+      | _ -> strings_rev := s :: !strings_rev
+    in
+    let add_expr e =
+      if !strings_rev = [] then strings_rev := "" :: !strings_rev;
+      if !last_was_expr then strings_rev := "" :: !strings_rev;
+      expressions_rev := sub.expr sub e :: !expressions_rev;
+      last_was_expr := true
+    in
+    let record_prefix = function
+      | Some "json" when !prefix = None -> prefix := Some "json"
+      | _ -> ()
+    in
+    List.iter
+      (function
+        | Template_string (txt, delim) ->
+          record_prefix delim;
+          add_string txt;
+          last_was_expr := false
+        | Template_expr expr -> add_expr expr)
+      parts;
+    if !last_was_expr then strings_rev := "" :: !strings_rev;
+    {
+      Parsetree.tag = None;
+      prefix = !prefix;
+      strings = List.rev !strings_rev;
+      expressions = List.rev !expressions_rev;
+    }
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
@@ -381,6 +463,42 @@ module E = struct
       let attrs = remove_await_attribute e.pexp_attributes in
       let e = sub.expr sub {e with pexp_attributes = attrs} in
       await ~loc e
+    | Pexp_apply (call_expr, args) when has_tagged_template_literal_attr attrs
+      -> (
+      let attrs = remove_tagged_template_literal_attr attrs in
+      match args with
+      | [
+       (Nolabel, {pexp_desc = Pexp_array string_exprs});
+       (Nolabel, {pexp_desc = Pexp_array value_exprs});
+      ] -> (
+        let rec collect_strings acc = function
+          | [] -> Some (List.rev acc)
+          | {pexp_desc = Pexp_constant (Pconst_string (txt, _)); _} :: rest ->
+            collect_strings (txt :: acc) rest
+          | _ -> None
+        in
+        match collect_strings [] string_exprs with
+        | Some strings ->
+          let tag_expr = sub.expr sub call_expr in
+          let values = List.map (sub.expr sub) value_exprs in
+          template ~loc ~attrs
+            {tag = Some tag_expr; prefix = None; strings; expressions = values}
+        | None ->
+          apply ~loc ~attrs (sub.expr sub call_expr)
+            (List.map
+               (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
+               args))
+      | _ ->
+        apply ~loc ~attrs (sub.expr sub call_expr)
+          (List.map
+             (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
+             args))
+    | _ when has_template_literal_attr attrs ->
+      let attrs = remove_template_literal_attr attrs in
+      let template_literal =
+        template_literal_of_parts sub (collect_template_parts e)
+      in
+      template ~loc ~attrs template_literal
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->

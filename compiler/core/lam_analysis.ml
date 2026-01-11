@@ -72,7 +72,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
     (* string primitives *)
     | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _ | Pstringorder
-    | Pstringmin | Pstringmax
+    | Pstringmin | Pstringmax | Pstringtemplate _
     (* array primitives *)
     | Pmakearray | Parraylength | Parrayrefu | Parrayrefs
     (* list primitives *)

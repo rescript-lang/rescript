@@ -546,6 +546,19 @@ module SexpAst = struct
       | Pexp_ident longident_loc ->
         Sexp.list [Sexp.atom "Pexp_ident"; longident longident_loc.Asttypes.txt]
       | Pexp_constant c -> Sexp.list [Sexp.atom "Pexp_constant"; constant c]
+      | Pexp_template {tag; prefix; strings; expressions} ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_template";
+            (match tag with
+            | None -> Sexp.atom "None"
+            | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
+            (match prefix with
+            | None -> Sexp.atom "None"
+            | Some prefix -> Sexp.list [Sexp.atom "Some"; string prefix]);
+            Sexp.list (map_empty ~f:string strings);
+            Sexp.list (map_empty ~f:expression expressions);
+          ]
       | Pexp_let (flag, vbs, expr) ->
         Sexp.list
           [

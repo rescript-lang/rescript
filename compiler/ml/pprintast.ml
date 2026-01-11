@@ -137,6 +137,56 @@ let is_simple_construct : construct -> bool = function
   | `nil | `tuple | `list _ | `simple _ -> true
   | `cons _ | `normal -> false
 
+let template_literal_attr = (Location.mknoloc "res.template", Parsetree.PStr [])
+
+let tagged_template_literal_attr =
+  (Location.mknoloc "res.taggedTemplate", Parsetree.PStr [])
+
+let make_string_expr ~loc ?prefix txt =
+  Exp.constant ~loc (Pconst_string (txt, prefix))
+
+let rec interleave_string_value_parts strings values =
+  match (strings, values) with
+  | [], [] -> []
+  | string_expr :: rest_strings, value_expr :: rest_values ->
+    string_expr :: value_expr
+    :: interleave_string_value_parts rest_strings rest_values
+  | string_expr :: rest_strings, [] -> string_expr :: rest_strings
+  | [], _ -> []
+
+let rec fold_string_concat ~loc op_expr parts =
+  match parts with
+  | [] -> make_string_expr ~loc ""
+  | [part] -> part
+  | part1 :: part2 :: rest ->
+    let expr = Exp.apply ~loc op_expr [(Nolabel, part1); (Nolabel, part2)] in
+    fold_string_concat ~loc op_expr (expr :: rest)
+
+let expand_template_literal ~loc ~attrs
+    (template_literal : Parsetree.template_literal) =
+  let {tag; prefix; strings; expressions} = template_literal in
+  match tag with
+  | Some tag_expr ->
+    let string_exprs = List.map (make_string_expr ~loc ?prefix:None) strings in
+    let strings_array = Exp.array ~loc string_exprs in
+    let values_array = Exp.array ~loc expressions in
+    Exp.apply ~loc
+      ~attrs:(tagged_template_literal_attr :: attrs)
+      tag_expr
+      [(Nolabel, strings_array); (Nolabel, values_array)]
+  | None ->
+    let string_exprs =
+      match strings with
+      | [] -> [make_string_expr ~loc ?prefix ""]
+      | first :: rest ->
+        make_string_expr ~loc ?prefix first
+        :: List.map (make_string_expr ~loc ?prefix:None) rest
+    in
+    let parts = interleave_string_value_parts string_exprs expressions in
+    let concat_op = Exp.ident ~loc {txt = Longident.Lident "++"; loc} in
+    let expr = fold_string_concat ~loc concat_op parts in
+    {expr with pexp_attributes = template_literal_attr :: attrs}
+
 let pp = fprintf
 
 type ctxt = {pipe: bool; semi: bool; ifthenelse: bool}
@@ -610,6 +660,9 @@ and expression ctxt f x =
       paren true (expression reset_ctxt) f x
     | (Pexp_ifthenelse _ | Pexp_sequence _) when ctxt.ifthenelse ->
       paren true (expression reset_ctxt) f x
+    | Pexp_template template_literal ->
+      expression ctxt f
+        (expand_template_literal ~loc:x.pexp_loc ~attrs:[] template_literal)
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
       paren true (expression reset_ctxt) f x

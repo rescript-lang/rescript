@@ -287,6 +287,9 @@ let rec add_expr bv exp =
     | Pstr_eval ({pexp_desc = Pexp_construct (c, None)}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
+  | Pexp_template {tag; expressions; _} ->
+    Ext_option.iter tag (add_expr bv);
+    List.iter (add_expr bv) expressions
   | Pexp_await e -> add_expr bv e
   | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
     add_jsx_children bv children

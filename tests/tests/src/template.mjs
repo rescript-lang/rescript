@@ -4,9 +4,9 @@
 let bla2 = ``;
 
 function concat() {
-  return `
+  return `${`
     display:\r flex;
-   ` + bla2;
+   `}${bla2}`;
 }
 
 export {

@@ -8,21 +8,9 @@ let s = (({js|你好，
 世界|js})[@res.template ])
 let s = (({js|"|js})[@res.template ])
 let s = (({js|foo|js})[@res.template ])
-let s =
-  (((((({js|foo |js})[@res.template ]) ++ bar)[@res.template ]) ++
-      (({js| baz|js})[@res.template ]))
-  [@res.template ])
-let s =
-  (((((({js|some unicode é |js})[@res.template ]) ++ bar)[@res.template ])
-      ++ (({js| £ |js})[@res.template ]))
-  [@res.template ])
-let s = ((x [|(({js|foo|js})[@res.template ])|] [||])[@res.taggedTemplate ])
-let s =
-  ((x [|(({js|foo |js})[@res.template ]);(({js| baz|js})[@res.template ])|]
-      [|bar|])
-  [@res.taggedTemplate ])
-let s =
-  ((x
-      [|(({js|some unicode é |js})[@res.template ]);(({js| £ |js})
-        [@res.template ])|] [|bar|])
+let s = ((("foo " ++ bar) ++ " baz")[@res.template ])
+let s = ((("some unicode \195\169 " ++ bar) ++ " \194\163 ")[@res.template ])
+let s = ((x [|"foo"|] [||])[@res.taggedTemplate ])
+let s = ((x [|"foo ";" baz"|] [|bar|])[@res.taggedTemplate ])
+let s = ((x [|"some unicode \195\169 ";" \194\163 "|] [|bar|])
   [@res.taggedTemplate ])

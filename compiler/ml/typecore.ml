@@ -164,7 +164,8 @@ let iter_expression f e =
     | Pexp_match (e, pel) | Pexp_try (e, pel) ->
       expr e;
       List.iter case pel
-    | Pexp_array el | Pexp_tuple el -> List.iter expr el
+    | Pexp_array el | Pexp_tuple el | Pexp_template {expressions = el} ->
+      List.iter expr el
     | Pexp_construct (_, eo) | Pexp_variant (_, eo) -> may expr eo
     | Pexp_record (iel, eo) ->
       may expr eo;
@@ -1799,6 +1800,7 @@ let rec is_nonexpansive exp =
   match exp.exp_desc with
   | Texp_ident (_, _, _) -> true
   | Texp_constant _ -> true
+  | Texp_template {expressions; _} -> List.for_all is_nonexpansive expressions
   | Texp_let (_rec_flag, pat_exp_list, body) ->
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
@@ -2338,6 +2340,37 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
         exp_loc = loc;
         exp_extra = [];
         exp_type = type_constant cst;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_template {tag = Some tag_expr; prefix = _; strings; expressions} ->
+    let string_exprs =
+      List.map
+        (fun txt -> Ast_helper.Exp.constant ~loc (Pconst_string (txt, None)))
+        strings
+    in
+    let strings_array = Ast_helper.Exp.array ~loc string_exprs in
+    let values_array = Ast_helper.Exp.array ~loc expressions in
+    let apply_expr =
+      Ast_helper.Exp.apply ~loc tag_expr
+        [(Nolabel, strings_array); (Nolabel, values_array)]
+    in
+    type_expect ?deprecated_context ~context ?in_function env
+      {apply_expr with pexp_attributes = sexp.pexp_attributes}
+      ty_expected
+  | Pexp_template {tag = None; prefix; strings; expressions} ->
+    unify_exp_types ~context:None loc env Predef.type_string ty_expected;
+    let exprs =
+      List.map
+        (fun expr -> type_expect ~context:None env expr Predef.type_string)
+        expressions
+    in
+    rue
+      {
+        exp_desc = Texp_template {prefix; strings; expressions = exprs};
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance env Predef.type_string;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
