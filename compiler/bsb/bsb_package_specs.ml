@@ -164,8 +164,7 @@ let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
   | Some x -> Ext_string.inter3 res "-runtime" x
 
 let default_package_specs suffix =
-  (* TODO: swap default to Esmodule in v12 *)
-  Spec_set.singleton {format = Commonjs; in_source = false; suffix}
+  Spec_set.singleton {format = Esmodule; in_source = false; suffix}
 
 (**
     [get_list_of_output_js specs "src/hi/hello"]
