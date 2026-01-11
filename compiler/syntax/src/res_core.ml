@@ -5921,7 +5921,9 @@ and parse_tag_specs p =
       | Parsetree.Rtag (name, attrs, contains_constant, types) ->
         Parsetree.Rtag
           (name, doc_comment_attrs @ attrs, contains_constant, types)
-      | Rinherit _ -> tag
+      | Rinherit typ ->
+        Rinherit
+          {typ with ptyp_attributes = doc_comment_attrs @ typ.ptyp_attributes}
     in
     tag_with_doc :: parse_tag_specs p
   | _ -> []
@@ -5956,7 +5958,9 @@ and parse_tag_spec_first p =
     (match tag with
     | Parsetree.Rtag (name, attrs, contains_constant, types) ->
       Parsetree.Rtag (name, doc_comment_attrs @ attrs, contains_constant, types)
-    | Rinherit _ -> tag)
+    | Rinherit typ ->
+      Rinherit
+        {typ with ptyp_attributes = doc_comment_attrs @ typ.ptyp_attributes})
     :: parse_tag_specs p
   | DocComment _ | Hash | At -> (
     let doc_comment_attrs =
