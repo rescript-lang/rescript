@@ -15,7 +15,7 @@
     "rescript": "workspace:^"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "2.3.11",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "typescript": "5.9.3"
