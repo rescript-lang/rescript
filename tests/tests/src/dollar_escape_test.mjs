@@ -22,10 +22,17 @@ Mocha.describe("Dollar_escape_test", () => {
   });
 });
 
+function f($, $$1) {
+  let $$1 = $$1($);
+  let x = $$1(2);
+  return `$: ` + $$1 + ` ` + x;
+}
+
 export {
   $$,
   v,
   $$$plus,
   u,
+  f,
 }
 /*  Not a pure module */

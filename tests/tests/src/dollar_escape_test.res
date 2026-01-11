@@ -1,9 +1,9 @@
 open Mocha
 open Test_utils
 
-let \"$$" = (x, y) => x + y
+let $$ = (x, y) => x + y
 
-let v = \"$$"(1, 2)
+let v = $$(1, 2)
 
 let \"$$+" = (x, y) => x * y
 
@@ -15,3 +15,9 @@ describe(__MODULE__, () => {
     eq(__LOC__, u, 3)
   })
 })
+
+let f = ($, $$1) => {
+  let $ = $$1($)
+  let x = $$1(2)
+  `$: ${$} ${x}`
+}
