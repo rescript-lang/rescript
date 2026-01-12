@@ -22,7 +22,7 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | warnings              | Warnings                |        |     [x]      |
 | ppx-flags             | array of string         |        |     [x]      |
 | pp-flags              | array of string         |        |     [_]      |
-| js-post-build         | Js-Post-Build           |        |     [_]      |
+| js-post-build         | Js-Post-Build           |    `${file}` is now an absolute path    |     [x]      |
 | package-specs         | array of Module-Format  |        |     [_]      |
 | package-specs         | array of Package-Spec   |        |     [x]      |
 | entries               | array of Target-Item    |        |     [_]      |
@@ -135,7 +135,7 @@ Currently supported features:
 
 | Parameter | JSON type | Remark | Implemented? |
 | --------- | --------- | ------ | :----------: |
-| cmd       | string    |        |     [_]      |
+| cmd       | string    |    `${file}` is now an absolute path    |     [x]      |
 
 ### Package-Spec
 
