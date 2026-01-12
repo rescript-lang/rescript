@@ -5,8 +5,8 @@ module StringSet = Set.Make (String)
 module IntSet = Set.Make (Int)
 module FileSet = SharedTypes.FileSet
 
-let filter_deprecations_for_project ?package ?dependency_paths ~entryPointFile
-    ~deprecated_used =
+let filter_deprecations_for_project ?dependency_paths ?package ~deprecated_used
+    entryPointFile =
   let canonical p = try Unix.realpath p with _ -> p in
   let package =
     match package with
@@ -26,10 +26,21 @@ let filter_deprecations_for_project ?package ?dependency_paths ~entryPointFile
           (fun p acc -> acc |> FileSet.add p |> FileSet.add (canonical p))
           package.dependenciesFiles FileSet.empty
     in
+    let is_dependency_path p =
+      FileSet.mem p dependency_paths
+      || FileSet.mem (canonical p) dependency_paths
+    in
+    let def_loc_path (d : Cmt_utils.deprecated_used) =
+      let loc_of_expr e = e.Parsetree.pexp_loc.Location.loc_start.pos_fname in
+      match d.migration_template with
+      | Some e -> Some (loc_of_expr e)
+      | None -> Option.map loc_of_expr d.migration_in_pipe_chain_template
+    in
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
-           let loc_path = canonical d.source_loc.Location.loc_start.pos_fname in
-           not (FileSet.mem loc_path dependency_paths))
+           match def_loc_path d with
+           | Some def_path when is_dependency_path def_path -> false
+           | _ -> true)
 
 (* Public API: migrate ~entryPointFile ~outputMode *)
 
@@ -763,7 +774,7 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
   in
   mapper
 
-let migrate ?package ?dependency_paths ~outputMode entryPointFile =
+let migrate ?dependency_paths ?package ~outputMode entryPointFile =
   let path =
     match Filename.is_relative entryPointFile with
     | true -> Unix.realpath entryPointFile
@@ -780,8 +791,8 @@ let migrate ?package ?dependency_paths ~outputMode entryPointFile =
              path)
       | Some {cmt_extra_info = {deprecated_used}} ->
         let deprecated_used =
-          filter_deprecations_for_project ~entryPointFile:path ~deprecated_used
-            ?package ?dependency_paths
+          filter_deprecations_for_project ~deprecated_used ?package
+            ?dependency_paths path
         in
         if Ext_list.is_empty deprecated_used then
           match outputMode with
@@ -825,8 +836,8 @@ let migrate ?package ?dependency_paths ~outputMode entryPointFile =
              path)
       | Some {cmt_extra_info = {deprecated_used}} ->
         let deprecated_used =
-          filter_deprecations_for_project ~entryPointFile:path ~deprecated_used
-            ?package ?dependency_paths
+          filter_deprecations_for_project ~deprecated_used ?package
+            ?dependency_paths path
         in
         if Ext_list.is_empty deprecated_used then
           match outputMode with
