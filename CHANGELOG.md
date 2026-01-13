@@ -20,6 +20,7 @@
 
 - Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
 - Reanalyze: add reactive incremental analysis (`-reactive`, `-runs`, `-churn`) and Mermaid pipeline dumping (`-mermaid`). https://github.com/rescript-lang/rescript/pull/8092
+- Allow `$` in identifiers. https://github.com/rescript-lang/rescript/pull/8095
 
 - Reanalyze: add `reanalyze-server` (long-lived server) with transparent delegation for `rescript-tools reanalyze -json`. https://github.com/rescript-lang/rescript/pull/8127
 - Add support of `js-post-build` in Rewatch. Note that `${file}` is now an absolute path. https://github.com/rescript-lang/rescript/pull/8151
