@@ -26,21 +26,18 @@ let filter_deprecations_for_project ?dependency_paths ?package ~deprecated_used
           (fun p acc -> acc |> FileSet.add p |> FileSet.add (canonical p))
           package.dependenciesFiles FileSet.empty
     in
-    let is_dependency_path p =
-      FileSet.mem p dependency_paths
-      || FileSet.mem (canonical p) dependency_paths
-    in
-    let def_loc_path (d : Cmt_utils.deprecated_used) =
-      let loc_of_expr e = e.Parsetree.pexp_loc.Location.loc_start.pos_fname in
-      match d.migration_template with
-      | Some e -> Some (loc_of_expr e)
-      | None -> Option.map loc_of_expr d.migration_in_pipe_chain_template
-    in
     deprecated_used
     |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
-           match def_loc_path d with
-           | Some def_path when is_dependency_path def_path -> false
-           | _ -> true)
+           let loc_path = canonical d.source_loc.Location.loc_start.pos_fname in
+           not
+             (FileSet.mem loc_path dependency_paths
+             || FileSet.mem (canonical loc_path) dependency_paths))
+
+let migratable_deprecations (deprecated_used : Cmt_utils.deprecated_used list) =
+  deprecated_used
+  |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
+         Option.is_some d.migration_template
+         || Option.is_some d.migration_in_pipe_chain_template)
 
 (* Public API: migrate ~entryPointFile ~outputMode *)
 
@@ -794,7 +791,8 @@ let migrate ?dependency_paths ?package ~outputMode entryPointFile =
           filter_deprecations_for_project ~deprecated_used ?package
             ?dependency_paths path
         in
-        if Ext_list.is_empty deprecated_used then
+        let migratable_deprecated = migratable_deprecations deprecated_used in
+        if Ext_list.is_empty migratable_deprecated then
           match outputMode with
           | `Stdout ->
             let source = Res_io.read_file ~filename:path in
@@ -807,7 +805,7 @@ let migrate ?dependency_paths ?package ~outputMode entryPointFile =
           let {Res_driver.parsetree; comments; source} =
             parser ~filename:path
           in
-          let mapper = makeMapper deprecated_used in
+          let mapper = makeMapper migratable_deprecated in
           let astMapped = mapper.structure mapper parsetree in
           (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
           let apply_transforms =
@@ -839,7 +837,8 @@ let migrate ?dependency_paths ?package ~outputMode entryPointFile =
           filter_deprecations_for_project ~deprecated_used ?package
             ?dependency_paths path
         in
-        if Ext_list.is_empty deprecated_used then
+        let migratable_deprecated = migratable_deprecations deprecated_used in
+        if Ext_list.is_empty migratable_deprecated then
           match outputMode with
           | `Stdout ->
             let source = Res_io.read_file ~filename:path in
@@ -853,7 +852,7 @@ let migrate ?dependency_paths ?package ~outputMode entryPointFile =
             parser ~filename:path
           in
 
-          let mapper = makeMapper deprecated_used in
+          let mapper = makeMapper migratable_deprecated in
           let astMapped = mapper.signature mapper signature in
           let contents = Res_printer.print_interface astMapped ~comments in
           if contents = source then Ok (`Unchanged source)
