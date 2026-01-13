@@ -10,35 +10,26 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.1.0 (Unreleased)
-
-#### :boom: Breaking Change
-
-#### :eyeglasses: Spec Compliance
+# 12.1.0
 
 #### :rocket: New Feature
 
-- Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
+- Add support for `Set`, `Map`, `WeakSet` and `WeakMap` to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
 - Reanalyze: add reactive incremental analysis (`-reactive`, `-runs`, `-churn`) and Mermaid pipeline dumping (`-mermaid`). https://github.com/rescript-lang/rescript/pull/8092
-
 - Reanalyze: add `reanalyze-server` (long-lived server) with transparent delegation for `rescript-tools reanalyze -json`. https://github.com/rescript-lang/rescript/pull/8127
 - Add support of `js-post-build` in Rewatch. Note that `${file}` is now an absolute path. https://github.com/rescript-lang/rescript/pull/8151
 
 #### :bug: Bug fix
 
-- Fix rewatch swallowing parse warnings (%todo). https://github.com/rescript-lang/rescript/pull/8135
+- Fix rewatch swallowing parse warnings (e.g., for `%todo`). https://github.com/rescript-lang/rescript/pull/8135
 - Rewatch: log errors and warnings to `stderr`. https://github.com/rescript-lang/rescript/pull/8147 https://github.com/rescript-lang/rescript/pull/8148
 - Rewatch: warn about deprecated package specs `es6`/`es6-global`. https://github.com/rescript-lang/rescript/pull/8146
-- Attach res.doc to polyvariant. https://github.com/rescript-lang/rescript/pull/8155
-
-#### :memo: Documentation
+- Fix formatter removing doc comments for polymorphic variants. https://github.com/rescript-lang/rescript/pull/8155
 
 #### :nail_care: Polish
 
 - Rewatch: enable `--create-sourcedirs` by default (now deprecated when explicitly used). https://github.com/rescript-lang/rescript/pull/8092
 - Rewatch: check if filename case for interface and implementation matches. https://github.com/rescript-lang/rescript/pull/8144
-
-#### :house: Internal
 
 # 12.0.2
 
