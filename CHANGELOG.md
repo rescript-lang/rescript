@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Avoid crash when using locally abstract types in `type … .` annotations with ticked params; emit a proper diagnostic. https://github.com/rescript-lang/rescript/pull/7851
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
