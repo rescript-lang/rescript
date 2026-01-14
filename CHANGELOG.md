@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
+
 #### :memo: Documentation
 
 #### :nail_care: Polish

@@ -121,53 +121,70 @@ let create ~(decls : (Lexing.position, Decl.t) Reactive.t)
 
   let transitive = config.DceConfig.run.transitive in
 
-  (* Reactive per-file issues - recomputed when dead_decls_by_file changes.
-     Returns (file, (value_issues, modules_with_reported_values)) where
-     modules_with_reported_values are modules that have at least one reported dead value.
-     Module issues are generated separately in collect_issues using dead_modules. *)
+  (* Reactive per-file issues.
+     IMPORTANT: in non-transitive mode, warning emission depends on hasRefBelow,
+     which depends on value_refs_from (cross-file refs). So we must recompute
+     issues when refs change, not only when the file's dead decls change. *)
+  let issues_for_file (_file : string) decls =
+    (* Track modules that have reported values *)
+    let modules_with_values : (Name.t, unit) Hashtbl.t = Hashtbl.create 8 in
+    (* shouldReport checks annotations reactively *)
+    let shouldReport (decl : Decl.t) =
+      match Reactive.get annotations decl.pos with
+      | Some FileAnnotations.Live -> false
+      | Some FileAnnotations.GenType -> false
+      | Some FileAnnotations.Dead -> false
+      | None -> true
+    in
+    (* Don't emit module issues here - track modules for later *)
+    let checkModuleDead ~fileName:_ moduleName =
+      Hashtbl.replace modules_with_values moduleName ();
+      None (* Module issues generated separately *)
+    in
+    (* hasRefBelow: check if decl has any ref from "below" (including cross-file refs) *)
+    let hasRefBelow =
+      if transitive then fun _ -> false
+      else
+        match value_refs_from with
+        | None -> fun _ -> false
+        | Some refs_from ->
+          (* Must iterate ALL refs since cross-file refs also count as "below" *)
+          DeadCommon.make_hasRefBelow ~transitive
+            ~iter_value_refs_from:(fun f -> Reactive.iter f refs_from)
+    in
+    (* Sort within file and generate issues *)
+    let sorted = decls |> List.fast_sort Decl.compareForReporting in
+    let reporting_ctx = DeadCommon.ReportingContext.create () in
+    let file_issues =
+      sorted
+      |> List.concat_map (fun decl ->
+             DeadCommon.reportDeclaration ~config ~hasRefBelow ~checkModuleDead
+               ~shouldReport reporting_ctx decl)
+    in
+    let modules_list =
+      Hashtbl.fold (fun m () acc -> m :: acc) modules_with_values []
+    in
+    (file_issues, modules_list)
+  in
   let issues_by_file =
-    Reactive.flatMap ~name:"solver.issues_by_file" dead_decls_by_file
-      ~f:(fun file decls ->
-        (* Track modules that have reported values *)
-        let modules_with_values : (Name.t, unit) Hashtbl.t = Hashtbl.create 8 in
-        (* shouldReport checks annotations reactively *)
-        let shouldReport (decl : Decl.t) =
-          match Reactive.get annotations decl.pos with
-          | Some FileAnnotations.Live -> false
-          | Some FileAnnotations.GenType -> false
-          | Some FileAnnotations.Dead -> false
-          | None -> true
-        in
-        (* Don't emit module issues here - track modules for later *)
-        let checkModuleDead ~fileName:_ moduleName =
-          Hashtbl.replace modules_with_values moduleName ();
-          None (* Module issues generated separately *)
-        in
-        (* hasRefBelow: check if decl has any ref from "below" (including cross-file refs) *)
-        let hasRefBelow =
-          if transitive then fun _ -> false
-          else
-            match value_refs_from with
-            | None -> fun _ -> false
-            | Some refs_from ->
-              (* Must iterate ALL refs since cross-file refs also count as "below" *)
-              DeadCommon.make_hasRefBelow ~transitive
-                ~iter_value_refs_from:(fun f -> Reactive.iter f refs_from)
-        in
-        (* Sort within file and generate issues *)
-        let sorted = decls |> List.fast_sort Decl.compareForReporting in
-        let reporting_ctx = DeadCommon.ReportingContext.create () in
-        let file_issues =
-          sorted
-          |> List.concat_map (fun decl ->
-                 DeadCommon.reportDeclaration ~config ~hasRefBelow
-                   ~checkModuleDead ~shouldReport reporting_ctx decl)
-        in
-        let modules_list =
-          Hashtbl.fold (fun m () acc -> m :: acc) modules_with_values []
-        in
-        [(file, (file_issues, modules_list))])
-      ()
+    match (transitive, value_refs_from) with
+    | true, _ | false, None ->
+      Reactive.flatMap ~name:"solver.issues_by_file" dead_decls_by_file
+        ~f:(fun file decls -> [(file, issues_for_file file decls)])
+        ()
+    | false, Some refs_from ->
+      (* Create a singleton "refs token" that changes whenever refs_from changes,
+         and join every file against it so per-file issues recompute. *)
+      let refs_token =
+        Reactive.flatMap ~name:"solver.refs_token" refs_from
+          ~f:(fun _posFrom _targets -> [((), ())])
+          ~merge:(fun _ _ -> ())
+          ()
+      in
+      Reactive.join ~name:"solver.issues_by_file" dead_decls_by_file refs_token
+        ~key_of:(fun _file _decls -> ())
+        ~f:(fun file decls _token_opt -> [(file, issues_for_file file decls)])
+        ()
   in
 
   (* Reactive incorrect @dead: live decls with @dead annotation *)
