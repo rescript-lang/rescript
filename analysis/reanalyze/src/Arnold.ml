@@ -985,6 +985,9 @@ module Compile = struct
     | Texp_for _ ->
       notImplemented "Texp_for";
       assert false
+    | Texp_for_of _ ->
+      notImplemented "Texp_for_of";
+      assert false
     | Texp_send _ ->
       notImplemented "Texp_send";
       assert false

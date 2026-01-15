@@ -79,6 +79,7 @@ and t = private
   | Lsequence of t * t
   | Lwhile of t * t
   | Lfor of ident * t * t * Asttypes.direction_flag * t
+  | Lfor_of of ident * t * t
   | Lassign of ident * t
 
 (* | Lsend of Lambda.meth_kind * t * t * t list * Location.t *)
@@ -163,6 +164,8 @@ val staticcatch : t -> int * ident list -> t -> t
 val staticraise : int -> t list -> t
 
 val for_ : ident -> t -> t -> Asttypes.direction_flag -> t -> t
+
+val for_of : ident -> t -> t -> t
 
 (**************************************************************)
 

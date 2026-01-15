@@ -57,6 +57,10 @@ let pass_free_variables (l : Lam.t) : Set_ident.t =
       free e2;
       free e3;
       fv := Set_ident.remove !fv v
+    | Lfor_of (v, e1, e2) ->
+      free e1;
+      free e2;
+      fv := Set_ident.remove !fv v
     | Lconst _ -> ()
     | Lapply {ap_func; ap_args; _} ->
       free ap_func;
