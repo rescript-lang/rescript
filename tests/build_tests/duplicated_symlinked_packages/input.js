@@ -11,14 +11,13 @@ if (process.platform === "win32") {
 }
 
 await execClean();
-const { stdout, stderr } = await execBuild();
+const { stderr } = await execBuild();
 
 const expectedWarning =
   "Duplicated package: z ./node_modules/z (chosen) vs ./a/node_modules/z in ./a";
 
-const output = stdout + stderr;
-if (!output.includes(expectedWarning)) {
+if (!stderr.includes(expectedWarning)) {
   assert.fail(
-    `Expected duplicate package warning not found in output.\nExpected: ${expectedWarning}\nActual output:\n${output}`,
+    `Expected duplicate package warning not found in stderr.\nExpected: ${expectedWarning}\nActual stderr:\n${stderr}`,
   );
 }

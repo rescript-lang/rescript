@@ -326,7 +326,7 @@ fn read_dependencies(
                         .strip_prefix(root_path)
                         .unwrap_or(&current_package_path);
 
-                    println!(
+                    eprintln!(
                         "Duplicated package: {} ./{} (chosen) vs ./{} in ./{}",
                         package_name,
                         chosen_relative.to_string_lossy(),
