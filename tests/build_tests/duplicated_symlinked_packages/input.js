@@ -1,8 +1,8 @@
 // @ts-check
 
 import * as assert from "node:assert";
-import { setup } from "#dev/process";
 import { runtimePath } from "#cli/runtime";
+import { setup } from "#dev/process";
 
 // Set runtime path for rewatch to find
 process.env.RESCRIPT_RUNTIME = runtimePath;
