@@ -2,6 +2,10 @@
 
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
+import { runtimePath } from "#cli/runtime";
+
+// Set runtime path for rewatch to find
+process.env.RESCRIPT_RUNTIME = runtimePath;
 
 const { execBuild, execClean } = setup(import.meta.dirname);
 
