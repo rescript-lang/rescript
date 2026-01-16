@@ -460,10 +460,6 @@
       "$ref": "#/definitions/package-specs",
       "description": "ReScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
     },
-    "external-stdlib": {
-      "type": "string",
-      "description": "Use the external stdlib library instead of the one shipped with the compiler package"
-    },
     "bs-external-includes": {
       "type": "array",
       "items": {

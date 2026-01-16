@@ -717,8 +717,6 @@ impl Config {
             "cut-generators",
             "pp-flags",
             "entries",
-            "use-stdlib",
-            "external-stdlib",
             "bs-external-includes",
             "reanalyze",
         ];

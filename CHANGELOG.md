@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - `Int.fromString` and `Float.fromString` use stricter number parsing and no longer uses an explicit radix argument, but instead supports parsing hexadecimal, binary and exponential notation.
+- Remove `external-stdlib` configuration option from `rescript.json`. This option was rarely used and is no longer supported.
 
 #### :eyeglasses: Spec Compliance
 

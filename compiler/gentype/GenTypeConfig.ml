@@ -177,12 +177,7 @@ let read_config ~get_config_file ~namespace =
       | Some b -> b
     in
     let generated_file_extension = generated_file_extension_string_option in
-    let external_stdlib = bsconf |> get_string_option "external-stdlib" in
-    let platform_lib =
-      match external_stdlib with
-      | None -> "rescript"
-      | Some external_stdlib -> external_stdlib
-    in
+    let platform_lib = "rescript" in
     if !Debug.config then (
       Log_.item "Project roLiterals.bsconfig_jsonot: %s\n" project_root;
       if bsb_project_root <> project_root then

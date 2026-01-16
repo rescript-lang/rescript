@@ -47,7 +47,7 @@ let package_specs = "package-specs"
 let type_ = "type"
 let export_all = "all"
 let export_none = "none"
-let external_stdlib = "external-stdlib"
+
 let jsx = "jsx"
 let jsx_version = "version"
 let jsx_module = "module"

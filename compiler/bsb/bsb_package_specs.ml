@@ -1,5 +1,5 @@
 (* Copyright (C) 2017 Hongbo Zhang, Authors of ReScript
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -17,7 +17,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
@@ -27,13 +27,7 @@ let ( // ) = Ext_path.combine
 (*FIXME: use assoc list instead *)
 module Spec_set = Bsb_spec_set
 
-type t = {
-  modules: Spec_set.t;
-  runtime: string option;
-      (* This has to be resolved as early as possible, since
-         the path will be inherited in sub projects
-      *)
-}
+type t = {modules: Spec_set.t}
 
 let ( .?() ) = Map_string.find_opt
 
@@ -159,9 +153,7 @@ let package_flag_of_package_specs (package_specs : t) ~(dirname : string) :
         (fun format acc -> Ext_string.inter2 acc (package_flag format dirname))
         package_specs.modules Ext_string.empty
   in
-  match package_specs.runtime with
-  | None -> res
-  | Some x -> Ext_string.inter3 res "-runtime" x
+  res
 
 let default_package_specs suffix =
   (* TODO: swap default to Esmodule in v12 *)
@@ -205,18 +197,11 @@ let extract_js_suffix_exn (map : json_map) : string =
     Bsb_exception.config_error config "expected a string extension like \".js\""
 
 let from_map ~(cwd : string) map =
+  ignore cwd;
   let suffix = extract_js_suffix_exn map in
   let modules =
     match map.?(Bsb_build_schemas.package_specs) with
     | Some x -> from_json suffix x
     | None -> default_package_specs suffix
   in
-  let runtime =
-    match map.?(Bsb_build_schemas.external_stdlib) with
-    | None -> None
-    | Some (Str {str; _}) ->
-      Some
-        (Bsb_pkg.resolve_bs_package ~cwd (Bsb_pkg_types.string_as_package str))
-    | _ -> assert false
-  in
-  {runtime; modules}
+  {modules}
