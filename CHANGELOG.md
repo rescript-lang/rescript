@@ -23,6 +23,8 @@
 
 #### :bug: Bug fix
 
+- Add duplicate package detection to rewatch. https://github.com/rescript-lang/rescript/pull/8180
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
