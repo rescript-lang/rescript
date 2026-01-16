@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
+- Add duplicate package detection to rewatch. https://github.com/rescript-lang/rescript/pull/8180
 
 #### :memo: Documentation
 

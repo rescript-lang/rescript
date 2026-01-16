@@ -1,43 +1,27 @@
 // @ts-check
 
-import * as fs from "node:fs/promises";
+import * as assert from "node:assert";
+import { runtimePath } from "#cli/runtime";
 import { setup } from "#dev/process";
 
-const { execBuildLegacy, execCleanLegacy } = setup(import.meta.dirname);
+// Set runtime path for rewatch to find
+process.env.RESCRIPT_RUNTIME = runtimePath;
 
-const expectedFilePath = "./out.expected";
-
-const updateTests = process.argv[2] === "update";
-
-/**
- * @param {string} output
- * @return {string}
- */
-function postProcessErrorOutput(output) {
-  return output.trimEnd().replace(new RegExp(import.meta.dirname, "gi"), ".");
-}
+const { execBuild, execClean } = setup(import.meta.dirname);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
   process.exit(0);
 }
 
-await execCleanLegacy();
-const { stderr } = await execBuildLegacy();
+await execClean();
+const { stderr } = await execBuild();
 
-const actualErrorOutput = postProcessErrorOutput(stderr.toString());
-if (updateTests) {
-  await fs.writeFile(expectedFilePath, actualErrorOutput);
-} else {
-  const expectedErrorOutput = postProcessErrorOutput(
-    await fs.readFile(expectedFilePath, { encoding: "utf-8" }),
+const expectedWarning =
+  "Duplicated package: z ./node_modules/z (chosen) vs ./a/node_modules/z in ./a";
+
+if (!stderr.includes(expectedWarning)) {
+  assert.fail(
+    `Expected duplicate package warning not found in stderr.\nExpected: ${expectedWarning}\nActual stderr:\n${stderr}`,
   );
-  if (expectedErrorOutput !== actualErrorOutput) {
-    console.error(`The old and new error output aren't the same`);
-    console.error("\n=== Old:");
-    console.error(expectedErrorOutput);
-    console.error("\n=== New:");
-    console.error(actualErrorOutput);
-    process.exit(1);
-  }
 }
