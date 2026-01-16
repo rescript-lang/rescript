@@ -644,6 +644,8 @@ let runAnalysisAndReport ~cmtRoot =
 let parse_argv (argv : string array) : string option =
   let analysisKindSet = ref false in
   let cmtRootRef = ref None in
+  (* CLI override for transitive mode (overrides rescript.json if provided). *)
+  let transitive_override : bool option ref = ref None in
   let usage = "reanalyze version " ^ Version.version in
   let versionAndExit () =
     print_endline usage;
@@ -678,6 +680,14 @@ let parse_argv (argv : string array) : string option =
          path" );
       ("-ci", Unit (fun () -> Cli.ci := true), "Internal flag for use in CI");
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
+      ( "-transitive",
+        Unit (fun () -> transitive_override := Some true),
+        "Force transitive reporting (overrides rescript.json \
+         reanalyze.transitive)" );
+      ( "-no-transitive",
+        Unit (fun () -> transitive_override := Some false),
+        "Disable transitive reporting (overrides rescript.json \
+         reanalyze.transitive)" );
       ("-dce", Unit (fun () -> setDCE None), "Eperimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
       ( "-dce-cmt",
@@ -767,6 +777,9 @@ let parse_argv (argv : string array) : string option =
   let current = ref 0 in
   Arg.parse_argv ~current argv speclist print_endline usage;
   if !analysisKindSet = false then setConfig ();
+  (match !transitive_override with
+  | None -> ()
+  | Some b -> RunConfig.transitive b);
   !cmtRootRef
 
 (** Default socket location invariant:
