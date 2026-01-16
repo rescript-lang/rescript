@@ -122,16 +122,14 @@ if (bsbTest) {
     if (!fs.existsSync(path.join(testDir, "input.js"))) {
       console.warn(`input.js does not exist in ${testDir}`);
     } else {
-      console.log(`testing ${file}`);
-
       // note existsSync test already ensure that it is a directory
       const out = await node("input.js", [], { cwd: testDir });
-      console.log(out.stdout);
+      process.stdout.write(out.stdout);
 
       if (out.status === 0) {
-        console.log("✅ success in", file);
+        console.log(`✅ success in ${file}`);
       } else {
-        console.log(`❌ error in ${file} with stderr:\n`, out.stderr);
+        console.log(`❌ error in ${file} with stderr:\n${out.stderr}`);
         hasError = true;
       }
     }

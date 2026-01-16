@@ -1,14 +1,12 @@
 import * as assert from "node:assert";
+import { stripVTControlCharacters } from "node:util";
 import { setup } from "#dev/process";
 
 const { execBuild, execClean } = setup(import.meta.dirname);
 
 const o1 = await execBuild();
 
-// biome-ignore lint/suspicious/noControlCharactersInRegex: strip ANSI color codes from output
-const stripAnsi = s => s.replace(/\x1b\[[0-9;]*m/g, "");
-
-const first_message = stripAnsi(o1.stderr)
+const first_message = stripVTControlCharacters(o1.stderr)
   .split("\n")
   .map(s => s.trim())
   .find(s => s === "Warning number 110");
@@ -20,7 +18,7 @@ if (!first_message) {
 // Second build using --warn-error +110
 const o2 = await execBuild(["--warn-error", "+110"]);
 
-const second_message = stripAnsi(o2.stderr)
+const second_message = stripVTControlCharacters(o2.stderr)
   .split("\n")
   .map(s => s.trim())
   .find(s => s === "Warning number 110 (configured as error)");
@@ -33,7 +31,7 @@ if (!second_message) {
 // The result should not be a warning as error
 const o3 = await execBuild();
 
-const third_message = stripAnsi(o3.stderr)
+const third_message = stripVTControlCharacters(o3.stderr)
   .split("\n")
   .map(s => s.trim())
   .find(s => s === "Warning number 110 (configured as error)");

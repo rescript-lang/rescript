@@ -5,9 +5,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
-await execBuildLegacy();
+await execClean();
+await execBuild();
 
 const o = await fs.readFile(path.join("src", "hello.res.js"), "ascii");
 assert.ok(/HelloGen\.f/.test(o));

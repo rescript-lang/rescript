@@ -3,10 +3,9 @@
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
-const output = await execBuildLegacy();
-assert.match(
-  output.stdout,
-  /^Warning: bsconfig.json is deprecated. Migrate it to rescript.json/,
-);
+const output = await execBuild();
+assert.notEqual(output.status, 0);
+assert.match(output.stderr, /no package\.json or rescript\.json file/i);
+await execClean();

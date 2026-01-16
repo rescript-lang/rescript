@@ -1,7 +1,7 @@
 import * as child_process from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { bsc_exe, rescript_exe, rescript_legacy_exe } from "#cli/bins";
+import { bsc_exe, rescript_exe } from "#cli/bins";
 
 /**
  * @typedef {{
@@ -33,9 +33,6 @@ export const {
   rescript,
   execBuild,
   execClean,
-  rescriptLegacy,
-  execBuildLegacy,
-  execCleanLegacy,
 } = setup();
 
 /**
@@ -208,50 +205,6 @@ export function setup(cwd = process.cwd()) {
      */
     execClean(args = [], options = {}) {
       return exec(rescript_exe, ["clean", ...args], options);
-    },
-
-    /**
-     * `rescript` legacy CLI
-     *
-     * @param {(
-     *   | "build"
-     *   | "clean"
-     *   | "format"
-     *   | "dump"
-     *   | (string & {})
-     * )} command
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    rescriptLegacy(command, args = [], options = {}) {
-      const cliPath = path.join(
-        import.meta.dirname,
-        "../cli/rescript-legacy.js",
-      );
-      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
-    },
-
-    /**
-     * Execute ReScript legacy `build` command directly
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    execBuildLegacy(args = [], options = {}) {
-      return exec(rescript_legacy_exe, ["build", ...args], options);
-    },
-
-    /**
-     * Execute ReScript legacy `clean` command directly
-     *
-     * @param {string[]} [args]
-     * @param {ExecOptions} [options]
-     * @return {Promise<ExecResult>}
-     */
-    execCleanLegacy(args = [], options = {}) {
-      return exec(rescript_legacy_exe, ["clean", ...args], options);
     },
 
     /**

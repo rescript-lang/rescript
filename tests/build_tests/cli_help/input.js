@@ -1,78 +1,109 @@
 // @ts-check
 
 import * as assert from "node:assert";
+import { stripVTControlCharacters } from "node:util";
 import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { rescriptLegacy } = setup(import.meta.dirname);
+const { rescript } = setup(import.meta.dirname);
 
 const cliHelp =
-  "Usage: rescript <options> <subcommand>\n" +
+  "ReScript - Fast, Simple, Fully Typed JavaScript from the Future\n" +
   "\n" +
-  "`rescript` is equivalent to `rescript build`\n" +
+  "Usage: rescript [OPTIONS] <COMMAND>\n" +
+  "\n" +
+  "Commands:\n" +
+  "  build          Build the project (default command)\n" +
+  "  watch          Build, then start a watcher\n" +
+  "  clean          Clean the build artifacts\n" +
+  "  format         Format ReScript files\n" +
+  "  compiler-args  Print the compiler arguments for a ReScript source file\n" +
+  "  help           Print this message or the help of the given subcommand(s)\n" +
   "\n" +
   "Options:\n" +
-  "  -v, -version  display version number\n" +
-  "  -h, -help     display help\n" +
+  "  -v, --verbose...  Increase logging verbosity\n" +
+  "  -q, --quiet...    Decrease logging verbosity\n" +
+  "  -h, --help        Print help\n" +
+  "  -V, --version     Print version\n" +
   "\n" +
-  "Subcommands:\n" +
-  "  build\n" +
-  "  clean\n" +
-  "  format\n" +
-  "  dump\n" +
-  "  help\n" +
-  "\n" +
-  "Run `rescript <subcommand> -h` for subcommand help. Examples:\n" +
-  "  rescript build -h\n" +
-  "  rescript format -h\n";
+  "Notes:\n" +
+  "  - If no command is provided, the build command is run by default. See `rescript help build` for more information.\n" +
+  "  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.\n" +
+  "  - For the legacy (pre-v12) build system, run `rescript-legacy`.\n";
 
 const buildHelp =
-  "Usage: rescript build <options> -- <ninja_options>\n" +
+  "Build the project (default command)\n" +
   "\n" +
-  "`rescript build` builds the project with dependencies\n" +
+  "Usage: rescript build [OPTIONS] [FOLDER]\n" +
   "\n" +
-  "`rescript build -- -h` for Ninja options (internal usage only; unstable)\n" +
+  "Arguments:\n" +
+  "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
   "\n" +
   "Options:\n" +
-  "  -w           Watch mode\n" +
-  "  -ws          [host]:port set up host & port for WebSocket build notifications\n" +
-  "  -verbose     Set the output to be verbose\n" +
-  "  -with-deps   *deprecated* This is the default behavior now. This option will be removed in a future release\n" +
-  '  -warn-error  Warning numbers and whether to turn them into errors, e.g., "+8+32-102"\n';
+  "  -f, --filter <FILTER>            Filter source files by regex. E.g., filter out test files for compilation while doing feature work\n" +
+  "  -v, --verbose...                 Increase logging verbosity\n" +
+  "  -a, --after-build <AFTER_BUILD>  Run an additional command after build. E.g., play a sound or run a test suite when done compiling\n" +
+  "  -q, --quiet...                   Decrease logging verbosity\n" +
+  '      --warn-error <WARN_ERROR>    Override warning configuration from rescript.json. Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
+  "  -n, --no-timing [<NO_TIMING>]    Disable output timing [default: false] [possible values: true, false]\n" +
+  "  -h, --help                       Print help\n";
 
 const cleanHelp =
-  "Usage: rescript clean <options>\n" +
+  "Clean the build artifacts\n" +
   "\n" +
-  "`rescript clean` cleans build artifacts\n" +
+  "Usage: rescript clean [OPTIONS] [FOLDER]\n" +
+  "\n" +
+  "Arguments:\n" +
+  "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
   "\n" +
   "Options:\n" +
-  "  -verbose    Set the output to be verbose\n" +
-  "  -with-deps  *deprecated* This is the default behavior now. This option will be removed in a future release\n";
+  "  -v, --verbose...  Increase logging verbosity\n" +
+  "  -q, --quiet...    Decrease logging verbosity\n" +
+  "  -h, --help        Print help\n";
 
 const formatHelp =
-  "Usage: rescript format <options> [files]\n" +
+  "Format ReScript files\n" +
   "\n" +
-  "`rescript format` formats the current directory\n" +
+  "Usage: rescript format [OPTIONS] [FILES]...\n" +
+  "\n" +
+  "Arguments:\n" +
+  "  [FILES]...  Files to format. If no files are provided, all files are formatted\n" +
   "\n" +
   "Options:\n" +
-  "  -stdin  [.res|.resi] Read the code from stdin and print\n" +
-  "          the formatted code to stdout in ReScript syntax\n" +
-  "  -all    Format the whole project \n" +
-  "  -check  Check formatting for file or the whole project. Use `-all` to check the whole project\n";
+  "  -c, --check          Check formatting status without applying changes\n" +
+  "  -v, --verbose...     Increase logging verbosity\n" +
+  "  -q, --quiet...       Decrease logging verbosity\n" +
+  "  -s, --stdin <STDIN>  Read the code from stdin and print the formatted code to stdout [possible values: .res, .resi]\n" +
+  "  -h, --help           Print help\n";
 
-const dumpHelp =
-  "Usage: rescript dump <options> [target]\n" +
-  "`rescript dump` dumps the information for the target\n";
+const compilerArgsHelp =
+  "Print the compiler arguments for a ReScript source file\n" +
+  "\n" +
+  "Usage: rescript compiler-args [OPTIONS] <PATH>\n" +
+  "\n" +
+  "Arguments:\n" +
+  "  <PATH>  Path to a ReScript source file (.res or .resi)\n" +
+  "\n" +
+  "Options:\n" +
+  "  -v, --verbose...  Increase logging verbosity\n" +
+  "  -q, --quiet...    Decrease logging verbosity\n" +
+  "  -h, --help        Print help\n";
 
 /**
  * @param {string[]} params
  * @param {{ stdout: string; stderr: string; status: number; }} expected
  */
 async function test(params, expected) {
-  const out = await rescriptLegacy("", params);
+  const out = await rescript("", params);
 
-  assert.equal(normalizeNewlines(out.stdout), expected.stdout);
-  assert.equal(normalizeNewlines(out.stderr), expected.stderr);
+  assert.equal(
+    normalizeNewlines(stripVTControlCharacters(out.stdout)),
+    expected.stdout,
+  );
+  assert.equal(
+    normalizeNewlines(stripVTControlCharacters(out.stderr)),
+    expected.stderr,
+  );
   assert.equal(out.status, expected.status);
 }
 
@@ -98,9 +129,16 @@ await test(["--help", "-w"], { stdout: cliHelp, stderr: "", status: 0 });
 await test(["build", "-h"], { stdout: buildHelp, stderr: "", status: 0 });
 
 // Exits with build help with unknown arg
-await test(["build", "-foo"], {
+await test(["build", "--foo"], {
   stdout: "",
-  stderr: `Error: Unknown option "-foo".\n${buildHelp}`,
+  stderr:
+    "error: unexpected argument '--foo' found\n" +
+    "\n" +
+    "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
+    "\n" +
+    "Usage: rescript build [OPTIONS] [FOLDER]\n" +
+    "\n" +
+    "For more information, try '--help'.\n",
   status: 2,
 });
 
@@ -114,16 +152,17 @@ await test(["-h"], { stdout: cliHelp, stderr: "", status: 0 });
 await test(["help"], { stdout: cliHelp, stderr: "", status: 0 });
 
 // Exits with cli help with unknown command
-await test(["built"], {
+// Exits with build usage on unknown args
+await test(["--foo"], {
   stdout: "",
-  stderr: `Error: Unknown command "built".\n${cliHelp}`,
-  status: 2,
-});
-
-// Exits with build help with unknown args
-await test(["-foo"], {
-  stdout: "",
-  stderr: `Error: Unknown option "-foo".\n${buildHelp}`,
+  stderr:
+    "error: unexpected argument '--foo' found\n" +
+    "\n" +
+    "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
+    "\n" +
+    "Usage: rescript build [OPTIONS] [FOLDER]\n" +
+    "\n" +
+    "For more information, try '--help'.\n",
   status: 2,
 });
 
@@ -138,9 +177,16 @@ await test(["clean", "--help"], {
 await test(["clean", "-h"], { stdout: cleanHelp, stderr: "", status: 0 });
 
 // Exits with clean help with unknown arg
-await test(["clean", "-foo"], {
+await test(["clean", "--foo"], {
   stdout: "",
-  stderr: `Error: Unknown option "-foo".\n${cleanHelp}`,
+  stderr:
+    "error: unexpected argument '--foo' found\n" +
+    "\n" +
+    "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
+    "\n" +
+    "Usage: rescript clean [OPTIONS] [FOLDER]\n" +
+    "\n" +
+    "For more information, try '--help'.\n",
   status: 2,
 });
 
@@ -158,12 +204,16 @@ await test(["format", "-h"], {
   status: 0,
 });
 
-// Shows dump help with --help arg
-await test(["dump", "--help"], {
-  stdout: dumpHelp,
+// Shows compiler-args help with --help arg
+await test(["compiler-args", "--help"], {
+  stdout: compilerArgsHelp,
   stderr: "",
   status: 0,
 });
 
-// Shows dump help with -h arg
-await test(["dump", "-h"], { stdout: dumpHelp, stderr: "", status: 0 });
+// Shows compiler-args help with -h arg
+await test(["compiler-args", "-h"], {
+  stdout: compilerArgsHelp,
+  stderr: "",
+  status: 0,
+});
