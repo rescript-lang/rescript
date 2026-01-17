@@ -9,7 +9,6 @@ const { execBuild, execClean } = setup(import.meta.dirname);
 
 const isWindows = process.platform === "win32";
 
-// Use a node script for cross-platform path logging
 const logFile = path.join(import.meta.dirname, "post-build-paths.txt");
 
 // Clean up any previous log file
@@ -29,22 +28,19 @@ try {
 
   const paths = fs.readFileSync(logFile, "utf-8").trim().split("\n");
 
-  // With in-source: true, the paths should be next to the source files
-  // e.g., /path/to/post-build/src/demo.js (Unix)
-  // e.g., C:\path\to\post-build\src\demo.js (Windows)
-  const srcSep = isWindows ? "\\src\\" : "/src/";
+  // With in-source: false and module: esmodule, the paths should be in lib/es6/
+  // e.g., /path/to/post-build-out-of-source/lib/es6/src/demo.mjs (Unix)
+  // e.g., C:\path\to\post-build-out-of-source\lib\es6\src\demo.mjs (Windows)
+  const libEs6Sep = isWindows ? "\\lib\\es6\\" : "/lib/es6/";
   const libBsSep = isWindows ? "\\lib\\bs\\" : "/lib/bs/";
 
   for (const p of paths) {
     assert.ok(
-      p.includes(srcSep) && p.endsWith(".js"),
-      `Path should be in src/ directory: ${p}`,
+      p.includes(libEs6Sep) && p.endsWith(".mjs"),
+      `Path should be in lib/es6/ directory with .mjs suffix: ${p}`,
     );
-    // Should NOT be in lib/bs/ when in-source is true
-    assert.ok(
-      !p.includes(libBsSep),
-      `Path should not be in lib/bs/ when in-source is true: ${p}`,
-    );
+    // Should NOT be in lib/bs/ when in-source is false
+    assert.ok(!p.includes(libBsSep), `Path should not be in lib/bs/: ${p}`);
   }
 } finally {
   // Clean up log file

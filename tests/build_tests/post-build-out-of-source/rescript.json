@@ -1,13 +1,14 @@
 {
-  "name": "post-build",
+  "name": "post-build-out-of-source",
   "sources": {
     "dir": "src",
     "subdirs": true
   },
   "package-specs": {
-    "module": "commonjs",
-    "in-source": true
+    "module": "esmodule",
+    "in-source": false
   },
+  "suffix": ".mjs",
   "js-post-build": { "cmd": "node ./log-path.js" },
   "warnings": {
     "error": "+101"

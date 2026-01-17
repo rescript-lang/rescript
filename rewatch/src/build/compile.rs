@@ -853,10 +853,23 @@ fn compile_file(
             {
                 // Execute post-build command for each package spec (each output format)
                 for spec in root_config.get_package_specs() {
-                    let js_file = helpers::get_source_file_from_rescript_file(
-                        &package.get_build_path().join(path),
-                        &root_config.get_suffix(&spec),
-                    );
+                    // Determine the correct JS file path based on in-source setting:
+                    // - in-source: true  -> next to the source file (e.g., src/Foo.js)
+                    // - in-source: false -> in lib/<module>/ directory (e.g., lib/es6/src/Foo.js)
+                    let js_file = if spec.in_source {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    } else {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path)
+                                .join("lib")
+                                .join(&spec.get_out_of_source_dir())
+                                .join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    };
 
                     if js_file.exists() {
                         // Fail the build if post-build command fails (matches bsb behavior with &&)
