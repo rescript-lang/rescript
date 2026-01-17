@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- Remove the legacy build system. Going forward, only the modern build system is supported, and the `rescript-legacy` command is not available anymore. https://github.com/rescript-lang/rescript/pull/8186
 - `Int.fromString` and `Float.fromString` use stricter number parsing and no longer uses an explicit radix argument, but instead supports parsing hexadecimal, binary and exponential notation.
 - Remove `external-stdlib` configuration option from `rescript.json`. This option was rarely used and is no longer supported.
 
