@@ -810,6 +810,7 @@ pub mod tests {
             gentype_config: None,
             js_post_build: None,
             editor: None,
+            reanalyze: None,
             namespace_entry: None,
             deprecation_warnings: vec![],
             experimental_features: None,
