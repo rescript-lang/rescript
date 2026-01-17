@@ -30,10 +30,7 @@
     "access": "public",
     "provenance": true,
     "executableFiles": [
-      "./bin/bsb_helper.exe",
       "./bin/bsc.exe",
-      "./bin/ninja.exe",
-      "./bin/rescript-legacy.exe",
       "./bin/rescript-editor-analysis.exe",
       "./bin/rescript-tools.exe",
       "./bin/rescript.exe"

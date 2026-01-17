@@ -23,7 +23,6 @@ lib/bs
 *.mliast
 .vscode
 .merlin
-.bsb.lock
 /node_modules/
 /lib/
 .DS_Store

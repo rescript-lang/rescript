@@ -4,7 +4,7 @@
   "scripts": {
     "build": "rescript build",
     "clean": "rescript clean",
-    "dev": "rescript -w"
+    "dev": "rescript --watch"
   },
   "dependencies": {
     "@rescript/react": "link:../dependencies/rescript-react",

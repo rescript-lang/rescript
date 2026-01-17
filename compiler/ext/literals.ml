@@ -76,8 +76,6 @@ let bsconfig_json = "bsconfig.json"
 
 let rescript_json = "rescript.json"
 
-let build_ninja = "build.ninja"
-
 (* Name of the library file created for each external dependency. *)
 let library_file = "lib"
 
@@ -140,8 +138,6 @@ let node_current = "."
 
 let gentype_import1 = "genType.import"
 let gentype_import2 = "gentype.import"
-
-let bsbuild_cache = ".bsbuild"
 
 let sourcedirs_meta = ".sourcedirs.json"
 

@@ -43,14 +43,12 @@
   },
   "bin": {
     "bsc": "cli/bsc.js",
-    "bstracing": "cli/bstracing.js",
     "rescript": "cli/rescript.js",
-    "rescript-legacy": "cli/rescript-legacy.js",
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {
     "test": "node scripts/test.js -all",
-    "test-bsb": "node scripts/test.js -bsb",
+    "test-build": "node scripts/test.js -build",
     "test-ocaml": "node scripts/test.js -ounit",
     "check": "biome check --no-errors-on-unmatched .",
     "check:all": "biome check .",
@@ -64,7 +62,6 @@
     "COPYING",
     "COPYING.LESSER",
     "CREDITS.md",
-    "ninja.COPYING",
     "docs/docson/build-schema.json",
     "cli"
   ],

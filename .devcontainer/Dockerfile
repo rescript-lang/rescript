@@ -5,9 +5,7 @@ LABEL org.opencontainers.image.description="Docker image for ReScript developmen
 RUN sudo apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     cmake \
-    ninja-build \
     musl-tools \
-    python-is-python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install OPAM

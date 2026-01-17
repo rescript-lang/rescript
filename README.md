@@ -96,9 +96,6 @@ ReScript is licensed under LGPL version 3, with relaxed rules about creating and
 
 The ReScript parser (subdirectory `compiler/syntax`) is licensed under the [MIT License](compiler/syntax/LICENSE).
 
-The `ninja` subdirectory contains the vendored [ninja](https://github.com/ninja-build/ninja) build system.
-Refer to its copyright and license notices for information about its licensing.
-
 ## 🏅 Acknowledgments
 
 ReScript was originally created by [Hongbo Zhang](https://github.com/bobzhang) in 2015.

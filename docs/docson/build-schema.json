@@ -2,7 +2,12 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "definitions": {
     "module-format": {
-      "enum": ["esmodule", "commonjs", "es6", "es6-global"],
+      "enum": [
+        "esmodule",
+        "commonjs",
+        "es6",
+        "es6-global"
+      ],
       "description": "es6 and es6-global are deprecated. Default: commonjs."
     },
     "suffix-spec": {
@@ -23,7 +28,9 @@
           "$ref": "#/definitions/suffix-spec"
         }
       },
-      "required": ["module"]
+      "required": [
+        "module"
+      ]
     },
     "package-spec": {
       "oneOf": [
@@ -66,7 +73,11 @@
         "analysis": {
           "type": "array",
           "items": {
-            "enum": ["dce", "exception", "termination"]
+            "enum": [
+              "dce",
+              "exception",
+              "termination"
+            ]
           },
           "description": "The types of analysis to activate. `dce` means dead code analysis, `exception` means exception analysis, and `termination` is to check for infinite loops."
         },
@@ -165,9 +176,10 @@
               "type": "string",
               "description": "name of the directory"
             },
-
             "type": {
-              "enum": ["dev"]
+              "enum": [
+                "dev"
+              ]
             },
             "files": {
               "oneOf": [
@@ -213,7 +225,9 @@
                   "description": "Selected modules, for example, [Module_a, Module_b] "
                 },
                 {
-                  "enum": ["all"]
+                  "enum": [
+                    "all"
+                  ]
                 }
               ],
               "description": "Default: export all modules. It is recommended for library developers to hide some files/interfaces"
@@ -266,7 +280,9 @@
               }
             }
           },
-          "required": ["dir"]
+          "required": [
+            "dir"
+          ]
         },
         {
           "title": "Single non-nested directory",
@@ -304,7 +320,9 @@
       "properties": {
         "version": {
           "type": "number",
-          "enum": [4],
+          "enum": [
+            4
+          ],
           "description": "Whether to apply the specific version of JSX PPX transformation"
         },
         "module": {
@@ -373,7 +391,7 @@
       "items": {
         "type": "string"
       },
-      "description": "a list of directories that bsb will not look into"
+      "description": "a list of directories that the build system will not look into"
     },
     "bs-dependencies": {
       "$ref": "#/definitions/dependencies",
@@ -454,7 +472,7 @@
     },
     "js-post-build": {
       "$ref": "#/definitions/js-post-build",
-      "description": "(Experimental) post-processing hook. bsb will invoke `cmd ${file}` whenever a `${file}` is changed"
+      "description": "(Experimental) post-processing hook. The build system will invoke `cmd ${file}` whenever a `${file}` is changed"
     },
     "package-specs": {
       "$ref": "#/definitions/package-specs",
@@ -491,5 +509,8 @@
     }
   },
   "additionalProperties": false,
-  "required": ["name", "sources"]
+  "required": [
+    "name",
+    "sources"
+  ]
 }

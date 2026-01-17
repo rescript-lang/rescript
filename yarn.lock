@@ -2486,9 +2486,7 @@ __metadata:
       optional: true
   bin:
     bsc: cli/bsc.js
-    bstracing: cli/bstracing.js
     rescript: cli/rescript.js
-    rescript-legacy: cli/rescript-legacy.js
     rescript-tools: cli/rescript-tools.js
   languageName: unknown
   linkType: soft

@@ -33,11 +33,6 @@ export const runtimeEsmOutputDir = path.resolve(projectDir, "lib", "es6");
 export const rewatchDir = path.resolve(projectDir, "rewatch");
 
 /**
- * path: `<projectDir>/ninja/`
- */
-export const ninjaDir = path.resolve(projectDir, "ninja");
-
-/**
  * path: `<projectDir>/tests/`
  */
 export const testDir = path.resolve(projectDir, "tests");

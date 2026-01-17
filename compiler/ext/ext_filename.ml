@@ -28,17 +28,6 @@ let is_dir_sep_win_cygwin c = c = '/' || c = '\\' || c = ':'
 
 let is_dir_sep = if Sys.unix then is_dir_sep_unix else is_dir_sep_win_cygwin
 
-(* reference ninja.cc IsKnownShellSafeCharacter *)
-let maybe_quote (s : string) =
-  let noneed_quote =
-    Ext_string.for_all s (function
-      | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_' | '+' | '-' | '.' | '/' | '@'
-        ->
-        true
-      | _ -> false)
-  in
-  if noneed_quote then s else Filename.quote s
-
 let chop_extension_maybe name =
   let rec search_dot i =
     if i < 0 || is_dir_sep (String.unsafe_get name i) then name

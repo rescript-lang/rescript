@@ -40,8 +40,7 @@ pub enum FileExtension {
 #[command(version)]
 #[command(after_help = "[1m[1m[4mNotes:[0m
   - If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information.
-  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.
-  - For the legacy (pre-v12) build system, run `rescript-legacy`.")]
+  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.")]
 pub struct Cli {
     /// Verbosity:
     /// -v -> Debug

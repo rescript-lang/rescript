@@ -23,7 +23,7 @@ import {
 
 let ounitTest = false;
 let mochaTest = false;
-let bsbTest = false;
+let buildTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
 
@@ -35,8 +35,8 @@ if (process.argv.includes("-mocha")) {
   mochaTest = true;
 }
 
-if (process.argv.includes("-bsb")) {
-  bsbTest = true;
+if (process.argv.includes("-build")) {
+  buildTest = true;
 }
 
 if (process.argv.includes("-format")) {
@@ -50,7 +50,7 @@ if (process.argv.includes("-docstrings")) {
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
-  bsbTest = true;
+  buildTest = true;
   formatTest = true;
   runtimeDocstrings = true;
 }
@@ -108,7 +108,7 @@ if (mochaTest) {
   });
 }
 
-if (bsbTest) {
+if (buildTest) {
   console.log("Doing build_tests");
   const files = fs.readdirSync(buildTestDir);
 

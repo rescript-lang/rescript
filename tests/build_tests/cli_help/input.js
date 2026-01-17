@@ -28,8 +28,7 @@ const cliHelp =
   "\n" +
   "Notes:\n" +
   "  - If no command is provided, the build command is run by default. See `rescript help build` for more information.\n" +
-  "  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.\n" +
-  "  - For the legacy (pre-v12) build system, run `rescript-legacy`.\n";
+  "  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.\n";
 
 const buildHelp =
   "Build the project (default command)\n" +

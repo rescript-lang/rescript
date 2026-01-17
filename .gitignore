@@ -48,9 +48,6 @@ node_modules
 *.dump
 coverage
 
-.ninja_log
-.bsdeps
-.bsbuild
 lib/ocaml
 tests/build_tests/*/lib/
 #ignore temporary directory

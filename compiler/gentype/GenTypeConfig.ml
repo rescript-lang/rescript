@@ -179,7 +179,7 @@ let read_config ~get_config_file ~namespace =
     let generated_file_extension = generated_file_extension_string_option in
     let platform_lib = "rescript" in
     if !Debug.config then (
-      Log_.item "Project roLiterals.bsconfig_jsonot: %s\n" project_root;
+      Log_.item "Project root: %s\n" project_root;
       if bsb_project_root <> project_root then
         Log_.item "bsb project root: %s\n" bsb_project_root;
       Log_.item "Config module:%s shims:%d entries \n"

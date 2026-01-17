@@ -296,43 +296,6 @@ jobs:
       - name: Copy compiler exes to platform bin dir
         run: node scripts/copyExes.js --compiler
 
-      - name: Restore ninja build cache
-        id: ninja-build-cache
-        uses: actions/cache@v5
-        with:
-          path: ninja/ninja${{ matrix.exe-suffix }}
-          key: ninja-build-v2-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
-
-      - name: Setup Python for ninja build
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
-      - name: Setup MSVC for ninja build (Windows)
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
-        uses: TheMrMilchmann/setup-msvc-dev@v4
-        with:
-          arch: x64
-
-      - name: Build ninja
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os != 'Linux'
-        run: node scripts/buildNinjaBinary.js
-
-      - name: Build ninja (Linux static)
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        env:
-          LDFLAGS: -static
-        run: node scripts/buildNinjaBinary.js
-
-      # Prevent ninja being rebuilt on playground build step later
-      - name: Touch ninja/ninja
-        if: ${{ matrix.build_playground && steps.ninja-build-cache.outputs.cache-hit == 'true' }}
-        run: touch ninja/ninja${{ matrix.exe-suffix }}
-
-      - name: Copy ninja exe to platform bin dir
-        run: node scripts/copyExes.js --ninja
-
       - name: "Syntax: Run tests"
         env:
           ROUNDTRIP_TEST: ${{ runner.os == 'Windows' && '0' || '1' }}

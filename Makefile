@@ -59,7 +59,7 @@ RUNTIME_BUILD_STAMP := packages/@rescript/runtime/.buildstamp
 
 # Default target
 
-build: compiler rewatch ninja
+build: compiler rewatch
 
 # Yarn
 
@@ -71,25 +71,6 @@ yarn-install: $(YARN_INSTALL_STAMP)
 $(YARN_INSTALL_STAMP): $(YARN_INSTALL_SOURCES)
 	yarn install
 	touch $@
-
-# Ninja
-
-NINJA_SOURCES = $(wildcard ninja/src/*.cc ninja/src/*.h) $(wildcard ninja/*.py)
-NINJA_EXE = $(BIN_DIR)/ninja.exe
-
-ninja: $(NINJA_EXE)
-
-ninja/ninja: $(NINJA_SOURCES)
-ifeq ($(OS),Darwin)
-	export CXXFLAGS="-flto"
-endif
-	cd ninja && python3 configure.py --bootstrap --verbose
-
-$(NINJA_EXE): ninja/ninja
-	$(call COPY_EXE,$<,$@)
-
-clean-ninja:
-	rm -rf $(NINJA_EXE) ninja/build.ninja ninja/build ninja/misc/__pycache__ ninja/ninja
 
 # Rewatch
 
@@ -119,7 +100,7 @@ clean-rewatch:
 
 COMPILER_SOURCE_DIRS := compiler tests analysis tools
 COMPILER_SOURCES = $(shell find $(COMPILER_SOURCE_DIRS) -type f \( -name '*.ml' -o -name '*.mli' -o -name '*.dune' -o -name dune -o -name dune-project \))
-COMPILER_BIN_NAMES := bsc bsb_helper rescript-legacy rescript-editor-analysis rescript-tools
+COMPILER_BIN_NAMES := bsc rescript-editor-analysis rescript-tools
 COMPILER_EXES := $(addsuffix .exe,$(addprefix $(BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 COMPILER_DUNE_BINS := $(addsuffix $(PLATFORM_EXE_EXT),$(addprefix $(DUNE_BIN_DIR)/,$(COMPILER_BIN_NAMES)))
 
@@ -166,20 +147,20 @@ artifacts: lib
 bench: compiler
 	$(DUNE_BIN_DIR)/syntax_benchmarks
 
-test: lib ninja
+test: lib
 	node scripts/test.js -all
 
-test-analysis: lib ninja
+test-analysis: lib
 	make -C tests/analysis_tests clean test
 
-test-reanalyze: lib ninja
+test-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode test
 
 # Benchmark reanalyze on larger codebase (COPIES=N for more files)
-benchmark-reanalyze: lib ninja
+benchmark-reanalyze: lib
 	make -C tests/analysis_tests/tests-reanalyze/deadcode-benchmark benchmark COPIES=$(or $(COPIES),50)
 
-test-tools: lib ninja
+test-tools: lib
 	make -C tests/tools_tests clean test
 
 test-syntax: compiler
@@ -188,7 +169,7 @@ test-syntax: compiler
 test-syntax-roundtrip: compiler
 	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
 
-test-gentype: lib ninja
+test-gentype: lib
 	make -C tests/gentype_tests/typescript-react-example clean test
 	make -C tests/gentype_tests/stdlib-no-shims clean test
 
@@ -217,7 +198,7 @@ $(PLAYGROUND_BUILD_STAMP): $(COMPILER_SOURCES)
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: $(PLAYGROUND_CMI_BUILD_STAMP)
 
-$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP) $(NINJA_EXE)
+$(PLAYGROUND_CMI_BUILD_STAMP): $(RUNTIME_BUILD_STAMP)
 	yarn workspace playground build
 
 playground-test: playground
@@ -244,11 +225,11 @@ clean-gentype:
 
 clean-tests: clean-gentype
 
-clean: clean-lib clean-compiler clean-rewatch clean-ninja
+clean: clean-lib clean-compiler clean-rewatch
 
 dev-container:
 	docker build -t rescript-dev-container docker
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build ninja rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-ninja clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
