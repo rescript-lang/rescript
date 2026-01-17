@@ -13,7 +13,7 @@ use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use anyhow::{Result, anyhow};
 use console::style;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 use std::path::Path;
 use std::path::PathBuf;
@@ -26,6 +26,8 @@ use std::time::SystemTime;
 fn execute_post_build_command(cmd: &str, js_file_path: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
 
+    debug!("Executing js-post-build: {}", full_command);
+
     let output = if cfg!(target_os = "windows") {
         Command::new("cmd").args(["/C", &full_command]).output()
     } else {
@@ -33,18 +35,29 @@ fn execute_post_build_command(cmd: &str, js_file_path: &Path) -> Result<()> {
     };
 
     match output {
-        Ok(output) if !output.status.success() => {
+        Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            Err(anyhow!(
-                "js-post-build command failed for {}: {}{}",
-                js_file_path.display(),
-                stderr,
-                stdout
-            ))
+
+            // Always log stdout/stderr - the user explicitly configured this command
+            // and likely cares about its output
+            if !stdout.is_empty() {
+                info!("{}", stdout.trim());
+            }
+            if !stderr.is_empty() {
+                warn!("{}", stderr.trim());
+            }
+
+            if !output.status.success() {
+                Err(anyhow!(
+                    "js-post-build command failed for {}",
+                    js_file_path.display()
+                ))
+            } else {
+                Ok(())
+            }
         }
         Err(e) => Err(anyhow!("Failed to execute js-post-build command: {}", e)),
-        Ok(_) => Ok(()),
     }
 }
 
@@ -865,7 +878,7 @@ fn compile_file(
                         helpers::get_source_file_from_rescript_file(
                             &Path::new(&package.path)
                                 .join("lib")
-                                .join(&spec.get_out_of_source_dir())
+                                .join(spec.get_out_of_source_dir())
                                 .join(path),
                             &root_config.get_suffix(&spec),
                         )
