@@ -657,7 +657,7 @@ let parse_argv (argv : string array) : string option =
     cmtRootRef := cmtRoot;
     analysisKindSet := true
   and setConfig () =
-    Paths.Config.processBsconfig ();
+    Paths.Config.processConfig ();
     analysisKindSet := true
   and setDCE cmtRoot =
     RunConfig.dce ();

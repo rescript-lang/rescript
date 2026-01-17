@@ -82,7 +82,7 @@ module Config = struct
     | _ -> ()
 
   (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
-  let processBsconfig () =
+  let processConfig () =
     setProjectRootFromCwd ();
     let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in
 
