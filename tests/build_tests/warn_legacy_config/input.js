@@ -7,5 +7,5 @@ const { execBuild, execClean } = setup(import.meta.dirname);
 
 const output = await execBuild();
 assert.notEqual(output.status, 0);
-assert.match(output.stderr, /no package\.json or rescript\.json file/i);
+assert.match(output.stderr, /could not read rescript\.json/i);
 await execClean();
