@@ -311,6 +311,9 @@ pub struct Config {
     // Used by the VS Code extension; ignored by rewatch but should not emit warnings.
     // Payload is not validated here, only in the VS Code extension.
     pub editor: Option<serde_json::Value>,
+    // Used by rescript-tools reanalyze; ignored by rewatch but should not emit warnings.
+    // Payload is not validated here, only in reanalyze.
+    pub reanalyze: Option<serde_json::Value>,
     // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
@@ -718,7 +721,6 @@ impl Config {
             "pp-flags",
             "entries",
             "bs-external-includes",
-            "reanalyze",
         ];
 
         let top_level = field.split(|c| ['.', '['].contains(&c)).next().unwrap_or(field);

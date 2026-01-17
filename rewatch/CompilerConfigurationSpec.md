@@ -28,7 +28,7 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | entries               | array of Target-Item    |                                          |     [_]      |
 | bs-external-includes  | array of string         |                                          |     [_]      |
 | suffix                | Suffix                  |                                          |     [x]      |
-| reanalyze             | Reanalyze               |                                          |     [_]      |
+| reanalyze             | Reanalyze               | Reanalyze config; ignored by rewatch     |     [x]      |
 | experimental-features | ExperimentalFeatures    |                                          |     [x]      |
 | editor                | object                  | VS Code tooling only; ignored by rewatch |     [x]      |
 
