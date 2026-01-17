@@ -140,6 +140,8 @@ The path passed to the command respects the `in-source` setting:
 - `in-source: true` → path next to the source file (e.g., `src/Foo.js`)
 - `in-source: false` → path in `lib/<module>/` directory (e.g., `lib/es6/src/Foo.mjs`)
 
+The command runs with the same working directory as the rewatch process (typically the project root).
+
 stdout and stderr from the command are logged.
 
 ### Package-Spec
