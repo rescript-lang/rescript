@@ -75,7 +75,7 @@ impl Source {
     }
 
     /// `to_qualified_without_children` takes a tree like structure of dependencies, coming in from
-    /// `bsconfig`, and turns it into a flat list. The main thing we extract here are the source
+    /// `rescript.json`, and turns it into a flat list. The main thing we extract here are the source
     /// folders, and optional subdirs, where potentially, the subdirs recurse or not.
     pub fn to_qualified_without_children(&self, sub_path: Option<PathBuf>) -> PackageSource {
         match self {
@@ -446,7 +446,7 @@ fn namespace_from_package_name(package_name: &str) -> String {
 }
 
 impl Config {
-    /// Try to convert a bsconfig from a certain path to a bsconfig struct
+    /// Try to convert a config from a certain path to a config struct
     pub fn new(path: &Path) -> Result<Self> {
         let read = fs::read_to_string(path)?;
         let mut config = Config::new_from_json_string(&read)?;
@@ -454,7 +454,7 @@ impl Config {
         Ok(config)
     }
 
-    /// Try to convert a bsconfig from a string to a bsconfig struct
+    /// Try to convert a config from a string to a config struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
         let mut deserializer = serde_json::Deserializer::from_str(config_str);
         let mut tracker = serde_path_to_error::Track::new();
