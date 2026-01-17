@@ -88,7 +88,7 @@ let main () =
         (Error
            (Printf.sprintf
               "error: failed to load ReScript project at %s (missing \
-               bsconfig.json/rescript.json?)"
+               rescript.json?)"
               rootPath))
     | Some package ->
       let moduleNames =

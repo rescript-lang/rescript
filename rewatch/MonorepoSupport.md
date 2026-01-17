@@ -14,7 +14,7 @@ All statements are derived from:
 
 | Term | Definition |
 |------|------------|
-| **Package** | A folder containing `rescript.json` (or legacy `bsconfig.json`). Usually also has `package.json`. |
+| **Package** | A folder containing `rescript.json`. Usually also has `package.json`. |
 | **Root config** | The `rescript.json` used for global build settings (JSX, output format, etc.). |
 | **Local package** | A package whose canonical path is inside the workspace AND not under any `node_modules` path component. |
 | **Current package** | The package where you ran `rescript build` or `rescript watch`. |
@@ -41,7 +41,7 @@ There are **three effective modes**:
 - The root `rescript.json` should list workspace packages by name in `dependencies`/`dev-dependencies`
 
 ### 3. Monorepo Leaf Package
-- A parent directory contains a `rescript.json` (or `bsconfig.json`)
+- A parent directory contains a `rescript.json`
 - That parent config lists this package's name in its `dependencies` or `dev-dependencies`
 
 ---

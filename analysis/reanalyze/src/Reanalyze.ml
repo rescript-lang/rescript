@@ -787,7 +787,7 @@ let parse_argv (argv : string array) : string option =
     - reanalyze can be called from anywhere within the project
 
     Project root detection reuses the same logic as reanalyze config discovery:
-    walk up from a directory until we find rescript.json or bsconfig.json. *)
+    walk up from a directory until we find rescript.json. *)
 let cli () =
   let cmtRoot = parse_argv Sys.argv in
   runAnalysisAndReport ~cmtRoot

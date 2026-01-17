@@ -72,8 +72,6 @@ let node_modules_length = String.length "node_modules"
 
 let package_json = "package.json"
 
-let bsconfig_json = "bsconfig.json"
-
 let rescript_json = "rescript.json"
 
 (* Name of the library file created for each external dependency. *)

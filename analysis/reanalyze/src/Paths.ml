@@ -1,6 +1,5 @@
 module StringMap = Map_string
 
-let bsconfig = "bsconfig.json"
 let rescriptJson = "rescript.json"
 
 let readFile filename =
@@ -14,8 +13,7 @@ let readFile filename =
 
 let rec findProjectRoot ~dir =
   let rescriptJsonFile = Filename.concat dir rescriptJson in
-  let bsconfigFile = Filename.concat dir bsconfig in
-  if Sys.file_exists rescriptJsonFile || Sys.file_exists bsconfigFile then dir
+  if Sys.file_exists rescriptJsonFile then dir
   else
     let parent = dir |> Filename.dirname in
     if parent = dir then (
@@ -87,7 +85,6 @@ module Config = struct
   let processBsconfig () =
     setProjectRootFromCwd ();
     let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in
-    let bsconfigFile = Filename.concat runConfig.projectRoot bsconfig in
 
     let processText text =
       match Json.parse text with
@@ -106,10 +103,7 @@ module Config = struct
 
     match readFile rescriptFile with
     | Some text -> processText text
-    | None -> (
-      match readFile bsconfigFile with
-      | Some text -> processText text
-      | None -> ())
+    | None -> ()
 end
 
 (**

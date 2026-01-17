@@ -6,7 +6,7 @@
     - reanalyze can be called from anywhere within the project
 
     Project root detection reuses the same logic as reanalyze config discovery:
-    walk up from a directory until we find rescript.json or bsconfig.json. *)
+    walk up from a directory until we find rescript.json. *)
 let default_socket_filename = ".rescript-reanalyze.sock"
 
 let project_root_from_dir (dir : string) : string option =
