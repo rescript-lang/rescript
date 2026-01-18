@@ -378,9 +378,7 @@ let rec extractType ?(printOpeningDebug = true)
   | Tarrow _ -> (
     match extractFunctionType2 ?typeArgContext t ~env ~package with
     | args, tRet, typeArgContext when args <> [] ->
-      Some
-        ( Tfunction {env; args; typ = t; uncurried = false; returnType = tRet},
-          typeArgContext )
+      Some (Tfunction {env; args; typ = t; returnType = tRet}, typeArgContext)
     | _args, _tRet, _typeArgContext -> None)
   | Tconstr (path, typeArgs, _) -> (
     if Debug.verbose () then

@@ -25,7 +25,6 @@
       "subdirs": true
     }
   ],
-  "uncurried": true,
   "package-specs": {
     "module": "esmodule",
     "in-source": true
