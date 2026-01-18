@@ -599,12 +599,12 @@ pub fn compile_one(
 
     // Step 3: Mark only the target file as parse_dirty
     // This ensures we parse the latest version of the target file
-    if let Some(module) = build_state.modules.get_mut(&target_module_name) {
-        if let SourceType::SourceFile(source_file) = &mut module.source_type {
-            source_file.implementation.parse_dirty = true;
-            if let Some(interface) = &mut source_file.interface {
-                interface.parse_dirty = true;
-            }
+    if let Some(module) = build_state.modules.get_mut(&target_module_name)
+        && let SourceType::SourceFile(source_file) = &mut module.source_type
+    {
+        source_file.implementation.parse_dirty = true;
+        if let Some(interface) = &mut source_file.interface {
+            interface.parse_dirty = true;
         }
     }
 
