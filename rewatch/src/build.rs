@@ -579,6 +579,7 @@ pub fn compile_one(
     project_root: &Path,
     plain_output: bool,
     warn_error: Option<String>,
+    module_format: Option<String>,
 ) -> Result<String> {
     use std::fs;
 
@@ -592,6 +593,12 @@ pub fn compile_one(
         plain_output,
         warn_error,
     )?;
+
+    // Determine which package spec to use for output
+    let root_config = build_state.get_root_config();
+    let package_specs = root_config.get_package_specs();
+
+    let selected_spec_index = select_package_spec(&package_specs, &module_format)?;
 
     // Step 2: Find target module from file path
     let target_module_name = find_module_for_file(&build_state, target_file)
@@ -633,11 +640,55 @@ pub fn compile_one(
     .map_err(|e| anyhow!("Compilation failed: {}", e))?;
 
     // Step 7: Find and read the generated JavaScript file
-    let js_path = get_js_output_path(&build_state, &target_module_name, target_file)?;
+    let js_path = get_js_output_path(&build_state, &target_module_name, selected_spec_index)?;
     let js_content = fs::read_to_string(&js_path)
         .map_err(|e| anyhow!("Failed to read generated JS file {}: {}", js_path.display(), e))?;
 
     Ok(js_content)
+}
+
+/// Select the appropriate package spec based on the module_format argument.
+///
+/// If module_format is specified, find the matching spec.
+/// If not specified and there are multiple specs, warn and use the first one.
+/// Returns the index of the selected package spec.
+fn select_package_spec(
+    package_specs: &[config::PackageSpec],
+    module_format: &Option<String>,
+) -> Result<usize> {
+    if package_specs.is_empty() {
+        return Err(anyhow!("No package-specs configured in rescript.json"));
+    }
+
+    match module_format {
+        Some(format) => {
+            // Find the package spec matching the requested format
+            package_specs
+                .iter()
+                .position(|spec| spec.module == *format)
+                .ok_or_else(|| {
+                    let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
+                    anyhow!(
+                        "Module format '{}' not found in package-specs. Available: {}",
+                        format,
+                        available.join(", ")
+                    )
+                })
+        }
+        None => {
+            // No format specified - use first, but warn if multiple exist
+            if package_specs.len() > 1 {
+                let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
+                eprintln!(
+                    "Warning: Multiple package-specs configured ({}). Using '{}'. \
+                     Specify --module-format to choose a different one.",
+                    available.join(", "),
+                    package_specs[0].module
+                );
+            }
+            Ok(0)
+        }
+    }
 }
 
 /// Find the module name for a given file path by searching through all modules.
@@ -705,11 +756,11 @@ fn get_dependency_closure(module_name: &str, build_state: &BuildState) -> AHashS
 /// Respects the package's configuration for output location and format:
 /// - in-source: JS file next to the .res file
 /// - out-of-source: JS file in lib/js or lib/es6
-/// - Uses first package spec to determine .js vs .mjs extension
+/// - Uses the selected package spec to determine .js vs .mjs extension
 fn get_js_output_path(
     build_state: &BuildCommandState,
     module_name: &str,
-    _original_file: &Path,
+    spec_index: usize,
 ) -> Result<PathBuf> {
     let module = build_state
         .get_module(module_name)
@@ -722,8 +773,8 @@ fn get_js_output_path(
     let root_config = build_state.get_root_config();
     let package_specs = root_config.get_package_specs();
     let package_spec = package_specs
-        .first()
-        .ok_or_else(|| anyhow!("No package specs configured"))?;
+        .get(spec_index)
+        .ok_or_else(|| anyhow!("Package spec index {} out of bounds", spec_index))?;
 
     let suffix = root_config.get_suffix(package_spec);
 

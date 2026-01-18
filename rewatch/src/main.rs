@@ -50,7 +50,11 @@ fn main() -> Result<()> {
             println!("{}", build::get_compiler_args(Path::new(&path))?);
             std::process::exit(0);
         }
-        cli::Command::CompileFile { path, warn_error } => {
+        cli::Command::CompileFile {
+            path,
+            module_format,
+            warn_error,
+        } => {
             // Find project root by walking up from file path (same as CompilerArgs command)
             let file_path = Path::new(&path);
             let project_root = helpers::get_abs_path(
@@ -59,7 +63,13 @@ fn main() -> Result<()> {
 
             let _lock = get_lock(project_root.to_str().unwrap());
 
-            match build::compile_one(file_path, &project_root, plain_output, (*warn_error).clone()) {
+            match build::compile_one(
+                file_path,
+                &project_root,
+                plain_output,
+                (*warn_error).clone(),
+                module_format,
+            ) {
                 Ok(js_output) => {
                     // Output JS to stdout (clean for piping)
                     print!("{js_output}");
