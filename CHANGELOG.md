@@ -25,6 +25,8 @@
 
 #### :rocket: New Feature
 
+- Add `rescript compile-file` command for one-shot compilation of a single ReScript file to JavaScript, outputting to stdout. Supports `--module-format` flag to select output format when multiple package-specs are configured. https://github.com/rescript-lang/rescript/pull/8002
+
 #### :bug: Bug fix
 
 - Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
