@@ -628,37 +628,6 @@ pub fn compiler_args(
     .concat())
 }
 
-/// Generate compiler arguments for stdout output (no file write).
-/// This is a convenience wrapper around `compiler_args` with `OutputMode::ToStdout`.
-pub fn compiler_args_for_stdout(
-    config: &config::Config,
-    ast_path: &Path,
-    file_path: &Path,
-    has_interface: bool,
-    project_context: &ProjectContext,
-    packages: &Option<&AHashMap<String, packages::Package>>,
-    is_type_dev: bool,
-    is_local_dep: bool,
-    warn_error_override: Option<String>,
-    module_format: &str,
-) -> Result<Vec<String>> {
-    compiler_args(
-        config,
-        ast_path,
-        file_path,
-        false, // not interface - we want implementation output
-        has_interface,
-        project_context,
-        packages,
-        is_type_dev,
-        is_local_dep,
-        warn_error_override,
-        OutputMode::ToStdout {
-            module_format: module_format.to_string(),
-        },
-    )
-}
-
 /// Compile a single file and return its JavaScript output on stdout.
 /// This is used by `compile_one` for the target file only.
 pub fn compile_file_to_stdout(
@@ -690,17 +659,20 @@ pub fn compile_file_to_stdout(
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
 
-    let args = compiler_args_for_stdout(
+    let args = compiler_args(
         &package.config,
         ast_path,
         implementation_file_path,
+        false, // not interface - we want implementation output
         has_interface,
         project_context,
         &Some(packages),
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
-        module_format,
+        OutputMode::ToStdout {
+            module_format: module_format.to_string(),
+        },
     )?;
 
     let output = Command::new(&compiler_info.bsc_path)
