@@ -6,7 +6,7 @@ let actAsync: (unit => Js.Promise.t<'a>) => Js.Promise.t<unit>
 external isElement: 'element => bool = "isElement"
 
 @module("react-dom/test-utils")
-external isElementOfType: ('element, React.component<'props>) => bool = "isElement"
+external isElementOfType: ('element, React.component<'props>) => bool = "isElementOfType"
 
 @module("react-dom/test-utils")
 external isDOMComponent: 'element => bool = "isDOMComponent"

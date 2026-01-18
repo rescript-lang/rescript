@@ -359,7 +359,7 @@
   addValueDeclaration +make Hooks.res:63:6 path:+Hooks.RenderPropRequiresConversion
   addRecordLabelDeclaration name Hooks.res:1:16 path:+Hooks.vehicle
   addRecordLabelDeclaration vehicle Hooks.res:4:12 path:+Hooks.props
-  addValueReference Hooks.res:5:26 --> React.res:134:0
+  addValueReference Hooks.res:5:26 --> React.res:135:0
   addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
   addValueReference Hooks.res:10:29 --> Hooks.res:4:12
   addValueReference Hooks.res:10:75 --> Hooks.res:5:7

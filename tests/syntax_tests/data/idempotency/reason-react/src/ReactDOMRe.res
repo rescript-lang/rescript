@@ -81,7 +81,7 @@ type domRef
 
 module Ref = {
   type t = domRef
-  type currentDomRef = React.Ref.t<Js.nullable<Dom.element>>
+  type currentDomRef = React.ref<Js.nullable<Dom.element>>
   type callbackDomRef = Js.nullable<Dom.element> => unit
 
   external domRef: currentDomRef => domRef = "%identity"

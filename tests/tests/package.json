@@ -1,0 +1,9 @@
+{
+  "name": "@tests/tests",
+  "private": true,
+  "dependencies": {
+    "@rescript/react": "workspace:^",
+    "rescript": "workspace:^"
+  },
+  "type": "module"
+}
