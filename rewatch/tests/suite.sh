@@ -29,7 +29,7 @@ fi
 source ./utils.sh
 
 bold "Yarn install"
-(cd ../testrepo && yarn)
+(cd ../testrepo && yarn && cp node_modules/rescript-nodejs/bsconfig.json node_modules/rescript-nodejs/rescript.json)
 
 bold "Rescript version"
 (cd ../testrepo && ./node_modules/.bin/rescript --version)
