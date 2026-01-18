@@ -2,6 +2,7 @@
 
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
+
 const { execBuild, execClean } = setup(import.meta.dirname);
 
 const out = await execBuild();

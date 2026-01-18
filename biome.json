@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -11,11 +11,10 @@
     "rules": {
       "recommended": true,
       "style": {
-        "useTemplate": "off"
-      },
-      "nursery": {
+        "useTemplate": "off",
         "noCommonJs": "error"
       },
+      "nursery": {},
       "suspicious": {
         "noAssignInExpressions": "warn"
       },
@@ -27,9 +26,7 @@
       }
     }
   },
-  "organizeImports": {
-    "enabled": true
-  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
@@ -53,30 +50,32 @@
     }
   },
   "files": {
-    "ignore": [
-      ".yarn/**",
-      "tests/analysis_tests/**/src/**",
-      "tests/build_tests/**/src/**",
-      "tests/docstring_tests/**",
-      "tests/gentype_tests/**",
-      "tests/tests/**/src/**",
-      "tests/tools_tests/**/src/**",
-      "analysis/examples/**/src/**",
-      "rewatch/**",
-      "lib/es6/**",
-      "lib/js/**",
-      "lib/bs/**",
-      "playground/**",
-      "*.bs.js",
-      "*.res.js",
-      "*.res.mjs",
-      "*.gen.ts*",
-      "*.d.ts",
-      "*.exe",
-      "package.json",
-      "packages/artifacts.json",
-      ".mypy_cache/**",
-      ".history/**"
+    "includes": [
+      "**",
+      "!**/.yarn",
+      "!**/tests/analysis_tests/**/src",
+      "!**/tests/build_tests/**/src",
+      "!**/tests/docstring_tests",
+      "!**/tests/gentype_tests",
+      "**/tests/gentype_tests/typescript-react-example/**",
+      "!**/tests/tests/**/src",
+      "!**/tests/tools_tests/**/src",
+      "!**/analysis/examples/**/src",
+      "!**/rewatch",
+      "!**/lib/es6",
+      "!**/lib/js",
+      "!**/lib/bs",
+      "!**/playground",
+      "!**/*.bs.js",
+      "!**/*.res.js",
+      "!**/*.res.mjs",
+      "!**/*.gen.ts*",
+      "!**/*.d.ts",
+      "!**/*.exe",
+      "!**/package.json",
+      "!**/packages/artifacts.json",
+      "!**/.mypy_cache",
+      "!**/.history"
     ]
   }
 }

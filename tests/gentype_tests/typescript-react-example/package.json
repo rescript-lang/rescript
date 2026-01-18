@@ -5,8 +5,7 @@
     "start": "rescript build -w",
     "build": "rescript build",
     "clean": "rescript clean",
-    "typecheck": "tsc",
-    "check": "biome check --changed --no-errors-on-unmatched ."
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@rescript/react": "^0.13.1",
@@ -15,7 +14,6 @@
     "rescript": "workspace:^"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "typescript": "5.9.3"
