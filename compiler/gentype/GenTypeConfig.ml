@@ -234,9 +234,9 @@ let read_config ~get_config_file ~namespace =
   in
   let default_config = {default with project_root; bsb_project_root} in
   match get_config_file ~project_root with
-  | Some bs_config_file -> (
+  | Some config_file -> (
     try
-      let json = bs_config_file |> Ext_json_parse.parse_json_from_file in
+      let json = config_file |> Ext_json_parse.parse_json_from_file in
       match json with
       | Obj {map = bsconf} -> (
         match bsconf |> get_opt "gentypeconfig" with
