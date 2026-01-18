@@ -18,6 +18,7 @@ const cliHelp =
   "  clean          Clean the build artifacts\n" +
   "  format         Format ReScript files\n" +
   "  compiler-args  Print the compiler arguments for a ReScript source file\n" +
+  "  compile-file   Compile a single file and output JavaScript to stdout\n" +
   "  help           Print this message or the help of the given subcommand(s)\n" +
   "\n" +
   "Options:\n" +
@@ -87,6 +88,21 @@ const compilerArgsHelp =
   "  -v, --verbose...  Increase logging verbosity\n" +
   "  -q, --quiet...    Decrease logging verbosity\n" +
   "  -h, --help        Print help\n";
+
+const compileFileHelp =
+  "Compile a single file and output JavaScript to stdout\n" +
+  "\n" +
+  "Usage: rescript compile-file [OPTIONS] <PATH>\n" +
+  "\n" +
+  "Arguments:\n" +
+  "  <PATH>  Path to a ReScript source file (.res or .resi)\n" +
+  "\n" +
+  "Options:\n" +
+  "      --module-format <MODULE_FORMAT>  Module format to use (commonjs or esmodule). If not specified and multiple package-specs are configured, the first one is used with a warning\n" +
+  "  -v, --verbose...                     Increase logging verbosity\n" +
+  "  -q, --quiet...                       Decrease logging verbosity\n" +
+  '      --warn-error <WARN_ERROR>        Override warning configuration from rescript.json. Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
+  "  -h, --help                           Print help\n";
 
 /**
  * @param {string[]} params
@@ -213,6 +229,20 @@ await test(["compiler-args", "--help"], {
 // Shows compiler-args help with -h arg
 await test(["compiler-args", "-h"], {
   stdout: compilerArgsHelp,
+  stderr: "",
+  status: 0,
+});
+
+// Shows compile-file help with --help arg
+await test(["compile-file", "--help"], {
+  stdout: compileFileHelp,
+  stderr: "",
+  status: 0,
+});
+
+// Shows compile-file help with -h arg
+await test(["compile-file", "-h"], {
+  stdout: compileFileHelp,
   stderr: "",
   status: 0,
 });
