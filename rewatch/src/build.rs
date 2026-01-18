@@ -556,24 +556,25 @@ pub fn build(
 /// 1. Initializes build state (reusing cached artifacts from previous builds)
 /// 2. Finds the target module from the file path
 /// 3. Calculates the dependency closure (all transitive dependencies)
-/// 4. Marks target + dependencies as dirty for compilation
-/// 5. Runs incremental build to compile only what's needed
-/// 6. Reads and returns the generated JavaScript file
+/// 4. Marks dependencies (excluding target) as dirty for compilation
+/// 5. Runs incremental build to compile dependencies (ensures .cmi files exist)
+/// 6. Compiles target file directly to stdout (no file write)
 ///
 /// # Workflow
 /// Unlike the watch mode which expands UPWARD to dependents when a file changes,
 /// this expands DOWNWARD to dependencies to ensure everything needed is compiled.
+/// The target file itself is compiled separately with output to stdout.
 ///
 /// # Example
 /// If compiling `App.res` which imports `Component.res` which imports `Utils.res`:
 /// - Dependency closure: {Utils, Component, App}
-/// - Compilation order (via wave algorithm): Utils → Component → App
+/// - Dependencies compiled to disk: Utils, Component (for .cmi files)
+/// - Target compiled to stdout: App
 ///
 /// # Errors
 /// Returns error if:
 /// - File doesn't exist or isn't part of the project
 /// - Compilation fails (parse errors, type errors, etc.)
-/// - Generated JavaScript file cannot be found
 pub fn compile_one(
     target_file: &Path,
     project_root: &Path,
@@ -581,8 +582,6 @@ pub fn compile_one(
     warn_error: Option<String>,
     module_format: Option<String>,
 ) -> Result<String> {
-    use std::fs;
-
     // Step 1: Initialize build state
     // This leverages any existing .ast/.cmi files from previous builds
     let mut build_state = initialize_build(
@@ -591,14 +590,13 @@ pub fn compile_one(
         false, // no progress output (keep stderr clean)
         project_root,
         plain_output,
-        warn_error,
+        warn_error.clone(),
     )?;
 
-    // Determine which package spec to use for output
+    // Determine the module format for output
     let root_config = build_state.get_root_config();
     let package_specs = root_config.get_package_specs();
-
-    let selected_spec_index = select_package_spec(&package_specs, &module_format)?;
+    let module_format_str = get_module_format(&package_specs, &module_format)?;
 
     // Step 2: Find target module from file path
     let target_module_name = find_module_for_file(&build_state, target_file)
@@ -619,15 +617,18 @@ pub fn compile_one(
     // Unlike compile universe (upward to dependents), we need all dependencies
     let dependency_closure = get_dependency_closure(&target_module_name, &build_state);
 
-    // Step 5: Mark all dependencies as compile_dirty
+    // Step 5: Mark dependencies (excluding target) as compile_dirty
+    // The target will be compiled separately to stdout
     for module_name in &dependency_closure {
-        if let Some(module) = build_state.modules.get_mut(module_name) {
+        if module_name != &target_module_name
+            && let Some(module) = build_state.modules.get_mut(module_name)
+        {
             module.compile_dirty = true;
         }
     }
 
-    // Step 6: Run incremental build
-    // The wave compilation algorithm will compile dependencies first, then the target
+    // Step 6: Run incremental build for dependencies only
+    // This ensures all .cmi files exist for the target's imports
     incremental_build(
         &mut build_state,
         None,
@@ -639,44 +640,57 @@ pub fn compile_one(
     )
     .map_err(|e| anyhow!("Compilation failed: {}", e))?;
 
-    // Step 7: Find and read the generated JavaScript file
-    let js_path = get_js_output_path(&build_state, &target_module_name, selected_spec_index)?;
-    let js_content = fs::read_to_string(&js_path)
-        .map_err(|e| anyhow!("Failed to read generated JS file {}: {}", js_path.display(), e))?;
+    // Step 7: Compile the target file to stdout
+    let module = build_state
+        .get_module(&target_module_name)
+        .ok_or_else(|| anyhow!("Module not found: {}", target_module_name))?;
 
-    Ok(js_content)
+    let package = build_state
+        .get_package(&module.package_name)
+        .ok_or_else(|| anyhow!("Package not found: {}", module.package_name))?;
+
+    // Get the AST path for the target module
+    let ast_path = get_ast_path(&build_state, &target_module_name)?;
+
+    compile::compile_file_to_stdout(
+        package,
+        &ast_path,
+        module,
+        &build_state,
+        warn_error,
+        &module_format_str,
+    )
 }
 
-/// Select the appropriate package spec based on the module_format argument.
+/// Determine the module format to use for stdout output.
 ///
-/// If module_format is specified, find the matching spec.
-/// If not specified and there are multiple specs, warn and use the first one.
-/// Returns the index of the selected package spec.
-fn select_package_spec(
+/// If module_format is specified via --module-format, it must match one of the
+/// configured package-specs (since dependencies are compiled to those formats).
+/// If not specified, use the first package-spec's format (warn if multiple exist).
+fn get_module_format(
     package_specs: &[config::PackageSpec],
     module_format: &Option<String>,
-) -> Result<usize> {
+) -> Result<String> {
     if package_specs.is_empty() {
         return Err(anyhow!("No package-specs configured in rescript.json"));
     }
 
     match module_format {
         Some(format) => {
-            // Find the package spec matching the requested format
-            package_specs
-                .iter()
-                .position(|spec| spec.module == *format)
-                .ok_or_else(|| {
-                    let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
-                    anyhow!(
-                        "Module format '{}' not found in package-specs. Available: {}",
-                        format,
-                        available.join(", ")
-                    )
-                })
+            // Must match a configured package-spec (dependencies are compiled to those formats)
+            if package_specs.iter().any(|spec| spec.module == *format) {
+                Ok(format.clone())
+            } else {
+                let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
+                Err(anyhow!(
+                    "Module format '{}' not found in package-specs. Available: {}",
+                    format,
+                    available.join(", ")
+                ))
+            }
         }
         None => {
-            // No format specified - use first, but warn if multiple exist
+            // No format specified - use first package-spec, warn if multiple exist
             if package_specs.len() > 1 {
                 let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
                 eprintln!(
@@ -686,7 +700,7 @@ fn select_package_spec(
                     package_specs[0].module
                 );
             }
-            Ok(0)
+            Ok(package_specs[0].module.clone())
         }
     }
 }
@@ -751,17 +765,10 @@ fn get_dependency_closure(module_name: &str, build_state: &BuildState) -> AHashS
     closure
 }
 
-/// Get the path to the generated JavaScript file for a module.
+/// Get the path to the AST file for a module.
 ///
-/// Respects the package's configuration for output location and format:
-/// - in-source: JS file next to the .res file
-/// - out-of-source: JS file in lib/js or lib/es6
-/// - Uses the selected package spec to determine .js vs .mjs extension
-fn get_js_output_path(
-    build_state: &BuildCommandState,
-    module_name: &str,
-    spec_index: usize,
-) -> Result<PathBuf> {
+/// The AST file is generated during the parse phase and is needed for compilation.
+fn get_ast_path(build_state: &BuildCommandState, module_name: &str) -> Result<PathBuf> {
     let module = build_state
         .get_module(module_name)
         .ok_or_else(|| anyhow!("Module not found: {}", module_name))?;
@@ -770,33 +777,11 @@ fn get_js_output_path(
         .get_package(&module.package_name)
         .ok_or_else(|| anyhow!("Package not found: {}", module.package_name))?;
 
-    let root_config = build_state.get_root_config();
-    let package_specs = root_config.get_package_specs();
-    let package_spec = package_specs
-        .get(spec_index)
-        .ok_or_else(|| anyhow!("Package spec index {} out of bounds", spec_index))?;
-
-    let suffix = root_config.get_suffix(package_spec);
-
     if let SourceType::SourceFile(source_file) = &module.source_type {
         let source_path = &source_file.implementation.path;
-
-        if package_spec.in_source {
-            // in-source: JS file next to source file
-            let js_file = source_path.with_extension(&suffix[1..]); // remove leading dot
-            Ok(package.path.join(js_file))
-        } else {
-            // out-of-source: in lib/js or lib/es6
-            let base_path = if package_spec.is_common_js() {
-                package.get_js_path()
-            } else {
-                package.get_es6_path()
-            };
-
-            let js_file = source_path.with_extension(&suffix[1..]);
-            Ok(base_path.join(js_file))
-        }
+        let ast_file = source_path.with_extension("ast");
+        Ok(package.get_build_path().join(ast_file))
     } else {
-        Err(anyhow!("Cannot get JS output for non-source module"))
+        Err(anyhow!("Cannot get AST path for non-source module"))
     }
 }

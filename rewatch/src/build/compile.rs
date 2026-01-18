@@ -602,6 +602,152 @@ pub fn compiler_args(
     .concat())
 }
 
+/// Generate compiler arguments for stdout output (no file write).
+///
+/// Calls `compiler_args` and then filters out flags that would cause file output:
+/// - Removes `-bs-package-name` (triggers file output mode)
+/// - Removes `-bs-package-output` and `-bs-suffix` (file output config)
+/// - Keeps only a single `-bs-module-system` for the requested format
+pub fn compiler_args_for_stdout(
+    config: &config::Config,
+    ast_path: &Path,
+    file_path: &Path,
+    has_interface: bool,
+    project_context: &ProjectContext,
+    packages: &Option<&AHashMap<String, packages::Package>>,
+    is_type_dev: bool,
+    is_local_dep: bool,
+    warn_error_override: Option<String>,
+    module_format: &str,
+) -> Result<Vec<String>> {
+    // Get the base compiler args
+    let base_args = compiler_args(
+        config,
+        ast_path,
+        file_path,
+        false, // not interface - we want implementation output
+        has_interface,
+        project_context,
+        packages,
+        is_type_dev,
+        is_local_dep,
+        warn_error_override,
+    )?;
+
+    // Filter out flags that trigger file output, keeping track of what to skip
+    let mut result = Vec::new();
+    let mut skip_next = false;
+    let mut seen_module_system = false;
+
+    for arg in base_args {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+
+        match arg.as_str() {
+            // Skip -bs-package-name and its value (triggers file output)
+            "-bs-package-name" => {
+                skip_next = true;
+            }
+            // Skip -bs-package-output and its value (file path)
+            "-bs-package-output" => {
+                skip_next = true;
+            }
+            // Skip -bs-suffix and its value (not needed for stdout)
+            "-bs-suffix" => {
+                skip_next = true;
+            }
+            // Keep only one -bs-module-system with our chosen format
+            "-bs-module-system" => {
+                if !seen_module_system {
+                    result.push("-bs-module-system".to_string());
+                    result.push(module_format.to_string());
+                    seen_module_system = true;
+                }
+                skip_next = true; // skip the original value
+            }
+            _ => {
+                result.push(arg);
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+/// Compile a single file and return its JavaScript output on stdout.
+/// This is used by `compile_one` for the target file only.
+pub fn compile_file_to_stdout(
+    package: &packages::Package,
+    ast_path: &Path,
+    module: &Module,
+    build_state: &BuildState,
+    warn_error_override: Option<String>,
+    module_format: &str,
+) -> Result<String> {
+    let BuildState {
+        packages,
+        project_context,
+        compiler_info,
+        ..
+    } = build_state;
+
+    let build_path_abs = package.get_build_path();
+    let implementation_file_path = match &module.source_type {
+        SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
+        sourcetype => Err(format!(
+            "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
+            sourcetype,
+            ast_path.to_string_lossy()
+        )),
+    }
+    .map_err(|e| anyhow!(e))?;
+
+    let has_interface = module.get_interface().is_some();
+    let is_type_dev = module.is_type_dev;
+
+    let args = compiler_args_for_stdout(
+        &package.config,
+        ast_path,
+        implementation_file_path,
+        has_interface,
+        project_context,
+        &Some(packages),
+        is_type_dev,
+        package.is_local_dep,
+        warn_error_override,
+        module_format,
+    )?;
+
+    let output = Command::new(&compiler_info.bsc_path)
+        .current_dir(
+            build_path_abs
+                .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                .ok()
+                .unwrap(),
+        )
+        .args(&args)
+        .output();
+
+    match output {
+        Ok(x) if !x.status.success() => {
+            let stderr = String::from_utf8_lossy(&x.stderr);
+            let stdout = String::from_utf8_lossy(&x.stdout);
+            Err(anyhow!(stderr.to_string() + &stdout))
+        }
+        Err(e) => Err(anyhow!(
+            "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
+        )),
+        Ok(x) => {
+            // JavaScript output is on stdout
+            let js_output = String::from_utf8_lossy(&x.stdout).to_string();
+            Ok(js_output)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum DependentPackage {
     Normal(String),
