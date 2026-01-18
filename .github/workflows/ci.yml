@@ -22,6 +22,53 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
+  # Test Rust compiler crate (Phase 1 of OCaml->Rust migration)
+  test-compiler-rust:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Determine Rust toolchain version
+        id: rust-version
+        shell: bash
+        run: |
+          version="$(awk -F '"' '/^rust-version[[:space:]]*=/ { print $2; exit }' compiler-rust/Cargo.toml)"
+          if [ -z "$version" ]; then
+            echo "rust-version missing in compiler-rust/Cargo.toml" >&2
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.rust-version.outputs.version }}
+          components: clippy, rustfmt
+
+      - name: Cache cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            compiler-rust/target/
+          key: compiler-rust-${{ runner.os }}-cargo-${{ hashFiles('compiler-rust/Cargo.lock') }}
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path compiler-rust/Cargo.toml -- --check
+
+      - name: Run clippy
+        run: cargo clippy --manifest-path compiler-rust/Cargo.toml --all-targets --all-features
+
+      - name: Run tests
+        run: cargo test --manifest-path compiler-rust/Cargo.toml --all
+
+      - name: Run doc tests
+        run: cargo test --manifest-path compiler-rust/Cargo.toml --doc
+
   build-compiler:
     outputs:
       api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}

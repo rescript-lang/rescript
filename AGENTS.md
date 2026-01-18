@@ -52,6 +52,8 @@ The Makefile’s targets build on each other in this order:
 
 - **Do not introduce new keywords unless absolutely necessary** - Try to find ways to implement features without reserving keywords, as seen with the "catch" implementation that avoids making it a keyword.
 
+- **Use tight timeouts when testing compiler/parser** - When running the compiler or parser in tests, always use a short timeout (e.g., 5-10 seconds). Compilation should be fast, and logic errors can cause infinite loops or hangs. A tight timeout ensures these issues are caught quickly rather than blocking indefinitely.
+
 ## Compiler Architecture
 
 ### Compilation Pipeline
@@ -437,3 +439,54 @@ When clippy suggests refactoring that could impact performance, consider the tra
 2. Update `AsyncWatchArgs` for new parameters
 3. Handle different file types (`.res`, `.resi`, etc.)
 4. Consider performance impact of watching many files
+
+---
+
+## OCaml to Rust Compiler Rewrite
+
+The compiler is being rewritten from OCaml to Rust. This is a major undertaking documented in the `compiler-rust/` directory.
+
+### Key Documents
+
+- **[compiler-rust/PLAN.md](compiler-rust/PLAN.md)** - Comprehensive migration plan with phases, technical approach, and success criteria
+- **[compiler-rust/PROGRESS.md](compiler-rust/PROGRESS.md)** - Current progress, completed tasks, and next steps
+- **[compiler-rust/GLOBAL_STATE_AUDIT.md](compiler-rust/GLOBAL_STATE_AUDIT.md)** - Catalog of OCaml global state to eliminate
+
+> **Note for AI assistants**: These documents are living documents. Update `PLAN.md` when you discover new insights about architecture, challenges, or better approaches. Update `PROGRESS.md` as you complete tasks or identify new work items. Add to `GLOBAL_STATE_AUDIT.md` when you find additional global state that needs to be eliminated.
+
+### Rewrite Constraints
+
+1. **No global state** - The Rust compiler must support concurrent compilation
+2. **Drop-in replacement** - Must be backward compatible at all times
+3. **Identical output** - JavaScript output must be byte-for-byte identical
+
+### Migration Phases
+
+1. **Phase 1: Foundation** - Core types, contexts, FFI boundary (`compiler/ext/` → Rust)
+2. **Phase 2: Parser** - ReScript parser in Rust (`compiler/syntax/` → Rust)
+3. **Phase 3: Backend** - Lambda IR and JS generation (`compiler/core/` → Rust)
+4. **Phase 4: Type Checker** - Type system in Rust (`compiler/ml/` → Rust)
+5. **Phase 5: Integration** - Single Rust binary, OCaml removed
+
+### Development Commands
+
+```bash
+# Build the Rust compiler crate
+cargo build --manifest-path compiler-rust/Cargo.toml
+
+# Run tests
+cargo test --manifest-path compiler-rust/Cargo.toml
+
+# Run tests with thread sanitizer (nightly)
+RUSTFLAGS="-Z sanitizer=thread" cargo test --manifest-path compiler-rust/Cargo.toml
+
+# Check for issues
+cargo clippy --manifest-path compiler-rust/Cargo.toml --all-targets
+```
+
+### Key Design Decisions
+
+- **Thread-safe ID generation** - `IdGenerator` with `AtomicI32` instead of global `currentstamp`
+- **Explicit contexts** - `CompilationContext`, `TypeContext` passed through pipeline
+- **Arena-per-compilation** - Type arenas owned by `TypeContext`, not shared
+- **No `static mut`** - All mutable state in explicit contexts

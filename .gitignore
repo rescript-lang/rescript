@@ -74,6 +74,8 @@ playground/compiler.*js
 rewatch/target/
 rewatch/rewatch
 
+compiler-rust/target/
+
 tests/tools_tests/**/*.res.js
 tests/tools_tests/lib
 tests/analysis_tests*/lib
