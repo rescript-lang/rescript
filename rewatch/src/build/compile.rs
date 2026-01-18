@@ -469,6 +469,18 @@ pub fn get_runtime_path_args(
     ])
 }
 
+/// Output mode for compiler arguments.
+/// Controls whether bsc writes to files or outputs to stdout.
+pub enum OutputMode {
+    /// Normal mode: write JS to files based on package-specs configuration.
+    /// Includes -bs-package-name, -bs-package-output, -bs-suffix, -bs-module-system for each spec.
+    ToFile,
+    /// Stdout mode: output JS to stdout for one-shot compilation.
+    /// Only includes -bs-module-system with the specified format.
+    /// Omits -bs-package-name (which triggers file output) and -bs-package-output.
+    ToStdout { module_format: String },
+}
+
 pub fn compiler_args(
     config: &config::Config,
     ast_path: &Path,
@@ -485,6 +497,8 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    // Output mode: ToFile for normal compilation, ToStdout for one-shot compilation
+    output_mode: OutputMode,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -531,40 +545,52 @@ pub fn compiler_args(
         false => vec![],
     };
 
-    let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+    // Package name and implementation args depend on output mode
+    let (package_name_arg, implementation_args) = match &output_mode {
+        OutputMode::ToFile => {
+            let package_name = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+            let impl_args = if is_interface {
+                debug!("Compiling interface file: {}", &module_name);
+                vec![]
+            } else {
+                debug!("Compiling file: {}", &module_name);
+                let specs = root_config.get_package_specs();
 
-    let implementation_args = if is_interface {
-        debug!("Compiling interface file: {}", &module_name);
-        vec![]
-    } else {
-        debug!("Compiling file: {}", &module_name);
-        let specs = root_config.get_package_specs();
-
-        specs
-            .iter()
-            .flat_map(|spec| {
-                // Pass module system, suffix, and output path as separate flags
-                vec![
-                    "-bs-module-system".to_string(),
-                    spec.module.clone(),
-                    "-bs-suffix".to_string(),
-                    root_config.get_suffix(spec),
-                    "-bs-package-output".to_string(),
-                    if spec.in_source {
-                        file_path.parent().unwrap().to_str().unwrap().to_string()
-                    } else {
-                        Path::new("lib")
-                            .join(Path::join(
-                                Path::new(&spec.get_out_of_source_dir()),
-                                file_path.parent().unwrap(),
-                            ))
-                            .to_str()
-                            .unwrap()
-                            .to_string()
-                    },
-                ]
-            })
-            .collect()
+                specs
+                    .iter()
+                    .flat_map(|spec| {
+                        // Pass module system, suffix, and output path as separate flags
+                        vec![
+                            "-bs-module-system".to_string(),
+                            spec.module.clone(),
+                            "-bs-suffix".to_string(),
+                            root_config.get_suffix(spec),
+                            "-bs-package-output".to_string(),
+                            if spec.in_source {
+                                file_path.parent().unwrap().to_str().unwrap().to_string()
+                            } else {
+                                Path::new("lib")
+                                    .join(Path::join(
+                                        Path::new(&spec.get_out_of_source_dir()),
+                                        file_path.parent().unwrap(),
+                                    ))
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string()
+                            },
+                        ]
+                    })
+                    .collect()
+            };
+            (package_name, impl_args)
+        }
+        OutputMode::ToStdout { module_format } => {
+            // For stdout mode: no -bs-package-name (triggers file output),
+            // only -bs-module-system with the chosen format
+            debug!("Compiling file to stdout: {}", &module_name);
+            let impl_args = vec!["-bs-module-system".to_string(), module_format.clone()];
+            (vec![], impl_args)
+        }
     };
 
     let runtime_path_args = get_runtime_path_args(config, project_context)?;
@@ -603,11 +629,7 @@ pub fn compiler_args(
 }
 
 /// Generate compiler arguments for stdout output (no file write).
-///
-/// Calls `compiler_args` and then filters out flags that would cause file output:
-/// - Removes `-bs-package-name` (triggers file output mode)
-/// - Removes `-bs-package-output` and `-bs-suffix` (file output config)
-/// - Keeps only a single `-bs-module-system` for the requested format
+/// This is a convenience wrapper around `compiler_args` with `OutputMode::ToStdout`.
 pub fn compiler_args_for_stdout(
     config: &config::Config,
     ast_path: &Path,
@@ -620,8 +642,7 @@ pub fn compiler_args_for_stdout(
     warn_error_override: Option<String>,
     module_format: &str,
 ) -> Result<Vec<String>> {
-    // Get the base compiler args
-    let base_args = compiler_args(
+    compiler_args(
         config,
         ast_path,
         file_path,
@@ -632,48 +653,10 @@ pub fn compiler_args_for_stdout(
         is_type_dev,
         is_local_dep,
         warn_error_override,
-    )?;
-
-    // Filter out flags that trigger file output, keeping track of what to skip
-    let mut result = Vec::new();
-    let mut skip_next = false;
-    let mut seen_module_system = false;
-
-    for arg in base_args {
-        if skip_next {
-            skip_next = false;
-            continue;
-        }
-
-        match arg.as_str() {
-            // Skip -bs-package-name and its value (triggers file output)
-            "-bs-package-name" => {
-                skip_next = true;
-            }
-            // Skip -bs-package-output and its value (file path)
-            "-bs-package-output" => {
-                skip_next = true;
-            }
-            // Skip -bs-suffix and its value (not needed for stdout)
-            "-bs-suffix" => {
-                skip_next = true;
-            }
-            // Keep only one -bs-module-system with our chosen format
-            "-bs-module-system" => {
-                if !seen_module_system {
-                    result.push("-bs-module-system".to_string());
-                    result.push(module_format.to_string());
-                    seen_module_system = true;
-                }
-                skip_next = true; // skip the original value
-            }
-            _ => {
-                result.push(arg);
-            }
-        }
-    }
-
-    Ok(result)
+        OutputMode::ToStdout {
+            module_format: module_format.to_string(),
+        },
+    )
 }
 
 /// Compile a single file and return its JavaScript output on stdout.
@@ -875,6 +858,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        OutputMode::ToFile,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)
