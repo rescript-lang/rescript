@@ -22,7 +22,7 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | warnings              | Warnings                |        |     [x]      |
 | ppx-flags             | array of string         |        |     [x]      |
 | pp-flags              | array of string         |        |     [_]      |
-| js-post-build         | Js-Post-Build           |    `${file}` is now an absolute path    |     [x]      |
+| js-post-build         | Js-Post-Build           | Path respects `in-source` setting; stdout/stderr are logged |     [x]      |
 | package-specs         | array of Module-Format  |        |     [_]      |
 | package-specs         | array of Package-Spec   |        |     [x]      |
 | entries               | array of Target-Item    |        |     [_]      |
@@ -133,9 +133,18 @@ Currently supported features:
 
 ### Js-Post-Build
 
-| Parameter | JSON type | Remark | Implemented? |
-| --------- | --------- | ------ | :----------: |
-| cmd       | string    |    `${file}` is now an absolute path    |     [x]      |
+| Parameter | JSON type | Remark                            | Implemented? |
+| --------- | --------- | --------------------------------- | :----------: |
+| cmd       | string    | Receives absolute path to JS file |     [x]      |
+
+The path passed to the command respects the `in-source` setting:
+
+- `in-source: true` → path next to the source file (e.g., `src/Foo.js`)
+- `in-source: false` → path in `lib/<module>/` directory (e.g., `lib/es6/src/Foo.mjs`)
+
+The command runs with the same working directory as the rewatch process (typically the project root).
+
+stdout and stderr from the command are logged.
 
 ### Package-Spec
 

@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- `js-post-build` now passes the correct output file path based on `in-source` configuration: when `in-source: true`, the path next to the source file is passed; when `in-source: false`, the path in the `lib/<module>/` directory is passed. Additionally, stdout and stderr from the post-build command are now logged. https://github.com/rescript-lang/rescript/pull/8190
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
