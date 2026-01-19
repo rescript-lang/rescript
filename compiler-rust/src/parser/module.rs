@@ -3,7 +3,9 @@
 //! This module contains the module parsing logic, converting tokens
 //! into module AST nodes (structures, signatures, module expressions, etc.).
 
-use crate::location::Position;
+use std::cell::RefCell;
+
+use crate::location::{Location, Position};
 
 use super::ast::*;
 use super::core::{is_es6_arrow_functor, mk_loc, mknoloc, recover, with_loc};
@@ -14,6 +16,30 @@ use super::pattern;
 use super::state::Parser;
 use super::token::Token;
 use super::typ;
+
+// ============================================================================
+// Inline Record Desugaring Context
+// ============================================================================
+
+/// Context for collecting inline record types during type declaration parsing.
+/// Inline records like `type t = {permissions: {all: {stuff: bool}}}` get
+/// desugared into separate type declarations with dotted names like `t.permissions.all`.
+#[derive(Debug)]
+pub struct InlineTypesContext {
+    /// Collected inline types: (dotted_name, location, type_kind)
+    pub found_inline_types: Vec<(String, Location, TypeKind)>,
+    /// Type parameters from the outer type declaration
+    pub params: Vec<(CoreType, Variance)>,
+}
+
+impl InlineTypesContext {
+    fn new(params: Vec<(CoreType, Variance)>) -> Self {
+        Self {
+            found_inline_types: vec![],
+            params,
+        }
+    }
+}
 
 // ============================================================================
 // Helper Functions
@@ -143,13 +169,17 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let ext = parse_type_extension(p, attrs.clone());
                 Some(StructureItemDesc::Pstr_typext(ext))
             } else {
-                let rec_flag = if p.token == Token::Rec {
+                let mut rec_flag = if p.token == Token::Rec {
                     p.next();
                     RecFlag::Recursive
                 } else {
                     RecFlag::Nonrecursive
                 };
-                let decls = parse_type_declarations(p, attrs.clone());
+                let (decls, has_inline_types) = parse_type_declarations(p, attrs.clone());
+                // Inline record types require the type to be recursive
+                if has_inline_types {
+                    rec_flag = RecFlag::Recursive;
+                }
                 Some(StructureItemDesc::Pstr_type(rec_flag, decls))
             }
         }
@@ -365,13 +395,17 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 let ext = parse_type_extension(p, attrs.clone());
                 Some(SignatureItemDesc::Psig_typext(ext))
             } else {
-                let rec_flag = if p.token == Token::Rec {
+                let mut rec_flag = if p.token == Token::Rec {
                     p.next();
                     RecFlag::Recursive
                 } else {
                     RecFlag::Nonrecursive
                 };
-                let decls = parse_type_declarations(p, attrs.clone());
+                let (decls, has_inline_types) = parse_type_declarations(p, attrs.clone());
+                // Inline record types require the type to be recursive
+                if has_inline_types {
+                    rec_flag = RecFlag::Recursive;
+                }
                 Some(SignatureItemDesc::Psig_type(rec_flag, decls))
             }
         }
@@ -1701,13 +1735,44 @@ fn parse_let_bindings(
     bindings
 }
 
-/// Parse type declarations.
-fn parse_type_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<TypeDeclaration> {
+/// Parse type declarations. Returns the declarations and a flag indicating if inline types were found.
+fn parse_type_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> (Vec<TypeDeclaration>, bool) {
     let mut decls = vec![];
     let mut next_attrs = outer_attrs;
+    let mut has_inline_types = false;
+
+    // Create shared context for inline record desugaring
+    // Note: For simplicity, we create a new context for each type declaration
+    // The OCaml parser shares the context across `and` chains, but the inline types
+    // are processed per-declaration anyway.
 
     loop {
-        if let Some(decl) = parse_type_declaration(p, next_attrs) {
+        // Create context for this declaration
+        let inline_ctx = RefCell::new(InlineTypesContext::new(vec![]));
+        if let Some(decl) = parse_type_declaration_with_context(p, next_attrs, &inline_ctx) {
+            // Collect inline types from the context
+            let ctx = inline_ctx.borrow();
+            if !ctx.found_inline_types.is_empty() {
+                has_inline_types = true;
+                // Create type declarations for inline types with @res.inlineRecordDefinition attribute
+                let inline_attr: Attribute = (
+                    mknoloc("res.inlineRecordDefinition".to_string()),
+                    Payload::PStr(vec![]),
+                );
+                for (inline_name, loc, type_kind) in ctx.found_inline_types.iter() {
+                    let inline_decl = TypeDeclaration {
+                        ptype_name: with_loc(inline_name.clone(), loc.clone()),
+                        ptype_params: ctx.params.clone(),
+                        ptype_cstrs: vec![],
+                        ptype_kind: type_kind.clone(),
+                        ptype_private: PrivateFlag::Public,
+                        ptype_manifest: None,
+                        ptype_attributes: vec![inline_attr.clone()],
+                        ptype_loc: loc.clone(),
+                    };
+                    decls.push(inline_decl);
+                }
+            }
             decls.push(decl);
         }
         next_attrs = vec![];
@@ -1746,7 +1811,13 @@ fn parse_type_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<T
         }
     }
 
-    decls
+    (decls, has_inline_types)
+}
+
+/// Parse a single type declaration (wrapper for backward compatibility).
+fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option<TypeDeclaration> {
+    let inline_ctx = RefCell::new(InlineTypesContext::new(vec![]));
+    parse_type_declaration_with_context(p, outer_attrs, &inline_ctx)
 }
 
 /// Parse a type extension: `type t += ...`.
@@ -1819,8 +1890,12 @@ fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension 
     }
 }
 
-/// Parse a single type declaration.
-fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option<TypeDeclaration> {
+/// Parse a single type declaration with inline record desugaring context.
+fn parse_type_declaration_with_context(
+    p: &mut Parser<'_>,
+    outer_attrs: Attributes,
+    inline_ctx: &RefCell<InlineTypesContext>,
+) -> Option<TypeDeclaration> {
     let start_pos = p.start_pos.clone();
     let inner_attrs = parse_attributes(p);
     // Prepend outer attributes to inner ones
@@ -1866,6 +1941,12 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
     } else {
         vec![]
     };
+
+    // Store params in context for inline type declarations
+    inline_ctx.borrow_mut().params = params.clone();
+
+    // The type name path for inline record desugaring
+    let current_type_name_path = vec![name.txt.clone()];
 
     // Parse optional manifest and/or kind (and ReScript's `type t = T = ...` equation form).
     let (manifest, kind, private) = if p.token == Token::Equal {
@@ -2001,14 +2082,14 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
         match &p.token {
             Token::Bar => {
                 // Variant type starting with | (e.g., type t = | A | B)
-                kind = parse_type_kind(p);
+                kind = parse_type_kind(p, None, None);
             }
             Token::Lbrace => {
                 // Record type OR object type ({"x": int})
                 if looks_like_object_type_after_lbrace(p) {
                     manifest = Some(typ::parse_typ_expr(p));
                 } else {
-                    kind = parse_type_kind(p);
+                    kind = parse_type_kind(p, Some(inline_ctx), Some(&current_type_name_path));
                 }
             }
             Token::Uident(_) => {
@@ -2090,7 +2171,8 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
             };
 
             kind = match &p.token {
-                Token::Bar | Token::Lbrace => parse_type_kind(p),
+                Token::Bar => parse_type_kind(p, None, None),
+                Token::Lbrace => parse_type_kind(p, Some(inline_ctx), Some(&current_type_name_path)),
                 Token::Uident(_) => TypeKind::Ptype_variant(parse_constructors_without_leading_bar(p)),
                 Token::DotDot => {
                     p.next();
@@ -2424,7 +2506,11 @@ fn format_type_with_angle_brackets(name: &str, params: &[(CoreType, Variance)]) 
 }
 
 /// Parse type kind (variant or record).
-fn parse_type_kind(p: &mut Parser<'_>) -> TypeKind {
+fn parse_type_kind(
+    p: &mut Parser<'_>,
+    inline_ctx: Option<&RefCell<InlineTypesContext>>,
+    current_type_name_path: Option<&Vec<String>>,
+) -> TypeKind {
     match &p.token {
         Token::Bar => {
             // Variant type
@@ -2434,7 +2520,7 @@ fn parse_type_kind(p: &mut Parser<'_>) -> TypeKind {
         Token::Lbrace => {
             // Record type
             p.next();
-            let labels = parse_label_declarations(p);
+            let labels = parse_label_declarations(p, inline_ctx, current_type_name_path);
             p.expect(Token::Rbrace);
             TypeKind::Ptype_record(labels)
         }
@@ -2555,7 +2641,7 @@ fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
             });
         if is_inline_record {
             p.next(); // consume {
-            let labels = parse_label_declarations(p);
+            let labels = parse_label_declarations(p, None, None);
             p.expect(Token::Rbrace);
             p.expect(Token::Rparen);
             ConstructorArguments::Pcstr_record(labels)
@@ -2572,7 +2658,7 @@ fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
         }
     } else if p.token == Token::Lbrace {
         p.next();
-        let labels = parse_label_declarations(p);
+        let labels = parse_label_declarations(p, None, None);
         p.expect(Token::Rbrace);
         ConstructorArguments::Pcstr_record(labels)
     } else {
@@ -2599,7 +2685,11 @@ fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
 
 /// Parse record label declarations.
 /// Handles both regular fields and spread syntax (...typ).
-fn parse_label_declarations(p: &mut Parser<'_>) -> Vec<LabelDeclaration> {
+fn parse_label_declarations(
+    p: &mut Parser<'_>,
+    inline_ctx: Option<&RefCell<InlineTypesContext>>,
+    current_type_name_path: Option<&Vec<String>>,
+) -> Vec<LabelDeclaration> {
     let mut labels = vec![];
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
@@ -2623,7 +2713,7 @@ fn parse_label_declarations(p: &mut Parser<'_>) -> Vec<LabelDeclaration> {
             continue;
         }
 
-        if let Some(l) = parse_label_declaration(p) {
+        if let Some(l) = parse_label_declaration(p, inline_ctx, current_type_name_path) {
             labels.push(l);
         }
         if !p.optional(&Token::Comma) {
@@ -2635,7 +2725,11 @@ fn parse_label_declarations(p: &mut Parser<'_>) -> Vec<LabelDeclaration> {
 }
 
 /// Parse a single label declaration.
-fn parse_label_declaration(p: &mut Parser<'_>) -> Option<LabelDeclaration> {
+fn parse_label_declaration(
+    p: &mut Parser<'_>,
+    inline_ctx: Option<&RefCell<InlineTypesContext>>,
+    current_type_name_path: Option<&Vec<String>>,
+) -> Option<LabelDeclaration> {
     let start_pos = p.start_pos.clone();
     let attrs = parse_attributes(p);
 
@@ -2661,11 +2755,97 @@ fn parse_label_declaration(p: &mut Parser<'_>) -> Option<LabelDeclaration> {
         }
     };
 
+    // Extend current type name path with this field name for nested inline records
+    let extended_path = current_type_name_path.map(|path| {
+        let mut new_path = path.clone();
+        new_path.push(name.txt.clone());
+        new_path
+    });
+
     // Check for optional field marker
     let is_optional = p.optional(&Token::Question);
 
     p.expect(Token::Colon);
-    let typ = typ::parse_typ_expr(p);
+
+    // Check if the field type is an inline record
+    let typ = if p.token == Token::Lbrace && inline_ctx.is_some() && extended_path.is_some() {
+        // Check if this looks like a record (starts with Lident, Mutable, At, or DotDotDot)
+        let looks_like_record = p.lookahead(|state| {
+            state.next(); // Skip {
+            // Skip leading attributes
+            while state.token == Token::At {
+                state.next();
+                // Skip attribute identifier
+                if matches!(state.token, Token::Lident(_) | Token::Uident(_)) || state.token.is_keyword() {
+                    state.next();
+                    while state.token == Token::Dot {
+                        state.next();
+                        if matches!(state.token, Token::Lident(_) | Token::Uident(_)) || state.token.is_keyword() {
+                            state.next();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                // Skip optional payload
+                if state.token == Token::Lparen {
+                    let mut depth = 1;
+                    state.next();
+                    while depth > 0 && state.token != Token::Eof {
+                        match state.token {
+                            Token::Lparen => depth += 1,
+                            Token::Rparen => depth -= 1,
+                            _ => {}
+                        }
+                        state.next();
+                    }
+                }
+            }
+            // Check if first significant token indicates a record declaration
+            matches!(
+                state.token,
+                Token::Lident(_) | Token::Mutable | Token::At | Token::DotDotDot
+            )
+        });
+
+        if looks_like_record {
+            // Parse as inline record and register it
+            let type_start_pos = p.start_pos.clone();
+            p.next(); // consume {
+            let inline_ctx = inline_ctx.unwrap();
+            let extended_path = extended_path.as_ref().unwrap();
+            let labels = parse_label_declarations(p, Some(inline_ctx), Some(extended_path));
+            p.expect(Token::Rbrace);
+            let type_loc = mk_loc(&type_start_pos, &p.prev_end_pos);
+
+            // Create the inline type name (e.g., "options.permissions.all")
+            let inline_type_name = extended_path.join(".");
+
+            // Register this inline type (insert at front for correct order)
+            inline_ctx.borrow_mut().found_inline_types.insert(0, (
+                inline_type_name.clone(),
+                type_loc.clone(),
+                TypeKind::Ptype_record(labels),
+            ));
+
+            // Return a Ptyp_constr pointing to the inline type
+            let params = inline_ctx.borrow().params.clone();
+            let type_args: Vec<CoreType> = params.into_iter().map(|(t, _)| t).collect();
+            CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_constr(
+                    with_loc(Longident::Lident(inline_type_name), type_loc.clone()),
+                    type_args,
+                ),
+                ptyp_loc: type_loc,
+                ptyp_attributes: vec![],
+            }
+        } else {
+            // Not a record - parse as regular type (object type)
+            typ::parse_typ_expr(p)
+        }
+    } else {
+        typ::parse_typ_expr(p)
+    };
 
     let loc = mk_loc(&start_pos, &p.prev_end_pos);
     Some(LabelDeclaration {

@@ -827,17 +827,18 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
             } else {
                 let expr = parse_expr(p);
                 // Check for type annotation after default: ~name = default : type
-                let pat = if p.token == Token::Colon {
+                // The type constraint goes on the expression, not the pattern
+                let expr = if p.token == Token::Colon {
                     p.next();
                     let typ = super::typ::parse_typ_expr(p);
-                    let loc = mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
-                    Pattern {
-                        ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
-                        ppat_loc: loc,
-                        ppat_attributes: vec![],
+                    let loc = mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+                    Expression {
+                        pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), typ),
+                        pexp_loc: loc,
+                        pexp_attributes: vec![],
                     }
                 } else {
-                    pat
+                    expr
                 };
                 (label, pat, Some(expr))
             }
@@ -3886,6 +3887,35 @@ fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
                 Constant::String(s, None),
                 loc,
             ));
+        } else if p.token == Token::List {
+            // Handle list{...} expressions in JSX children
+            let start_pos = p.start_pos.clone();
+            p.next(); // consume 'list'
+            let expr = parse_list_expr(p, start_pos);
+            children.push(expr);
+        } else if p.token == Token::Lbracket {
+            // Handle array literals [a, b, c] in JSX children
+            let expr = parse_array_expr(p);
+            children.push(expr);
+        } else if p.token == Token::Lparen {
+            // Handle parenthesized expressions including first-class modules
+            let expr = parse_atomic_expr(p);
+            let expr = parse_primary_expr(p, expr, true);
+            children.push(expr);
+        } else if p.token == Token::Module {
+            // Handle first-class modules: module(Foo), module(Foo: Bar)
+            let expr = parse_atomic_expr(p);
+            let expr = parse_primary_expr(p, expr, true);
+            children.push(expr);
+        } else if p.token == Token::Percent {
+            // Handle extension expressions: %raw("...")
+            let expr = parse_atomic_expr(p);
+            let expr = parse_primary_expr(p, expr, true);
+            children.push(expr);
+        } else if matches!(&p.token, Token::Int { .. } | Token::Float { .. } | Token::Codepoint { .. }) {
+            // Handle numeric literals as JSX children
+            let expr = parse_atomic_expr(p);
+            children.push(expr);
         } else {
             // Skip whitespace and other tokens
             p.next();
