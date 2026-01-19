@@ -19,6 +19,7 @@ use crate::parser::ast::{
 use crate::parser::longident::Longident;
 use crate::types::Path;
 use crate::types::env::Env;
+use crate::types::type_expr::TypeExprRef;
 use crate::types::typecore::{TypeCheckContext, TypeCoreError, type_binding, type_expression};
 use crate::types::typedtree::{
     EnvRef, Expression, IncludeDeclaration, ModuleBinding, ModuleCoercion, ModuleExpr,
@@ -299,17 +300,154 @@ fn type_structure_item(
             ))
         }
 
-        ParsedStructureItemDesc::Pstr_type(rec_flag, _decls) => {
+        ParsedStructureItemDesc::Pstr_type(rec_flag, decls) => {
             // Type declaration: type t = ...
-            // Full implementation would register the type declarations
-            let desc = StructureItemDesc::Tstr_type(*rec_flag, vec![]);
+            let ctx = tctx.type_ctx;
+            let mut new_env = env.clone();
+            let mut typed_decls = Vec::new();
+
+            for decl in decls {
+                let type_name = &decl.ptype_name.txt;
+                let type_id = Ident::create_persistent(type_name);
+
+                // Create the type path for self-reference
+                let type_path = Path::pident(type_id.clone());
+
+                // Convert the type kind
+                let (type_kind, constructors) = match &decl.ptype_kind {
+                    crate::parser::ast::TypeKind::Ptype_abstract => {
+                        (crate::types::TypeKind::TypeAbstract, vec![])
+                    }
+                    crate::parser::ast::TypeKind::Ptype_variant(cstrs) => {
+                        let mut typed_cstrs = Vec::new();
+                        let mut cstr_descs = Vec::new();
+                        let num_consts = cstrs.iter().filter(|c| matches!(c.pcd_args, crate::parser::ast::ConstructorArguments::Pcstr_tuple(ref args) if args.is_empty())).count() as i32;
+                        let num_nonconsts = cstrs.len() as i32 - num_consts;
+
+                        let mut const_tag = 0i32;
+                        let mut block_tag = 0i32;
+
+                        for cstr in cstrs {
+                            let cstr_id = Ident::create_persistent(&cstr.pcd_name.txt);
+                            let is_constant = matches!(cstr.pcd_args, crate::parser::ast::ConstructorArguments::Pcstr_tuple(ref args) if args.is_empty());
+
+                            // Convert constructor arguments
+                            let (cstr_args, cd_args) = match &cstr.pcd_args {
+                                crate::parser::ast::ConstructorArguments::Pcstr_tuple(types) => {
+                                    let typed_args: Vec<TypeExprRef> = types.iter().map(|_| {
+                                        // For now, use a placeholder type variable
+                                        ctx.new_var(None)
+                                    }).collect();
+                                    (typed_args.clone(), crate::types::ConstructorArguments::CstrTuple(typed_args))
+                                }
+                                crate::parser::ast::ConstructorArguments::Pcstr_record(_) => {
+                                    // TODO: Handle inline record constructors
+                                    (vec![], crate::types::ConstructorArguments::CstrTuple(vec![]))
+                                }
+                            };
+
+                            // Determine the tag
+                            let tag = if is_constant {
+                                let t = const_tag;
+                                const_tag += 1;
+                                crate::types::ConstructorTag::CstrConstant(t)
+                            } else {
+                                let t = block_tag;
+                                block_tag += 1;
+                                crate::types::ConstructorTag::CstrBlock(t)
+                            };
+
+                            // Create the result type (the variant type itself)
+                            let res_ty = ctx.new_constr(type_path.clone(), vec![]);
+
+                            // Create typed constructor declaration
+                            typed_cstrs.push(crate::types::ConstructorDeclaration {
+                                cd_id: cstr_id.clone(),
+                                cd_args,
+                                cd_res: None,
+                                cd_loc: cstr.pcd_loc.clone(),
+                                cd_attributes: vec![],
+                            });
+
+                            // Create constructor description for the environment
+                            let cstr_arity = cstr_args.len() as i32;
+                            cstr_descs.push((cstr_id, crate::types::ConstructorDescription {
+                                cstr_name: cstr.pcd_name.txt.clone(),
+                                cstr_res: res_ty,
+                                cstr_existentials: vec![],
+                                cstr_args,
+                                cstr_arity,
+                                cstr_tag: tag,
+                                cstr_consts: num_consts,
+                                cstr_nonconsts: num_nonconsts,
+                                cstr_generalized: false,
+                                cstr_private: crate::types::PrivateFlag::Public,
+                                cstr_loc: cstr.pcd_loc.clone(),
+                                cstr_attributes: vec![],
+                                cstr_inlined: None,
+                            }));
+                        }
+
+                        (crate::types::TypeKind::TypeVariant(typed_cstrs), cstr_descs)
+                    }
+                    crate::parser::ast::TypeKind::Ptype_record(labels) => {
+                        let typed_labels: Vec<crate::types::LabelDeclaration> = labels.iter().map(|lbl| {
+                            // Convert parser MutableFlag to types MutableFlag
+                            let mutable_flag = match lbl.pld_mutable {
+                                crate::parser::ast::MutableFlag::Immutable => crate::types::MutableFlag::Immutable,
+                                crate::parser::ast::MutableFlag::Mutable => crate::types::MutableFlag::Mutable,
+                            };
+                            crate::types::LabelDeclaration {
+                                ld_id: Ident::create_persistent(&lbl.pld_name.txt),
+                                ld_mutable: mutable_flag,
+                                ld_optional: false,
+                                ld_type: ctx.new_var(None), // Placeholder
+                                ld_loc: lbl.pld_loc.clone(),
+                                ld_attributes: vec![],
+                            }
+                        }).collect();
+                        (crate::types::TypeKind::TypeRecord(typed_labels, crate::types::RecordRepresentation::RecordRegular), vec![])
+                    }
+                    crate::parser::ast::TypeKind::Ptype_open => {
+                        (crate::types::TypeKind::TypeOpen, vec![])
+                    }
+                };
+
+                // Create the typed type declaration
+                let typed_decl = crate::types::TypeDeclaration {
+                    type_params: vec![],
+                    type_arity: 0,
+                    type_kind,
+                    type_private: crate::types::PrivateFlag::Public,
+                    type_manifest: None,
+                    type_variance: vec![],
+                    type_newtype_level: None,
+                    type_loc: decl.ptype_loc.clone(),
+                    type_attributes: vec![],
+                    type_immediate: false,
+                    type_unboxed: crate::types::UnboxedStatus::default(),
+                    type_inlined_types: vec![],
+                };
+
+                // Add type to environment
+                new_env.add_type(type_id, typed_decl.clone());
+
+                // Add constructors to environment
+                for (cstr_id, cstr_desc) in constructors {
+                    new_env.add_constructor(cstr_id, cstr_desc);
+                }
+
+                typed_decls.push(typed_decl);
+            }
+
+            let desc = StructureItemDesc::Tstr_type(*rec_flag, typed_decls);
             Ok((
                 StructureItem {
                     str_desc: desc,
                     str_loc: loc.clone(),
                     str_env: EnvRef(0),
                 },
-                env.clone(),
+                new_env,
             ))
         }
 

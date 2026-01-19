@@ -12,8 +12,24 @@ use crate::lambda::convert::LambdaConverter;
 use crate::parser::{module, Parser};
 use crate::types::{initial_env, type_structure, TypeCheckContext, TypeContext};
 
+/// Compiler options that can be passed to the driver.
+#[derive(Default, Clone)]
+pub struct CompilerOptions {
+    /// Print the Lambda IR to stderr (like OCaml's -drawlambda)
+    pub dump_lambda: bool,
+}
+
 /// Compile ReScript source to JavaScript.
 pub fn compile_source_to_js(source: &str, filename: &str) -> Result<String> {
+    compile_source_to_js_with_options(source, filename, &CompilerOptions::default())
+}
+
+/// Compile ReScript source to JavaScript with options.
+pub fn compile_source_to_js_with_options(
+    source: &str,
+    filename: &str,
+    options: &CompilerOptions,
+) -> Result<String> {
     // Parse
     let mut parser = Parser::new(filename, source);
     let structure = module::parse_structure(&mut parser);
@@ -33,6 +49,11 @@ pub fn compile_source_to_js(source: &str, filename: &str) -> Result<String> {
     let mut converter = LambdaConverter::new();
     let lambda = converter.convert_structure(&typed_structure);
 
+    // Print Lambda IR if requested
+    if options.dump_lambda {
+        eprintln!("{}", crate::lambda::print::LambdaPrinter::new(&lambda));
+    }
+
     // Lambda -> JS IR
     let mut compiler = LambdaCompiler::new();
     let program = compiler.compile_program(&lambda);
@@ -43,10 +64,18 @@ pub fn compile_source_to_js(source: &str, filename: &str) -> Result<String> {
 
 /// Compile a file to JavaScript.
 pub fn compile_file_to_js(path: &std::path::Path) -> Result<String> {
+    compile_file_to_js_with_options(path, &CompilerOptions::default())
+}
+
+/// Compile a file to JavaScript with options.
+pub fn compile_file_to_js_with_options(
+    path: &std::path::Path,
+    options: &CompilerOptions,
+) -> Result<String> {
     // Use lossy UTF-8 conversion (like OCaml) to handle files with invalid bytes
     let bytes = std::fs::read(path)
         .with_context(|| format!("Failed to read {}", path.display()))?;
     let source = String::from_utf8_lossy(&bytes).into_owned();
     let filename = path.to_string_lossy();
-    compile_source_to_js(&source, &filename)
+    compile_source_to_js_with_options(&source, &filename, options)
 }

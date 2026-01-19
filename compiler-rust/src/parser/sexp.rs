@@ -24,7 +24,7 @@ enum Doc {
 }
 
 /// Mode for rendering: Flat (lines become spaces) or Break (lines become newlines)
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 enum Mode {
     Flat,
     Break,
@@ -82,7 +82,9 @@ impl Doc {
             match doc {
                 Doc::Nil => {}
                 Doc::Text(s) => {
-                    width -= s.len() as i32;
+                    // Use char count, not byte length, because output uses Latin-1 encoding
+                    // where each char is 1 byte (not UTF-8 where chars can be multi-byte)
+                    width -= s.chars().count() as i32;
                 }
                 Doc::Concat(docs) => {
                     // Push children in reverse order so first child is processed first
@@ -123,7 +125,8 @@ impl Doc {
                 Doc::Nil => {}
                 Doc::Text(s) => {
                     out.push_str(s);
-                    col += s.len() as i32;
+                    // Use char count, not byte length, because output uses Latin-1 encoding
+                    col += s.chars().count() as i32;
                 }
                 Doc::Concat(docs) => {
                     // Push in reverse order so first element is processed first
@@ -161,6 +164,7 @@ impl Doc {
 
                     let remaining = WIDTH - col;
                     let does_fit = Self::fits(remaining, &check_stack);
+
                     if does_fit {
                         // Fits: render in flat mode
                         stack.push((indent, Mode::Flat, d));
@@ -225,9 +229,28 @@ impl Sexp {
     }
 }
 
-// Helper to quote strings like OCaml does
+/// Quote a string for sexp output.
+/// If `escape_quotes` is true, escape quotes with backslash (for regular strings).
+/// If false, output quotes as-is (for tagged/template strings).
+fn quote_string_impl(s: &str, _escape_quotes: bool) -> String {
+    // The scanner now keeps escape sequences as text (e.g., \n is two chars: \ and n).
+    // The sexp printer just wraps the string in quotes without additional escaping.
+    // OCaml's output is simply the string contents surrounded by double quotes.
+    let mut result = String::with_capacity(s.len() + 2);
+    result.push('"');
+    result.push_str(s);
+    result.push('"');
+    result
+}
+
 fn quote_string(s: &str) -> String {
-    format!("\"{}\"", s)
+    // Default: escape quotes (for regular strings)
+    quote_string_impl(s, true)
+}
+
+fn quote_string_tagged(s: &str) -> String {
+    // For tagged strings (template literals): don't escape quotes
+    quote_string_impl(s, false)
 }
 
 fn map_empty<T, F>(items: &[T], f: F) -> Vec<Sexp>
@@ -347,9 +370,15 @@ fn constant_inner(c: &Constant) -> Sexp {
             if tag.as_ref().map(|t| t.as_str()) == Some("INTERNAL_RES_CHAR_CONTENTS") {
                 Sexp::list(vec![Sexp::atom("Pconst_char")])
             } else {
+                // Tagged strings (template literals) don't escape quotes in sexp output
+                let quoted = if tag.is_some() {
+                    quote_string_tagged(txt)
+                } else {
+                    quote_string(txt)
+                };
                 Sexp::list(vec![
                     Sexp::atom("Pconst_string"),
-                    Sexp::atom(&quote_string(txt)),
+                    Sexp::atom(&quoted),
                     match tag {
                         Some(t) => Sexp::list(vec![Sexp::atom("Some"), Sexp::atom(&quote_string(t))]),
                         None => Sexp::atom("None"),
@@ -1169,12 +1198,28 @@ fn signature_item(si: &SignatureItem) -> Sexp {
 // Public API
 // ============================================================================
 
+/// Convert a String with Latin-1 encoded chars (U+0000-U+00FF) back to raw bytes.
+/// This allows matching OCaml's behavior where strings are byte sequences.
+fn string_to_latin1_bytes(s: &str) -> Vec<u8> {
+    s.chars()
+        .map(|c| {
+            let cp = c as u32;
+            if cp <= 255 {
+                cp as u8
+            } else {
+                // For chars outside Latin-1, output '?' or the replacement char
+                b'?'
+            }
+        })
+        .collect()
+}
+
 pub fn print_structure(items: &[StructureItem], out: &mut impl Write) {
     let sexp = structure(items);
-    let _ = out.write_all(sexp.to_string().as_bytes());
+    let _ = out.write_all(&string_to_latin1_bytes(&sexp.to_string()));
 }
 
 pub fn print_signature(items: &[SignatureItem], out: &mut impl Write) {
     let sexp = signature(items);
-    let _ = out.write_all(sexp.to_string().as_bytes());
+    let _ = out.write_all(&string_to_latin1_bytes(&sexp.to_string()));
 }

@@ -111,23 +111,18 @@ while read -r file; do
 
     # Compare outputs if both succeeded
     if $ocaml_success && $rust_success; then
-        # Normalize whitespace for comparison (collapse all whitespace to single spaces)
-        ocaml_normalized="$TEMP_DIR/ocaml.norm"
-        rust_normalized="$TEMP_DIR/rust.norm"
-        LC_ALL=C tr -s '[:space:]' ' ' < "$ocaml_output" > "$ocaml_normalized"
-        LC_ALL=C tr -s '[:space:]' ' ' < "$rust_output" > "$rust_normalized"
-
-        if diff -q "$ocaml_normalized" "$rust_normalized" > /dev/null 2>&1; then
+        # Exact comparison - no normalization
+        if diff -q "$ocaml_output" "$rust_output" > /dev/null 2>&1; then
             pass_count=$((pass_count + 1))
         else
             diff_count=$((diff_count + 1))
             diff_files="$diff_files$file\n"
 
-            # Save diff for later inspection (use normalized versions)
+            # Save diff for later inspection
             diff_dir="$TEMP_DIR/diffs"
             mkdir -p "$diff_dir"
             safe_name=$(echo "$file" | tr '/' '_')
-            diff -u "$ocaml_normalized" "$rust_normalized" > "$diff_dir/$safe_name.diff" 2>&1 || true
+            diff -u "$ocaml_output" "$rust_output" > "$diff_dir/$safe_name.diff" 2>&1 || true
         fi
     fi
 

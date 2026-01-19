@@ -57,6 +57,10 @@ module SexpAst = struct
   let string txt =
     Sexp.atom ("\"" ^ Ext_ident.unwrap_uppercase_exotic txt ^ "\"")
 
+  (* For string constants - don't apply identifier transformations *)
+  let string_literal txt =
+    Sexp.atom ("\"" ^ txt ^ "\"")
+
   let char c = Sexp.atom ("'" ^ Char.escaped c ^ "'")
 
   let opt_char oc =
@@ -129,9 +133,9 @@ module SexpAst = struct
         Sexp.list
           [
             Sexp.atom "Pconst_string";
-            string txt;
+            string_literal txt;
             (match tag with
-            | Some txt -> Sexp.list [Sexp.atom "Some"; string txt]
+            | Some txt -> Sexp.list [Sexp.atom "Some"; string_literal txt]
             | None -> Sexp.atom "None");
           ]
       | Pconst_float (txt, tag) ->
@@ -674,7 +678,8 @@ module SexpAst = struct
           [Sexp.atom "Pexp_constraint"; expression expr; core_type typexpr]
       | Pexp_coerce (expr, (), typexpr) ->
         Sexp.list [Sexp.atom "Pexp_coerce"; expression expr; core_type typexpr]
-      | Pexp_send _ -> Sexp.list [Sexp.atom "Pexp_send"]
+      | Pexp_send (expr, {txt = method_name; _}) ->
+        Sexp.list [Sexp.atom "Pexp_send"; string method_name; expression expr]
       | Pexp_letmodule (mod_name, mod_expr, expr) ->
         Sexp.list
           [

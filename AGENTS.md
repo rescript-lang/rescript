@@ -484,6 +484,33 @@ RUSTFLAGS="-Z sanitizer=thread" cargo test --manifest-path compiler-rust/Cargo.t
 cargo clippy --manifest-path compiler-rust/Cargo.toml --all-targets
 ```
 
+### Debugging the Rust Compiler
+
+```bash
+# View Lambda IR from Rust compiler (prints to stderr)
+./compiler-rust/target/debug/bsc -drawlambda myfile.res
+
+# View Lambda IR from OCaml reference compiler (for comparison)
+packages/@rescript/darwin-arm64/bin/bsc.exe -drawlambda myfile.res
+
+# Compile with Rust compiler and check JS output
+./compiler-rust/target/debug/bsc myfile.res && cat myfile.js
+
+# Compile with OCaml reference compiler for comparison
+packages/@rescript/darwin-arm64/bin/bsc.exe myfile.res
+```
+
+### Following the Reference Implementation
+
+**IMPORTANT**: When implementing features in the Rust compiler, always compare against the OCaml reference implementation:
+
+1. **Lambda IR comparison** - Use `-drawlambda` on both compilers to compare the intermediate representation
+2. **JS output comparison** - The Rust compiler should produce functionally equivalent (ideally identical) JavaScript output
+3. **Study the OCaml code** - When in doubt, read the corresponding OCaml implementation in `compiler/core/` (for Lambda/JS) or `compiler/ml/` (for type checking)
+4. **Test with the same inputs** - Run both compilers on the same `.res` files to verify behavior matches
+
+The goal is byte-for-byte identical output where possible, or at minimum functionally equivalent output.
+
 ### Key Design Decisions
 
 - **Thread-safe ID generation** - `IdGenerator` with `AtomicI32` instead of global `currentstamp`

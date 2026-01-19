@@ -124,6 +124,29 @@ $(COMPILER_DUNE_BINS): $(COMPILER_BUILD_STAMP) ;
 clean-compiler:
 	dune clean && rm -f $(COMPILER_EXES) $(COMPILER_BUILD_STAMP)
 
+# Rust Compiler
+
+RUST_COMPILER_SOURCES = $(shell find compiler-rust/src -name '*.rs') compiler-rust/Cargo.toml compiler-rust/Cargo.lock
+RUST_BSC := compiler-rust/target/release/bsc
+RUST_PARSER := compiler-rust/target/release/res_parser_rust
+
+rust-compiler: $(RUST_BSC) $(RUST_PARSER)
+
+$(RUST_BSC) $(RUST_PARSER): $(RUST_COMPILER_SOURCES)
+	cargo build --manifest-path compiler-rust/Cargo.toml --release
+
+rust-test: compiler rust-compiler
+	./scripts/test_rust_parity.sh
+
+rust-test-parser: compiler rust-compiler
+	./scripts/test_rust_parity.sh --skip-js
+
+rust-test-ast: compiler rust-compiler
+	./scripts/test_parser_ast_parity.sh
+
+clean-rust-compiler:
+	cargo clean --manifest-path compiler-rust/Cargo.toml
+
 # Runtime / stdlib
 
 RUNTIME_SOURCES := $(shell find $(RUNTIME_DIR) -path '$(RUNTIME_DIR)/lib' -prune -o -type f \( -name '*.res' -o -name '*.resi' -o -name 'rescript.json' \) -print)
@@ -232,4 +255,4 @@ dev-container:
 
 .DEFAULT_GOAL := build
 
-.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container
+.PHONY: yarn-install build rewatch compiler lib artifacts bench test test-analysis test-reanalyze benchmark-reanalyze test-tools test-syntax test-syntax-roundtrip test-gentype test-rewatch test-all rust-compiler rust-test rust-test-parser rust-test-ast clean-rust-compiler playground playground-compiler playground-test playground-cmijs playground-release format checkformat clean-rewatch clean-compiler clean-lib clean-gentype clean-tests clean dev-container

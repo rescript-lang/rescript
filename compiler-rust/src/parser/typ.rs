@@ -3,12 +3,115 @@
 //! This module contains the type expression parsing logic, converting tokens
 //! into type AST nodes.
 
+use std::collections::HashSet;
+
 use super::ast::*;
 use super::core::{ast_helper, mk_loc, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::longident::Longident;
 use super::state::Parser;
 use super::token::Token;
+
+// ============================================================================
+// Type Variable Substitution
+// ============================================================================
+
+/// Transform a type by converting Ptyp_constr with a single Lident that matches
+/// one of the poly type variables into Ptyp_var.
+/// This is needed for locally abstract types: `type a b c. list<a, b, c>` should
+/// have `a`, `b`, `c` as Ptyp_var, not Ptyp_constr.
+pub fn substitute_type_vars(typ: CoreType, vars: &HashSet<&str>) -> CoreType {
+    let new_desc = match typ.ptyp_desc {
+        CoreTypeDesc::Ptyp_constr(lid, args) => {
+            // Check if this is a simple Lident that matches a type variable
+            if args.is_empty() {
+                if let Longident::Lident(name) = &lid.txt {
+                    if vars.contains(name.as_str()) {
+                        // Convert to Ptyp_var
+                        return CoreType {
+                            ptyp_desc: CoreTypeDesc::Ptyp_var(name.clone()),
+                            ptyp_loc: typ.ptyp_loc,
+                            ptyp_attributes: typ.ptyp_attributes,
+                        };
+                    }
+                }
+            }
+            // Recursively process type arguments
+            let new_args = args
+                .into_iter()
+                .map(|arg| substitute_type_vars(arg, vars))
+                .collect();
+            CoreTypeDesc::Ptyp_constr(lid, new_args)
+        }
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => CoreTypeDesc::Ptyp_arrow {
+            arg: Box::new(TypeArg {
+                attrs: arg.attrs,
+                lbl: arg.lbl,
+                typ: substitute_type_vars(arg.typ, vars),
+            }),
+            ret: Box::new(substitute_type_vars(*ret, vars)),
+            arity,
+        },
+        CoreTypeDesc::Ptyp_tuple(elements) => CoreTypeDesc::Ptyp_tuple(
+            elements
+                .into_iter()
+                .map(|e| substitute_type_vars(e, vars))
+                .collect(),
+        ),
+        CoreTypeDesc::Ptyp_poly(poly_vars, body) => {
+            CoreTypeDesc::Ptyp_poly(poly_vars, Box::new(substitute_type_vars(*body, vars)))
+        }
+        CoreTypeDesc::Ptyp_alias(inner, alias) => {
+            CoreTypeDesc::Ptyp_alias(Box::new(substitute_type_vars(*inner, vars)), alias)
+        }
+        CoreTypeDesc::Ptyp_object(fields, closed) => {
+            let new_fields = fields
+                .into_iter()
+                .map(|field| match field {
+                    ObjectField::Otag(name, attrs, inner_typ) => {
+                        ObjectField::Otag(name, attrs, substitute_type_vars(inner_typ, vars))
+                    }
+                    ObjectField::Oinherit(inner_typ) => {
+                        ObjectField::Oinherit(substitute_type_vars(inner_typ, vars))
+                    }
+                })
+                .collect();
+            CoreTypeDesc::Ptyp_object(new_fields, closed)
+        }
+        CoreTypeDesc::Ptyp_variant(rows, closed, labels) => {
+            let new_rows = rows
+                .into_iter()
+                .map(|row| match row {
+                    RowField::Rtag(name, attrs, empty, types) => {
+                        let new_types = types
+                            .into_iter()
+                            .map(|t| substitute_type_vars(t, vars))
+                            .collect();
+                        RowField::Rtag(name, attrs, empty, new_types)
+                    }
+                    RowField::Rinherit(inner_typ) => {
+                        RowField::Rinherit(substitute_type_vars(inner_typ, vars))
+                    }
+                })
+                .collect();
+            CoreTypeDesc::Ptyp_variant(new_rows, closed, labels)
+        }
+        CoreTypeDesc::Ptyp_package((lid, constraints)) => {
+            let new_constraints = constraints
+                .into_iter()
+                .map(|(c_lid, c_typ)| (c_lid, substitute_type_vars(c_typ, vars)))
+                .collect();
+            CoreTypeDesc::Ptyp_package((lid, new_constraints))
+        }
+        // These don't contain nested types, return as-is
+        other => other,
+    };
+    CoreType {
+        ptyp_desc: new_desc,
+        ptyp_loc: typ.ptyp_loc,
+        ptyp_attributes: typ.ptyp_attributes,
+    }
+}
 
 // ============================================================================
 // Main Type Parsing
@@ -160,22 +263,33 @@ fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
 // Atomic Type Parsing
 // ============================================================================
 
-/// Parse attributes that can appear before a type.
+/// Parse attributes that can appear before a type (including doc comments).
 fn parse_type_attributes(p: &mut Parser<'_>) -> Attributes {
     let mut attrs = vec![];
-    while p.token == Token::At {
-        p.next();
-        let start_pos = p.start_pos.clone();
-        // Parse attribute id (possibly with path)
-        let id = parse_attribute_id(p);
-        // Parse optional payload
-        let payload = if p.token == Token::Lparen && p.start_pos.cnum == p.prev_end_pos.cnum {
-            parse_payload(p)
-        } else {
-            Payload::PStr(vec![])
-        };
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
-        attrs.push((with_loc(id, loc), payload));
+    loop {
+        match &p.token {
+            Token::At => {
+                p.next();
+                let start_pos = p.start_pos.clone();
+                // Parse attribute id (possibly with path)
+                let id = parse_attribute_id(p);
+                // Parse optional payload
+                let payload = if p.token == Token::Lparen && p.start_pos.cnum == p.prev_end_pos.cnum {
+                    parse_payload(p)
+                } else {
+                    Payload::PStr(vec![])
+                };
+                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                attrs.push((with_loc(id, loc), payload));
+            }
+            Token::DocComment { loc, content } => {
+                let loc = loc.clone();
+                let content = content.clone();
+                p.next();
+                attrs.push(super::core::doc_comment_to_attribute(loc, content));
+            }
+            _ => break,
+        }
     }
     attrs
 }
@@ -232,6 +346,8 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
         Token::Typ => {
             // Locally abstract types: type a b c. SomeType
             // This creates a Ptyp_poly with the type names as string variables
+            // NOTE: We don't substitute Ptyp_constr -> Ptyp_var here. That's done
+            // in module.rs where we have the full context of how the type is used.
             p.next();
             let mut vars: Vec<StringLoc> = vec![];
 
@@ -564,12 +680,23 @@ fn parse_lident(p: &mut Parser<'_>) -> String {
     }
 }
 
-/// Parse attributes.
+/// Parse attributes (including doc comments which become res.doc attributes).
 fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
     let mut attrs = vec![];
-    while p.token == Token::At {
-        if let Some(attr) = parse_attribute(p) {
-            attrs.push(attr);
+    loop {
+        match &p.token {
+            Token::At => {
+                if let Some(attr) = parse_attribute(p) {
+                    attrs.push(attr);
+                }
+            }
+            Token::DocComment { loc, content } => {
+                let loc = loc.clone();
+                let content = content.clone();
+                p.next();
+                attrs.push(super::core::doc_comment_to_attribute(loc, content));
+            }
+            _ => break,
         }
     }
     attrs
@@ -602,26 +729,36 @@ fn parse_attribute(p: &mut Parser<'_>) -> Option<Attribute> {
 
 /// Parse an attribute payload.
 fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
-    // For now, just parse a simple string payload
     match &p.token {
-        Token::String(_s) => {
+        Token::String(s) => {
+            let value = s.clone();
+            let loc = mk_loc(&p.start_pos, &p.end_pos);
             p.next();
+            // Create Pstr_eval(Pexp_constant(Pconst_string(s, None)))
+            let expr = Expression {
+                pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(value, None)),
+                pexp_loc: loc.clone(),
+                pexp_attributes: vec![],
+            };
+            let item = StructureItem {
+                pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
+                pstr_loc: loc,
+            };
+            Payload::PStr(vec![item])
+        }
+        Token::Rparen => {
+            // Empty payload
             Payload::PStr(vec![])
         }
         _ => {
-            // Skip until closing paren
-            let mut depth = 1;
-            while depth > 0 && p.token != Token::Eof {
-                match &p.token {
-                    Token::Lparen => depth += 1,
-                    Token::Rparen => depth -= 1,
-                    _ => {}
-                }
-                if depth > 0 {
-                    p.next();
-                }
-            }
-            Payload::PStr(vec![])
+            // Try to parse as an expression
+            let expr = super::expr::parse_expr(p);
+            let loc = expr.pexp_loc.clone();
+            let item = StructureItem {
+                pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
+                pstr_loc: loc,
+            };
+            Payload::PStr(vec![item])
         }
     }
 }
@@ -853,8 +990,11 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
     p.optional(&Token::Bar);
 
     while p.token != Token::Rbracket && p.token != Token::Eof {
-        // Parse attributes before the tag
+        // Parse attributes (including doc comments) before the tag
         let attrs = parse_attributes(p);
+
+        // Doc comments may be followed by `|`, which we need to skip
+        p.optional(&Token::Bar);
 
         if p.token == Token::Hash {
             // Tagged row field: #tag or #tag(args)
@@ -954,7 +1094,9 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
         }
 
         // Handle separator: `|` between fields
-        if !p.optional(&Token::Bar) {
+        // Note: Doc comments or attributes may appear before the next `|`, so we also
+        // continue if we see those (the bar will be consumed after parsing them)
+        if !p.optional(&Token::Bar) && !matches!(p.token, Token::At | Token::DocComment { .. }) {
             break;
         }
     }

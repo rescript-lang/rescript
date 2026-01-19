@@ -90,6 +90,8 @@ pub enum FieldDbgInfo {
     Extension,
     /// Variant field
     Variant,
+    /// Variant TAG field
+    VariantTag,
     /// List cons field
     Cons,
 }
@@ -107,6 +109,7 @@ impl FieldDbgInfo {
             | FieldDbgInfo::PolyVarContent
             | FieldDbgInfo::Extension
             | FieldDbgInfo::Variant
+            | FieldDbgInfo::VariantTag
             | FieldDbgInfo::Cons => None,
         }
     }

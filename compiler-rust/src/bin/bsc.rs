@@ -9,7 +9,7 @@
 //! All other flags are accepted and ignored.
 
 use anyhow::{anyhow, Context, Result};
-use rescript_compiler::driver::compile_file_to_js;
+use rescript_compiler::driver::{compile_file_to_js_with_options, CompilerOptions};
 use rescript_compiler::parser::{module, Parser};
 use std::env;
 use std::fs;
@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 #[derive(Default, Debug)]
 struct Options {
     bs_ast: bool,
+    dump_lambda: bool,
     output: Option<PathBuf>,
     package_outputs: Vec<String>,
     namespace: Option<String>,
@@ -40,6 +41,7 @@ fn run() -> Result<()> {
         if arg.starts_with('-') {
             match arg.as_str() {
                 "-bs-ast" => opts.bs_ast = true,
+                "-drawlambda" => opts.dump_lambda = true,
                 "-o" | "-output" => {
                     if let Some(val) = args.next() {
                         opts.output = Some(PathBuf::from(val));
@@ -109,7 +111,10 @@ fn run() -> Result<()> {
         input
     };
 
-    let js = compile_file_to_js(&source_path)?;
+    let compiler_opts = CompilerOptions {
+        dump_lambda: opts.dump_lambda,
+    };
+    let js = compile_file_to_js_with_options(&source_path, &compiler_opts)?;
     write_outputs(&source_path, &js, &opts)
 }
 

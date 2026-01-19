@@ -9,6 +9,110 @@ use super::diagnostics::DiagnosticCategory;
 use super::longident::Longident;
 use super::state::Parser;
 use super::token::Token;
+use crate::location::Located;
+
+// ============================================================================
+// Attribute Parsing for Patterns
+// ============================================================================
+
+/// Parse attributes (including doc comments which become res.doc attributes).
+fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
+    let mut attrs = vec![];
+    loop {
+        match &p.token {
+            Token::At => {
+                if let Some(attr) = parse_attribute(p) {
+                    attrs.push(attr);
+                }
+            }
+            Token::DocComment { loc, content } => {
+                let loc = loc.clone();
+                let content = content.clone();
+                p.next();
+                attrs.push(super::core::doc_comment_to_attribute(loc, content));
+            }
+            _ => break,
+        }
+    }
+    attrs
+}
+
+/// Parse a single attribute.
+fn parse_attribute(p: &mut Parser<'_>) -> Option<Attribute> {
+    if p.token != Token::At {
+        return None;
+    }
+    p.next();
+
+    let attr_id = parse_attribute_id(p);
+
+    // Only parse Lparen as payload if it's immediately adjacent to the attribute ID
+    // (no whitespace between them). e.g., @attr(payload) vs @attr (expression)
+    let is_adjacent = p.start_pos.cnum == p.prev_end_pos.cnum;
+    let payload = if p.token == Token::Lparen && is_adjacent {
+        p.next();
+        let payload = parse_payload(p);
+        p.expect(Token::Rparen);
+        payload
+    } else {
+        Payload::PStr(vec![])
+    };
+
+    Some((attr_id, payload))
+}
+
+/// Parse an attribute identifier.
+fn parse_attribute_id(p: &mut Parser<'_>) -> Located<String> {
+    let start_pos = p.start_pos.clone();
+    let mut parts = vec![];
+
+    loop {
+        let name = match &p.token {
+            Token::Lident(name) | Token::Uident(name) => {
+                let name = name.clone();
+                p.next();
+                name
+            }
+            _ if p.token.is_keyword() => {
+                let name = p.token.to_string();
+                p.next();
+                name
+            }
+            _ => break,
+        };
+        parts.push(name);
+        if p.token == Token::Dot {
+            p.next();
+        } else {
+            break;
+        }
+    }
+
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    with_loc(parts.join("."), loc)
+}
+
+/// Parse an attribute payload.
+fn parse_payload(p: &mut Parser<'_>) -> Payload {
+    // For patterns, we mainly need to handle string payloads like @attr("value")
+    // and simple structure payloads
+    let mut items = vec![];
+
+    while p.token != Token::Rparen && p.token != Token::Eof {
+        // Try to parse an expression for the payload
+        let expr = super::expr::parse_expr(p);
+        items.push(StructureItem {
+            pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
+            pstr_loc: crate::location::Location::none(),
+        });
+
+        if !p.optional(&Token::Comma) && !p.optional(&Token::Semicolon) {
+            break;
+        }
+    }
+
+    Payload::PStr(items)
+}
 
 /// Parse a type longident (for #...type pattern).
 /// Type paths can be like: typevar, Module.typevar, etc.
@@ -50,6 +154,10 @@ fn parse_type_longident(p: &mut Parser<'_>) -> Longident {
 /// This parses one "branch" of an or-pattern without consuming further `|`.
 fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
     let start_pos = p.start_pos.clone();
+
+    // Parse leading attributes
+    let attrs = parse_attributes(p);
+
     let mut pat = parse_atomic_pattern(p);
 
     // Handle interval patterns: 1 .. 2, 'a' .. 'z'
@@ -78,6 +186,16 @@ fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
                 _ => {}
             }
         }
+    }
+
+    // Apply leading attributes to the pattern
+    if !attrs.is_empty() {
+        let loc = mk_loc(&start_pos, &pat.ppat_loc.loc_end);
+        pat = Pattern {
+            ppat_desc: pat.ppat_desc,
+            ppat_loc: loc,
+            ppat_attributes: [attrs, pat.ppat_attributes].concat(),
+        };
     }
 
     pat
@@ -437,20 +555,49 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                             while p.token == Token::Comma {
                                 p.next();
                                 if p.token == Token::Rparen {
-                                    break;
+                                    break; // Trailing comma
                                 }
                                 patterns.push(parse_pattern(p));
                             }
                             p.expect(Token::Rparen);
-                            let tuple_loc = mk_loc(&tuple_start, &p.prev_end_pos);
-                            Some(Pattern {
-                                ppat_desc: PatternDesc::Ppat_tuple(patterns),
-                                ppat_loc: tuple_loc,
-                                ppat_attributes: vec![],
-                            })
+
+                            // If we only have one pattern (trailing comma case), treat as single argument
+                            if patterns.len() == 1 {
+                                let single = patterns.into_iter().next().unwrap();
+                                if matches!(single.ppat_desc, PatternDesc::Ppat_tuple(_)) {
+                                    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                                    Some(Pattern {
+                                        ppat_desc: PatternDesc::Ppat_tuple(vec![single]),
+                                        ppat_loc: loc,
+                                        ppat_attributes: vec![],
+                                    })
+                                } else {
+                                    Some(single)
+                                }
+                            } else {
+                                let tuple_loc = mk_loc(&tuple_start, &p.prev_end_pos);
+                                Some(Pattern {
+                                    ppat_desc: PatternDesc::Ppat_tuple(patterns),
+                                    ppat_loc: tuple_loc,
+                                    ppat_attributes: vec![],
+                                })
+                            }
                         } else {
                             p.expect(Token::Rparen);
-                            Some(first)
+                            // If the single argument is itself a tuple, wrap it in another
+                            // single-element tuple. This distinguishes C((a,b)) from C(a,b).
+                            // C((a,b)) = single tuple argument = Ppat_tuple([Ppat_tuple([a,b])])
+                            // C(a,b) = multiple arguments = Ppat_tuple([a, b])
+                            if matches!(first.ppat_desc, PatternDesc::Ppat_tuple(_)) {
+                                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                                Some(Pattern {
+                                    ppat_desc: PatternDesc::Ppat_tuple(vec![first]),
+                                    ppat_loc: loc,
+                                    ppat_attributes: vec![],
+                                })
+                            } else {
+                                Some(first)
+                            }
                         }
                     }
                 } else {
@@ -587,26 +734,54 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
             // Use parse_constrained_pattern to support (pat: type) inside constructors
             let first = parse_constrained_pattern(p);
             if p.token == Token::Comma {
-                // Multiple arguments - create a tuple pattern
+                // Possible multiple arguments - parse remaining
                 let tuple_start = first.ppat_loc.loc_start.clone();
                 let mut patterns = vec![first];
                 while p.token == Token::Comma {
                     p.next();
                     if p.token == Token::Rparen {
-                        break;
+                        break; // Trailing comma
                     }
                     patterns.push(parse_constrained_pattern(p));
                 }
                 p.expect(Token::Rparen);
-                let tuple_loc = mk_loc(&tuple_start, &p.prev_end_pos);
-                Some(Pattern {
-                    ppat_desc: PatternDesc::Ppat_tuple(patterns),
-                    ppat_loc: tuple_loc,
-                    ppat_attributes: vec![],
-                })
+
+                // If we only have one pattern (trailing comma case), treat as single argument
+                if patterns.len() == 1 {
+                    let single = patterns.into_iter().next().unwrap();
+                    // If the single argument is itself a tuple, wrap it
+                    if matches!(single.ppat_desc, PatternDesc::Ppat_tuple(_)) {
+                        let wrap_loc = mk_loc(&start_pos, &p.prev_end_pos);
+                        Some(Pattern {
+                            ppat_desc: PatternDesc::Ppat_tuple(vec![single]),
+                            ppat_loc: wrap_loc,
+                            ppat_attributes: vec![],
+                        })
+                    } else {
+                        Some(single)
+                    }
+                } else {
+                    let tuple_loc = mk_loc(&tuple_start, &p.prev_end_pos);
+                    Some(Pattern {
+                        ppat_desc: PatternDesc::Ppat_tuple(patterns),
+                        ppat_loc: tuple_loc,
+                        ppat_attributes: vec![],
+                    })
+                }
             } else {
                 p.expect(Token::Rparen);
-                Some(first)
+                // If the single argument is itself a tuple, wrap it in another
+                // single-element tuple. This distinguishes C((a,b)) from C(a,b).
+                if matches!(first.ppat_desc, PatternDesc::Ppat_tuple(_)) {
+                    let wrap_loc = mk_loc(&start_pos, &p.prev_end_pos);
+                    Some(Pattern {
+                        ppat_desc: PatternDesc::Ppat_tuple(vec![first]),
+                        ppat_loc: wrap_loc,
+                        ppat_attributes: vec![],
+                    })
+                } else {
+                    Some(first)
+                }
             }
         }
     } else {
@@ -813,17 +988,9 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
     p.expect(Token::Rbrace);
     let loc = mk_loc(&start_pos, &p.prev_end_pos);
 
-    let record_pat = Pattern {
-        ppat_desc: PatternDesc::Ppat_record(fields, ClosedFlag::Closed),
-        ppat_loc: loc.clone(),
-        ppat_attributes: vec![],
-    };
-
+    // Dict patterns are parsed directly as open record patterns (not wrapped in extension)
     Pattern {
-        ppat_desc: PatternDesc::Ppat_extension((
-            mknoloc("res.dict".to_string()),
-            Payload::PPat(Box::new(record_pat), None),
-        )),
+        ppat_desc: PatternDesc::Ppat_record(fields, ClosedFlag::Open),
         ppat_loc: loc,
         ppat_attributes: vec![],
     }

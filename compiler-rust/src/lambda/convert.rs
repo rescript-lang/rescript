@@ -5,6 +5,7 @@
 //! keeping the translation straightforward and easy to extend.
 
 use crate::context::IdGenerator;
+use crate::ident::Ident;
 use crate::lambda::compat::{Comparison, FieldDbgInfo, LetKind, SetFieldDbgInfo};
 use crate::lambda::constant::{Constant, PointerInfo, StringDelim};
 use crate::lambda::primitive::{ExternalArgSpec, ExternalFfiSpec, Mutable, Primitive};
@@ -44,9 +45,20 @@ impl LambdaConverter {
 
     /// Convert a structure into a Lambda expression.
     pub fn convert_structure(&mut self, structure: &Structure) -> Lambda {
-        let mut result = Lambda::unit();
-        for item in &structure.str_items {
-            let item_lam = self.convert_structure_item(item);
+        let items: Vec<Lambda> = structure
+            .str_items
+            .iter()
+            .map(|item| self.convert_structure_item(item))
+            .filter(|lam| !lam.is_unit())
+            .collect();
+
+        if items.is_empty() {
+            return Lambda::unit();
+        }
+
+        let mut iter = items.into_iter();
+        let mut result = iter.next().unwrap();
+        for item_lam in iter {
             result = Lambda::seq(result, item_lam);
         }
         result
@@ -87,8 +99,8 @@ impl LambdaConverter {
                 params,
                 body,
                 partial,
-                arity: _,
-            } => self.convert_function(expr.exp_loc.clone(), params, body, *partial),
+                arity,
+            } => self.convert_function(expr.exp_loc.clone(), params, body, *partial, *arity),
             ExpressionDesc::Texp_apply { funct, args } => {
                 self.convert_apply(expr.exp_loc.clone(), funct, args)
             }
@@ -283,9 +295,20 @@ impl LambdaConverter {
         params: &[FunctionParam],
         cases: &[Case],
         partial: crate::types::typedtree::Partial,
+        arity: crate::parser::ast::Arity,
     ) -> Lambda {
+        // Debug: print arity
+        eprintln!("convert_function: arity={:?}, params.len={}", arity, params.len());
+
+        // Use arity to flatten nested functions into a single multi-param function
+        // e.g., `(x, y) => x + y` has arity 2 but is represented as nested functions
+        let (all_params, final_body, final_partial) =
+            self.flatten_function_by_arity(params, cases, partial, arity);
+
+        eprintln!("  after flatten: all_params.len={}", all_params.len());
+
         let mut param_ids = Vec::new();
-        for (idx, param) in params.iter().enumerate() {
+        for (idx, param) in all_params.iter().enumerate() {
             let pat = Self::param_pattern(param);
             let id = match &pat.pat_desc {
                 PatternDesc::Tpat_var(id, _) => id.clone(),
@@ -295,21 +318,13 @@ impl LambdaConverter {
             param_ids.push(id);
         }
 
-        let scrut = if param_ids.len() == 1 {
-            Lambda::var(param_ids[0].clone())
+        // Convert the body - if it's simple variable patterns, skip pattern matching
+        let body = if let Some(expr) = final_body {
+            // We have the final body expression directly
+            self.convert_expr(expr)
         } else {
-            let args = param_ids.iter().cloned().map(Lambda::var).collect();
-            Lambda::prim(
-                Primitive::Pmakeblock(0, TagInfo::Tuple, Mutable::Immutable),
-                args,
-                loc.clone(),
-            )
-        };
-
-        let body = if cases.is_empty() {
+            // Fall back to pattern matching on cases
             Lambda::unit()
-        } else {
-            self.compile_match(loc.clone(), scrut, cases, partial)
         };
 
         let attr = FunctionAttribute {
@@ -318,6 +333,106 @@ impl LambdaConverter {
         };
 
         Lambda::function_(param_ids.len() as i32, param_ids, body, attr)
+    }
+
+    /// Create a scrutinee for pattern matching from param_ids
+    fn make_scrutinee(&self, param_ids: &[Ident], loc: &Location) -> Lambda {
+        if param_ids.len() == 1 {
+            Lambda::var(param_ids[0].clone())
+        } else {
+            let args = param_ids.iter().cloned().map(Lambda::var).collect();
+            Lambda::prim(
+                Primitive::Pmakeblock(0, TagInfo::Tuple, Mutable::Immutable),
+                args,
+                loc.clone(),
+            )
+        }
+    }
+
+    /// Check if a pattern is a simple variable pattern (or tuple of variable patterns)
+    /// that matches the given param_ids exactly
+    fn is_simple_param_pattern(&self, pat: &Pattern, param_ids: &[Ident]) -> bool {
+        match &pat.pat_desc {
+            PatternDesc::Tpat_var(id, _) => {
+                // Single variable pattern
+                param_ids.len() == 1 && id.name() == param_ids[0].name()
+            }
+            PatternDesc::Tpat_tuple(pats) => {
+                // Tuple of patterns - check each matches the corresponding param_id
+                if pats.len() != param_ids.len() {
+                    return false;
+                }
+                pats.iter().zip(param_ids.iter()).all(|(p, id)| {
+                    matches!(&p.pat_desc, PatternDesc::Tpat_var(pat_id, _) if pat_id.name() == id.name())
+                })
+            }
+            PatternDesc::Tpat_any => {
+                // Wildcard pattern - also simple
+                param_ids.len() == 1
+            }
+            _ => false,
+        }
+    }
+
+    /// Flatten nested functions based on arity.
+    ///
+    /// In OCaml/ReScript, `(x, y) => x + y` is represented in the typed tree as:
+    /// ```
+    /// Texp_function (arity=2)
+    ///   params: [x]
+    ///   body: Texp_function
+    ///     params: [y]
+    ///     body: x + y
+    /// ```
+    ///
+    /// We use the arity to know how many nested functions to flatten into
+    /// a single multi-parameter function.
+    fn flatten_function_by_arity<'a>(
+        &self,
+        params: &'a [FunctionParam],
+        cases: &'a [Case],
+        partial: crate::types::typedtree::Partial,
+        arity: crate::parser::ast::Arity,
+    ) -> (Vec<&'a FunctionParam>, Option<&'a Expression>, crate::types::typedtree::Partial) {
+        use crate::parser::ast::Arity;
+        let target_arity = match arity {
+            Arity::Full(n) => n,
+            Arity::Unknown => params.len(),
+        };
+
+        let mut all_params: Vec<&'a FunctionParam> = params.iter().collect();
+        let mut current_partial = partial;
+
+        // We need exactly one case with no guard to flatten
+        if cases.len() != 1 || cases[0].c_guard.is_some() {
+            // Can't flatten - return what we have
+            return (all_params, cases.first().map(|c| &c.c_rhs), current_partial);
+        }
+
+        let mut current_body: &'a Expression = &cases[0].c_rhs;
+
+        // Keep flattening while we haven't reached the target arity
+        while all_params.len() < target_arity {
+            match &current_body.exp_desc {
+                ExpressionDesc::Texp_function {
+                    params: inner_params,
+                    body: inner_cases,
+                    partial: inner_partial,
+                    ..
+                } => {
+                    // Only flatten if there's exactly one case with no guard
+                    if inner_cases.len() != 1 || inner_cases[0].c_guard.is_some() {
+                        break;
+                    }
+                    all_params.extend(inner_params.iter());
+                    current_partial = *inner_partial;
+                    current_body = &inner_cases[0].c_rhs;
+                }
+                _ => break,
+            }
+        }
+
+        (all_params, Some(current_body), current_partial)
     }
 
     fn param_pattern(param: &FunctionParam) -> Pattern {
@@ -358,11 +473,20 @@ impl LambdaConverter {
         cases: &[Case],
         partial: crate::types::typedtree::Partial,
     ) -> Lambda {
-        let scrut_id = self.id_gen.create("match");
-        let scrut_var = Lambda::var(scrut_id.clone());
         let failure = match partial {
             crate::types::typedtree::Partial::Total => Lambda::unit(),
             crate::types::typedtree::Partial::Partial => self.match_failure(loc.clone()),
+        };
+
+        // Optimization: if scrutinee is already a variable, use it directly
+        // to avoid creating unnecessary intermediate bindings
+        let (scrut_var, wrap_let) = match &scrut {
+            Lambda::Lvar(id) => (Lambda::var(id.clone()), None),
+            _ => {
+                let scrut_id = self.id_gen.create("match");
+                let scrut_var = Lambda::var(scrut_id.clone());
+                (scrut_var, Some(scrut_id))
+            }
         };
 
         let mut result = failure;
@@ -374,7 +498,12 @@ impl LambdaConverter {
             }
             result = self.bind_pattern(&case.c_lhs, scrut_var.clone(), body, result);
         }
-        Lambda::let_(LetKind::Strict, scrut_id, scrut, result)
+
+        // Only wrap in let if we created a new binding
+        match wrap_let {
+            Some(scrut_id) => Lambda::let_(LetKind::Strict, scrut_id, scrut, result),
+            None => result,
+        }
     }
 
     fn bind_pattern(
@@ -386,7 +515,15 @@ impl LambdaConverter {
     ) -> Lambda {
         match &pat.pat_desc {
             PatternDesc::Tpat_any => body,
-            PatternDesc::Tpat_var(id, _) => Lambda::let_(LetKind::Alias, id.clone(), scrut, body),
+            PatternDesc::Tpat_var(id, _) => {
+                // Optimization: if binding to the same variable, skip the let
+                if let Lambda::Lvar(scrut_id) = &scrut {
+                    if scrut_id.name() == id.name() {
+                        return body;
+                    }
+                }
+                Lambda::let_(LetKind::Alias, id.clone(), scrut, body)
+            }
             PatternDesc::Tpat_alias(inner, id, _) => {
                 let inner_bind = self.bind_pattern(inner, scrut.clone(), body, failure);
                 Lambda::let_(LetKind::Alias, id.clone(), scrut, inner_bind)
@@ -507,24 +644,31 @@ impl LambdaConverter {
         args: &[Pattern],
     ) -> Lambda {
         match &cstr.cstr_tag {
-            ConstructorTag::CstrConstant(tag) => {
+            ConstructorTag::CstrConstant(_tag) => {
+                // Compare against the same value we'd generate: string for variants, bool for true/false
+                let tag_const = match cstr.cstr_name.as_str() {
+                    "true" => Constant::JsTrue,
+                    "false" => Constant::JsFalse,
+                    _ => Constant::Pointer(cstr.cstr_name.clone()),
+                };
                 let cond = Lambda::prim(
                     Primitive::Pjscomp(Comparison::Eq),
-                    vec![scrut, Lambda::const_(Constant::int(*tag))],
+                    vec![scrut, Lambda::const_(tag_const)],
                     pat.pat_loc.clone(),
                 );
                 Lambda::if_(cond, body, failure)
             }
-            ConstructorTag::CstrBlock(tag) => {
+            ConstructorTag::CstrBlock(_tag) => {
                 let tmp = self.id_gen.create("ctor");
+                // Access the TAG field and compare against the constructor name string
                 let tag_expr = Lambda::prim(
-                    Primitive::Pobjtag,
+                    Primitive::Pfield(0, FieldDbgInfo::VariantTag),
                     vec![Lambda::var(tmp.clone())],
                     pat.pat_loc.clone(),
                 );
                 let tag_cond = Lambda::prim(
                     Primitive::Pjscomp(Comparison::Eq),
-                    vec![tag_expr, Lambda::const_(Constant::int(*tag))],
+                    vec![tag_expr, Lambda::const_(Constant::Pointer(cstr.cstr_name.clone()))],
                     pat.pat_loc.clone(),
                 );
                 let mut result = body;
@@ -557,16 +701,14 @@ impl LambdaConverter {
         args: &[Expression],
     ) -> Lambda {
         match &cstr.cstr_tag {
-            ConstructorTag::CstrConstant(tag) => {
-                let comment = PointerInfo::Constructor(crate::lambda::constant::ConstructorTag {
-                    name: cstr.cstr_name.clone(),
-                    const_: cstr.cstr_consts,
-                    non_const: cstr.cstr_nonconsts,
-                });
-                Lambda::const_(Constant::Int {
-                    i: *tag,
-                    comment: Some(comment),
-                })
+            ConstructorTag::CstrConstant(_tag) => {
+                // Special handling for booleans - they compile to JS true/false
+                match cstr.cstr_name.as_str() {
+                    "true" => Lambda::const_(Constant::JsTrue),
+                    "false" => Lambda::const_(Constant::JsFalse),
+                    // ReScript compiles other constant constructors to strings
+                    _ => Lambda::const_(Constant::Pointer(cstr.cstr_name.clone())),
+                }
             }
             ConstructorTag::CstrUnboxed => {
                 if let Some(arg) = args.first() {
@@ -775,6 +917,7 @@ impl LambdaConverter {
             "%mulfloat" => Pmulfloat,
             "%divfloat" => Pdivfloat,
             "%modfloat" => Pmodfloat,
+            "%powfloat" => Ppowfloat,
             "%eqfloat" => Pfloatcomp(Comparison::Eq),
             "%noteqfloat" => Pfloatcomp(Comparison::Neq),
             "%ltfloat" => Pfloatcomp(Comparison::Lt),

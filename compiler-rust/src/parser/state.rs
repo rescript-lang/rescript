@@ -33,6 +33,21 @@ pub enum RegionStatus {
     Silent,
 }
 
+/// Snapshot of parser state for backtracking.
+///
+/// Used by `parse_attributes_and_binding` to speculatively parse attributes
+/// and restore state if they're not followed by `and`.
+pub struct ParserSnapshot {
+    scanner_snapshot: super::scanner::ScannerSnapshot,
+    token: Token,
+    start_pos: Position,
+    end_pos: Position,
+    prev_end_pos: Position,
+    breadcrumbs: Vec<(Grammar, Position)>,
+    diagnostics_len: usize,
+    comments_len: usize,
+}
+
 /// Parser state for ReScript.
 ///
 /// This structure tracks all state needed during parsing:
@@ -277,6 +292,37 @@ impl<'src> Parser<'src> {
         self.comments.truncate(comments_len);
 
         result
+    }
+
+    /// Create a snapshot of the current parser state.
+    ///
+    /// Used for speculative parsing with manual backtracking.
+    /// Call `restore` to return to this state.
+    pub fn snapshot(&self) -> ParserSnapshot {
+        ParserSnapshot {
+            scanner_snapshot: self.scanner.snapshot(),
+            token: self.token.clone(),
+            start_pos: self.start_pos.clone(),
+            end_pos: self.end_pos.clone(),
+            prev_end_pos: self.prev_end_pos.clone(),
+            breadcrumbs: self.breadcrumbs.clone(),
+            diagnostics_len: self.diagnostics.len(),
+            comments_len: self.comments.len(),
+        }
+    }
+
+    /// Restore parser state from a snapshot.
+    ///
+    /// Used to backtrack after speculative parsing.
+    pub fn restore(&mut self, snapshot: ParserSnapshot) {
+        self.scanner.restore(snapshot.scanner_snapshot);
+        self.token = snapshot.token;
+        self.start_pos = snapshot.start_pos;
+        self.end_pos = snapshot.end_pos;
+        self.prev_end_pos = snapshot.prev_end_pos;
+        self.breadcrumbs = snapshot.breadcrumbs;
+        self.diagnostics.truncate(snapshot.diagnostics_len);
+        self.comments.truncate(snapshot.comments_len);
     }
 
     /// Check if parsing made progress.

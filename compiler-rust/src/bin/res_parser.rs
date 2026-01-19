@@ -16,7 +16,7 @@
 
 use clap::Parser as ClapParser;
 use rescript_compiler::parser::{
-    code_frame, module, print_signature, print_structure, sexp, Parser, Scanner,
+    code_frame, module, print_signature, print_structure, sexp, Parser, ParserMode, Scanner,
 };
 use std::fs;
 use std::io::{self, Write};
@@ -86,12 +86,19 @@ fn normalize_args() -> Vec<String> {
         .collect()
 }
 
+/// Convert bytes to string preserving raw bytes as Latin-1 (ISO-8859-1).
+/// This matches OCaml's behavior where strings are byte sequences.
+/// Invalid UTF-8 bytes are mapped to their corresponding Unicode codepoints.
+fn bytes_to_string_latin1(bytes: &[u8]) -> String {
+    bytes.iter().map(|&b| b as char).collect()
+}
+
 fn main() {
     let args = Args::parse_from(normalize_args());
 
-    // Read the input file with lossy UTF-8 conversion (like OCaml)
+    // Read the input file preserving raw bytes as Latin-1 (like OCaml)
     let source = match fs::read(&args.file) {
-        Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
+        Ok(bytes) => bytes_to_string_latin1(&bytes),
         Err(e) => {
             eprintln!("Error reading file {:?}: {}", args.file, e);
             process::exit(1);
@@ -103,8 +110,16 @@ fn main() {
     // Determine if we're parsing an interface
     let is_interface = args.interface || filename.ends_with(".resi") || filename.ends_with(".mli");
 
+    // Determine parser mode based on output format
+    // For sexp/res/ml output (printer), use Default mode which does extra tuple wrapping
+    // For type checking, use ParseForTypeChecker mode
+    let mode = match args.print.as_str() {
+        "sexp" | "res" | "ml" | "ast" => ParserMode::Default,
+        _ => ParserMode::ParseForTypeChecker,
+    };
+
     // Parse the file
-    let mut parser = Parser::new(&filename, &source);
+    let mut parser = Parser::with_mode(&filename, &source, mode);
 
     // Parse structure or signature
     if is_interface {

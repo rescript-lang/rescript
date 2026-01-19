@@ -427,50 +427,84 @@ impl<'src> Scanner<'src> {
         let start_pos = self.position();
         self.next(); // consume opening quote
 
+        // OCaml keeps escape sequences as text, only converting decimal to hex.
+        // We use a buffer to accumulate the result, copying text verbatim except
+        // for decimal escapes which get converted to hex format.
         let mut result = String::new();
-        let first_char_offset = self.offset;
+        let mut chunk_start = self.offset;
 
         loop {
             match self.ch {
                 '"' => {
                     // Add remaining content
-                    result.push_str(self.substring(first_char_offset, self.offset));
+                    result.push_str(self.substring(chunk_start, self.offset));
                     self.next();
                     break;
                 }
                 '\\' => {
-                    result.push_str(self.substring(first_char_offset, self.offset));
-                    self.next();
-                    self.scan_string_escape_sequence(&start_pos);
+                    // Add content before the escape (including the backslash)
+                    result.push_str(self.substring(chunk_start, self.offset));
+                    result.push('\\');
+                    self.next(); // consume backslash
+
+                    // Check if this is a decimal escape that needs conversion
+                    let escape_start = self.offset;
+                    self.scan_string_escape_sequence_text(&start_pos);
+                    let escape_end = self.offset;
+
+                    // Check if it was a 3-digit decimal escape
+                    let escape_text = self.substring(escape_start, escape_end);
+                    if escape_text.len() == 3
+                        && escape_text.chars().all(|c| c.is_ascii_digit())
+                    {
+                        // Convert decimal to hex format
+                        if let Ok(value) = escape_text.parse::<u32>() {
+                            if value <= 255 {
+                                result.push_str(&format!("x{:02x}", value));
+                            } else {
+                                // Invalid value, keep as-is
+                                result.push_str(escape_text);
+                            }
+                        } else {
+                            result.push_str(escape_text);
+                        }
+                    } else {
+                        // Keep other escapes as-is
+                        result.push_str(escape_text);
+                    }
+                    chunk_start = self.offset;
                 }
                 c if c == EOF_CHAR => {
                     let end_pos = self.position();
                     self.error(start_pos, end_pos, DiagnosticCategory::unclosed_string());
-                    result.push_str(self.substring(first_char_offset, self.offset));
+                    result.push_str(self.substring(chunk_start, self.offset));
                     break;
                 }
                 _ => self.next(),
             }
         }
 
-        // For simplicity, return the original substring
-        // In a full implementation, we'd handle escape sequences properly
-        Token::String(
-            self.substring(first_char_offset, self.offset.saturating_sub(1))
-                .to_string(),
-        )
+        Token::String(result)
     }
 
-    /// Scan a string escape sequence.
-    fn scan_string_escape_sequence(&mut self, start_pos: &Position) {
+    /// Scan past a string escape sequence, advancing the scanner position.
+    /// This doesn't interpret the escape, just skips past it.
+    fn scan_string_escape_sequence_text(&mut self, start_pos: &Position) {
         match self.ch {
-            'n' | 't' | 'b' | 'r' | '\\' | ' ' | '\'' | '"' => self.next(),
-            '0' if !self.peek().is_ascii_digit() => self.next(),
+            'n' | 't' | 'b' | 'r' | '\\' | ' ' | '\'' | '"' => {
+                self.next();
+            }
+            '0' if !self.peek().is_ascii_digit() => {
+                // \0 when not followed by digit
+                self.next();
+            }
             '0'..='9' => {
-                // Decimal escape \NNN
+                // Decimal escape \NNN (up to 3 digits)
                 for _ in 0..3 {
                     if self.ch.is_ascii_digit() {
                         self.next();
+                    } else {
+                        break;
                     }
                 }
             }
@@ -478,8 +512,10 @@ impl<'src> Scanner<'src> {
                 // Hex escape \xNN
                 self.next();
                 for _ in 0..2 {
-                    if Self::digit_value(self.ch) < 16 {
+                    if self.ch.is_ascii_hexdigit() {
                         self.next();
+                    } else {
+                        break;
                     }
                 }
             }
@@ -497,8 +533,10 @@ impl<'src> Scanner<'src> {
                 } else {
                     // Unicode escape \uNNNN
                     for _ in 0..4 {
-                        if Self::digit_value(self.ch) < 16 {
+                        if self.ch.is_ascii_hexdigit() {
                             self.next();
+                        } else {
+                            break;
                         }
                     }
                 }
@@ -512,10 +550,130 @@ impl<'src> Scanner<'src> {
                 );
             }
             _ => {
-                // Unknown escape - just consume it
+                // Unknown escape - skip the character
                 self.next();
             }
         }
+    }
+
+    /// Scan a string escape sequence and return the converted character.
+    /// Returns None if the escape sequence is invalid or produces no character.
+    fn scan_string_escape_sequence_char(&mut self, start_pos: &Position) -> Option<char> {
+        match self.ch {
+            'n' => {
+                self.next();
+                Some('\n')
+            }
+            't' => {
+                self.next();
+                Some('\t')
+            }
+            'b' => {
+                self.next();
+                Some('\x08') // backspace
+            }
+            'r' => {
+                self.next();
+                Some('\r')
+            }
+            '\\' => {
+                self.next();
+                Some('\\')
+            }
+            ' ' => {
+                self.next();
+                Some(' ')
+            }
+            '\'' => {
+                self.next();
+                Some('\'')
+            }
+            '"' => {
+                self.next();
+                Some('"')
+            }
+            '0' if !self.peek().is_ascii_digit() => {
+                self.next();
+                Some('\0')
+            }
+            '0'..='9' => {
+                // Octal/decimal escape \NNN (up to 3 digits)
+                let mut value: u32 = 0;
+                for _ in 0..3 {
+                    if self.ch.is_ascii_digit() {
+                        value = value * 10 + (self.ch as u32 - '0' as u32);
+                        self.next();
+                    } else {
+                        break;
+                    }
+                }
+                // Convert to char (Latin-1 range)
+                char::from_u32(value)
+            }
+            'x' => {
+                // Hex escape \xNN
+                self.next();
+                let mut value: u32 = 0;
+                for _ in 0..2 {
+                    let digit = Self::digit_value(self.ch);
+                    if digit < 16 {
+                        value = value * 16 + digit as u32;
+                        self.next();
+                    } else {
+                        break;
+                    }
+                }
+                char::from_u32(value)
+            }
+            'u' => {
+                self.next();
+                if self.ch == '{' {
+                    // Unicode escape \u{NNNN}
+                    self.next();
+                    let mut value: u32 = 0;
+                    while self.ch.is_ascii_hexdigit() {
+                        value = value * 16 + Self::digit_value(self.ch) as u32;
+                        self.next();
+                    }
+                    if self.ch == '}' {
+                        self.next();
+                    }
+                    char::from_u32(value)
+                } else {
+                    // Unicode escape \uNNNN
+                    let mut value: u32 = 0;
+                    for _ in 0..4 {
+                        let digit = Self::digit_value(self.ch);
+                        if digit < 16 {
+                            value = value * 16 + digit as u32;
+                            self.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    char::from_u32(value)
+                }
+            }
+            c if c == EOF_CHAR => {
+                let end_pos = self.position();
+                self.error(
+                    start_pos.clone(),
+                    end_pos,
+                    DiagnosticCategory::message("unclosed escape sequence"),
+                );
+                None
+            }
+            c => {
+                // Unknown escape - return the char as-is
+                self.next();
+                Some(c)
+            }
+        }
+    }
+
+    /// Scan a string escape sequence (legacy version, doesn't return char).
+    fn scan_string_escape_sequence(&mut self, start_pos: &Position) {
+        let _ = self.scan_string_escape_sequence_char(start_pos);
     }
 
     /// Scan a single-line comment.
@@ -591,22 +749,22 @@ impl<'src> Scanner<'src> {
         };
 
         let end_pos = self.position();
-        let style = if doc_comment {
+        let loc = crate::location::Location::from_positions(start_pos, end_pos);
+
+        if doc_comment {
             if standalone {
-                CommentStyle::ModuleComment
+                Token::ModuleComment { loc, content }
             } else {
-                CommentStyle::DocComment
+                Token::DocComment { loc, content }
             }
         } else {
-            CommentStyle::MultiLine
-        };
-
-        Token::Comment(Comment {
-            txt: content,
-            style,
-            loc: crate::location::Location::from_positions(start_pos, end_pos),
-            prev_tok_end_pos: Position::default(),
-        })
+            Token::Comment(Comment {
+                txt: content,
+                style: CommentStyle::MultiLine,
+                loc,
+                prev_tok_end_pos: Position::default(),
+            })
+        }
     }
 
     /// Scan a template literal token.

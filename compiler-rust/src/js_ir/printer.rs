@@ -88,13 +88,9 @@ impl JsPrinter {
 
     /// Get a unique name for an identifier
     fn ident_name(&self, id: &Ident) -> String {
-        if id.stamp() == 0 {
-            // Persistent identifier
-            id.name().to_string()
-        } else {
-            // Local identifier - use name with stamp
-            format!("{}${}", id.name(), id.stamp())
-        }
+        // Use the name as-is for user-defined identifiers
+        // The stamp is only for internal compiler uniqueness, not for output
+        id.name().to_string()
     }
 
     /// Print a program
@@ -848,16 +844,86 @@ impl JsPrinter {
             }
 
             ExpressionDesc::CamlBlock(elements, _mutable, _tag, tag_info) => {
-                // For now, just output as array (can be refined for records/variants)
-                self.write_char('[');
-                for (i, elem) in elements.iter().enumerate() {
-                    if i > 0 {
-                        self.write(", ");
+                use crate::lambda::TagInfo;
+
+                // Check if this is a record with field names
+                match tag_info {
+                    TagInfo::Record { fields, .. } if fields.len() == elements.len() => {
+                        // Output as JS object
+                        self.write_char('{');
+                        for (i, (elem, (field_name, _optional))) in elements.iter().zip(fields.iter()).enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.write(field_name);
+                            self.write(": ");
+                            self.print_expression(elem, 1);
+                        }
+                        self.write_char('}');
                     }
-                    self.print_expression(elem, 1);
+                    TagInfo::RecordInlined { fields, .. } if fields.len() == elements.len() => {
+                        // Output as JS object for inlined records
+                        self.write_char('{');
+                        for (i, (elem, (field_name, _optional))) in elements.iter().zip(fields.iter()).enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.write(field_name);
+                            self.write(": ");
+                            self.print_expression(elem, 1);
+                        }
+                        self.write_char('}');
+                    }
+                    TagInfo::RecordExt { fields, .. } if fields.len() == elements.len() => {
+                        // Output as JS object for record extensions
+                        self.write_char('{');
+                        for (i, (elem, field_name)) in elements.iter().zip(fields.iter()).enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.write(field_name);
+                            self.write(": ");
+                            self.print_expression(elem, 1);
+                        }
+                        self.write_char('}');
+                    }
+                    TagInfo::Constructor { name, .. } => {
+                        // Output as JS object with TAG field: {TAG: "Name", _0: val, _1: val2, ...}
+                        self.write_char('{');
+                        self.write("TAG: ");
+                        self.print_string(name);
+                        for (i, elem) in elements.iter().enumerate() {
+                            self.write(", _");
+                            self.write(&i.to_string());
+                            self.write(": ");
+                            self.print_expression(elem, 1);
+                        }
+                        self.write_char('}');
+                    }
+                    TagInfo::PolyVar(name) => {
+                        // Output as JS object with NAME field: {NAME: "name", VAL: val}
+                        self.write_char('{');
+                        self.write("NAME: ");
+                        self.print_string(name);
+                        if let Some(val) = elements.get(1) {
+                            // First element is the NAME constant, second is the value
+                            self.write(", VAL: ");
+                            self.print_expression(val, 1);
+                        }
+                        self.write_char('}');
+                    }
+                    _ => {
+                        // Output as array for tuples, etc.
+                        self.write_char('[');
+                        for (i, elem) in elements.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.print_expression(elem, 1);
+                        }
+                        self.write_char(']');
+                    }
                 }
-                self.write_char(']');
-                let _ = tag_info;
             }
 
             ExpressionDesc::CamlBlockTag(e, tag) => {

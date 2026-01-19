@@ -47,7 +47,10 @@ impl LambdaCompiler {
     pub fn compile_program(&mut self, lam: &Lambda) -> Program {
         let compiled = self.compile_expr(lam);
         let mut block = compiled.prelude;
-        block.push(Statement::exp(compiled.expr));
+        // Only add the final expression if it's not undefined
+        if !matches!(compiled.expr.desc, ExpressionDesc::Undefined { .. }) {
+            block.push(Statement::exp(compiled.expr));
+        }
         Program::new(block, vec![])
     }
 
@@ -293,7 +296,10 @@ impl LambdaCompiler {
     fn compile_block(&mut self, lam: &Lambda) -> Block {
         let compiled = self.compile_expr(lam);
         let mut block = compiled.prelude;
-        block.push(Statement::exp(compiled.expr));
+        // Only add the final expression if it's not undefined
+        if !matches!(compiled.expr.desc, ExpressionDesc::Undefined { .. }) {
+            block.push(Statement::exp(compiled.expr));
+        }
         block
     }
 
@@ -412,6 +418,16 @@ impl LambdaCompiler {
             Pmulint | Pmulfloat => Expression::bin(BinOp::Mul, compiled_args[0].clone(), compiled_args[1].clone()),
             Pdivint | Pdivfloat => Expression::bin(BinOp::Div, compiled_args[0].clone(), compiled_args[1].clone()),
             Pmodint | Pmodfloat => Expression::bin(BinOp::Mod, compiled_args[0].clone(), compiled_args[1].clone()),
+            Ppowfloat => {
+                // Math.pow(base, exponent)
+                let math = Expression::var(Ident::create_persistent("Math"));
+                let pow = Expression::new(ExpressionDesc::StaticIndex(
+                    Box::new(math),
+                    "pow".to_string(),
+                    None,
+                ));
+                Expression::call(pow, compiled_args, CallInfo::default())
+            }
             Pintcomp(cmp) | Pfloatcomp(cmp) | Pbigintcomp(cmp) | Pstringcomp(cmp) | Pjscomp(cmp) => {
                 let op = comparison_to_binop(*cmp);
                 Expression::bin(op, compiled_args[0].clone(), compiled_args[1].clone())
@@ -535,6 +551,19 @@ impl LambdaCompiler {
                 name.clone(),
                 None,
             )),
+            FieldDbgInfo::VariantTag => Expression::new(ExpressionDesc::StaticIndex(
+                Box::new(target.clone()),
+                "TAG".to_string(),
+                None,
+            )),
+            FieldDbgInfo::Variant => {
+                // Variant fields are accessed as _0, _1, _2, ...
+                Expression::new(ExpressionDesc::StaticIndex(
+                    Box::new(target.clone()),
+                    format!("_{}", idx),
+                    None,
+                ))
+            }
             _ => Expression::new(ExpressionDesc::ArrayIndex(
                 Box::new(target.clone()),
                 Box::new(Expression::number(Number::int(idx))),

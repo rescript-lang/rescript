@@ -1187,14 +1187,19 @@ fn type_pattern_construct(
             vec![typed_arg]
         }
         (arg_types, Some(arg_pat)) if arg_types.len() > 1 => {
-            // Multiple arguments - expect tuple pattern
+            // Multiple arguments - the parser wraps them in a tuple pattern
+            // Type check as a tuple, then extract individual patterns
             let tuple_tys: Vec<_> = arg_types
                 .iter()
                 .map(|t| crate::types::instance(ctx, *t))
                 .collect();
             let tuple_ty = ctx.new_tuple(tuple_tys);
-            let typed_arg = type_pattern_inner(tctx, env, arg_pat, tuple_ty, mode, state, 0)?;
-            vec![typed_arg]
+            let typed_tuple = type_pattern_inner(tctx, env, arg_pat, tuple_ty, mode, state, 0)?;
+            // Extract tuple pattern elements
+            match &typed_tuple.pat_desc {
+                PatternDesc::Tpat_tuple(elements) => elements.clone(),
+                _ => vec![typed_tuple], // Fallback if not a tuple pattern
+            }
         }
         (arg_types, None) if arg_types.is_empty() => {
             // Constant constructor
@@ -2386,9 +2391,19 @@ fn type_construct(
             vec![typed_arg]
         }
         (arg_types, Some(arg_expr)) if arg_types.len() > 1 => {
-            // Multiple arguments - expect tuple
-            let typed_arg = type_expect(tctx, env, arg_expr, ctx.new_var(None), None)?;
-            vec![typed_arg]
+            // Multiple arguments - the parser wraps them in a tuple
+            // Type check as a tuple, then extract individual elements
+            let instantiated_arg_types: Vec<_> = arg_types
+                .iter()
+                .map(|t| crate::types::instance(ctx, *t))
+                .collect();
+            let tuple_ty = ctx.new_tuple(instantiated_arg_types);
+            let typed_tuple = type_expect(tctx, env, arg_expr, tuple_ty, None)?;
+            // Extract tuple elements
+            match &typed_tuple.exp_desc {
+                ExpressionDesc::Texp_tuple(elements) => elements.clone(),
+                _ => vec![typed_tuple], // Fallback if not a tuple
+            }
         }
         (arg_types, None) if arg_types.is_empty() => {
             // Constant constructor with no arguments
@@ -3159,11 +3174,8 @@ impl Env {
 
     /// Look up a value by longident.
     pub fn lookup_value_by_lid(&self, lid: &Longident) -> TypeCoreResult<(Path, ValueDescription)> {
-        match self.find_value(lid.to_string().as_str()) {
-            Ok(desc) => Ok((
-                Path::pident(Ident::create_persistent(lid.to_string())),
-                desc.clone(),
-            )),
+        match self.find_value_with_id(lid.to_string().as_str()) {
+            Ok((id, desc)) => Ok((Path::pident(id.clone()), desc.clone())),
             Err(_) => Err(TypeCoreError::UndefinedMethod {
                 ty: TypeExprRef(0), // Placeholder
                 method: lid.to_string(),

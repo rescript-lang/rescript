@@ -17,9 +17,10 @@
 //! - Lookup functions for values, types, and modules
 
 use super::context::TypeContext;
+use super::asttypes::PrivateFlag;
 use super::decl::{
-    ConstructorDescription, LabelDescription, ModtypeDeclaration, ModuleDeclaration,
-    TypeDeclaration, ValueDescription,
+    ConstructorDescription, ConstructorTag, LabelDescription, ModtypeDeclaration,
+    ModuleDeclaration, PrimitiveDescription, TypeDeclaration, ValueDescription, ValueKind,
 };
 use super::path::Path;
 use super::type_expr::TypeExprRef;
@@ -122,6 +123,14 @@ impl<T: Clone> BindingTable<T> {
             .get(name)
             .and_then(|entries| entries.last())
             .map(|(_, v)| v)
+    }
+
+    /// Find a binding by name, returning both the identifier and value.
+    pub fn find_by_name_with_id(&self, name: &str) -> Option<(&Ident, &T)> {
+        self.by_name
+            .get(name)
+            .and_then(|entries| entries.last())
+            .map(|(id, v)| (id, v))
     }
 
     /// Find a binding by identifier.
@@ -244,6 +253,14 @@ impl Env {
         self.values
             .find_by_name(name)
             .map(|v| v.as_ref())
+            .ok_or_else(|| EnvError::ValueNotFound(name.to_string()))
+    }
+
+    /// Find a value by name, returning both the identifier and description.
+    pub fn find_value_with_id(&self, name: &str) -> EnvResult<(&Ident, &ValueDescription)> {
+        self.values
+            .find_by_name_with_id(name)
+            .map(|(id, v)| (id, v.as_ref()))
             .ok_or_else(|| EnvError::ValueNotFound(name.to_string()))
     }
 
@@ -475,14 +492,22 @@ pub fn initial_env(ctx: &TypeContext<'_>) -> Env {
     // Add built-in types
     // These are the primitive types that exist in ReScript
     let builtins = [
-        "int", "float", "bool", "string", "unit", "array", "list", "option",
+        ("int", true),     // immediate
+        ("float", false),
+        ("bool", true),    // immediate
+        ("string", false),
+        ("unit", true),    // immediate
+        ("array", false),
+        ("list", false),
+        ("option", false),
+        ("char", true),    // immediate
     ];
 
-    for name in builtins {
+    for (name, immediate) in builtins {
         let id = Ident::create_persistent(name);
         let decl = TypeDeclaration {
             type_params: vec![],
-            type_arity: 0,
+            type_arity: if name == "array" || name == "list" || name == "option" { 1 } else { 0 },
             type_kind: super::decl::TypeKind::TypeAbstract,
             type_private: super::asttypes::PrivateFlag::Public,
             type_manifest: None,
@@ -490,21 +515,150 @@ pub fn initial_env(ctx: &TypeContext<'_>) -> Env {
             type_newtype_level: None,
             type_loc: Location::none(),
             type_attributes: vec![],
-            type_immediate: false,
+            type_immediate: immediate,
             type_unboxed: super::decl::UnboxedStatus::default(),
             type_inlined_types: vec![],
         };
         env.add_type(id, decl);
     }
 
-    // Add option type with constructors
-    let option_id = Ident::create_persistent("option");
-    if let Ok(option_decl) = env.find_type("option") {
-        // Would add None and Some constructors here
-        let _ = (ctx, option_id, option_decl);
-    }
+    // Create type references for primitives
+    let int_ty = ctx.new_constr(Path::pident(Ident::create_persistent("int")), vec![]);
+    let float_ty = ctx.new_constr(Path::pident(Ident::create_persistent("float")), vec![]);
+    let bool_ty = ctx.new_constr(Path::pident(Ident::create_persistent("bool")), vec![]);
+    let string_ty = ctx.new_constr(Path::pident(Ident::create_persistent("string")), vec![]);
+    let unit_ty = ctx.new_constr(Path::pident(Ident::create_persistent("unit")), vec![]);
+
+    // Add boolean constructors: true and false
+    // false has tag 0, true has tag 1
+    let false_id = Ident::create_persistent("false");
+    let false_cstr = ConstructorDescription {
+        cstr_name: "false".to_string(),
+        cstr_res: bool_ty,
+        cstr_existentials: vec![],
+        cstr_args: vec![],
+        cstr_arity: 0,
+        cstr_tag: ConstructorTag::CstrConstant(0),
+        cstr_consts: 2,
+        cstr_nonconsts: 0,
+        cstr_generalized: false,
+        cstr_private: PrivateFlag::Public,
+        cstr_loc: Location::none(),
+        cstr_attributes: vec![],
+        cstr_inlined: None,
+    };
+    env.add_constructor(false_id, false_cstr);
+
+    let true_id = Ident::create_persistent("true");
+    let true_cstr = ConstructorDescription {
+        cstr_name: "true".to_string(),
+        cstr_res: bool_ty,
+        cstr_existentials: vec![],
+        cstr_args: vec![],
+        cstr_arity: 0,
+        cstr_tag: ConstructorTag::CstrConstant(1),
+        cstr_consts: 2,
+        cstr_nonconsts: 0,
+        cstr_generalized: false,
+        cstr_private: PrivateFlag::Public,
+        cstr_loc: Location::none(),
+        cstr_attributes: vec![],
+        cstr_inlined: None,
+    };
+    env.add_constructor(true_id, true_cstr);
+
+    // Add arithmetic operators for int
+    // Note: In ReScript, + is polymorphic and specialized by the type checker,
+    // but for simplicity we'll add int versions directly
+    add_binary_primitive(&mut env, ctx, "+", "%addint", int_ty, int_ty, int_ty);
+    add_binary_primitive(&mut env, ctx, "-", "%subint", int_ty, int_ty, int_ty);
+    add_binary_primitive(&mut env, ctx, "*", "%mulint", int_ty, int_ty, int_ty);
+    add_binary_primitive(&mut env, ctx, "/", "%divint", int_ty, int_ty, int_ty);
+    add_binary_primitive(&mut env, ctx, "mod", "%modint", int_ty, int_ty, int_ty);
+
+    // Add arithmetic operators for float
+    add_binary_primitive(&mut env, ctx, "+.", "%addfloat", float_ty, float_ty, float_ty);
+    add_binary_primitive(&mut env, ctx, "-.", "%subfloat", float_ty, float_ty, float_ty);
+    add_binary_primitive(&mut env, ctx, "*.", "%mulfloat", float_ty, float_ty, float_ty);
+    add_binary_primitive(&mut env, ctx, "/.", "%divfloat", float_ty, float_ty, float_ty);
+    add_binary_primitive(&mut env, ctx, "**", "%powfloat", float_ty, float_ty, float_ty);
+
+    // Add comparison operators (polymorphic - using int for now)
+    add_binary_primitive(&mut env, ctx, "==", "%eq", int_ty, int_ty, bool_ty);
+    add_binary_primitive(&mut env, ctx, "!=", "%noteq", int_ty, int_ty, bool_ty);
+    add_binary_primitive(&mut env, ctx, "<", "%ltint", int_ty, int_ty, bool_ty);
+    add_binary_primitive(&mut env, ctx, ">", "%gtint", int_ty, int_ty, bool_ty);
+    add_binary_primitive(&mut env, ctx, "<=", "%leint", int_ty, int_ty, bool_ty);
+    add_binary_primitive(&mut env, ctx, ">=", "%geint", int_ty, int_ty, bool_ty);
+
+    // Add boolean operators
+    add_binary_primitive(&mut env, ctx, "&&", "%sequand", bool_ty, bool_ty, bool_ty);
+    add_binary_primitive(&mut env, ctx, "||", "%sequor", bool_ty, bool_ty, bool_ty);
+    add_unary_primitive(&mut env, ctx, "not", "%boolnot", bool_ty, bool_ty);
+
+    // Add unary minus
+    add_unary_primitive(&mut env, ctx, "~-", "%negint", int_ty, int_ty);
+    add_unary_primitive(&mut env, ctx, "~-.", "%negfloat", float_ty, float_ty);
+
+    // Add string concatenation
+    add_binary_primitive(&mut env, ctx, "++", "%string_concat", string_ty, string_ty, string_ty);
+
+    // Add ignore function
+    let alpha = ctx.new_var(None);
+    add_unary_primitive(&mut env, ctx, "ignore", "%ignore", alpha, unit_ty);
 
     env
+}
+
+/// Helper to add a binary primitive operator
+fn add_binary_primitive(
+    env: &mut Env,
+    ctx: &TypeContext<'_>,
+    name: &str,
+    prim_name: &str,
+    arg1_ty: TypeExprRef,
+    arg2_ty: TypeExprRef,
+    ret_ty: TypeExprRef,
+) {
+    let func_ty = ctx.new_arrow_simple(arg1_ty, ctx.new_arrow_simple(arg2_ty, ret_ty));
+    let id = Ident::create_persistent(name);
+    let desc = ValueDescription {
+        val_type: func_ty,
+        val_kind: ValueKind::ValPrim(PrimitiveDescription {
+            prim_name: prim_name.to_string(),
+            prim_arity: 2,
+            prim_native_name: String::new(),
+            prim_native_float: false,
+        }),
+        val_loc: Location::none(),
+        val_attributes: vec![],
+    };
+    env.add_value(id, desc);
+}
+
+/// Helper to add a unary primitive operator
+fn add_unary_primitive(
+    env: &mut Env,
+    ctx: &TypeContext<'_>,
+    name: &str,
+    prim_name: &str,
+    arg_ty: TypeExprRef,
+    ret_ty: TypeExprRef,
+) {
+    let func_ty = ctx.new_arrow_simple(arg_ty, ret_ty);
+    let id = Ident::create_persistent(name);
+    let desc = ValueDescription {
+        val_type: func_ty,
+        val_kind: ValueKind::ValPrim(PrimitiveDescription {
+            prim_name: prim_name.to_string(),
+            prim_arity: 1,
+            prim_native_name: String::new(),
+            prim_native_float: false,
+        }),
+        val_loc: Location::none(),
+        val_attributes: vec![],
+    };
+    env.add_value(id, desc);
 }
 
 #[cfg(test)]

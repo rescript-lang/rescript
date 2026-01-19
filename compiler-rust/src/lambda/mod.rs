@@ -347,6 +347,11 @@ impl Lambda {
     pub fn unit() -> Self {
         Lambda::Lconst(Constant::JsUndefined { is_unit: true })
     }
+
+    /// Check if this is the unit value (undefined with is_unit=true)
+    pub fn is_unit(&self) -> bool {
+        matches!(self, Lambda::Lconst(Constant::JsUndefined { is_unit: true }))
+    }
 }
 
 #[cfg(test)]

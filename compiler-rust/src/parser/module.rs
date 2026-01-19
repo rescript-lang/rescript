@@ -160,7 +160,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         }
         Token::Exception => {
             p.next();
-            let ext = parse_extension_constructor(p);
+            let ext = parse_extension_constructor(p, attrs.clone());
             Some(StructureItemDesc::Pstr_exception(ext))
         }
         Token::Module => {
@@ -198,6 +198,14 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let attr = parse_attribute_body(p);
                 Some(StructureItemDesc::Pstr_attribute(attr))
             }
+        }
+        Token::ModuleComment { loc, content } => {
+            // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
+            let loc = loc.clone();
+            let content = content.clone();
+            p.next();
+            let attr = super::core::doc_comment_to_attribute(loc, content);
+            Some(StructureItemDesc::Pstr_attribute(attr))
         }
         Token::PercentPercent => {
             // Structure-level extension (%%raw(...), %%private(...), etc.)
@@ -374,7 +382,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
         }
         Token::Exception => {
             p.next();
-            let ext = parse_extension_constructor(p);
+            let ext = parse_extension_constructor(p, attrs.clone());
             Some(SignatureItemDesc::Psig_exception(ext))
         }
         Token::Module => {
@@ -411,6 +419,14 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 let attr = parse_attribute_body(p);
                 Some(SignatureItemDesc::Psig_attribute(attr))
             }
+        }
+        Token::ModuleComment { loc, content } => {
+            // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
+            let loc = loc.clone();
+            let content = content.clone();
+            p.next();
+            let attr = super::core::doc_comment_to_attribute(loc, content);
+            Some(SignatureItemDesc::Psig_attribute(attr))
         }
         Token::Percent | Token::PercentPercent => {
             let ext = parse_extension(p);
@@ -962,16 +978,22 @@ fn parse_structure_in_braces(p: &mut Parser<'_>) -> Vec<StructureItem> {
 
 /// Parse a module type.
 pub fn parse_module_type(p: &mut Parser<'_>) -> ModuleType {
-    parse_module_type_impl(p, true)
+    parse_module_type_impl(p, true, true)
 }
 
 /// Parse a module type without allowing ES6 arrow functor types.
 /// Used when parsing return type constraints in functor expressions.
 pub fn parse_module_type_no_arrow(p: &mut Parser<'_>) -> ModuleType {
-    parse_module_type_impl(p, false)
+    parse_module_type_impl(p, false, true)
 }
 
-fn parse_module_type_impl(p: &mut Parser<'_>, es6_arrow: bool) -> ModuleType {
+/// Parse a module type without `with` constraint support.
+/// Used for functor body types where `with` should apply to the outer functor.
+fn parse_module_type_no_with(p: &mut Parser<'_>) -> ModuleType {
+    parse_module_type_impl(p, true, false)
+}
+
+fn parse_module_type_impl(p: &mut Parser<'_>, es6_arrow: bool, parse_with: bool) -> ModuleType {
     let start_pos = p.start_pos.clone();
 
     // Parse attributes (e.g. `@attr module type of M`)
@@ -985,7 +1007,8 @@ fn parse_module_type_impl(p: &mut Parser<'_>, es6_arrow: bool) -> ModuleType {
     };
 
     // Handle with constraint: S with type t = ...
-    if matches!(&p.token, Token::Lident(s) if s == "with") {
+    // Only if parse_with is true - functor bodies don't parse `with` so it applies to the outer functor
+    if parse_with && matches!(&p.token, Token::Lident(s) if s == "with") {
         p.next();
         let constraints = parse_with_constraints(p);
         let loc = mk_loc(&start_pos, &p.prev_end_pos);
@@ -1018,7 +1041,8 @@ fn parse_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
     let param_type = parse_primary_module_type(p);
     if p.token == Token::EqualGreater {
         p.next();
-        let body = parse_module_type(p);
+        // Use parse_module_type_no_with so `with` constraints apply to the outer functor
+        let body = parse_module_type_no_with(p);
         let loc = mk_loc(&start_pos, &body.pmty_loc.loc_end);
         return ModuleType {
             pmty_desc: ModuleTypeDesc::Pmty_functor(
@@ -1064,6 +1088,7 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
     struct FunctorParam {
         name: StringLoc,
         param: Option<ModuleType>,
+        attrs: Attributes,
         start_pos: Position,
     }
 
@@ -1076,13 +1101,14 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
         params.push(FunctorParam {
             name: mknoloc("*".to_string()),
             param: None,
+            attrs: vec![],
             start_pos,
         });
     } else {
         while p.token != Token::Rparen && p.token != Token::Eof {
             let start_pos = p.start_pos.clone();
-            // Consume (and ignore) any parameter attributes like `(@attr _: S)`.
-            let _param_attrs = parse_attributes(p);
+            // Parse parameter attributes like `@attr _: S` - attach to the functor type, not param
+            let param_attrs = parse_attributes(p);
 
             match &p.token {
                 Token::Underscore => {
@@ -1098,6 +1124,7 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                     params.push(FunctorParam {
                         name,
                         param,
+                        attrs: param_attrs,
                         start_pos,
                     });
                 }
@@ -1119,10 +1146,11 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                             _ => mknoloc("_".to_string()),
                         };
                         p.expect(Token::Colon);
-                        let param = Some(parse_module_type(p));
+                        let mty = parse_module_type(p);
                         params.push(FunctorParam {
                             name,
-                            param,
+                            param: Some(mty),
+                            attrs: param_attrs,
                             start_pos,
                         });
                     } else {
@@ -1131,6 +1159,7 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                         params.push(FunctorParam {
                             name: mknoloc("_".to_string()),
                             param: Some(param_ty),
+                            attrs: param_attrs,
                             start_pos,
                         });
                     }
@@ -1145,8 +1174,9 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                         p.next();
                         p.expect(Token::Rparen);
                         params.push(FunctorParam {
-                            name: mknoloc(String::new()),
+                            name: mknoloc("*".to_string()),
                             param: None,
+                            attrs: param_attrs,
                             start_pos,
                         });
                     } else {
@@ -1154,6 +1184,7 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                         params.push(FunctorParam {
                             name: mknoloc("_".to_string()),
                             param: Some(param_ty),
+                            attrs: param_attrs,
                             start_pos,
                         });
                     }
@@ -1174,7 +1205,8 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
     }
 
     p.expect(Token::EqualGreater);
-    let body = parse_module_type(p);
+    // Use parse_module_type_no_with so `with` constraints apply to the outer functor
+    let body = parse_module_type_no_with(p);
     let end_pos = body.pmty_loc.loc_end.clone();
 
     params.into_iter().rev().fold(body, |acc, param| {
@@ -1186,7 +1218,7 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                 Box::new(acc),
             ),
             pmty_loc: loc,
-            pmty_attributes: vec![],
+            pmty_attributes: param.attrs,
         }
     })
 }
@@ -1521,13 +1553,13 @@ fn parse_let_bindings(
         // For the first binding, prepend the outer attributes
         if bindings.is_empty() {
             attrs = [outer_attrs.clone(), attrs].concat();
-            // Add let.unwrap attribute if this is let?
-            if unwrap {
-                attrs.push((
-                    mknoloc("let.unwrap".to_string()),
-                    Payload::PStr(vec![]),
-                ));
-            }
+        }
+        // Add let.unwrap attribute if this is let? (for all bindings, including `and` bindings)
+        if unwrap {
+            attrs.push((
+                mknoloc("let.unwrap".to_string()),
+                Payload::PStr(vec![]),
+            ));
         }
 
         // Handle `and` after attributes: `@attr and foo = ...`
@@ -1553,22 +1585,80 @@ fn parse_let_bindings(
         let pat = pattern::parse_pattern(p);
 
         // Handle optional type annotation: let x: int = ...
-        let pat = if p.token == Token::Colon {
+        // Also track locally abstract types for Pexp_newtype wrapping
+        let (pat, newtype_info) = if p.token == Token::Colon {
             p.next();
+
+            // Check if this is `type a.` syntax (locally abstract types)
+            // Only `type a.` syntax generates Pexp_newtype, not `'a.` syntax
+            let is_locally_abstract = p.token == Token::Typ;
+
             let typ = typ::parse_typ_expr(p);
+
+            // Extract type variables and inner type if this is a Ptyp_poly from `type a.` syntax
+            // The inner type is used directly for Pexp_constraint (with Ptyp_constr for type vars)
+            // But for the Ptyp_poly in the pattern, we need to substitute Ptyp_constr -> Ptyp_var
+            let (final_typ, newtype_info) = match typ.ptyp_desc {
+                CoreTypeDesc::Ptyp_poly(vars, inner) if is_locally_abstract => {
+                    // Build the set of variable names for substitution
+                    let var_set: std::collections::HashSet<&str> =
+                        vars.iter().map(|v| v.txt.as_str()).collect();
+
+                    // The inner type (with Ptyp_constr) is used for Pexp_constraint
+                    let inner_for_constraint = (*inner).clone();
+
+                    // Substitute Ptyp_constr -> Ptyp_var for the Ptyp_poly body
+                    let substituted_inner = typ::substitute_type_vars((*inner).clone(), &var_set);
+
+                    // Rebuild the Ptyp_poly with the substituted body
+                    let substituted_typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_poly(vars.clone(), Box::new(substituted_inner)),
+                        ptyp_loc: typ.ptyp_loc,
+                        ptyp_attributes: typ.ptyp_attributes,
+                    };
+
+                    (substituted_typ, Some((vars, inner_for_constraint)))
+                }
+                _ => (typ, None),
+            };
+
             // Create a constraint pattern
-            let loc = mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
-            Pattern {
-                ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
+            let loc = mk_loc(&pat.ppat_loc.loc_start, &final_typ.ptyp_loc.loc_end);
+            let pat = Pattern {
+                ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), final_typ),
                 ppat_loc: loc,
                 ppat_attributes: vec![],
-            }
+            };
+            (pat, newtype_info)
         } else {
-            pat
+            (pat, None)
         };
 
         p.expect(Token::Equal);
-        let expr = expr::parse_expr(p);
+        let mut expr = expr::parse_expr(p);
+
+        // Wrap expression in Pexp_newtype for locally abstract types
+        // Also add Pexp_constraint with the inner type (from Ptyp_poly)
+        if let Some((newtype_vars, inner_type)) = newtype_info {
+            // First wrap the expression in Pexp_constraint with the inner type
+            let loc = expr.pexp_loc.clone();
+            expr = Expression {
+                pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), inner_type),
+                pexp_loc: loc,
+                pexp_attributes: vec![],
+            };
+
+            // Then wrap in Pexp_newtype for each type variable
+            // Fold in reverse order so that the outermost newtype is the first variable
+            for var in newtype_vars.into_iter().rev() {
+                let loc = expr.pexp_loc.clone();
+                expr = Expression {
+                    pexp_desc: ExpressionDesc::Pexp_newtype(var, Box::new(expr)),
+                    pexp_loc: loc,
+                    pexp_attributes: vec![],
+                };
+            }
+        }
 
         let loc = mk_loc(&start_pos, &p.prev_end_pos);
         bindings.push(ValueBinding {
@@ -1579,18 +1669,22 @@ fn parse_let_bindings(
         });
 
         // Check for `and` to continue with more bindings.
-        // Also handle attributes before `and`: `@attr and ...`
+        // Also handle attributes/doc comments before `and`: `@attr and ...` or `/** doc */ and ...`
         if p.token == Token::And {
             p.next();
-        } else if matches!(p.token, Token::At | Token::AtAt) {
-            // Look ahead to see if attributes are followed by And
+        } else if matches!(p.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
+            // Look ahead to see if attributes/doc comments are followed by And
             let has_and_after = p.lookahead(|state| {
-                // Skip attributes
-                while matches!(state.token, Token::At | Token::AtAt) {
-                    state.next(); // @
-                    // Skip the attribute identifier and any payload
-                    while !matches!(state.token, Token::At | Token::AtAt | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                // Skip attributes and doc comments
+                while matches!(state.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
+                    if matches!(state.token, Token::DocComment { .. }) {
                         state.next();
+                    } else {
+                        state.next(); // @
+                        // Skip the attribute identifier and any payload
+                        while !matches!(state.token, Token::At | Token::AtAt | Token::DocComment { .. } | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                            state.next();
+                        }
                     }
                 }
                 state.token == Token::And
@@ -1610,26 +1704,31 @@ fn parse_let_bindings(
 /// Parse type declarations.
 fn parse_type_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<TypeDeclaration> {
     let mut decls = vec![];
+    let mut next_attrs = outer_attrs;
 
     loop {
-        let first_decl = decls.is_empty();
-        if let Some(decl) = parse_type_declaration(p, if first_decl { outer_attrs.clone() } else { vec![] }) {
+        if let Some(decl) = parse_type_declaration(p, next_attrs) {
             decls.push(decl);
         }
+        next_attrs = vec![];
 
         // Check for `and` to continue with more type declarations.
-        // Also handle attributes before `and`: `@attr and type t = ...`
+        // Also handle attributes/doc comments before `and`: `/** doc */ and type t = ...`
         if p.token == Token::And {
             p.next();
-        } else if matches!(p.token, Token::At | Token::AtAt) {
-            // Look ahead to see if attributes are followed by And
+        } else if matches!(p.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
+            // Look ahead to see if attributes/doc comments are followed by And
             let has_and_after = p.lookahead(|state| {
-                // Skip attributes
-                while matches!(state.token, Token::At | Token::AtAt) {
-                    state.next(); // @
-                    // Skip the attribute identifier and any payload
-                    while !matches!(state.token, Token::At | Token::AtAt | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                // Skip attributes and doc comments
+                while matches!(state.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
+                    if matches!(state.token, Token::DocComment { .. }) {
                         state.next();
+                    } else {
+                        state.next(); // @
+                        // Skip the attribute identifier and any payload
+                        while !matches!(state.token, Token::At | Token::AtAt | Token::DocComment { .. } | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                            state.next();
+                        }
                     }
                 }
                 state.token == Token::And
@@ -1637,7 +1736,11 @@ fn parse_type_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<T
             if !has_and_after {
                 break;
             }
-            // Continue - attributes will be parsed in parse_type_declaration
+            // Parse the attributes/doc comments, then consume `and`
+            next_attrs = parse_attributes(p);
+            if p.token == Token::And {
+                p.next();
+            }
         } else {
             break;
         }
@@ -1699,7 +1802,7 @@ fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension 
 
     let mut constructors = vec![];
     while p.token != Token::Eof {
-        constructors.push(parse_extension_constructor(p));
+        constructors.push(parse_extension_constructor(p, vec![]));
         if p.token == Token::Bar {
             p.next();
             continue;
@@ -1806,10 +1909,43 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
                     }
                 }
 
-                matches!(
-                    state.token,
-                    Token::String(_) | Token::Dot | Token::DotDot | Token::DotDotDot
-                )
+                // It's an object type if we see a string field name (like {"x": int})
+                // Spread (...) alone doesn't make it an object - records can have spread too
+                if matches!(state.token, Token::String(_)) {
+                    return true;
+                }
+
+                // If we see spread, look for a string field anywhere after it
+                // If all fields are spreads or idents, it's a record
+                if state.token == Token::DotDotDot {
+                    // Scan through the rest to see if there's any string field
+                    let mut depth = 0;
+                    loop {
+                        match state.token {
+                            Token::String(_) if depth == 0 => return true, // Found a string field - it's an object
+                            Token::Rbrace if depth == 0 => return false, // End of braces, no string found - it's a record
+                            Token::Eof => return false,
+                            Token::Lparen | Token::Lbrace | Token::Lbracket => depth += 1,
+                            Token::Rparen | Token::Rbracket => {
+                                if depth > 0 {
+                                    depth -= 1;
+                                }
+                            }
+                            Token::Rbrace => {
+                                if depth > 0 {
+                                    depth -= 1;
+                                } else {
+                                    return false;
+                                }
+                            }
+                            _ => {}
+                        }
+                        state.next();
+                    }
+                }
+
+                // Dot or DotDot at start also indicates object type
+                matches!(state.token, Token::Dot | Token::DotDot)
             })
         };
 
@@ -1826,6 +1962,7 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
                 }
 
                 // Any of these mean we're in constructor territory.
+                // Includes tokens that end the type declaration (like keywords starting new decls).
                 matches!(
                     state.token,
                     Token::Bar
@@ -1838,6 +1975,14 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
                         | Token::Semicolon
                         | Token::Rbrace
                         | Token::Eof
+                        // Keywords that start new top-level declarations
+                        | Token::Let { .. }
+                        | Token::Typ
+                        | Token::Module
+                        | Token::Open
+                        | Token::Include
+                        | Token::External
+                        | Token::Exception
                 )
             })
         };
@@ -1874,28 +2019,47 @@ fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option
                     manifest = Some(typ::parse_typ_expr(p));
                 }
             }
-            Token::At => {
+            Token::At | Token::DocComment { .. } => {
                 // Check if this is a variant constructor with attribute: @attr Constr
-                // Lookahead to see if there's a Uident after the attribute
+                // vs a manifest type with attribute: @attr Type.t
+                // Lookahead to see if there's a Uident after the attribute that's NOT followed by `.`
                 let is_variant = p.lookahead(|state| {
-                    // Skip attributes
-                    while state.token == Token::At {
-                        state.next(); // @
-                        state.next(); // attr name
-                        if state.token == Token::Lparen {
-                            let mut depth = 1;
+                    // Skip attributes and doc comments
+                    while matches!(state.token, Token::At | Token::DocComment { .. }) {
+                        if matches!(state.token, Token::DocComment { .. }) {
                             state.next();
-                            while depth > 0 && state.token != Token::Eof {
-                                if state.token == Token::Lparen {
-                                    depth += 1;
-                                } else if state.token == Token::Rparen {
-                                    depth -= 1;
-                                }
+                        } else {
+                            state.next(); // @
+                            // Skip attribute name (may be dotted like res.doc)
+                            while matches!(state.token, Token::Lident(_) | Token::Uident(_)) || state.token.is_keyword() {
                                 state.next();
+                                if state.token == Token::Dot {
+                                    state.next();
+                                } else {
+                                    break;
+                                }
+                            }
+                            if state.token == Token::Lparen {
+                                let mut depth = 1;
+                                state.next();
+                                while depth > 0 && state.token != Token::Eof {
+                                    if state.token == Token::Lparen {
+                                        depth += 1;
+                                    } else if state.token == Token::Rparen {
+                                        depth -= 1;
+                                    }
+                                    state.next();
+                                }
                             }
                         }
                     }
-                    matches!(state.token, Token::Uident(_))
+                    // It's a variant if we see Uident NOT followed by `.` (type path)
+                    if matches!(state.token, Token::Uident(_)) {
+                        state.next();
+                        state.token != Token::Dot
+                    } else {
+                        false
+                    }
                 });
                 if is_variant {
                     let constructors = parse_constructors_without_leading_bar(p);
@@ -2439,12 +2603,20 @@ fn parse_label_declarations(p: &mut Parser<'_>) -> Vec<LabelDeclaration> {
     let mut labels = vec![];
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
-        // Handle spread: ...typ (skip for now, not represented in AST)
+        // Handle spread: ...typ - represented as a label with name "..."
         if p.token == Token::DotDotDot {
+            let start_pos = p.start_pos.clone();
             p.next();
-            let _spread_type = typ::parse_typ_expr(p);
-            // TODO: Handle spread in record type definitions properly
-            // For now, skip it
+            let spread_type = typ::parse_typ_expr(p);
+            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            labels.push(LabelDeclaration {
+                pld_name: with_loc("...".to_string(), loc.clone()),
+                pld_mutable: MutableFlag::Immutable,
+                pld_type: spread_type,
+                pld_loc: loc,
+                pld_attributes: vec![],
+                pld_optional: false,
+            });
             if !p.optional(&Token::Comma) {
                 break;
             }
@@ -2562,7 +2734,7 @@ fn parse_value_description(p: &mut Parser<'_>, outer_attrs: Attributes) -> Value
 }
 
 /// Parse an extension constructor (for exception).
-pub fn parse_extension_constructor(p: &mut Parser<'_>) -> ExtensionConstructor {
+pub fn parse_extension_constructor(p: &mut Parser<'_>, attrs: Attributes) -> ExtensionConstructor {
     let start_pos = p.start_pos.clone();
     let constructor = parse_constructor(p).unwrap_or_else(|| ConstructorDeclaration {
         pcd_name: mknoloc("Error".to_string()),
@@ -2581,11 +2753,15 @@ pub fn parse_extension_constructor(p: &mut Parser<'_>) -> ExtensionConstructor {
         kind = ExtensionConstructorKind::Pext_rebind(lid);
     }
 
+    // Combine outer attributes with constructor attributes
+    let mut all_attrs = attrs;
+    all_attrs.extend(constructor.pcd_attributes);
+
     ExtensionConstructor {
         pext_name: constructor.pcd_name,
         pext_kind: kind,
         pext_loc: mk_loc(&start_pos, &p.prev_end_pos),
-        pext_attributes: constructor.pcd_attributes,
+        pext_attributes: all_attrs,
     }
 }
 
@@ -2664,7 +2840,7 @@ fn parse_module_definition(p: &mut Parser<'_>, attrs: Attributes) -> Option<Stru
     }
 
     // Parse additional module bindings with `and`
-    // Also handle attributes before `and`: `@attr and M = ...`
+    // Also handle attributes/doc comments before `and`: `@attr and M = ...` or `/** doc */ and M = ...`
     loop {
         if p.token == Token::And {
             p.next();
@@ -2673,15 +2849,19 @@ fn parse_module_definition(p: &mut Parser<'_>, attrs: Attributes) -> Option<Stru
             if let Some(binding) = parse_binding(p, binding_start, binding_attrs) {
                 bindings.push(binding);
             }
-        } else if matches!(p.token, Token::At | Token::AtAt) {
-            // Look ahead to see if attributes are followed by And
+        } else if matches!(p.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
+            // Look ahead to see if attributes/doc comments are followed by And
             let has_and_after = p.lookahead(|state| {
-                // Skip attributes
-                while matches!(state.token, Token::At | Token::AtAt) {
-                    state.next(); // @
-                    // Skip the attribute identifier and any payload
-                    while !matches!(state.token, Token::At | Token::AtAt | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                // Skip attributes and doc comments
+                while matches!(state.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
+                    if matches!(state.token, Token::DocComment { .. }) {
                         state.next();
+                    } else {
+                        state.next(); // @
+                        // Skip the attribute identifier and any payload
+                        while !matches!(state.token, Token::At | Token::AtAt | Token::DocComment { .. } | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                            state.next();
+                        }
                     }
                 }
                 state.token == Token::And
@@ -2766,6 +2946,32 @@ fn parse_module_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Modu
     }
 }
 
+/// Parse attributes only if followed by `and` keyword.
+/// This uses speculative parsing with backtracking like OCaml's parse_attributes_and_binding.
+/// If attrs are present but not followed by `and`, parser state is restored and empty attrs returned.
+fn parse_attributes_and_binding(p: &mut Parser<'_>) -> Attributes {
+    match &p.token {
+        Token::At | Token::DocComment { .. } => {
+            // Save parser state for potential backtrack
+            let snapshot = p.snapshot();
+
+            // Parse attributes
+            let attrs = parse_attributes(p);
+
+            // Check if `and` follows
+            if p.token == Token::And {
+                // Keep the attrs - they're for the `and` clause
+                attrs
+            } else {
+                // Restore parser state - attrs belong to next item
+                p.restore(snapshot);
+                vec![]
+            }
+        }
+        _ => vec![],
+    }
+}
+
 /// Parse recursive module declarations (for signature).
 fn parse_rec_module_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<ModuleDeclaration> {
     let mut decls = vec![];
@@ -2773,15 +2979,10 @@ fn parse_rec_module_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) ->
     // Parse first declaration (gets the outer attrs)
     decls.push(parse_module_declaration(p, outer_attrs));
 
-    // Parse additional declarations with `and` (each may have attrs before `and`)
+    // Parse additional declarations with `and`
+    // Uses parse_attributes_and_binding which backtracks if attrs aren't followed by `and`
     loop {
-        // Check for attributes before `and`
-        let attrs = if p.token == Token::At {
-            parse_attributes(p)
-        } else {
-            vec![]
-        };
-
+        let attrs = parse_attributes_and_binding(p);
         if p.token == Token::And {
             p.next();
             decls.push(parse_module_declaration(p, attrs));
@@ -2831,12 +3032,23 @@ fn parse_module_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) ->
     }
 }
 
-/// Parse attributes.
+/// Parse attributes (including doc comments which become res.doc attributes).
 fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
     let mut attrs = vec![];
-    while p.token == Token::At {
-        p.next();
-        attrs.push(parse_attribute_body(p));
+    loop {
+        match &p.token {
+            Token::At => {
+                p.next();
+                attrs.push(parse_attribute_body(p));
+            }
+            Token::DocComment { loc, content } => {
+                let loc = loc.clone();
+                let content = content.clone();
+                p.next();
+                attrs.push(super::core::doc_comment_to_attribute(loc, content));
+            }
+            _ => break,
+        }
     }
     attrs
 }
@@ -2961,6 +3173,7 @@ pub fn parse_payload(p: &mut Parser<'_>) -> Payload {
                 | Token::AtAt
                 | Token::Percent
                 | Token::PercentPercent
+                | Token::ModuleComment { .. }
         );
 
         if is_structure_item {

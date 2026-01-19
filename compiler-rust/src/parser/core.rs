@@ -327,6 +327,26 @@ pub fn skip_doc_comments(p: &mut Parser<'_>) {
     }
 }
 
+/// Convert a doc comment to a res.doc attribute.
+pub fn doc_comment_to_attribute(loc: Location, content: String) -> Attribute {
+    let name = with_loc("res.doc".to_string(), loc.clone());
+    let payload = Payload::PStr(vec![StructureItem {
+        pstr_desc: StructureItemDesc::Pstr_eval(
+            Expression {
+                pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(
+                    content,
+                    None,
+                )),
+                pexp_loc: loc.clone(),
+                pexp_attributes: vec![],
+            },
+            vec![],
+        ),
+        pstr_loc: loc,
+    }]);
+    (name, payload)
+}
+
 // ============================================================================
 // Longident Building
 // ============================================================================
