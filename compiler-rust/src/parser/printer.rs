@@ -4,8 +4,10 @@
 //! It's used for formatting and roundtrip testing.
 
 use super::ast::*;
+use super::comment::{Comment, CommentStyle};
 use super::longident::Longident;
-use std::fmt::Write;
+use super::token::Token;
+use crate::location::Location;
 
 /// Printer state for formatting output.
 pub struct Printer {
@@ -15,6 +17,34 @@ pub struct Printer {
     indent: usize,
     /// Indentation string (spaces).
     indent_str: &'static str,
+    /// Maximum line width for formatting decisions.
+    max_width: usize,
+    /// Current line length (approximate, in bytes).
+    line_len: usize,
+    /// Optional comment stream for preserving comments.
+    comments: Option<CommentCursor>,
+}
+
+#[derive(Debug, Clone)]
+struct CommentCursor {
+    comments: Vec<Comment>,
+    index: usize,
+}
+
+impl CommentCursor {
+    fn new(comments: Vec<Comment>) -> Self {
+        Self { comments, index: 0 }
+    }
+
+    fn peek(&self) -> Option<&Comment> {
+        self.comments.get(self.index)
+    }
+
+    fn advance(&mut self) {
+        if self.index < self.comments.len() {
+            self.index += 1;
+        }
+    }
 }
 
 impl Default for Printer {
@@ -30,6 +60,34 @@ impl Printer {
             output: String::new(),
             indent: 0,
             indent_str: "  ",
+            max_width: 100,
+            line_len: 0,
+            comments: None,
+        }
+    }
+
+    /// Create a new printer with a custom line width.
+    pub fn with_width(max_width: usize) -> Self {
+        Printer {
+            max_width,
+            ..Self::new()
+        }
+    }
+
+    /// Create a new printer with comments.
+    pub fn with_comments(comments: Vec<Comment>) -> Self {
+        Printer {
+            comments: Some(CommentCursor::new(comments)),
+            ..Self::new()
+        }
+    }
+
+    /// Create a new printer with comments and a custom line width.
+    pub fn with_comments_and_width(comments: Vec<Comment>, max_width: usize) -> Self {
+        Printer {
+            max_width,
+            comments: Some(CommentCursor::new(comments)),
+            ..Self::new()
         }
     }
 
@@ -46,13 +104,40 @@ impl Printer {
     /// Write a string to the output.
     fn write(&mut self, s: &str) {
         self.output.push_str(s);
+        if let Some(idx) = s.rfind('\n') {
+            let after = &s[idx + 1..];
+            self.line_len = after.len();
+        } else {
+            self.line_len += s.len();
+        }
+    }
+
+    /// Write an identifier, escaping it if it's a keyword.
+    /// Keywords like "switch" need to be written as \"switch" in ReScript.
+    /// Escaped identifiers are stored in the AST with quotes, e.g. "switch"
+    fn write_ident(&mut self, s: &str) {
+        // Check if the identifier is already in escaped form (e.g. "switch")
+        if s.starts_with('"') && s.ends_with('"') && s.len() > 2 {
+            // This is an escaped identifier - add backslash prefix
+            self.write("\\");
+            self.write(s);
+        } else if Token::is_keyword_txt(s) && s != "true" && s != "false" {
+            // Escape keywords except true/false which are boolean literals
+            self.write("\\\"");
+            self.write(s);
+            self.write("\"");
+        } else {
+            self.write(s);
+        }
     }
 
     /// Write a newline and indentation.
     fn newline(&mut self) {
         self.output.push('\n');
+        self.line_len = 0;
         for _ in 0..self.indent {
             self.output.push_str(self.indent_str);
+            self.line_len += self.indent_str.len();
         }
     }
 
@@ -70,7 +155,157 @@ impl Printer {
 
     /// Write a space.
     fn space(&mut self) {
-        self.output.push(' ');
+        self.write(" ");
+    }
+
+    /// Check if we're at the start of a line.
+    fn at_line_start(&self) -> bool {
+        self.output.is_empty() || self.output.ends_with('\n')
+    }
+
+    /// Ensure indentation is written if we're at the start of a line.
+    fn write_indent_if_line_start(&mut self) {
+        if self.at_line_start() {
+            for _ in 0..self.indent {
+                self.output.push_str(self.indent_str);
+                self.line_len += self.indent_str.len();
+            }
+        }
+    }
+
+    fn comments_enabled(&self) -> bool {
+        self.comments.is_some()
+    }
+
+    fn comment_before_loc(comment: &Comment, loc: &Location) -> bool {
+        comment.loc.loc_start.cnum <= loc.loc_start.cnum
+    }
+
+    fn is_trailing_comment_for_loc(comment: &Comment, loc: &Location) -> bool {
+        let start = &comment.loc.loc_start;
+        let end = &loc.loc_end;
+        start.line == end.line && start.cnum >= end.cnum && comment.prev_tok_end_pos.cnum >= end.cnum
+    }
+
+    fn print_comment_text(&mut self, comment: &Comment) {
+        match comment.style {
+            CommentStyle::SingleLine => {
+                self.write("//");
+                self.write(comment.txt());
+            }
+            CommentStyle::MultiLine => {
+                self.write("/*");
+                self.write(comment.txt());
+                self.write("*/");
+            }
+            CommentStyle::DocComment => {
+                self.write("/**");
+                self.write(comment.txt());
+                self.write("*/");
+            }
+            CommentStyle::ModuleComment => {
+                self.write("/***");
+                self.write(comment.txt());
+                self.write("*/");
+            }
+        }
+    }
+
+    fn print_comment_leading(&mut self, comment: &Comment) {
+        let inline = comment.loc.loc_start.line == comment.prev_tok_end_pos.line;
+        if inline {
+            if !self.at_line_start() && !self.output.ends_with(' ') {
+                self.space();
+            }
+            self.print_comment_text(comment);
+            if comment.is_single_line() {
+                self.newline();
+            } else if !self.output.ends_with(' ') {
+                self.space();
+            }
+        } else {
+            if !self.at_line_start() {
+                self.newline();
+            }
+            self.write_indent_if_line_start();
+            self.print_comment_text(comment);
+            self.newline();
+        }
+    }
+
+    fn print_comment_trailing(&mut self, comment: &Comment) {
+        if !self.at_line_start() && !self.output.ends_with(' ') {
+            self.space();
+        }
+        self.print_comment_text(comment);
+        if comment.is_single_line() {
+            self.newline();
+        } else if !self.output.ends_with(' ') {
+            self.space();
+        }
+    }
+
+    fn print_comments_before_loc(&mut self, loc: &Location) {
+        let Some(mut cursor) = self.comments.take() else {
+            return;
+        };
+        while let Some(comment) = cursor.peek() {
+            if Self::comment_before_loc(comment, loc) {
+                self.print_comment_leading(comment);
+                cursor.advance();
+            } else {
+                break;
+            }
+        }
+        self.comments = Some(cursor);
+    }
+
+    fn print_comments_before_loc_end(&mut self, loc: &Location) {
+        let Some(mut cursor) = self.comments.take() else {
+            return;
+        };
+        while let Some(comment) = cursor.peek() {
+            if comment.loc.loc_start.cnum <= loc.loc_end.cnum {
+                self.print_comment_leading(comment);
+                cursor.advance();
+            } else {
+                break;
+            }
+        }
+        self.comments = Some(cursor);
+    }
+
+    fn has_comment_before_loc_end(&self, loc: &Location) -> bool {
+        self.comments
+            .as_ref()
+            .and_then(|cursor| cursor.peek())
+            .map_or(false, |comment| comment.loc.loc_start.cnum <= loc.loc_end.cnum)
+    }
+
+    fn print_trailing_comments_for_loc(&mut self, loc: &Location) {
+        let Some(mut cursor) = self.comments.take() else {
+            return;
+        };
+        while let Some(comment) = cursor.peek() {
+            if Self::is_trailing_comment_for_loc(comment, loc) {
+                self.print_comment_trailing(comment);
+                cursor.advance();
+            } else {
+                break;
+            }
+        }
+        self.comments = Some(cursor);
+    }
+
+    fn flush_remaining_comments(&mut self) {
+        let Some(mut cursor) = self.comments.take() else {
+            return;
+        };
+        while let Some(comment) = cursor.peek() {
+            self.print_comment_leading(comment);
+            cursor.advance();
+        }
+        self.comments = Some(cursor);
     }
 
     /// Check if an expression is a block-like form (let, letmodule, letexception, open, sequence)
@@ -89,12 +324,18 @@ impl Printer {
     /// Print a block body expression without adding outer braces.
     /// Used for printing the continuation of let/module/open/exception.
     fn print_block_body(&mut self, expr: &Expression) {
-        // Print any non-internal attributes on the expression
-        for attr in &expr.pexp_attributes {
-            if !Self::is_internal_attribute(attr) {
-                self.write("@");
-                self.print_attribute(attr);
-                self.space();
+        self.print_block_body_inner(expr, true);
+    }
+
+    fn print_block_body_inner(&mut self, expr: &Expression, print_attrs: bool) {
+        if print_attrs {
+            // Print any non-internal attributes on the expression
+            for attr in &expr.pexp_attributes {
+                if !Self::is_internal_attribute(attr) {
+                    self.write("@");
+                    self.print_attribute(attr);
+                    self.space();
+                }
             }
         }
 
@@ -151,7 +392,16 @@ impl Printer {
                 self.newline();
                 self.newline();
             }
+            if self.comments_enabled() {
+                self.print_comments_before_loc(&item.pstr_loc);
+            }
             self.print_structure_item(item);
+            if self.comments_enabled() {
+                self.print_trailing_comments_for_loc(&item.pstr_loc);
+            }
+        }
+        if self.comments_enabled() {
+            self.flush_remaining_comments();
         }
     }
 
@@ -160,7 +410,17 @@ impl Printer {
         self.print_attributes(&item.pstr_desc.get_attributes());
         match &item.pstr_desc {
             StructureItemDesc::Pstr_eval(expr, _attrs) => {
-                self.print_expression(expr);
+                if matches!(&expr.pexp_desc, ExpressionDesc::Pexp_sequence(..)) {
+                    self.write("{");
+                    self.indent();
+                    self.newline();
+                    self.print_block_body_inner(expr, false);
+                    self.dedent();
+                    self.newline();
+                    self.write("}");
+                } else {
+                    self.print_expression(expr);
+                }
             }
             StructureItemDesc::Pstr_value(rec_flag, bindings) => {
                 self.print_let_bindings(*rec_flag, bindings);
@@ -212,7 +472,7 @@ impl Printer {
             StructureItemDesc::Pstr_extension(ext, _attrs) => {
                 // Module-level extensions use %%
                 self.write("%%");
-                self.write(&ext.0.txt);
+                self.write_ident(&ext.0.txt);
                 self.print_extension_payload(&ext.1);
             }
         }
@@ -275,12 +535,12 @@ impl Printer {
 
     /// List of binary operators in ReScript.
     const BINARY_OPERATORS: &'static [&'static str] = &[
-        ":=", "||", "&&", "==", "===", "<", ">", "!=", "!==", "<=", ">=", "+", "+.", "-", "-.",
+        ":=", "||", "&&", "=", "==", "===", "<", ">", "!=", "!==", "<=", ">=", "+", "+.", "-", "-.",
         "++", "*", "*.", "/", "/.", "**", "->", "<>", "%", "|||", "^^^", "&&&", "<<", ">>", ">>>",
     ];
 
     /// List of unary operators in ReScript.
-    const UNARY_OPERATORS: &'static [&'static str] = &["!", "~+", "~+.", "~-", "~-.", "not"];
+    const UNARY_OPERATORS: &'static [&'static str] = &["!", "?", "~+", "~+.", "~-", "~-.", "not"];
 
     /// Check if an operator is a binary operator.
     fn is_binary_operator(op: &str) -> bool {
@@ -290,6 +550,27 @@ impl Printer {
     /// Check if an operator is a unary operator.
     fn is_unary_operator(op: &str) -> bool {
         Self::UNARY_OPERATORS.contains(&op)
+    }
+
+    /// Check if a labeled argument is punned (e.g., `~foo` instead of `~foo=foo`).
+    /// This is detected by checking if the argument is a ghost identifier with the same name as the label.
+    fn is_punned_arg(&self, label: &ArgLabel, arg: &Expression) -> bool {
+        let label_name = match label {
+            ArgLabel::Labelled(name) | ArgLabel::Optional(name) => name,
+            ArgLabel::Nolabel => return false,
+        };
+
+        // Check if arg is a ghost ident with the same name
+        if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
+            if let Longident::Lident(ident_name) = &lid.txt {
+                // Check if the location is ghost (synthetic, not in source)
+                if arg.pexp_loc.loc_ghost && ident_name == label_name {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 
     /// Try to extract binary expression components from a Pexp_apply.
@@ -364,6 +645,7 @@ impl Printer {
     /// Walks the ++ chain and reconstructs the template.
     fn print_template_literal(&mut self, expr: &Expression) {
         let mut tag = "js";
+        let mut inner = Printer::new();
 
         fn walk_expr(printer: &mut Printer, expr: &Expression, tag: &mut &str) {
             match &expr.pexp_desc {
@@ -401,10 +683,10 @@ impl Printer {
             }
         }
 
-        walk_expr(self, expr, &mut tag);
+        walk_expr(&mut inner, expr, &mut tag);
+        let content = inner.into_output();
 
         // Wrap with backticks
-        let content = std::mem::take(&mut self.output);
         if tag == "js" {
             self.write("`");
         } else {
@@ -481,7 +763,21 @@ impl Printer {
 
     /// Print an expression.
     pub fn print_expression(&mut self, expr: &Expression) {
-        self.print_expression_inner(expr, false);
+        self.print_expression_with_comments(expr, false);
+    }
+
+    fn print_expression_in_subexpr(&mut self, expr: &Expression) {
+        self.print_expression_with_comments(expr, true);
+    }
+
+    fn print_expression_with_comments(&mut self, expr: &Expression, needs_parens: bool) {
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&expr.pexp_loc);
+        }
+        self.print_expression_inner(expr, needs_parens);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&expr.pexp_loc);
+        }
     }
 
     /// Check if an attribute is internal and shouldn't be printed.
@@ -490,17 +786,134 @@ impl Printer {
         name.starts_with("res.") || name.starts_with("ns.")
     }
 
+    fn is_unit_pattern(pat: &Pattern) -> bool {
+        matches!(
+            &pat.ppat_desc,
+            PatternDesc::Ppat_construct(lid, None) if lid.txt.to_string() == "()"
+        )
+    }
+
+    fn expr_needs_parens_for_attribute(&self, expr: &Expression) -> bool {
+        match &expr.pexp_desc {
+            ExpressionDesc::Pexp_apply { funct, args, .. } => {
+                self.as_binary_expr(funct, args).is_some() || self.as_unary_expr(funct, args).is_some()
+            }
+            ExpressionDesc::Pexp_sequence(..)
+            | ExpressionDesc::Pexp_ifthenelse(..)
+            | ExpressionDesc::Pexp_match(..)
+            | ExpressionDesc::Pexp_try(..)
+            | ExpressionDesc::Pexp_fun { .. }
+            | ExpressionDesc::Pexp_let(..)
+            | ExpressionDesc::Pexp_letmodule(..)
+            | ExpressionDesc::Pexp_letexception(..)
+            | ExpressionDesc::Pexp_open(..)
+            | ExpressionDesc::Pexp_for(..)
+            | ExpressionDesc::Pexp_while(..)
+            | ExpressionDesc::Pexp_constraint(..)
+            | ExpressionDesc::Pexp_coerce(..)
+            | ExpressionDesc::Pexp_newtype(..) => true,
+            _ => false,
+        }
+    }
+
+    fn expr_needs_parens_in_subexpr(&self, expr: &Expression) -> bool {
+        match &expr.pexp_desc {
+            ExpressionDesc::Pexp_apply { funct, args, .. } => {
+                self.as_binary_expr(funct, args).is_some() || self.as_unary_expr(funct, args).is_some()
+            }
+            ExpressionDesc::Pexp_fun { .. }
+            | ExpressionDesc::Pexp_ifthenelse(..)
+            | ExpressionDesc::Pexp_match(..)
+            | ExpressionDesc::Pexp_try(..)
+            | ExpressionDesc::Pexp_for(..)
+            | ExpressionDesc::Pexp_while(..)
+            | ExpressionDesc::Pexp_newtype(..)
+            | ExpressionDesc::Pexp_constraint(..)
+            | ExpressionDesc::Pexp_coerce(..)
+            | ExpressionDesc::Pexp_setfield(..)
+            | ExpressionDesc::Pexp_sequence(..)
+            | ExpressionDesc::Pexp_let(..)
+            | ExpressionDesc::Pexp_letmodule(..)
+            | ExpressionDesc::Pexp_letexception(..)
+            | ExpressionDesc::Pexp_open(..)
+            | ExpressionDesc::Pexp_assert(..) => true,
+            _ => false,
+        }
+    }
+
+    fn print_apply_funct(&mut self, funct: &Expression) {
+        let has_attrs = funct
+            .pexp_attributes
+            .iter()
+            .any(|attr| !Self::is_internal_attribute(attr));
+        if has_attrs {
+            self.write("(");
+            self.print_expression(funct);
+            self.write(")");
+        } else {
+            self.print_expression_in_subexpr(funct);
+        }
+    }
+
     /// Print an expression with optional parentheses context.
-    fn print_expression_inner(&mut self, expr: &Expression, _needs_parens: bool) {
-        // Print any non-internal attributes on the expression
-        for attr in &expr.pexp_attributes {
-            if !Self::is_internal_attribute(attr) {
+    fn print_expression_inner(&mut self, expr: &Expression, needs_parens: bool) {
+        let attrs: Vec<&Attribute> = expr
+            .pexp_attributes
+            .iter()
+            .filter(|attr| !Self::is_internal_attribute(attr))
+            .collect();
+        let has_attrs = !attrs.is_empty();
+
+        if needs_parens && matches!(&expr.pexp_desc, ExpressionDesc::Pexp_sequence(..)) {
+            for attr in &attrs {
                 self.write("@");
                 self.print_attribute(attr);
                 self.space();
             }
+            self.write("{");
+            self.indent();
+            self.newline();
+            self.print_block_body_inner(expr, false);
+            self.dedent();
+            self.newline();
+            self.write("}");
+            return;
         }
 
+        if needs_parens && self.expr_needs_parens_in_subexpr(expr) {
+            for attr in &attrs {
+                self.write("@");
+                self.print_attribute(attr);
+                self.space();
+            }
+            self.write("(");
+            self.print_expression_desc(expr, needs_parens);
+            self.write(")");
+            return;
+        }
+
+        if has_attrs && self.expr_needs_parens_for_attribute(expr) {
+            for attr in &attrs {
+                self.write("@");
+                self.print_attribute(attr);
+                self.space();
+            }
+            self.write("(");
+            self.print_expression_desc(expr, needs_parens);
+            self.write(")");
+            return;
+        }
+
+        for attr in &attrs {
+            self.write("@");
+            self.print_attribute(attr);
+            self.space();
+        }
+
+        self.print_expression_desc(expr, needs_parens);
+    }
+
+    fn print_expression_desc(&mut self, expr: &Expression, needs_parens: bool) {
         match &expr.pexp_desc {
             ExpressionDesc::Pexp_ident(lid) => {
                 self.print_longident(&lid.txt);
@@ -548,7 +961,12 @@ impl Printer {
                 }
                 self.print_fun_expr(expr);
             }
-            ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            ExpressionDesc::Pexp_apply {
+                funct,
+                args,
+                partial,
+                ..
+            } => {
                 // Check for tagged template literal: tag([strings], [values])
                 if expr
                     .pexp_attributes
@@ -574,9 +992,9 @@ impl Printer {
                     .any(|(n, _)| n.txt == "res.array.access")
                     && args.len() == 2
                 {
-                    self.print_expression(&args[0].1);
+                    self.print_expression_in_subexpr(&args[0].1);
                     self.write("[");
-                    self.print_expression(&args[1].1);
+                    self.print_expression_in_subexpr(&args[1].1);
                     self.write("]");
                     return;
                 }
@@ -587,39 +1005,62 @@ impl Printer {
                     .any(|(n, _)| n.txt == "res.array.set")
                     && args.len() == 3
                 {
-                    self.print_expression(&args[0].1);
+                    self.print_expression_in_subexpr(&args[0].1);
                     self.write("[");
-                    self.print_expression(&args[1].1);
+                    self.print_expression_in_subexpr(&args[1].1);
                     self.write("] = ");
-                    self.print_expression(&args[2].1);
+                    self.print_expression_in_subexpr(&args[2].1);
                     return;
                 }
                 // Check if this is a binary expression and print in infix notation
                 if let Some((operator, left, right)) = self.as_binary_expr(funct, args) {
-                    self.print_expression(left);
+                    self.print_expression_in_subexpr(left);
                     self.space();
                     self.write(operator);
                     self.space();
-                    self.print_expression(right);
+                    self.print_expression_in_subexpr(right);
                 } else if let Some((operator, operand)) = self.as_unary_expr(funct, args) {
                     self.write(operator);
-                    self.print_expression(operand);
+                    self.print_expression_in_subexpr(operand);
                 } else {
-                    self.print_expression(funct);
+                    self.print_apply_funct(funct);
                     self.write("(");
                     for (i, (label, arg)) in args.iter().enumerate() {
                         if i > 0 {
                             self.write(", ");
                         }
-                        self.print_arg_label(label);
-                        self.print_expression(arg);
+                        // Check for punning: ~foo where arg is ghost ident "foo"
+                        if self.is_punned_arg(label, arg) {
+                            match label {
+                                ArgLabel::Labelled(s) => {
+                                    self.write("~");
+                                    self.write_ident(s);
+                                }
+                                ArgLabel::Optional(s) => {
+                                    self.write("~");
+                                    self.write_ident(s);
+                                    self.write("?");
+                                }
+                                ArgLabel::Nolabel => {}
+                            }
+                        } else {
+                            self.print_arg_label(label);
+                            self.print_expression_in_subexpr(arg);
+                        }
+                    }
+                    // Print partial application marker
+                    if *partial {
+                        if !args.is_empty() {
+                            self.write(", ");
+                        }
+                        self.write("...");
                     }
                     self.write(")");
                 }
             }
             ExpressionDesc::Pexp_match(scrutinee, cases) => {
                 self.write("switch ");
-                self.print_expression(scrutinee);
+                self.print_expression_in_subexpr(scrutinee);
                 self.write(" {");
                 self.indent();
                 for case in cases {
@@ -631,7 +1072,7 @@ impl Printer {
                         self.print_expression(guard);
                     }
                     self.write(" => ");
-                    self.print_expression(&case.pc_rhs);
+                    self.print_expression_in_subexpr(&case.pc_rhs);
                 }
                 self.dedent();
                 self.newline();
@@ -639,7 +1080,7 @@ impl Printer {
             }
             ExpressionDesc::Pexp_try(body, cases) => {
                 self.write("try ");
-                self.print_expression(body);
+                self.print_expression_in_subexpr(body);
                 self.write(" catch {");
                 self.indent();
                 for case in cases {
@@ -651,27 +1092,37 @@ impl Printer {
                         self.print_expression(guard);
                     }
                     self.write(" => ");
-                    self.print_expression(&case.pc_rhs);
+                    self.print_expression_in_subexpr(&case.pc_rhs);
                 }
                 self.dedent();
                 self.newline();
                 self.write("}");
             }
             ExpressionDesc::Pexp_tuple(exprs) => {
+                if exprs.len() == 1 {
+                    self.print_expression_with_comments(&exprs[0], needs_parens);
+                    return;
+                }
                 self.write("(");
                 for (i, e) in exprs.iter().enumerate() {
                     if i > 0 {
                         self.write(", ");
                     }
-                    self.print_expression(e);
+                    self.print_expression_in_subexpr(e);
                 }
                 self.write(")");
             }
             ExpressionDesc::Pexp_construct(lid, arg) => {
+                if self.comments_enabled() {
+                    self.print_comments_before_loc(&lid.loc);
+                }
                 self.print_longident(&lid.txt);
+                if self.comments_enabled() {
+                    self.print_trailing_comments_for_loc(&lid.loc);
+                }
                 if let Some(arg) = arg {
                     self.write("(");
-                    self.print_expression(arg);
+                    self.print_expression_in_subexpr(arg);
                     self.write(")");
                 }
             }
@@ -687,7 +1138,7 @@ impl Printer {
                                 if i > 0 {
                                     self.write(", ");
                                 }
-                                self.print_expression(e);
+                                self.print_expression_in_subexpr(e);
                             }
                         }
                         ExpressionDesc::Pexp_construct(lid, None)
@@ -695,7 +1146,7 @@ impl Printer {
                         {
                             // Unit argument - print nothing inside parens
                         }
-                        _ => self.print_expression(arg),
+                        _ => self.print_expression_in_subexpr(arg),
                     }
                     self.write(")");
                 }
@@ -704,7 +1155,7 @@ impl Printer {
                 self.write("{");
                 if let Some(spread) = spread {
                     self.write("...");
-                    self.print_expression(spread);
+                    self.print_expression_in_subexpr(spread);
                     if !fields.is_empty() {
                         self.write(", ");
                     }
@@ -713,23 +1164,56 @@ impl Printer {
                     if i > 0 {
                         self.write(", ");
                     }
+                    if self.comments_enabled() {
+                        self.print_comments_before_loc(&field.lid.loc);
+                    }
                     self.print_longident(&field.lid.txt);
+                    if self.comments_enabled() {
+                        self.print_trailing_comments_for_loc(&field.lid.loc);
+                    }
                     self.write(": ");
-                    self.print_expression(&field.expr);
+                    // Print optional marker if present
+                    if field.opt {
+                        self.write("? ");
+                        // If the expression is a constraint, wrap in parens to avoid ambiguity
+                        let needs_parens =
+                            matches!(field.expr.pexp_desc, ExpressionDesc::Pexp_constraint(..));
+                        if needs_parens {
+                            self.write("(");
+                        }
+                        self.print_expression_in_subexpr(&field.expr);
+                        if needs_parens {
+                            self.write(")");
+                        }
+                    } else {
+                        self.print_expression_in_subexpr(&field.expr);
+                    }
                 }
                 self.write("}");
             }
             ExpressionDesc::Pexp_field(expr, lid) => {
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
                 self.write(".");
+                if self.comments_enabled() {
+                    self.print_comments_before_loc(&lid.loc);
+                }
                 self.print_longident(&lid.txt);
+                if self.comments_enabled() {
+                    self.print_trailing_comments_for_loc(&lid.loc);
+                }
             }
             ExpressionDesc::Pexp_setfield(expr, lid, value) => {
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
                 self.write(".");
+                if self.comments_enabled() {
+                    self.print_comments_before_loc(&lid.loc);
+                }
                 self.print_longident(&lid.txt);
+                if self.comments_enabled() {
+                    self.print_trailing_comments_for_loc(&lid.loc);
+                }
                 self.write(" = ");
-                self.print_expression(value);
+                self.print_expression_in_subexpr(value);
             }
             ExpressionDesc::Pexp_array(items) => {
                 self.write("[");
@@ -737,7 +1221,7 @@ impl Printer {
                     if i > 0 {
                         self.write(", ");
                     }
-                    self.print_expression(item);
+                    self.print_expression_in_subexpr(item);
                 }
                 self.write("]");
             }
@@ -748,16 +1232,16 @@ impl Printer {
                     .iter()
                     .any(|(name, _)| name.txt == "res.ternary");
                 if is_ternary {
-                    self.print_expression(cond);
+                    self.print_expression_in_subexpr(cond);
                     self.write(" ? ");
-                    self.print_expression(then_branch);
+                    self.print_expression_in_subexpr(then_branch);
                     self.write(" : ");
                     if let Some(else_br) = else_branch {
-                        self.print_expression(else_br);
+                        self.print_expression_in_subexpr(else_br);
                     }
                 } else {
                     self.write("if ");
-                    self.print_expression(cond);
+                    self.print_expression_in_subexpr(cond);
                     self.write(" {");
                     self.indent();
                     self.newline();
@@ -789,7 +1273,7 @@ impl Printer {
             }
             ExpressionDesc::Pexp_while(cond, body) => {
                 self.write("while ");
-                self.print_expression(cond);
+                self.print_expression_in_subexpr(cond);
                 self.write(" {");
                 self.indent();
                 self.newline();
@@ -802,12 +1286,12 @@ impl Printer {
                 self.write("for ");
                 self.print_pattern(pat);
                 self.write(" in ");
-                self.print_expression(start);
+                self.print_expression_in_subexpr(start);
                 match dir {
                     DirectionFlag::Upto => self.write(" to "),
                     DirectionFlag::Downto => self.write(" downto "),
                 }
-                self.print_expression(finish);
+                self.print_expression_in_subexpr(finish);
                 self.write(" {");
                 self.indent();
                 self.newline();
@@ -818,20 +1302,20 @@ impl Printer {
             }
             ExpressionDesc::Pexp_constraint(expr, typ) => {
                 self.write("(");
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
                 self.write(": ");
                 self.print_core_type(typ);
                 self.write(")");
             }
             ExpressionDesc::Pexp_coerce(expr, _from, to) => {
                 self.write("(");
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
                 self.write(" :> ");
                 self.print_core_type(to);
                 self.write(")");
             }
             ExpressionDesc::Pexp_send(expr, meth) => {
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
                 self.write("##");
                 self.write(&meth.txt);
             }
@@ -865,7 +1349,7 @@ impl Printer {
             }
             ExpressionDesc::Pexp_assert(expr) => {
                 self.write("assert ");
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
             }
             ExpressionDesc::Pexp_pack(modexpr) => {
                 self.write("module(");
@@ -886,6 +1370,32 @@ impl Printer {
                 self.write("}");
             }
             ExpressionDesc::Pexp_extension(ext) => {
+                // Regex literal: `/pattern/flags`
+                if ext.0.txt == "res.regex" {
+                    if let Payload::PStr(items) = &ext.1 {
+                        let get_str = |idx: usize| -> Option<&str> {
+                            let item = items.get(idx)?;
+                            match &item.pstr_desc {
+                                StructureItemDesc::Pstr_eval(expr, _) => match &expr.pexp_desc {
+                                    ExpressionDesc::Pexp_constant(Constant::String(s, _)) => {
+                                        Some(s.as_str())
+                                    }
+                                    _ => None,
+                                },
+                                _ => None,
+                            }
+                        };
+
+                        if let (Some(pattern), Some(flags)) = (get_str(0), get_str(1)) {
+                            self.write("/");
+                            self.write(pattern);
+                            self.write("/");
+                            self.write(flags);
+                            return;
+                        }
+                    }
+                }
+
                 // Check for %obj extension (JS object literal)
                 if ext.0.txt == "obj" {
                     if let Payload::PStr(items) = &ext.1 {
@@ -901,7 +1411,7 @@ impl Printer {
                                         self.write("\"");
                                         self.print_longident(&field.lid.txt);
                                         self.write("\": ");
-                                        self.print_expression(&field.expr);
+                                        self.print_expression_in_subexpr(&field.expr);
                                     }
                                     self.write("}");
                                     return;
@@ -919,13 +1429,24 @@ impl Printer {
                                 self.write(", ");
                             }
                             if let StructureItemDesc::Pstr_eval(e, _) = &item.pstr_desc {
-                                self.print_expression(e);
+                                if let ExpressionDesc::Pexp_extension((name, payload)) = &e.pexp_desc
+                                    && name.txt == "res.spread"
+                                    && let Payload::PStr(spread_items) = payload
+                                    && let Some(spread_item) = spread_items.first()
+                                    && let StructureItemDesc::Pstr_eval(spread_expr, _) =
+                                        &spread_item.pstr_desc
+                                {
+                                    self.write("...");
+                                    self.print_expression_in_subexpr(spread_expr);
+                                } else {
+                                    self.print_expression_in_subexpr(e);
+                                }
                             }
                         }
                     }
                     // Check for spread in attributes
                     if ext.0.txt == "res.list.spread" {
-                        if let Some((attr_name, attr_payload)) = expr
+                        if let Some((_attr_name, attr_payload)) = expr
                             .pexp_attributes
                             .iter()
                             .find(|(n, _)| n.txt == "res.spread")
@@ -937,7 +1458,7 @@ impl Printer {
                             if let Payload::PStr(spread_items) = attr_payload {
                                 if let Some(item) = spread_items.first() {
                                     if let StructureItemDesc::Pstr_eval(e, _) = &item.pstr_desc {
-                                        self.print_expression(e);
+                                        self.print_expression_in_subexpr(e);
                                     }
                                 }
                             }
@@ -947,18 +1468,18 @@ impl Printer {
                     return;
                 }
                 self.write("%");
-                self.write(&ext.0.txt);
+                self.write_ident(&ext.0.txt);
                 self.print_extension_payload(&ext.1);
             }
             ExpressionDesc::Pexp_newtype(name, body) => {
                 self.write("(type ");
                 self.write(&name.txt);
                 self.write(") => ");
-                self.print_expression(body);
+                self.print_expression_with_comments(body, true);
             }
             ExpressionDesc::Pexp_await(expr) => {
                 self.write("await ");
-                self.print_expression(expr);
+                self.print_expression_in_subexpr(expr);
             }
             ExpressionDesc::Pexp_jsx_element(elem) => {
                 self.print_jsx_element(elem);
@@ -972,17 +1493,20 @@ impl Printer {
 
     /// Print a pattern.
     pub fn print_pattern(&mut self, pat: &Pattern) {
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&pat.ppat_loc);
+        }
         match &pat.ppat_desc {
             PatternDesc::Ppat_any => {
                 self.write("_");
             }
             PatternDesc::Ppat_var(name) => {
-                self.write(&name.txt);
+                self.write_ident(&name.txt);
             }
             PatternDesc::Ppat_alias(pat, name) => {
                 self.print_pattern(pat);
                 self.write(" as ");
-                self.write(&name.txt);
+                self.write_ident(&name.txt);
             }
             PatternDesc::Ppat_constant(c) => {
                 self.print_constant(c);
@@ -1000,10 +1524,20 @@ impl Printer {
                     }
                     self.print_pattern(p);
                 }
+                // Single-element tuples need trailing comma to distinguish from grouping parens
+                if pats.len() == 1 {
+                    self.write(",");
+                }
                 self.write(")");
             }
             PatternDesc::Ppat_construct(lid, arg) => {
+                if self.comments_enabled() {
+                    self.print_comments_before_loc(&lid.loc);
+                }
                 self.print_longident(&lid.txt);
+                if self.comments_enabled() {
+                    self.print_trailing_comments_for_loc(&lid.loc);
+                }
                 if let Some(arg) = arg {
                     self.write("(");
                     self.print_pattern(arg);
@@ -1025,9 +1559,30 @@ impl Printer {
                     if i > 0 {
                         self.write(", ");
                     }
+                    if self.comments_enabled() {
+                        self.print_comments_before_loc(&field.lid.loc);
+                    }
                     self.print_longident(&field.lid.txt);
+                    if self.comments_enabled() {
+                        self.print_trailing_comments_for_loc(&field.lid.loc);
+                    }
                     self.write(": ");
-                    self.print_pattern(&field.pat);
+                    // Print optional marker if present
+                    if field.opt {
+                        self.write("? ");
+                        // If the pattern is a constraint, wrap in parens to avoid ambiguity
+                        let needs_parens =
+                            matches!(field.pat.ppat_desc, PatternDesc::Ppat_constraint(..));
+                        if needs_parens {
+                            self.write("(");
+                        }
+                        self.print_pattern(&field.pat);
+                        if needs_parens {
+                            self.write(")");
+                        }
+                    } else {
+                        self.print_pattern(&field.pat);
+                    }
                 }
                 if *closed == ClosedFlag::Open {
                     if !fields.is_empty() {
@@ -1058,8 +1613,15 @@ impl Printer {
                 self.print_core_type(typ);
             }
             PatternDesc::Ppat_type(lid) => {
-                self.write("#");
+                // Type pattern with spread: #...Foo.t
+                self.write("#...");
+                if self.comments_enabled() {
+                    self.print_comments_before_loc(&lid.loc);
+                }
                 self.print_longident(&lid.txt);
+                if self.comments_enabled() {
+                    self.print_trailing_comments_for_loc(&lid.loc);
+                }
             }
             PatternDesc::Ppat_unpack(name) => {
                 self.write("module(");
@@ -1071,15 +1633,47 @@ impl Printer {
                 self.print_pattern(pat);
             }
             PatternDesc::Ppat_extension(ext) => {
+                // Dict pattern: dict{"key": pat}
+                if ext.0.txt == "res.dict" {
+                    if let Payload::PPat(pat, _) = &ext.1 {
+                        if let PatternDesc::Ppat_record(fields, _closed) = &pat.ppat_desc {
+                            self.write("dict{");
+                            for (i, field) in fields.iter().enumerate() {
+                                if i > 0 {
+                                    self.write(", ");
+                                }
+                                self.write("\"");
+                                self.write(&field.lid.txt.to_string());
+                                self.write("\": ");
+                                if field.opt {
+                                    self.write("?");
+                                }
+                                self.print_pattern(&field.pat);
+                            }
+                            self.write("}");
+                            return;
+                        }
+                    }
+                }
+
                 self.write("%");
                 self.write(&ext.0.txt);
             }
             PatternDesc::Ppat_open(lid, pat) => {
+                if self.comments_enabled() {
+                    self.print_comments_before_loc(&lid.loc);
+                }
                 self.print_longident(&lid.txt);
+                if self.comments_enabled() {
+                    self.print_trailing_comments_for_loc(&lid.loc);
+                }
                 self.write(".(");
                 self.print_pattern(pat);
                 self.write(")");
             }
+        }
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&pat.ppat_loc);
         }
     }
 
@@ -1089,6 +1683,30 @@ impl Printer {
 
     /// Print a core type.
     pub fn print_core_type(&mut self, typ: &CoreType) {
+        self.print_core_type_with_comments(typ, true);
+    }
+
+    fn print_core_type_with_comments(&mut self, typ: &CoreType, allow_breaks: bool) {
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&typ.ptyp_loc);
+        }
+        let attrs: Vec<&Attribute> = typ
+            .ptyp_attributes
+            .iter()
+            .filter(|attr| !Self::is_internal_attribute(attr))
+            .collect();
+        for attr in attrs {
+            self.write("@");
+            self.print_attribute(attr);
+            self.space();
+        }
+        self.print_core_type_inner(typ, allow_breaks);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&typ.ptyp_loc);
+        }
+    }
+
+    fn print_core_type_inner(&mut self, typ: &CoreType, allow_breaks: bool) {
         match &typ.ptyp_desc {
             CoreTypeDesc::Ptyp_any => {
                 self.write("_");
@@ -1097,20 +1715,34 @@ impl Printer {
                 self.write("'");
                 self.write(name);
             }
-            CoreTypeDesc::Ptyp_arrow { arg, ret, .. } => {
-                self.print_type_arg(arg);
-                self.write(" => ");
-                self.print_core_type(ret);
+            CoreTypeDesc::Ptyp_arrow { .. } => {
+                self.print_arrow_type(typ, allow_breaks);
             }
             CoreTypeDesc::Ptyp_tuple(typs) => {
-                self.write("(");
-                for (i, t) in typs.iter().enumerate() {
-                    if i > 0 {
-                        self.write(", ");
+                let inline_len = self.inline_tuple_len(typs);
+                let fits_inline = !allow_breaks || self.line_len + inline_len <= self.max_width;
+
+                if fits_inline {
+                    self.write("(");
+                    for (i, t) in typs.iter().enumerate() {
+                        if i > 0 {
+                            self.write(", ");
+                        }
+                        self.print_core_type_with_comments(t, allow_breaks);
                     }
-                    self.print_core_type(t);
+                    self.write(")");
+                } else {
+                    self.write("(");
+                    self.indent();
+                    for t in typs {
+                        self.newline();
+                        self.print_core_type_with_comments(t, allow_breaks);
+                        self.write(",");
+                    }
+                    self.dedent();
+                    self.newline();
+                    self.write(")");
                 }
-                self.write(")");
             }
             CoreTypeDesc::Ptyp_constr(lid, args) => {
                 // ReScript uses angle bracket syntax: constr<args>
@@ -1121,39 +1753,55 @@ impl Printer {
                         if i > 0 {
                             self.write(", ");
                         }
-                        self.print_core_type(arg);
+                        self.print_core_type_with_comments(arg, allow_breaks);
                     }
                     self.write(">");
                 }
             }
             CoreTypeDesc::Ptyp_object(fields, closed) => {
-                self.write("{");
+                let is_open = *closed == ClosedFlag::Open;
+                if is_open {
+                    self.write("{..");
+                    if fields.is_empty() {
+                        self.write("}");
+                        return;
+                    }
+                    self.write(" ");
+                } else if fields.is_empty() {
+                    self.write("{.}");
+                    return;
+                } else {
+                    self.write("{");
+                }
+
                 for (i, field) in fields.iter().enumerate() {
                     if i > 0 {
                         self.write(", ");
                     }
                     match field {
-                        ObjectField::Otag(name, _attrs, typ) => {
+                        ObjectField::Otag(name, attrs, typ) => {
+                            for attr in attrs.iter().filter(|attr| !Self::is_internal_attribute(attr))
+                            {
+                                self.write("@");
+                                self.print_attribute(attr);
+                                self.space();
+                            }
+                            self.write("\"");
                             self.write(&name.txt);
+                            self.write("\"");
                             self.write(": ");
-                            self.print_core_type(typ);
+                            self.print_core_type_with_comments(typ, allow_breaks);
                         }
                         ObjectField::Oinherit(typ) => {
                             self.write("...");
-                            self.print_core_type(typ);
+                            self.print_core_type_with_comments(typ, allow_breaks);
                         }
                     }
-                }
-                if *closed == ClosedFlag::Open {
-                    if !fields.is_empty() {
-                        self.write(", ");
-                    }
-                    self.write("..");
                 }
                 self.write("}");
             }
             CoreTypeDesc::Ptyp_alias(typ, name) => {
-                self.print_core_type(typ);
+                self.print_core_type_with_comments(typ, allow_breaks);
                 self.write(" as '");
                 self.write(name);
             }
@@ -1177,7 +1825,7 @@ impl Printer {
                     self.write(" ");
                 }
                 self.write(". ");
-                self.print_core_type(typ);
+                self.print_core_type_with_comments(typ, allow_breaks);
             }
             CoreTypeDesc::Ptyp_package(pkg) => {
                 self.write("module(");
@@ -1191,7 +1839,7 @@ impl Printer {
                         self.write("type ");
                         self.print_longident(&lid.txt);
                         self.write(" = ");
-                        self.print_core_type(typ);
+                        self.print_core_type_with_comments(typ, allow_breaks);
                     }
                 }
                 self.write(")");
@@ -1203,10 +1851,116 @@ impl Printer {
         }
     }
 
+    fn print_arrow_type(&mut self, typ: &CoreType, allow_breaks: bool) {
+        let mut args: Vec<&TypeArg> = vec![];
+        let mut current = typ;
+        while let CoreTypeDesc::Ptyp_arrow { arg, ret, .. } = &current.ptyp_desc {
+            args.push(arg.as_ref());
+            current = ret.as_ref();
+        }
+
+        // Shouldn't happen, but keep it safe.
+        if args.is_empty() {
+            self.print_core_type_with_comments(current, allow_breaks);
+            return;
+        }
+
+        let has_label = args.iter().any(|arg| !matches!(arg.lbl, ArgLabel::Nolabel));
+
+        if has_label {
+            self.write("(");
+            for (i, arg) in args.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+
+                for attr in arg
+                    .attrs
+                    .iter()
+                    .filter(|attr| !Self::is_internal_attribute(attr))
+                {
+                    self.write("@");
+                    self.print_attribute(attr);
+                    self.space();
+                }
+
+                match &arg.lbl {
+                    ArgLabel::Nolabel => {}
+                    ArgLabel::Labelled(name) | ArgLabel::Optional(name) => {
+                        self.write("~");
+                        self.write(name);
+                        self.write(": ");
+                    }
+                }
+
+                self.print_core_type_with_comments(&arg.typ, allow_breaks);
+
+                if matches!(arg.lbl, ArgLabel::Optional(_)) {
+                    self.write("=?");
+                }
+            }
+            self.write(") => ");
+            self.print_core_type_with_comments(current, allow_breaks);
+            return;
+        }
+
+        // Right associative arrow chain.
+        for (i, arg) in args.iter().enumerate() {
+            if i > 0 {
+                self.write(" => ");
+            }
+            self.print_core_type_as_arrow_param(&arg.typ, allow_breaks);
+        }
+        self.write(" => ");
+        self.print_core_type_with_comments(current, allow_breaks);
+    }
+
+    fn print_core_type_as_arrow_param(&mut self, typ: &CoreType, allow_breaks: bool) {
+        // Wrap arrow types and tuples in parens to disambiguate from multi-param arrow syntax
+        // Without this, ('a, 'b) => unit would be reparsed as 'a => 'b => unit
+        if matches!(
+            typ.ptyp_desc,
+            CoreTypeDesc::Ptyp_arrow { .. } | CoreTypeDesc::Ptyp_tuple(_)
+        ) {
+            self.write("(");
+            self.print_core_type_with_comments(typ, allow_breaks);
+            self.write(")");
+        } else {
+            self.print_core_type_with_comments(typ, allow_breaks);
+        }
+    }
+
+    fn inline_tuple_len(&self, typs: &[CoreType]) -> usize {
+        let mut len = 2; // opening and closing parens
+        for (i, typ) in typs.iter().enumerate() {
+            if i > 0 {
+                len += 2; // ", "
+            }
+            len += self.inline_type_len(typ);
+        }
+        len
+    }
+
+    fn inline_type_len(&self, typ: &CoreType) -> usize {
+        let mut printer = Printer::with_width(self.max_width);
+        printer.print_core_type_inner(typ, false);
+        printer.output.len()
+    }
+
     /// Print a type argument.
-    fn print_type_arg(&mut self, arg: &TypeArg) {
-        self.print_arg_label(&arg.lbl);
-        self.print_core_type(&arg.typ);
+    fn print_type_arg_with_breaks(&mut self, arg: &TypeArg, allow_breaks: bool) {
+        match &arg.lbl {
+            ArgLabel::Nolabel => {}
+            ArgLabel::Labelled(name) | ArgLabel::Optional(name) => {
+                self.write("~");
+                self.write(name);
+                self.write(": ");
+            }
+        }
+        self.print_core_type_with_comments(&arg.typ, allow_breaks);
+        if matches!(arg.lbl, ArgLabel::Optional(_)) {
+            self.write("=?");
+        }
     }
 
     /// Print a row field.
@@ -1244,11 +1998,25 @@ impl Printer {
             }
             ModuleExprDesc::Pmod_structure(items) => {
                 self.write("{");
-                if !items.is_empty() {
+                let has_inner_comments =
+                    self.comments_enabled() && self.has_comment_before_loc_end(&modexpr.pmod_loc);
+                if !items.is_empty() || has_inner_comments {
                     self.indent();
                     for item in items {
                         self.newline();
+                        if self.comments_enabled() {
+                            self.print_comments_before_loc(&item.pstr_loc);
+                        }
                         self.print_structure_item(item);
+                        if self.comments_enabled() {
+                            self.print_trailing_comments_for_loc(&item.pstr_loc);
+                        }
+                    }
+                    if has_inner_comments {
+                        if items.is_empty() {
+                            self.newline();
+                        }
+                        self.print_comments_before_loc_end(&modexpr.pmod_loc);
                     }
                     self.dedent();
                     self.newline();
@@ -1298,8 +2066,7 @@ impl Printer {
                 self.write(")");
             }
             ModuleExprDesc::Pmod_extension(ext) => {
-                self.write("%");
-                self.write(&ext.0.txt);
+                self.print_extension(ext);
             }
         }
     }
@@ -1334,7 +2101,15 @@ impl Printer {
                 self.print_module_type(body);
             }
             ModuleTypeDesc::Pmty_with(typ, constraints) => {
+                // If the inner type is also a Pmty_with, we need parentheses
+                let needs_parens = matches!(typ.pmty_desc, ModuleTypeDesc::Pmty_with(..));
+                if needs_parens {
+                    self.write("(");
+                }
                 self.print_module_type(typ);
+                if needs_parens {
+                    self.write(")");
+                }
                 self.write(" with ");
                 for (i, constraint) in constraints.iter().enumerate() {
                     if i > 0 {
@@ -1358,12 +2133,32 @@ impl Printer {
         }
     }
 
+    /// Print a signature (interface file content).
+    pub fn print_signature(&mut self, signature: &[SignatureItem]) {
+        for (i, item) in signature.iter().enumerate() {
+            if i > 0 {
+                self.newline();
+                self.newline();
+            }
+            if self.comments_enabled() {
+                self.print_comments_before_loc(&item.psig_loc);
+            }
+            self.print_signature_item(item);
+            if self.comments_enabled() {
+                self.print_trailing_comments_for_loc(&item.psig_loc);
+            }
+        }
+        if self.comments_enabled() {
+            self.flush_remaining_comments();
+        }
+    }
+
     /// Print a signature item.
     pub fn print_signature_item(&mut self, item: &SignatureItem) {
         match &item.psig_desc {
             SignatureItemDesc::Psig_value(vd) => {
                 self.write("let ");
-                self.write(&vd.pval_name.txt);
+                self.write_ident(&vd.pval_name.txt);
                 self.write(": ");
                 self.print_core_type(&vd.pval_type);
             }
@@ -1380,8 +2175,14 @@ impl Printer {
             SignatureItemDesc::Psig_module(md) => {
                 self.write("module ");
                 self.write(&md.pmd_name.txt);
-                self.write(": ");
-                self.print_module_type(&md.pmd_type);
+                // Handle module alias (module X = M) vs module type annotation (module X: T)
+                if let ModuleTypeDesc::Pmty_alias(lid) = &md.pmd_type.pmty_desc {
+                    self.write(" = ");
+                    self.print_longident(&lid.txt);
+                } else {
+                    self.write(": ");
+                    self.print_module_type(&md.pmd_type);
+                }
             }
             SignatureItemDesc::Psig_recmodule(mds) => {
                 for (i, md) in mds.iter().enumerate() {
@@ -1400,7 +2201,11 @@ impl Printer {
                 self.print_module_type_declaration(mtd);
             }
             SignatureItemDesc::Psig_open(od) => {
-                self.write("open ");
+                self.write("open");
+                if od.popen_override == OverrideFlag::Override {
+                    self.write("!");
+                }
+                self.write(" ");
                 self.print_longident(&od.popen_lid.txt);
             }
             SignatureItemDesc::Psig_include(incl) => {
@@ -1421,7 +2226,13 @@ impl Printer {
     /// Print a module binding.
     fn print_module_binding(&mut self, mb: &ModuleBinding) {
         self.write("module ");
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&mb.pmb_name.loc);
+        }
         self.write(&mb.pmb_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&mb.pmb_name.loc);
+        }
         self.write(" = ");
         self.print_module_expr(&mb.pmb_expr);
     }
@@ -1429,7 +2240,13 @@ impl Printer {
     /// Print a module type declaration.
     fn print_module_type_declaration(&mut self, mtd: &ModuleTypeDeclaration) {
         self.write("module type ");
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&mtd.pmtd_name.loc);
+        }
         self.write(&mtd.pmtd_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&mtd.pmtd_name.loc);
+        }
         if let Some(typ) = &mtd.pmtd_type {
             self.write(" = ");
             self.print_module_type(typ);
@@ -1493,7 +2310,14 @@ impl Printer {
     /// Print a single type declaration.
     fn print_type_declaration(&mut self, decl: &TypeDeclaration) {
         // Print type name first (ReScript style: type option<'a> not 'a option)
-        self.write(&decl.ptype_name.txt);
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&decl.ptype_name.loc);
+        }
+        // Use write_ident to escape keywords (e.g., type \"import" = ...)
+        self.write_ident(&decl.ptype_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&decl.ptype_name.loc);
+        }
 
         // Print type parameters in angle brackets (ReScript style)
         if !decl.ptype_params.is_empty() {
@@ -1554,7 +2378,26 @@ impl Printer {
 
     /// Print a constructor declaration.
     fn print_constructor_declaration(&mut self, ctor: &ConstructorDeclaration) {
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&ctor.pcd_loc);
+        }
+        // Handle spread syntax: ...typeName
+        if ctor.pcd_name.txt == "..." {
+            self.write("...");
+            if let ConstructorArguments::Pcstr_tuple(typs) = &ctor.pcd_args {
+                if let Some(typ) = typs.first() {
+                    self.print_core_type(typ);
+                }
+            }
+            if self.comments_enabled() {
+                self.print_trailing_comments_for_loc(&ctor.pcd_loc);
+            }
+            return;
+        }
         self.write(&ctor.pcd_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&ctor.pcd_name.loc);
+        }
         match &ctor.pcd_args {
             ConstructorArguments::Pcstr_tuple(typs) if !typs.is_empty() => {
                 self.write("(");
@@ -1582,21 +2425,42 @@ impl Printer {
             self.write(": ");
             self.print_core_type(res);
         }
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&ctor.pcd_loc);
+        }
     }
 
     /// Print a label declaration.
     fn print_label_declaration(&mut self, field: &LabelDeclaration) {
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&field.pld_loc);
+        }
         if field.pld_mutable == MutableFlag::Mutable {
             self.write("mutable ");
         }
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&field.pld_name.loc);
+        }
         self.write(&field.pld_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&field.pld_name.loc);
+        }
         self.write(": ");
         self.print_core_type(&field.pld_type);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&field.pld_loc);
+        }
     }
 
     /// Print an extension constructor.
     fn print_extension_constructor(&mut self, ext: &ExtensionConstructor) {
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&ext.pext_loc);
+        }
         self.write(&ext.pext_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&ext.pext_name.loc);
+        }
         match &ext.pext_kind {
             ExtensionConstructorKind::Pext_decl(args, res) => {
                 match args {
@@ -1632,6 +2496,9 @@ impl Printer {
                 self.print_longident(&lid.txt);
             }
         }
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&ext.pext_loc);
+        }
     }
 
     /// Print a type extension.
@@ -1652,7 +2519,13 @@ impl Printer {
     /// Print a value description.
     fn print_value_description(&mut self, vd: &ValueDescription) {
         self.write("external ");
+        if self.comments_enabled() {
+            self.print_comments_before_loc(&vd.pval_name.loc);
+        }
         self.write(&vd.pval_name.txt);
+        if self.comments_enabled() {
+            self.print_trailing_comments_for_loc(&vd.pval_name.loc);
+        }
         self.write(": ");
         self.print_core_type(&vd.pval_type);
         if !vd.pval_prim.is_empty() {
@@ -1710,16 +2583,47 @@ impl Printer {
     }
 
     /// Print a JSX child expression.
-    /// Non-JSX expressions need to be wrapped in braces.
+    /// JSX elements and exotic identifiers don't need braces.
     fn print_jsx_child(&mut self, child: &Expression) {
-        // JSX elements don't need braces
-        if matches!(child.pexp_desc, ExpressionDesc::Pexp_jsx_element(_)) {
-            self.print_expression(child);
-        } else {
+        match &child.pexp_desc {
+            // JSX elements don't need braces
+            ExpressionDesc::Pexp_jsx_element(_) => {
+                self.print_expression(child);
+            }
+            // Exotic identifiers can be printed bare in JSX
+            ExpressionDesc::Pexp_ident(lid) => {
+                if let Longident::Lident(name) = &lid.txt {
+                    if name.starts_with('"') && name.ends_with('"') {
+                        // Exotic identifier - print with backslash prefix
+                        self.write(" ");
+                        self.write_ident(name);
+                        return;
+                    }
+                }
+                // Regular identifiers need braces
+                self.write("{");
+                self.print_expression(child);
+                self.write("}");
+            }
+            // String constants don't need braces in JSX
+            ExpressionDesc::Pexp_constant(Constant::String(s, delim)) => {
+                self.write(" ");
+                if let Some(d) = delim {
+                    self.write(d);
+                    self.write(s);
+                    self.write(d);
+                } else {
+                    self.write("\"");
+                    self.write(s);
+                    self.write("\"");
+                }
+            }
             // Other expressions need braces
-            self.write("{");
-            self.print_expression(child);
-            self.write("}");
+            _ => {
+                self.write("{");
+                self.print_expression(child);
+                self.write("}");
+            }
         }
     }
 
@@ -1745,21 +2649,50 @@ impl Printer {
                 optional,
                 value,
             } => {
-                self.write(&name.txt);
+                self.write_ident(&name.txt);
                 if *optional {
                     self.write("=?");
                 } else {
                     self.write("=");
                 }
-                self.write("{");
-                self.print_expression(value);
-                self.write("}");
+                // Check if the value is a string constant - print without braces
+                if let ExpressionDesc::Pexp_constant(Constant::String(s, delim)) = &value.pexp_desc
+                {
+                    // For string constants, print directly as "value"
+                    let needs_escape = delim.is_none();
+                    if needs_escape {
+                        self.write("\"");
+                        self.write(s);
+                        self.write("\"");
+                    } else if let Some(d) = delim {
+                        self.write(d);
+                        self.write(s);
+                        self.write(d);
+                    }
+                } else if let ExpressionDesc::Pexp_ident(lid) = &value.pexp_desc {
+                    // Check if it's an exotic identifier (quoted name)
+                    if let Longident::Lident(ident_name) = &lid.txt {
+                        if ident_name.starts_with('"') && ident_name.ends_with('"') {
+                            // Exotic identifier - print as string value "value"
+                            self.write_ident(ident_name);
+                            return;
+                        }
+                    }
+                    // Regular identifier - needs braces
+                    self.write("{");
+                    self.print_expression(value);
+                    self.write("}");
+                } else {
+                    self.write("{");
+                    self.print_expression(value);
+                    self.write("}");
+                }
             }
             JsxProp::Punning { optional, name } => {
                 if *optional {
                     self.write("?");
                 }
-                self.write(&name.txt);
+                self.write_ident(&name.txt);
             }
             JsxProp::Spreading { expr, .. } => {
                 self.write("{...");
@@ -1776,11 +2709,11 @@ impl Printer {
     /// Print a longident.
     fn print_longident(&mut self, lid: &Longident) {
         match lid {
-            Longident::Lident(s) => self.write(s),
+            Longident::Lident(s) => self.write_ident(s),
             Longident::Ldot(prefix, s) => {
                 self.print_longident(prefix);
                 self.write(".");
-                self.write(s);
+                self.write_ident(s);
             }
             Longident::Lapply(f, arg) => {
                 self.print_longident(f);
@@ -1797,11 +2730,39 @@ impl Printer {
             Constant::Integer(s, suffix) => {
                 self.write(s);
                 if let Some(suffix) = suffix {
-                    let _ = write!(self.output, "{}", suffix);
+                    self.write(&suffix.to_string());
                 }
             }
             Constant::Char(code) => {
-                let _ = write!(self.output, "'\\u{{{:04x}}}'", code);
+                // Print simple printable ASCII characters directly, others as Unicode escapes
+                let c = if *code >= 0 {
+                    char::from_u32(*code as u32)
+                } else {
+                    None
+                };
+                match c {
+                    Some(ch) if ch.is_ascii() && !ch.is_ascii_control() && ch != '\'' && ch != '\\' => {
+                        self.write(&format!("'{}'", ch));
+                    }
+                    Some('\\') => {
+                        self.write("'\\\\'");
+                    }
+                    Some('\'') => {
+                        self.write("'\\''");
+                    }
+                    Some('\n') => {
+                        self.write("'\\n'");
+                    }
+                    Some('\r') => {
+                        self.write("'\\r'");
+                    }
+                    Some('\t') => {
+                        self.write("'\\t'");
+                    }
+                    _ => {
+                        self.write(&format!("'\\u{{{:04x}}}'", code));
+                    }
+                }
             }
             Constant::String(s, _delim) => {
                 self.write("\"");
@@ -1813,7 +2774,7 @@ impl Printer {
             Constant::Float(s, suffix) => {
                 self.write(s);
                 if let Some(suffix) = suffix {
-                    let _ = write!(self.output, "{}", suffix);
+                    self.write(&suffix.to_string());
                 }
             }
         }
@@ -1821,8 +2782,8 @@ impl Printer {
 
     /// Print a function expression, collecting all parameters and handling labeled args properly.
     fn print_fun_expr(&mut self, expr: &Expression) {
-        // Collect all function parameters
-        let mut params: Vec<(&ArgLabel, Option<&Expression>, &Pattern)> = Vec::new();
+        // Collect all function parameters along with their attributes
+        let mut params: Vec<(&Attributes, &ArgLabel, Option<&Expression>, &Pattern)> = Vec::new();
         let mut current = expr;
 
         while let ExpressionDesc::Pexp_fun {
@@ -1833,27 +2794,49 @@ impl Printer {
             ..
         } = &current.pexp_desc
         {
-            params.push((arg_label, default.as_deref(), lhs));
+            params.push((&current.pexp_attributes, arg_label, default.as_deref(), lhs));
             current = rhs;
         }
+
+        let has_unit_param = params.len() == 1 && Self::is_unit_pattern(params[0].3);
+
+        // Check if there's a return type annotation (body is a constraint)
+        let has_return_type = matches!(
+            &current.pexp_desc,
+            ExpressionDesc::Pexp_constraint(_, _)
+        );
 
         // Check if we need parentheses:
         // - Any labeled parameter
         // - Multiple parameters
         // - Any default value
+        // - Any parameter with attributes
+        // - Return type annotation (to distinguish (a): int => x from a: int => x)
+        // A single unit pattern doesn't need extra parens - it already has ()
+        let has_complex_single_param = params.len() == 1
+            && !Self::is_simple_arrow_param(params[0].3)
+            && !Self::is_unit_pattern(params[0].3);
+        let has_attrs = params.iter().any(|(attrs, _, _, _)| !attrs.is_empty());
         let needs_parens = params.len() > 1
             || params
                 .iter()
-                .any(|(label, default, _)| !matches!(label, ArgLabel::Nolabel) || default.is_some());
+                .any(|(_, label, default, _)| !matches!(label, ArgLabel::Nolabel) || default.is_some());
+        let needs_parens = needs_parens || has_complex_single_param || has_attrs || has_return_type;
 
         // Print parameters
         if needs_parens {
             self.write("(");
         }
 
-        for (i, (label, default, pat)) in params.iter().enumerate() {
+        for (i, (attrs, label, default, pat)) in params.iter().enumerate() {
             if i > 0 {
                 self.write(", ");
+            }
+            // Print parameter attributes
+            for attr in *attrs {
+                self.write("@");
+                self.print_attribute(attr);
+                self.write(" ");
             }
             self.print_fun_param(label, *default, pat);
         }
@@ -1862,17 +2845,41 @@ impl Printer {
             self.write(")");
         }
 
-        self.write(" => ");
-        // Function body needs braces if it's a sequence
-        if matches!(&current.pexp_desc, ExpressionDesc::Pexp_sequence(..)) {
+        // Check if the body is a constraint - if so, print as return type annotation
+        // (params): type => body instead of (params) => (body: type)
+        if let ExpressionDesc::Pexp_constraint(inner_body, return_type) = &current.pexp_desc {
+            self.write(": ");
+            self.print_core_type(return_type);
+            self.write(" => ");
+            // Function body: sequences need braces, other complex expressions don't need parens
+            self.print_function_body(inner_body);
+        } else {
+            self.write(" => ");
+            // Function body: sequences need braces, other complex expressions don't need parens
+            self.print_function_body(current);
+        }
+    }
+
+    /// Print a function body expression.
+    /// Sequences need braces, other complex expressions don't need parens.
+    fn print_function_body(&mut self, body: &Expression) {
+        // Check for sequences - they need braces
+        if matches!(&body.pexp_desc, ExpressionDesc::Pexp_sequence(..)) {
             self.write("{");
+            self.indent();
             self.newline();
-            self.print_block_body(current);
+            self.print_block_body_inner(body, false);
+            self.dedent();
             self.newline();
             self.write("}");
         } else {
-            self.print_expression(current);
+            // Other expressions don't need parens in function body context
+            self.print_expression_with_comments(body, false);
         }
+    }
+
+    fn is_simple_arrow_param(pat: &Pattern) -> bool {
+        matches!(&pat.ppat_desc, PatternDesc::Ppat_var(_) | PatternDesc::Ppat_any)
     }
 
     /// Print a single function parameter, using punning when possible.
@@ -1887,10 +2894,12 @@ impl Printer {
             }
             ArgLabel::Labelled(name) => {
                 self.write("~");
-                self.write(name);
-                // Check for punning: ~name where pattern is just the variable name
-                let is_punned = Self::is_punned_pattern(name, pat);
-                if !is_punned {
+                self.write_ident(name);
+                let (is_punned, punned_type) = Self::punned_pattern_type(name, pat);
+                if let Some(typ) = punned_type {
+                    self.write(": ");
+                    self.print_core_type(typ);
+                } else if !is_punned {
                     self.write(" as ");
                     self.print_pattern(pat);
                 }
@@ -1901,16 +2910,20 @@ impl Printer {
             }
             ArgLabel::Optional(name) => {
                 self.write("~");
-                self.write(name);
-                // Check for punning
-                let is_punned = Self::is_punned_pattern(name, pat);
-                if !is_punned {
+                self.write_ident(name);
+                let (is_punned, punned_type) = Self::punned_pattern_type(name, pat);
+                if let Some(typ) = punned_type {
+                    self.write(": ");
+                    self.print_core_type(typ);
+                } else if !is_punned {
                     self.write(" as ");
                     self.print_pattern(pat);
                 }
-                self.write("=?");
                 if let Some(def) = default {
+                    self.write("=");
                     self.print_expression(def);
+                } else {
+                    self.write("=?");
                 }
             }
         }
@@ -1925,18 +2938,27 @@ impl Printer {
         }
     }
 
+    fn punned_pattern_type<'a>(name: &str, pat: &'a Pattern) -> (bool, Option<&'a CoreType>) {
+        match &pat.ppat_desc {
+            PatternDesc::Ppat_constraint(inner, typ) if Self::is_punned_pattern(name, inner) => {
+                (true, Some(typ))
+            }
+            _ => (Self::is_punned_pattern(name, pat), None),
+        }
+    }
+
     /// Print an argument label (used for function application arguments).
     fn print_arg_label(&mut self, label: &ArgLabel) {
         match label {
             ArgLabel::Nolabel => {}
             ArgLabel::Labelled(s) => {
                 self.write("~");
-                self.write(s);
+                self.write_ident(s);
                 self.write("=");
             }
             ArgLabel::Optional(s) => {
                 self.write("~");
-                self.write(s);
+                self.write_ident(s);
                 self.write("=?");
             }
         }
@@ -1951,15 +2973,49 @@ impl Printer {
         }
     }
 
-    /// Print a single attribute.
+    /// Print a single attribute (without the @ prefix).
     fn print_attribute(&mut self, attr: &Attribute) {
         self.write(&attr.0.txt);
         match &attr.1 {
             Payload::PStr(items) if items.is_empty() => {}
+            Payload::PStr(items) => {
+                // Check if it's a simple string payload like @as("foo")
+                if items.len() == 1 {
+                    if let StructureItemDesc::Pstr_eval(expr, _) = &items[0].pstr_desc {
+                        if let ExpressionDesc::Pexp_constant(Constant::String(s, _)) =
+                            &expr.pexp_desc
+                        {
+                            self.write("(\"");
+                            self.write(s);
+                            self.write("\")");
+                            return;
+                        }
+                    }
+                }
+                // Fallback for complex payloads
+                self.write("(");
+                for item in items {
+                    self.print_structure_item(item);
+                }
+                self.write(")");
+            }
             _ => {
                 self.write("(...)");
             }
         }
+    }
+
+    /// Print a single attribute with @ prefix.
+    fn print_attribute_with_at(&mut self, attr: &Attribute) {
+        self.write("@");
+        self.print_attribute(attr);
+    }
+
+    /// Print an extension (name + payload).
+    fn print_extension(&mut self, ext: &Extension) {
+        self.write("%");
+        self.write_ident(&ext.0.txt);
+        self.print_extension_payload(&ext.1);
     }
 
     fn print_extension_payload(&mut self, payload: &Payload) {
@@ -2014,6 +3070,28 @@ pub fn print_structure(structure: &Structure) -> String {
     printer.into_output()
 }
 
+pub fn print_structure_with_width(structure: &Structure, max_width: usize) -> String {
+    let mut printer = Printer::with_width(max_width);
+    printer.print_structure(structure);
+    printer.into_output()
+}
+
+pub fn print_structure_with_comments(structure: &Structure, comments: &[Comment]) -> String {
+    let mut printer = Printer::with_comments(comments.to_vec());
+    printer.print_structure(structure);
+    printer.into_output()
+}
+
+pub fn print_structure_with_comments_and_width(
+    structure: &Structure,
+    comments: &[Comment],
+    max_width: usize,
+) -> String {
+    let mut printer = Printer::with_comments_and_width(comments.to_vec(), max_width);
+    printer.print_structure(structure);
+    printer.into_output()
+}
+
 /// Print an expression to a string.
 pub fn print_expression(expr: &Expression) -> String {
     let mut printer = Printer::new();
@@ -2032,6 +3110,13 @@ pub fn print_pattern(pat: &Pattern) -> String {
 pub fn print_core_type(typ: &CoreType) -> String {
     let mut printer = Printer::new();
     printer.print_core_type(typ);
+    printer.into_output()
+}
+
+/// Print a signature (interface file) to a string.
+pub fn print_signature(signature: &[SignatureItem]) -> String {
+    let mut printer = Printer::new();
+    printer.print_signature(signature);
     printer.into_output()
 }
 
@@ -2060,7 +3145,46 @@ mod tests {
         thread::spawn(move || {
             let mut parser = Parser::new("test.res", &source_owned);
             let structure = module::parse_structure(&mut parser);
-            let result = print_structure(&structure);
+            let result = print_structure_with_comments(&structure, parser.comments());
+            let _ = tx.send(result);
+        });
+
+        match rx.recv_timeout(PARSE_TIMEOUT) {
+            Ok(result) => result,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                panic!(
+                    "Parser timed out after {:?} for input: {}",
+                    PARSE_TIMEOUT,
+                    if source_for_error.len() > 100 {
+                        format!("{}...", &source_for_error[..100])
+                    } else {
+                        source_for_error
+                    }
+                )
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                panic!("Parser thread panicked for input: {}", source_for_error)
+            }
+        }
+    }
+
+    fn roundtrip_twice(source: &str) -> String {
+        let first = roundtrip(source);
+        let second = roundtrip(&first);
+        assert_eq!(first, second, "Roundtrip not idempotent");
+        first
+    }
+
+    fn roundtrip_with_width(source: &str, max_width: usize) -> String {
+        let source_owned = source.to_string();
+        let source_for_error = source_owned.clone();
+        let (tx, rx) = mpsc::channel();
+
+        thread::spawn(move || {
+            let mut parser = Parser::new("test.res", &source_owned);
+            let structure = module::parse_structure(&mut parser);
+            let result =
+                print_structure_with_comments_and_width(&structure, parser.comments(), max_width);
             let _ = tx.send(result);
         });
 
@@ -2242,6 +3366,26 @@ mod tests {
     }
 
     #[test]
+    fn test_print_type_and_chain() {
+        let result = roundtrip_twice("type t = string and s = int and u = float");
+        assert!(result.contains("and s = int"), "Missing second type: {}", result);
+        assert!(result.contains("and u = float"), "Missing third type: {}", result);
+    }
+
+    #[test]
+    fn test_print_type_constructor_tuple_arg() {
+        let result = roundtrip("type t = constr<(string, int)>");
+        assert!(result.contains("constr<(string, int)>"), "Unexpected output: {}", result);
+    }
+
+    #[test]
+    fn test_long_tuple_type_breaks() {
+        let source = "type t = (superLongTypeNameThatWillBreak, superLongTypeNameThatWillBreak, superLongTypeNameThatWillBreak, superLongTypeNameThatWillBreak)";
+        let result = roundtrip_with_width(source, 60);
+        assert!(result.contains("(\n"), "Expected multiline tuple type: {}", result);
+    }
+
+    #[test]
     fn test_print_labeled_function() {
         let result = roundtrip("let f = (~x, ~y) => x + y");
         assert!(result.contains("~x"));
@@ -2280,6 +3424,60 @@ mod tests {
         let result = roundtrip("let _ = { f(); g() }");
         // The parser might parse this differently
         assert!(result.contains("f") && result.contains("g"));
+    }
+
+    #[test]
+    fn test_roundtrip_sequence_in_fun_body() {
+        let result = roundtrip_twice("let f = x => { a(); b() }");
+        assert!(result.contains("=> {"), "Expected block body in output: {}", result);
+    }
+
+    #[test]
+    fn test_roundtrip_sequence_in_binary_rhs() {
+        let result = roundtrip_twice("let x = a && { b(); c() }");
+        assert!(
+            result.contains("&& {"),
+            "Expected block RHS in output: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_roundtrip_attribute_parens() {
+        let result = roundtrip_twice("let x = @attr (a + b)");
+        assert!(
+            result.contains("@attr (a + b)"),
+            "Expected parentheses preserved: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_roundtrip_comment_preservation() {
+        let result = roundtrip_twice("let /*a*/ x /*b*/ = 1 /*c*/");
+        assert!(result.contains("/*a*/"), "Missing /*a*/ in output: {}", result);
+        assert!(result.contains("/*b*/"), "Missing /*b*/ in output: {}", result);
+        assert!(result.contains("/*c*/"), "Missing /*c*/ in output: {}", result);
+    }
+
+    #[test]
+    fn test_roundtrip_unit_param() {
+        let result = roundtrip_twice("let f = (()) => 1");
+        assert!(
+            result.contains("(()) =>"),
+            "Expected unit param to keep extra parens: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_roundtrip_single_element_tuple_construct() {
+        let result = roundtrip_twice("let x = Some((foo()))");
+        assert!(
+            result.contains("Some(foo())"),
+            "Expected single-element tuple to avoid double parens: {}",
+            result
+        );
     }
 
     #[test]

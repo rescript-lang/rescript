@@ -21,18 +21,13 @@ pub type Loc<T> = Located<T>;
 pub type StringLoc = Located<String>;
 
 /// Arity information for functions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Arity {
     /// Full arity (all arguments known).
     Full(usize),
     /// Unknown arity.
+    #[default]
     Unknown,
-}
-
-impl Default for Arity {
-    fn default() -> Self {
-        Arity::Unknown
-    }
 }
 
 /// Recursive flag for let bindings.
@@ -461,6 +456,7 @@ pub struct ValueBinding {
 
 /// A JSX element.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum JsxElement {
     /// Fragment: `<> ... </>`.
     Fragment(JsxFragment),

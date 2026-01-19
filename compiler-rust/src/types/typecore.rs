@@ -1969,18 +1969,6 @@ pub fn type_expect<'a>(
                 &expr.pexp_attributes,
             )
         }
-
-        // For unimplemented expressions, create a placeholder
-        _ => {
-            // For unimplemented expressions, create a variable with expected type
-            Ok(Expression::new(
-                ExpressionDesc::Texp_constant(Constant::Int(0)),
-                loc,
-                expected_ty,
-                EnvRef(0),
-                expr.pexp_attributes.clone(),
-            ))
-        }
     }
 }
 

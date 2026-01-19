@@ -16,10 +16,9 @@ path = "src/lib.rs"
 name = "res_parser_rust"
 path = "src/bin/res_parser.rs"
 
-# Main compiler binary will be added later
-# [[bin]]
-# name = "bsc"
-# path = "src/main.rs"
+[[bin]]
+name = "bsc"
+path = "src/bin/bsc.rs"
 
 [dependencies]
 # Serialization (for FFI and config)

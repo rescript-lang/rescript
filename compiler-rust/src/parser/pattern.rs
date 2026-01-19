@@ -46,15 +46,56 @@ fn parse_type_longident(p: &mut Parser<'_>) -> Longident {
 // Main Pattern Parsing
 // ============================================================================
 
+/// Parse a single pattern (atomic + interval), used by or-pattern parsing.
+/// This parses one "branch" of an or-pattern without consuming further `|`.
+fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
+    let start_pos = p.start_pos.clone();
+    let mut pat = parse_atomic_pattern(p);
+
+    // Handle interval patterns: 1 .. 2, 'a' .. 'z'
+    if p.token == Token::DotDot {
+        if let PatternDesc::Ppat_constant(from) = &pat.ppat_desc {
+            match from {
+                Constant::Integer(..) | Constant::Char(..) => {
+                    let from = from.clone();
+                    p.next();
+                    let to = match &p.token {
+                        Token::Int { .. } | Token::Codepoint { .. } => super::expr::parse_constant(p),
+                        _ => {
+                            p.err(DiagnosticCategory::Message(
+                                "Expected constant after '..' in pattern".to_string(),
+                            ));
+                            Constant::Integer("0".to_string(), None)
+                        }
+                    };
+                    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                    pat = Pattern {
+                        ppat_desc: PatternDesc::Ppat_interval(from, to),
+                        ppat_loc: loc,
+                        ppat_attributes: vec![],
+                    };
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pat
+}
+
 /// Parse a pattern.
 pub fn parse_pattern(p: &mut Parser<'_>) -> Pattern {
     let start_pos = p.start_pos.clone();
-    let mut pat = parse_atomic_pattern(p);
+    let mut pat = parse_single_pattern(p);
 
     // Handle or-patterns
     if p.token == Token::Bar {
         pat = parse_or_pattern(p, pat, start_pos.clone());
     }
+
+    // Note: Type constraints (pat : type) are NOT handled here.
+    // Callers that need constraints should use parse_constrained_pattern.
+    // This matches OCaml's design where parse_pattern doesn't consume `:`.
 
     // Handle pattern aliases (pat as name)
     while p.token == Token::As {
@@ -94,17 +135,18 @@ fn parse_or_pattern(
 
     while p.token == Token::Bar {
         p.next();
-        patterns.push(parse_atomic_pattern(p));
+        // Use parse_single_pattern to handle interval patterns like 'a' .. 'z'
+        patterns.push(parse_single_pattern(p));
     }
 
-    // Build right-associative or-pattern chain
+    // Build left-associative or-pattern chain: A | B | C => ((A | B) | C)
+    // This matches OCaml's behavior
     patterns
         .into_iter()
-        .rev()
         .reduce(|acc, pat| {
-            let loc = mk_loc(&pat.ppat_loc.loc_start, &acc.ppat_loc.loc_end);
+            let loc = mk_loc(&acc.ppat_loc.loc_start, &pat.ppat_loc.loc_end);
             Pattern {
-                ppat_desc: PatternDesc::Ppat_or(Box::new(pat), Box::new(acc)),
+                ppat_desc: PatternDesc::Ppat_or(Box::new(acc), Box::new(pat)),
                 ppat_loc: loc,
                 ppat_attributes: vec![],
             }
@@ -118,7 +160,9 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
 
     if p.token == Token::Colon {
         p.next();
-        let typ = super::typ::parse_typ_expr(p);
+        // Use no-arrow parsing so the `=>` token isn't consumed as part of a type
+        // when we're in contexts like switch cases: `| pat: t => expr`.
+        let typ = super::typ::parse_typ_expr_no_arrow(p);
         let loc = mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
         Pattern {
             ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
@@ -127,6 +171,85 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
         }
     } else {
         pat
+    }
+}
+
+/// Create a unit construct pattern `()`.
+pub fn make_unit_construct_pattern(loc: crate::location::Location) -> Pattern {
+    ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc)
+}
+
+/// Parse an optional alias `as name` after a pattern.
+///
+/// This is used in for loops where we need to parse aliases separately
+/// from the main pattern parsing.
+pub fn parse_alias_pattern(
+    p: &mut Parser<'_>,
+    mut pat: Pattern,
+    _attrs: Vec<Attribute>,
+) -> Pattern {
+    let start_pos = pat.ppat_loc.loc_start.clone();
+    while p.token == Token::As {
+        p.next();
+        let name = match &p.token {
+            Token::Lident(name) => {
+                let name = name.clone();
+                let loc = mk_loc(&p.start_pos, &p.end_pos);
+                p.next();
+                with_loc(name, loc)
+            }
+            _ => {
+                p.err(DiagnosticCategory::Message(
+                    "Expected identifier after 'as'".to_string(),
+                ));
+                with_loc("_".to_string(), mk_loc(&p.start_pos, &p.end_pos))
+            }
+        };
+        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        pat = Pattern {
+            ppat_desc: PatternDesc::Ppat_alias(Box::new(pat), name),
+            ppat_loc: loc,
+            ppat_attributes: vec![],
+        };
+    }
+    pat
+}
+
+/// Parse a tuple pattern from a starting position and first pattern.
+///
+/// The caller must have already consumed the first comma between the first
+/// pattern and the second. This function continues parsing subsequent patterns.
+///
+/// Example: for `(a, b, c)`, after parsing `a` and consuming the comma,
+/// this function parses `b, c)`.
+pub fn parse_tuple_pattern(
+    p: &mut Parser<'_>,
+    start_pos: crate::location::Position,
+    first: Pattern,
+    _attrs: Vec<Attribute>,
+) -> Pattern {
+    let mut patterns = vec![first];
+
+    // Parse remaining patterns (first comma already consumed by caller)
+    loop {
+        if p.token == Token::Rparen {
+            break;
+        }
+        patterns.push(parse_constrained_pattern(p));
+        if p.token == Token::Comma {
+            p.next();
+        } else {
+            break;
+        }
+    }
+
+    p.expect(Token::Rparen);
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+
+    Pattern {
+        ppat_desc: PatternDesc::Ppat_tuple(patterns),
+        ppat_loc: loc,
+        ppat_attributes: vec![],
     }
 }
 
@@ -202,8 +325,9 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 // Parenthesized pattern or tuple
                 let pat = parse_constrained_pattern(p);
                 if p.token == Token::Comma {
-                    // Tuple pattern
-                    parse_tuple_pattern(p, start_pos, pat)
+                    // Tuple pattern - consume first comma, then parse rest
+                    p.next();
+                    parse_tuple_pattern(p, start_pos, pat, vec![])
                 } else {
                     p.expect(Token::Rparen);
                     pat
@@ -216,6 +340,10 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             p.next();
             parse_list_pattern(p, start_pos)
         }
+        Token::Dict => {
+            p.next();
+            parse_dict_pattern(p, start_pos)
+        }
         Token::Exception => {
             p.next();
             let pat = parse_atomic_pattern(p);
@@ -226,7 +354,122 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 ppat_attributes: vec![],
             }
         }
+        Token::Module => {
+            // Unpack pattern: module(M) or module(M: S)
+            p.next();
+            p.expect(Token::Lparen);
+
+            let name_loc = match &p.token {
+                Token::Uident(name) | Token::Lident(name) => {
+                    let name = name.clone();
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    with_loc(name, loc)
+                }
+                _ => {
+                    p.err(DiagnosticCategory::Message(
+                        "Expected module name".to_string(),
+                    ));
+                    with_loc("Error".to_string(), mk_loc(&p.start_pos, &p.end_pos))
+                }
+            };
+
+            let pkg_type = if p.token == Token::Colon {
+                p.next();
+                Some(super::typ::parse_package_type(p))
+            } else {
+                None
+            };
+
+            p.expect(Token::Rparen);
+            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+
+            let unpack = Pattern {
+                ppat_desc: PatternDesc::Ppat_unpack(name_loc),
+                ppat_loc: loc.clone(),
+                ppat_attributes: vec![],
+            };
+
+            if let Some(typ) = pkg_type {
+                Pattern {
+                    ppat_desc: PatternDesc::Ppat_constraint(Box::new(unpack), typ),
+                    ppat_loc: loc,
+                    ppat_attributes: vec![],
+                }
+            } else {
+                unpack
+            }
+        }
         Token::Hash => parse_poly_variant_pattern(p),
+        Token::Percent => parse_extension_pattern(p, start_pos),
+        Token::Backtick | Token::TemplateTail { .. } | Token::TemplatePart { .. } => {
+            parse_template_literal_pattern(p, start_pos)
+        }
+        Token::Colon => {
+            // List cons constructor: :: (printed by the current list pattern printer)
+            p.next();
+            if p.token != Token::Colon {
+                p.err(DiagnosticCategory::Message(
+                    "Unexpected token in pattern: Colon".to_string(),
+                ));
+                recover::default_pattern()
+            } else {
+                p.next();
+
+                let lid_loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let lid = mknoloc(Longident::Lident("::".to_string()));
+
+                let arg = if p.token == Token::Lparen {
+                    p.next();
+                    if p.token == Token::Rparen {
+                        p.next();
+                        let unit_loc = mk_loc(&start_pos, &p.prev_end_pos);
+                        Some(ast_helper::make_construct_pat(
+                            Longident::Lident("()".to_string()),
+                            None,
+                            unit_loc,
+                        ))
+                    } else {
+                        let first = parse_pattern(p);
+                        if p.token == Token::Comma {
+                            let tuple_start = first.ppat_loc.loc_start.clone();
+                            let mut patterns = vec![first];
+                            while p.token == Token::Comma {
+                                p.next();
+                                if p.token == Token::Rparen {
+                                    break;
+                                }
+                                patterns.push(parse_pattern(p));
+                            }
+                            p.expect(Token::Rparen);
+                            let tuple_loc = mk_loc(&tuple_start, &p.prev_end_pos);
+                            Some(Pattern {
+                                ppat_desc: PatternDesc::Ppat_tuple(patterns),
+                                ppat_loc: tuple_loc,
+                                ppat_attributes: vec![],
+                            })
+                        } else {
+                            p.expect(Token::Rparen);
+                            Some(first)
+                        }
+                    }
+                } else {
+                    None
+                };
+
+                let loc = if arg.is_some() {
+                    mk_loc(&start_pos, &p.prev_end_pos)
+                } else {
+                    lid_loc
+                };
+
+                Pattern {
+                    ppat_desc: PatternDesc::Ppat_construct(lid, arg.map(Box::new)),
+                    ppat_loc: loc,
+                    ppat_attributes: vec![],
+                }
+            }
+        }
         Token::Minus | Token::Plus => {
             // Negative or positive number pattern: -1 or +1
             let is_negative = p.token == Token::Minus;
@@ -341,14 +584,18 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
                 unit_loc,
             ))
         } else {
-            let first = parse_pattern(p);
+            // Use parse_constrained_pattern to support (pat: type) inside constructors
+            let first = parse_constrained_pattern(p);
             if p.token == Token::Comma {
                 // Multiple arguments - create a tuple pattern
                 let tuple_start = first.ppat_loc.loc_start.clone();
                 let mut patterns = vec![first];
                 while p.token == Token::Comma {
                     p.next();
-                    patterns.push(parse_pattern(p));
+                    if p.token == Token::Rparen {
+                        break;
+                    }
+                    patterns.push(parse_constrained_pattern(p));
                 }
                 p.expect(Token::Rparen);
                 let tuple_loc = mk_loc(&tuple_start, &p.prev_end_pos);
@@ -373,33 +620,6 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
     };
 
     ast_helper::make_construct_pat(lid, arg, full_loc)
-}
-
-// ============================================================================
-// Tuple Pattern
-// ============================================================================
-
-/// Parse a tuple pattern.
-fn parse_tuple_pattern(
-    p: &mut Parser<'_>,
-    start_pos: crate::location::Position,
-    first: Pattern,
-) -> Pattern {
-    let mut patterns = vec![first];
-
-    while p.token == Token::Comma {
-        p.next();
-        patterns.push(parse_constrained_pattern(p));
-    }
-
-    p.expect(Token::Rparen);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
-
-    Pattern {
-        ppat_desc: PatternDesc::Ppat_tuple(patterns),
-        ppat_loc: loc,
-        ppat_attributes: vec![],
-    }
 }
 
 // ============================================================================
@@ -439,10 +659,13 @@ fn parse_list_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         if p.token == Token::DotDotDot {
             p.next();
-            spread = Some(parse_pattern(p));
+            spread = Some(parse_constrained_pattern(p));
+            // Allow trailing comma after spread: list{a, ...rest,}
+            p.optional(&Token::Comma);
             break;
         }
-        patterns.push(parse_pattern(p));
+        // Use parse_constrained_pattern to support (pat: type) inside list patterns
+        patterns.push(parse_constrained_pattern(p));
         if !p.optional(&Token::Comma) {
             break;
         }
@@ -466,38 +689,73 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
         if p.token == Token::Underscore {
             p.next();
             closed = ClosedFlag::Open;
+            // Allow trailing comma after underscore: {a, _,}
+            p.optional(&Token::Comma);
             break;
         }
 
-        match &p.token {
-            Token::Lident(name) => {
-                let name = name.clone();
-                let field_start = p.start_pos.clone();
-                p.next();
+        let field_start = p.start_pos.clone();
 
-                let (lid, pat, opt) = if p.token == Token::Colon {
-                    // field: pattern
-                    p.next();
-                    let pat = parse_pattern(p);
-                    let loc = mk_loc(&field_start, &p.prev_end_pos);
-                    (with_loc(Longident::Lident(name), loc), pat, false)
-                } else if p.token == Token::Question {
-                    // field? (optional punning)
-                    p.next();
-                    let loc = mk_loc(&field_start, &p.prev_end_pos);
-                    let pat = ast_helper::make_var_pat(name.clone(), loc.clone());
-                    (with_loc(Longident::Lident(name), loc), pat, true)
-                } else {
-                    // Punning: field is same as variable
-                    let loc = mk_loc(&field_start, &p.prev_end_pos);
-                    let pat = ast_helper::make_var_pat(name.clone(), loc.clone());
-                    (with_loc(Longident::Lident(name), loc), pat, false)
-                };
-
-                fields.push(PatternRecordField { lid, pat, opt });
-            }
-            _ => break,
+        // Check for optional field punning: { ? name, ... }
+        let opt_punning = p.token == Token::Question;
+        if opt_punning {
+            p.next();
         }
+
+        // Support qualified record labels in patterns: {Module.label: pat}
+        // (also needed for ambiguity disambiguation, mirroring OCaml syntax).
+        let mut parts: Vec<String> = vec![];
+        loop {
+            match &p.token {
+                Token::Lident(name) | Token::Uident(name) => {
+                    parts.push(name.clone());
+                    p.next();
+                }
+                _ if p.token.is_keyword() => {
+                    parts.push(p.token.to_string());
+                    p.next();
+                }
+                _ => break,
+            }
+            if p.token == Token::Dot {
+                p.next();
+            } else {
+                break;
+            }
+        }
+
+        if parts.is_empty() {
+            break;
+        }
+
+        let lid_unloc = super::core::build_longident(&parts);
+        let pun_name = parts.last().cloned().unwrap_or("_".to_string());
+
+        let (lid, pat, opt) = if p.token == Token::Colon {
+            // field: pattern or field: ? pattern
+            p.next();
+            // Check for optional marker after colon: name: ? pat
+            let opt = p.token == Token::Question;
+            if opt {
+                p.next();
+            }
+            let pat = parse_pattern(p);
+            let loc = mk_loc(&field_start, &p.prev_end_pos);
+            (with_loc(lid_unloc, loc), pat, opt)
+        } else if p.token == Token::Question {
+            // field? (optional punning after field name - less common)
+            p.next();
+            let loc = mk_loc(&field_start, &p.prev_end_pos);
+            let pat = ast_helper::make_var_pat(pun_name, loc.clone());
+            (with_loc(lid_unloc, loc), pat, true)
+        } else {
+            // Punning: field is same as variable (use last identifier in the path)
+            let loc = mk_loc(&field_start, &p.prev_end_pos);
+            let pat = ast_helper::make_var_pat(pun_name, loc.clone());
+            (with_loc(lid_unloc, loc), pat, opt_punning)
+        };
+
+        fields.push(PatternRecordField { lid, pat, opt });
 
         if !p.optional(&Token::Comma) {
             break;
@@ -509,6 +767,170 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
 
     Pattern {
         ppat_desc: PatternDesc::Ppat_record(fields, closed),
+        ppat_loc: loc,
+        ppat_attributes: vec![],
+    }
+}
+
+/// Parse a dict pattern: dict{"key": pat, ...}.
+/// The `dict{` token is already consumed.
+fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) -> Pattern {
+    let mut fields = vec![];
+
+    while p.token != Token::Rbrace && p.token != Token::Eof {
+        match &p.token {
+            Token::String(key) => {
+                let key = key.clone();
+                let key_start = p.start_pos.clone();
+                p.next();
+
+                p.expect(Token::Colon);
+
+                // Optional value marker: "key": ?x
+                let opt = p.optional(&Token::Question);
+
+                let pat = parse_pattern(p);
+                let loc = mk_loc(&key_start, &p.prev_end_pos);
+                fields.push(PatternRecordField {
+                    lid: with_loc(Longident::Lident(key), loc),
+                    pat,
+                    opt,
+                });
+            }
+            _ => {
+                p.err(DiagnosticCategory::Message(
+                    "Dict keys must be strings".to_string(),
+                ));
+                break;
+            }
+        }
+
+        if !p.optional(&Token::Comma) {
+            break;
+        }
+    }
+
+    p.expect(Token::Rbrace);
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+
+    let record_pat = Pattern {
+        ppat_desc: PatternDesc::Ppat_record(fields, ClosedFlag::Closed),
+        ppat_loc: loc.clone(),
+        ppat_attributes: vec![],
+    };
+
+    Pattern {
+        ppat_desc: PatternDesc::Ppat_extension((
+            mknoloc("res.dict".to_string()),
+            Payload::PPat(Box::new(record_pat), None),
+        )),
+        ppat_loc: loc,
+        ppat_attributes: vec![],
+    }
+}
+
+/// Parse an extension pattern: %ext or %ext.with.dots(payload)
+fn parse_extension_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) -> Pattern {
+    p.expect(Token::Percent);
+
+    let id_start = p.start_pos.clone();
+    let mut parts: Vec<String> = vec![];
+
+    loop {
+        match &p.token {
+            Token::Lident(name) | Token::Uident(name) => {
+                parts.push(name.clone());
+                p.next();
+            }
+            _ if p.token.is_keyword() => {
+                parts.push(p.token.to_string());
+                p.next();
+            }
+            _ => break,
+        }
+
+        if p.token == Token::Dot {
+            p.next();
+            continue;
+        }
+        break;
+    }
+
+    let id = if parts.is_empty() {
+        p.err(DiagnosticCategory::Message(
+            "Expected extension identifier".to_string(),
+        ));
+        mknoloc("error".to_string())
+    } else {
+        with_loc(parts.join("."), mk_loc(&id_start, &p.prev_end_pos))
+    };
+
+    let payload = if p.token == Token::Lparen {
+        p.next();
+        let payload = super::module::parse_payload(p);
+        p.expect(Token::Rparen);
+        payload
+    } else {
+        Payload::PStr(vec![])
+    };
+
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+
+    Pattern {
+        ppat_desc: PatternDesc::Ppat_extension((id, payload)),
+        ppat_loc: loc,
+        ppat_attributes: vec![],
+    }
+}
+
+/// Parse a template literal pattern: `foo` (and consumes interpolations if present).
+fn parse_template_literal_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) -> Pattern {
+    let mut text = String::new();
+
+    if p.token == Token::Backtick {
+        p.next_template_literal_token();
+    }
+
+    loop {
+        match &p.token {
+            Token::TemplatePart { text: chunk, .. } => {
+                text.push_str(chunk);
+                p.next();
+                // Consume interpolation expression.
+                let _ = super::expr::parse_expr(p);
+                p.next_template_literal_token();
+            }
+            Token::TemplateTail { text: chunk, .. } => {
+                text.push_str(chunk);
+                p.next();
+                break;
+            }
+            Token::Backtick => {
+                // Empty template string
+                p.next();
+                break;
+            }
+            Token::Eof => {
+                p.err(DiagnosticCategory::Message(
+                    "Unterminated template literal".to_string(),
+                ));
+                break;
+            }
+            _ => {
+                p.err(DiagnosticCategory::Message(format!(
+                    "Unexpected token in template literal pattern: {:?}",
+                    p.token
+                )));
+                p.next();
+                break;
+            }
+        }
+    }
+
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+
+    Pattern {
+        ppat_desc: PatternDesc::Ppat_constant(Constant::String(text, Some("js".to_string()))),
         ppat_loc: loc,
         ppat_attributes: vec![],
     }

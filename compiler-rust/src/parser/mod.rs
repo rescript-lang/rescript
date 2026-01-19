@@ -38,6 +38,7 @@
 pub mod ast;
 #[cfg(test)]
 pub mod benchmark;
+pub mod code_frame;
 pub mod comment;
 pub mod core;
 pub mod diagnostics;
@@ -52,6 +53,7 @@ pub mod state;
 pub mod token;
 pub mod typ;
 pub mod utf8;
+pub mod sexp;
 
 // Re-exports
 pub use ast::*;
@@ -59,7 +61,10 @@ pub use comment::{Comment, CommentStyle};
 pub use diagnostics::{DiagnosticCategory, ParserDiagnostic};
 pub use grammar::Grammar;
 pub use longident::{Longident, LongidentLoc};
-pub use printer::{Printer, print_core_type, print_expression, print_pattern, print_structure};
+pub use printer::{
+    Printer, print_core_type, print_expression, print_pattern, print_signature, print_structure,
+    print_structure_with_comments, print_structure_with_comments_and_width, print_structure_with_width,
+};
 pub use scanner::{ScanResult, Scanner, ScannerMode, ScannerSnapshot};
 pub use state::{Parser, ParserMode, RegionStatus};
 pub use token::Token;

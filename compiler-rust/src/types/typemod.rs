@@ -19,13 +19,10 @@ use crate::parser::ast::{
 use crate::parser::longident::Longident;
 use crate::types::Path;
 use crate::types::env::Env;
-use crate::types::typecore::{
-    PatternMode, PatternState, TypeCheckContext, TypeCoreError, TypeCoreResult, type_binding,
-    type_expression,
-};
+use crate::types::typecore::{TypeCheckContext, TypeCoreError, type_binding, type_expression};
 use crate::types::typedtree::{
     EnvRef, Expression, IncludeDeclaration, ModuleBinding, ModuleCoercion, ModuleExpr,
-    ModuleExprDesc, ModuleType, ModuleTypeDeclaration, OpenDeclaration, SignatureItem, Structure,
+    ModuleExprDesc, ModuleType, ModuleTypeDeclaration, OpenDeclaration, Structure,
     StructureItem, StructureItemDesc, TypeExtension, ValueBinding,
 };
 
@@ -579,9 +576,6 @@ fn extend_env_with_bindings(env: &Env, bindings: &[ValueBinding]) -> Env {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::context::IdGenerator;
-    use crate::types::ctype::UnifyState;
-    use crate::types::env::initial_env;
 
     #[test]
     fn test_type_module_error_conversion() {

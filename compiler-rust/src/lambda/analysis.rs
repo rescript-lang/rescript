@@ -91,15 +91,12 @@ pub fn no_side_effects(lam: &Lambda) -> bool {
         // Function application - special case for known pure functions
         Lambda::Lapply(apply) => {
             // Special case: Lazy.from_fun application
-            match &*apply.ap_func {
-                Lambda::Lprim(prim_info) => {
-                    if let Primitive::Pfield(_, FieldDbgInfo::Module { name }) = &prim_info.primitive {
-                        if name == "from_fun" && apply.ap_args.len() == 1 {
-                            return no_side_effects(&apply.ap_args[0]);
-                        }
+            if let Lambda::Lprim(prim_info) = &*apply.ap_func {
+                if let Primitive::Pfield(_, FieldDbgInfo::Module { name }) = &prim_info.primitive {
+                    if name == "from_fun" && apply.ap_args.len() == 1 {
+                        return no_side_effects(&apply.ap_args[0]);
                     }
                 }
-                _ => {}
             }
             // General function application is not pure
             false

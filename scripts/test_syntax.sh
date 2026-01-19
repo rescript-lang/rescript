@@ -8,7 +8,27 @@
 scriptDir=`dirname $0`
 # macOS 12 does not have the realpath utility,
 # so let's use this workaround instead.
-DUNE_BIN_DIR=`cd "$scriptDir/../_build/install/default/bin"; pwd -P`
+PROJECT_ROOT=`cd "$scriptDir/.."; pwd -P`
+DUNE_BIN_DIR="$PROJECT_ROOT/_build/install/default/bin"
+
+# Allow switching between OCaml and Rust parsers via PARSER environment variable
+# Usage: PARSER=rust ./scripts/test_syntax.sh
+if [[ "$PARSER" == "rust" ]]; then
+  RES_PARSER="$PROJECT_ROOT/compiler-rust/target/release/res_parser_rust"
+  if [[ ! -x "$RES_PARSER" ]]; then
+    echo "Error: Rust parser not found at $RES_PARSER"
+    echo "Run 'cargo build --manifest-path compiler-rust/Cargo.toml --release' first."
+    exit 1
+  fi
+  echo "Using Rust parser: $RES_PARSER"
+else
+  RES_PARSER="$DUNE_BIN_DIR/res_parser"
+  if [[ ! -x "$RES_PARSER" ]]; then
+    echo "Error: OCaml parser not found at $RES_PARSER"
+    echo "Run 'make' first to build the OCaml parser."
+    exit 1
+  fi
+fi
 
 function exp {
   echo "$(dirname $1)/expected/$(basename $1).txt"
@@ -29,29 +49,29 @@ mkdir temp
 # parsing
 find syntax_tests/data/parsing/{errors,infiniteLoops,recovery} -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser -recover -print ml $file &> $(exp $file) & maybeWait
+  $RES_PARSER -recover -print ml $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 find syntax_tests/data/parsing/{grammar,other} -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser -print ml $file &> $(exp $file) & maybeWait
+  $RES_PARSER -print ml $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 # printing
 find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser $file &> $(exp $file) & maybeWait
+  $RES_PARSER $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 # printing with ast conversion
 find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
+  $RES_PARSER -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 # printing with ppx
 find syntax_tests/data/ppx/react -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser -jsx-version 4 $file &> $(exp $file) & maybeWait
+  $RES_PARSER -jsx-version 4 $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 wait
@@ -91,15 +111,15 @@ if [[ $ROUNDTRIP_TEST = 1 ]]; then
     esac
 
     # First pass: original file -> AST1 and text1
-    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $file > $sexpAst1
-    $DUNE_BIN_DIR/res_parser $resIntf -print res $file > $rescript1
+    $RES_PARSER $resIntf -print sexp $file > $sexpAst1
+    $RES_PARSER $resIntf -print res $file > $rescript1
 
     # Second pass: text1 -> AST2 and text2
-    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $rescript1 > $sexpAst2
-    $DUNE_BIN_DIR/res_parser $resIntf -print res $rescript1 > $rescript2
+    $RES_PARSER $resIntf -print sexp $rescript1 > $sexpAst2
+    $RES_PARSER $resIntf -print res $rescript1 > $rescript2
 
     # Third pass: text2 -> AST3 (to check idempotency after normalization)
-    $DUNE_BIN_DIR/res_parser $resIntf -print sexp $rescript2 > $sexpAst3
+    $RES_PARSER $resIntf -print sexp $rescript2 > $sexpAst3
 
     # Check AST idempotency: AST2 should equal AST3 (allows AST1 != AST2 for canonicalization)
     diff --unified $sexpAst2 $sexpAst3

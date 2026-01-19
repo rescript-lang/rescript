@@ -119,7 +119,7 @@ mod tests {
         // Create a simple function type: 'a -> 'b
         let a = ctx.new_var(Some("a".to_string()));
         let b = ctx.new_var(Some("b".to_string()));
-        let func = ctx.new_arrow_simple(a, b);
+        let _func = ctx.new_arrow_simple(a, b);
 
         // Create a path
         let string_id = Ident::create_persistent("String");

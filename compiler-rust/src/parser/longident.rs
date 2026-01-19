@@ -65,17 +65,6 @@ impl Longident {
         }
     }
 
-    /// Convert to a dotted string representation.
-    pub fn to_string(&self) -> String {
-        match self {
-            Longident::Lident(s) => s.clone(),
-            Longident::Ldot(prefix, s) => format!("{}.{}", prefix.to_string(), s),
-            Longident::Lapply(f, arg) => {
-                format!("{}({})", f.to_string(), arg.to_string())
-            }
-        }
-    }
-
     /// Check if this is a simple (non-dotted) identifier.
     pub fn is_simple(&self) -> bool {
         matches!(self, Longident::Lident(_))

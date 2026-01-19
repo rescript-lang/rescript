@@ -15,7 +15,9 @@
 //!   -jsx-module <mod>  JSX module (default: react)
 
 use clap::Parser as ClapParser;
-use rescript_compiler::parser::{Parser, Scanner, module, print_structure};
+use rescript_compiler::parser::{
+    code_frame, module, print_signature, print_structure, sexp, Parser, Scanner,
+};
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -62,12 +64,34 @@ struct Args {
     test_ast_conversion: bool,
 }
 
-fn main() {
-    let args = Args::parse();
+/// Convert OCaml-style single-dash long options to GNU-style double-dash options.
+/// This allows the same CLI to work with scripts written for the OCaml parser.
+/// e.g., "-print" -> "--print", "-recover" -> "--recover"
+fn normalize_args() -> Vec<String> {
+    std::env::args()
+        .map(|arg| {
+            // Convert OCaml-style options to GNU-style
+            match arg.as_str() {
+                "-print" => "--print".to_string(),
+                "-recover" => "--recover".to_string(),
+                "-interface" => "--interface".to_string(),
+                "-width" => "--width".to_string(),
+                "-jsx-version" => "--jsx-version".to_string(),
+                "-jsx-module" => "--jsx-module".to_string(),
+                "-typechecker" => "--typechecker".to_string(),
+                "-test-ast-conversion" => "--test-ast-conversion".to_string(),
+                _ => arg,
+            }
+        })
+        .collect()
+}
 
-    // Read the input file
-    let source = match fs::read_to_string(&args.file) {
-        Ok(content) => content,
+fn main() {
+    let args = Args::parse_from(normalize_args());
+
+    // Read the input file with lossy UTF-8 conversion (like OCaml)
+    let source = match fs::read(&args.file) {
+        Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
         Err(e) => {
             eprintln!("Error reading file {:?}: {}", args.file, e);
             process::exit(1);
@@ -86,17 +110,19 @@ fn main() {
     if is_interface {
         let signature = module::parse_signature(&mut parser);
 
-        // Check for errors
-        if parser.has_errors() && !args.recover {
-            print_diagnostics(&parser, &source, &filename);
-            process::exit(1);
+        // Print diagnostics if any
+        if parser.has_errors() {
+            print_diagnostics(&parser, &source, &filename, &mut io::stdout());
+            if !args.recover {
+                process::exit(1);
+            }
         }
 
         // Print in requested format
         match args.print.as_str() {
             "ml" => print_signature_ml(&signature, &mut io::stdout()),
             "res" => print_signature_res(&signature, &mut io::stdout()),
-            "sexp" => print_signature_sexp(&signature, &mut io::stdout()),
+            "sexp" => sexp::print_signature(&signature, &mut io::stdout()),
             "ast" => print_signature_ast(&signature, &mut io::stdout()),
             "comments" => print_comments(&parser, &mut io::stdout()),
             "tokens" => print_tokens(&source, &filename, &mut io::stdout()),
@@ -108,10 +134,12 @@ fn main() {
     } else {
         let structure = module::parse_structure(&mut parser);
 
-        // Check for errors
-        if parser.has_errors() && !args.recover {
-            print_diagnostics(&parser, &source, &filename);
-            process::exit(1);
+        // Print diagnostics if any
+        if parser.has_errors() {
+            print_diagnostics(&parser, &source, &filename, &mut io::stdout());
+            if !args.recover {
+                process::exit(1);
+            }
         }
 
         // Print in requested format
@@ -122,7 +150,7 @@ fn main() {
                 let _ = io::stdout().write_all(output.as_bytes());
                 let _ = io::stdout().write_all(b"\n");
             }
-            "sexp" => print_structure_sexp(&structure, &mut io::stdout()),
+            "sexp" => sexp::print_structure(&structure, &mut io::stdout()),
             "ast" => print_structure_ast(&structure, &mut io::stdout()),
             "comments" => print_comments(&parser, &mut io::stdout()),
             "tokens" => print_tokens(&source, &filename, &mut io::stdout()),
@@ -134,21 +162,17 @@ fn main() {
     }
 }
 
-/// Print parser diagnostics
-fn print_diagnostics(parser: &Parser, source: &str, filename: &str) {
+/// Print parser diagnostics in OCaml-compatible format
+fn print_diagnostics(parser: &Parser, source: &str, filename: &str, out: &mut impl Write) {
     for diag in parser.diagnostics() {
-        let col = diag.start_pos.cnum - diag.start_pos.bol;
-        eprintln!(
-            "{}:{}:{}: {:?}",
+        let error_msg = code_frame::format_error(
             filename,
-            diag.start_pos.line,
-            col + 1,
-            diag.category
+            source,
+            &diag.start_pos,
+            &diag.end_pos,
+            &diag.explain(),
         );
-        // Show the source line if available (line is 1-indexed)
-        if let Some(line) = source.lines().nth((diag.start_pos.line - 1) as usize) {
-            eprintln!("  {}", line);
-        }
+        let _ = out.write_all(error_msg.as_bytes());
     }
 }
 
@@ -192,11 +216,11 @@ use rescript_compiler::parser::longident::Longident;
 fn print_structure_ml(structure: &Structure, out: &mut impl Write) {
     for (i, item) in structure.iter().enumerate() {
         if i > 0 {
-            let _ = out.write_all(b" ");
+            let _ = out.write_all(b"\n");
         }
         print_structure_item_ml(item, out);
     }
-    let _ = out.write_all(b"\n");
+    // No trailing newline - OCaml doesn't add one
 }
 
 fn print_structure_item_ml(item: &StructureItem, out: &mut impl Write) {
@@ -676,13 +700,15 @@ fn print_core_type_ml(typ: &CoreType, out: &mut impl Write) {
         CoreTypeDesc::Ptyp_var(name) => {
             let _ = write!(out, "'{}", name);
         }
-        CoreTypeDesc::Ptyp_arrow { arg, ret, .. } => {
-            let _ = write!(out, "(");
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
             print_arg_label_ml(&arg.lbl, out);
             print_core_type_ml(&arg.typ, out);
             let _ = write!(out, " -> ");
             print_core_type_ml(ret, out);
-            let _ = write!(out, ")");
+            // Print arity annotation if known
+            if let Arity::Full(n) = arity {
+                let _ = write!(out, " (a:{})", n);
+            }
         }
         CoreTypeDesc::Ptyp_tuple(types) => {
             let _ = write!(out, "(");
@@ -955,22 +981,29 @@ fn print_type_declaration_ml(decl: &TypeDeclaration, out: &mut impl Write) {
             }
         }
         TypeKind::Ptype_record(fields) => {
-            let _ = write!(out, " = ");
+            let _ = write!(out, " =");
             if matches!(decl.ptype_private, PrivateFlag::Private) {
-                let _ = write!(out, "private ");
+                let _ = write!(out, " private");
             }
-            let _ = write!(out, "{{");
+            // OCaml breaks line before { when there are multiple type parameters
+            if decl.ptype_params.len() > 1 {
+                let _ = write!(out, "\n  {{\n");
+            } else {
+                let _ = write!(out, " {{\n");
+            }
             for (i, field) in fields.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, "; ");
-                }
+                let _ = write!(out, "  "); // 2-space indent
                 if matches!(field.pld_mutable, MutableFlag::Mutable) {
                     let _ = write!(out, "mutable ");
                 }
                 let _ = write!(out, "{}: ", field.pld_name.txt);
                 print_core_type_ml(&field.pld_type, out);
+                if i < fields.len() - 1 {
+                    let _ = write!(out, " ;\n");
+                } else {
+                    let _ = write!(out, " }}");
+                }
             }
-            let _ = write!(out, "}}");
         }
         TypeKind::Ptype_open => {
             let _ = write!(out, " = ..");
@@ -1233,738 +1266,13 @@ fn print_signature_item_ml(item: &SignatureItem, out: &mut impl Write) {
 
 fn print_signature_res(signature: &[SignatureItem], out: &mut impl Write) {
     // Use the built-in printer from the parser module
-    // For now, just print as ML - the actual res printer needs more work
-    print_signature_ml(signature, out);
-}
-
-// ============================================================================
-// S-expression Printer (for roundtrip tests)
-// ============================================================================
-
-fn print_structure_sexp(structure: &Structure, out: &mut impl Write) {
-    let _ = write!(out, "(");
-    for (i, item) in structure.iter().enumerate() {
-        if i > 0 {
-            let _ = write!(out, " ");
-        }
-        print_structure_item_sexp(item, out);
-    }
-    let _ = write!(out, ")");
+    let output = print_signature(signature);
+    let _ = out.write_all(output.as_bytes());
     let _ = out.write_all(b"\n");
 }
 
-fn print_structure_item_sexp(item: &StructureItem, out: &mut impl Write) {
-    match &item.pstr_desc {
-        StructureItemDesc::Pstr_eval(expr, _) => {
-            let _ = write!(out, "(Pstr_eval ");
-            print_expression_sexp(expr, out);
-            let _ = write!(out, ")");
-        }
-        StructureItemDesc::Pstr_value(rec_flag, bindings) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => "Recursive",
-                RecFlag::Nonrecursive => "Nonrecursive",
-            };
-            let _ = write!(out, "(Pstr_value {} (", rec_str);
-            for (i, binding) in bindings.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "(");
-                print_pattern_sexp(&binding.pvb_pat, out);
-                let _ = write!(out, " ");
-                print_expression_sexp(&binding.pvb_expr, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, "))");
-        }
-        StructureItemDesc::Pstr_primitive(vd) => {
-            let _ = write!(out, "(Pstr_primitive {} ", vd.pval_name.txt);
-            print_core_type_sexp(&vd.pval_type, out);
-            let _ = write!(out, ")");
-        }
-        StructureItemDesc::Pstr_type(rec_flag, decls) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => "Recursive",
-                RecFlag::Nonrecursive => "Nonrecursive",
-            };
-            let _ = write!(out, "(Pstr_type {} (", rec_str);
-            for (i, decl) in decls.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_type_declaration_sexp(decl, out);
-            }
-            let _ = write!(out, "))");
-        }
-        StructureItemDesc::Pstr_typext(ext) => {
-            let _ = write!(out, "(Pstr_typext ");
-            print_longident_sexp(&ext.ptyext_path.txt, out);
-            let _ = write!(out, ")");
-        }
-        StructureItemDesc::Pstr_exception(ext) => {
-            let _ = write!(out, "(Pstr_exception {})", ext.pext_name.txt);
-        }
-        StructureItemDesc::Pstr_module(mb) => {
-            let _ = write!(out, "(Pstr_module {} ", mb.pmb_name.txt);
-            print_module_expr_sexp(&mb.pmb_expr, out);
-            let _ = write!(out, ")");
-        }
-        StructureItemDesc::Pstr_recmodule(mbs) => {
-            let _ = write!(out, "(Pstr_recmodule (");
-            for (i, mb) in mbs.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "({} ", mb.pmb_name.txt);
-                print_module_expr_sexp(&mb.pmb_expr, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, "))");
-        }
-        StructureItemDesc::Pstr_modtype(mtd) => {
-            let _ = write!(out, "(Pstr_modtype {})", mtd.pmtd_name.txt);
-        }
-        StructureItemDesc::Pstr_open(od) => {
-            let _ = write!(out, "(Pstr_open ");
-            print_longident_sexp(&od.popen_lid.txt, out);
-            let _ = write!(out, ")");
-        }
-        StructureItemDesc::Pstr_include(_) => {
-            let _ = write!(out, "(Pstr_include)");
-        }
-        StructureItemDesc::Pstr_attribute((name, _)) => {
-            let _ = write!(out, "(Pstr_attribute {})", name.txt);
-        }
-        StructureItemDesc::Pstr_extension((name, _), _) => {
-            let _ = write!(out, "(Pstr_extension {})", name.txt);
-        }
-    }
-}
-
-fn print_expression_sexp(expr: &Expression, out: &mut impl Write) {
-    match &expr.pexp_desc {
-        ExpressionDesc::Pexp_ident(lid) => {
-            let _ = write!(out, "(Pexp_ident ");
-            print_longident_sexp(&lid.txt, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_constant(c) => {
-            let _ = write!(out, "(Pexp_constant ");
-            print_constant_sexp(c, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => "Recursive",
-                RecFlag::Nonrecursive => "Nonrecursive",
-            };
-            let _ = write!(out, "(Pexp_let {} (", rec_str);
-            for (i, binding) in bindings.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "(");
-                print_pattern_sexp(&binding.pvb_pat, out);
-                let _ = write!(out, " ");
-                print_expression_sexp(&binding.pvb_expr, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, ") ");
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_fun { lhs, rhs, .. } => {
-            let _ = write!(out, "(Pexp_fun ");
-            print_pattern_sexp(lhs, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(rhs, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_apply { funct, args, .. } => {
-            let _ = write!(out, "(Pexp_apply ");
-            print_expression_sexp(funct, out);
-            let _ = write!(out, " (");
-            for (i, (_, arg)) in args.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_expression_sexp(arg, out);
-            }
-            let _ = write!(out, "))");
-        }
-        ExpressionDesc::Pexp_match(scrutinee, cases) => {
-            let _ = write!(out, "(Pexp_match ");
-            print_expression_sexp(scrutinee, out);
-            let _ = write!(out, " (");
-            for (i, case) in cases.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "(");
-                print_pattern_sexp(&case.pc_lhs, out);
-                let _ = write!(out, " ");
-                print_expression_sexp(&case.pc_rhs, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, "))");
-        }
-        ExpressionDesc::Pexp_try(body, cases) => {
-            let _ = write!(out, "(Pexp_try ");
-            print_expression_sexp(body, out);
-            let _ = write!(out, " (");
-            for (i, case) in cases.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "(");
-                print_pattern_sexp(&case.pc_lhs, out);
-                let _ = write!(out, " ");
-                print_expression_sexp(&case.pc_rhs, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, "))");
-        }
-        ExpressionDesc::Pexp_tuple(exprs) => {
-            let _ = write!(out, "(Pexp_tuple (");
-            for (i, e) in exprs.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_expression_sexp(e, out);
-            }
-            let _ = write!(out, "))");
-        }
-        ExpressionDesc::Pexp_construct(lid, arg) => {
-            let _ = write!(out, "(Pexp_construct ");
-            print_longident_sexp(&lid.txt, out);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_expression_sexp(a, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_variant(label, arg) => {
-            let _ = write!(out, "(Pexp_variant {}", label);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_expression_sexp(a, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_record(fields, base) => {
-            let _ = write!(out, "(Pexp_record (");
-            for (i, field) in fields.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "(");
-                print_longident_sexp(&field.lid.txt, out);
-                let _ = write!(out, " ");
-                print_expression_sexp(&field.expr, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, ")");
-            if let Some(b) = base {
-                let _ = write!(out, " ");
-                print_expression_sexp(b, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_field(obj, field) => {
-            let _ = write!(out, "(Pexp_field ");
-            print_expression_sexp(obj, out);
-            let _ = write!(out, " ");
-            print_longident_sexp(&field.txt, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_setfield(obj, field, value) => {
-            let _ = write!(out, "(Pexp_setfield ");
-            print_expression_sexp(obj, out);
-            let _ = write!(out, " ");
-            print_longident_sexp(&field.txt, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(value, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_array(elems) => {
-            let _ = write!(out, "(Pexp_array (");
-            for (i, e) in elems.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_expression_sexp(e, out);
-            }
-            let _ = write!(out, "))");
-        }
-        ExpressionDesc::Pexp_ifthenelse(cond, then_expr, else_expr) => {
-            let _ = write!(out, "(Pexp_ifthenelse ");
-            print_expression_sexp(cond, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(then_expr, out);
-            if let Some(e) = else_expr {
-                let _ = write!(out, " ");
-                print_expression_sexp(e, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_sequence(e1, e2) => {
-            let _ = write!(out, "(Pexp_sequence ");
-            print_expression_sexp(e1, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(e2, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_while(cond, body) => {
-            let _ = write!(out, "(Pexp_while ");
-            print_expression_sexp(cond, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_for(pat, start, end, _dir, body) => {
-            let _ = write!(out, "(Pexp_for ");
-            print_pattern_sexp(pat, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(start, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(end, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_constraint(e, t) => {
-            let _ = write!(out, "(Pexp_constraint ");
-            print_expression_sexp(e, out);
-            let _ = write!(out, " ");
-            print_core_type_sexp(t, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_coerce(e, t1, t2) => {
-            let _ = write!(out, "(Pexp_coerce ");
-            print_expression_sexp(e, out);
-            if let Some(t) = t1 {
-                let _ = write!(out, " ");
-                print_core_type_sexp(t, out);
-            }
-            let _ = write!(out, " ");
-            print_core_type_sexp(t2, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_send(e, meth) => {
-            let _ = write!(out, "(Pexp_send ");
-            print_expression_sexp(e, out);
-            let _ = write!(out, " {})", meth.txt);
-        }
-        ExpressionDesc::Pexp_letmodule(name, mexpr, body) => {
-            let _ = write!(out, "(Pexp_letmodule {} ", name.txt);
-            print_module_expr_sexp(mexpr, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_letexception(ext, body) => {
-            let _ = write!(out, "(Pexp_letexception {} ", ext.pext_name.txt);
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_assert(e) => {
-            let _ = write!(out, "(Pexp_assert ");
-            print_expression_sexp(e, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_newtype(name, body) => {
-            let _ = write!(out, "(Pexp_newtype {} ", name.txt);
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_pack(mexpr) => {
-            let _ = write!(out, "(Pexp_pack ");
-            print_module_expr_sexp(mexpr, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_open(_, lid, body) => {
-            let _ = write!(out, "(Pexp_open ");
-            print_longident_sexp(&lid.txt, out);
-            let _ = write!(out, " ");
-            print_expression_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_extension((name, _)) => {
-            let _ = write!(out, "(Pexp_extension {})", name.txt);
-        }
-        ExpressionDesc::Pexp_await(e) => {
-            let _ = write!(out, "(Pexp_await ");
-            print_expression_sexp(e, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_jsx_element(_) => {
-            let _ = write!(out, "(Pexp_jsx_element)");
-        }
-    }
-}
-
-fn print_pattern_sexp(pat: &Pattern, out: &mut impl Write) {
-    match &pat.ppat_desc {
-        PatternDesc::Ppat_any => {
-            let _ = write!(out, "(Ppat_any)");
-        }
-        PatternDesc::Ppat_var(name) => {
-            let _ = write!(out, "(Ppat_var {})", name.txt);
-        }
-        PatternDesc::Ppat_alias(p, name) => {
-            let _ = write!(out, "(Ppat_alias ");
-            print_pattern_sexp(p, out);
-            let _ = write!(out, " {})", name.txt);
-        }
-        PatternDesc::Ppat_constant(c) => {
-            let _ = write!(out, "(Ppat_constant ");
-            print_constant_sexp(c, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_interval(c1, c2) => {
-            let _ = write!(out, "(Ppat_interval ");
-            print_constant_sexp(c1, out);
-            let _ = write!(out, " ");
-            print_constant_sexp(c2, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_tuple(pats) => {
-            let _ = write!(out, "(Ppat_tuple (");
-            for (i, p) in pats.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_pattern_sexp(p, out);
-            }
-            let _ = write!(out, "))");
-        }
-        PatternDesc::Ppat_construct(lid, arg) => {
-            let _ = write!(out, "(Ppat_construct ");
-            print_longident_sexp(&lid.txt, out);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_pattern_sexp(a, out);
-            }
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_variant(label, arg) => {
-            let _ = write!(out, "(Ppat_variant {}", label);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_pattern_sexp(a, out);
-            }
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_record(fields, closed) => {
-            let closed_str = match closed {
-                ClosedFlag::Closed => "Closed",
-                ClosedFlag::Open => "Open",
-            };
-            let _ = write!(out, "(Ppat_record {} (", closed_str);
-            for (i, field) in fields.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "(");
-                print_longident_sexp(&field.lid.txt, out);
-                let _ = write!(out, " ");
-                print_pattern_sexp(&field.pat, out);
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, "))");
-        }
-        PatternDesc::Ppat_array(pats) => {
-            let _ = write!(out, "(Ppat_array (");
-            for (i, p) in pats.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_pattern_sexp(p, out);
-            }
-            let _ = write!(out, "))");
-        }
-        PatternDesc::Ppat_or(p1, p2) => {
-            let _ = write!(out, "(Ppat_or ");
-            print_pattern_sexp(p1, out);
-            let _ = write!(out, " ");
-            print_pattern_sexp(p2, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_constraint(p, t) => {
-            let _ = write!(out, "(Ppat_constraint ");
-            print_pattern_sexp(p, out);
-            let _ = write!(out, " ");
-            print_core_type_sexp(t, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_type(lid) => {
-            let _ = write!(out, "(Ppat_type ");
-            print_longident_sexp(&lid.txt, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_unpack(name) => {
-            let _ = write!(out, "(Ppat_unpack {})", name.txt);
-        }
-        PatternDesc::Ppat_exception(p) => {
-            let _ = write!(out, "(Ppat_exception ");
-            print_pattern_sexp(p, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_extension((name, _)) => {
-            let _ = write!(out, "(Ppat_extension {})", name.txt);
-        }
-        PatternDesc::Ppat_open(lid, p) => {
-            let _ = write!(out, "(Ppat_open ");
-            print_longident_sexp(&lid.txt, out);
-            let _ = write!(out, " ");
-            print_pattern_sexp(p, out);
-            let _ = write!(out, ")");
-        }
-    }
-}
-
-fn print_core_type_sexp(typ: &CoreType, out: &mut impl Write) {
-    match &typ.ptyp_desc {
-        CoreTypeDesc::Ptyp_any => {
-            let _ = write!(out, "(Ptyp_any)");
-        }
-        CoreTypeDesc::Ptyp_var(name) => {
-            let _ = write!(out, "(Ptyp_var {})", name);
-        }
-        CoreTypeDesc::Ptyp_arrow { arg, ret, .. } => {
-            let _ = write!(out, "(Ptyp_arrow ");
-            print_core_type_sexp(&arg.typ, out);
-            let _ = write!(out, " ");
-            print_core_type_sexp(ret, out);
-            let _ = write!(out, ")");
-        }
-        CoreTypeDesc::Ptyp_tuple(types) => {
-            let _ = write!(out, "(Ptyp_tuple (");
-            for (i, t) in types.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_core_type_sexp(t, out);
-            }
-            let _ = write!(out, "))");
-        }
-        CoreTypeDesc::Ptyp_constr(lid, args) => {
-            let _ = write!(out, "(Ptyp_constr ");
-            print_longident_sexp(&lid.txt, out);
-            if !args.is_empty() {
-                let _ = write!(out, " (");
-                for (i, t) in args.iter().enumerate() {
-                    if i > 0 {
-                        let _ = write!(out, " ");
-                    }
-                    print_core_type_sexp(t, out);
-                }
-                let _ = write!(out, ")");
-            }
-            let _ = write!(out, ")");
-        }
-        CoreTypeDesc::Ptyp_object(_, _) => {
-            let _ = write!(out, "(Ptyp_object)");
-        }
-        CoreTypeDesc::Ptyp_alias(t, name) => {
-            let _ = write!(out, "(Ptyp_alias ");
-            print_core_type_sexp(t, out);
-            let _ = write!(out, " {})", name);
-        }
-        CoreTypeDesc::Ptyp_variant(_, _, _) => {
-            let _ = write!(out, "(Ptyp_variant)");
-        }
-        CoreTypeDesc::Ptyp_poly(vars, t) => {
-            let _ = write!(out, "(Ptyp_poly (");
-            for (i, v) in vars.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "{}", v.txt);
-            }
-            let _ = write!(out, ") ");
-            print_core_type_sexp(t, out);
-            let _ = write!(out, ")");
-        }
-        CoreTypeDesc::Ptyp_package((lid, _)) => {
-            let _ = write!(out, "(Ptyp_package ");
-            print_longident_sexp(&lid.txt, out);
-            let _ = write!(out, ")");
-        }
-        CoreTypeDesc::Ptyp_extension((name, _)) => {
-            let _ = write!(out, "(Ptyp_extension {})", name.txt);
-        }
-    }
-}
-
-fn print_constant_sexp(c: &Constant, out: &mut impl Write) {
-    match c {
-        Constant::Integer(s, suffix) => {
-            let _ = write!(out, "(Pconst_integer {}", s);
-            if let Some(c) = suffix {
-                let _ = write!(out, " {}", c);
-            }
-            let _ = write!(out, ")");
-        }
-        Constant::Char(i) => {
-            let _ = write!(out, "(Pconst_char {})", i);
-        }
-        Constant::String(s, _) => {
-            let _ = write!(out, "(Pconst_string \"{}\")", escape_string(s));
-        }
-        Constant::Float(s, suffix) => {
-            let _ = write!(out, "(Pconst_float {}", s);
-            if let Some(c) = suffix {
-                let _ = write!(out, " {}", c);
-            }
-            let _ = write!(out, ")");
-        }
-    }
-}
-
-fn print_longident_sexp(lid: &Longident, out: &mut impl Write) {
-    match lid {
-        Longident::Lident(name) => {
-            let _ = write!(out, "(Lident {})", name);
-        }
-        Longident::Ldot(prefix, name) => {
-            let _ = write!(out, "(Ldot ");
-            print_longident_sexp(prefix, out);
-            let _ = write!(out, " {})", name);
-        }
-        Longident::Lapply(m1, m2) => {
-            let _ = write!(out, "(Lapply ");
-            print_longident_sexp(m1, out);
-            let _ = write!(out, " ");
-            print_longident_sexp(m2, out);
-            let _ = write!(out, ")");
-        }
-    }
-}
-
-fn print_type_declaration_sexp(decl: &TypeDeclaration, out: &mut impl Write) {
-    let _ = write!(out, "(type_declaration {})", decl.ptype_name.txt);
-}
-
-fn print_module_expr_sexp(mexpr: &ModuleExpr, out: &mut impl Write) {
-    match &mexpr.pmod_desc {
-        ModuleExprDesc::Pmod_ident(lid) => {
-            let _ = write!(out, "(Pmod_ident ");
-            print_longident_sexp(&lid.txt, out);
-            let _ = write!(out, ")");
-        }
-        ModuleExprDesc::Pmod_structure(items) => {
-            let _ = write!(out, "(Pmod_structure (");
-            for (i, item) in items.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_structure_item_sexp(item, out);
-            }
-            let _ = write!(out, "))");
-        }
-        ModuleExprDesc::Pmod_functor(name, _mtype, body) => {
-            let _ = write!(out, "(Pmod_functor {} ", name.txt);
-            print_module_expr_sexp(body, out);
-            let _ = write!(out, ")");
-        }
-        ModuleExprDesc::Pmod_apply(m1, m2) => {
-            let _ = write!(out, "(Pmod_apply ");
-            print_module_expr_sexp(m1, out);
-            let _ = write!(out, " ");
-            print_module_expr_sexp(m2, out);
-            let _ = write!(out, ")");
-        }
-        ModuleExprDesc::Pmod_constraint(m, _mt) => {
-            let _ = write!(out, "(Pmod_constraint ");
-            print_module_expr_sexp(m, out);
-            let _ = write!(out, ")");
-        }
-        ModuleExprDesc::Pmod_unpack(e) => {
-            let _ = write!(out, "(Pmod_unpack ");
-            print_expression_sexp(e, out);
-            let _ = write!(out, ")");
-        }
-        ModuleExprDesc::Pmod_extension((name, _)) => {
-            let _ = write!(out, "(Pmod_extension {})", name.txt);
-        }
-    }
-}
-
-fn print_signature_sexp(signature: &[SignatureItem], out: &mut impl Write) {
-    let _ = write!(out, "(");
-    for (i, item) in signature.iter().enumerate() {
-        if i > 0 {
-            let _ = write!(out, " ");
-        }
-        print_signature_item_sexp(item, out);
-    }
-    let _ = write!(out, ")");
-    let _ = out.write_all(b"\n");
-}
-
-fn print_signature_item_sexp(item: &SignatureItem, out: &mut impl Write) {
-    match &item.psig_desc {
-        SignatureItemDesc::Psig_value(vd) => {
-            let _ = write!(out, "(Psig_value {} ", vd.pval_name.txt);
-            print_core_type_sexp(&vd.pval_type, out);
-            let _ = write!(out, ")");
-        }
-        SignatureItemDesc::Psig_type(rec_flag, decls) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => "Recursive",
-                RecFlag::Nonrecursive => "Nonrecursive",
-            };
-            let _ = write!(out, "(Psig_type {} (", rec_str);
-            for (i, decl) in decls.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                print_type_declaration_sexp(decl, out);
-            }
-            let _ = write!(out, "))");
-        }
-        SignatureItemDesc::Psig_typext(ext) => {
-            let _ = write!(out, "(Psig_typext ");
-            print_longident_sexp(&ext.ptyext_path.txt, out);
-            let _ = write!(out, ")");
-        }
-        SignatureItemDesc::Psig_exception(ext) => {
-            let _ = write!(out, "(Psig_exception {})", ext.pext_name.txt);
-        }
-        SignatureItemDesc::Psig_module(md) => {
-            let _ = write!(out, "(Psig_module {})", md.pmd_name.txt);
-        }
-        SignatureItemDesc::Psig_recmodule(mds) => {
-            let _ = write!(out, "(Psig_recmodule (");
-            for (i, md) in mds.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " ");
-                }
-                let _ = write!(out, "{}", md.pmd_name.txt);
-            }
-            let _ = write!(out, "))");
-        }
-        SignatureItemDesc::Psig_modtype(mtd) => {
-            let _ = write!(out, "(Psig_modtype {})", mtd.pmtd_name.txt);
-        }
-        SignatureItemDesc::Psig_open(od) => {
-            let _ = write!(out, "(Psig_open ");
-            print_longident_sexp(&od.popen_lid.txt, out);
-            let _ = write!(out, ")");
-        }
-        SignatureItemDesc::Psig_include(_) => {
-            let _ = write!(out, "(Psig_include)");
-        }
-        SignatureItemDesc::Psig_attribute((name, _)) => {
-            let _ = write!(out, "(Psig_attribute {})", name.txt);
-        }
-        SignatureItemDesc::Psig_extension((name, _), _) => {
-            let _ = write!(out, "(Psig_extension {})", name.txt);
-        }
-    }
-}
+// NOTE: S-expression printer moved to src/parser/sexp.rs for byte-for-byte
+// parity with OCaml res_ast_debugger.ml output
 
 // ============================================================================
 // AST Debug Printer

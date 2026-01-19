@@ -89,7 +89,9 @@ fn benchmark_ocaml_parser(file_path: &str, iterations: u32) -> Option<Duration> 
 
 /// Run a benchmark comparing Rust and OCaml parsers
 pub fn run_benchmark(name: &str, file_path: &str) -> Option<BenchmarkResult> {
-    let source = std::fs::read_to_string(file_path).ok()?;
+    // Use lossy UTF-8 conversion (like OCaml) to handle files with invalid bytes
+    let bytes = std::fs::read(file_path).ok()?;
+    let source = String::from_utf8_lossy(&bytes).into_owned();
     let source_size = source.len();
 
     // Warm up

@@ -177,9 +177,15 @@ done | grep -c "^DIFF"
 
 ## Success Criteria
 
-- [ ] ROUNDTRIP_DIFF failures reduced from ~20 to 0
-- [ ] All fixes have dedicated tests with 5s timeouts
-- [ ] `cargo test` passes
-- [ ] Output matches OCaml printer for common cases
+- [x] ROUNDTRIP_DIFF failures reduced from ~20 to 0
+- [x] All fixes have dedicated tests with 5s timeouts
+- [x] `cargo test` passes
+- [x] Output matches OCaml printer for common cases
+
+## Status
+
+- ROUNDTRIP_DIFF sweep: 0 (PARSE_FAIL remains in parser task scope).
+- Printer now preserves comments (best-effort ordering by location), prints type attributes, and formats bsObject/object types with `{.}` / `{..}` / quoted labels.
+- Added idempotency and formatting tests in `compiler-rust/src/parser/printer.rs`.
 
 **Note**: ROUNDTRIP_PARSE_FAIL cases will decrease as the concurrent parser task progresses - no action needed here for those.

@@ -9,7 +9,6 @@ use super::{
     Statement, StatementDesc, StringClause, VIdent, VariableDeclaration,
 };
 use crate::ident::Ident;
-use std::collections::HashSet;
 use std::fmt::Write;
 
 /// JavaScript printer state
@@ -21,8 +20,6 @@ pub struct JsPrinter {
     indent: usize,
     /// Indentation string (2 spaces)
     indent_str: &'static str,
-    /// Used identifiers (for scope management)
-    used_idents: HashSet<String>,
 }
 
 impl Default for JsPrinter {
@@ -38,7 +35,6 @@ impl JsPrinter {
             output: String::new(),
             indent: 0,
             indent_str: "  ",
-            used_idents: HashSet::new(),
         }
     }
 
@@ -483,11 +479,7 @@ impl JsPrinter {
                     }
 
                     for (i, (name, value)) in props.iter().enumerate() {
-                        if i > 0 || dup.is_some() {
-                            self.newline();
-                        } else {
-                            self.newline();
-                        }
+                        self.newline();
                         self.print_property_name(name);
                         self.write(": ");
                         self.print_expression(value, 1);

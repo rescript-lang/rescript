@@ -16,6 +16,29 @@ use super::token::Token;
 use super::typ;
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Convert a module type to a package type (for Ptyp_package).
+/// For a simple module type identifier like `T`, creates `(T, [])`.
+/// For more complex module types, extracts the identifier.
+fn module_type_to_package(mt: &ModuleType) -> PackageType {
+    let lid = match &mt.pmty_desc {
+        ModuleTypeDesc::Pmty_ident(lid) => lid.clone(),
+        ModuleTypeDesc::Pmty_with(base, _) => {
+            // For "T with type t = int", use T
+            if let ModuleTypeDesc::Pmty_ident(lid) = &base.pmty_desc {
+                lid.clone()
+            } else {
+                with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone())
+            }
+        }
+        _ => with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone()),
+    };
+    (lid, vec![])
+}
+
+// ============================================================================
 // Structure (Implementation) Parsing
 // ============================================================================
 
@@ -68,7 +91,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             }))
         }
         Token::Let { unwrap } => {
-            let _unwrap = *unwrap;
+            let unwrap = *unwrap;
             p.next();
             let rec_flag = if p.token == Token::Rec {
                 p.next();
@@ -76,23 +99,63 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             } else {
                 RecFlag::Nonrecursive
             };
-            let bindings = parse_let_bindings(p, rec_flag);
+            let bindings = parse_let_bindings(p, rec_flag, attrs.clone(), unwrap);
             Some(StructureItemDesc::Pstr_value(rec_flag, bindings))
         }
         Token::Typ => {
             p.next();
-            let rec_flag = if p.token == Token::Rec {
-                p.next();
-                RecFlag::Recursive
+            // `type t += ...` (type extension) vs `type t = ...` (type declaration)
+            let is_type_extension = p.token != Token::Rec
+                && p.lookahead(|state| {
+                    // Parse the (possibly dotted) type path.
+                    loop {
+                        match &state.token {
+                            Token::Lident(_) | Token::Uident(_) => {
+                                state.next();
+                                if state.token == Token::Dot {
+                                    state.next();
+                                    continue;
+                                }
+                            }
+                            _ => {}
+                        }
+                        break;
+                    }
+
+                    // Optional type params: <...>
+                    if state.token == Token::LessThan {
+                        let mut depth = 1;
+                        state.next();
+                        while depth > 0 && state.token != Token::Eof {
+                            match state.token {
+                                Token::LessThan => depth += 1,
+                                Token::GreaterThan => depth -= 1,
+                                _ => {}
+                            }
+                            state.next();
+                        }
+                    }
+
+                    state.token == Token::PlusEqual
+                });
+
+            if is_type_extension {
+                let ext = parse_type_extension(p, attrs.clone());
+                Some(StructureItemDesc::Pstr_typext(ext))
             } else {
-                RecFlag::Nonrecursive
-            };
-            let decls = parse_type_declarations(p);
-            Some(StructureItemDesc::Pstr_type(rec_flag, decls))
+                let rec_flag = if p.token == Token::Rec {
+                    p.next();
+                    RecFlag::Recursive
+                } else {
+                    RecFlag::Nonrecursive
+                };
+                let decls = parse_type_declarations(p, attrs.clone());
+                Some(StructureItemDesc::Pstr_type(rec_flag, decls))
+            }
         }
         Token::External => {
             p.next();
-            let vd = parse_value_description(p);
+            let vd = parse_value_description(p, attrs.clone());
             Some(StructureItemDesc::Pstr_primitive(vd))
         }
         Token::Exception => {
@@ -111,7 +174,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let expr = super::expr::parse_expr_with_operand(p, pack_expr);
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else {
-                parse_module_definition(p)
+                parse_module_definition(p, attrs.clone())
             }
         }
         Token::Include => {
@@ -136,29 +199,31 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 Some(StructureItemDesc::Pstr_attribute(attr))
             }
         }
-        Token::Percent => {
-            // Extension
-            let ext = parse_extension(p);
-            Some(StructureItemDesc::Pstr_extension(ext, attrs.clone()))
-        }
         Token::PercentPercent => {
-            // Structure-level extension (%%raw(...), etc.)
+            // Structure-level extension (%%raw(...), %%private(...), etc.)
             p.next();
-            // Parse extension name
-            let id = match &p.token {
+            // Parse extension name (can be identifier or keyword like `private`)
+            let id_start = p.start_pos.clone();
+            let id_name = match &p.token {
                 Token::Lident(name) | Token::Uident(name) => {
                     let name = name.clone();
-                    let loc = mk_loc(&p.start_pos, &p.end_pos);
                     p.next();
-                    with_loc(name, loc)
+                    name
+                }
+                // Keywords can be used as extension names (e.g., %%private)
+                token if token.is_keyword() => {
+                    let name = token.to_string();
+                    p.next();
+                    name
                 }
                 _ => {
                     p.err(DiagnosticCategory::Message(
                         "Expected extension identifier".to_string(),
                     ));
-                    mknoloc("error".to_string())
+                    "error".to_string()
                 }
             };
+            let id = with_loc(id_name, mk_loc(&id_start, &p.prev_end_pos));
             // Parse optional payload
             let payload = if p.token == Token::Lparen {
                 p.next();
@@ -233,34 +298,78 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
     let desc = match &p.token {
         Token::Open => {
             p.next();
+            // Check for override flag: open! M
+            let override_flag = if p.token == Token::Bang {
+                p.next();
+                OverrideFlag::Override
+            } else {
+                OverrideFlag::Fresh
+            };
             let lid = parse_module_long_ident(p);
             let loc = mk_loc(&start_pos, &p.prev_end_pos);
             Some(SignatureItemDesc::Psig_open(OpenDescription {
                 popen_lid: lid,
-                popen_override: OverrideFlag::Fresh,
+                popen_override: override_flag,
                 popen_loc: loc,
                 popen_attributes: attrs.clone(),
             }))
         }
         Token::Let { .. } => {
             p.next();
-            let vd = parse_value_description(p);
+            let vd = parse_value_description(p, attrs.clone());
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Typ => {
             p.next();
-            let rec_flag = if p.token == Token::Rec {
-                p.next();
-                RecFlag::Recursive
+            let is_type_extension = p.token != Token::Rec
+                && p.lookahead(|state| {
+                    loop {
+                        match &state.token {
+                            Token::Lident(_) | Token::Uident(_) => {
+                                state.next();
+                                if state.token == Token::Dot {
+                                    state.next();
+                                    continue;
+                                }
+                            }
+                            _ => {}
+                        }
+                        break;
+                    }
+
+                    if state.token == Token::LessThan {
+                        let mut depth = 1;
+                        state.next();
+                        while depth > 0 && state.token != Token::Eof {
+                            match state.token {
+                                Token::LessThan => depth += 1,
+                                Token::GreaterThan => depth -= 1,
+                                _ => {}
+                            }
+                            state.next();
+                        }
+                    }
+
+                    state.token == Token::PlusEqual
+                });
+
+            if is_type_extension {
+                let ext = parse_type_extension(p, attrs.clone());
+                Some(SignatureItemDesc::Psig_typext(ext))
             } else {
-                RecFlag::Nonrecursive
-            };
-            let decls = parse_type_declarations(p);
-            Some(SignatureItemDesc::Psig_type(rec_flag, decls))
+                let rec_flag = if p.token == Token::Rec {
+                    p.next();
+                    RecFlag::Recursive
+                } else {
+                    RecFlag::Nonrecursive
+                };
+                let decls = parse_type_declarations(p, attrs.clone());
+                Some(SignatureItemDesc::Psig_type(rec_flag, decls))
+            }
         }
         Token::External => {
             p.next();
-            let vd = parse_value_description(p);
+            let vd = parse_value_description(p, attrs.clone());
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Exception => {
@@ -272,10 +381,14 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             p.next();
             if p.token == Token::Typ {
                 p.next();
-                let mtd = parse_module_type_declaration(p);
+                let mtd = parse_module_type_declaration(p, attrs.clone());
                 Some(SignatureItemDesc::Psig_modtype(mtd))
+            } else if p.token == Token::Rec {
+                p.next();
+                let mds = parse_rec_module_declarations(p, attrs.clone());
+                Some(SignatureItemDesc::Psig_recmodule(mds))
             } else {
-                let md = parse_module_declaration(p);
+                let md = parse_module_declaration(p, attrs.clone());
                 Some(SignatureItemDesc::Psig_module(md))
             }
         }
@@ -299,7 +412,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 Some(SignatureItemDesc::Psig_attribute(attr))
             }
         }
-        Token::Percent => {
+        Token::Percent | Token::PercentPercent => {
             let ext = parse_extension(p);
             Some(SignatureItemDesc::Psig_extension(ext, attrs.clone()))
         }
@@ -388,6 +501,58 @@ pub fn parse_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
     }
 }
 
+/// Parse a module expression without consuming a trailing `: type` constraint.
+/// Used for first-class modules where the constraint becomes Pexp_constraint + Ptyp_package.
+pub fn parse_module_expr_without_constraint(p: &mut Parser<'_>) -> ModuleExpr {
+    let start_pos = p.start_pos.clone();
+
+    // Handle await keyword
+    let has_await = if p.token == Token::Await {
+        p.next();
+        true
+    } else {
+        false
+    };
+
+    // Parse attributes (e.g., @functorAttr)
+    let mut attrs = parse_attributes(p);
+
+    // Add await attribute if present
+    if has_await {
+        attrs.insert(
+            0,
+            (
+                mknoloc("res.await".to_string()),
+                Payload::PStr(vec![]),
+            ),
+        );
+    }
+
+    // Check if this is a functor: (args) => body or (args) : type => body
+    let expr = if is_es6_arrow_functor(p) {
+        parse_functor_module_expr(p)
+    } else {
+        parse_primary_module_expr(p)
+    };
+
+    // Handle module application: F(X)
+    let expr = parse_module_apply(p, expr);
+
+    // NOTE: We intentionally DON'T handle `: type` constraint here
+
+    // Attach attributes to the module expression
+    if attrs.is_empty() {
+        expr
+    } else {
+        let mut combined_attrs = expr.pmod_attributes.clone();
+        combined_attrs.extend(attrs);
+        ModuleExpr {
+            pmod_attributes: combined_attrs,
+            ..expr
+        }
+    }
+}
+
 /// Parse a primary module expression.
 fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
     let start_pos = p.start_pos.clone();
@@ -421,9 +586,20 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
             } else {
                 // Parenthesized module expression
                 p.next();
+                if p.token == Token::Rparen {
+                    // Unit module expression: ()
+                    p.next();
+                    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                    ModuleExpr {
+                        pmod_desc: ModuleExprDesc::Pmod_structure(vec![]),
+                        pmod_loc: loc,
+                        pmod_attributes: vec![],
+                    }
+                } else {
                 let inner = parse_module_expr(p);
                 p.expect(Token::Rparen);
                 inner
+                }
             }
         }
         Token::Percent => {
@@ -449,15 +625,39 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
             }
         }
         _ => {
-            // Try to parse as unpack: (val expr : pkg_type)
+            // Try to parse as unpack: unpack(expr : pkg_type)
             if matches!(&p.token, Token::Lident(s) if s == "unpack") {
                 p.next();
                 p.expect(Token::Lparen);
                 let expr = expr::parse_expr(p);
+                let final_expr = if p.token == Token::Colon {
+                    p.next();
+                    // Parse module type and convert to Ptyp_package
+                    let mod_type = parse_module_type(p);
+                    // Create Ptyp_package from module type
+                    let pkg_type = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_package(
+                            module_type_to_package(&mod_type),
+                        ),
+                        ptyp_loc: mod_type.pmty_loc.clone(),
+                        ptyp_attributes: vec![],
+                    };
+                    // Wrap expression in Pexp_constraint
+                    Expression {
+                        pexp_desc: ExpressionDesc::Pexp_constraint(
+                            Box::new(expr),
+                            pkg_type,
+                        ),
+                        pexp_loc: mk_loc(&start_pos, &p.prev_end_pos),
+                        pexp_attributes: vec![],
+                    }
+                } else {
+                    expr
+                };
                 p.expect(Token::Rparen);
                 let loc = mk_loc(&start_pos, &p.prev_end_pos);
                 ModuleExpr {
-                    pmod_desc: ModuleExprDesc::Pmod_unpack(Box::new(expr)),
+                    pmod_desc: ModuleExprDesc::Pmod_unpack(Box::new(final_expr)),
                     pmod_loc: loc,
                     pmod_attributes: vec![],
                 }
@@ -481,27 +681,41 @@ fn parse_module_apply(p: &mut Parser<'_>, func: ModuleExpr) -> ModuleExpr {
         let start = result.pmod_loc.loc_start.clone();
         p.next();
 
-        let arg = if p.token == Token::Rparen {
+        let args = if p.token == Token::Rparen {
             // Empty argument: F()
             p.next();
             let loc = mk_loc(&p.prev_end_pos, &p.prev_end_pos);
-            ModuleExpr {
+            vec![ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_structure(vec![]),
                 pmod_loc: loc,
                 pmod_attributes: vec![],
-            }
+            }]
         } else {
-            let arg = parse_module_expr(p);
+            let mut args = vec![];
+            loop {
+                args.push(parse_module_expr(p));
+                if p.token == Token::Comma {
+                    p.next();
+                    // Trailing comma.
+                    if p.token == Token::Rparen {
+                        break;
+                    }
+                    continue;
+                }
+                break;
+            }
             p.expect(Token::Rparen);
-            arg
+            args
         };
 
         let loc = mk_loc(&start, &p.prev_end_pos);
-        result = ModuleExpr {
-            pmod_desc: ModuleExprDesc::Pmod_apply(Box::new(result), Box::new(arg)),
-            pmod_loc: loc,
-            pmod_attributes: vec![],
-        };
+        for arg in args {
+            result = ModuleExpr {
+                pmod_desc: ModuleExprDesc::Pmod_apply(Box::new(result), Box::new(arg)),
+                pmod_loc: loc.clone(),
+                pmod_attributes: vec![],
+            };
+        }
     }
 
     result
@@ -667,13 +881,14 @@ fn parse_functor_args(p: &mut Parser<'_>) -> Vec<FunctorArg> {
 
 /// Parse a functor module expression: (args) => body
 fn parse_functor_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
-    let start_pos = p.start_pos.clone();
+    let _start_pos = p.start_pos.clone();
     let args = parse_functor_args(p);
 
     // Optional return type constraint: (args) : RetType => body
+    // Use parse_module_type_no_arrow to avoid interpreting `Set => A` as a functor type
     let return_type = if p.token == Token::Colon {
         p.next();
-        Some(parse_module_type(p))
+        Some(parse_module_type_no_arrow(p))
     } else {
         None
     };
@@ -747,23 +962,233 @@ fn parse_structure_in_braces(p: &mut Parser<'_>) -> Vec<StructureItem> {
 
 /// Parse a module type.
 pub fn parse_module_type(p: &mut Parser<'_>) -> ModuleType {
+    parse_module_type_impl(p, true)
+}
+
+/// Parse a module type without allowing ES6 arrow functor types.
+/// Used when parsing return type constraints in functor expressions.
+pub fn parse_module_type_no_arrow(p: &mut Parser<'_>) -> ModuleType {
+    parse_module_type_impl(p, false)
+}
+
+fn parse_module_type_impl(p: &mut Parser<'_>, es6_arrow: bool) -> ModuleType {
     let start_pos = p.start_pos.clone();
 
-    let typ = parse_primary_module_type(p);
+    // Parse attributes (e.g. `@attr module type of M`)
+    let attrs = parse_attributes(p);
+
+    // Parse functor types first (if allowed), then fall back to primary module types.
+    let typ = if es6_arrow {
+        parse_functor_module_type(p)
+    } else {
+        parse_primary_module_type(p)
+    };
 
     // Handle with constraint: S with type t = ...
     if matches!(&p.token, Token::Lident(s) if s == "with") {
         p.next();
         let constraints = parse_with_constraints(p);
         let loc = mk_loc(&start_pos, &p.prev_end_pos);
-        ModuleType {
+        let mut result = ModuleType {
             pmty_desc: ModuleTypeDesc::Pmty_with(Box::new(typ), constraints),
             pmty_loc: loc,
             pmty_attributes: vec![],
+        };
+        if !attrs.is_empty() {
+            result.pmty_attributes.extend(attrs);
         }
+        result
     } else {
-        typ
+        let mut result = typ;
+        if !attrs.is_empty() {
+            result.pmty_attributes.extend(attrs);
+        }
+        result
     }
+}
+
+fn parse_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
+    // Parenthesized functor params: `() => MT` or `(_ : S, X: T) => MT`
+    if p.token == Token::Lparen && is_paren_functor_module_type(p) {
+        return parse_paren_functor_module_type(p);
+    }
+
+    // Sugar: `S => MT` (unnamed parameter)
+    let start_pos = p.start_pos.clone();
+    let param_type = parse_primary_module_type(p);
+    if p.token == Token::EqualGreater {
+        p.next();
+        let body = parse_module_type(p);
+        let loc = mk_loc(&start_pos, &body.pmty_loc.loc_end);
+        return ModuleType {
+            pmty_desc: ModuleTypeDesc::Pmty_functor(
+                mknoloc("_".to_string()),
+                Some(Box::new(param_type)),
+                Box::new(body),
+            ),
+            pmty_loc: loc,
+            pmty_attributes: vec![],
+        };
+    }
+
+    param_type
+}
+
+fn is_paren_functor_module_type(p: &mut Parser<'_>) -> bool {
+    p.lookahead(|state| {
+        let mut depth = 0;
+        while state.token != Token::Eof {
+            match state.token {
+                Token::Lparen => depth += 1,
+                Token::Rparen => {
+                    depth -= 1;
+                    if depth == 0 {
+                        state.next();
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            state.next();
+        }
+
+        state.token == Token::EqualGreater
+    })
+}
+
+fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
+    let functor_start = p.start_pos.clone();
+    p.expect(Token::Lparen);
+
+    #[derive(Debug)]
+    struct FunctorParam {
+        name: StringLoc,
+        param: Option<ModuleType>,
+        start_pos: Position,
+    }
+
+    let mut params = vec![];
+
+    if p.token == Token::Rparen {
+        // Unit parameter: `() => MT` - OCaml uses "*" as the name for generative functors
+        let start_pos = functor_start.clone();
+        p.next();
+        params.push(FunctorParam {
+            name: mknoloc("*".to_string()),
+            param: None,
+            start_pos,
+        });
+    } else {
+        while p.token != Token::Rparen && p.token != Token::Eof {
+            let start_pos = p.start_pos.clone();
+            // Consume (and ignore) any parameter attributes like `(@attr _: S)`.
+            let _param_attrs = parse_attributes(p);
+
+            match &p.token {
+                Token::Underscore => {
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    let name = with_loc("_".to_string(), loc);
+                    let param = if p.token == Token::Colon {
+                        p.next();
+                        Some(parse_module_type(p))
+                    } else {
+                        None
+                    };
+                    params.push(FunctorParam {
+                        name,
+                        param,
+                        start_pos,
+                    });
+                }
+                Token::Lident(_) | Token::Uident(_) => {
+                    // `X: S` (named) or `S` (shorthand parameter type)
+                    let is_named = p.lookahead(|state| {
+                        state.next();
+                        state.token == Token::Colon
+                    });
+
+                    if is_named {
+                        let name = match &p.token {
+                            Token::Lident(n) | Token::Uident(n) => {
+                                let n = n.clone();
+                                let loc = mk_loc(&p.start_pos, &p.end_pos);
+                                p.next();
+                                with_loc(n, loc)
+                            }
+                            _ => mknoloc("_".to_string()),
+                        };
+                        p.expect(Token::Colon);
+                        let param = Some(parse_module_type(p));
+                        params.push(FunctorParam {
+                            name,
+                            param,
+                            start_pos,
+                        });
+                    } else {
+                        // Shorthand: `(S, T) => U` (unnamed parameter types)
+                        let param_ty = parse_module_type(p);
+                        params.push(FunctorParam {
+                            name: mknoloc("_".to_string()),
+                            param: Some(param_ty),
+                            start_pos,
+                        });
+                    }
+                }
+                Token::Lparen => {
+                    // Allow `()` as a unit parameter in multi-arg functors, and `(S)` as shorthand.
+                    let is_unit = p.lookahead(|state| {
+                        state.next();
+                        state.token == Token::Rparen
+                    });
+                    if is_unit {
+                        p.next();
+                        p.expect(Token::Rparen);
+                        params.push(FunctorParam {
+                            name: mknoloc(String::new()),
+                            param: None,
+                            start_pos,
+                        });
+                    } else {
+                        let param_ty = parse_module_type(p);
+                        params.push(FunctorParam {
+                            name: mknoloc("_".to_string()),
+                            param: Some(param_ty),
+                            start_pos,
+                        });
+                    }
+                }
+                _ => {
+                    p.err(DiagnosticCategory::Message(
+                        "Expected module type parameter".to_string(),
+                    ));
+                    break;
+                }
+            }
+
+            if !p.optional(&Token::Comma) {
+                break;
+            }
+        }
+        p.expect(Token::Rparen);
+    }
+
+    p.expect(Token::EqualGreater);
+    let body = parse_module_type(p);
+    let end_pos = body.pmty_loc.loc_end.clone();
+
+    params.into_iter().rev().fold(body, |acc, param| {
+        let loc = mk_loc(&param.start_pos, &end_pos);
+        ModuleType {
+            pmty_desc: ModuleTypeDesc::Pmty_functor(
+                param.name,
+                param.param.map(Box::new),
+                Box::new(acc),
+            ),
+            pmty_loc: loc,
+            pmty_attributes: vec![],
+        }
+    })
 }
 
 /// Parse a primary module type.
@@ -801,9 +1226,9 @@ fn parse_primary_module_type(p: &mut Parser<'_>) -> ModuleType {
         Token::Module => {
             // module type of M
             p.next();
-            if matches!(&p.token, Token::Lident(s) if s == "type") {
+            if p.token == Token::Typ {
                 p.next();
-                if matches!(&p.token, Token::Lident(s) if s == "of") {
+                if p.token == Token::Of {
                     p.next();
                     let mod_expr = parse_module_expr(p);
                     let loc = mk_loc(&start_pos, &p.prev_end_pos);
@@ -888,36 +1313,78 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
             let type_name = lid.txt.last().to_string();
             let type_loc = lid.loc.clone();
 
-            // Parse type parameters if present
+            // Parse type parameters if present (angle bracket syntax: <'a, 'b>)
             let params = if p.token == Token::LessThan {
-                parse_type_params(p)
+                parse_type_params_angle(p)
             } else {
                 vec![]
             };
 
-            p.expect(Token::Equal);
+            // Check for destructive substitution (:=) vs regular type equation (=)
+            let is_substitution = p.token == Token::ColonEqual;
+            if is_substitution {
+                p.next();
+            } else {
+                p.expect(Token::Equal);
+            }
             let typ = typ::parse_typ_expr(p);
 
-            Some(WithConstraint::Pwith_type(
-                lid,
-                TypeDeclaration {
-                    ptype_name: mknoloc(type_name),
-                    ptype_params: params,
-                    ptype_cstrs: vec![],
-                    ptype_kind: TypeKind::Ptype_abstract,
-                    ptype_private: PrivateFlag::Public,
-                    ptype_manifest: Some(typ),
-                    ptype_attributes: vec![],
-                    ptype_loc: type_loc,
-                },
-            ))
+            // Parse type constraints: constraint 'a = int constraint 'b = string
+            let mut cstrs = vec![];
+            while p.token == Token::Constraint {
+                let cstr_start = p.start_pos.clone();
+                p.next();
+                p.expect(Token::SingleQuote);
+                let var = if let Token::Lident(name) = &p.token {
+                    let name = name.clone();
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                        ptyp_loc: loc,
+                        ptyp_attributes: vec![],
+                    }
+                } else {
+                    break;
+                };
+                p.expect(Token::Equal);
+                let cstr_typ = typ::parse_typ_expr(p);
+                cstrs.push((var, cstr_typ, mk_loc(&cstr_start, &p.prev_end_pos)));
+            }
+
+            let decl = TypeDeclaration {
+                ptype_name: mknoloc(type_name),
+                ptype_params: params,
+                ptype_cstrs: cstrs,
+                ptype_kind: TypeKind::Ptype_abstract,
+                ptype_private: PrivateFlag::Public,
+                ptype_manifest: Some(typ),
+                ptype_attributes: vec![],
+                ptype_loc: type_loc,
+            };
+
+            if is_substitution {
+                Some(WithConstraint::Pwith_typesubst(lid, decl))
+            } else {
+                Some(WithConstraint::Pwith_type(lid, decl))
+            }
         }
         Token::Module => {
             p.next();
             let lid = parse_module_long_ident(p);
-            p.expect(Token::Equal);
+            // Check for destructive substitution (:=) vs regular module equation (=)
+            let is_substitution = p.token == Token::ColonEqual;
+            if is_substitution {
+                p.next();
+            } else {
+                p.expect(Token::Equal);
+            }
             let lid2 = parse_module_long_ident(p);
-            Some(WithConstraint::Pwith_module(lid, lid2))
+            if is_substitution {
+                Some(WithConstraint::Pwith_modsubst(lid, lid2))
+            } else {
+                Some(WithConstraint::Pwith_module(lid, lid2))
+            }
         }
         _ => None,
     }
@@ -957,35 +1424,44 @@ fn is_expr_start(token: &Token) -> bool {
             | Token::Dict
             | Token::Hash
             | Token::Backtick
+            | Token::Percent
     )
 }
 
 /// Parse a module long identifier.
+/// Handles both module paths (Foo.Bar.Baz) and module type paths (Foo.Bar.t).
+/// Module type names are typically lowercase (e.g., RGLEvents.t).
 fn parse_module_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
     let start_pos = p.start_pos.clone();
     let mut path_parts = vec![];
 
-    while let Token::Uident(name) = &p.token {
-        path_parts.push(name.clone());
-        p.next();
-        if p.token == Token::Dot {
-            p.next();
-        } else {
-            break;
+    loop {
+        match &p.token {
+            Token::Uident(name) => {
+                path_parts.push(name.clone());
+                p.next();
+                if p.token == Token::Dot {
+                    p.next();
+                    continue;
+                }
+                break;
+            }
+            Token::Lident(name) => {
+                // Allow lowercase as final component (for module type names like `t`)
+                // This handles paths like RGLEvents.t where `t` is a module type name
+                path_parts.push(name.clone());
+                p.next();
+                break;
+            }
+            _ => break,
         }
     }
 
     if path_parts.is_empty() {
-        // Try lowercase for module type names
-        if let Token::Lident(name) = &p.token {
-            path_parts.push(name.clone());
-            p.next();
-        } else {
-            p.err(DiagnosticCategory::Message(
-                "Expected module identifier".to_string(),
-            ));
-            path_parts.push("Error".to_string());
-        }
+        p.err(DiagnosticCategory::Message(
+            "Expected module identifier".to_string(),
+        ));
+        path_parts.push("Error".to_string());
     }
 
     let lid = super::core::build_longident(&path_parts);
@@ -1031,12 +1507,49 @@ fn parse_type_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
 }
 
 /// Parse let bindings.
-fn parse_let_bindings(p: &mut Parser<'_>, _rec_flag: RecFlag) -> Vec<ValueBinding> {
+fn parse_let_bindings(
+    p: &mut Parser<'_>,
+    _rec_flag: RecFlag,
+    outer_attrs: Attributes,
+    unwrap: bool,
+) -> Vec<ValueBinding> {
     let mut bindings = vec![];
 
     loop {
         let start_pos = p.start_pos.clone();
-        let attrs = parse_attributes(p);
+        let mut attrs = parse_attributes(p);
+        // For the first binding, prepend the outer attributes
+        if bindings.is_empty() {
+            attrs = [outer_attrs.clone(), attrs].concat();
+            // Add let.unwrap attribute if this is let?
+            if unwrap {
+                attrs.push((
+                    mknoloc("let.unwrap".to_string()),
+                    Payload::PStr(vec![]),
+                ));
+            }
+        }
+
+        // Handle `and` after attributes: `@attr and foo = ...`
+        // The `and` keyword is consumed here if present.
+        if p.token == Token::And {
+            // If this is the first binding, `and` is unexpected
+            if bindings.is_empty() {
+                p.err(DiagnosticCategory::Message(
+                    "Unexpected token: And".to_string(),
+                ));
+            }
+            p.next(); // consume `and`
+        } else if !bindings.is_empty() {
+            // Not `and` and not the first binding - we're done
+            // But wait, we already consumed attributes. This shouldn't happen
+            // if we properly check for continuation before starting a new iteration.
+            // Since we already parsed attributes, we need to continue.
+            // However, if we're here, it means we didn't have `and` after the previous binding.
+            // This is a logic error - let's not hit this case.
+            // Actually, we get here on the first iteration where bindings is empty.
+        }
+
         let pat = pattern::parse_pattern(p);
 
         // Handle optional type annotation: let x: int = ...
@@ -1065,8 +1578,27 @@ fn parse_let_bindings(p: &mut Parser<'_>, _rec_flag: RecFlag) -> Vec<ValueBindin
             pvb_loc: loc,
         });
 
+        // Check for `and` to continue with more bindings.
+        // Also handle attributes before `and`: `@attr and ...`
         if p.token == Token::And {
             p.next();
+        } else if matches!(p.token, Token::At | Token::AtAt) {
+            // Look ahead to see if attributes are followed by And
+            let has_and_after = p.lookahead(|state| {
+                // Skip attributes
+                while matches!(state.token, Token::At | Token::AtAt) {
+                    state.next(); // @
+                    // Skip the attribute identifier and any payload
+                    while !matches!(state.token, Token::At | Token::AtAt | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                        state.next();
+                    }
+                }
+                state.token == Token::And
+            });
+            if !has_and_after {
+                break;
+            }
+            // Continue - attributes will be parsed in the next iteration, and `and` will be consumed there
         } else {
             break;
         }
@@ -1076,16 +1608,36 @@ fn parse_let_bindings(p: &mut Parser<'_>, _rec_flag: RecFlag) -> Vec<ValueBindin
 }
 
 /// Parse type declarations.
-fn parse_type_declarations(p: &mut Parser<'_>) -> Vec<TypeDeclaration> {
+fn parse_type_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<TypeDeclaration> {
     let mut decls = vec![];
 
     loop {
-        if let Some(decl) = parse_type_declaration(p) {
+        let first_decl = decls.is_empty();
+        if let Some(decl) = parse_type_declaration(p, if first_decl { outer_attrs.clone() } else { vec![] }) {
             decls.push(decl);
         }
 
+        // Check for `and` to continue with more type declarations.
+        // Also handle attributes before `and`: `@attr and type t = ...`
         if p.token == Token::And {
             p.next();
+        } else if matches!(p.token, Token::At | Token::AtAt) {
+            // Look ahead to see if attributes are followed by And
+            let has_and_after = p.lookahead(|state| {
+                // Skip attributes
+                while matches!(state.token, Token::At | Token::AtAt) {
+                    state.next(); // @
+                    // Skip the attribute identifier and any payload
+                    while !matches!(state.token, Token::At | Token::AtAt | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                        state.next();
+                    }
+                }
+                state.token == Token::And
+            });
+            if !has_and_after {
+                break;
+            }
+            // Continue - attributes will be parsed in parse_type_declaration
         } else {
             break;
         }
@@ -1094,10 +1646,82 @@ fn parse_type_declarations(p: &mut Parser<'_>) -> Vec<TypeDeclaration> {
     decls
 }
 
-/// Parse a single type declaration.
-fn parse_type_declaration(p: &mut Parser<'_>) -> Option<TypeDeclaration> {
+/// Parse a type extension: `type t += ...`.
+fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension {
     let start_pos = p.start_pos.clone();
-    let attrs = parse_attributes(p);
+
+    // Parse the extended type path (e.g. t or M.t).
+    let mut parts: Vec<String> = vec![];
+    loop {
+        match &p.token {
+            Token::Lident(name) | Token::Uident(name) => {
+                parts.push(name.clone());
+                p.next();
+            }
+            _ => break,
+        }
+        if p.token == Token::Dot {
+            p.next();
+            continue;
+        }
+        break;
+    }
+
+    if parts.is_empty() {
+        p.err(DiagnosticCategory::Message(
+            "Expected type name for type extension".to_string(),
+        ));
+        parts.push("Error".to_string());
+    }
+
+    let path = with_loc(super::core::build_longident(&parts), mk_loc(&start_pos, &p.prev_end_pos));
+
+    // Optional type params: <'a, +'b, -'c>
+    let params = if p.token == Token::LessThan {
+        parse_type_params_angle(p)
+    } else {
+        vec![]
+    };
+
+    p.expect(Token::PlusEqual);
+
+    let private = if p.token == Token::Private {
+        p.next();
+        PrivateFlag::Private
+    } else {
+        PrivateFlag::Public
+    };
+
+    // Constructors (with optional leading `|`).
+    if p.token == Token::Bar {
+        p.next();
+    }
+
+    let mut constructors = vec![];
+    while p.token != Token::Eof {
+        constructors.push(parse_extension_constructor(p));
+        if p.token == Token::Bar {
+            p.next();
+            continue;
+        }
+        break;
+    }
+
+    TypeExtension {
+        ptyext_path: path,
+        ptyext_params: params,
+        ptyext_constructors: constructors,
+        ptyext_private: private,
+        ptyext_attributes: attrs,
+    }
+}
+
+/// Parse a single type declaration.
+fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option<TypeDeclaration> {
+    let start_pos = p.start_pos.clone();
+    let inner_attrs = parse_attributes(p);
+    // Prepend outer attributes to inner ones
+    let attrs = [outer_attrs, inner_attrs].concat();
 
     // Parse type name first (ReScript uses t<'a> not 'a t syntax)
     let name = match &p.token {
@@ -1118,92 +1742,206 @@ fn parse_type_declaration(p: &mut Parser<'_>) -> Option<TypeDeclaration> {
     // Parse type parameters after name (e.g., t<'a, 'b> or t<+'a, -'b>)
     let params = if p.token == Token::LessThan {
         parse_type_params_angle(p)
+    } else if p.token == Token::Lparen {
+        // Detect old OCaml-style type parameters: type t('a) = ...
+        // Give a helpful error message about using angle brackets instead
+        let paren_start = p.start_pos.clone();
+        let params = parse_type_params_old_style(p, &name.txt);
+        let paren_end = p.prev_end_pos.clone();
+
+        // Emit helpful error about angle bracket syntax
+        let suggested = format_type_with_angle_brackets(&name.txt, &params);
+        p.err_multiple(
+            paren_start,
+            paren_end,
+            DiagnosticCategory::Message(format!(
+                "Type parameters require angle brackets:\n  {}",
+                suggested
+            )),
+        );
+        params
     } else {
         vec![]
     };
 
-    // Parse optional manifest and/or kind
+    // Parse optional manifest and/or kind (and ReScript's `type t = T = ...` equation form).
     let (manifest, kind, private) = if p.token == Token::Equal {
-        p.next();
-        let private = if p.token == Token::Private {
+        // Heuristic: `{...}` after `=` can be a record type *or* a bs-object/object type.
+        // Disambiguate by looking at the first significant token inside the braces.
+        let looks_like_object_type_after_lbrace = |p: &mut Parser<'_>| -> bool {
+            p.lookahead(|state| {
+                // Current token is `{`
+                state.next();
+
+                // Skip leading attributes: @attr ...
+                while state.token == Token::At {
+                    state.next();
+                    // Skip attribute id segments (possibly dotted)
+                    if matches!(state.token, Token::Lident(_) | Token::Uident(_)) || state.token.is_keyword()
+                    {
+                        state.next();
+                        while state.token == Token::Dot {
+                            state.next();
+                            if matches!(state.token, Token::Lident(_) | Token::Uident(_))
+                                || state.token.is_keyword()
+                            {
+                                state.next();
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    // Skip optional payload in parentheses
+                    if state.token == Token::Lparen {
+                        let mut depth = 1;
+                        state.next();
+                        while depth > 0 && state.token != Token::Eof {
+                            match state.token {
+                                Token::Lparen => depth += 1,
+                                Token::Rparen => depth -= 1,
+                                _ => {}
+                            }
+                            state.next();
+                        }
+                    }
+                }
+
+                matches!(
+                    state.token,
+                    Token::String(_) | Token::Dot | Token::DotDot | Token::DotDotDot
+                )
+            })
+        };
+
+        // Better variant-vs-manifest disambiguation: a leading Uident without a following `.`
+        // is almost always a constructor in a variant type, even if there's only a single
+        // constructor (no `|`).
+        let is_variant_type_starting_with_uident = |p: &mut Parser<'_>| -> bool {
+            p.lookahead(|state| {
+                state.next(); // consume Uident
+
+                // `Foo.bar` is a type path, not a constructor.
+                if state.token == Token::Dot {
+                    return false;
+                }
+
+                // Any of these mean we're in constructor territory.
+                matches!(
+                    state.token,
+                    Token::Bar
+                        | Token::Lparen
+                        | Token::Lbrace
+                        | Token::Colon // GADT syntax: `type t = Foo: t`
+                        | Token::Equal // `type t = C = ...`
+                        | Token::And
+                        | Token::Constraint
+                        | Token::Semicolon
+                        | Token::Rbrace
+                        | Token::Eof
+                )
+            })
+        };
+
+        p.next(); // consume first '='
+        let mut private = if p.token == Token::Private {
             p.next();
             PrivateFlag::Private
         } else {
             PrivateFlag::Public
         };
 
-        // Check for variant or record
+        let mut manifest = None;
+        let mut kind = TypeKind::Ptype_abstract;
+
         match &p.token {
             Token::Bar => {
                 // Variant type starting with | (e.g., type t = | A | B)
-                let kind = parse_type_kind(p);
-                (None, kind, private)
+                kind = parse_type_kind(p);
             }
             Token::Lbrace => {
-                // Record type
-                let kind = parse_type_kind(p);
-                (None, kind, private)
+                // Record type OR object type ({"x": int})
+                if looks_like_object_type_after_lbrace(p) {
+                    manifest = Some(typ::parse_typ_expr(p));
+                } else {
+                    kind = parse_type_kind(p);
+                }
             }
             Token::Uident(_) => {
-                // Could be a variant type starting with constructor (type t = A | B)
-                // or a type alias (type t = SomeType)
-                // We need to look ahead to see if there's a | after the constructor
-                let is_variant = p.lookahead(|state| {
-                    // Skip the constructor name
-                    state.next();
-                    // Check if followed by | or ( ... ) |
-                    state.token == Token::Bar
-                        || (state.token == Token::Lparen && {
-                            // Skip the argument list
-                            let mut depth = 1;
-                            state.next();
-                            while depth > 0 && state.token != Token::Eof {
-                                match state.token {
-                                    Token::Lparen => depth += 1,
-                                    Token::Rparen => depth -= 1,
-                                    _ => {}
-                                }
-                                state.next();
-                            }
-                            state.token == Token::Bar
-                        })
-                        || (state.token == Token::Lbrace && {
-                            // Skip the inline record
-                            let mut depth = 1;
-                            state.next();
-                            while depth > 0 && state.token != Token::Eof {
-                                match state.token {
-                                    Token::Lbrace => depth += 1,
-                                    Token::Rbrace => depth -= 1,
-                                    _ => {}
-                                }
-                                state.next();
-                            }
-                            state.token == Token::Bar
-                        })
-                });
-
-                if is_variant {
-                    // Parse as variant type without leading |
+                if is_variant_type_starting_with_uident(p) {
                     let constructors = parse_constructors_without_leading_bar(p);
-                    (None, TypeKind::Ptype_variant(constructors), private)
+                    kind = TypeKind::Ptype_variant(constructors);
                 } else {
-                    // Parse as manifest type
-                    let typ = typ::parse_typ_expr(p);
-                    (Some(typ), TypeKind::Ptype_abstract, private)
+                    manifest = Some(typ::parse_typ_expr(p));
+                }
+            }
+            Token::At => {
+                // Check if this is a variant constructor with attribute: @attr Constr
+                // Lookahead to see if there's a Uident after the attribute
+                let is_variant = p.lookahead(|state| {
+                    // Skip attributes
+                    while state.token == Token::At {
+                        state.next(); // @
+                        state.next(); // attr name
+                        if state.token == Token::Lparen {
+                            let mut depth = 1;
+                            state.next();
+                            while depth > 0 && state.token != Token::Eof {
+                                if state.token == Token::Lparen {
+                                    depth += 1;
+                                } else if state.token == Token::Rparen {
+                                    depth -= 1;
+                                }
+                                state.next();
+                            }
+                        }
+                    }
+                    matches!(state.token, Token::Uident(_))
+                });
+                if is_variant {
+                    let constructors = parse_constructors_without_leading_bar(p);
+                    kind = TypeKind::Ptype_variant(constructors);
+                } else {
+                    manifest = Some(typ::parse_typ_expr(p));
                 }
             }
             Token::DotDot => {
                 // Extensible variant: type t = ..
                 p.next();
-                (None, TypeKind::Ptype_open, private)
+                kind = TypeKind::Ptype_open;
             }
             _ => {
                 // Manifest type
-                let typ = typ::parse_typ_expr(p);
-                (Some(typ), TypeKind::Ptype_abstract, private)
+                manifest = Some(typ::parse_typ_expr(p));
             }
         }
+
+        // ReScript type equation: `type t = T = ...`
+        if manifest.is_some() && p.token == Token::Equal {
+            p.next(); // consume second '='
+            private = if p.token == Token::Private {
+                p.next();
+                PrivateFlag::Private
+            } else {
+                PrivateFlag::Public
+            };
+
+            kind = match &p.token {
+                Token::Bar | Token::Lbrace => parse_type_kind(p),
+                Token::Uident(_) => TypeKind::Ptype_variant(parse_constructors_without_leading_bar(p)),
+                Token::DotDot => {
+                    p.next();
+                    TypeKind::Ptype_open
+                }
+                _ => {
+                    p.err(DiagnosticCategory::Message(
+                        "Expected variant or record type after '='".to_string(),
+                    ));
+                    TypeKind::Ptype_abstract
+                }
+            };
+        }
+
+        (manifest, kind, private)
     } else {
         (None, TypeKind::Ptype_abstract, PrivateFlag::Public)
     };
@@ -1257,16 +1995,19 @@ fn parse_type_params(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
             let variance = Variance::Invariant;
             if p.token == Token::SingleQuote {
                 p.next();
-                if let Token::Lident(name) = &p.token {
-                    let name = name.clone();
-                    let loc = mk_loc(&p.start_pos, &p.end_pos);
-                    p.next();
-                    let typ = CoreType {
-                        ptyp_desc: CoreTypeDesc::Ptyp_var(name),
-                        ptyp_loc: loc,
-                        ptyp_attributes: vec![],
-                    };
-                    params.push((typ, variance));
+                match &p.token {
+                    Token::Lident(name) | Token::Uident(name) => {
+                        let name = name.clone();
+                        let loc = mk_loc(&p.start_pos, &p.end_pos);
+                        p.next();
+                        let typ = CoreType {
+                            ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                            ptyp_loc: loc,
+                            ptyp_attributes: vec![],
+                        };
+                        params.push((typ, variance));
+                    }
+                    _ => {}
                 }
             }
             if !p.optional(&Token::Comma) {
@@ -1276,23 +2017,26 @@ fn parse_type_params(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
         p.expect(Token::Rparen);
     } else if p.token == Token::SingleQuote {
         p.next();
-        if let Token::Lident(name) = &p.token {
-            let name = name.clone();
-            let loc = mk_loc(&p.start_pos, &p.end_pos);
-            p.next();
-            let typ = CoreType {
-                ptyp_desc: CoreTypeDesc::Ptyp_var(name),
-                ptyp_loc: loc,
-                ptyp_attributes: vec![],
-            };
-            params.push((typ, Variance::Invariant));
+        match &p.token {
+            Token::Lident(name) | Token::Uident(name) => {
+                let name = name.clone();
+                let loc = mk_loc(&p.start_pos, &p.end_pos);
+                p.next();
+                let typ = CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                    ptyp_loc: loc,
+                    ptyp_attributes: vec![],
+                };
+                params.push((typ, Variance::Invariant));
+            }
+            _ => {}
         }
     }
 
     params
 }
 
-/// Parse type parameters in angle bracket syntax: <'a, +'b, -'c>
+/// Parse type parameters in angle bracket syntax: <'a, +'b, -'c, _>
 fn parse_type_params_angle(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
     let mut params = vec![];
 
@@ -1302,6 +2046,8 @@ fn parse_type_params_angle(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
     p.next(); // consume <
 
     while p.token != Token::GreaterThan && p.token != Token::Eof {
+        let param_start = p.start_pos.clone();
+
         // Parse optional variance: +, -, or nothing
         let variance = match &p.token {
             Token::Plus => {
@@ -1315,20 +2061,120 @@ fn parse_type_params_angle(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
             _ => Variance::Invariant,
         };
 
-        // Parse type variable: 'name
+        // Parse type variable: 'name or underscore _
         if p.token == Token::SingleQuote {
+            let quote_pos = p.start_pos.clone();
             p.next();
-            if let Token::Lident(name) = &p.token {
-                let name = name.clone();
-                let loc = mk_loc(&p.start_pos, &p.end_pos);
-                p.next();
-                let typ = CoreType {
-                    ptyp_desc: CoreTypeDesc::Ptyp_var(name),
-                    ptyp_loc: loc,
-                    ptyp_attributes: vec![],
-                };
-                params.push((typ, variance));
+            match &p.token {
+                Token::Lident(name) | Token::Uident(name) => {
+                    let name = name.clone();
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    let typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                        ptyp_loc: loc,
+                        ptyp_attributes: vec![],
+                    };
+                    params.push((typ, variance));
+                }
+                t if t.is_keyword() => {
+                    // Reserved keyword after singlequote: 'for, 'let, etc.
+                    let keyword = format!("{}", t);
+                    let keyword_start = p.start_pos.clone();
+                    let keyword_end = p.end_pos.clone();
+                    let loc = mk_loc(&keyword_start, &keyword_end);
+                    p.err_multiple(
+                        keyword_start,
+                        keyword_end,
+                        DiagnosticCategory::Message(format!(
+                            "`{}` is a reserved keyword. Keywords need to be escaped: \\\"{}\"",
+                            keyword, keyword
+                        )),
+                    );
+                    p.next();
+                    // Still add a param for recovery
+                    let typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(keyword),
+                        ptyp_loc: loc,
+                        ptyp_attributes: vec![],
+                    };
+                    params.push((typ, variance));
+                }
+                Token::Underscore => {
+                    // '_ is not valid - type param needs a name
+                    // Report position at the underscore, not the quote
+                    p.err_multiple(
+                        p.start_pos.clone(),
+                        p.start_pos.clone(),
+                        DiagnosticCategory::Message(
+                            "A type param consists of a singlequote followed by a name like `'a` or `'A`".to_string()
+                        ),
+                    );
+                    p.next();
+                    // Add placeholder for recovery - use empty string for type var
+                    let typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(String::new()),
+                        ptyp_loc: mk_loc(&param_start, &p.prev_end_pos),
+                        ptyp_attributes: vec![],
+                    };
+                    params.push((typ, variance));
+                }
+                _ => {
+                    // Something else after singlequote (like '+ )
+                    // Report position at the invalid token, not the quote
+                    p.err_multiple(
+                        p.start_pos.clone(),
+                        p.start_pos.clone(),
+                        DiagnosticCategory::Message(
+                            "A type param consists of a singlequote followed by a name like `'a` or `'A`".to_string()
+                        ),
+                    );
+                    // Skip to next comma or closing >
+                    while p.token != Token::Comma
+                        && p.token != Token::GreaterThan
+                        && p.token != Token::Eof
+                    {
+                        p.next();
+                    }
+                    // Add placeholder for recovery - use empty string for type var
+                    let typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(String::new()),
+                        ptyp_loc: mk_loc(&param_start, &p.prev_end_pos),
+                        ptyp_attributes: vec![],
+                    };
+                    params.push((typ, variance));
+                }
             }
+        } else if p.token == Token::Underscore {
+            // Anonymous/wildcard type parameter: _
+            let loc = mk_loc(&p.start_pos, &p.end_pos);
+            p.next();
+            let typ = CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_any,
+                ptyp_loc: loc,
+                ptyp_attributes: vec![],
+            };
+            params.push((typ, variance));
+        } else if let Token::Lident(name) = &p.token {
+            // Missing singlequote: foo instead of 'foo
+            let name = name.clone();
+            p.err_multiple(
+                p.start_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::Message(format!(
+                    "Type params start with a singlequote: '{}",
+                    name
+                )),
+            );
+            let loc = mk_loc(&p.start_pos, &p.end_pos);
+            p.next();
+            // Add for recovery
+            let typ = CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                ptyp_loc: loc,
+                ptyp_attributes: vec![],
+            };
+            params.push((typ, variance));
         }
 
         if !p.optional(&Token::Comma) {
@@ -1338,6 +2184,79 @@ fn parse_type_params_angle(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
 
     p.expect(Token::GreaterThan);
     params
+}
+
+/// Parse old OCaml-style type parameters: ('a, 'b)
+/// This is for error recovery - ReScript requires angle brackets.
+fn parse_type_params_old_style(p: &mut Parser<'_>, _type_name: &str) -> Vec<(CoreType, Variance)> {
+    let mut params = vec![];
+
+    if p.token != Token::Lparen {
+        return params;
+    }
+    p.next(); // consume (
+
+    while p.token != Token::Rparen && p.token != Token::Eof {
+        if p.token == Token::SingleQuote {
+            p.next();
+            match &p.token {
+                Token::Lident(name) | Token::Uident(name) => {
+                    let name = name.clone();
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    let typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                        ptyp_loc: loc,
+                        ptyp_attributes: vec![],
+                    };
+                    params.push((typ, Variance::Invariant));
+                }
+                t if t.is_keyword() => {
+                    // Reserved keyword as type param (e.g., 'for)
+                    let name = format!("{}", t);
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    let typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                        ptyp_loc: loc,
+                        ptyp_attributes: vec![],
+                    };
+                    params.push((typ, Variance::Invariant));
+                }
+                _ => {
+                    // Skip unknown token
+                    p.next();
+                }
+            }
+        } else {
+            // Skip non-quote token
+            p.next();
+        }
+        if !p.optional(&Token::Comma) {
+            break;
+        }
+    }
+
+    if p.token == Token::Rparen {
+        p.next();
+    }
+    params
+}
+
+/// Format a type with angle bracket syntax for error suggestions.
+fn format_type_with_angle_brackets(name: &str, params: &[(CoreType, Variance)]) -> String {
+    if params.is_empty() {
+        name.to_string()
+    } else {
+        let param_strs: Vec<String> = params
+            .iter()
+            .map(|(t, _)| match &t.ptyp_desc {
+                CoreTypeDesc::Ptyp_var(v) => format!("'{}", v),
+                _ => "_".to_string(),
+            })
+            .collect();
+        format!("{}<{}>", name, param_strs.join(", "))
+    }
 }
 
 /// Parse type kind (variant or record).
@@ -1396,6 +2315,22 @@ fn parse_constructors_without_leading_bar(p: &mut Parser<'_>) -> Vec<Constructor
 /// Parse a single constructor.
 fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
     let start_pos = p.start_pos.clone();
+    let attrs = parse_attributes(p);
+
+    // Check for spread syntax: ...typeName
+    if p.token == Token::DotDotDot {
+        let spread_start = p.start_pos.clone();
+        p.next();
+        let spread_type = typ::parse_typ_expr(p);
+        let loc = mk_loc(&spread_start, &p.prev_end_pos);
+        return Some(ConstructorDeclaration {
+            pcd_name: with_loc("...".to_string(), loc.clone()),
+            pcd_args: ConstructorArguments::Pcstr_tuple(vec![spread_type]),
+            pcd_res: None,
+            pcd_loc: loc,
+            pcd_attributes: attrs,
+        });
+    }
 
     let name = match &p.token {
         Token::Uident(n) => {
@@ -1415,15 +2350,62 @@ fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
     // Parse constructor arguments
     let args = if p.token == Token::Lparen {
         p.next();
-        let mut args = vec![];
-        while p.token != Token::Rparen && p.token != Token::Eof {
-            args.push(typ::parse_typ_expr(p));
-            if !p.optional(&Token::Comma) {
-                break;
+        // Check for inline record: Foo({...}) with braces inside parens
+        // But NOT object types which use string keys or . markers
+        let is_inline_record = p.token == Token::Lbrace
+            && p.lookahead(|state| {
+                state.next(); // consume {
+                // Skip any leading attributes
+                while state.token == Token::At {
+                    state.next();
+                    // Skip attribute id and any payload
+                    if matches!(
+                        state.token,
+                        Token::Lident(_) | Token::Uident(_) | Token::Module
+                    ) {
+                        state.next();
+                    }
+                    // Skip attribute payload if present
+                    if state.token == Token::Lparen {
+                        let mut depth = 1;
+                        state.next();
+                        while depth > 0 && state.token != Token::Eof {
+                            match state.token {
+                                Token::Lparen => depth += 1,
+                                Token::Rparen => depth -= 1,
+                                _ => {}
+                            }
+                            state.next();
+                        }
+                    }
+                }
+                // If we see string, ".", "..", or "}" it's an object type, not inline record
+                !matches!(
+                    state.token,
+                    Token::String(_)
+                        | Token::Dot
+                        | Token::DotDot
+                        | Token::DotDotDot
+                        | Token::Rbrace
+                )
+            });
+        if is_inline_record {
+            p.next(); // consume {
+            let labels = parse_label_declarations(p);
+            p.expect(Token::Rbrace);
+            p.expect(Token::Rparen);
+            ConstructorArguments::Pcstr_record(labels)
+        } else {
+            let mut args = vec![];
+            while p.token != Token::Rparen && p.token != Token::Eof {
+                args.push(typ::parse_typ_expr(p));
+                if !p.optional(&Token::Comma) {
+                    break;
+                }
             }
+            p.expect(Token::Rparen);
+            ConstructorArguments::Pcstr_tuple(args)
         }
-        p.expect(Token::Rparen);
-        ConstructorArguments::Pcstr_tuple(args)
     } else if p.token == Token::Lbrace {
         p.next();
         let labels = parse_label_declarations(p);
@@ -1433,13 +2415,21 @@ fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
         ConstructorArguments::Pcstr_tuple(vec![])
     };
 
+    // Optional GADT result type: Constructor: type
+    let res = if p.token == Token::Colon {
+        p.next();
+        Some(typ::parse_typ_expr(p))
+    } else {
+        None
+    };
+
     let loc = mk_loc(&start_pos, &p.prev_end_pos);
     Some(ConstructorDeclaration {
         pcd_name: name,
         pcd_args: args,
-        pcd_res: None,
+        pcd_res: res,
         pcd_loc: loc,
-        pcd_attributes: vec![],
+        pcd_attributes: attrs,
     })
 }
 
@@ -1475,6 +2465,7 @@ fn parse_label_declarations(p: &mut Parser<'_>) -> Vec<LabelDeclaration> {
 /// Parse a single label declaration.
 fn parse_label_declaration(p: &mut Parser<'_>) -> Option<LabelDeclaration> {
     let start_pos = p.start_pos.clone();
+    let attrs = parse_attributes(p);
 
     let mutable = if p.token == Token::Mutable {
         p.next();
@@ -1510,19 +2501,28 @@ fn parse_label_declaration(p: &mut Parser<'_>) -> Option<LabelDeclaration> {
         pld_mutable: mutable,
         pld_type: typ,
         pld_loc: loc,
-        pld_attributes: vec![],
+        pld_attributes: attrs,
         pld_optional: is_optional,
     })
 }
 
 /// Parse a value description (for external).
-fn parse_value_description(p: &mut Parser<'_>) -> ValueDescription {
+fn parse_value_description(p: &mut Parser<'_>, outer_attrs: Attributes) -> ValueDescription {
     let start_pos = p.start_pos.clone();
-    let attrs = parse_attributes(p);
+    let inner_attrs = parse_attributes(p);
+    // Merge outer (structure-level) attrs with inner (name-level) attrs
+    let attrs = [outer_attrs, inner_attrs].concat();
 
     let name = match &p.token {
         Token::Lident(n) => {
             let n = n.clone();
+            let loc = mk_loc(&p.start_pos, &p.end_pos);
+            p.next();
+            with_loc(n, loc)
+        }
+        Token::String(s) => {
+            // Escaped identifier like "export" - store with quotes for printer to recognize
+            let n = format!("\"{}\"", s);
             let loc = mk_loc(&p.start_pos, &p.end_pos);
             p.next();
             with_loc(n, loc)
@@ -1564,8 +2564,6 @@ fn parse_value_description(p: &mut Parser<'_>) -> ValueDescription {
 /// Parse an extension constructor (for exception).
 pub fn parse_extension_constructor(p: &mut Parser<'_>) -> ExtensionConstructor {
     let start_pos = p.start_pos.clone();
-    let attrs = parse_attributes(p);
-
     let constructor = parse_constructor(p).unwrap_or_else(|| ConstructorDeclaration {
         pcd_name: mknoloc("Error".to_string()),
         pcd_args: ConstructorArguments::Pcstr_tuple(vec![]),
@@ -1574,22 +2572,31 @@ pub fn parse_extension_constructor(p: &mut Parser<'_>) -> ExtensionConstructor {
         pcd_attributes: vec![],
     });
 
+    let mut kind = ExtensionConstructorKind::Pext_decl(constructor.pcd_args, constructor.pcd_res);
+
+    // Rebind: Constructor = Other
+    if p.token == Token::Equal {
+        p.next();
+        let lid = parse_module_long_ident(p);
+        kind = ExtensionConstructorKind::Pext_rebind(lid);
+    }
+
     ExtensionConstructor {
         pext_name: constructor.pcd_name,
-        pext_kind: ExtensionConstructorKind::Pext_decl(constructor.pcd_args, None),
-        pext_loc: constructor.pcd_loc,
-        pext_attributes: attrs,
+        pext_kind: kind,
+        pext_loc: mk_loc(&start_pos, &p.prev_end_pos),
+        pext_attributes: constructor.pcd_attributes,
     }
 }
 
 /// Parse a module definition.
-fn parse_module_definition(p: &mut Parser<'_>) -> Option<StructureItemDesc> {
-    let _start_pos = p.start_pos.clone();
+fn parse_module_definition(p: &mut Parser<'_>, attrs: Attributes) -> Option<StructureItemDesc> {
+    let start_pos = p.start_pos.clone();
 
     // Check for module type
     if p.token == Token::Typ {
         p.next();
-        let mtd = parse_module_type_declaration(p);
+        let mtd = parse_module_type_declaration(p, attrs);
         return Some(StructureItemDesc::Pstr_modtype(mtd));
     }
 
@@ -1601,51 +2608,116 @@ fn parse_module_definition(p: &mut Parser<'_>) -> Option<StructureItemDesc> {
         RecFlag::Nonrecursive
     };
 
-    let name = match &p.token {
-        Token::Uident(n) => {
-            let n = n.clone();
-            let loc = mk_loc(&p.start_pos, &p.end_pos);
+    let mut bindings = vec![];
+
+    let parse_binding = |p: &mut Parser<'_>, binding_start: Position, attrs: Attributes| -> Option<ModuleBinding> {
+        let name = match &p.token {
+            Token::Uident(n) => {
+                let n = n.clone();
+                let loc = mk_loc(&p.start_pos, &p.end_pos);
+                p.next();
+                with_loc(n, loc)
+            }
+            _ => {
+                p.err(DiagnosticCategory::Message(
+                    "Expected module name".to_string(),
+                ));
+                return None;
+            }
+        };
+
+        // Optional module type annotation (constraint)
+        let mod_type = if p.token == Token::Colon {
             p.next();
-            with_loc(n, loc)
+            Some(parse_module_type(p))
+        } else {
+            None
+        };
+
+        p.expect(Token::Equal);
+        let mut mod_expr = parse_module_expr(p);
+
+        if let Some(mod_type) = mod_type {
+            let loc = mk_loc(&mod_expr.pmod_loc.loc_start, &mod_type.pmty_loc.loc_end);
+            mod_expr = ModuleExpr {
+                pmod_desc: ModuleExprDesc::Pmod_constraint(
+                    Box::new(mod_expr),
+                    Box::new(mod_type),
+                ),
+                pmod_loc: loc,
+                pmod_attributes: vec![],
+            };
         }
-        _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected module name".to_string(),
-            ));
-            return None;
-        }
+
+        Some(ModuleBinding {
+            pmb_name: name,
+            pmb_expr: mod_expr,
+            pmb_attributes: attrs,
+            pmb_loc: mk_loc(&binding_start, &p.prev_end_pos),
+        })
     };
 
-    // Parse optional module type annotation
-    // TODO: Use mod_type for constraint
-    let _mod_type = if p.token == Token::Colon {
-        p.next();
-        Some(parse_module_type(p))
+    if let Some(binding) = parse_binding(p, start_pos.clone(), attrs) {
+        bindings.push(binding);
     } else {
-        None
-    };
+        return None;
+    }
 
-    p.expect(Token::Equal);
-    let mod_expr = parse_module_expr(p);
-
-    let binding = ModuleBinding {
-        pmb_name: name,
-        pmb_expr: mod_expr,
-        pmb_attributes: vec![],
-        pmb_loc: mk_loc(&_start_pos, &p.prev_end_pos),
-    };
+    // Parse additional module bindings with `and`
+    // Also handle attributes before `and`: `@attr and M = ...`
+    loop {
+        if p.token == Token::And {
+            p.next();
+            let binding_start = p.start_pos.clone();
+            let binding_attrs = parse_attributes(p);
+            if let Some(binding) = parse_binding(p, binding_start, binding_attrs) {
+                bindings.push(binding);
+            }
+        } else if matches!(p.token, Token::At | Token::AtAt) {
+            // Look ahead to see if attributes are followed by And
+            let has_and_after = p.lookahead(|state| {
+                // Skip attributes
+                while matches!(state.token, Token::At | Token::AtAt) {
+                    state.next(); // @
+                    // Skip the attribute identifier and any payload
+                    while !matches!(state.token, Token::At | Token::AtAt | Token::And | Token::Eof | Token::Let { .. } | Token::Typ | Token::Module | Token::External | Token::Open | Token::Include) {
+                        state.next();
+                    }
+                }
+                state.token == Token::And
+            });
+            if !has_and_after {
+                break;
+            }
+            // Parse the attributes, then the `and` keyword
+            let binding_start = p.start_pos.clone();
+            let binding_attrs = parse_attributes(p);
+            if p.token == Token::And {
+                p.next();
+            }
+            if let Some(binding) = parse_binding(p, binding_start, binding_attrs) {
+                bindings.push(binding);
+            }
+        } else {
+            break;
+        }
+    }
 
     if rec_flag == RecFlag::Recursive {
-        Some(StructureItemDesc::Pstr_recmodule(vec![binding]))
+        Some(StructureItemDesc::Pstr_recmodule(bindings))
+    } else if bindings.len() == 1 {
+        Some(StructureItemDesc::Pstr_module(bindings.remove(0)))
     } else {
-        Some(StructureItemDesc::Pstr_module(binding))
+        Some(StructureItemDesc::Pstr_recmodule(bindings))
     }
 }
 
 /// Parse a module declaration (for signature).
-fn parse_module_declaration(p: &mut Parser<'_>) -> ModuleDeclaration {
+fn parse_module_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> ModuleDeclaration {
     let start_pos = p.start_pos.clone();
-    let attrs = parse_attributes(p);
+    let inner_attrs = parse_attributes(p);
+    // Merge outer (signature item level) attrs with inner (name level) attrs
+    let attrs = [outer_attrs, inner_attrs].concat();
 
     let name = match &p.token {
         Token::Uident(n) => {
@@ -1662,8 +2734,28 @@ fn parse_module_declaration(p: &mut Parser<'_>) -> ModuleDeclaration {
         }
     };
 
-    p.expect(Token::Colon);
-    let mod_type = parse_module_type(p);
+    // Handle both `module X: T` (type annotation) and `module X = M` (alias)
+    // In signatures, `=` can be followed by a module type or a module alias
+    let mod_type = if p.token == Token::Equal {
+        p.next();
+        // Check if this is `= { ... }` (module type) or `= ModuleName` (alias)
+        if p.token == Token::Lbrace {
+            // Module type: module X = { ... }
+            parse_module_type(p)
+        } else {
+            // Module alias: module X = M
+            let lid = parse_module_long_ident(p);
+            let loc = mk_loc(&lid.loc.loc_start, &p.prev_end_pos);
+            ModuleType {
+                pmty_desc: ModuleTypeDesc::Pmty_alias(lid),
+                pmty_loc: loc,
+                pmty_attributes: vec![],
+            }
+        }
+    } else {
+        p.expect(Token::Colon);
+        parse_module_type(p)
+    };
 
     let loc = mk_loc(&start_pos, &p.prev_end_pos);
     ModuleDeclaration {
@@ -1674,10 +2766,39 @@ fn parse_module_declaration(p: &mut Parser<'_>) -> ModuleDeclaration {
     }
 }
 
+/// Parse recursive module declarations (for signature).
+fn parse_rec_module_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<ModuleDeclaration> {
+    let mut decls = vec![];
+
+    // Parse first declaration (gets the outer attrs)
+    decls.push(parse_module_declaration(p, outer_attrs));
+
+    // Parse additional declarations with `and` (each may have attrs before `and`)
+    loop {
+        // Check for attributes before `and`
+        let attrs = if p.token == Token::At {
+            parse_attributes(p)
+        } else {
+            vec![]
+        };
+
+        if p.token == Token::And {
+            p.next();
+            decls.push(parse_module_declaration(p, attrs));
+        } else {
+            break;
+        }
+    }
+
+    decls
+}
+
 /// Parse a module type declaration.
-fn parse_module_type_declaration(p: &mut Parser<'_>) -> ModuleTypeDeclaration {
+fn parse_module_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> ModuleTypeDeclaration {
     let start_pos = p.start_pos.clone();
-    let attrs = parse_attributes(p);
+    let inner_attrs = parse_attributes(p);
+    // Merge outer (signature item level) attrs with inner (name level) attrs
+    let attrs = [outer_attrs, inner_attrs].concat();
 
     let name = match &p.token {
         Token::Uident(n) | Token::Lident(n) => {
@@ -1732,6 +2853,12 @@ fn parse_attribute_body(p: &mut Parser<'_>) -> Attribute {
                 parts.push(name.clone());
                 p.next();
             }
+            // Attributes can use keyword-like identifiers (e.g. `@module`, `@as`).
+            // Treat keywords as identifiers in this context.
+            token if token.is_keyword() => {
+                parts.push(token.to_string());
+                p.next();
+            }
             _ => break,
         }
         if p.token == Token::Dot {
@@ -1745,7 +2872,8 @@ fn parse_attribute_body(p: &mut Parser<'_>) -> Attribute {
     let name_loc = mk_loc(&start_pos, &p.prev_end_pos);
 
     // Parse optional payload
-    let payload = if p.token == Token::Lparen {
+    let is_adjacent = p.start_pos.cnum == p.prev_end_pos.cnum;
+    let payload = if p.token == Token::Lparen && is_adjacent {
         p.next();
         let payload = parse_payload(p);
         p.expect(Token::Rparen);
@@ -1758,44 +2886,156 @@ fn parse_attribute_body(p: &mut Parser<'_>) -> Attribute {
 }
 
 /// Parse an attribute payload.
+/// Payloads can be:
+/// - Structure items: `(expr1 expr2 ...)` - the default
+/// - Type: `(: type)` - indicated by leading colon followed by type
+/// - Signature: `(: signature_items)` - indicated by leading colon followed by signature items
+/// - Pattern: `(? pattern)` or `(? pattern when guard)` - indicated by leading question mark
 pub fn parse_payload(p: &mut Parser<'_>) -> Payload {
-    // Simplified: skip payload content for now
-    let mut depth = 1;
-    while depth > 0 && p.token != Token::Eof {
-        match &p.token {
-            Token::Lparen | Token::Lbrace | Token::Lbracket => depth += 1,
-            Token::Rparen | Token::Rbrace | Token::Rbracket => depth -= 1,
-            _ => {}
-        }
-        if depth > 0 {
-            p.next();
+    // Check for type or signature payload: (: ...)
+    if p.token == Token::Colon {
+        p.next();
+        // Check if it's a signature payload (starts with let, type, etc.) or a type
+        if matches!(
+            p.token,
+            Token::Let { .. }
+                | Token::Typ
+                | Token::Module
+                | Token::External
+                | Token::Open
+                | Token::Include
+                | Token::Exception
+        ) {
+            // Parse as signature
+            let mut sig_items = vec![];
+            while p.token != Token::Rparen && p.token != Token::Eof {
+                if let Some(item) = parse_signature_item(p) {
+                    sig_items.push(item);
+                }
+                p.optional(&Token::Semicolon);
+            }
+            return Payload::PSig(sig_items);
+        } else {
+            // Parse as type
+            let typ = super::typ::parse_typ_expr(p);
+            return Payload::PTyp(Box::new(typ));
         }
     }
-    Payload::PStr(vec![])
+
+    // Check for pattern payload: (? pattern) or (? pattern when guard)
+    if p.token == Token::Question {
+        p.next();
+        let pat = super::pattern::parse_pattern(p);
+        let guard = if p.token == Token::When {
+            p.next();
+            Some(Box::new(super::expr::parse_expr(p)))
+        } else {
+            None
+        };
+        return Payload::PPat(Box::new(pat), guard);
+    }
+
+    // Otherwise, parse as structure items
+    let mut items = vec![];
+
+    // If the payload is empty, return early
+    if p.token == Token::Rparen || p.token == Token::Eof {
+        return Payload::PStr(items);
+    }
+
+    // Parse structure items
+    loop {
+        let start_pos = p.start_pos.clone();
+
+        // Check if this looks like a structure item (let, type, module, etc.)
+        let is_structure_item = matches!(
+            p.token,
+            Token::Let { .. }
+                | Token::Typ
+                | Token::Module
+                | Token::External
+                | Token::Open
+                | Token::Include
+                | Token::Exception
+                | Token::At
+                | Token::AtAt
+                | Token::Percent
+                | Token::PercentPercent
+        );
+
+        if is_structure_item {
+            // Parse as structure item
+            if let Some(item) = parse_structure_item(p) {
+                items.push(item);
+            }
+        } else {
+            // Parse as expression
+            let expr = super::expr::parse_expr(p);
+            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+
+            items.push(StructureItem {
+                pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
+                pstr_loc: loc,
+            });
+        }
+
+        // Check for more items (separated by semicolons or just by whitespace)
+        p.optional(&Token::Semicolon);
+
+        // Stop if we hit the closing paren or EOF
+        if p.token == Token::Rparen || p.token == Token::Eof {
+            break;
+        }
+    }
+
+    Payload::PStr(items)
 }
 
 /// Parse an extension.
 fn parse_extension(p: &mut Parser<'_>) -> Extension {
-    let _start_pos = p.start_pos.clone();
-    p.expect(Token::Percent);
+    // Handle both %ext and %%ext (single and double percent)
+    if p.token == Token::PercentPercent {
+        p.next();
+    } else {
+        p.expect(Token::Percent);
+    }
 
-    let id = match &p.token {
-        Token::Lident(name) | Token::Uident(name) => {
-            let name = name.clone();
-            let loc = mk_loc(&p.start_pos, &p.end_pos);
+    let id_start = p.start_pos.clone();
+    let mut parts: Vec<String> = vec![];
+
+    loop {
+        match &p.token {
+            Token::Lident(name) | Token::Uident(name) => {
+                parts.push(name.clone());
+                p.next();
+            }
+            _ if p.token.is_keyword() => {
+                parts.push(p.token.to_string());
+                p.next();
+            }
+            _ => break,
+        }
+
+        if p.token == Token::Dot {
             p.next();
-            with_loc(name, loc)
+            continue;
         }
-        _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected extension identifier".to_string(),
-            ));
-            mknoloc("error".to_string())
-        }
+        break;
+    }
+
+    let id = if parts.is_empty() {
+        p.err(DiagnosticCategory::Message(
+            "Expected extension identifier".to_string(),
+        ));
+        mknoloc("error".to_string())
+    } else {
+        let id = parts.join(".");
+        with_loc(id, mk_loc(&id_start, &p.prev_end_pos))
     };
 
-    // Parse optional payload
-    let payload = if p.token == Token::Lparen {
+    // Parse optional payload only if it's immediately adjacent.
+    let is_adjacent = p.start_pos.cnum == p.prev_end_pos.cnum;
+    let payload = if p.token == Token::Lparen && is_adjacent {
         p.next();
         let payload = parse_payload(p);
         p.expect(Token::Rparen);

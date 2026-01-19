@@ -28,6 +28,7 @@ pub enum RecFlag {
 
 /// Element in a block.
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum Element {
     /// No information available
     Na,
@@ -47,7 +48,7 @@ pub enum BoxedNullable {
 ///
 /// This tracks what kind of value an identifier is bound to,
 /// which helps with optimization and code generation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum IdKind {
     /// Optional value with normal null handling
     NormalOptional(Lambda),
@@ -71,13 +72,8 @@ pub enum IdKind {
     /// Function parameter
     Parameter,
     /// No specific information (default)
+    #[default]
     Na,
-}
-
-impl Default for IdKind {
-    fn default() -> Self {
-        IdKind::Na
-    }
 }
 
 /// Identifier table for tracking identifier kinds.

@@ -112,6 +112,17 @@ impl<'src> Parser<'src> {
         }
     }
 
+    /// Record a diagnostic error without silencing subsequent errors.
+    /// Use this for errors that should allow additional errors to be reported.
+    pub fn err_multiple(&mut self, start_pos: Position, end_pos: Position, category: DiagnosticCategory) {
+        let diagnostic = ParserDiagnostic {
+            start_pos,
+            end_pos,
+            category,
+        };
+        self.diagnostics.push(diagnostic);
+    }
+
     /// Begin a new error reporting region.
     pub fn begin_region(&mut self) {
         self.regions.push(RegionStatus::Report);
@@ -127,7 +138,7 @@ impl<'src> Parser<'src> {
     /// Advance to the next non-comment token.
     ///
     /// Comments are collected in the parser's comment list.
-    /// Doc comments and module comments are converted to special tokens.
+    /// Note: Doc/module comments are currently treated as comments (not tokens).
     pub fn next(&mut self) {
         self.next_with_prev_end(None);
     }
@@ -144,35 +155,13 @@ impl<'src> Parser<'src> {
             let result = self.scanner.scan();
             match result.token {
                 Token::Comment(ref c) => {
-                    if c.is_doc_comment() {
-                        // Convert doc comment to DocComment token
-                        self.token = Token::DocComment {
-                            loc: c.loc.clone(),
-                            content: c.txt.clone(),
-                        };
-                        self.prev_end_pos = prev_end;
-                        self.start_pos = result.start_pos;
-                        self.end_pos = result.end_pos;
-                        return;
-                    } else if c.is_module_comment() {
-                        // Convert module comment to ModuleComment token
-                        self.token = Token::ModuleComment {
-                            loc: c.loc.clone(),
-                            content: c.txt.clone(),
-                        };
-                        self.prev_end_pos = prev_end;
-                        self.start_pos = result.start_pos;
-                        self.end_pos = result.end_pos;
-                        return;
-                    } else {
-                        // Regular comment - collect it and continue
-                        let mut comment = c.clone();
-                        comment.set_prev_tok_end_pos(self.end_pos.clone());
-                        self.comments.push(comment);
-                        self.prev_end_pos = self.end_pos.clone();
-                        self.end_pos = result.end_pos;
-                        // Continue to next token
-                    }
+                    // Collect comment and continue scanning.
+                    let mut comment = c.clone();
+                    comment.set_prev_tok_end_pos(self.end_pos.clone());
+                    self.comments.push(comment);
+                    self.prev_end_pos = self.end_pos.clone();
+                    self.end_pos = result.end_pos;
+                    // Continue to next token
                 }
                 _ => {
                     self.token = result.token;
@@ -324,6 +313,28 @@ impl<'src> Parser<'src> {
     /// Check if there are any errors.
     pub fn has_errors(&self) -> bool {
         !self.diagnostics.is_empty()
+    }
+
+    /// Check if there's a newline between the previous token and the current token.
+    ///
+    /// This is used for disambiguating syntax like `[` which can be either
+    /// an array literal (when starting a new line) or array indexing (when
+    /// following an expression on the same line).
+    pub fn has_newline_before(&self) -> bool {
+        self.start_pos.line > self.prev_end_pos.line
+    }
+
+    /// Check if the current token has whitespace on both sides.
+    ///
+    /// Used to disambiguate operators like `-` which can be:
+    /// - Binary (subtraction) when there's whitespace on both sides
+    /// - Unary (negation) when at the start of a line without surrounding whitespace
+    pub fn is_binary_op(&self) -> bool {
+        Scanner::is_binary_op(
+            self.scanner.src(),
+            self.start_pos.cnum as usize,
+            self.end_pos.cnum as usize,
+        )
     }
 
     /// Set diamond mode on the scanner (for type parameters).

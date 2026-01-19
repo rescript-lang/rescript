@@ -48,6 +48,7 @@ pub mod js_ir;
 pub mod lambda;
 pub mod location;
 pub mod parser;
+pub mod driver;
 pub mod types;
 
 // Re-exports for convenience

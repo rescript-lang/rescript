@@ -36,6 +36,7 @@ pub struct ScannerSnapshot {
     line_offset: usize,
     lnum: i32,
     mode: Vec<ScannerMode>,
+    prev_token: Option<Token>,
     diagnostics_len: usize,
 }
 
@@ -62,6 +63,8 @@ pub struct Scanner<'src> {
     mode: Vec<ScannerMode>,
     /// Collected diagnostics.
     diagnostics: Vec<ParserDiagnostic>,
+    /// Previous non-comment token (for context-sensitive lexing like regex literals).
+    prev_token: Option<Token>,
 }
 
 /// Result of scanning a token.
@@ -97,6 +100,7 @@ impl<'src> Scanner<'src> {
             lnum: 1,
             mode: Vec::new(),
             diagnostics: Vec::new(),
+            prev_token: None,
         }
     }
 
@@ -131,6 +135,7 @@ impl<'src> Scanner<'src> {
             line_offset: self.line_offset,
             lnum: self.lnum,
             mode: self.mode.clone(),
+            prev_token: self.prev_token.clone(),
             diagnostics_len: self.diagnostics.len(),
         }
     }
@@ -143,7 +148,13 @@ impl<'src> Scanner<'src> {
         self.line_offset = snapshot.line_offset;
         self.lnum = snapshot.lnum;
         self.mode = snapshot.mode;
+        self.prev_token = snapshot.prev_token;
         self.diagnostics.truncate(snapshot.diagnostics_len);
+    }
+
+    /// Get a reference to the source string.
+    pub fn src(&self) -> &str {
+        self.src
     }
 
     /// Check if in diamond mode.
@@ -848,13 +859,27 @@ impl<'src> Scanner<'src> {
                     self.scan_single_line_comment()
                 }
                 '*' => self.scan_multi_line_comment(),
-                '.' => {
-                    self.next2();
-                    Token::ForwardslashDot
-                }
                 _ => {
-                    self.next();
-                    Token::Forwardslash
+                    if self.can_start_regex_literal() && !self.is_jsx_close_slash() {
+                        if let Some(tok) = self.try_scan_regex_literal() {
+                            tok
+                        } else {
+                            // Fall back to division operators
+                            if self.peek() == '.' {
+                                self.next2();
+                                Token::ForwardslashDot
+                            } else {
+                                self.next();
+                                Token::Forwardslash
+                            }
+                        }
+                    } else if self.peek() == '.' {
+                        self.next2();
+                        Token::ForwardslashDot
+                    } else {
+                        self.next();
+                        Token::Forwardslash
+                    }
                 }
             },
 
@@ -1033,11 +1058,133 @@ impl<'src> Scanner<'src> {
         };
 
         let end_pos = self.position();
+        if !matches!(token, Token::Comment(_)) {
+            self.prev_token = Some(token.clone());
+        }
         ScanResult {
             start_pos,
             end_pos,
             token,
         }
+    }
+
+    fn is_jsx_close_slash(&self) -> bool {
+        self.offset > 0 && self.src_bytes.get(self.offset - 1) == Some(&b'<')
+    }
+
+    fn can_start_regex_literal(&self) -> bool {
+        match &self.prev_token {
+            None => true,
+            Some(prev) => {
+                if prev.precedence() > 0 {
+                    return true;
+                }
+                matches!(
+                    prev,
+                    Token::Lparen
+                        | Token::Lbracket
+                        | Token::Lbrace
+                        | Token::Comma
+                        | Token::Semicolon
+                        | Token::Colon
+                        | Token::Equal
+                        | Token::EqualGreater
+                        | Token::MinusGreater
+                        | Token::Question
+                        | Token::Bar
+                        | Token::Lor
+                        | Token::Land
+                        | Token::And
+                        | Token::As
+                        | Token::If
+                        | Token::Else
+                        | Token::Try
+                        | Token::When
+                        | Token::In
+                        | Token::For
+                        | Token::While
+                        | Token::Let { .. }
+                        | Token::Await
+                        | Token::Assert
+                        | Token::Open
+                        | Token::Module
+                        | Token::Typ
+                        | Token::External
+                        | Token::Exception
+                        | Token::Include
+                        | Token::Of
+                )
+            }
+        }
+    }
+
+    fn try_scan_regex_literal(&mut self) -> Option<Token> {
+        let snapshot = self.snapshot();
+        let start_pos = self.position();
+
+        // Consume opening '/'
+        self.next();
+        let pattern_start = self.offset;
+
+        let mut escaped = false;
+        let mut in_char_class = false;
+
+        loop {
+            match self.ch {
+                '\n' | '\r' => {
+                    // Invalid regex literal, restore and fall back to '/'
+                    self.restore(snapshot);
+                    return None;
+                }
+                c if c == EOF_CHAR => {
+                    // Invalid regex literal, restore and fall back to '/'
+                    self.restore(snapshot);
+                    return None;
+                }
+                '\\' if !escaped => {
+                    escaped = true;
+                    self.next();
+                }
+                '[' if !escaped => {
+                    in_char_class = true;
+                    self.next();
+                }
+                ']' if !escaped => {
+                    in_char_class = false;
+                    self.next();
+                }
+                '/' if !escaped && !in_char_class => {
+                    break;
+                }
+                _ => {
+                    escaped = false;
+                    self.next();
+                }
+            }
+        }
+
+        // Current char is closing '/'
+        let pattern = self.substring(pattern_start, self.offset).to_string();
+        self.next(); // consume closing '/'
+
+        let flags_start = self.offset;
+        while self.ch.is_ascii_alphabetic() {
+            self.next();
+        }
+        let flags = self.substring(flags_start, self.offset).to_string();
+
+        let end_pos = self.position();
+        // Record a scanner-level diagnostic if the literal is empty and we didn't advance.
+        // (Helps debugging invalid recovery cases; parser can still proceed.)
+        if pattern_start == flags_start && pattern.is_empty() {
+            self.error(
+                start_pos,
+                end_pos,
+                DiagnosticCategory::message("Empty regex literal".to_string()),
+            );
+        }
+
+        Some(Token::Regex { pattern, flags })
     }
 
     /// Scan an escape sequence in a character literal.
@@ -1127,17 +1274,21 @@ impl<'src> Scanner<'src> {
     }
 
     /// Scan an exotic identifier (e.g., \"foo").
+    /// Returns the identifier without surrounding quotes.
     fn scan_exotic_identifier(&mut self) -> Token {
         let start_pos = self.position();
-        let start_off = self.offset;
 
         self.next(); // consume opening quote
+        let content_start = self.offset; // start of identifier content (after opening quote)
 
         loop {
             match self.ch {
                 '"' => {
-                    self.next();
-                    break;
+                    let content_end = self.offset; // end of content (before closing quote)
+                    self.next(); // consume closing quote
+                    // Return identifier without quotes
+                    let ident = self.substring(content_start, content_end).to_string();
+                    return Token::Lident(ident);
                 }
                 '\n' | '\r' => {
                     let end_pos = self.position();
@@ -1148,8 +1299,9 @@ impl<'src> Scanner<'src> {
                             "A quoted identifier can't contain line breaks.",
                         ),
                     );
+                    let ident = self.substring(content_start, self.offset).to_string();
                     self.next();
-                    break;
+                    return Token::Lident(ident);
                 }
                 c if c == EOF_CHAR => {
                     let end_pos = self.position();
@@ -1158,14 +1310,12 @@ impl<'src> Scanner<'src> {
                         end_pos,
                         DiagnosticCategory::message("Did you forget a \" here?"),
                     );
-                    break;
+                    let ident = self.substring(content_start, self.offset).to_string();
+                    return Token::Lident(ident);
                 }
                 _ => self.next(),
             }
         }
-
-        let ident = self.substring(start_off, self.offset).to_string();
-        Token::Lident(ident)
     }
 
     /// Check if an operator has whitespace on both sides (making it binary).

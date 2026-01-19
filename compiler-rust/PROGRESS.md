@@ -9,7 +9,7 @@
 | Phase | Status | Progress | Key Blocker |
 |-------|--------|----------|-------------|
 | Phase 1: Foundation | ✅ Complete | 100% | None |
-| Phase 2: Parser | 🚧 In Progress | ~65% | None |
+| Phase 2: Parser | 🚧 In Progress | ~70% | AST parity (see below) |
 | Phase 3: Lambda/JS IR | 🚧 In Progress | ~30% | None |
 | Phase 4: Type Checker | ✅ Complete | 100% | Parallel with Phase 2 |
 | Phase 5: Integration | ⏳ Not Started | 0% | Depends on Phase 4 |
@@ -260,6 +260,80 @@
    - [ ] Underscore sugar
    - [ ] Tagged templates
    - [ ] Exotic identifiers
+
+---
+
+## AST Parity Testing Methodology
+
+**CRITICAL**: The Rust parser must produce **byte-for-byte identical** S-expression output to the OCaml parser.
+
+### Current Parity Status
+
+**Overall: ~70% parity** (93/134 grammar test files match exactly)
+
+### Comparison Commands
+
+**OCaml parser (reference):**
+```bash
+res_parser -print sexp <file.res>
+# or if building locally:
+./_build/install/default/bin/res_parser -print sexp <file.res>
+```
+
+**Rust parser (under test):**
+```bash
+./compiler-rust/target/release/res_parser_rust -p sexp <file.res>
+```
+
+### Comparison Rules
+
+1. **NO normalization** - Compare outputs exactly as strings, no token extraction or reformatting
+2. **Exact string match** - `ocaml_output == rust_output` must be true
+3. **Formatting must match** - Indentation, spacing, and structure must be identical
+4. **Match OCaml desugaring** - Some constructs ARE desugared at parse time (see table below)
+
+### Running Parity Tests
+
+```bash
+# Compare a single file
+diff <(res_parser -print sexp test.res) \
+     <(./compiler-rust/target/release/res_parser_rust -p sexp test.res)
+
+# Batch comparison with percentage
+total=0; matching=0
+for f in tests/syntax_tests/data/parsing/grammar/**/*.res; do
+    total=$((total + 1))
+    res_parser -print sexp "$f" > /tmp/ocaml.sexp 2>&1
+    ./compiler-rust/target/release/res_parser_rust -p sexp "$f" > /tmp/rust.sexp 2>&1
+    if diff -q /tmp/ocaml.sexp /tmp/rust.sexp > /dev/null 2>&1; then
+        matching=$((matching + 1))
+    fi
+done
+echo "Matching: $matching / $total"
+```
+
+### Key Parsing Behaviors (Match OCaml)
+
+| Construct | OCaml Behavior | Notes |
+|-----------|---------------|-------|
+| Pipe `a->f(x)` | Keep as `Pexp_apply(->)` | Do NOT desugar to `f(a, x)` - ✅ Fixed |
+| Type extension | `Pstr_type` with `type_extension` | NOT `Pstr_typext` - ✅ Fixed |
+| Spread `[...xs, a]` | Do NOT desugar | Keep as array with spread |
+| Empty call `f()` | `f(())` with unit arg | ✅ Fixed |
+| Uncurried unit `f(.)` | `f(())` with unit arg | ✅ Fixed |
+| Dict literal `dict{...}` | Desugar to `Primitive_dict.make([...])` | ⏳ Pending |
+| Regex `%re("/a/")` | Use extension name `re` | ⏳ Pending (Rust uses `res.regex`) |
+| Unary `-` on new line | NOT binary operator | ✅ Fixed |
+| For loop `for (pat in ...)` | Handle optional outer parens | ✅ Fixed |
+
+### Remaining Parity Issues
+
+1. **Dict expression desugaring**: OCaml desugars `dict{"a": b}` to `Primitive_dict.make([("a", b)])`
+2. **Regex extension name**: Should use `re` not `res.regex`
+3. **Typed array access**: `arr[x: int]` syntax not fully implemented
+4. **Let unwrap attribute**: `let? x = foo` should add `let.unwrap` attribute
+5. **Pattern `as` with `|`**: Complex precedence handling for `_ as x | _ as y`
+6. **Standalone arrow expressions**: `_ => doThings()` at top level
 
 ---
 

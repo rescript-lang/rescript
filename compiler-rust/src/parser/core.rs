@@ -256,9 +256,10 @@ pub fn tagged_template_literal_attr() -> Attribute {
 // ============================================================================
 
 /// Expression parsing context.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ExprContext {
     /// Ordinary expression.
+    #[default]
     Ordinary,
     /// True branch of ternary.
     TernaryTrueBranch,
@@ -266,12 +267,6 @@ pub enum ExprContext {
     When,
     /// Switch case right-hand side (stop at `|`).
     SwitchCaseRhs,
-}
-
-impl Default for ExprContext {
-    fn default() -> Self {
-        ExprContext::Ordinary
-    }
 }
 
 // ============================================================================
@@ -425,6 +420,24 @@ pub mod ast_helper {
         )
     }
 
+    /// Create a partial apply expression.
+    pub fn make_apply_partial(
+        func: Expression,
+        args: Vec<(ArgLabel, Expression)>,
+        loc: Location,
+        partial: bool,
+    ) -> Expression {
+        make_expr(
+            ExpressionDesc::Pexp_apply {
+                funct: Box::new(func),
+                args,
+                partial,
+                transformed_jsx: false,
+            },
+            loc,
+        )
+    }
+
     /// Create a let expression.
     pub fn make_let(
         rec_flag: RecFlag,
@@ -500,8 +513,8 @@ pub mod ast_helper {
 
 /// Negate a string number.
 fn negate_string(s: &str) -> String {
-    if s.starts_with('-') {
-        s[1..].to_string()
+    if let Some(stripped) = s.strip_prefix('-') {
+        stripped.to_string()
     } else {
         format!("-{}", s)
     }
@@ -548,7 +561,9 @@ pub fn make_unary_expr(
     // General unary operator application
     let token_loc = mk_loc(&start_pos, &token_end);
     let token_string = token.to_string();
-    let operator = if token_string.starts_with('~') {
+    let operator = if matches!(token, Token::Question) {
+        "?".to_string()
+    } else if token_string.starts_with('~') {
         token_string
     } else if matches!(token, Token::Bang) {
         "not".to_string()
@@ -613,19 +628,8 @@ pub fn is_es6_arrow_expression(p: &mut Parser<'_>, in_ternary: bool) -> bool {
                             Token::Colon if !in_ternary => {
                                 state.next();
                                 // Check for `() :typ =>`
-                                if let Token::Lident(_) = &state.token {
-                                    state.next();
-                                    // Handle type parameters
-                                    if state.token == Token::LessThan {
-                                        state.set_diamond_mode();
-                                        state.next();
-                                        go_to_closing(&Token::GreaterThan, state);
-                                        state.pop_diamond_mode();
-                                    }
-                                    matches!(state.token, Token::EqualGreater)
-                                } else {
-                                    true
-                                }
+                                super::typ::parse_typ_expr_no_arrow(state);
+                                matches!(state.token, Token::EqualGreater)
                             }
                             Token::EqualGreater => true,
                             _ => false,
@@ -637,7 +641,11 @@ pub fn is_es6_arrow_expression(p: &mut Parser<'_>, in_ternary: bool) -> bool {
                         go_to_closing(&Token::Rparen, state);
                         match &state.token {
                             Token::EqualGreater => true,
-                            Token::Colon if !in_ternary => true,
+                            Token::Colon if !in_ternary => {
+                                state.next();
+                                super::typ::parse_typ_expr_no_arrow(state);
+                                matches!(state.token, Token::EqualGreater)
+                            }
                             Token::Rparen => false,
                             _ => {
                                 state.next_unsafe();
@@ -744,6 +752,7 @@ pub struct FundefTypeParam {
 
 /// A function definition parameter.
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum FundefParameter {
     /// Term parameter (value).
     Term(FundefTermParam),
@@ -870,6 +879,18 @@ mod tests {
     fn test_is_es6_arrow_expression_not() {
         let mut parser = Parser::new("test.res", "x + y");
         assert!(!is_es6_arrow_expression(&mut parser, false));
+    }
+
+    #[test]
+    fn test_is_es6_arrow_expression_return_type() {
+        let mut parser = Parser::new("test.res", "(a): int => a");
+        assert!(is_es6_arrow_expression(&mut parser, false));
+    }
+
+    #[test]
+    fn test_is_es6_arrow_expression_object_return_type() {
+        let mut parser = Parser::new("test.res", "(a): {\"x\": int} => a");
+        assert!(is_es6_arrow_expression(&mut parser, false));
     }
 
     #[test]

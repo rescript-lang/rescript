@@ -17,8 +17,6 @@ use super::token::Token;
 /// Parse a type expression.
 pub fn parse_typ_expr(p: &mut Parser<'_>) -> CoreType {
     let typ = parse_typ_expr_inner(p, true);
-
-    // Handle type aliases (type as 'name)
     parse_type_alias(p, typ)
 }
 
@@ -60,12 +58,15 @@ fn parse_type_alias(p: &mut Parser<'_>, typ: CoreType) -> CoreType {
 
 /// Parse a type expression with optional ES6 arrow support.
 fn parse_typ_expr_inner(p: &mut Parser<'_>, es6_arrow: bool) -> CoreType {
-    let typ = parse_atomic_typ_expr(p);
+    let attrs = parse_type_attributes(p);
 
-    // Handle arrow types
-    if es6_arrow && p.token == Token::EqualGreater {
-        parse_arrow_type_rest(p, typ)
+    if es6_arrow && super::core::is_es6_arrow_type(p) {
+        parse_es6_arrow_type(p, attrs)
     } else {
+        let mut typ = parse_atomic_typ_expr(p, attrs, es6_arrow);
+        if es6_arrow && p.token == Token::EqualGreater {
+            typ = parse_arrow_type_rest(p, typ);
+        }
         typ
     }
 }
@@ -73,7 +74,9 @@ fn parse_typ_expr_inner(p: &mut Parser<'_>, es6_arrow: bool) -> CoreType {
 /// Parse the rest of an arrow type.
 fn parse_arrow_type_rest(p: &mut Parser<'_>, param_type: CoreType) -> CoreType {
     p.expect(Token::EqualGreater);
-    let return_type = parse_typ_expr(p);
+    // Parse return type without alias - `as` binds looser than `=>`
+    // So `int => unit as 'a` is `(int => unit) as 'a`, not `int => (unit as 'a)`
+    let return_type = parse_typ_expr_inner(p, true);
     let loc = mk_loc(
         &param_type.ptyp_loc.loc_start,
         &return_type.ptyp_loc.loc_end,
@@ -89,10 +92,67 @@ fn parse_arrow_type_rest(p: &mut Parser<'_>, param_type: CoreType) -> CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_arrow {
             arg: Box::new(arg),
             ret: Box::new(return_type),
-            arity: Arity::Unknown,
+            arity: Arity::Full(1),
         },
         ptyp_loc: loc,
         ptyp_attributes: vec![],
+    }
+}
+
+/// Parse an ES6 arrow type starting at either `~` or a parenthesized parameter list.
+fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
+    let start_pos = p.start_pos.clone();
+
+    if p.token == Token::Tilde {
+        p.next();
+        let name = parse_lident(p);
+        p.expect(Token::Colon);
+
+        let typ = parse_typ_expr_inner(p, false);
+        let mut lbl = ArgLabel::Labelled(name);
+
+        // Optional labeled args: `~x: t=?`
+        if p.token == Token::Equal {
+            p.next();
+            if p.token == Token::Question {
+                p.next();
+                if let ArgLabel::Labelled(name) = lbl {
+                    lbl = ArgLabel::Optional(name);
+                }
+            } else {
+                p.err(DiagnosticCategory::Message(
+                    "Expected '?' after '=' in optional argument type".to_string(),
+                ));
+            }
+        }
+
+        p.expect(Token::EqualGreater);
+        // Parse return type without alias - `as` binds looser than `=>`
+        let return_type = parse_typ_expr_inner(p, true);
+
+        let loc = mk_loc(&start_pos, &return_type.ptyp_loc.loc_end);
+        let arg = TypeArg {
+            attrs,
+            lbl,
+            typ,
+        };
+
+        CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                arg: Box::new(arg),
+                ret: Box::new(return_type),
+                arity: Arity::Full(1),
+            },
+            ptyp_loc: loc,
+            ptyp_attributes: vec![],
+        }
+    } else {
+        p.expect(Token::Lparen);
+        let mut typ = parse_function_type(p, start_pos);
+        if !attrs.is_empty() {
+            typ.ptyp_attributes.extend(attrs);
+        }
+        typ
     }
 }
 
@@ -156,51 +216,88 @@ fn parse_attribute_id(p: &mut Parser<'_>) -> String {
     id
 }
 
-/// Parse an attribute payload.
+/// Parse an attribute payload (in type context).
 fn parse_payload(p: &mut Parser<'_>) -> Payload {
     p.expect(Token::Lparen);
-    // For now, just skip to matching )
-    let mut depth = 1;
-    while depth > 0 && p.token != Token::Eof {
-        match p.token {
-            Token::Lparen => depth += 1,
-            Token::Rparen => depth -= 1,
-            _ => {}
-        }
-        p.next();
-    }
-    Payload::PStr(vec![])
+    let payload = super::module::parse_payload(p);
+    p.expect(Token::Rparen);
+    payload
 }
 
 /// Parse an atomic type expression.
-fn parse_atomic_typ_expr(p: &mut Parser<'_>) -> CoreType {
+fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool) -> CoreType {
     let start_pos = p.start_pos.clone();
 
-    // Parse attributes first
-    let attrs = parse_type_attributes(p);
-
     let mut typ = match &p.token {
-        Token::SingleQuote => {
-            // Type variable: 'a
+        Token::Typ => {
+            // Locally abstract types: type a b c. SomeType
+            // This creates a Ptyp_poly with the type names as string variables
             p.next();
-            let name = match &p.token {
-                Token::Lident(name) | Token::Uident(name) => {
-                    let name = name.clone();
-                    p.next();
-                    name
-                }
-                _ => {
-                    p.err(DiagnosticCategory::Message(
-                        super::core::error_messages::TYPE_VAR.to_string(),
-                    ));
-                    "a".to_string()
-                }
-            };
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let mut vars: Vec<StringLoc> = vec![];
+
+            // Collect all type variable names until we see a dot
+            while let Token::Lident(name) = &p.token {
+                let var_start = p.start_pos.clone();
+                let name = name.clone();
+                p.next();
+                let var_loc = mk_loc(&var_start, &p.prev_end_pos);
+                vars.push(with_loc(name, var_loc));
+            }
+
+            p.expect(Token::Dot);
+            let body = parse_typ_expr(p);
+            let loc = mk_loc(&start_pos, &body.ptyp_loc.loc_end);
             CoreType {
-                ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, Box::new(body)),
                 ptyp_loc: loc,
                 ptyp_attributes: vec![],
+            }
+        }
+        Token::SingleQuote => {
+            // Type variable: 'a
+            // Polytype: 'a 'b. T
+            let mut vars: Vec<StringLoc> = vec![];
+
+            while p.token == Token::SingleQuote {
+                let var_start = p.start_pos.clone();
+                p.next();
+                let name = match &p.token {
+                    Token::Lident(name) | Token::Uident(name) => {
+                        let name = name.clone();
+                        p.next();
+                        name
+                    }
+                    _ => {
+                        p.err(DiagnosticCategory::Message(
+                            super::core::error_messages::TYPE_VAR.to_string(),
+                        ));
+                        "a".to_string()
+                    }
+                };
+                let var_loc = mk_loc(&var_start, &p.prev_end_pos);
+                vars.push(with_loc(name, var_loc));
+            }
+
+            if p.token == Token::Dot && !vars.is_empty() {
+                p.next();
+                let body = parse_typ_expr(p);
+                let loc = mk_loc(&start_pos, &body.ptyp_loc.loc_end);
+                CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, Box::new(body)),
+                    ptyp_loc: loc,
+                    ptyp_attributes: vec![],
+                }
+            } else if let Some(first) = vars.first() {
+                CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_var(first.txt.clone()),
+                    ptyp_loc: mk_loc(&start_pos, &p.prev_end_pos),
+                    ptyp_attributes: vec![],
+                }
+            } else {
+                p.err(DiagnosticCategory::Message(
+                    super::core::error_messages::TYPE_VAR.to_string(),
+                ));
+                recover::default_type()
             }
         }
         Token::Underscore => {
@@ -216,14 +313,52 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>) -> CoreType {
         Token::Lident(_) | Token::Uident(_) => parse_type_constr(p),
         Token::Lparen => {
             p.next();
-            if p.token == Token::Rparen {
+            // Disambiguate `( ... ) => ...` function types from parenthesized/tuple types.
+            //
+            // ReScript function types with multiple or labeled arguments use a parenthesized
+            // parameter list, e.g. `(~x: int, ~y: int) => int`.
+            //
+            // Note that `(t1 => t2) => t3` is *not* a parameter list, it's a normal arrow type
+            // taking a function. So we only treat `( ... ) => ...` as a parameter-list function
+            // type when the parens look like a parameter list (start with `~`/`.`/`@` or contain
+            // a top-level comma).
+            let is_function_type = es6_arrow && p.lookahead(|state| {
+                let starts_like_params = matches!(state.token, Token::Tilde | Token::Dot | Token::At);
+                let is_empty = state.token == Token::Rparen;
+
+                let mut depth = 0;
+                let mut saw_top_level_comma = false;
+
+                while state.token != Token::Eof {
+                    match state.token {
+                        Token::Lparen => depth += 1,
+                        Token::Rparen => {
+                            if depth == 0 {
+                                state.next();
+                                let followed_by_arrow = state.token == Token::EqualGreater;
+                                return followed_by_arrow
+                                    && !is_empty
+                                    && (starts_like_params || saw_top_level_comma);
+                            }
+                            depth -= 1;
+                        }
+                        Token::Comma if depth == 0 => {
+                            saw_top_level_comma = true;
+                        }
+                        _ => {}
+                    }
+                    state.next();
+                }
+                false
+            });
+
+            if is_function_type {
+                parse_function_type(p, start_pos)
+            } else if p.token == Token::Rparen {
                 // Unit type: ()
                 p.next();
                 let loc = mk_loc(&start_pos, &p.prev_end_pos);
                 ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], loc)
-            } else if p.token == Token::Dot || p.token == Token::Tilde {
-                // Function type with labeled args
-                parse_function_type(p, start_pos)
             } else {
                 // Parenthesized type or tuple
                 let typ = parse_typ_expr(p);
@@ -339,18 +474,35 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     let mut params = vec![];
 
     while p.token != Token::Rparen && p.token != Token::Eof {
+        // Allow dotted parameters for uncurried segments (ignored for now).
+        p.optional(&Token::Dot);
         let param_attrs = parse_attributes(p);
 
-        let (label, typ) = if p.token == Token::Tilde {
+        let (mut label, typ) = if p.token == Token::Tilde {
             p.next();
             let name = parse_lident(p);
             p.expect(Token::Colon);
-            let typ = parse_typ_expr_inner(p, false);
+            let typ = parse_typ_expr(p);
             (ArgLabel::Labelled(name), typ)
         } else {
-            let typ = parse_typ_expr_inner(p, false);
+            let typ = parse_typ_expr(p);
             (ArgLabel::Nolabel, typ)
         };
+
+        // Optional labeled args: `~x: t=?`
+        if p.token == Token::Equal {
+            p.next();
+            if p.token == Token::Question {
+                p.next();
+                if let ArgLabel::Labelled(name) = label {
+                    label = ArgLabel::Optional(name);
+                }
+            } else {
+                p.err(DiagnosticCategory::Message(
+                    "Expected '?' after '=' in optional argument type".to_string(),
+                ));
+            }
+        }
 
         params.push(TypeArg {
             attrs: param_attrs,
@@ -364,11 +516,22 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     }
 
     p.expect(Token::Rparen);
+    let rparen_end_pos = p.prev_end_pos.clone();
     p.expect(Token::EqualGreater);
-    let return_type = parse_typ_expr(p);
+    // Parse return type without alias - `as` binds looser than `=>`
+    let return_type = parse_typ_expr_inner(p, true);
 
     // Build the arrow type from params
     let loc = mk_loc(&start_pos, &return_type.ptyp_loc.loc_end);
+
+    if params.is_empty() {
+        let unit_loc = mk_loc(&start_pos, &rparen_end_pos);
+        params.push(TypeArg {
+            attrs: vec![],
+            lbl: ArgLabel::Nolabel,
+            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], unit_loc),
+        });
+    }
 
     params
         .into_iter()
@@ -377,7 +540,7 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             ptyp_desc: CoreTypeDesc::Ptyp_arrow {
                 arg: Box::new(param),
                 ret: Box::new(acc),
-                arity: Arity::Unknown,
+                arity: Arity::Full(1),
             },
             ptyp_loc: loc.clone(),
             ptyp_attributes: vec![],
@@ -481,8 +644,10 @@ fn parse_tuple_type(
         if p.token == Token::Rparen {
             break;
         }
-        // Allow arrow types in tuple elements
-        types.push(parse_typ_expr_inner(p, true));
+        // Allow arrow types and type aliases in tuple elements
+        let elem_typ = parse_typ_expr_inner(p, true);
+        let elem_typ = parse_type_alias(p, elem_typ);
+        types.push(elem_typ);
     }
 
     p.expect(Token::Rparen);
@@ -516,28 +681,19 @@ fn parse_record_or_object_type(p: &mut Parser<'_>) -> CoreType {
         ClosedFlag::Closed
     };
 
-    if is_object {
-        // Object type
-        let fields = parse_object_fields(p);
-        p.expect(Token::Rbrace);
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
-        CoreType {
-            ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
-            ptyp_loc: loc,
-            ptyp_attributes: vec![],
-        }
-    } else {
-        // Record type - convert to object type with special marker
-        // For now, just parse as object
-        let fields = parse_object_fields(p);
-        p.expect(Token::Rbrace);
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
-        CoreType {
-            ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
-            ptyp_loc: loc,
-            ptyp_attributes: vec![],
-        }
-    }
+    let fields = parse_object_fields(p);
+    p.expect(Token::Rbrace);
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let typ = CoreType {
+        ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
+        ptyp_loc: loc,
+        ptyp_attributes: vec![],
+    };
+    // Handle type alias: {...} as 'name
+    let typ = parse_type_alias(p, typ);
+    // Note: Don't parse arrow rest here - let the caller (parse_typ_expr_inner) handle it.
+    // This is important for correct precedence of arrows in function return types.
+    typ
 }
 
 /// Parse object fields.
@@ -545,10 +701,13 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
     let mut fields = vec![];
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
+        // Optional attributes on the field.
+        let field_attrs = parse_attributes(p);
+
         // Handle spread: ...typ
         if p.token == Token::DotDotDot {
             p.next();
-            let typ = parse_typ_expr_inner(p, false);
+            let typ = parse_typ_expr(p);
             fields.push(ObjectField::Oinherit(typ));
             if !p.optional(&Token::Comma) {
                 break;
@@ -569,9 +728,9 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
                 // Check for optional field marker
                 let _is_optional = p.optional(&Token::Question);
                 p.expect(Token::Colon);
-                let typ = parse_typ_expr_inner(p, false);
+                let typ = parse_typ_expr(p);
                 let loc = mk_loc(&field_start, &p.prev_end_pos);
-                fields.push(ObjectField::Otag(with_loc(name, loc), vec![], typ));
+                fields.push(ObjectField::Otag(with_loc(name, loc), field_attrs, typ));
             }
             None => {
                 p.err(DiagnosticCategory::Message(
@@ -657,7 +816,8 @@ fn parse_poly_variant_type_simple(p: &mut Parser<'_>) -> CoreType {
         p.next();
         let mut args = vec![];
         while p.token != Token::Rparen && p.token != Token::Eof {
-            args.push(parse_typ_expr_inner(p, false));
+            // Allow arrow types in polymorphic variant arguments (e.g., #Foo(string => unit))
+            args.push(parse_typ_expr_inner(p, true));
             if !p.optional(&Token::Comma) {
                 break;
             }
@@ -689,15 +849,15 @@ fn parse_poly_variant_type_simple(p: &mut Parser<'_>) -> CoreType {
 fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
     let mut fields = vec![];
 
-    while p.token != Token::Rbracket && p.token != Token::Eof {
-        if p.token == Token::Bar {
-            p.next();
-        }
+    // Handle optional leading `|`
+    p.optional(&Token::Bar);
 
+    while p.token != Token::Rbracket && p.token != Token::Eof {
         // Parse attributes before the tag
         let attrs = parse_attributes(p);
 
         if p.token == Token::Hash {
+            // Tagged row field: #tag or #tag(args)
             p.next();
             let tag = match &p.token {
                 Token::Lident(name) | Token::Uident(name) => {
@@ -718,6 +878,16 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
                     p.next();
                     with_loc(tag, loc)
                 }
+                Token::True => {
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    with_loc("true".to_string(), loc)
+                }
+                Token::False => {
+                    let loc = mk_loc(&p.start_pos, &p.end_pos);
+                    p.next();
+                    with_loc("false".to_string(), loc)
+                }
                 _ => {
                     p.err(DiagnosticCategory::Message(
                         "Expected variant tag after #".to_string(),
@@ -726,23 +896,65 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
                 }
             };
 
-            let args = if p.token == Token::Lparen {
+            // Parse arguments inside parentheses
+            // Track if they're comma-separated (tuple wrap) vs ampersand-separated (no wrap)
+            let (args, comma_separated, had_parens) = if p.token == Token::Lparen {
                 p.next();
                 let mut args = vec![];
+                let mut has_comma = false;
                 while p.token != Token::Rparen && p.token != Token::Eof {
-                    args.push(parse_typ_expr_inner(p, false));
-                    if !p.optional(&Token::Ampersand) && !p.optional(&Token::Comma) {
+                    // Allow arrow types in polymorphic variant arguments (e.g., #Foo(string => unit))
+                    args.push(parse_typ_expr_inner(p, true));
+                    if p.optional(&Token::Comma) {
+                        has_comma = true;
+                    } else if !p.optional(&Token::Ampersand) {
                         break;
                     }
                 }
                 p.expect(Token::Rparen);
-                args
+                (args, has_comma, true)
             } else {
-                vec![]
+                (vec![], false, false)
             };
 
-            fields.push(RowField::Rtag(tag, attrs, args.is_empty(), args));
+            // Track if the tag itself is constant (no args in parens)
+            // #A is constant, #A(int) is not, #A&(...) is constant (& are constraints, not args)
+            let is_constant = !had_parens || args.is_empty();
+
+            // Parse intersection constraints: #tag & typ1 & typ2
+            let mut constraints = args;
+            while p.token == Token::Ampersand {
+                p.next();
+                constraints.push(parse_typ_expr_inner(p, false));
+            }
+
+            // Only wrap in Ptyp_tuple for comma-separated args inside parens (e.g., #A(int, string))
+            // Don't wrap ampersand-separated constraints (e.g., #T([<u2]) & ([<u1]))
+            let constraints = if comma_separated && constraints.len() >= 2 {
+                let loc = mk_loc(
+                    &constraints.first().unwrap().ptyp_loc.loc_start,
+                    &constraints.last().unwrap().ptyp_loc.loc_end,
+                );
+                vec![CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_tuple(constraints),
+                    ptyp_loc: loc,
+                    ptyp_attributes: vec![],
+                }]
+            } else {
+                constraints
+            };
+
+            fields.push(RowField::Rtag(tag, attrs, is_constant, constraints));
+        } else if matches!(p.token, Token::Lident(_) | Token::Uident(_)) {
+            // Inherited row type: Foo.t or just t
+            let typ = parse_type_constr(p);
+            fields.push(RowField::Rinherit(typ));
         } else {
+            break;
+        }
+
+        // Handle separator: `|` between fields
+        if !p.optional(&Token::Bar) {
             break;
         }
     }
@@ -820,10 +1032,53 @@ fn parse_module_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
     }
 
     if path_parts.is_empty() {
+        // Allow lowercase module identifiers in some contexts (e.g. module type names).
+        if let Token::Lident(name) = &p.token {
+            path_parts.push(name.clone());
+            p.next();
+        } else {
+            p.err(DiagnosticCategory::Message(
+                "Expected module identifier".to_string(),
+            ));
+            path_parts.push("Error".to_string());
+        }
+    }
+
+    let lid = super::core::build_longident(&path_parts);
+    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    with_loc(lid, loc)
+}
+
+/// Parse a type long identifier (module path ending in a type name).
+fn parse_type_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
+    let start_pos = p.start_pos.clone();
+    let mut path_parts = vec![];
+
+    loop {
+        match &p.token {
+            Token::Uident(name) => {
+                path_parts.push(name.clone());
+                p.next();
+                if p.token == Token::Dot {
+                    p.next();
+                } else {
+                    break;
+                }
+            }
+            Token::Lident(name) => {
+                path_parts.push(name.clone());
+                p.next();
+                break;
+            }
+            _ => break,
+        }
+    }
+
+    if path_parts.is_empty() {
         p.err(DiagnosticCategory::Message(
-            "Expected module identifier".to_string(),
+            "Expected type identifier".to_string(),
         ));
-        path_parts.push("Error".to_string());
+        path_parts.push("error".to_string());
     }
 
     let lid = super::core::build_longident(&path_parts);
@@ -841,7 +1096,7 @@ fn parse_package_constraints(p: &mut Parser<'_>) -> Vec<(super::ast::Loc<Longide
         }
         p.expect(Token::Typ);
 
-        let lid = parse_module_long_ident(p);
+        let lid = parse_type_long_ident(p);
         p.expect(Token::Equal);
         let typ = parse_typ_expr_inner(p, false);
 
@@ -857,25 +1112,49 @@ fn parse_package_constraints(p: &mut Parser<'_>) -> Vec<(super::ast::Loc<Longide
 
 /// Parse an extension.
 fn parse_extension(p: &mut Parser<'_>) -> Extension {
-    let _start_pos = p.start_pos.clone();
     p.expect(Token::Percent);
 
-    let id = match &p.token {
-        Token::Lident(name) | Token::Uident(name) => {
-            let name = name.clone();
-            let loc = mk_loc(&p.start_pos, &p.end_pos);
+    let id_start = p.start_pos.clone();
+    let mut parts: Vec<String> = vec![];
+
+    loop {
+        match &p.token {
+            Token::Lident(name) | Token::Uident(name) => {
+                parts.push(name.clone());
+                p.next();
+            }
+            _ if p.token.is_keyword() => {
+                parts.push(p.token.to_string());
+                p.next();
+            }
+            _ => break,
+        }
+
+        if p.token == Token::Dot {
             p.next();
-            with_loc(name, loc)
+            continue;
         }
-        _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected extension identifier".to_string(),
-            ));
-            mknoloc("error".to_string())
-        }
+        break;
+    }
+
+    let id = if parts.is_empty() {
+        p.err(DiagnosticCategory::Message(
+            "Expected extension identifier".to_string(),
+        ));
+        mknoloc("error".to_string())
+    } else {
+        let id = parts.join(".");
+        with_loc(id, mk_loc(&id_start, &p.prev_end_pos))
     };
 
-    (id, Payload::PStr(vec![]))
+    // Parse optional payload: %ext(payload)
+    let payload = if p.token == Token::Lparen {
+        parse_payload(p)
+    } else {
+        Payload::PStr(vec![])
+    };
+
+    (id, payload)
 }
 
 // ============================================================================
