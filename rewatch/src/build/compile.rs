@@ -22,16 +22,27 @@ use std::sync::OnceLock;
 use std::time::SystemTime;
 
 /// Execute js-post-build command for a compiled JavaScript file.
-/// Unlike bsb which passes relative paths, rewatch passes absolute paths for clarity.
-fn execute_post_build_command(cmd: &str, js_file_path: &Path) -> Result<()> {
+/// The command runs in the directory containing the rescript.json that defines it.
+/// The absolute path to the JS file is passed as an argument.
+fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
 
-    debug!("Executing js-post-build: {}", full_command);
+    debug!(
+        "Executing js-post-build: {} (in {})",
+        full_command,
+        working_dir.display()
+    );
 
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd").args(["/C", &full_command]).output()
+        Command::new("cmd")
+            .args(["/C", &full_command])
+            .current_dir(working_dir)
+            .output()
     } else {
-        Command::new("sh").args(["-c", &full_command]).output()
+        Command::new("sh")
+            .args(["-c", &full_command])
+            .current_dir(working_dir)
+            .output()
     };
 
     match output {
@@ -886,7 +897,8 @@ fn compile_file(
 
                     if js_file.exists() {
                         // Fail the build if post-build command fails (matches bsb behavior with &&)
-                        execute_post_build_command(&js_post_build.cmd, &js_file)?;
+                        // Run in the package's directory (where rescript.json is defined)
+                        execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
                     }
                 }
             }

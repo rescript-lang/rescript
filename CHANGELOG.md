@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - `js-post-build` now passes the correct output file path based on `in-source` configuration: when `in-source: true`, the path next to the source file is passed; when `in-source: false`, the path in the `lib/<module>/` directory is passed. Additionally, stdout and stderr from the post-build command are now logged. https://github.com/rescript-lang/rescript/pull/8190
+- `js-post-build` command now runs in the directory containing the `rescript.json` where it is defined, instead of the unpredictable build invocation directory. This provides consistent behavior in monorepos. https://github.com/rescript-lang/rescript/pull/8195
 
 #### :eyeglasses: Spec Compliance
 
