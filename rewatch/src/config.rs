@@ -2,7 +2,7 @@ use crate::build::packages;
 use crate::helpers;
 use crate::helpers::deserialize::*;
 use crate::project_context::ProjectContext;
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, anyhow};
 use convert_case::{Case, Casing};
 use serde::de::{Error as DeError, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -228,9 +228,6 @@ pub struct JsPostBuild {
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub enum DeprecationWarning {
-    BsDependencies,
-    BsDevDependencies,
-    BscFlags,
     PackageSpecsEs6,
     PackageSpecsEs6Global,
 }
@@ -285,20 +282,11 @@ pub struct Config {
     pub dependencies: Option<Vec<String>>,
     #[serde(rename = "dev-dependencies")]
     pub dev_dependencies: Option<Vec<String>>,
-    // Deprecated field: overwrites dependencies
-    #[serde(rename = "bs-dependencies")]
-    bs_dependencies: Option<Vec<String>>,
-    // Deprecated field: overwrites dev_dependencies
-    #[serde(rename = "bs-dev-dependencies")]
-    bs_dev_dependencies: Option<Vec<String>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
 
     #[serde(rename = "compiler-flags")]
     pub compiler_flags: Option<Vec<OneOrMore<String>>>,
-    // Deprecated field: overwrites compiler_flags
-    #[serde(rename = "bsc-flags")]
-    bsc_flags: Option<Vec<OneOrMore<String>>>,
 
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
@@ -729,33 +717,6 @@ impl Config {
     }
 
     fn handle_deprecations(&mut self) -> Result<()> {
-        if self.dependencies.is_some() && self.bs_dependencies.is_some() {
-            bail!("dependencies and bs-dependencies are mutually exclusive. Please use 'dependencies'.");
-        }
-        if self.dev_dependencies.is_some() && self.bs_dev_dependencies.is_some() {
-            bail!(
-                "dev-dependencies and bs-dev-dependencies are mutually exclusive. Please use 'dev-dependencies'"
-            );
-        }
-
-        if self.compiler_flags.is_some() && self.bsc_flags.is_some() {
-            bail!("compiler-flags and bsc-flags are mutually exclusive. Please use 'compiler-flags'");
-        }
-
-        if self.bs_dependencies.is_some() {
-            self.dependencies = self.bs_dependencies.take();
-            self.deprecation_warnings.push(DeprecationWarning::BsDependencies);
-        }
-        if self.bs_dev_dependencies.is_some() {
-            self.dev_dependencies = self.bs_dev_dependencies.take();
-            self.deprecation_warnings
-                .push(DeprecationWarning::BsDevDependencies);
-        }
-        if self.bsc_flags.is_some() {
-            self.compiler_flags = self.bsc_flags.take();
-            self.deprecation_warnings.push(DeprecationWarning::BscFlags);
-        }
-
         let (has_es6, has_es6_global) = match &self.package_specs {
             None => (false, false),
             Some(OneOrMore::Single(spec)) => (spec.module == "es6", spec.module == "es6-global"),
@@ -800,11 +761,8 @@ pub mod tests {
             suffix: None,
             dependencies: Some(args.bs_deps),
             dev_dependencies: Some(args.build_dev_deps),
-            bs_dependencies: None,
-            bs_dev_dependencies: None,
             ppx_flags: None,
             compiler_flags: None,
-            bsc_flags: None,
             namespace: None,
             jsx: None,
             gentype_config: None,
@@ -1011,31 +969,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dependencies_deprecation() {
-        let json = r#"
-        {
-            "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "esmodule",
-                "in-source": true
-                }
-            ],
-            "suffix": ".mjs",
-            "bs-dependencies": [ "@testrepo/main" ]
-        }
-        "#;
-
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDependencies]);
-    }
-
-    #[test]
     fn test_dependencies() {
         let json = r#"
         {
@@ -1058,31 +991,6 @@ pub mod tests {
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
         assert!(config.get_deprecations().is_empty());
-    }
-
-    #[test]
-    fn test_dev_dependencies_deprecation() {
-        let json = r#"
-        {
-            "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "esmodule",
-                "in-source": true
-                }
-            ],
-            "suffix": ".mjs",
-            "bs-dev-dependencies": [ "@testrepo/main" ]
-        }
-        "#;
-
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDevDependencies]);
     }
 
     #[test]
@@ -1250,30 +1158,6 @@ pub mod tests {
             unreachable!("Expected compiler flags to be Some");
         }
         assert!(config.get_deprecations().is_empty());
-    }
-
-    #[test]
-    fn test_compiler_flags_deprecation() {
-        let json = r#"
-        {
-            "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "esmodule",
-                "in-source": true
-                }
-            ],
-            "suffix": ".mjs",
-            "bsc-flags": [ "-w" ]
-        }
-        "#;
-
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::BscFlags]);
     }
 
     fn test_find_is_type_dev(source: OneOrMore<Source>, path: &Path, expected: bool) {
