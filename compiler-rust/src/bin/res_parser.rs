@@ -25,6 +25,45 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process;
 
+/// A Write adapter that collects UTF-8 output and stores it as chars in a String.
+/// When the ML printer writes chars as UTF-8, this captures them and stores the
+/// decoded chars, preserving the original Latin-1 encoding from the source.
+struct StringWriter(String);
+
+impl StringWriter {
+    fn new() -> Self {
+        StringWriter(String::new())
+    }
+
+    fn into_string(self) -> String {
+        self.0
+    }
+}
+
+impl Write for StringWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        // buf contains UTF-8 encoded bytes from write! macro
+        // Convert back to a &str (which is what was originally written)
+        match std::str::from_utf8(buf) {
+            Ok(s) => {
+                self.0.push_str(s);
+                Ok(buf.len())
+            }
+            Err(_) => {
+                // Fallback: treat as Latin-1 bytes
+                for &b in buf {
+                    self.0.push(b as char);
+                }
+                Ok(buf.len())
+            }
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 /// ReScript Parser CLI - for testing purposes only
 #[derive(ClapParser, Debug)]
 #[command(name = "res_parser_rust")]
@@ -91,9 +130,9 @@ fn normalize_args() -> Vec<String> {
 fn main() {
     let args = Args::parse_from(normalize_args());
 
-    // Read the input file as raw bytes, then convert to String using Latin-1 encoding
-    // (each byte becomes a char with code point 0-255). This matches OCaml's behavior
-    // where strings are byte sequences, not UTF-8.
+    // Read file as raw bytes, converting each byte to a char (Latin-1 encoding).
+    // This preserves the original byte sequence through the compilation pipeline,
+    // matching OCaml's behavior where strings are byte sequences, not Unicode.
     let source = match fs::read(&args.file) {
         Ok(bytes) => bytes.iter().map(|&b| b as char).collect::<String>(),
         Err(e) => {
@@ -143,7 +182,15 @@ fn main() {
 
         // Print in requested format
         match args.print.as_str() {
-            "ml" => ml_printer::print_signature_ml(&signature, &mut io::stdout()),
+            "ml" => {
+                // Capture ML output using StringWriter, then convert chars to Latin-1 bytes.
+                // This preserves the original file bytes through the round-trip.
+                let mut writer = StringWriter::new();
+                ml_printer::print_signature_ml(&signature, &mut writer);
+                let output = writer.into_string();
+                let bytes: Vec<u8> = output.chars().map(|c| c as u8).collect();
+                let _ = io::stdout().write_all(&bytes);
+            }
             "res" => print_signature_res(&signature, &mut io::stdout()),
             "sexp" => sexp::print_signature(&signature, &mut io::stdout()),
             "sexp-locs" => sexp_locs::print_signature(&signature, &mut io::stdout()),
@@ -198,7 +245,15 @@ fn main() {
 
         // Print in requested format
         match args.print.as_str() {
-            "ml" => ml_printer::print_structure_ml(&structure, &mut io::stdout()),
+            "ml" => {
+                // Capture ML output using StringWriter, then convert chars to Latin-1 bytes.
+                // This preserves the original file bytes through the round-trip.
+                let mut writer = StringWriter::new();
+                ml_printer::print_structure_ml(&structure, &mut writer);
+                let output = writer.into_string();
+                let bytes: Vec<u8> = output.chars().map(|c| c as u8).collect();
+                let _ = io::stdout().write_all(&bytes);
+            }
             "res" => {
                 let output =
                     printer::print_structure_with_comments(&structure, parser.comments());

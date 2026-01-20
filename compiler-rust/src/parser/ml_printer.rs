@@ -337,24 +337,54 @@ fn get_operator_name(expr: &Expression) -> Option<&str> {
     }
 }
 
-/// Check if an expression needs parens when used as an operand in a binary expression.
-/// Complex expressions (if, let, fun, match, try, sequence) need parens to avoid ambiguity.
+/// Check if expression needs parens in binary context (operators, function args, etc.)
 fn needs_parens_in_binary_context(expr: &Expression) -> bool {
-    matches!(
-        &expr.pexp_desc,
+    match &expr.pexp_desc {
         ExpressionDesc::Pexp_ifthenelse(_, _, _)
-            | ExpressionDesc::Pexp_let(_, _, _)
-            | ExpressionDesc::Pexp_fun { .. }
-            | ExpressionDesc::Pexp_match(_, _)
-            | ExpressionDesc::Pexp_try(_, _)
-            | ExpressionDesc::Pexp_sequence(_, _)
-    )
+        | ExpressionDesc::Pexp_let(_, _, _)
+        | ExpressionDesc::Pexp_fun { .. }
+        | ExpressionDesc::Pexp_match(_, _)
+        | ExpressionDesc::Pexp_try(_, _)
+        | ExpressionDesc::Pexp_sequence(_, _) => true,
+        ExpressionDesc::Pexp_apply { args, .. } if !args.is_empty() => true,
+        _ => false,
+    }
 }
 
-/// Print an expression, adding parens if it's a complex expression that needs them
-/// when used as an operand in a binary expression.
+/// Check if expression is an infix operator application
+fn is_infix_application(expr: &Expression) -> bool {
+    if let ExpressionDesc::Pexp_apply { funct, args, .. } = &expr.pexp_desc {
+        if args.len() == 2 {
+            if let Some(op_name) = get_operator_name(funct) {
+                return is_infix_operator(op_name);
+            }
+        }
+    }
+    false
+}
+
+/// Check if a function application has labeled arguments
+fn application_has_labeled_args(expr: &Expression) -> bool {
+    if let ExpressionDesc::Pexp_apply { args, .. } = &expr.pexp_desc {
+        args.iter().any(|(label, _)| !matches!(label, ArgLabel::Nolabel))
+    } else {
+        false
+    }
+}
+
+/// Check if expression needs parens when used as a labeled argument value
+fn needs_parens_as_labeled_arg(expr: &Expression) -> bool {
+    needs_parens_in_binary_context(expr) || is_infix_application(expr)
+}
+
+/// Check if expression needs parens when used as an unlabeled function argument
+fn needs_parens_as_function_arg(expr: &Expression) -> bool {
+    needs_parens_in_binary_context(expr) || application_has_labeled_args(expr)
+}
+
+/// Print expression with parens if needed as a function argument
 fn print_expression_ml_parens_if_complex(expr: &Expression, out: &mut impl Write) {
-    if needs_parens_in_binary_context(expr) {
+    if needs_parens_as_function_arg(expr) {
         let _ = write!(out, "(");
         print_expression_ml_inner(expr, out, false);
         let _ = write!(out, ")");
@@ -694,11 +724,15 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens
             }
         }
         ExpressionDesc::Pexp_sequence(e1, e2) => {
-            let _ = write!(out, "(");
+            if use_parens {
+                let _ = write!(out, "(");
+            }
             print_expression_ml(e1, out);
             let _ = write!(out, "; ");
             print_expression_ml(e2, out);
-            let _ = write!(out, ")");
+            if use_parens {
+                let _ = write!(out, ")");
+            }
         }
         ExpressionDesc::Pexp_while(cond, body) => {
             let _ = write!(out, "(while ");
@@ -1071,9 +1105,15 @@ fn print_arg_with_label_ml(label: &ArgLabel, arg: &Expression, out: &mut impl Wr
                     }
                 }
             }
-            // Full form: ~name:value
+            // Full form: ~name:value (with parens for complex expressions)
             let _ = write!(out, "~{}:", name);
-            print_expression_ml(arg, out);
+            if needs_parens_as_labeled_arg(arg) {
+                let _ = write!(out, "(");
+                print_expression_ml(arg, out);
+                let _ = write!(out, ")");
+            } else {
+                print_expression_ml(arg, out);
+            }
         }
         ArgLabel::Optional(name) => {
             if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
@@ -1085,12 +1125,19 @@ fn print_arg_with_label_ml(label: &ArgLabel, arg: &Expression, out: &mut impl Wr
                     }
                 }
             }
-            // Full form: ?name:value
+            // Full form: ?name:value (with parens for complex expressions)
             let _ = write!(out, "?{}:", name);
-            print_expression_ml(arg, out);
+            if needs_parens_as_labeled_arg(arg) {
+                let _ = write!(out, "(");
+                print_expression_ml(arg, out);
+                let _ = write!(out, ")");
+            } else {
+                print_expression_ml(arg, out);
+            }
         }
         ArgLabel::Nolabel => {
-            print_expression_ml(arg, out);
+            // Use parens for complex expressions when used as function arguments
+            print_expression_ml_parens_if_complex(arg, out);
         }
     }
 }
