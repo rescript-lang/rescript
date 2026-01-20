@@ -60,9 +60,11 @@ fail_count=0
 ocaml_fail_count=0
 rust_fail_count=0
 diff_count=0
+locs_diff_count=0
 
 # Store failures for reporting
 diff_files=""
+locs_diff_files=""
 rust_fail_files=""
 ocaml_fail_files=""
 

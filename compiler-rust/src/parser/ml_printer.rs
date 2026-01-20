@@ -511,13 +511,14 @@ fn print_expression_ml(expr: &Expression, out: &mut impl Write) {
 
 /// Print expression without outer parentheses (for top-level eval statements)
 fn print_expression_ml_no_outer_parens(expr: &Expression, out: &mut impl Write) {
-    let has_attrs = !expr.pexp_attributes.is_empty();
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
     if has_attrs {
         let _ = write!(out, "(");
     }
     print_expression_ml_inner(expr, out, false);
     if has_attrs {
-        for (name, payload) in &expr.pexp_attributes {
+        for (name, payload) in attrs {
             let _ = write!(out, "[@{}", name.txt);
             if !payload_is_empty(payload) {
                 let _ = write!(out, " ");
