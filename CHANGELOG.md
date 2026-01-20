@@ -20,11 +20,14 @@
 - Remove `external-stdlib` configuration option from `rescript.json`. This option was rarely used and is no longer supported.
 - `js-post-build` now passes the correct output file path based on `in-source` configuration: when `in-source: true`, the path next to the source file is passed; when `in-source: false`, the path in the `lib/<module>/` directory is passed. Additionally, stdout and stderr from the post-build command are now logged. https://github.com/rescript-lang/rescript/pull/8190
 - `js-post-build` command now runs in the directory containing the `rescript.json` where it is defined, instead of the unpredictable build invocation directory. This provides consistent behavior in monorepos. https://github.com/rescript-lang/rescript/pull/8195
+- Remove support for deprecated `bs-dependencies`, `bs-dev-dependencies`, and `bsc-flags` configuration options. Use `dependencies`, `dev-dependencies`, and `compiler-flags` instead. https://github.com/rescript-lang/rescript/pull/8196
+- `bsc`: remove legacy `-uncurried` flag. https://github.com/rescript-lang/rescript/pull/8201
 
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
+- Reanalyze: add scoped `@@live`/`@@dead` annotations for marking module/file sections as live or dead. https://github.com/rescript-lang/rescript/pull/8197
 - Add `rescript compile-file` command for one-shot compilation of a single ReScript file to JavaScript, outputting to stdout. Supports `--module-format` flag to select output format when multiple package-specs are configured. https://github.com/rescript-lang/rescript/pull/8002
 
 #### :bug: Bug fix
@@ -32,6 +35,7 @@
 - Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
 - Add duplicate package detection to rewatch. https://github.com/rescript-lang/rescript/pull/8180
 - Rewatch: do not warn about "reanalyze" config field. https://github.com/rescript-lang/rescript/pull/8181
+- Fix error when importing CommonJS runtime modules with `require()`. https://github.com/rescript-lang/rescript/pull/8194
 
 #### :memo: Documentation
 

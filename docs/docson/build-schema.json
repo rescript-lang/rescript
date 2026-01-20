@@ -375,14 +375,6 @@
       },
       "description": "a list of directories that the build system will not look into"
     },
-    "bs-dependencies": {
-      "$ref": "#/definitions/dependencies",
-      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dependencies instead)."
-    },
-    "bs-dev-dependencies": {
-      "$ref": "#/definitions/dependencies",
-      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dev-dependencies instead)."
-    },
     "dependencies": {
       "$ref": "#/definitions/dependencies",
       "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`."
@@ -413,10 +405,6 @@
     "gentypeconfig": {
       "$ref": "#/definitions/gentype-specs",
       "description": "gentype config, see cristianoc/genType for more details"
-    },
-    "bsc-flags": {
-      "$ref": "#/definitions/compiler-flags",
-      "description": "Flags passed to bsc.exe (deprecated, use compiler-flags instead)"
     },
     "compiler-flags": {
       "$ref": "#/definitions/compiler-flags",

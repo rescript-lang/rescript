@@ -948,20 +948,20 @@ fn get_unallowed_dependents(
 }
 #[derive(Debug, Clone)]
 struct UnallowedDependency {
-    bs_deps: Vec<String>,
-    bs_build_dev_deps: Vec<String>,
+    deps: Vec<String>,
+    dev_deps: Vec<String>,
 }
 
 pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> bool {
     let mut detected_unallowed_dependencies: AHashMap<String, UnallowedDependency> = AHashMap::new();
 
     for (package_name, package) in packages {
-        let bs_dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
+        let dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
         let dev_dependencies = &package.config.dev_dependencies.to_owned().unwrap_or(vec![]);
 
         [
-            ("bs-dependencies", bs_dependencies),
-            ("bs-dev-dependencies", dev_dependencies),
+            ("dependencies", dependencies),
+            ("dev-dependencies", dev_dependencies),
         ]
         .iter()
         .for_each(|(dependency_type, dependencies)| {
@@ -969,15 +969,15 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 get_unallowed_dependents(packages, package_name, dependencies)
             {
                 let empty_unallowed_deps = UnallowedDependency {
-                    bs_deps: vec![],
-                    bs_build_dev_deps: vec![],
+                    deps: vec![],
+                    dev_deps: vec![],
                 };
 
                 let unallowed_dependency = detected_unallowed_dependencies.entry(String::from(package_name));
                 let value = unallowed_dependency.or_insert_with(|| empty_unallowed_deps);
                 match *dependency_type {
-                    "bs-dependencies" => value.bs_deps.push(unallowed_dependency_name),
-                    "bs-dev-dependencies" => value.bs_build_dev_deps.push(unallowed_dependency_name),
+                    "dependencies" => value.deps.push(unallowed_dependency_name),
+                    "dev-dependencies" => value.dev_deps.push(unallowed_dependency_name),
                     _ => (),
                 }
             }
@@ -991,8 +991,8 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
         );
 
         [
-            ("bs-dependencies", unallowed_deps.bs_deps.to_owned()),
-            ("bs-dev-dependencies", unallowed_deps.bs_build_dev_deps.to_owned()),
+            ("dependencies", unallowed_deps.deps.to_owned()),
+            ("dev-dependencies", unallowed_deps.dev_deps.to_owned()),
         ]
         .iter()
         .for_each(|(deps_type, map)| {

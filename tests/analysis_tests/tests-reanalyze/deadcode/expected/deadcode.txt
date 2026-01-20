@@ -1079,6 +1079,11 @@
   addValueReference Newton.res:31:8 --> Newton.res:29:4
   addValueReference Newton.res:31:18 --> Newton.res:29:4
   addValueReference Newton.res:31:16 --> Newton.res:25:4
+  Scanning OcamlWarningSuppressToplevel.cmt Source:OcamlWarningSuppressToplevel.res
+  addValueDeclaration +suppressed1 OcamlWarningSuppressToplevel.res:3:4 path:+OcamlWarningSuppressToplevel
+  addValueDeclaration +suppressed2 OcamlWarningSuppressToplevel.res:4:4 path:+OcamlWarningSuppressToplevel
+  addValueDeclaration +suppressed3 OcamlWarningSuppressToplevel.res:7:6 path:+OcamlWarningSuppressToplevel.M
+  addValueDeclaration +suppressed4 OcamlWarningSuppressToplevel.res:8:6 path:+OcamlWarningSuppressToplevel.M
   Scanning Opaque.cmt Source:Opaque.res
   addValueDeclaration +noConversion Opaque.res:5:4 path:+Opaque
   addValueDeclaration +testConvertNestedRecordFromOtherFile Opaque.res:11:4 path:+Opaque
@@ -1312,6 +1317,26 @@
   addTypeReference RepeatedLabel.res:12:16 --> RepeatedLabel.res:8:2
   addValueReference RepeatedLabel.res:14:7 --> RepeatedLabel.res:12:4
   Scanning RequireCond.cmt Source:RequireCond.res
+  Scanning ScopedAnnotationsLiveVsDead.cmt Source:ScopedAnnotationsLiveVsDead.res
+  addValueDeclaration +leafLive ScopedAnnotationsLiveVsDead.res:1:4 path:+ScopedAnnotationsLiveVsDead
+  addValueDeclaration +middleLive ScopedAnnotationsLiveVsDead.res:2:4 path:+ScopedAnnotationsLiveVsDead
+  addValueDeclaration +root ScopedAnnotationsLiveVsDead.res:6:6 path:+ScopedAnnotationsLiveVsDead.LiveScope
+  addValueDeclaration +stillDeadOutside ScopedAnnotationsLiveVsDead.res:9:4 path:+ScopedAnnotationsLiveVsDead
+  addValueDeclaration +leafDead ScopedAnnotationsLiveVsDead.res:11:4 path:+ScopedAnnotationsLiveVsDead
+  addValueDeclaration +middleDead ScopedAnnotationsLiveVsDead.res:12:4 path:+ScopedAnnotationsLiveVsDead
+  addValueDeclaration +root ScopedAnnotationsLiveVsDead.res:16:6 path:+ScopedAnnotationsLiveVsDead.DeadScope
+  addValueReference ScopedAnnotationsLiveVsDead.res:2:4 --> ScopedAnnotationsLiveVsDead.res:1:4
+  addValueReference ScopedAnnotationsLiveVsDead.res:6:6 --> ScopedAnnotationsLiveVsDead.res:2:4
+  addValueReference ScopedAnnotationsLiveVsDead.res:12:4 --> ScopedAnnotationsLiveVsDead.res:11:4
+  addValueReference ScopedAnnotationsLiveVsDead.res:16:6 --> ScopedAnnotationsLiveVsDead.res:12:4
+  Scanning ScopedAnnotationsOverride.cmt Source:ScopedAnnotationsOverride.res
+  addValueDeclaration +before ScopedAnnotationsOverride.res:2:6 path:+ScopedAnnotationsOverride.M
+  addValueDeclaration +live1 ScopedAnnotationsOverride.res:5:6 path:+ScopedAnnotationsOverride.M
+  addValueDeclaration +nestedLive ScopedAnnotationsOverride.res:8:8 path:+ScopedAnnotationsOverride.M.NestedInLive
+  addValueDeclaration +dead1 ScopedAnnotationsOverride.res:12:6 path:+ScopedAnnotationsOverride.M
+  addValueDeclaration +nestedDead ScopedAnnotationsOverride.res:15:8 path:+ScopedAnnotationsOverride.M.NestedInDead
+  addValueDeclaration +live2 ScopedAnnotationsOverride.res:19:6 path:+ScopedAnnotationsOverride.M
+  addValueDeclaration +afterModules ScopedAnnotationsOverride.res:22:4 path:+ScopedAnnotationsOverride
   Scanning Shadow.cmt Source:Shadow.res
   addValueDeclaration +test Shadow.res:2:4 path:+Shadow
   addValueDeclaration +test Shadow.res:5:4 path:+Shadow
@@ -1807,9 +1832,9 @@
   
 Forward Liveness Analysis
 
-    decls: 641
+    decls: 659
     roots(external targets): 122
-    decl-deps: decls_with_out=371 edges_to_decls=248
+    decl-deps: decls_with_out=375 edges_to_decls=252
 
     Root (annotated): Value +Hooks.+default
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
@@ -1821,6 +1846,7 @@ Forward Liveness Analysis
     Root (external ref): Value +CreateErrorHandler2.Error2.+notification
     Root (annotated): Value +DeadTest.+fortyTwoButExported
     Root (annotated): Value +Docstrings.+grouped
+    Root (annotated): Value +ScopedAnnotationsOverride.M.+live1
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Function
     Root (annotated): Value +Tuples.+marry
@@ -1938,6 +1964,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Uncurried.+callback
     Root (annotated): Value +TestPromise.+convert
     Root (external ref): Value +EmptyArray.Z.+make
+    Root (annotated): Value +ScopedAnnotationsLiveVsDead.LiveScope.+root
     Root (external ref): Value +Newton.+result
     Root (annotated): Value +Records.+findAllAddresses
     Root (annotated): Value +Variants.+id2
@@ -1947,6 +1974,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Hooks.Inner.+make
     Root (annotated): Value +Uncurried.+curried3
     Root (external ref): Value +OptArg.+twoArgs
+    Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed1
     Root (external ref): RecordLabel +Records.business2.address2
     Root (annotated): Value +Tuples.+testTuple
     Root (annotated): Value +Records.+testMyObj2
@@ -1970,12 +1998,14 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImport.+make
     Root (external ref): RecordLabel +Unison.t.break
     Root (annotated): Value +ImportJsValue.+default
+    Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (annotated): Value +Types.+optFunction
     Root (annotated): Value +Records.+getPayloadRecordPlusOne
     Root (annotated): Value +Types.+swap
     Root (annotated): Value +Types.+jsonStringify
     Root (annotated): RecordLabel +ImportHookDefault.props.person
     Root (annotated): Value +Variants.+saturday
+    Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed3
     Root (annotated): Value +Records.+findAddress2
     Root (annotated): Value +Records.+someBusiness
     Root (external ref): RecordLabel +Hooks.vehicle.name
@@ -2025,6 +2055,7 @@ Forward Liveness Analysis
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Value
     Root (annotated): Value +Records.+testMyObj
     Root (external ref): VariantCase DeadTypeTest.deadType.InBoth
+    Root (annotated): Value +ScopedAnnotationsOverride.M.+live2
     Root (annotated): Value +Records.+testMyRecBsAs2
     Root (annotated): Value +VariantsWithPayload.+testManyPayloads
     Root (annotated): Value +FirstClassModules.+someFunctorAsFunction
@@ -2049,6 +2080,7 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+useColor
     Root (annotated): Value +Records.+getPayload
     Root (external ref): VariantCase +Unison.break.IfNeed
+    Root (annotated): Value +ScopedAnnotationsOverride.M.NestedInLive.+nestedLive
     Root (external ref): Value +FirstClassModules.M.+y
     Root (annotated): Value +ModuleAliases.+testInner2
     Root (annotated): RecordLabel +ImportHooks.props.person
@@ -2103,6 +2135,7 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
     Root (annotated): RecordLabel +ImportHookDefault.props.children
     Root (annotated): Value +TestModuleAliases.+testInner1
+    Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed2
     Root (annotated): Value +VariantsWithPayload.+testWithPayload
     Root (annotated): Value +Types.+testConvertNull
     Root (annotated): Value +Records.+getPayloadRecord
@@ -2112,7 +2145,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
   
-  300 roots found
+  308 roots found
 
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
@@ -2130,6 +2163,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
     Propagate: ErrorHandler.Make.+notify -> +ErrorHandler.Make.+notify
     Propagate: +References.+make -> +References.R.+make
+    Propagate: +ScopedAnnotationsLiveVsDead.LiveScope.+root -> +ScopedAnnotationsLiveVsDead.+middleLive
     Propagate: +Newton.+result -> +Newton.+newton
     Propagate: +Newton.+result -> +Newton.+fPrimed
     Propagate: +Records.+findAllAddresses -> +Records.+getOpt
@@ -2148,6 +2182,7 @@ Forward Liveness Analysis
     Propagate: DeadValueTest.+valueAlive -> +DeadValueTest.+valueAlive
     Propagate: +References.R.+get -> +References.R.+get
     Propagate: +References.R.+make -> +References.R.+make
+    Propagate: +ScopedAnnotationsLiveVsDead.+middleLive -> +ScopedAnnotationsLiveVsDead.+leafLive
     Propagate: +Newton.+newton -> +Newton.+/
     Propagate: +Newton.+newton -> +Newton.+current
     Propagate: +Newton.+newton -> +Newton.+iterateMore
@@ -2160,7 +2195,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  45 declarations marked live via propagation
+  47 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -3199,6 +3234,10 @@ Forward Liveness Analysis
         -> +Newton.+newton
         -> +Newton.+f
         -> +Newton.+fPrimed
+  Live (annotated) Value +OcamlWarningSuppressToplevel.+suppressed1
+  Live (annotated) Value +OcamlWarningSuppressToplevel.+suppressed2
+  Live (annotated) Value +OcamlWarningSuppressToplevel.M.+suppressed3
+  Live (annotated) Value +OcamlWarningSuppressToplevel.M.+suppressed4
   Dead VariantCase +Opaque.opaqueFromRecords.A
   Live (annotated) Value +Opaque.+noConversion
   Live (annotated) Value +Opaque.+testConvertNestedRecordFromOtherFile
@@ -3386,6 +3425,34 @@ Forward Liveness Analysis
       deps: in=0 (live=0 dead=0) out=2
         -> +RepeatedLabel.tabState.a
         -> +RepeatedLabel.tabState.b
+  Live (propagated) Value +ScopedAnnotationsLiveVsDead.+leafLive
+      deps: in=1 (live=1 dead=0) out=0
+        <- +ScopedAnnotationsLiveVsDead.+middleLive (live)
+  Live (propagated) Value +ScopedAnnotationsLiveVsDead.+middleLive
+      deps: in=1 (live=1 dead=0) out=1
+        <- +ScopedAnnotationsLiveVsDead.LiveScope.+root (live)
+        -> +ScopedAnnotationsLiveVsDead.+leafLive
+  Live (annotated) Value +ScopedAnnotationsLiveVsDead.LiveScope.+root
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ScopedAnnotationsLiveVsDead.+middleLive
+  Dead Value +ScopedAnnotationsLiveVsDead.+stillDeadOutside
+  Dead Value +ScopedAnnotationsLiveVsDead.+leafDead
+      deps: in=1 (live=0 dead=1) out=0
+        <- +ScopedAnnotationsLiveVsDead.+middleDead (dead)
+  Dead Value +ScopedAnnotationsLiveVsDead.+middleDead
+      deps: in=1 (live=0 dead=1) out=1
+        <- +ScopedAnnotationsLiveVsDead.DeadScope.+root (dead)
+        -> +ScopedAnnotationsLiveVsDead.+leafDead
+  Dead Value +ScopedAnnotationsLiveVsDead.DeadScope.+root
+      deps: in=0 (live=0 dead=0) out=1
+        -> +ScopedAnnotationsLiveVsDead.+middleDead
+  Dead Value +ScopedAnnotationsOverride.M.+before
+  Live (annotated) Value +ScopedAnnotationsOverride.M.+live1
+  Live (annotated) Value +ScopedAnnotationsOverride.M.NestedInLive.+nestedLive
+  Dead Value +ScopedAnnotationsOverride.M.+dead1
+  Dead Value +ScopedAnnotationsOverride.M.NestedInDead.+nestedDead
+  Live (annotated) Value +ScopedAnnotationsOverride.M.+live2
+  Dead Value +ScopedAnnotationsOverride.+afterModules
   Live (annotated) Value +Shadow.+test
   Live (annotated) Value +Shadow.+test
   Live (annotated) Value +Shadow.M.+test
@@ -4596,6 +4663,30 @@ Forward Liveness Analysis
   tabState.f is a record label never used to read a value
 
   Warning Dead Value
+  ScopedAnnotationsLiveVsDead.res:9:1-24
+  stillDeadOutside is never used
+
+  Warning Dead Value
+  ScopedAnnotationsLiveVsDead.res:11:1-16
+  leafDead is never used
+
+  Warning Dead Value
+  ScopedAnnotationsLiveVsDead.res:12:1-25
+  middleDead is never used
+
+  Warning Dead Value
+  ScopedAnnotationsOverride.res:2:3-16
+  M.before is never used
+
+  Warning Dead Module
+  ScopedAnnotationsOverride.res:0:1
+  ScopedAnnotationsOverride is a dead module as all its items are dead.
+
+  Warning Dead Value
+  ScopedAnnotationsOverride.res:22:1-20
+  afterModules is never used
+
+  Warning Dead Value
   Shadow.res:11:3-22
   M.test is never used
 
@@ -4847,4 +4938,4 @@ Forward Liveness Analysis
   OptArg.res:26:1-70
   optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 305 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:174, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 311 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:87, Warning Dead Value:179, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)

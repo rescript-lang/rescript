@@ -1875,17 +1875,14 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> Tfunction #1";
-    let shouldPrintAsUncurried = false in
     let mkFnArgs ~asSnippet =
       match args with
-      | [(Nolabel, argTyp)] when TypeUtils.typeIsUnit argTyp ->
-        if shouldPrintAsUncurried then "(. )" else "()"
+      | [(Nolabel, argTyp)] when TypeUtils.typeIsUnit argTyp -> "()"
       | [(Nolabel, argTyp)] ->
         let varName =
           CompletionExpressions.prettyPrintFnTemplateArgName ~env ~full argTyp
         in
-        let argsText = if asSnippet then "${1:" ^ varName ^ "}" else varName in
-        if shouldPrintAsUncurried then "(. " ^ argsText ^ ")" else argsText
+        if asSnippet then "${1:" ^ varName ^ "}" else varName
       | _ ->
         let currentUnlabelledIndex = ref 0 in
         let argsText =
@@ -1908,7 +1905,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
                      else varName))
           |> String.concat ", "
         in
-        "(" ^ if shouldPrintAsUncurried then ". " else "" ^ argsText ^ ")"
+        "(" ^ argsText ^ ")"
     in
     let isAsync =
       match TypeUtils.extractType ~env ~package:full.package returnType with

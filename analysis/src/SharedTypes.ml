@@ -392,7 +392,6 @@ and completionType =
       env: QueryEnv.t;
       args: typedFnArg list;
       typ: Types.type_expr;
-      uncurried: bool;
       returnType: Types.type_expr;
     }
 
@@ -519,7 +518,6 @@ type package = {
   pathsForModule: (file, paths) Hashtbl.t;
   namespace: string option;
   opens: path list;
-  uncurried: bool;
   rescriptVersion: int * int;
   autocomplete: file list Misc.StringMap.t;
 }

@@ -384,7 +384,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       clear Clflags.keep_locs,
       "*internal* Do not keep locations in .cmi files" );
     ("-nopervasives", set Clflags.nopervasives, "*internal*");
-    ("-uncurried", unit_call (fun () -> ()), "*internal* deprecated");
     ( "-v",
       unit_call print_version_string,
       "Print compiler version and location of standard library and exit" );

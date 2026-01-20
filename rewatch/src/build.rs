@@ -421,15 +421,6 @@ fn log_config_warnings(build_state: &BuildCommandState) {
         if package.is_local_dep {
             package.config.get_deprecations().iter().for_each(
                 |deprecation_warning| match deprecation_warning {
-                    config::DeprecationWarning::BsDependencies => {
-                        log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
-                    }
-                    config::DeprecationWarning::BsDevDependencies => {
-                        log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
-                    }
-                    config::DeprecationWarning::BscFlags => {
-                        log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
-                    }
                     config::DeprecationWarning::PackageSpecsEs6 => {
                         log_deprecated_package_specs_module("es6");
                     }
@@ -452,14 +443,6 @@ fn log_config_warnings(build_state: &BuildCommandState) {
                 .for_each(|field| log_unknown_config_field(&package.name, field));
         }
     });
-}
-
-fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_name: &str) {
-    let warning = format!(
-        "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
-        Use '{new_field_name}' instead."
-    );
-    eprintln!("\n{}", style(warning).yellow());
 }
 
 fn log_deprecated_package_specs_module(module_name: &str) {

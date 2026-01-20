@@ -50,12 +50,6 @@ let newBsPackage ~rootPath =
         | Some (String suffix) -> suffix
         | _ -> ".js"
       in
-      let uncurried =
-        let ns = config |> Json.get "uncurried" in
-        match (rescriptVersion, ns) with
-        | (major, _), None when major >= 11 -> Some true
-        | _, ns -> Option.bind ns Json.bool
-      in
       let genericJsxModule =
         let jsxConfig = config |> Json.get "jsx" in
         match jsxConfig with
@@ -87,7 +81,6 @@ let newBsPackage ~rootPath =
           | _ -> Misc.StringMap.empty)
         | None -> Misc.StringMap.empty
       in
-      let uncurried = uncurried = Some true in
       match libBs with
       | None -> None
       | Some libBs ->
@@ -183,7 +176,6 @@ let newBsPackage ~rootPath =
              pathsForModule;
              opens;
              namespace;
-             uncurried;
              autocomplete;
            }))
     | None -> None
