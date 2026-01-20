@@ -1,33 +1,40 @@
-/*** This is a module comment */
+@@res.doc(" This is a module comment ")
 
-/*** This is another module comment */
+@@res.doc(" This is another module comment ")
 
-/** This is a doc ✅ comment */
+@res.doc(" This is a doc â comment ")
 let z = 34
 
-/***And this is a res.doc module annotation*/
+@@res.doc("And this is a res.doc module annotation")
 
-/**And this is a res.doc ✅ annotation*/
+@res.doc("And this is a res.doc â annotation")
 let q = 11
 
-/** This
+@res.doc(" This
   * is a multi-line
   multiline doc comment
-  */
+  ")
 type h = int
 
 /* comment and attribute */
-@foo let x = 10
-
-/** doc comment and attribute */
-@foo let x = 10
-
-/** doc comment and 3 attributes */
-@foo @bar @baz let x = 10
-
-/** doc comment and 0 attributes */
+@foo
 let x = 10
 
-type pathItem = {}
-/** Issue 6844: doc comment before "and" */
-and operation = {}
+@res.doc(" doc comment and attribute ")
+@foo
+let x = 10
+
+@res.doc(" doc comment and 3 attributes ")
+@foo
+@bar
+@baz
+let x = 10
+
+@res.doc(" doc comment and 0 attributes ")
+let x = 10
+
+type pathItem = {
+}@res.doc(" Issue 6844: doc comment before "and" ")
+
+and operation = {
+}

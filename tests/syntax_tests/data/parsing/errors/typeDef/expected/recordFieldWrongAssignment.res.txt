@@ -5,7 +5,8 @@
   1 │ type t = {foo=string}
   2 │ 
 
-  Record fields in type declarations use `:`. Example: `{field: string}`
+  Did you forget a `:` here?
 
 type nonrec t = {
-  foo: string }
+  foo: [%%rescript.typehole] }
+;;string

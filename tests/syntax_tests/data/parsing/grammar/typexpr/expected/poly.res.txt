@@ -1,8 +1,1 @@
-external getLogger :
-  unit ->
-    <
-      log: 'a -> unit (a:1)  ;log2: 'a . int -> int (a:1)  ;log3: 'a 'b .
-                                                                    'a ->
-                                                                    'b -> int (a:2)
-                                                                >  (a:1) =
-    "./src/logger.mock.js"
+external getLogger : unit -> <log: 'a -> unit (a:1); log2: 'a . int -> int (a:1); log3: 'a 'b . 'a -> 'b -> int (a:1) (a:1)> (a:1) = "./src/logger.mock.js"

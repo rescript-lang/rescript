@@ -1,26 +1,16 @@
 
   Syntax error!
-  syntax_tests/data/parsing/infiniteLoops/jsxChildren.res:1:22
+  syntax_tests/data/parsing/infiniteLoops/jsxChildren.res:5:18
 
-  1 │ type action = AddUser<string>
-  2 │ 
   3 │ let a: action = AddUser("test")
+  4 │ 
+  5 │ etype s = {x:list<i>}
+  6 │ 
 
-  consecutive statements on a line must be separated by ';' or a newline
+  Did you forget a `}` here?
 
-
-  Syntax error!
-  syntax_tests/data/parsing/infiniteLoops/jsxChildren.res:1:22-29
-
-  1 │ type action = AddUser<string>
-  2 │ 
-  3 │ let a: action = AddUser("test")
-
-  Missing </string>
-
-type nonrec action =
-  | AddUser 
-;;<string>
-let (a : action) = AddUser {js|test|js}
+type nonrec action = string AddUser
+let (a : action) = AddUser "test"
 ;;etype
-;;s = { x = ((list < i) > ([%rescript.exprhole ])) }
+;;(= s {x = list})
+;;<jsx>

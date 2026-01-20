@@ -1,1 +1,1 @@
-%%private(let x = 34)
+%%\"private"(let x = 34)

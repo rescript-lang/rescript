@@ -1,6 +1,7 @@
-node.left->peekMinNode
+node.left -> peekMinNode
+
 // same as the above
-node.left->peekMinNode
+node.left -> peekMinNode
 
 // field access has higher precedence than unary -
 let x = -a.bar
@@ -11,3 +12,4 @@ let a = 1
 let b = 2
 // a
 // b
+

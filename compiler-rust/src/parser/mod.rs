@@ -54,6 +54,7 @@ pub mod token;
 pub mod typ;
 pub mod utf8;
 pub mod sexp;
+pub mod jsx_ppx;
 
 // Re-exports
 pub use ast::*;

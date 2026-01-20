@@ -47,21 +47,43 @@ impl InlineTypesContext {
 
 /// Convert a module type to a package type (for Ptyp_package).
 /// For a simple module type identifier like `T`, creates `(T, [])`.
-/// For more complex module types, extracts the identifier.
+/// For `T with type t = int`, creates `(T, [(t, int)])`.
 fn module_type_to_package(mt: &ModuleType) -> PackageType {
-    let lid = match &mt.pmty_desc {
-        ModuleTypeDesc::Pmty_ident(lid) => lid.clone(),
-        ModuleTypeDesc::Pmty_with(base, _) => {
-            // For "T with type t = int", use T
-            if let ModuleTypeDesc::Pmty_ident(lid) = &base.pmty_desc {
+    match &mt.pmty_desc {
+        ModuleTypeDesc::Pmty_ident(lid) => (lid.clone(), vec![]),
+        ModuleTypeDesc::Pmty_with(base, constraints) => {
+            // For "T with type t = int", extract base identifier and constraints
+            let lid = if let ModuleTypeDesc::Pmty_ident(lid) = &base.pmty_desc {
                 lid.clone()
             } else {
                 with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone())
-            }
+            };
+
+            // Convert WithConstraint to package type constraints
+            let pkg_constraints: Vec<(Loc<Longident>, CoreType)> = constraints
+                .iter()
+                .filter_map(|c| match c {
+                    WithConstraint::Pwith_type(type_lid, type_decl) => {
+                        // Extract the manifest type from the type declaration
+                        type_decl.ptype_manifest.as_ref().map(|manifest| {
+                            (type_lid.clone(), manifest.clone())
+                        })
+                    }
+                    WithConstraint::Pwith_typesubst(type_lid, type_decl) => {
+                        // Type substitution also has a manifest
+                        type_decl.ptype_manifest.as_ref().map(|manifest| {
+                            (type_lid.clone(), manifest.clone())
+                        })
+                    }
+                    // Module constraints are not relevant for package types
+                    _ => None,
+                })
+                .collect();
+
+            (lid, pkg_constraints)
         }
-        _ => with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone()),
-    };
-    (lid, vec![])
+        _ => (with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone()), vec![]),
+    }
 }
 
 // ============================================================================

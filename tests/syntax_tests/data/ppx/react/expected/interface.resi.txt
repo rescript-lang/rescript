@@ -1,14 +1,15 @@
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/interface.resi", line: 7, bol: 94, cnum: 96 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/interface.resi", line: 8, bol: 113, cnum: 146 }, loc_ghost: false })
 module A: {
   @res.jsxComponentProps
   type props<'x> = {
-    x: 'x,
+    x: 'x
   }
   let make: React.component<props<string>>
 }
 
 module NoProps: {
   @res.jsxComponentProps
-  type props = {}
-
+  type props = {
+  }
   let make: React.component<props>
 }

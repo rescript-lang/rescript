@@ -1,4 +1,5 @@
 let x = \"type"
+
 let x = Extension.Type.\"type"
 
 let \"+++" = (a, b) => a + b
@@ -6,11 +7,11 @@ let \"+++" = (a, b) => a + b
 \"+++"(~a=\"let", \"module", ~\"type")
 
 switch \"type" {
-| () => ()
+  | () => ()
 }
 
 try \"type" catch {
-| () => ()
+  | () => ()
 }
 
 for pat in \"type" to \"let" {
@@ -28,55 +29,50 @@ while \"let" {
 }
 
 let x = (\"type", \"module")
+
 let x = [\"type", \"module"]
+
 let x = list{\"type", \"module"}
+
 let x = list{\"type", \"module", ...\"let"}
 
-Color(\"let", \"module")
+Color((\"let", \"module"))
 
-let importType = {
-  ...\"let",
-  \"type": \"module",
-}
+let importType = {...\"let", \"type": \"module"}
 
 let userType = user.\"type"
+
 let m = user.\"type".\"module"
 
 user.\"type" = \"module"
 
 let () = {
-  \"let"()
+  \"let"(())
   \"module"
 }
 
 let x = (\"type": \"module")
 
-assert(\"let")
+assert \"let"
 
-%let
-%let(`console.log`)
+%\"let"
+
+%\"let"(`console.log`)
 
 @let
 let x = 1
 
-let x =
-  <div \"aria-foo"=\"type">
-    \"module"
-    \"let"
-  </div>
+let x = <div \"aria-foo"={\"type"}>{\"module"}{\"let"}</div>
 
 type dict = {
   key: int,
-  \"KEY": int,
+  KEY: int
 }
 
-let dict = {
-  key: 42,
-  \"KEY": 42,
+let dict = {key: 42, KEY: 42}
+
+type t = {
+  ð: int
 }
 
-type t = {\"🎉": int}
-
-let x = {
-  \"🎉": 42,
-}
+let x = {\"ð": 42}

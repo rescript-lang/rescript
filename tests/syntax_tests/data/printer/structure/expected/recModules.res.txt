@@ -1,24 +1,20 @@
-module rec A: Map = {
+module rec A = ({
   let m = 2
-}
-and B: Set = {
+}: Map)
+and B = ({
   let s = 1
-}
+}: Set)
 
-@onFirstBinding
-module rec A: Map = {
+module rec A = ({
   let m = 2
-}
-@onSecondBinding
-and B: Set = {
+}: Map)
+and B = ({
   let s = 1
-}
+}: Set)
 
-@onFirstBindingOfNext
-module rec A: Map = {
+module rec A = ({
   let m = 2
-}
-@onSecondBindingOfNext
-and B: Set = {
+}: Map)
+and B = ({
   let s = 1
-}
+}: Set)

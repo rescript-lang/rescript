@@ -1,94 +1,91 @@
 /* with comments */
-compilation->Plugin.buildAssets // after
-/* below compilation */ // trailing
+compilation // after
+ -> 
+/* below compilation */
+Plugin.buildAssets // trailing
 
-compilation /* same line as compilation */->Plugin.buildAssets // trailing
+
+compilation /* same line as compilation */ // trailing
+ -> Plugin.buildAssets
 
 /* with comments */
-compilation
+((compilation -> 
 /* first */
-->Plugin.buildAssets /* first trail */
+Plugin.buildAssets /* first trail */ ) -> 
 /* second */
-->Js.Json.stringify /* second trail */
+Js.Json.stringify /* second trail */ ) -> 
 /* last */
-->Node.Fs.writeFileAsUtf8Sync(path) /* last trail */
+Node.Fs.writeFileAsUtf8Sync /* last trail */ (path)
 
-if (
-  // above1
-  a == b &&
-  // trailing1
-  // above2
-  c == d &&
-  // trailing2
-  // above3
-  e == f &&
-  // trailing3
-  x
-) {
+if 
+// above1
+((((a // trailing1
+ == b) && 
+// above2
+(c // trailing2
+ == d)) && 
+// above3
+(e // trailing3
+ == f)) && x) {
   console.log("foo bar")
 }
 
-let truth = a == b && c == d /* cmt */ && e == f
+let truth = ((a /* cmt */  == b) && (c == d)) && (e == f)
 
-let truth =
-  /* c0 */ a /* c1 */ == /* c2 */ b /* c3 */ &&
-  /* c4 */ c /* c5 */ == /* c6 */ d /* c7 */ &&
-  /* c8 */ e /* c9 */ == /* c10 */ f /* c11 */
+let truth = 
+/* c0 */
+((a /* c1 */ /* c2 */ /* c3 */  == b) && 
+/* c4 */
+(c /* c5 */ /* c6 */ /* c7 */  == d)) && 
+/* c8 */
+(e /* c9 */ /* c10 */ /* c11 */  == f)
 
-promise
+promise -> 
 // TODO: This comment needs to be here
-->Js.Promise.then(payload => {
+Js.Promise.then((payload => {
   Js.log2("this payload was received", payload)
-  Js.Promise.resolve(""->Obj.magic)
-})
+  Js.Promise.resolve(("" -> Obj.magic))
+}))
 
-promise
+promise -> 
 /* TODO: This comment needs to be here */
-->Js.Promise.then(payload => {
+Js.Promise.then((payload => {
   Js.log2("this payload was received", payload)
-  Js.Promise.resolve(""->Obj.magic)
-})
+  Js.Promise.resolve(("" -> Obj.magic))
+}))
 
-promise
+(promise -> 
 // comment
-->Js.Promise.then(payload => {
-  Js.Promise.resolve(""->Obj.magic)
-})
+Js.Promise.then((payload => Js.Promise.resolve(("" -> Obj.magic))))) -> 
 // comment 2
-->Js.Promise.catch(err => {
+Js.Promise.catch((err => {
   Js.log2("this error was caught", err)
-  Js.Promise.resolve(""->Obj.magic)
-})
+  Js.Promise.resolve(("" -> Obj.magic))
+}))
 
-promise
+(promise -> 
 /* comment */
-->Js.Promise.then(payload => {
-  Js.Promise.resolve(""->Obj.magic)
-})
+Js.Promise.then((payload => Js.Promise.resolve(("" -> Obj.magic))))) -> 
 /* comment 2 */
-
 // comment 3
-
 /* comment 4 */
-->Js.Promise.catch(err => {
+Js.Promise.catch((err => {
   Js.log2("this error was caught", err)
-  Js.Promise.resolve(""->Obj.magic)
-})
+  Js.Promise.resolve(("" -> Obj.magic))
+}))
 
-promise
+promise -> 
 // TODO: This comment needs to be here
-->Js.Promise.then(payload => {
+Js.Promise.then((payload => {
   Js.log2("this payload was received", payload)
-  Js.Promise.resolve(""->Obj.magic)
-})
+  Js.Promise.resolve(("" -> Obj.magic))
+}))
 
-promise
+(promise -> 
 // comment
-->Js.Promise.then(payload => {
-  Js.Promise.resolve(""->Obj.magic)
-})
+Js.Promise.then((payload => Js.Promise.resolve(("" -> Obj.magic))))) -> 
 // comment 2
-->Js.Promise.catch(err => {
+Js.Promise.catch((err => {
   Js.log2("this error was caught", err)
-  Js.Promise.resolve(""->Obj.magic)
-})
+  Js.Promise.resolve(("" -> Obj.magic))
+}))

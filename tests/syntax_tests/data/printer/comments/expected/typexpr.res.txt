@@ -1,97 +1,77 @@
 // Ptyp_any
-type t = /* before */ _ /* after */
+type t /* before */ /* after */  = _
 
 // Ptyp_var
-type t = /* before */ 'a /* after */
+type t /* before */ /* after */  = 'a
 
 // Ptyp_tuple
-// sigh… conflicts
-
+// sighâ¦ conflicts
 // Ptyp_constr
-type t = /* before */ string /* after */
-type t = /* before */ option /* c0 */</* c1 */ string /* c2 */> /* after */
-type t = /* before */ result /* c0 */</* c1 */ success /* c2 */, /* c3 */ err /* c4 */> /* after */
+type t /* before */ /* after */  = string
+
+type t /* before */ /* c0 */ /*c1 */ /* c2 */ /* after */  = option<string>
+
+type t /* before */ /* c0 */ /*c1 */ /* c2 */ /* c3 */ /*c4*/ /* after */  = result<success, err>
 
 // Ptyp_extension
-type t = /* before */ %ext(/* before */ "here" /* after */) /* after */
+type t /* before */ /* before */ /* after */ /* after */  = %ext
 
 // Ptyp_package
-type t = /* c0 */ module(/* before */ S /* after */) /* c1 */
+type t /* c0 */ /* before */ /* after */ /* c1 */  = module(S)
 
-type t = /* c0 */ module(/* c1 */ Hashmap /* c2 */ with
-  /* c3 */ type key /* c4 */ = /* c5 */ string /* c6 */
-)
+type t /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* c6 */  = module(Hashmap with type key = string)
 
 // Ptyp_alias
-type t = /* c0 */ string /* c1 */ as 'x // after
+type t /* c0 */ /* c1 */ // after
+ = string as 'x
 
 // Ptyp_poly
 type fn = {
-  f: /* c0 */ 'a /* c1 */ 'b /* c2 */. /* c3 */ string /* c4 */,
+  f /* c0 */ /* c1 */ /* c2*/ /* c3 */ /* c4 */ : 'a 'b . string
 }
 
 type fn = {
-  /* comment1 */
-  // comment2
 }
 
-type fn = {/* comment1 */ /* comment2 */}
+/* comment1 */
+// comment2
+type fn /* comment1 */ /* comment2 */  = {
+}
 
 // Ptyp_arrow
-type add = /* before */ (
-  /* c0 */ int /* c1 */,
-  /* c2 */ int /* c3 */,
-) => /* before return */ int /* after */
-type add = /* before */ (
-  /* c0 */ ~a: int /* c1 */,
-  /* c2 */ ~b: int /* c3 */,
-) => /* before return */ int /* after */
-type multiply = /* before */ (
-  /* c0 */ ~fn: (
-    /* cinner0 */ int /* cinner1 */,
-    /* cinner2 */ int /* cinner3 */,
-  ) => /* cx */ int /* c1 */,
-  /* c2 */ ~b: int /* c3 */,
-) => int /* after */
-type make = (
-  ~activity: ActivityFlow_Activity.t,
-  ~showExpert: (string, string) => unit,
-  ~showCognitiveAspect: string => unit,
-  ~next: (string, string, array<string>) => unit,
-  ~hapticFeedback: unit => unit,
-  ~participants: Belt.Set.String.t,
-  // here
+type add /* before */ /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* before return */ /* after */  = int => int => int
 
-  // above
-  /* c0 */ ~openPhotoFeed: /* c1 */ (
-    /* c2 */ ~feedId: /* c3 */ option<string> /* c4 */,
-    /* c5 */ unit /* c6 */,
-  ) => /* c7 */ unit /* c8 */,
-  // only provide this when it shows a random activity
-  ~getAnother: unit => unit=?,
-) => React.element
+type add /* before */ /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* before return */ /* after */  = (~a: int, ~b: int) => int
+
+type multiply /* before */ /* c0 */ /* cinner0 */ /* cinner1 */ /* cinner2 */ /*cinner3 */ /*cx*/ /* c1 */ /* c2 */ /* c3 */ /* after */  = (~fn: int => int => int, ~b: int) => int
+
+type make = (~activity: ActivityFlow_Activity.t, ~showExpert: string => string => unit, ~showCognitiveAspect: string => unit, ~next: string => string => array<string> => unit, ~hapticFeedback: unit => unit, ~participants: Belt.Set.String.t, ~openPhotoFeed: 
+// here
+// above
+/* c0 */
+/* c1 */ (~feedId: /* c2 */ /* c3 */ option<string /* c4 */ /* c5 */ /* c6 */ /* c7 */ /* c8 */ >, unit) => unit, ~getAnother: 
+// only provide this when it shows a random activity
+unit => unit=?) => React.element
 
 //type f = /* c0 */ ~a: /* c1 */ int /* c2 */ => /* c3 */  int /* c4 */
 //type f = (/* c0 */ ~a: /* c1 */ int /* c2 */) => /* c3 */  int /* c4 */
-
 // Ptyp_object
-type jsUser = /* before */ {
-  // above name
-  /* before name */ "name" /* after name */: /* before typ */ string /* after typ */,
-  // above age
-  /* before age */ "age" /* after age */: /* before int */ int /* after int */,
-} /* after */
+type jsUser /* before */  = {"name": 
+// above name
+/* before name */
+/* after name */ /* before typ */ string /* after typ */ , "age": 
+// above age
+/* before age */
+/* after age */ /*before int */ int /*after int */ } /* after */ 
 
-external test: (
-  // comment 1
-  ~int: int,
-  // comment 2
-  ~int: int,
-) => unit = "test"
+external test: (~int: 
+// comment 1
+int, ~int: 
+// comment 2
+int) => unit = "test"
 
-external another_test: (
-  // comment 1
-  int,
-  // comment 2
-  int,
-) => unit = "test"
+external another_test: 
+// comment 1
+int => 
+// comment 2
+int => unit = "test"

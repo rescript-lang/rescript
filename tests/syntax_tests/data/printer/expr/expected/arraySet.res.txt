@@ -1,5 +1,3 @@
-numbers[20] = 10
+@res.array.set numbers[20] = 10
 
-streetsAddressBookThisIsALongName[
-  streets->Belt.Array.length - 1
-] = streetWithAVeryVeryVerrrrrrryVeeeeeeeeeryLongName
+@res.array.set streetsAddressBookThisIsALongName[((streets -> Belt.Array.length) - 1)] = streetWithAVeryVeryVerrrrrrryVeeeeeeeeeryLongName

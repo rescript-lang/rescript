@@ -1,1 +1,10 @@
-type nonrec ('a, 'b) t = ..
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/typedefinition/diamond.res:2:14
+
+  1 │ // >= shouldn't be picked up as infix op
+  2 │ type t<'a, 'b>= ..
+  3 │ 
+
+  Did you forget a `>` here?
+

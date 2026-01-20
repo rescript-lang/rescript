@@ -1,13 +1,25 @@
 let x = 'a'
+
 let x = '\\'
+
 let x = '\''
+
 let x = '\n'
+
 let x = '\t'
-let x = '\b'
+
+let x = '\u{0008}'
+
 let x = '\r'
+
 let x = ' '
-let x = '\o021'
-let x = '\xAA'
-let x = '\179'
-let heart = '\u2665'
-let smile2 = '\u{1F600}'
+
+let x = '\u{0011}'
+
+let x = '\u{00aa}'
+
+let x = '\u{00b3}'
+
+let heart = '\u{2665}'
+
+let smile2 = '\u{1f600}'

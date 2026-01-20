@@ -1,2 +1,1 @@
-@genType
 let x: int

@@ -16,7 +16,8 @@
 
 use clap::Parser as ClapParser;
 use rescript_compiler::parser::{
-    code_frame, module, print_signature, print_structure, sexp, Parser, ParserMode, Scanner,
+    code_frame, jsx_ppx, module, print_signature, print_structure, printer, sexp, Parser,
+    ParserMode, Scanner,
 };
 use std::fs;
 use std::io::{self, Write};
@@ -133,6 +134,9 @@ fn main() {
             }
         }
 
+        // Apply JSX PPX transformation
+        let signature = jsx_ppx::transform_signature(signature, args.jsx_version);
+
         // Print in requested format
         match args.print.as_str() {
             "ml" => print_signature_ml(&signature, &mut io::stdout()),
@@ -157,11 +161,15 @@ fn main() {
             }
         }
 
+        // Apply JSX PPX transformation
+        let structure = jsx_ppx::transform_structure(structure, args.jsx_version);
+
         // Print in requested format
         match args.print.as_str() {
             "ml" => print_structure_ml(&structure, &mut io::stdout()),
             "res" => {
-                let output = print_structure(&structure);
+                let output =
+                    printer::print_structure_with_comments(&structure, parser.comments());
                 let _ = io::stdout().write_all(output.as_bytes());
                 let _ = io::stdout().write_all(b"\n");
             }

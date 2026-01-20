@@ -1,65 +1,47 @@
-// Psig_value
-/* c0 */ external /* c1 */ force_gc /* c2 */: /* c3 */ unit /* c4 */ => /* c5 */ unit /* c6 */ =
-  "gc" // trailing
+let force_gc: unit => unit
 
-// Psig_type
-/* c0 */ type /* c1 */ t /* c2 */ = /* c3 */ string /* c4 */
+type t = string
 
-/* c0 */ type /* c1 */ t /* c2 */ = /* c4 */ string /* c5 */
-// above
-and /* c6 */ s /* c7 */ = /* c8 */ int /* c9 */
+type t = string
+and s = int
 
-// Pstr_typext
-/* c0 */ type /* c1 */ Foo.Bar.t /* c2 */ +=
-  | /* before Foo */ Foo // after Foo
-  | /* before Bar */ Bar // after Bar
+type Foo.Bar.t +=
+| Foo
+| Bar
 
-/* c0 */ type /* c1 */ Foo.Bar.t /* c2 */</* c1.1 */ 'x /* c2.2 */> +=
-  | /* before Foo */ Foo // after Foo
-  | /* before Bar */ Bar // after Bar
+type Foo.Bar.t +=
+| Foo
+| Bar
 
-/* c0 */ type /* c1 */ Foo.Bar.t /* c2 */ += /* c3 */ Bar /* c4 */
+type Foo.Bar.t +=
+| Bar
 
-/* c0 */ type /* c1 */ t /* c2 */ +=
-  | /* c3 */ Foo /* c4 */ = /* c5 */ Bar /* c6 */
+type t +=
+| Foo = Bar
 
-// Pstr_exception
-/* c0 */ exception /* c1 */ Exit /* c2 */ = /* c3 */ Terminate /* c4 */
+exception Exit = Terminate
 
-/* c0 */ exception /* c1 */ ExitEarly /* c2 */(/* c4 */ int /* c5 */, /* c6 */ int /* c7 */) // after
+exception ExitEarly(int, int)
 
-/* c0 */ exception /* c1 */ ExitEarly /* c2 */(
-  /* c4 */ int /* c5 */,
-  /* c6 */ int /* c7 */,
-): /* c8 */ gadt // after
+exception ExitEarly(int, int): gadt
 
-/* c0 */ exception /* c1 */ ExitEarly /* c2 */({
-  /* c4 */ code /* inside */: /* inside2 */ int /* c5 */,
-  /* c6 */ timeout /* inside */: /* inside2 */ int /* c7 */,
-}): /* c8 */ gadt // after
+exception ExitEarly{code: int, timeout: int}: gadt
 
-// Psig_module
-/* c0 */ module /* c1 */ X /* c2 */: /* c3 */ MT /* c4 */
+module X: MT
 
-// Psig_module
-/* c0 */ module rec /* c1 */ X1 /* c2 */: /* c3 */ MT1
-// above
-and /* c4 */ Xn /* c5 */: /* c6 */ MTn /* c7 */
+module rec X1: MT1
+and Xn: MTn
 
-// Psig_modtype
-/* c0 */ module type /* c1 */ S /* c2 */ = /* c3 */ MT /* c4 */
-/* c0 */ module type /* c1 */ S /* c2 */
+module type S = MT
 
-// Psig_open
-/* c0 */ open /* c1 */ Belt /* c2 */
+module type S
 
-// Psig_include
-/* c0 */ include /* c1 */ {
-  let a /* inside */: int
-} // after
+open Belt
 
-// Psig_attribute
-/* c0 */ @@attr(/* c1 */ payload /* c2 */) /* c3 */
+include {
+  let a: int
+}
 
-// Psig_extension
-/* c0 */ @@extension(/* c1 */ payload /* c2 */) /* c3 */
+@@attr(payload)
+
+@@extension(payload)

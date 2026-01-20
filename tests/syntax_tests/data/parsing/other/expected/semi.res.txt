@@ -1,4 +1,3 @@
-type nonrec t =
-  | Red 
+type nonrec t = Red
 ;;Red
-;;foo := 1
+;;(:= foo 1)

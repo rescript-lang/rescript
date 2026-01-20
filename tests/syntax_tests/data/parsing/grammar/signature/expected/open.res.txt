@@ -1,11 +1,1 @@
-module type Signature  =
-  sig
-    open Belt
-    open! Belt
-    open Belt.Array
-    open! Belt.Array
-    open Belt[@@attr ]
-    open! Belt[@@attr ]
-    open Belt.List[@@attr ]
-    open! Belt.List[@@attr ]
-  end
+module type Signature = sig open Belt open Belt open Belt.Array open Belt.Array open Belt open Belt open Belt.List open Belt.List end

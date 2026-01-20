@@ -17,41 +17,40 @@ let name = if true {
 }
 
 let () = if true {
-  let a = 1
-  let b = 2
-  open Belt
-  sideEffect()
-  ()
+  {
+    let a = 1
+    let b = 2
+    open Belt
+    sideEffect(())
+    ()
+  }
 } else {
-  let a = 5
-  let b = 6
-  open React
-  render()
-  ()
+  {
+    let a = 5
+    let b = 6
+    open React
+    render(())
+    ()
+  }
 }
 
-let x =
-  @attr
-  if truth {
-    sideEffect()
-  }
+let x = @attr (if truth {
+  sideEffect(())
+})
 
-if inclusions[index] = (uid, url) {
+if @res.array.set inclusions[index] = (uid, url) {
   onChange(inclusions)
 }
-
 // Basic
 // if let Some(x) = foo() {
 // doSomethingWithX(x)
 // }
-
 // Else branch
 // if let Some(x) = foo(){
 // doSomethingWithX(x)
 // } else {
 // doSomethingElse()
 // }
-
 // Else-if support
 // if let Some(x) = foo(){
 // doSomethingWithX(x)
@@ -60,7 +59,6 @@ if inclusions[index] = (uid, url) {
 // } else {
 // doSomethingElse()
 // }
-
 // Mixed conditions, pattern start
 // if let Some(x) = foo(){
 // doSomethingWithX(x)
@@ -69,7 +67,6 @@ if inclusions[index] = (uid, url) {
 // } else {
 // doSomethingElse()
 // }
-
 // Mixed conditions, condition start
 // if n > 10 {
 // doSomethingWithForN()
@@ -78,7 +75,6 @@ if inclusions[index] = (uid, url) {
 // } else {
 // doSomethingElse()
 // }
-
 // Maintains attrs correctly
 // if n > 10 {
 // @aa
@@ -90,7 +86,6 @@ if inclusions[index] = (uid, url) {
 // @ff
 // doSomethingElse()
 // }
-
 // if let Some(x) = foo() {
 // doSomethingWithX(x)
 // } else if let Some(y) = bar() {
@@ -98,21 +93,18 @@ if inclusions[index] = (uid, url) {
 // } else if let Some(z) = baz() {
 // doSomethingWithZ(z)
 // }
-
 // full destructuring
 // if let Some(Thing(With({
 // many: Internal([Components, q]),
 // }))) as p = foo() {
 // doSomethingWithE(e)
 // }
-
 // Assignment
 // let a = if let Some(x) = foo() {
 // x
 // } else {
 // 123
 // }
-
 // Nesting
 // let getZ = nested =>
 // if let Some(point) = nested.origin {
@@ -124,7 +116,6 @@ if inclusions[index] = (uid, url) {
 // } else {
 // 0
 // }
-
 // Deep nesting
 // let getZ = nested =>
 // if let Some(nested) = nested.a {
@@ -158,20 +149,16 @@ if inclusions[index] = (uid, url) {
 // } else {
 // 0
 // }
-
 // Break testing
 // if let Some(suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName) = anotherSuuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName() {
 // foo()
 // }
-
 // if let Some(suuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName) = anotherSuuuuuuuuuuuuuuuuuuuuuuuuuuuperLongNameanotherSuuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName(withSomeArgsThatAreAlsoLarge, withManyArgsThatAreAlsoLarge) {
 // foo()
 // }
-
 // if let { suuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName, suuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName2, suuuuuuuuuuuuuuuuuuuuuuuuuuuperLongName3 } = buildMyRecord() {
 // foo()
 // }
-
 // Complex nesting
 // if let Some(Thing(With({many: Internal([Components, q])}))) as p = foo() {
 // if let Other(Thing(With({many: Internal([Components, q])}))) as p = foo() {
@@ -187,7 +174,6 @@ if inclusions[index] = (uid, url) {
 // }))) as p = foo() {
 // doSomethingWithE(e)
 // }
-
 // Ternary
 // let a = b
 // ? if let Some(x) = foo() {
@@ -196,7 +182,6 @@ if inclusions[index] = (uid, url) {
 // 2
 // }
 // : 3
-
 // let a = b
 // ? 1
 // : if let Some(x) = foo() {
@@ -204,7 +189,6 @@ if inclusions[index] = (uid, url) {
 // } else {
 // 2
 // }
-
 // let a = b
 // ? if let Some(x) = foo() {
 // 1
@@ -216,10 +200,10 @@ if inclusions[index] = (uid, url) {
 // } else {
 // 2
 // }
-
 // print parens correct
 // if let Some(x) = (3: option<int>) {
 // (x: int)
 // } else {
 // (20: int)
 // }
+

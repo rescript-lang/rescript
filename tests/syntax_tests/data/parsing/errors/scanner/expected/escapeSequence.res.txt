@@ -1,2 +1,2 @@
-let x = {js|\x37|js}
-let x = {js|\x7b|js}
+let x = "\\x37"
+let x = "\\x7b"

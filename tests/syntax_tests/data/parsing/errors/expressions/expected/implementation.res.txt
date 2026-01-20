@@ -8,10 +8,7 @@
   8 │ module LicenseList = {
   9 │ 
 
-  I'm not sure what to parse here when looking at "}".
+  Unexpected token: Rbrace
 
-module InstallerDownload =
-  struct
-    let make [arity:1]() = ((<div />)[@res.braces ])[@@react.component ]
-  end
-module LicenseList = struct  end
+module InstallerDownload = struct let make = (fun () -> <jsx>) end
+module LicenseList = struct end

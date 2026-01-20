@@ -112,9 +112,31 @@ impl Printer {
         }
     }
 
-    /// Write an identifier, escaping it if it's a keyword.
+    /// Check if an identifier needs escaping because it contains non-identifier characters.
+    /// Valid identifiers start with a-z, A-Z, or _ and continue with a-z, A-Z, 0-9, ', or _.
+    fn needs_exotic_escaping(s: &str) -> bool {
+        if s.is_empty() {
+            return true;
+        }
+        let bytes = s.as_bytes();
+        // First character must be a-z, A-Z, or _
+        match bytes[0] {
+            b'a'..=b'z' | b'A'..=b'Z' | b'_' => {}
+            _ => return true,
+        }
+        // Subsequent characters must be a-z, A-Z, 0-9, ', or _
+        for &b in &bytes[1..] {
+            match b {
+                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'\'' | b'_' => {}
+                _ => return true,
+            }
+        }
+        false
+    }
+
+    /// Write an identifier, escaping it if it's a keyword or exotic.
     /// Keywords like "switch" need to be written as \"switch" in ReScript.
-    /// Escaped identifiers are stored in the AST with quotes, e.g. "switch"
+    /// Exotic identifiers like "=" also need escaping: \"="
     fn write_ident(&mut self, s: &str) {
         // Check if the identifier is already in escaped form (e.g. "switch")
         if s.starts_with('"') && s.ends_with('"') && s.len() > 2 {
@@ -123,6 +145,11 @@ impl Printer {
             self.write(s);
         } else if Token::is_keyword_txt(s) && s != "true" && s != "false" {
             // Escape keywords except true/false which are boolean literals
+            self.write("\\\"");
+            self.write(s);
+            self.write("\"");
+        } else if Self::needs_exotic_escaping(s) {
+            // Escape exotic identifiers containing non-identifier characters
             self.write("\\\"");
             self.write(s);
             self.write("\"");
@@ -321,6 +348,78 @@ impl Printer {
         )
     }
 
+    /// Collect list expressions from a cons chain (`::`) into a vector of expressions
+    /// and an optional spread expression.
+    ///
+    /// For `list{a, b, c}` represented as `a :: b :: c :: []`, returns `([a, b, c], None)`.
+    /// For `list{a, b, ...rest}` represented as `a :: b :: rest`, returns `([a, b], Some(rest))`.
+    fn collect_list_expressions(expr: &Expression) -> (Vec<&Expression>, Option<&Expression>) {
+        let mut acc = Vec::new();
+        let mut current = expr;
+
+        loop {
+            match &current.pexp_desc {
+                // Empty list `[]` - end of list, no spread
+                ExpressionDesc::Pexp_construct(lid, _)
+                    if matches!(&lid.txt, Longident::Lident(s) if s == "[]") =>
+                {
+                    return (acc, None);
+                }
+                // Cons cell `::` with tuple argument (head, tail)
+                ExpressionDesc::Pexp_construct(lid, Some(arg))
+                    if matches!(&lid.txt, Longident::Lident(s) if s == "::") =>
+                {
+                    if let ExpressionDesc::Pexp_tuple(elems) = &arg.pexp_desc {
+                        if elems.len() == 2 {
+                            acc.push(&elems[0]);
+                            current = &elems[1];
+                            continue;
+                        }
+                    }
+                    // Malformed cons - treat as spread
+                    return (acc, Some(current));
+                }
+                // Not a list constructor - this is a spread
+                _ => {
+                    return (acc, Some(current));
+                }
+            }
+        }
+    }
+
+    /// Collect list patterns from a cons chain (`::`) into a vector of patterns
+    /// and a tail pattern.
+    ///
+    /// For `list{a, b, c}` represented as `a :: b :: c :: []`, returns `([a, b, c], [])`.
+    /// For `list{a, b, ...rest}` represented as `a :: b :: rest`, returns `([a, b], rest)`.
+    fn collect_list_patterns(pat: &Pattern) -> (Vec<&Pattern>, &Pattern) {
+        let mut acc = Vec::new();
+        let mut current = pat;
+
+        loop {
+            match &current.ppat_desc {
+                // Cons cell `::` with tuple argument (head, tail)
+                PatternDesc::Ppat_construct(lid, Some(arg))
+                    if matches!(&lid.txt, Longident::Lident(s) if s == "::") =>
+                {
+                    if let PatternDesc::Ppat_tuple(elems) = &arg.ppat_desc {
+                        if elems.len() == 2 {
+                            acc.push(&elems[0]);
+                            current = &elems[1];
+                            continue;
+                        }
+                    }
+                    // Malformed cons - return as-is
+                    return (acc, current);
+                }
+                // Not a cons constructor - return the tail
+                _ => {
+                    return (acc, current);
+                }
+            }
+        }
+    }
+
     /// Print a block body expression without adding outer braces.
     /// Used for printing the continuation of let/module/open/exception.
     fn print_block_body(&mut self, expr: &Expression) {
@@ -407,7 +506,8 @@ impl Printer {
 
     /// Print a structure item.
     pub fn print_structure_item(&mut self, item: &StructureItem) {
-        self.print_attributes(&item.pstr_desc.get_attributes());
+        // Print attributes on the same line as the item (not on separate lines)
+        self.print_attributes_with_sep(&item.pstr_desc.get_attributes(), false);
         match &item.pstr_desc {
             StructureItemDesc::Pstr_eval(expr, _attrs) => {
                 if matches!(&expr.pexp_desc, ExpressionDesc::Pexp_sequence(..)) {
@@ -485,6 +585,8 @@ impl Printer {
     /// Print let bindings.
     fn print_let_bindings(&mut self, rec_flag: RecFlag, bindings: &[ValueBinding]) {
         for (i, binding) in bindings.iter().enumerate() {
+            // Print attributes before the let keyword (each on separate line)
+            self.print_attributes(&binding.pvb_attributes);
             if i == 0 {
                 self.write("let ");
                 if rec_flag == RecFlag::Recursive {
@@ -781,9 +883,21 @@ impl Printer {
     }
 
     /// Check if an attribute is internal and shouldn't be printed.
+    /// Based on OCaml's is_printable_attribute in res_parsetree_viewer.ml
     fn is_internal_attribute(attr: &Attribute) -> bool {
         let name = &attr.0.txt;
-        name.starts_with("res.") || name.starts_with("ns.")
+        matches!(
+            name.as_str(),
+            "res.iflet"
+                | "res.braces"
+                | "ns.braces"
+                | "JSX"
+                | "res.await"
+                | "res.template"
+                | "res.taggedTemplate"
+                | "res.ternary"
+                | "res.inlineRecordDefinition"
+        )
     }
 
     fn is_unit_pattern(pat: &Pattern) -> bool {
@@ -802,7 +916,7 @@ impl Printer {
             | ExpressionDesc::Pexp_ifthenelse(..)
             | ExpressionDesc::Pexp_match(..)
             | ExpressionDesc::Pexp_try(..)
-            | ExpressionDesc::Pexp_fun { .. }
+            // Note: Pexp_fun does NOT need parens - `@attr x => y` is valid
             | ExpressionDesc::Pexp_let(..)
             | ExpressionDesc::Pexp_letmodule(..)
             | ExpressionDesc::Pexp_letexception(..)
@@ -1012,6 +1126,28 @@ impl Printer {
                     self.print_expression_in_subexpr(&args[2].1);
                     return;
                 }
+                // Check for object property access: ##(obj, "prop") -> obj["prop"]
+                if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
+                    if matches!(&lid.txt, Longident::Lident(s) if s == "##") && args.len() == 2 {
+                        self.print_expression_in_subexpr(&args[0].1);
+                        self.write("[\"");
+                        // Print the member - if it's an identifier, just use the name
+                        if let ExpressionDesc::Pexp_ident(member_lid) = &args[1].1.pexp_desc {
+                            self.print_longident(&member_lid.txt);
+                        } else {
+                            self.print_expression_in_subexpr(&args[1].1);
+                        }
+                        self.write("\"]");
+                        return;
+                    }
+                    // Check for object property set: #=(lhs, rhs) -> lhs = rhs
+                    if matches!(&lid.txt, Longident::Lident(s) if s == "#=") && args.len() == 2 {
+                        self.print_expression_in_subexpr(&args[0].1);
+                        self.write(" = ");
+                        self.print_expression_in_subexpr(&args[1].1);
+                        return;
+                    }
+                }
                 // Check if this is a binary expression and print in infix notation
                 if let Some((operator, left, right)) = self.as_binary_expr(funct, args) {
                     self.print_expression_in_subexpr(left);
@@ -1113,17 +1249,50 @@ impl Printer {
                 self.write(")");
             }
             ExpressionDesc::Pexp_construct(lid, arg) => {
-                if self.comments_enabled() {
-                    self.print_comments_before_loc(&lid.loc);
-                }
-                self.print_longident(&lid.txt);
-                if self.comments_enabled() {
-                    self.print_trailing_comments_for_loc(&lid.loc);
-                }
-                if let Some(arg) = arg {
-                    self.write("(");
-                    self.print_expression_in_subexpr(arg);
-                    self.write(")");
+                // Handle special constructors: (), [], ::
+                match &lid.txt {
+                    // Unit: ()
+                    Longident::Lident(s) if s == "()" => {
+                        self.write("()");
+                    }
+                    // Empty list: list{}
+                    Longident::Lident(s) if s == "[]" => {
+                        self.write("list{}");
+                    }
+                    // List cons: list{a, b, ...rest}
+                    Longident::Lident(s) if s == "::" => {
+                        let (exprs, spread) = Self::collect_list_expressions(expr);
+                        self.write("list{");
+                        for (i, e) in exprs.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.print_expression_in_subexpr(e);
+                        }
+                        if let Some(spread_expr) = spread {
+                            if !exprs.is_empty() {
+                                self.write(", ");
+                            }
+                            self.write("...");
+                            self.print_expression_in_subexpr(spread_expr);
+                        }
+                        self.write("}");
+                    }
+                    // Generic constructor
+                    _ => {
+                        if self.comments_enabled() {
+                            self.print_comments_before_loc(&lid.loc);
+                        }
+                        self.print_longident(&lid.txt);
+                        if self.comments_enabled() {
+                            self.print_trailing_comments_for_loc(&lid.loc);
+                        }
+                        if let Some(arg) = arg {
+                            self.write("(");
+                            self.print_expression_in_subexpr(arg);
+                            self.write(")");
+                        }
+                    }
                 }
             }
             ExpressionDesc::Pexp_variant(label, arg) => {
@@ -1315,9 +1484,11 @@ impl Printer {
                 self.write(")");
             }
             ExpressionDesc::Pexp_send(expr, meth) => {
+                // Object method send: obj["method"]
                 self.print_expression_in_subexpr(expr);
-                self.write("##");
+                self.write("[\"");
                 self.write(&meth.txt);
+                self.write("\"]");
             }
             ExpressionDesc::Pexp_letmodule(name, modexpr, body) => {
                 self.write("{");
@@ -1496,6 +1667,12 @@ impl Printer {
         if self.comments_enabled() {
             self.print_comments_before_loc(&pat.ppat_loc);
         }
+        // Print pattern attributes
+        for attr in &pat.ppat_attributes {
+            self.write("@");
+            self.print_attribute(attr);
+            self.write(" ");
+        }
         match &pat.ppat_desc {
             PatternDesc::Ppat_any => {
                 self.write("_");
@@ -1531,17 +1708,56 @@ impl Printer {
                 self.write(")");
             }
             PatternDesc::Ppat_construct(lid, arg) => {
-                if self.comments_enabled() {
-                    self.print_comments_before_loc(&lid.loc);
-                }
-                self.print_longident(&lid.txt);
-                if self.comments_enabled() {
-                    self.print_trailing_comments_for_loc(&lid.loc);
-                }
-                if let Some(arg) = arg {
-                    self.write("(");
-                    self.print_pattern(arg);
-                    self.write(")");
+                // Handle special constructors: (), [], ::
+                match &lid.txt {
+                    // Unit: ()
+                    Longident::Lident(s) if s == "()" => {
+                        self.write("()");
+                    }
+                    // Empty list: list{}
+                    Longident::Lident(s) if s == "[]" => {
+                        self.write("list{}");
+                    }
+                    // List cons: list{a, b, ...rest}
+                    Longident::Lident(s) if s == "::" => {
+                        let (pats, tail) = Self::collect_list_patterns(pat);
+                        self.write("list{");
+                        for (i, p) in pats.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.print_pattern(p);
+                        }
+                        // Check if tail is empty list `[]` or a spread pattern
+                        let is_empty_list = matches!(
+                            &tail.ppat_desc,
+                            PatternDesc::Ppat_construct(lid, None)
+                                if matches!(&lid.txt, Longident::Lident(s) if s == "[]")
+                        );
+                        if !is_empty_list {
+                            if !pats.is_empty() {
+                                self.write(", ");
+                            }
+                            self.write("...");
+                            self.print_pattern(tail);
+                        }
+                        self.write("}");
+                    }
+                    // Generic constructor
+                    _ => {
+                        if self.comments_enabled() {
+                            self.print_comments_before_loc(&lid.loc);
+                        }
+                        self.print_longident(&lid.txt);
+                        if self.comments_enabled() {
+                            self.print_trailing_comments_for_loc(&lid.loc);
+                        }
+                        if let Some(arg) = arg {
+                            self.write("(");
+                            self.print_pattern(arg);
+                            self.write(")");
+                        }
+                    }
                 }
             }
             PatternDesc::Ppat_variant(label, arg) => {
@@ -2294,6 +2510,14 @@ impl Printer {
     /// Print type declarations.
     fn print_type_declarations(&mut self, rec_flag: RecFlag, decls: &[TypeDeclaration]) {
         for (i, decl) in decls.iter().enumerate() {
+            // Print type declaration attributes before the type keyword
+            for attr in &decl.ptype_attributes {
+                if !Self::is_internal_attribute(attr) {
+                    self.write("@");
+                    self.print_attribute(attr);
+                    self.newline();
+                }
+            }
             if i == 0 {
                 self.write("type ");
                 if rec_flag == RecFlag::Recursive && decls.len() > 1 {
@@ -2783,8 +3007,11 @@ impl Printer {
     /// Print a function expression, collecting all parameters and handling labeled args properly.
     fn print_fun_expr(&mut self, expr: &Expression) {
         // Collect all function parameters along with their attributes
+        // Stop collecting when we encounter a Pexp_fun with its own attributes
+        // (those should be printed as nested arrow functions)
         let mut params: Vec<(&Attributes, &ArgLabel, Option<&Expression>, &Pattern)> = Vec::new();
         let mut current = expr;
+        let mut first = true;
 
         while let ExpressionDesc::Pexp_fun {
             arg_label,
@@ -2794,6 +3021,12 @@ impl Printer {
             ..
         } = &current.pexp_desc
         {
+            // Stop collecting if this Pexp_fun has attributes (except for the first one,
+            // whose attributes are printed as an outer wrapper by the caller)
+            if !first && !current.pexp_attributes.is_empty() {
+                break;
+            }
+            first = false;
             params.push((&current.pexp_attributes, arg_label, default.as_deref(), lhs));
             current = rhs;
         }
@@ -2816,7 +3049,8 @@ impl Printer {
         let has_complex_single_param = params.len() == 1
             && !Self::is_simple_arrow_param(params[0].3)
             && !Self::is_unit_pattern(params[0].3);
-        let has_attrs = params.iter().any(|(attrs, _, _, _)| !attrs.is_empty());
+        // Check if any pattern has attributes (ppat_attributes)
+        let has_attrs = params.iter().any(|(_, _, _, pat)| !pat.ppat_attributes.is_empty());
         let needs_parens = params.len() > 1
             || params
                 .iter()
@@ -2828,16 +3062,13 @@ impl Printer {
             self.write("(");
         }
 
-        for (i, (attrs, label, default, pat)) in params.iter().enumerate() {
+        for (i, (_attrs, label, default, pat)) in params.iter().enumerate() {
             if i > 0 {
                 self.write(", ");
             }
-            // Print parameter attributes
-            for attr in *attrs {
-                self.write("@");
-                self.print_attribute(attr);
-                self.write(" ");
-            }
+            // Note: expression attributes (from Pexp_fun.pexp_attributes) are NOT printed here.
+            // The first Pexp_fun's attributes are printed by the caller (print_expression_inner).
+            // Pattern attributes (ppat_attributes) are printed in print_fun_param.
             self.print_fun_param(label, *default, pat);
         }
 
@@ -2872,6 +3103,21 @@ impl Printer {
             self.dedent();
             self.newline();
             self.write("}");
+        } else if let ExpressionDesc::Pexp_fun { is_async, .. } = &body.pexp_desc {
+            // For nested arrow functions with attributes (like `@attr (c, d) => ()`),
+            // we need to print the attributes and the function without extra parens.
+            // First print any non-internal attributes
+            for attr in &body.pexp_attributes {
+                if !Self::is_internal_attribute(attr) {
+                    self.write("@");
+                    self.print_attribute(attr);
+                    self.space();
+                }
+            }
+            if *is_async {
+                self.write("async ");
+            }
+            self.print_fun_expr(body);
         } else {
             // Other expressions don't need parens in function body context
             self.print_expression_with_comments(body, false);
@@ -2893,6 +3139,19 @@ impl Printer {
                 }
             }
             ArgLabel::Labelled(name) => {
+                // For labeled args, pattern attributes are printed in two cases:
+                // 1. If punned (no alias): print attrs before ~label
+                // 2. If not punned (has alias): print attrs as part of the aliased pattern
+                // This avoids double-printing attributes.
+                let (is_punned, _) = Self::punned_pattern_type(name, pat);
+                if is_punned {
+                    // Print pattern attributes before the label only when punned
+                    for attr in &pat.ppat_attributes {
+                        self.write("@");
+                        self.print_attribute(attr);
+                        self.write(" ");
+                    }
+                }
                 self.write("~");
                 self.write_ident(name);
                 let (is_punned, punned_type) = Self::punned_pattern_type(name, pat);
@@ -2909,6 +3168,17 @@ impl Printer {
                 }
             }
             ArgLabel::Optional(name) => {
+                // For optional args, pattern attributes are printed in two cases:
+                // 1. If punned (no alias): print attrs before ~label
+                // 2. If not punned (has alias): print attrs as part of the aliased pattern
+                let (is_punned, _) = Self::punned_pattern_type(name, pat);
+                if is_punned {
+                    for attr in &pat.ppat_attributes {
+                        self.write("@");
+                        self.print_attribute(attr);
+                        self.write(" ");
+                    }
+                }
                 self.write("~");
                 self.write_ident(name);
                 let (is_punned, punned_type) = Self::punned_pattern_type(name, pat);
@@ -2966,10 +3236,24 @@ impl Printer {
 
     /// Print attributes.
     fn print_attributes(&mut self, attrs: &Attributes) {
+        self.print_attributes_with_sep(attrs, true);
+    }
+
+    /// Print attributes with optional newline separator.
+    /// If `with_newline` is true, each attribute ends with a newline.
+    /// If false, each attribute ends with a space.
+    fn print_attributes_with_sep(&mut self, attrs: &Attributes, with_newline: bool) {
         for attr in attrs {
+            if Self::is_internal_attribute(attr) {
+                continue;
+            }
             self.write("@");
             self.print_attribute(attr);
-            self.newline();
+            if with_newline {
+                self.newline();
+            } else {
+                self.write(" ");
+            }
         }
     }
 
@@ -3054,6 +3338,15 @@ impl StructureItemDesc {
         match self {
             StructureItemDesc::Pstr_eval(_, attrs) => attrs.clone(),
             StructureItemDesc::Pstr_extension(_, attrs) => attrs.clone(),
+            StructureItemDesc::Pstr_primitive(vd) => vd.pval_attributes.clone(),
+            StructureItemDesc::Pstr_module(mb) => mb.pmb_attributes.clone(),
+            StructureItemDesc::Pstr_open(od) => od.popen_attributes.clone(),
+            StructureItemDesc::Pstr_include(id) => id.pincl_attributes.clone(),
+            StructureItemDesc::Pstr_modtype(mtd) => mtd.pmtd_attributes.clone(),
+            StructureItemDesc::Pstr_typext(te) => te.ptyext_attributes.clone(),
+            StructureItemDesc::Pstr_exception(ec) => ec.pext_attributes.clone(),
+            // Type and value have their attributes on individual items within the vec
+            // These are handled separately in their specific print functions
             _ => vec![],
         }
     }

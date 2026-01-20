@@ -1,4 +1,1 @@
-type nonrec 'a node =
-  | Nil 
-  | Node of {
-  } 
+type nonrec 'a node = Nil | Node of <>

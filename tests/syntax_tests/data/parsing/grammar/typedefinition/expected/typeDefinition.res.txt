@@ -1,12 +1,6 @@
 type nonrec t = string
-type nonrec t = string
-and s = int
-type nonrec t = string
-and s = int
-and u = float
+type nonrec t = string and s = int
+type nonrec t = string and s = int and u = float
 type t = t node
-type t = string
-and s = int
-type t = string
-and s = int
-and u = float
+type t = string and s = int
+type t = string and s = int and u = float

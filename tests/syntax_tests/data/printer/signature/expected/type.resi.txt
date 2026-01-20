@@ -1,16 +1,21 @@
 type s = string
 
-type user = {name: string, age: int}
+type user = {
+  name: string,
+  age: int
+}
 
 type color =
-  | Red
-  | Blue
-  | Black
+| Red
+| Blue
+| Black
 
-type options = {
-  permissions: {
-    all: {
-      stuff: bool,
-    },
-  },
+type rec \"options.permissions" = {
+  all: \"options.permissions.all"
+}
+and \"options.permissions.all" = {
+  stuff: bool
+}
+and options = {
+  permissions: \"options.permissions"
 }

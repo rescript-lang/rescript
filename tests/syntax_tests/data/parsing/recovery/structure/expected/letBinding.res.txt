@@ -1,10 +1,11 @@
 
   Syntax error!
-  syntax_tests/data/parsing/recovery/structure/letBinding.res:1:8-9
+  syntax_tests/data/parsing/recovery/structure/letBinding.res:1:9
 
   1 │ let x = = doStuff(y)
   2 │ 
 
-  This let-binding misses an expression
+  Unexpected token: Equal
 
-let x = doStuff y
+let x = [%%rescript.exprhole]
+;;(doStuff y)

@@ -1,1 +1,2 @@
-type t = | @as("one") One
+type t =
+| One

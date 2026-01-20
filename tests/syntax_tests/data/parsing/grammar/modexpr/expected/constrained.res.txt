@@ -1,2 +1,2 @@
-module X : MyMod = A 
+module X = (A : MyMod)
 include (X : MyMod)

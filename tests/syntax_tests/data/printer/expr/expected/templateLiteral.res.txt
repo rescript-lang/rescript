@@ -1,6 +1,9 @@
 let y = `In winter the sky is never blue`
+
 let x = `firstname: ${user.firstName} lastname: ${user.lastName}.`
+
 let z = `${user.name} is his name`
+
 let o = `His name is ${user.name}`
 
 let s = `multi
@@ -10,26 +13,35 @@ string
 `
 
 let s = `a \ b`
+
 let s = `a \\ b`
+
 let s = `a \\\ b`
 
 let s = `${foo}`
 
 let s = `before${foo}`
+
 let s = `before ${foo}`
+
 let s = `before  ${foo}`
 
 let s = `${foo}after`
+
 let s = `${foo} after`
+
 let s = `${foo}  after`
 
 let s = `${foo}${bar}`
+
 let s = `${foo}${bar}${baz}`
 
 let s = `${foo} ${bar}`
+
 let s = `${foo} ${bar} ${baz}`
 
 let s = ` before ${foo} ${bar} after `
+
 let s = `before ${foo} middle ${bar} ${baz} wow `
 
 let s = `
@@ -54,16 +66,23 @@ let s = `${(s: string)}`
 // don't sugar to one single template literal, keep the concatenation
 `the sky` ++ `is blue`
 
-`my ${language.name} is ` ++ `Bond, ${jamesbond.firstName}.`
-`my ${language.name} is ` ++ `${jamesbond.lastName}. James Bond.`
-(`my ${language.name} is ` ++ `Bond, ${jamesbond.firstName}.`)->Js.log
-(`my ${name} is ` ++ `Bond`)->Js.log
-`my ${kitchen.quality} kitched` ++ ` is ${language.big} ` ++ ` of the ${kitchen.things}.`
-json`null`->Js.log
-a ++ ` x ` ++ b
+(`my ${language.name} is `) ++ (`Bond, ${jamesbond.firstName}.`)
+
+(`my ${language.name} is `) ++ (`${jamesbond.lastName}. James Bond.`)
+
+((`my ${language.name} is `) ++ (`Bond, ${jamesbond.firstName}.`)) -> Js.log
+
+((`my ${name} is `) ++ `Bond`) -> Js.log
+
+((`my ${kitchen.quality} kitched`) ++ (` is ${language.big} `)) ++ (` of the ${kitchen.things}.`)
+
+`null` -> Js.log
+
+(a ++ ` x `) ++ b
+
 a ++ (` x ` ++ b)
 
-let x = json`null`
+let x = `null`
 
 let x = sql`select ${column} from ${table}`
 
@@ -87,20 +106,20 @@ let cn = css`
   margin: ${1}px;
   margin: ${1 + 2}px;
   margin: ${1 * 2}px;
-  margin: ${1 + 2 / 3 + 4}px;
-  margin: ${1 * 2 / 3 + 4}px;
-  margin: ${1 - 2 / 3 * 4}px;
-  margin: ${1 / 2 + 3 * 4}px;
+  margin: ${(1 + (2 / 3)) + 4}px;
+  margin: ${((1 * 2) / 3) + 4}px;
+  margin: ${1 - ((2 / 3) * 4)}px;
+  margin: ${(1 / 2) + (3 * 4)}px;
   padding: ${Size.md}px;
   padding: ${1 + Size.md}px;
   padding: ${1.2 / Size.md}px;
-  padding: ${Size.md + 1 - 2.3 * pad / 4}px;
+  padding: ${(Size.md + 1) - ((2.3 * pad) / 4)}px;
 `
 
 let box = css`
-  margin: ${ten()}px;
+  margin: ${ten(())}px;
   padding: ${pad}px;
-  border: 6px solid ${Color.Border.bg->Polished.lighten(0.3)};
+  border: 6px solid ${Color.Border.bg -> Polished.lighten(0.3)};
   background-color: ${Color.bg};
   border-radius: ${Size.md / 2}px;
 `
@@ -120,6 +139,4 @@ let box = css`
   }
 `)
 
-sql
-->SQL.query`INSERT INTO my_table (a, b, c) VALUES ${a}, ${b}, ${c}`
-->Promise.thenResolve(Console.log)
+(sql -> SQL.query`INSERT INTO my_table (a, b, c) VALUES ${a}, ${b}, ${c}`) -> Promise.thenResolve(Console.log)

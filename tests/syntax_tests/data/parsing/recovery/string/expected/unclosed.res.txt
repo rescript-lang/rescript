@@ -1,2 +1,2 @@
-let x = {js|unclosed|js}
+let x = "unclosed"
 let y = 1

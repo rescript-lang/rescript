@@ -1,4 +1,3 @@
-let Ok foo = someResult[@@let.unwrap ]
-let Some bar = someOption[@@let.unwrap ]
-let Some baz = someOption[@@let.unwrap ]
-and Some bar = someOtherOption[@@let.unwrap ]
+let Ok foo = someResult
+let Some bar = someOption
+let Some baz = someOption and Some bar = someOtherOption

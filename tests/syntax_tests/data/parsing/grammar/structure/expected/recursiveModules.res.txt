@@ -1,5 +1,3 @@
-module rec A:Map = struct let m = 2 end  and B:Set = struct let s = 1 end
-module rec A:Map = struct let m = 2 end[@@onFirstBinding ]
- and B:Set = struct let s = 1 end[@@onSecondBinding ]
-module rec A:Map = struct let m = 2 end[@@onFirstBindingOfNext ]
- and B:Set = struct let s = 1 end[@@onSecondBindingOfNext ]
+module rec A = (struct let m = 2 end : Map) and B = (struct let s = 1 end : Set)
+module rec A = (struct let m = 2 end : Map) and B = (struct let s = 1 end : Set)
+module rec A = (struct let m = 2 end : Map) and B = (struct let s = 1 end : Set)

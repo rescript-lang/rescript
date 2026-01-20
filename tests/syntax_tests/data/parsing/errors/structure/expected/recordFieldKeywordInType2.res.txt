@@ -8,10 +8,11 @@
   4 │   x: bool,
   5 │ }
 
-  Cannot use keyword `type` as a record field name. Suggestion: rename it (e.g. `type_`)
-  If you need the field to be "type" at runtime, annotate the field: `@as("type") type_ : ...`
+  Expected field name
 
 type nonrec r = {
-  id: string ;
-  type_: int ;
-  x: bool }
+  id: string }
+
+;;int
+;;x
+;;bool

@@ -1,10 +1,12 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/namedParameters.res:1:15-20
+  syntax_tests/data/parsing/errors/typeDef/namedParameters.res:1:21
 
   1 │ type  draw = (stroke: pencil) => unit
   2 │ 
 
-  A labeled parameter starts with a `~`. Did you mean: `~stroke`?
+  Did you forget a `)` here?
 
-type nonrec draw = stroke:pencil -> unit (a:1)
+type nonrec draw = stroke -> [%%rescript.typehole] (a:1)
+;;pencil
+;;unit

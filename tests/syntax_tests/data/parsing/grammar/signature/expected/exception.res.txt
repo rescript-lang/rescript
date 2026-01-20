@@ -1,15 +1,12 @@
-module type Signature  =
-  sig
-    exception Exit 
-    exception Exit of int 
-    exception Exit of int * string 
-    exception Exit of int * string 
-    exception Terminate of {
-      time: int ;
-      status: int } 
-    exception Terminate of {
-      time: int ;
-      status: int } 
-    exception Exit [@attr ]
-    exception Exit of int [@attr ]
-  end
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/signature/exception.res:9:47
+
+   7 ┆ exception Terminate({time: int, status: int})
+   8 ┆ // trailing comma
+   9 ┆ exception Terminate({time: int, status: int},)
+  10 ┆ 
+  11 ┆ // attributes
+
+  Did you forget a `)` here?
+

@@ -1,6 +1,5 @@
 open Belt
 
-@attr
-open Belt
+@attr open Belt
 
-open! Belt
+open Belt

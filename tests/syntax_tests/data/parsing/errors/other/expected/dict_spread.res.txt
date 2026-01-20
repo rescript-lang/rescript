@@ -6,6 +6,9 @@
   2 │ 
   3 │ 
 
-  Dict literals do not support spread (`...`) yet.
+  Dict keys must be strings
 
-let x = Primitive_dict.make [|("bar", 3)|]
+let x = (Primitive_dict.make [||])
+;;foo
+;;"bar"
+;;3

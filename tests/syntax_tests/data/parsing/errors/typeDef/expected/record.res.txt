@@ -7,8 +7,8 @@
   4 │ }
   5 │ 
 
-  I'm missing a type here
+  Unexpected token in type: Rbrace
 
 type nonrec observation = {
   observed: int ;
-  observer: [%rescript.typehole ] }
+  observer: [%%rescript.typehole] }

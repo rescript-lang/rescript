@@ -6,8 +6,7 @@
   2 │   let x = 1
   3 │   let b = 2
 
-  Did you forget a `,` here?
+  Did you forget a `)` here?
 
-;;(Object.keys providers).reduce
-    (fun [arity:2]elements ->
-       fun providerId -> ((let x = 1 in let b = 2 in x + b)[@res.braces ]))
+;;((Object.keys providers).reduce (fun elements -> (fun providerId -> [%%rescript.exprhole])))
+;;(let x = 1 in (let b = 2 in (+ x b)))

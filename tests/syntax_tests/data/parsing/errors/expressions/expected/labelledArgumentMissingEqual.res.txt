@@ -1,22 +1,13 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/expressions/labelledArgumentMissingEqual.res:1:16
+  syntax_tests/data/parsing/errors/expressions/labelledArgumentMissingEqual.res:1:17
 
   1 │ let _ = fn(~foo:1)
   2 │ let _ = fn(~bar:?value)
   3 │ 
 
-  Use `=` to pass a labelled argument. Example: `~label=value`
+  Unexpected token in type: Int { i: "1", suffix: None }
 
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/expressions/labelledArgumentMissingEqual.res:2:16
-
-  1 │ let _ = fn(~foo:1)
-  2 │ let _ = fn(~bar:?value)
-  3 │ 
-
-  Optional labelled arguments use `=?`. Example: `~label=?value`
-
-let _ = fn ~foo:1
-let _ = fn ?bar:value
+let _ = (fn ~foo:(foo : [%%rescript.typehole]))
+;;1
+let _ = (if (fn ~bar:(bar : [%%rescript.typehole])) then value else [%%rescript.exprhole])

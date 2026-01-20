@@ -1,2 +1,1 @@
-type nonrec t =
-  | One [@as {js|one|js}]
+type nonrec t = One

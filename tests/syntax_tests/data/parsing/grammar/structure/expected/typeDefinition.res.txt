@@ -1,5 +1,3 @@
 type nonrec t = string
-type nonrec t = string[@@onStructureItem ]
-module X =
-  struct type nonrec t = string
-         type nonrec t = string[@@onStructureItem ] end
+type nonrec t = string
+module X = struct type nonrec t = string type nonrec t = string end

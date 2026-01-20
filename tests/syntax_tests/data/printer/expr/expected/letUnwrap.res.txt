@@ -1,9 +1,13 @@
 // with Ok
-let? Ok(foo) = someResult
+@let.unwrap
+let Ok(foo) = someResult
 
-// with Some
-let? Some(bar) = someOption
+// with Some 
+@let.unwrap
+let Some(bar) = someOption
 
 // with and
-let? Some(baz) = someOption
+@let.unwrap
+let Some(baz) = someOption@let.unwrap
+
 and Some(bar) = someOtherOption

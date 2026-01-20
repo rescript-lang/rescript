@@ -1,14 +1,15 @@
 
   Syntax error!
-  syntax_tests/data/parsing/recovery/typexpr/typeConstructorArgs.res:2:28-31
+  syntax_tests/data/parsing/recovery/typexpr/typeConstructorArgs.res:2:28
 
   1 │ type node<'a> = {
   2 │   _value: Js.Nullable.value('a)
   3 │ }
   4 │ 
 
-  Type parameters require angle brackets:
-  Js.Nullable.value<'a>
+  Did you forget a `}` here?
 
 type nonrec 'a node = {
-  _value: 'a Js.Nullable.value }
+  _value: Js.Nullable.value }
+;;[%%rescript.exprhole]
+;;a

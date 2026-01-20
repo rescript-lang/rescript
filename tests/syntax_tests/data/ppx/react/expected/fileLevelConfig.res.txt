@@ -3,15 +3,11 @@
 module V4A = {
   @res.jsxComponentProps
   type props<'msg> = {
-    msg: 'msg,
+    msg: 'msg
   }
-
-  let make = ({msg, _}: props<_>): React.element => {
-    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({msg->React.string})})
-  }
+  let make = ({msg: msg, _}: props<_>): React.element => ReactDOM.jsx("div", {children: ? ReactDOM.someElement((msg -> React.string))})
   let make = {
     let \"FileLevelConfig$V4A" = (props: props<_>) => make(props)
-
     \"FileLevelConfig$V4A"
   }
 }

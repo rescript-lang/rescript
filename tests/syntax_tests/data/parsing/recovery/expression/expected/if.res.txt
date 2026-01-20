@@ -1,19 +1,10 @@
 
   Syntax error!
-  syntax_tests/data/parsing/recovery/expression/if.res:1:16-18
+  syntax_tests/data/parsing/recovery/expression/if.res:1:16
 
   1 │ if (foo == bar) Js.log("if-branch") else Js.log("else-branch")
   2 │ 
 
   Did you forget a `{` here?
 
-
-  Syntax error!
-  syntax_tests/data/parsing/recovery/expression/if.res:1:41-43
-
-  1 │ if (foo == bar) Js.log("if-branch") else Js.log("else-branch")
-  2 │ 
-
-  Did you forget a `{` here?
-
-;;if foo == bar then Js.log {js|if-branch|js} else Js.log {js|else-branch|js}
+;;(if (== foo bar) then ((Js.log "if-branch"); ([%%rescript.exprhole]; (Js.log "else-branch"))))

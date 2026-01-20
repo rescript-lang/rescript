@@ -1,6 +1,1 @@
-module type StandaloneAttribute  =
-  sig
-    [@@@standaloneAttribute ]
-    [@@@standaloneAttribute withPayload]
-    [@@@standaloneAttribute fun [arity:1]x -> x]
-  end
+module type StandaloneAttribute = sig [@@standaloneAttribute] [@@standaloneAttribute] [@@standaloneAttribute] end

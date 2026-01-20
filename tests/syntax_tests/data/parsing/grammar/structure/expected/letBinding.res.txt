@@ -1,10 +1,5 @@
 let a = 1
-let a = 1[@@onFirstBinding ]
-let a = 1[@@onFirstBinding ]
-and b = 2[@@onSecondBinding ]
-let f : type t. t foo =
-  fun [arity:1]sideEffect ->
-    ((let module M = struct exception E of t  end in
-        sideEffect (); (fun [arity:1]x -> M.E x))
-    [@res.braces ])
-let f : type t x u. (t * x * y) list = fun [arity:1]l -> f l
+let a = 1
+let a = 1 and b = 2
+let (f : 't . 't foo) = (fun (type t) -> ((fun sideEffect -> (let module M = struct exception E of t end in ((sideEffect ()); (fun x -> M.E x)))) : t foo))
+let (f : 't 'x 'u . ('t * 'x * y) list) = (fun (type t) -> (fun (type x) -> (fun (type u) -> ((fun l -> (f l)) : (t * x * y) list))))

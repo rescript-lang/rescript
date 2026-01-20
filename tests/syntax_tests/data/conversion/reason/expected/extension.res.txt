@@ -7,4 +7,5 @@ __gc,
   `)
 
 let x = %raw("10")
+
 let y = %raw("20")

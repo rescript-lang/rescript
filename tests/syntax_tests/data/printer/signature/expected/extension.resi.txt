@@ -1,4 +1,3 @@
-%%raw("eval(js)")
+%raw
 
-@attr
-%%extension(payload)
+%extension

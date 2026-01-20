@@ -1,9 +1,1 @@
-module type Signature  =
-  sig
-    type nonrec t
-    external linkProgram :
-      t -> program:webGlProgram -> unit (a:2) = "linkProgram"[@@send ]
-    external add_nat : nat -> int -> int -> int (a:3) = "add_nat_bytecode"
-    external svg : unit -> React.element (a:1) = "svg"
-    external svg : unit -> React.element (a:1) = "svg"
-  end
+module type Signature = sig type nonrec t val linkProgram : t -> ~program:webGlProgram -> unit (a:1) (a:1) val add_nat : nat -> int -> int -> int (a:1) (a:1) (a:1) val svg : unit -> React.element (a:1) val svg : unit -> React.element (a:1) end

@@ -1,1 +1,2 @@
-type t = | @foo X
+type t =
+| X

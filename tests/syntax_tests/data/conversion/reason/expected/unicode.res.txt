@@ -1,5 +1,5 @@
-let x = "✅ foo bar"
+let x = "â foo bar"
 
 let x = "\n okokok"
 
-let z = "\t \b \n okok 🙈"
+let z = "\t \b \n okok ð"

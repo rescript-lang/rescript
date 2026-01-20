@@ -645,17 +645,26 @@ pub fn parse_es6_arrow_expression(
     } else {
         term_params.into_iter().rev().fold(body, |acc, param| {
             let loc = mk_loc(&param.start_pos, &end_pos);
+            // Apply parameter attributes to the pattern's ppat_attributes
+            // This is where attributes like @as("open") on parameters like (@as("open") ~_open)
+            // should end up, so the JSX PPX can access them via pattern.ppat_attributes
+            let mut pat = param.pat;
+            if !param.attrs.is_empty() {
+                let mut attrs = param.attrs;
+                attrs.extend(pat.ppat_attributes);
+                pat.ppat_attributes = attrs;
+            }
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_fun {
                     arg_label: param.label,
                     default: param.expr.map(Box::new),
-                    lhs: param.pat,
+                    lhs: pat,
                     rhs: Box::new(acc),
                     arity: Arity::Unknown,
                     is_async,
                 },
                 pexp_loc: loc,
-                pexp_attributes: param.attrs,
+                pexp_attributes: vec![],
             }
         })
     };
@@ -1948,8 +1957,8 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
             (ArgLabel::Labelled(name), expr)
         }
     } else {
-        // Unlabeled argument
-        (ArgLabel::Nolabel, parse_expr(p))
+        // Unlabeled argument - may have type constraint like f({}:t)
+        (ArgLabel::Nolabel, parse_constrained_or_coerced_expr(p))
     }
 }
 

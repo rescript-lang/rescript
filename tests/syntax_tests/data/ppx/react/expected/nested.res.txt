@@ -1,19 +1,19 @@
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/nested.res", line: 5, bol: 78, cnum: 84 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/nested.res", line: 6, bol: 101, cnum: 131 }, loc_ghost: false })
 module Outer = {
   @res.jsxComponentProps
-  type props = {}
+  type props = {
+  }
   let make = (_: props): React.element => {
     module Inner = {
       @res.jsxComponentProps
-      type props = {}
-
+      type props = {
+      }
       let make = (_: props): React.element => ReactDOM.jsx("div", {})
       let make = {
         let \"Nested$Outer" = props => make(props)
-
         \"Nested$Outer"
       }
     }
-
     React.jsx(Inner.make, {})
   }
   let make = {

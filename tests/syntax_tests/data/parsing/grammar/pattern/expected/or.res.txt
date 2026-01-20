@@ -1,7 +1,12 @@
-;;match x with
-  | Blue|Red -> ()
-  | Blue|Red as colour -> ()
-  | Blue as c1|Red as c2 -> ()
-  | Blue as c1|Red as c2 -> ()
-  | exception Exit|exception Continue -> ()
-  | exception (Exit|exception Continue) -> ()
+
+  Syntax error!
+  syntax_tests/data/parsing/grammar/pattern/or.res:4:13
+
+  2 │ | Blue | Red => ()
+  3 │ | (Blue | Red) as colour => ()
+  4 │ | Blue as c1 | Red as c2 => ()
+  5 │ | (Blue as c1) | (Red as c2) => ()
+  6 │ | exception Exit | exception Continue => ()
+
+  Did you forget a `=>` here?
+

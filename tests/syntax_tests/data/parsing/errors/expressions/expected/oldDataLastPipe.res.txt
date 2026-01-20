@@ -7,10 +7,7 @@
   3 │ 
   4 │ 
 
-  I'm not sure what to parse here when looking at "|".
+  Unexpected token: Bar
 
-  The old data-last pipe `|>` has been removed from the language.
-  Refactor to use a data-first `->` pipe instead.
-
-let x [arity:1]f = f
+let x = (fun f -> f)
 ;;String.length

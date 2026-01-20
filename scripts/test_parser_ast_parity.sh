@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AST Parity Test: Ensures Rust parser produces identical AST to OCaml parser
-# Uses roundtrip test files from tests/syntax_tests/data/{idempotency,printer}
+# Uses test files from tests/syntax_tests/data/{idempotency,printer,ppx}
 
 set -e
 
@@ -47,7 +47,7 @@ echo ""
 
 # Find all test files
 cd "$PROJECT_ROOT/tests"
-find syntax_tests/data/idempotency syntax_tests/data/printer -name "*.res" -o -name "*.resi" 2>/dev/null | sort > "$TEMP_DIR/files.txt"
+find syntax_tests/data/idempotency syntax_tests/data/printer syntax_tests/data/ppx syntax_tests/data/conversion syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" 2>/dev/null | sort > "$TEMP_DIR/files.txt"
 TOTAL_FILES=$(wc -l < "$TEMP_DIR/files.txt" | tr -d ' ')
 
 echo -e "Found ${BOLD}$TOTAL_FILES${RESET} test files"

@@ -1,9 +1,9 @@
 let b = 2
-/* test */ // sldkfj
 
+/* test */
 // sldkfj
-
-/* help */ /* help2 */
-
+// sldkfj
+/* help */
+/* help2 */ 
 /* test2 */
-open /* before lident */ React
+open React /* before lident */ 

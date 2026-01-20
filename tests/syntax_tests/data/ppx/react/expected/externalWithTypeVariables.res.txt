@@ -1,12 +1,11 @@
 @@jsxConfig({version: 4})
 
 module V4C = {
-  @res.jsxComponentProps @live
+  @res.jsxComponentProps
+  @live
   type props<'x, 'children> = {
     x: 'x,
-    children: 'children,
+    children: 'children
   }
-
-  @module("c")
-  external make: React.component<props<t<'a>, React.element>> = "component"
+  @module("c") external make: React.component<props<t<'a>, React.element>> = "component"
 }

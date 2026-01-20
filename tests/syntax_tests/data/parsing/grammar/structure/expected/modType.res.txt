@@ -1,2 +1,2 @@
-module type X  = Foo
-module type X  = Foo[@@attr ]
+module type X = Foo
+module type X = Foo

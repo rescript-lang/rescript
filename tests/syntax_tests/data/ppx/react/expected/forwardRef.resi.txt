@@ -1,23 +1,27 @@
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 14, bol: 271, cnum: 275 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 15, bol: 292, cnum: 367 }, loc_ghost: false })
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 21, bol: 421, cnum: 425 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 26, bol: 560, cnum: 582 }, loc_ghost: false })
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 30, bol: 611, cnum: 615 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 31, bol: 632, cnum: 707 }, loc_ghost: false })
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 39, bol: 798, cnum: 802 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 44, bol: 937, cnum: 959 }, loc_ghost: false })
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 48, bol: 988, cnum: 992 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 49, bol: 1009, cnum: 1084 }, loc_ghost: false })
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 55, bol: 1138, cnum: 1142 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 60, bol: 1277, cnum: 1299 }, loc_ghost: false })
+Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 64, bol: 1328, cnum: 1332 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/forwardRef.resi", line: 65, bol: 1349, cnum: 1424 }, loc_ghost: false })
 @@jsxConfig({version: 4, mode: "classic"})
 
 module V4C: {
   module FancyInput: {
     @res.jsxComponentProps
     type props<'className, 'children, 'ref> = {
-      className?: 'className,
+      className: 'className,
       children: 'children,
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
-
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
@@ -26,20 +30,17 @@ module V4CUncurried: {
   module FancyInput: {
     @res.jsxComponentProps
     type props<'className, 'children, 'ref> = {
-      className?: 'className,
+      className: 'className,
       children: 'children,
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
-
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
@@ -50,20 +51,17 @@ module V4A: {
   module FancyInput: {
     @res.jsxComponentProps
     type props<'className, 'children, 'ref> = {
-      className?: 'className,
+      className: 'className,
       children: 'children,
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
-
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
@@ -72,20 +70,17 @@ module V4AUncurried: {
   module FancyInput: {
     @res.jsxComponentProps
     type props<'className, 'children, 'ref> = {
-      className?: 'className,
+      className: 'className,
       children: 'children,
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<string, React.element, ReactDOM.Ref.currentDomRef>>
   }
-
   module ForwardRef: {
     @res.jsxComponentProps
     type props<'ref> = {
-      ref?: 'ref,
+      ref: 'ref
     }
-
     let make: React.component<props<React.ref<Js.Nullable.t<inputRef>>>>
   }
 }
