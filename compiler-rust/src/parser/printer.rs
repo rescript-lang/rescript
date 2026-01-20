@@ -1566,7 +1566,21 @@ impl Printer {
                 } else {
                     self.print_apply_funct(funct);
                     self.write("(");
-                    for (i, (label, arg)) in args.iter().enumerate() {
+                    // Check if this is a single unit argument - if so, don't print it
+                    // f() is syntactic sugar for f(())
+                    let is_single_unit_arg = args.len() == 1
+                        && matches!(args[0].0, ArgLabel::Nolabel)
+                        && matches!(
+                            &args[0].1.pexp_desc,
+                            ExpressionDesc::Pexp_construct(lid, None)
+                                if matches!(&lid.txt, Longident::Lident(s) if s == "()")
+                        );
+                    let args_to_print: Vec<_> = if is_single_unit_arg {
+                        vec![]
+                    } else {
+                        args.iter().collect()
+                    };
+                    for (i, (label, arg)) in args_to_print.iter().enumerate() {
                         if i > 0 {
                             self.write(", ");
                         }
