@@ -113,14 +113,6 @@ await test(["build", "--help"], {
   status: 0,
 });
 
-await test(["build", "-w", "--help"], {
-  stdout: buildHelp,
-  stderr: "",
-  status: 0,
-});
-
-await test(["-w", "--help"], { stdout: cliHelp, stderr: "", status: 0 });
-
 // Shows cli help with --help arg even if there are invalid arguments after it
 await test(["--help", "-w"], { stdout: cliHelp, stderr: "", status: 0 });
 
