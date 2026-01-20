@@ -5,7 +5,15 @@
 
 open DeadCommon
 
-let processAttributes ~state ~config ~doGenType ~name ~pos attributes =
+type scope_default = FileAnnotations.annotated_as option
+
+let processAttributes ~(scope_default : scope_default) ~state ~config ~doGenType
+    ~name ~pos attributes =
+  (match scope_default with
+  | Some FileAnnotations.Live -> FileAnnotations.annotate_live state pos
+  | Some FileAnnotations.Dead -> FileAnnotations.annotate_dead state pos
+  | Some FileAnnotations.GenType -> FileAnnotations.annotate_gentype state pos
+  | None -> ());
   let getPayloadFun f = attributes |> Annotation.getAttributePayload f in
   let getPayload (x : string) =
     attributes |> Annotation.getAttributePayload (( = ) x)
@@ -39,6 +47,20 @@ let processAttributes ~state ~config ~doGenType ~name ~pos attributes =
 let collectExportLocations ~state ~config ~doGenType =
   let super = Tast_mapper.default in
   let currentlyDisableWarnings = ref false in
+  let currentScopeDefault : scope_default ref = ref None in
+
+  let scopeDefaultFromToplevelAttribute (attribute : Parsetree.attribute) :
+      scope_default =
+    let attrs = [attribute] in
+    let getPayload (x : string) =
+      attrs |> Annotation.getAttributePayload (( = ) x)
+    in
+    if getPayload "dead" <> None then Some FileAnnotations.Dead
+    else if getPayload "live" <> None then Some FileAnnotations.Live
+    else if getPayload "genType" <> None then Some FileAnnotations.GenType
+    else None
+  in
+
   let value_binding self
       ({vb_attributes; vb_pat} as value_binding : Typedtree.value_binding) =
     (match vb_pat.pat_desc with
@@ -46,8 +68,8 @@ let collectExportLocations ~state ~config ~doGenType =
     | Tpat_alias ({pat_desc = Tpat_any}, id, {loc = {loc_start = pos}}) ->
       if !currentlyDisableWarnings then FileAnnotations.annotate_live state pos;
       vb_attributes
-      |> processAttributes ~state ~config ~doGenType ~name:(id |> Ident.name)
-           ~pos
+      |> processAttributes ~scope_default:!currentScopeDefault ~state ~config
+           ~doGenType ~name:(id |> Ident.name) ~pos
     | _ -> ());
     super.value_binding self value_binding
   in
@@ -58,8 +80,8 @@ let collectExportLocations ~state ~config ~doGenType =
       |> List.iter
            (fun ({ld_attributes; ld_loc} : Typedtree.label_declaration) ->
              toplevelAttrs @ ld_attributes
-             |> processAttributes ~state ~config ~doGenType:false ~name:""
-                  ~pos:ld_loc.loc_start)
+             |> processAttributes ~scope_default:!currentScopeDefault ~state
+                  ~config ~doGenType:false ~name:"" ~pos:ld_loc.loc_start)
     | Ttype_variant constructorDeclarations ->
       constructorDeclarations
       |> List.iter
@@ -74,14 +96,15 @@ let collectExportLocations ~state ~config ~doGenType =
                    (fun ({ld_attributes; ld_loc} : Typedtree.label_declaration)
                       ->
                      toplevelAttrs @ cd_attributes @ ld_attributes
-                     |> processAttributes ~state ~config ~doGenType:false
-                          ~name:"" ~pos:ld_loc.loc_start)
+                     |> processAttributes ~scope_default:!currentScopeDefault
+                          ~state ~config ~doGenType:false ~name:""
+                          ~pos:ld_loc.loc_start)
                    flds
                | Cstr_tuple _ -> ()
              in
              toplevelAttrs @ cd_attributes
-             |> processAttributes ~state ~config ~doGenType:false ~name:""
-                  ~pos:cd_loc.loc_start)
+             |> processAttributes ~scope_default:!currentScopeDefault ~state
+                  ~config ~doGenType:false ~name:"" ~pos:cd_loc.loc_start)
     | _ -> ());
     super.type_kind self typeKind
   in
@@ -96,36 +119,42 @@ let collectExportLocations ~state ~config ~doGenType =
         Typedtree.value_description) =
     if !currentlyDisableWarnings then FileAnnotations.annotate_live state pos;
     val_attributes
-    |> processAttributes ~state ~config ~doGenType ~name:(val_id |> Ident.name)
-         ~pos;
+    |> processAttributes ~scope_default:!currentScopeDefault ~state ~config
+         ~doGenType ~name:(val_id |> Ident.name) ~pos;
     super.value_description self value_description
   in
   let structure_item self (item : Typedtree.structure_item) =
     (match item.str_desc with
-    | Tstr_attribute attribute
-      when [attribute] |> Annotation.isOcamlSuppressDeadWarning ->
-      currentlyDisableWarnings := true
+    | Tstr_attribute attribute -> (
+      match scopeDefaultFromToplevelAttribute attribute with
+      | Some _ as newDefault -> currentScopeDefault := newDefault
+      | None -> ())
     | _ -> ());
     super.structure_item self item
   in
   let structure self (structure : Typedtree.structure) =
     let oldDisableWarnings = !currentlyDisableWarnings in
+    let oldScopeDefault = !currentScopeDefault in
     super.structure self structure |> ignore;
     currentlyDisableWarnings := oldDisableWarnings;
+    currentScopeDefault := oldScopeDefault;
     structure
   in
   let signature_item self (item : Typedtree.signature_item) =
     (match item.sig_desc with
-    | Tsig_attribute attribute
-      when [attribute] |> Annotation.isOcamlSuppressDeadWarning ->
-      currentlyDisableWarnings := true
+    | Tsig_attribute attribute -> (
+      match scopeDefaultFromToplevelAttribute attribute with
+      | Some _ as newDefault -> currentScopeDefault := newDefault
+      | None -> ())
     | _ -> ());
     super.signature_item self item
   in
   let signature self (signature : Typedtree.signature) =
     let oldDisableWarnings = !currentlyDisableWarnings in
+    let oldScopeDefault = !currentScopeDefault in
     super.signature self signature |> ignore;
     currentlyDisableWarnings := oldDisableWarnings;
+    currentScopeDefault := oldScopeDefault;
     signature
   in
   {
