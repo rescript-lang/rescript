@@ -98,9 +98,8 @@ reset='\033[0m'
 
 if [[ "$PARSER" == "rust" ]]; then
   # Compare temp output against expected files without modifying expected files
-  # Collect results by category for summary
-  declare -A category_passed
-  declare -A category_failed
+  # Use files instead of associative arrays for bash 3 compatibility
+  mkdir -p temp/categories
 
   find temp/syntax_tests -name "*.txt" >temp/comparison_files.txt
 
@@ -112,30 +111,20 @@ if [[ "$PARSER" == "rust" ]]; then
       category=$(echo "$expected_file" | sed 's|syntax_tests/data/||' | cut -d'/' -f1-2 | sed 's|/expected.*||')
       # Simplify nested categories
       case "$category" in
-        parsing/*) category="parsing/$(echo $category | cut -d'/' -f2)" ;;
-        ppx/*) category="ppx/$(echo $category | cut -d'/' -f2)" ;;
+        parsing/*) category="parsing_$(echo $category | cut -d'/' -f2)" ;;
+        ppx/*) category="ppx_$(echo $category | cut -d'/' -f2)" ;;
+        */*) category=$(echo $category | cut -d'/' -f1) ;;
       esac
 
       if diff -q "$expected_file" "$temp_file" >/dev/null 2>&1; then
-        category_passed[$category]=$((${category_passed[$category]:-0} + 1))
+        echo "1" >> "temp/categories/${category}_passed.txt"
         echo "PASS:$expected_file" >> temp/results.txt
       else
-        category_failed[$category]=$((${category_failed[$category]:-0} + 1))
+        echo "1" >> "temp/categories/${category}_failed.txt"
         echo "FAIL:$expected_file" >> temp/results.txt
       fi
     fi
   done <temp/comparison_files.txt
-
-  # Calculate totals
-  total_passed=0
-  total_failed=0
-  for cat in "${!category_passed[@]}"; do
-    total_passed=$((total_passed + ${category_passed[$cat]}))
-  done
-  for cat in "${!category_failed[@]}"; do
-    total_failed=$((total_failed + ${category_failed[$cat]}))
-  done
-  total=$((total_passed + total_failed))
 
   # Print summary
   echo ""
@@ -144,18 +133,33 @@ if [[ "$PARSER" == "rust" ]]; then
   printf "%-25s %6s %6s %6s\n" "Category" "Passed" "Failed" "Total"
   printf "%-25s %6s %6s %6s\n" "--------" "------" "------" "-----"
 
-  # Get all categories and sort them
-  all_categories=$(echo "${!category_passed[@]} ${!category_failed[@]}" | tr ' ' '\n' | sort -u)
-  for cat in $all_categories; do
-    p=${category_passed[$cat]:-0}
-    f=${category_failed[$cat]:-0}
+  total_passed=0
+  total_failed=0
+
+  # Get all categories from the files
+  for passed_file in temp/categories/*_passed.txt temp/categories/*_failed.txt; do
+    [[ -f "$passed_file" ]] || continue
+    cat_name=$(basename "$passed_file" | sed 's/_passed.txt$//' | sed 's/_failed.txt$//')
+    echo "$cat_name"
+  done | sort -u > temp/all_categories.txt
+
+  while read cat; do
+    p=0
+    f=0
+    [[ -f "temp/categories/${cat}_passed.txt" ]] && p=$(wc -l < "temp/categories/${cat}_passed.txt" | tr -d ' ')
+    [[ -f "temp/categories/${cat}_failed.txt" ]] && f=$(wc -l < "temp/categories/${cat}_failed.txt" | tr -d ' ')
     t=$((p + f))
     if [[ $t -gt 0 ]]; then
       pct=$((p * 100 / t))
-      printf "%-25s %6d %6d %6d  (%2d%%)\n" "$cat" "$p" "$f" "$t" "$pct"
+      # Convert underscore back to slash for display
+      display_cat=$(echo "$cat" | sed 's/_/\//')
+      printf "%-25s %6d %6d %6d  (%2d%%)\n" "$display_cat" "$p" "$f" "$t" "$pct"
+      total_passed=$((total_passed + p))
+      total_failed=$((total_failed + f))
     fi
-  done
+  done < temp/all_categories.txt
 
+  total=$((total_passed + total_failed))
   printf "%-25s %6s %6s %6s\n" "--------" "------" "------" "-----"
   if [[ $total -gt 0 ]]; then
     pct=$((total_passed * 100 / total))
