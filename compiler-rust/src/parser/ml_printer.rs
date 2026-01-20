@@ -139,11 +139,16 @@ fn print_value_binding_ml(pat: &Pattern, expr: &Expression, out: &mut impl Write
             lhs,
             rhs,
             arity,
-            ..
+            is_async,
         } => {
             // Print the binding pattern
             print_pattern_ml(pat, out);
             let _ = write!(out, " ");
+
+            // Print async before arity
+            if *is_async {
+                let _ = write!(out, "async ");
+            }
 
             // Print arity annotation if known
             if let Arity::Full(n) = arity {
@@ -450,15 +455,46 @@ fn print_expression_ml_parens_if_complex(expr: &Expression, out: &mut impl Write
     }
 }
 
+/// Check if expression content is multi-line (contains newlines when printed)
+fn expression_is_multiline(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_constant(Constant::String(s, _)) => s.contains('\n'),
+        _ => false,
+    }
+}
+
+/// Check if an attribute is internal and should not be printed
+/// These are parser/compiler annotations that OCaml's pprintast doesn't show
+fn is_internal_attribute(name: &str) -> bool {
+    matches!(
+        name,
+        "res.await" | "res.array.access"
+    )
+}
+
+/// Filter attributes to only include ones that should be printed
+fn printable_attributes(attrs: &[(Located<String>, Payload)]) -> Vec<&(Located<String>, Payload)> {
+    attrs
+        .iter()
+        .filter(|(name, _)| !is_internal_attribute(&name.txt))
+        .collect()
+}
+
 fn print_expression_ml(expr: &Expression, out: &mut impl Write) {
-    let has_attrs = !expr.pexp_attributes.is_empty();
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
     if has_attrs {
-        // OCaml format: ((expr)[@attr ])
+        // OCaml format: ((expr)[@attr ]) or with newline before attr if multiline
         let _ = write!(out, "((");
         // Use use_parens = false inside the double parens to avoid triple nesting
         print_expression_ml_inner(expr, out, false);
         let _ = write!(out, ")");
-        for (name, payload) in &expr.pexp_attributes {
+        // If expression is multiline, put attributes on new line with indent
+        let multiline = expression_is_multiline(expr);
+        for (name, payload) in attrs {
+            if multiline {
+                let _ = write!(out, "\n  ");
+            }
             let _ = write!(out, "[@{}", name.txt);
             if !payload_is_empty(payload) {
                 let _ = write!(out, " ");
@@ -575,7 +611,7 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens
             lhs,
             rhs,
             arity,
-            ..
+            is_async,
         } => {
             // Print with arity annotation
             let arity_value = match arity {
@@ -592,6 +628,10 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens
             };
             if use_parens {
                 let _ = write!(out, "(");
+            }
+            // Print async before fun
+            if *is_async {
+                let _ = write!(out, "async ");
             }
             let _ = write!(out, "fun ");
             if let Some(n) = arity_value {
@@ -875,9 +915,25 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens
             let _ = write!(out, "[%%{}]", name.txt);
         }
         ExpressionDesc::Pexp_await(e) => {
-            let _ = write!(out, "(await ");
+            // Print await with argument in parens if needed (like simple_expr in OCaml)
+            let _ = write!(out, "await ");
+            // Wrap the argument in parens - OCaml uses simple_expr which adds parens for complex exprs
+            let needs_parens = !matches!(
+                &e.pexp_desc,
+                ExpressionDesc::Pexp_ident(_)
+                    | ExpressionDesc::Pexp_constant(_)
+                    | ExpressionDesc::Pexp_construct(_, None)
+                    | ExpressionDesc::Pexp_tuple(_)
+                    | ExpressionDesc::Pexp_array(_)
+                    | ExpressionDesc::Pexp_record(_, _)
+            );
+            if needs_parens {
+                let _ = write!(out, "(");
+            }
             print_expression_ml(e, out);
-            let _ = write!(out, ")");
+            if needs_parens {
+                let _ = write!(out, ")");
+            }
         }
         ExpressionDesc::Pexp_jsx_element(_jsx) => {
             let _ = write!(out, "<jsx>");

@@ -521,14 +521,76 @@ The expected files in `tests/syntax_tests/data/*/expected/` contain the OCaml re
 
 - **NEVER** update expected files to match Rust output - this defeats the purpose of parity testing
 - **NEVER** commit changes to expected files on feature branches
-- **ALWAYS** revert expected files to master before running tests: `git checkout master -- tests/syntax_tests/data/`
 - If tests fail, **fix the Rust implementation**, not the expected files
 
-The test script (`scripts/test_syntax.sh`) overwrites expected files when run. Always revert them afterward.
+#### Running the Syntax Tests
+
+```bash
+# Build the Rust parser first
+cargo build --manifest-path compiler-rust/Cargo.toml --release
+
+# Run all syntax tests with the Rust parser
+PARSER=rust ./scripts/test_syntax.sh
+```
+
+The test script will:
+1. Run the Rust parser on all test files
+2. Compare output against expected files (without modifying them)
+3. Show a summary table of pass/fail by category
+4. Preserve test artifacts in `tests/temp/` for inspection
+
+Example output:
+```
+=== Rust Parser Syntax Test Results ===
+
+Category                  Passed Failed  Total
+--------                  ------ ------  -----
+parsing/errors                 2     82     84  ( 2%)
+parsing/grammar               14    121    135  (10%)
+printer                       16    171    187  ( 8%)
+...
+--------                  ------ ------  -----
+TOTAL                         47    459    506  ( 9%)
+```
+
+#### Picking Up a Failing Test to Fix
+
+After running the tests, use these commands to find and inspect failures:
+
+```bash
+# List all failing tests
+grep '^FAIL:' tests/temp/results.txt | cut -d: -f2
+
+# View diff for a specific failing test
+diff tests/syntax_tests/data/printer/expr/apply.res.txt \
+     tests/temp/syntax_tests/data/printer/expr/apply.res.txt
+
+# View the source file being tested
+cat tests/syntax_tests/data/printer/expr/apply.res
+
+# View the expected output (OCaml reference)
+cat tests/syntax_tests/data/printer/expr/expected/apply.res.txt
+
+# View the actual Rust output
+cat tests/temp/syntax_tests/data/printer/expr/expected/apply.res.txt
+```
+
+#### Test a Single File Manually
+
+```bash
+# For printer tests (default ReScript output)
+./compiler-rust/target/release/res_parser_rust tests/syntax_tests/data/printer/expr/apply.res
+
+# For parsing tests (ML format output)
+./compiler-rust/target/release/res_parser_rust -print ml tests/syntax_tests/data/parsing/grammar/expressions/binary.res
+
+# Compare with OCaml parser output
+./_build/install/default/bin/res_parser tests/syntax_tests/data/printer/expr/apply.res
+```
 
 #### Test Categories and Flags
 
-The test script (`scripts/test_syntax.sh`) uses different flags for different test categories:
+The test script uses different flags for different test categories:
 
 | Directory | Flags | Output Format |
 |-----------|-------|---------------|
@@ -538,58 +600,14 @@ The test script (`scripts/test_syntax.sh`) uses different flags for different te
 | `ast-mapping/*` | `-test-ast-conversion -jsx-version 4` | ReScript format with AST roundtrip |
 | `ppx/react/*` | `-jsx-version 4` | ReScript format with JSX transform |
 
-#### Running Tests Against Master Reference
-
-```bash
-# Build Rust parser
-cargo build --manifest-path compiler-rust/Cargo.toml --release
-
-# Test a single file against master expected output
-f="tests/syntax_tests/data/printer/expr/apply.res"
-dir=$(dirname "$f")
-name=$(basename "$f")
-expected_path="${dir}/expected/${name}.txt"
-
-# Compare Rust output vs original master expected
-diff <(./compiler-rust/target/release/res_parser_rust "$f") \
-     <(git show "master:$expected_path")
-
-# For parsing tests (use -print ml)
-diff <(./compiler-rust/target/release/res_parser_rust -p ml "$f") \
-     <(git show "master:$expected_path")
-```
-
-#### Batch Testing Against Master
-
-```bash
-# Test printer/* against master expectations
-BINARY="./compiler-rust/target/release/res_parser_rust"
-PASSED=0; FAILED=0
-while IFS= read -r f; do
-  dir=$(dirname "$f"); name=$(basename "$f")
-  expected_path="${dir}/expected/${name}.txt"
-  original=$(git show "master:$expected_path" 2>/dev/null) || continue
-  actual=$("$BINARY" "$f" 2>&1)
-  [ "$actual" = "$original" ] && ((PASSED++)) || ((FAILED++))
-done < <(find tests/syntax_tests/data/printer -name "*.res")
-echo "Passed: $PASSED / $((PASSED + FAILED))"
-```
-
-#### Handling Expected Files
-
-1. **Never blindly update expected files** - If tests fail, fix the Rust implementation to match OCaml output
-2. **Use master as reference** - `git show master:path/to/expected/file.txt` gives the correct expected output
-3. **Check if files are modified** - `git diff master -- tests/syntax_tests/data/*/expected/` shows what's been changed
-4. **Reset to master if needed** - `git checkout master -- tests/syntax_tests/data/*/expected/` restores original expectations
-
 #### Common Printer Differences to Fix
 
 When the Rust printer output differs from OCaml, common issues include:
+- **Comment placement**: Comments should stay attached to the correct AST nodes
+- **Whitespace/newlines**: Blank lines between items should be preserved
+- **Multi-line formatting**: Record/array breaking should match
+- **Parenthesization**: Extra or missing parens around expressions
 - **Exotic identifiers**: `~~~compare` should not become `\"~~~"(compare)`
-- **Multi-line formatting**: Record/array breaking differs
-- **Parenthesization**: Extra parens around expressions
-- **Comment preservation**: Comments in source should appear in ReScript output
-- **Blank line preservation**: Spacing between items should match
 
 ### Key Design Decisions
 

@@ -375,21 +375,22 @@ impl MarshalWriter {
     /// Returns true if the position was written (not shared), false if a shared ref was written.
     pub fn write_position_shared(
         &mut self,
-        _id: PositionId,
+        id: PositionId,
         file_name: &str,
         line: i32,
         bol: i32,
         cnum: i32,
     ) -> bool {
-        // Use content-based sharing: positions with identical content are shared.
-        // This approximates OCaml's behavior for positions.
-        let content_key = (line, bol, cnum);
-
-        if let Some(&obj_idx) = self.position_content_table.get(&content_key) {
-            // Write a shared reference
-            let d = self.obj_counter - obj_idx;
-            self.write_shared_ref(d);
-            return false;
+        // Use identity-based sharing: positions with the same PositionId are shared.
+        // This mimics OCaml's pointer-based sharing.
+        // Skip sharing for default ID (0) which is used for dummy/uninitialized positions.
+        if id.raw() != 0 {
+            if let Some(&obj_idx) = self.position_table.get(&id) {
+                // Write a shared reference
+                let d = self.obj_counter - obj_idx;
+                self.write_shared_ref(d);
+                return false;
+            }
         }
 
         // Record the object index BEFORE writing
@@ -402,8 +403,10 @@ impl MarshalWriter {
         self.write_int(bol as i64);
         self.write_int(cnum as i64);
 
-        // Record for future content-based sharing
-        self.position_content_table.insert(content_key, obj_idx);
+        // Record for future identity-based sharing (only for non-default IDs)
+        if id.raw() != 0 {
+            self.position_table.insert(id, obj_idx);
+        }
 
         true
     }

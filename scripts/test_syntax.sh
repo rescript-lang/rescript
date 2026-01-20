@@ -98,27 +98,97 @@ reset='\033[0m'
 
 if [[ "$PARSER" == "rust" ]]; then
   # Compare temp output against expected files without modifying expected files
+  # Collect results by category for summary
+  declare -A category_passed
+  declare -A category_failed
+
   find temp/syntax_tests -name "*.txt" >temp/comparison_files.txt
-  diff_output=""
+
+  # Collect pass/fail results
   while read temp_file; do
-    # Convert temp/syntax_tests/data/.../expected/foo.res.txt -> syntax_tests/data/.../expected/foo.res.txt
     expected_file="${temp_file#temp/}"
     if [[ -f "$expected_file" ]]; then
-      file_diff=$(diff --unified "$expected_file" "$temp_file" 2>/dev/null)
-      if [[ -n "$file_diff" ]]; then
-        diff_output+="--- $expected_file
-+++ $temp_file (Rust output)
-$file_diff
-"
+      # Extract category from path: syntax_tests/data/CATEGORY/...
+      category=$(echo "$expected_file" | sed 's|syntax_tests/data/||' | cut -d'/' -f1-2 | sed 's|/expected.*||')
+      # Simplify nested categories
+      case "$category" in
+        parsing/*) category="parsing/$(echo $category | cut -d'/' -f2)" ;;
+        ppx/*) category="ppx/$(echo $category | cut -d'/' -f2)" ;;
+      esac
+
+      if diff -q "$expected_file" "$temp_file" >/dev/null 2>&1; then
+        category_passed[$category]=$((${category_passed[$category]:-0} + 1))
+        echo "PASS:$expected_file" >> temp/results.txt
+      else
+        category_failed[$category]=$((${category_failed[$category]:-0} + 1))
+        echo "FAIL:$expected_file" >> temp/results.txt
       fi
     fi
   done <temp/comparison_files.txt
 
-  if [[ -z "$diff_output" ]]; then
-    printf "${successGreen}✅ Rust parser output matches expected files.${reset}\n"
-  else
-    printf "${warningYellow}⚠️ Rust parser output differs from expected files:\n${diff_output}${reset}"
+  # Calculate totals
+  total_passed=0
+  total_failed=0
+  for cat in "${!category_passed[@]}"; do
+    total_passed=$((total_passed + ${category_passed[$cat]}))
+  done
+  for cat in "${!category_failed[@]}"; do
+    total_failed=$((total_failed + ${category_failed[$cat]}))
+  done
+  total=$((total_passed + total_failed))
+
+  # Print summary
+  echo ""
+  echo "=== Rust Parser Syntax Test Results ==="
+  echo ""
+  printf "%-25s %6s %6s %6s\n" "Category" "Passed" "Failed" "Total"
+  printf "%-25s %6s %6s %6s\n" "--------" "------" "------" "-----"
+
+  # Get all categories and sort them
+  all_categories=$(echo "${!category_passed[@]} ${!category_failed[@]}" | tr ' ' '\n' | sort -u)
+  for cat in $all_categories; do
+    p=${category_passed[$cat]:-0}
+    f=${category_failed[$cat]:-0}
+    t=$((p + f))
+    if [[ $t -gt 0 ]]; then
+      pct=$((p * 100 / t))
+      printf "%-25s %6d %6d %6d  (%2d%%)\n" "$cat" "$p" "$f" "$t" "$pct"
+    fi
+  done
+
+  printf "%-25s %6s %6s %6s\n" "--------" "------" "------" "-----"
+  if [[ $total -gt 0 ]]; then
+    pct=$((total_passed * 100 / total))
+    printf "%-25s %6d %6d %6d  (%2d%%)\n" "TOTAL" "$total_passed" "$total_failed" "$total" "$pct"
+  fi
+  echo ""
+
+  if [[ $total_failed -eq 0 ]]; then
+    printf "${successGreen}✅ Rust parser output matches all expected files.${reset}\n"
     rm -r temp/
+  else
+    printf "${warningYellow}⚠️ $total_failed tests have differences${reset}\n"
+    echo ""
+    echo "Test artifacts preserved in tests/temp/"
+    echo ""
+    echo "To view a specific diff:"
+    echo "  diff tests/syntax_tests/data/PATH/expected/FILE.txt tests/temp/syntax_tests/data/PATH/expected/FILE.txt"
+    echo ""
+    echo "To list all failing tests:"
+    echo "  grep '^FAIL:' tests/temp/results.txt | cut -d: -f2"
+    echo ""
+    echo "To view first failing diff:"
+    first_fail=$(grep '^FAIL:' temp/results.txt | head -1 | cut -d: -f2)
+    if [[ -n "$first_fail" ]]; then
+      echo "  diff $first_fail temp/$first_fail"
+      echo ""
+      echo "--- First failing test: $first_fail ---"
+      diff --unified "$first_fail" "temp/$first_fail" | head -50
+      diff_lines=$(diff --unified "$first_fail" "temp/$first_fail" | wc -l)
+      if [[ $diff_lines -gt 50 ]]; then
+        echo "... ($((diff_lines - 50)) more lines)"
+      fi
+    fi
     exit 1
   fi
 else

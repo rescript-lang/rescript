@@ -3691,9 +3691,10 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
         return parse_jsx_fragment(p, start_pos);
     }
 
-    // Parse tag name
+    // Parse tag name - the location starts at the identifier, not the '<'
+    let tag_name_start = p.start_pos.clone();
     let tag_name = parse_jsx_tag_name(p);
-    let tag_name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let tag_name_loc = p.mk_loc(&tag_name_start, &p.prev_end_pos);
 
     // Parse props
     let props = parse_jsx_props(p);

@@ -2597,8 +2597,10 @@ fn parse_constructors(p: &mut Parser<'_>) -> Vec<ConstructorDeclaration> {
     let mut constructors = vec![];
 
     while p.token == Token::Bar {
+        // Capture start position BEFORE consuming the bar (like OCaml)
+        let bar_start = p.start_pos.clone();
         p.next();
-        if let Some(c) = parse_constructor(p) {
+        if let Some(c) = parse_constructor_with_start(p, bar_start) {
             constructors.push(c);
         }
     }
@@ -2617,8 +2619,10 @@ fn parse_constructors_without_leading_bar(p: &mut Parser<'_>) -> Vec<Constructor
 
     // Parse remaining constructors (with leading |)
     while p.token == Token::Bar {
+        // Capture start position BEFORE consuming the bar (like OCaml)
+        let bar_start = p.start_pos.clone();
         p.next();
-        if let Some(c) = parse_constructor(p) {
+        if let Some(c) = parse_constructor_with_start(p, bar_start) {
             constructors.push(c);
         }
     }
@@ -2626,9 +2630,22 @@ fn parse_constructors_without_leading_bar(p: &mut Parser<'_>) -> Vec<Constructor
     constructors
 }
 
+/// Parse a single constructor with optional explicit start position.
+fn parse_constructor_with_start(
+    p: &mut Parser<'_>,
+    start_pos: Position,
+) -> Option<ConstructorDeclaration> {
+    parse_constructor_impl(p, start_pos)
+}
+
 /// Parse a single constructor.
 fn parse_constructor(p: &mut Parser<'_>) -> Option<ConstructorDeclaration> {
     let start_pos = p.start_pos.clone();
+    parse_constructor_impl(p, start_pos)
+}
+
+/// Implementation of constructor parsing with a given start position.
+fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<ConstructorDeclaration> {
     let attrs = parse_attributes(p);
 
     // Check for spread syntax: ...typeName
