@@ -3041,19 +3041,13 @@ and parse_jsx_children p : Parsetree.jsx_children =
         loop p (child :: children)
       | _ -> children
     in
-    let children =
-      match p.Parser.token with
-      | DotDotDot ->
-        Parser.next p;
-        let expr =
-          parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
-        in
-        Parsetree.JSXChildrenSpreading expr
-      | _ ->
-        let children = List.rev (loop p []) in
-        Parsetree.JSXChildrenItems children
-    in
-    children
+    match p.Parser.token with
+    | DotDotDot ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.spread_children_no_longer_supported);
+      Parser.next p;
+      [parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p]
+    | _ -> List.rev (loop p [])
 
 and _nojaf_dump_token prefix p =
   let start_line = p.Parser.start_pos.Lexing.pos_lnum in
@@ -3092,8 +3086,7 @@ and parse_jsx_children_2 (p : Parser.t) : Parsetree.jsx_children =
       let text_expr = parse_jsx_text p in
       text_expr :: loop p children
   in
-  let children = loop p [] in
-  Parsetree.JSXChildrenItems children
+  loop p []
 
 (**
     Parse tokens as regular string inside a jsx element.
