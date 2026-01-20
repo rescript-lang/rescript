@@ -687,22 +687,22 @@ The goal is byte-identical binary AST output between Rust and OCaml parsers. Cur
 
 **Remaining Work:**
 
-1. 🔴 **ArgLabel Location** (Major): Rust's `ArgLabel::Labelled(String)` needs to become `ArgLabel::Labelled(Located<String>)` to match OCaml's `Labelled of string loc`
-   - This affects ~90 files in the codebase
-   - Primary cause of ~93% of files having AST differences
-   - Files with labeled/optional arguments all fail parity due to this
+1. ✅ **ArgLabel Location** (Major): Changed `ArgLabel::Labelled(String)` to `ArgLabel::Labelled(Located<String>)` to match OCaml's `Labelled of string loc`
+   - Updated ast.rs, expr.rs, typ.rs, printer.rs, ml_printer.rs, jsx_ppx.rs, sexp_locs.rs
+   - Updated all binary_ast mappers (mapper_from0.rs, mapper_to0.rs, current_marshal.rs)
+   - Fixed 42 files with location differences (849 → 807 remaining)
 
 2. 🟡 **Position Sharing Differences** (Minor): ~5% of files have matching sexp but different binary
    - Some positions that OCaml shares are not shared in Rust
    - Needs investigation into OCaml's pointer sharing patterns
 
-**Current Parity Statistics:**
+**Current Parity Statistics (After ArgLabel Fix):**
 
 | Metric | Value |
 |--------|-------|
-| Sexp-locs match | ~7% |
-| Binary match | ~5% |
-| ArgLabel-related failures | ~93% |
+| Sexp (AST structure) match | 100% (1049/1049) |
+| Sexp-locs (with locations) match | ~23% (242/1049) |
+| Location differences | 807 files have location differences |
 
 **Simple cases that work:**
 
@@ -712,11 +712,12 @@ The goal is byte-identical binary AST output between Rust and OCaml parsers. Cur
 - `type t = | A | B` ✅
 - `<App />` ✅
 - `let f = x => x` ✅
+- `let f = (~a, ~b) => a + b` ✅ (ArgLabel now includes location)
 
-**Cases that fail due to ArgLabel:**
+**Remaining location differences:**
 
-- `let f = (~a, ~b) => a + b` ❌ (missing location on Labelled/Optional)
-- Any file using labeled arguments ❌
+- Various position differences in types, expressions, and value descriptions
+- Need to investigate OCaml's position calculation patterns
 
 ### Binary AST Byte Parity Analysis
 
