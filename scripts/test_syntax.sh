@@ -46,32 +46,48 @@ pushd tests
 rm -rf temp
 mkdir temp
 
+# When using Rust parser, write to temp files and compare against expected files
+# instead of overwriting them. This preserves the OCaml reference output.
+if [[ "$PARSER" == "rust" ]]; then
+  function out {
+    # Output to temp directory, mirroring the expected file structure
+    local expected=$(exp $1)
+    local temp_out="temp/$expected"
+    mkdir -p "$(dirname $temp_out)"
+    echo "$temp_out"
+  }
+else
+  function out {
+    exp $1
+  }
+fi
+
 # parsing
 find syntax_tests/data/parsing/{errors,infiniteLoops,recovery} -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $RES_PARSER -recover -print ml $file &> $(exp $file) & maybeWait
+  $RES_PARSER -recover -print ml $file &> $(out $file) & maybeWait
 done <temp/files.txt
 find syntax_tests/data/parsing/{grammar,other} -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $RES_PARSER -print ml $file &> $(exp $file) & maybeWait
+  $RES_PARSER -print ml $file &> $(out $file) & maybeWait
 done <temp/files.txt
 
 # printing
 find syntax_tests/data/{printer,conversion} -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
 while read file; do
-  $RES_PARSER $file &> $(exp $file) & maybeWait
+  $RES_PARSER $file &> $(out $file) & maybeWait
 done <temp/files.txt
 
 # printing with ast conversion
 find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
 while read file; do
-  $RES_PARSER -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
+  $RES_PARSER -test-ast-conversion -jsx-version 4 $file &> $(out $file) & maybeWait
 done <temp/files.txt
 
 # printing with ppx
 find syntax_tests/data/ppx/react -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $RES_PARSER -jsx-version 4 $file &> $(exp $file) & maybeWait
+  $RES_PARSER -jsx-version 4 $file &> $(out $file) & maybeWait
 done <temp/files.txt
 
 wait
@@ -80,14 +96,41 @@ warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
 reset='\033[0m'
 
-git diff --ignore-cr-at-eol $(find syntax_tests -name expected) >temp/diff.txt
-diff=$(cat temp/diff.txt)
-if [[ $diff = "" ]]; then
-  printf "${successGreen}✅ No unstaged tests difference.${reset}\n"
+if [[ "$PARSER" == "rust" ]]; then
+  # Compare temp output against expected files without modifying expected files
+  find temp/syntax_tests -name "*.txt" >temp/comparison_files.txt
+  diff_output=""
+  while read temp_file; do
+    # Convert temp/syntax_tests/data/.../expected/foo.res.txt -> syntax_tests/data/.../expected/foo.res.txt
+    expected_file="${temp_file#temp/}"
+    if [[ -f "$expected_file" ]]; then
+      file_diff=$(diff --unified "$expected_file" "$temp_file" 2>/dev/null)
+      if [[ -n "$file_diff" ]]; then
+        diff_output+="--- $expected_file
++++ $temp_file (Rust output)
+$file_diff
+"
+      fi
+    fi
+  done <temp/comparison_files.txt
+
+  if [[ -z "$diff_output" ]]; then
+    printf "${successGreen}✅ Rust parser output matches expected files.${reset}\n"
+  else
+    printf "${warningYellow}⚠️ Rust parser output differs from expected files:\n${diff_output}${reset}"
+    rm -r temp/
+    exit 1
+  fi
 else
-  printf "${warningYellow}⚠️ There are unstaged differences in syntax_tests/data/! Did you break a test?\n${diff}\n${reset}"
-  rm -r temp/
-  exit 1
+  git diff --ignore-cr-at-eol $(find syntax_tests -name expected) >temp/diff.txt
+  diff=$(cat temp/diff.txt)
+  if [[ $diff = "" ]]; then
+    printf "${successGreen}✅ No unstaged tests difference.${reset}\n"
+  else
+    printf "${warningYellow}⚠️ There are unstaged differences in syntax_tests/data/! Did you break a test?\n${diff}\n${reset}"
+    rm -r temp/
+    exit 1
+  fi
 fi
 
 # roundtrip tests
