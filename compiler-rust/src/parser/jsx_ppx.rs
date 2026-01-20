@@ -11,7 +11,7 @@
 //! - Key props use `jsxKeyed`/`jsxsKeyed` instead
 //! - `@react.component` transforms functions to accept props record
 
-use crate::location::{Location, Position};
+use crate::location::{Location, LocationId, Position, PositionId};
 use super::ast::*;
 use super::longident::Longident;
 
@@ -1968,11 +1968,13 @@ fn empty_loc() -> Location {
         line: 0,
         bol: 0,
         cnum: 0,
+        id: PositionId::default_id(),
     };
     Location {
         loc_start: pos.clone(),
         loc_end: pos,
         loc_ghost: true,
+        id: LocationId::default_id(),
     }
 }
 
@@ -3027,6 +3029,7 @@ fn mk_record_from_props(
             loc_start: first.loc_start.clone(),
             loc_end: last.loc_end.clone(),
             loc_ghost: false,
+            id: LocationId::default_id(),
         }
     };
 

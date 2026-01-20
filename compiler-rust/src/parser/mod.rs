@@ -42,6 +42,7 @@ pub mod code_frame;
 pub mod comment;
 pub mod core;
 pub mod diagnostics;
+pub mod doc;
 pub mod expr;
 pub mod grammar;
 pub mod longident;
@@ -54,7 +55,9 @@ pub mod token;
 pub mod typ;
 pub mod utf8;
 pub mod sexp;
+pub mod sexp_locs;
 pub mod jsx_ppx;
+pub mod ml_printer;
 
 // Re-exports
 pub use ast::*;

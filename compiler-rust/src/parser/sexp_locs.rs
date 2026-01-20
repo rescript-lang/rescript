@@ -1,243 +1,36 @@
-//! S-expression printer for AST - matches OCaml res_ast_debugger.ml output exactly
+//! S-expression printer for AST with location information
 //!
-//! This module produces sexp output that is byte-for-byte identical to the OCaml
-//! `res_parser -print sexp` output, enabling AST parity testing between the
-//! Rust and OCaml parsers.
-//!
-//! Uses the same Doc-based pretty printing algorithm as OCaml's Res_doc module.
+//! This module produces sexp output that includes location information,
+//! matching OCaml res_ast_debugger.ml SexpAstWithLocs output exactly.
+//! Used for debugging position parity between the Rust and OCaml parsers.
 
+use crate::location::{Located, Location};
 use crate::parser::ast::*;
 use crate::parser::longident::Longident;
+use crate::parser::sexp::{Sexp, string_to_latin1_bytes};
 use std::io::Write;
 
-const WIDTH: i32 = 80;
+// ============================================================================
+// Location helpers
+// ============================================================================
 
-/// Document type matching OCaml's Res_doc.t
-#[derive(Clone)]
-enum Doc {
-    Nil,
-    Text(String),
-    Concat(Vec<Doc>),
-    Indent(Box<Doc>),
-    Line,  // Becomes space if group fits, newline otherwise
-    Group(Box<Doc>),
+fn location(loc: &Location) -> Sexp {
+    let start_col = loc.loc_start.cnum - loc.loc_start.bol;
+    let end_col = loc.loc_end.cnum - loc.loc_end.bol;
+    Sexp::list(vec![
+        Sexp::atom("loc"),
+        Sexp::atom(&loc.loc_start.line.to_string()),
+        Sexp::atom(&start_col.to_string()),
+        Sexp::atom(&loc.loc_end.line.to_string()),
+        Sexp::atom(&end_col.to_string()),
+    ])
 }
 
-/// Mode for rendering: Flat (lines become spaces) or Break (lines become newlines)
-#[derive(Clone, Copy, PartialEq, Debug)]
-enum Mode {
-    Flat,
-    Break,
-}
+// ============================================================================
+// String quoting (reuse from sexp module patterns)
+// ============================================================================
 
-impl Doc {
-    fn text(s: &str) -> Doc {
-        Doc::Text(s.to_string())
-    }
-
-    fn concat(docs: Vec<Doc>) -> Doc {
-        Doc::Concat(docs)
-    }
-
-    fn indent(doc: Doc) -> Doc {
-        Doc::Indent(Box::new(doc))
-    }
-
-    fn group(doc: Doc) -> Doc {
-        Doc::Group(Box::new(doc))
-    }
-
-    fn join(sep: Doc, docs: Vec<Doc>) -> Doc {
-        let mut result = Vec::new();
-        for (i, doc) in docs.into_iter().enumerate() {
-            if i > 0 {
-                result.push(sep.clone());
-            }
-            result.push(doc);
-        }
-        Doc::Concat(result)
-    }
-
-    /// Check if the documents on the stack fit within the remaining width
-    /// This matches OCaml's fits function behavior exactly
-    fn fits(mut width: i32, stack: &[(i32, Mode, &Doc)]) -> bool {
-        // Use a work stack to process docs in order (like OCaml's recursive approach)
-        // Key difference from naive iterative: we process Concat children in-order,
-        // and continue with the outer stack AFTER all children are done.
-
-        // Work items: (indent, mode, doc, continuation_stack_idx)
-        // When a doc is fully processed, we continue with continuation_stack_idx
-        let mut work: Vec<(i32, Mode, &Doc)> = Vec::new();
-
-        // Initialize with stack items in reverse order (so first is processed first)
-        for item in stack.iter().rev() {
-            work.push(*item);
-        }
-
-        while let Some((indent, mode, doc)) = work.pop() {
-            if width < 0 {
-                return false;
-            }
-
-            match doc {
-                Doc::Nil => {}
-                Doc::Text(s) => {
-                    // Use char count to match OCaml's String.length behavior.
-                    // With Latin-1 encoding, each original byte becomes one char,
-                    // so chars().count() gives the original byte count.
-                    width -= s.chars().count() as i32;
-                }
-                Doc::Concat(docs) => {
-                    // Push children in reverse order so first child is processed first
-                    for d in docs.iter().rev() {
-                        work.push((indent, mode, d));
-                    }
-                }
-                Doc::Indent(d) => {
-                    work.push((indent + 2, mode, d.as_ref()));
-                }
-                Doc::Line => {
-                    match mode {
-                        Mode::Flat => width -= 1,
-                        Mode::Break => return true, // Line break = we fit
-                    }
-                }
-                Doc::Group(d) => {
-                    // Groups inherit the current mode in fits check
-                    work.push((indent, mode, d.as_ref()));
-                }
-            }
-        }
-
-        width >= 0
-    }
-
-    /// Convert to string with pretty printing using stack-based algorithm
-    /// This matches OCaml's Res_doc.to_string algorithm
-    fn to_string(&self) -> String {
-        let mut out = String::new();
-        let mut col: i32 = 0;
-
-        // Stack of (indent, mode, doc)
-        let mut stack: Vec<(i32, Mode, &Doc)> = vec![(0, Mode::Break, self)];
-
-        while let Some((indent, mode, doc)) = stack.pop() {
-            match doc {
-                Doc::Nil => {}
-                Doc::Text(s) => {
-                    out.push_str(s);
-                    // Use char count to match OCaml's String.length behavior.
-                    // With Latin-1 encoding, each original byte becomes one char.
-                    col += s.chars().count() as i32;
-                }
-                Doc::Concat(docs) => {
-                    // Push in reverse order so first element is processed first
-                    for d in docs.iter().rev() {
-                        stack.push((indent, mode, d));
-                    }
-                }
-                Doc::Indent(d) => {
-                    stack.push((indent + 2, mode, d));
-                }
-                Doc::Line => {
-                    match mode {
-                        Mode::Flat => {
-                            out.push(' ');
-                            col += 1;
-                        }
-                        Mode::Break => {
-                            out.push('\n');
-                            for _ in 0..indent {
-                                out.push(' ');
-                            }
-                            col = indent;
-                        }
-                    }
-                }
-                Doc::Group(d) => {
-                    // Check if the group fits WITH the rest of the stack
-                    // Build check stack: this group in flat mode, plus remaining stack (in top-to-bottom order)
-                    let mut check_stack: Vec<(i32, Mode, &Doc)> = vec![(indent, Mode::Flat, d.as_ref())];
-                    // Stack items are added from top (last index) to bottom (first index)
-                    // so they're processed in the correct order after we reverse in fits
-                    for item in stack.iter().rev() {
-                        check_stack.push(*item);
-                    }
-
-                    let remaining = WIDTH - col;
-                    let does_fit = Self::fits(remaining, &check_stack);
-
-                    if does_fit {
-                        // Fits: render in flat mode
-                        stack.push((indent, Mode::Flat, d));
-                    } else {
-                        // Doesn't fit: render in break mode
-                        stack.push((indent, Mode::Break, d));
-                    }
-                }
-            }
-        }
-
-        out
-    }
-}
-
-/// Pretty-printed sexp with proper indentation (matches OCaml Res_doc output)
-#[derive(Clone)]
-pub enum Sexp {
-    Atom(String),
-    List(Vec<Sexp>),
-}
-
-impl Sexp {
-    pub fn atom(s: &str) -> Sexp {
-        Sexp::Atom(s.to_string())
-    }
-
-    pub fn list(items: Vec<Sexp>) -> Sexp {
-        Sexp::List(items)
-    }
-
-    pub fn to_string(&self) -> String {
-        self.to_doc().to_string()
-    }
-
-    /// Convert Sexp to Doc, matching OCaml's res_ast_debugger to_doc function
-    fn to_doc(&self) -> Doc {
-        match self {
-            Sexp::Atom(s) => Doc::text(s),
-            Sexp::List(items) if items.is_empty() => Doc::text("()"),
-            Sexp::List(items) if items.len() == 1 => {
-                Doc::concat(vec![
-                    Doc::text("("),
-                    items[0].to_doc(),
-                    Doc::text(")"),
-                ])
-            }
-            Sexp::List(items) => {
-                let head = items[0].to_doc();
-                let tail: Vec<Doc> = items[1..].iter().map(|s| s.to_doc()).collect();
-                Doc::group(Doc::concat(vec![
-                    Doc::text("("),
-                    head,
-                    Doc::indent(Doc::concat(vec![
-                        Doc::Line,
-                        Doc::join(Doc::Line, tail),
-                    ])),
-                    Doc::text(")"),
-                ]))
-            }
-        }
-    }
-}
-
-/// Quote a string for sexp output.
-/// If `escape_quotes` is true, escape quotes with backslash (for regular strings).
-/// If false, output quotes as-is (for tagged/template strings).
-fn quote_string_impl(s: &str, _escape_quotes: bool) -> String {
-    // The scanner now keeps escape sequences as text (e.g., \n is two chars: \ and n).
-    // The sexp printer just wraps the string in quotes without additional escaping.
-    // OCaml's output is simply the string contents surrounded by double quotes.
+fn quote_string(s: &str) -> String {
     let mut result = String::with_capacity(s.len() + 2);
     result.push('"');
     result.push_str(s);
@@ -245,14 +38,9 @@ fn quote_string_impl(s: &str, _escape_quotes: bool) -> String {
     result
 }
 
-fn quote_string(s: &str) -> String {
-    // Default: escape quotes (for regular strings)
-    quote_string_impl(s, true)
-}
-
 fn quote_string_tagged(s: &str) -> String {
-    // For tagged strings (template literals): don't escape quotes
-    quote_string_impl(s, false)
+    // Same as quote_string for now - template literals don't need escaping
+    quote_string(s)
 }
 
 fn map_empty<T, F>(items: &[T], f: F) -> Vec<Sexp>
@@ -284,6 +72,7 @@ fn longident_inner(lid: &Longident) -> Sexp {
     }
 }
 
+/// Returns (longident ...) without location - location is added separately at call sites
 fn longident(lid: &Longident) -> Sexp {
     Sexp::list(vec![Sexp::atom("longident"), longident_inner(lid)])
 }
@@ -368,11 +157,9 @@ fn constant_inner(c: &Constant) -> Sexp {
         }
         Constant::Char(_) => Sexp::list(vec![Sexp::atom("Pconst_char")]),
         Constant::String(txt, tag) => {
-            // Check for internal char marker
             if tag.as_ref().map(|t| t.as_str()) == Some("INTERNAL_RES_CHAR_CONTENTS") {
                 Sexp::list(vec![Sexp::atom("Pconst_char")])
             } else {
-                // Tagged strings (template literals) don't escape quotes in sexp output
                 let quoted = if tag.is_some() {
                     quote_string_tagged(txt)
                 } else {
@@ -424,12 +211,12 @@ fn payload(p: &Payload) -> Sexp {
 
 fn attribute(attr: &Attribute) -> Sexp {
     let (name, p) = attr;
-    Sexp::list(vec![Sexp::atom("attribute"), Sexp::atom(&name.txt), payload(p)])
+    Sexp::list(vec![Sexp::atom("attribute"), Sexp::atom(&name.txt), location(&name.loc), payload(p)])
 }
 
 fn extension(ext: &Extension) -> Sexp {
     let (name, p) = ext;
-    Sexp::list(vec![Sexp::atom("extension"), Sexp::atom(&name.txt), payload(p)])
+    Sexp::list(vec![Sexp::atom("extension"), Sexp::atom(&name.txt), location(&name.loc), payload(p)])
 }
 
 fn attributes(attrs: &[Attribute]) -> Sexp {
@@ -458,6 +245,7 @@ fn core_type(typ: &CoreType) -> Sexp {
         CoreTypeDesc::Ptyp_constr(lid, types) => Sexp::list(vec![
             Sexp::atom("Ptyp_constr"),
             longident(&lid.txt),
+            location(&lid.loc),
             Sexp::list(map_empty(types, core_type)),
         ]),
         CoreTypeDesc::Ptyp_object(fields, flag) => Sexp::list(vec![
@@ -490,7 +278,7 @@ fn core_type(typ: &CoreType) -> Sexp {
         ]),
         CoreTypeDesc::Ptyp_extension(ext) => Sexp::list(vec![Sexp::atom("Ptyp_extension"), extension(ext)]),
     };
-    Sexp::list(vec![Sexp::atom("core_type"), desc])
+    Sexp::list(vec![Sexp::atom("core_type"), location(&typ.ptyp_loc), desc])
 }
 
 fn object_field(field: &ObjectField) -> Sexp {
@@ -498,6 +286,7 @@ fn object_field(field: &ObjectField) -> Sexp {
         ObjectField::Otag(lbl, attrs, t) => Sexp::list(vec![
             Sexp::atom("Otag"),
             Sexp::atom(&quote_string(&lbl.txt)),
+            location(&lbl.loc),
             attributes(attrs),
             core_type(t),
         ]),
@@ -510,6 +299,7 @@ fn row_field(field: &RowField) -> Sexp {
         RowField::Rtag(lbl, attrs, empty, types) => Sexp::list(vec![
             Sexp::atom("Rtag"),
             Sexp::atom(&quote_string(&lbl.txt)),
+            location(&lbl.loc),
             attributes(attrs),
             Sexp::atom(if *empty { "true" } else { "false" }),
             Sexp::list(map_empty(types, core_type)),
@@ -518,12 +308,13 @@ fn row_field(field: &RowField) -> Sexp {
     }
 }
 
-fn package_type(mod_name: &Loc<Longident>, constraints: &[(Loc<Longident>, CoreType)]) -> Sexp {
+fn package_type(mod_name: &Located<Longident>, constraints: &[(Located<Longident>, CoreType)]) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("package_type"),
         longident(&mod_name.txt),
+        location(&mod_name.loc),
         Sexp::list(map_empty(constraints, |(lid, t)| {
-            Sexp::list(vec![longident(&lid.txt), core_type(t)])
+            Sexp::list(vec![longident(&lid.txt), location(&lid.loc), core_type(t)])
         })),
     ])
 }
@@ -536,12 +327,13 @@ fn pattern(p: &Pattern) -> Sexp {
     let descr = match &p.ppat_desc {
         PatternDesc::Ppat_any => Sexp::atom("Ppat_any"),
         PatternDesc::Ppat_var(var) => {
-            Sexp::list(vec![Sexp::atom("Ppat_var"), Sexp::atom(&quote_string(&var.txt))])
+            Sexp::list(vec![Sexp::atom("Ppat_var"), Sexp::atom(&quote_string(&var.txt)), location(&var.loc)])
         }
         PatternDesc::Ppat_alias(pat, alias) => Sexp::list(vec![
             Sexp::atom("Ppat_alias"),
             pattern(pat),
             Sexp::atom(&quote_string(&alias.txt)),
+            location(&alias.loc),
         ]),
         PatternDesc::Ppat_constant(c) => Sexp::list(vec![Sexp::atom("Ppat_constant"), constant(c)]),
         PatternDesc::Ppat_interval(lo, hi) => {
@@ -553,9 +345,10 @@ fn pattern(p: &Pattern) -> Sexp {
         PatternDesc::Ppat_construct(lid, opt_pat) => Sexp::list(vec![
             Sexp::atom("Ppat_construct"),
             longident(&lid.txt),
+            location(&lid.loc),
             match opt_pat {
                 None => Sexp::atom("None"),
-                Some(p) => Sexp::list(vec![Sexp::atom("some"), pattern(p)]), // Note: lowercase "some" matches OCaml
+                Some(p) => Sexp::list(vec![Sexp::atom("some"), pattern(p)]),
             },
         ]),
         PatternDesc::Ppat_variant(lbl, opt_pat) => Sexp::list(vec![
@@ -570,7 +363,7 @@ fn pattern(p: &Pattern) -> Sexp {
             Sexp::atom("Ppat_record"),
             closed_flag(flag),
             Sexp::list(map_empty(fields, |f| {
-                Sexp::list(vec![longident(&f.lid.txt), pattern(&f.pat)])
+                Sexp::list(vec![longident(&f.lid.txt), location(&f.lid.loc), pattern(&f.pat)])
             })),
         ]),
         PatternDesc::Ppat_array(pats) => {
@@ -582,17 +375,17 @@ fn pattern(p: &Pattern) -> Sexp {
         PatternDesc::Ppat_constraint(pat, t) => {
             Sexp::list(vec![Sexp::atom("Ppat_constraint"), pattern(pat), core_type(t)])
         }
-        PatternDesc::Ppat_type(lid) => Sexp::list(vec![Sexp::atom("Ppat_type"), longident(&lid.txt)]),
+        PatternDesc::Ppat_type(lid) => Sexp::list(vec![Sexp::atom("Ppat_type"), longident(&lid.txt), location(&lid.loc)]),
         PatternDesc::Ppat_unpack(name) => {
-            Sexp::list(vec![Sexp::atom("Ppat_unpack"), Sexp::atom(&quote_string(&name.txt))])
+            Sexp::list(vec![Sexp::atom("Ppat_unpack"), Sexp::atom(&quote_string(&name.txt)), location(&name.loc)])
         }
         PatternDesc::Ppat_exception(pat) => Sexp::list(vec![Sexp::atom("Ppat_exception"), pattern(pat)]),
         PatternDesc::Ppat_extension(ext) => Sexp::list(vec![Sexp::atom("Ppat_extension"), extension(ext)]),
         PatternDesc::Ppat_open(lid, pat) => {
-            Sexp::list(vec![Sexp::atom("Ppat_open"), longident(&lid.txt), pattern(pat)])
+            Sexp::list(vec![Sexp::atom("Ppat_open"), longident(&lid.txt), location(&lid.loc), pattern(pat)])
         }
     };
-    Sexp::list(vec![Sexp::atom("pattern"), descr])
+    Sexp::list(vec![Sexp::atom("pattern"), location(&p.ppat_loc), descr])
 }
 
 // ============================================================================
@@ -601,7 +394,7 @@ fn pattern(p: &Pattern) -> Sexp {
 
 fn expression(expr: &Expression) -> Sexp {
     let desc = match &expr.pexp_desc {
-        ExpressionDesc::Pexp_ident(lid) => Sexp::list(vec![Sexp::atom("Pexp_ident"), longident(&lid.txt)]),
+        ExpressionDesc::Pexp_ident(lid) => Sexp::list(vec![Sexp::atom("Pexp_ident"), longident(&lid.txt), location(&lid.loc)]),
         ExpressionDesc::Pexp_constant(c) => Sexp::list(vec![Sexp::atom("Pexp_constant"), constant(c)]),
         ExpressionDesc::Pexp_let(flag, vbs, body) => Sexp::list(vec![
             Sexp::atom("Pexp_let"),
@@ -646,6 +439,7 @@ fn expression(expr: &Expression) -> Sexp {
         ExpressionDesc::Pexp_construct(lid, opt_expr) => Sexp::list(vec![
             Sexp::atom("Pexp_construct"),
             longident(&lid.txt),
+            location(&lid.loc),
             match opt_expr {
                 None => Sexp::atom("None"),
                 Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
@@ -662,7 +456,7 @@ fn expression(expr: &Expression) -> Sexp {
         ExpressionDesc::Pexp_record(fields, opt_base) => Sexp::list(vec![
             Sexp::atom("Pexp_record"),
             Sexp::list(map_empty(fields, |f| {
-                Sexp::list(vec![longident(&f.lid.txt), expression(&f.expr)])
+                Sexp::list(vec![longident(&f.lid.txt), location(&f.lid.loc), expression(&f.expr)])
             })),
             match opt_base {
                 None => Sexp::atom("None"),
@@ -670,12 +464,13 @@ fn expression(expr: &Expression) -> Sexp {
             },
         ]),
         ExpressionDesc::Pexp_field(e, lid) => {
-            Sexp::list(vec![Sexp::atom("Pexp_field"), expression(e), longident(&lid.txt)])
+            Sexp::list(vec![Sexp::atom("Pexp_field"), expression(e), longident(&lid.txt), location(&lid.loc)])
         }
         ExpressionDesc::Pexp_setfield(e1, lid, e2) => Sexp::list(vec![
             Sexp::atom("Pexp_setfield"),
             expression(e1),
             longident(&lid.txt),
+            location(&lid.loc),
             expression(e2),
         ]),
         ExpressionDesc::Pexp_array(exprs) => {
@@ -708,17 +503,18 @@ fn expression(expr: &Expression) -> Sexp {
             Sexp::list(vec![Sexp::atom("Pexp_constraint"), expression(e), core_type(t)])
         }
         ExpressionDesc::Pexp_coerce(e, _t1, t2) => {
-            // OCaml doesn't include t1 in coerce sexp
             Sexp::list(vec![Sexp::atom("Pexp_coerce"), expression(e), core_type(t2)])
         }
         ExpressionDesc::Pexp_send(obj, method_name) => Sexp::list(vec![
             Sexp::atom("Pexp_send"),
             Sexp::atom(&quote_string(&method_name.txt)),
+            location(&method_name.loc),
             expression(obj),
         ]),
         ExpressionDesc::Pexp_letmodule(name, me, body) => Sexp::list(vec![
             Sexp::atom("Pexp_letmodule"),
             Sexp::atom(&quote_string(&name.txt)),
+            location(&name.loc),
             module_expression(me),
             expression(body),
         ]),
@@ -731,6 +527,7 @@ fn expression(expr: &Expression) -> Sexp {
         ExpressionDesc::Pexp_newtype(name, body) => Sexp::list(vec![
             Sexp::atom("Pexp_newtype"),
             Sexp::atom(&quote_string(&name.txt)),
+            location(&name.loc),
             expression(body),
         ]),
         ExpressionDesc::Pexp_pack(me) => Sexp::list(vec![Sexp::atom("Pexp_pack"), module_expression(me)]),
@@ -738,13 +535,14 @@ fn expression(expr: &Expression) -> Sexp {
             Sexp::atom("Pexp_open"),
             override_flag(flag),
             longident(&lid.txt),
+            location(&lid.loc),
             expression(body),
         ]),
         ExpressionDesc::Pexp_extension(ext) => Sexp::list(vec![Sexp::atom("Pexp_extension"), extension(ext)]),
         ExpressionDesc::Pexp_await(e) => Sexp::list(vec![Sexp::atom("Pexp_await"), expression(e)]),
         ExpressionDesc::Pexp_jsx_element(jsx) => jsx_element(jsx),
     };
-    Sexp::list(vec![Sexp::atom("expression"), desc])
+    Sexp::list(vec![Sexp::atom("expression"), location(&expr.pexp_loc), desc])
 }
 
 fn jsx_element(jsx: &JsxElement) -> Sexp {
@@ -767,11 +565,11 @@ fn jsx_element(jsx: &JsxElement) -> Sexp {
 
 fn jsx_prop(prop: &JsxProp) -> Sexp {
     match prop {
-        JsxProp::Punning { name, .. } => Sexp::atom(&name.txt),
+        JsxProp::Punning { name, .. } => Sexp::list(vec![Sexp::atom(&name.txt), location(&name.loc)]),
         JsxProp::Value { name, value, .. } => {
-            Sexp::list(vec![Sexp::atom(&name.txt), expression(value)])
+            Sexp::list(vec![Sexp::atom(&name.txt), location(&name.loc), expression(value)])
         }
-        JsxProp::Spreading { expr, .. } => expression(expr),
+        JsxProp::Spreading { loc, expr } => Sexp::list(vec![Sexp::atom("..."), location(loc), expression(expr)]),
     }
 }
 
@@ -793,6 +591,7 @@ fn case(c: &Case) -> Sexp {
 fn value_binding(vb: &ValueBinding) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("value_binding"),
+        location(&vb.pvb_loc),
         pattern(&vb.pvb_pat),
         expression(&vb.pvb_expr),
         attributes(&vb.pvb_attributes),
@@ -806,7 +605,9 @@ fn value_binding(vb: &ValueBinding) -> Sexp {
 fn type_declaration(td: &TypeDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("type_declaration"),
+        location(&td.ptype_loc),
         Sexp::atom(&quote_string(&td.ptype_name.txt)),
+        location(&td.ptype_name.loc),
         Sexp::list(vec![
             Sexp::atom("ptype_params"),
             Sexp::list(map_empty(&td.ptype_params, |(t, v)| {
@@ -850,7 +651,9 @@ fn type_kind(kind: &TypeKind) -> Sexp {
 fn constructor_declaration(cd: &ConstructorDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("constructor_declaration"),
+        location(&cd.pcd_loc),
         Sexp::atom(&quote_string(&cd.pcd_name.txt)),
+        location(&cd.pcd_name.loc),
         Sexp::list(vec![Sexp::atom("pcd_args"), constructor_arguments(&cd.pcd_args)]),
         Sexp::list(vec![
             Sexp::atom("pcd_res"),
@@ -877,7 +680,9 @@ fn constructor_arguments(args: &ConstructorArguments) -> Sexp {
 fn label_declaration(ld: &LabelDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("label_declaration"),
+        location(&ld.pld_loc),
         Sexp::atom(&quote_string(&ld.pld_name.txt)),
+        location(&ld.pld_name.loc),
         mutable_flag(&ld.pld_mutable),
         core_type(&ld.pld_type),
         attributes(&ld.pld_attributes),
@@ -887,7 +692,9 @@ fn label_declaration(ld: &LabelDeclaration) -> Sexp {
 fn extension_constructor(ec: &ExtensionConstructor) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("extension_constructor"),
+        location(&ec.pext_loc),
         Sexp::atom(&quote_string(&ec.pext_name.txt)),
+        location(&ec.pext_name.loc),
         extension_constructor_kind(&ec.pext_kind),
         attributes(&ec.pext_attributes),
     ])
@@ -904,7 +711,7 @@ fn extension_constructor_kind(kind: &ExtensionConstructorKind) -> Sexp {
             },
         ]),
         ExtensionConstructorKind::Pext_rebind(lid) => {
-            Sexp::list(vec![Sexp::atom("Pext_rebind"), longident(&lid.txt)])
+            Sexp::list(vec![Sexp::atom("Pext_rebind"), longident(&lid.txt), location(&lid.loc)])
         }
     }
 }
@@ -912,7 +719,7 @@ fn extension_constructor_kind(kind: &ExtensionConstructorKind) -> Sexp {
 fn type_extension(te: &TypeExtension) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("type_extension"),
-        Sexp::list(vec![Sexp::atom("ptyext_path"), longident(&te.ptyext_path.txt)]),
+        Sexp::list(vec![Sexp::atom("ptyext_path"), longident(&te.ptyext_path.txt), location(&te.ptyext_path.loc)]),
         Sexp::list(vec![
             Sexp::atom("ptyext_parms"),
             Sexp::list(map_empty(&te.ptyext_params, |(t, v)| {
@@ -935,7 +742,9 @@ fn type_extension(te: &TypeExtension) -> Sexp {
 fn value_description(vd: &ValueDescription) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("value_description"),
+        location(&vd.pval_loc),
         Sexp::atom(&quote_string(&vd.pval_name.txt)),
+        location(&vd.pval_name.loc),
         core_type(&vd.pval_type),
         Sexp::list(map_empty(&vd.pval_prim, |s| Sexp::atom(&quote_string(s)))),
         attributes(&vd.pval_attributes),
@@ -948,13 +757,14 @@ fn value_description(vd: &ValueDescription) -> Sexp {
 
 fn module_expression(me: &ModuleExpr) -> Sexp {
     let desc = match &me.pmod_desc {
-        ModuleExprDesc::Pmod_ident(lid) => Sexp::list(vec![Sexp::atom("Pmod_ident"), longident(&lid.txt)]),
+        ModuleExprDesc::Pmod_ident(lid) => Sexp::list(vec![Sexp::atom("Pmod_ident"), longident(&lid.txt), location(&lid.loc)]),
         ModuleExprDesc::Pmod_structure(items) => {
             Sexp::list(vec![Sexp::atom("Pmod_structure"), structure(items)])
         }
         ModuleExprDesc::Pmod_functor(name, opt_mt, body) => Sexp::list(vec![
             Sexp::atom("Pmod_functor"),
             Sexp::atom(&quote_string(&name.txt)),
+            location(&name.loc),
             match opt_mt {
                 None => Sexp::atom("None"),
                 Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(mt)]),
@@ -974,18 +784,19 @@ fn module_expression(me: &ModuleExpr) -> Sexp {
         ModuleExprDesc::Pmod_unpack(e) => Sexp::list(vec![Sexp::atom("Pmod_unpack"), expression(e)]),
         ModuleExprDesc::Pmod_extension(ext) => Sexp::list(vec![Sexp::atom("Pmod_extension"), extension(ext)]),
     };
-    Sexp::list(vec![Sexp::atom("module_expr"), desc, attributes(&me.pmod_attributes)])
+    Sexp::list(vec![Sexp::atom("module_expr"), location(&me.pmod_loc), desc, attributes(&me.pmod_attributes)])
 }
 
 fn module_type(mt: &ModuleType) -> Sexp {
     let desc = match &mt.pmty_desc {
-        ModuleTypeDesc::Pmty_ident(lid) => Sexp::list(vec![Sexp::atom("Pmty_ident"), longident(&lid.txt)]),
+        ModuleTypeDesc::Pmty_ident(lid) => Sexp::list(vec![Sexp::atom("Pmty_ident"), longident(&lid.txt), location(&lid.loc)]),
         ModuleTypeDesc::Pmty_signature(items) => {
             Sexp::list(vec![Sexp::atom("Pmty_signature"), signature(items)])
         }
         ModuleTypeDesc::Pmty_functor(name, opt_mt, body) => Sexp::list(vec![
             Sexp::atom("Pmty_functor"),
             Sexp::atom(&quote_string(&name.txt)),
+            location(&name.loc),
             match opt_mt {
                 None => Sexp::atom("None"),
                 Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(mt)]),
@@ -1003,9 +814,9 @@ fn module_type(mt: &ModuleType) -> Sexp {
         ModuleTypeDesc::Pmty_extension(ext) => {
             Sexp::list(vec![Sexp::atom("Pmty_extension"), extension(ext)])
         }
-        ModuleTypeDesc::Pmty_alias(lid) => Sexp::list(vec![Sexp::atom("Pmty_alias"), longident(&lid.txt)]),
+        ModuleTypeDesc::Pmty_alias(lid) => Sexp::list(vec![Sexp::atom("Pmty_alias"), longident(&lid.txt), location(&lid.loc)]),
     };
-    Sexp::list(vec![Sexp::atom("module_type"), desc, attributes(&mt.pmty_attributes)])
+    Sexp::list(vec![Sexp::atom("module_type"), location(&mt.pmty_loc), desc, attributes(&mt.pmty_attributes)])
 }
 
 fn with_constraint(wc: &WithConstraint) -> Sexp {
@@ -1013,18 +824,20 @@ fn with_constraint(wc: &WithConstraint) -> Sexp {
         WithConstraint::Pwith_type(lid, td) => Sexp::list(vec![
             Sexp::atom("Pmty_with"),
             longident(&lid.txt),
+            location(&lid.loc),
             type_declaration(td),
         ]),
         WithConstraint::Pwith_module(l1, l2) => {
-            Sexp::list(vec![Sexp::atom("Pwith_module"), longident(&l1.txt), longident(&l2.txt)])
+            Sexp::list(vec![Sexp::atom("Pwith_module"), longident(&l1.txt), location(&l1.loc), longident(&l2.txt), location(&l2.loc)])
         }
         WithConstraint::Pwith_typesubst(lid, td) => Sexp::list(vec![
             Sexp::atom("Pwith_typesubst"),
             longident(&lid.txt),
+            location(&lid.loc),
             type_declaration(td),
         ]),
         WithConstraint::Pwith_modsubst(l1, l2) => {
-            Sexp::list(vec![Sexp::atom("Pwith_modsubst"), longident(&l1.txt), longident(&l2.txt)])
+            Sexp::list(vec![Sexp::atom("Pwith_modsubst"), longident(&l1.txt), location(&l1.loc), longident(&l2.txt), location(&l2.loc)])
         }
     }
 }
@@ -1032,7 +845,9 @@ fn with_constraint(wc: &WithConstraint) -> Sexp {
 fn module_binding(mb: &ModuleBinding) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("module_binding"),
+        location(&mb.pmb_loc),
         Sexp::atom(&quote_string(&mb.pmb_name.txt)),
+        location(&mb.pmb_name.loc),
         module_expression(&mb.pmb_expr),
         attributes(&mb.pmb_attributes),
     ])
@@ -1041,7 +856,9 @@ fn module_binding(mb: &ModuleBinding) -> Sexp {
 fn module_declaration(md: &ModuleDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("module_declaration"),
+        location(&md.pmd_loc),
         Sexp::atom(&quote_string(&md.pmd_name.txt)),
+        location(&md.pmd_name.loc),
         module_type(&md.pmd_type),
         attributes(&md.pmd_attributes),
     ])
@@ -1050,7 +867,9 @@ fn module_declaration(md: &ModuleDeclaration) -> Sexp {
 fn module_type_declaration(mtd: &ModuleTypeDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("module_type_declaration"),
+        location(&mtd.pmtd_loc),
         Sexp::atom(&quote_string(&mtd.pmtd_name.txt)),
+        location(&mtd.pmtd_name.loc),
         match &mtd.pmtd_type {
             None => Sexp::atom("None"),
             Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(mt)]),
@@ -1062,7 +881,9 @@ fn module_type_declaration(mtd: &ModuleTypeDeclaration) -> Sexp {
 fn open_description(od: &OpenDescription) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("open_description"),
+        location(&od.popen_loc),
         longident(&od.popen_lid.txt),
+        location(&od.popen_lid.loc),
         attributes(&od.popen_attributes),
     ])
 }
@@ -1070,6 +891,7 @@ fn open_description(od: &OpenDescription) -> Sexp {
 fn include_declaration(id: &IncludeDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("include_declaration"),
+        location(&id.pincl_loc),
         module_expression(&id.pincl_mod),
         attributes(&id.pincl_attributes),
     ])
@@ -1078,6 +900,7 @@ fn include_declaration(id: &IncludeDeclaration) -> Sexp {
 fn include_description(id: &IncludeDescription) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("include_description"),
+        location(&id.pincl_loc),
         module_type(&id.pincl_mod),
         attributes(&id.pincl_attributes),
     ])
@@ -1112,7 +935,6 @@ fn structure_item(si: &StructureItem) -> Sexp {
             Sexp::list(map_empty(tds, type_declaration)),
         ]),
         StructureItemDesc::Pstr_typext(te) => {
-            // OCaml outputs "Pstr_type" for type extensions (not "Pstr_typext")
             Sexp::list(vec![Sexp::atom("Pstr_type"), type_extension(te)])
         }
         StructureItemDesc::Pstr_exception(ec) => {
@@ -1141,7 +963,7 @@ fn structure_item(si: &StructureItem) -> Sexp {
             Sexp::list(vec![Sexp::atom("Pstr_extension"), extension(ext), attributes(attrs)])
         }
     };
-    Sexp::list(vec![Sexp::atom("structure_item"), desc])
+    Sexp::list(vec![Sexp::atom("structure_item"), location(&si.pstr_loc), desc])
 }
 
 // ============================================================================
@@ -1193,28 +1015,19 @@ fn signature_item(si: &SignatureItem) -> Sexp {
             Sexp::list(vec![Sexp::atom("Psig_extension"), extension(ext), attributes(attrs)])
         }
     };
-    Sexp::list(vec![Sexp::atom("signature_item"), desc])
+    Sexp::list(vec![Sexp::atom("signature_item"), location(&si.psig_loc), desc])
 }
 
 // ============================================================================
 // Public API
 // ============================================================================
 
-/// Convert a String to bytes using Latin-1 encoding (each char becomes a byte).
-/// This matches OCaml's behavior where strings are byte sequences.
-/// All chars in the string should have code points 0-255 (from Latin-1 file reading).
-pub fn string_to_latin1_bytes(s: &str) -> Vec<u8> {
-    s.chars().map(|c| c as u8).collect()
-}
-
 pub fn print_structure(items: &[StructureItem], out: &mut impl Write) {
     let sexp = structure(items);
-    // Output as Latin-1 bytes to match OCaml's byte-based string handling
     let _ = out.write_all(&string_to_latin1_bytes(&sexp.to_string()));
 }
 
 pub fn print_signature(items: &[SignatureItem], out: &mut impl Write) {
     let sexp = signature(items);
-    // Output as Latin-1 bytes to match OCaml's byte-based string handling
     let _ = out.write_all(&string_to_latin1_bytes(&sexp.to_string()));
 }

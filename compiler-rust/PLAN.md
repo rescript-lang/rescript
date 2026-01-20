@@ -435,6 +435,113 @@ diff expected.txt actual.txt
 - Golden tests comparing OCaml/Rust parser output
 - PPX compatibility layer (`parsetree0` ↔ Rust AST)
 - Parser benchmarks showing performance parity or better
+- **Binary AST byte-for-byte parity** (see below)
+
+### Binary AST Byte Parity (Critical for Drop-in Replacement)
+
+The `-bs-ast` flag produces binary AST files (`.ast`, `.iast`) that downstream tools consume. For a true drop-in replacement, these files must be **byte-for-byte identical** to OCaml's output.
+
+**Current Status**: 100% dependency parity, ~0% byte-identical (due to different sharing patterns)
+
+**Root Cause**: OCaml's Marshal uses **pointer-based sharing** (same memory address → shared reference) while Rust uses **content-based sharing** (same content → shared reference).
+
+#### How OCaml Marshal Sharing Works
+
+```
+Object 0: Position { file="test.res", line=1, col=0 }
+Object 1: Position { file="test.res", line=1, col=5 }  ← Different memory, not shared
+Object 2: Location { start=obj0, end=obj1 }
+Object 3: Location { start=obj0, end=obj1 }            ← Same objects, SHARES obj2
+```
+
+#### Key Discovery: Position Sharing via `prev_end_pos`
+
+In OCaml's parser (`res_parser.ml`):
+```ocaml
+let next p =
+  p.prev_end_pos <- p.end_pos;  (* SAME OBJECT reference! *)
+  let start_pos, end_pos, token = Scanner.scan p.scanner in
+  p.start_pos <- start_pos;     (* NEW object from scanner *)
+  p.end_pos <- end_pos          (* NEW object from scanner *)
+```
+
+When token B follows token A, `prev_end_pos` for B is the **same object** as `end_pos` for A.
+
+#### Implementation Plan: Identity-Based Sharing
+
+1. **Add `PositionId` to Position struct**
+   ```rust
+   #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+   pub struct PositionId(u32);
+
+   pub struct Position {
+       pub file_name: String,
+       pub line: usize,
+       pub bol: usize,
+       pub cnum: usize,
+       pub id: PositionId,  // Unique identity for sharing
+   }
+   ```
+
+2. **Update scanner to assign unique IDs**
+   ```rust
+   impl Scanner {
+       fn make_position(&mut self) -> Position {
+           self.position_counter += 1;
+           Position {
+               file_name: self.filename.clone(),
+               line: self.line,
+               bol: self.line_offset,
+               cnum: self.offset,
+               id: PositionId(self.position_counter),
+           }
+       }
+   }
+   ```
+
+3. **Preserve ID in parser's `next()`**
+   ```rust
+   impl Parser {
+       pub fn next(&mut self) {
+           // Key: prev_end_pos gets the SAME id as current end_pos
+           self.prev_end_pos = self.end_pos.clone();  // Same id!
+
+           let (start_pos, end_pos) = self.scanner.scan();
+           self.start_pos = start_pos;  // New id from scanner
+           self.end_pos = end_pos;      // New id from scanner
+       }
+   }
+   ```
+
+4. **Update marshal to share by identity**
+   ```rust
+   // Change from content-based to identity-based:
+   position_table: HashMap<PositionId, u32>,  // Instead of HashMap<(file,line,bol,cnum), u32>
+   ```
+
+#### Implementation Tasks
+
+- [ ] Add `PositionId` type to `location.rs`
+- [ ] Add `id` field to `Position` struct
+- [ ] Update scanner to assign unique IDs on position creation
+- [ ] Update parser's `next()` to preserve ID when assigning `prev_end_pos`
+- [ ] Update marshal `position_table` to key by `PositionId`
+- [ ] Run parity test suite: `./scripts/test_ast_parity_suite.sh`
+- [ ] Target: 100% byte-identical for parseable files
+
+#### Parity Test Suite
+
+```bash
+# Run comprehensive parity test
+./scripts/test_ast_parity_suite.sh --verbose --limit 100
+
+# Compare specific file
+./compiler-rust/target/debug/bsc -bs-ast test.res -o /tmp/rust.ast
+packages/@rescript/darwin-arm64/bin/bsc.exe -bs-ast test.res -o /tmp/ocaml.ast
+xxd /tmp/rust.ast > /tmp/rust.hex
+xxd /tmp/ocaml.ast > /tmp/ocaml.hex
+diff /tmp/rust.hex /tmp/ocaml.hex
+```
 
 ### Phase 3: Lambda IR & JS Generation
 **Scope**: ~26K lines from `compiler/core/`

@@ -37,6 +37,7 @@
 #![warn(rust_2018_idioms)]
 #![allow(clippy::uninlined_format_args)] // Style preference, not a correctness issue
 
+pub mod binary_ast;
 pub mod cache;
 pub mod config;
 pub mod context;
@@ -61,3 +62,6 @@ pub use ident::Ident;
 pub use lambda::Lambda;
 pub use location::Location;
 pub use types::{Path, TypeContext, TypeExpr, Variance};
+
+// Binary AST exports
+pub use binary_ast::{Marshal, MarshalWriter};

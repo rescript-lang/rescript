@@ -4,6 +4,17 @@
 //! and diagnostics. Unlike the OCaml `location.ml` which uses global
 //! `input_name` ref, all location information is self-contained.
 //!
+//! # Position Identity
+//!
+//! Positions have a unique `PositionId` for identity-based sharing in the
+//! Marshal format. This mimics OCaml's pointer-based object sharing:
+//! - Scanner creates NEW positions with unique IDs (via its internal counter)
+//! - Parser assigns `prev_end_pos = end_pos` which COPIES the ID (same identity)
+//! - Marshal uses PositionId to determine sharing (not content equality)
+//!
+//! The Scanner owns the ID counter, so each parser instance has independent IDs.
+//! This avoids global state and supports concurrent parsing.
+//!
 //! # Example
 //!
 //! ```rust
@@ -20,10 +31,83 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// Unique identifier for a Position, used for identity-based sharing.
+///
+/// This mimics OCaml's pointer-based object identity:
+/// - Each call to `Scanner::position()` creates a NEW position with a unique ID
+/// - Assigning `prev_end_pos = end_pos` copies the ID (same identity)
+/// - Marshal uses PositionId (not content) to determine if positions should be shared
+///
+/// ID 0 is reserved for default/uninitialized positions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PositionId(u32);
+
+impl PositionId {
+    /// Create a PositionId from a raw value.
+    /// Used by Scanner which owns the counter.
+    pub fn from_raw(id: u32) -> Self {
+        Self(id)
+    }
+
+    /// Create a default/uninitialized PositionId (ID 0).
+    pub fn default_id() -> Self {
+        Self(0)
+    }
+
+    /// Get the raw ID value (for debugging/testing/serialization).
+    pub fn raw(&self) -> u32 {
+        self.0
+    }
+}
+
+impl Default for PositionId {
+    fn default() -> Self {
+        Self::default_id()
+    }
+}
+
+/// Unique identifier for a Location, used for identity-based sharing.
+///
+/// This mimics OCaml's pointer-based object identity:
+/// - Each call to `mk_loc()` creates a NEW location with a unique ID
+/// - Cloning a Location preserves the ID (same identity, will be shared in Marshal)
+/// - Marshal uses LocationId (not content) to determine if locations should be shared
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct LocationId(u32);
+
+impl LocationId {
+    /// Create a LocationId from a raw value.
+    pub fn from_raw(id: u32) -> Self {
+        Self(id)
+    }
+
+    /// Create a default/uninitialized LocationId (ID 0).
+    pub fn default_id() -> Self {
+        Self(0)
+    }
+
+    /// Get the raw ID value (for debugging/testing/serialization).
+    pub fn raw(&self) -> u32 {
+        self.0
+    }
+}
+
+impl Default for LocationId {
+    fn default() -> Self {
+        Self::default_id()
+    }
+}
+
 /// A position in a source file.
 ///
 /// This corresponds to `Lexing.position` in OCaml.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+///
+/// # Identity
+///
+/// Each Position has a unique `id` field for identity-based sharing in the
+/// Marshal format. When you clone a Position, the id is copied (same identity).
+/// To create a truly NEW position, use `Position::new()` or `Position::new_with_id()`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Position {
     /// File name.
     pub file_name: String,
@@ -33,26 +117,65 @@ pub struct Position {
     pub bol: i32,
     /// Character offset from beginning of file (0-indexed).
     pub cnum: i32,
+    /// Unique identity for sharing in Marshal format.
+    /// When cloning, this ID is preserved (same identity as original).
+    pub id: PositionId,
+}
+
+impl Default for Position {
+    fn default() -> Self {
+        Self {
+            file_name: String::new(),
+            line: 0,
+            bol: 0,
+            cnum: 0,
+            id: PositionId::default_id(),
+        }
+    }
 }
 
 impl Position {
-    /// Create a new position.
+    /// Create a new position with a default (uninitialized) ID.
+    ///
+    /// For positions with proper identity tracking, use `new_with_id()` or
+    /// let the Scanner create positions (which assigns unique IDs).
     pub fn new(file_name: impl Into<String>, line: i32, bol: i32, cnum: i32) -> Self {
         Self {
             file_name: file_name.into(),
             line,
             bol,
             cnum,
+            id: PositionId::default_id(),
         }
     }
 
-    /// Create a position at the start of a file.
+    /// Create a new position with a specific ID.
+    ///
+    /// Used by Scanner to create positions with unique IDs.
+    pub fn new_with_id(
+        file_name: impl Into<String>,
+        line: i32,
+        bol: i32,
+        cnum: i32,
+        id: PositionId,
+    ) -> Self {
+        Self {
+            file_name: file_name.into(),
+            line,
+            bol,
+            cnum,
+            id,
+        }
+    }
+
+    /// Create a position at the start of a file with a default ID.
     pub fn at_file_start(file_name: impl Into<String>) -> Self {
         Self {
             file_name: file_name.into(),
             line: 1,
             bol: 0,
             cnum: 0,
+            id: PositionId::default_id(),
         }
     }
 
@@ -70,6 +193,13 @@ impl Position {
 /// A location span in source code.
 ///
 /// This corresponds to `Location.t` in OCaml.
+///
+/// # Identity
+///
+/// Each Location has a unique `id` field for identity-based sharing in the
+/// Marshal format. When you clone a Location, the id is copied (same identity).
+/// This mostly matches OCaml's behavior where assigning a location to multiple
+/// fields shares the same object.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Location {
     /// Start position.
@@ -78,6 +208,10 @@ pub struct Location {
     pub loc_end: Position,
     /// Whether this is a "ghost" location (compiler-generated).
     pub loc_ghost: bool,
+    /// Unique identity for sharing in Marshal format.
+    /// When cloning, this ID is preserved (same identity as original).
+    #[serde(default)]
+    pub id: LocationId,
 }
 
 impl Default for Location {
@@ -87,18 +221,32 @@ impl Default for Location {
 }
 
 impl Location {
-    /// Create a new location from start and end positions.
+    /// Create a new location from start and end positions with default ID.
+    /// For locations with proper identity tracking, use `from_positions_with_id()`.
     pub fn from_positions(start: Position, end: Position) -> Self {
         Self {
             loc_start: start,
             loc_end: end,
             loc_ghost: false,
+            id: LocationId::default_id(),
+        }
+    }
+
+    /// Create a new location from start and end positions with a specific ID.
+    /// Used by mk_loc() to create locations with unique IDs.
+    pub fn from_positions_with_id(start: Position, end: Position, id: LocationId) -> Self {
+        Self {
+            loc_start: start,
+            loc_end: end,
+            loc_ghost: false,
+            id,
         }
     }
 
     /// Create a location from character offsets in a file.
     ///
     /// This is a convenience constructor when you don't have full position info.
+    /// Positions get default (uninitialized) IDs.
     pub fn new(file_name: &str, start_offset: usize, end_offset: usize) -> Self {
         Self {
             loc_start: Position {
@@ -106,18 +254,22 @@ impl Location {
                 line: 1,
                 bol: 0,
                 cnum: start_offset as i32,
+                id: PositionId::default_id(),
             },
             loc_end: Position {
                 file_name: file_name.to_string(),
                 line: 1,
                 bol: 0,
                 cnum: end_offset as i32,
+                id: PositionId::default_id(),
             },
             loc_ghost: false,
+            id: LocationId::default_id(),
         }
     }
 
     /// Create a ghost location at the start of a file.
+    /// Positions get default (uninitialized) IDs.
     pub fn in_file(name: impl Into<String>) -> Self {
         let name = name.into();
         let pos = Position {
@@ -125,11 +277,13 @@ impl Location {
             line: 1,
             bol: 0,
             cnum: -1,
+            id: PositionId::default_id(),
         };
         Self {
             loc_start: pos.clone(),
             loc_end: pos,
             loc_ghost: true,
+            id: LocationId::default_id(),
         }
     }
 
@@ -174,20 +328,24 @@ impl Location {
     }
 
     /// Create a ghost version of this location.
+    /// Note: Creates a new LocationId (different identity).
     pub fn ghostify(&self) -> Self {
         Self {
             loc_start: self.loc_start.clone(),
             loc_end: self.loc_end.clone(),
             loc_ghost: true,
+            id: LocationId::default_id(),
         }
     }
 
     /// Merge two locations into a span covering both.
+    /// Note: Creates a new LocationId (different identity).
     pub fn merge(&self, other: &Location) -> Self {
         Self {
             loc_start: self.loc_start.clone(),
             loc_end: other.loc_end.clone(),
             loc_ghost: self.loc_ghost && other.loc_ghost,
+            id: LocationId::default_id(),
         }
     }
 

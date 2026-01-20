@@ -5,6 +5,7 @@
 
 use super::ast::*;
 use super::comment::{Comment, CommentStyle};
+use super::doc::Doc;
 use super::longident::Longident;
 use super::token::Token;
 use crate::location::Location;
@@ -185,6 +186,313 @@ impl Printer {
         self.write(" ");
     }
 
+    /// Render a Doc and write it to the output buffer.
+    /// The Doc's line breaks will be resolved based on max_width.
+    fn write_doc(&mut self, doc: Doc) {
+        let rendered = doc.to_string(self.max_width as i32);
+        // Add current indentation to each line
+        for (i, line) in rendered.lines().enumerate() {
+            if i > 0 {
+                self.output.push('\n');
+                for _ in 0..self.indent {
+                    self.output.push_str(self.indent_str);
+                }
+            }
+            self.output.push_str(line);
+        }
+        // Update line_len based on last line
+        if let Some(last_newline) = self.output.rfind('\n') {
+            self.line_len = self.output.len() - last_newline - 1;
+        } else {
+            self.line_len = self.output.len();
+        }
+    }
+
+    /// Convert an expression to a string using a fresh printer.
+    fn expr_to_string(&self, expr: &Expression) -> String {
+        let mut p = Printer::with_width(self.max_width);
+        p.print_expression(expr);
+        p.into_output()
+    }
+
+    /// Print a list expression using Doc for proper line breaking.
+    fn print_list_with_doc(&mut self, elems: &[&Expression], spread: Option<&Expression>) {
+        if elems.is_empty() && spread.is_none() {
+            self.write("list{}");
+            return;
+        }
+
+        // Collect element locations for consuming comments later
+        let mut elem_locations: Vec<Location> = Vec::new();
+        let mut all_docs: Vec<(Doc, String)> = Vec::new();
+
+        for elem in elems {
+            let elem_str = self.expr_to_string(elem);
+            let trailing_comment = self.get_trailing_comments_text(&elem.pexp_loc);
+            elem_locations.push(elem.pexp_loc.clone());
+            all_docs.push((Doc::text(elem_str), trailing_comment));
+        }
+
+        if let Some(spread_expr) = spread {
+            let spread_str = format!("...{}", self.expr_to_string(spread_expr));
+            let trailing_comment = self.get_trailing_comments_text(&spread_expr.pexp_loc);
+            elem_locations.push(spread_expr.pexp_loc.clone());
+            all_docs.push((Doc::text(spread_str), trailing_comment));
+        }
+
+        // Build doc with separators, using line_suffix for trailing comments
+        let docs_with_sep: Vec<(Doc, Doc)> = all_docs
+            .into_iter()
+            .map(|(elem_doc, comment)| {
+                let elem_with_comment = if comment.is_empty() {
+                    elem_doc
+                } else {
+                    Doc::concat(vec![
+                        elem_doc,
+                        Doc::line_suffix(Doc::text(comment)),
+                    ])
+                };
+                (elem_with_comment, Doc::concat(vec![Doc::text(","), Doc::line()]))
+            })
+            .collect();
+
+        let doc = Doc::group(Doc::concat(vec![
+            Doc::text("list{"),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join_with_sep(docs_with_sep),
+                Doc::trailing_comma(),
+            ])),
+            Doc::soft_line(),
+            Doc::text("}"),
+        ]));
+
+        self.write_doc(doc);
+
+        // Consume the comments that were included
+        for loc in &elem_locations {
+            self.consume_trailing_comments_for_loc(loc);
+        }
+    }
+
+    /// Print an array expression using Doc for proper line breaking.
+    fn print_array_with_doc(&mut self, elems: &[Expression]) {
+        if elems.is_empty() {
+            self.write("[]");
+            return;
+        }
+
+        // Collect element locations for consuming comments later
+        let mut elem_locations: Vec<Location> = Vec::new();
+        let mut all_docs: Vec<(Doc, String)> = Vec::new();
+
+        for elem in elems {
+            let elem_str = self.expr_to_string(elem);
+            let trailing_comment = self.get_trailing_comments_text(&elem.pexp_loc);
+            elem_locations.push(elem.pexp_loc.clone());
+            all_docs.push((Doc::text(elem_str), trailing_comment));
+        }
+
+        // Build doc with separators, using line_suffix for trailing comments
+        let docs_with_sep: Vec<(Doc, Doc)> = all_docs
+            .into_iter()
+            .map(|(elem_doc, comment)| {
+                let elem_with_comment = if comment.is_empty() {
+                    elem_doc
+                } else {
+                    Doc::concat(vec![
+                        elem_doc,
+                        Doc::line_suffix(Doc::text(comment)),
+                    ])
+                };
+                (elem_with_comment, Doc::concat(vec![Doc::text(","), Doc::line()]))
+            })
+            .collect();
+
+        let doc = Doc::group(Doc::concat(vec![
+            Doc::text("["),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join_with_sep(docs_with_sep),
+                Doc::trailing_comma(),
+            ])),
+            Doc::soft_line(),
+            Doc::text("]"),
+        ]));
+
+        self.write_doc(doc);
+
+        // Consume the comments that were included
+        for loc in &elem_locations {
+            self.consume_trailing_comments_for_loc(loc);
+        }
+    }
+
+    /// Print a record expression field to string (for Doc formatting).
+    fn record_field_to_string(&self, field: &ExpressionRecordField) -> String {
+        // Check for punning: if field name equals expression variable name
+        if let ExpressionDesc::Pexp_ident(path) = &field.expr.pexp_desc {
+            if let Longident::Lident(name) = &path.txt {
+                if let Longident::Lident(field_name) = &field.lid.txt {
+                    if name == field_name && !field.opt {
+                        // Punned field - just the name
+                        return name.clone();
+                    }
+                }
+            }
+        }
+
+        let mut result = String::new();
+
+        // Field name
+        result.push_str(&self.longident_to_string(&field.lid.txt));
+        result.push_str(": ");
+
+        // Optional marker
+        if field.opt {
+            result.push_str("? ");
+        }
+
+        // Expression
+        result.push_str(&self.expr_to_string(&field.expr));
+
+        result
+    }
+
+    /// Convert a longident to string.
+    fn longident_to_string(&self, lid: &Longident) -> String {
+        match lid {
+            Longident::Lident(name) => name.clone(),
+            Longident::Ldot(prefix, name) => {
+                format!("{}.{}", self.longident_to_string(prefix), name)
+            }
+            Longident::Lapply(a, b) => {
+                format!("{}({})", self.longident_to_string(a), self.longident_to_string(b))
+            }
+        }
+    }
+
+    /// Print a record expression using Doc for proper line breaking.
+    fn print_record_with_doc(
+        &mut self,
+        fields: &[ExpressionRecordField],
+        spread: Option<&Expression>,
+        loc: &Location,
+    ) {
+        if fields.is_empty() && spread.is_none() {
+            self.write("{}");
+            return;
+        }
+
+        // Check if record spans multiple lines (to force break)
+        let force_break = if let Some(first_field) = fields.first() {
+            loc.loc_start.line < first_field.lid.loc.loc_start.line
+        } else if let Some(spread_expr) = spread {
+            loc.loc_start.line < spread_expr.pexp_loc.loc_start.line
+        } else {
+            false
+        };
+
+        // Also check if the record was originally multiline by checking if any field is on different line
+        let multiline = force_break || fields.windows(2).any(|w| {
+            w[0].expr.pexp_loc.loc_end.line < w[1].lid.loc.loc_start.line
+        });
+
+        let mut all_docs: Vec<(Doc, String)> = Vec::new();
+
+        // Add spread if present
+        if let Some(spread_expr) = spread {
+            all_docs.push((
+                Doc::concat(vec![
+                    Doc::text("..."),
+                    Doc::text(self.expr_to_string(spread_expr)),
+                ]),
+                String::new(), // No trailing comment for spread
+            ));
+        }
+
+        // Disallow punning for single-element records (unless there's a spread)
+        let punning_allowed = spread.is_some() || fields.len() > 1;
+
+        // Collect field locations for later consuming comments
+        let mut field_locations: Vec<Location> = Vec::new();
+
+        for field in fields {
+            // Create combined location for this field (from name to expression end)
+            let field_loc = Location {
+                loc_start: field.lid.loc.loc_start.clone(),
+                loc_end: field.expr.pexp_loc.loc_end.clone(),
+                loc_ghost: false,
+                id: field.lid.loc.id,
+            };
+
+            let field_str = if punning_allowed {
+                self.record_field_to_string(field)
+            } else {
+                // Single field without spread - no punning
+                let mut result = self.longident_to_string(&field.lid.txt);
+                result.push_str(": ");
+                if field.opt {
+                    result.push_str("?");
+                }
+                result.push_str(&self.expr_to_string(&field.expr));
+                result
+            };
+
+            // Get trailing comments for this field
+            let trailing_comment = self.get_trailing_comments_text(&field_loc);
+
+            field_locations.push(field_loc);
+            all_docs.push((Doc::text(field_str), trailing_comment));
+        }
+
+        // Build doc with separators
+        // Use line_suffix for trailing comments so they appear AFTER the comma
+        let docs_with_sep: Vec<(Doc, Doc)> = all_docs
+            .into_iter()
+            .map(|(field_doc, comment)| {
+                // Field doc with optional line suffix for trailing comment
+                let field_with_comment = if comment.is_empty() {
+                    field_doc
+                } else {
+                    // Use line_suffix so comment prints AFTER the comma
+                    Doc::concat(vec![
+                        field_doc,
+                        Doc::line_suffix(Doc::text(comment)),
+                    ])
+                };
+
+                // Standard separator: comma + line break
+                let sep = Doc::concat(vec![Doc::text(","), Doc::line()]);
+
+                (field_with_comment, sep)
+            })
+            .collect();
+
+        let inner = Doc::concat(vec![
+            Doc::soft_line(),
+            Doc::join_with_sep(docs_with_sep),
+            Doc::trailing_comma(),
+        ]);
+
+        let doc = Doc::breakable_group(
+            Doc::concat(vec![
+                Doc::text("{"),
+                Doc::indent(inner),
+                Doc::soft_line(),
+                Doc::text("}"),
+            ]),
+            multiline || force_break,
+        );
+
+        self.write_doc(doc);
+
+        // Consume the comments that were included in the doc
+        for field_loc in &field_locations {
+            self.consume_trailing_comments_for_loc(field_loc);
+        }
+    }
+
     /// Check if we're at the start of a line.
     fn at_line_start(&self) -> bool {
         self.output.is_empty() || self.output.ends_with('\n')
@@ -212,6 +520,73 @@ impl Printer {
         let start = &comment.loc.loc_start;
         let end = &loc.loc_end;
         start.line == end.line && start.cnum >= end.cnum && comment.prev_tok_end_pos.cnum >= end.cnum
+    }
+
+    /// Get trailing comments for a location without consuming them.
+    /// Returns them as formatted text.
+    fn get_trailing_comments_text(&self, loc: &Location) -> String {
+        let Some(cursor) = &self.comments else {
+            return String::new();
+        };
+
+        let mut result = String::new();
+        let mut temp_cursor = cursor.clone();
+
+        // Skip comments that come before the location's end line
+        while let Some(comment) = temp_cursor.peek() {
+            if comment.loc.loc_start.line < loc.loc_end.line {
+                temp_cursor.advance();
+            } else {
+                break;
+            }
+        }
+
+        while let Some(comment) = temp_cursor.peek() {
+            if Self::is_trailing_comment_for_loc(comment, loc) {
+                result.push(' ');
+                match comment.style {
+                    CommentStyle::SingleLine => {
+                        result.push_str("//");
+                        result.push_str(comment.txt());
+                    }
+                    CommentStyle::MultiLine => {
+                        result.push_str("/*");
+                        result.push_str(comment.txt());
+                        result.push_str("*/");
+                    }
+                    CommentStyle::DocComment => {
+                        result.push_str("/**");
+                        result.push_str(comment.txt());
+                        result.push_str("*/");
+                    }
+                    CommentStyle::ModuleComment => {
+                        result.push_str("/***");
+                        result.push_str(comment.txt());
+                        result.push_str("*/");
+                    }
+                }
+                temp_cursor.advance();
+            } else {
+                break;
+            }
+        }
+
+        result
+    }
+
+    /// Consume trailing comments for a location from the cursor.
+    fn consume_trailing_comments_for_loc(&mut self, loc: &Location) {
+        let Some(mut cursor) = self.comments.take() else {
+            return;
+        };
+        while let Some(comment) = cursor.peek() {
+            if Self::is_trailing_comment_for_loc(comment, loc) {
+                cursor.advance();
+            } else {
+                break;
+            }
+        }
+        self.comments = Some(cursor);
     }
 
     fn print_comment_text(&mut self, comment: &Comment) {
@@ -900,6 +1275,25 @@ impl Printer {
         )
     }
 
+    /// Check if an expression has the res.braces/ns.braces attribute.
+    fn has_braces_attribute(expr: &Expression) -> bool {
+        expr.pexp_attributes
+            .iter()
+            .any(|attr| matches!(attr.0.txt.as_str(), "res.braces" | "ns.braces"))
+    }
+
+    /// Strip res.braces/ns.braces attributes from an expression.
+    fn strip_braces_attribute(expr: &Expression) -> Expression {
+        let mut result = expr.clone();
+        result.pexp_attributes = expr
+            .pexp_attributes
+            .iter()
+            .filter(|attr| !matches!(attr.0.txt.as_str(), "res.braces" | "ns.braces"))
+            .cloned()
+            .collect();
+        result
+    }
+
     fn is_unit_pattern(pat: &Pattern) -> bool {
         matches!(
             &pat.ppat_desc,
@@ -933,7 +1327,13 @@ impl Printer {
     fn expr_needs_parens_in_subexpr(&self, expr: &Expression) -> bool {
         match &expr.pexp_desc {
             ExpressionDesc::Pexp_apply { funct, args, .. } => {
-                self.as_binary_expr(funct, args).is_some() || self.as_unary_expr(funct, args).is_some()
+                // Check if this is a binary expression
+                if let Some((op, _, _)) = self.as_binary_expr(funct, args) {
+                    // Pipe operator doesn't need parens in subexpr
+                    op != "->"
+                } else {
+                    self.as_unary_expr(funct, args).is_some()
+                }
             }
             ExpressionDesc::Pexp_fun { .. }
             | ExpressionDesc::Pexp_ifthenelse(..)
@@ -1151,9 +1551,14 @@ impl Printer {
                 // Check if this is a binary expression and print in infix notation
                 if let Some((operator, left, right)) = self.as_binary_expr(funct, args) {
                     self.print_expression_in_subexpr(left);
-                    self.space();
-                    self.write(operator);
-                    self.space();
+                    // Pipe operator (->) doesn't have spaces around it
+                    if operator == "->" {
+                        self.write(operator);
+                    } else {
+                        self.space();
+                        self.write(operator);
+                        self.space();
+                    }
                     self.print_expression_in_subexpr(right);
                 } else if let Some((operator, operand)) = self.as_unary_expr(funct, args) {
                     self.write(operator);
@@ -1262,21 +1667,7 @@ impl Printer {
                     // List cons: list{a, b, ...rest}
                     Longident::Lident(s) if s == "::" => {
                         let (exprs, spread) = Self::collect_list_expressions(expr);
-                        self.write("list{");
-                        for (i, e) in exprs.iter().enumerate() {
-                            if i > 0 {
-                                self.write(", ");
-                            }
-                            self.print_expression_in_subexpr(e);
-                        }
-                        if let Some(spread_expr) = spread {
-                            if !exprs.is_empty() {
-                                self.write(", ");
-                            }
-                            self.write("...");
-                            self.print_expression_in_subexpr(spread_expr);
-                        }
-                        self.write("}");
+                        self.print_list_with_doc(&exprs, spread);
                     }
                     // Generic constructor
                     _ => {
@@ -1321,44 +1712,7 @@ impl Printer {
                 }
             }
             ExpressionDesc::Pexp_record(fields, spread) => {
-                self.write("{");
-                if let Some(spread) = spread {
-                    self.write("...");
-                    self.print_expression_in_subexpr(spread);
-                    if !fields.is_empty() {
-                        self.write(", ");
-                    }
-                }
-                for (i, field) in fields.iter().enumerate() {
-                    if i > 0 {
-                        self.write(", ");
-                    }
-                    if self.comments_enabled() {
-                        self.print_comments_before_loc(&field.lid.loc);
-                    }
-                    self.print_longident(&field.lid.txt);
-                    if self.comments_enabled() {
-                        self.print_trailing_comments_for_loc(&field.lid.loc);
-                    }
-                    self.write(": ");
-                    // Print optional marker if present
-                    if field.opt {
-                        self.write("? ");
-                        // If the expression is a constraint, wrap in parens to avoid ambiguity
-                        let needs_parens =
-                            matches!(field.expr.pexp_desc, ExpressionDesc::Pexp_constraint(..));
-                        if needs_parens {
-                            self.write("(");
-                        }
-                        self.print_expression_in_subexpr(&field.expr);
-                        if needs_parens {
-                            self.write(")");
-                        }
-                    } else {
-                        self.print_expression_in_subexpr(&field.expr);
-                    }
-                }
-                self.write("}");
+                self.print_record_with_doc(fields, spread.as_deref(), &expr.pexp_loc);
             }
             ExpressionDesc::Pexp_field(expr, lid) => {
                 self.print_expression_in_subexpr(expr);
@@ -1385,14 +1739,7 @@ impl Printer {
                 self.print_expression_in_subexpr(value);
             }
             ExpressionDesc::Pexp_array(items) => {
-                self.write("[");
-                for (i, item) in items.iter().enumerate() {
-                    if i > 0 {
-                        self.write(", ");
-                    }
-                    self.print_expression_in_subexpr(item);
-                }
-                self.write("]");
+                self.print_array_with_doc(items);
             }
             ExpressionDesc::Pexp_ifthenelse(cond, then_branch, else_branch) => {
                 // Check for ternary attribute
@@ -2165,6 +2512,11 @@ impl Printer {
 
     /// Print a type argument.
     fn print_type_arg_with_breaks(&mut self, arg: &TypeArg, allow_breaks: bool) {
+        let has_attrs = !arg.attrs.is_empty();
+        if has_attrs {
+            self.write("(");
+            self.print_attributes(&arg.attrs);
+        }
         match &arg.lbl {
             ArgLabel::Nolabel => {}
             ArgLabel::Labelled(name) | ArgLabel::Optional(name) => {
@@ -2176,6 +2528,9 @@ impl Printer {
         self.print_core_type_with_comments(&arg.typ, allow_breaks);
         if matches!(arg.lbl, ArgLabel::Optional(_)) {
             self.write("=?");
+        }
+        if has_attrs {
+            self.write(")");
         }
     }
 
@@ -2573,7 +2928,7 @@ impl Printer {
                 }
                 for ctor in constructors {
                     self.newline();
-                    self.write("| ");
+                    self.write("  | ");
                     self.print_constructor_declaration(ctor);
                 }
             }
@@ -2583,13 +2938,12 @@ impl Printer {
                     self.write("private ");
                 }
                 self.write("{");
-                for (i, field) in fields.iter().enumerate() {
-                    if i > 0 {
-                        self.write(",");
-                    }
+                for field in fields {
                     self.newline();
                     self.write("  ");
                     self.print_label_declaration(field);
+                    // Add comma after each field (including last)
+                    self.write(",");
                 }
                 self.newline();
                 self.write("}");
@@ -2844,9 +3198,11 @@ impl Printer {
             }
             // Other expressions need braces
             _ => {
-                self.write("{");
-                self.print_expression(child);
-                self.write("}");
+                // Strip res.braces attribute since we're adding our own braces
+                let stripped = Self::strip_braces_attribute(child);
+                self.write(" {");
+                self.print_expression(&stripped);
+                self.write("} ");
             }
         }
     }

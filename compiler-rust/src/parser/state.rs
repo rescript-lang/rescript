@@ -4,7 +4,9 @@
 //! like advancing tokens, error handling, lookahead, and breadcrumb tracking.
 //! It mirrors `res_parser.ml`.
 
-use crate::location::Position;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+use crate::location::{Location, LocationId, Position};
 
 use super::comment::Comment;
 use super::diagnostics::{DiagnosticCategory, ParserDiagnostic};
@@ -46,6 +48,7 @@ pub struct ParserSnapshot {
     breadcrumbs: Vec<(Grammar, Position)>,
     diagnostics_len: usize,
     comments_len: usize,
+    location_id_counter: u32,
 }
 
 /// Parser state for ReScript.
@@ -76,6 +79,10 @@ pub struct Parser<'src> {
     comments: Vec<Comment>,
     /// Stack of region statuses for error deduplication.
     regions: Vec<RegionStatus>,
+    /// Counter for generating unique LocationIds.
+    /// Each call to `mk_loc` gets a new ID, enabling identity-based sharing in Marshal.
+    /// Uses atomic to allow mk_loc to take &self (avoiding borrow conflicts).
+    location_id_counter: AtomicU32,
 }
 
 impl<'src> Parser<'src> {
@@ -98,10 +105,23 @@ impl<'src> Parser<'src> {
             diagnostics: Vec::new(),
             comments: Vec::new(),
             regions: vec![RegionStatus::Report],
+            location_id_counter: AtomicU32::new(1), // Start at 1, 0 is reserved for default/uninitialized
         };
         // Scan the first token
         parser.next();
         parser
+    }
+
+    /// Create a location with a unique ID for identity-based sharing in Marshal.
+    ///
+    /// Each call generates a new LocationId. When the returned Location is cloned,
+    /// the clones share the same ID (and will be shared in the Marshal output).
+    ///
+    /// Uses atomic counter to take &self, avoiding borrow conflicts when
+    /// passing position references like `p.mk_loc(&start_pos, &p.prev_end_pos)`.
+    pub fn mk_loc(&self, start: &Position, end: &Position) -> Location {
+        let id = self.location_id_counter.fetch_add(1, Ordering::Relaxed);
+        Location::from_positions_with_id(start.clone(), end.clone(), LocationId::from_raw(id))
     }
 
     /// Record a diagnostic error.
@@ -308,6 +328,7 @@ impl<'src> Parser<'src> {
             breadcrumbs: self.breadcrumbs.clone(),
             diagnostics_len: self.diagnostics.len(),
             comments_len: self.comments.len(),
+            location_id_counter: self.location_id_counter.load(Ordering::Relaxed),
         }
     }
 
@@ -323,6 +344,7 @@ impl<'src> Parser<'src> {
         self.breadcrumbs = snapshot.breadcrumbs;
         self.diagnostics.truncate(snapshot.diagnostics_len);
         self.comments.truncate(snapshot.comments_len);
+        self.location_id_counter.store(snapshot.location_id_counter, Ordering::Relaxed);
     }
 
     /// Check if parsing made progress.

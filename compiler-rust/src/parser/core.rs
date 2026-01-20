@@ -486,6 +486,7 @@ pub mod ast_helper {
 
     /// Create a list pattern `[a, b, ...rest]`.
     pub fn make_list_pattern(
+        p: &Parser<'_>,
         loc: Location,
         items: Vec<Pattern>,
         spread: Option<Pattern>,
@@ -505,7 +506,7 @@ pub mod ast_helper {
 
         // Build :: chain from the end
         for item in items.into_iter().rev() {
-            let tuple_loc = mk_loc(&item.ppat_loc.loc_start, &result.ppat_loc.loc_end);
+            let tuple_loc = p.mk_loc(&item.ppat_loc.loc_start, &result.ppat_loc.loc_end);
             let cons_loc = tuple_loc.clone();
             let tuple = make_pat(PatternDesc::Ppat_tuple(vec![item, result]), tuple_loc);
             let cons = with_loc(Longident::Lident("::".to_string()), cons_loc.clone());
@@ -519,10 +520,16 @@ pub mod ast_helper {
     }
 
     /// Create a type constructor.
+    ///
+    /// Note: We intentionally create a NEW Location for ptyp_loc (using from_positions)
+    /// instead of cloning. This matches OCaml's behavior where lid.loc and ptyp_loc
+    /// are different Location objects that share the same Position objects inside.
     pub fn make_type_constr(lid: Longident, args: Vec<CoreType>, loc: Location) -> CoreType {
+        // Create a separate Location for ptyp_loc (different LocationId, shares positions)
+        let ptyp_loc = Location::from_positions(loc.loc_start.clone(), loc.loc_end.clone());
         make_typ(
-            CoreTypeDesc::Ptyp_constr(with_loc(lid, loc.clone()), args),
-            loc,
+            CoreTypeDesc::Ptyp_constr(with_loc(lid, loc), args),
+            ptyp_loc,
         )
     }
 }
@@ -542,6 +549,7 @@ fn negate_string(s: &str) -> String {
 
 /// Create a unary expression from an operator token and operand.
 pub fn make_unary_expr(
+    p: &Parser<'_>,
     start_pos: Position,
     token_end: Position,
     token: Token,
@@ -579,7 +587,7 @@ pub fn make_unary_expr(
     }
 
     // General unary operator application
-    let token_loc = mk_loc(&start_pos, &token_end);
+    let token_loc = p.mk_loc(&start_pos, &token_end);
     let token_string = token.to_string();
     let operator = if matches!(token, Token::Question) {
         "?".to_string()
@@ -592,28 +600,21 @@ pub fn make_unary_expr(
     };
 
     let op_expr = ast_helper::make_ident(Longident::Lident(operator), token_loc);
-    let loc = mk_loc(&start_pos, &operand.pexp_loc.loc_end);
+    let loc = p.mk_loc(&start_pos, &operand.pexp_loc.loc_end);
 
     ast_helper::make_apply(op_expr, vec![(ArgLabel::Nolabel, operand)], loc)
 }
 
 /// Create an infix operator expression.
 pub fn make_infix_operator(
-    p: &mut Parser<'_>,
+    p: &Parser<'_>,
     token: Token,
     start_pos: Position,
     end_pos: Position,
 ) -> Expression {
-    let stringified_token = if token == Token::Equal {
-        p.err(DiagnosticCategory::Message(
-            "Did you mean `==` here?".to_string(),
-        ));
-        "=".to_string()
-    } else {
-        token.to_string()
-    };
+    let stringified_token = token.to_string();
 
-    let loc = mk_loc(&start_pos, &end_pos);
+    let loc = p.mk_loc(&start_pos, &end_pos);
     let operator = with_loc(Longident::Lident(stringified_token), loc.clone());
 
     ast_helper::make_ident(operator.txt, loc)

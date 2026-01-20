@@ -6,7 +6,7 @@
 use crate::location::{Located, Location, Position};
 
 use super::ast::*;
-use super::core::{ExprContext, ast_helper, mk_loc, mknoloc, recover, with_loc};
+use super::core::{ExprContext, ast_helper, make_braces_attr, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::grammar;
 use super::grammar::Grammar;
@@ -182,27 +182,27 @@ fn parse_value_path_after_dot(p: &mut Parser<'_>) -> Located<Longident> {
                 }
             }
 
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             with_loc(path, loc)
         }
         Token::Lident(name) => {
             let path = Longident::Lident(name.clone());
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             with_loc(path, loc)
         }
         Token::String(name) => {
             // Quoted field: ."switch"
             let path = Longident::Lident(name.clone());
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             with_loc(path, loc)
         }
         _ => {
             p.err(DiagnosticCategory::Message(
                 "Expected identifier after dot".to_string(),
             ));
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             with_loc(Longident::Lident("_".to_string()), loc)
         }
     }
@@ -242,7 +242,7 @@ pub fn parse_value_or_constructor(p: &mut Parser<'_>) -> Expression {
             }
 
             let lid = super::core::build_longident(&path_parts);
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
             // Check if it's a constructor (all uppercase components)
             if path_parts
@@ -259,7 +259,7 @@ pub fn parse_value_or_constructor(p: &mut Parser<'_>) -> Expression {
                         arg.map(Box::new),
                     ),
                     pexp_loc: if has_arg {
-                        mk_loc(&start_pos, &p.prev_end_pos)
+                        p.mk_loc(&start_pos, &p.prev_end_pos)
                     } else {
                         loc
                     },
@@ -273,7 +273,7 @@ pub fn parse_value_or_constructor(p: &mut Parser<'_>) -> Expression {
         Token::Lident(name) => {
             let name = name.clone();
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             ast_helper::make_ident(Longident::Lident(name), loc)
         }
         _ => {
@@ -296,7 +296,7 @@ fn parse_constructor_arg(p: &mut Parser<'_>) -> Option<Expression> {
             if p.token == Token::Rparen {
                 // Empty constructor args: Rgb()
                 p.next();
-                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let lid = Longident::Lident("()".to_string());
                 Some(Expression {
                     pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid, loc.clone()), None),
@@ -322,7 +322,7 @@ fn parse_constructor_arg(p: &mut Parser<'_>) -> Option<Expression> {
                     if exprs.len() == 1 {
                         Some(exprs.into_iter().next().unwrap())
                     } else {
-                        let loc = mk_loc(&tuple_start, &p.prev_end_pos);
+                        let loc = p.mk_loc(&tuple_start, &p.prev_end_pos);
                         Some(Expression {
                             pexp_desc: ExpressionDesc::Pexp_tuple(exprs),
                             pexp_loc: loc,
@@ -336,7 +336,7 @@ fn parse_constructor_arg(p: &mut Parser<'_>) -> Option<Expression> {
                     // C((1,2)) = single tuple argument = Pexp_tuple([Pexp_tuple([1,2])])
                     // C(1,2) = multiple arguments = Pexp_tuple([1, 2])
                     if matches!(first_expr.pexp_desc, ExpressionDesc::Pexp_tuple(_)) {
-                        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                         Some(Expression {
                             pexp_desc: ExpressionDesc::Pexp_tuple(vec![first_expr]),
                             pexp_loc: loc,
@@ -373,7 +373,7 @@ pub fn parse_expr_with_operand(p: &mut Parser<'_>, operand: Expression) -> Expre
     if p.token == Token::ColonGreaterThan {
         p.next();
         let typ = super::typ::parse_typ_expr(p);
-        let loc = mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+        let loc = p.mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
         Expression {
             pexp_desc: ExpressionDesc::Pexp_coerce(Box::new(expr), None, typ),
             pexp_loc: loc,
@@ -393,7 +393,7 @@ pub fn parse_expr_with_context(p: &mut Parser<'_>, context: ExprContext) -> Expr
     if p.token == Token::ColonGreaterThan {
         p.next();
         let typ = super::typ::parse_typ_expr(p);
-        let loc = mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+        let loc = p.mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
         Expression {
             pexp_desc: ExpressionDesc::Pexp_coerce(Box::new(expr), None, typ),
             pexp_loc: loc,
@@ -416,7 +416,7 @@ pub fn parse_ternary_expr(p: &mut Parser<'_>, left_operand: Expression) -> Expre
 
         p.eat_breadcrumb();
 
-        let loc = mk_loc(
+        let loc = p.mk_loc(
             &left_operand.pexp_loc.loc_start,
             &false_branch.pexp_loc.loc_end,
         );
@@ -457,7 +457,7 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
             let token_end = p.prev_end_pos.clone();
             let operand = parse_unary_expr(p);
             (
-                super::core::make_unary_expr(start_pos, token_end, token, operand),
+                super::core::make_unary_expr(p, start_pos, token_end, token, operand),
                 false,
             )
         }
@@ -479,7 +479,7 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
             } else {
                 // Just a regular "async" identifier - continue with primary expr parsing
                 // to handle function calls like async(x)
-                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let ident = ast_helper::make_ident(Longident::Lident("async".to_string()), loc);
                 (parse_primary_expr(p, ident, false), false)
             }
@@ -536,7 +536,7 @@ pub fn parse_unary_expr(p: &mut Parser<'_>) -> Expression {
             p.next();
             let token_end = p.prev_end_pos.clone();
             let operand = parse_unary_expr(p);
-            super::core::make_unary_expr(start_pos, token_end, token, operand)
+            super::core::make_unary_expr(p, start_pos, token_end, token, operand)
         }
         _ => {
             let atomic = parse_atomic_expr(p);
@@ -561,7 +561,7 @@ pub fn parse_await_expression(p: &mut Parser<'_>) -> Expression {
     let token_prec = Token::MinusGreater.precedence();
     let operand = parse_unary_expr(p);
     let expr = parse_binary_expr(p, operand, token_prec, ExprContext::Ordinary);
-    let loc = mk_loc(&start_pos, &expr.pexp_loc.loc_end);
+    let loc = p.mk_loc(&start_pos, &expr.pexp_loc.loc_end);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_await(Box::new(expr)),
@@ -601,7 +601,7 @@ pub fn parse_es6_arrow_expression(
     let body = parse_expr_with_context(p, context);
     let body = match return_type {
         Some(typ) => {
-            let loc = mk_loc(&body.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+            let loc = p.mk_loc(&body.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(body), typ),
                 pexp_loc: loc,
@@ -621,7 +621,7 @@ pub fn parse_es6_arrow_expression(
     // If there are type params but no term params, add an implicit unit param
     let arrow_expr = if term_params.is_empty() && type_params.is_some() {
         // Implicit unit parameter for type-only arrow
-        let unit_loc = type_params.as_ref().map(|tp| mk_loc(&tp.start_pos, &end_pos)).unwrap();
+        let unit_loc = type_params.as_ref().map(|tp| p.mk_loc(&tp.start_pos, &end_pos)).unwrap();
         let unit_pat = Pattern {
             ppat_desc: PatternDesc::Ppat_construct(
                 with_loc(Longident::Lident("()".to_string()), unit_loc.clone()),
@@ -643,36 +643,50 @@ pub fn parse_es6_arrow_expression(
             pexp_attributes: vec![],
         }
     } else {
-        term_params.into_iter().rev().fold(body, |acc, param| {
-            let loc = mk_loc(&param.start_pos, &end_pos);
-            // Apply parameter attributes to the pattern's ppat_attributes
-            // This is where attributes like @as("open") on parameters like (@as("open") ~_open)
-            // should end up, so the JSX PPX can access them via pattern.ppat_attributes
-            let mut pat = param.pat;
-            if !param.attrs.is_empty() {
-                let mut attrs = param.attrs;
-                attrs.extend(pat.ppat_attributes);
-                pat.ppat_attributes = attrs;
-            }
-            Expression {
-                pexp_desc: ExpressionDesc::Pexp_fun {
-                    arg_label: param.label,
-                    default: param.expr.map(Box::new),
-                    lhs: pat,
-                    rhs: Box::new(acc),
-                    arity: Arity::Unknown,
-                    is_async,
-                },
-                pexp_loc: loc,
-                pexp_attributes: vec![],
-            }
-        })
+        // Compute arity for the outermost function
+        let total_arity = term_params.len();
+        term_params
+            .into_iter()
+            .rev()
+            .enumerate()
+            .fold(body, |acc, (i, param)| {
+                let loc = p.mk_loc(&param.start_pos, &end_pos);
+                // Apply parameter attributes to the pattern's ppat_attributes
+                // This is where attributes like @as("open") on parameters like (@as("open") ~_open)
+                // should end up, so the JSX PPX can access them via pattern.ppat_attributes
+                let mut pat = param.pat;
+                if !param.attrs.is_empty() {
+                    let mut attrs = param.attrs;
+                    attrs.extend(pat.ppat_attributes);
+                    pat.ppat_attributes = attrs;
+                }
+                // Only the outermost function (last in fold, first in original list) gets arity
+                // After reversing, index 0 in fold corresponds to the innermost function
+                // The last iteration (i == total_arity - 1) is the outermost function
+                let arity = if i == total_arity - 1 {
+                    Arity::Full(total_arity)
+                } else {
+                    Arity::Unknown
+                };
+                Expression {
+                    pexp_desc: ExpressionDesc::Pexp_fun {
+                        arg_label: param.label,
+                        default: param.expr.map(Box::new),
+                        lhs: pat,
+                        rhs: Box::new(acc),
+                        arity,
+                        is_async,
+                    },
+                    pexp_loc: loc,
+                    pexp_attributes: vec![],
+                }
+            })
     };
 
     // Handle newtype parameters
     let arrow_expr = match type_params {
         Some(tp) => {
-            let loc = mk_loc(&tp.start_pos, &end_pos);
+            let loc = p.mk_loc(&tp.start_pos, &end_pos);
             tp.locs
                 .into_iter()
                 .rev()
@@ -686,7 +700,7 @@ pub fn parse_es6_arrow_expression(
     };
 
     Expression {
-        pexp_loc: mk_loc(&start_pos, &arrow_expr.pexp_loc.loc_end),
+        pexp_loc: p.mk_loc(&start_pos, &arrow_expr.pexp_loc.loc_end),
         pexp_attributes: arrow_attrs,
         ..arrow_expr
     }
@@ -708,7 +722,7 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                 // Unit parameter: () or (.)
                 let end_pos = p.end_pos.clone();
                 p.next();
-                let loc = mk_loc(&start_pos, &end_pos);
+                let loc = p.mk_loc(&start_pos, &end_pos);
                 let unit_pat = Pattern {
                     ppat_desc: PatternDesc::Ppat_construct(
                         with_loc(Longident::Lident("()".to_string()), loc.clone()),
@@ -791,7 +805,7 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
         let lbl = match &p.token {
             Token::Comma | Token::Equal | Token::Rparen | Token::EqualGreater => {
                 // Just ~name
-                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
                 (ArgLabel::Labelled(lbl_name), pat, None)
             }
@@ -799,7 +813,7 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
                 // ~name: type
                 p.next();
                 let typ = super::typ::parse_typ_expr(p);
-                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let var_pat = ast_helper::make_var_pat(lbl_name.clone(), loc.clone());
                 let pat = Pattern {
                     ppat_desc: PatternDesc::Ppat_constraint(Box::new(var_pat), typ),
@@ -815,7 +829,7 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
                 (ArgLabel::Labelled(lbl_name), pat, None)
             }
             _ => {
-                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
                 (ArgLabel::Labelled(lbl_name), pat, None)
             }
@@ -840,7 +854,7 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
                 let expr = if p.token == Token::Colon {
                     p.next();
                     let typ = super::typ::parse_typ_expr(p);
-                    let loc = mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+                    let loc = p.mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
                     Expression {
                         pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), typ),
                         pexp_loc: loc,
@@ -876,7 +890,7 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
         let pat = if p.token == Token::Colon {
             p.next();
             let typ = super::typ::parse_typ_expr(p);
-            let loc = mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
+            let loc = p.mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
             Pattern {
                 ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
                 ppat_loc: loc,
@@ -904,7 +918,7 @@ fn parse_lident_list(p: &mut Parser<'_>) -> Vec<Located<String>> {
     let mut lidents = vec![];
     while let Token::Lident(name) = &p.token {
         let name = name.clone();
-        let loc = mk_loc(&p.start_pos, &p.end_pos);
+        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
         p.next();
         lidents.push(with_loc(name, loc));
     }
@@ -916,7 +930,7 @@ fn parse_lident(p: &mut Parser<'_>) -> (String, Location) {
     match &p.token {
         Token::Lident(name) => {
             let name = name.clone();
-            let loc = mk_loc(&p.start_pos, &p.end_pos);
+            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
             p.next();
             (name, loc)
         }
@@ -1027,7 +1041,7 @@ fn parse_attribute_id(p: &mut Parser<'_>) -> Located<String> {
     }
 
     let name = parts.join(".");
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
     with_loc(name, loc)
 }
 
@@ -1042,12 +1056,12 @@ fn parse_payload(p: &mut Parser<'_>) -> Payload {
         let start_pos = p.start_pos.clone();
         let str_expr = Expression {
             pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(s, None)),
-            pexp_loc: mk_loc(&start_pos, &p.prev_end_pos),
+            pexp_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
             pexp_attributes: vec![],
         };
         return Payload::PStr(vec![StructureItem {
             pstr_desc: StructureItemDesc::Pstr_eval(str_expr, vec![]),
-            pstr_loc: mk_loc(&start_pos, &p.prev_end_pos),
+            pstr_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
         }]);
     }
 
@@ -1137,7 +1151,7 @@ pub fn parse_binary_expr(
         // Handle special case for assignment
         if token == Token::ColonEqual {
             let right = parse_expr_with_context(p, context);
-            let loc = mk_loc(&left.pexp_loc.loc_start, &right.pexp_loc.loc_end);
+            let loc = p.mk_loc(&left.pexp_loc.loc_start, &right.pexp_loc.loc_end);
             left = ast_helper::make_apply(
                 super::core::make_infix_operator(p, Token::ColonEqual, op_start, op_end),
                 vec![(ArgLabel::Nolabel, left), (ArgLabel::Nolabel, right)],
@@ -1156,8 +1170,8 @@ pub fn parse_binary_expr(
         };
         let right = parse_binary_expr(p, right, next_prec, context);
 
-        let loc = mk_loc(&left.pexp_loc.loc_start, &right.pexp_loc.loc_end);
-        let op_loc = mk_loc(&op_start, &op_end);
+        let loc = p.mk_loc(&left.pexp_loc.loc_start, &right.pexp_loc.loc_end);
+        let op_loc = p.mk_loc(&op_start, &op_end);
 
         // Build application expression
         let op_expr = ast_helper::make_ident(Longident::Lident(token.to_string()), op_loc);
@@ -1236,7 +1250,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
         Token::True | Token::False => {
             let is_true = p.token == Token::True;
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             let lid = Longident::Lident(if is_true { "true" } else { "false" }.to_string());
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid, loc.clone()), None),
@@ -1246,14 +1260,14 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
         }
         Token::Int { .. } | Token::String(_) | Token::Float { .. } | Token::Codepoint { .. } => {
             let c = parse_constant(p);
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             ast_helper::make_constant(c, loc)
         }
         Token::Regex { pattern, flags } => {
             let pattern = pattern.clone();
             let flags = flags.clone();
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
             // OCaml format: single string with slashes: "/" + pattern + "/" + flags
             let regex_str = format!("/{}/{}", pattern, flags);
@@ -1282,7 +1296,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
             if p.token == Token::Rparen {
                 // Unit: ()
                 p.next();
-                let loc = mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let lid = Longident::Lident("()".to_string());
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid, loc.clone()), None),
@@ -1321,7 +1335,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
             p.next();
             // Assert takes a full expression, not just an operand
             let arg = parse_expr(p);
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_assert(Box::new(arg)),
                 pexp_loc: loc,
@@ -1362,7 +1376,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 with_loc("error".to_string(), Location::none())
             } else {
                 let id = parts.join(".");
-                with_loc(id, mk_loc(&id_start, &p.prev_end_pos))
+                with_loc(id, p.mk_loc(&id_start, &p.prev_end_pos))
             };
 
             let payload = if p.token == Token::Lparen {
@@ -1374,7 +1388,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 Payload::PStr(vec![])
             };
 
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_extension((name, payload)),
                 pexp_loc: loc,
@@ -1418,7 +1432,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 p.next();
                 // Handle empty parens: #tag() is a variant with unit argument
                 if p.token == Token::Rparen {
-                    let unit_loc = mk_loc(&p.start_pos, &p.start_pos);
+                    let unit_loc = p.mk_loc(&p.start_pos, &p.start_pos);
                     p.next();
                     Some(Box::new(Expression {
                         pexp_desc: ExpressionDesc::Pexp_construct(
@@ -1445,7 +1459,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                         }
                         p.expect(Token::Rparen);
                         let rparen_pos = p.prev_end_pos.clone();
-                        let paren_loc = mk_loc(&lparen_pos, &rparen_pos);
+                        let paren_loc = p.mk_loc(&lparen_pos, &rparen_pos);
 
                         // OCaml wraps polymorphic variant args differently based on mode:
                         // - For multiple args #a(1, 2), both modes create Pexp_tuple([1, 2])
@@ -1471,7 +1485,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                             }
                         } else {
                             // Multiple expressions - just wrap in a single tuple (no extra wrapping)
-                            let tuple_loc = mk_loc(&tuple_start, &rparen_pos);
+                            let tuple_loc = p.mk_loc(&tuple_start, &rparen_pos);
                             Some(Box::new(Expression {
                                 pexp_desc: ExpressionDesc::Pexp_tuple(exprs),
                                 pexp_loc: tuple_loc,
@@ -1485,7 +1499,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                         // This handles #a((1, 2)) case - inner parens create tuple, wrap for printer
                         if p.mode != ParserMode::ParseForTypeChecker {
                             if matches!(first_expr.pexp_desc, ExpressionDesc::Pexp_tuple(_)) {
-                                let paren_loc = mk_loc(&lparen_pos, &rparen_pos);
+                                let paren_loc = p.mk_loc(&lparen_pos, &rparen_pos);
                                 Some(Box::new(Expression {
                                     pexp_desc: ExpressionDesc::Pexp_tuple(vec![first_expr]),
                                     pexp_loc: paren_loc,
@@ -1503,7 +1517,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 None
             };
 
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_variant(tag, arg),
                 pexp_loc: loc,
@@ -1517,7 +1531,7 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
         }
         Token::Underscore => {
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             ast_helper::make_ident(Longident::Lident("_".to_string()), loc)
         }
         Token::Eof => {
@@ -1552,7 +1566,7 @@ pub fn parse_constrained_or_coerced_expr(p: &mut Parser<'_>) -> Expression {
         if p.token == Token::ColonGreaterThan {
             p.next();
             let target_typ = super::typ::parse_typ_expr(p);
-            let loc = mk_loc(&expr.pexp_loc.loc_start, &target_typ.ptyp_loc.loc_end);
+            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &target_typ.ptyp_loc.loc_end);
             // OCaml represents (x : t :> int) as Pexp_coerce(Pexp_constraint(x, t), int)
             // The constraint is nested inside the expression, not as the optional middle type
             let constraint_expr = Expression {
@@ -1566,7 +1580,7 @@ pub fn parse_constrained_or_coerced_expr(p: &mut Parser<'_>) -> Expression {
                 pexp_attributes: vec![],
             }
         } else {
-            let loc = mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), typ),
                 pexp_loc: loc,
@@ -1577,7 +1591,7 @@ pub fn parse_constrained_or_coerced_expr(p: &mut Parser<'_>) -> Expression {
         // Direct coercion: expr :> type
         p.next();
         let typ = super::typ::parse_typ_expr(p);
-        let loc = mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
+        let loc = p.mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
         Expression {
             pexp_desc: ExpressionDesc::Pexp_coerce(Box::new(expr), None, typ),
             pexp_loc: loc,
@@ -1609,14 +1623,14 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 match &p.token {
                     Token::Lident(name) => {
                         let name = name.clone();
-                        let name_loc = mk_loc(&p.start_pos, &p.end_pos);
+                        let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                         p.next();
 
                         // Check for field assignment: expr.field = value
                         if p.token == Token::Equal {
                             p.next();
                             let value = parse_expr(p);
-                            let loc = mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
                                     Box::new(expr),
@@ -1627,7 +1641,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                 pexp_attributes: vec![],
                             };
                         } else {
-                            let loc = mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_field(
                                     Box::new(expr),
@@ -1641,14 +1655,14 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     Token::String(name) => {
                         // Quoted field access: expr."switch"
                         let name = name.clone();
-                        let name_loc = mk_loc(&p.start_pos, &p.end_pos);
+                        let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                         p.next();
 
                         // Check for field assignment: expr."field" = value
                         if p.token == Token::Equal {
                             p.next();
                             let value = parse_expr(p);
-                            let loc = mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
                                     Box::new(expr),
@@ -1659,7 +1673,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                 pexp_attributes: vec![],
                             };
                         } else {
-                            let loc = mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_field(
                                     Box::new(expr),
@@ -1674,7 +1688,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         // Module-qualified field access: expr.Module.field
                         // Parse the path (e.g., Lexing.pos_fname) and create Pexp_field
                         let field_path = parse_value_path_after_dot(p);
-                        let loc = mk_loc(&expr.pexp_loc.loc_start, &field_path.loc.loc_end);
+                        let loc = p.mk_loc(&expr.pexp_loc.loc_start, &field_path.loc.loc_end);
                         expr = Expression {
                             pexp_desc: ExpressionDesc::Pexp_field(Box::new(expr), field_path),
                             pexp_loc: loc,
@@ -1691,7 +1705,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     break;
                 }
                 let (args, partial) = parse_call_args(p);
-                let loc = mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
                 // Apply placeholder transformation: f(a, _, b) => fun __x -> f(a, __x, b)
                 expr = transform_placeholder_application(Box::new(expr), args, partial, loc);
             }
@@ -1714,7 +1728,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     p.next();
                     let equal_end = p.prev_end_pos.clone();
                     let value = parse_expr(p);
-                    let loc = mk_loc(&start, &p.prev_end_pos);
+                    let loc = p.mk_loc(&start, &p.prev_end_pos);
 
                     // Check if index is a string constant for object property assignment
                     if let ExpressionDesc::Pexp_constant(Constant::String(s, _)) =
@@ -1730,11 +1744,11 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                     loc: index.pexp_loc.clone(),
                                 },
                             ),
-                            pexp_loc: mk_loc(&start, &index.pexp_loc.loc_end),
+                            pexp_loc: p.mk_loc(&start, &index.pexp_loc.loc_end),
                             pexp_attributes: vec![],
                         };
                         // Create the "#=" operator
-                        let operator_loc = mk_loc(&equal_start, &equal_end);
+                        let operator_loc = p.mk_loc(&equal_start, &equal_end);
                         let operator = ast_helper::make_ident(
                             Longident::Lident("#=".to_string()),
                             operator_loc,
@@ -1750,12 +1764,14 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         );
                     } else {
                         // Non-string index: arr[index] = value -> Array.set(arr, index, value)
+                        // Use the `=` operator location for the synthesized Array.set identifier
+                        let operator_loc = p.mk_loc(&equal_start, &equal_end);
                         let array_set = ast_helper::make_ident(
                             Longident::Ldot(
                                 Box::new(Longident::Lident("Array".to_string())),
                                 "set".to_string(),
                             ),
-                            Location::none(),
+                            operator_loc,
                         );
                         let mut apply_expr = ast_helper::make_apply(
                             array_set,
@@ -1775,7 +1791,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 } else {
                     // Check if index is a string constant for Pexp_send (JS object access)
                     // or use Array.get for other index types
-                    let loc = mk_loc(&start, &p.prev_end_pos);
+                    let loc = p.mk_loc(&start, &p.prev_end_pos);
 
                     if let ExpressionDesc::Pexp_constant(Constant::String(s, _)) =
                         &index.pexp_desc
@@ -1857,7 +1873,7 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
         // Check for apply(.) - uncurried unit call
         // This produces a single unit argument, not an empty list
         if p.token == Token::Rparen {
-            let unit_loc = mk_loc(&lparen_start, &p.end_pos);
+            let unit_loc = p.mk_loc(&lparen_start, &p.end_pos);
             let unit_expr = Expression {
                 pexp_desc: ExpressionDesc::Pexp_construct(
                     Loc {
@@ -1895,7 +1911,7 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
     // If no arguments were parsed, treat f() as f(())
     // OCaml treats empty parens as a unit argument
     if args.is_empty() && !partial {
-        let unit_loc = mk_loc(&lparen_start, &rparen_end);
+        let unit_loc = p.mk_loc(&lparen_start, &rparen_end);
         let unit_expr = Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
@@ -1978,7 +1994,7 @@ fn parse_tuple_expr(p: &mut Parser<'_>, start_pos: Position, first: Expression) 
     }
 
     p.expect(Token::Rparen);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     if elements.len() < 2 {
         p.err(DiagnosticCategory::Message(
@@ -2019,7 +2035,7 @@ fn parse_array_expr(p: &mut Parser<'_>) -> Expression {
     }
 
     p.expect(Token::Rbracket);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Check if there are any spreads
     let has_spread = items.iter().any(|(is_spread, _)| *is_spread);
@@ -2124,7 +2140,7 @@ fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     }
 
     p.expect(Token::Rbrace);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Split items into segments by spread boundaries
     // Each segment is (non_spread_items, optional_spread)
@@ -2288,7 +2304,7 @@ fn parse_dict_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
                 let key_start = p.start_pos.clone();
                 p.next();
                 let key_end = p.prev_end_pos.clone();
-                let key_loc = mk_loc(&key_start, &key_end);
+                let key_loc = p.mk_loc(&key_start, &key_end);
 
                 p.expect(Token::Colon);
                 let value = parse_expr(p);
@@ -2300,7 +2316,7 @@ fn parse_dict_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
                     pexp_loc: key_loc.clone(),
                     pexp_attributes: vec![],
                 };
-                let tuple_loc = mk_loc(&key_loc.loc_start, &value_end);
+                let tuple_loc = p.mk_loc(&key_loc.loc_start, &value_end);
                 let tuple = Expression {
                     pexp_desc: ExpressionDesc::Pexp_tuple(vec![key_expr, value]),
                     pexp_loc: tuple_loc,
@@ -2321,7 +2337,7 @@ fn parse_dict_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     }
 
     p.expect(Token::Rbrace);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Create array of key-value pairs
     let array_expr = Expression {
@@ -2364,7 +2380,7 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
     // Check for empty braces
     if p.token == Token::Rbrace {
         p.next();
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         return Expression {
             pexp_desc: ExpressionDesc::Pexp_record(vec![], None),
             pexp_loc: loc,
@@ -2379,7 +2395,7 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
         p.optional(&Token::Comma);
         let fields = parse_record_fields(p);
         p.expect(Token::Rbrace);
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         return Expression {
             pexp_desc: ExpressionDesc::Pexp_record(fields, Some(Box::new(spread))),
             pexp_loc: loc,
@@ -2442,7 +2458,7 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
     if is_record {
         let fields = parse_record_fields(p);
         p.expect(Token::Rbrace);
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         return Expression {
             pexp_desc: ExpressionDesc::Pexp_record(fields, None),
             pexp_loc: loc,
@@ -2482,9 +2498,15 @@ fn parse_block_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     let body = parse_block_body(p);
 
     p.expect(Token::Rbrace);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
-    body.unwrap_or_else(|| ast_helper::make_unit(loc))
+    let mut expr = body.unwrap_or_else(|| ast_helper::make_unit(loc.clone()));
+
+    // Add res.braces attribute to mark this as a braced expression
+    let braces_attr = make_braces_attr(loc);
+    expr.pexp_attributes.insert(0, braces_attr);
+
+    expr
 }
 
 /// Parse the body of a block expression.
@@ -2523,11 +2545,11 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             // Parse the rest of the block as the body
             let rest = parse_block_body(p);
             let body = rest.unwrap_or_else(|| {
-                let loc = mk_loc(&expr_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                 ast_helper::make_unit(loc)
             });
 
-            let loc = mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_open(override_flag, lid, Box::new(body)),
                 pexp_loc: loc,
@@ -2553,7 +2575,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
 
                 // Check for continuation
                 if let Some(rest) = parse_block_body(p) {
-                    let new_loc = mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
+                    let new_loc = p.mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
                     Expression {
                         pexp_desc: ExpressionDesc::Pexp_sequence(Box::new(expr), Box::new(rest)),
                         pexp_loc: new_loc,
@@ -2579,7 +2601,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
 
                 // If there's a type constraint, wrap the expression
                 if let Some(mod_type) = mod_type {
-                    let loc = mk_loc(&module_expr.pmod_loc.loc_start, &mod_type.pmty_loc.loc_end);
+                    let loc = p.mk_loc(&module_expr.pmod_loc.loc_start, &mod_type.pmty_loc.loc_end);
                     module_expr = ModuleExpr {
                         pmod_desc: ModuleExprDesc::Pmod_constraint(
                             Box::new(module_expr),
@@ -2596,11 +2618,11 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 // Parse the rest of the block as the body
                 let rest = parse_block_body(p);
                 let body = rest.unwrap_or_else(|| {
-                    let loc = mk_loc(&expr_start, &p.prev_end_pos);
+                    let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                     ast_helper::make_unit(loc)
                 });
 
-                let loc = mk_loc(&expr_start, &body.pexp_loc.loc_end);
+                let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_letmodule(
                         module_name,
@@ -2623,11 +2645,11 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             // Parse the rest of the block as the body
             let rest = parse_block_body(p);
             let body = rest.unwrap_or_else(|| {
-                let loc = mk_loc(&expr_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                 ast_helper::make_unit(loc)
             });
 
-            let loc = mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_letexception(ext, Box::new(body)),
                 pexp_loc: loc,
@@ -2647,7 +2669,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
 
             // Check for continuation
             if let Some(rest) = parse_block_body(p) {
-                let new_loc = mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
+                let new_loc = p.mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
                 return Some(Expression {
                     pexp_desc: ExpressionDesc::Pexp_sequence(Box::new(expr), Box::new(rest)),
                     pexp_loc: new_loc,
@@ -2733,7 +2755,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
         };
 
         // Create a constraint pattern
-        let loc = mk_loc(&first_pat.ppat_loc.loc_start, &final_typ.ptyp_loc.loc_end);
+        let loc = p.mk_loc(&first_pat.ppat_loc.loc_start, &final_typ.ptyp_loc.loc_end);
         let pat = Pattern {
             ppat_desc: PatternDesc::Ppat_constraint(Box::new(first_pat), final_typ),
             ppat_loc: loc,
@@ -2769,7 +2791,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
         }
     }
 
-    let first_loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let first_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Combine leading_attrs with let.unwrap attribute if this is let?
     let first_attrs = if unwrap {
@@ -2792,15 +2814,16 @@ fn parse_let_in_block_with_continuation_and_attrs(
 
     // Parse additional bindings with 'and'
     while p.token == Token::And {
-        p.next();
+        // Capture start position BEFORE consuming `and`
         let binding_start = p.start_pos.clone();
+        p.next();
         let pat = super::pattern::parse_pattern(p);
 
         // Handle optional type annotation
         let pat = if p.token == Token::Colon {
             p.next();
             let typ = super::typ::parse_typ_expr(p);
-            let loc = mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
+            let loc = p.mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
             Pattern {
                 ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
                 ppat_loc: loc,
@@ -2812,7 +2835,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
 
         p.expect(Token::Equal);
         let value = parse_expr(p);
-        let binding_loc = mk_loc(&binding_start, &p.prev_end_pos);
+        let binding_loc = p.mk_loc(&binding_start, &p.prev_end_pos);
         bindings.push(ValueBinding {
             pvb_pat: pat,
             pvb_expr: value,
@@ -2827,11 +2850,11 @@ fn parse_let_in_block_with_continuation_and_attrs(
     // Parse the rest of the block as the body
     let rest = parse_block_body(p);
     let body = rest.unwrap_or_else(|| {
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         ast_helper::make_unit(loc)
     });
 
-    let loc = mk_loc(&start_pos, &body.pexp_loc.loc_end);
+    let loc = p.mk_loc(&start_pos, &body.pexp_loc.loc_end);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_let(rec_flag, bindings, Box::new(body)),
@@ -2845,7 +2868,7 @@ fn parse_module_name(p: &mut Parser<'_>) -> Located<String> {
     match &p.token {
         Token::Uident(name) => {
             let name = name.clone();
-            let loc = mk_loc(&p.start_pos, &p.end_pos);
+            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
             p.next();
             with_loc(name, loc)
         }
@@ -2891,7 +2914,7 @@ fn parse_module_longident(p: &mut Parser<'_>) -> Located<Longident> {
     }
 
     let lid = super::core::build_longident(&parts);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
     with_loc(lid, loc)
 }
 
@@ -2938,18 +2961,20 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
 
         let (lid, expr, opt) = if p.token == Token::Colon {
             // field: value or field: ? value
+            // Capture lid location - just the identifier, not including the colon
+            let lid_end = p.prev_end_pos.clone();
             p.next();
+            let lid_loc = p.mk_loc(&field_start, &lid_end);
             // Check for optional marker after colon: name: ? value
             let opt = p.token == Token::Question;
             if opt {
                 p.next();
             }
             let expr = parse_expr(p);
-            let loc = mk_loc(&field_start, &p.prev_end_pos);
-            (with_loc(lid_unloc, loc), expr, opt)
+            (with_loc(lid_unloc, lid_loc), expr, opt)
         } else {
             // Punning: field is same as variable
-            let loc = mk_loc(&field_start, &p.prev_end_pos);
+            let loc = p.mk_loc(&field_start, &p.prev_end_pos);
             let expr = ast_helper::make_ident(Longident::Lident(pun_name), loc.clone());
             (with_loc(lid_unloc, loc), expr, opt_punning)
         };
@@ -2978,7 +3003,7 @@ fn parse_js_object_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
             if p.token == Token::Colon {
                 p.next();
                 let expr = parse_expr(p);
-                let loc = mk_loc(&field_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&field_start, &p.prev_end_pos);
                 fields.push(ExpressionRecordField {
                     lid: with_loc(Longident::Lident(key), loc),
                     expr,
@@ -2986,7 +3011,7 @@ fn parse_js_object_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
                 });
             } else {
                 // Punning for string keys (less common but valid)
-                let loc = mk_loc(&field_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&field_start, &p.prev_end_pos);
                 let expr = ast_helper::make_ident(Longident::Lident(key.clone()), loc.clone());
                 fields.push(ExpressionRecordField {
                     lid: with_loc(Longident::Lident(key), loc),
@@ -3004,7 +3029,7 @@ fn parse_js_object_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     }
 
     p.expect(Token::Rbrace);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Create the inner record expression
     let record_expr = Expression {
@@ -3057,7 +3082,7 @@ fn parse_if_expr(p: &mut Parser<'_>) -> Expression {
         None
     };
 
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_ifthenelse(
@@ -3100,11 +3125,11 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             // Parse the rest as the body
             let rest = parse_switch_case_body(p);
             let body = rest.unwrap_or_else(|| {
-                let loc = mk_loc(&expr_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                 ast_helper::make_unit(loc)
             });
 
-            let loc = mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_open(OverrideFlag::Fresh, lid, Box::new(body)),
                 pexp_loc: loc,
@@ -3128,7 +3153,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
 
                 // Check for continuation
                 if let Some(rest) = parse_switch_case_body(p) {
-                    let new_loc = mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
+                    let new_loc = p.mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
                     Expression {
                         pexp_desc: ExpressionDesc::Pexp_sequence(Box::new(expr), Box::new(rest)),
                         pexp_loc: new_loc,
@@ -3149,11 +3174,11 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                 // Parse the rest as the body
                 let rest = parse_switch_case_body(p);
                 let body = rest.unwrap_or_else(|| {
-                    let loc = mk_loc(&expr_start, &p.prev_end_pos);
+                    let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                     ast_helper::make_unit(loc)
                 });
 
-                let loc = mk_loc(&expr_start, &body.pexp_loc.loc_end);
+                let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_letmodule(
                         module_name,
@@ -3176,11 +3201,11 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             // Parse the rest as the body
             let rest = parse_switch_case_body(p);
             let body = rest.unwrap_or_else(|| {
-                let loc = mk_loc(&expr_start, &p.prev_end_pos);
+                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                 ast_helper::make_unit(loc)
             });
 
-            let loc = mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_letexception(ext, Box::new(body)),
                 pexp_loc: loc,
@@ -3196,7 +3221,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
 
             // Check for continuation
             if let Some(rest) = parse_switch_case_body(p) {
-                let new_loc = mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
+                let new_loc = p.mk_loc(&expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_sequence(Box::new(expr), Box::new(rest)),
                     pexp_loc: new_loc,
@@ -3239,7 +3264,7 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
         p.next();
         let typ = super::typ::parse_typ_expr(p);
         // Create a constraint pattern
-        let loc = mk_loc(&first_pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
+        let loc = p.mk_loc(&first_pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
         Pattern {
             ppat_desc: PatternDesc::Ppat_constraint(Box::new(first_pat), typ),
             ppat_loc: loc,
@@ -3251,7 +3276,7 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
 
     p.expect(Token::Equal);
     let first_value = parse_expr(p);
-    let first_loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let first_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Add let.unwrap attribute if this is let?
     let first_attrs = if unwrap {
@@ -3272,15 +3297,16 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
 
     // Parse additional bindings with 'and'
     while p.token == Token::And {
-        p.next();
+        // Capture start position BEFORE consuming `and`
         let binding_start = p.start_pos.clone();
+        p.next();
         let pat = super::pattern::parse_pattern(p);
 
         // Handle optional type annotation
         let pat = if p.token == Token::Colon {
             p.next();
             let typ = super::typ::parse_typ_expr(p);
-            let loc = mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
+            let loc = p.mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
             Pattern {
                 ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
                 ppat_loc: loc,
@@ -3292,7 +3318,7 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
 
         p.expect(Token::Equal);
         let value = parse_expr(p);
-        let binding_loc = mk_loc(&binding_start, &p.prev_end_pos);
+        let binding_loc = p.mk_loc(&binding_start, &p.prev_end_pos);
         bindings.push(ValueBinding {
             pvb_pat: pat,
             pvb_expr: value,
@@ -3307,11 +3333,11 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
     // Parse the rest as the body
     let rest = parse_switch_case_body(p);
     let body = rest.unwrap_or_else(|| {
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         ast_helper::make_unit(loc)
     });
 
-    let loc = mk_loc(&start_pos, &body.pexp_loc.loc_end);
+    let loc = p.mk_loc(&start_pos, &body.pexp_loc.loc_end);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_let(rec_flag, bindings, Box::new(body)),
@@ -3356,7 +3382,7 @@ fn parse_first_class_module_expr_inner(p: &mut Parser<'_>, start_pos: Position) 
     };
 
     p.expect(Token::Rparen);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     let pack_expr = Expression {
         pexp_desc: ExpressionDesc::Pexp_pack(mod_expr),
@@ -3381,7 +3407,7 @@ fn parse_first_class_module_expr_inner(p: &mut Parser<'_>, start_pos: Position) 
 fn parse_switch_case_block(p: &mut Parser<'_>) -> Expression {
     // Use the new recursive parser that properly nests let/module/open/exception
     parse_switch_case_body(p).unwrap_or_else(|| {
-        let loc = mk_loc(&p.start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&p.start_pos, &p.prev_end_pos);
         ast_helper::make_unit(loc)
     })
 }
@@ -3421,7 +3447,7 @@ fn parse_switch_expr(p: &mut Parser<'_>) -> Expression {
     }
 
     p.expect(Token::Rbrace);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_match(Box::new(scrutinee), cases),
@@ -3440,7 +3466,7 @@ fn parse_while_expr(p: &mut Parser<'_>) -> Expression {
     let body_start = p.start_pos.clone();
     let body = parse_block_expr(p, body_start);
 
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_while(Box::new(condition), Box::new(body)),
@@ -3468,7 +3494,7 @@ fn parse_for_expr(p: &mut Parser<'_>) -> Expression {
         if p.token == Token::Rparen {
             // for () - unit pattern, then check for alias
             p.next();
-            let loc = mk_loc(&lparen_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&lparen_pos, &p.prev_end_pos);
             let unit_pat = super::pattern::make_unit_construct_pattern(loc);
             let pat = super::pattern::parse_alias_pattern(p, unit_pat, vec![]);
             (pat, false)
@@ -3530,7 +3556,7 @@ fn parse_for_expr(p: &mut Parser<'_>) -> Expression {
     p.eat_breadcrumb();
     p.end_region();
 
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_for(
@@ -3587,7 +3613,7 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
     }
 
     p.expect(Token::Rbrace);
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_try(Box::new(body), cases),
@@ -3612,7 +3638,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
 
     // Parse tag name
     let tag_name = parse_jsx_tag_name(p);
-    let tag_name_loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let tag_name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Parse props
     let props = parse_jsx_props(p);
@@ -3621,7 +3647,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
     if p.token == Token::Forwardslash {
         p.next();
         p.expect(Token::GreaterThan);
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
         Expression {
             pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Unary(JsxUnaryElement {
@@ -3644,7 +3670,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
         let _closing_tag_name = parse_jsx_tag_name(p);
         p.expect(Token::GreaterThan);
 
-        let loc = mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
         Expression {
             pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Container(
@@ -3674,7 +3700,7 @@ fn parse_jsx_fragment(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     let closing = p.start_pos.clone();
     p.expect(Token::GreaterThan);
 
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Fragment(JsxFragment {
@@ -3774,7 +3800,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
                     p.expect(Token::DotDotDot);
                     let expr = parse_expr(p);
                     p.expect(Token::Rbrace);
-                    let loc = mk_loc(&spread_start, &p.prev_end_pos);
+                    let loc = p.mk_loc(&spread_start, &p.prev_end_pos);
                     props.push(JsxProp::Spreading { loc, expr });
                 } else {
                     break;
@@ -3782,7 +3808,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
             }
             Token::Lident(name) => {
                 let name = name.clone();
-                let name_loc = mk_loc(&p.start_pos, &p.end_pos);
+                let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                 p.next();
 
                 if p.token == Token::Equal {
@@ -3816,7 +3842,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
                 p.next();
                 if let Token::Lident(name) = &p.token {
                     let name = name.clone();
-                    let name_loc = mk_loc(&p.start_pos, &p.end_pos);
+                    let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                     p.next();
                     props.push(JsxProp::Punning {
                         optional: true,
@@ -3827,7 +3853,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
             token if token.is_keyword() => {
                 // JSX props may use keyword-like identifiers (rare but valid).
                 let name = token.to_string();
-                let name_loc = mk_loc(&p.start_pos, &p.end_pos);
+                let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                 p.next();
 
                 if p.token == Token::Equal {
@@ -3891,7 +3917,7 @@ fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
             let start_pos = p.start_pos.clone();
             let s = s.clone();
             p.next();
-            let loc = mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             children.push(ast_helper::make_constant(
                 Constant::String(s, None),
                 loc,
@@ -3940,7 +3966,7 @@ fn parse_jsx_braced_expr(p: &mut Parser<'_>, lbrace_start: Position) -> Expressi
     match parse_block_body(p) {
         Some(expr) => expr,
         None => {
-            let loc = mk_loc(&lbrace_start, &p.prev_end_pos);
+            let loc = p.mk_loc(&lbrace_start, &p.prev_end_pos);
             ast_helper::make_unit(loc)
         }
     }
@@ -3981,7 +4007,7 @@ fn parse_template_literal_with_prefix(
             Token::TemplatePart { text, .. } => {
                 // Part before an interpolation ${
                 let text = text.clone();
-                let text_loc = mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String(text, part_prefix.clone()),
                     text_loc,
@@ -3997,7 +4023,7 @@ fn parse_template_literal_with_prefix(
             Token::TemplateTail { text, .. } => {
                 // Final part or simple template string
                 let text = text.clone();
-                let text_loc = mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String(text, part_prefix.clone()),
                     text_loc,
@@ -4009,7 +4035,7 @@ fn parse_template_literal_with_prefix(
             }
             Token::Backtick => {
                 // Empty template string
-                let text_loc = mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String("".to_string(), part_prefix.clone()),
                     text_loc,
@@ -4037,7 +4063,7 @@ fn parse_template_literal_with_prefix(
         }
     }
 
-    let loc = mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     // Check if this is a tagged template (non-json prefix)
     let is_tagged = match &prefix {
@@ -4115,7 +4141,7 @@ fn parse_template_literal_with_prefix(
         };
 
         let concat = |e1: Expression, e2: Expression| -> Expression {
-            let concat_loc = mk_loc(&e1.pexp_loc.loc_start, &e2.pexp_loc.loc_end);
+            let concat_loc = p.mk_loc(&e1.pexp_loc.loc_start, &e2.pexp_loc.loc_end);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_apply {
                     funct: Box::new(hidden_operator.clone()),
@@ -4155,7 +4181,7 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
         match &p.token {
             Token::TemplatePart { text, .. } => {
                 let text = text.clone();
-                let text_loc = mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
                 let mut str_expr =
                     ast_helper::make_constant(Constant::String(text, Some("js".to_string())), text_loc);
                 str_expr.pexp_attributes.push(template_literal_attr.clone());
@@ -4166,7 +4192,7 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
             }
             Token::TemplateTail { text, .. } => {
                 let text = text.clone();
-                let text_loc = mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
                 let mut str_expr =
                     ast_helper::make_constant(Constant::String(text, Some("js".to_string())), text_loc);
                 str_expr.pexp_attributes.push(template_literal_attr.clone());
@@ -4176,7 +4202,7 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
             }
             Token::Backtick => {
                 // Empty template string
-                let text_loc = mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String("".to_string(), Some("js".to_string())),
                     text_loc,
@@ -4222,11 +4248,11 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
         Payload::PStr(vec![]),
     );
 
-    let loc = mk_loc(&tag_start, &p.prev_end_pos);
+    let loc = p.mk_loc(&tag_start, &p.prev_end_pos);
 
     // If we failed to advance (EOF / malformed), make sure the location at least starts at the tag.
     let loc = if loc.loc_end.cnum == 0 {
-        mk_loc(&tag_start, &template_start)
+        p.mk_loc(&tag_start, &template_start)
     } else {
         loc
     };

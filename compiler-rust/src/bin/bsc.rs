@@ -9,6 +9,7 @@
 //! All other flags are accepted and ignored.
 
 use anyhow::{anyhow, Context, Result};
+use rescript_compiler::binary_ast::{write_signature_ast, write_structure_ast};
 use rescript_compiler::driver::{compile_file_to_js_with_options, CompilerOptions};
 use rescript_compiler::parser::{module, Parser};
 use std::env;
@@ -120,39 +121,96 @@ fn run() -> Result<()> {
 
 fn generate_ast(input: &Path, output: Option<PathBuf>) -> Result<()> {
     // Use lossy UTF-8 conversion (like OCaml) to handle files with invalid bytes
-    let bytes = fs::read(input)
-        .with_context(|| format!("Failed to read {}", input.display()))?;
+    let bytes =
+        fs::read(input).with_context(|| format!("Failed to read {}", input.display()))?;
     let source = String::from_utf8_lossy(&bytes).into_owned();
-    let filename = input.to_string_lossy().to_string();
-    let mut parser = Parser::new(filename, &source);
-    let _ = module::parse_structure(&mut parser);
-    if parser.has_errors() {
-        return Err(anyhow!(
-            "Parse failed with {} error(s)",
-            parser.diagnostics().len()
-        ));
-    }
 
-    let out_path = output.unwrap_or_else(|| input.with_extension("ast"));
+    // Use the original path as provided (matching OCaml's behavior)
+    // OCaml does not canonicalize paths - it uses them as-is
+    let source_path = input.to_string_lossy().to_string();
+
+    let filename = input.to_string_lossy().to_string();
+
+    // Determine if this is an interface (.resi) or implementation (.res)
+    let is_interface = input
+        .extension()
+        .and_then(|s| s.to_str())
+        .is_some_and(|ext| ext == "resi" || ext == "mli");
+
+    // Determine output path and extension
+    let out_path = output.unwrap_or_else(|| {
+        if is_interface {
+            input.with_extension("iast")
+        } else {
+            input.with_extension("ast")
+        }
+    });
+
     if let Some(parent) = out_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    let abs = fs::canonicalize(input).unwrap_or_else(|_| input.to_path_buf());
-    fs::write(&out_path, format!("{}\n", abs.display()))?;
+
+    let mut parser = Parser::new(filename, &source);
+
+    if is_interface {
+        // Parse signature (interface file)
+        let signature = module::parse_signature(&mut parser);
+        if parser.has_errors() {
+            return Err(anyhow!(
+                "Parse failed with {} error(s)",
+                parser.diagnostics().len()
+            ));
+        }
+        write_signature_ast(&out_path, &source_path, &signature)
+            .with_context(|| format!("Failed to write {}", out_path.display()))?;
+    } else {
+        // Parse structure (implementation file)
+        let structure = module::parse_structure(&mut parser);
+        if parser.has_errors() {
+            return Err(anyhow!(
+                "Parse failed with {} error(s)",
+                parser.diagnostics().len()
+            ));
+        }
+        write_structure_ast(&out_path, &source_path, &structure)
+            .with_context(|| format!("Failed to write {}", out_path.display()))?;
+    }
+
     Ok(())
 }
 
 fn read_ast_source_path(ast_path: &Path) -> Result<PathBuf> {
-    let content = fs::read_to_string(ast_path)
-        .with_context(|| format!("Failed to read {}", ast_path.display()))?;
-    let mut line = content.lines().next().unwrap_or("").trim().to_string();
-    if let Some(rest) = line.strip_prefix("SOURCE:") {
-        line = rest.trim().to_string();
+    let content =
+        fs::read(ast_path).with_context(|| format!("Failed to read {}", ast_path.display()))?;
+
+    if content.len() < 5 {
+        return Err(anyhow!("Invalid .ast file: too small"));
     }
-    if line.is_empty() {
+
+    // Read the dependency section size (4 bytes, big-endian)
+    let dep_size = u32::from_be_bytes([content[0], content[1], content[2], content[3]]) as usize;
+
+    // Skip past the dependency section to get to the source path
+    let path_start = 4 + dep_size;
+    if path_start >= content.len() {
         return Err(anyhow!("Invalid .ast file: missing source path"));
     }
-    Ok(PathBuf::from(line))
+
+    // Read until newline to get the source path
+    let path_end = content[path_start..]
+        .iter()
+        .position(|&b| b == b'\n')
+        .map(|pos| path_start + pos)
+        .unwrap_or(content.len());
+
+    let path_bytes = &content[path_start..path_end];
+    let path_str = String::from_utf8_lossy(path_bytes);
+
+    if path_str.is_empty() {
+        return Err(anyhow!("Invalid .ast file: empty source path"));
+    }
+
+    Ok(PathBuf::from(path_str.into_owned()))
 }
 
 fn write_outputs(source_path: &Path, js: &str, opts: &Options) -> Result<()> {

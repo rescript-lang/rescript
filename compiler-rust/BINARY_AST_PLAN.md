@@ -1549,9 +1549,142 @@ Rust doesn't have OCaml's pointer identity semantics:
 **Pros**: Predictable
 **Cons**: May not achieve byte-identical output
 
-### Recommended Approach
+### Recommended Approach: Identity-Based Sharing (Option D)
 
-Start with **Option B**:
+After extensive analysis (2026-01-20), we identified a better approach that directly matches OCaml's sharing semantics:
+
+#### Key Discovery: Position Sharing via `prev_end_pos`
+
+In OCaml's parser (`res_parser.ml`), position objects are shared through a specific pattern:
+
+```ocaml
+let next p =
+  p.prev_end_pos <- p.end_pos;  (* SAME OBJECT reference! *)
+  let start_pos, end_pos, token = Scanner.scan p.scanner in
+  p.start_pos <- start_pos;     (* NEW object from scanner *)
+  p.end_pos <- end_pos          (* NEW object from scanner *)
+```
+
+When token B follows token A, `prev_end_pos` for B is the **same object** as `end_pos` for A. This is the primary source of sharing in the AST.
+
+#### Current Status (2026-01-20)
+
+```
+Parity Test Results (170 files):
+- Dependency parity: 100% (122/122 parseable files)
+- Size parity: 8% (10/122 files)
+- Byte-identical: 2% (3/122 files - empty/comment-only)
+- Rust parse errors: 40 (unsupported features)
+- OCaml parse errors: 8
+```
+
+The 100% dependency parity confirms the AST structure is correct. The byte differences are due to different sharing patterns.
+
+#### Implementation Plan: Identity-Based Sharing
+
+**Step 1: Add PositionId to Position struct**
+
+```rust
+// In location.rs
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PositionId(u32);
+
+pub struct Position {
+    pub file_name: String,
+    pub line: usize,
+    pub bol: usize,
+    pub cnum: usize,
+    pub id: PositionId,  // NEW: Unique identity for sharing
+}
+```
+
+**Step 2: Update scanner to assign unique IDs**
+
+```rust
+// In scanner.rs
+impl Scanner {
+    fn make_position(&mut self) -> Position {
+        self.position_counter += 1;
+        Position {
+            file_name: self.filename.clone(),
+            line: self.line,
+            bol: self.line_offset,
+            cnum: self.offset,
+            id: PositionId(self.position_counter),
+        }
+    }
+}
+```
+
+**Step 3: Preserve ID in parser's `next()`**
+
+```rust
+// In parser/state.rs
+impl Parser {
+    pub fn next(&mut self) {
+        // Key: prev_end_pos gets the SAME id as current end_pos
+        self.prev_end_pos = self.end_pos.clone();  // Same id!
+
+        let (start_pos, end_pos) = self.scanner.scan();
+        self.start_pos = start_pos;  // New id from scanner
+        self.end_pos = end_pos;      // New id from scanner
+    }
+}
+```
+
+**Step 4: Update marshal to share by identity**
+
+```rust
+// In binary_ast/marshal.rs
+pub struct MarshalWriter {
+    buffer: Vec<u8>,
+    obj_counter: u32,
+    // Change from content-based to identity-based:
+    position_table: HashMap<PositionId, u32>,  // Instead of HashMap<(file,line,bol,cnum), u32>
+}
+
+impl MarshalWriter {
+    pub fn write_position_by_id(&mut self, pos: &Position) -> bool {
+        if let Some(&obj_idx) = self.position_table.get(&pos.id) {
+            // Already seen this exact position object
+            let d = self.obj_counter - obj_idx;
+            self.write_shared_ref(d);
+            false
+        } else {
+            // First time seeing this position
+            let obj_idx = self.obj_counter;
+            self.write_block_header(0, 4);
+            self.write_string_shared(&pos.file_name);
+            self.write_int(pos.line as i64);
+            self.write_int(pos.bol as i64);
+            self.write_int(pos.cnum as i64);
+            self.position_table.insert(pos.id, obj_idx);
+            true
+        }
+    }
+}
+```
+
+#### Implementation Tasks
+
+- [ ] Add `PositionId` type to `location.rs`
+- [ ] Add `id` field to `Position` struct
+- [ ] Update scanner to assign unique IDs on position creation
+- [ ] Update parser's `next()` to preserve ID when assigning `prev_end_pos`
+- [ ] Update marshal `position_table` to key by `PositionId`
+- [ ] Run parity test suite: `./scripts/test_ast_parity_suite.sh`
+- [ ] Target: 100% byte-identical for parseable files
+
+#### Why This Approach Works
+
+1. **Matches OCaml semantics**: OCaml shares based on pointer identity, we share based on PositionId
+2. **Deterministic**: Same parse produces same IDs in same order
+3. **Minimal changes**: Only affects Position creation and marshal lookup
+4. **Testable**: Can verify incrementally with parity test suite
+
+#### Fallback: Option B (Incremental Analysis)
+
+If identity-based sharing proves insufficient:
 
 1. **Phase 1**: Implement without sharing
 2. **Phase 2**: Generate test cases, compare with OCaml

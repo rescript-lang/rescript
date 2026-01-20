@@ -9,7 +9,7 @@
 //! - Regular expressions
 //! - All operators and punctuation
 
-use crate::location::Position;
+use crate::location::{Position, PositionId};
 
 use super::comment::{Comment, CommentStyle};
 use super::diagnostics::{DiagnosticCategory, ParserDiagnostic};
@@ -32,12 +32,12 @@ pub enum ScannerMode {
 pub struct ScannerSnapshot {
     ch: char,
     offset: usize,
-    offset16: usize,
     line_offset: usize,
     lnum: i32,
     mode: Vec<ScannerMode>,
     prev_token: Option<Token>,
     diagnostics_len: usize,
+    position_id_counter: u32,
 }
 
 /// The lexical scanner state.
@@ -47,14 +47,15 @@ pub struct Scanner<'src> {
     pub filename: String,
     /// Source code being scanned.
     src: &'src str,
-    /// Source as bytes for efficient access.
+    /// Source as bytes for efficient access (UTF-8 encoding of the string).
     src_bytes: &'src [u8],
+    /// Character count (cached for efficiency).
+    /// For Latin-1 source, this equals the original byte count.
+    src_char_count: usize,
     /// Current character.
     ch: char,
-    /// Current byte offset in source.
+    /// Current character offset in source (= byte offset in original Latin-1 file).
     offset: usize,
-    /// Current UTF-16 code units since line start (for column tracking).
-    offset16: usize,
     /// Byte offset of current line start.
     line_offset: usize,
     /// Current line number (1-indexed).
@@ -65,6 +66,9 @@ pub struct Scanner<'src> {
     diagnostics: Vec<ParserDiagnostic>,
     /// Previous non-comment token (for context-sensitive lexing like regex literals).
     prev_token: Option<Token>,
+    /// Counter for generating unique PositionIds.
+    /// Each scanner instance has its own counter to avoid global state.
+    position_id_counter: u32,
 }
 
 /// Result of scanning a token.
@@ -83,6 +87,7 @@ impl<'src> Scanner<'src> {
     pub fn new(filename: impl Into<String>, src: &'src str) -> Self {
         let filename = filename.into();
         let src_bytes = src.as_bytes();
+        let src_char_count = src.chars().count();
         let ch = if src.is_empty() {
             EOF_CHAR
         } else {
@@ -93,14 +98,16 @@ impl<'src> Scanner<'src> {
             filename,
             src,
             src_bytes,
+            src_char_count,
             ch,
             offset: 0,
-            offset16: 0,
             line_offset: 0,
             lnum: 1,
             mode: Vec::new(),
             diagnostics: Vec::new(),
             prev_token: None,
+            // Start at 1 because 0 is reserved for default/uninitialized positions
+            position_id_counter: 1,
         }
     }
 
@@ -131,12 +138,12 @@ impl<'src> Scanner<'src> {
         ScannerSnapshot {
             ch: self.ch,
             offset: self.offset,
-            offset16: self.offset16,
             line_offset: self.line_offset,
             lnum: self.lnum,
             mode: self.mode.clone(),
             prev_token: self.prev_token.clone(),
             diagnostics_len: self.diagnostics.len(),
+            position_id_counter: self.position_id_counter,
         }
     }
 
@@ -144,12 +151,12 @@ impl<'src> Scanner<'src> {
     pub fn restore(&mut self, snapshot: ScannerSnapshot) {
         self.ch = snapshot.ch;
         self.offset = snapshot.offset;
-        self.offset16 = snapshot.offset16;
         self.line_offset = snapshot.line_offset;
         self.lnum = snapshot.lnum;
         self.mode = snapshot.mode;
         self.prev_token = snapshot.prev_token;
         self.diagnostics.truncate(snapshot.diagnostics_len);
+        self.position_id_counter = snapshot.position_id_counter;
     }
 
     /// Get a reference to the source string.
@@ -162,13 +169,24 @@ impl<'src> Scanner<'src> {
         matches!(self.mode.last(), Some(ScannerMode::Diamond))
     }
 
-    /// Get the current position.
-    pub fn position(&self) -> Position {
-        Position::new(
+    /// Get the current position with a unique PositionId.
+    ///
+    /// Each call creates a NEW position with a unique ID.
+    /// This mimics OCaml where each call to the scanner's position function
+    /// allocates a new position record.
+    ///
+    /// For byte-accurate positions (OCaml parity), we use character offset directly.
+    /// Since the source is Latin-1 encoded (each original byte → one char), the
+    /// character offset equals the original byte offset.
+    pub fn position(&mut self) -> Position {
+        let id = PositionId::from_raw(self.position_id_counter);
+        self.position_id_counter += 1;
+        Position::new_with_id(
             &self.filename,
             self.lnum,
             self.line_offset as i32,
-            (self.line_offset + self.offset16) as i32,
+            self.offset as i32, // Use character offset (= byte offset in Latin-1)
+            id,
         )
     }
 
@@ -179,34 +197,24 @@ impl<'src> Scanner<'src> {
     }
 
     /// Advance to the next character.
+    ///
+    /// For Latin-1 source (each original byte → one char), the character offset
+    /// equals the byte offset. We use chars().nth() for proper character indexing.
     fn next(&mut self) {
-        if self.offset >= self.src.len() {
+        if self.offset >= self.src_char_count {
             self.ch = EOF_CHAR;
             return;
         }
 
-        let byte = self.src_bytes[self.offset];
-        let utf16_len = utf8::utf16_len(byte);
-
-        // Handle newlines
+        // Handle newlines - update line tracking
         if self.ch == '\n' {
             self.line_offset = self.offset + 1;
-            self.offset16 = 0;
             self.lnum += 1;
-        } else {
-            self.offset16 += utf16_len;
         }
 
         // Move to next character
         self.offset += 1;
-        if self.offset < self.src.len() {
-            // Decode the next character
-            let (cp, _len) = utf8::decode_codepoint(self.src_bytes, self.offset);
-            self.ch = char::from_u32(cp as u32).unwrap_or(EOF_CHAR);
-        } else {
-            self.offset16 = self.offset - self.line_offset;
-            self.ch = EOF_CHAR;
-        }
+        self.ch = self.src.chars().nth(self.offset).unwrap_or(EOF_CHAR);
     }
 
     /// Advance by 2 characters.
@@ -224,32 +232,17 @@ impl<'src> Scanner<'src> {
 
     /// Peek at the next character without advancing.
     fn peek(&self) -> char {
-        if self.offset + 1 < self.src.len() {
-            let (cp, _) = utf8::decode_codepoint(self.src_bytes, self.offset + 1);
-            char::from_u32(cp as u32).unwrap_or(EOF_CHAR)
-        } else {
-            EOF_CHAR
-        }
+        self.src.chars().nth(self.offset + 1).unwrap_or(EOF_CHAR)
     }
 
     /// Peek at the character 2 positions ahead.
     fn peek2(&self) -> char {
-        if self.offset + 2 < self.src.len() {
-            let (cp, _) = utf8::decode_codepoint(self.src_bytes, self.offset + 2);
-            char::from_u32(cp as u32).unwrap_or(EOF_CHAR)
-        } else {
-            EOF_CHAR
-        }
+        self.src.chars().nth(self.offset + 2).unwrap_or(EOF_CHAR)
     }
 
     /// Peek at the character 3 positions ahead.
     fn peek3(&self) -> char {
-        if self.offset + 3 < self.src.len() {
-            let (cp, _) = utf8::decode_codepoint(self.src_bytes, self.offset + 3);
-            char::from_u32(cp as u32).unwrap_or(EOF_CHAR)
-        } else {
-            EOF_CHAR
-        }
+        self.src.chars().nth(self.offset + 3).unwrap_or(EOF_CHAR)
     }
 
     /// Check if a character is whitespace.
@@ -275,8 +268,15 @@ impl<'src> Scanner<'src> {
     }
 
     /// Extract a substring from the source.
+    ///
+    /// Note: start and end are character offsets. We convert them to byte offsets
+    /// for slicing, since the source string is UTF-8 internally (Latin-1 chars >127
+    /// become 2-byte UTF-8 sequences).
     fn substring(&self, start: usize, end: usize) -> &'src str {
-        &self.src[start..end.min(self.src.len())]
+        // Get byte indices for the character range
+        let byte_start = self.src.char_indices().nth(start).map(|(i, _)| i).unwrap_or(self.src.len());
+        let byte_end = self.src.char_indices().nth(end).map(|(i, _)| i).unwrap_or(self.src.len());
+        &self.src[byte_start..byte_end]
     }
 
     /// Scan an identifier or keyword.
