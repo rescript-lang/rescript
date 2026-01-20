@@ -316,6 +316,13 @@ and expression_desc =
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
+  | Pexp_jsx_text of jsx_text
+
+and jsx_text = {
+  jsx_text_content: string; (* The trimmed text content *)
+  jsx_text_leading_space: bool; (* Had whitespace before the text *)
+  jsx_text_trailing_space: bool; (* Had whitespace after the text *)
+}
 
 (* an element of a record pattern or expression *)
 and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}

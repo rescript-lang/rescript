@@ -539,6 +539,17 @@ module E = struct
             (Asttypes.Noloc.Labelled "children", children_expr);
             (Asttypes.Noloc.Nolabel, jsx_unit_expr);
           ])
+    | Pexp_jsx_text text ->
+      (* Transform JSX text to React.string("text") *)
+      let react_string_ident =
+        {loc; txt = Longident.Ldot (Lident "React", "string")}
+      in
+      let string_const =
+        Ast_helper0.Exp.constant ~loc
+          (Pconst_string (text.jsx_text_content, None))
+      in
+      apply ~loc ~attrs (ident react_string_ident)
+        [(Asttypes.Noloc.Nolabel, string_const)]
 end
 
 module P = struct

@@ -3075,14 +3075,12 @@ and parse_jsx_children_2 (p : Parser.t) : Parsetree.jsx_children =
         child :: loop p children
     (* Expression hole *)
     | Lbrace ->
-      print_endline "jsx child lbrace";
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
       child :: loop p children
     | Rbrace -> failwith "Nested children not supported"
     | _text_token ->
-      Printf.printf "text_token: %s\n" (Res_token.to_string p.token);
       let text_expr = parse_jsx_text p in
       text_expr :: loop p children
   in
@@ -3093,6 +3091,8 @@ and parse_jsx_children_2 (p : Parser.t) : Parsetree.jsx_children =
     See https://facebook.github.io/jsx/#prod-JSXText
   *)
 and parse_jsx_text p : Parsetree.expression =
+  (* Use prev_end_pos to capture any leading whitespace that the scanner skipped *)
+  let raw_start_pos = p.Parser.prev_end_pos in
   let start_pos = p.Parser.start_pos in
   let rec visit p =
     match p.Parser.token with
@@ -3112,20 +3112,22 @@ and parse_jsx_text p : Parsetree.expression =
     | LessThan | Lbrace ->
       let end_pos = p.Parser.start_pos in
       let loc = mk_loc start_pos end_pos in
-      let text =
-        String.sub p.scanner.src start_pos.pos_cnum
-          (end_pos.pos_cnum - start_pos.pos_cnum)
-        |> String.trim
+      let raw_text =
+        String.sub p.scanner.src raw_start_pos.pos_cnum
+          (end_pos.pos_cnum - raw_start_pos.pos_cnum)
       in
-      (* TODO: not sure what *j is *)
-      let string_expr =
-        Ast_helper.Exp.constant ~loc (Parsetree.Pconst_string (text, Some "*j"))
+      let text = String.trim raw_text in
+      let leading_space =
+        String.length raw_text > 0
+        && (raw_text.[0] = ' ' || raw_text.[0] = '\t' || raw_text.[0] = '\n')
       in
-      let react_string_ident = Longident.Ldot (Lident "React", "string") in
-      let attrs = [make_braces_attr loc] in
-      Ast_helper.Exp.apply ~loc ~attrs
-        (Ast_helper.Exp.ident ~loc (Location.mkloc react_string_ident loc))
-        [(Nolabel, string_expr)]
+      let trailing_space =
+        String.length raw_text > 0
+        &&
+        let last = raw_text.[String.length raw_text - 1] in
+        last = ' ' || last = '\t' || last = '\n'
+      in
+      Ast_helper.Exp.jsx_text ~loc ~leading_space ~trailing_space text
     | _text_token ->
       Parser.next p;
       visit p

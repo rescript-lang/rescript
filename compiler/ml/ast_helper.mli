@@ -225,6 +225,14 @@ module Exp : sig
     Parsetree.jsx_closing_container_tag option ->
     expression
 
+  val jsx_text :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    ?leading_space:bool ->
+    ?trailing_space:bool ->
+    string ->
+    expression
+
   val case :
     ?bar:Lexing.position -> pattern -> ?guard:expression -> expression -> case
   val await : ?loc:loc -> ?attrs:attrs -> expression -> expression

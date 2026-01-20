@@ -1073,7 +1073,7 @@ and print_include_declaration ~state
       Doc.text "include ";
       (let include_doc =
          match include_declaration.pincl_mod.pmod_desc with
-         (* 
+         (*
            include Module.Name({ type t = t })
            try as oneliner if there is a single type alias declaration
           *)
@@ -2981,6 +2981,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
            }) ->
       print_jsx_container_tag ~state tag_name opening_greater_than props
         children closing_tag e.pexp_loc cmt_tbl
+    | Pexp_jsx_text {jsx_text_content = text} -> Doc.text text
     | Pexp_construct ({txt = Longident.Lident "()"}, _) -> Doc.text "()"
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
       Doc.concat
@@ -4572,13 +4573,31 @@ and print_jsx_container_tag ~state tag_name
     | [] -> false
   in
   let line_sep = get_line_sep_for_jsx_children children in
+  (* Check if all children are simple (text or braced expressions, no nested JSX elements) *)
+  let all_children_simple =
+    List.for_all
+      (function
+        | {Parsetree.pexp_desc = Pexp_jsx_element _} -> false
+        | _ -> true)
+      children
+  in
   let print_children children =
-    Doc.concat
-      [
-        Doc.indent
-          (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
-        line_sep;
-      ]
+    if all_children_simple then
+      (* For simple children, try to keep them on the same line as the tags *)
+      Doc.concat
+        [
+          Doc.soft_line;
+          print_jsx_children ~state children cmt_tbl;
+          Doc.soft_line;
+        ]
+    else
+      (* For complex children with nested elements, use indentation and line breaks *)
+      Doc.concat
+        [
+          Doc.indent
+            (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
+          line_sep;
+        ]
   in
 
   (* comments between the opening and closing tag *)
@@ -4673,13 +4692,15 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
        ])
 
 and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
+  (* Use hard_line only when there are nested JSX elements.
+     For simple children like text and expressions, use soft line
+     so they can be grouped on the same line when they fit. *)
   if
-    List.length children > 1
-    || List.exists
-         (function
-           | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
-           | _ -> false)
-         children
+    List.exists
+      (function
+        | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
+        | _ -> false)
+      children
   then Doc.hard_line
   else Doc.line
 
@@ -4720,6 +4741,25 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   match children with
   | [] -> Doc.nil
   | children ->
+    (* Determine the separator between two adjacent children based on their types
+       and whitespace information from JSX text nodes *)
+    let get_separator_between x y =
+      match (x.Parsetree.pexp_desc, y.Parsetree.pexp_desc) with
+      (* Between two JSX text nodes: use trailing space of x or leading space of y *)
+      | ( Pexp_jsx_text {jsx_text_trailing_space = trailing},
+          Pexp_jsx_text {jsx_text_leading_space = leading} ) ->
+        if trailing || leading then Doc.space else Doc.nil
+      (* Text followed by expression: use trailing space of text *)
+      | Pexp_jsx_text {jsx_text_trailing_space = trailing}, _ ->
+        if trailing then Doc.space else Doc.nil
+      (* Expression followed by text: use leading space of text *)
+      | _, Pexp_jsx_text {jsx_text_leading_space = leading} ->
+        if leading then Doc.space else Doc.nil
+      (* Between JSX elements: line break *)
+      | Pexp_jsx_element _, _ | _, Pexp_jsx_element _ -> sep
+      (* Default: use the computed separator *)
+      | _ -> sep
+    in
     let rec visit acc children =
       match children with
       | [] -> acc
@@ -4737,16 +4777,17 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
         let leading_single_line_comments =
           get_leading_line_comment_count cmt_tbl (get_loc y)
         in
+        let child_sep = get_separator_between x y in
         (* If there are lines between the jsx elements, we preserve at least one line *)
         if
           (* Unless they are all comments *)
           (* The edge case of comment followed by blank line is not caught here *)
           lines_between > 0 && not (lines_between = leading_single_line_comments)
         then
-          let doc = Doc.concat [print_expr x; sep; Doc.hard_line] in
+          let doc = Doc.concat [print_expr x; child_sep; Doc.hard_line] in
           visit (Doc.concat [acc; doc]) rest
         else
-          let doc = Doc.concat [print_expr x; sep] in
+          let doc = Doc.concat [print_expr x; child_sep] in
           visit (Doc.concat [acc; doc]) rest
     in
     visit Doc.nil children

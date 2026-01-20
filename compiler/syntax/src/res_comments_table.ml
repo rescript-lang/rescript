@@ -100,9 +100,9 @@ let attach tbl loc comments =
  *
  * When splitting around the location of `x = 5`:
  * - leading: [comment1]
- * - inside: [comment2]  
+ * - inside: [comment2]
  * - trailing: [comment3]
- * 
+ *
  * This is the primary comment partitioning function used for associating comments
  * with AST nodes during the tree traversal.
  *
@@ -1800,13 +1800,14 @@ and walk_expression expr t comments =
       let children_nodes = List.map (fun e -> Expression e) children in
 
       walk_list children_nodes t comments_for_children
-    (* It is less likely that there are comments inside the closing tag, 
+    (* It is less likely that there are comments inside the closing tag,
        so we don't process them right now,
-       if you ever need this, feel free to update process _rest. 
+       if you ever need this, feel free to update process _rest.
        Comments after the closing tag will already be taking into account by the parent node. *)
     )
   | Pexp_await expr -> walk_expression expr t comments
   | Pexp_send _ -> ()
+  | Pexp_jsx_text _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in
