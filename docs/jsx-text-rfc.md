@@ -22,6 +22,36 @@ This is verbose compared to standard JSX in JavaScript/TypeScript:
 <div>Welcome to {name}!</div>
 ```
 
+## Enabling the Feature
+
+JSX text support is an experimental feature that must be explicitly enabled.
+
+### Via rescript.json
+
+Add to your `rescript.json`:
+
+```json
+{
+  "experimental-features": {
+    "JsxText": true
+  }
+}
+```
+
+### Via compiler flag
+
+Pass the flag directly to the compiler:
+
+```bash
+bsc -enable-experimental JsxText myfile.res
+```
+
+For development/testing with dune:
+
+```bash
+dune exec bsc -- -enable-experimental JsxText myfile.res
+```
+
 ## Design
 
 ### New AST Node
@@ -167,12 +197,14 @@ This allows the printer to reconstruct proper spacing between elements:
 
 ## Development Commands
 
+All development commands require the `-enable-experimental JsxText` flag.
+
 ### Parse and view AST
 
 To see how JSX text is parsed, including whitespace metadata:
 
 ```bash
-dune exec bsc -- -dparsetree path/to/file.res -only-parse
+dune exec bsc -- -enable-experimental JsxText -dparsetree path/to/file.res -only-parse
 ```
 
 Example output:
@@ -186,7 +218,7 @@ Pexp_jsx_text "Hello" (leading=false, trailing=true)
 To verify that parsing and reprinting preserves the original formatting:
 
 ```bash
-dune exec bsc -- -only-parse -reprint-source path/to/file.res
+dune exec bsc -- -enable-experimental JsxText -only-parse -reprint-source path/to/file.res
 ```
 
 ### View transformed AST (with React.string)
@@ -194,7 +226,7 @@ dune exec bsc -- -only-parse -reprint-source path/to/file.res
 To see how the JSX text transforms to `React.string()` calls:
 
 ```bash
-dune exec bsc -- -bs-jsx 4 -dparsetree path/to/file.res
+dune exec bsc -- -enable-experimental JsxText -bs-jsx 4 -dparsetree path/to/file.res
 ```
 
 ### Full compilation
@@ -202,7 +234,7 @@ dune exec bsc -- -bs-jsx 4 -dparsetree path/to/file.res
 To compile and see the generated JavaScript:
 
 ```bash
-dune exec bsc -- path/to/file.res
+dune exec bsc -- -enable-experimental JsxText path/to/file.res
 ```
 
 ## Implementation Checklist
@@ -227,6 +259,8 @@ dune exec bsc -- path/to/file.res
 | `compiler/ml/parsetree.ml`                  | AST definition with `jsx_text` record type      |
 | `compiler/ml/ast_helper.ml`                 | Helper function to create `Pexp_jsx_text` nodes |
 | `compiler/ml/ast_helper.mli`                | Interface for the helper function               |
+| `compiler/ml/experimental_features.ml`      | Added `JsxText` experimental feature            |
+| `compiler/ml/experimental_features.mli`     | Interface for experimental features             |
 | `compiler/syntax/src/res_core.ml`           | Parser implementation with whitespace tracking  |
 | `compiler/syntax/src/res_printer.ml`        | Printer with whitespace-aware separators        |
 | `compiler/syntax/src/res_parens.ml`         | Parenthesization rules                          |
@@ -241,9 +275,11 @@ dune exec bsc -- path/to/file.res
 | `compiler/syntax/src/res_ast_debugger.ml`   | S-expression debug output                       |
 | `compiler/frontend/bs_ast_mapper.ml`        | Frontend AST mapper                             |
 | `analysis/src/Utils.ml`                     | Analysis utilities                              |
+| `rewatch/src/config.rs`                     | Added `JsxText` to rewatch config parsing       |
+| `docs/docson/build-schema.json`             | JSON schema for `rescript.json`                 |
 
 ## Future Considerations
 
 1. **HTML entities**: Could add `&amp;`, `&lt;`, `&gt;`, `&quot;` decoding
 2. **Whitespace modes**: Could add options for whitespace handling (preserve, collapse, trim)
-3. **Opt-in/opt-out**: Could be gated behind a flag during initial rollout
+3. **Promotion to stable**: Once the feature is proven stable, it could be enabled by default

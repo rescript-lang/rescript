@@ -21,4 +21,4 @@ module CustomComponent = {
   }
 }
 
-let x = <CustomComponent> {1.} </CustomComponent>
+let x = <CustomComponent>{1.}</CustomComponent>

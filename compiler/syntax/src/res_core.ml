@@ -7,7 +7,8 @@ module ResPrinter = Res_printer
 module Scanner = Res_scanner
 module Parser = Res_parser
 
-let is_jsx_2 = true
+let is_jsx_text_enabled () =
+  Experimental_features.is_enabled Experimental_features.JsxText
 
 let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
@@ -3016,8 +3017,8 @@ and parse_jsx_props p : Parsetree.jsx_prop list =
   parse_region ~grammar:Grammar.JsxAttribute ~f:parse_jsx_prop p
 
 and parse_jsx_children p : Parsetree.jsx_children =
-  if is_jsx_2 then
-    (* New RFC proposal *)
+  if is_jsx_text_enabled () then
+    (* JSX text RFC: https://github.com/rescript-lang/rescript/blob/master/docs/jsx-text-rfc.md *)
     parse_jsx_children_2 p
   else
     let rec loop p children =
