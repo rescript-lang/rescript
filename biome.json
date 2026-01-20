@@ -57,6 +57,7 @@
       ".yarn/**",
       "tests/analysis_tests/**/src/**",
       "tests/build_tests/**/src/**",
+      "tests/commonjs_tests/**/src/**",
       "tests/docstring_tests/**",
       "tests/gentype_tests/**",
       "tests/tests/**/src/**",

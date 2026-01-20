@@ -28,6 +28,7 @@
 - Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
 - Add duplicate package detection to rewatch. https://github.com/rescript-lang/rescript/pull/8180
 - Rewatch: do not warn about "reanalyze" config field. https://github.com/rescript-lang/rescript/pull/8181
+- Fix error when importing CommonJS runtime modules with `require()`. https://github.com/rescript-lang/rescript/pull/8194
 
 #### :memo: Documentation
 

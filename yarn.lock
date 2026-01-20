@@ -2455,6 +2455,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"rescript-commonjs-tests@workspace:tests/commonjs_tests":
+  version: 0.0.0-use.local
+  resolution: "rescript-commonjs-tests@workspace:tests/commonjs_tests"
+  languageName: unknown
+  linkType: soft
+
 "rescript@workspace:., rescript@workspace:^":
   version: 0.0.0-use.local
   resolution: "rescript@workspace:."
