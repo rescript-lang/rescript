@@ -9,8 +9,18 @@ use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::longident::Longident;
-use super::state::Parser;
+use super::state::{Parser, ParserMode};
 use super::token::Token;
+
+/// Get the string tag based on parser mode.
+/// In typechecker mode, strings are tagged with "js" to indicate JS string literals.
+fn get_string_tag(p: &Parser<'_>) -> Option<String> {
+    if p.mode == ParserMode::ParseForTypeChecker {
+        Some("js".to_string())
+    } else {
+        None
+    }
+}
 
 // ============================================================================
 // Type Variable Substitution
@@ -737,11 +747,12 @@ fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
     match &p.token {
         Token::String(s) => {
             let value = s.clone();
+            let tag = get_string_tag(p);
             let loc = p.mk_loc(&p.start_pos, &p.end_pos);
             p.next();
-            // Create Pstr_eval(Pexp_constant(Pconst_string(s, None)))
+            // Create Pstr_eval(Pexp_constant(Pconst_string(s, tag)))
             let expr = Expression {
-                pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(value, None)),
+                pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(value, tag)),
                 pexp_loc: loc.clone(),
                 pexp_attributes: vec![],
             };

@@ -95,7 +95,7 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
     let mut items = vec![];
 
     while p.token != Token::Eof {
-        // Skip semicolons
+        // Skip leading semicolons
         while p.token == Token::Semicolon {
             p.next();
         }
@@ -212,11 +212,15 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             Some(StructureItemDesc::Pstr_primitive(vd))
         }
         Token::Exception => {
+            // Capture start position BEFORE consuming 'exception' for accurate location
+            let exception_start = p.start_pos.clone();
             p.next();
-            let ext = parse_extension_constructor(p, attrs.clone());
+            let ext = parse_extension_constructor(p, attrs.clone(), Some(exception_start));
             Some(StructureItemDesc::Pstr_exception(ext))
         }
         Token::Module => {
+            // Capture module_start BEFORE consuming 'module' for accurate locations
+            let module_start = p.start_pos.clone();
             p.next();
             // Check for first-class module expression: module(...)
             if p.token == Token::Lparen {
@@ -227,7 +231,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let expr = super::expr::parse_expr_with_operand(p, pack_expr);
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else {
-                parse_module_definition(p, attrs.clone())
+                parse_module_definition(p, module_start, attrs.clone())
             }
         }
         Token::Include => {
@@ -241,14 +245,16 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         }
         Token::At | Token::AtAt => {
             // Floating attribute or extension
+            // Capture start_pos before consuming @ or @@ so attribute location includes it
+            let attr_start = p.start_pos.clone();
             if p.token == Token::AtAt {
                 p.next();
-                let attr = parse_attribute_body(p);
+                let attr = parse_attribute_body(p, attr_start);
                 Some(StructureItemDesc::Pstr_attribute(attr))
             } else {
                 // @ might be a doc comment or similar
                 p.next();
-                let attr = parse_attribute_body(p);
+                let attr = parse_attribute_body(p, attr_start);
                 Some(StructureItemDesc::Pstr_attribute(attr))
             }
         }
@@ -262,9 +268,11 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         }
         Token::PercentPercent => {
             // Structure-level extension (%%raw(...), %%private(...), etc.)
+            // Capture start position BEFORE consuming %% so extension location includes it
+            let ext_start = p.start_pos.clone();
             p.next();
             // Parse extension name (can be identifier or keyword like `private`)
-            let id_start = p.start_pos.clone();
+            let id_start = ext_start.clone();
             let id_name = match &p.token {
                 Token::Lident(name) | Token::Uident(name) => {
                     let name = name.clone();
@@ -316,6 +324,11 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             }
         }
     };
+
+    // Consume trailing semicolon if present (OCaml includes this in the structure item location)
+    if p.token == Token::Semicolon {
+        p.next();
+    }
 
     desc.map(|d| StructureItem {
         pstr_desc: d,
@@ -439,8 +452,10 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Exception => {
+            // Capture start position BEFORE consuming 'exception' for accurate location
+            let exception_start = p.start_pos.clone();
             p.next();
-            let ext = parse_extension_constructor(p, attrs.clone());
+            let ext = parse_extension_constructor(p, attrs.clone(), Some(exception_start));
             Some(SignatureItemDesc::Psig_exception(ext))
         }
         Token::Module => {
@@ -468,13 +483,15 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             }))
         }
         Token::At | Token::AtAt => {
+            // Capture start_pos before consuming @ or @@ so attribute location includes it
+            let attr_start = p.start_pos.clone();
             if p.token == Token::AtAt {
                 p.next();
-                let attr = parse_attribute_body(p);
+                let attr = parse_attribute_body(p, attr_start);
                 Some(SignatureItemDesc::Psig_attribute(attr))
             } else {
                 p.next();
-                let attr = parse_attribute_body(p);
+                let attr = parse_attribute_body(p, attr_start);
                 Some(SignatureItemDesc::Psig_attribute(attr))
             }
         }
@@ -1917,7 +1934,7 @@ fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension 
 
     let mut constructors = vec![];
     while p.token != Token::Eof {
-        constructors.push(parse_extension_constructor(p, vec![]));
+        constructors.push(parse_extension_constructor(p, vec![], None));
         if p.token == Token::Bar {
             p.next();
             continue;
@@ -2960,8 +2977,14 @@ fn parse_value_description(p: &mut Parser<'_>, outer_attrs: Attributes) -> Value
 }
 
 /// Parse an extension constructor (for exception).
-pub fn parse_extension_constructor(p: &mut Parser<'_>, attrs: Attributes) -> ExtensionConstructor {
-    let start_pos = p.start_pos.clone();
+/// `exception_start` should be the position BEFORE 'exception' was consumed (if applicable).
+pub fn parse_extension_constructor(
+    p: &mut Parser<'_>,
+    attrs: Attributes,
+    exception_start: Option<Position>,
+) -> ExtensionConstructor {
+    // Use provided start position (before 'exception') or current position
+    let start_pos = exception_start.unwrap_or_else(|| p.start_pos.clone());
     let constructor = parse_constructor(p).unwrap_or_else(|| ConstructorDeclaration {
         pcd_name: mknoloc("Error".to_string()),
         pcd_args: ConstructorArguments::Pcstr_tuple(vec![]),
@@ -2992,9 +3015,8 @@ pub fn parse_extension_constructor(p: &mut Parser<'_>, attrs: Attributes) -> Ext
 }
 
 /// Parse a module definition.
-fn parse_module_definition(p: &mut Parser<'_>, attrs: Attributes) -> Option<StructureItemDesc> {
-    let start_pos = p.start_pos.clone();
-
+/// `module_start` should be the position BEFORE 'module' was consumed.
+fn parse_module_definition(p: &mut Parser<'_>, module_start: Position, attrs: Attributes) -> Option<StructureItemDesc> {
     // Check for module type
     if p.token == Token::Typ {
         p.next();
@@ -3008,6 +3030,15 @@ fn parse_module_definition(p: &mut Parser<'_>, attrs: Attributes) -> Option<Stru
         RecFlag::Recursive
     } else {
         RecFlag::Nonrecursive
+    };
+
+    // For recursive modules (module rec X = ...), use position before 'module'.
+    // For non-recursive modules (module X = ...), use current position (after 'module').
+    // This matches OCaml's parse_maybe_rec_module_binding behavior.
+    let start_pos = if rec_flag == RecFlag::Recursive {
+        module_start
+    } else {
+        p.start_pos.clone()
     };
 
     let mut bindings = vec![];
@@ -3265,8 +3296,10 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
     loop {
         match &p.token {
             Token::At => {
+                // Capture start_pos before consuming @ so attribute location includes it
+                let attr_start = p.start_pos.clone();
                 p.next();
-                attrs.push(parse_attribute_body(p));
+                attrs.push(parse_attribute_body(p, attr_start));
             }
             Token::DocComment { loc, content } => {
                 let loc = loc.clone();
@@ -3281,8 +3314,8 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
 }
 
 /// Parse an attribute body.
-fn parse_attribute_body(p: &mut Parser<'_>) -> Attribute {
-    let start_pos = p.start_pos.clone();
+/// `start_pos` should be the position BEFORE the `@` or `@@` token was consumed.
+fn parse_attribute_body(p: &mut Parser<'_>, start_pos: Position) -> Attribute {
     let mut parts = vec![];
 
     // Parse attribute identifier
@@ -3433,14 +3466,15 @@ pub fn parse_payload(p: &mut Parser<'_>) -> Payload {
 
 /// Parse an extension.
 fn parse_extension(p: &mut Parser<'_>) -> Extension {
+    // Capture start position BEFORE consuming % or %% so extension location includes it
+    let id_start = p.start_pos.clone();
+
     // Handle both %ext and %%ext (single and double percent)
     if p.token == Token::PercentPercent {
         p.next();
     } else {
         p.expect(Token::Percent);
     }
-
-    let id_start = p.start_pos.clone();
     let mut parts: Vec<String> = vec![];
 
     loop {

@@ -129,13 +129,15 @@ fn print_value_binding_ml(pat: &Pattern, expr: &Expression, out: &mut impl Write
 
             // Print = body
             let _ = write!(out, "= ");
-            print_expression_ml(body, out);
+            // Use no outer parens for simple applies
+            print_expression_ml_no_outer_parens(body, out);
         }
         _ => {
             // Not a function, print normally
             print_pattern_ml(pat, out);
             let _ = write!(out, " = ");
-            print_expression_ml(expr, out);
+            // Use no outer parens for simple applies
+            print_expression_ml_no_outer_parens(expr, out);
         }
     }
 }
@@ -169,7 +171,8 @@ fn print_structure_item_ml(item: &StructureItem, out: &mut impl Write) {
     match &item.pstr_desc {
         StructureItemDesc::Pstr_eval(expr, _attrs) => {
             let _ = write!(out, ";;");
-            print_expression_ml(expr, out);
+            // Print without parens for top-level eval
+            print_expression_ml_no_outer_parens(expr, out);
         }
         StructureItemDesc::Pstr_value(rec_flag, bindings) => {
             let rec_str = match rec_flag {
@@ -334,12 +337,62 @@ fn get_operator_name(expr: &Expression) -> Option<&str> {
     }
 }
 
+/// Check if an expression needs parens when used as an operand in a binary expression.
+/// Complex expressions (if, let, fun, match, try, sequence) need parens to avoid ambiguity.
+fn needs_parens_in_binary_context(expr: &Expression) -> bool {
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_ifthenelse(_, _, _)
+            | ExpressionDesc::Pexp_let(_, _, _)
+            | ExpressionDesc::Pexp_fun { .. }
+            | ExpressionDesc::Pexp_match(_, _)
+            | ExpressionDesc::Pexp_try(_, _)
+            | ExpressionDesc::Pexp_sequence(_, _)
+    )
+}
+
+/// Print an expression, adding parens if it's a complex expression that needs them
+/// when used as an operand in a binary expression.
+fn print_expression_ml_parens_if_complex(expr: &Expression, out: &mut impl Write) {
+    if needs_parens_in_binary_context(expr) {
+        let _ = write!(out, "(");
+        print_expression_ml_inner(expr, out, false);
+        let _ = write!(out, ")");
+    } else {
+        print_expression_ml(expr, out);
+    }
+}
+
 fn print_expression_ml(expr: &Expression, out: &mut impl Write) {
+    let has_attrs = !expr.pexp_attributes.is_empty();
+    if has_attrs {
+        // OCaml format: ((expr)[@attr ])
+        let _ = write!(out, "((");
+        // Use use_parens = false inside the double parens to avoid triple nesting
+        print_expression_ml_inner(expr, out, false);
+        let _ = write!(out, ")");
+        for (name, payload) in &expr.pexp_attributes {
+            let _ = write!(out, "[@{}", name.txt);
+            if !payload_is_empty(payload) {
+                let _ = write!(out, " ");
+                print_payload_ml(payload, out);
+            }
+            let _ = write!(out, " ]");
+        }
+        let _ = write!(out, ")");
+    } else {
+        // Don't add parens by default - let the specific expression types handle it
+        print_expression_ml_inner(expr, out, false);
+    }
+}
+
+/// Print expression without outer parentheses (for top-level eval statements)
+fn print_expression_ml_no_outer_parens(expr: &Expression, out: &mut impl Write) {
     let has_attrs = !expr.pexp_attributes.is_empty();
     if has_attrs {
         let _ = write!(out, "(");
     }
-    print_expression_ml_inner(expr, out);
+    print_expression_ml_inner(expr, out, false);
     if has_attrs {
         for (name, payload) in &expr.pexp_attributes {
             let _ = write!(out, "[@{}", name.txt);
@@ -353,41 +406,19 @@ fn print_expression_ml(expr: &Expression, out: &mut impl Write) {
     }
 }
 
-fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write) {
+/// Print fun body - strips the outer parens from nested funs
+/// OCaml prints `fun [arity:2]acc -> fun curr -> body` not `fun acc -> (fun curr -> body)`
+fn print_fun_body_ml(expr: &Expression, out: &mut impl Write) {
     match &expr.pexp_desc {
-        ExpressionDesc::Pexp_ident(lid) => {
-            print_longident(&lid.txt, out);
-        }
-        ExpressionDesc::Pexp_constant(c) => {
-            print_constant_ml(c, out);
-        }
-        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => " rec",
-                RecFlag::Nonrecursive => "",
-            };
-            let _ = write!(out, "(let{}", rec_str);
-            for (i, binding) in bindings.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " and");
-                }
-                let _ = write!(out, " ");
-                print_pattern_ml(&binding.pvb_pat, out);
-                let _ = write!(out, " = ");
-                print_expression_ml(&binding.pvb_expr, out);
-            }
-            let _ = write!(out, " in ");
-            print_expression_ml(body, out);
-            let _ = write!(out, ")");
-        }
         ExpressionDesc::Pexp_fun {
             arg_label,
             default,
             lhs,
             rhs,
             ..
-        } => {
-            let _ = write!(out, "(fun ");
+        } if expr.pexp_attributes.is_empty() => {
+            // Print nested fun without wrapping parens
+            let _ = write!(out, "fun ");
             print_arg_label_ml(arg_label, out);
             if let Some(def) = default {
                 let _ = write!(out, "?(");
@@ -399,39 +430,158 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write) {
                 print_pattern_ml(lhs, out);
             }
             let _ = write!(out, " -> ");
-            print_expression_ml(rhs, out);
-            let _ = write!(out, ")");
+            print_fun_body_ml(rhs, out);
         }
-        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+        _ => {
+            // Not a nested fun, print without outer parens (infix ops don't need parens here)
+            print_expression_ml_no_outer_parens(expr, out);
+        }
+    }
+}
+
+fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens: bool) {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(lid) => {
+            print_longident(&lid.txt, out);
+        }
+        ExpressionDesc::Pexp_constant(c) => {
+            // Wrap negative numbers in parens to match OCaml output
+            let is_negative = match c {
+                Constant::Integer(s, _) | Constant::Float(s, _) => s.starts_with('-'),
+                _ => false,
+            };
+            if is_negative {
+                let _ = write!(out, "(");
+            }
+            print_constant_ml(c, out);
+            if is_negative {
+                let _ = write!(out, ")");
+            }
+        }
+        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
+            let rec_str = match rec_flag {
+                RecFlag::Recursive => " rec",
+                RecFlag::Nonrecursive => "",
+            };
+            if use_parens {
+                let _ = write!(out, "(");
+            }
+            let _ = write!(out, "let{}", rec_str);
+            for (i, binding) in bindings.iter().enumerate() {
+                if i > 0 {
+                    let _ = write!(out, " and");
+                }
+                let _ = write!(out, " ");
+                print_pattern_ml(&binding.pvb_pat, out);
+                let _ = write!(out, " = ");
+                print_expression_ml(&binding.pvb_expr, out);
+            }
+            let _ = write!(out, " in ");
+            print_expression_ml(body, out);
+            if use_parens {
+                let _ = write!(out, ")");
+            }
+        }
+        ExpressionDesc::Pexp_fun {
+            arg_label,
+            default,
+            lhs,
+            rhs,
+            arity,
+            ..
+        } => {
+            // Print with arity annotation
+            let arity_value = match arity {
+                Arity::Full(n) => Some(*n),
+                Arity::Unknown => {
+                    // Compute arity by counting nested funs
+                    let computed = count_function_arity(expr);
+                    if computed > 0 {
+                        Some(computed)
+                    } else {
+                        None
+                    }
+                }
+            };
+            if use_parens {
+                let _ = write!(out, "(");
+            }
+            let _ = write!(out, "fun ");
+            if let Some(n) = arity_value {
+                let _ = write!(out, "[arity:{}]", n);
+            }
+            print_arg_label_ml(arg_label, out);
+            if let Some(def) = default {
+                let _ = write!(out, "?(");
+                print_pattern_ml(lhs, out);
+                let _ = write!(out, " = ");
+                print_expression_ml(def, out);
+                let _ = write!(out, ")");
+            } else {
+                print_pattern_ml(lhs, out);
+            }
+            let _ = write!(out, " -> ");
+            // Print nested funs without the outer parens
+            print_fun_body_ml(rhs, out);
+            if use_parens {
+                let _ = write!(out, ")");
+            }
+        }
+        ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
             // Check if this is an infix or prefix operator application
             if let Some(op_name) = get_operator_name(funct) {
                 if is_infix_operator(op_name) && args.len() == 2 {
                     // Binary infix: print as `lhs op rhs`
+                    // Add parens around complex expressions (if/let/fun/match/try/sequence)
                     let (_, lhs) = &args[0];
                     let (_, rhs) = &args[1];
-                    print_expression_ml(lhs, out);
+                    // Use parens when we're inside something else (use_parens = true)
+                    if use_parens {
+                        let _ = write!(out, "(");
+                    }
+                    // Use print_expression_ml_parens_if_complex for operands
+                    print_expression_ml_parens_if_complex(lhs, out);
                     let _ = write!(out, " {} ", op_name);
-                    print_expression_ml(rhs, out);
+                    print_expression_ml_parens_if_complex(rhs, out);
+                    // Print partial marker if applicable
+                    if *partial {
+                        let _ = write!(out, " ...");
+                    }
+                    if use_parens {
+                        let _ = write!(out, ")");
+                    }
                     return;
                 } else if is_prefix_operator(op_name) && args.len() == 1 {
                     // Unary prefix: print as `(op arg)`
                     let (_, arg) = &args[0];
                     let _ = write!(out, "(");
                     let _ = write!(out, "{} ", op_name);
-                    print_expression_ml(arg, out);
+                    print_expression_ml_parens_if_complex(arg, out);
+                    if *partial {
+                        let _ = write!(out, " ...");
+                    }
                     let _ = write!(out, ")");
                     return;
                 }
             }
             // Default: prefix application
-            let _ = write!(out, "(");
+            // Only use parens if needed (determined by use_parens flag)
+            if use_parens {
+                let _ = write!(out, "(");
+            }
             print_expression_ml(funct, out);
             for (label, arg) in args {
                 let _ = write!(out, " ");
-                print_arg_label_ml(label, out);
-                print_expression_ml(arg, out);
+                // Check if labeled arg matches the form ~name where arg is just `name`
+                print_arg_with_label_ml(label, arg, out);
             }
-            let _ = write!(out, ")");
+            // Print partial marker if applicable
+            if *partial {
+                let _ = write!(out, " ...");
+            }
+            if use_parens {
+                let _ = write!(out, ")");
+            }
         }
         ExpressionDesc::Pexp_match(scrutinee, cases) => {
             let _ = write!(out, "(match ");
@@ -521,14 +671,17 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write) {
             let _ = write!(out, "[|");
             for (i, e) in elems.iter().enumerate() {
                 if i > 0 {
-                    let _ = write!(out, "; ");
+                    let _ = write!(out, ";");
                 }
                 print_expression_ml(e, out);
             }
             let _ = write!(out, "|]");
         }
         ExpressionDesc::Pexp_ifthenelse(cond, then_expr, else_expr) => {
-            let _ = write!(out, "(if ");
+            if use_parens {
+                let _ = write!(out, "(");
+            }
+            let _ = write!(out, "if ");
             print_expression_ml(cond, out);
             let _ = write!(out, " then ");
             print_expression_ml(then_expr, out);
@@ -536,7 +689,9 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write) {
                 let _ = write!(out, " else ");
                 print_expression_ml(e, out);
             }
-            let _ = write!(out, ")");
+            if use_parens {
+                let _ = write!(out, ")");
+            }
         }
         ExpressionDesc::Pexp_sequence(e1, e2) => {
             let _ = write!(out, "(");
@@ -902,6 +1057,44 @@ fn print_arg_label_ml(label: &ArgLabel, out: &mut impl Write) {
     }
 }
 
+/// Print a labeled argument, using short form ~name when value is just an identifier with same name
+fn print_arg_with_label_ml(label: &ArgLabel, arg: &Expression, out: &mut impl Write) {
+    // Check if we can use the short form: ~name instead of ~name:name
+    match label {
+        ArgLabel::Labelled(name) => {
+            if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
+                if let Longident::Lident(arg_name) = &lid.txt {
+                    if arg_name == name && arg.pexp_attributes.is_empty() {
+                        // Use short form: just ~name
+                        let _ = write!(out, "~{}", name);
+                        return;
+                    }
+                }
+            }
+            // Full form: ~name:value
+            let _ = write!(out, "~{}:", name);
+            print_expression_ml(arg, out);
+        }
+        ArgLabel::Optional(name) => {
+            if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
+                if let Longident::Lident(arg_name) = &lid.txt {
+                    if arg_name == name && arg.pexp_attributes.is_empty() {
+                        // Use short form: just ?name
+                        let _ = write!(out, "?{}", name);
+                        return;
+                    }
+                }
+            }
+            // Full form: ?name:value
+            let _ = write!(out, "?{}:", name);
+            print_expression_ml(arg, out);
+        }
+        ArgLabel::Nolabel => {
+            print_expression_ml(arg, out);
+        }
+    }
+}
+
 fn print_constant_ml(c: &Constant, out: &mut impl Write) {
     match c {
         Constant::Integer(s, suffix) => {
@@ -911,14 +1104,41 @@ fn print_constant_ml(c: &Constant, out: &mut impl Write) {
             }
         }
         Constant::Char(i) => {
-            if let Some(c) = char::from_u32(*i as u32) {
-                let _ = write!(out, "'{}'", c);
-            } else {
-                let _ = write!(out, "'\\{}'", i);
-            }
+            // Escape special characters in character literals
+            // OCaml uses decimal escapes (\170 for char 170), not octal
+            let escaped = match *i {
+                0x5C => "\\\\".to_string(),      // backslash -> '\\'
+                0x27 => "\\'".to_string(),       // single quote -> '\''
+                0x0A => "\\n".to_string(),       // newline -> '\n'
+                0x09 => "\\t".to_string(),       // tab -> '\t'
+                0x08 => "\\b".to_string(),       // backspace -> '\b'
+                0x0D => "\\r".to_string(),       // carriage return -> '\r'
+                n if (0x20..=0x7E).contains(&n) => {
+                    // Printable ASCII (excluding backslash and quote which are handled above)
+                    if let Some(c) = char::from_u32(n as u32) {
+                        c.to_string()
+                    } else {
+                        format!("\\{}", n) // Decimal escape
+                    }
+                }
+                n => format!("\\{}", n),         // Decimal escape for other chars
+            };
+            let _ = write!(out, "'{}'", escaped);
         }
-        Constant::String(s, _) => {
-            let _ = write!(out, "\"{}\"", escape_string(s));
+        Constant::String(s, delim) => {
+            // Use the original delimiter if available (for JS strings, template literals, etc.)
+            if let Some(d) = delim {
+                if d.is_empty() {
+                    // Empty delimiter means regular double-quoted string
+                    let _ = write!(out, "\"{}\"", escape_string(s));
+                } else {
+                    // Use the original delimiter (e.g., "js", "j")
+                    let _ = write!(out, "{{{}|{}|{}}}", d, s, d);
+                }
+            } else {
+                // No delimiter, use js| format for plain strings
+                let _ = write!(out, "{{js|{}|js}}", s);
+            }
         }
         Constant::Float(s, suffix) => {
             let _ = write!(out, "{}", s);

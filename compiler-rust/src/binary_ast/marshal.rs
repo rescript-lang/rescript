@@ -347,41 +347,14 @@ impl MarshalWriter {
         }
     }
 
-    /// Check if a string looks like an operator that OCaml would intern.
+    /// Write a string for an identifier, with content-based sharing.
     ///
-    /// OCaml's parser interns operator tokens, so strings like "-", "+", "<"
-    /// get shared when they appear multiple times. Regular identifiers don't.
-    fn is_operator_string(s: &str) -> bool {
-        // Single-character operators
-        if s.len() == 1 {
-            let c = s.chars().next().unwrap();
-            return matches!(
-                c,
-                '+' | '-' | '*' | '/' | '%' | '<' | '>' | '=' | '!' | '&' | '|' | '^' | '~' | '@'
-                    | '#' | '?' | ':'
-            );
-        }
-        // Multi-character operators
-        matches!(
-            s,
-            "+." | "-." | "*." | "/." | "**" | "++" | "==" | "!=" | "<=" | ">=" | "&&" | "||"
-                | "|>" | "->" | "=>" | ":=" | "::" | "@@" | "|."
-        )
-    }
-
-    /// Write a string for an identifier, with operator interning.
-    ///
-    /// Operator strings (like "-", "+") are shared by content to match OCaml's
-    /// behavior. Regular identifiers are NOT shared since OCaml creates new
-    /// string objects for each occurrence.
+    /// OCaml's parser reuses string objects from its string pool, so identical
+    /// identifier strings get shared when serialized. We mimic this by sharing
+    /// ALL identifier strings by content.
     pub fn write_identifier_string(&mut self, s: &str) {
-        if Self::is_operator_string(s) {
-            // Operators are interned - share by content
-            self.write_string_shared(s);
-        } else {
-            // Regular identifiers are not shared
-            self.write_str(s);
-        }
+        // All identifier strings are shared by content to match OCaml's behavior
+        self.write_string_shared(s);
     }
 
     /// Write a Position with identity-based sharing
