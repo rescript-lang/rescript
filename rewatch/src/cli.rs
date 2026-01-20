@@ -422,6 +422,19 @@ pub enum Command {
         #[command()]
         path: String,
     },
+    /// Compile a single file and output JavaScript to stdout
+    CompileFile {
+        /// Path to a ReScript source file (.res or .resi)
+        path: String,
+
+        /// Module format to use (commonjs or esmodule). If not specified and multiple
+        /// package-specs are configured, the first one is used with a warning.
+        #[arg(long)]
+        module_format: Option<String>,
+
+        #[command(flatten)]
+        warn_error: WarnErrorArg,
+    },
 }
 
 impl Deref for FolderArg {

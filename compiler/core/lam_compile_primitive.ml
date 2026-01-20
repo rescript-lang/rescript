@@ -46,7 +46,8 @@ let get_module_system () =
   let package_info = Js_packages_state.get_packages_info () in
   let module_system =
     if Js_packages_info.is_empty package_info && !Js_config.js_stdout then
-      [Ext_module_system.Commonjs]
+      (* Use configured module system instead of hardcoded Commonjs *)
+      [!Js_config.default_module_system]
     else
       Js_packages_info.map package_info (fun {module_system} -> module_system)
   in

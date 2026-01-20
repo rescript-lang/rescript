@@ -16,6 +16,7 @@ use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
+use ahash::AHashSet;
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -102,6 +103,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         is_type_dev,
         true,
         None, // No warn_error_override for compiler-args command
+        compile::OutputMode::ToFile,
     )?;
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -529,5 +531,241 @@ pub fn build(
             write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
+    }
+}
+
+/// Compile a single ReScript file and return its JavaScript output.
+///
+/// This function performs a targeted one-shot compilation:
+/// 1. Initializes build state (reusing cached artifacts from previous builds)
+/// 2. Finds the target module from the file path
+/// 3. Calculates the dependency closure (all transitive dependencies)
+/// 4. Marks dependencies (excluding target) as dirty for compilation
+/// 5. Runs incremental build to compile dependencies (ensures .cmi files exist)
+/// 6. Compiles target file directly to stdout (no file write)
+///
+/// # Workflow
+/// Unlike the watch mode which expands UPWARD to dependents when a file changes,
+/// this expands DOWNWARD to dependencies to ensure everything needed is compiled.
+/// The target file itself is compiled separately with output to stdout.
+///
+/// # Example
+/// If compiling `App.res` which imports `Component.res` which imports `Utils.res`:
+/// - Dependency closure: {Utils, Component, App}
+/// - Dependencies compiled to disk: Utils, Component (for .cmi files)
+/// - Target compiled to stdout: App
+///
+/// # Errors
+/// Returns error if:
+/// - File doesn't exist or isn't part of the project
+/// - Compilation fails (parse errors, type errors, etc.)
+pub fn compile_one(
+    target_file: &Path,
+    project_root: &Path,
+    plain_output: bool,
+    warn_error: Option<String>,
+    module_format: Option<String>,
+) -> Result<String> {
+    // Step 1: Initialize build state
+    // This leverages any existing .ast/.cmi files from previous builds
+    let mut build_state = initialize_build(
+        None,
+        &None, // no filter
+        false, // no progress output (keep stderr clean)
+        project_root,
+        plain_output,
+        warn_error.clone(),
+    )?;
+
+    // Determine the module format for output
+    let root_config = build_state.get_root_config();
+    let package_specs = root_config.get_package_specs();
+    let module_format_str = get_module_format(&package_specs, &module_format)?;
+
+    // Step 2: Find target module from file path
+    let target_module_name = find_module_for_file(&build_state, target_file)
+        .ok_or_else(|| anyhow!("File not found in project: {}", target_file.display()))?;
+
+    // Step 3: Mark only the target file as parse_dirty
+    // This ensures we parse the latest version of the target file
+    if let Some(module) = build_state.modules.get_mut(&target_module_name)
+        && let SourceType::SourceFile(source_file) = &mut module.source_type
+    {
+        source_file.implementation.parse_dirty = true;
+        if let Some(interface) = &mut source_file.interface {
+            interface.parse_dirty = true;
+        }
+    }
+
+    // Step 4: Get dependency closure (downward traversal)
+    // Unlike compile universe (upward to dependents), we need all dependencies
+    let dependency_closure = get_dependency_closure(&target_module_name, &build_state);
+
+    // Step 5: Mark dependencies (excluding target) as compile_dirty
+    // The target will be compiled separately to stdout
+    for module_name in &dependency_closure {
+        if module_name != &target_module_name
+            && let Some(module) = build_state.modules.get_mut(module_name)
+        {
+            module.compile_dirty = true;
+        }
+    }
+
+    // Step 6: Run incremental build for dependencies only
+    // This ensures all .cmi files exist for the target's imports
+    incremental_build(
+        &mut build_state,
+        None,
+        false, // not initial build
+        false, // no progress output
+        true,  // only incremental (no cleanup step)
+        false, // no sourcedirs
+        plain_output,
+    )
+    .map_err(|e| anyhow!("Compilation failed: {}", e))?;
+
+    // Step 7: Compile the target file to stdout
+    let module = build_state
+        .get_module(&target_module_name)
+        .ok_or_else(|| anyhow!("Module not found: {}", target_module_name))?;
+
+    let package = build_state
+        .get_package(&module.package_name)
+        .ok_or_else(|| anyhow!("Package not found: {}", module.package_name))?;
+
+    // Get the AST path for the target module
+    let ast_path = get_ast_path(&build_state, &target_module_name)?;
+
+    compile::compile_file_to_stdout(
+        package,
+        &ast_path,
+        module,
+        &build_state,
+        warn_error,
+        &module_format_str,
+    )
+}
+
+/// Determine the module format to use for stdout output.
+///
+/// If module_format is specified via --module-format, it must match one of the
+/// configured package-specs (since dependencies are compiled to those formats).
+/// If not specified, use the first package-spec's format (warn if multiple exist).
+fn get_module_format(
+    package_specs: &[config::PackageSpec],
+    module_format: &Option<String>,
+) -> Result<String> {
+    if package_specs.is_empty() {
+        return Err(anyhow!("No package-specs configured in rescript.json"));
+    }
+
+    match module_format {
+        Some(format) => {
+            // Must match a configured package-spec (dependencies are compiled to those formats)
+            if package_specs.iter().any(|spec| spec.module == *format) {
+                Ok(format.clone())
+            } else {
+                let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
+                Err(anyhow!(
+                    "Module format '{}' not found in package-specs. Available: {}",
+                    format,
+                    available.join(", ")
+                ))
+            }
+        }
+        None => {
+            // No format specified - use first package-spec, warn if multiple exist
+            if package_specs.len() > 1 {
+                let available: Vec<&str> = package_specs.iter().map(|s| s.module.as_str()).collect();
+                eprintln!(
+                    "Warning: Multiple package-specs configured ({}). Using '{}'. \
+                     Specify --module-format to choose a different one.",
+                    available.join(", "),
+                    package_specs[0].module
+                );
+            }
+            Ok(package_specs[0].module.clone())
+        }
+    }
+}
+
+/// Find the module name for a given file path by searching through all modules.
+///
+/// This performs a linear search through the build state's modules to match
+/// the canonical file path. Returns the module name if found.
+fn find_module_for_file(build_state: &BuildCommandState, target_file: &Path) -> Option<String> {
+    let canonical_target = target_file.canonicalize().ok()?;
+
+    for (module_name, module) in &build_state.modules {
+        if let SourceType::SourceFile(source_file) = &module.source_type {
+            let package = build_state.packages.get(&module.package_name)?;
+
+            // Check implementation file
+            let impl_path = package.path.join(&source_file.implementation.path);
+            if impl_path.canonicalize().ok().as_ref() == Some(&canonical_target) {
+                return Some(module_name.clone());
+            }
+
+            // Check interface file if present
+            if let Some(interface) = &source_file.interface {
+                let iface_path = package.path.join(&interface.path);
+                if iface_path.canonicalize().ok().as_ref() == Some(&canonical_target) {
+                    return Some(module_name.clone());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Calculate the transitive closure of all dependencies for a given module.
+///
+/// This performs a downward traversal (dependencies, not dependents):
+/// - Module A depends on B and C
+/// - B depends on D
+/// - Result: {A, B, C, D}
+///
+/// This is the opposite of the "compile universe" which expands upward to dependents.
+fn get_dependency_closure(module_name: &str, build_state: &BuildState) -> AHashSet<String> {
+    let mut closure = AHashSet::new();
+    let mut to_process = vec![module_name.to_string()];
+
+    while let Some(current) = to_process.pop() {
+        if !closure.contains(&current) {
+            closure.insert(current.clone());
+
+            if let Some(module) = build_state.get_module(&current) {
+                // Add all dependencies to process queue
+                for dep in &module.deps {
+                    if !closure.contains(dep) {
+                        to_process.push(dep.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    closure
+}
+
+/// Get the path to the AST file for a module.
+///
+/// The AST file is generated during the parse phase and is needed for compilation.
+fn get_ast_path(build_state: &BuildCommandState, module_name: &str) -> Result<PathBuf> {
+    let module = build_state
+        .get_module(module_name)
+        .ok_or_else(|| anyhow!("Module not found: {}", module_name))?;
+
+    let package = build_state
+        .get_package(&module.package_name)
+        .ok_or_else(|| anyhow!("Package not found: {}", module.package_name))?;
+
+    if let SourceType::SourceFile(source_file) = &module.source_type {
+        let source_path = &source_file.implementation.path;
+        let ast_file = source_path.with_extension("ast");
+        Ok(package.get_build_path().join(ast_file))
+    } else {
+        Err(anyhow!("Cannot get AST path for non-source module"))
     }
 }

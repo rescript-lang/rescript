@@ -469,6 +469,18 @@ pub fn get_runtime_path_args(
     ])
 }
 
+/// Output mode for compiler arguments.
+/// Controls whether bsc writes to files or outputs to stdout.
+pub enum OutputMode {
+    /// Normal mode: write JS to files based on package-specs configuration.
+    /// Includes -bs-package-name, -bs-package-output, -bs-suffix, -bs-module-system for each spec.
+    ToFile,
+    /// Stdout mode: output JS to stdout for one-shot compilation.
+    /// Only includes -bs-module-system with the specified format.
+    /// Omits -bs-package-name (which triggers file output) and -bs-package-output.
+    ToStdout { module_format: String },
+}
+
 pub fn compiler_args(
     config: &config::Config,
     ast_path: &Path,
@@ -485,6 +497,8 @@ pub fn compiler_args(
     is_local_dep: bool,
     // Command-line --warn-error flag override (takes precedence over rescript.json config)
     warn_error_override: Option<String>,
+    // Output mode: ToFile for normal compilation, ToStdout for one-shot compilation
+    output_mode: OutputMode,
 ) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
     let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
@@ -531,40 +545,52 @@ pub fn compiler_args(
         false => vec![],
     };
 
-    let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+    // Package name and implementation args depend on output mode
+    let (package_name_arg, implementation_args) = match &output_mode {
+        OutputMode::ToFile => {
+            let package_name = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+            let impl_args = if is_interface {
+                debug!("Compiling interface file: {}", &module_name);
+                vec![]
+            } else {
+                debug!("Compiling file: {}", &module_name);
+                let specs = root_config.get_package_specs();
 
-    let implementation_args = if is_interface {
-        debug!("Compiling interface file: {}", &module_name);
-        vec![]
-    } else {
-        debug!("Compiling file: {}", &module_name);
-        let specs = root_config.get_package_specs();
-
-        specs
-            .iter()
-            .flat_map(|spec| {
-                vec![
-                    "-bs-package-output".to_string(),
-                    format!(
-                        "{}:{}:{}",
-                        spec.module,
-                        if spec.in_source {
-                            file_path.parent().unwrap().to_str().unwrap().to_string()
-                        } else {
-                            Path::new("lib")
-                                .join(Path::join(
-                                    Path::new(&spec.get_out_of_source_dir()),
-                                    file_path.parent().unwrap(),
-                                ))
-                                .to_str()
-                                .unwrap()
-                                .to_string()
-                        },
-                        root_config.get_suffix(spec),
-                    ),
-                ]
-            })
-            .collect()
+                specs
+                    .iter()
+                    .flat_map(|spec| {
+                        // Pass module system, suffix, and output path as separate flags
+                        vec![
+                            "-bs-module-system".to_string(),
+                            spec.module.clone(),
+                            "-bs-suffix".to_string(),
+                            root_config.get_suffix(spec),
+                            "-bs-package-output".to_string(),
+                            if spec.in_source {
+                                file_path.parent().unwrap().to_str().unwrap().to_string()
+                            } else {
+                                Path::new("lib")
+                                    .join(Path::join(
+                                        Path::new(&spec.get_out_of_source_dir()),
+                                        file_path.parent().unwrap(),
+                                    ))
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string()
+                            },
+                        ]
+                    })
+                    .collect()
+            };
+            (package_name, impl_args)
+        }
+        OutputMode::ToStdout { module_format } => {
+            // For stdout mode: no -bs-package-name (triggers file output),
+            // only -bs-module-system with the chosen format
+            debug!("Compiling file to stdout: {}", &module_name);
+            let impl_args = vec!["-bs-module-system".to_string(), module_format.clone()];
+            (vec![], impl_args)
+        }
     };
 
     let runtime_path_args = get_runtime_path_args(config, project_context)?;
@@ -600,6 +626,81 @@ pub fn compiler_args(
         vec![ast_path.to_string_lossy().to_string()],
     ]
     .concat())
+}
+
+/// Compile a single file and return its JavaScript output on stdout.
+/// This is used by `compile_one` for the target file only.
+pub fn compile_file_to_stdout(
+    package: &packages::Package,
+    ast_path: &Path,
+    module: &Module,
+    build_state: &BuildState,
+    warn_error_override: Option<String>,
+    module_format: &str,
+) -> Result<String> {
+    let BuildState {
+        packages,
+        project_context,
+        compiler_info,
+        ..
+    } = build_state;
+
+    let build_path_abs = package.get_build_path();
+    let implementation_file_path = match &module.source_type {
+        SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
+        sourcetype => Err(format!(
+            "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
+            sourcetype,
+            ast_path.to_string_lossy()
+        )),
+    }
+    .map_err(|e| anyhow!(e))?;
+
+    let has_interface = module.get_interface().is_some();
+    let is_type_dev = module.is_type_dev;
+
+    let args = compiler_args(
+        &package.config,
+        ast_path,
+        implementation_file_path,
+        false, // not interface - we want implementation output
+        has_interface,
+        project_context,
+        &Some(packages),
+        is_type_dev,
+        package.is_local_dep,
+        warn_error_override,
+        OutputMode::ToStdout {
+            module_format: module_format.to_string(),
+        },
+    )?;
+
+    let output = Command::new(&compiler_info.bsc_path)
+        .current_dir(
+            build_path_abs
+                .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                .ok()
+                .unwrap(),
+        )
+        .args(&args)
+        .output();
+
+    match output {
+        Ok(x) if !x.status.success() => {
+            let stderr = String::from_utf8_lossy(&x.stderr);
+            let stdout = String::from_utf8_lossy(&x.stdout);
+            Err(anyhow!(stderr.to_string() + &stdout))
+        }
+        Err(e) => Err(anyhow!(
+            "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
+        )),
+        Ok(x) => {
+            // JavaScript output is on stdout
+            let js_output = String::from_utf8_lossy(&x.stdout).to_string();
+            Ok(js_output)
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -729,6 +830,7 @@ fn compile_file(
         is_type_dev,
         package.is_local_dep,
         warn_error_override,
+        OutputMode::ToFile,
     )?;
 
     let to_mjs = Command::new(&compiler_info.bsc_path)

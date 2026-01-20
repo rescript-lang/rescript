@@ -192,13 +192,21 @@ let add_npm_package_path (packages_info : t) (s : string) : t =
     in
     let m =
       match Ext_string.split ~keep_empty:true s ':' with
-      | [path] -> {module_system = Esmodule; path; suffix = Literals.suffix_js}
+      (* NEW: Just path - use configured module system and suffix *)
+      | [path] ->
+        {
+          module_system = !Js_config.default_module_system;
+          path;
+          suffix = !Js_config.default_suffix;
+        }
+      (* OLD: module_system:path - use configured suffix *)
       | [module_system; path] ->
         {
           module_system = handle_module_system module_system;
           path;
-          suffix = Literals.suffix_js;
+          suffix = !Js_config.default_suffix;
         }
+      (* OLD: Full format - all explicit *)
       | [module_system; path; suffix] ->
         {module_system = handle_module_system module_system; path; suffix}
       | _ -> Bsc_args.bad_arg ("invalid npm package path: " ^ s)

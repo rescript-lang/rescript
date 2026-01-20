@@ -29,6 +29,7 @@
 #### :rocket: New Feature
 
 - Reanalyze: add scoped `@@live`/`@@dead` annotations for marking module/file sections as live or dead. https://github.com/rescript-lang/rescript/pull/8197
+- Add `rescript compile-file` command for one-shot compilation of a single ReScript file to JavaScript, outputting to stdout. Supports `--module-format` flag to select output format when multiple package-specs are configured. https://github.com/rescript-lang/rescript/pull/8002
 
 #### :bug: Bug fix
 
