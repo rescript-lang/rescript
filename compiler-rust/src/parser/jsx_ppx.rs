@@ -11,7 +11,7 @@
 //! - Key props use `jsxKeyed`/`jsxsKeyed` instead
 //! - `@react.component` transforms functions to accept props record
 
-use crate::location::{Location, LocationId, Position, PositionId};
+use crate::location::{Located, Location, LocationId, Position, PositionId};
 use super::ast::*;
 use super::longident::Longident;
 
@@ -1906,10 +1906,11 @@ fn try_find_key_prop(props: &[JsxProp]) -> Option<(ArgLabel, Expression)> {
     for prop in props {
         match prop {
             JsxProp::Punning { optional, name } if name.txt == "key" => {
+                let label_loc = Located::new(name.txt.clone(), name.loc.clone());
                 let arg_label = if *optional {
-                    ArgLabel::Optional(name.txt.clone())
+                    ArgLabel::Optional(label_loc)
                 } else {
-                    ArgLabel::Labelled(name.txt.clone())
+                    ArgLabel::Labelled(label_loc)
                 };
                 let expr = Expression {
                     pexp_desc: ExpressionDesc::Pexp_ident(Loc {
@@ -1922,10 +1923,11 @@ fn try_find_key_prop(props: &[JsxProp]) -> Option<(ArgLabel, Expression)> {
                 return Some((arg_label, expr));
             }
             JsxProp::Value { name, optional, value } if name.txt == "key" => {
+                let label_loc = Located::new(name.txt.clone(), name.loc.clone());
                 let arg_label = if *optional {
-                    ArgLabel::Optional(name.txt.clone())
+                    ArgLabel::Optional(label_loc)
                 } else {
-                    ArgLabel::Labelled(name.txt.clone())
+                    ArgLabel::Labelled(label_loc)
                 };
                 return Some((arg_label, value.clone()));
             }
@@ -1957,7 +1959,7 @@ fn is_labelled(label: &ArgLabel) -> bool {
 
 fn get_label(label: &ArgLabel) -> String {
     match label {
-        ArgLabel::Labelled(s) | ArgLabel::Optional(s) => s.clone(),
+        ArgLabel::Labelled(s) | ArgLabel::Optional(s) => s.txt.clone(),
         ArgLabel::Nolabel => String::new(),
     }
 }

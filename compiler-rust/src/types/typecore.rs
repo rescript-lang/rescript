@@ -476,10 +476,10 @@ fn convert_arg_label_for_ctx(lbl: &crate::parser::ast::ArgLabel) -> crate::types
     match lbl {
         crate::parser::ast::ArgLabel::Nolabel => crate::types::ArgLabel::Nolabel,
         crate::parser::ast::ArgLabel::Labelled(s) => {
-            crate::types::ArgLabel::labelled(s.clone(), Location::none())
+            crate::types::ArgLabel::labelled(s.txt.clone(), s.loc.clone())
         }
         crate::parser::ast::ArgLabel::Optional(s) => {
-            crate::types::ArgLabel::optional(s.clone(), Location::none())
+            crate::types::ArgLabel::optional(s.txt.clone(), s.loc.clone())
         }
     }
 }

@@ -252,8 +252,9 @@ fn map_variance(var: current::Variance) -> pt0::Variance {
 fn map_arg_label(label: &current::ArgLabel) -> pt0::ArgLabel {
     match label {
         current::ArgLabel::Nolabel => pt0::ArgLabel::Nolabel,
-        current::ArgLabel::Labelled(s) => pt0::ArgLabel::Labelled(s.clone()),
-        current::ArgLabel::Optional(s) => pt0::ArgLabel::Optional(s.clone()),
+        // parsetree0 doesn't have location info, so extract just the string
+        current::ArgLabel::Labelled(s) => pt0::ArgLabel::Labelled(s.txt.clone()),
+        current::ArgLabel::Optional(s) => pt0::ArgLabel::Optional(s.txt.clone()),
     }
 }
 
@@ -1271,12 +1272,14 @@ mod tests {
 
     #[test]
     fn test_map_arg_label() {
+        use crate::location::Located;
+
         assert!(matches!(map_arg_label(&current::ArgLabel::Nolabel), pt0::ArgLabel::Nolabel));
 
-        let label = map_arg_label(&current::ArgLabel::Labelled("x".to_string()));
+        let label = map_arg_label(&current::ArgLabel::Labelled(Located::mknoloc("x".to_string())));
         assert!(matches!(label, pt0::ArgLabel::Labelled(s) if s == "x"));
 
-        let opt = map_arg_label(&current::ArgLabel::Optional("y".to_string()));
+        let opt = map_arg_label(&current::ArgLabel::Optional(Located::mknoloc("y".to_string())));
         assert!(matches!(opt, pt0::ArgLabel::Optional(s) if s == "y"));
     }
 
@@ -1288,7 +1291,8 @@ mod tests {
         let c2 = map_constant(&current::Constant::Char(65));
         assert!(matches!(c2, pt0::Constant::Char(65)));
 
+        // Note: None delimiter is mapped to Some("*j") for OCaml binary parity
         let c3 = map_constant(&current::Constant::String("hello".to_string(), None));
-        assert!(matches!(c3, pt0::Constant::String(s, None) if s == "hello"));
+        assert!(matches!(c3, pt0::Constant::String(s, Some(d)) if s == "hello" && d == "*j"));
     }
 }

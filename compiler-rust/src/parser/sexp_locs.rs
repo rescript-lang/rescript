@@ -134,8 +134,16 @@ fn variance(v: &Variance) -> Sexp {
 fn arg_label(lbl: &ArgLabel) -> Sexp {
     match lbl {
         ArgLabel::Nolabel => Sexp::atom("Nolabel"),
-        ArgLabel::Labelled(s) => Sexp::list(vec![Sexp::atom("Labelled"), Sexp::atom(&quote_string(s))]),
-        ArgLabel::Optional(s) => Sexp::list(vec![Sexp::atom("Optional"), Sexp::atom(&quote_string(s))]),
+        ArgLabel::Labelled(s) => Sexp::list(vec![
+            Sexp::atom("Labelled"),
+            Sexp::atom(&quote_string(&s.txt)),
+            location(&s.loc),
+        ]),
+        ArgLabel::Optional(s) => Sexp::list(vec![
+            Sexp::atom("Optional"),
+            Sexp::atom(&quote_string(&s.txt)),
+            location(&s.loc),
+        ]),
     }
 }
 

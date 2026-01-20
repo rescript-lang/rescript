@@ -928,9 +928,9 @@ mod tests {
     #[test]
     fn test_arg_label() {
         assert!(ArgLabel::Nolabel.is_nolabel());
-        assert!(!ArgLabel::Labelled("x".to_string()).is_nolabel());
-        assert!(ArgLabel::Optional("x".to_string()).is_optional());
-        assert_eq!(ArgLabel::Labelled("x".to_string()).name(), Some("x"));
+        assert!(!ArgLabel::Labelled(Located::mknoloc("x".to_string())).is_nolabel());
+        assert!(ArgLabel::Optional(Located::mknoloc("x".to_string())).is_optional());
+        assert_eq!(ArgLabel::Labelled(Located::mknoloc("x".to_string())).name(), Some("x"));
     }
 
     #[test]

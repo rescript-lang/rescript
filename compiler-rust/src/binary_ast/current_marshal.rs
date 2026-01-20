@@ -106,18 +106,17 @@ impl Marshal for ArgLabel {
             ArgLabel::Nolabel => w.write_int(0),
             ArgLabel::Labelled(s) => {
                 // Labelled has a string loc, which is a record {txt; loc}
-                // For now, use a ghost location
                 w.write_block_header(0, 1);
                 // The string loc is block(tag=0, size=2) with txt and loc
                 w.write_block_header(0, 2);
-                w.write_str(s);
-                Location::none().marshal(w);
+                w.write_str(&s.txt);
+                s.loc.marshal(w);
             }
             ArgLabel::Optional(s) => {
                 w.write_block_header(1, 1);
                 w.write_block_header(0, 2);
-                w.write_str(s);
-                Location::none().marshal(w);
+                w.write_str(&s.txt);
+                s.loc.marshal(w);
             }
         }
     }

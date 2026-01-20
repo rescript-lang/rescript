@@ -316,8 +316,9 @@ fn map_variance(v: pt0::Variance) -> current::Variance {
 fn map_arg_label(lbl: &pt0::ArgLabel) -> current::ArgLabel {
     match lbl {
         pt0::ArgLabel::Nolabel => current::ArgLabel::Nolabel,
-        pt0::ArgLabel::Labelled(s) => current::ArgLabel::Labelled(s.clone()),
-        pt0::ArgLabel::Optional(s) => current::ArgLabel::Optional(s.clone()),
+        // parsetree0 doesn't have location info, so use mknoloc
+        pt0::ArgLabel::Labelled(s) => current::ArgLabel::Labelled(Located::mknoloc(s.clone())),
+        pt0::ArgLabel::Optional(s) => current::ArgLabel::Optional(Located::mknoloc(s.clone())),
     }
 }
 

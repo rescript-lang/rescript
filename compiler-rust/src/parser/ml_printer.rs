@@ -84,37 +84,37 @@ fn print_inline_param_ml(
             }
         }
         ArgLabel::Labelled(name) => {
-            if pattern_is_simple_var(pat, name) {
+            if pattern_is_simple_var(pat, &name.txt) {
                 // ~name  (double space when pattern matches label)
-                let _ = write!(out, "~{}  ", name);
+                let _ = write!(out, "~{}  ", name.txt);
             } else {
                 // ~name:pattern
-                let _ = write!(out, "~{}:", name);
+                let _ = write!(out, "~{}:", name.txt);
                 print_pattern_ml(pat, out);
                 let _ = write!(out, "  ");
             }
         }
         ArgLabel::Optional(name) => {
             if let Some(def) = default {
-                if pattern_is_simple_var(pat, name) {
+                if pattern_is_simple_var(pat, &name.txt) {
                     // ?(name= default)  when pattern matches label
-                    let _ = write!(out, "?({}= ", name);
+                    let _ = write!(out, "?({}= ", name.txt);
                     print_expression_ml(def, out);
                     let _ = write!(out, ")  ");
                 } else {
                     // ?name:(pattern= default)
-                    let _ = write!(out, "?{}:(", name);
+                    let _ = write!(out, "?{}:(", name.txt);
                     print_pattern_ml(pat, out);
                     let _ = write!(out, "= ");
                     print_expression_ml(def, out);
                     let _ = write!(out, ")  ");
                 }
-            } else if pattern_is_simple_var(pat, name) {
+            } else if pattern_is_simple_var(pat, &name.txt) {
                 // ?name  (double space when pattern matches label)
-                let _ = write!(out, "?{}  ", name);
+                let _ = write!(out, "?{}  ", name.txt);
             } else {
                 // ?name:pattern
-                let _ = write!(out, "?{}:", name);
+                let _ = write!(out, "?{}:", name.txt);
                 print_pattern_ml(pat, out);
                 let _ = write!(out, "  ");
             }
@@ -1305,10 +1305,10 @@ fn print_arg_label_ml(label: &ArgLabel, out: &mut impl Write) {
     match label {
         ArgLabel::Nolabel => {}
         ArgLabel::Labelled(s) => {
-            let _ = write!(out, "~{}:", s);
+            let _ = write!(out, "~{}:", s.txt);
         }
         ArgLabel::Optional(s) => {
-            let _ = write!(out, "?{}:", s);
+            let _ = write!(out, "?{}:", s.txt);
         }
     }
 }
@@ -1320,15 +1320,15 @@ fn print_arg_with_label_ml(label: &ArgLabel, arg: &Expression, out: &mut impl Wr
         ArgLabel::Labelled(name) => {
             if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
                 if let Longident::Lident(arg_name) = &lid.txt {
-                    if arg_name == name && arg.pexp_attributes.is_empty() {
+                    if arg_name == &name.txt && arg.pexp_attributes.is_empty() {
                         // Use short form: just ~name
-                        let _ = write!(out, "~{}", name);
+                        let _ = write!(out, "~{}", name.txt);
                         return;
                     }
                 }
             }
             // Full form: ~name:value (with parens for complex expressions)
-            let _ = write!(out, "~{}:", name);
+            let _ = write!(out, "~{}:", name.txt);
             if needs_parens_as_labeled_arg(arg) {
                 let _ = write!(out, "(");
                 print_expression_ml(arg, out);
@@ -1340,15 +1340,15 @@ fn print_arg_with_label_ml(label: &ArgLabel, arg: &Expression, out: &mut impl Wr
         ArgLabel::Optional(name) => {
             if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
                 if let Longident::Lident(arg_name) = &lid.txt {
-                    if arg_name == name && arg.pexp_attributes.is_empty() {
+                    if arg_name == &name.txt && arg.pexp_attributes.is_empty() {
                         // Use short form: just ?name
-                        let _ = write!(out, "?{}", name);
+                        let _ = write!(out, "?{}", name.txt);
                         return;
                     }
                 }
             }
             // Full form: ?name:value (with parens for complex expressions)
-            let _ = write!(out, "?{}:", name);
+            let _ = write!(out, "?{}:", name.txt);
             if needs_parens_as_labeled_arg(arg) {
                 let _ = write!(out, "(");
                 print_expression_ml(arg, out);

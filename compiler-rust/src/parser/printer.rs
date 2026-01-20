@@ -1033,7 +1033,7 @@ impl Printer {
     /// This is detected by checking if the argument is a ghost identifier with the same name as the label.
     fn is_punned_arg(&self, label: &ArgLabel, arg: &Expression) -> bool {
         let label_name = match label {
-            ArgLabel::Labelled(name) | ArgLabel::Optional(name) => name,
+            ArgLabel::Labelled(name) | ArgLabel::Optional(name) => &name.txt,
             ArgLabel::Nolabel => return false,
         };
 
@@ -1589,11 +1589,11 @@ impl Printer {
                             match label {
                                 ArgLabel::Labelled(s) => {
                                     self.write("~");
-                                    self.write_ident(s);
+                                    self.write_ident(&s.txt);
                                 }
                                 ArgLabel::Optional(s) => {
                                     self.write("~");
-                                    self.write_ident(s);
+                                    self.write_ident(&s.txt);
                                     self.write("?");
                                 }
                                 ArgLabel::Nolabel => {}
@@ -2465,7 +2465,7 @@ impl Printer {
                     ArgLabel::Nolabel => {}
                     ArgLabel::Labelled(name) | ArgLabel::Optional(name) => {
                         self.write("~");
-                        self.write(name);
+                        self.write(&name.txt);
                         self.write(": ");
                     }
                 }
@@ -2535,7 +2535,7 @@ impl Printer {
             ArgLabel::Nolabel => {}
             ArgLabel::Labelled(name) | ArgLabel::Optional(name) => {
                 self.write("~");
-                self.write(name);
+                self.write(&name.txt);
                 self.write(": ");
             }
         }
@@ -3513,7 +3513,7 @@ impl Printer {
                 // 1. If punned (no alias): print attrs before ~label
                 // 2. If not punned (has alias): print attrs as part of the aliased pattern
                 // This avoids double-printing attributes.
-                let (is_punned, _) = Self::punned_pattern_type(name, pat);
+                let (is_punned, _) = Self::punned_pattern_type(&name.txt, pat);
                 if is_punned {
                     // Print pattern attributes before the label only when punned
                     for attr in &pat.ppat_attributes {
@@ -3523,8 +3523,8 @@ impl Printer {
                     }
                 }
                 self.write("~");
-                self.write_ident(name);
-                let (is_punned, punned_type) = Self::punned_pattern_type(name, pat);
+                self.write_ident(&name.txt);
+                let (is_punned, punned_type) = Self::punned_pattern_type(&name.txt, pat);
                 if let Some(typ) = punned_type {
                     self.write(": ");
                     self.print_core_type(typ);
@@ -3541,7 +3541,7 @@ impl Printer {
                 // For optional args, pattern attributes are printed in two cases:
                 // 1. If punned (no alias): print attrs before ~label
                 // 2. If not punned (has alias): print attrs as part of the aliased pattern
-                let (is_punned, _) = Self::punned_pattern_type(name, pat);
+                let (is_punned, _) = Self::punned_pattern_type(&name.txt, pat);
                 if is_punned {
                     for attr in &pat.ppat_attributes {
                         self.write("@");
@@ -3550,8 +3550,8 @@ impl Printer {
                     }
                 }
                 self.write("~");
-                self.write_ident(name);
-                let (is_punned, punned_type) = Self::punned_pattern_type(name, pat);
+                self.write_ident(&name.txt);
+                let (is_punned, punned_type) = Self::punned_pattern_type(&name.txt, pat);
                 if let Some(typ) = punned_type {
                     self.write(": ");
                     self.print_core_type(typ);
@@ -3593,12 +3593,12 @@ impl Printer {
             ArgLabel::Nolabel => {}
             ArgLabel::Labelled(s) => {
                 self.write("~");
-                self.write_ident(s);
+                self.write_ident(&s.txt);
                 self.write("=");
             }
             ArgLabel::Optional(s) => {
                 self.write("~");
-                self.write_ident(s);
+                self.write_ident(&s.txt);
                 self.write("=?");
             }
         }

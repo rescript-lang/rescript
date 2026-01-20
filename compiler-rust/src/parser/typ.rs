@@ -5,6 +5,7 @@
 
 use std::collections::HashSet;
 
+use crate::location::{Located, Location};
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
@@ -219,11 +220,11 @@ fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
 
     if p.token == Token::Tilde {
         p.next();
-        let name = parse_lident(p);
+        let (name, name_loc) = parse_lident(p);
         p.expect(Token::Colon);
 
         let typ = parse_typ_expr_inner(p, false);
-        let mut lbl = ArgLabel::Labelled(name);
+        let mut lbl = ArgLabel::Labelled(Located::new(name, name_loc));
 
         // Optional labeled args: `~x: t=?`
         if p.token == Token::Equal {
@@ -608,10 +609,10 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
 
         let (mut label, typ) = if p.token == Token::Tilde {
             p.next();
-            let name = parse_lident(p);
+            let (name, name_loc) = parse_lident(p);
             p.expect(Token::Colon);
             let typ = parse_typ_expr(p);
-            (ArgLabel::Labelled(name), typ)
+            (ArgLabel::Labelled(Located::new(name, name_loc)), typ)
         } else {
             let typ = parse_typ_expr(p);
             (ArgLabel::Nolabel, typ)
@@ -679,18 +680,20 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
 }
 
 /// Parse a lowercase identifier.
-fn parse_lident(p: &mut Parser<'_>) -> String {
+fn parse_lident(p: &mut Parser<'_>) -> (String, Location) {
+    let start_pos = p.start_pos.clone();
     match &p.token {
         Token::Lident(name) => {
             let name = name.clone();
             p.next();
-            name
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            (name, loc)
         }
         _ => {
             p.err(DiagnosticCategory::Message(
                 "Expected lowercase identifier".to_string(),
             ));
-            "_".to_string()
+            ("_".to_string(), Location::none())
         }
     }
 }

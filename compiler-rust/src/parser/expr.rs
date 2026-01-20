@@ -813,13 +813,14 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
     // Check for labeled parameter
     if p.token == Token::Tilde {
         p.next();
-        let (lbl_name, _lbl_loc) = parse_lident(p);
+        let (lbl_name, lbl_loc) = parse_lident(p);
+        let lbl_located = Located::new(lbl_name.clone(), lbl_loc);
         let lbl = match &p.token {
             Token::Comma | Token::Equal | Token::Rparen | Token::EqualGreater => {
                 // Just ~name
                 let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
-                (ArgLabel::Labelled(lbl_name), pat, None)
+                (ArgLabel::Labelled(lbl_located), pat, None)
             }
             Token::Colon => {
                 // ~name: type
@@ -832,18 +833,18 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
                     ppat_loc: loc,
                     ppat_attributes: vec![],
                 };
-                (ArgLabel::Labelled(lbl_name), pat, None)
+                (ArgLabel::Labelled(lbl_located), pat, None)
             }
             Token::As => {
                 // ~name as pattern
                 p.next();
                 let pat = super::pattern::parse_constrained_pattern(p);
-                (ArgLabel::Labelled(lbl_name), pat, None)
+                (ArgLabel::Labelled(lbl_located), pat, None)
             }
             _ => {
                 let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
-                (ArgLabel::Labelled(lbl_name), pat, None)
+                (ArgLabel::Labelled(lbl_located), pat, None)
             }
         };
 
@@ -1957,7 +1958,8 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
 fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
     if p.token == Token::Tilde {
         p.next();
-        let (name, _loc) = parse_lident(p);
+        let (name, name_loc) = parse_lident(p);
+        let name_located = Located::new(name.clone(), name_loc);
 
         if p.token == Token::Equal {
             p.next();
@@ -1965,19 +1967,19 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
                 p.next();
                 // ~label=?expr or ~label=?expr: type
                 (
-                    ArgLabel::Optional(name.clone()),
+                    ArgLabel::Optional(name_located),
                     parse_constrained_expr_in_arg(p),
                 )
             } else {
                 // ~label=expr or ~label=expr: type
-                (ArgLabel::Labelled(name), parse_constrained_expr_in_arg(p))
+                (ArgLabel::Labelled(name_located), parse_constrained_expr_in_arg(p))
             }
         } else if p.token == Token::Question {
             // ~label? (optional punning)
             p.next();
             let loc = Location::none();
             let expr = ast_helper::make_ident(Longident::Lident(name.clone()), loc);
-            (ArgLabel::Optional(name), expr)
+            (ArgLabel::Optional(name_located), expr)
         } else if p.token == Token::Colon {
             // ~label: type (labeled with type annotation - punning with constraint)
             p.next();
@@ -1989,12 +1991,12 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
                 pexp_loc: loc,
                 pexp_attributes: vec![],
             };
-            (ArgLabel::Labelled(name), expr)
+            (ArgLabel::Labelled(name_located), expr)
         } else {
             // ~label (punning)
             let loc = Location::none();
             let expr = ast_helper::make_ident(Longident::Lident(name.clone()), loc);
-            (ArgLabel::Labelled(name), expr)
+            (ArgLabel::Labelled(name_located), expr)
         }
     } else {
         // Unlabeled argument - may have type constraint like f({}:t)
