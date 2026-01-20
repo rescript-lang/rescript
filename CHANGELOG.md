@@ -22,6 +22,7 @@
 - `js-post-build` command now runs in the directory containing the `rescript.json` where it is defined, instead of the unpredictable build invocation directory. This provides consistent behavior in monorepos. https://github.com/rescript-lang/rescript/pull/8195
 - Remove support for deprecated `bs-dependencies`, `bs-dev-dependencies`, and `bsc-flags` configuration options. Use `dependencies`, `dev-dependencies`, and `compiler-flags` instead. https://github.com/rescript-lang/rescript/pull/8196
 - `bsc`: remove legacy `-uncurried` flag. https://github.com/rescript-lang/rescript/pull/8201
+- Remove deprecated cli flags `--dev`, `--create-sourcedirs` and `build -w`. https://github.com/rescript-lang/rescript/pull/8202
 
 #### :eyeglasses: Spec Compliance
 
