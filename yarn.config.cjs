@@ -35,6 +35,7 @@ async function enforceCompilerMeta({ Yarn }) {
         "Cristiano Calcagno (https://github.com/cristianoc)",
         "Dmitry Zakharov (https://github.com/DZakh)",
         "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+        "Florian Verdonck (https://github.com/nojaf)",
         "Gabriel Nordeborn (https://github.com/zth)",
         "Hyeseong Kim (https://github.com/cometkim)",
         "Jaap Frolich (https://github.com/jfrolich)",
