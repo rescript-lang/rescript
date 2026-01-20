@@ -1079,6 +1079,11 @@
   addValueReference Newton.res:31:8 --> Newton.res:29:4
   addValueReference Newton.res:31:18 --> Newton.res:29:4
   addValueReference Newton.res:31:16 --> Newton.res:25:4
+  Scanning OcamlWarningSuppressToplevel.cmt Source:OcamlWarningSuppressToplevel.res
+  addValueDeclaration +suppressed1 OcamlWarningSuppressToplevel.res:3:4 path:+OcamlWarningSuppressToplevel
+  addValueDeclaration +suppressed2 OcamlWarningSuppressToplevel.res:4:4 path:+OcamlWarningSuppressToplevel
+  addValueDeclaration +suppressed3 OcamlWarningSuppressToplevel.res:7:6 path:+OcamlWarningSuppressToplevel.M
+  addValueDeclaration +suppressed4 OcamlWarningSuppressToplevel.res:8:6 path:+OcamlWarningSuppressToplevel.M
   Scanning Opaque.cmt Source:Opaque.res
   addValueDeclaration +noConversion Opaque.res:5:4 path:+Opaque
   addValueDeclaration +testConvertNestedRecordFromOtherFile Opaque.res:11:4 path:+Opaque
@@ -1827,7 +1832,7 @@
   
 Forward Liveness Analysis
 
-    decls: 655
+    decls: 659
     roots(external targets): 122
     decl-deps: decls_with_out=375 edges_to_decls=252
 
@@ -1969,6 +1974,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Hooks.Inner.+make
     Root (annotated): Value +Uncurried.+curried3
     Root (external ref): Value +OptArg.+twoArgs
+    Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed1
     Root (external ref): RecordLabel +Records.business2.address2
     Root (annotated): Value +Tuples.+testTuple
     Root (annotated): Value +Records.+testMyObj2
@@ -1992,12 +1998,14 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImport.+make
     Root (external ref): RecordLabel +Unison.t.break
     Root (annotated): Value +ImportJsValue.+default
+    Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed4
     Root (annotated): Value +Types.+optFunction
     Root (annotated): Value +Records.+getPayloadRecordPlusOne
     Root (annotated): Value +Types.+swap
     Root (annotated): Value +Types.+jsonStringify
     Root (annotated): RecordLabel +ImportHookDefault.props.person
     Root (annotated): Value +Variants.+saturday
+    Root (annotated): Value +OcamlWarningSuppressToplevel.M.+suppressed3
     Root (annotated): Value +Records.+findAddress2
     Root (annotated): Value +Records.+someBusiness
     Root (external ref): RecordLabel +Hooks.vehicle.name
@@ -2127,6 +2135,7 @@ Forward Liveness Analysis
     Root (external ref): RecordLabel +VariantsWithPayload.payload.y
     Root (annotated): RecordLabel +ImportHookDefault.props.children
     Root (annotated): Value +TestModuleAliases.+testInner1
+    Root (annotated): Value +OcamlWarningSuppressToplevel.+suppressed2
     Root (annotated): Value +VariantsWithPayload.+testWithPayload
     Root (annotated): Value +Types.+testConvertNull
     Root (annotated): Value +Records.+getPayloadRecord
@@ -2136,7 +2145,7 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
   
-  304 roots found
+  308 roots found
 
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
@@ -3225,6 +3234,10 @@ Forward Liveness Analysis
         -> +Newton.+newton
         -> +Newton.+f
         -> +Newton.+fPrimed
+  Live (annotated) Value +OcamlWarningSuppressToplevel.+suppressed1
+  Live (annotated) Value +OcamlWarningSuppressToplevel.+suppressed2
+  Live (annotated) Value +OcamlWarningSuppressToplevel.M.+suppressed3
+  Live (annotated) Value +OcamlWarningSuppressToplevel.M.+suppressed4
   Dead VariantCase +Opaque.opaqueFromRecords.A
   Live (annotated) Value +Opaque.+noConversion
   Live (annotated) Value +Opaque.+testConvertNestedRecordFromOtherFile

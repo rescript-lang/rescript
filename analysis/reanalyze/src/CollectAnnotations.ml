@@ -128,7 +128,9 @@ let collectExportLocations ~state ~config ~doGenType =
     | Tstr_attribute attribute -> (
       match scopeDefaultFromToplevelAttribute attribute with
       | Some _ as newDefault -> currentScopeDefault := newDefault
-      | None -> ())
+      | None ->
+        if [attribute] |> Annotation.isOcamlSuppressDeadWarning then
+          currentlyDisableWarnings := true)
     | _ -> ());
     super.structure_item self item
   in
@@ -145,7 +147,9 @@ let collectExportLocations ~state ~config ~doGenType =
     | Tsig_attribute attribute -> (
       match scopeDefaultFromToplevelAttribute attribute with
       | Some _ as newDefault -> currentScopeDefault := newDefault
-      | None -> ())
+      | None ->
+        if [attribute] |> Annotation.isOcamlSuppressDeadWarning then
+          currentlyDisableWarnings := true)
     | _ -> ());
     super.signature_item self item
   in
