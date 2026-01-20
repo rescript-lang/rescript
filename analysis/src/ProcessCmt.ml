@@ -822,19 +822,17 @@ let exceptionsForCmt ~cmt : (string * bool) list =
       include TypedtreeIter.DefaultIteratorArgument
 
       let enter_structure_item (item : Typedtree.structure_item) =
-        (match item.str_desc with
+        match item.str_desc with
         | Tstr_exception _ -> in_toplevel_exception := true
-        | _ -> ());
-        ()
+        | _ -> ()
 
       let leave_structure_item (_ : Typedtree.structure_item) =
         in_toplevel_exception := false
 
       let enter_signature_item (item : Typedtree.signature_item) =
-        (match item.sig_desc with
+        match item.sig_desc with
         | Tsig_exception _ -> in_toplevel_exception := true
-        | _ -> ());
-        ()
+        | _ -> ()
 
       let leave_signature_item (_ : Typedtree.signature_item) =
         in_toplevel_exception := false

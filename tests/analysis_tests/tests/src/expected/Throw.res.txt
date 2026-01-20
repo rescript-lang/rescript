@@ -43,3 +43,44 @@ Path thro
     "insertTextFormat": 2
   }]
 
+Complete src/Throw.res 6:27
+posCursor:[6:27] posNoWhite:[6:26] Found expr:[6:11->6:28]
+posCursor:[6:27] posNoWhite:[6:26] Found expr:[6:17->6:28]
+Pexp_apply ...[6:17->6:22] (...[6:23->6:27])
+Completable: Cexpression CArgument Value[throw]($0)=MyCu
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[{
+    "label": "MyCustomThingToThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "insertText": "MyCustomThingToThrow($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Throw.res 9:23
+posCursor:[9:23] posNoWhite:[9:22] Found expr:[9:11->9:24]
+posCursor:[9:23] posNoWhite:[9:22] Found expr:[9:17->9:24]
+Pexp_apply ...[9:17->9:22] (...[9:23->9:24])
+Completable: Cexpression CArgument Value[throw]($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[{
+    "label": "MyCustomThingToThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "insertText": "MyCustomThingToThrow($0)",
+    "insertTextFormat": 2
+  }, {
+    "label": "NoArgsToThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "insertText": "NoArgsToThrow"
+  }]
+
