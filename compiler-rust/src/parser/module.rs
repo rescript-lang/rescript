@@ -1532,6 +1532,7 @@ fn is_expr_start(token: &Token) -> bool {
             | Token::Hash
             | Token::Backtick
             | Token::Percent
+            | Token::Underscore
     )
 }
 

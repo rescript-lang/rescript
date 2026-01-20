@@ -27,10 +27,38 @@ fn count_function_arity(expr: &Expression) -> usize {
     }
 }
 
-/// Check if pattern is a simple variable with given name
+/// Check if pattern is a simple variable with given name (and no attributes)
 fn pattern_is_simple_var(pat: &Pattern, name: &str) -> bool {
+    if !pat.ppat_attributes.is_empty() {
+        return false; // Patterns with attributes can't use short form
+    }
     match &pat.ppat_desc {
         PatternDesc::Ppat_var(var) => var.txt == name,
+        _ => false,
+    }
+}
+
+/// Check if pattern needs parens when used as a function parameter
+/// Patterns like `Constructor` or `Constructor arg` need parens
+fn pattern_needs_parens_as_param(pat: &Pattern) -> bool {
+    match &pat.ppat_desc {
+        // Construct patterns need parens: (None), (Some x)
+        // But unit () and empty list [] don't need extra parens
+        // Cons pattern :: already adds its own parens in print_pattern_ml
+        PatternDesc::Ppat_construct(lid, _arg) => {
+            match &lid.txt {
+                Longident::Lident(name) if name == "()" || name == "[]" || name == "::" => false,
+                _ => true, // All other constructors (with or without args) need parens
+            }
+        }
+        // Variant with argument needs parens: (`Tag x)
+        PatternDesc::Ppat_variant(_, Some(_)) => true,
+        // Alias patterns need parens: (p as x)
+        PatternDesc::Ppat_alias(_, _) => true,
+        // Or patterns need parens: (A | B)
+        PatternDesc::Ppat_or(_, _) => true,
+        // Constraint patterns already add their own parens in print_pattern_ml
+        // so don't add extra parens here
         _ => false,
     }
 }
@@ -44,8 +72,15 @@ fn print_inline_param_ml(
 ) {
     match label {
         ArgLabel::Nolabel => {
-            print_pattern_ml(pat, out);
-            let _ = write!(out, " ");
+            // Wrap complex patterns in parens (like constructor patterns with args)
+            if pattern_needs_parens_as_param(pat) {
+                let _ = write!(out, "(");
+                print_pattern_ml(pat, out);
+                let _ = write!(out, ") ");
+            } else {
+                print_pattern_ml(pat, out);
+                let _ = write!(out, " ");
+            }
         }
         ArgLabel::Labelled(name) => {
             if pattern_is_simple_var(pat, name) {
@@ -66,10 +101,10 @@ fn print_inline_param_ml(
                     print_expression_ml(def, out);
                     let _ = write!(out, ")  ");
                 } else {
-                    // ?name:(pattern = default)
+                    // ?name:(pattern= default)
                     let _ = write!(out, "?{}:(", name);
                     print_pattern_ml(pat, out);
-                    let _ = write!(out, " = ");
+                    let _ = write!(out, "= ");
                     print_expression_ml(def, out);
                     let _ = write!(out, ")  ");
                 }
@@ -363,6 +398,18 @@ fn is_infix_application(expr: &Expression) -> bool {
     false
 }
 
+/// Check if expression is a prefix operator application (like `~~~ a`)
+fn is_prefix_application(expr: &Expression) -> bool {
+    if let ExpressionDesc::Pexp_apply { funct, args, .. } = &expr.pexp_desc {
+        if args.len() == 1 {
+            if let Some(op_name) = get_operator_name(funct) {
+                return is_prefix_operator(op_name);
+            }
+        }
+    }
+    false
+}
+
 /// Check if a function application has labeled arguments
 fn application_has_labeled_args(expr: &Expression) -> bool {
     if let ExpressionDesc::Pexp_apply { args, .. } = &expr.pexp_desc {
@@ -374,11 +421,21 @@ fn application_has_labeled_args(expr: &Expression) -> bool {
 
 /// Check if expression needs parens when used as a labeled argument value
 fn needs_parens_as_labeled_arg(expr: &Expression) -> bool {
+    // Prefix applications (like `~~~ a`) already add their own parens in the printer,
+    // so don't add extra outer parens for them
+    if is_prefix_application(expr) {
+        return false;
+    }
     needs_parens_in_binary_context(expr) || is_infix_application(expr)
 }
 
 /// Check if expression needs parens when used as an unlabeled function argument
 fn needs_parens_as_function_arg(expr: &Expression) -> bool {
+    // Prefix applications (like `~~~ a`) already add their own parens in the printer,
+    // so don't add extra outer parens for them
+    if is_prefix_application(expr) {
+        return false;
+    }
     needs_parens_in_binary_context(expr) || application_has_labeled_args(expr)
 }
 
@@ -829,6 +886,26 @@ fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens
 }
 
 fn print_pattern_ml(pat: &Pattern, out: &mut impl Write) {
+    let has_attrs = !pat.ppat_attributes.is_empty();
+    if has_attrs {
+        let _ = write!(out, "((");
+    }
+    print_pattern_ml_inner(pat, out);
+    if has_attrs {
+        let _ = write!(out, ")");
+        for (name, payload) in &pat.ppat_attributes {
+            let _ = write!(out, "[@{}", name.txt);
+            if !payload_is_empty(payload) {
+                let _ = write!(out, " ");
+                print_payload_ml(payload, out);
+            }
+            let _ = write!(out, " ]");
+        }
+        let _ = write!(out, ")");
+    }
+}
+
+fn print_pattern_ml_inner(pat: &Pattern, out: &mut impl Write) {
     match &pat.ppat_desc {
         PatternDesc::Ppat_any => {
             let _ = write!(out, "_");
@@ -860,6 +937,24 @@ fn print_pattern_ml(pat: &Pattern, out: &mut impl Write) {
             let _ = write!(out, ")");
         }
         PatternDesc::Ppat_construct(lid, arg) => {
+            // Special case for cons pattern: print as (x::xs) not (:: (x, xs))
+            if let Longident::Lident(name) = &lid.txt {
+                if name == "::" {
+                    if let Some(a) = arg {
+                        // The argument should be a tuple (head, tail)
+                        if let PatternDesc::Ppat_tuple(elements) = &a.ppat_desc {
+                            if elements.len() == 2 {
+                                let _ = write!(out, "(");
+                                print_pattern_ml(&elements[0], out);
+                                let _ = write!(out, "::");
+                                print_pattern_ml(&elements[1], out);
+                                let _ = write!(out, ")");
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
             print_longident(&lid.txt, out);
             if let Some(a) = arg {
                 let _ = write!(out, " ");
@@ -874,25 +969,42 @@ fn print_pattern_ml(pat: &Pattern, out: &mut impl Write) {
             }
         }
         PatternDesc::Ppat_record(fields, closed) => {
-            let _ = write!(out, "{{");
+            let _ = write!(out, "{{ ");
             for (i, field) in fields.iter().enumerate() {
                 if i > 0 {
                     let _ = write!(out, "; ");
                 }
-                print_longident(&field.lid.txt, out);
-                let _ = write!(out, " = ");
-                print_pattern_ml(&field.pat, out);
+                // Check if we can use punning: { name } instead of { name = name }
+                let field_name = match &field.lid.txt {
+                    Longident::Lident(name) => Some(name.as_str()),
+                    Longident::Ldot(_, name) => Some(name.as_str()),
+                    _ => None,
+                };
+                let is_punned = if let Some(fname) = field_name {
+                    matches!(&field.pat.ppat_desc, PatternDesc::Ppat_var(var) if var.txt == fname)
+                } else {
+                    false
+                };
+
+                if is_punned {
+                    // Use punned form: just the field name
+                    print_longident(&field.lid.txt, out);
+                } else {
+                    print_longident(&field.lid.txt, out);
+                    let _ = write!(out, " = ");
+                    print_pattern_ml(&field.pat, out);
+                }
             }
             if matches!(closed, ClosedFlag::Open) {
                 let _ = write!(out, "; _");
             }
-            let _ = write!(out, "}}");
+            let _ = write!(out, " }}");
         }
         PatternDesc::Ppat_array(pats) => {
             let _ = write!(out, "[|");
             for (i, p) in pats.iter().enumerate() {
                 if i > 0 {
-                    let _ = write!(out, "; ");
+                    let _ = write!(out, ";");
                 }
                 print_pattern_ml(p, out);
             }
@@ -920,9 +1032,8 @@ fn print_pattern_ml(pat: &Pattern, out: &mut impl Write) {
             let _ = write!(out, "(module {})", name.txt);
         }
         PatternDesc::Ppat_exception(p) => {
-            let _ = write!(out, "(exception ");
+            let _ = write!(out, "exception ");
             print_pattern_ml(p, out);
-            let _ = write!(out, ")");
         }
         PatternDesc::Ppat_extension((name, _)) => {
             let _ = write!(out, "[%%{}]", name.txt);

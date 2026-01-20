@@ -347,23 +347,30 @@ impl MarshalWriter {
         }
     }
 
-    /// Write a string for an identifier, with content-based sharing.
+    /// Write a string for an identifier - NO sharing.
     ///
-    /// OCaml's parser reuses string objects from its string pool, so identical
-    /// identifier strings get shared when serialized. We mimic this by sharing
-    /// ALL identifier strings by content.
+    /// In OCaml, each identifier token creates a fresh string allocation on the heap.
+    /// Multiple occurrences of the same identifier (like "x" appearing twice) are
+    /// DIFFERENT objects with different pointers, so they are NOT shared during
+    /// Marshal serialization.
+    ///
+    /// Only filename strings (which are literal constants in the parser) and certain
+    /// constant token strings get shared in OCaml.
     pub fn write_identifier_string(&mut self, s: &str) {
-        // All identifier strings are shared by content to match OCaml's behavior
-        self.write_string_shared(s);
+        // Identifiers are NOT shared - each occurrence is a fresh string
+        self.write_str(s);
     }
 
-    /// Write a Position with identity-based sharing
+    /// Write a Position with content-based sharing
     ///
-    /// If a Position with this PositionId has been written before,
-    /// writes a shared reference. Otherwise writes the full Position block.
+    /// Positions with the same content (line, bol, cnum) are shared.
+    /// This approximates OCaml's pointer-based sharing behavior.
     ///
-    /// This mimics OCaml's pointer-based sharing - positions with the same
-    /// PositionId are considered "the same object" and get shared.
+    /// NOTE: The PositionId is currently NOT used for sharing because Rust's
+    /// clone semantics differ from OCaml's pointer semantics. In Rust, cloning
+    /// preserves the ID, but every call site that uses a position creates a clone.
+    /// In OCaml, assignment copies a pointer, so only explicit pointer reuse
+    /// creates sharing.
     ///
     /// Returns true if the position was written (not shared), false if a shared ref was written.
     pub fn write_position_shared(
@@ -374,9 +381,8 @@ impl MarshalWriter {
         bol: i32,
         cnum: i32,
     ) -> bool {
-        // Use content-based sharing: positions with the same (line, bol, cnum) are shared.
-        // This approximates OCaml's pointer-based sharing - positions that have identical
-        // content are likely to be the same object in OCaml's parser.
+        // Use content-based sharing: positions with identical content are shared.
+        // This approximates OCaml's behavior for positions.
         let content_key = (line, bol, cnum);
 
         if let Some(&obj_idx) = self.position_content_table.get(&content_key) {
