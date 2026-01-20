@@ -2,56 +2,68 @@
 
 module V4A1 = {
   type props = sharedProps<string>
-  let make = ({x: x, y: y, _}: props): React.element => React.string((x ++ y))
+
+  let make = ({x, y, _}: props): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A1" = props => make(props)
+
     \"SharedProps$V4A1"
   }
 }
 
 module V4A2 = {
   type props<'a> = sharedProps<'a>
-  let make = ({x: x, y: y, _}: props<_>): React.element => React.string((x ++ y))
+
+  let make = ({x, y, _}: props<_>): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A2" = (props: props<_>) => make(props)
+
     \"SharedProps$V4A2"
   }
 }
 
 module V4A3 = {
   type props<'a> = sharedProps<string, 'a>
-  let make = ({x: x, y: y, _}: props<_>): React.element => React.string((x ++ y))
+
+  let make = ({x, y, _}: props<_>): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A3" = (props: props<_>) => make(props)
+
     \"SharedProps$V4A3"
   }
 }
 
 module V4A4 = {
   type props = sharedProps
-  let make = ({x: x, y: y, _}: props): React.element => React.string((x ++ y))
+
+  let make = ({x, y, _}: props): React.element => React.string(x ++ y)
   let make = {
     let \"SharedProps$V4A4" = props => make(props)
+
     \"SharedProps$V4A4"
   }
 }
 
 module V4A5 = {
   type props = sharedProps<string>
+
   external make: React.component<props> = "default"
 }
 
 module V4A6 = {
   type props<'a> = sharedProps<'a>
+
   external make: React.component<props<_>> = "default"
 }
 
 module V4A7 = {
   type props<'a> = sharedProps<string, 'a>
+
   external make: React.component<props<_>> = "default"
 }
 
 module V4A8 = {
   type props = sharedProps
+
   external make: React.component<props> = "default"
 }

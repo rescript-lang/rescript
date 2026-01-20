@@ -1,25 +1,107 @@
-let s = "foo"
-let s = "multi\n  line\n\nstring\n"
-let s = (++ (++ "" foo) "")
-let s = (++ (++ "before" foo) "")
-let s = (++ (++ "before " foo) "")
-let s = (++ (++ "before  " foo) "")
-let s = (++ (++ "" foo) "after")
-let s = (++ (++ "" foo) " after")
-let s = (++ (++ "" foo) "  after")
-let s = (++ (++ (++ (++ "" foo) "") bar) "")
-let s = (++ (++ (++ (++ (++ (++ "" foo) "") bar) "") baz) "")
-let s = (++ (++ (++ (++ "" foo) " ") bar) "")
-let s = (++ (++ (++ (++ (++ (++ "" foo) " ") bar) " ") baz) "")
-let s = (++ (++ (++ (++ " before " foo) " ") bar) " after ")
-let s = (++ (++ (++ (++ (++ (++ "before " foo) " middle ") bar) " ") baz) " wow ")
-let s = "\n  multiline\n\n  es6\n\n  template\n\n  expression\n\n  so convenient\n\n  :)\n"
-let s = "$dollar without $braces $interpolation"
-let s = "null"
-let x = "foo\\`bar\\$\\\\foo"
-let x = (++ (++ (++ (++ "foo\\`bar\\$\\\\foo" a) " \\` ") b) " \\` xx")
-let thisIsFine = "$something"
-let thisIsAlsoFine = "fine\\$"
-let isThisFine = "shouldBeFine$"
-;;(++ (++ "$" dollarAmountInt) "")
-;;(++ (++ "\\$" dollarAmountInt) "")
+let s = (({js|foo|js})[@res.template ])
+let s = (({js|multi
+  line
+
+string
+|js})[@res.template ])
+let s =
+  (((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++ (({js||js})
+      [@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js|before|js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js|before |js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js|before  |js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js|after|js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js| after|js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+      (({js|  after|js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+          (({js||js})[@res.template ]))
+        [@res.template ]) ++ bar)
+      [@res.template ]) ++ (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((((((((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+              (({js||js})[@res.template ]))
+            [@res.template ]) ++ bar)
+          [@res.template ]) ++ (({js||js})[@res.template ]))
+        [@res.template ]) ++ baz)
+      [@res.template ]) ++ (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+          (({js| |js})[@res.template ]))
+        [@res.template ]) ++ bar)
+      [@res.template ]) ++ (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((((((((((({js||js})[@res.template ]) ++ foo)[@res.template ]) ++
+              (({js| |js})[@res.template ]))
+            [@res.template ]) ++ bar)
+          [@res.template ]) ++ (({js| |js})[@res.template ]))
+        [@res.template ]) ++ baz)
+      [@res.template ]) ++ (({js||js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((((((({js| before |js})[@res.template ]) ++ foo)[@res.template ]) ++
+          (({js| |js})[@res.template ]))
+        [@res.template ]) ++ bar)
+      [@res.template ]) ++ (({js| after |js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((((((((((({js|before |js})[@res.template ]) ++ foo)[@res.template ]) ++
+              (({js| middle |js})[@res.template ]))
+            [@res.template ]) ++ bar)
+          [@res.template ]) ++ (({js| |js})[@res.template ]))
+        [@res.template ]) ++ baz)
+      [@res.template ]) ++ (({js| wow |js})[@res.template ]))
+  [@res.template ])
+let s =
+  (({js|
+  multiline
+
+  es6
+
+  template
+
+  expression
+
+  so convenient
+
+  :)
+|js})
+  [@res.template ])
+let s = (({js|$dollar without $braces $interpolation|js})[@res.template ])
+let s = (({json|null|json})[@res.template ])
+let x = (({js|foo\`bar\$\\foo|js})[@res.template ])
+let x =
+  (((((((((({js|foo\`bar\$\\foo|js})[@res.template ]) ++ a)[@res.template ])
+          ++ (({js| \` |js})[@res.template ]))
+        [@res.template ]) ++ b)
+      [@res.template ]) ++ (({js| \` xx|js})[@res.template ]))
+  [@res.template ])
+let thisIsFine = (({js|$something|js})[@res.template ])
+let thisIsAlsoFine = (({js|fine\$|js})[@res.template ])
+let isThisFine = (({js|shouldBeFine$|js})[@res.template ])
+;;(((((({js|$|js})[@res.template ]) ++ dollarAmountInt)[@res.template ]) ++
+      (({js||js})[@res.template ]))[@res.template ])
+;;(((((({js|\$|js})[@res.template ]) ++ dollarAmountInt)[@res.template ]) ++
+      (({js||js})[@res.template ]))[@res.template ])

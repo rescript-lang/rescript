@@ -1,6 +1,8 @@
-// comment
-if condition(()) {
-  renderBranch(())
-} else {
-  doSomeOtherThings(())
+{
+  // comment
+  if condition() {
+    renderBranch()
+  } else {
+    doSomeOtherThings()
+  }
 }

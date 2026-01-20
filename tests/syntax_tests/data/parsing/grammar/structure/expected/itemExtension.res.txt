@@ -1,12 +1,5 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/grammar/structure/itemExtension.res:3:7
-
-  1 │ %%itemExtension
-  2 │ 
-  3 │ %%item.extension
-  4 │ 
-  5 │ %%item.extension.with.args("argument")
-
-  Unexpected token: Dot
-
+[%%itemExtension ]
+[%%item.extension ]
+[%%item.extension.with.args {js|argument|js}]
+[%%item.extension.with.args fun [arity:1]x -> f x]
+[%%itemExtension ][@@attrOnExtension ]

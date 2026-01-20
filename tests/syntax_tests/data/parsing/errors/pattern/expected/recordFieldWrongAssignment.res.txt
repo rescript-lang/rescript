@@ -5,7 +5,6 @@
   1 │ let {foo=bar} = record
   2 │ 
 
-  Did you forget a `}` here?
+  Record patterns use `:` when matching fields. Example: `{field: value}`
 
-let {foo = foo} = bar
-;;record
+let { foo = bar } = record

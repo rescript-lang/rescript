@@ -4,5 +4,6 @@
 
   1 │ type
 
-  Expected type name
+  I'm not sure what to parse here when looking at "eof".
 
+type nonrec _

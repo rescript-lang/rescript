@@ -1,8 +1,8 @@
 module React = {
   type t
+
   let render = () => Js.log("foo")
 }
 
-module Make = ((_: Config) => (*) => {}: (*) => S)
-
-module rec Make = ((Config: Config) => (*) => ({}: S): (_: Config) => (*) => S)
+module Make: () => S = (_: Config, ()) => {}
+module rec Make: (Config, ()) => S = (Config: Config, ()): S => {}

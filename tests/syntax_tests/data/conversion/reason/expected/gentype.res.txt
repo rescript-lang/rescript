@@ -1,21 +1,25 @@
-module M = ({
+module M: {
+  @genType @after
+  type t
+
+  @genType @after
+  let x: int
+
+  @foo
+  type e = ..
+} = {
   type t
   let x = 34
   type e = ..
-}: {
-  @genType
-  @after
-  type t
-  let x: int
-  @foo
-  type e = ..
-})
+}
 
 module type MT = {
-  @genType
-  @after
+  @genType @after
   type t
+
+  @genType @after
   let x: int
+
   @foo
   type e = ..
 }

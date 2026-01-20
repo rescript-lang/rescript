@@ -1,3 +1,6 @@
-let /* before */ x /* after */ : 't . /* a */ int /* b */ /* c */ /* d */ /* e */ /* f */  => int => int = (type t) => (((( /* c0 */ a /* c1 */ /* c2 */ /* c3 */ , b) => 
-// comment
-a + b): int => int => int))
+let /* before */ x /* after */:
+  type t. (/* a */ int /* b */, /* c */ int /* d */) => /* e */ int =
+  (/* c0 */ a /* c1 */, /* c2 */ b /* c3 */) => {
+    // comment
+    a + b
+  }

@@ -1,5 +1,5 @@
 /* parses reason file */
 let () = {
   let msg = "test"
-  msg -> Js.log
+  msg->Js.log
 }

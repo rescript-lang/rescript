@@ -7,14 +7,26 @@
   3 │   ~image: bool=?,
   4 │ ) => React.element = "ModalContent"
 
-  Did you forget a `)` here?
+  Did you forget a `,` here?
 
-external make : ?style:ReactDOMRe.Style.t -> [%%rescript.typehole] (a:1)
-;;image
-;;(= bool (? [%%rescript.exprhole]))
-;;(= React.element "ModalContent")
-type nonrec 'extraInfo student = {
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/other/regionMissingComma.res:8:11-9:11
+
+   6 │ type student<'extraInfo> = {
+   7 │   name: string,
+   8 │   age: int
+   9 │   otherInfo: 'extraInfo
+  10 │ }
+  11 │ 
+
+  Did you forget a `,` here?
+
+external make :
+  ?style:ReactDOMRe.Style.t -> ?image:bool -> React.element (a:2) =
+    "ModalContent"
+type nonrec 'extraInfo student =
+  {
   name: string ;
-  age: int }
-;;otherInfo
-;;extraInfo
+  age: int ;
+  otherInfo: 'extraInfo }

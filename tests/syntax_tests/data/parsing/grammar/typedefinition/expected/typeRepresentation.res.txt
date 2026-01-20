@@ -1,12 +1,50 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/grammar/typedefinition/typeRepresentation.res:33:16-17
-
-  31 │ type t = @attr {x: int}
-  32 │ type t = @attr /**doc before record*/ {x: int}
-  33 │ type t = @attr ..
-  34 │ type t = @attr /**doc before open*/ ..
-  35 │ 
-
-  Unexpected token in type: DotDot
-
+type nonrec t = ..
+type nonrec t = private ..
+type nonrec t =
+  | Blue 
+type nonrec t =
+  | Blue 
+type nonrec t =
+  | Blue 
+  | Red 
+type nonrec t =
+  | Blue 
+  | Red 
+type nonrec t =
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t =
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t = private
+  | Blue 
+type nonrec t = private
+  | Blue 
+type nonrec t = private
+  | Blue 
+  | Red 
+type nonrec t = private
+  | Blue 
+  | Red 
+type nonrec t = private
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t = private
+  | Blue 
+  | Red 
+  | Green 
+type nonrec t = {
+  x: int ;
+  y: int }
+type nonrec t = private {
+  x: int ;
+  y: int }
+type nonrec t = {
+  x: int }
+type nonrec t = {
+  x: int }
+type nonrec t = ..
+type nonrec t = ..

@@ -1,5 +1,4 @@
 @@attr
-
 @@standaloneAttribute
 
 @@standaloneAttribute(paylod => f(payload))

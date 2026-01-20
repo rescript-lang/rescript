@@ -5,6 +5,6 @@
   1 │ let r = {type: 1}
   2 │ 
 
-  Unexpected token: Typ
+  Cannot use keyword `type` as a record field name. Suggestion: rename it (e.g. `type_`)
 
-let r = ([%%rescript.exprhole]; ([%%rescript.exprhole]; 1))
+let r = { type_ = 1 }

@@ -6,7 +6,17 @@
   2 │ let for = 3
   3 │ 
 
-  Unexpected token in pattern: Open
+  `open` is a reserved keyword. Keywords need to be escaped: \"open"
 
-let [%%rescript.patternhole] = 1
-let [%%rescript.patternhole] = 3
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/letBindingPatternKeyword.res:2:5-7
+
+  1 │ let open = 1
+  2 │ let for = 3
+  3 │ 
+
+  `for` is a reserved keyword. Keywords need to be escaped: \"for"
+
+let [%rescript.patternhole ] = 1
+let [%rescript.patternhole ] = 3

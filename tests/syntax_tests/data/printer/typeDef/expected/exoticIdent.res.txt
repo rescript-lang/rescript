@@ -1,13 +1,12 @@
-type \"type" = {
-  module: \"type",
-  let: \"module"
+type \"type" = User.\"type" = {
+  \"module": \"type",
+  \"let": \"module",
 }
 
-type Color =
-| Red(\"let", \"module", \"type")
-| Blue(\"let", \"module", \"type"): Color<\"let", SuperType>
+type \"Color" =
+  | Red(\"let", \"module", \"type")
+  | Blue(\"let", \"module", \"type"): \"Color"<\"let", \"SuperType">
 
-type \"type"<'ð± gadt, 'ð»>
+type \"type"<'\"😱 gadt", '\"😻"> constraint '\"type" = \"let"
 
-type \"type" +=
-| Blue(\"type", ExtremeType)
+type \"type"<'\"😆SuperIdent"> += Blue(\"type", \"ExtremeType")

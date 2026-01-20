@@ -6,8 +6,7 @@
   2 │ external printName: (~name:?, unit) => unit = "printName"
   3 │ 
 
-  Unexpected token in type: Question
+  I'm not sure what to parse here when looking at "?".
 
-external printName : ~name:[%%rescript.typehole] -> [%%rescript.typehole] (a:1)
-;;unit
-;;(= unit "printName")
+external printName : name:unit -> unit (a:1) = "printName"[@@module
+                                                            {js|moduleName|js}]

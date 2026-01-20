@@ -8,7 +8,7 @@
   7 │ Js.log("test"); // Is omitted from the compiled JS
   8 │ 
 
-  Unexpected token: Rparen
+  I'm not sure what to parse here when looking at ")".
 
-module C = struct module T = Fun(struct ;;(foo (+ a c) (+ b d)) end) end
-;;(Js.log "test")
+module C = struct module T = (Fun)(struct ;;foo (a + c) (b + d) end) end
+;;Js.log {js|test|js}

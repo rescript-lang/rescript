@@ -1,9 +1,17 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/scanner/badCharacter.res:1:7
+  syntax_tests/data/parsing/errors/scanner/badCharacter.res:1:5
 
   1 │ let $ = 1
 
-  Unexpected token in pattern: Equal
+  Not sure what to do with this character: "$".
 
-let [%%rescript.patternhole] = 1
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/scanner/badCharacter.res:1:5-7
+
+  1 │ let $ = 1
+
+  I was expecting a name for this let-binding. Example: `let message = "hello"`
+
+let 1 = [%rescript.exprhole ]

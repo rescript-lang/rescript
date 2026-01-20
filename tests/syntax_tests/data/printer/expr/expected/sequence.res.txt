@@ -1,9 +1,9 @@
 let () = {
-  foo(())
-  bar(())
+  foo()
+  bar()
 }
 
 let () = {
-  (foo(()): unit)
-  (bar(()): unit)
+  (foo(): unit)
+  (bar(): unit)
 }

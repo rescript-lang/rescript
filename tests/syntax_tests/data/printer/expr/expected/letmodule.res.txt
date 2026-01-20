@@ -4,11 +4,11 @@ let x = {
 }
 
 let x = {
-  module M = ME
+  module M = await ME
   M.x
 }
 
 let x = {
-  module M = (ME: MT)
+  module M = await (ME: MT)
   M.x
 }

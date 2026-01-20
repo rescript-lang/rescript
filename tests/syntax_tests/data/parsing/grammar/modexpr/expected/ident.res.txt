@@ -2,7 +2,7 @@ module A = Array
 module A = Belt.Array
 include Array
 include Belt.Array
-module A = Array
-module A = Belt.Array
-include Array
-include Belt.Array
+module A = ((Array)[@attr ])
+module A = ((Belt.Array)[@attr ])
+include ((Array)[@attr ])
+include ((Belt.Array)[@attr ])

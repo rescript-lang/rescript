@@ -1,95 +1,79 @@
-let x = __x => f(a, __x, c)
+let x = f(a, _, c)
+let x = f(a, g(x, _, z), _)
+let x = f(_, x, c)
+let x = f(_, _, _)
+let x = f(g(_))
+let x = f(~a=1, ~b=_, ~c=2)
+let x = f(~a=_, ~b=_, ~c=_)
+let x = f(~a=_, ~b=_, ~c=g(~x=2, ~y=_, ~z=_))
 
-let x = __x => f(a, (__x => g(x, __x, z)), __x)
+let nested = x => List.length(_)
+let nested2 = (x, y, z) => List.length(_)
 
-let x = __x => f(__x, x, c)
+let l = [1, 2, 3]->List.map(i => i + 1, _)->List.filter(i => i > 0, _)
 
-let x = __x => f(__x, __x, __x)
+let l = (i => i + 1)->List.map([1, 2, 3])
 
-let x = f((__x => g(__x)))
-
-let x = __x => f(~a=1, ~b=__x, ~c=2)
-
-let x = __x => f(~a=__x, ~b=__x, ~c=__x)
-
-let x = __x => f(~a=__x, ~b=__x, ~c=(__x => g(~x=2, ~y=__x, ~z=__x)))
-
-let nested = (x, __x) => List.length(__x)
-
-let nested2 = (x, y, z, __x) => List.length(__x)
-
-let l = ([1, 2, 3] -> (__x => List.map((i => i + 1), __x))) -> (__x => List.filter((i => i > 0), __x))
-
-let l = (i => i + 1) -> (__x => List.map(__x, [1, 2, 3]))
-
-let x = __x => List.length(__x)
+let x = List.length(_)
 
 let incr = (~v) => v + 1
 
-let l1 = ([1, 2, 3] -> List.map((__x => incr(~v=__x)))) -> List.length
+let l1 = [1, 2, 3]->List.map(incr(~v=_))->List.length
 
-let l2 = ([1, 2, 3] -> List.map((__x => incr(~v=__x)))) -> List.length
+let l2 = [1, 2, 3]->List.map(incr(~v=_))->List.length
 
-let optParam = (~v=?, ()) => (v == None) ? 0 : 1
+let optParam = (~v=?, ()) => v == None ? 0 : 1
 
-let l1 = ([Some(1), None, Some(2)] -> List.map((__x => optParam(~v=?__x, ())))) -> List.length
+let l1 = [Some(1), None, Some(2)]->List.map(optParam(~v=?_, ()))->List.length
 
-let l2 = ([Some(1), None, Some(2)] -> List.map((__x => optParam(~v=?__x, ())))) -> List.length
+let l2 = [Some(1), None, Some(2)]->List.map(optParam(~v=?_, ()))->List.length
 
 // callback in last position
-f(a, b, ((a, b, __x) => List.length(__x)))
-
+f(a, b, (a, b) => List.length(_))
 // callback in first position
-f(((a, b, __x) => List.length(__x)), a, b)
+f((a, b) => List.length(_), a, b)
 
-(__x => f(a, b, __x))(x, y)
+f(a, b, _)(x, y)
+-f(a, b, _)
+f(a, b, _) + g(x, _, z)
+f(a, b, _) + g(x, _, z) + h(alpha, beta, _)
 
--(__x => f(a, b, __x))
+assert(f(a, b, _))
 
-(__x => f(a, b, __x)) + (__x => g(x, __x, z))
+getDirector(a, b, _).name
 
-((__x => f(a, b, __x)) + (__x => g(x, __x, z))) + (__x => h(alpha, beta, __x))
+f(a, b, _) ? g(x, y, _) : h(alpha, beta, _)
 
-assert (__x => f(a, b, __x))
+<div onClick={f(a, b, _)} />
+<div> {f(a, b, _)} </div>
 
-(__x => getDirector(a, b, __x)).name
+f(a, b, _)[ix]
+f(a, b, _)[ix] = 2
 
-(__x => f(a, b, __x)) ? (__x => g(x, y, __x)) : (__x => h(alpha, beta, __x))
+getDirector(a, b, _).name = "Steve"
 
-<div onClick={__x => f(a, b, __x)} />
+filterNone->Array.get(0)
+filterNone->Array.get(0)
+Array.get(_, 0)
+1 + Array.get(_, 0)
+Array.get(_, 1) + Array.get(_, 0)
+let f = Array.get(_, 0)
 
-<div>{__x => f(a, b, __x)}</div>
+let photo = pricedRoom["room"]["photos"]->filterNone->Array.get(_, 0)
 
-@res.array.access (__x => f(a, b, __x))[ix]
+underscoreWithComments(// Comment 1
+x => {
+  // Comment 2
+  something()
+}, _)
 
-@res.array.set (__x => f(a, b, __x))[ix] = 2
+let status =
+  json
+  ->optional(field("status", string, _), _)
+  ->Option.mapOr(Status.Active, Status.fromString)
 
-(__x => getDirector(a, b, __x)).name = "Steve"
+a->map2(fn)
 
-filterNone -> (__x => Array.get(__x, 0))
+a->map2(fn)
 
-filterNone -> (__x => Array.get(__x, 0))
-
-__x => Array.get(__x, 0)
-
-1 + (__x => Array.get(__x, 0))
-
-(__x => Array.get(__x, 1)) + (__x => Array.get(__x, 0))
-
-let f = __x => Array.get(__x, 0)
-
-let photo = (pricedRoom["room"]["photos"] -> filterNone) -> (__x => Array.get(__x, 0))
-
-__x => underscoreWithComments(
-// Comment 1
-(x => 
-// Comment 2
-something(())), __x)
-
-let status = (json -> (__x => optional((__x => field("status", string, __x)), __x))) -> Option.mapOr(Status.Active, Status.fromString)
-
-a -> (__x => map2(__x, fn))
-
-a -> map2(fn)
-
-a -> (__x => f(__x, __x, b))
+a->f(_, _, b)

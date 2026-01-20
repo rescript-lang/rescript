@@ -8,7 +8,7 @@
   4 │ 
   5 │ let y = 2
 
-  Unexpected token: Rbrace
+  I'm not sure what to parse here when looking at "}".
 
 let x = 1
 let y = 2

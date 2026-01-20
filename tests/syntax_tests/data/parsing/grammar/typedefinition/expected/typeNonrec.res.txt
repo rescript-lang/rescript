@@ -1,2 +1,2 @@
-type nonrec nonrec
-;;(= t Water)
+type nonrec t =
+  | Water 

@@ -1,10 +1,28 @@
-let s = "some unicode Ã© Â£ "
-let s = (match foo with | "bar" -> "bar" | "foo" -> "foo" | _ -> "baz")
-let s = "ä½ å¥½ï¼\nä¸ç"
-let s = "\""
-let s = "foo"
-let s = (++ (++ "foo " bar) " baz")
-let s = (++ (++ "some unicode Ã© " bar) " Â£ ")
-let s = (x [|"foo"|] [||])
-let s = (x [|"foo "; " baz"|] [|bar|])
-let s = (x [|"some unicode Ã© "; " Â£ "|] [|bar|])
+let s = {js|some unicode é £ |js}
+let s =
+  match foo with
+  | (({js|bar|js})[@res.template ]) -> {js|bar|js}
+  | {js|foo|js} -> {js|foo|js}
+  | _ -> {js|baz|js}
+let s = (({js|你好，
+世界|js})[@res.template ])
+let s = (({js|"|js})[@res.template ])
+let s = (({js|foo|js})[@res.template ])
+let s =
+  (((((({js|foo |js})[@res.template ]) ++ bar)[@res.template ]) ++
+      (({js| baz|js})[@res.template ]))
+  [@res.template ])
+let s =
+  (((((({js|some unicode é |js})[@res.template ]) ++ bar)[@res.template ])
+      ++ (({js| £ |js})[@res.template ]))
+  [@res.template ])
+let s = ((x [|(({js|foo|js})[@res.template ])|] [||])[@res.taggedTemplate ])
+let s =
+  ((x [|(({js|foo |js})[@res.template ]);(({js| baz|js})[@res.template ])|]
+      [|bar|])
+  [@res.taggedTemplate ])
+let s =
+  ((x
+      [|(({js|some unicode é |js})[@res.template ]);(({js| £ |js})
+        [@res.template ])|] [|bar|])
+  [@res.taggedTemplate ])

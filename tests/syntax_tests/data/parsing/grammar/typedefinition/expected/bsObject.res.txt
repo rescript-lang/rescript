@@ -1,2 +1,2 @@
-type nonrec 'a foo = (<foo: int; ..> as 'a)
-type nonrec 'a foo = (<foo: int> as 'a)
+type nonrec 'a foo = < foo: int   ;.. >  as 'a
+type nonrec 'a foo = < foo: int   >  as 'a

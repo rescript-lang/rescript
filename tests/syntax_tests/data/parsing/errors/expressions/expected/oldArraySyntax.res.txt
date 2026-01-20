@@ -7,9 +7,10 @@
   3 │ 
   4 │ 
 
-  Unexpected token: Bar
+  I'm not sure what to parse here when looking at "|".
 
-let s = [|[%%rescript.exprhole]|]
-;;1
-;;2
-;;3
+  Did you mean to write an array literal? Arrays are written with `[ ... ]` (not `[| ... |]`).
+  Quick fix: replace `[|` with `[` and `|]` with `]`.
+  Example: `[|1, 2, 3|]` -> `[1, 2, 3]`
+
+let s = [|1;2;3|]

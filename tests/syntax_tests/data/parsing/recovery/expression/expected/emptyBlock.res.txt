@@ -1,2 +1,2 @@
-let x = {}
-let f = (fun a -> (fun b -> {}))
+let x = {  }
+let f [arity:2]a b = {  }

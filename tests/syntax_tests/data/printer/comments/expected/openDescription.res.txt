@@ -1,6 +1,3 @@
-open React
-
-/* leading */ /* trailing */ open React
-
-/* leading */ /* trailing */ open React /* leading */ // trailing
-
+open /* leading */ React /* trailing */
+open /* leading */ React /* trailing */
+open /* leading */ React // trailing

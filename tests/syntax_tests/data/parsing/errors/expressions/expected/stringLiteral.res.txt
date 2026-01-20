@@ -1,1 +1,1 @@
-;;(match x with | "\\x37" -> () | "\\x7b" -> ())
+;;match x with | {js|\x37|js} -> () | {js|\x7b|js} -> ()

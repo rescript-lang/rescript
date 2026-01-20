@@ -1,1 +1,7 @@
-module type Signature = sig module Tree : (module Btree) module Tree : (module Ns.Btree) module Tree : (module Btree) module Tree : (module Ns.Btree) end
+module type Signature  =
+  sig
+    module Tree = Btree
+    module Tree = Ns.Btree
+    module Tree = Btree[@@attr ]
+    module Tree = Ns.Btree[@@attr ]
+  end

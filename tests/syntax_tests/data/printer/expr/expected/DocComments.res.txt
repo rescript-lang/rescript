@@ -1,31 +1,50 @@
-let doc1: (@res.doc(" ddd ") ~x: int) => int = (~x) => x + 1
+let doc1: (
+  /** ddd */
+  ~x: int,
+) => int = (~x) => x + 1
+let doc2: /** ddd */ int => int = x => x + 1
+let doc3: /** ddd */ int => int = x => x + 1
+let doc4: (
+  /** ddd */
+  ~x: int,
+  /** eee */ n,
+) => int = (~x) => x + 1
 
-let doc2: @res.doc(" ddd ") int => int = x => x + 1
-
-let doc3: @res.doc(" ddd ") int => int = x => x + 1
-
-let doc4: (@res.doc(" ddd ") ~x: int, @res.doc(" eee ") n) => int = (~x) => x + 1
-
-module M = ({
+module M: {
+  let foo: (
+    /** xxdoc */
+    ~x: int,
+    /** yydoc */
+    ~y: int,
+  ) => int
+} = {
   let foo = (~x, ~y) => x + y
-}: {
-  let foo: (@res.doc(" xxdoc ") ~x: int, @res.doc(" yydoc ") ~y: int) => int
-})
+}
 
-@val external ex: (@res.doc(" ddd ") ~x: int, @res.doc(" eee ") n) => int = "ex"
+@val
+external ex: (
+  /** ddd */
+  ~x: int,
+  /** eee */ n,
+) => int = "ex"
 
-module rec A = ({
+/** A */
+module rec A: {
   type t
-}: {
+} = {
   type t
-})
-and B = ({
+}
+
+/** B */
+and B: {
   type t
-}: {
+} = {
   type t
-})
-and C = ({
+}
+
+/** C */
+and C: {
   type t
-}: {
+} = {
   type t
-})
+}

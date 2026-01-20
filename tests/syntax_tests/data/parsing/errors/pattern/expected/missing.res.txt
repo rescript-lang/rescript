@@ -6,7 +6,18 @@
   2 │ let = 4
   3 │ 
 
-  Unexpected token in pattern: Equal
+  I was expecting a name for this let-binding. Example: `let message = "hello"`
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/missing.res:2:5
+
+  1 │ let = 2
+  2 │ let = 4
+  3 │ 
+  4 │ for in 0 to 10 {
+
+  I was expecting a name for this let-binding. Example: `let message = "hello"`
 
 
   Syntax error!
@@ -18,9 +29,20 @@
   5 │   Js.log("for")
   6 │ }
 
-  Unexpected token in pattern: In
+  A for-loop has the following form: `for i in 0 to 10`. Did you forget to supply a name before `in`?
 
-let [%%rescript.patternhole] = 2
-let [%%rescript.patternhole] = 4
-;;(for [%%rescript.patternhole] = 0 to 10 do (Js.log "for") done)
-;;(match x with | [%%rescript.patternhole] -> ())
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/pattern/missing.res:9:3-4
+
+   7 │ 
+   8 │ switch x {
+   9 │ | => ()
+  10 │ }
+  11 │ 
+
+  I was expecting a pattern to match on before the `=>`
+
+let 2 = [%rescript.exprhole ]
+let 4 = for [%rescript.patternhole ] = 0 to 10 do Js.log {js|for|js} done
+;;match x with | () -> [%rescript.exprhole ]

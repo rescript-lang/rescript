@@ -1,6 +1,6 @@
 let s = "a string with \b \n \r \t abcdef"
 
-let s = "ð ð¤­ ð¥ ð with emojis ð ð test ð"
+let s = "🚀 🤭 🔥 😀 with emojis 😅 👌 test 👀"
 
 let s = "a \"string inside\" a string"
 

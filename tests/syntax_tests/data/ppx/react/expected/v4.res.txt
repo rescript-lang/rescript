@@ -1,28 +1,25 @@
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/v4.res", line: 17, bol: 355, cnum: 357 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/v4.res", line: 18, bol: 374, cnum: 417 }, loc_ghost: false })
-// Component with type constraint
 @res.jsxComponentProps
 type props<'x, 'y> = {
-  x: 'x,
-  y: 'y
+  x: 'x, // Component with type constraint
+  y: 'y,
 }
-
-let make = ({x: x, y: y, _}: props<string, string>): React.element => React.string((x ++ y))
-
+let make = ({x, y, _}: props<string, string>): React.element => React.string(x ++ y)
 let make = {
-  let V4 = (props: props<_>) => make(props)
-  V4
+  let \"V4" = (props: props<_>) => make(props)
+  \"V4"
 }
 
 module AnotherName = {
-  
-  // Component with another name than "make"
   @res.jsxComponentProps
-  type props<'x> = {
-    x: 'x
+  type // Component with another name than "make"
+  props<'x> = {
+    x: 'x,
   }
-  let anotherName = ({x: x, _}: props<_>): React.element => React.string(x)
+
+  let anotherName = ({x, _}: props<_>): React.element => React.string(x)
   let anotherName = {
     let \"V4$AnotherName$anotherName" = (props: props<_>) => anotherName(props)
+
     \"V4$AnotherName$anotherName"
   }
 }
@@ -30,11 +27,13 @@ module AnotherName = {
 module Uncurried = {
   @res.jsxComponentProps
   type props<'x> = {
-    x: 'x
+    x: 'x,
   }
-  let make = ({x: x, _}: props<_>): React.element => React.string(x)
+
+  let make = ({x, _}: props<_>): React.element => React.string(x)
   let make = {
     let \"V4$Uncurried" = (props: props<_>) => make(props)
+
     \"V4$Uncurried"
   }
 }
@@ -42,47 +41,78 @@ module Uncurried = {
 module type TUncurried = {
   @res.jsxComponentProps
   type props<'x> = {
-    x: 'x
+    x: 'x,
   }
+
   let make: React.component<props<string>>
 }
 
 module E = {
-  @res.jsxComponentProps
-  @live
+  @res.jsxComponentProps @live
   type props<'x> = {
-    x: 'x
+    x: 'x,
   }
+
   external make: React.component<props<string>> = "default"
 }
 
 module EUncurried = {
-  @res.jsxComponentProps
-  @live
+  @res.jsxComponentProps @live
   type props<'x> = {
-    x: 'x
+    x: 'x,
   }
+
   external make: React.component<props<string>> = "default"
 }
 
 module Rec = {
   @res.jsxComponentProps
-  type props = {
+  type props = {}
+
+  let rec make = {
+    let \"make$Internal" = (_: props): React.element => {
+      make(({}: props))
+    }
+    let make = {
+      let \"V4$Rec" = props => \"make$Internal"(props)
+
+      \"V4$Rec"
+    }
+    make
   }
-  let rec make = (_: props): React.element => make((({}: props)))
 }
 
 module Rec1 = {
   @res.jsxComponentProps
-  type props = {
+  type props = {}
+
+  let rec make = {
+    let \"make$Internal" = (_: props): React.element => {
+      React.null
+    }
+    let make = {
+      let \"V4$Rec1" = props => \"make$Internal"(props)
+
+      \"V4$Rec1"
+    }
+    make
   }
-  let rec make = (_: props): React.element => React.null
 }
 
 module Rec2 = {
   @res.jsxComponentProps
-  type props = {
+  type props = {}
+
+  let rec make = {
+    let \"make$Internal" = (_: props): React.element => {
+      mm(({}: props))
+    }
+    let make = {
+      let \"V4$Rec2" = props => \"make$Internal"(props)
+
+      \"V4$Rec2"
+    }
+    make
   }
-  let rec make = (_: props): React.element => mm((({}: props)))
   and mm = x => make(x)
 }

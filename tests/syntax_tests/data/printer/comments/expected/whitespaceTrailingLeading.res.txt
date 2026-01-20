@@ -1,21 +1,17 @@
-let a // single line trailing 
- = 1
+let a = 1 // single line trailing
+// leading
+let b = 2
+
+let a = 1 /* comment */
+// leading
+let b = 2
+
+let a = 1 // single line trailing
 
 // leading
 let b = 2
 
-let a /* comment */  = 1
-
-// leading
-let b = 2
-
-let a // single line trailing 
- = 1
-
-// leading
-let b = 2
-
-let a /* comment */  = 1
+let a = 1 /* comment */
 
 // leading
 let b = 2

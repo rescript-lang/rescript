@@ -6,7 +6,7 @@
   2 │ let newX = x +. newVelocity *. secondPerFrame^;
   3 │ 
 
-  Unexpected token: Caret
+  I'm not sure what to parse here when looking at "^".
 
-let newVelocity = (+. velocity (*. a secondPerFrame))
-let newX = (+. x (*. newVelocity secondPerFrame))
+let newVelocity = velocity +. (a *. secondPerFrame)
+let newX = x +. (newVelocity *. secondPerFrame)

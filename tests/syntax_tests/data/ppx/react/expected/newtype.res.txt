@@ -1,4 +1,3 @@
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/newtype.res", line: 33, bol: 544, cnum: 544 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/newtype.res", line: 34, bol: 561, cnum: 608 }, loc_ghost: false })
 @@jsxConfig({version: 4})
 
 module V4A = {
@@ -6,11 +5,14 @@ module V4A = {
   type props<'a, 'b, 'c> = {
     a: 'a,
     b: 'b,
-    c: 'c
+    c: 'c,
   }
-  let make = (type a) => (({a: a, b: b, c: c, _}: props<a, array<option<[#Foo(a)]>>, 'a>): React.element => ReactDOM.jsx("div", {}))
+
+  let make = (type a, {a, b, c, _}: props<a, array<option<[#Foo(a)]>>, 'a>): React.element =>
+    ReactDOM.jsx("div", {})
   let make = {
     let \"Newtype$V4A" = (props: props<_>) => make(props)
+
     \"Newtype$V4A"
   }
 }
@@ -20,11 +22,14 @@ module V4A1 = {
   type props<'a, 'b, 'c> = {
     a: 'a,
     b: 'b,
-    c: 'c
+    c: 'c,
   }
-  let make = (type x) => ((type y) => (({a: a, b: b, c: c, _}: props<x, array<y>, 'a>): React.element => ReactDOM.jsx("div", {})))
+
+  let make = (type x y, {a, b, c, _}: props<x, array<y>, 'a>): React.element =>
+    ReactDOM.jsx("div", {})
   let make = {
     let \"Newtype$V4A1" = (props: props<_>) => make(props)
+
     \"Newtype$V4A1"
   }
 }
@@ -36,14 +41,16 @@ module type T = {
 module V4A2 = {
   @res.jsxComponentProps
   type props<'foo> = {
-    foo: 'foo
+    foo: 'foo,
   }
-  let make = (type a) => (({foo: foo: module(T with type t = a), _}: props<_>): React.element => {
+
+  let make = (type a, {foo: (foo: module(T with type t = a)), _}: props<_>): React.element => {
     module T = unpack(foo)
     ReactDOM.jsx("div", {})
-  })
+  }
   let make = {
     let \"Newtype$V4A2" = (props: props<_>) => make(props)
+
     \"Newtype$V4A2"
   }
 }
@@ -51,29 +58,30 @@ module V4A2 = {
 module V4A3 = {
   @res.jsxComponentProps
   type props<'foo> = {
-    foo: 'foo
+    foo: 'foo,
   }
-  let make = (type a) => (({foo: foo, _}: props<_>): React.element => {
-    module T = unpack((foo: module(T with type t = a)))
+
+  let make = (type a, {foo, _}: props<_>): React.element => {
+    module T = unpack(foo: T with type t = a)
     foo
-  })
+  }
   let make = {
     let \"Newtype$V4A3" = (props: props<_>) => make(props)
+
     \"Newtype$V4A3"
   }
 }
-
 @res.jsxComponentProps
 type props<'x, 'q> = {
   x: 'x,
-  q: 'q
+  q: 'q,
 }
 
-let make = ({x: x, q: q, _}: props<('a, 'b), 'a>): React.element => [fst(x), q]
-
+let make = ({x, q, _}: props<('a, 'b), 'a>): React.element => [fst(x), q]
 let make = {
-  let Newtype = (props: props<_>) => make(props)
-  Newtype
+  let \"Newtype" = (props: props<_>) => make(props)
+
+  \"Newtype"
 }
 
 @@uncurried
@@ -81,11 +89,13 @@ let make = {
 module Uncurried = {
   @res.jsxComponentProps
   type props<'foo> = {
-    foo: 'foo
+    foo?: 'foo,
   }
-  let make = (type a) => (({foo: ? foo, _}: props<_>): React.element => React.null)
+
+  let make = (type a, {?foo, _}: props<_>): React.element => React.null
   let make = {
     let \"Newtype$Uncurried" = (props: props<_>) => make(props)
+
     \"Newtype$Uncurried"
   }
 }

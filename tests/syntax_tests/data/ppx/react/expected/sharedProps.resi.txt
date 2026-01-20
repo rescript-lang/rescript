@@ -1,29 +1,26 @@
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 9, bol: 159, cnum: 161 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 10, bol: 196, cnum: 237 }, loc_ghost: false })
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 14, bol: 256, cnum: 258 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 15, bol: 301, cnum: 342 }, loc_ghost: false })
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 19, bol: 362, cnum: 364 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 20, bol: 395, cnum: 436 }, loc_ghost: false })
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 26, bol: 500, cnum: 502 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 27, bol: 541, cnum: 582 }, loc_ghost: false })
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 31, bol: 601, cnum: 603 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 32, bol: 638, cnum: 679 }, loc_ghost: false })
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 36, bol: 698, cnum: 700 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 37, bol: 743, cnum: 784 }, loc_ghost: false })
-Only one component definition is allowed for each module. Move to a submodule or other file if necessary. (at Location { loc_start: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 41, bol: 803, cnum: 805 }, loc_end: Position { file_name: "syntax_tests/data/ppx/react/sharedProps.resi", line: 42, bol: 836, cnum: 877 }, loc_ghost: false })
 @@jsxConfig({version: 4, mode: "classic"})
 
 module V4C1: {
   type props = sharedProps<string>
+
   let make: React.component<props>
 }
 
 module V4C2: {
   type props<'a> = sharedProps<'a>
+
   let make: React.component<props<_>>
 }
 
 module V4C3: {
   type props<'a> = sharedProps<string, 'a>
+
   let make: React.component<props<_>>
 }
 
 module V4C4: {
   type props = sharedProps
+
   let make: React.component<props>
 }
 
@@ -31,20 +28,24 @@ module V4C4: {
 
 module V4A1: {
   type props = sharedProps<string>
+
   let make: React.component<props>
 }
 
 module V4A2: {
   type props<'a> = sharedProps<'a>
+
   let make: React.component<props<_>>
 }
 
 module V4A3: {
   type props<'a> = sharedProps<string, 'a>
+
   let make: React.component<props<_>>
 }
 
 module V4A4: {
   type props = sharedProps
+
   let make: React.component<props>
 }

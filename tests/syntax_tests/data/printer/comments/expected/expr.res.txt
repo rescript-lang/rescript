@@ -1,240 +1,163 @@
 // Pexp_ident
-let pi /* before */ // after
- = Math.pi
+let pi = /* before */ Math.pi // after
 
 // Pexp_constant
-let one /* before */ // after
- = 1
+let one = /* before */ 1 // after
 
 // Pexp_let
 let x = {
-  let /* before a */ a /* after a */ /* before 1 */ // after 1
-   = 1
-  
-  /* before ident */
-  Pexp.ident /* after ident */ 
+  let /* before a */ a /* after a */ = /* before 1 */ 1 // after 1
+  /* before ident */ Pexp.ident /* after ident */
 }
 
 let x = {
-  let /* before a */ a /* after a */ /* before 1 */ // after 1
-   = 1
-  let /* before b */ b /* after b */ /* before 2 */ // after 2
-   = 2
-  
-  /* before ident */
-  Pexp.ident /* after ident */ 
+  let /* before a */ a /* after a */ = /* before 1 */ 1 // after 1
+  let /* before b */ b /* after b */ = /* before 2 */ 2 // after 2
+  /* before ident */ Pexp.ident /* after ident */
 }
 
 let x = {
-  let /* before a */ a /* after a */ /* before 1 */ // after 1
-   = 1
-  let /* before b */ b /* after b */ /* before 2 */ // after 2
-   = 2
-  
-  /* before const */
-  "a string" /* after const */ 
+  let /* before a */ a /* after a */ = /* before 1 */ 1 // after 1
+  let /* before b */ b /* after b */ = /* before 2 */ 2 // after 2
+  /* before const */ "a string" /* after const */
 }
 
 // Pexp_extension
-let x /* c0 */ /* before */ /* after */ /* c1 */  = %ext("test")
+let x = /* c0 */ %ext(/* before */ "test" /* after */) /* c1 */
 
 // Pexp_open
 let x = {
-  open Belt
-  
-  /* before open */
-  /* c0 */ /* c1 */ // after open
-  
-  /* before const */
-  "a string" /* after const */ 
+  /* before open */ open /* c0 */ Belt /* c1 */ // after open
+  /* before const */ "a string" /* after const */
 }
 
 let x = {
-  open Belt
-  open! Unsafe
-  
-  /* before open */
-  /* c0 */ /* c1 */ // after open
-  
-  /* before open */
-  /* c0 */ /* c1 */ // after open
-  
-  /* before const */
-  "a string" /* after const */ 
+  /* before open */ open /* c0 */ Belt /* c1 */ // after open
+  /* before open */ open! /* c0 */ Unsafe /* c1 */ // after open
+  /* before const */ "a string" /* after const */
 }
 
 let x = {
-  let 
-  /* before let */
-  a // after let
-   = 1
-  open Belt
-  /* before ident */ // after open
-  
-  /* before const */
-  "test" /* after const */ 
+  /* before let */ let a = 1 // after let
+  open /* before ident */ Belt // after open
+  /* before const */ "test" /* after const */
 }
 
 let x = {
-  open Belt
-  let /* before ident */ // after open
-  
-  /* before let */
-  a // after let
-   = 1
-  
-  /* before const */
-  "test" /* after const */ 
+  open /* before ident */ Belt // after open
+  /* before let */ let a = 1 // after let
+  /* before const */ "test" /* after const */
 }
 
 // Pexp_letexception
 let x = {
-  exception 
-  /* before */
-  /* c0 */ Foo /* c1 */ // after
-  
-  
-  /* before */
-  "test" /* after */ 
+  /* before */ exception /* c0 */ Foo /* c1 */ // after
+  /* before */ "test" /* after */
 }
 
 // Pexp_letmodule
 let x = {
-  module B = Belt
-  
-  /* before */
-  /* c0 */ /* c1 */ // after
-  
-  /* before */
-  "test" /* after */ 
+  /* before */ module /* c0 */ B /* c1 */ = Belt // after
+  /* before */ "test" /* after */
 }
 
 // Pexp_assert
-let x /* here */ /* c0 */ /* c1 */  = assert true
+let x = /* here */ assert(/* c0 */ true /* c1 */)
 
 // Pexp_constraint
-let x /* c0 */ /* c1 */ /* c2 */ /* c3 */ // after
- = ("string": string)
+let x = (/* c0 */ "string" /* c1 */: /* c2 */ string /* c3 */) // after
 
 // Pexp_construct
-let x /* before */ /* after */  = true
-
-let x /* before */ /* after */  = Red
-
-let x /* before */ /* c0 */ /* c1 */ /* after */  = Red(shade)
-
-let x /* before */ /* after Red */ /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* after */  = Red((r, g, b))
+let x = /* before */ true /* after */
+let x = /* before */ Red /* after */
+let x = /* before */ Red(/* c0 */ shade /* c1 */) /* after */
+let x = /* before */ Red /* after Red */(
+  /* c0 */ r /* c1 */,
+  /* c2 */ g /* c3 */,
+  /* c4 */ b /* c5 */,
+) /* after */
 
 // lists
-let x /* c0 */ /* c1 */ /* c2 */  = list{}
+let x = /* c0 */ list{/* c1 */} /* c2 */
+/* c0 */ list{/* c1 */} /* c2 */
 
-/* c0 */
-list{}
+let x = /* c0 */ list{/* c1 */ a /* c2 */} /* c3 */
+/* c0 */ list{/* c1 */ a /* c2 */} /* c3 */
 
-/* c1 */ /* c2 */ let x /* c0 */ /* c1 */ /* c2 */ /* c3 */  = list{a}
+let x = /* c0 */ list{/* c1 */ a /* c2 */, /* c3 */ b /* c4 */} /* c5 */
+/* c0 */ list{/* c1 */ a /* c2 */, /* c3 */ b /* c4 */} /* c5 */
 
-/* c0 */
-list{ /* c1 */ a /* c2 */ /* c3 */ }
-
-let x /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5*/  = list{a, b}
-
-/* c0 */
-list{ /* c1 */ a /* c2 */ /* c3 */ /* c4 */ /* c5*/ , b}
-
-let x /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* c6 */ /* c7 */  = list{a, b, c}
-
-/* c0 */
-list{ /* c1 */ a /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* c6 */ /* c7 */ , b, c}
+let x = /* c0 */ list{/* c1 */ a /* c2 */, /* c3 */ b /* c4 */, /* c5 */ c /* c6 */} /* c7 */
+/* c0 */ list{/* c1 */ a /* c2 */, /* c3 */ b /* c4 */, /* c5 */ c /* c6 */} /* c7 */
 
 // Pexp_array
-let x /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */  = [a, b, c]
+let x = [/* c0 */ a /* c1 */, /* c2 */ b /* c3 */, /* c4 */ c /* c5 */]
+let x = [/* a */]
+let x = [
+  // test
+]
 
-let x /* a */  = []
-
-let x = []
-
-// test
 // Pexp_record
-let user /* before */  = {
-// above name
-/* c0 */
-name: /* c1 */ /* c2 */ "Steve" /* c3 */ , 
-// above age
-/* c4 */
-age: /* c5 */ /* c6 */ 31 /* c7 */ } // after
-
+let user = /* before */ {
+  // above name
+  /* c0 */ name /* c1 */: /* c2 */ "Steve" /* c3 */,
+  // above age
+  /* c4 */ age /* c5 */: /* c6 */ 31 /* c7 */,
+} // after
 
 // Pexp_record with empty record
-let user /* before */  = {}
+let user = /* before */ {
+  /* comment1 */
+  // comment2
+} // after
 
-/* comment1 */
-// comment2
-// after
-let user /* before */ /* comment1 */ /* comments2 */ // after
- = {}
+let user = /* before */ {/* comment1 */ /* comments2 */} // after
 
 // bs object sugar
-let user /* before */  = {"name": 
-// above name
-/* c0 */
-/* c1 */ /* c2 */ "Steve" /* c3 */ , "age": 
-// above age
-/* c4 */
-/* c5 */ /* c6 */ 31 /* c7 */ } // after
+let user = /* before */ {
+  // above name
+  /* c0 */ "name" /* c1 */: /* c2 */ "Steve" /* c3 */,
+  // above age
+  /* c4 */ "age" /* c5 */: /* c6 */ 31 /* c7 */,
+} // after
 
-
-let spreadUser /* before */ /* after */ /* c0 */ /*c1 */ /* c2 */ /* c3 */  = {...user1, age: 32}
+let spreadUser = {/* before */ ...user1 /* after */, /* c0 */ age /* c1 */: /* c2 */ 32 /* c3 */}
 
 // Pexp_field
-let x /* before */ /* c0 */ /* c1 */ /* c2 */  = user.name
+let x = /* before */ user /* c0 */./* c1 */ name /* c2 */
 
 // Pexp_setfield
-/* before */
-user /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ .name = "Steve"
+/* before */ user /* c0 */./* c1 */ name /* c2 */ = /* c3 */ "Steve" /* c4 */
 
 // Pexp_ifthenelse
-if /* c0 */ (user /* c1 */ .name === "Steve") {
-  
-  /* c2 */
-  Js.log /* c3 */ ("It's Steve")
+if /* c0 */ user.name === "Steve" /* c1 */ {
+  /* c2 */ Js.log("It's Steve") /* c3 */
 } // trailing
 
-
-if /* c0 */ (user /* c1 */ .name === "John") {
-  
-  /* c2 */
-  Js.log /* c3 */ ("It's Johnâ¦")
+if /* c0 */ user.name === "John" /* c1 */ {
+  /* c2 */ Js.log("It's John…") /* c3 */
 } else {
-  
   // c4
-  
-  /* c5 */
-  Js.log /* c6 */ ("we need John")
+  /* c5 */ Js.log("we need John") /* c6 */
 } // trailing
-
 
 if a {
   b
-} else 
-// test
-if c {
+} // test
+else if c {
   d
 }
 
-let distXToTraverse = if (deltaX < 0.) {
-  
+let distXToTraverse = if deltaX < 0. {
   // wizard to the left
-  if (minRangeX >= (-.deltaX)) {
-    
+  if minRangeX >= -.deltaX {
     // already within min range, aka close enough
     0.
   } else {
     deltaX +. minRangeX
   }
-} else 
-// wizard to the right
-if (minRangeX >= deltaX) {
-  
+} // wizard to the right
+else if minRangeX >= deltaX {
   // already within min range, aka close enough
   0.
 } else {
@@ -242,198 +165,181 @@ if (minRangeX >= deltaX) {
 }
 
 // Pexp_while
-while /* c0 */ condition /* c1 */ .contents {
-  
-  /* c2 */
-  doStuff /* c3 */ (())
+while /* c0 */ condition.contents /* c1 */ {
+  /* c2 */ doStuff() /* c3 */
 } // trailing
-
 
 // Pexp_for
-for /* c0 */ i /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */  in 0 to 10 {
-  
-  /* c6 */
-  doStuff /* c7 */ (())
+for /* c0 */ i /* c1 */ in /* c2 */ 0 /* c3 */ to /* c4 */ 10 /* c5 */ {
+  /* c6 */ doStuff() /* c7 */
 } // trailing
-
 
 // Pexp_pack
-/* c0 */
-module(ModExpr)
+/* c0 */ module(/* c1 */ ModExpr /* c2 */) /* c3 */
+/* c0 */ let /* c1 */ three /* c2 */ = /* c3 */ module(/* c4 */ Three /* c5 */) /* c6 */
 
-/* c1 */ /* c2 */ /* c3 */ 
-/* c0 */
-let /* c1 */ three /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* c6 */  = module(Three)
+/* c0 */ module(/* c1 */ ModExpr: /* c4 */ MyModule /* c5 */) /* c6 */
+/* c0 */ let /* c1 */ three /* c2 */ = /* c3 */ module(
+  /* c4 */ Three: /* c6 */ MyModule /* c7 */
+) /* c8 */
 
-/* c0 */
-(module(ModExpr): /* c1 */ /* c2 */ /* c4 */ module(MyModule) /* c5 */ /* c6 */ )
+/* c0 */ switch /* c1 */ color /* c2 */ {
+// above Red
+/* c0 */ | Red /* c1 */ => /* c2 */ printColor("red") /* ending */
 
-/* c0 */
-let /* c1 */ three /* c2 */ /* c3 */  = (module(Three): 
-/* c4 */
-/* c5 */ /* c6 */ module(MyModule) /* c7 */ ) /* c8 */ 
-
-/* c0 */
-switch /* c1 */ color /* c2 */  {
-  | 
-  // above Red
-  /* c0 */ Red /* c1 */ /* c2 */ /* ending */  => printColor("red")
-  | 
-  // above Blue
-  /* c3 */ Blue /* c4 */ /* c5 */ /* ending */  => printColor("blue")
+// above Blue
+/* c3 */ | Blue /* c4 */ => /* c5 */ printColor("blue") /* ending */
 }
 
-/* c0 */
-try /* c2 */ unsafeIdentifier /* c3 */  catch {
-  | 
-  // Above
-  /* before */ InfiniteLoop /* after */ /* here */ /* trailing */  => ()
-  | 
-  // Above2
-  /* before */ InfiniteLoop2 /* after */ /* here */ /* trailing */  => ()
+/* c0 */ try /* c2 */ unsafeIdentifier /* c3 */ catch {
+// Above
+/* before */ | InfiniteLoop /* after */ => /* here */ () /* trailing */
+
+// Above2
+/* before */ | InfiniteLoop2 /* after */ => /* here */ () /* trailing */
 } // trailing
 
-
 // Pexp_fun
-let f /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* c6 */ /* c7 */  = (a, b): int => 20
-
-let multiply /* c0 */ /* c1 */ /* c2 */ /* c3 */  = (m1, m2) => 
-// here
-{
+let f = (/* c0 */ a /* c1 */, /* c2 */ b /* c3 */): /* c4 */ int /* c5 */ => /* c6 */ 20 /* c7 */
+let multiply = (/* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => {
+  // here
   open Matrix4D
-  let m3 = makeUninitializedUnsafe(())
-  
+
+  let m3 = makeUninitializedUnsafe()
+
   // there
-  
+
   // over there
   m3
+  /* trailing */
+  // test
 }
 
-/* trailing */
-// test
-let multiply /* c0 */ /* c1 */ /* c2 */ /* c3 */  = (~x=m1, ~y=m2) => ()
+let multiply = (~x=/* c0 */ m1 /* c1 */, ~y=/* c2 */ m2 /* c3 */) => ()
 
-let f /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */ /* c6 */ /* c7 */  = (~greeting, ~from as hometown, ~x=?) => ()
+let f = (
+  /* c0 */ ~greeting /* c1 */,
+  /* c2 */ ~from as /* c3 */ /* c4 */ hometown /* c5 */,
+  /* c6 */ ~x=?,
+) => /* c7 */ ()
 
-let multiply /* c-2 */ /* c-1 */ /* c0 */ /* c1 */ /* c2 */ /* c3 */  = (type t) => ((m1, m2) => ())
+let multiply = (type /* c-2 */ t /* c-1 */, /* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => ()
+let multiply = (
+  type /* c-4 */ t /* c-3 */ s,
+  /* c0 */ m1 /* c1 */,
+  /* c-2 */ /* c-1 */ /* c2 */ m2 /* c3 */,
+) => ()
 
-let multiply /* c-4 */ /* c-3 */ /* c0 */ /* c1 */ /* c-2 */ /* c-1 */ /* c2 */ /* c3 */  = (type t) => ((type s) => ((m1, m2) => ()))
-
-f(())
-
-// a
-// b
-// c
 f(
-// a 
-// b
-// c
-())
+  // a
+  // b
+  // c
+  )
+
+f(
+  // a
+  // b
+  // c
+  )
 
 let x = {
-  f(())
-  
-  // a 
-  
-  // b
-  
-  // c
   f(
-  // a 
-  
-  // b
-  
-  // c
-  ())
+    // a
+    // b
+    // c
+    )
+
+  f(
+    // a
+    // b
+    // c
+    )
 }
 
-f((() => 
+f(() => 1)
 // c1
-1))
-
-f((_ => 
+f(_ => 1)
 // c2
-1))
-
-f((a => 
+f(a => 1)
 // c3
-1))
-
-f(((~a) => 
-// c4
-1))
+f((~a) =>
+  // c4
+  1
+)
 
 // ternary
-let x /* c0 */ /* c1 */ /* c2 */ /* c3 */ /* c4 */ /* c5 */  = test ? true : false
+let x = /* c0 */ test /* c1 */ ? /* c2 */ true /* c3 */ : /* c4 */ false /* c5 */
 
 // Pexp_if case, don't duplicate comments
-if (next == Js.null) {
-  
+if next == Js.null {
   /* only one element */
   clear(q)
   Some(contentGet(x))
 } else {
-  lengthSet(q, (lengthGet(q) - 1))
+  lengthSet(q, lengthGet(q) - 1)
   firstSet(q, next)
   Some(contentGet(x))
 }
 
 // Pexp_if with parenthesized condition
-if 
-/* Format.eprintf "@[%a@]@." Printtyp.raw_type_expr ty; */
-(switch ty0.desc {
-  | Tconstr((p, _, _)) => Path.same(p, path)
+if (
+  /* Format.eprintf "@[%a@]@." Printtyp.raw_type_expr ty; */
+  switch ty0.desc {
+  | Tconstr(p, _, _) => Path.same(p, path)
   | _ => false
-}) {
+  }
+) {
   ()
 }
 
 // add end of list of nodes
-Doc.concat(privateFlag, rows)
+Doc.concat(
+  privateFlag,
+  rows,
+  /* a */
+)
+Doc.concat(list{
+  privateFlag,
+  rows,
+  /* a */
+})
 
-/* a */
-Doc.concat(list{privateFlag, rows})
-
-/* a */
 // More record spread test
 type b = {
-  
-// spread a
-...: a,
-  
-// spread c
-...: c,
-  
-// no spread
-b: string
+  // spread a
+  ...a,
+  // spread c
+  ...c,
+  // no spread
+  b: string,
 }
 
 type a = {
-  
-// spread from different module
-...: M.a,
-  
-// spread c
-...: c,
-  
-// no spread
-b: string
+  // spread from different module
+  ...M.a,
+  // spread c
+  ...c,
+  // no spread
+  b: string,
 }
 
-let b = {...
-// exotic
-\"let", 
-// foo
-bar: "foo"}
+let b = {
+  // exotic
+  ...\"let",
+  // foo
+  bar: "foo",
+}
 
-let b = {...
-// quote
-"let", 
-// foo
-bar: "foo"}
+let b = {
+  // quote
+  ..."let",
+  // foo
+  bar: "foo",
+}
 
-let c = {...
-// from different module
-M.a, 
-// foo
-bar: "foo"}
+let c = {
+  // from different module
+  ...M.a,
+  // foo
+  bar: "foo",
+}

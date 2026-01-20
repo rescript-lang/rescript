@@ -1,6 +1,6 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/expressions/unexpectedConstraint.res:4:9
+  syntax_tests/data/parsing/errors/expressions/unexpectedConstraint.res:4:3-13
 
   2 │   let a = 1
   3 │   let b = 2
@@ -8,8 +8,20 @@
   5 │ }
   6 │ 
 
-  Unexpected token: Colon
+  Expressions with type constraints need to be wrapped in parens:
+  (a + b: int)
 
-let x = (let a = 1 in (let b = 2 in ((+ a b); ([%%rescript.exprhole]; int))))
-let x = "hi"
-;;string
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/unexpectedConstraint.res:7:9-20
+
+  5 │ }
+  6 │ 
+  7 │ let x = "hi": string 
+  8 │ 
+
+  Expressions with type constraints need to be wrapped in parens:
+  ("hi": string)
+
+let x = ((let a = 1 in let b = 2 in (a + b : int))[@res.braces ])
+let x = ({js|hi|js} : string)

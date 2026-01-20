@@ -1,15 +1,25 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/polyvariant.res:3:22
+  syntax_tests/data/parsing/errors/typeDef/polyvariant.res:1:13
 
   1 │ type t = [< ]
   2 │ 
   3 │ type z = [< | #A | #B > ]
+
+  I'm not sure what to parse here when looking at "]".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/polyvariant.res:5:15
+
+  3 │ type z = [< | #A | #B > ]
   4 │ 
   5 │ type rec t = []
+  6 │ 
+  7 │ 
 
-  Did you forget a `]` here?
+  I'm not sure what to parse here when looking at "]".
 
-type nonrec t = [<  > ]
-type nonrec z = [< `A | `B > ]
-type t = []
+type nonrec t = [< [%rescript.typehole ]]
+type nonrec z = [< `A  | `B ]
+type t = [ [%rescript.typehole ] | [%rescript.typehole ]]
