@@ -663,6 +663,61 @@ pub fn extract_signature_deps(signature: &[SignatureItem]) -> Dependencies;
    - Reduces file size significantly (e.g., 347→145 bytes for simple file)
    - 75 binary_ast tests pass (2 new string sharing tests added)
 
+### Binary AST Parity Progress 🚧
+
+The goal is byte-identical binary AST output between Rust and OCaml parsers. Current progress:
+
+**Completed Fixes:**
+
+1. ✅ **Constructor Declaration Location**: Fixed parser to include leading `|` in variant constructor locations
+   - Changed `parse_constructors` to capture start position BEFORE consuming the bar
+   - `type t = | A` now has correct constructor_declaration location `(1 9 1 12)` instead of `(1 11 1 12)`
+
+2. ✅ **JSX Tag Name Location**: Fixed parser to use identifier position, not `<` position
+   - Changed `parse_jsx` to capture `tag_name_start` after consuming `<`
+   - `<App />` tag_name location is now `(1 9 1 12)` instead of `(1 8 1 12)`
+
+3. ✅ **Identity-based Position Sharing**: Using `PositionId` for position sharing
+   - Positions with same ID are shared (mimics OCaml's pointer-based sharing)
+   - Default ID (0) positions are not shared
+
+4. ✅ **Identifier String Sharing**: Identifiers are NOT shared
+   - Changed `write_identifier_string` to use `write_str(s)` instead of `write_string_shared(s)`
+   - Each identifier token creates a fresh string (matches OCaml behavior)
+
+**Remaining Work:**
+
+1. 🔴 **ArgLabel Location** (Major): Rust's `ArgLabel::Labelled(String)` needs to become `ArgLabel::Labelled(Located<String>)` to match OCaml's `Labelled of string loc`
+   - This affects ~90 files in the codebase
+   - Primary cause of ~93% of files having AST differences
+   - Files with labeled/optional arguments all fail parity due to this
+
+2. 🟡 **Position Sharing Differences** (Minor): ~5% of files have matching sexp but different binary
+   - Some positions that OCaml shares are not shared in Rust
+   - Needs investigation into OCaml's pointer sharing patterns
+
+**Current Parity Statistics:**
+
+| Metric | Value |
+|--------|-------|
+| Sexp-locs match | ~7% |
+| Binary match | ~5% |
+| ArgLabel-related failures | ~93% |
+
+**Simple cases that work:**
+
+- `let x = 1` ✅
+- `type t = A` ✅
+- `type t = A | B` ✅
+- `type t = | A | B` ✅
+- `<App />` ✅
+- `let f = x => x` ✅
+
+**Cases that fail due to ArgLabel:**
+
+- `let f = (~a, ~b) => a + b` ❌ (missing location on Labelled/Optional)
+- Any file using labeled arguments ❌
+
 ### Binary AST Byte Parity Analysis
 
 **Current Status**: 100% dependency parity, ~0% byte-identical

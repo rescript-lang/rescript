@@ -5,6 +5,7 @@
 
 use std::io::Write;
 
+use crate::location::Located;
 use super::ast::*;
 use super::longident::Longident;
 
@@ -380,12 +381,14 @@ fn get_operator_name(expr: &Expression) -> Option<&str> {
 /// Check if expression needs parens in binary context (operators, function args, etc.)
 fn needs_parens_in_binary_context(expr: &Expression) -> bool {
     match &expr.pexp_desc {
+        // These need parens from outside - they don't have their own
         ExpressionDesc::Pexp_ifthenelse(_, _, _)
         | ExpressionDesc::Pexp_let(_, _, _)
         | ExpressionDesc::Pexp_fun { .. }
-        | ExpressionDesc::Pexp_match(_, _)
-        | ExpressionDesc::Pexp_try(_, _)
-        | ExpressionDesc::Pexp_sequence(_, _) => true,
+        | ExpressionDesc::Pexp_sequence(_, _)
+        | ExpressionDesc::Pexp_await(_) => true,
+        // Note: match, try, while, for already print their own parens in print_expression_ml_inner
+        // so they don't need extra parens here
         ExpressionDesc::Pexp_apply { args, .. } if !args.is_empty() => true,
         _ => false,
     }
@@ -444,14 +447,65 @@ fn needs_parens_as_function_arg(expr: &Expression) -> bool {
     needs_parens_in_binary_context(expr) || application_has_labeled_args(expr)
 }
 
+/// Check if expression already prints its own parens in print_expression_ml_inner
+fn expression_has_own_parens(expr: &Expression) -> bool {
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_match(_, _)
+            | ExpressionDesc::Pexp_try(_, _)
+            | ExpressionDesc::Pexp_while(_, _)
+            | ExpressionDesc::Pexp_for(_, _, _, _, _)
+            | ExpressionDesc::Pexp_assert(_)
+    )
+}
+
 /// Print expression with parens if needed as a function argument
 fn print_expression_ml_parens_if_complex(expr: &Expression, out: &mut impl Write) {
-    if needs_parens_as_function_arg(expr) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+    let needs_parens = needs_parens_as_function_arg(expr);
+    let has_own_parens = expression_has_own_parens(expr);
+
+    // Expressions with attributes need the ((expr)[@attr]) format
+    if has_attrs {
+        // For expressions that have their own parens (match/try/etc.), use (expr[@attr])
+        // For other expressions, use ((expr)[@attr])
+        if has_own_parens {
+            // Expression already has its own parens, just wrap with one outer paren
+            let _ = write!(out, "(");
+            print_expression_ml_inner(expr, out, false);
+            for (name, payload) in attrs {
+                let _ = write!(out, "[@{}", name.txt);
+                if !payload_is_empty(payload) {
+                    let _ = write!(out, " ");
+                    print_payload_ml(payload, out);
+                }
+                let _ = write!(out, " ]");
+            }
+            let _ = write!(out, ")");
+        } else {
+            // Expression doesn't have its own parens, use double parens
+            let _ = write!(out, "((");
+            print_expression_ml_inner(expr, out, false);
+            let _ = write!(out, ")");
+            for (name, payload) in attrs {
+                let _ = write!(out, "[@{}", name.txt);
+                if !payload_is_empty(payload) {
+                    let _ = write!(out, " ");
+                    print_payload_ml(payload, out);
+                }
+                let _ = write!(out, " ]");
+            }
+            let _ = write!(out, ")");
+        }
+    } else if needs_parens && !has_own_parens {
+        // Complex expression that doesn't have its own parens - wrap in parens
         let _ = write!(out, "(");
         print_expression_ml_inner(expr, out, false);
         let _ = write!(out, ")");
     } else {
-        print_expression_ml(expr, out);
+        // Either not complex, or expression has its own parens (match/try/etc.)
+        print_expression_ml_inner(expr, out, false);
     }
 }
 

@@ -96,14 +96,15 @@ pub enum Variance {
 }
 
 /// Argument label for function parameters.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Note: Labelled and Optional include a location to match OCaml's `Labelled of string loc`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ArgLabel {
     /// No label.
     Nolabel,
-    /// Labeled argument: `~foo`.
-    Labelled(String),
-    /// Optional argument: `?foo`.
-    Optional(String),
+    /// Labeled argument: `~foo` with location.
+    Labelled(Located<String>),
+    /// Optional argument: `?foo` with location.
+    Optional(Located<String>),
 }
 
 impl ArgLabel {
@@ -119,6 +120,14 @@ impl ArgLabel {
 
     /// Get the label name, if any.
     pub fn name(&self) -> Option<&str> {
+        match self {
+            ArgLabel::Nolabel => None,
+            ArgLabel::Labelled(s) | ArgLabel::Optional(s) => Some(&s.txt),
+        }
+    }
+
+    /// Get the located string, if any.
+    pub fn located(&self) -> Option<&Located<String>> {
         match self {
             ArgLabel::Nolabel => None,
             ArgLabel::Labelled(s) | ArgLabel::Optional(s) => Some(s),

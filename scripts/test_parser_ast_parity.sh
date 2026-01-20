@@ -126,6 +126,24 @@ while read -r file; do
             safe_name=$(echo "$file" | tr '/' '_')
             diff -u "$ocaml_output" "$rust_output" > "$diff_dir/$safe_name.diff" 2>&1 || true
         fi
+
+        # Also test sexp-locs output (with locations)
+        ocaml_locs_output="$TEMP_DIR/ocaml.sexp-locs"
+        rust_locs_output="$TEMP_DIR/rust.sexp-locs"
+
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -print sexp-locs "$file" > "$ocaml_locs_output" 2>/dev/null && \
+           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --print sexp-locs "$file" > "$rust_locs_output" 2>/dev/null; then
+            if ! diff -q "$ocaml_locs_output" "$rust_locs_output" > /dev/null 2>&1; then
+                locs_diff_count=$((locs_diff_count + 1))
+                locs_diff_files="$locs_diff_files$file\n"
+
+                # Save diff for later inspection
+                diff_dir="$TEMP_DIR/locs_diffs"
+                mkdir -p "$diff_dir"
+                safe_name=$(echo "$file" | tr '/' '_')
+                diff -u "$ocaml_locs_output" "$rust_locs_output" > "$diff_dir/$safe_name.diff" 2>&1 || true
+            fi
+        fi
     fi
 
 done < "$TEMP_DIR/files.txt"
@@ -141,11 +159,12 @@ echo -e "${BOLD}============================================${RESET}"
 echo ""
 
 echo -e "${BOLD}Summary:${RESET}"
-echo "  Total files tested:     $TOTAL_FILES"
-echo "  AST matches (PASS):     $pass_count"
-echo "  AST mismatches (DIFF):  $diff_count"
-echo "  OCaml parse failures:   $ocaml_fail_count"
-echo "  Rust parse failures:    $rust_fail_count"
+echo "  Total files tested:      $TOTAL_FILES"
+echo "  AST matches (PASS):      $pass_count"
+echo "  AST mismatches (DIFF):   $diff_count"
+echo "  Location mismatches:     $locs_diff_count"
+echo "  OCaml parse failures:    $ocaml_fail_count"
+echo "  Rust parse failures:     $rust_fail_count"
 echo ""
 
 # Show AST mismatches
@@ -166,6 +185,31 @@ if [[ $diff_count -gt 0 ]]; then
     if [[ -n "$first_diff" ]]; then
         head -50 "$first_diff"
         lines=$(wc -l < "$first_diff")
+        if [[ $lines -gt 50 ]]; then
+            echo "  ... (diff truncated, $lines total lines)"
+        fi
+    fi
+    echo ""
+fi
+
+# Show location mismatches
+if [[ $locs_diff_count -gt 0 ]]; then
+    echo -e "${BOLD}${YELLOW}Files with location differences ($locs_diff_count):${RESET}"
+    echo -e "$locs_diff_files" | grep -v "^$" | head -30 | while read file; do
+        echo "  $file"
+    done
+    if [[ $locs_diff_count -gt 30 ]]; then
+        remaining=$((locs_diff_count - 30))
+        echo "  ... and $remaining more"
+    fi
+    echo ""
+
+    # Show first locs diff as example
+    echo -e "${BOLD}Example location diff (first file):${RESET}"
+    first_locs_diff=$(ls "$TEMP_DIR/locs_diffs/"*.diff 2>/dev/null | head -1)
+    if [[ -n "$first_locs_diff" ]]; then
+        head -50 "$first_locs_diff"
+        lines=$(wc -l < "$first_locs_diff")
         if [[ $lines -gt 50 ]]; then
             echo "  ... (diff truncated, $lines total lines)"
         fi
@@ -205,14 +249,17 @@ fi
 echo -e "${BOLD}============================================${RESET}"
 
 # Determine exit status
-if [[ $diff_count -eq 0 && $pass_count -gt 0 ]]; then
-    echo -e "${GREEN}${BOLD}SUCCESS: All $pass_count comparable files have identical ASTs!${RESET}"
+if [[ $diff_count -eq 0 && $locs_diff_count -eq 0 && $pass_count -gt 0 ]]; then
+    echo -e "${GREEN}${BOLD}SUCCESS: All $pass_count comparable files have identical ASTs and locations!${RESET}"
     exit 0
 elif [[ $pass_count -eq 0 ]]; then
     echo -e "${RED}${BOLD}ERROR: No files could be compared${RESET}"
     exit 1
-else
+elif [[ $diff_count -gt 0 ]]; then
     pct_match=$(python3 -c "print(f'{100 * $pass_count / ($pass_count + $diff_count):.1f}')")
     echo -e "${RED}${BOLD}FAILED: $diff_count files have AST differences ($pct_match% match)${RESET}"
+    exit 1
+elif [[ $locs_diff_count -gt 0 ]]; then
+    echo -e "${YELLOW}${BOLD}WARNING: All ASTs match, but $locs_diff_count files have location differences${RESET}"
     exit 1
 fi
