@@ -26,6 +26,7 @@
 
 #### :rocket: New Feature
 
+- Reanalyze: add scoped `@@live`/`@@dead` annotations for marking module/file sections as live or dead. https://github.com/rescript-lang/rescript/pull/8197
 - Add completions for `throw`. https://github.com/rescript-lang/rescript/pull/7905
 
 #### :bug: Bug fix
