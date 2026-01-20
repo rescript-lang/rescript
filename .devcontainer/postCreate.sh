@@ -9,6 +9,8 @@ opam install . --deps-only --with-test --with-dev-setup -y
 echo 'eval $(opam env)' >> ~/.zshrc
 echo 'eval $(opam env)' >> ~/.bashrc
 
+eval $(opam env)
+
 nvm install
 
 corepack enable
