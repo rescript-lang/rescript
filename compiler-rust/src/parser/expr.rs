@@ -1719,9 +1719,14 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 }
                 // Array indexing or assignment
                 let start = expr.pexp_loc.loc_start.clone();
+                // Capture the bracket location for Array.set/get identifiers
+                // OCaml uses the location from [ to ] for synthesized Array.set/get
+                let lbracket_start = p.start_pos.clone();
                 p.next();
                 let index = parse_constrained_or_coerced_expr(p);
                 p.expect(Token::Rbracket);
+                let rbracket_end = p.prev_end_pos.clone();
+                let bracket_loc = p.mk_loc(&lbracket_start, &rbracket_end);
 
                 if p.token == Token::Equal {
                     let equal_start = p.start_pos.clone();
@@ -1764,14 +1769,14 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         );
                     } else {
                         // Non-string index: arr[index] = value -> Array.set(arr, index, value)
-                        // Use the `=` operator location for the synthesized Array.set identifier
-                        let operator_loc = p.mk_loc(&equal_start, &equal_end);
+                        // Use the bracket location [index] for the synthesized Array.set identifier
+                        // (matching OCaml's array_loc = mk_loc lbracket rbracket)
                         let array_set = ast_helper::make_ident(
                             Longident::Ldot(
                                 Box::new(Longident::Lident("Array".to_string())),
                                 "set".to_string(),
                             ),
-                            operator_loc,
+                            bracket_loc.clone(),
                         );
                         let mut apply_expr = ast_helper::make_apply(
                             array_set,
