@@ -11,10 +11,12 @@
   "package-specs": [
     {
       "module": "commonjs",
+      "suffix": ".cjs",
       "in-source": false
     },
     {
       "module": "esmodule",
+      "suffix": ".mjs",
       "in-source": false
     }
   ],

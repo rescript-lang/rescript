@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Stdlib_Lazy from "@rescript/runtime/lib/es6/Stdlib_Lazy.js";
+import * as Stdlib_Lazy from "@rescript/runtime/lib/es6/Stdlib_Lazy.mjs";
 
 let u = {
   contents: 3

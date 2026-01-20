@@ -2,8 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.js";
-import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
+import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
 
 function f1(x) {
   if (x !== null) {

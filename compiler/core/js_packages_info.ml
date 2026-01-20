@@ -51,15 +51,7 @@ let runtime_package_path (ms : module_system) js_file =
 
 type t = {name: package_name; module_systems: package_info list}
 
-let runtime_package_specs : t =
-  {
-    name = Pkg_runtime;
-    module_systems =
-      [
-        {module_system = Esmodule; path = "lib/es6"; suffix = Literals.suffix_js};
-        {module_system = Commonjs; path = "lib/js"; suffix = Literals.suffix_js};
-      ];
-  }
+let runtime_package_specs : t = {name = Pkg_runtime; module_systems = []}
 
 let same_package_by_name (x : t) (y : t) =
   match x.name with
@@ -201,15 +193,3 @@ let add_npm_package_path (packages_info : t) (s : string) : t =
       | _ -> Bsc_args.bad_arg ("invalid npm package path: " ^ s)
     in
     {packages_info with module_systems = m :: packages_info.module_systems}
-
-(* support es6 modules instead
-   TODO: enrich ast to support import export
-   http://www.ecma-international.org/ecma-262/6.0/#sec-imports
-   For every module, we need [Ident.t] for accessing and [filename] for import,
-   they are not necessarily the same.
-
-   Es6 modules is not the same with commonjs, we use commonjs currently
-   (play better with node)
-
-   FIXME: the module order matters?
-*)

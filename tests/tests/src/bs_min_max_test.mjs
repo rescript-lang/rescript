@@ -2,8 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.js";
-import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
+import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 
 function f(x, y) {
   return Primitive_int.compare(x + y | 0, y + x | 0);

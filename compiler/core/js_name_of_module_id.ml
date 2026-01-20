@@ -31,7 +31,7 @@ let string_of_module_id_in_browser (x : Lam_module_ident.t) =
   match x.kind with
   | External {name} -> name
   | Runtime | Ml -> 
-    "./stdlib/" ^ x.id.name ^ ".js"
+    "./stdlib/" ^ x.id.name ^ ".mjs"
 
 let string_of_module_id 
     (id : Lam_module_ident.t)
@@ -48,6 +48,11 @@ let fix_path_for_windows : string -> string =
   if Ext_sys.is_windows_or_cygwin then Ext_string.replace_backward_slash
   else fun s -> s 
 
+let runtime_suffix_of_module_system (module_system : Js_packages_info.module_system)
+    =
+  match module_system with
+  | Commonjs -> ".cjs"
+  | Esmodule -> ".mjs"
 
 (* dependency is runtime module *)  
 let get_runtime_module_path 
@@ -59,7 +64,7 @@ let get_runtime_module_path
       module_system  in
   let js_file =  
     Ext_namespace.js_name_of_modulename dep_module_id.id.name 
-      Upper Literals.suffix_js in 
+      Upper (runtime_suffix_of_module_system module_system) in 
   match current_info_query with        
   | Package_not_found -> assert false
   | Package_script -> 

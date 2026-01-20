@@ -2,8 +2,8 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
-import * as Js_null_undefined from "@rescript/runtime/lib/es6/Js_null_undefined.js";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
+import * as Js_null_undefined from "@rescript/runtime/lib/es6/Js_null_undefined.mjs";
 
 Mocha.describe("Js_null_undefined_test", () => {
   Mocha.test("toOption - null", () => Test_utils.eq("File \"js_null_undefined_test.res\", line 7, characters 7-14", undefined, undefined));

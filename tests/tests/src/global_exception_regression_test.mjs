@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.mjs";
 
 let v = {
   RE_EXN_ID: "Not_found"
