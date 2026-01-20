@@ -99,10 +99,10 @@ let _escaped_jsx_prop = <MyWeirdComponent \"MyWeirdProp"="bar" />
 let _large_component =
   <div title="foo" className="bar" tabIndex={1} onClick={_ => ()} onMouseDown={_ => ()}>
     <p title="foo" className="bar" tabIndex={1} onClick={_ => ()} onMouseDown={_ => ()}>
-    {React.string("Hello, world!")}
+      {React.string("Hello, world!")}
     </p>
     <strong title="foo" className="bar" tabIndex={1} onClick={_ => ()} onMouseDown={_ => ()}>
-    {React.string("Hello, world!")}
+      {React.string("Hello, world!")}
     </strong>
     <p>{React.int(5)}</p>
   </div>

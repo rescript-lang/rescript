@@ -8,20 +8,22 @@ let make = (~vehicle) => {
 
   <div>
     <p>
-    {React.string(
-      "Hooks example " ++ (vehicle.name ++ (" clicked " ++ (Belt.Int.toString(count) ++ " times"))),
-    )}
+      {React.string(
+        "Hooks example " ++
+        (vehicle.name ++
+        (" clicked " ++ (Belt.Int.toString(count) ++ " times"))),
+      )}
     </p>
     <button onClick={_ => setCount(_ => count + 1)}>{React.string("Click me")}</button>
     <ImportHooks person={name: "Mary", age: 71} renderMe={x => React.string(x["randomString"])}>
-    {React.string("child1")}
-    {React.string("child2")}
+      {React.string("child1")}
+      {React.string("child2")}
     </ImportHooks>
     <ImportHookDefault
       person={name: "DefaultImport", age: 42} renderMe={x => React.string(x["randomString"])}
     >
-    {React.string("child1")}
-    {React.string("child2")}
+      {React.string("child1")}
+      {React.string("child2")}
     </ImportHookDefault>
   </div>
 }

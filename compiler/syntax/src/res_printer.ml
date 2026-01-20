@@ -4586,8 +4586,9 @@ and print_jsx_container_tag ~state tag_name
       (* For simple children, try to keep them on the same line as the tags *)
       Doc.concat
         [
-          Doc.soft_line;
-          print_jsx_children ~state children cmt_tbl;
+          Doc.indent
+            (Doc.concat
+               [Doc.soft_line; print_jsx_children ~state children cmt_tbl]);
           Doc.soft_line;
         ]
     else

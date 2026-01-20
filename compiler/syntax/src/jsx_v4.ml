@@ -1274,7 +1274,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
   let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
   Exp.apply ~loc ~attrs ~transformed_jsx:true jsx_expr args
 
-(* In most situations, the component name is the make function from a module. 
+(* In most situations, the component name is the make function from a module.
     However, if the name contains a lowercase letter, it means it probably an external component.
     In this case, we use the name as is.
     See tests/syntax_tests/data/ppx/react/externalWithCustomName.res
@@ -1348,6 +1348,17 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
       | JsxTagInvalid name ->
         Jsx_common.raise_error ~loc
           "JSX: element name is neither upper- or lowercase, got \"%s\"" name))
+  | {
+   pexp_desc = Pexp_jsx_text {jsx_text_content = text};
+   pexp_loc = loc;
+   pexp_attributes = attrs;
+  } ->
+    (* Transform JSX text to React.string("text") *)
+    let react_string_ident =
+      Exp.ident ~loc {loc; txt = module_access_name config "string"}
+    in
+    let string_const = Exp.constant ~loc (Pconst_string (text, None)) in
+    Exp.apply ~loc ~attrs react_string_ident [(Nolabel, string_const)]
   | e -> default_mapper.expr mapper e
 
 let module_binding ~(config : Jsx_common.jsx_config) mapper module_binding =
