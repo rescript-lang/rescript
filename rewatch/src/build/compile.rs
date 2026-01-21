@@ -547,7 +547,7 @@ pub fn compiler_args(
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
-                        spec.module,
+                        spec.module.as_str(),
                         if spec.in_source {
                             file_path.parent().unwrap().to_str().unwrap().to_string()
                         } else {

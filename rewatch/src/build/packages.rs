@@ -75,7 +75,7 @@ pub fn get_js_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("js")
 }
 
-pub fn get_es6_path(canonical_path: &Path) -> PathBuf {
+pub fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("es6")
 }
 
@@ -100,8 +100,8 @@ impl Package {
         get_js_path(&self.path)
     }
 
-    pub fn get_es6_path(&self) -> PathBuf {
-        get_es6_path(&self.path)
+    pub fn get_esmodule_path(&self) -> PathBuf {
+        get_esmodule_path(&self.path)
     }
 
     pub fn get_mlmap_path(&self) -> PathBuf {
@@ -690,9 +690,9 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                         helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
                     })
                 } else {
-                    helpers::create_path(&package.get_es6_path());
+                    helpers::create_path(&package.get_esmodule_path());
                     relative_dirs.iter().for_each(|path_buf| {
-                        helpers::create_path_for_path(&Path::join(&package.get_es6_path(), path_buf))
+                        helpers::create_path_for_path(&Path::join(&package.get_esmodule_path(), path_buf))
                     })
                 }
             }

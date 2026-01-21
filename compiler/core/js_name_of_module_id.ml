@@ -76,26 +76,7 @@ let get_runtime_module_path
             which is guaranteed by [-bs-package-output]
         *)
     else  
-      match module_system with 
-      | Commonjs | Esmodule -> 
-        Js_packages_info.runtime_package_path module_system js_file              
-      (* Note we did a post-processing when working on Windows *)
-      | Es6_global 
-        -> 
-        (* lib/ocaml/xx.cmj --               
-            HACKING: FIXME
-            maybe we can caching relative package path calculation or employ package map *)
-        (* assert false  *)
-        Ext_path.rel_normalized_absolute_path              
-          ~from:(
-            Js_packages_info.get_output_dir 
-              current_package_info
-              ~package_dir:(Lazy.force Ext_path.package_dir)
-              module_system )
-          (*Invariant: the package path to rescript, it is used to 
-            calculate relative js path
-          *)
-          (!Runtime_package.path // dep_path // js_file)
+      Js_packages_info.runtime_package_path module_system js_file              
 
 (* [output_dir] is decided by the command line argument *)
 let string_of_module_id 
@@ -157,24 +138,7 @@ let string_of_module_id
           else  
           if Js_packages_info.is_runtime_package dep_package_info then 
             get_runtime_module_path dep_module_id current_package_info module_system
-          else 
-            begin match module_system with 
-              | Commonjs | Esmodule -> 
-                dep_pkg.pkg_rel_path // js_file
-              (* Note we did a post-processing when working on Windows *)
-              | Es6_global 
-                ->             
-                begin 
-                  Ext_path.rel_normalized_absolute_path              
-                    ~from:(
-                      Js_packages_info.get_output_dir 
-                        current_package_info
-                        ~package_dir:(Lazy.force Ext_path.package_dir)
-                        module_system 
-                    )
-                    (package_path // dep_pkg.rel_path // js_file)              
-                end
-            end
+          else dep_pkg.pkg_rel_path // js_file
         | Package_script, Package_script 
           -> 
           let js_file =  

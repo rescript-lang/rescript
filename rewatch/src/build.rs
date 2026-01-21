@@ -15,7 +15,7 @@ use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, wri
 use crate::helpers::emojis::*;
 use crate::helpers::{self};
 use crate::project_context::ProjectContext;
-use crate::{config, sourcedirs};
+use crate::sourcedirs;
 use anyhow::{Context, Result, anyhow};
 use build_types::*;
 use console::style;
@@ -417,17 +417,6 @@ fn log_config_warnings(build_state: &BuildCommandState) {
     build_state.packages.iter().for_each(|(_, package)| {
         // Only warn for local dependencies, not external packages
         if package.is_local_dep {
-            package.config.get_deprecations().iter().for_each(
-                |deprecation_warning| match deprecation_warning {
-                    config::DeprecationWarning::PackageSpecsEs6 => {
-                        log_deprecated_package_specs_module("es6");
-                    }
-                    config::DeprecationWarning::PackageSpecsEs6Global => {
-                        log_deprecated_package_specs_module("es6-global");
-                    }
-                },
-            );
-
             package
                 .config
                 .get_unsupported_fields()
@@ -441,11 +430,6 @@ fn log_config_warnings(build_state: &BuildCommandState) {
                 .for_each(|field| log_unknown_config_field(&package.name, field));
         }
     });
-}
-
-fn log_deprecated_package_specs_module(module_name: &str) {
-    let warning = format!("deprecated: Option \"{module_name}\" is deprecated. Use \"esmodule\" instead.");
-    eprintln!("\n{}", style(warning).yellow());
 }
 
 fn log_unsupported_config_field(package_name: &str, field_name: &str) {

@@ -155,9 +155,9 @@ let read_config ~get_config_file ~namespace =
       (* Give priority to gentypeconfig, followed by package-specs *)
       match (module_string, package_specs_module_string) with
       | Some "commonjs", _ -> CommonJS
-      | Some ("esmodule" | "es6"), _ -> ESModule
+      | Some "esmodule", _ -> ESModule
       | None, Some "commonjs" -> CommonJS
-      | None, Some ("esmodule" | "es6" | "es6-global") -> ESModule
+      | None, Some "esmodule" -> ESModule
       | _ -> default.module_
     in
     let module_resolution =

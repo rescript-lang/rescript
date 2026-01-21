@@ -147,23 +147,40 @@ impl Eq for Source {}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct PackageSpec {
-    pub module: String,
+    pub module: PackageModule,
     #[serde(rename = "in-source", default = "default_true")]
     pub in_source: bool,
     pub suffix: Option<String>,
 }
 
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+pub enum PackageModule {
+    #[serde(rename = "commonjs")]
+    CommonJs,
+    #[serde(rename = "esmodule")]
+    EsModule,
+}
+
+impl PackageModule {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PackageModule::CommonJs => "commonjs",
+            PackageModule::EsModule => "esmodule",
+        }
+    }
+}
+
 impl PackageSpec {
     pub fn get_out_of_source_dir(&self) -> String {
-        match self.module.as_str() {
-            "commonjs" => "js",
-            _ => "es6",
+        match self.module {
+            PackageModule::CommonJs => "js",
+            PackageModule::EsModule => "es6",
         }
         .to_string()
     }
 
     pub fn is_common_js(&self) -> bool {
-        self.module.as_str() == "commonjs"
+        self.module == PackageModule::CommonJs
     }
 
     pub fn get_suffix(&self) -> Option<String> {
@@ -227,10 +244,7 @@ pub struct JsPostBuild {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum DeprecationWarning {
-    PackageSpecsEs6,
-    PackageSpecsEs6Global,
-}
+pub enum DeprecationWarning {}
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ExperimentalFeature {
@@ -444,6 +458,10 @@ impl Config {
 
     /// Try to convert a config from a string to a config struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(config_str) {
+            validate_package_specs_value(&value)?;
+        }
+
         let mut deserializer = serde_json::Deserializer::from_str(config_str);
         let mut tracker = serde_path_to_error::Track::new();
         let path_deserializer = serde_path_to_error::Deserializer::new(&mut deserializer, &mut tracker);
@@ -626,7 +644,7 @@ impl Config {
     pub fn get_package_specs(&self) -> Vec<PackageSpec> {
         match self.package_specs.clone() {
             None => vec![PackageSpec {
-                module: "commonjs".to_string(),
+                module: PackageModule::CommonJs,
                 in_source: true,
                 suffix: Some(".js".to_string()),
             }],
@@ -717,24 +735,45 @@ impl Config {
     }
 
     fn handle_deprecations(&mut self) -> Result<()> {
-        let (has_es6, has_es6_global) = match &self.package_specs {
-            None => (false, false),
-            Some(OneOrMore::Single(spec)) => (spec.module == "es6", spec.module == "es6-global"),
-            Some(OneOrMore::Multiple(specs)) => (
-                specs.iter().any(|spec| spec.module == "es6"),
-                specs.iter().any(|spec| spec.module == "es6-global"),
-            ),
-        };
-        if has_es6 {
-            self.deprecation_warnings
-                .push(DeprecationWarning::PackageSpecsEs6);
-        }
-        if has_es6_global {
-            self.deprecation_warnings
-                .push(DeprecationWarning::PackageSpecsEs6Global);
-        }
-
         Ok(())
+    }
+}
+
+fn validate_package_specs_value(value: &serde_json::Value) -> Result<()> {
+    let specs = match value.get("package-specs") {
+        Some(specs) => specs,
+        None => return Ok(()),
+    };
+
+    match specs {
+        serde_json::Value::Array(specs) => {
+            for spec in specs {
+                validate_package_spec_value(spec)?;
+            }
+        }
+        serde_json::Value::Object(_) => validate_package_spec_value(specs)?,
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
+    let module = match value.get("module") {
+        Some(module) => module,
+        None => return Ok(()),
+    };
+
+    let module = match module.as_str() {
+        Some(module) => module,
+        None => return Ok(()),
+    };
+
+    match module {
+        "commonjs" | "esmodule" => Ok(()),
+        other => Err(anyhow!(
+            "Module system \"{other}\" is unsupported. Expected \"commonjs\" or \"esmodule\"."
+        )),
     }
 }
 
@@ -784,7 +823,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ]
         }
@@ -794,7 +833,7 @@ pub mod tests {
         let specs = config.get_package_specs();
         assert_eq!(specs.len(), 1);
         let spec = specs.first().unwrap();
-        assert_eq!(spec.module, "es6");
+        assert_eq!(spec.module, PackageModule::EsModule);
         assert_eq!(config.get_suffix(spec), ".mjs");
     }
 
@@ -871,7 +910,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "gentypeconfig": {
@@ -892,7 +931,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": {
@@ -921,7 +960,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": { "version": 4, "preserve": true }
@@ -953,7 +992,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -1037,11 +1076,9 @@ pub mod tests {
         }
         "#;
 
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(
-            config.get_deprecations(),
-            [DeprecationWarning::PackageSpecsEs6Global]
-        );
+        let err = Config::new_from_json_string(json).unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("Module system \"es6-global\" is unsupported"));
     }
 
     #[test]
@@ -1063,8 +1100,9 @@ pub mod tests {
         }
         "#;
 
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::PackageSpecsEs6]);
+        let err = Config::new_from_json_string(json).unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("Module system \"es6\" is unsupported"));
     }
 
     #[test]

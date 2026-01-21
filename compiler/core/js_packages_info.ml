@@ -32,7 +32,6 @@ let compatible (dep : module_system) (query : module_system) =
   match query with
   | Commonjs -> dep = Commonjs
   | Esmodule -> dep = Esmodule
-  | Es6_global -> dep = Es6_global || dep = Esmodule
 (* As a dependency Leaf Node, it is the same either [global] or [not] *)
 
 type package_info = {module_system: module_system; path: string; suffix: string}
@@ -41,11 +40,11 @@ type package_name = Pkg_empty | Pkg_runtime | Pkg_normal of string
 
 let ( // ) = Filename.concat
 
-(* in runtime lib, [es6] and [es6] are treated the same wway *)
+(* We keep the dir names "js" and "es6" (instead of "commonjs" and "esmodule") for compatibility. *)
 let runtime_dir_of_module_system (ms : module_system) =
   match ms with
   | Commonjs -> "js"
-  | Esmodule | Es6_global -> "es6"
+  | Esmodule -> "es6"
 
 let runtime_package_path (ms : module_system) js_file =
   Runtime_package.name // "lib" // runtime_dir_of_module_system ms // js_file
@@ -101,13 +100,11 @@ let string_of_module_system (ms : module_system) =
   match ms with
   | Commonjs -> "CommonJS"
   | Esmodule -> "ESModule"
-  | Es6_global -> "Es6_global"
 
 let module_system_of_string package_name : module_system option =
   match package_name with
   | "commonjs" -> Some Commonjs
-  | "esmodule" | "es6" -> Some Esmodule
-  | "es6-global" -> Some Es6_global
+  | "esmodule" -> Some Esmodule
   | _ -> None
 
 let dump_package_info (fmt : Format.formatter)

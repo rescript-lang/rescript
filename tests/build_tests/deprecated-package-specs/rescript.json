@@ -1,7 +1,0 @@
-{
-  "name": "deprecated-package-specs",
-  "sources": "src",
-  "package-specs": {
-    "module": "es6-global"
-  }
-}
