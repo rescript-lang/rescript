@@ -1,6 +1,5 @@
 'use strict';
 
-let Stdlib_JsError = require("./Stdlib_JsError.js");
 let Primitive_option = require("./Primitive_option.js");
 
 function filter(opt, p) {
@@ -18,9 +17,9 @@ function forEach(opt, f) {
 function getOrThrow(x, message) {
   if (x !== undefined) {
     return Primitive_option.valFromOption(x);
-  } else {
-    return Stdlib_JsError.panic(message !== undefined ? message : "Option.getOrThrow called for None value");
   }
+  let msg = message !== undefined ? message : "Option.getOrThrow called for None value";
+  throw new Error(`Panic! ${msg}`);
 }
 
 function mapOr(opt, $$default, f) {

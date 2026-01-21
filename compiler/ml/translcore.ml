@@ -663,6 +663,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_ident (path, _, {val_kind = Val_reg}) ->
     transl_value_path ~loc:e.exp_loc e.exp_env path
   | Texp_constant cst -> Lconst (Const_base cst)
+  | Texp_template {strings; expressions; _} ->
+    let args = List.map transl_exp expressions in
+    Lprim (Pstringtemplate strings, args, e.exp_loc)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
   | Texp_function {arg_label = _; arity; param; case; partial; async} -> (

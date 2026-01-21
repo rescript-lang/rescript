@@ -171,6 +171,7 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
     false
   | Await _ -> false
   | Spread _ -> false
+  | Template_literal _ -> false
   | Tagged_template _ -> false
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
@@ -697,6 +698,23 @@ and expression_desc cxt ~(level : int) f x : cxt =
             expression ~level:1 cxt f el))
   | Tagged_template (call_expr, string_args, value_args) ->
     let cxt = expression cxt ~level f call_expr in
+    P.string f "`";
+    let rec aux cxt xs ys =
+      match (xs, ys) with
+      | [], [] -> ()
+      | [{J.expression_desc = Str {txt; _}}], [] -> P.string f txt
+      | {J.expression_desc = Str {txt; _}} :: x_rest, y :: y_rest ->
+        P.string f txt;
+        P.string f "${";
+        let cxt = expression cxt ~level f y in
+        P.string f "}";
+        aux cxt x_rest y_rest
+      | _ -> assert false
+    in
+    aux cxt string_args value_args;
+    P.string f "`";
+    cxt
+  | Template_literal (string_args, value_args) ->
     P.string f "`";
     let rec aux cxt xs ys =
       match (xs, ys) with

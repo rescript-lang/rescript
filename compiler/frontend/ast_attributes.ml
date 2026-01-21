@@ -224,6 +224,13 @@ type as_const_payload = Int of int | Str of string * External_arg_spec.delim
 
 let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
   let st = ref None in
+  let string_payload_loc payload =
+    match payload with
+    | Parsetree.PStr [{pstr_desc = Parsetree.Pstr_eval ({pexp_loc; _}, _); _}]
+      ->
+      Some pexp_loc
+    | _ -> None
+  in
   Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
       match txt with
       | "as" ->
@@ -231,41 +238,31 @@ let iter_process_bs_string_or_int_as (attrs : Parsetree.attributes) =
           Used_attributes.mark_used_attribute attr;
           match Ast_payload.is_single_int payload with
           | None -> (
-            match payload with
-            | PStr
-                [
-                  {
-                    pstr_desc =
-                      Pstr_eval
-                        ( {
-                            pexp_desc = Pexp_constant (Pconst_string (s, delim_));
-                            pexp_loc;
-                            _;
-                          },
-                          _ );
-                    _;
-                  };
-                ]
-              when Ast_utf8_string_interp.parse_processed_delim delim_ <> None
-              -> (
-              let delim =
-                match Ast_utf8_string_interp.parse_processed_delim delim_ with
-                | None -> assert false
-                | Some delim -> delim
-              in
-              st := Some (Str (s, delim));
-              if delim = DNoQuotes then
-                (* check that it is a valid object literal *)
-                match
-                  Classify_function.classify
-                    ~check:(pexp_loc, Bs_flow_ast_utils.flow_deli_offset delim_)
-                    s
-                with
-                | Js_literal _ -> ()
-                | _ ->
-                  Location.raise_errorf ~loc:pexp_loc
-                    "an object literal expected")
-            | _ -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)
+            match Ast_payload.is_single_string payload with
+            | Some (s, delim_) -> (
+              match Ast_utf8_string_interp.parse_processed_delim delim_ with
+              | None ->
+                Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal
+              | Some delim -> (
+                let payload_loc =
+                  match string_payload_loc payload with
+                  | Some payload_loc -> payload_loc
+                  | None -> loc
+                in
+                st := Some (Str (s, delim));
+                if delim = DNoQuotes then
+                  (* check that it is a valid object literal *)
+                  match
+                    Classify_function.classify
+                      ~check:
+                        (payload_loc, Bs_flow_ast_utils.flow_deli_offset delim_)
+                      s
+                  with
+                  | Js_literal _ -> ()
+                  | _ ->
+                    Location.raise_errorf ~loc:payload_loc
+                      "an object literal expected"))
+            | None -> Bs_syntaxerr.err loc Expect_int_or_string_or_json_literal)
           | Some v -> st := Some (Int v))
         else raise (Ast_untagged_variants.Error (loc, Duplicated_bs_as))
       | _ -> ());

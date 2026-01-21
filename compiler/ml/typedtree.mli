@@ -123,6 +123,7 @@ and expression_desc =
             M.x
          *)
   | Texp_constant of constant  (** 1, 'a', "true", 1.0, 1l, 1L, 1n *)
+  | Texp_template of template_literal
   | Texp_let of rec_flag * value_binding list * expression
       (** let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
             let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
@@ -224,6 +225,12 @@ and expression_desc =
   | Texp_assert of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
+
+and template_literal = {
+  prefix: string option;
+  strings: string list;
+  expressions: expression list;
+}
 
 and meth = Tmeth_name of string
 

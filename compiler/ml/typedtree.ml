@@ -73,6 +73,7 @@ and exp_extra =
 and expression_desc =
   | Texp_ident of Path.t * Longident.t loc * Types.value_description
   | Texp_constant of constant
+  | Texp_template of template_literal
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
       arg_label: arg_label;
@@ -123,6 +124,12 @@ and expression_desc =
   | Texp_assert of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
+
+and template_literal = {
+  prefix: string option;
+  strings: string list;
+  expressions: expression list;
+}
 
 and meth = Tmeth_name of string
 

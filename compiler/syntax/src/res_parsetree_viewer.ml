@@ -690,6 +690,7 @@ let has_tagged_template_literal_attr attrs =
 
 let is_template_literal expr =
   match expr.pexp_desc with
+  | Pexp_template {tag = None; _} -> true
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
@@ -703,6 +704,7 @@ let is_template_literal expr =
 
 let is_tagged_template_literal expr =
   match expr with
+  | {pexp_desc = Pexp_template {tag = Some _; _}; _} -> true
   | {pexp_desc = Pexp_apply _; pexp_attributes = attrs} ->
     has_tagged_template_literal_attr attrs
   | _ -> false

@@ -1464,9 +1464,6 @@ Path ForAuto.a
 
 Complete src/Completion.res 234:34
 posCursor:[234:34] posNoWhite:[234:33] Found expr:[234:18->234:36]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[234:18->234:34], ...[234:34->234:35])
-posCursor:[234:34] posNoWhite:[234:33] Found expr:[234:18->234:34]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[234:18->234:30], ...[234:32->234:34])
 posCursor:[234:34] posNoWhite:[234:33] Found expr:[234:32->234:34]
 Pexp_ident na:[234:32->234:34]
 Completable: Cpath Value[na]
@@ -2216,9 +2213,6 @@ Path AndThatOther.T
 
 Complete src/Completion.res 381:24
 posCursor:[381:24] posNoWhite:[381:23] Found expr:[381:12->381:26]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[381:12->381:24], ...[381:24->381:25])
-posCursor:[381:24] posNoWhite:[381:23] Found expr:[381:12->381:24]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[381:12->381:14], ...[381:16->381:24])
 posCursor:[381:24] posNoWhite:[381:23] Found expr:[381:16->381:24]
 Pexp_ident ForAuto.:[381:16->381:24]
 Completable: Cpath Value[ForAuto, ""]
@@ -2243,9 +2237,6 @@ Path ForAuto.
 
 Complete src/Completion.res 384:38
 posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:12->384:41]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[384:12->384:39], ...[384:39->384:40])
-posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:12->384:39]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[384:12->384:17], ...[384:19->384:39])
 posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:19->384:39]
 Pexp_send [384:38->384:38] e:[384:19->384:36]
 Completable: Cpath Value[FAO, forAutoObject][""]
@@ -2271,9 +2262,6 @@ Path FAO.forAutoObject
 
 Complete src/Completion.res 387:24
 posCursor:[387:24] posNoWhite:[387:23] Found expr:[387:11->387:26]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[387:11->387:24], ...[387:24->387:25])
-posCursor:[387:24] posNoWhite:[387:23] Found expr:[387:11->387:24]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[387:11->387:12], ...[387:14->387:24])
 posCursor:[387:24] posNoWhite:[387:23] Found expr:[387:14->387:24]
 Pexp_field [387:14->387:23] _:[387:24->387:24]
 Completable: Cpath Value[funRecord].""
@@ -2332,9 +2320,6 @@ Path ma
 
 Complete src/Completion.res 399:14
 posCursor:[399:14] posNoWhite:[399:13] Found expr:[398:14->399:20]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[398:14->399:16], ...[399:16->399:19])
-posCursor:[399:14] posNoWhite:[399:13] Found expr:[398:14->399:16]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[398:14->399:11], ...[399:13->399:16])
 posCursor:[399:14] posNoWhite:[399:13] Found expr:[399:13->399:16]
 Pexp_ident red:[399:13->399:16]
 Completable: Cpath Value[red]
@@ -2353,9 +2338,6 @@ Path red
 
 Complete src/Completion.res 404:25
 posCursor:[404:25] posNoWhite:[404:24] Found expr:[402:14->404:31]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[402:14->404:27], ...[404:27->404:30])
-posCursor:[404:25] posNoWhite:[404:24] Found expr:[402:14->404:27]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[402:14->404:22], ...[404:24->404:27])
 posCursor:[404:25] posNoWhite:[404:24] Found expr:[404:24->404:27]
 Pexp_ident red:[404:24->404:27]
 Completable: Cpath Value[red]
@@ -2374,9 +2356,6 @@ Path red
 
 Complete src/Completion.res 407:22
 posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->485:0]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->425:17], ...[430:0->485:0])
-posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->425:17]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->407:19], ...[407:21->425:17])
 posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->425:17]
 posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->407:22]
 Pexp_ident r:[407:21->407:22]

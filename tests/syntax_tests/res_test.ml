@@ -125,6 +125,87 @@ module ParserApiTest = struct
     windows_crlf ()
 end
 
+module TemplateLiteralSyntaxTest = struct
+  let run () =
+    let src =
+      "let plain = `Hello`\n\
+       let greeting = `Hello ${name}`\n\
+       let tagged = tag`Hi ${name}`"
+    in
+    let parser = Res_parser.make src "template_test.res" in
+    match Res_core.parse_implementation parser with
+    | [
+     {
+       Parsetree.pstr_desc =
+         Parsetree.Pstr_value
+           ( _,
+             [
+               {
+                 Parsetree.pvb_expr =
+                   {pexp_desc = Pexp_constant (Pconst_string ("Hello", _)); _};
+                 _;
+               };
+             ] );
+       _;
+     };
+     {
+       Parsetree.pstr_desc =
+         Parsetree.Pstr_value
+           ( _,
+             [
+               {
+                 Parsetree.pvb_expr =
+                   {
+                     pexp_desc =
+                       Pexp_template
+                         {
+                           tag = None;
+                           prefix = None;
+                           strings = ["Hello "; ""];
+                           expressions = [_];
+                         };
+                     _;
+                   };
+                 _;
+               };
+             ] );
+       _;
+     };
+     {
+       Parsetree.pstr_desc =
+         Parsetree.Pstr_value
+           ( _,
+             [
+               {
+                 Parsetree.pvb_expr =
+                   {
+                     pexp_desc =
+                       Pexp_template
+                         {
+                           tag =
+                             Some
+                               {
+                                 pexp_desc =
+                                   Pexp_ident {txt = Longident.Lident "tag"; _};
+                                 _;
+                               };
+                           prefix = None;
+                           strings = ["Hi "; ""];
+                           expressions = [_];
+                         };
+                     _;
+                   };
+                 _;
+               };
+             ] );
+       _;
+     };
+    ] ->
+      print_endline "✅ Parser produces Pexp_template for template literals"
+    | _ -> assert false
+end [@ocaml.warning "-4"]
+
 let () = OutcomePrinterTests.run ()
 let () = ParserApiTest.run ()
+let () = TemplateLiteralSyntaxTest.run ()
 let () = Res_utf8_test.run ()
