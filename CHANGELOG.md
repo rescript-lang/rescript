@@ -42,6 +42,8 @@
 
 #### :nail_care: Polish
 
+- Build system: Only log verbose "Generating AST for module" when actually parsing. https://github.com/rescript-lang/rescript/pull/8210
+
 #### :house: Internal
 
 # 12.1.0
