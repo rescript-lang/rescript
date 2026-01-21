@@ -1,7 +1,7 @@
 [2K No implementation file found for interface file (skipping): src/ModuleWithInterface.resi
 Cleaned 2/428
 Parsed 1 source files
-Compiled 2 modules
+Compiled 1 modules
 
 The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
 

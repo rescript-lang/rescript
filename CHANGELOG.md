@@ -42,6 +42,7 @@
 
 #### :nail_care: Polish
 
+- Formatter no longer writes files when contents are already correctly formatted. https://github.com/rescript-lang/rescript/pull/8209
 - Build system: Only log verbose "Generating AST for module" when actually parsing. https://github.com/rescript-lang/rescript/pull/8210
 
 #### :house: Internal

@@ -1,5 +1,7 @@
-source "./utils.sh"
-cd ../testrepo
+#!/bin/bash
+cd $(dirname $0)
+source "../utils.sh"
+cd ../../testrepo
 
 bold "Test: It should support custom suffixes"
 

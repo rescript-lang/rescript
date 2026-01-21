@@ -1,7 +1,7 @@
 #!/bin/bash
 cd $(dirname $0)
-source "./utils.sh"
-cd ../testrepo
+source "../utils.sh"
+cd ../../testrepo
 
 bold "Test: invalid experimental-features keys produce helpful error"
 
@@ -33,4 +33,3 @@ if [ $? -ne 0 ]; then
 fi
 
 success "invalid experimental-features produces helpful error"
-
