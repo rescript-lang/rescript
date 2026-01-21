@@ -106,6 +106,7 @@ tests/
    - **JS layer** (`compiler/core/js_*`): JavaScript generation
 
 2. **Always run appropriate tests:**
+
    ```bash
    # For compiler or stdlib changes
    make test
@@ -128,6 +129,7 @@ tests/
 ### Debugging Techniques
 
 #### View Intermediate Representations
+
 ```bash
 # Source code (for debugging preprocessing)
 ./cli/bsc.js -dsource myfile.res
@@ -145,6 +147,7 @@ tests/
 ```
 
 #### Common Debug Scenarios
+
 - **JavaScript formatting issues**: Check `compiler/ml/pprintast.ml`
 - **Type checking issues**: Look in `compiler/ml/` type checker modules
 - **Optimization bugs**: Check `compiler/core/lam_*.ml` analysis passes
@@ -153,12 +156,14 @@ tests/
 ### Testing Requirements
 
 #### When to Add Tests
+
 - **Always** for new language features
 - **Always** for bug fixes
 - **When modifying** analysis passes
 - **When changing** JavaScript generation
 
 #### Test Types to Include
+
 1. **Syntax tests** (`tests/syntax_tests/`) - Parser validation
 2. **Integration tests** (`tests/tests/`) - End-to-end behavior
 3. **Unit tests** (`tests/ounit_tests/`) - Compiler functions
@@ -168,6 +173,7 @@ tests/
 ## Build Commands & Development
 
 ### Essential Commands
+
 ```bash
 # Build compiler
 make
@@ -189,6 +195,7 @@ make clean
 ```
 
 ### Testing Commands
+
 ```bash
 # Specific test types
 make test-syntax           # Syntax parser tests
@@ -203,6 +210,7 @@ make test-rewatch         # Rewatch tests
 ```
 
 ### Code Quality
+
 ```bash
 # Format code
 make format
@@ -218,7 +226,6 @@ npm run check:all
 npm run typecheck
 ```
 
-
 ## Performance Considerations
 
 The compiler is designed for fast feedback loops and scales to large codebases:
@@ -232,15 +239,18 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 ## Coding Conventions
 
 ### Naming
+
 - **OCaml code**: snake_case (e.g., `to_string`)
 - **ReScript code**: camelCase (e.g., `toString`)
 
 ### Commit Standards
+
 - Use DCO sign-off: `Signed-Off-By: Your Name <email>`
 - Include appropriate tests with all changes
 - Build must pass before committing
 
 ### Code Quality
+
 - Follow existing patterns in the codebase
 - Prefer existing utility functions over reinventing
 - Comment complex algorithms and non-obvious logic
@@ -256,6 +266,7 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 ## Common Tasks
 
 ### Adding New Language Features
+
 1. Update parser in `compiler/syntax/`
 2. Update AST definitions in `compiler/ml/`
 3. Implement type checking in `compiler/ml/`
@@ -264,6 +275,7 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 6. Add comprehensive tests
 
 ### Debugging Compilation Issues
+
 1. Identify which compilation phase has the issue
 2. Use appropriate debugging flags (`-dparsetree`, `-dtypedtree`)
 3. Check intermediate representations
@@ -271,6 +283,7 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 5. Verify with minimal test cases
 
 ### Working with Lambda IR
+
 - Remember Lambda IR is the core optimization layer
 - All `lam_*.ml` files process this representation
 - Use `lam_print.ml` for debugging lambda expressions
@@ -383,6 +396,23 @@ make test-rewatch     # Run integration tests
 - **Dependencies**: Inspect module dependency graph in `deps.rs`
 - **File Watching**: Monitor file change events in `watcher.rs`
 
+#### Running Rewatch Directly
+
+When running the rewatch binary directly (via `cargo run` or the compiled binary) during development, you need to set environment variables to point to the local compiler and runtime. Otherwise, rewatch will try to use the installed versions:
+
+```bash
+# Set the compiler executable path
+export RESCRIPT_BSC_EXE=$(realpath _build/default/compiler/bsc/rescript_compiler_main.exe)
+
+# Set the runtime path
+export RESCRIPT_RUNTIME=$(realpath packages/@rescript/runtime)
+
+# Now you can run rewatch directly
+cargo run --manifest-path rewatch/Cargo.toml -- build
+```
+
+This is useful when testing rewatch changes against local compiler modifications without running a full `make` build cycle.
+
 #### Performance Considerations
 
 - **Incremental Builds**: Only recompile dirty modules
@@ -400,7 +430,7 @@ When clippy suggests refactoring that could impact performance, consider the tra
   - Small and one-time (e.g., `Vec<String>` with few elements)
   - Necessary for correct ownership semantics
   - Not in a hot path
-  
+
   Then accept the clone rather than over-engineering the solution.
 
 - **When to Optimize**: Profile before optimizing. Most "performance concerns" in build systems are negligible compared to actual compilation time.
