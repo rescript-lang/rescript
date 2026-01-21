@@ -8,7 +8,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.1",
+    "@rescript/react": "^0.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rescript": "workspace:^"

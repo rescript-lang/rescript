@@ -1,19 +1,19 @@
 // This is a very big component because it contains full 3box. They should be lazy loaded!
 type threeBoxError
 type boxSpaceFunctions = {
-  get: (. string) => Promise.Js.t<string, threeBoxError>,
-  remove: (. string) => Promise.Js.t<string, threeBoxError>,
-  set: (. string, string) => Promise.Js.t<unit, threeBoxError>,
-  all: (. unit) => Promise.Js.t<string, threeBoxError>,
+  get: (string) => Promise.Js.t<string, threeBoxError>,
+  remove: (string) => Promise.Js.t<string, threeBoxError>,
+  set: (string, string) => Promise.Js.t<unit, threeBoxError>,
+  all: (unit) => Promise.Js.t<string, threeBoxError>,
 }
 type space = {
   syncDone: Promise.Js.t<bool, threeBoxError>,
   public: boxSpaceFunctions,
 }
-type verified3Box = {addTwitter: (. string) => Promise.Js.t<string, threeBoxError>}
+type verified3Box = {addTwitter: (string) => Promise.Js.t<string, threeBoxError>}
 type threeBox = {
   syncDone: Promise.Js.t<bool, threeBoxError>,
-  openSpace: (. string) => Promise.Js.t<space, threeBoxError>,
+  openSpace: (string) => Promise.Js.t<space, threeBoxError>,
   public: boxSpaceFunctions,
   verified: verified3Box,
   @as("DID")
@@ -33,7 +33,7 @@ type threeBoxStatus =
   | SyncedSpace(threeBox, space)
 
 @module("3box")
-external openBox: (. Web3.ethAddress, Web3.rawProvider) => Promise.Js.t<threeBox, threeBoxError> =
+external openBox: (Web3.ethAddress, Web3.rawProvider) => Promise.Js.t<threeBox, threeBoxError> =
   "openBox"
 
 module ProfileItem = {
@@ -105,7 +105,7 @@ module ProfileDetails = {
       setThreeBoxState(_ => Loading3Box)
       switch (optEthereumWallet, optWeb3Provider) {
       | (Some(ethereumWallet), Some(web3Provider)) =>
-        openBox(. ethereumWallet, web3Provider.provider)
+        openBox(ethereumWallet, web3Provider.provider)
         ->Promise.Js.toResult
         ->Promise.getOk(threeBoxInstance => {
           setThreeBoxState(_ => LoggedIn(threeBoxInstance, true))
@@ -117,12 +117,12 @@ module ProfileDetails = {
               let namePromise = if profileName == editedName {
                 Promise.resolved(Ok())
               } else {
-                threeBoxInstance.public.set(. "name", editedName)->Promise.Js.toResult
+                threeBoxInstance.public.set("name", editedName)->Promise.Js.toResult
               }
               let descriptionPromise = if profileDescription == editedDescription {
                 Promise.resolved(Ok())
               } else {
-                threeBoxInstance.public.set(. "description", editedDescription)->Promise.Js.toResult
+                threeBoxInstance.public.set("description", editedDescription)->Promise.Js.toResult
               }
               Promise.all2(namePromise, descriptionPromise)->Promise.get(a => {
                 let (nameSet, descriptionSet) = a
@@ -141,7 +141,7 @@ module ProfileDetails = {
           // NOTE: The below code is if we also require the wildcards space.
           // Promise.all2(
           //   threeBoxInstance.syncDone->Promise.Js.toResult,
-          //   threeBoxInstance.openSpace(. "wildcards")->Promise.Js.toResult,
+          //   threeBoxInstance.openSpace("wildcards")->Promise.Js.toResult,
           // )
           // ->Promise.get(isBoxLoaded => {
           //     let (finishedBoxSyncResult, wildcardsSpaceResult) = isBoxLoaded;
@@ -264,7 +264,7 @@ module TwitterVerification = {
       let _ = switch (optEthereumWallet, optWeb3Provider) {
       | (Some(ethereumWallet), Some(web3Provider)) =>
         setTwitterVerificationStep(_ => PreparePostToTwitter)
-        openBox(. ethereumWallet, web3Provider.provider)
+        openBox(ethereumWallet, web3Provider.provider)
         ->Promise.Js.toResult
         ->Promise.getOk(threeBoxInstance => {
           setThreeBoxState(_ => LoggedIn(threeBoxInstance, true))
@@ -288,7 +288,7 @@ module TwitterVerification = {
       let _ = switch (optEthereumWallet, optWeb3Provider) {
       | (Some(ethereumWallet), Some(web3Provider)) =>
         setTwitterVerificationStep(_ => PreparePostToTwitter)
-        openBox(. ethereumWallet, web3Provider.provider)
+        openBox(ethereumWallet, web3Provider.provider)
         ->Promise.Js.toResult
         ->Promise.getOk(threeBoxInstance => {
           setThreeBoxState(_ => LoggedIn(threeBoxInstance, true))
@@ -298,7 +298,7 @@ module TwitterVerification = {
           ->Promise.get(isBoxLoaded => {
             let state = switch isBoxLoaded {
             | Ok(_finishedBoxSync) =>
-              let _ = threeBoxInstance.public.remove(. "proof_twitter")
+              let _ = threeBoxInstance.public.remove("proof_twitter")
               reloadUser(true)
               SyncedBox(threeBoxInstance)
             | Error(_) => Load3BoxError
@@ -337,7 +337,7 @@ module TwitterVerification = {
             | SyncedBox(threeBoxInstance)
             | SyncedBoxWithSpace(threeBoxInstance, _)
             | SyncedSpace(threeBoxInstance, _) =>
-              threeBoxInstance.verified.addTwitter(. twitterProof)
+              threeBoxInstance.verified.addTwitter(twitterProof)
               ->Promise.Js.toResult
               ->Promise.getOk(_result => {
                 reloadUser(true)

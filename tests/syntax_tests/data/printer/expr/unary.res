@@ -44,7 +44,7 @@ let z = !%extension
 !module(Foo: Bar)
 !module(Foo)
 let x = -apply(arg)
-let x = -apply(. arg)
+let x = -apply(arg)
 let x = -Foo(a, b, c)
 let x = -{x:1, y: 2}
 let x = -list{1, 2, 3}

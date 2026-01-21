@@ -476,13 +476,13 @@ __metadata:
   languageName: node
   linkType: soft
 
-"@rescript/react@npm:^0.13.1":
-  version: 0.13.1
-  resolution: "@rescript/react@npm:0.13.1"
+"@rescript/react@npm:^0.14.0":
+  version: 0.14.0
+  resolution: "@rescript/react@npm:0.14.0"
   peerDependencies:
-    react: ">=18.0.0"
-    react-dom: ">=18.0.0"
-  checksum: 10c0/c4d04536daf7acc3f6452890665333211ad08723ecb9e9efdd66ea7bf7de6503f513d6dabad400415fcae7625740431f1c121fa3abbc4b7446b60e2e7052df32
+    react: ">=19.0.0"
+    react-dom: ">=19.0.0"
+  checksum: 10c0/9463eb027df1d28aab60879d3779f0832270580b381fc7b980387ffe080b821548242fef419cfe0a625d9d9866c4f7d676ed77f500374c22b2affd83ebd8bbaa
   languageName: node
   linkType: hard
 
@@ -745,7 +745,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/gentype-react-example@workspace:tests/gentype_tests/typescript-react-example"
   dependencies:
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "npm:^0.14.0"
     "@types/react": "npm:^18.3.3"
     "@types/react-dom": "npm:^18.3.0"
     react: "npm:^18.3.1"
@@ -2360,7 +2360,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:packages/playground"
   dependencies:
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "npm:^0.14.0"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
     h3: "npm:2.0.1-rc.8"
     rescript: "workspace:^"

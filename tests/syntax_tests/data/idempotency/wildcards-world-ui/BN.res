@@ -18,6 +18,6 @@ type t
 @new @module("bn.js") external new_: string => t = "default"
 @new @module("bn.js") external newInt_: int => t = "default"
 
-// [@module "@polkadot/util"] external tSqrt: (. t) => t = "tSqrt";
+// [@module "@polkadot/util"] external tSqrt: (t) => t = "tSqrt";
 
-// let test = tSqrt(. new_("50"));
+// let test = tSqrt(new_("50"));

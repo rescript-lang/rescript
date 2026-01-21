@@ -17,7 +17,7 @@ let x = assert %extension
 let x = assert user.name
 let x = assert streets[0]
 let x = assert apply(arg1, arg2)
-let x = assert apply(. arg1, arg2)
+let x = assert apply(arg1, arg2)
 let x = assert -1
 let x = assert !true
 let x = assert (x => print(x))

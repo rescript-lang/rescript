@@ -48,5 +48,5 @@ let _ = {
   #Constructor(a, b)
 }
 
-library.getBalance(. account)
+library.getBalance(account)
 ->Promise.Js.catch(_ => {Promise.resolved(None)})

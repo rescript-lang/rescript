@@ -134,7 +134,7 @@ let x =
       sideEffect(aaaaaaaaaaaaaaarg3)
     }}
     apply={myFunction(x)}
-    applyWithDot={myFunction(. x)}
+    applyWithDot={myFunction(x)}
     street={streets[0]}
     binary={a + b}
     int={-1}
@@ -205,7 +205,7 @@ let x =
       sideEffect(aaaaaaaaaaaaaaarg3)
     }}
     {myFunction(x)}
-    {myFunction(. x)}
+    {myFunction(x)}
     {streets[0]}
     {a + b}
     {-1}

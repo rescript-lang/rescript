@@ -1,6 +1,6 @@
 Cleaned 0/0
-Parsed 425 source files
-Compiled 425 modules
+Parsed 428 source files
+Compiled 428 modules
 
 The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
 

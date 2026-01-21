@@ -64,16 +64,16 @@ let f = _ => ()
 let f = (~a=?) => ()
 let f = (~from as hometown=?) => ()
 
-let f = (. a) => ()
-let f = (. a, b) => ()
-let f = (. ()) => ()
+let f = (a) => ()
+let f = (a, b) => ()
+let f = (()) => ()
 
 let f = @attr (a, b) => @attr2 (c, d) => ()
 let f = @attr (@attrOnA a, @attrOnB b) => @attr2 (@attrOnC c, @attrOnD d) => ()
-let f = @attr (. a, b) => @attr2 (. c, d) => ()
+let f = @attr (a, b) => @attr2 (c, d) => ()
 
 let f = (@attr ~a, @attr ~b) => ()
-let f = (. @attr ~a, . @attr ~b) => ()
+let f = (@attr ~a, @attr ~b) => ()
 
 let f = (
   thisIsAVeryLongNaaaaaaaaaaaaaaaaaaameeeeeeeeeeeee,
@@ -170,13 +170,13 @@ let genName = () => "Steve"
 
 @react.component
 let make = (
-      ~onChange: option<(. { "testing": bool}, array<string>) => unit>=?,
+      ~onChange: option<({ "testing": bool}, array<string>) => unit>=?,
       children,
     ) => {
   let doSomething = () =>
     switch (onChange) {
     | None => ()
-    | Some(onChange) => onChange(. {"testing": true}, ["hey"])
+    | Some(onChange) => onChange({"testing": true}, ["hey"])
     };
   <input onChange={_ => doSomething()} />;
 };
@@ -294,8 +294,8 @@ let query = (~url, ()): (unit => unit => unit => unit) => {
   () => () => () => Js.log("Queried " ++ url)
 }
 
-let f = (. a) => (. b) => a + b
-let f = (. a, b) => (. b, c) => a + b + c + d
-let f = (. a, b) => (. b , c) => (. e , f, g) => a + b + c + d  + e + f + g
+let f = (a) => (b) => a + b
+let f = (a, b) => (b, c) => a + b + c + d
+let f = (a, b) => (b , c) => (e , f, g) => a + b + c + d  + e + f + g
 
 let unitConstraint = (): array<nullable<int>> => []

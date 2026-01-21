@@ -9982,7 +9982,7 @@ module Printer = {
      */
     let fitsOnOneLine = Doc.concat(list{
       if uncurried {
-        Doc.text("(. ")
+        Doc.text("(")
       } else {
         Doc.lparen
       },
@@ -10028,7 +10028,7 @@ module Printer = {
     /* Thing.map(foo, (arg1, arg2) => MyModuleBlah.toList(argument)) */
     let fitsOnOneLine = Doc.concat(list{
       if uncurried {
-        Doc.text("(.")
+        Doc.text("(")
       } else {
         Doc.lparen
       },
@@ -10043,7 +10043,7 @@ module Printer = {
      */
     let arugmentsFitOnOneLine = Doc.concat(list{
       if uncurried {
-        Doc.text("(.")
+        Doc.text("(")
       } else {
         Doc.lparen
       },
@@ -10073,7 +10073,7 @@ module Printer = {
     switch args {
     | list{(Nolabel, {pexp_desc: Pexp_construct({txt: Longident.Lident("()")}, _)})} =>
       if uncurried {
-        Doc.text("(.)")
+        Doc.text("()")
       } else {
         Doc.text("()")
       }
@@ -10089,7 +10089,7 @@ module Printer = {
 
       Doc.concat(list{
         if uncurried {
-          Doc.text("(.")
+          Doc.text("(")
         } else {
           Doc.lparen
         },
@@ -10100,7 +10100,7 @@ module Printer = {
       Doc.group(
         Doc.concat(list{
           if uncurried {
-            Doc.text("(.")
+            Doc.text("(")
           } else {
             Doc.lparen
           },
@@ -10348,7 +10348,7 @@ module Printer = {
     /* let f = (~greeting, ~from as hometown, ~x=?) => () */
     | parameters =>
       let lparen = if uncurried {
-        Doc.text("(. ")
+        Doc.text("(")
       } else {
         Doc.lparen
       }
@@ -14487,7 +14487,7 @@ Solution: directly use `concat`."
    *   | _
    *   | lident
    *   | ()
-   *   | (.)
+   *   | ()
    *   | ( parameter {, parameter} [,] )
    */
   and parseParameters = p => {
@@ -16245,7 +16245,7 @@ Solution: directly use `concat`."
         let startPos = p.Parser.startPos
         Parser.next(p)
         switch p.token {
-        /* apply(.) */
+        /* apply() */
         | Rparen =>
           let loc = mkLoc(startPos, p.prevEndPos)
           let unitExpr = Ast_helper.Exp.construct(

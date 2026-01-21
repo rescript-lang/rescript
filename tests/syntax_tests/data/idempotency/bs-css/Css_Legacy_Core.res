@@ -28,19 +28,18 @@ let addStop = (dict, (stop, rules)) => {
 }
 
 module Make = (CssImplementation: Css_Core.CssImplementationIntf) => {
-  let merge = stylenames => CssImplementation.mergeStyles(. stylenames->Array.of_list)
+  let merge = stylenames => CssImplementation.mergeStyles(stylenames->Array.of_list)
 
-  let insertRule = s => CssImplementation.injectRaw(. s)
+  let insertRule = s => CssImplementation.injectRaw(s)
 
-  let style = rules => CssImplementation.make(. rules->toJson)
+  let style = rules => CssImplementation.make(rules->toJson)
 
   let global = (selector, rules: list<rule>) =>
-    CssImplementation.injectRule(.
-      list{(selector, toJson(rules))}->Js.Dict.fromList->Js.Json.object_,
+    CssImplementation.injectRule(list{(selector, toJson(rules))}->Js.Dict.fromList->Js.Json.object_,
     )
 
   let keyframes = frames =>
-    CssImplementation.makeKeyFrames(. List.fold_left(addStop, Js.Dict.empty(), frames))
+    CssImplementation.makeKeyFrames(List.fold_left(addStop, Js.Dict.empty(), frames))
 }
 
 let join = (strings, separator) => {
@@ -1696,7 +1695,7 @@ let backgroundSize = x => D(
 )
 
 let fontFace = (~fontFamily, ~src, ~fontStyle=?, ~fontWeight=?, ~fontDisplay=?, ()) => {
-  let fontStyle = Js.Option.map((. value) => FontStyle.toString(value), fontStyle)
+  let fontStyle = Js.Option.map((value) => FontStyle.toString(value), fontStyle)
   let src =
     src
     ->List.map(x =>

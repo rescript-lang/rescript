@@ -141,7 +141,7 @@ __metadata:
   resolution: "@testrepo/nohoist@workspace:packages/nohoist"
   dependencies:
     rescript: "npm:12.0.0-beta.3"
-    rescript-bun: "npm:2.0.1"
+    rescript-bun: "npm:2.1.0"
   languageName: unknown
   linkType: soft
 
@@ -164,7 +164,7 @@ __metadata:
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
   dependencies:
     "@rescript/webapi": "npm:0.1.0-experimental-73e6a0d"
-    rescript-nodejs: "npm:16.1.0"
+    rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
   languageName: unknown
   linkType: soft
 
@@ -172,18 +172,18 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/with-ppx@workspace:packages/with-ppx"
   dependencies:
-    rescript-nodejs: "npm:16.1.0"
+    rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
     sury: "npm:^11.0.0-alpha.2"
     sury-ppx: "npm:^11.0.0-alpha.2"
   languageName: unknown
   linkType: soft
 
-"rescript-bun@npm:2.0.1":
-  version: 2.0.1
-  resolution: "rescript-bun@npm:2.0.1"
+"rescript-bun@npm:2.1.0":
+  version: 2.1.0
+  resolution: "rescript-bun@npm:2.1.0"
   peerDependencies:
-    rescript: 12.0.0-beta.3
-  checksum: 10c0/97fedd71f2706dca0a13084c76cf0f61f7d910cf2e2dfb8dbe33e19d8ad8c5c67aeb25cdf7ab935264fb26e6dda911f1451a370fd7ae10766023c629810d0e36
+    rescript: ">= 12.0.0-alpha.4"
+  checksum: 10c0/f76fd4dffdd90b13d1d61642fa5eabb26828c85b9eb71e945ffac9c84e81b9a6b68d20d9e68096156243bc543197a15906b606572db7d8c50a554d50652d3143
   languageName: node
   linkType: hard
 
@@ -191,6 +191,13 @@ __metadata:
   version: 16.1.0
   resolution: "rescript-nodejs@npm:16.1.0"
   checksum: 10c0/2ea271dbddebdceec79bf5ee6089c15474f2c014cb22c1cc39d43ef27fd363fcb1cd8e1244d0cb998cd6b426d7474e3055e41277951fb01ee1eeecf68bbe01ab
+  languageName: node
+  linkType: hard
+
+"rescript-nodejs@patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch":
+  version: 16.1.0
+  resolution: "rescript-nodejs@patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch::version=16.1.0&hash=8a6725"
+  checksum: 10c0/5ac79b6ff832413bc448fc139c139e0703e1f41f6eb3c0d58937630794e18081185f93c69781503530d635a4d6721c94064d54c49ecfaa67c9150ca1b0d27752
   languageName: node
   linkType: hard
 

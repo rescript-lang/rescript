@@ -13,7 +13,7 @@ while (continuePrefix.contents && aPrefixLen.contents && bPrefixLen.contents && 
 
 // uncurried attribute shouldn't result in parens
 while (
-  rbt.compare(. Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
+  rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
 ) {
   ()
 }
@@ -187,8 +187,8 @@ let x = a && !b && !c
 let x = a && f(b)
 let x = a && f(b) && f(c)
 
-let x = a && f(. b)
-let x = a && f(. b) && f(. c)
+let x = a && f(b)
+let x = a && f(b) && f(c)
 
 let x = a && x->f(g)
 let x = a && x->f(g) && y->f(h)
@@ -280,23 +280,21 @@ let x = (true ? 0 : 1) + (false ? 1 : 0) +  (false ? 1 : 0)
 
 while (
   oldIter.contents < oldLen &&
-    rbt.compare(.
-      Js.Array2.unsafe_get(old, oldIter.contents),
+    rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents),
       node.value,
     )
 ) {
-  disappear(. Js.Array2.unsafe_get(old, oldIter.contents))
+  disappear(Js.Array2.unsafe_get(old, oldIter.contents))
   oldIter.contents = oldIter.contents + 1
 }
 
  while (
     oldIter.contents < oldLen &&
-      rbt.compare(.
-        Js.Array2.unsafe_get(old, oldIter.contents),
+      rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents),
         node.value,
       ) < 0
   ) {
-    disappear(. Js.Array2.unsafe_get(old, oldIter.contents))
+    disappear(Js.Array2.unsafe_get(old, oldIter.contents))
     oldIter.contents = oldIter.contents + 1
   }
 
@@ -377,14 +375,14 @@ React.useEffect4(
   () => {
     switch (context.library, context.account) {
     | (Some(library), Some(account)) =>
-      library.getBalance(. account)
+      library.getBalance(account)
       ->Promise.Js.catch(_ => {Promise.resolved(None)})
       ->Promise.get(newBalance => {
           dispatch(
             LoadAddress(
               account,
               newBalance->Belt.Option.flatMap(balance =>
-                Eth.make(balance.toString(.))
+                Eth.make(balance.toString())
               ),
             ),
           )
