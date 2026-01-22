@@ -154,7 +154,9 @@ stdout and stderr from the command are logged.
 
 ### Module-Format
 
-enum: "commonjs" | "esmodule"
+enum: "esmodule" | "commonjs"
+
+default: "esmodule"
 
 ### Suffix
 
