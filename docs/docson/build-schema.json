@@ -3,7 +3,7 @@
   "definitions": {
     "module-format": {
       "enum": ["esmodule", "commonjs"],
-      "description": "Output module format. Default: commonjs."
+      "description": "Output module format. Default: esmodule."
     },
     "suffix-spec": {
       "type": "string",
