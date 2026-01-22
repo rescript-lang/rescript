@@ -14,7 +14,7 @@
 
 #### :boom: Breaking Change
 
-- Remove the legacy build system. Going forward, only the modern build system is supported, and the `rescript-legacy` command is not available anymore. https://github.com/rescript-lang/rescript/pull/8186
+- Remove the legacy build system. Going forward, only the modern build system is supported, and the `rescript-legacy` command is not available anymore. https://github.com/rescript-lang/rescript/pull/8186 https://github.com/rescript-lang/rescript/pull/8212
 - Remove support for `bsconfig.json`. https://github.com/rescript-lang/rescript/pull/8187
 - `Int.fromString` and `Float.fromString` use stricter number parsing and no longer uses an explicit radix argument, but instead supports parsing hexadecimal, binary and exponential notation.
 - Remove the deprecated module system names `es6` and `es6-global` (superseded by `esmodule`). https://github.com/rescript-lang/rescript/pull/8205
