@@ -745,17 +745,63 @@ fn validate_package_specs_value(value: &serde_json::Value) -> Result<()> {
         None => return Ok(()),
     };
 
+    let top_level_suffix = value
+        .get("suffix")
+        .and_then(|suffix| suffix.as_str())
+        .unwrap_or(".js")
+        .to_string();
+    let mut seen_suffixes = std::collections::HashSet::new();
+
     match specs {
         serde_json::Value::Array(specs) => {
             for spec in specs {
                 validate_package_spec_value(spec)?;
+                if let Some(suffix) = resolve_spec_suffix(spec, &top_level_suffix) {
+                    let in_source = resolve_spec_in_source(spec);
+                    if !seen_suffixes.insert((suffix.clone(), in_source)) {
+                        return Err(anyhow!(
+                            "Duplicate package-spec suffix \"{suffix}\" is not allowed."
+                        ));
+                    }
+                }
             }
         }
-        serde_json::Value::Object(_) => validate_package_spec_value(specs)?,
+        serde_json::Value::Object(_) => {
+            validate_package_spec_value(specs)?;
+            if let Some(suffix) = resolve_spec_suffix(specs, &top_level_suffix) {
+                let in_source = resolve_spec_in_source(specs);
+                if !seen_suffixes.insert((suffix.clone(), in_source)) {
+                    return Err(anyhow!(
+                        "Duplicate package-spec suffix \"{suffix}\" is not allowed."
+                    ));
+                }
+            }
+        }
         _ => {}
     }
 
     Ok(())
+}
+
+fn resolve_spec_suffix(spec: &serde_json::Value, top_level_suffix: &str) -> Option<String> {
+    if !spec.is_object() {
+        return None;
+    }
+
+    match spec.get("suffix").and_then(|suffix| suffix.as_str()) {
+        Some(suffix) => Some(suffix.to_string()),
+        None => Some(top_level_suffix.to_string()),
+    }
+}
+
+fn resolve_spec_in_source(spec: &serde_json::Value) -> bool {
+    if !spec.is_object() {
+        return true;
+    }
+
+    spec.get("in-source")
+        .and_then(|in_source| in_source.as_bool())
+        .unwrap_or(true)
 }
 
 fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
@@ -835,6 +881,57 @@ pub mod tests {
         let spec = specs.first().unwrap();
         assert_eq!(spec.module, PackageModule::EsModule);
         assert_eq!(config.get_suffix(spec), ".mjs");
+    }
+
+    #[test]
+    fn test_package_specs_duplicate_suffix_default() {
+        let json = r#"
+        {
+            "name": "dup-suffix-default",
+            "sources": ".",
+            "package-specs": [
+                { "module": "commonjs", "in-source": true },
+                { "module": "esmodule", "in-source": true }
+            ]
+        }
+        "#;
+
+        let error = Config::new_from_json_string(json).unwrap_err().to_string();
+        assert!(error.contains("Duplicate package-spec suffix"));
+    }
+
+    #[test]
+    fn test_package_specs_duplicate_suffix_explicit() {
+        let json = r#"
+        {
+            "name": "dup-suffix-explicit",
+            "sources": ".",
+            "package-specs": [
+                { "module": "commonjs", "in-source": true, "suffix": ".mjs" },
+                { "module": "esmodule", "in-source": true, "suffix": ".mjs" }
+            ]
+        }
+        "#;
+
+        let error = Config::new_from_json_string(json).unwrap_err().to_string();
+        assert!(error.contains("Duplicate package-spec suffix"));
+    }
+
+    #[test]
+    fn test_package_specs_duplicate_suffix_different_in_source_ok() {
+        let json = r#"
+        {
+            "name": "dup-suffix-different-in-source",
+            "sources": ".",
+            "package-specs": [
+                { "module": "esmodule", "in-source": true, "suffix": ".res.js" },
+                { "module": "esmodule", "in-source": false, "suffix": ".res.js" }
+            ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).unwrap();
+        assert_eq!(config.get_package_specs().len(), 2);
     }
 
     #[test]
