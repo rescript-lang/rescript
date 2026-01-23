@@ -82,7 +82,7 @@ let addValueReference ~config ~refs ~file_deps ~(binding : Location.t)
 
 let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
     ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Decl.Nothing)
-    ~moduleLoc (name : Name.t) =
+    ?manifestTypePath ~moduleLoc (name : Name.t) =
   let pos = loc.loc_start in
   let posStart =
     match posStart with
@@ -110,6 +110,7 @@ let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
         moduleLoc;
         posAdjustment;
         path = name :: path;
+        manifestTypePath;
         pos;
         posEnd;
         posStart;

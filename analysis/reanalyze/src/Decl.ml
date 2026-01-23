@@ -31,6 +31,11 @@ type t = {
   moduleLoc: Location.t;
   posAdjustment: posAdjustment;
   path: DcePath.t;
+      (** For type re-exports (e.g. [type y = x = {...}]), record/variant label
+      declarations belonging to the re-exporting type can carry the manifest
+      type path so [DeadType.process_type_label_dependencies] can link fields
+      without needing the typed tree. *)
+  manifestTypePath: DcePath.t option;
   pos: Lexing.position;
   posEnd: Lexing.position;
   posStart: Lexing.position;

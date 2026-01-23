@@ -19,15 +19,20 @@ let extendTypeDependencies ~config ~refs (loc1 : Location.t) (loc2 : Location.t)
     addTypeReference ~config ~refs ~posFrom ~posTo)
 
 let addDeclaration ~config ~decls ~file ~(modulePath : ModulePath.t)
-    ~(typeId : Ident.t) ~(typeKind : Types.type_kind) =
-  let pathToType =
-    (typeId |> Ident.name |> Name.create)
-    :: (modulePath.path @ [FileContext.module_name_tagged file])
+    ~(typeId : Ident.t) ~(typeKind : Types.type_kind)
+    ~(manifestTypeId : Ident.t option) =
+  let moduleContext = modulePath.path @ [FileContext.module_name_tagged file] in
+  let pathToType = (typeId |> Ident.name |> Name.create) :: moduleContext in
+  let manifestTypePath =
+    match manifestTypeId with
+    | None -> None
+    | Some manifestId ->
+      Some ((manifestId |> Ident.name |> Name.create) :: moduleContext)
   in
   let processTypeLabel ?(posAdjustment = Decl.Nothing) typeLabelName ~declKind
       ~(loc : Location.t) =
     addDeclaration_ ~config ~decls ~file ~declKind ~path:pathToType ~loc
-      ~moduleLoc:modulePath.loc ~posAdjustment typeLabelName
+      ?manifestTypePath ~moduleLoc:modulePath.loc ~posAdjustment typeLabelName
   in
   match typeKind with
   | Type_record (l, _) ->
@@ -162,4 +167,59 @@ let process_type_label_dependencies ~config ~decls ~refs =
               if not Config.reportTypesDeadOnlyInInterface then
                 extendTypeDependencies ~config ~refs loc loc1))
       | _ -> ())
-    decls
+    decls;
+
+  (* Link fields of re-exported types (type y = x = {...}) to original type fields.
+     We store the manifest type path on the label declarations themselves, and
+     derive the set of re-export relationships here. To preserve stable output
+     ordering, we process types bottom-to-top (by their first label position)
+     and fields top-to-bottom (by their label position). *)
+  let compare_pos (p1 : Lexing.position) (p2 : Lexing.position) =
+    match compare p1.Lexing.pos_fname p2.Lexing.pos_fname with
+    | 0 -> compare p1.Lexing.pos_cnum p2.Lexing.pos_cnum
+    | c -> c
+  in
+  (* currentTypePath -> (rep_pos, manifestTypePath, (pos, fieldName, currentLoc) list) *)
+  let groups :
+      ( DcePath.t,
+        Lexing.position
+        * DcePath.t
+        * (Lexing.position * Name.t * Location.t) list )
+      Hashtbl.t =
+    Hashtbl.create 32
+  in
+  Declarations.iter
+    (fun _pos decl ->
+      match (decl.Decl.declKind, decl.manifestTypePath, decl.path) with
+      | ( (RecordLabel | VariantCase),
+          Some manifestTypePath,
+          fieldName :: currentTypePath ) -> (
+        let item = (decl.pos, fieldName, decl_raw_loc decl) in
+        match Hashtbl.find_opt groups currentTypePath with
+        | None ->
+          Hashtbl.replace groups currentTypePath
+            (decl.pos, manifestTypePath, [item])
+        | Some (rep_pos, mtp0, items) ->
+          (* manifestTypePath should be stable for a given currentTypePath *)
+          let rep_pos =
+            if compare_pos decl.pos rep_pos < 0 then decl.pos else rep_pos
+          in
+          Hashtbl.replace groups currentTypePath (rep_pos, mtp0, item :: items))
+      | _ -> ())
+    decls;
+
+  groups |> Hashtbl.to_seq |> List.of_seq
+  |> List.map (fun (currentTypePath, (rep_pos, manifestTypePath, items)) ->
+         (rep_pos, currentTypePath, manifestTypePath, items))
+  (* Later (lower) types first *)
+  |> List.fast_sort (fun (p1, _, _, _) (p2, _, _, _) -> compare_pos p2 p1)
+  |> List.iter (fun (_rep_pos, _currentTypePath, manifestTypePath, items) ->
+         items
+         |> List.fast_sort (fun (p1, _, _) (p2, _, _) -> compare_pos p1 p2)
+         |> List.iter (fun (_pos, fieldName, currentLoc) ->
+                let manifestFieldPath = fieldName :: manifestTypePath in
+                match find_one manifestFieldPath with
+                | None -> ()
+                | Some manifestLoc ->
+                  extendTypeDependencies ~config ~refs currentLoc manifestLoc;
+                  extendTypeDependencies ~config ~refs manifestLoc currentLoc))

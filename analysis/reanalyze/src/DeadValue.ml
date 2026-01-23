@@ -247,8 +247,16 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
   match si with
   | Sig_type (id, t, _) when doTypes ->
     if !Config.analyzeTypes then
+      (* Extract manifest type id for type re-exports (type y = x = {...}) *)
+      let manifestTypeId =
+        match (t.type_kind, t.type_manifest) with
+        | ( Types.Type_record _,
+            Some {desc = Tconstr (Path.Pident manifestId, _, _)} ) ->
+          Some manifestId
+        | _ -> None
+      in
       DeadType.addDeclaration ~config ~decls ~file ~modulePath ~typeId:id
-        ~typeKind:t.type_kind
+        ~typeKind:t.type_kind ~manifestTypeId
   | Sig_value (id, {Types.val_loc = loc; val_kind = kind; val_type})
     when doValues ->
     if not loc.Location.loc_ghost then
@@ -361,9 +369,25 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
                   typeDeclarations
                   |> List.iter
                        (fun (typeDeclaration : Typedtree.type_declaration) ->
+                         (* Extract manifest type id for type re-exports (type y = x = {...}) *)
+                         let manifestTypeId =
+                           match
+                             ( typeDeclaration.typ_type.type_kind,
+                               typeDeclaration.typ_manifest )
+                           with
+                           | ( Types.Type_record _,
+                               Some
+                                 {
+                                   ctyp_desc =
+                                     Ttyp_constr (Path.Pident manifestId, _, _);
+                                 } ) ->
+                             Some manifestId
+                           | _ -> None
+                         in
                          DeadType.addDeclaration ~config ~decls ~file
                            ~modulePath ~typeId:typeDeclaration.typ_id
-                           ~typeKind:typeDeclaration.typ_type.type_kind);
+                           ~typeKind:typeDeclaration.typ_type.type_kind
+                           ~manifestTypeId);
                 None
               | Tstr_include {incl_mod; incl_type} ->
                 (match incl_mod.mod_desc with
