@@ -8,9 +8,6 @@ RUN sudo apt-get update && export DEBIAN_FRONTEND=noninteractive \
     musl-tools \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust tooling
-RUN rustup component add clippy
-
 # Install OPAM
 ARG OPAM_VERSION=2.5.0
 RUN printf '\n\n' | bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh) --version $OPAM_VERSION"

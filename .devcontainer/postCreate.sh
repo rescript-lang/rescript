@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Install Rust tooling
+rustup component add clippy
+
 # Install dev dependencies from OPAM
 opam init -y --auto-setup --bare --disable-sandboxing
 opam switch create 5.3.0
