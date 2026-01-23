@@ -28,6 +28,15 @@ fi
 
 source ./utils.sh
 
+bold "Check for stale rescript processes"
+STALE_PIDS=$(ps aux | grep "$REWATCH_EXECUTABLE" | grep -v grep | awk '{print $2}')
+if [ -n "$STALE_PIDS" ]; then
+  error "Found stale rescript processes using this executable:"
+  ps aux | grep "$REWATCH_EXECUTABLE" | grep -v grep
+  exit 1
+fi
+success "No stale rescript processes found"
+
 bold "Yarn install"
 (cd ../testrepo && yarn && cp node_modules/rescript-nodejs/bsconfig.json node_modules/rescript-nodejs/rescript.json)
 

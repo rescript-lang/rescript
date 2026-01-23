@@ -1,7 +1,8 @@
 use crate::build;
-use crate::build::build_types::SourceType;
+use crate::build::build_types::{BuildCommandState, SourceType};
 use crate::build::clean;
 use crate::cmd;
+use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::helpers::emojis::*;
@@ -12,7 +13,7 @@ use anyhow::{Context, Result};
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -57,7 +58,71 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
+/// Computes the list of paths to watch based on the build state.
+/// Returns tuples of (path, recursive_mode) for each watch target.
+fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(PathBuf, RecursiveMode)> {
+    let mut watch_paths: Vec<(PathBuf, RecursiveMode)> = Vec::new();
+
+    for (_, package) in build_state.build_state.packages.iter() {
+        if !package.is_local_dep {
+            continue;
+        }
+
+        // Watch the rescript.json for this package
+        let config_path = package.path.join("rescript.json");
+        if config_path.exists() {
+            watch_paths.push((config_path, RecursiveMode::NonRecursive));
+        }
+
+        // Watch each source folder
+        for source in &package.source_folders {
+            let dir = package.path.join(&source.dir);
+            if !dir.exists() {
+                continue;
+            }
+            let mode = match &source.subdirs {
+                Some(config::Subdirs::Recurse(true)) => RecursiveMode::Recursive,
+                _ => RecursiveMode::NonRecursive,
+            };
+            watch_paths.push((dir, mode));
+        }
+    }
+
+    // Watch the lib/ directory for the lockfile (rescript.lock lives in lib/)
+    let lib_dir = root.join("lib");
+    if lib_dir.exists() {
+        watch_paths.push((lib_dir, RecursiveMode::NonRecursive));
+    }
+
+    watch_paths
+}
+
+/// Registers all watch paths with the given watcher.
+fn register_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, RecursiveMode)]) {
+    for (path, mode) in watch_paths {
+        let mode_str = if *mode == RecursiveMode::Recursive {
+            "recursive"
+        } else {
+            "non-recursive"
+        };
+        log::debug!("  watching ({mode_str}): {}", path.display());
+        if let Err(e) = watcher.watch(path, *mode) {
+            log::error!("Could not watch {}: {}", path.display(), e);
+        }
+    }
+}
+
+/// Unregisters all watch paths from the given watcher.
+fn unregister_watches(watcher: &mut RecommendedWatcher, watch_paths: &[(PathBuf, RecursiveMode)]) {
+    for (path, _) in watch_paths {
+        let _ = watcher.unwatch(path);
+    }
+}
+
 struct AsyncWatchArgs<'a> {
+    watcher: &'a mut RecommendedWatcher,
+    current_watch_paths: Vec<(PathBuf, RecursiveMode)>,
+    initial_build_state: BuildCommandState,
     q: Arc<FifoQueue<Result<Event, Error>>>,
     path: &'a Path,
     show_progress: bool,
@@ -65,11 +130,13 @@ struct AsyncWatchArgs<'a> {
     after_build: Option<String>,
     create_sourcedirs: bool,
     plain_output: bool,
-    warn_error: Option<String>,
 }
 
 async fn async_watch(
     AsyncWatchArgs {
+        watcher,
+        mut current_watch_paths,
+        initial_build_state,
         q,
         path,
         show_progress,
@@ -77,12 +144,9 @@ async fn async_watch(
         after_build,
         create_sourcedirs,
         plain_output,
-        warn_error,
     }: AsyncWatchArgs<'_>,
 ) -> Result<()> {
-    let mut build_state: build::build_types::BuildCommandState =
-        build::initialize_build(None, filter, show_progress, path, plain_output, warn_error)
-            .with_context(|| "Could not initialize build")?;
+    let mut build_state = initial_build_state;
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -126,6 +190,21 @@ async fn async_watch(
                 }
                 clean::cleanup_after_build(&build_state);
                 return Ok(());
+            }
+
+            // Detect rescript.json changes and trigger a full rebuild
+            if event
+                .paths
+                .iter()
+                .any(|p| p.file_name().map(|name| name == "rescript.json").unwrap_or(false))
+                && matches!(
+                    event.kind,
+                    EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_)
+                )
+            {
+                log::debug!("rescript.json changed -> full compile");
+                needs_compile_type = CompileType::Full;
+                continue;
             }
 
             let paths = event
@@ -280,6 +359,12 @@ async fn async_watch(
                     build_state.get_warn_error_override(),
                 )
                 .expect("Could not initialize build");
+
+                // Re-register watches based on the new build state
+                unregister_watches(watcher, &current_watch_paths);
+                current_watch_paths = compute_watch_paths(&build_state, path);
+                register_watches(watcher, &current_watch_paths);
+
                 let _ = build::incremental_build(
                     &mut build_state,
                     None,
@@ -334,15 +419,27 @@ pub fn start(
         let mut watcher = RecommendedWatcher::new(move |res| producer.push(res), Config::default())
             .expect("Could not create watcher");
 
-        log::debug!("watching {folder}");
-
-        watcher
-            .watch(Path::new(folder), RecursiveMode::Recursive)
-            .expect("Could not start watcher");
-
         let path = Path::new(folder);
 
+        // Do an initial build to discover packages and source folders
+        let build_state: BuildCommandState = build::initialize_build(
+            None,
+            filter,
+            show_progress,
+            path,
+            plain_output,
+            warn_error.clone(),
+        )
+        .with_context(|| "Could not initialize build")?;
+
+        // Compute and register targeted watches based on source folders
+        let current_watch_paths = compute_watch_paths(&build_state, path);
+        register_watches(&mut watcher, &current_watch_paths);
+
         async_watch(AsyncWatchArgs {
+            watcher: &mut watcher,
+            current_watch_paths,
+            initial_build_state: build_state,
             q: consumer,
             path,
             show_progress,
@@ -350,7 +447,6 @@ pub fn start(
             after_build,
             create_sourcedirs,
             plain_output,
-            warn_error: warn_error.clone(),
         })
         .await
     })

@@ -411,7 +411,15 @@ export RESCRIPT_RUNTIME=$(realpath packages/@rescript/runtime)
 cargo run --manifest-path rewatch/Cargo.toml -- build
 ```
 
+Note that the dev binary is `./rewatch/target/debug/rescript`, not `rewatch`. The binary name is `rescript` because that's the package name in `Cargo.toml`.
+
 This is useful when testing rewatch changes against local compiler modifications without running a full `make` build cycle.
+
+Use `-v` for info-level logging or `-vv` for debug-level logging (e.g., to see which folders are being watched in watch mode):
+
+```bash
+cargo run --manifest-path rewatch/Cargo.toml -- -vv watch <folder>
+```
 
 #### Performance Considerations
 
