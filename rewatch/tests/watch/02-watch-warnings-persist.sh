@@ -17,43 +17,59 @@ fi
 
 exit_watcher() {
   # kill watcher by removing lock file
-  rm lib/rescript.lock
+  rm -f lib/rescript.lock
+}
+
+# Wait until a pattern appears in a file (with timeout in seconds, default 30)
+wait_for_pattern() {
+  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    grep -q "$pattern" "$file" 2>/dev/null && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
+# Wait until a pattern appears N times in a file (with timeout in seconds, default 30)
+wait_for_pattern_count() {
+  local file="$1"; local pattern="$2"; local count="$3"; local timeout="${4:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    local current_count=$(grep -c "$pattern" "$file" 2>/dev/null || echo "0")
+    [ "$current_count" -ge "$count" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
 }
 
 # Start watcher and capture stderr (where warnings are printed)
 rewatch_bg watch > /dev/null 2> rewatch-stderr.log &
-sleep 8
-success "Watcher Started"
 
-# Verify the initial build produces the warning from ModuleA.res
-if grep -q "unused value unusedValue" rewatch-stderr.log;
-then
-  success "Initial build shows warning from ModuleA.res"
-else
+# Wait for initial compilation to produce the warning
+if ! wait_for_pattern rewatch-stderr.log "unused value unusedValue" 30; then
   error "Initial build does not show warning from ModuleA.res"
   cat rewatch-stderr.log
   exit_watcher
   exit 1
 fi
+success "Initial build shows warning from ModuleA.res"
 
 # Trigger a recompilation of B.res only
 printf '// trigger recompile\n' >> ./packages/watch-warnings/src/B.res
 
-sleep 5
-
-# Check that the warning from ModuleA.res is still present after incremental build
-# Count occurrences: should be 2 (initial + incremental)
-warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log)
-if [ "$warning_count" -ge 2 ];
-then
-  success "Warning from ModuleA.res persists after recompiling B.res (count: $warning_count)"
-else
+# Wait for the warning to appear a second time (from the incremental build)
+if ! wait_for_pattern_count rewatch-stderr.log "unused value unusedValue" 2 20; then
+  warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log || echo "0")
   error "Warning from ModuleA.res was lost after recompiling B.res (count: $warning_count)"
   cat rewatch-stderr.log
   exit_watcher
   printf 'let world = () => Console.log("world")\n' > ./packages/watch-warnings/src/B.res
   exit 1
 fi
+
+warning_count=$(grep -c "unused value unusedValue" rewatch-stderr.log)
+success "Warning from ModuleA.res persists after recompiling B.res (count: $warning_count)"
 
 # Restore B.res
 printf 'let world = () => Console.log("world")\n' > ./packages/watch-warnings/src/B.res
