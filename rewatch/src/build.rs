@@ -23,8 +23,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
 use serde::Serialize;
 use std::fmt;
-use std::fs::File;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
