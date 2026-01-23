@@ -800,6 +800,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                         compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
                                         parse_dirty: true,
+                                        compile_warning: None,
                                     },
                                     interface: None,
                                 }),
@@ -871,6 +872,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
+                                            compile_warning: None,
                                         });
                                     }
                                 })
@@ -884,6 +886,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
+                                            compile_warning: None,
                                         },
                                         interface: Some(Interface {
                                             path: file.to_owned(),
@@ -891,6 +894,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
+                                            compile_warning: None,
                                         }),
                                     }),
                                     deps: AHashSet::new(),

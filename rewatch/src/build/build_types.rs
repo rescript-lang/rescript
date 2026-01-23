@@ -27,6 +27,10 @@ pub struct Interface {
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
     pub parse_dirty: bool,
+    /// Compiler warning output (from bsc stderr) stored for re-emission
+    /// during incremental builds when this module is not recompiled.
+    /// Written to `.compiler.log` on each build cycle.
+    pub compile_warning: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -36,6 +40,10 @@ pub struct Implementation {
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
     pub parse_dirty: bool,
+    /// Compiler warning output (from bsc stderr) stored for re-emission
+    /// during incremental builds when this module is not recompiled.
+    /// Written to `.compiler.log` on each build cycle.
+    pub compile_warning: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

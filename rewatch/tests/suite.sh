@@ -76,6 +76,7 @@ fi
 
 # Watch tests
 ./watch/01-watch-recompile.sh &&
+./watch/02-watch-warnings-persist.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&

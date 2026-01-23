@@ -327,15 +327,19 @@ pub fn compile(
                     }
                     SourceType::SourceFile(ref mut source_file) => match result {
                         Ok(Some(err)) => {
+                            let warning_text = err.to_string();
                             source_file.implementation.compile_state = CompileState::Warning;
-                            (Some(err.to_string()), None)
+                            source_file.implementation.compile_warning = Some(warning_text.clone());
+                            (Some(warning_text), None)
                         }
                         Ok(None) => {
                             source_file.implementation.compile_state = CompileState::Success;
+                            source_file.implementation.compile_warning = None;
                             (None, None)
                         }
                         Err(err) => {
                             source_file.implementation.compile_state = CompileState::Error;
+                            source_file.implementation.compile_warning = None;
                             (None, Some(err.to_string()))
                         }
                     },
@@ -345,17 +349,22 @@ pub fn compile(
                     if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                         match interface_result {
                             Some(Ok(Some(err))) => {
+                                let warning_text = err.to_string();
                                 source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                                (Some(err.to_string()), None)
+                                source_file.interface.as_mut().unwrap().compile_warning =
+                                    Some(warning_text.clone());
+                                (Some(warning_text), None)
                             }
                             Some(Ok(None)) => {
                                 if let Some(interface) = source_file.interface.as_mut() {
                                     interface.compile_state = CompileState::Success;
+                                    interface.compile_warning = None;
                                 }
                                 (None, None)
                             }
                             Some(Err(err)) => {
                                 source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                                source_file.interface.as_mut().unwrap().compile_warning = None;
                                 (None, Some(err.to_string()))
                             }
                             _ => (None, None),
@@ -432,6 +441,32 @@ pub fn compile(
         if !compile_errors.is_empty() {
             break;
         };
+    }
+
+    // Collect warnings from modules that were not recompiled in this build
+    // but still have stored warnings from a previous compilation.
+    // This ensures warnings are not lost during incremental builds in watch mode.
+    for (module_name, module) in build_state.modules.iter() {
+        if compile_universe.contains(module_name) {
+            continue;
+        }
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            let package = build_state.get_package(&module.package_name);
+            if let Some(ref warning) = source_file.implementation.compile_warning {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+            if let Some(ref interface) = source_file.interface
+                && let Some(ref warning) = interface.compile_warning
+            {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+        }
     }
 
     Ok((compile_errors, compile_warnings, num_compiled_modules))
