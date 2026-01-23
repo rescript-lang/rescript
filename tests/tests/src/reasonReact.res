@@ -173,7 +173,7 @@ let convertPropsIfTheyreFromJs = (props, jsPropsToReason, debugName) => {
 // Old reason-react sources converted from .re syntax.
 // The OCaml object system is not available in ReScript anymore
 // let createClass = (type reasonState retainedProps action, debugName): reactClass =>
-//   ReasonReactOptimizedCreateClass.createClass(. Pexp_object not implemented in printer)
+//   ReasonReactOptimizedCreateClass.createClass(Pexp_object not implemented in printer)
 let createClass = Obj.magic
 
 let basicComponent = debugName => {

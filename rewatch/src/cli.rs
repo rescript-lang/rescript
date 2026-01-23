@@ -40,8 +40,7 @@ pub enum FileExtension {
 #[command(version)]
 #[command(after_help = "[1m[1m[4mNotes:[0m
   - If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information.
-  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.
-  - For the legacy (pre-v12) build system, run `rescript-legacy`.")]
+  - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.")]
 pub struct Cli {
     /// Verbosity:
     /// -v -> Debug
@@ -195,21 +194,6 @@ pub struct AfterBuildArg {
     pub after_build: Option<String>,
 }
 
-#[derive(Args, Debug, Clone, Copy)]
-pub struct CreateSourceDirsArg {
-    /// Deprecated: source_dirs.json is now always created.
-    #[arg(short, long, num_args = 0..=1, default_missing_value = "true", hide = true)]
-    pub create_sourcedirs: Option<bool>,
-}
-
-#[derive(Args, Debug, Clone, Copy)]
-pub struct DevArg {
-    /// Deprecated: Build development dependencies
-    /// This is the flag no longer does anything and will be removed in future versions.
-    #[arg(long, default_value_t = false, num_args = 0..=1, hide = true)]
-    pub dev: bool,
-}
-
 #[derive(Args, Debug, Clone)]
 pub struct WarnErrorArg {
     /// Override warning configuration from rescript.json.
@@ -230,21 +214,11 @@ pub struct BuildArgs {
     pub after_build: AfterBuildArg,
 
     #[command(flatten)]
-    pub create_sourcedirs: CreateSourceDirsArg,
-
-    #[command(flatten)]
-    pub dev: DevArg,
-
-    #[command(flatten)]
     pub warn_error: WarnErrorArg,
 
     /// Disable output timing
     #[arg(short, long, default_value_t = false, num_args = 0..=1)]
     pub no_timing: bool,
-
-    /// Watch mode (deprecated, use `rescript watch` instead)
-    #[arg(short, default_value_t = false, num_args = 0..=1, hide = true)]
-    pub watch: bool,
 }
 
 #[cfg(test)]
@@ -397,12 +371,6 @@ pub struct WatchArgs {
     pub after_build: AfterBuildArg,
 
     #[command(flatten)]
-    pub create_sourcedirs: CreateSourceDirsArg,
-
-    #[command(flatten)]
-    pub dev: DevArg,
-
-    #[command(flatten)]
     pub warn_error: WarnErrorArg,
 }
 
@@ -412,8 +380,6 @@ impl From<BuildArgs> for WatchArgs {
             folder: build_args.folder,
             filter: build_args.filter,
             after_build: build_args.after_build,
-            create_sourcedirs: build_args.create_sourcedirs,
-            dev: build_args.dev,
             warn_error: build_args.warn_error,
         }
     }
@@ -429,9 +395,6 @@ pub enum Command {
     Clean {
         #[command(flatten)]
         folder: FolderArg,
-
-        #[command(flatten)]
-        dev: DevArg,
     },
     /// Format ReScript files.
     Format {
@@ -452,9 +415,6 @@ pub enum Command {
         /// Files to format. If no files are provided, all files are formatted.
         #[arg(group = "format_input_mode")]
         files: Vec<String>,
-
-        #[command(flatten)]
-        dev: DevArg,
     },
     /// Print the compiler arguments for a ReScript source file.
     CompilerArgs {
@@ -485,21 +445,6 @@ impl Deref for AfterBuildArg {
 
     fn deref(&self) -> &Self::Target {
         &self.after_build
-    }
-}
-
-impl CreateSourceDirsArg {
-    /// Returns true if the flag was explicitly passed on the command line.
-    pub fn was_explicitly_set(&self) -> bool {
-        self.create_sourcedirs.is_some()
-    }
-}
-
-impl Deref for DevArg {
-    type Target = bool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.dev
     }
 }
 

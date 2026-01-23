@@ -93,9 +93,6 @@ jobs:
       - name: Install npm packages
         run: yarn install
 
-      - name: Install testrepo deps
-        run: cd rewatch/testrepo && yarn install
-
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
@@ -295,43 +292,6 @@ jobs:
 
       - name: Copy compiler exes to platform bin dir
         run: node scripts/copyExes.js --compiler
-
-      - name: Restore ninja build cache
-        id: ninja-build-cache
-        uses: actions/cache@v5
-        with:
-          path: ninja/ninja${{ matrix.exe-suffix }}
-          key: ninja-build-v2-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
-
-      - name: Setup Python for ninja build
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true'
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.13"
-
-      - name: Setup MSVC for ninja build (Windows)
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
-        uses: TheMrMilchmann/setup-msvc-dev@v4
-        with:
-          arch: x64
-
-      - name: Build ninja
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os != 'Linux'
-        run: node scripts/buildNinjaBinary.js
-
-      - name: Build ninja (Linux static)
-        if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        env:
-          LDFLAGS: -static
-        run: node scripts/buildNinjaBinary.js
-
-      # Prevent ninja being rebuilt on playground build step later
-      - name: Touch ninja/ninja
-        if: ${{ matrix.build_playground && steps.ninja-build-cache.outputs.cache-hit == 'true' }}
-        run: touch ninja/ninja${{ matrix.exe-suffix }}
-
-      - name: Copy ninja exe to platform bin dir
-        run: node scripts/copyExes.js --ninja
 
       - name: "Syntax: Run tests"
         env:
@@ -548,6 +508,17 @@ jobs:
           git commit -m "Update API docs for $GITHUB_REF_NAME"
           git push
 
+  test-devcontainer:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Run make in dev container
+        uses: devcontainers/ci@v0.3
+        with:    
+          push: never
+          runCmd: make
+
   test-installation-npm:
     needs:
       - pkg-pr-new
@@ -593,7 +564,7 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript-legacy build && cat src/Test.res.js
+        run: npx rescript -h && npx rescript build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -646,7 +617,7 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: pnpm rescript -h && pnpm rescript-legacy build && cat src/Test.res.js
+        run: pnpm rescript -h && pnpm rescript build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 

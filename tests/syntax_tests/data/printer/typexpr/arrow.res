@@ -82,16 +82,16 @@ type returnTyp = (intWithSuperLongIdentifierNameLooooooooooooooooooooooooooooooo
 type returnTyp = (intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => @magic @magicWithSuperLongIdentiefierNameLoooooooooooooooooooooooong @magicWithSuperLongIdentiefierNameLoooooooooooooooooooooooong float
 
 // uncurried
-type t = (. int) => int
-type t = (. int, int) => int
-type t = (. int, . int) => int
-type t = (. int, int, . int, int) => int
+type t = (int) => int
+type t = (int, int) => int
+type t = (int, int) => int
+type t = (int, int, int, int) => int
 
 
-type t = (. @attr int) => unit 
-type t = (. @attr int, . @attr2 int) => unit 
-type t = (. @attrOnInt int, @attrOnInt int, . @attrOnInt int, @attrOnInt int) => int
-type t = (. @attr ~x: int, ~y: int, . @attr ~z: int, @attr ~omega: int) => unit 
+type t = (@attr int) => unit 
+type t = (@attr int, @attr2 int) => unit 
+type t = (@attrOnInt int, @attrOnInt int, @attrOnInt int, @attrOnInt int) => int
+type t = (@attr ~x: int, ~y: int, @attr ~z: int, @attr ~omega: int) => unit 
 
 @val external requestAnimationFrame: (float => unit) => unit = "requestAnimationFrame"
 @val external requestAnimationFrame: @attr (float => unit) => unit = "requestAnimationFrame"

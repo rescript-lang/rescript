@@ -19,6 +19,13 @@ type all_files_result = {
 type t = (Cmt_format.cmt_infos, cmt_file_result option) ReactiveFileCollection.t
 (** The reactive collection type *)
 
+type processing_stats = {
+  mutable total_files: int;
+  mutable processed: int;
+  mutable from_cache: int;
+}
+(** Stats from a process_files call *)
+
 (** Process cmt_infos into a file result *)
 let process_cmt_infos ~config ~cmtFilePath cmt_infos : cmt_file_result option =
   let excludePath sourceFile =
@@ -75,8 +82,10 @@ let create ~config : t =
 
 (** Process all files incrementally using ReactiveFileCollection.
     First run processes all files. Subsequent runs only process changed files.
-    Uses batch processing to emit all changes as a single Batch delta. *)
-let process_files ~(collection : t) ~config:_ cmtFilePaths : all_files_result =
+    Uses batch processing to emit all changes as a single Batch delta.
+    Returns (result, stats) where stats contains processing information. *)
+let process_files ~(collection : t) ~config:_ cmtFilePaths :
+    all_files_result * processing_stats =
   Timing.time_phase `FileLoading (fun () ->
       let total_files = List.length cmtFilePaths in
       let cached_before =
@@ -90,6 +99,7 @@ let process_files ~(collection : t) ~config:_ cmtFilePaths : all_files_result =
         ReactiveFileCollection.process_files_batch collection cmtFilePaths
       in
       let from_cache = total_files - processed in
+      let stats = {total_files; processed; from_cache} in
 
       if !Cli.timing then
         Printf.eprintf
@@ -113,10 +123,11 @@ let process_files ~(collection : t) ~config:_ cmtFilePaths : all_files_result =
           | None -> ())
         collection;
 
-      {
-        dce_data_list = List.rev !dce_data_list;
-        exception_results = List.rev !exception_results;
-      })
+      ( {
+          dce_data_list = List.rev !dce_data_list;
+          exception_results = List.rev !exception_results;
+        },
+        stats ))
 
 (** Get collection length *)
 let length (collection : t) = ReactiveFileCollection.length collection

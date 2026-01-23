@@ -1,6 +1,0 @@
-(library
- (name bsb)
- (wrapped false)
- (flags
-  (:standard -w +a-4-9-40-41-42-70))
- (libraries common ext str unix))

@@ -3,6 +3,6 @@
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
-const output = await execBuildLegacy();
+const { execBuild } = setup(import.meta.dirname);
+const output = await execBuild();
 assert.ok(output.status === 0);

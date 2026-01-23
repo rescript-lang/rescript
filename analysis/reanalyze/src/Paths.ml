@@ -1,6 +1,5 @@
 module StringMap = Map_string
 
-let bsconfig = "bsconfig.json"
 let rescriptJson = "rescript.json"
 
 let readFile filename =
@@ -14,8 +13,7 @@ let readFile filename =
 
 let rec findProjectRoot ~dir =
   let rescriptJsonFile = Filename.concat dir rescriptJson in
-  let bsconfigFile = Filename.concat dir bsconfig in
-  if Sys.file_exists rescriptJsonFile || Sys.file_exists bsconfigFile then dir
+  if Sys.file_exists rescriptJsonFile then dir
   else
     let parent = dir |> Filename.dirname in
     if parent = dir then (
@@ -26,13 +24,14 @@ let rec findProjectRoot ~dir =
 
 let runConfig = RunConfig.runConfig
 
-let setReScriptProjectRoot =
-  lazy
-    (runConfig.projectRoot <- findProjectRoot ~dir:(Sys.getcwd ());
-     runConfig.bsbProjectRoot <-
-       (match Sys.getenv_opt "BSB_PROJECT_ROOT" with
-       | None -> runConfig.projectRoot
-       | Some s -> s))
+let setProjectRootFromCwd () =
+  runConfig.projectRoot <- findProjectRoot ~dir:(Sys.getcwd ());
+  runConfig.bsbProjectRoot <-
+    (match Sys.getenv_opt "BSB_PROJECT_ROOT" with
+    | None -> runConfig.projectRoot
+    | Some s -> s)
+
+let setReScriptProjectRoot = lazy (setProjectRootFromCwd ())
 
 module Config = struct
   let readSuppress conf =
@@ -83,10 +82,9 @@ module Config = struct
     | _ -> ()
 
   (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
-  let processBsconfig () =
-    Lazy.force setReScriptProjectRoot;
+  let processConfig () =
+    setProjectRootFromCwd ();
     let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in
-    let bsconfigFile = Filename.concat runConfig.projectRoot bsconfig in
 
     let processText text =
       match Json.parse text with
@@ -105,10 +103,7 @@ module Config = struct
 
     match readFile rescriptFile with
     | Some text -> processText text
-    | None -> (
-      match readFile bsconfigFile with
-      | Some text -> processText text
-      | None -> ())
+    | None -> ()
 end
 
 (**
@@ -204,3 +199,72 @@ let readSourceDirs ~configSources =
       Log_.item "Types for cross-references will not be found.\n");
     dirs := readDirsFromConfig ~configSources);
   !dirs
+
+type cmt_scan_entry = {
+  build_root: string;
+  scan_dirs: string list;
+  also_scan_build_root: bool;
+}
+(** Read explicit `.cmt/.cmti` scan plan from `.sourcedirs.json`.
+
+    This is a v2 extension produced by `rewatch` to support monorepos without requiring
+    reanalyze-side package resolution.
+
+    The scan plan is a list of build roots (usually `<pkg>/lib/bs`) relative to the project root,
+    plus a list of subdirectories (relative to that build root) to scan for `.cmt/.cmti`.
+
+    If missing, returns the empty list and callers should fall back to legacy behavior. *)
+
+let readCmtScan () =
+  let sourceDirsFile =
+    ["lib"; "bs"; ".sourcedirs.json"]
+    |> List.fold_left Filename.concat runConfig.bsbProjectRoot
+  in
+  let entries = ref [] in
+  let read_entry (json : Ext_json_types.t) =
+    match json with
+    | Ext_json_types.Obj {map} -> (
+      let build_root =
+        match StringMap.find_opt map "build_root" with
+        | Some (Ext_json_types.Str {str}) -> Some str
+        | _ -> None
+      in
+      let scan_dirs =
+        match StringMap.find_opt map "scan_dirs" with
+        | Some (Ext_json_types.Arr {content = arr}) ->
+          arr |> Array.to_list
+          |> List.filter_map (fun x ->
+                 match x with
+                 | Ext_json_types.Str {str} -> Some str
+                 | _ -> None)
+        | _ -> []
+      in
+      let also_scan_build_root =
+        match StringMap.find_opt map "also_scan_build_root" with
+        | Some (Ext_json_types.True _) -> true
+        | Some (Ext_json_types.False _) -> false
+        | _ -> false
+      in
+      match build_root with
+      | Some build_root ->
+        entries := {build_root; scan_dirs; also_scan_build_root} :: !entries
+      | None -> ())
+    | _ -> ()
+  in
+  let read_cmt_scan (json : Ext_json_types.t) =
+    match json with
+    | Ext_json_types.Obj {map} -> (
+      match StringMap.find_opt map "cmt_scan" with
+      | Some (Ext_json_types.Arr {content = arr}) ->
+        arr |> Array.iter read_entry
+      | _ -> ())
+    | _ -> ()
+  in
+  if sourceDirsFile |> Sys.file_exists then (
+    let jsonOpt = sourceDirsFile |> Ext_json_parse.parse_json_from_file in
+    match jsonOpt with
+    | exception _ -> []
+    | json ->
+      read_cmt_scan json;
+      !entries |> List.rev)
+  else []

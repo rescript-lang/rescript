@@ -14,7 +14,7 @@ const execPromise = util.promisify(exec);
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "12.1.0";
+  const EXPECTED_VERSION = "13.0.0-alpha.1";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
@@ -35,12 +35,14 @@ async function enforceCompilerMeta({ Yarn }) {
         "Cristiano Calcagno (https://github.com/cristianoc)",
         "Dmitry Zakharov (https://github.com/DZakh)",
         "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+        "Florian Verdonck (https://github.com/nojaf)",
         "Gabriel Nordeborn (https://github.com/zth)",
         "Hyeseong Kim (https://github.com/cometkim)",
         "Jaap Frolich (https://github.com/jfrolich)",
         "Matthias Le Brun (https://github.com/bloodyowl)",
         "Patrick Ecker (https://github.com/ryyppy)",
         "Paul Tsnobiladzé (https://github.com/tsnobip)",
+        "Shulhi Sapli (https://github.com/shulhi)",
         "Woonki Moon (https://github.com/mununki)",
       ]);
       workspace.set("preferUnplugged", true);

@@ -2,9 +2,9 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Stdlib_Lazy from "@rescript/runtime/lib/es6/Stdlib_Lazy.js";
-import * as Primitive_module from "@rescript/runtime/lib/es6/Primitive_module.js";
-import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.js";
+import * as Stdlib_Lazy from "@rescript/runtime/lib/es6/Stdlib_Lazy.mjs";
+import * as Primitive_module from "@rescript/runtime/lib/es6/Primitive_module.mjs";
+import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 
 let Xx = {
   f: (prim0, prim1) => hfiehi(prim0, prim1)

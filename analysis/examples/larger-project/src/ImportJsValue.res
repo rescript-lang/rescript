@@ -31,7 +31,7 @@ let areaValue = area({x: 3, y: None})
 
 module AbsoluteValue = {
   @genType.import(("./MyMath", "AbsoluteValue"))
-  type t = {"getAbs": (. unit) => int}
+  type t = {"getAbs": (unit) => int}
 
   /* This is untyped */
   @send external getProp: t => int = "getProp"
@@ -39,7 +39,7 @@ module AbsoluteValue = {
   /* This is also untyped, as we "trust" the type declaration in absoluteVaue */
   let getAbs = (x: t) => {
     let getAbs = x["getAbs"]
-    getAbs(.)
+    getAbs()
   }
 }
 

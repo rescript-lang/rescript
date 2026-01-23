@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_util from "@rescript/runtime/lib/es6/Primitive_util.js";
+import * as Primitive_util from "@rescript/runtime/lib/es6/Primitive_util.mjs";
 
 function tToJs(param) {
   return {

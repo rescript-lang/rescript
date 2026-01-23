@@ -1,21 +1,19 @@
 // @ts-check
 
-import * as assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
   process.exit(0);
 }
 
-await execBuildLegacy();
-const content = await fs.readFile(
-  path.join("lib", "bs", ".sourcedirs.json"),
-  "utf-8",
-);
+await execBuild();
 
-assert.ok(JSON.parse(content).dirs.some(x => x.includes("📕annotation")));
+await fs.access(
+  path.join(import.meta.dirname, "lib", "bs", "src", "📕annotation", "a.js"),
+);
+await execClean();

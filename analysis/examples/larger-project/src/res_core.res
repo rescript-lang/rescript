@@ -3882,7 +3882,7 @@ and parseArgument = p =>
       let uncurried = true
       Parser.next(p)
       switch p.token {
-      /* apply(.) */
+      /* apply() */
       | Rparen =>
         let unitExpr = Ast_helper.Exp.construct(Location.mknoloc(Longident.Lident("()")), None)
 
@@ -3992,12 +3992,12 @@ and parseCallExpr = (p, funExpr) => {
     if !loc.loc_ghost &&
     p.mode == ParseForTypeChecker => /* Since there is no syntax space for arity zero vs arity one,
      *  we expand
-     *    `fn(. ())` into
-     *    `fn(. {let __res_unit = (); __res_unit})`
+     *    `fn(())` into
+     *    `fn({let __res_unit = (); __res_unit})`
      *  when the parsetree is intended for type checking
      *
      *  Note:
-     *    `fn(.)` is treated as zero arity application.
+     *    `fn()` is treated as zero arity application.
      *  The invisible unit expression here has loc_ghost === true
      *
      *  Related: https://github.com/rescript-lang/syntax/issues/138

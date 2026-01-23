@@ -75,7 +75,7 @@ pub fn get_js_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("js")
 }
 
-pub fn get_es6_path(canonical_path: &Path) -> PathBuf {
+pub fn get_esmodule_path(canonical_path: &Path) -> PathBuf {
     canonical_path.join("lib").join("es6")
 }
 
@@ -100,8 +100,8 @@ impl Package {
         get_js_path(&self.path)
     }
 
-    pub fn get_es6_path(&self) -> PathBuf {
-        get_es6_path(&self.path)
+    pub fn get_esmodule_path(&self) -> PathBuf {
+        get_esmodule_path(&self.path)
     }
 
     pub fn get_mlmap_path(&self) -> PathBuf {
@@ -246,13 +246,7 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
 
 pub fn read_config(package_dir: &Path) -> Result<Config> {
     let rescript_json_path = package_dir.join("rescript.json");
-    let bsconfig_json_path = package_dir.join("bsconfig.json");
-
-    if Path::new(&rescript_json_path).exists() {
-        Config::new(&rescript_json_path)
-    } else {
-        Config::new(&bsconfig_json_path)
-    }
+    Config::new(&rescript_json_path)
 }
 
 pub fn read_dependency(
@@ -284,6 +278,7 @@ pub fn read_dependency(
 ///    registered for the parent packages. Especially relevant for peerDependencies.
 /// 2. In parallel performs IO to read the dependencies config and
 ///    recursively continues operation for their dependencies as well.
+/// 3. Detects and warns about duplicate packages (same name, different paths).
 fn read_dependencies(
     registered_dependencies_set: &mut AHashSet<String>,
     project_context: &ProjectContext,
@@ -302,6 +297,37 @@ fn read_dependencies(
         .iter()
         .filter_map(|package_name| {
             if registered_dependencies_set.contains(package_name) {
+                // Package already registered - check for duplicate (different path)
+                // Re-resolve from current package and from root to compare paths
+                if let Ok(current_path) = read_dependency(package_name, package_config, project_context)
+                    && let Ok(chosen_path) = read_dependency(package_name, &project_context.current_config, project_context)
+                    && current_path != chosen_path
+                {
+                    // Different paths - this is a duplicate
+                    let root_path = project_context.get_root_path();
+                    let chosen_relative = chosen_path
+                        .strip_prefix(root_path)
+                        .unwrap_or(&chosen_path);
+                    let duplicate_relative = current_path
+                        .strip_prefix(root_path)
+                        .unwrap_or(&current_path);
+                    let current_package_path = package_config
+                        .path
+                        .parent()
+                        .map(|p| p.to_path_buf())
+                        .unwrap_or_else(|| PathBuf::from("."));
+                    let parent_relative = current_package_path
+                        .strip_prefix(root_path)
+                        .unwrap_or(&current_package_path);
+
+                    eprintln!(
+                        "Duplicated package: {} ./{} (chosen) vs ./{} in ./{}",
+                        package_name,
+                        chosen_relative.to_string_lossy(),
+                        duplicate_relative.to_string_lossy(),
+                        parent_relative.to_string_lossy()
+                    );
+                }
                 None
             } else {
                 registered_dependencies_set.insert(package_name.to_owned());
@@ -481,6 +507,7 @@ This inconsistency will cause issues with package resolution.\n",
 fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
+
     let current_package = {
         let config = &project_context.current_config;
         let folder = config
@@ -500,6 +527,7 @@ fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Resul
         show_progress,
         /* is local dep */ true,
     ));
+
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
             let package = make_package(d.config.to_owned(), &d.path, false, d.is_local_dep);
@@ -662,9 +690,9 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                         helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
                     })
                 } else {
-                    helpers::create_path(&package.get_es6_path());
+                    helpers::create_path(&package.get_esmodule_path());
                     relative_dirs.iter().for_each(|path_buf| {
-                        helpers::create_path_for_path(&Path::join(&package.get_es6_path(), path_buf))
+                        helpers::create_path_for_path(&Path::join(&package.get_esmodule_path(), path_buf))
                     })
                 }
             }
@@ -920,20 +948,20 @@ fn get_unallowed_dependents(
 }
 #[derive(Debug, Clone)]
 struct UnallowedDependency {
-    bs_deps: Vec<String>,
-    bs_build_dev_deps: Vec<String>,
+    deps: Vec<String>,
+    dev_deps: Vec<String>,
 }
 
 pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> bool {
     let mut detected_unallowed_dependencies: AHashMap<String, UnallowedDependency> = AHashMap::new();
 
     for (package_name, package) in packages {
-        let bs_dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
+        let dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
         let dev_dependencies = &package.config.dev_dependencies.to_owned().unwrap_or(vec![]);
 
         [
-            ("bs-dependencies", bs_dependencies),
-            ("bs-dev-dependencies", dev_dependencies),
+            ("dependencies", dependencies),
+            ("dev-dependencies", dev_dependencies),
         ]
         .iter()
         .for_each(|(dependency_type, dependencies)| {
@@ -941,15 +969,15 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 get_unallowed_dependents(packages, package_name, dependencies)
             {
                 let empty_unallowed_deps = UnallowedDependency {
-                    bs_deps: vec![],
-                    bs_build_dev_deps: vec![],
+                    deps: vec![],
+                    dev_deps: vec![],
                 };
 
                 let unallowed_dependency = detected_unallowed_dependencies.entry(String::from(package_name));
                 let value = unallowed_dependency.or_insert_with(|| empty_unallowed_deps);
                 match *dependency_type {
-                    "bs-dependencies" => value.bs_deps.push(unallowed_dependency_name),
-                    "bs-dev-dependencies" => value.bs_build_dev_deps.push(unallowed_dependency_name),
+                    "dependencies" => value.deps.push(unallowed_dependency_name),
+                    "dev-dependencies" => value.dev_deps.push(unallowed_dependency_name),
                     _ => (),
                 }
             }
@@ -963,8 +991,8 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
         );
 
         [
-            ("bs-dependencies", unallowed_deps.bs_deps.to_owned()),
-            ("bs-dev-dependencies", unallowed_deps.bs_build_dev_deps.to_owned()),
+            ("dependencies", unallowed_deps.deps.to_owned()),
+            ("dev-dependencies", unallowed_deps.dev_deps.to_owned()),
         ]
         .iter()
         .for_each(|(deps_type, map)| {

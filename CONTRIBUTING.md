@@ -17,7 +17,6 @@ Happy hacking!
 - [Node.js](https://nodejs.org/) v22.x or newer
 - [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
-- Python <= 3.11 (required to build ninja)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install and install the version listed as `rust-version` in `rewatch/Cargo.toml`)
 - `opam` (OCaml Package Manager) v2.2.0 or newer
 - VSCode (+ [OCaml Platform Extension](https://marketplace.visualstudio.com/items?itemName=ocamllabs.ocaml-platform))
@@ -103,12 +102,10 @@ You can also open this dev container with [GitHub Codespaces](https://github.com
 
 ## Building the Compiler
 
-To build the compiler, the build tools (rewatch and ninja), and the ReScript runtime/standard library, just run:
-
 Main targets:
 
 ```sh
-# Build the compiler and the build tools (rewatch and ninja)
+# Build the compiler and the build system (rewatch)
 make
 
 # Build the runtime/standard library
@@ -126,9 +123,6 @@ make compiler
 
 # Build rewatch only
 make rewatch
-
-# Build the ninja tool only
-make ninja
 
 # Run syntax tests
 make test-syntax
@@ -230,10 +224,10 @@ node scripts/test.js -mocha
 
 **Run build system test (integration tests):**
 
-This will run the whole build system test suite defined in `tests/build_tests`.
+This will run the build system test suite defined in `tests/build_tests`.
 
 ```
-node scripts/test.js -bsb
+node scripts/test.js -build
 ```
 
 **Run ounit tests:**

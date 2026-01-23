@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_module from "@rescript/runtime/lib/es6/Primitive_module.js";
+import * as Primitive_module from "@rescript/runtime/lib/es6/Primitive_module.mjs";
 
 let Int3 = Primitive_module.init([
   "recursive_module_test.res",

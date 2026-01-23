@@ -6,19 +6,19 @@ import * as Nodeurl from "node:url";
 import * as Nodepath from "node:path";
 import * as ArrayUtils from "./ArrayUtils.res.js";
 import * as SpawnAsync from "./SpawnAsync.res.js";
-import * as Stdlib_Int from "@rescript/runtime/lib/es6/Stdlib_Int.js";
-import * as Stdlib_Dict from "@rescript/runtime/lib/es6/Stdlib_Dict.js";
-import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.js";
-import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.js";
-import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.js";
-import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.js";
+import * as Stdlib_Int from "@rescript/runtime/lib/es6/Stdlib_Int.mjs";
+import * as Stdlib_Dict from "@rescript/runtime/lib/es6/Stdlib_Dict.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
+import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
+import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.mjs";
+import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.mjs";
 import * as Promises from "node:fs/promises";
-import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.js";
+import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
 import * as BinsJs from "../../cli/common/bins.js";
 
 let rescript_tools_exe = BinsJs.rescript_tools_exe;
 
-let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
+let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node")), "Failed to convert node version to Int");
 
 let ignoreRuntimeTests = [
   [

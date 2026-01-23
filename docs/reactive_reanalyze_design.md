@@ -297,7 +297,7 @@ let runAnalysisIncremental ~config ~events =
 
 ## Open Questions
 
-1. **Build system integration**: How to get file events from rewatch/ninja?
+1. **Build system integration**: How to get file events from rewatch?
 2. **CMT staleness**: What if build system is still writing CMT files?
 3. **Multi-project**: How to handle monorepos with multiple rescript.json?
 4. **Memory limits**: When to evict file_data from cache?

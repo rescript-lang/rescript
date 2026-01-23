@@ -10,6 +10,6 @@
     "@rescript/webapi": "0.1.0-experimental-73e6a0d"
   },
   "dependencies": {
-    "rescript-nodejs": "16.1.0"
+    "rescript-nodejs": "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
   }
 }

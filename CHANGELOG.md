@@ -10,31 +10,66 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.1.0 (Unreleased)
+# 13.0.0-alpha.1 (Unreleased)
 
 #### :boom: Breaking Change
+
+- Remove the legacy build system. Going forward, only the modern build system is supported, and the `rescript-legacy` command is not available anymore. https://github.com/rescript-lang/rescript/pull/8186 https://github.com/rescript-lang/rescript/pull/8212
+- Remove support for `bsconfig.json`. https://github.com/rescript-lang/rescript/pull/8187
+- `Int.fromString` and `Float.fromString` use stricter number parsing and no longer uses an explicit radix argument, but instead supports parsing hexadecimal, binary and exponential notation.
+- Remove the deprecated module system names `es6` and `es6-global` (superseded by `esmodule`). https://github.com/rescript-lang/rescript/pull/8205
+- Default to module system `esmodule`. https://github.com/rescript-lang/rescript/pull/8213
+- Remove `external-stdlib` configuration option from `rescript.json`. This option was rarely used and is no longer supported.
+- Remove the deprecated uncurried `(. args) => ...` function syntax. https://github.com/rescript-lang/rescript/pull/8211 
+- `js-post-build` now passes the correct output file path based on `in-source` configuration: when `in-source: true`, the path next to the source file is passed; when `in-source: false`, the path in the `lib/<module>/` directory is passed. Additionally, stdout and stderr from the post-build command are now logged. https://github.com/rescript-lang/rescript/pull/8190
+- `js-post-build` command now runs in the directory containing the `rescript.json` where it is defined, instead of the unpredictable build invocation directory. This provides consistent behavior in monorepos. https://github.com/rescript-lang/rescript/pull/8195
+- Remove support for deprecated `bs-dependencies`, `bs-dev-dependencies`, and `bsc-flags` configuration options. Use `dependencies`, `dev-dependencies`, and `compiler-flags` instead. https://github.com/rescript-lang/rescript/pull/8196
+- `bsc`: remove legacy `-uncurried` flag. https://github.com/rescript-lang/rescript/pull/8201
+- Remove deprecated cli flags `--dev`, `--create-sourcedirs` and `build -w`. https://github.com/rescript-lang/rescript/pull/8202
+- Do not allow two different package specs with the same suffix to avoid conflicts. https://github.com/rescript-lang/rescript/pull/8214
 
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
-- Add support for Set, Map, WeakSet and WeakMap to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
-- Reanalyze: add reactive incremental analysis (`-reactive`, `-runs`, `-churn`) and Mermaid pipeline dumping (`-mermaid`). https://github.com/rescript-lang/rescript/pull/8092
+- Reanalyze: add scoped `@@live`/`@@dead` annotations for marking module/file sections as live or dead. https://github.com/rescript-lang/rescript/pull/8197
 
 #### :bug: Bug fix
 
-- Fix rewatch swallowing parse warnings (%todo). https://github.com/rescript-lang/rescript/pull/8135
-- Rewatch: log errors and warnings to `stderr`. https://github.com/rescript-lang/rescript/pull/8147 https://github.com/rescript-lang/rescript/pull/8148
-- Rewatch: warn about deprecated package specs `es6`/`es6-global`. https://github.com/rescript-lang/rescript/pull/8146
+- Reanalyze: fix reactive/server stale results when cross-file references change without changing dead declarations (non-transitive mode). https://github.com/rescript-lang/rescript/pull/8173
+- Add duplicate package detection to rewatch. https://github.com/rescript-lang/rescript/pull/8180
+- Rewatch: do not warn about "reanalyze" config field. https://github.com/rescript-lang/rescript/pull/8181
+- Fix error when importing CommonJS runtime modules with `require()`. https://github.com/rescript-lang/rescript/pull/8194
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
-- Rewatch: enable `--create-sourcedirs` by default (now deprecated when explicitly used). https://github.com/rescript-lang/rescript/pull/8092
-- Rewatch: check if filename case for interface and implementation matches. https://github.com/rescript-lang/rescript/pull/8144
+- Formatter no longer writes files when contents are already correctly formatted. https://github.com/rescript-lang/rescript/pull/8209
+- Build system: Only log verbose "Generating AST for module" when actually parsing. https://github.com/rescript-lang/rescript/pull/8210
 
 #### :house: Internal
+
+# 12.1.0
+
+#### :rocket: New Feature
+
+- Add support for `Set`, `Map`, `WeakSet` and `WeakMap` to `@unboxed`. https://github.com/rescript-lang/rescript/pull/8009
+- Reanalyze: add reactive incremental analysis (`-reactive`, `-runs`, `-churn`) and Mermaid pipeline dumping (`-mermaid`). https://github.com/rescript-lang/rescript/pull/8092
+- Reanalyze: add `reanalyze-server` (long-lived server) with transparent delegation for `rescript-tools reanalyze -json`. https://github.com/rescript-lang/rescript/pull/8127
+- Add support of `js-post-build` in Rewatch. Note that `${file}` is now an absolute path. https://github.com/rescript-lang/rescript/pull/8151
+
+#### :bug: Bug fix
+
+- Fix rewatch swallowing parse warnings (e.g., for `%todo`). https://github.com/rescript-lang/rescript/pull/8135
+- Rewatch: log errors and warnings to `stderr`. https://github.com/rescript-lang/rescript/pull/8147 https://github.com/rescript-lang/rescript/pull/8148
+- Rewatch: warn about deprecated package specs `es6`/`es6-global`. https://github.com/rescript-lang/rescript/pull/8146
+- Fix formatter removing doc comments for polymorphic variants. https://github.com/rescript-lang/rescript/pull/8155
+
+#### :nail_care: Polish
+
+- Rewatch: enable `--create-sourcedirs` by default (now deprecated when explicitly used). https://github.com/rescript-lang/rescript/pull/8092
+- Rewatch: check if filename case for interface and implementation matches. https://github.com/rescript-lang/rescript/pull/8144
 
 # 12.0.2
 

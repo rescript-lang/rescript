@@ -11,7 +11,7 @@ const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins", "stdlib");
 
 let input = [];
 
-for await (const file of glob(`${LIB_DIR}/es6/*.js`, { withFileTypes: false })) {
+for await (const file of glob(`${LIB_DIR}/es6/*.mjs`, { withFileTypes: false })) {
   input.push(file);
 }
 

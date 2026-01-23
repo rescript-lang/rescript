@@ -32,7 +32,6 @@ let compatible (dep : module_system) (query : module_system) =
   match query with
   | Commonjs -> dep = Commonjs
   | Esmodule -> dep = Esmodule
-  | Es6_global -> dep = Es6_global || dep = Esmodule
 (* As a dependency Leaf Node, it is the same either [global] or [not] *)
 
 type package_info = {module_system: module_system; path: string; suffix: string}
@@ -41,26 +40,18 @@ type package_name = Pkg_empty | Pkg_runtime | Pkg_normal of string
 
 let ( // ) = Filename.concat
 
-(* in runtime lib, [es6] and [es6] are treated the same wway *)
+(* We keep the dir names "js" and "es6" (instead of "commonjs" and "esmodule") for compatibility. *)
 let runtime_dir_of_module_system (ms : module_system) =
   match ms with
   | Commonjs -> "js"
-  | Esmodule | Es6_global -> "es6"
+  | Esmodule -> "es6"
 
 let runtime_package_path (ms : module_system) js_file =
   Runtime_package.name // "lib" // runtime_dir_of_module_system ms // js_file
 
 type t = {name: package_name; module_systems: package_info list}
 
-let runtime_package_specs : t =
-  {
-    name = Pkg_runtime;
-    module_systems =
-      [
-        {module_system = Esmodule; path = "lib/es6"; suffix = Literals.suffix_js};
-        {module_system = Commonjs; path = "lib/js"; suffix = Literals.suffix_js};
-      ];
-  }
+let runtime_package_specs : t = {name = Pkg_runtime; module_systems = []}
 
 let same_package_by_name (x : t) (y : t) =
   match x.name with
@@ -101,13 +92,11 @@ let string_of_module_system (ms : module_system) =
   match ms with
   | Commonjs -> "CommonJS"
   | Esmodule -> "ESModule"
-  | Es6_global -> "Es6_global"
 
 let module_system_of_string package_name : module_system option =
   match package_name with
   | "commonjs" -> Some Commonjs
-  | "esmodule" | "es6" -> Some Esmodule
-  | "es6-global" -> Some Es6_global
+  | "esmodule" -> Some Esmodule
   | _ -> None
 
 let dump_package_info (fmt : Format.formatter)
@@ -204,15 +193,3 @@ let add_npm_package_path (packages_info : t) (s : string) : t =
       | _ -> Bsc_args.bad_arg ("invalid npm package path: " ^ s)
     in
     {packages_info with module_systems = m :: packages_info.module_systems}
-
-(* support es6 modules instead
-   TODO: enrich ast to support import export
-   http://www.ecma-international.org/ecma-262/6.0/#sec-imports
-   For every module, we need [Ident.t] for accessing and [filename] for import,
-   they are not necessarily the same.
-
-   Es6 modules is not the same with commonjs, we use commonjs currently
-   (play better with node)
-
-   FIXME: the module order matters?
-*)

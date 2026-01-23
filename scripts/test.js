@@ -23,7 +23,7 @@ import {
 
 let ounitTest = false;
 let mochaTest = false;
-let bsbTest = false;
+let buildTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
 
@@ -35,8 +35,8 @@ if (process.argv.includes("-mocha")) {
   mochaTest = true;
 }
 
-if (process.argv.includes("-bsb")) {
-  bsbTest = true;
+if (process.argv.includes("-build")) {
+  buildTest = true;
 }
 
 if (process.argv.includes("-format")) {
@@ -50,7 +50,7 @@ if (process.argv.includes("-docstrings")) {
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
-  bsbTest = true;
+  buildTest = true;
   formatTest = true;
   runtimeDocstrings = true;
 }
@@ -106,9 +106,21 @@ if (mochaTest) {
     cwd: projectDir,
     stdio: "inherit",
   });
+
+  // CommonJS tests
+  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
+  await execBuild([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
+
+  await node("tests/commonjs_tests/src/belt_import.js", [], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }
 
-if (bsbTest) {
+if (buildTest) {
   console.log("Doing build_tests");
   const files = fs.readdirSync(buildTestDir);
 
@@ -122,16 +134,14 @@ if (bsbTest) {
     if (!fs.existsSync(path.join(testDir, "input.js"))) {
       console.warn(`input.js does not exist in ${testDir}`);
     } else {
-      console.log(`testing ${file}`);
-
       // note existsSync test already ensure that it is a directory
       const out = await node("input.js", [], { cwd: testDir });
-      console.log(out.stdout);
+      process.stdout.write(out.stdout);
 
       if (out.status === 0) {
-        console.log("✅ success in", file);
+        console.log(`✅ success in ${file}`);
       } else {
-        console.log(`❌ error in ${file} with stderr:\n`, out.stderr);
+        console.log(`❌ error in ${file} with stderr:\n${out.stderr}`);
         hasError = true;
       }
     }

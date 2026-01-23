@@ -24,7 +24,6 @@ pub fn generate_asts(
         .modules
         .par_iter()
         .map(|(module_name, module)| {
-            debug!("Generating AST for module: {module_name}");
             let package = build_state
                 .get_package(&module.package_name)
                 .expect("Package not found");
@@ -47,6 +46,7 @@ pub fn generate_asts(
                             .map(|i| i.parse_dirty)
                             .unwrap_or(false)
                     {
+                        debug!("Generating AST for module: {module_name}");
                         inc();
                         let ast_result = generate_ast(
                             package.to_owned(),

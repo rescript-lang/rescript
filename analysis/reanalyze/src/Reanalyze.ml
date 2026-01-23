@@ -102,28 +102,36 @@ let collectCmtFilePaths ~cmtRoot : string list =
     walkSubDirs ""
   | None ->
     Lazy.force Paths.setReScriptProjectRoot;
-    let lib_bs = runConfig.projectRoot +++ ("lib" +++ "bs") in
-    let sourceDirs =
-      Paths.readSourceDirs ~configSources:None |> List.sort String.compare
+    (* Prefer explicit scan plan emitted by rewatch (v2 `.sourcedirs.json`).
+       This supports monorepos without reanalyze-side package resolution. *)
+    let scan_plan = Paths.readCmtScan () in
+    let seen = Hashtbl.create 256 in
+    let add_dir (absDir : string) =
+      let files =
+        match Sys.readdir absDir |> Array.to_list with
+        | files -> files
+        | exception Sys_error _ -> []
+      in
+      files
+      |> List.filter (fun x ->
+             Filename.check_suffix x ".cmt" || Filename.check_suffix x ".cmti")
+      |> List.sort String.compare
+      |> List.iter (fun f ->
+             let p = Filename.concat absDir f in
+             if not (Hashtbl.mem seen p) then (
+               Hashtbl.add seen p ();
+               paths := p :: !paths))
     in
-    sourceDirs
-    |> List.iter (fun sourceDir ->
-           let libBsSourceDir = Filename.concat lib_bs sourceDir in
-           let files =
-             match Sys.readdir libBsSourceDir |> Array.to_list with
-             | files -> files
-             | exception Sys_error _ -> []
+    scan_plan
+    |> List.iter (fun (entry : Paths.cmt_scan_entry) ->
+           let build_root_abs =
+             Filename.concat runConfig.projectRoot entry.build_root
            in
-           let cmtFiles =
-             files
-             |> List.filter (fun x ->
-                    Filename.check_suffix x ".cmt"
-                    || Filename.check_suffix x ".cmti")
-           in
-           cmtFiles |> List.sort String.compare
-           |> List.iter (fun cmtFile ->
-                  let cmtFilePath = Filename.concat libBsSourceDir cmtFile in
-                  paths := cmtFilePath :: !paths)));
+           (* Scan configured subdirs. *)
+           entry.scan_dirs
+           |> List.iter (fun d -> add_dir (Filename.concat build_root_abs d));
+           (* Optionally scan build root itself for namespace/mlmap `.cmt`s. *)
+           if entry.also_scan_build_root then add_dir build_root_abs));
   !paths |> List.rev
 
 (** Process files sequentially *)
@@ -146,8 +154,10 @@ let processFilesSequential ~config (cmtFilePaths : string list) :
       {dce_data_list = !dce_data_list; exception_results = !exception_results})
 
 (** Process all cmt files and return results for DCE and Exception analysis.
-    Conceptually: map process_cmt_file over all files. *)
-let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
+    Conceptually: map process_cmt_file over all files.
+    If file_stats is provided, it will be updated with processing statistics. *)
+let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file
+    ?(file_stats : ReactiveAnalysis.processing_stats option) () :
     all_files_result =
   let cmtFilePaths =
     let all = collectCmtFilePaths ~cmtRoot in
@@ -158,9 +168,15 @@ let processCmtFiles ~config ~cmtRoot ~reactive_collection ~skip_file :
   (* Reactive mode: use incremental processing that skips unchanged files *)
   match reactive_collection with
   | Some collection ->
-    let result =
+    let result, stats =
       ReactiveAnalysis.process_files ~collection ~config cmtFilePaths
     in
+    (match file_stats with
+    | Some fs ->
+      fs.total_files <- stats.total_files;
+      fs.processed <- stats.processed;
+      fs.from_cache <- stats.from_cache
+    | None -> ());
     {
       dce_data_list = result.dce_data_list;
       exception_results = result.exception_results;
@@ -180,10 +196,11 @@ let shuffle_list lst =
   Array.to_list arr
 
 let runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-    ~reactive_liveness ~reactive_solver ~skip_file =
+    ~reactive_liveness ~reactive_solver ~skip_file ?file_stats () =
   (* Map: process each file -> list of file_data *)
   let {dce_data_list; exception_results} =
     processCmtFiles ~config:dce_config ~cmtRoot ~reactive_collection ~skip_file
+      ?file_stats ()
   in
   (* Get exception results from reactive collection if available *)
   let exception_results =
@@ -549,7 +566,7 @@ let runAnalysisAndReport ~cmtRoot =
       else None
     in
     runAnalysis ~dce_config ~cmtRoot ~reactive_collection ~reactive_merge
-      ~reactive_liveness ~reactive_solver ~skip_file;
+      ~reactive_liveness ~reactive_solver ~skip_file ();
     (* Report issue count with diff *)
     let current_count = Log_.Stats.get_issue_count () in
     if !Cli.churn > 0 then (
@@ -599,9 +616,11 @@ let runAnalysisAndReport ~cmtRoot =
       removed_std);
   if !Cli.json then EmitJson.finish ()
 
-let cli () =
+let parse_argv (argv : string array) : string option =
   let analysisKindSet = ref false in
   let cmtRootRef = ref None in
+  (* CLI override for transitive mode (overrides rescript.json if provided). *)
+  let transitive_override : bool option ref = ref None in
   let usage = "reanalyze version " ^ Version.version in
   let versionAndExit () =
     print_endline usage;
@@ -613,7 +632,7 @@ let cli () =
     cmtRootRef := cmtRoot;
     analysisKindSet := true
   and setConfig () =
-    Paths.Config.processBsconfig ();
+    Paths.Config.processConfig ();
     analysisKindSet := true
   and setDCE cmtRoot =
     RunConfig.dce ();
@@ -636,6 +655,14 @@ let cli () =
          path" );
       ("-ci", Unit (fun () -> Cli.ci := true), "Internal flag for use in CI");
       ("-config", Unit setConfig, "Read the analysis mode from rescript.json");
+      ( "-transitive",
+        Unit (fun () -> transitive_override := Some true),
+        "Force transitive reporting (overrides rescript.json \
+         reanalyze.transitive)" );
+      ( "-no-transitive",
+        Unit (fun () -> transitive_override := Some false),
+        "Disable transitive reporting (overrides rescript.json \
+         reanalyze.transitive)" );
       ("-dce", Unit (fun () -> setDCE None), "Eperimental DCE");
       ("-debug", Unit (fun () -> Cli.debug := true), "Print debug information");
       ( "-dce-cmt",
@@ -722,11 +749,29 @@ let cli () =
       ("--version", Unit versionAndExit, "Show version information and exit");
     ]
   in
-  Arg.parse speclist print_endline usage;
+  let current = ref 0 in
+  Arg.parse_argv ~current argv speclist print_endline usage;
   if !analysisKindSet = false then setConfig ();
-  let cmtRoot = !cmtRootRef in
+  (match !transitive_override with
+  | None -> ()
+  | Some b -> RunConfig.transitive b);
+  !cmtRootRef
+
+(** Default socket location invariant:
+    - the socket lives in the project root
+    - reanalyze can be called from anywhere within the project
+
+    Project root detection reuses the same logic as reanalyze config discovery:
+    walk up from a directory until we find rescript.json. *)
+let cli () =
+  let cmtRoot = parse_argv Sys.argv in
   runAnalysisAndReport ~cmtRoot
 [@@raises exit]
+
+(* Re-export server module for external callers (e.g. tools/bin/main.ml).
+   This keeps the wrapped-library layering intact: Reanalyze depends on internal
+   modules, not the other way around. *)
+module ReanalyzeServer = ReanalyzeServer
 
 module RunConfig = RunConfig
 module DceConfig = DceConfig

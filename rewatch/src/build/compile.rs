@@ -13,13 +13,64 @@ use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use anyhow::{Result, anyhow};
 use console::style;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::OnceLock;
 use std::time::SystemTime;
+
+/// Execute js-post-build command for a compiled JavaScript file.
+/// The command runs in the directory containing the rescript.json that defines it.
+/// The absolute path to the JS file is passed as an argument.
+fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
+    let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    debug!(
+        "Executing js-post-build: {} (in {})",
+        full_command,
+        working_dir.display()
+    );
+
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/C", &full_command])
+            .current_dir(working_dir)
+            .output()
+    } else {
+        Command::new("sh")
+            .args(["-c", &full_command])
+            .current_dir(working_dir)
+            .output()
+    };
+
+    match output {
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            // Always log stdout/stderr - the user explicitly configured this command
+            // and likely cares about its output
+            if !stdout.is_empty() {
+                info!("{}", stdout.trim());
+            }
+            if !stderr.is_empty() {
+                warn!("{}", stderr.trim());
+            }
+
+            if !output.status.success() {
+                Err(anyhow!(
+                    "js-post-build command failed for {}",
+                    js_file_path.display()
+                ))
+            } else {
+                Ok(())
+            }
+        }
+        Err(e) => Err(anyhow!("Failed to execute js-post-build command: {}", e)),
+    }
+}
 
 pub fn compile(
     build_state: &mut BuildCommandState,
@@ -496,7 +547,7 @@ pub fn compiler_args(
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
-                        spec.module,
+                        spec.module.as_str(),
                         if spec.in_source {
                             file_path.parent().unwrap().to_str().unwrap().to_string()
                         } else {
@@ -814,6 +865,43 @@ fn compile_file(
                     }
                 }
             });
+
+            // Execute js-post-build command if configured
+            // Only run for implementation files (not interfaces)
+            if !is_interface
+                && let Some(js_post_build) = &package.config.js_post_build
+                && let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
+            {
+                // Execute post-build command for each package spec (each output format)
+                for spec in root_config.get_package_specs() {
+                    // Determine the correct JS file path based on in-source setting:
+                    // - in-source: true  -> next to the source file (e.g., src/Foo.js)
+                    // - in-source: false -> in lib/<module>/ directory (e.g., lib/es6/src/Foo.js)
+                    let js_file = if spec.in_source {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    } else {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path)
+                                .join("lib")
+                                .join(spec.get_out_of_source_dir())
+                                .join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    };
+
+                    if js_file.exists() {
+                        // Fail the build if post-build command fails (matches bsb behavior with &&)
+                        // Run in the package's directory (where rescript.json is defined)
+                        execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
+                    }
+                }
+            }
 
             if helpers::contains_ascii_characters(&err) {
                 if package.is_local_dep {

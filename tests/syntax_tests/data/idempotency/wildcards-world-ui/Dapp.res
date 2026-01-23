@@ -559,18 +559,18 @@ module DefaultLeftPanel = {
   @react.component
   let make = () => {
     let translationModeContext = ReactTranslate.useTranslationModeContext()
-    let translation = ReactTranslate.useTranslate(. translationModeContext.translationMode)
+    let translation = ReactTranslate.useTranslate(translationModeContext.translationMode)
     <React.Fragment>
       <h1 className=Styles.heading>
-        <span className=Styles.colorBlue> {translation(. "bluetext")->restr} </span>
+        <span className=Styles.colorBlue> {translation("bluetext")->restr} </span>
         <br />
-        {translation(. "ethereum")->restr}
+        {translation("ethereum")->restr}
         <br />
         <span className=Styles.colorGreen> {"conservation"->restr} </span>
-        {(" " ++ translation(. "tokens"))->restr}
+        {(" " ++ translation("tokens"))->restr}
       </h1>
       <hr />
-      <h3 className=Styles.subHeading> {translation(. "subHeading")->restr} </h3>
+      <h3 className=Styles.subHeading> {translation("subHeading")->restr} </h3>
     </React.Fragment>
   }
 }

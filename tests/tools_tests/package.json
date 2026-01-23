@@ -2,9 +2,9 @@
   "name": "@tests/tools",
   "private": true,
   "scripts": {
-    "build": "rescript-legacy build -warn-error -3",
+    "build": "rescript build",
     "clean": "rescript clean",
-    "dev": "rescript -w"
+    "dev": "rescript --watch"
   },
   "dependencies": {
     "@rescript/react": "link:../dependencies/rescript-react",

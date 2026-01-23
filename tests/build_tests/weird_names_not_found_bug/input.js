@@ -1,14 +1,11 @@
 import * as assert from "node:assert";
+import { stripVTControlCharacters } from "node:util";
 import { setup } from "#dev/process";
 
-const { execBuildLegacy } = await setup(import.meta.dirname);
+const { execBuild, execClean } = await setup(import.meta.dirname);
 
-const out = await execBuildLegacy();
+const out = await execBuild();
+const stderr = stripVTControlCharacters(out.stderr);
 
-if (out.stderr !== "") {
-  assert.fail(out.stderr);
-}
-
-if (!out.stdout.includes(`The module or file Demo can't be found.`)) {
-  assert.fail(out.stdout);
-}
+assert.ok(stderr.includes(`The module or file Demo can't be found.`));
+await execClean();

@@ -29,15 +29,6 @@ fn main() -> Result<()> {
     }))
     .expect("Failed to initialize logger");
 
-    let mut command = cli.command;
-
-    if let cli::Command::Build(build_args) = &command
-        && build_args.watch
-    {
-        log::warn!("`rescript build -w` is deprecated. Please use `rescript watch` instead.");
-        command = cli::Command::Watch(build_args.clone().into());
-    }
-
     let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
     let plain_output = !is_tty;
 
@@ -45,25 +36,13 @@ fn main() -> Result<()> {
     // level, we should never show that.
     let show_progress = log_level_filter == LevelFilter::Info;
 
-    match command {
+    match cli.command {
         cli::Command::CompilerArgs { path } => {
             println!("{}", build::get_compiler_args(Path::new(&path))?);
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
-
-            if build_args.dev.dev {
-                log::warn!(
-                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
-                );
-            }
-
-            if build_args.create_sourcedirs.was_explicitly_set() {
-                log::warn!(
-                    "`--create-sourcedirs` is deprecated: source_dirs.json is now always created. Please remove this flag from your command."
-                );
-            }
 
             match build::build(
                 &build_args.filter,
@@ -89,18 +68,6 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            if *watch_args.dev {
-                log::warn!(
-                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
-                );
-            }
-
-            if watch_args.create_sourcedirs.was_explicitly_set() {
-                log::warn!(
-                    "`--create-sourcedirs` is deprecated: source_dirs.json is now always created. Please remove this flag from your command."
-                );
-            }
-
             match watcher::start(
                 &watch_args.filter,
                 show_progress,
@@ -117,30 +84,11 @@ fn main() -> Result<()> {
                 Ok(_) => Ok(()),
             }
         }
-        cli::Command::Clean { folder, dev } => {
+        cli::Command::Clean { folder } => {
             let _lock = get_lock(&folder);
-
-            if dev.dev {
-                log::warn!(
-                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
-                );
-            }
-
             build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
         }
-        cli::Command::Format {
-            stdin,
-            check,
-            files,
-            dev,
-        } => {
-            if dev.dev {
-                log::warn!(
-                    "`--dev no longer has any effect. Please remove it from your command. It will be removed in a future version."
-                );
-            }
-            format::format(stdin, check, files)
-        }
+        cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
     }
 }
 

@@ -21,7 +21,7 @@ let make = (~clickAction=() => (), ~isMobile=false) => {
     \">>="(
       \"<$>"(\">>="(\">>="(optProfile, a => a.image), img => img->Array.get(0)), a => a.contentUrl),
       content => Js.Dict.get(content, "/"),
-    )->Option.mapWithDefault(Blockie.makeBlockie(. userAddressLowerCase), hash =>
+    )->Option.mapWithDefault(Blockie.makeBlockie(userAddressLowerCase), hash =>
       "https://ipfs.infura.io/ipfs/" ++ hash
     )
 

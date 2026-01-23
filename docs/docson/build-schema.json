@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "definitions": {
     "module-format": {
-      "enum": ["esmodule", "commonjs", "es6", "es6-global"],
-      "description": "es6 and es6-global are deprecated. Default: commonjs."
+      "enum": ["esmodule", "commonjs"],
+      "description": "Output module format. Default: esmodule."
     },
     "suffix-spec": {
       "type": "string",
@@ -124,7 +124,8 @@
       "type": "object",
       "properties": {
         "cmd": {
-          "type": "string"
+          "type": "string",
+          "description": "Shell command to run after each JS file is compiled. The absolute path to the output JS file is appended as an argument. The path respects the `in-source` setting. The command runs in the directory containing the rescript.json where it is defined."
         }
       }
     },
@@ -165,7 +166,6 @@
               "type": "string",
               "description": "name of the directory"
             },
-
             "type": {
               "enum": ["dev"]
             },
@@ -373,15 +373,7 @@
       "items": {
         "type": "string"
       },
-      "description": "a list of directories that bsb will not look into"
-    },
-    "bs-dependencies": {
-      "$ref": "#/definitions/dependencies",
-      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dependencies instead)."
-    },
-    "bs-dev-dependencies": {
-      "$ref": "#/definitions/dependencies",
-      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules` (deprecated, use dev-dependencies instead)."
+      "description": "a list of directories that the build system will not look into"
     },
     "dependencies": {
       "$ref": "#/definitions/dependencies",
@@ -413,10 +405,6 @@
     "gentypeconfig": {
       "$ref": "#/definitions/gentype-specs",
       "description": "gentype config, see cristianoc/genType for more details"
-    },
-    "bsc-flags": {
-      "$ref": "#/definitions/compiler-flags",
-      "description": "Flags passed to bsc.exe (deprecated, use compiler-flags instead)"
     },
     "compiler-flags": {
       "$ref": "#/definitions/compiler-flags",
@@ -454,15 +442,11 @@
     },
     "js-post-build": {
       "$ref": "#/definitions/js-post-build",
-      "description": "(Experimental) post-processing hook. bsb will invoke `cmd ${file}` whenever a `${file}` is changed"
+      "description": "Post-processing hook. The build system will invoke `cmd <absolute-path-to-js-file>` after each JS file is compiled. The path respects the `in-source` setting: when true, the path is next to the source file; when false, the path is in the `lib/<module>/` directory. The command runs in the directory containing the rescript.json where it is defined."
     },
     "package-specs": {
       "$ref": "#/definitions/package-specs",
       "description": "ReScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
-    },
-    "external-stdlib": {
-      "type": "string",
-      "description": "Use the external stdlib library instead of the one shipped with the compiler package"
     },
     "bs-external-includes": {
       "type": "array",

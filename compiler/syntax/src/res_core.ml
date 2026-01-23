@@ -1726,11 +1726,9 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   let start_pos = p.Parser.start_pos in
   Parser.leave_breadcrumb p Grammar.Es6ArrowExpr;
   (* Parsing function parameters and attributes:
-     1. Basically, attributes outside of `(...)` are added to the function, except
-     the uncurried attribute `(.)` is added to the function. e.g. async, uncurried
-
+     1. Attributes outside of `(...)` are added to the function, e.g. async.
      2. Attributes inside `(...)` are added to the arguments regardless of whether
-     labeled, optional or nolabeled *)
+     labeled, optional or nolabeled. *)
   let parameters =
     match term_parameters with
     | Some params -> (None, params)
@@ -1807,9 +1805,6 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   {arrow_expr with pexp_loc = {arrow_expr.pexp_loc with loc_start = start_pos}}
 
 (*
- * dotted_parameter ::=
- *   | . parameter
- *
  * parameter ::=
  *   | pattern
  *   | pattern : type
@@ -1827,14 +1822,10 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
  *)
 and parse_parameter p =
   if
-    p.Parser.token = Token.Typ || p.token = Tilde || p.token = Dot
+    p.Parser.token = Token.Typ || p.token = Tilde
     || Grammar.is_pattern_start p.token
   then
     let start_pos = p.Parser.start_pos in
-    let _ =
-      Parser.optional p Token.Dot
-      (* dot is ignored *)
-    in
     let attrs = parse_attributes p in
     if p.Parser.token = Typ then (
       Parser.next p;
@@ -1934,7 +1925,6 @@ and parse_parameter_list p =
  *   | _
  *   | lident
  *   | ()
- *   | (.)
  *   | ( parameter {, parameter} [,] )
  *)
 and parse_parameters p : fundef_type_param option * fundef_term_param list =
@@ -1983,7 +1973,6 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       ] )
   | Lparen ->
     Parser.next p;
-    ignore (Parser.optional p Dot);
     let type_params, term_params = parse_parameter_list p in
     let term_params =
       if term_params <> [] then term_params else [unit_term_parameter ()]
@@ -3902,29 +3891,13 @@ and parse_switch_expression p =
  *   | ~ label-name = ? _           (* syntax sugar *)
  *   | ~ label-name = ? expr : type
  *
- *  dotted_argument ::=
- *   | . argument
  *)
 and parse_argument p : argument option =
   if
     p.Parser.token = Token.Tilde
-    || p.token = Dot || p.token = Underscore
+    || p.token = Underscore
     || Grammar.is_expr_start p.token
-  then
-    match p.Parser.token with
-    | Dot -> (
-      Parser.next p;
-      match p.token with
-      (* apply(.) *)
-      | Rparen ->
-        let unit_expr =
-          Ast_helper.Exp.construct
-            (Location.mknoloc (Longident.Lident "()"))
-            None
-        in
-        Some {label = Asttypes.Nolabel; expr = unit_expr}
-      | _ -> parse_argument2 p)
-    | _ -> parse_argument2 p
+  then parse_argument2 p
   else None
 
 and parse_argument2 p : argument option =
@@ -4614,9 +4587,6 @@ and parse_type_alias p typ =
  * note:
  *  | attrs ~ident: type_expr    -> attrs are on the arrow
  *  | attrs type_expr            -> attrs are here part of the type_expr
- *
- * dotted_type_parameter ::=
- *  | . type_parameter
  *)
 and parse_type_parameter p =
   let doc_attr : Parsetree.attributes =
@@ -4626,16 +4596,8 @@ and parse_type_parameter p =
       [doc_comment_to_attribute loc s]
     | _ -> []
   in
-  if
-    p.Parser.token = Token.Tilde
-    || p.token = Dot
-    || Grammar.is_typ_expr_start p.token
-  then
+  if p.Parser.token = Token.Tilde || Grammar.is_typ_expr_start p.token then
     let start_pos = p.Parser.start_pos in
-    let _ =
-      Parser.optional p Dot
-      (* dot is ignored *)
-    in
     let attrs = doc_attr @ parse_attributes p in
     match p.Parser.token with
     | Tilde -> (
@@ -5265,24 +5227,25 @@ and parse_constr_decl_args p =
   in
   (constr_args, res)
 
+(* Helper to check if current token is a bar or doc comment followed by a bar *)
+and is_bar_or_doc_comment_then_bar p =
+  Parser.lookahead p (fun state ->
+      match state.Parser.token with
+      | DocComment _ -> (
+        Parser.next state;
+        match state.token with
+        | Bar -> true
+        | _ -> false)
+      | Bar -> true
+      | _ -> false)
+
 (* constr-decl ::=
  *  | constr-name
  *  | attrs constr-name
  *  | constr-name const-args
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
-  let is_constructor_with_bar p =
-    Parser.lookahead p (fun state ->
-        match state.Parser.token with
-        | DocComment _ -> (
-          Parser.next state;
-          match state.token with
-          | Bar -> true
-          | _ -> false)
-        | Bar -> true
-        | _ -> false)
-  in
-  if is_constructor_with_bar p then (
+  if is_bar_or_doc_comment_then_bar p then (
     let doc_comment_attrs =
       match p.Parser.token with
       | DocComment (loc, s) ->
@@ -5905,14 +5868,37 @@ and parse_tag_spec_full p =
 
 and parse_tag_specs p =
   match p.Parser.token with
-  | Bar ->
-    Parser.next p;
-    let row_field = parse_tag_spec p in
-    row_field :: parse_tag_specs p
+  | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    Parser.expect Bar p;
+    let tag = parse_tag_spec p in
+    let tag_with_doc =
+      match tag with
+      | Parsetree.Rtag (name, attrs, contains_constant, types) ->
+        Parsetree.Rtag
+          (name, doc_comment_attrs @ attrs, contains_constant, types)
+      | Rinherit typ ->
+        Rinherit
+          {typ with ptyp_attributes = doc_comment_attrs @ typ.ptyp_attributes}
+    in
+    tag_with_doc :: parse_tag_specs p
   | _ -> []
 
 and parse_tag_spec p =
-  let attrs = parse_attributes p in
+  let doc_comment_attrs =
+    match p.Parser.token with
+    | DocComment (loc, s) ->
+      Parser.next p;
+      [doc_comment_to_attribute loc s]
+    | _ -> []
+  in
+  let attrs = doc_comment_attrs @ parse_attributes p in
   match p.Parser.token with
   | Hash -> parse_polymorphic_variant_type_spec_hash ~attrs ~full:false p
   | _ ->
@@ -5920,14 +5906,46 @@ and parse_tag_spec p =
     Parsetree.Rinherit typ
 
 and parse_tag_spec_first p =
-  let attrs = parse_attributes p in
   match p.Parser.token with
-  | Bar ->
-    Parser.next p;
-    [parse_tag_spec p]
-  | Hash -> [parse_polymorphic_variant_type_spec_hash ~attrs ~full:false p]
+  | (Bar | DocComment _) when is_bar_or_doc_comment_then_bar p ->
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    Parser.expect Bar p;
+    let tag = parse_tag_spec p in
+    (match tag with
+    | Parsetree.Rtag (name, attrs, contains_constant, types) ->
+      Parsetree.Rtag (name, doc_comment_attrs @ attrs, contains_constant, types)
+    | Rinherit typ ->
+      Rinherit
+        {typ with ptyp_attributes = doc_comment_attrs @ typ.ptyp_attributes})
+    :: parse_tag_specs p
+  | DocComment _ | Hash | At -> (
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    let attrs = doc_comment_attrs @ parse_attributes p in
+    match p.Parser.token with
+    | Hash -> [parse_polymorphic_variant_type_spec_hash ~attrs ~full:false p]
+    | _ -> (
+      let typ = parse_typ_expr ~attrs p in
+      match p.token with
+      | Rbracket ->
+        (* example: [ListStyleType.t] *)
+        [Parsetree.Rinherit typ]
+      | _ ->
+        Parser.expect Bar p;
+        [Parsetree.Rinherit typ; parse_tag_spec p]))
   | _ -> (
-    let typ = parse_typ_expr ~attrs p in
+    let typ = parse_typ_expr p in
     match p.token with
     | Rbracket ->
       (* example: [ListStyleType.t] *)

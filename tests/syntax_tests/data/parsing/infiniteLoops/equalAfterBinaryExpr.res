@@ -164,7 +164,7 @@ let removeNode = (rbt, node) => {
     }
   }
   // Don't forget to detatch the artificially created leaf.
-  if isLeaf(. successor) {
+  if isLeaf(successor) {
     if rbt->root === Some(successor) {
       rbt->root = None
     }

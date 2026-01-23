@@ -44,10 +44,6 @@ This file was imported but changed significantly in iterations later.
 
 ReScript compiler unit test builds on [OUnit](http://ounit.forge.ocamlcore.org/)
 
-## Ninja
-
-Thanks to [ninja-build](https://ninja-build.org), ReScript also comes with a blazing fast build tool on top of it, `ninja` is a truly [well engineered](http://aosabook.org/en/posa/ninja.html) scalable build tool.
-
 ## Bloomberg and Facebook
 
 Thanks to [Bloomberg](https://www.techatbloomberg.com) and [Facebook](https://github.com/facebook/). This project began at Bloomberg and was published in 2016; without the support of Bloomberg, it would not have happened. This project's funded by Facebook since July 2017.

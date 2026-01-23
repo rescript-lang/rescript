@@ -41,6 +41,7 @@ format-codeblocks <file>                Format ReScript code blocks
 extract-codeblocks <file>               Extract ReScript code blocks from file
   [--transform-assert-equal]              Transform `==` to `assertEqual`
 reanalyze                               Reanalyze
+reanalyze-server                        Start reanalyze server
 -v, --version                           Print version
 -h, --help                              Print help|}
 
@@ -87,7 +88,7 @@ let main () =
         (Error
            (Printf.sprintf
               "error: failed to load ReScript project at %s (missing \
-               bsconfig.json/rescript.json?)"
+               rescript.json?)"
               rootPath))
     | Some package ->
       let moduleNames =
@@ -171,12 +172,56 @@ let main () =
         exit 1)
     | _ -> logAndExit (Error extractCodeblocksHelp))
   | "reanalyze" :: _ ->
+    if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
+      let len = Array.length Sys.argv in
+      for i = 1 to len - 2 do
+        Sys.argv.(i) <- Sys.argv.(i + 1)
+      done;
+      Sys.argv.(len - 1) <- "";
+      Reanalyze.cli ())
+    else
+      (* Transparent delegation is supported only for the editor invocation:
+         `reanalyze -json` (and nothing else). *)
+      let argv_for_server =
+        let args = Array.to_list Sys.argv in
+        let rest =
+          match args with
+          | _ :: "reanalyze" :: rest -> rest
+          | _ :: rest -> rest
+          | [] -> []
+        in
+        rest |> List.filter (fun s -> s <> "") |> Array.of_list
+      in
+      if argv_for_server = [|"-json"|] then (
+        match Reanalyze.ReanalyzeServer.try_request_default () with
+        | Some resp ->
+          output_string stdout resp.stdout;
+          output_string stderr resp.stderr;
+          flush stdout;
+          flush stderr;
+          exit resp.exit_code
+        | None ->
+          let len = Array.length Sys.argv in
+          for i = 1 to len - 2 do
+            Sys.argv.(i) <- Sys.argv.(i + 1)
+          done;
+          Sys.argv.(len - 1) <- "";
+          Reanalyze.cli ())
+      else
+        let len = Array.length Sys.argv in
+        for i = 1 to len - 2 do
+          Sys.argv.(i) <- Sys.argv.(i + 1)
+        done;
+        Sys.argv.(len - 1) <- "";
+        Reanalyze.cli ()
+  | "reanalyze-server" :: _ ->
     let len = Array.length Sys.argv in
     for i = 1 to len - 2 do
       Sys.argv.(i) <- Sys.argv.(i + 1)
     done;
     Sys.argv.(len - 1) <- "";
-    Reanalyze.cli ()
+    Reanalyze.ReanalyzeServer.server_cli ~parse_argv:Reanalyze.parse_argv
+      ~run_analysis:Reanalyze.runAnalysis ()
   | "extract-embedded" :: extPointNames :: filename :: _ ->
     logAndExit
       (Ok

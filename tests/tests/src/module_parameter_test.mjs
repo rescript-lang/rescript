@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Stdlib_String from "@rescript/runtime/lib/es6/Stdlib_String.js";
+import * as Stdlib_String from "@rescript/runtime/lib/es6/Stdlib_String.mjs";
 
 function u(v) {
   return v;

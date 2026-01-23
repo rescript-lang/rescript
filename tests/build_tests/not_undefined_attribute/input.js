@@ -1,23 +1,16 @@
 // @ts-check
 
 import * as assert from "node:assert";
+import { stripVTControlCharacters } from "node:util";
 import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
-const out = await execBuildLegacy();
+const out = await execBuild();
+const stderr = normalizeNewlines(stripVTControlCharacters(out.stderr));
 
-assert.equal(
-  normalizeNewlines(out.stdout.slice(out.stdout.indexOf("input.res:2:1-12"))),
-  `input.res:2:1-12
-
-  1 │ @notUndefined
-  2 │ type t = int
-  3 │ 
-
-  @notUndefined can only be used on abstract types
-
-FAILED: cannot make progress due to previous errors.
-`,
-);
+assert.ok(stderr.includes("demo.res:2:1-12"));
+assert.ok(stderr.includes("@notUndefined can only be used on abstract types"));
+assert.ok(stderr.includes("Failed to Compile"));
+await execClean();

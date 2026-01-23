@@ -191,13 +191,6 @@ let main () =
     in
     Printf.printf "\"%s\"" res
   | [_; "diagnosticSyntax"; path] -> Commands.diagnosticSyntax ~path
-  | _ :: "reanalyze" :: _ ->
-    let len = Array.length Sys.argv in
-    for i = 1 to len - 2 do
-      Sys.argv.(i) <- Sys.argv.(i + 1)
-    done;
-    Sys.argv.(len - 1) <- "";
-    Reanalyze.cli ()
   | [_; "references"; path; line; col] ->
     Commands.references ~path
       ~pos:(int_of_string line, int_of_string col)

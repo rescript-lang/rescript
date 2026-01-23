@@ -2,10 +2,10 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.js";
-import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
-import * as Belt_MutableQueue from "@rescript/runtime/lib/es6/Belt_MutableQueue.js";
-import * as Belt_MutableStack from "@rescript/runtime/lib/es6/Belt_MutableStack.js";
+import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.mjs";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.mjs";
+import * as Belt_MutableQueue from "@rescript/runtime/lib/es6/Belt_MutableQueue.mjs";
+import * as Belt_MutableStack from "@rescript/runtime/lib/es6/Belt_MutableStack.mjs";
 
 function inOrder(v) {
   let current = v;

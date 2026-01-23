@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.js";
+import * as Js_undefined from "@rescript/runtime/lib/es6/Js_undefined.mjs";
 
 Mocha.describe("Js_undefined_test", () => {
   Mocha.test("toOption - empty", () => Test_utils.eq("File \"js_undefined_test.res\", line 7, characters 7-14", undefined, Js_undefined.toOption(undefined)));

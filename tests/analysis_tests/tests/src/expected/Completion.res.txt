@@ -2704,8 +2704,8 @@ Path someVariantWithDeprecated
     "insertTextFormat": 2
   }]
 
-Complete src/Completion.res 457:30
-posCursor:[457:30] posNoWhite:[457:29] Found expr:[457:11->457:30]
+Complete src/Completion.res 457:28
+posCursor:[457:28] posNoWhite:[457:27] Found expr:[457:11->457:28]
 Completable: Cpath Value[uncurried](Nolabel)->toS
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

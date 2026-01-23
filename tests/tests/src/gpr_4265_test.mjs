@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Belt_MutableMapInt from "@rescript/runtime/lib/es6/Belt_MutableMapInt.js";
+import * as Belt_MutableMapInt from "@rescript/runtime/lib/es6/Belt_MutableMapInt.mjs";
 
 let mockMap = Belt_MutableMapInt.make();
 

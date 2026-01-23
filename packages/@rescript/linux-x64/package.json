@@ -1,6 +1,6 @@
 {
   "name": "@rescript/linux-x64",
-  "version": "12.1.0",
+  "version": "13.0.0-alpha.1",
   "description": "ReScript binaries for Linux x86_64",
   "type": "module",
   "homepage": "https://rescript-lang.org",
@@ -18,22 +18,21 @@
     "Cristiano Calcagno (https://github.com/cristianoc)",
     "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+    "Florian Verdonck (https://github.com/nojaf)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
     "Jaap Frolich (https://github.com/jfrolich)",
     "Matthias Le Brun (https://github.com/bloodyowl)",
     "Patrick Ecker (https://github.com/ryyppy)",
     "Paul Tsnobiladzé (https://github.com/tsnobip)",
+    "Shulhi Sapli (https://github.com/shulhi)",
     "Woonki Moon (https://github.com/mununki)"
   ],
   "publishConfig": {
     "access": "public",
     "provenance": true,
     "executableFiles": [
-      "./bin/bsb_helper.exe",
       "./bin/bsc.exe",
-      "./bin/ninja.exe",
-      "./bin/rescript-legacy.exe",
       "./bin/rescript-editor-analysis.exe",
       "./bin/rescript-tools.exe",
       "./bin/rescript.exe"

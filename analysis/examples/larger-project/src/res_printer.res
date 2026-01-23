@@ -1190,7 +1190,7 @@ and printTypeDeclarations = (~recFlag, typeDeclarations, cmtTbl) =>
  * type_declaration = {
  *    ptype_name: string loc;
  *    ptype_params: (core_type * variance) list;
- *          (* ('a1,...'an) t; None represents  _*)
+ *          (* ('a1, ...'an) t; None represents  _*)
  *    ptype_cstrs: (core_type * core_type * Location.t) list;
  *          (* ... constraint T1=T1'  ... constraint Tn=Tn' *)
  *    ptype_kind: type_kind;
@@ -4203,7 +4203,7 @@ and printArgumentsWithCallbackInFirstPosition = (~uncurried, args, cmtTbl) => {
    */
   let fitsOnOneLine = Doc.concat(list{
     if uncurried {
-      Doc.text("(. ")
+      Doc.text("(")
     } else {
       Doc.lparen
     },
@@ -4285,7 +4285,7 @@ and printArgumentsWithCallbackInLastPosition = (~uncurried, args, cmtTbl) => {
   /* Thing.map(foo, (arg1, arg2) => MyModuleBlah.toList(argument)) */
   let fitsOnOneLine = Doc.concat(list{
     if uncurried {
-      Doc.text("(.")
+      Doc.text("(")
     } else {
       Doc.lparen
     },
@@ -4300,7 +4300,7 @@ and printArgumentsWithCallbackInLastPosition = (~uncurried, args, cmtTbl) => {
    */
   let arugmentsFitOnOneLine = Doc.concat(list{
     if uncurried {
-      Doc.text("(.")
+      Doc.text("(")
     } else {
       Doc.lparen
     },
@@ -4347,8 +4347,8 @@ and printArguments = (~uncurried, args: list<(Asttypes.arg_label, Parsetree.expr
      * arity zero vs arity one syntax.
      * Related: https://github.com/rescript-lang/syntax/issues/138 */
     switch (uncurried, loc.loc_ghost) {
-    | (true, true) => Doc.text("(.)") /* arity zero */
-    | (true, false) => Doc.text("(. ())") /* arity one */
+    | (true, true) => Doc.text("()") /* arity zero */
+    | (true, false) => Doc.text("(())") /* arity one */
     | _ => Doc.text("()")
     }
   | list{(Nolabel, arg)} if ParsetreeViewer.isHuggableExpression(arg) =>
@@ -4363,7 +4363,7 @@ and printArguments = (~uncurried, args: list<(Asttypes.arg_label, Parsetree.expr
 
     Doc.concat(list{
       if uncurried {
-        Doc.text("(. ")
+        Doc.text("(")
       } else {
         Doc.lparen
       },
@@ -4374,7 +4374,7 @@ and printArguments = (~uncurried, args: list<(Asttypes.arg_label, Parsetree.expr
     Doc.group(
       Doc.concat(list{
         if uncurried {
-          Doc.text("(.")
+          Doc.text("(")
         } else {
           Doc.lparen
         },
@@ -4635,7 +4635,7 @@ and printExprFunParameters = (~inCallback, ~uncurried, ~hasConstraint, parameter
     }
 
     let lparen = if uncurried {
-      Doc.text("(. ")
+      Doc.text("(")
     } else {
       Doc.lparen
     }

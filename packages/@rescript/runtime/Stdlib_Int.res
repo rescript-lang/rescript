@@ -45,20 +45,9 @@ external toStringWithRadix: (int, ~radix: int) => string = "toString"
 external toFloat: int => float = "%identity"
 external fromFloat: float => int = "%intoffloat"
 
-let fromString = (x, ~radix=?) => {
-  let maybeInt = switch radix {
-  | Some(radix) => Stdlib_Float.parseInt(x, ~radix)
-  | None => Stdlib_Float.parseInt(x)
-  }
-
-  if Stdlib_Float.isNaN(maybeInt) {
-    None
-  } else if maybeInt > Constants.maxValue->toFloat || maybeInt < Constants.minValue->toFloat {
-    None
-  } else {
-    let asInt = fromFloat(maybeInt)
-    Some(asInt)
-  }
+let fromString: string => option<int> = str => {
+  let? Some(num) = str->Stdlib_Float.fromString
+  num === num->fromFloat->toFloat && Stdlib_Float.isFinite(num) ? Some(num->fromFloat) : None
 }
 
 external mod: (int, int) => int = "%modint"

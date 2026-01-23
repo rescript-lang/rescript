@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_float from "@rescript/runtime/lib/es6/Primitive_float.js";
+import * as Primitive_float from "@rescript/runtime/lib/es6/Primitive_float.mjs";
 
 let five = BigInt("5");
 

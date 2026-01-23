@@ -10,12 +10,12 @@ module AnotherName = {
 
 module Uncurried = {
   @react.component
-  let make = (. ~x) => React.string(x)
+  let make = (~x) => React.string(x)
 }
 
 module type TUncurried = {
   @react.component
-  let make: (. ~x: string) => React.element
+  let make: (~x: string) => React.element
 }
 
 module E = {
@@ -25,7 +25,7 @@ module E = {
 
 module EUncurried = {
   @react.component
-  external make: (. ~x: string) => React.element = "default"
+  external make: (~x: string) => React.element = "default"
 }
 
 module Rec = {

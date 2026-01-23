@@ -2,7 +2,7 @@
 
 import * as Mocha from "mocha";
 import * as Test_utils from "./test_utils.mjs";
-import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.js";
+import * as Primitive_int from "@rescript/runtime/lib/es6/Primitive_int.mjs";
 
 Mocha.describe("Gpr_1760_test", () => {
   Mocha.test("division by zero exception handling", () => {

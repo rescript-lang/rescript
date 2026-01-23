@@ -1,5 +1,8 @@
 {
   "name": "@rescript/runtime",
+  "experimental-features": {
+    "LetUnwrap": true
+  },
   "sources": [
     {
       "dir": "."
@@ -8,10 +11,12 @@
   "package-specs": [
     {
       "module": "commonjs",
+      "suffix": ".cjs",
       "in-source": false
     },
     {
       "module": "esmodule",
+      "suffix": ".mjs",
       "in-source": false
     }
   ],

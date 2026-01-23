@@ -2,21 +2,11 @@
 
 import * as assert from "node:assert";
 import { setup } from "#dev/process";
-import { normalizeNewlines } from "#dev/utils";
 
-const { execBuildLegacy } = setup(import.meta.dirname);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
-const out = await execBuildLegacy();
-if (out.stdout !== "") {
-  assert.fail(out.stdout);
-} else {
-  assert.equal(
-    normalizeNewlines(out.stderr),
-    [
-      'File "rescript.json", line 1',
-      "Error: package weird not found or built",
-      "- Did you install it?",
-      "",
-    ].join("\n"),
-  );
-}
+const out = await execBuild();
+assert.notEqual(out.status, 0);
+assert.match(out.stderr, /could not build package tree/i);
+assert.match(out.stderr, /dependency 'weird'/i);
+await execClean();

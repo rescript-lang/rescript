@@ -18,5 +18,8 @@
     "module": "esmodule",
     "in-source": false
   },
-  "suffix": ".res.js"
+  "suffix": ".res.js",
+  "warnings": {
+    "number": "-a"
+  }
 }
