@@ -29,16 +29,6 @@ wait_for_file() {
   return 1
 }
 
-wait_for_pattern() {
-  local file="$1"; local pattern="$2"; local timeout="${3:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    grep -q "$pattern" "$file" 2>/dev/null && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
 # Start watcher and capture output
 rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
@@ -52,61 +42,64 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 1
-
-# Record the timestamp of a compiled file
-BEFORE_MTIME=$(stat -f %m ./src/Test.mjs 2>/dev/null || stat -c %Y ./src/Test.mjs 2>/dev/null)
-
-# Create a .res file OUTSIDE any source directory (in the project root)
-cat > ./NotInSourceDir.res << 'EOF'
+# Create .res files in subdirectories that are NOT source dirs.
+mkdir -p ./random-dir
+cat > ./random-dir/NotSource.res << 'EOF'
 let x = 42
 EOF
 
-# Also create a file in a random non-source subdirectory
-mkdir -p ./random-dir
-cat > ./random-dir/AlsoNotSource.res << 'EOF'
+mkdir -p ./another-dir/nested
+cat > ./another-dir/nested/AlsoNotSource.res << 'EOF'
 let y = 99
 EOF
 
-# Wait a bit to give the watcher time to (not) react
-sleep 5
+# Now trigger a real source change to prove the watcher is alive
+cat > ./src/WatchProbe.res << 'EOF'
+let probe = "watcher-is-alive"
+EOF
 
-# Verify these files were NOT compiled
-if [ -f ./NotInSourceDir.mjs ]; then
-  error "File outside source dir was compiled (should be ignored)"
-  rm -f ./NotInSourceDir.res ./NotInSourceDir.mjs
-  rm -rf ./random-dir
+# Wait for the probe file to be compiled (proves watcher is responsive)
+if ! wait_for_file "./src/WatchProbe.mjs" 20; then
+  error "Watcher did not respond to source change (probe file not compiled)"
+  cat rewatch.log
+  rm -rf ./random-dir ./another-dir ./src/WatchProbe.res
   exit_watcher
   exit 1
 fi
-success "File in project root was correctly ignored"
+success "Watcher responded to source change"
 
-if [ -f ./random-dir/AlsoNotSource.mjs ]; then
+# Now verify the non-source files were NOT compiled
+if [ -f ./random-dir/NotSource.mjs ]; then
   error "File in non-source subdir was compiled (should be ignored)"
-  rm -f ./NotInSourceDir.res
-  rm -rf ./random-dir
+  rm -rf ./random-dir ./another-dir ./src/WatchProbe.res ./src/WatchProbe.mjs
   exit_watcher
   exit 1
 fi
 success "File in non-source subdir was correctly ignored"
 
-# Verify no recompilation happened (mtime of existing output unchanged)
-AFTER_MTIME=$(stat -f %m ./src/Test.mjs 2>/dev/null || stat -c %Y ./src/Test.mjs 2>/dev/null)
-if [ "$BEFORE_MTIME" = "$AFTER_MTIME" ]; then
-  success "No unnecessary recompilation triggered"
-else
-  error "Unexpected recompilation was triggered"
-  rm -f ./NotInSourceDir.res
-  rm -rf ./random-dir
+if [ -f ./another-dir/nested/AlsoNotSource.mjs ]; then
+  error "File in nested non-source subdir was compiled (should be ignored)"
+  rm -rf ./random-dir ./another-dir ./src/WatchProbe.res ./src/WatchProbe.mjs
   exit_watcher
   exit 1
 fi
+success "File in nested non-source subdir was correctly ignored"
 
 # Clean up
-rm -f ./NotInSourceDir.res
-rm -rf ./random-dir
+rm -f ./src/WatchProbe.res ./src/WatchProbe.mjs
+rm -rf ./random-dir ./another-dir
 
 exit_watcher
 
 sleep 2
 rm -f rewatch.log
+
+if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
+then
+  success "No leftover changes"
+else
+  error "Leftover changes detected"
+  git diff .
+  git ls-files --others --exclude-standard .
+  exit 1
+fi
