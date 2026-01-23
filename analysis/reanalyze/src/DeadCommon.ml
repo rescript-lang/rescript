@@ -183,6 +183,16 @@ let reportDeclaration ~config ~hasRefBelow ?checkModuleDead ?shouldReport
     | Some f -> f decl
     | None -> decl.report
   in
+  (* For type re-exports (type y = x = {...}), the re-exported record/variant
+     labels are restated but not independently actionable. Avoid duplicate/noisy
+     warnings by suppressing reporting for the re-exported copy. *)
+  let should_report =
+    should_report
+    &&
+    match (decl.declKind, decl.manifestTypePath) with
+    | (RecordLabel | VariantCase), Some _ -> false
+    | _ -> true
+  in
   if not should_report then []
   else
     let deadWarning, message =

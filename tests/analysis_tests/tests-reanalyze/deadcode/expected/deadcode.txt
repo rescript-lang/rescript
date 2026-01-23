@@ -4889,24 +4889,12 @@ Forward Liveness Analysis
   UseReexported.originalType.unusedField is a record label never used to read a value
 
   Warning Dead Type
-  TypeReexport.res:22:5-20
-  UseReexported.reexportedType.unusedField is a record label never used to read a value
-
-  Warning Dead Type
   TypeReexport.res:37:5-19
   UseOriginal.originalType.alsoUnused is a record label never used to read a value
 
   Warning Dead Type
-  TypeReexport.res:42:5-19
-  UseOriginal.reexportedType.alsoUnused is a record label never used to read a value
-
-  Warning Dead Type
   TypeReexport.res:58:5-20
   OnlyReexportedDead.originalType.unusedField is a record label never used to read a value
-
-  Warning Dead Type
-  TypeReexport.res:64:5-20
-  OnlyReexportedDead.reexportedType.unusedField is a record label never used to read a value
 
   Warning Dead Type
   Types.res:12:3-13
@@ -5092,4 +5080,4 @@ Forward Liveness Analysis
   OptArg.res:26:1-70
   optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 317 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:179, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 314 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:90, Warning Dead Value:179, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
