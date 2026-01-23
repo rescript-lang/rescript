@@ -293,8 +293,6 @@ async fn async_watch(
                     cmd::run(a)
                 }
 
-                build::write_build_ninja(&build_state);
-
                 let timing_total_elapsed = timing_total.elapsed();
                 if !plain_output && show_progress {
                     println!(

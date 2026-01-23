@@ -446,18 +446,6 @@ fn log_unknown_config_field(package_name: &str, field_name: &str) {
     eprintln!("\n{}", style(warning).yellow());
 }
 
-// write build.ninja files in the packages after a non-incremental build
-// this is necessary to bust the editor tooling cache. The editor tooling
-// is watching this file.
-// we don't need to do this in an incremental build because there are no file
-// changes (deletes / additions)
-pub fn write_build_ninja(build_state: &BuildCommandState) {
-    for package in build_state.packages.values() {
-        // write empty file:
-        let mut f = File::create(package.get_build_path().join("build.ninja")).expect("Unable to write file");
-        f.write_all(b"").expect("unable to write to ninja file");
-    }
-}
 
 #[allow(clippy::too_many_arguments)]
 pub fn build(
@@ -505,12 +493,10 @@ pub fn build(
                 );
             }
             clean::cleanup_after_build(&build_state);
-            write_build_ninja(&build_state);
             Ok(build_state)
         }
         Err(e) => {
             clean::cleanup_after_build(&build_state);
-            write_build_ninja(&build_state);
             Err(anyhow!("Incremental build failed. Error: {e}"))
         }
     }
