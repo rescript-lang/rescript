@@ -82,6 +82,8 @@
 
 - Rewatch: enable `--create-sourcedirs` by default (now deprecated when explicitly used). https://github.com/rescript-lang/rescript/pull/8092
 - Rewatch: check if filename case for interface and implementation matches. https://github.com/rescript-lang/rescript/pull/8144
+- Migration tool: Do not rewrite or format files unless there are actual migrations performed. https://github.com/rescript-lang/rescript/pull/8157
+- Migration tool: Do not attempt to run migrations on dependencies. https://github.com/rescript-lang/rescript/pull/8157
 
 # 12.0.2
 

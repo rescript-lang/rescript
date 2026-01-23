@@ -36,7 +36,8 @@ done
 # Test migrate command
 for file in src/migrate/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"
-  ../../_build/install/default/bin/rescript-tools migrate "$file" --stdout > $output
+  # Capture stderr too so warnings would surface in expected output if they occur.
+  ../../_build/install/default/bin/rescript-tools migrate "$file" --stdout > $output 2>&1
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi

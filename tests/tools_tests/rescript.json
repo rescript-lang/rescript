@@ -12,5 +12,5 @@
     "error": "-3"
   },
   "suffix": ".res.js",
-  "dependencies": ["@rescript/react"]
+  "dependencies": ["@rescript/react", "deprecatedlib"]
 }
