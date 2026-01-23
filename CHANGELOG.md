@@ -10,16 +10,16 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 13.0.0-alpha.1 (Unreleased)
+# 13.0.0-alpha.1
 
 #### :boom: Breaking Change
 
 - Remove the legacy build system. Going forward, only the modern build system is supported, and the `rescript-legacy` command is not available anymore. https://github.com/rescript-lang/rescript/pull/8186 https://github.com/rescript-lang/rescript/pull/8212
 - Remove support for `bsconfig.json`. https://github.com/rescript-lang/rescript/pull/8187
-- `Int.fromString` and `Float.fromString` use stricter number parsing and no longer uses an explicit radix argument, but instead supports parsing hexadecimal, binary and exponential notation.
+- `Int.fromString` and `Float.fromString` use stricter number parsing and no longer use an explicit radix argument, but instead support parsing hexadecimal, binary and exponential notation. https://github.com/rescript-lang/rescript/pull/8129
 - Remove the deprecated module system names `es6` and `es6-global` (superseded by `esmodule`). https://github.com/rescript-lang/rescript/pull/8205
 - Default to module system `esmodule`. https://github.com/rescript-lang/rescript/pull/8213
-- Remove `external-stdlib` configuration option from `rescript.json`. This option was rarely used and is no longer supported.
+- Remove `external-stdlib` configuration option from `rescript.json`. This option was rarely used and is no longer supported. https://github.com/rescript-lang/rescript/pull/8175
 - Remove the deprecated uncurried `(. args) => ...` function syntax. https://github.com/rescript-lang/rescript/pull/8211
 - `js-post-build` now passes the correct output file path based on `in-source` configuration: when `in-source: true`, the path next to the source file is passed; when `in-source: false`, the path in the `lib/<module>/` directory is passed. Additionally, stdout and stderr from the post-build command are now logged. https://github.com/rescript-lang/rescript/pull/8190
 - `js-post-build` command now runs in the directory containing the `rescript.json` where it is defined, instead of the unpredictable build invocation directory. This provides consistent behavior in monorepos. https://github.com/rescript-lang/rescript/pull/8195
@@ -27,8 +27,6 @@
 - `bsc`: remove legacy `-uncurried` flag. https://github.com/rescript-lang/rescript/pull/8201
 - Remove deprecated cli flags `--dev`, `--create-sourcedirs` and `build -w`. https://github.com/rescript-lang/rescript/pull/8202
 - Do not allow two different package specs with the same suffix to avoid conflicts. https://github.com/rescript-lang/rescript/pull/8214
-
-#### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
@@ -43,14 +41,10 @@
 - Fix error when importing CommonJS runtime modules with `require()`. https://github.com/rescript-lang/rescript/pull/8194
 - Rewatch: fix warnings from non-recompiled modules being lost during incremental builds in watch mode. https://github.com/rescript-lang/rescript/pull/8216
 
-#### :memo: Documentation
-
 #### :nail_care: Polish
 
 - Formatter no longer writes files when contents are already correctly formatted. https://github.com/rescript-lang/rescript/pull/8209
 - Build system: Only log verbose "Generating AST for module" when actually parsing. https://github.com/rescript-lang/rescript/pull/8210
-
-#### :house: Internal
 
 # 12.1.0
 
