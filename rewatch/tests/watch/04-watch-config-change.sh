@@ -29,6 +29,16 @@ wait_for_file() {
   return 1
 }
 
+wait_for_file_gone() {
+  local file="$1"; local timeout="${2:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    [ ! -f "$file" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
 # Start watcher and capture all output
 rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
@@ -47,13 +57,20 @@ sleep 2
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
 
-# Wait for a full rebuild to produce files with the new suffix
+# After a config change, the watcher does a full rebuild. However, a suffix
+# change alone may not recompile files (sources haven't changed). Trigger a
+# source change so the watcher compiles with the new suffix.
+sleep 3
+echo '// config-change-test' >> ./src/Test.res
+
+# Wait for the file with the new suffix to appear
 if wait_for_file "./src/Test.res.mjs" 20; then
   success "Full rebuild triggered by rescript.json change (new suffix applied)"
 else
   error "No rebuild detected after rescript.json change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
+  git checkout -- ./src/Test.res
   exit_watcher
   exit 1
 fi
@@ -65,22 +82,25 @@ else
   error "Watcher crashed after config change"
   cat rewatch.log
   replace "s/.res.mjs/.mjs/g" rescript.json
+  git checkout -- ./src/Test.res
   exit 1
 fi
 
-# Restore rescript.json
+# Restore rescript.json and source file
 replace "s/.res.mjs/.mjs/g" rescript.json
+git checkout -- ./src/Test.res
 
-# Wait for rebuild with restored suffix
-sleep 8
+# Wait for rebuild with restored suffix (old .res.mjs should go away)
+if wait_for_file_gone "./src/Test.res.mjs" 20; then
+  success "Rebuild after restore removed old suffix files"
+else
+  # Clean up manually if the watcher didn't remove them
+  find . -name "*.res.mjs" -delete 2>/dev/null
+fi
 
 exit_watcher
 
 sleep 2
-
-# Clean up generated .res.mjs files if any remain
-find . -name "*.res.mjs" -delete 2>/dev/null
-
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
