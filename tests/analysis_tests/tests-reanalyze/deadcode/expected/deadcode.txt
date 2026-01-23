@@ -1486,30 +1486,56 @@
   addValueReference TypeParams3.res:2:4 --> TypeParams3.res:2:12
   addValueReference TypeParams3.res:5:4 --> TypeParams3.res:5:13
   Scanning TypeReexport.cmt Source:TypeReexport.res
-  addValueDeclaration +value TypeReexport.res:25:6 path:+TypeReexport.UseReexported
-  addValueDeclaration +value TypeReexport.res:45:6 path:+TypeReexport.UseOriginal
-  addValueDeclaration +value TypeReexport.res:67:6 path:+TypeReexport.OnlyReexportedDead
-  addRecordLabelDeclaration usedField TypeReexport.res:16:4 path:+TypeReexport.UseReexported.originalType
-  addRecordLabelDeclaration unusedField TypeReexport.res:17:4 path:+TypeReexport.UseReexported.originalType
-  addRecordLabelDeclaration usedField TypeReexport.res:21:4 path:+TypeReexport.UseReexported.reexportedType
-  addRecordLabelDeclaration unusedField TypeReexport.res:22:4 path:+TypeReexport.UseReexported.reexportedType
-  addValueDeclaration +_ TypeReexport.res:26:2 path:+TypeReexport.UseReexported
-  addTypeReference TypeReexport.res:26:10 --> TypeReexport.res:21:4
-  addValueReference TypeReexport.res:26:10 --> TypeReexport.res:25:6
-  addRecordLabelDeclaration directlyUsed TypeReexport.res:36:4 path:+TypeReexport.UseOriginal.originalType
-  addRecordLabelDeclaration alsoUnused TypeReexport.res:37:4 path:+TypeReexport.UseOriginal.originalType
-  addRecordLabelDeclaration directlyUsed TypeReexport.res:41:4 path:+TypeReexport.UseOriginal.reexportedType
-  addRecordLabelDeclaration alsoUnused TypeReexport.res:42:4 path:+TypeReexport.UseOriginal.reexportedType
-  addValueDeclaration +_ TypeReexport.res:46:2 path:+TypeReexport.UseOriginal
-  addTypeReference TypeReexport.res:46:10 --> TypeReexport.res:41:4
-  addValueReference TypeReexport.res:46:10 --> TypeReexport.res:45:6
-  addRecordLabelDeclaration usedField TypeReexport.res:57:4 path:+TypeReexport.OnlyReexportedDead.originalType
-  addRecordLabelDeclaration unusedField TypeReexport.res:58:4 path:+TypeReexport.OnlyReexportedDead.originalType
-  addRecordLabelDeclaration usedField TypeReexport.res:63:4 path:+TypeReexport.OnlyReexportedDead.reexportedType
-  addRecordLabelDeclaration unusedField TypeReexport.res:64:4 path:+TypeReexport.OnlyReexportedDead.reexportedType
-  addValueDeclaration +_ TypeReexport.res:68:2 path:+TypeReexport.OnlyReexportedDead
-  addTypeReference TypeReexport.res:68:10 --> TypeReexport.res:63:4
-  addValueReference TypeReexport.res:68:10 --> TypeReexport.res:67:6
+  addValueDeclaration +value TypeReexport.res:36:6 path:+TypeReexport.UseReexported
+  addValueDeclaration +value TypeReexport.res:57:6 path:+TypeReexport.UseOriginal
+  addValueDeclaration +value TypeReexport.res:80:6 path:+TypeReexport.OnlyReexportedDead
+  addValueDeclaration +value TypeReexport.res:94:6 path:+TypeReexport.VariantUseReexported
+  addValueDeclaration +value TypeReexport.res:112:6 path:+TypeReexport.VariantUseOriginal
+  addRecordLabelDeclaration usedField TypeReexport.res:27:4 path:+TypeReexport.UseReexported.originalType
+  addRecordLabelDeclaration unusedField TypeReexport.res:28:4 path:+TypeReexport.UseReexported.originalType
+  addRecordLabelDeclaration usedField TypeReexport.res:32:4 path:+TypeReexport.UseReexported.reexportedType
+  addRecordLabelDeclaration unusedField TypeReexport.res:33:4 path:+TypeReexport.UseReexported.reexportedType
+  addValueDeclaration +_ TypeReexport.res:37:2 path:+TypeReexport.UseReexported
+  addTypeReference TypeReexport.res:37:10 --> TypeReexport.res:32:4
+  addValueReference TypeReexport.res:37:10 --> TypeReexport.res:36:6
+  addRecordLabelDeclaration directlyUsed TypeReexport.res:48:4 path:+TypeReexport.UseOriginal.originalType
+  addRecordLabelDeclaration alsoUnused TypeReexport.res:49:4 path:+TypeReexport.UseOriginal.originalType
+  addRecordLabelDeclaration directlyUsed TypeReexport.res:53:4 path:+TypeReexport.UseOriginal.reexportedType
+  addRecordLabelDeclaration alsoUnused TypeReexport.res:54:4 path:+TypeReexport.UseOriginal.reexportedType
+  addValueDeclaration +_ TypeReexport.res:58:2 path:+TypeReexport.UseOriginal
+  addTypeReference TypeReexport.res:58:10 --> TypeReexport.res:53:4
+  addValueReference TypeReexport.res:58:10 --> TypeReexport.res:57:6
+  addRecordLabelDeclaration usedField TypeReexport.res:70:4 path:+TypeReexport.OnlyReexportedDead.originalType
+  addRecordLabelDeclaration unusedField TypeReexport.res:71:4 path:+TypeReexport.OnlyReexportedDead.originalType
+  addRecordLabelDeclaration usedField TypeReexport.res:76:4 path:+TypeReexport.OnlyReexportedDead.reexportedType
+  addRecordLabelDeclaration unusedField TypeReexport.res:77:4 path:+TypeReexport.OnlyReexportedDead.reexportedType
+  addValueDeclaration +_ TypeReexport.res:81:2 path:+TypeReexport.OnlyReexportedDead
+  addTypeReference TypeReexport.res:81:10 --> TypeReexport.res:76:4
+  addValueReference TypeReexport.res:81:10 --> TypeReexport.res:80:6
+  addVariantCaseDeclaration A TypeReexport.res:91:22 path:+TypeReexport.VariantUseReexported.originalType
+  addVariantCaseDeclaration B TypeReexport.res:91:24 path:+TypeReexport.VariantUseReexported.originalType
+  addVariantCaseDeclaration A TypeReexport.res:92:39 path:+TypeReexport.VariantUseReexported.reexportedType
+  addVariantCaseDeclaration B TypeReexport.res:92:41 path:+TypeReexport.VariantUseReexported.reexportedType
+  addTypeReference TypeReexport.res:94:30 --> TypeReexport.res:92:39
+  addValueDeclaration +_ TypeReexport.res:95:2 path:+TypeReexport.VariantUseReexported
+  addValueReference TypeReexport.res:96:11 --> TypeReexport.res:94:6
+  addVariantCaseDeclaration A TypeReexport.res:109:22 path:+TypeReexport.VariantUseOriginal.originalType
+  addVariantCaseDeclaration B TypeReexport.res:109:24 path:+TypeReexport.VariantUseOriginal.originalType
+  addVariantCaseDeclaration A TypeReexport.res:110:39 path:+TypeReexport.VariantUseOriginal.reexportedType
+  addVariantCaseDeclaration B TypeReexport.res:110:41 path:+TypeReexport.VariantUseOriginal.reexportedType
+  addTypeReference TypeReexport.res:112:28 --> TypeReexport.res:110:39
+  addValueDeclaration +_ TypeReexport.res:113:2 path:+TypeReexport.VariantUseOriginal
+  addValueReference TypeReexport.res:114:11 --> TypeReexport.res:112:6
+  Scanning TypeReexportCrossFileA.cmt Source:TypeReexportCrossFileA.res
+  addRecordLabelDeclaration usedField TypeReexportCrossFileA.res:5:2 path:+TypeReexportCrossFileA.originalRecord
+  addRecordLabelDeclaration unusedField TypeReexportCrossFileA.res:6:2 path:+TypeReexportCrossFileA.originalRecord
+  Scanning TypeReexportCrossFileB.cmt Source:TypeReexportCrossFileB.res
+  addValueDeclaration +recordValue TypeReexportCrossFileB.res:8:4 path:+TypeReexportCrossFileB
+  addRecordLabelDeclaration usedField TypeReexportCrossFileB.res:4:2 path:+TypeReexportCrossFileB.reexportedRecord
+  addRecordLabelDeclaration unusedField TypeReexportCrossFileB.res:5:2 path:+TypeReexportCrossFileB.reexportedRecord
+  addValueDeclaration +_ TypeReexportCrossFileB.res:13:0 path:+TypeReexportCrossFileB
+  addTypeReference TypeReexportCrossFileB.res:13:8 --> TypeReexportCrossFileB.res:4:2
+  addValueReference TypeReexportCrossFileB.res:13:8 --> TypeReexportCrossFileB.res:8:4
   Scanning Types.cmt Source:Types.res
   addValueDeclaration +someIntList Types.res:5:4 path:+Types
   addValueDeclaration +map Types.res:8:4 path:+Types
@@ -1853,41 +1879,66 @@
   addTypeReference DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
   extendTypeDependencies DeadTypeTest.resi:9:2 --> DeadTypeTest.res:9:2
   addTypeReference DeadTypeTest.res:9:2 --> DeadTypeTest.resi:9:2
-  extendTypeDependencies TypeReexport.res:63:4 --> TypeReexport.res:57:4
-  addTypeReference TypeReexport.res:57:4 --> TypeReexport.res:63:4
-  extendTypeDependencies TypeReexport.res:57:4 --> TypeReexport.res:63:4
-  addTypeReference TypeReexport.res:63:4 --> TypeReexport.res:57:4
-  extendTypeDependencies TypeReexport.res:64:4 --> TypeReexport.res:58:4
-  addTypeReference TypeReexport.res:58:4 --> TypeReexport.res:64:4
-  extendTypeDependencies TypeReexport.res:58:4 --> TypeReexport.res:64:4
-  addTypeReference TypeReexport.res:64:4 --> TypeReexport.res:58:4
-  extendTypeDependencies TypeReexport.res:41:4 --> TypeReexport.res:36:4
-  addTypeReference TypeReexport.res:36:4 --> TypeReexport.res:41:4
-  extendTypeDependencies TypeReexport.res:36:4 --> TypeReexport.res:41:4
-  addTypeReference TypeReexport.res:41:4 --> TypeReexport.res:36:4
-  extendTypeDependencies TypeReexport.res:42:4 --> TypeReexport.res:37:4
-  addTypeReference TypeReexport.res:37:4 --> TypeReexport.res:42:4
-  extendTypeDependencies TypeReexport.res:37:4 --> TypeReexport.res:42:4
-  addTypeReference TypeReexport.res:42:4 --> TypeReexport.res:37:4
-  extendTypeDependencies TypeReexport.res:21:4 --> TypeReexport.res:16:4
-  addTypeReference TypeReexport.res:16:4 --> TypeReexport.res:21:4
-  extendTypeDependencies TypeReexport.res:16:4 --> TypeReexport.res:21:4
-  addTypeReference TypeReexport.res:21:4 --> TypeReexport.res:16:4
-  extendTypeDependencies TypeReexport.res:22:4 --> TypeReexport.res:17:4
-  addTypeReference TypeReexport.res:17:4 --> TypeReexport.res:22:4
-  extendTypeDependencies TypeReexport.res:17:4 --> TypeReexport.res:22:4
-  addTypeReference TypeReexport.res:22:4 --> TypeReexport.res:17:4
+  extendTypeDependencies TypeReexportCrossFileB.res:4:2 --> TypeReexportCrossFileA.res:5:2
+  addTypeReference TypeReexportCrossFileA.res:5:2 --> TypeReexportCrossFileB.res:4:2
+  extendTypeDependencies TypeReexportCrossFileA.res:5:2 --> TypeReexportCrossFileB.res:4:2
+  addTypeReference TypeReexportCrossFileB.res:4:2 --> TypeReexportCrossFileA.res:5:2
+  extendTypeDependencies TypeReexportCrossFileB.res:5:2 --> TypeReexportCrossFileA.res:6:2
+  addTypeReference TypeReexportCrossFileA.res:6:2 --> TypeReexportCrossFileB.res:5:2
+  extendTypeDependencies TypeReexportCrossFileA.res:6:2 --> TypeReexportCrossFileB.res:5:2
+  addTypeReference TypeReexportCrossFileB.res:5:2 --> TypeReexportCrossFileA.res:6:2
+  extendTypeDependencies TypeReexport.res:110:39 --> TypeReexport.res:109:22
+  addTypeReference TypeReexport.res:109:22 --> TypeReexport.res:110:39
+  extendTypeDependencies TypeReexport.res:109:22 --> TypeReexport.res:110:39
+  addTypeReference TypeReexport.res:110:39 --> TypeReexport.res:109:22
+  extendTypeDependencies TypeReexport.res:110:41 --> TypeReexport.res:109:24
+  addTypeReference TypeReexport.res:109:24 --> TypeReexport.res:110:41
+  extendTypeDependencies TypeReexport.res:109:24 --> TypeReexport.res:110:41
+  addTypeReference TypeReexport.res:110:41 --> TypeReexport.res:109:24
+  extendTypeDependencies TypeReexport.res:92:39 --> TypeReexport.res:91:22
+  addTypeReference TypeReexport.res:91:22 --> TypeReexport.res:92:39
+  extendTypeDependencies TypeReexport.res:91:22 --> TypeReexport.res:92:39
+  addTypeReference TypeReexport.res:92:39 --> TypeReexport.res:91:22
+  extendTypeDependencies TypeReexport.res:92:41 --> TypeReexport.res:91:24
+  addTypeReference TypeReexport.res:91:24 --> TypeReexport.res:92:41
+  extendTypeDependencies TypeReexport.res:91:24 --> TypeReexport.res:92:41
+  addTypeReference TypeReexport.res:92:41 --> TypeReexport.res:91:24
+  extendTypeDependencies TypeReexport.res:76:4 --> TypeReexport.res:70:4
+  addTypeReference TypeReexport.res:70:4 --> TypeReexport.res:76:4
+  extendTypeDependencies TypeReexport.res:70:4 --> TypeReexport.res:76:4
+  addTypeReference TypeReexport.res:76:4 --> TypeReexport.res:70:4
+  extendTypeDependencies TypeReexport.res:77:4 --> TypeReexport.res:71:4
+  addTypeReference TypeReexport.res:71:4 --> TypeReexport.res:77:4
+  extendTypeDependencies TypeReexport.res:71:4 --> TypeReexport.res:77:4
+  addTypeReference TypeReexport.res:77:4 --> TypeReexport.res:71:4
+  extendTypeDependencies TypeReexport.res:53:4 --> TypeReexport.res:48:4
+  addTypeReference TypeReexport.res:48:4 --> TypeReexport.res:53:4
+  extendTypeDependencies TypeReexport.res:48:4 --> TypeReexport.res:53:4
+  addTypeReference TypeReexport.res:53:4 --> TypeReexport.res:48:4
+  extendTypeDependencies TypeReexport.res:54:4 --> TypeReexport.res:49:4
+  addTypeReference TypeReexport.res:49:4 --> TypeReexport.res:54:4
+  extendTypeDependencies TypeReexport.res:49:4 --> TypeReexport.res:54:4
+  addTypeReference TypeReexport.res:54:4 --> TypeReexport.res:49:4
+  extendTypeDependencies TypeReexport.res:32:4 --> TypeReexport.res:27:4
+  addTypeReference TypeReexport.res:27:4 --> TypeReexport.res:32:4
+  extendTypeDependencies TypeReexport.res:27:4 --> TypeReexport.res:32:4
+  addTypeReference TypeReexport.res:32:4 --> TypeReexport.res:27:4
+  extendTypeDependencies TypeReexport.res:33:4 --> TypeReexport.res:28:4
+  addTypeReference TypeReexport.res:28:4 --> TypeReexport.res:33:4
+  extendTypeDependencies TypeReexport.res:28:4 --> TypeReexport.res:33:4
+  addTypeReference TypeReexport.res:33:4 --> TypeReexport.res:28:4
   addValueReference TestDeadExn.res:1:7 --> DeadExn.res:1:0
   
 Forward Liveness Analysis
 
-    decls: 677
-    roots(external targets): 128
-    decl-deps: decls_with_out=390 edges_to_decls=270
+    decls: 695
+    roots(external targets): 134
+    decl-deps: decls_with_out=407 edges_to_decls=288
 
     Root (annotated): Value +Hooks.+default
     Root (external ref): Value +FirstClassModules.M.InnerModule2.+k
     Root (external ref): VariantCase DeadRT.moduleAccessPath.Root
+    Root (external ref): Value +TypeReexport.VariantUseOriginal.+value
     Root (annotated): Value +NestedModules.Universe.Nested2.Nested3.+nested3Function
     Root (annotated): Value +ImportJsValue.+areaValue
     Root (external ref): Value +CreateErrorHandler2.Error2.+notification
@@ -1895,12 +1946,14 @@ Forward Liveness Analysis
     Root (annotated): Value +ScopedAnnotationsOverride.M.+live1
     Root (external ref): RecordLabel +DeadTest.inlineRecord.IR.b
     Root (annotated): Value +Docstrings.+twoU
+    Root (external ref): RecordLabel +TypeReexportCrossFileB.reexportedRecord.usedField
     Root (annotated): Value +NestedModules.Universe.Nested2.+nested2Function
     Root (annotated): Value +Tuples.+marry
     Root (annotated): Value +Docstrings.+unitArgWithoutConversionU
     Root (annotated): Value +Types.+i64Const
     Root (external ref): VariantCase +DeadTypeTest.deadType.OnlyInImplementation
     Root (annotated): Value +TestImport.+valueStartingWithUpperCaseLetter
+    Root (external ref): Value +TypeReexport.VariantUseReexported.+value
     Root (external ref): Value +OptionalArgsLiveDead.+liveCaller
     Root (annotated): RecordLabel +ImportHookDefault.props.renderMe
     Root (annotated): Value +TypeParams3.+test
@@ -1923,7 +1976,6 @@ Forward Liveness Analysis
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive3
     Root (external ref): Value +Hooks.RenderPropRequiresConversion.+car
     Root (external ref): RecordLabel +Records.person.address
-    Root (external ref): RecordLabel +TypeReexport.UseOriginal.reexportedType.directlyUsed
     Root (annotated): Value +Variants.+testConvert2
     Root (annotated): Value +Tuples.+coord2d
     Root (external ref): Value +CreateErrorHandler1.Error1.+notification
@@ -1936,13 +1988,13 @@ Forward Liveness Analysis
     Root (annotated): Value +DeadTest.+thisIsMarkedLive
     Root (annotated): Value +NestedModules.+notNested
     Root (annotated): Value +Records.+computeArea
+    Root (external ref): RecordLabel +TypeReexport.UseOriginal.reexportedType.directlyUsed
     Root (annotated): Value +ImportJsValue.+convertVariant
     Root (annotated): Value +Uncurried.+curried3
     Root (annotated): Value +Docstrings.+tree
     Root (annotated): Value +ImportHooks.+foo
     Root (annotated): RecordLabel +ImportIndex.props.method
     Root (annotated): Value +Docstrings.+unnamed2U
-    Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
     Root (external ref): Value +FirstClassModules.M.Z.+u
     Root (annotated): Value +Uncurried.+callback2U
     Root (annotated): Value +ImportJsValue.+default
@@ -1952,11 +2004,9 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useTypeImportedInOtherModule
     Root (annotated): Value +Hooks.NoProps.+make
     Root (external ref): Value +OptArg.+foo
-    Root (external ref): Value +TypeReexport.UseOriginal.+value
     Root (annotated): Value +Variants.+fortytwoOK
     Root (external ref): Value OptArg.+bar
     Root (annotated): Value +Records.+payloadValue
-    Root (external ref): RecordLabel +TypeReexport.UseReexported.reexportedType.usedField
     Root (external ref): RecordLabel +DeadTest.props.s
     Root (annotated): Value +TestEmitInnerModules.Inner.+y
     Root (external ref): VariantCase InnerModuleTypes.I.t.Foo
@@ -1980,7 +2030,7 @@ Forward Liveness Analysis
     Root (annotated): Value +TestImport.+defaultValue
     Root (external ref): Value +OptArg.+threeArgs
     Root (annotated): Value +Types.+setMatch
-    Root (external ref): RecordLabel +TypeReexport.OnlyReexportedDead.reexportedType.usedField
+    Root (external ref): RecordLabel +TypeReexport.UseReexported.reexportedType.usedField
     Root (annotated): Value +Docstrings.+signMessage
     Root (external ref): Value +DeadExn.+eInside
     Root (external ref): VariantCase +DeadTest.inlineRecord.IR
@@ -2049,6 +2099,7 @@ Forward Liveness Analysis
     Root (annotated): Value +Uncurried.+callback
     Root (annotated): Value +VariantsWithPayload.+printVariantWithPayload
     Root (annotated): Value +TestImmutableArray.+testImmutableArrayGet
+    Root (external ref): Value +TypeReexport.UseOriginal.+value
     Root (annotated): Value +Docstrings.+unnamed2
     Root (annotated): Value +Hooks.RenderPropRequiresConversion.+make
     Root (annotated): Value +LetPrivate.local_1.+x
@@ -2072,6 +2123,7 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+preserveRefIdentity
     Root (annotated): Value +Types.+jsStringT
     Root (annotated): Value +Variants.+restResult1
+    Root (external ref): VariantCase +TypeReexport.VariantUseReexported.reexportedType.A
     Root (annotated): Value +ImportJsValue.+polymorphic
     Root (annotated): Value +References.+set
     Root (external ref): Value +DeadTest.MM.+x
@@ -2122,7 +2174,6 @@ Forward Liveness Analysis
     Root (annotated): Value +Records.+computeArea3
     Root (annotated): Value +Variants.+fortytwoBAD
     Root (external ref): Value +DeadTest.+thisIsUsedOnce
-    Root (external ref): Value +TypeReexport.UseReexported.+value
     Root (external ref): Value ImmutableArray.+fromArray
     Root (external ref): Value +RepeatedLabel.+userData
     Root (annotated): Value +Variants.+testConvert2to3
@@ -2132,6 +2183,7 @@ Forward Liveness Analysis
     Root (annotated): Value +VariantsWithPayload.+testSimpleVariant
     Root (annotated): Value +TestFirstClassModules.+convert
     Root (external ref): VariantCase +DeadRT.moduleAccessPath.Kaboom
+    Root (external ref): Value +TypeReexport.UseReexported.+value
     Root (external ref): Value +DeadCodeImplementation.M.+x
     Root (annotated): Value +VariantsWithPayload.+testVariantWithPayloads
     Root (annotated): Value +Variants.+restResult2
@@ -2164,12 +2216,15 @@ Forward Liveness Analysis
     Root (annotated): Value +ImportJsValue.+useGetAbs
     Root (external ref): Value +JsxV4.C.+make
     Root (external ref): RecordLabel +Types.selfRecursive.self
+    Root (external ref): VariantCase +TypeReexport.VariantUseOriginal.reexportedType.A
     Root (annotated): Value +Variants.+polyWithOpt
     Root (annotated): Value +References.+destroysRefIdentity
     Root (external ref): Value +FirstClassModules.M.+x
+    Root (external ref): Value +TypeReexportCrossFileB.+recordValue
     Root (external ref): VariantCase +Unison.stack.Empty
     Root (annotated): Value +Records.+computeArea4
     Root (annotated): Value +TestModuleAliases.+testInner1Expanded
+    Root (external ref): Value +TypeReexport.OnlyReexportedDead.+value
     Root (annotated): Value +ImportIndex.+make
     Root (annotated): Value +Unboxed.+testV1
     Root (annotated): Value +NestedModules.Universe.+theAnswer
@@ -2182,6 +2237,7 @@ Forward Liveness Analysis
     Root (annotated): Value +References.+update
     Root (annotated): Value +Opaque.+noConversion
     Root (external ref): RecordLabel +RepeatedLabel.tabState.b
+    Root (external ref): RecordLabel +TypeReexport.OnlyReexportedDead.reexportedType.usedField
     Root (annotated): Value +Docstrings.+unitArgWithConversion
     Root (annotated): Value +DeadTest.GloobLive.+globallyLive1
     Root (external ref): RecordLabel +Records.business.owner
@@ -2200,22 +2256,22 @@ Forward Liveness Analysis
     Root (annotated): Value +UseImportJsValue.+useGetProp
     Root (external ref): RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle
   
-  314 roots found
+  320 roots found
 
     Propagate: +Hooks.+default -> +Hooks.+make
     Propagate: DeadRT.moduleAccessPath.Root -> +DeadRT.moduleAccessPath.Root
+    Propagate: +TypeReexportCrossFileB.reexportedRecord.usedField -> +TypeReexportCrossFileA.originalRecord.usedField
     Propagate: +DeadTypeTest.deadType.OnlyInImplementation -> DeadTypeTest.deadType.OnlyInImplementation
     Propagate: +OptionalArgsLiveDead.+liveCaller -> +OptionalArgsLiveDead.+formatDate
     Propagate: +Newton.+f -> +Newton.+-
     Propagate: +Newton.+f -> +Newton.++
     Propagate: +Newton.+f -> +Newton.+*
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.t.A -> +DeadTest.VariantUsedOnlyInImplementation.t.A
-    Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
     Propagate: +DeadTest.+thisIsMarkedLive -> +DeadTest.+thisIsKeptAlive
-    Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
+    Propagate: +TypeReexport.UseOriginal.reexportedType.directlyUsed -> +TypeReexport.UseOriginal.originalType.directlyUsed
     Propagate: InnerModuleTypes.I.t.Foo -> +InnerModuleTypes.I.t.Foo
     Propagate: DeadTypeTest.deadType.OnlyInInterface -> +DeadTypeTest.deadType.OnlyInInterface
-    Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
+    Propagate: +TypeReexport.UseReexported.reexportedType.usedField -> +TypeReexport.UseReexported.originalType.usedField
     Propagate: +Unison.+toString -> +Unison.+fits
     Propagate: +References.+get -> +References.R.+get
     Propagate: +DeadTest.WithInclude.t.A -> +DeadTest.WithInclude.t.A
@@ -2229,6 +2285,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.VariantUsedOnlyInImplementation.+a -> +DeadTest.VariantUsedOnlyInImplementation.+a
     Propagate: +OptArg.+wrapOneArg -> +OptArg.+oneArg
     Propagate: +TestImmutableArray.+testImmutableArrayGet -> ImmutableArray.Array.+get
+    Propagate: +TypeReexport.VariantUseReexported.reexportedType.A -> +TypeReexport.VariantUseReexported.originalType.A
     Propagate: +References.+set -> +References.R.+set
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+x
     Propagate: NestedModulesInSignature.Universe.+theAnswer -> +NestedModulesInSignature.Universe.+theAnswer
@@ -2238,6 +2295,8 @@ Forward Liveness Analysis
     Propagate: +DeadRT.moduleAccessPath.Kaboom -> DeadRT.moduleAccessPath.Kaboom
     Propagate: DeadValueTest.+valueAlive -> +DeadValueTest.+valueAlive
     Propagate: +ImportJsValue.+useGetAbs -> +ImportJsValue.AbsoluteValue.+getAbs
+    Propagate: +TypeReexport.VariantUseOriginal.reexportedType.A -> +TypeReexport.VariantUseOriginal.originalType.A
+    Propagate: +TypeReexport.OnlyReexportedDead.reexportedType.usedField -> +TypeReexport.OnlyReexportedDead.originalType.usedField
     Propagate: +References.R.+get -> +References.R.+get
     Propagate: +References.R.+make -> +References.R.+make
     Propagate: +ScopedAnnotationsLiveVsDead.+middleLive -> +ScopedAnnotationsLiveVsDead.+leafLive
@@ -2253,7 +2312,7 @@ Forward Liveness Analysis
     Propagate: +DeadTest.MM.+x -> +DeadTest.MM.+y
     Propagate: +ImportJsValue.AbsoluteValue.+getAbs -> +ImportJsValue.AbsoluteValue.+getAbs
   
-  50 declarations marked live via propagation
+  53 declarations marked live via propagation
 
   Dead VariantCase +AutoAnnotate.variant.R
   Dead RecordLabel +AutoAnnotate.record.variant
@@ -3670,6 +3729,78 @@ Forward Liveness Analysis
       deps: in=0 (live=0 dead=0) out=2
         -> +TypeReexport.OnlyReexportedDead.+value
         -> +TypeReexport.OnlyReexportedDead.reexportedType.usedField
+  Live (propagated) VariantCase +TypeReexport.VariantUseReexported.originalType.A
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeReexport.VariantUseReexported.reexportedType.A (live)
+        -> +TypeReexport.VariantUseReexported.reexportedType.A
+  Dead VariantCase +TypeReexport.VariantUseReexported.originalType.B
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexport.VariantUseReexported.reexportedType.B (dead)
+        -> +TypeReexport.VariantUseReexported.reexportedType.B
+  Live (external ref) VariantCase +TypeReexport.VariantUseReexported.reexportedType.A
+      deps: in=2 (live=2 dead=0) out=1
+        <- +TypeReexport.VariantUseReexported.originalType.A (live)
+        <- +TypeReexport.VariantUseReexported.+value (live)
+        -> +TypeReexport.VariantUseReexported.originalType.A
+  Dead VariantCase +TypeReexport.VariantUseReexported.reexportedType.B
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexport.VariantUseReexported.originalType.B (dead)
+        -> +TypeReexport.VariantUseReexported.originalType.B
+  Live (external ref) Value +TypeReexport.VariantUseReexported.+value
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexport.VariantUseReexported.+_ (dead)
+        -> +TypeReexport.VariantUseReexported.reexportedType.A
+  Dead Value +TypeReexport.VariantUseReexported.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TypeReexport.VariantUseReexported.+value
+  Live (propagated) VariantCase +TypeReexport.VariantUseOriginal.originalType.A
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeReexport.VariantUseOriginal.reexportedType.A (live)
+        -> +TypeReexport.VariantUseOriginal.reexportedType.A
+  Dead VariantCase +TypeReexport.VariantUseOriginal.originalType.B
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexport.VariantUseOriginal.reexportedType.B (dead)
+        -> +TypeReexport.VariantUseOriginal.reexportedType.B
+  Live (external ref) VariantCase +TypeReexport.VariantUseOriginal.reexportedType.A
+      deps: in=2 (live=2 dead=0) out=1
+        <- +TypeReexport.VariantUseOriginal.originalType.A (live)
+        <- +TypeReexport.VariantUseOriginal.+value (live)
+        -> +TypeReexport.VariantUseOriginal.originalType.A
+  Dead VariantCase +TypeReexport.VariantUseOriginal.reexportedType.B
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexport.VariantUseOriginal.originalType.B (dead)
+        -> +TypeReexport.VariantUseOriginal.originalType.B
+  Live (external ref) Value +TypeReexport.VariantUseOriginal.+value
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexport.VariantUseOriginal.+_ (dead)
+        -> +TypeReexport.VariantUseOriginal.reexportedType.A
+  Dead Value +TypeReexport.VariantUseOriginal.+_
+      deps: in=0 (live=0 dead=0) out=1
+        -> +TypeReexport.VariantUseOriginal.+value
+  Live (propagated) RecordLabel +TypeReexportCrossFileA.originalRecord.usedField
+      deps: in=1 (live=1 dead=0) out=1
+        <- +TypeReexportCrossFileB.reexportedRecord.usedField (live)
+        -> +TypeReexportCrossFileB.reexportedRecord.usedField
+  Dead RecordLabel +TypeReexportCrossFileA.originalRecord.unusedField
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexportCrossFileB.reexportedRecord.unusedField (dead)
+        -> +TypeReexportCrossFileB.reexportedRecord.unusedField
+  Live (external ref) RecordLabel +TypeReexportCrossFileB.reexportedRecord.usedField
+      deps: in=2 (live=1 dead=1) out=1
+        <- +TypeReexportCrossFileA.originalRecord.usedField (live)
+        <- +TypeReexportCrossFileB.+_ (dead)
+        -> +TypeReexportCrossFileA.originalRecord.usedField
+  Dead RecordLabel +TypeReexportCrossFileB.reexportedRecord.unusedField
+      deps: in=1 (live=0 dead=1) out=1
+        <- +TypeReexportCrossFileA.originalRecord.unusedField (dead)
+        -> +TypeReexportCrossFileA.originalRecord.unusedField
+  Live (external ref) Value +TypeReexportCrossFileB.+recordValue
+      deps: in=1 (live=0 dead=1) out=0
+        <- +TypeReexportCrossFileB.+_ (dead)
+  Dead Value +TypeReexportCrossFileB.+_
+      deps: in=0 (live=0 dead=0) out=2
+        -> +TypeReexportCrossFileB.+recordValue
+        -> +TypeReexportCrossFileB.reexportedRecord.usedField
   Live (annotated) Value +Types.+someIntList
   Live (annotated) Value +Types.+map
   Dead VariantCase +Types.typeWithVars.A
@@ -4885,16 +5016,28 @@ Forward Liveness Analysis
   exportSomething is never used
 
   Warning Dead Type
-  TypeReexport.res:17:5-20
+  TypeReexport.res:28:5-20
   UseReexported.originalType.unusedField is a record label never used to read a value
 
   Warning Dead Type
-  TypeReexport.res:37:5-19
+  TypeReexport.res:49:5-19
   UseOriginal.originalType.alsoUnused is a record label never used to read a value
 
   Warning Dead Type
-  TypeReexport.res:58:5-20
+  TypeReexport.res:71:5-20
   OnlyReexportedDead.originalType.unusedField is a record label never used to read a value
+
+  Warning Dead Type
+  TypeReexport.res:91:27
+  VariantUseReexported.originalType.B is a variant case which is never constructed
+
+  Warning Dead Type
+  TypeReexport.res:109:27
+  VariantUseOriginal.originalType.B is a variant case which is never constructed
+
+  Warning Dead Type
+  TypeReexportCrossFileA.res:6:3-18
+  originalRecord.unusedField is a record label never used to read a value
 
   Warning Dead Type
   Types.res:12:3-13
@@ -5080,4 +5223,4 @@ Forward Liveness Analysis
   OptArg.res:26:1-70
   optional argument c of function wrapfourArgs is always supplied (2 calls)
   
-  Analysis reported 314 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:90, Warning Dead Value:179, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)
+  Analysis reported 317 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:93, Warning Dead Value:179, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:6, Warning Unused Argument:12)

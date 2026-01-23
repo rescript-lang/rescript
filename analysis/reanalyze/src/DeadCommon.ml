@@ -4,6 +4,8 @@ module FileContext = struct
   (** Get module name as Name.t tagged with interface/implementation info *)
   let module_name_tagged file =
     file.module_name |> Name.create ~isInterface:file.is_interface
+
+  let isInterface (file : t) = file.is_interface
 end
 
 (* Adapted from https://github.com/LexiFi/dead_code_analyzer *)

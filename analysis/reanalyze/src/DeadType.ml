@@ -20,15 +20,9 @@ let extendTypeDependencies ~config ~refs (loc1 : Location.t) (loc2 : Location.t)
 
 let addDeclaration ~config ~decls ~file ~(modulePath : ModulePath.t)
     ~(typeId : Ident.t) ~(typeKind : Types.type_kind)
-    ~(manifestTypeId : Ident.t option) =
+    ~(manifestTypePath : DcePath.t option) =
   let moduleContext = modulePath.path @ [FileContext.module_name_tagged file] in
   let pathToType = (typeId |> Ident.name |> Name.create) :: moduleContext in
-  let manifestTypePath =
-    match manifestTypeId with
-    | None -> None
-    | Some manifestId ->
-      Some ((manifestId |> Ident.name |> Name.create) :: moduleContext)
-  in
   let processTypeLabel ?(posAdjustment = Decl.Nothing) typeLabelName ~declKind
       ~(loc : Location.t) =
     addDeclaration_ ~config ~decls ~file ~declKind ~path:pathToType ~loc

@@ -247,16 +247,26 @@ let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
   match si with
   | Sig_type (id, t, _) when doTypes ->
     if !Config.analyzeTypes then
-      (* Extract manifest type id for type re-exports (type y = x = {...}) *)
-      let manifestTypeId =
-        match (t.type_kind, t.type_manifest) with
-        | ( Types.Type_record _,
-            Some {desc = Tconstr (Path.Pident manifestId, _, _)} ) ->
-          Some manifestId
+      (* Extract manifest type path for type re-exports (type y = x = {...}).
+         Use full Path.t so cross-module re-exports work (Path.Pdot, aliases, etc.). *)
+      let manifestTypePath =
+        match t.type_manifest with
+        | Some {desc = Tconstr (path, _, _)} -> (
+          let p = path |> DcePath.fromPathT in
+          match p with
+          | [typeName] ->
+            let moduleContext =
+              modulePath.path @ [FileContext.module_name_tagged file]
+            in
+            Some (typeName :: moduleContext)
+          | _ ->
+            Some
+              (if FileContext.isInterface file then DcePath.moduleToInterface p
+               else DcePath.moduleToImplementation p))
         | _ -> None
       in
       DeadType.addDeclaration ~config ~decls ~file ~modulePath ~typeId:id
-        ~typeKind:t.type_kind ~manifestTypeId
+        ~typeKind:t.type_kind ~manifestTypePath
   | Sig_value (id, {Types.val_loc = loc; val_kind = kind; val_type})
     when doValues ->
     if not loc.Location.loc_ghost then
@@ -369,25 +379,29 @@ let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
                   typeDeclarations
                   |> List.iter
                        (fun (typeDeclaration : Typedtree.type_declaration) ->
-                         (* Extract manifest type id for type re-exports (type y = x = {...}) *)
-                         let manifestTypeId =
-                           match
-                             ( typeDeclaration.typ_type.type_kind,
-                               typeDeclaration.typ_manifest )
-                           with
-                           | ( Types.Type_record _,
+                         (* Extract manifest type path for type re-exports (type y = x = {...}). *)
+                         let manifestTypePath =
+                           match typeDeclaration.typ_manifest with
+                           | Some {ctyp_desc = Ttyp_constr (path, _, _)} -> (
+                             let p = path |> DcePath.fromPathT in
+                             match p with
+                             | [typeName] ->
+                               let moduleContext =
+                                 modulePath.path
+                                 @ [FileContext.module_name_tagged file]
+                               in
+                               Some (typeName :: moduleContext)
+                             | _ ->
                                Some
-                                 {
-                                   ctyp_desc =
-                                     Ttyp_constr (Path.Pident manifestId, _, _);
-                                 } ) ->
-                             Some manifestId
+                                 (if FileContext.isInterface file then
+                                    DcePath.moduleToInterface p
+                                  else DcePath.moduleToImplementation p))
                            | _ -> None
                          in
                          DeadType.addDeclaration ~config ~decls ~file
                            ~modulePath ~typeId:typeDeclaration.typ_id
                            ~typeKind:typeDeclaration.typ_type.type_kind
-                           ~manifestTypeId);
+                           ~manifestTypePath);
                 None
               | Tstr_include {incl_mod; incl_type} ->
                 (match incl_mod.mod_desc with
