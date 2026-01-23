@@ -86,6 +86,9 @@ fi
 # Watch tests
 ./watch/01-watch-recompile.sh &&
 ./watch/02-watch-warnings-persist.sh &&
+./watch/03-watch-new-file.sh &&
+./watch/04-watch-config-change.sh &&
+./watch/05-watch-ignores-non-source.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&
