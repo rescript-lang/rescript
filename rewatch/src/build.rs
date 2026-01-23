@@ -444,7 +444,6 @@ fn log_unknown_config_field(package_name: &str, field_name: &str) {
     eprintln!("\n{}", style(warning).yellow());
 }
 
-
 #[allow(clippy::too_many_arguments)]
 pub fn build(
     filter: &Option<regex::Regex>,
