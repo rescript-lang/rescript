@@ -29,6 +29,7 @@
 - Add duplicate package detection to rewatch. https://github.com/rescript-lang/rescript/pull/8180
 - Rewatch: do not warn about "reanalyze" config field. https://github.com/rescript-lang/rescript/pull/8181
 - Fix error when importing CommonJS runtime modules with `require()`. https://github.com/rescript-lang/rescript/pull/8194
+- Rewatch: fix warnings from non-recompiled modules being lost during incremental builds in watch mode. https://github.com/rescript-lang/rescript/pull/8216
 
 #### :memo: Documentation
 
