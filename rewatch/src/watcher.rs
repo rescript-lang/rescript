@@ -68,11 +68,11 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
             continue;
         }
 
-        // Watch the rescript.json for this package
-        let config_path = package.path.join("rescript.json");
-        if config_path.exists() {
-            watch_paths.push((config_path, RecursiveMode::NonRecursive));
-        }
+        // Watch the package root non-recursively to detect rescript.json changes.
+        // We watch the directory rather than the file directly because many editors
+        // use atomic writes (delete + recreate or write to temp + rename) which would
+        // cause a direct file watch to be lost after the first edit.
+        watch_paths.push((package.path.clone(), RecursiveMode::NonRecursive));
 
         // Watch each source folder
         for source in &package.source_folders {
