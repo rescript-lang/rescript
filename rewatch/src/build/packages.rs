@@ -800,7 +800,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                         compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
                                         parse_dirty: true,
-                                        compile_warning: None,
+                                        compile_warnings: None,
                                     },
                                     interface: None,
                                 }),
@@ -872,7 +872,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
-                                            compile_warning: None,
+                                            compile_warnings: None,
                                         });
                                     }
                                 })
@@ -886,7 +886,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
-                                            compile_warning: None,
+                                            compile_warnings: None,
                                         },
                                         interface: Some(Interface {
                                             path: file.to_owned(),
@@ -894,7 +894,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
-                                            compile_warning: None,
+                                            compile_warnings: None,
                                         }),
                                     }),
                                     deps: AHashSet::new(),

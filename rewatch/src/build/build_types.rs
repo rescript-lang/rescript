@@ -30,7 +30,7 @@ pub struct Interface {
     /// Compiler warning output (from bsc stderr) stored for re-emission
     /// during incremental builds when this module is not recompiled.
     /// Written to `.compiler.log` on each build cycle.
-    pub compile_warning: Option<String>,
+    pub compile_warnings: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -43,7 +43,7 @@ pub struct Implementation {
     /// Compiler warning output (from bsc stderr) stored for re-emission
     /// during incremental builds when this module is not recompiled.
     /// Written to `.compiler.log` on each build cycle.
-    pub compile_warning: Option<String>,
+    pub compile_warnings: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
