@@ -389,6 +389,20 @@ make test-rewatch     # Run integration tests
 
 **Integration Tests**: The `make test-rewatch` command runs bash-based integration tests located in `rewatch/tests/suite.sh`. These tests use the `rewatch/testrepo/` directory as a test workspace with various package configurations to verify rewatch's behavior across different scenarios.
 
+**Running Individual Integration Tests**: You can run individual test scripts directly by setting up the environment manually:
+
+```bash
+cd rewatch/tests
+export REWATCH_EXECUTABLE="$(realpath ../target/debug/rescript)"
+eval $(node ./get_bin_paths.js)
+export RESCRIPT_BSC_EXE
+export RESCRIPT_RUNTIME
+source ./utils.sh
+bash ./watch/06-watch-missing-source-folder.sh
+```
+
+This is useful for iterating on a specific test without running the full suite.
+
 #### Debugging
 
 - **Build State**: Use `log::debug!` to inspect `BuildState` contents

@@ -17,11 +17,6 @@ else
   exit 1
 fi
 
-exit_watcher() {
-  # kill watcher by removing lock file
-  rm lib/rescript.lock
-}
-
 rewatch_bg watch > /dev/null 2>&1 &
 success "Watcher Started"
 

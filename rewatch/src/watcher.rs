@@ -78,6 +78,12 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
         for source in &package.source_folders {
             let dir = package.path.join(&source.dir);
             if !dir.exists() {
+                log::error!(
+                    "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
+                    source.dir,
+                    package.name,
+                    package.path
+                );
                 continue;
             }
             let mode = match &source.subdirs {

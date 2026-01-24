@@ -89,6 +89,7 @@ fi
 ./watch/03-watch-new-file.sh &&
 ./watch/04-watch-config-change.sh &&
 ./watch/05-watch-ignores-non-source.sh &&
+./watch/06-watch-missing-source-folder.sh &&
 
 # Lock tests
 ./lock/01-lock-when-watching.sh &&

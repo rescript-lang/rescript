@@ -15,20 +15,6 @@ else
   exit 1
 fi
 
-exit_watcher() {
-  rm -f lib/rescript.lock
-}
-
-wait_for_file() {
-  local file="$1"; local timeout="${2:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    [ -f "$file" ] && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
 # Start watcher
 rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"

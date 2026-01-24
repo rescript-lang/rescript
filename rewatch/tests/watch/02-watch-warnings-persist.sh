@@ -15,11 +15,6 @@ else
   exit 1
 fi
 
-exit_watcher() {
-  # kill watcher by removing lock file
-  rm -f lib/rescript.lock
-}
-
 # Wait until a pattern appears in a file (with timeout in seconds, default 30)
 wait_for_pattern() {
   local file="$1"; local pattern="$2"; local timeout="${3:-30}"
