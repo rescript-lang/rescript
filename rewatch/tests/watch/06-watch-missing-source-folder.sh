@@ -55,6 +55,10 @@ git checkout "$DEP01_CONFIG"
 
 exit_watcher
 
+# Rebuild to regenerate any artifacts that were removed by `rewatch clean`
+# but not rebuilt due to the modified config (e.g. Dep01.mjs).
+rewatch build > /dev/null 2>&1
+
 sleep 2
 rm -f rewatch.log
 

@@ -61,7 +61,22 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
 /// Computes the list of paths to watch based on the build state.
 /// Returns tuples of (path, recursive_mode) for each watch target.
 fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(PathBuf, RecursiveMode)> {
-    let mut watch_paths: Vec<(PathBuf, RecursiveMode)> = Vec::new();
+    // Use a HashMap to deduplicate paths, giving precedence to Recursive mode
+    // when the same path appears with different modes (e.g. package root watched
+    // NonRecursively for rescript.json changes, but also as a source folder with
+    // Recursive mode).
+    let mut watch_paths: std::collections::HashMap<PathBuf, RecursiveMode> = std::collections::HashMap::new();
+
+    let mut insert = |path: PathBuf, mode: RecursiveMode| {
+        watch_paths
+            .entry(path)
+            .and_modify(|existing| {
+                if mode == RecursiveMode::Recursive {
+                    *existing = RecursiveMode::Recursive;
+                }
+            })
+            .or_insert(mode);
+    };
 
     for (_, package) in build_state.build_state.packages.iter() {
         if !package.is_local_dep {
@@ -72,7 +87,7 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
         // We watch the directory rather than the file directly because many editors
         // use atomic writes (delete + recreate or write to temp + rename) which would
         // cause a direct file watch to be lost after the first edit.
-        watch_paths.push((package.path.clone(), RecursiveMode::NonRecursive));
+        insert(package.path.clone(), RecursiveMode::NonRecursive);
 
         // Watch each source folder
         for source in &package.source_folders {
@@ -90,17 +105,17 @@ fn compute_watch_paths(build_state: &BuildCommandState, root: &Path) -> Vec<(Pat
                 Some(config::Subdirs::Recurse(true)) => RecursiveMode::Recursive,
                 _ => RecursiveMode::NonRecursive,
             };
-            watch_paths.push((dir, mode));
+            insert(dir, mode);
         }
     }
 
     // Watch the lib/ directory for the lockfile (rescript.lock lives in lib/)
     let lib_dir = root.join("lib");
     if lib_dir.exists() {
-        watch_paths.push((lib_dir, RecursiveMode::NonRecursive));
+        insert(lib_dir, RecursiveMode::NonRecursive);
     }
 
-    watch_paths
+    watch_paths.into_iter().collect()
 }
 
 /// Registers all watch paths with the given watcher.
