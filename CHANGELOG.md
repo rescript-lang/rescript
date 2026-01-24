@@ -24,6 +24,8 @@
 
 #### :nail_care: Polish
 
+- Build system: Watch only source folders from build state instead of the entire project directory, and report missing configured source folders. https://github.com/rescript-lang/rescript/pull/8219
+
 #### :house: Internal
 
 # 13.0.0-alpha.1
