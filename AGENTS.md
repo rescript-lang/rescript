@@ -489,3 +489,9 @@ When clippy suggests refactoring that could impact performance, consider the tra
 2. Update `AsyncWatchArgs` for new parameters
 3. Handle different file types (`.res`, `.resi`, etc.)
 4. Consider performance impact of watching many files
+
+## CI Gotchas
+
+- **`sleep` is fragile** — Prefer polling (e.g., `wait_for_file`) over fixed sleeps. CI runners are slower than local machines.
+- **`exit_watcher` is async** — It only signals the watcher to stop (removes the lock file), it doesn't wait for the process to exit. Avoid triggering config-change events before exiting, as the watcher may start a concurrent rebuild.
+- **`sed -i` differs across platforms** — macOS requires `sed -i '' ...`, Linux does not. Use the `replace` / `normalize_paths` helpers from `rewatch/tests/utils.sh` instead of raw `sed`.

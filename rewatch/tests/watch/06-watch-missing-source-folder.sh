@@ -50,16 +50,18 @@ else
   exit 1
 fi
 
+# Exit the watcher before restoring the config to avoid a race condition
+# where the config change triggers a full rebuild that runs concurrently
+# with the subsequent `rewatch build`.
+exit_watcher
+sleep 1
+
 # Restore dep01's rescript.json
 git checkout "$DEP01_CONFIG"
-
-exit_watcher
 
 # Rebuild to regenerate any artifacts that were removed by `rewatch clean`
 # but not rebuilt due to the modified config (e.g. Dep01.mjs).
 rewatch build > /dev/null 2>&1
-
-sleep 2
 rm -f rewatch.log
 
 if git diff --exit-code . > /dev/null 2>&1 && [ -z "$(git ls-files --others --exclude-standard .)" ];
