@@ -54,11 +54,6 @@ let baseChildren = React.array([
   <span> {React.string("Hello, world!")} </span>,
 ])
 
-let _container_with_spread_children = <div title="barry" className="barry"> ...baseChildren </div>
-
-let _container_with_spread_props_and_children =
-  <div {...baseProps} title="barry" className="barry"> ...baseChildren </div>
-
 let _unary_element_with_spread_props_keyed = <input {...baseProps} type_="text" key="barry-key" />
 
 let _container_with_spread_props_keyed =
@@ -129,15 +124,47 @@ let _optional_props = <ComponentWithOptionalProps i=1 s="test" element={<div />}
 
 let _props_with_hyphen = <label ariaLabel={"close sidebar"} dataTestId="test" />
 
-module React = {
-  type component<'props> = Jsx.component<'props>
-  type element = Jsx.element
-
-  external jsx: (component<'props>, 'props) => element = "jsx"
-
-  type fragmentProps = {children?: element}
-
-  external jsxFragment: component<fragmentProps> = "Fragment"
-}
+let _empty_fragment = <> </>
 
 let _fragment = <> {Jsx.string("Hello, world!")} </>
+
+let _youtube_iframe =
+  <iframe
+    width="1911"
+    height="1075"
+    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+    frameBorder={0}
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerPolicy="strict-origin-when-cross-origin"
+    allowFullScreen={true}
+  >
+  </iframe>
+
+module X = {
+  type props = {}
+  let make = (_props: props) => React.null
+}
+
+let _ = <X />
+
+module Y = {
+  let x = 42
+
+  @react.component
+  let make = () => React.null
+
+  let make = React.memo(make)
+}
+
+let _ = <Y />
+
+let context = React.createContext(0)
+
+module ContextProvider = {
+  let make = React.Context.provider(context)
+}
+
+@react.component
+let make = (~children) => {
+  <ContextProvider value=42> {children} </ContextProvider>
+}

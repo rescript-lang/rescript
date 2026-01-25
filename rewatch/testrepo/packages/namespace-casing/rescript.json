@@ -9,7 +9,7 @@
   ],
   "package-specs": [
     {
-      "module": "es6",
+      "module": "esmodule",
       "in-source": true
     }
   ],
@@ -18,5 +18,9 @@
   "compiler-flags": [],
   "jsx": {
     "version": 4
+  },
+  "warnings": {
+    "number": "+1000",
+    "error": "-2000"
   }
 }

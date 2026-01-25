@@ -1,13 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 module Test_null = {
   let f1 = x =>
@@ -243,19 +235,19 @@ module Test_null_def = {
   let f11 = isNullable(return(3))
 }
 
-let () = {
-  eq(__LOC__, Test_null_def.f1(Js.Null_undefined.return(0)), 1)
-  eq(__LOC__, Test_null_def.f1(%raw("null")), 3)
-  eq(__LOC__, Test_null_def.f1(%raw("undefined")), 3)
+describe(__MODULE__, () => {
+  test("Test_null_def.f1 with return(0)", () =>
+    eq(__LOC__, Test_null_def.f1(Js.Null_undefined.return(0)), 1)
+  )
+  test("Test_null_def.f1 with null", () => eq(__LOC__, Test_null_def.f1(%raw("null")), 3))
+  test("Test_null_def.f1 with undefined", () => eq(__LOC__, Test_null_def.f1(%raw("undefined")), 3))
 
-  eq(__LOC__, Test_null.f1(Js.Null.return(0)), 1)
-  eq(__LOC__, Test_null.f1(%raw("null")), 3)
+  test("Test_null.f1 with return(0)", () => eq(__LOC__, Test_null.f1(Js.Null.return(0)), 1))
+  test("Test_null.f1 with null", () => eq(__LOC__, Test_null.f1(%raw("null")), 3))
 
-  eq(__LOC__, Test_def.f1(Js.Undefined.return(0)), 1)
-  eq(__LOC__, Test_def.f1(%raw("undefined")), 3)
-}
-
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+  test("Test_def.f1 with return(0)", () => eq(__LOC__, Test_def.f1(Js.Undefined.return(0)), 1))
+  test("Test_def.f1 with undefined", () => eq(__LOC__, Test_def.f1(%raw("undefined")), 3))
+})
 
 module Null_undefined_neq = {
   let a = null

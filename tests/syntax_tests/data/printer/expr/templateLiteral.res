@@ -119,3 +119,7 @@ let box = css`
     }
   }
 `)
+
+sql
+->SQL.query`INSERT INTO my_table (a, b, c) VALUES ${a}, ${b}, ${c}`
+->Promise.thenResolve(Console.log)

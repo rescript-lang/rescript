@@ -4,7 +4,7 @@ let ident l = l |> List.map str |> String.concat "."
 
 type path = string list
 
-type typedFnArg = Asttypes.Noloc.arg_label * Types.type_expr
+type typedFnArg = Asttypes.arg_label * Types.type_expr
 
 let pathToString (path : path) = path |> String.concat "."
 
@@ -392,7 +392,6 @@ and completionType =
       env: QueryEnv.t;
       args: typedFnArg list;
       typ: Types.type_expr;
-      uncurried: bool;
       returnType: Types.type_expr;
     }
 
@@ -519,7 +518,6 @@ type package = {
   pathsForModule: (file, paths) Hashtbl.t;
   namespace: string option;
   opens: path list;
-  uncurried: bool;
   rescriptVersion: int * int;
   autocomplete: file list Misc.StringMap.t;
 }
@@ -619,7 +617,7 @@ module Completable = struct
     | CPFloat
     | CPBool
     | CPOption of contextPath
-    | CPApply of contextPath * Asttypes.Noloc.arg_label list
+    | CPApply of contextPath * Asttypes.arg_label list
     | CPId of {
         path: string list;
         completionContext: completionContext;
@@ -708,9 +706,9 @@ module Completable = struct
       contextPathToString cp ^ "("
       ^ (labels
         |> List.map (function
-             | Asttypes.Noloc.Nolabel -> "Nolabel"
-             | Labelled s -> "~" ^ s
-             | Optional s -> "?" ^ s)
+             | Asttypes.Nolabel -> "Nolabel"
+             | Labelled {txt} -> "~" ^ txt
+             | Optional {txt} -> "?" ^ txt)
         |> String.concat ", ")
       ^ ")"
     | CPArray (Some ctxPath) -> "array<" ^ contextPathToString ctxPath ^ ">"

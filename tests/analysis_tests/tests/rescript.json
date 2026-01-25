@@ -1,5 +1,5 @@
 {
-  "name": "test",
+  "name": "@tests/analysis",
   "reanalyze": {
     "analysis": ["dce"]
   },
@@ -9,9 +9,10 @@
       "subdirs": true
     }
   ],
-  "compiler-flags": ["-w -33-44-8"],
+  "compiler-flags": ["-w -33-44-8-26-27-110"],
   "dependencies": ["@rescript/react"],
   "jsx": { "version": 4 },
+  "package-specs": [{ "module": "commonjs", "in-source": false }],
   "suffix": ".res.js",
   "editor": {
     "autocomplete": {

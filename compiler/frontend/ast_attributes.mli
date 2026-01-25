@@ -46,6 +46,8 @@ val iter_process_bs_string_as : t -> string option
 
 val has_bs_optional : t -> bool
 
+val has_unwrap_attr : t -> bool
+
 val iter_process_bs_int_as : t -> int option
 
 type as_const_payload = Int of int | Str of string * External_arg_spec.delim

@@ -48,15 +48,20 @@ let v = test(1, 2)
 
 type vv = int => int
 
-Mt.from_pair_suites(
-  __MODULE__,
-  {
-    open Mt
-    list{
-      ("unsafe_max", _ => Eq(2., max(1., 2.))),
-      ("unsafe_test", _ => Eq(3, v)),
-      ("unsafe_max2", _ => Eq(2, (%raw(`Math.max`): (int, int) => int)(1, 2))),
-      ("ffi_keys", _ => Eq(["a"], Ffi_js_test.keys(%raw(` {a : 3}`)))),
-    }
-  },
-)
+open Mocha
+open Test_utils
+
+describe(__MODULE__, () => {
+  test("unsafe_max", () => {
+    eq(__LOC__, 2., max(1., 2.))
+  })
+  test("unsafe_test", () => {
+    eq(__LOC__, 3, v)
+  })
+  test("unsafe_max2", () => {
+    eq(__LOC__, 2, (%raw(`Math.max`): (int, int) => int)(1, 2))
+  })
+  test("ffi_keys", () => {
+    eq(__LOC__, ["a"], Ffi_js_test.keys(%raw(` {a : 3}`)))
+  })
+})

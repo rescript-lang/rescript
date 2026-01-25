@@ -11,5 +11,4 @@
   But this function argument is expecting: [1;33m[#ONE | #TWO][0m
 
   Possible solutions:
-  - The constant passed matches one of the expected polymorphic variant constructors. Did you mean to pass this as a polymorphic variant? If so, rewrite [1;33m"ONE"[0m to [1;33m#ONE
-[0m
+  - The constant passed matches one of the expected polymorphic variant constructors. Did you mean to pass this as a polymorphic variant? If so, rewrite [1;33m"ONE"[0m to [1;33m#ONE[0m

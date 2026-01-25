@@ -1,35 +1,42 @@
 use anyhow::Result;
-use clap::Parser;
+use console::Term;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
 use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
-    let args = cli::Cli::parse();
+    let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
 
-    let log_level_filter = args.verbose.log_level_filter();
+    let log_level_filter = cli.verbose.log_level_filter();
 
-    env_logger::Builder::new()
+    let stdout_logger = env_logger::Builder::new()
         .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
         .filter_level(log_level_filter)
         .target(env_logger::fmt::Target::Stdout)
-        .init();
+        .build();
 
-    let mut command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+    let stderr_logger = env_logger::Builder::new()
+        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+        .filter_level(log_level_filter)
+        .target(env_logger::fmt::Target::Stderr)
+        .build();
 
-    if let cli::Command::Build(build_args) = &command {
-        if build_args.watch {
-            log::warn!("`rescript build -w` is deprecated. Please use `rescript watch` instead.");
-            command = cli::Command::Watch(build_args.clone().into());
-        }
-    }
+    log::set_max_level(log_level_filter);
+    log::set_boxed_logger(Box::new(SplitLogger {
+        stdout: stdout_logger,
+        stderr: stderr_logger,
+    }))
+    .expect("Failed to initialize logger");
+
+    let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
+    let plain_output = !is_tty;
 
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
     let show_progress = log_level_filter == LevelFilter::Info;
 
-    match command {
+    match cli.command {
         cli::Command::CompilerArgs { path } => {
             println!("{}", build::get_compiler_args(Path::new(&path))?);
             std::process::exit(0);
@@ -42,12 +49,12 @@ fn main() -> Result<()> {
                 Path::new(&build_args.folder as &str),
                 show_progress,
                 build_args.no_timing,
-                *build_args.create_sourcedirs,
-                *build_args.dev,
-                *build_args.snapshot_output,
+                true, // create_sourcedirs is now always enabled
+                plain_output,
+                (*build_args.warn_error).clone(),
             ) {
                 Err(e) => {
-                    println!("{e}");
+                    eprintln!("{:#}", e);
                     std::process::exit(1)
                 }
                 Ok(_) => {
@@ -61,51 +68,59 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            watcher::start(
+            match watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),
-                *watch_args.create_sourcedirs,
-                *watch_args.dev,
-                *watch_args.snapshot_output,
-            );
-
-            Ok(())
+                true, // create_sourcedirs is now always enabled
+                plain_output,
+                (*watch_args.warn_error).clone(),
+            ) {
+                Err(e) => {
+                    eprintln!("{:#}", e);
+                    std::process::exit(1)
+                }
+                Ok(_) => Ok(()),
+            }
         }
-        cli::Command::Clean {
-            folder,
-            snapshot_output,
-            dev,
-        } => {
+        cli::Command::Clean { folder } => {
             let _lock = get_lock(&folder);
-
-            build::clean::clean(
-                Path::new(&folder as &str),
-                show_progress,
-                *snapshot_output,
-                dev.dev,
-            )
+            build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
         }
-        cli::Command::Legacy { legacy_args } => {
-            let code = build::pass_through_legacy(legacy_args);
-            std::process::exit(code);
-        }
-        cli::Command::Format {
-            stdin,
-            all,
-            check,
-            files,
-        } => format::format(stdin, all, check, files),
+        cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
     }
 }
 
 fn get_lock(folder: &str) -> lock::Lock {
     match lock::get(folder) {
         lock::Lock::Error(error) => {
-            println!("Could not start ReScript build: {error}");
+            eprintln!("Could not start ReScript build: {error}");
             std::process::exit(1);
         }
         acquired_lock => acquired_lock,
+    }
+}
+
+struct SplitLogger {
+    stdout: env_logger::Logger,
+    stderr: env_logger::Logger,
+}
+
+impl log::Log for SplitLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        self.stdout.enabled(metadata) || self.stderr.enabled(metadata)
+    }
+
+    fn log(&self, record: &log::Record) {
+        match record.level() {
+            log::Level::Error | log::Level::Warn => self.stderr.log(record),
+            _ => self.stdout.log(record),
+        }
+    }
+
+    fn flush(&self) {
+        self.stdout.flush();
+        self.stderr.flush();
     }
 }

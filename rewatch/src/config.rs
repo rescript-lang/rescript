@@ -1,10 +1,14 @@
 use crate::build::packages;
+use crate::helpers;
 use crate::helpers::deserialize::*;
-use anyhow::{Result, bail};
+use crate::project_context::ProjectContext;
+use anyhow::{Result, anyhow};
 use convert_case::{Case, Casing};
-use serde::Deserialize;
+use serde::de::{Error as DeError, Visitor};
+use serde::{Deserialize, Deserializer};
+use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
@@ -71,7 +75,7 @@ impl Source {
     }
 
     /// `to_qualified_without_children` takes a tree like structure of dependencies, coming in from
-    /// `bsconfig`, and turns it into a flat list. The main thing we extract here are the source
+    /// `rescript.json`, and turns it into a flat list. The main thing we extract here are the source
     /// folders, and optional subdirs, where potentially, the subdirs recurse or not.
     pub fn to_qualified_without_children(&self, sub_path: Option<PathBuf>) -> PackageSource {
         match self {
@@ -143,23 +147,40 @@ impl Eq for Source {}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct PackageSpec {
-    pub module: String,
+    pub module: PackageModule,
     #[serde(rename = "in-source", default = "default_true")]
     pub in_source: bool,
     pub suffix: Option<String>,
 }
 
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+pub enum PackageModule {
+    #[serde(rename = "commonjs")]
+    CommonJs,
+    #[serde(rename = "esmodule")]
+    EsModule,
+}
+
+impl PackageModule {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PackageModule::CommonJs => "commonjs",
+            PackageModule::EsModule => "esmodule",
+        }
+    }
+}
+
 impl PackageSpec {
     pub fn get_out_of_source_dir(&self) -> String {
-        match self.module.as_str() {
-            "commonjs" => "js",
-            _ => "es6",
+        match self.module {
+            PackageModule::CommonJs => "js",
+            PackageModule::EsModule => "es6",
         }
         .to_string()
     }
 
     pub fn is_common_js(&self) -> bool {
-        self.module.as_str() == "commonjs"
+        self.module == PackageModule::CommonJs
     }
 
     pub fn get_suffix(&self) -> Option<String> {
@@ -215,11 +236,49 @@ pub struct JsxSpecs {
 /// We do not care about the internal structure because the gentype config is loaded by bsc.
 pub type GenTypeConfig = serde_json::Value;
 
+/// Configuration for running a command after each JavaScript file is compiled.
+/// Note: Unlike bsb, rewatch passes absolute paths to the command for clarity.
+#[derive(Deserialize, Debug, Clone)]
+pub struct JsPostBuild {
+    pub cmd: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub enum DeprecationWarning {
-    BsDependencies,
-    BsDevDependencies,
-    BscFlags,
+pub enum DeprecationWarning {}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum ExperimentalFeature {
+    LetUnwrap,
+}
+
+impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct EFVisitor;
+        impl<'de> Visitor<'de> for EFVisitor {
+            type Value = ExperimentalFeature;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "a valid experimental feature id (e.g. LetUnwrap)")
+            }
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: DeError,
+            {
+                match v {
+                    "LetUnwrap" => Ok(ExperimentalFeature::LetUnwrap),
+                    other => {
+                        let available = ["LetUnwrap"].join(", ");
+                        Err(DeError::custom(format!(
+                            "Unknown experimental feature '{other}'. Available features: {available}",
+                        )))
+                    }
+                }
+            }
+        }
+        deserializer.deserialize_any(EFVisitor)
+    }
 }
 
 /// # rescript.json representation
@@ -237,25 +296,26 @@ pub struct Config {
     pub dependencies: Option<Vec<String>>,
     #[serde(rename = "dev-dependencies")]
     pub dev_dependencies: Option<Vec<String>>,
-    // Deprecated field: overwrites dependencies
-    #[serde(rename = "bs-dependencies")]
-    bs_dependencies: Option<Vec<String>>,
-    // Deprecated field: overwrites dev_dependencies
-    #[serde(rename = "bs-dev-dependencies")]
-    bs_dev_dependencies: Option<Vec<String>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
 
     #[serde(rename = "compiler-flags")]
     pub compiler_flags: Option<Vec<OneOrMore<String>>>,
-    // Deprecated field: overwrites compiler_flags
-    #[serde(rename = "bsc-flags")]
-    bsc_flags: Option<Vec<OneOrMore<String>>>,
 
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
+    #[serde(rename = "experimental-features")]
+    pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
+    #[serde(rename = "js-post-build")]
+    pub js_post_build: Option<JsPostBuild>,
+    // Used by the VS Code extension; ignored by rewatch but should not emit warnings.
+    // Payload is not validated here, only in the VS Code extension.
+    pub editor: Option<serde_json::Value>,
+    // Used by rescript-tools reanalyze; ignored by rewatch but should not emit warnings.
+    // Payload is not validated here, only in reanalyze.
+    pub reanalyze: Option<serde_json::Value>,
     // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
@@ -266,6 +326,17 @@ pub struct Config {
     // Holds all deprecation warnings for the config struct
     #[serde(skip)]
     deprecation_warnings: Vec<DeprecationWarning>,
+
+    // Holds unknown fields we encountered while parsing
+    #[serde(skip, default)]
+    unknown_fields: Vec<String>,
+
+    #[serde(default = "default_path")]
+    pub path: PathBuf,
+}
+
+fn default_path() -> PathBuf {
+    PathBuf::from("./rescript.json")
 }
 
 /// This flattens string flags
@@ -289,56 +360,61 @@ pub fn flatten_flags(flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
 /// Since ppx-flags could be one or more, and could potentially be nested, this function takes the
 /// flags and flattens them.
 pub fn flatten_ppx_flags(
-    node_modules_dir: &Path,
+    project_context: &ProjectContext,
+    package_config: &Config,
     flags: &Option<Vec<OneOrMore<String>>>,
-    package_name: &String,
-) -> Vec<String> {
+) -> Result<Vec<String>> {
     match flags {
-        None => vec![],
-        Some(flags) => flags
-            .iter()
-            .flat_map(|x| match x {
+        None => Ok(vec![]),
+        Some(flags) => flags.iter().try_fold(Vec::new(), |mut acc, x| {
+            match x {
                 OneOrMore::Single(y) => {
                     let first_character = y.chars().next();
                     match first_character {
                         Some('.') => {
-                            vec![
-                                "-ppx".to_string(),
-                                node_modules_dir
-                                    .join(package_name)
-                                    .join(y)
-                                    .to_string_lossy()
-                                    .to_string(),
-                            ]
+                            let path = helpers::try_package_path(
+                                package_config,
+                                project_context,
+                                &format!("{}{}{}", &package_config.name, MAIN_SEPARATOR, y),
+                            )
+                            .map(|p| p.to_string_lossy().to_string())?;
+
+                            acc.push(String::from("-ppx"));
+                            acc.push(path);
                         }
-                        _ => vec![
-                            "-ppx".to_string(),
-                            node_modules_dir.join(y).to_string_lossy().to_string(),
-                        ],
+                        _ => {
+                            acc.push(String::from("-ppx"));
+                            let path = helpers::try_package_path(package_config, project_context, y)
+                                .map(|p| p.to_string_lossy().to_string())?;
+                            acc.push(path);
+                        }
                     }
                 }
-                OneOrMore::Multiple(ys) if ys.is_empty() => vec![],
+                OneOrMore::Multiple(ys) if ys.is_empty() => (),
                 OneOrMore::Multiple(ys) => {
                     let first_character = ys[0].chars().next();
                     let ppx = match first_character {
-                        Some('.') => node_modules_dir
-                            .join(package_name)
-                            .join(&ys[0])
-                            .to_string_lossy()
-                            .to_string(),
-                        _ => node_modules_dir.join(&ys[0]).to_string_lossy().to_string(),
+                        Some('.') => helpers::try_package_path(
+                            package_config,
+                            project_context,
+                            &format!("{}{}{}", package_config.name, MAIN_SEPARATOR, &ys[0]),
+                        )
+                        .map(|p| p.to_string_lossy().to_string())?,
+                        _ => helpers::try_package_path(package_config, project_context, &ys[0])
+                            .map(|p| p.to_string_lossy().to_string())?,
                     };
-                    vec![
-                        "-ppx".to_string(),
+                    acc.push(String::from("-ppx"));
+                    acc.push(
                         vec![ppx]
                             .into_iter()
                             .chain(ys[1..].to_owned())
                             .collect::<Vec<String>>()
                             .join(" "),
-                    ]
+                    );
                 }
-            })
-            .collect::<Vec<String>>(),
+            };
+            Ok(acc)
+        }),
     }
 }
 
@@ -372,19 +448,44 @@ fn namespace_from_package_name(package_name: &str) -> String {
 }
 
 impl Config {
-    /// Try to convert a bsconfig from a certain path to a bsconfig struct
+    /// Try to convert a config from a certain path to a config struct
     pub fn new(path: &Path) -> Result<Self> {
         let read = fs::read_to_string(path)?;
-        Config::new_from_json_string(&read)
+        let mut config = Config::new_from_json_string(&read)?;
+        config.set_path(path.to_path_buf())?;
+        Ok(config)
     }
 
-    /// Try to convert a bsconfig from a string to a bsconfig struct
+    /// Try to convert a config from a string to a config struct
     pub fn new_from_json_string(config_str: &str) -> Result<Self> {
-        let mut config = serde_json::from_str::<Config>(config_str)?;
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(config_str) {
+            validate_package_specs_value(&value)?;
+        }
+
+        let mut deserializer = serde_json::Deserializer::from_str(config_str);
+        let mut tracker = serde_path_to_error::Track::new();
+        let path_deserializer = serde_path_to_error::Deserializer::new(&mut deserializer, &mut tracker);
+        let mut unknown_fields = Vec::new();
+        let mut config: Config =
+            serde_ignored::deserialize(path_deserializer, |path| unknown_fields.push(path.to_string()))
+                .map_err(|err: serde_json::Error| {
+                    let path = tracker.path().to_string();
+                    if path.is_empty() {
+                        anyhow!("Failed to parse rescript.json: {err}")
+                    } else {
+                        anyhow!("Failed to parse rescript.json at {path}: {err}")
+                    }
+                })?;
 
         config.handle_deprecations()?;
+        config.unknown_fields = unknown_fields;
 
         Ok(config)
+    }
+
+    fn set_path(&mut self, path: PathBuf) -> Result<()> {
+        self.path = path;
+        Ok(())
     }
 
     pub fn get_namespace(&self) -> packages::Namespace {
@@ -477,6 +578,25 @@ impl Config {
         }
     }
 
+    pub fn get_experimental_features_args(&self) -> Vec<String> {
+        match &self.experimental_features {
+            None => vec![],
+            Some(map) => map
+                .iter()
+                .filter_map(|(k, v)| if *v { Some(k) } else { None })
+                .flat_map(|feature| {
+                    vec![
+                        "-enable-experimental".to_string(),
+                        match feature {
+                            ExperimentalFeature::LetUnwrap => "LetUnwrap",
+                        }
+                        .to_string(),
+                    ]
+                })
+                .collect(),
+        }
+    }
+
     pub fn get_gentype_arg(&self) -> Vec<String> {
         match &self.gentype_config {
             Some(_) => vec!["-bs-gentype".to_string()],
@@ -484,10 +604,16 @@ impl Config {
         }
     }
 
-    pub fn get_warning_args(&self, is_local_dep: bool) -> Vec<String> {
+    pub fn get_warning_args(&self, is_local_dep: bool, warn_error_override: Option<String>) -> Vec<String> {
         // Ignore warning config for non local dependencies (node_module dependencies)
         if !is_local_dep {
             return vec![];
+        }
+
+        // Command-line --warn-error flag takes precedence over rescript.json configuration
+        // This follows the same precedence behavior as the legacy bsb build system
+        if let Some(warn_error_str) = warn_error_override {
+            return vec!["-warn-error".to_string(), warn_error_str];
         }
 
         match self.warnings {
@@ -518,7 +644,7 @@ impl Config {
     pub fn get_package_specs(&self) -> Vec<PackageSpec> {
         match self.package_specs.clone() {
             None => vec![PackageSpec {
-                module: "commonjs".to_string(),
+                module: PackageModule::EsModule,
                 in_source: true,
                 suffix: Some(".js".to_string()),
             }],
@@ -532,8 +658,6 @@ impl Config {
             .or(self.suffix.clone())
             .unwrap_or(".js".to_string())
     }
-
-    // TODO: needs improving!
 
     pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {
         let relative_parent = match relative_path.parent() {
@@ -579,35 +703,123 @@ impl Config {
         &self.deprecation_warnings
     }
 
+    pub fn get_unknown_fields(&self) -> Vec<String> {
+        self.unknown_fields
+            .iter()
+            .filter(|field| !self.is_unsupported_field(field))
+            .cloned()
+            .collect()
+    }
+
+    pub fn get_unsupported_fields(&self) -> Vec<String> {
+        self.unknown_fields
+            .iter()
+            .filter(|field| self.is_unsupported_field(field))
+            .cloned()
+            .collect::<Vec<_>>()
+    }
+
+    fn is_unsupported_field(&self, field: &str) -> bool {
+        const UNSUPPORTED_TOP_LEVEL_FIELDS: &[&str] = &[
+            "ignored-dirs",
+            "generators",
+            "cut-generators",
+            "pp-flags",
+            "entries",
+            "bs-external-includes",
+        ];
+
+        let top_level = field.split(|c| ['.', '['].contains(&c)).next().unwrap_or(field);
+
+        UNSUPPORTED_TOP_LEVEL_FIELDS.contains(&top_level)
+    }
+
     fn handle_deprecations(&mut self) -> Result<()> {
-        if self.dependencies.is_some() && self.bs_dependencies.is_some() {
-            bail!("dependencies and bs-dependencies are mutually exclusive. Please use 'dependencies'.");
-        }
-        if self.dev_dependencies.is_some() && self.bs_dev_dependencies.is_some() {
-            bail!(
-                "dev-dependencies and bs-dev-dependencies are mutually exclusive. Please use 'dev-dependencies'"
-            );
-        }
-
-        if self.compiler_flags.is_some() && self.bsc_flags.is_some() {
-            bail!("compiler-flags and bsc-flags are mutually exclusive. Please use 'compiler-flags'");
-        }
-
-        if self.bs_dependencies.is_some() {
-            self.dependencies = self.bs_dependencies.take();
-            self.deprecation_warnings.push(DeprecationWarning::BsDependencies);
-        }
-        if self.bs_dev_dependencies.is_some() {
-            self.dev_dependencies = self.bs_dev_dependencies.take();
-            self.deprecation_warnings
-                .push(DeprecationWarning::BsDevDependencies);
-        }
-        if self.bsc_flags.is_some() {
-            self.compiler_flags = self.bsc_flags.take();
-            self.deprecation_warnings.push(DeprecationWarning::BscFlags);
-        }
-
         Ok(())
+    }
+}
+
+fn validate_package_specs_value(value: &serde_json::Value) -> Result<()> {
+    let specs = match value.get("package-specs") {
+        Some(specs) => specs,
+        None => return Ok(()),
+    };
+
+    let top_level_suffix = value
+        .get("suffix")
+        .and_then(|suffix| suffix.as_str())
+        .unwrap_or(".js")
+        .to_string();
+    let mut seen_suffixes = std::collections::HashSet::new();
+
+    match specs {
+        serde_json::Value::Array(specs) => {
+            for spec in specs {
+                validate_package_spec_value(spec)?;
+                if let Some(suffix) = resolve_spec_suffix(spec, &top_level_suffix) {
+                    let in_source = resolve_spec_in_source(spec);
+                    if !seen_suffixes.insert((suffix.clone(), in_source)) {
+                        return Err(anyhow!(
+                            "Duplicate package-spec suffix \"{suffix}\" is not allowed."
+                        ));
+                    }
+                }
+            }
+        }
+        serde_json::Value::Object(_) => {
+            validate_package_spec_value(specs)?;
+            if let Some(suffix) = resolve_spec_suffix(specs, &top_level_suffix) {
+                let in_source = resolve_spec_in_source(specs);
+                if !seen_suffixes.insert((suffix.clone(), in_source)) {
+                    return Err(anyhow!(
+                        "Duplicate package-spec suffix \"{suffix}\" is not allowed."
+                    ));
+                }
+            }
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn resolve_spec_suffix(spec: &serde_json::Value, top_level_suffix: &str) -> Option<String> {
+    if !spec.is_object() {
+        return None;
+    }
+
+    match spec.get("suffix").and_then(|suffix| suffix.as_str()) {
+        Some(suffix) => Some(suffix.to_string()),
+        None => Some(top_level_suffix.to_string()),
+    }
+}
+
+fn resolve_spec_in_source(spec: &serde_json::Value) -> bool {
+    if !spec.is_object() {
+        return true;
+    }
+
+    spec.get("in-source")
+        .and_then(|in_source| in_source.as_bool())
+        .unwrap_or(true)
+}
+
+fn validate_package_spec_value(value: &serde_json::Value) -> Result<()> {
+    let module = match value.get("module") {
+        Some(module) => module,
+        None => return Ok(()),
+    };
+
+    let module = match module.as_str() {
+        Some(module) => module,
+        None => return Ok(()),
+    };
+
+    match module {
+        "commonjs" | "esmodule" => Ok(()),
+        other => Err(anyhow!(
+            "Module system \"{other}\" is unsupported. Expected \"commonjs\" or \"esmodule\"."
+        )),
     }
 }
 
@@ -620,6 +832,7 @@ pub mod tests {
         pub bs_deps: Vec<String>,
         pub build_dev_deps: Vec<String>,
         pub allowed_dependents: Option<Vec<String>>,
+        pub path: PathBuf,
     }
 
     pub fn create_config(args: CreateConfigArgs) -> Config {
@@ -633,17 +846,20 @@ pub mod tests {
             suffix: None,
             dependencies: Some(args.bs_deps),
             dev_dependencies: Some(args.build_dev_deps),
-            bs_dependencies: None,
-            bs_dev_dependencies: None,
             ppx_flags: None,
             compiler_flags: None,
-            bsc_flags: None,
             namespace: None,
             jsx: None,
             gentype_config: None,
+            js_post_build: None,
+            editor: None,
+            reanalyze: None,
             namespace_entry: None,
             deprecation_warnings: vec![],
+            experimental_features: None,
             allowed_dependents: args.allowed_dependents,
+            unknown_fields: vec![],
+            path: args.path,
         }
     }
 
@@ -653,7 +869,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ]
         }
@@ -663,8 +879,59 @@ pub mod tests {
         let specs = config.get_package_specs();
         assert_eq!(specs.len(), 1);
         let spec = specs.first().unwrap();
-        assert_eq!(spec.module, "es6");
+        assert_eq!(spec.module, PackageModule::EsModule);
         assert_eq!(config.get_suffix(spec), ".mjs");
+    }
+
+    #[test]
+    fn test_package_specs_duplicate_suffix_default() {
+        let json = r#"
+        {
+            "name": "dup-suffix-default",
+            "sources": ".",
+            "package-specs": [
+                { "module": "commonjs", "in-source": true },
+                { "module": "esmodule", "in-source": true }
+            ]
+        }
+        "#;
+
+        let error = Config::new_from_json_string(json).unwrap_err().to_string();
+        assert!(error.contains("Duplicate package-spec suffix"));
+    }
+
+    #[test]
+    fn test_package_specs_duplicate_suffix_explicit() {
+        let json = r#"
+        {
+            "name": "dup-suffix-explicit",
+            "sources": ".",
+            "package-specs": [
+                { "module": "commonjs", "in-source": true, "suffix": ".mjs" },
+                { "module": "esmodule", "in-source": true, "suffix": ".mjs" }
+            ]
+        }
+        "#;
+
+        let error = Config::new_from_json_string(json).unwrap_err().to_string();
+        assert!(error.contains("Duplicate package-spec suffix"));
+    }
+
+    #[test]
+    fn test_package_specs_duplicate_suffix_different_in_source_ok() {
+        let json = r#"
+        {
+            "name": "dup-suffix-different-in-source",
+            "sources": ".",
+            "package-specs": [
+                { "module": "esmodule", "in-source": true, "suffix": ".res.js" },
+                { "module": "esmodule", "in-source": false, "suffix": ".res.js" }
+            ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).unwrap();
+        assert_eq!(config.get_package_specs().len(), 2);
     }
 
     #[test]
@@ -740,7 +1007,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "gentypeconfig": {
@@ -761,7 +1028,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": {
@@ -790,7 +1057,7 @@ pub mod tests {
         {
             "name": "my-monorepo",
             "sources": [ { "dir": "src/", "subdirs": true } ],
-            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "package-specs": [ { "module": "esmodule", "in-source": true } ],
             "suffix": ".mjs",
             "dependencies": [ "@teamwalnut/app" ],
             "jsx": { "version": 4, "preserve": true }
@@ -822,7 +1089,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -838,31 +1105,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dependencies_deprecation() {
-        let json = r#"
-        {
-            "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "es6",
-                "in-source": true
-                }
-            ],
-            "suffix": ".mjs",
-            "bs-dependencies": [ "@testrepo/main" ]
-        }
-        "#;
-
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDependencies]);
-    }
-
-    #[test]
     fn test_dependencies() {
         let json = r#"
         {
@@ -873,7 +1115,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -888,31 +1130,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dev_dependencies_deprecation() {
-        let json = r#"
-        {
-            "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "es6",
-                "in-source": true
-                }
-            ],
-            "suffix": ".mjs",
-            "bs-dev-dependencies": [ "@testrepo/main" ]
-        }
-        "#;
-
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::BsDevDependencies]);
-    }
-
-    #[test]
     fn test_dev_dependencies() {
         let json = r#"
         {
@@ -923,7 +1140,7 @@ pub mod tests {
             },
             "package-specs": [
                 {
-                "module": "es6",
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -938,7 +1155,31 @@ pub mod tests {
     }
 
     #[test]
-    fn test_compiler_flags() {
+    fn test_package_specs_es6_global_deprecation() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6-global",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs"
+        }
+        "#;
+
+        let err = Config::new_from_json_string(json).unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("Module system \"es6-global\" is unsupported"));
+    }
+
+    #[test]
+    fn test_package_specs_es6_deprecation() {
         let json = r#"
         {
             "name": "testrepo",
@@ -949,6 +1190,88 @@ pub mod tests {
             "package-specs": [
                 {
                 "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs"
+        }
+        "#;
+
+        let err = Config::new_from_json_string(json).unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("Module system \"es6\" is unsupported"));
+    }
+
+    #[test]
+    fn test_unknown_fields_are_collected() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "some-new-field": true
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.get_unknown_fields(), vec!["some-new-field".to_string()]);
+        assert!(config.get_unsupported_fields().is_empty());
+    }
+
+    #[test]
+    fn test_unsupported_fields_are_collected() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "ignored-dirs": ["scripts"]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.get_unsupported_fields(), vec!["ignored-dirs".to_string()]);
+        assert!(config.get_unknown_fields().is_empty());
+    }
+
+    #[test]
+    fn test_editor_field_supported() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "editor": {
+                "reason": {
+                    "profile": "development"
+                }
+            }
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert!(config.get_unsupported_fields().is_empty());
+        assert!(config.get_unknown_fields().is_empty());
+    }
+
+    #[test]
+    fn test_compiler_flags() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "esmodule",
                 "in-source": true
                 }
             ],
@@ -970,30 +1293,6 @@ pub mod tests {
             unreachable!("Expected compiler flags to be Some");
         }
         assert!(config.get_deprecations().is_empty());
-    }
-
-    #[test]
-    fn test_compiler_flags_deprecation() {
-        let json = r#"
-        {
-            "name": "testrepo",
-            "sources": {
-                "dir": "src",
-                "subdirs": true
-            },
-            "package-specs": [
-                {
-                "module": "es6",
-                "in-source": true
-                }
-            ],
-            "suffix": ".mjs",
-            "bsc-flags": [ "-w" ]
-        }
-        "#;
-
-        let config = Config::new_from_json_string(json).expect("a valid json string");
-        assert_eq!(config.get_deprecations(), [DeprecationWarning::BscFlags]);
     }
 
     fn test_find_is_type_dev(source: OneOrMore<Source>, path: &Path, expected: bool) {
@@ -1095,5 +1394,100 @@ pub mod tests {
             Path::new("src/bar/Foo.res"),
             true,
         )
+    }
+
+    #[test]
+    fn test_get_warning_args_with_override() {
+        let config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Test that warn_error_override takes precedence
+        let args = config.get_warning_args(true, Some("+3+8+11".to_string()));
+        assert_eq!(args, vec!["-warn-error".to_string(), "+3+8+11".to_string()]);
+    }
+
+    #[test]
+    fn test_get_warning_args_without_override() {
+        let mut config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Set up warnings in config
+        config.warnings = Some(Warnings {
+            number: Some("+8+32".to_string()),
+            error: Some(Error::Catchall(true)),
+        });
+
+        // Test that config warnings are used when no override
+        let args = config.get_warning_args(true, None);
+        assert_eq!(
+            args,
+            vec![
+                "-w".to_string(),
+                "+8+32".to_string(),
+                "-warn-error".to_string(),
+                "A".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_warning_args_non_local_dep() {
+        let config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Test that non-local deps ignore warning config
+        let args: Vec<String> = config.get_warning_args(false, None);
+        assert_eq!(args, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_get_warning_args_override_ignores_config() {
+        let mut config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Set up warnings in config
+        config.warnings = Some(Warnings {
+            number: Some("+8+32".to_string()),
+            error: Some(Error::Catchall(true)),
+        });
+
+        // Test that override completely ignores config warnings
+        let args = config.get_warning_args(true, Some("+3+8+11".to_string()));
+        assert_eq!(args, vec!["-warn-error".to_string(), "+3+8+11".to_string()]);
+    }
+
+    #[test]
+    fn test_get_warning_args_non_local_dep_ignores_override() {
+        let config = create_config(CreateConfigArgs {
+            name: "test".to_string(),
+            bs_deps: vec![],
+            build_dev_deps: vec![],
+            allowed_dependents: None,
+            path: PathBuf::from("./rescript.json"),
+        });
+
+        // Non-local dependency should never receive warning args, even if override is provided
+        let args = config.get_warning_args(false, Some("+3+8+11".to_string()));
+        assert_eq!(args, Vec::<String>::new());
     }
 }

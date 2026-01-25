@@ -39,12 +39,9 @@ if (supportedPlatforms.includes(target)) {
 export const {
   binDir,
   binPaths: {
-    bsb_helper_exe,
     bsc_exe,
-    ninja_exe,
     rescript_editor_analysis_exe,
     rescript_tools_exe,
-    rescript_legacy_exe,
     rescript_exe,
   },
 } = mod;

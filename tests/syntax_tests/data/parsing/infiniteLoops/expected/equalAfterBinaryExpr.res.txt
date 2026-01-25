@@ -2,7 +2,7 @@
   Syntax error!
   syntax_tests/data/parsing/infiniteLoops/equalAfterBinaryExpr.res:169:17
 
-  167 ┆ if isLeaf(. successor) {
+  167 ┆ if isLeaf(successor) {
   168 ┆   if rbt->root === Some(successor) {
   169 ┆     rbt->root = None
   170 ┆   }

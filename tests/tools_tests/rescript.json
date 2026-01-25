@@ -1,5 +1,5 @@
 {
-  "name": "docstrings-test",
+  "name": "@tests/tools",
   "sources": {
     "dir": "src",
     "subdirs": true
@@ -7,6 +7,9 @@
   "package-specs": {
     "module": "esmodule",
     "in-source": true
+  },
+  "warnings": {
+    "error": "-3"
   },
   "suffix": ".res.js",
   "dependencies": ["@rescript/react"]

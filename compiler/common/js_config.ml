@@ -70,7 +70,5 @@ let jsx_module_of_string = function
   | "react" -> React
   | module_name -> Generic {module_name}
 
-(* option to config `@rescript/std`*)
-let customize_runtime : string option ref = ref None
 let as_pp = ref false
 let self_stack : string Stack.t = Stack.create ()

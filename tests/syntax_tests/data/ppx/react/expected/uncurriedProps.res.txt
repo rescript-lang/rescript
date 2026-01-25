@@ -1,14 +1,15 @@
 @@jsxConfig({version: 4})
 @res.jsxComponentProps
-type props<'a> = {a?: 'a}
+type props<'a> = {
+  a?: 'a,
+}
 
 let make = ({a: ?__a, _}: props<unit => unit>) => {
   let a = switch __a {
   | Some(a) => a
   | None => () => ()
   }
-
-  React.null
+  (React.null: React.element)
 }
 let make = {
   let \"UncurriedProps" = (props: props<_>) => make(props)
@@ -28,17 +29,20 @@ func(~callback=(str, a, b) => {
 
 module Foo = {
   @res.jsxComponentProps
-  type props<'callback> = {callback?: 'callback}
+  type props<'callback> = {
+    callback?: 'callback,
+  }
 
   let make = ({callback: ?__callback, _}: props<(string, bool, bool) => unit>) => {
     let callback = switch __callback {
     | Some(callback) => callback
     | None => (_, _, _) => ()
     }
-
-    {
-      React.null
-    }
+    (
+      {
+        React.null
+      }: React.element
+    )
   }
   let make = {
     let \"UncurriedProps$Foo" = (props: props<_>) => make(props)
@@ -51,7 +55,7 @@ module Bar = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
+  let make = (_: props): React.element => React.jsx(Foo.make, {callback: {(_, _, _) => ()}})
   let make = {
     let \"UncurriedProps$Bar" = props => make(props)
 

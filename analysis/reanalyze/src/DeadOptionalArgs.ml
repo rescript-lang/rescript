@@ -1,32 +1,25 @@
 open DeadCommon
-open Common
 
 let active () = true
 
-type item = {
-  posTo: Lexing.position;
-  argNames: string list;
-  argNamesMaybe: string list;
-}
-
-let delayedItems = (ref [] : item list ref)
-let functionReferences = (ref [] : (Lexing.position * Lexing.position) list ref)
-
-let addFunctionReference ~(locFrom : Location.t) ~(locTo : Location.t) =
+let addFunctionReference ~config ~decls ~cross_file ~(locFrom : Location.t)
+    ~(locTo : Location.t) =
   if active () then
     let posTo = locTo.loc_start in
     let posFrom = locFrom.loc_start in
+    (* Check if target has optional args - for filtering and debug logging *)
     let shouldAdd =
-      match PosHash.find_opt decls posTo with
+      match Declarations.find_opt_builder decls posTo with
       | Some {declKind = Value {optionalArgs}} ->
         not (OptionalArgs.isEmpty optionalArgs)
       | _ -> false
     in
     if shouldAdd then (
-      if !Common.Cli.debug then
+      if config.DceConfig.cli.debug then
         Log_.item "OptionalArgs.addFunctionReference %s %s@."
-          (posFrom |> posToString) (posTo |> posToString);
-      functionReferences := (posFrom, posTo) :: !functionReferences)
+          (posFrom |> Pos.toString) (posTo |> Pos.toString);
+      CrossFileItems.add_function_reference cross_file ~pos_from:posFrom
+        ~pos_to:posTo)
 
 let rec hasOptionalArgs (texpr : Types.type_expr) =
   match texpr.desc with
@@ -40,77 +33,95 @@ let rec hasOptionalArgs (texpr : Types.type_expr) =
 let rec fromTypeExpr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
-  | Tarrow ({lbl = Optional s}, tTo, _, _) -> s :: fromTypeExpr tTo
+  | Tarrow ({lbl = Optional {txt = s}}, tTo, _, _) -> s :: fromTypeExpr tTo
   | Tarrow (_, tTo, _, _) -> fromTypeExpr tTo
   | Tlink t -> fromTypeExpr t
   | Tsubst t -> fromTypeExpr t
   | _ -> []
 
-let addReferences ~(locFrom : Location.t) ~(locTo : Location.t) ~path
-    (argNames, argNamesMaybe) =
+let addReferences ~config ~cross_file ~(locFrom : Location.t)
+    ~(locTo : Location.t) ~(binding : Location.t) ~path (argNames, argNamesMaybe)
+    =
   if active () then (
     let posTo = locTo.loc_start in
-    let posFrom = locFrom.loc_start in
-    delayedItems := {posTo; argNames; argNamesMaybe} :: !delayedItems;
-    if !Common.Cli.debug then
+    let posFrom = binding.loc_start in
+    CrossFileItems.add_optional_arg_call cross_file ~pos_from:posFrom
+      ~pos_to:posTo ~arg_names:argNames ~arg_names_maybe:argNamesMaybe;
+    if config.DceConfig.cli.debug then
+      let callPos = locFrom.loc_start in
       Log_.item
         "DeadOptionalArgs.addReferences %s called with optional argNames:%s \
          argNamesMaybe:%s %s@."
-        (path |> Path.fromPathT |> Path.toString)
+        (path |> DcePath.fromPathT |> DcePath.toString)
         (argNames |> String.concat ", ")
         (argNamesMaybe |> String.concat ", ")
-        (posFrom |> posToString))
+        (callPos |> Pos.toString))
 
-let forceDelayedItems () =
-  let items = !delayedItems |> List.rev in
-  delayedItems := [];
-  items
-  |> List.iter (fun {posTo; argNames; argNamesMaybe} ->
-         match PosHash.find_opt decls posTo with
-         | Some {declKind = Value r} ->
-           r.optionalArgs |> OptionalArgs.call ~argNames ~argNamesMaybe
-         | _ -> ());
-  let fRefs = !functionReferences |> List.rev in
-  functionReferences := [];
-  fRefs
-  |> List.iter (fun (posFrom, posTo) ->
-         match
-           (PosHash.find_opt decls posFrom, PosHash.find_opt decls posTo)
-         with
-         | Some {declKind = Value rFrom}, Some {declKind = Value rTo} ->
-           OptionalArgs.combine rFrom.optionalArgs rTo.optionalArgs
-         | _ -> ())
-
-let check decl =
+(** Check for optional args issues. Returns issues instead of logging.
+    Uses optional_args_state map for final computed state. *)
+let check ~optional_args_state ~ann_store ~config:_ decl : Issue.t list =
   match decl with
-  | {declKind = Value {optionalArgs}}
+  | {Decl.declKind = Value {optionalArgs}}
     when active ()
-         && not (ProcessDeadAnnotations.isAnnotatedGenTypeOrLive decl.pos) ->
-    optionalArgs
-    |> OptionalArgs.iterUnused (fun s ->
-           Log_.warning ~loc:(decl |> declGetLoc)
-             (DeadOptional
-                {
-                  deadOptional = WarningUnusedArgument;
-                  message =
-                    Format.asprintf
-                      "optional argument @{<info>%s@} of function @{<info>%s@} \
-                       is never used"
-                      s
-                      (decl.path |> Path.withoutHead);
-                }));
-    optionalArgs
-    |> OptionalArgs.iterAlwaysUsed (fun s nCalls ->
-           Log_.warning ~loc:(decl |> declGetLoc)
-             (DeadOptional
-                {
-                  deadOptional = WarningRedundantOptionalArgument;
-                  message =
-                    Format.asprintf
-                      "optional argument @{<info>%s@} of function @{<info>%s@} \
-                       is always supplied (%d calls)"
-                      s
-                      (decl.path |> Path.withoutHead)
-                      nCalls;
-                }))
-  | _ -> ()
+         && not
+              (AnnotationStore.is_annotated_gentype_or_live ann_store decl.pos)
+    ->
+    (* Look up computed state from map, fall back to declaration's initial state *)
+    let state =
+      match OptionalArgsState.find_opt optional_args_state decl.pos with
+      | Some s -> s
+      | None -> optionalArgs
+    in
+    let loc = decl |> declGetLoc in
+    let unused_issues =
+      OptionalArgs.foldUnused
+        (fun s acc ->
+          let issue : Issue.t =
+            {
+              name = "Warning Unused Argument";
+              severity = Warning;
+              loc;
+              description =
+                DeadOptional
+                  {
+                    deadOptional = WarningUnusedArgument;
+                    message =
+                      Format.asprintf
+                        "optional argument @{<info>%s@} of function \
+                         @{<info>%s@} is never used"
+                        s
+                        (decl.path |> DcePath.withoutHead);
+                  };
+            }
+          in
+          issue :: acc)
+        state []
+    in
+    let redundant_issues =
+      OptionalArgs.foldAlwaysUsed
+        (fun s nCalls acc ->
+          let issue : Issue.t =
+            {
+              name = "Warning Redundant Optional Argument";
+              severity = Warning;
+              loc;
+              description =
+                DeadOptional
+                  {
+                    deadOptional = WarningRedundantOptionalArgument;
+                    message =
+                      Format.asprintf
+                        "optional argument @{<info>%s@} of function \
+                         @{<info>%s@} is always supplied (%d calls)"
+                        s
+                        (decl.path |> DcePath.withoutHead)
+                        nCalls;
+                  };
+            }
+          in
+          issue :: acc)
+        state []
+    in
+    (* Reverse to maintain original order from iterUnused/iterAlwaysUsed *)
+    List.rev unused_issues @ List.rev redundant_issues
+  | _ -> []

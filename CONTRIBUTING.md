@@ -14,12 +14,11 @@ Happy hacking!
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
-- [Node.js](https://nodejs.org/) v22.x
+- [Node.js](https://nodejs.org/) v22.x or newer
 - [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
-- Python <= 3.11 (required to build ninja)
-- Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install)
-- `opam` (OCaml Package Manager) v2.2.0
+- Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install and install the version listed as `rust-version` in `rewatch/Cargo.toml`)
+- `opam` (OCaml Package Manager) v2.2.0 or newer
 - VSCode (+ [OCaml Platform Extension](https://marketplace.visualstudio.com/items?itemName=ocamllabs.ocaml-platform))
 
 ## Cloning the Git Repo
@@ -57,9 +56,41 @@ opam switch create 5.3.0
 opam install . --deps-only --with-test --with-dev-setup -y
 ```
 
+> [!TIP]
+> If you have
+>
+> ```sh
+> $ git config --global core.fsmonitor
+> true
+> ```
+>
+> and get an error when running the `opam install` command
+>
+> ```sh
+> #=== ERROR while compiling flow_parser.0.267.0 ================================#
+> Copying sockets (rescript/_opam/.opam-switch/sources/flow_parser/.git/fsmonitor--daemon.ipc) is unsupported
+> ```
+>
+> Run this:
+>
+> ```sh
+> cd _opam/.opam-switch/sources/flow_parser \
+>   && git config core.fsmonitor false \
+>   && rm -f .git/fsmonitor--daemon.ipc
+> ```
+
 #### npm install
 
 Run `yarn install`. This will install the npm dependencies required for the build scripts.
+
+#### rustup install
+
+[Rewatch](./rewatch/) is built with rust. Make sure you have [rustup](https://rustup.rs/) installed to manage rust versions.
+
+```sh
+rustup toolchain install 1.91
+rustup override set 1.91
+```
 
 ### B. Devcontainer
 
@@ -71,30 +102,27 @@ You can also open this dev container with [GitHub Codespaces](https://github.com
 
 ## Building the Compiler
 
-The compiler binaries themselves can be built directly with dune as follows:
+Main targets:
 
 ```sh
-# One off build
-dune build
-
-# Watch mode
-dune build -w
-```
-
-For all additional operations, a Makefile is provided:
-
-```sh
-# Build the compiler using dune and copy the exes into the platform dir
+# Build the compiler and the build system (rewatch)
 make
 
-# Build the ninja build tool
-make ninja
-
-# Build the ReScript standard library using ninja and the compiler
+# Build the runtime/standard library
 make lib
 
-# Run compiler tests
+# Run the tests
 make test
+```
+
+Additional targets:
+
+```sh
+# Build the compiler executables only
+make compiler
+
+# Build rewatch only
+make rewatch
 
 # Run syntax tests
 make test-syntax
@@ -102,8 +130,14 @@ make test-syntax
 # Run syntax tests including roundtrip tests
 make test-syntax-roundtrip
 
-# Populate lib/ocaml and update artifact list
+# Update artifact list
 make artifacts
+
+# Format code
+make format
+
+# Check formatting
+make checkformat
 ```
 
 ## Coding Style
@@ -111,11 +145,11 @@ make artifacts
 - OCaml Code: snake case format is used, e.g, `to_string`
 - ReScript Code: the camel case format is used, e.g `toString`
 
-## Adding new Files to the Npm Package
+## Adding new Files to the Npm Packages
 
-To make sure that no files are added to or removed from the npm package inadvertently, an artifact list is kept at `packages/artifacts.txt`. During CI build, it is verified that only the files that are listed there are actually included in the npm package.
+To make sure that no files are added to or removed from the `rescript` or `@rescript/runtime` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
 
-After adding a new file to the repository that should go into the npm package - e.g., a new stdlib module -, run `make artifacts`.
+After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
 
 ## Test the compiler
 
@@ -126,10 +160,22 @@ make lib # Build compiler and standard library
 ./cli/bsc.js myTestFile.res
 ```
 
+To view the tokens of a file run:
+
+```sh
+dune exec res_parser -- -print tokens myTestFile.res
+```
+
 To view the untyped tree of the file run:
 
 ```sh
 ./cli/bsc.js -dparsetree myTestFile.res
+```
+
+or
+
+```sh
+dune exec res_parser -- -print ast -recover myTestFile.res
 ```
 
 To view the typed tree of the file run:
@@ -147,6 +193,16 @@ cd myProject
 npm install
 npm link rescript
 ```
+
+#### Use Local BSC with Existing ReScript Installation
+
+Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+
+```sh
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+```
+
+This will test the local compiler while still using the build system from the installed Node module.
 
 ### Running Automatic Tests
 
@@ -168,10 +224,10 @@ node scripts/test.js -mocha
 
 **Run build system test (integration tests):**
 
-This will run the whole build system test suite defined in `tests/build_tests`.
+This will run the build system test suite defined in `tests/build_tests`.
 
 ```
-node scripts/test.js -bsb
+node scripts/test.js -build
 ```
 
 **Run ounit tests:**
@@ -205,14 +261,23 @@ Below we will discuss on how to write, build and run these test files.
 - Inside the file, add a mocha test suite. The mocha bindings are defined in `tests/tests/src/mt.res`. To get you started, here is a simple scaffold for a test suite with multiple test cases:
 
   ```rescript
-  let suites: Mt.pair_suites = list{
-    ("hey", _ => Eq(true, 3 > 2)),
-    ("hi", _ => Neq(2, 3)),
-    ("hello", _ => Approx(3.0, 3.0)),
-    ("throw", _ => ThrowAny(_ => raise(SomeException))),
-  }
+  open Mocha
+  open Test_utils
 
-  Mt.from_pair_suites(__MODULE__, suites)
+  describe(__MODULE__, () => {
+    test("hey", () => {
+      ok(__LOC__, 3 > 2)
+    })
+
+    test("hi", () => {
+      eq(__LOC__, 2, 2)
+      eq(__LOC__, 3, 3)
+    })
+
+    test("throw", () => {
+      throws(__LOC__, () => throw(SomeException))
+    })
+  })
   ```
 
 - Build the test files and run the tests: `node scripts/test.js -mocha`.
@@ -264,6 +329,17 @@ $ node
 
 Run `yarn workspace playground test` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
+You can test the bundle within the playground by running a web server and playground locally.
+
+```sh
+# Serve playground bundles locally
+yarn workspace playground serve-bundle
+
+# And run the website with "PLAYGROUND_BUNDLE_ENDPOINT"
+cd path/to/rescript-lang.org
+PLAYGROUND_BUNDLE_ENDPOINT=http://localhost:8888 npm run dev
+```
+
 ### Working on the Playground JS API
 
 Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_playground_main.ml` file, you'll need to rebuild the source and recreate the JS bundle.
@@ -292,30 +368,46 @@ Note that there's currently still a manual step involved on [rescript-lang.org](
 
 ## Contribute to the API Reference
 
-The API reference is generated from doc comments in the source code. [Here](https://github.com/rescript-lang/rescript-compiler/blob/99650/jscomp/others/js_re.mli#L146-L161)'s a good example.
+The API reference is generated from doc comments in the source code. [Here](https://github.com/rescript-lang/rescript/blob/57c696b1a38f53badaddcc082ed29188d80df70d/packages/%40rescript/runtime/Stdlib_String.resi#L441-L458)'s a good example.
 
 Some tips:
 
-- The first sentence or line should be a very short summary. This is used in indexes and by tools like merlin.
-- Ideally, every function should have **at least one** `@example`.
-- Cross-reference another definition with `{! identifier}`. But use them sparingly, they’re a bit verbose (currently, at least).
-- Wrap non-cross-referenced identifiers and other code in `[ ... ]`.
-- Escape `{`, `}`, `[`, `]` and `@` using `\`.
-- It’s possible to use `{%html ...}` to generate custom html, but use this very, very sparingly.
-- A number of "documentation tags" are provided that would be nice to use, but unfortunately they’re often not supported for \`external\`s. Which is of course most of the API.
-- `@param` usually doesn’t work. Use `{b <param>} ...` instead
-- `@returns` usually doesn’t work. Use `{b returns} ...` instead.
+- The first sentence or line should show the function call with a very short summary.
+- Ideally, every function should have an `## Examples` section with **at least one** example. The examples are compiled to check that they are correct. Use `==` to generate tests from the examples.
 - Always use `@deprecated` when applicable.
-- Always use `@raise` when applicable.
-- Always provide a `@see` tag pointing to MDN for more information when available.
+- Always use `@throw` when applicable.
+- Always provide a `See` section pointing to MDN for more information when available.
 
-See [Ocamldoc documentation](http://caml.inria.fr/pub/docs/manual-ocaml/ocamldoc.html#sec333) for more details.
+## Contribute to JSX `domProps`
 
-To generate the html:
+The `domProps` type, defined in [packages/@rescript/runtime/JsxDOM.res](packages/@rescript/runtime/JsxDOM.res), dictates which properties can be used on DOM elements. This list isn't exhaustive, so you might want to contribute a missing prop.
 
-```sh
-../scripts/ninja docs
-```
+Adding a new entry there requires re-running the analysis tests. Follow these steps:
+
+1.  Compile your changes:
+    ```bash
+    make lib
+    ```
+2.  (Optional) If your local compiler is outdated, rebuild:
+    ```bash
+    make build
+    ```
+3.  Run the analysis tests. This will likely fail due to an outdated autocomplete test snapshot:
+    ```bash
+    make test-analysis
+    ```
+4.  Add the updated snapshot to Git:
+    ```bash
+    git add tests/analysis_tests
+    ```
+5.  Re-run the analysis tests. They should now pass:
+    ```bash
+    make test-analysis
+    ```
+
+(If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
+
+Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
 
 ## Code structure
 
@@ -377,13 +469,11 @@ To build a new version and release it on NPM, follow these steps:
 1. Verify that the version number is already set correctly for the release. (It should have been incremented after releasing the previous version.)
 1. Create a PR to update `CHANGELOG.md`, removing the "(Unreleased)" for the version to be released.
 1. Once that PR is merged and built successfully, tag the commit with the version number (e.g., "v10.0.0", or "v10.0.0-beta.1") and push the tag.
-1. This triggers a tag build that will upload the playground bundle to Cloudflare R2 and publish the `rescript` and `@rescript/std` npm packages with the tag "ci".
+1. This triggers a tag build that will upload the playground bundle to Cloudflare R2 and publish the `rescript` npm package with the tag "ci".
 1. Verify that the playground bundle for the new version is now present on the settings tab in https://rescript-lang.org/try.
 1. Run `npm info rescript` to verify that the new version is now present with tag "ci".
 1. Test the new version.
-1. Tag the new version as appropriate (`latest` or `next`):
-   - `npm dist-tag add rescript@<version> <tag>`
-   - `npm dist-tag add @rescript/std@<version> <tag>`
+1. Tag all packages for the new version as appropriate (`latest` or `next`): `./scripts/npmRelease.js --version <version> --tag <tag>`
 1. Create a release entry for the version tag on the [Github Releases page](https://github.com/rescript-lang/rescript-compiler/releases), copying the changes from `CHANGELOG.md`.
 1. Create a PR with the following changes to prepare for development of the next version:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
@@ -394,7 +484,7 @@ To build a new version and release it on NPM, follow these steps:
 
 To reproduce issues, it can be helpful to the team to install a specific version of the compiler.
 
-ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available. 
+ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available.
 
 Follow the instructions from the comment, which are like:
 

@@ -1,8 +1,6 @@
+open Mocha
+open Test_utils
 open Belt
-
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
 
 module Caml_splice_call = {}
 @variadic @val external f: (int, array<int>) => int = "Math.max"
@@ -18,12 +16,12 @@ let f00 = (a, b) => a->send([b])
 /* This is only test, the binding maybe wrong
   since in OCaml array'length is not mutable
 */
-let () = {
+test("splice_test_static", () => {
   let a = []
   a->push(1, [2, 3, 4])
 
   eq(__LOC__, a, [1, 2, 3, 4])
-}
+})
 
 let dynamic = arr => {
   let a = []
@@ -41,10 +39,10 @@ dynamic([1, 1, 3])
 */
 @variadic @new external newArr: (int, int, array<int>) => array<int> = "Array"
 
-let () = {
+test("splice_test_newArr_static", () => {
   let a = newArr(1, 2, [3, 4])
   eq(__LOC__, a, [1, 2, 3, 4])
-}
+})
 
 let dynamicNew = arr => {
   let a = newArr(1, 2, arr)
@@ -68,10 +66,10 @@ type foo
 @variadic @new external newFoo: array<string> => foo = "Foo"
 @get external fooNames: foo => array<string> = "names"
 
-let () = {
+test("splice_test_foo_static", () => {
   let f = newFoo(["a", "b", "c"])
   eq(__LOC__, fooNames(f), ["a", "b", "c"])
-}
+})
 
 let dynamicFoo = arr => {
   let f = newFoo(arr)
@@ -108,8 +106,8 @@ module Pipe = {
 
 let f1 = (c: array<int>) => f(1, c)
 
-eq(__LOC__, f1([2, 3]), 3)
-eq(__LOC__, f1([]), 1)
-eq(__LOC__, f1([1, 2, 3, 4, 5, 2, 3]), 5)
-
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__FILE__, () => {
+  test("f1 with [2, 3]", () => eq(__LOC__, 3, f1([2, 3])))
+  test("f1 with empty", () => eq(__LOC__, 1, f1([])))
+  test("f1 with many values", () => eq(__LOC__, 5, f1([1, 2, 3, 4, 5, 2, 3])))
+})

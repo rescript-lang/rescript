@@ -231,3 +231,5 @@ val filter : 'a list -> ('a -> bool) -> 'a list
 
 val array_list_filter_map :
   'a array -> 'b list -> ('a -> 'b -> 'c option) -> 'c list
+
+val is_empty : 'a list -> bool

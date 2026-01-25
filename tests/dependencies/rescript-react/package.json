@@ -1,4 +1,31 @@
 {
-  "name": "@tests/rescript-react",
-  "private": true
+  "name": "@rescript/react",
+  "private": true,
+  "version": "13.0.0-alpha.2",
+  "homepage": "https://rescript-lang.org",
+  "bugs": "https://github.com/rescript-lang/rescript/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript.git"
+  },
+  "author": {
+    "name": "Hongbo Zhang",
+    "email": "bobzhang1988@gmail.com"
+  },
+  "maintainers": [
+    "Christoph Knittel (https://github.com/cknitt)",
+    "Cristiano Calcagno (https://github.com/cristianoc)",
+    "Dmitry Zakharov (https://github.com/DZakh)",
+    "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+    "Florian Verdonck (https://github.com/nojaf)",
+    "Gabriel Nordeborn (https://github.com/zth)",
+    "Hyeseong Kim (https://github.com/cometkim)",
+    "Jaap Frolich (https://github.com/jfrolich)",
+    "Matthias Le Brun (https://github.com/bloodyowl)",
+    "Patrick Ecker (https://github.com/ryyppy)",
+    "Paul Tsnobiladzé (https://github.com/tsnobip)",
+    "Shulhi Sapli (https://github.com/shulhi)",
+    "Woonki Moon (https://github.com/mununki)"
+  ],
+  "preferUnplugged": true
 }

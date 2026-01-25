@@ -242,7 +242,9 @@ in
 js 
 |> _j "initial"
 |> Js_pass_flatten.program
-|> _j "flattern"
+|> _j "flatten"
+|> Js_pass_external_shadow.program
+|> _j "external_shadow"
 |> Js_pass_tailcall_inline.tailcall_inline
 |> _j "inline_and_shake"
 |> Js_pass_flatten_and_mark_dead.program

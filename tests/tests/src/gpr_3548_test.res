@@ -4,4 +4,4 @@ type orientation = [
   | @as("vertical") #Vertical
 ]
 
-let () = Js.log(orientationToJs(#Horizontal))
+let () = Console.log(orientationToJs(#Horizontal))

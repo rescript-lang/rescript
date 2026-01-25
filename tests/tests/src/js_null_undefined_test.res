@@ -1,65 +1,84 @@
 open Js_null_undefined
+open Mocha
+open Test_utils
 
-let suites = {
-  open Mt
-  list{
-    ("toOption - null", _ => Eq(None, toOption(null))),
-    ("toOption - undefined", _ => Eq(None, toOption(undefined))),
-    ("toOption - empty", _ => Eq(None, toOption(undefined))),
-    (__LOC__, _ => Eq(Some("foo"), toOption(return("foo")))),
-    ("return", _ => Eq(Some("something"), toOption(return("something")))),
-    ("test - null", _ => Eq(true, isNullable(null))),
-    ("test - undefined", _ => Eq(true, isNullable(undefined))),
-    ("test - empty", _ => Eq(true, isNullable(undefined))),
-    (__LOC__, _ => Eq(true, isNullable(return()))),
-    ("bind - null", _ => StrictEq(null, bind(null, v => v))),
-    ("bind - undefined", _ => StrictEq(undefined, bind(undefined, v => v))),
-    ("bind - empty", _ => StrictEq(undefined, bind(undefined, v => v))),
-    ("bind - 'a", _ => Eq(return(4), bind(return(2), n => n * 2))),
-    (
-      "iter - null",
-      _ => {
-        let hit = ref(false)
-        let _ = iter(null, _ => hit := true)
-        Eq(false, hit.contents)
-      },
-    ),
-    (
-      "iter - undefined",
-      _ => {
-        let hit = ref(false)
-        let _ = iter(undefined, _ => hit := true)
-        Eq(false, hit.contents)
-      },
-    ),
-    (
-      "iter - empty",
-      _ => {
-        let hit = ref(false)
-        let _ = iter(undefined, _ => hit := true)
-        Eq(false, hit.contents)
-      },
-    ),
-    (
-      "iter - 'a",
-      _ => {
-        let hit = ref(0)
-        let _ = iter(return(2), v => hit := v)
-        Eq(2, hit.contents)
-      },
-    ),
-    ("fromOption - None", _ => Eq(undefined, fromOption(None))),
-    ("fromOption - Some", _ => Eq(return(2), fromOption(Some(2)))),
-    ("null <> undefined", _ => Ok(null != undefined)),
-    ("null <> empty", _ => Ok(null != undefined)),
-    ("undefined = empty", _ => Ok(undefined == undefined)),
-    (
-      __LOC__,
-      _ => Ok({
-        let null = 3
-        !Js.isNullable(Js.Nullable.return(null))
-      }),
-    ),
-  }
-}
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("toOption - null", () => {
+    eq(__LOC__, None, toOption(null))
+  })
+  test("toOption - undefined", () => {
+    eq(__LOC__, None, toOption(undefined))
+  })
+  test("toOption - empty", () => {
+    eq(__LOC__, None, toOption(undefined))
+  })
+  test("toOption - return", () => {
+    eq(__LOC__, Some("foo"), toOption(return("foo")))
+  })
+  test("return", () => {
+    eq(__LOC__, Some("something"), toOption(return("something")))
+  })
+  test("test - null", () => {
+    eq(__LOC__, true, isNullable(null))
+  })
+  test("test - undefined", () => {
+    eq(__LOC__, true, isNullable(undefined))
+  })
+  test("test - empty", () => {
+    eq(__LOC__, true, isNullable(undefined))
+  })
+  test("test - return", () => {
+    eq(__LOC__, true, isNullable(return()))
+  })
+  test("bind - null", () => {
+    eq(__LOC__, null, bind(null, v => v))
+  })
+  test("bind - undefined", () => {
+    eq(__LOC__, undefined, bind(undefined, v => v))
+  })
+  test("bind - empty", () => {
+    eq(__LOC__, undefined, bind(undefined, v => v))
+  })
+  test("bind - 'a", () => {
+    eq(__LOC__, return(4), bind(return(2), n => n * 2))
+  })
+  test("iter - null", () => {
+    let hit = ref(false)
+    let _ = iter(null, _ => hit := true)
+    eq(__LOC__, false, hit.contents)
+  })
+  test("iter - undefined", () => {
+    let hit = ref(false)
+    let _ = iter(undefined, _ => hit := true)
+    eq(__LOC__, false, hit.contents)
+  })
+  test("iter - empty", () => {
+    let hit = ref(false)
+    let _ = iter(undefined, _ => hit := true)
+    eq(__LOC__, false, hit.contents)
+  })
+  test("iter - 'a", () => {
+    let hit = ref(0)
+    let _ = iter(return(2), v => hit := v)
+    eq(__LOC__, 2, hit.contents)
+  })
+  test("fromOption - None", () => {
+    eq(__LOC__, undefined, fromOption(None))
+  })
+  test("fromOption - Some", () => {
+    eq(__LOC__, return(2), fromOption(Some(2)))
+  })
+  test("null <> undefined", () => {
+    eq(__LOC__, true, null != undefined)
+  })
+  test("null <> empty", () => {
+    eq(__LOC__, true, null != undefined)
+  })
+  test("undefined = empty", () => {
+    eq(__LOC__, true, undefined == undefined)
+  })
+  test("null variable", () => {
+    let null = 3
+    eq(__LOC__, true, !Js.isNullable(Js.Nullable.return(null)))
+  })
+})

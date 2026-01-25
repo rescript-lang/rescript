@@ -32,6 +32,8 @@ Usage: rescript-tools [command]
 
 Commands:
 
+migrate <file> [--stdout]               Runs the migration tool on the given file
+migrate-all <root>                      Runs migrations for all project sources under <root>
 doc <file>                              Generate documentation
 format-codeblocks <file>                Format ReScript code blocks
   [--stdout]                              Output to stdout
@@ -39,6 +41,7 @@ format-codeblocks <file>                Format ReScript code blocks
 extract-codeblocks <file>               Extract ReScript code blocks from file
   [--transform-assert-equal]              Transform `==` to `assertEqual`
 reanalyze                               Reanalyze
+reanalyze-server                        Start reanalyze server
 -v, --version                           Print version
 -h, --help                              Print help|}
 
@@ -66,6 +69,72 @@ let main () =
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
+  | "migrate" :: file :: opts -> (
+    let isStdout = List.mem "--stdout" opts in
+    let outputMode = if isStdout then `Stdout else `File in
+    match
+      (Tools.Migrate.migrate ~entryPointFile:file ~outputMode, outputMode)
+    with
+    | Ok content, `Stdout -> print_endline content
+    | result, `File -> logAndExit result
+    | Error e, _ -> logAndExit (Error e))
+  | "migrate-all" :: root :: _opts -> (
+    let rootPath =
+      if Filename.is_relative root then Unix.realpath root else root
+    in
+    match Analysis.Packages.newBsPackage ~rootPath with
+    | None ->
+      logAndExit
+        (Error
+           (Printf.sprintf
+              "error: failed to load ReScript project at %s (missing \
+               rescript.json?)"
+              rootPath))
+    | Some package ->
+      let moduleNames =
+        Analysis.SharedTypes.FileSet.elements package.projectFiles
+      in
+      let files =
+        moduleNames
+        |> List.filter_map (fun modName ->
+               Hashtbl.find_opt package.pathsForModule modName
+               |> Option.map Analysis.SharedTypes.getSrc)
+        |> List.concat
+        |> List.filter (fun path ->
+               Filename.check_suffix path ".res"
+               || Filename.check_suffix path ".resi")
+      in
+      let total = List.length files in
+      if total = 0 then logAndExit (Ok "No source files found to migrate")
+      else
+        let process_one file =
+          (file, Tools.Migrate.migrate ~entryPointFile:file ~outputMode:`File)
+        in
+        let results = List.map process_one files in
+        let migrated, unchanged, failures =
+          results
+          |> List.fold_left
+               (fun (migrated, unchanged, failures) (file, res) ->
+                 match res with
+                 | Ok msg ->
+                   let base = Filename.basename file in
+                   if msg = base ^ ": File migrated successfully" then
+                     (migrated + 1, unchanged, failures)
+                   else if msg = base ^ ": File did not need migration" then
+                     (migrated, unchanged + 1, failures)
+                   else
+                     (* Unknown OK message, count as unchanged *)
+                     (migrated, unchanged + 1, failures)
+                 | Error _ -> (migrated, unchanged, failures + 1))
+               (0, 0, 0)
+        in
+        let summary =
+          Printf.sprintf
+            "Migration summary: migrated %d, unchanged %d, failed %d, total %d"
+            migrated unchanged failures total
+        in
+        if failures > 0 then logAndExit (Error summary)
+        else logAndExit (Ok summary))
   | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatCodeblocksHelp)
@@ -103,12 +172,56 @@ let main () =
         exit 1)
     | _ -> logAndExit (Error extractCodeblocksHelp))
   | "reanalyze" :: _ ->
+    if Sys.getenv_opt "RESCRIPT_REANALYZE_NO_SERVER" = Some "1" then (
+      let len = Array.length Sys.argv in
+      for i = 1 to len - 2 do
+        Sys.argv.(i) <- Sys.argv.(i + 1)
+      done;
+      Sys.argv.(len - 1) <- "";
+      Reanalyze.cli ())
+    else
+      (* Transparent delegation is supported only for the editor invocation:
+         `reanalyze -json` (and nothing else). *)
+      let argv_for_server =
+        let args = Array.to_list Sys.argv in
+        let rest =
+          match args with
+          | _ :: "reanalyze" :: rest -> rest
+          | _ :: rest -> rest
+          | [] -> []
+        in
+        rest |> List.filter (fun s -> s <> "") |> Array.of_list
+      in
+      if argv_for_server = [|"-json"|] then (
+        match Reanalyze.ReanalyzeServer.try_request_default () with
+        | Some resp ->
+          output_string stdout resp.stdout;
+          output_string stderr resp.stderr;
+          flush stdout;
+          flush stderr;
+          exit resp.exit_code
+        | None ->
+          let len = Array.length Sys.argv in
+          for i = 1 to len - 2 do
+            Sys.argv.(i) <- Sys.argv.(i + 1)
+          done;
+          Sys.argv.(len - 1) <- "";
+          Reanalyze.cli ())
+      else
+        let len = Array.length Sys.argv in
+        for i = 1 to len - 2 do
+          Sys.argv.(i) <- Sys.argv.(i + 1)
+        done;
+        Sys.argv.(len - 1) <- "";
+        Reanalyze.cli ()
+  | "reanalyze-server" :: _ ->
     let len = Array.length Sys.argv in
     for i = 1 to len - 2 do
       Sys.argv.(i) <- Sys.argv.(i + 1)
     done;
     Sys.argv.(len - 1) <- "";
-    Reanalyze.cli ()
+    Reanalyze.ReanalyzeServer.server_cli ~parse_argv:Reanalyze.parse_argv
+      ~run_analysis:Reanalyze.runAnalysis ()
   | "extract-embedded" :: extPointNames :: filename :: _ ->
     logAndExit
       (Ok

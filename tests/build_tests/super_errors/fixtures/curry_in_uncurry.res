@@ -1,3 +1,3 @@
 let f = (a, b) => a + b
 
-f(2, 2)->Js.log
+f(2, 2)->Console.log

@@ -54,3 +54,7 @@ type nonrec domProps =
   label: string [@optional ];
   list: string [@optional ];
   loop: bool [@optional ]}
+type nonrec t = {
+  x: int }
+type nonrec t = {
+  x: int }

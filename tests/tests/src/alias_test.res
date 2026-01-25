@@ -1,5 +1,3 @@
-module String = Ocaml_String
-
 let a0 = "hello "
 
 let a1 = a0
@@ -41,7 +39,7 @@ let a18 = a17
 let a19 = a18
 
 let a20 = a19 ++ "not"
-let v = if String.get(a20, 0) == 'h' {
+let v = if String.getUnsafe(a20, 0) == "h" {
   1
 } else {
   2

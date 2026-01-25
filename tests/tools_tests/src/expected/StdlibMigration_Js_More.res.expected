@@ -1,0 +1,8 @@
+// Migration tests for new deprecations in packages/@rescript/runtime/Js.res
+
+// typeof migration
+let tyNum = typeof(1)
+
+// nullToOption
+let nToOpt = Null.toOption(Null.make(1))
+

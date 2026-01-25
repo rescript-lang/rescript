@@ -2,7 +2,6 @@ SHELL = /bin/bash
 
 test:
 	yarn build
-	yarn check
 	yarn typecheck
 	@git diff --quiet src/ \
 		|| { echo; echo "Please review the Gentype outputs too!"; echo; false; } \

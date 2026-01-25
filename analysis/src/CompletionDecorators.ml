@@ -41,12 +41,24 @@ Alternatively, use the `@@deprecated` decorator to add a deprecation warning to 
     ( "doesNotRaise",
       None,
       [
-        {|The `@doesNotRaise` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+        {|The `@doesNotRaise` decorator is deprecated. Please use `@doesNotThrow` instead.
 
-`@doesNotRaise` is uses to override the analysis and state that an expression does not raise any exceptions,
+`@doesNotRaise` is uses to override the analysis and state that an expression does not throw any exceptions,
 even though the analysis reports otherwise. This can happen for example in the case of array access where
 the analysis does not perform range checks but takes a conservative stance that any access
-could potentially raise.
+could potentially throw.
+[Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
+> Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
+      ] );
+    ( "doesNotThrow",
+      None,
+      [
+        {|The `@doesNotThrow` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+
+`@doesNotThrow` is uses to override the analysis and state that an expression does not throw any exceptions,
+even though the analysis reports otherwise. This can happen for example in the case of array access where
+the analysis does not perform range checks but takes a conservative stance that any access
+could potentially throw.
 [Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
 > Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );
@@ -117,13 +129,6 @@ could potentially raise.
 
 Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );
-    ( "meth",
-      None,
-      [
-        {|The `@meth` decorator is used to call a function on a JavaScript object, and avoid issues with currying.
-
-[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#meth-decorator).|};
-      ] );
     ( "module",
       Some "module(\"$0\")",
       [
@@ -149,11 +154,22 @@ The `@new` decorator is used whenever you need to bind to a JavaScript class con
     ( "raises",
       Some "raises(\"$0\")",
       [
-        {|The `@raises` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+        {|The `@raises` decorator is deprecated. Please use `@throws` instead.
 
-`@raises` acknowledges that a function can raise exceptions that are not caught, and suppresses
+`@raises` acknowledges that a function can throw exceptions that are not caught, and suppresses
 a warning in that case. Callers of the functions are then subjected to the same rule.
 Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
+[Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
+> Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
+      ] );
+    ( "throws",
+      Some "throws(\"$0\")",
+      [
+        {|The `@throws` decorator is for reanalyze, a static analysis tool for ReScript that can perform exception analysis.
+
+`@throws` acknowledges that a function can throw exceptions that are not caught, and suppresses
+a warning in that case. Callers of the functions are then subjected to the same rule.
+Example `@throws(Exn)` or `@throws([E1, E2, E3])` for multiple exceptions.
 [Read more and see examples in the documentation](https://github.com/rescript-association/reanalyze/blob/master/EXCEPTION.md).
 > Hint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!|};
       ] );
@@ -172,6 +188,24 @@ Note: The `@react.component` decorator requires the `jsx` config to be set in yo
       None,
       [
         {|The `@jsx.component` decorator is used to annotate functions that are JSX components used with ReScript's [generic JSX transform](https://rescript-lang.org/docs/manual/latest/jsx#generic-jsx-transform-jsx-beyond-react-experimental).
+
+You will need this decorator whenever you want to use a JSX component in ReScript JSX expressions.|};
+      ] );
+    ( "react.componentWithProps",
+      None,
+      [
+        {|The `@react.componentWithProps` decorator is used to annotate functions that are RescriptReact components.
+
+You will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.
+
+Note: The `@react.componentWithProps` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.
+
+[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-with-props-decorator).|};
+      ] );
+    ( "jsx.componentWithProps",
+      None,
+      [
+        {|The `@jsx.componentWithProps` decorator is used to annotate functions that are JSX components used with ReScript's [generic JSX transform](https://rescript-lang.org/docs/manual/latest/jsx#generic-jsx-transform-jsx-beyond-react-experimental).
 
 You will need this decorator whenever you want to use a JSX component in ReScript JSX expressions.|};
       ] );

@@ -23,7 +23,7 @@ import {
 
 let ounitTest = false;
 let mochaTest = false;
-let bsbTest = false;
+let buildTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
 
@@ -35,8 +35,8 @@ if (process.argv.includes("-mocha")) {
   mochaTest = true;
 }
 
-if (process.argv.includes("-bsb")) {
-  bsbTest = true;
+if (process.argv.includes("-build")) {
+  buildTest = true;
 }
 
 if (process.argv.includes("-format")) {
@@ -50,7 +50,7 @@ if (process.argv.includes("-docstrings")) {
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
-  bsbTest = true;
+  buildTest = true;
   formatTest = true;
   runtimeDocstrings = true;
 }
@@ -73,11 +73,8 @@ if (ounitTest) {
 }
 
 if (mochaTest) {
-  await execClean([], {
-    cwd: compilerTestDir,
-    stdio: "inherit",
-  });
-
+  // No need to clean beforehand, rewatch detects changes to the compiler binary
+  // and rebuilds automatically in that case.
   await execBuild([], {
     cwd: compilerTestDir,
     stdio: "inherit",
@@ -87,7 +84,7 @@ if (mochaTest) {
     [
       "-t",
       "10000",
-      "tests/tests/**/*_test.mjs",
+      "tests/tests/src/**/*_test.mjs",
       // Ignore the preserve_jsx_test.mjs file.
       // I can't run because Mocha doesn't support jsx.
       // We also want to keep the output as is.
@@ -100,18 +97,30 @@ if (mochaTest) {
     },
   );
 
-  await node("tests/tests/src/core/Core_TestSuite.mjs", [], {
+  await node("tests/tests/src/stdlib/Stdlib_TestSuite.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
 
-  await node("tests/tests/src/core/Core_TempTests.mjs", [], {
+  await node("tests/tests/src/stdlib/Stdlib_TempTests.mjs", [], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
+
+  // CommonJS tests
+  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
+  await execBuild([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
+
+  await node("tests/commonjs_tests/src/belt_import.js", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
 }
 
-if (bsbTest) {
+if (buildTest) {
   console.log("Doing build_tests");
   const files = fs.readdirSync(buildTestDir);
 
@@ -125,16 +134,14 @@ if (bsbTest) {
     if (!fs.existsSync(path.join(testDir, "input.js"))) {
       console.warn(`input.js does not exist in ${testDir}`);
     } else {
-      console.log(`testing ${file}`);
-
       // note existsSync test already ensure that it is a directory
       const out = await node("input.js", [], { cwd: testDir });
-      console.log(out.stdout);
+      process.stdout.write(out.stdout);
 
       if (out.status === 0) {
-        console.log("✅ success in", file);
+        console.log(`✅ success in ${file}`);
       } else {
-        console.log(`❌ error in ${file} with stderr:\n`, out.stderr);
+        console.log(`❌ error in ${file} with stderr:\n${out.stderr}`);
         hasError = true;
       }
     }

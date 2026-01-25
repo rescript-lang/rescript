@@ -1,5 +1,3 @@
-module Array = Ocaml_Array
-
 @unboxed
 type t = A | I(int) | S(string)
 @unboxed
@@ -53,8 +51,8 @@ let rec tuplesToObjects = (l: ListWithTuples.t<_>): ListWithObjects.t<_> =>
 
 let l1 = ListWithTuples.Cons((1, Cons((2, Cons((3, Empty))))))
 let l2 = tuplesToObjects(l1)
-Js.log2("l1", l1)
-Js.log2("l2", l2)
+Console.log2("l1", l1)
+Console.log2("l2", l2)
 
 module Truthy = {
   @unboxed
@@ -88,7 +86,7 @@ module Unknown = {
     | A => "a"
     | B => "b"
     | Unknown(v) => {
-        Js.log(x)
+        Console.log(x)
         "Unknown"
       }
     }
@@ -182,7 +180,7 @@ let classify  (x : t) : tagged_t =
   else if Js_array2.isArray x  then
     JSONArray (Obj.magic x)
   else
-    JSONObject (Obj.magic x)  
+    JSONObject (Obj.magic x)
  */
 }
 
@@ -249,7 +247,7 @@ module RecordIsObject = {
   let classify = v =>
     switch v {
     | Record({x}) => x
-    | Array(a) => a[0]
+    | Array(a) => a->Array.getUnsafe(0)
     }
 }
 
@@ -260,7 +258,7 @@ module ArrayAndObject = {
   let classify = v =>
     switch v {
     | Record({x}) => x
-    | Array(a) => a[0]
+    | Array(a) => a->Array.getUnsafe(0)
     }
 }
 
@@ -303,7 +301,7 @@ module TestFunctionCase = {
   let classify = v =>
     switch v {
     | Record({x}) => x
-    | Array(a) => a[0]
+    | Array(a) => a->Array.getUnsafe(0)
     | Function(f) => f(3)
     }
 
@@ -335,8 +333,8 @@ module ComplexPattern = {
 
   let check = s =>
     switch s {
-    | Array([True, False, Array([String("My name is"), Number(10.)])]) => Js.log("yup")
-    | _ => Js.log("Nope...")
+    | Array([True, False, Array([String("My name is"), Number(10.)])]) => Console.log("yup")
+    | _ => Console.log("Nope...")
     }
 }
 
@@ -377,12 +375,12 @@ module Arr = {
 
   let classify = async (a: arr) =>
     switch a {
-    | Array(arr) => Js.log(arr->Belt.Array.joinWith("-", x => x))
-    | String(s) => Js.log(s)
-    | Promise(p) => Js.log(await p)
-    | Object({userName}) => Js.log(userName)
-    | Test => Js.log("testing")
-    | TestInt => Js.log(12)
+    | Array(arr) => Console.log(arr->Belt.Array.joinWith("-", x => x))
+    | String(s) => Console.log(s)
+    | Promise(p) => Console.log(await p)
+    | Object({userName}) => Console.log(userName)
+    | Test => Console.log("testing")
+    | TestInt => Console.log(12)
     }
 }
 
@@ -402,17 +400,51 @@ module AllInstanceofTypes = {
     | RegExp(Stdlib_RegExp.t)
     | File(Js.File.t)
     | Blob(Js.Blob.t)
+    | ArrayBuffer(ArrayBuffer.t)
+    | Int8Array(Int8Array.t)
+    | Int16Array(Int16Array.t)
+    | Int32Array(Int32Array.t)
+    | Uint8Array(Uint8Array.t)
+    | Uint8ClampedArray(Uint8ClampedArray.t)
+    | Uint16Array(Uint16Array.t)
+    | Uint32Array(Uint32Array.t)
+    | Float32Array(Float32Array.t)
+    | Float64Array(Float64Array.t)
+    | BigInt64Array(BigInt64Array.t)
+    | BigUint64Array(BigUint64Array.t)
+    | DataView(DataView.t)
+    | Set(Set.t<string>)
+    | Map(Map.t<string, unknown>)
+    | WeakSet(WeakSet.t<string>)
+    | WeakMap(WeakMap.t<string, unknown>)
 
   let classifyAll = async (t: t) =>
     switch t {
-    | String(s) => Js.log(s)
-    | Promise(p) => Js.log(await p)
-    | Object({userName}) => Js.log(userName)
-    | Date(date) => Js.log(date->Js.Date.toString)
-    | RegExp(re) => Js.log(re->Js.Re.test_("test"))
-    | Array(arr) => Js.log(arr->Belt.Array.joinWith("-", x => x))
-    | File(file) => Js.log(file->fileName)
-    | Blob(blob) => Js.log(blob->blobSize)
+    | String(s) => Console.log(s)
+    | Promise(p) => Console.log(await p)
+    | Object({userName}) => Console.log(userName)
+    | Date(date) => Console.log(date->Js.Date.toString)
+    | RegExp(re) => Console.log(re->Js.Re.test_("test"))
+    | Array(arr) => Console.log(arr->Belt.Array.joinWith("-", x => x))
+    | File(file) => Console.log(file->fileName)
+    | Blob(blob) => Console.log(blob->blobSize)
+    | ArrayBuffer(_) => Console.log("ArrayBuffer")
+    | Int8Array(_) => Console.log("Int8Array")
+    | Int16Array(_) => Console.log("Int16Array")
+    | Int32Array(_) => Console.log("Int32Array")
+    | Uint8Array(_) => Console.log("Uint8Array")
+    | Uint8ClampedArray(_) => Console.log("Uint8ClampedArray")
+    | Uint16Array(_) => Console.log("Uint16Array")
+    | Uint32Array(_) => Console.log("Uint32Array")
+    | Float32Array(_) => Console.log("Float32Array")
+    | Float64Array(_) => Console.log("Float64Array")
+    | BigInt64Array(_) => Console.log("BigInt64Array")
+    | BigUint64Array(_) => Console.log("BigUint64Array")
+    | DataView(_) => Console.log("DataView")
+    | Set(_) => Console.log("Set")
+    | Map(_) => Console.log("Map")
+    | WeakSet(_) => Console.log("WeakSet")
+    | WeakMap(_) => Console.log("WeakMap")
     }
 }
 

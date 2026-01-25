@@ -47,7 +47,7 @@ type t =
   | Const_js_false
   | Const_int of {i: int32; comment: pointer_info}
   | Const_char of int
-  | Const_string of {s: string; unicode: bool}
+  | Const_string of {s: string; delim: External_arg_spec.delim option}
   | Const_float of string
   | Const_bigint of bool * string
   | Const_pointer of string
@@ -73,9 +73,9 @@ let rec eq_approx (x : t) (y : t) =
     match y with
     | Const_char iy -> ix = iy
     | _ -> false)
-  | Const_string {s = sx; unicode = ux} -> (
+  | Const_string {s = sx; delim = ux} -> (
     match y with
-    | Const_string {s = sy; unicode = uy} -> sx = sy && ux = uy
+    | Const_string {s = sy; delim = uy} -> sx = sy && ux = uy
     | _ -> false)
   | Const_float ix -> (
     match y with

@@ -12,9 +12,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/darwin-arm64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/darwin-arm64@npm:12.0.0-beta.3"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rescript/darwin-x64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/darwin-x64@npm:12.0.0-beta.1"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rescript/darwin-x64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/darwin-x64@npm:12.0.0-beta.3"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
@@ -26,9 +40,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/linux-arm64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/linux-arm64@npm:12.0.0-beta.3"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rescript/linux-x64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/linux-x64@npm:12.0.0-beta.1"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rescript/linux-x64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/linux-x64@npm:12.0.0-beta.3"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
@@ -49,11 +77,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testrepo/compiled-by-legacy@npm:*, @testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy":
-  version: 0.0.0-use.local
-  resolution: "@testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy"
-  languageName: unknown
-  linkType: soft
+"@rescript/win32-x64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/win32-x64@npm:12.0.0-beta.3"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
 
 "@testrepo/dep01@npm:*, @testrepo/dep01@workspace:packages/dep01":
   version: 0.0.0-use.local
@@ -91,7 +120,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/main@workspace:packages/main"
   dependencies:
-    "@testrepo/compiled-by-legacy": "npm:*"
     "@testrepo/dep01": "npm:*"
   languageName: unknown
   linkType: soft
@@ -108,9 +136,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@testrepo/nonexisting-dev-files@workspace:packages/nonexisting-dev-files":
+"@testrepo/nohoist@workspace:packages/nohoist":
   version: 0.0.0-use.local
-  resolution: "@testrepo/nonexisting-dev-files@workspace:packages/nonexisting-dev-files"
+  resolution: "@testrepo/nohoist@workspace:packages/nohoist"
+  dependencies:
+    rescript: "npm:12.0.0-beta.3"
+    rescript-bun: "npm:2.1.0"
+  languageName: unknown
+  linkType: soft
+
+"@testrepo/pure-dev@workspace:packages/pure-dev":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/pure-dev@workspace:packages/pure-dev"
+  languageName: unknown
+  linkType: soft
+
+"@testrepo/standalone@workspace:packages/standalone":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/standalone@workspace:packages/standalone"
+  dependencies:
+    "@testrepo/dep01": "npm:*"
+  languageName: unknown
+  linkType: soft
+
+"@testrepo/watch-warnings@workspace:packages/watch-warnings":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/watch-warnings@workspace:packages/watch-warnings"
   languageName: unknown
   linkType: soft
 
@@ -119,14 +170,40 @@ __metadata:
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
   dependencies:
     "@rescript/webapi": "npm:0.1.0-experimental-73e6a0d"
-    rescript-nodejs: "npm:16.1.0"
+    rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
   languageName: unknown
   linkType: soft
+
+"@testrepo/with-ppx@workspace:packages/with-ppx":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/with-ppx@workspace:packages/with-ppx"
+  dependencies:
+    rescript-nodejs: "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch"
+    sury: "npm:^11.0.0-alpha.2"
+    sury-ppx: "npm:^11.0.0-alpha.2"
+  languageName: unknown
+  linkType: soft
+
+"rescript-bun@npm:2.1.0":
+  version: 2.1.0
+  resolution: "rescript-bun@npm:2.1.0"
+  peerDependencies:
+    rescript: ">= 12.0.0-alpha.4"
+  checksum: 10c0/f76fd4dffdd90b13d1d61642fa5eabb26828c85b9eb71e945ffac9c84e81b9a6b68d20d9e68096156243bc543197a15906b606572db7d8c50a554d50652d3143
+  languageName: node
+  linkType: hard
 
 "rescript-nodejs@npm:16.1.0":
   version: 16.1.0
   resolution: "rescript-nodejs@npm:16.1.0"
   checksum: 10c0/2ea271dbddebdceec79bf5ee6089c15474f2c014cb22c1cc39d43ef27fd363fcb1cd8e1244d0cb998cd6b426d7474e3055e41277951fb01ee1eeecf68bbe01ab
+  languageName: node
+  linkType: hard
+
+"rescript-nodejs@patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch":
+  version: 16.1.0
+  resolution: "rescript-nodejs@patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch::version=16.1.0&hash=8a6725"
+  checksum: 10c0/5ac79b6ff832413bc448fc139c139e0703e1f41f6eb3c0d58937630794e18081185f93c69781503530d635a4d6721c94064d54c49ecfaa67c9150ca1b0d27752
   languageName: node
   linkType: hard
 
@@ -157,6 +234,57 @@ __metadata:
     rescript-legacy: cli/rescript-legacy.js
     rescript-tools: cli/rescript-tools.js
   checksum: 10c0/ec18e0ccd0791dec7b2bfaa44e0a011e1f171025d0743e06b51f7f4d81c8333bdf3b02f47b72f5b9a5cfa409bdf51e64998833696314e77b6f51afe376a4c3ad
+  languageName: node
+  linkType: hard
+
+"rescript@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "rescript@npm:12.0.0-beta.3"
+  dependencies:
+    "@rescript/darwin-arm64": "npm:12.0.0-beta.3"
+    "@rescript/darwin-x64": "npm:12.0.0-beta.3"
+    "@rescript/linux-arm64": "npm:12.0.0-beta.3"
+    "@rescript/linux-x64": "npm:12.0.0-beta.3"
+    "@rescript/win32-x64": "npm:12.0.0-beta.3"
+  dependenciesMeta:
+    "@rescript/darwin-arm64":
+      optional: true
+    "@rescript/darwin-x64":
+      optional: true
+    "@rescript/linux-arm64":
+      optional: true
+    "@rescript/linux-x64":
+      optional: true
+    "@rescript/win32-x64":
+      optional: true
+  bin:
+    bsc: cli/bsc.js
+    bstracing: cli/bstracing.js
+    rescript: cli/rescript.js
+    rescript-legacy: cli/rescript-legacy.js
+    rescript-tools: cli/rescript-tools.js
+  checksum: 10c0/da264d99199f600dcaf78d8907b70200333dc1cc3a45a52f2fa2c72e2f5f393a8dedd01ebbcf46de94cbbe59a997a4685d6e20648739cd2234560cfb94cd7832
+  languageName: node
+  linkType: hard
+
+"sury-ppx@npm:^11.0.0-alpha.2":
+  version: 11.0.0-alpha.2
+  resolution: "sury-ppx@npm:11.0.0-alpha.2"
+  peerDependencies:
+    sury: ^11.0.0-alpha.2
+  checksum: 10c0/ae9190fa4e406de46e88b67db233e757db36f5377301227cf5b084b5b81d360725d6fc4781e24c56cb87476cd3a42af5acc0cfc49f0c7ea17435caf065ba22ab
+  languageName: node
+  linkType: hard
+
+"sury@npm:^11.0.0-alpha.2":
+  version: 11.0.0-alpha.2
+  resolution: "sury@npm:11.0.0-alpha.2"
+  peerDependencies:
+    rescript: 11.x
+  peerDependenciesMeta:
+    rescript:
+      optional: true
+  checksum: 10c0/254dd708608b125defc6b4be0f038df0f6704290df60504b70b7cd613f1e840d150ff65a3f23dbc7213f2b18b86fdc60400b4361ca46f5c86bbe7360eff9c84a
   languageName: node
   linkType: hard
 

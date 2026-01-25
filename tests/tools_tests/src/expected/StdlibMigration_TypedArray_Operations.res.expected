@@ -1,0 +1,7 @@
+let ta = Uint8Array.fromArray([1, 2, 3, 4])
+
+let a1 = ta->TypedArray.copyWithin(~target=1, ~start=2)
+let a2 = ta->TypedArray.fill(9, ~start=1)
+let a3 = ta->TypedArray.slice(~start=1)
+let a4 = ta->TypedArray.subarray(~start=1)
+

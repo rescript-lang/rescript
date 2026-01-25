@@ -378,9 +378,7 @@ let rec extractType ?(printOpeningDebug = true)
   | Tarrow _ -> (
     match extractFunctionType2 ?typeArgContext t ~env ~package with
     | args, tRet, typeArgContext when args <> [] ->
-      Some
-        ( Tfunction {env; args; typ = t; uncurried = false; returnType = tRet},
-          typeArgContext )
+      Some (Tfunction {env; args; typ = t; returnType = tRet}, typeArgContext)
     | _args, _tRet, _typeArgContext -> None)
   | Tconstr (path, typeArgs, _) -> (
     if Debug.verbose () then
@@ -902,10 +900,10 @@ let getArgs ~env (t : Types.type_expr) ~full =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
-    | Tarrow ({lbl = Labelled l; typ = tArg}, tRet, _, _) ->
+    | Tarrow ({lbl = Labelled {txt = l}; typ = tArg}, tRet, _, _) ->
       (SharedTypes.Completable.Labelled l, tArg)
       :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
-    | Tarrow ({lbl = Optional l; typ = tArg}, tRet, _, _) ->
+    | Tarrow ({lbl = Optional {txt = l}; typ = tArg}, tRet, _, _) ->
       (Optional l, tArg) :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
     | Tarrow ({lbl = Nolabel; typ = tArg}, tRet, _, _) ->
       (Unlabelled {argumentPosition = currentArgumentPosition}, tArg)
@@ -1144,7 +1142,7 @@ let getFirstFnUnlabelledArgType ~env ~full t =
   in
   let rec findFirstUnlabelledArgType labels =
     match labels with
-    | (Asttypes.Noloc.Nolabel, t) :: _ -> Some t
+    | (Asttypes.Nolabel, t) :: _ -> Some t
     | _ :: rest -> findFirstUnlabelledArgType rest
     | [] -> None
   in
@@ -1291,4 +1289,6 @@ let completionPathFromMaybeBuiltin path =
     | [mainModule; "t"] when String.starts_with ~prefix:"Stdlib_" mainModule ->
       (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
       Some (String.split_on_char '_' mainModule)
+    | ["Primitive_js_extern"; "null"] -> Some ["Stdlib"; "Null"]
+    | ["Primitive_js_extern"; "nullable"] -> Some ["Stdlib"; "Nullable"]
     | _ -> None)

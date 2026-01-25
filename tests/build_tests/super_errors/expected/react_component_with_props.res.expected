@@ -12,4 +12,4 @@
   14 [2m│[0m   )
   15 [2m│[0m }
 
-  Components using React.forwardRef cannot use @react.componentWithProps. Please use @react.component instead.
+  Components using React.forwardRef cannot use @react.componentWithProps. Use @react.component instead.

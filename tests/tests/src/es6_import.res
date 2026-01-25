@@ -1,1 +1,1 @@
-Js.log(Es6_export.default)
+Console.log(Es6_export.default)

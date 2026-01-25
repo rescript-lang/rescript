@@ -1,0 +1,119 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f4fd', 'primaryTextColor': '#1a1a1a', 'primaryBorderColor': '#4a90d9', 'lineColor': '#4a90d9', 'secondaryColor': '#f0f7e6', 'tertiaryColor': '#fff5e6'}}}%%
+flowchart TB
+    subgraph FileLayer["File Layer"]
+        file_collection[("file_collection")]
+    end
+
+    subgraph FileData["Per-File Data"]
+        file_data[file_data]
+    end
+
+    subgraph Extracted["Extracted (ReactiveMerge)"]
+        decls[decls]
+        annotations[annotations]
+        value_refs[value_refs]
+        type_refs[type_refs]
+        cross_file_items[cross_file_items]
+    end
+
+    subgraph TypeDeps["ReactiveTypeDeps"]
+        decl_by_path[decl_by_path]
+        all_type_refs[all_type_refs]
+    end
+
+    subgraph ExcRefs["ReactiveExceptionRefs"]
+        exception_refs[exception_refs]
+        exception_decls[exception_decls]
+        resolved_refs[resolved_refs]
+    end
+
+    subgraph DeclRefs["ReactiveDeclRefs"]
+        combined_refs[combined_refs]
+    end
+
+    subgraph Liveness["ReactiveLiveness"]
+        roots[roots]
+        edges[edges]
+        live[live<br/>fixpoint]
+    end
+
+    subgraph Solver["ReactiveSolver"]
+        dead_decls[dead_decls]
+        live_decls[live_decls]
+        dead_modules[dead_modules]
+        dead_by_file[dead_by_file]
+        issues_by_file[issues_by_file]
+        incorrect_dead[incorrect_dead]
+        module_issues[module_issues]
+    end
+
+    subgraph Report["Report (iter only)"]
+        OUTPUT[("REPORT")]
+    end
+
+    file_collection -->|process| file_data
+    file_data -->|flatMap| decls
+    file_data -->|flatMap| annotations
+    file_data -->|flatMap| value_refs
+    file_data -->|flatMap| type_refs
+    file_data -->|flatMap| cross_file_items
+
+    decls -->|flatMap| decl_by_path
+    decl_by_path -->|union+join| all_type_refs
+
+    cross_file_items -->|flatMap| exception_refs
+    decls -->|flatMap| exception_decls
+    exception_refs -->|join| resolved_refs
+    exception_decls -->|join| resolved_refs
+
+    decls --> combined_refs
+    value_refs --> combined_refs
+    type_refs --> combined_refs
+    all_type_refs --> combined_refs
+    resolved_refs --> combined_refs
+
+    decls --> roots
+    annotations --> roots
+
+    combined_refs -->|flatMap| edges
+    roots --> live
+    edges --> live
+
+    decls -->|join| dead_decls
+    live -->|NOT in| dead_decls
+    decls -->|join| live_decls
+    live -->|IN| live_decls
+
+    dead_decls --> dead_modules
+    live_decls --> dead_modules
+
+    dead_decls -->|flatMap| dead_by_file
+    dead_by_file -->|flatMap| issues_by_file
+
+    live_decls -->|join @dead| incorrect_dead
+    annotations --> incorrect_dead
+
+    dead_modules -->|join| module_issues
+    issues_by_file --> module_issues
+
+    issues_by_file -->|iter| OUTPUT
+    incorrect_dead -->|iter| OUTPUT
+    module_issues -->|iter| OUTPUT
+
+    classDef fileLayer fill:#e8f4fd,stroke:#4a90d9,stroke-width:2px
+    classDef extracted fill:#f0f7e6,stroke:#6b8e23,stroke-width:2px
+    classDef typeDeps fill:#fff5e6,stroke:#d4a574,stroke-width:2px
+    classDef excDeps fill:#f5e6ff,stroke:#9966cc,stroke-width:2px
+    classDef declRefs fill:#e6f0ff,stroke:#4a74d9,stroke-width:2px
+    classDef liveness fill:#ffe6e6,stroke:#cc6666,stroke-width:2px
+    classDef solver fill:#ffe6f0,stroke:#cc6699,stroke-width:2px
+    classDef output fill:#e6ffe6,stroke:#2e8b2e,stroke-width:2px
+
+    class file_collection,file_data fileLayer
+    class decls,annotations,value_refs,type_refs,cross_file_items extracted
+    class decl_by_path,all_type_refs typeDeps
+    class exception_refs,exception_decls,resolved_refs excDeps
+    class combined_refs declRefs
+    class roots,edges,live liveness
+    class dead_decls,live_decls,dead_modules,dead_by_file,issues_by_file,incorrect_dead,module_issues solver
+    class OUTPUT output

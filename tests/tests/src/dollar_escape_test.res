@@ -1,13 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 let \"$$" = (x, y) => x + y
 
@@ -17,6 +9,9 @@ let \"$$+" = (x, y) => x * y
 
 let u = \"$$+"(1, 3)
 
-eq(__LOC__, v, 3)
-eq(__LOC__, u, 3)
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("dollar escape operators", () => {
+    eq(__LOC__, v, 3)
+    eq(__LOC__, u, 3)
+  })
+})

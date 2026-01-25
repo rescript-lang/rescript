@@ -66,7 +66,6 @@ val operator_precedence : string -> int
 
 val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
-val is_unary_bitnot_expression : Parsetree.expression -> bool
 val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
 val is_rhs_binary_operator : string -> bool
@@ -146,6 +145,9 @@ val is_single_pipe_expr : Parsetree.expression -> bool
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val rewrite_underscore_apply : Parsetree.expression -> Parsetree.expression
+
+val rewrite_underscore_apply_in_pipe :
+  Parsetree.expression -> Parsetree.expression
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 val is_underscore_apply_sugar : Parsetree.expression -> bool

@@ -1,6 +1,5 @@
 {
   "name": "weird_devdeps",
-  "version": "0.1.0",
   "sources": [
     {
       "dir": "src",

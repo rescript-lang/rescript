@@ -15,11 +15,8 @@
 
 (* System configuration *)
 
-val standard_library : string
-(* The directory containing the standard libraries *)
-
-val load_path : string list ref
 (* Directories in the search path for .cmi and .cmo files *)
+val load_path : string list ref
 
 val cmi_magic_number : string
 

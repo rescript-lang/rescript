@@ -1,7 +1,7 @@
-@raises(JsExn)
+@throws(JsExn)
 external bigIntFromStringExn: string => bigint = "BigInt"
 
-@raises(JsExn)
+@throws(JsExn)
 let bigIntFromStringExn = s => s->bigIntFromStringExn
 
 let bigIntFromStringExn2 = s => s->bigIntFromStringExn

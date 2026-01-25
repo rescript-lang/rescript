@@ -8,7 +8,7 @@ open Belt
 
 let b = List.length(list{1, 2, 3})
 let a = b - 1
-Js.log("hello, res")
+Console.log("hello, res")
 
 type t = {"x": int}
 
@@ -39,10 +39,10 @@ let u = {
 
 let h = {
   let {v} = module(H.H1)
-  Js.log(v)
+  Console.log(v)
 }
 
 let to = 3
 let downto = 1
 
-Js.log([to, downto])
+Console.log([to, downto])

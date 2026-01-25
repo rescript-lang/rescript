@@ -123,3 +123,13 @@ type foo = [
   | // before baz
   #Baz
 ] // after baz
+
+// doc comments on inherited polyvariant types
+type rgb = [#Red | #Green | #Blue]
+type color = [
+  | /** Primary colors from RGB */ rgb
+  /** A warm color */
+  | #Orange
+  /** Another warm color */
+  | #Yellow
+]

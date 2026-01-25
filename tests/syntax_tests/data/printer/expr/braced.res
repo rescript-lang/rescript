@@ -178,7 +178,7 @@ apply(~a={a})
 apply({
   a
 })
-apply(.{
+apply({
   a
 })
 

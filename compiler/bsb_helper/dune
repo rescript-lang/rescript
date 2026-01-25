@@ -1,6 +1,0 @@
-(library
- (name bsb_helper)
- (wrapped false)
- (flags
-  (:standard -w +a-9-40-42))
- (libraries ext))

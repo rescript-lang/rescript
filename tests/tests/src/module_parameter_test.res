@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 module type X = module type of String
 
 let u = (v: module(X)) => v
@@ -16,9 +19,12 @@ let v = x => {
   V.length(x)
 }
 
-let suites = {
-  open Mt
-  list{("const", _ => Eq(1, v0)), ("other", _ => Eq(3, v("abc")))}
-}
+describe(__MODULE__, () => {
+  test("const", () => {
+    eq(__LOC__, 1, v0)
+  })
 
-Mt.from_pair_suites(__MODULE__, suites)
+  test("other", () => {
+    eq(__LOC__, 3, v("abc"))
+  })
+})

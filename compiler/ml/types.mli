@@ -57,7 +57,7 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
     Note on mutability: TBD.
  *)
 
-and arg = {lbl: Noloc.arg_label; typ: type_expr}
+and arg = {lbl: arg_label; typ: type_expr}
 
 and type_desc =
   | Tvar of string option
@@ -65,8 +65,8 @@ and type_desc =
       [Tvar None]       ==> [_] *)
   | Tarrow of arg * type_expr * commutable * arity
       (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
-      [Tarrow (Labelled "l", e1, e2, c)] ==> [l:e1  -> e2]
-      [Tarrow (Optional "l", e1, e2, c)] ==> [?l:e1 -> e2]
+      [Tarrow (Labelled {txt="l"}, e1, e2, c)] ==> [l:e1  -> e2]
+      [Tarrow (Optional {txt="l"}, e1, e2, c)] ==> [?l:e1 -> e2]
 
       See [commutable] for the last argument. *)
   | Ttuple of type_expr list  (** [Ttuple [t1;...;tn]] ==> [(t1 * ... * tn)] *)

@@ -9,7 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
 import { binDir } from "#cli/bins";
-import { compilerBinDir, ninjaDir, rewatchDir } from "#dev/paths";
+import { compilerBinDir, rewatchDir } from "#dev/paths";
 
 const args = parseArgs({
   args: process.argv.slice(2),
@@ -20,9 +20,6 @@ const args = parseArgs({
     compiler: {
       type: "boolean",
     },
-    ninja: {
-      type: "boolean",
-    },
     rewatch: {
       type: "boolean",
     },
@@ -30,19 +27,12 @@ const args = parseArgs({
 });
 
 const shouldCopyCompiler = args.values.all || args.values.compiler;
-const shouldCopyNinja = args.values.all || args.values.ninja;
 const shouldCopyRewatch = args.values.all || args.values.rewatch;
 
 if (shouldCopyCompiler) {
-  copyExe(compilerBinDir, "rescript-legacy");
   copyExe(compilerBinDir, "rescript-editor-analysis");
   copyExe(compilerBinDir, "rescript-tools");
   copyExe(compilerBinDir, "bsc");
-  copyExe(compilerBinDir, "bsb_helper");
-}
-
-if (shouldCopyNinja) {
-  copyExe(ninjaDir, "ninja");
 }
 
 if (shouldCopyRewatch) {

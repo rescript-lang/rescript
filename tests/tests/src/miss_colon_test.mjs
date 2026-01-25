@@ -16,7 +16,6 @@ function $plus$colon(_f, _g) {
       if (n === 0) {
         return g;
       }
-      
     }
     switch (g.TAG) {
       case "Int" :

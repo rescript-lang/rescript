@@ -1,0 +1,14 @@
+{
+  "name": "@testrepo/with-ppx",
+  "version": "0.0.1",
+  "keywords": [
+    "rescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "rescript-nodejs": "patch:rescript-nodejs@npm%3A16.1.0#~/.yarn/patches/rescript-nodejs-npm-16.1.0-1841fa6174.patch",
+    "sury": "^11.0.0-alpha.2",
+    "sury-ppx": "^11.0.0-alpha.2"
+  }
+}

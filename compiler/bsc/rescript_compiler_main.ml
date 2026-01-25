@@ -50,18 +50,7 @@ let set_abs_input_name sourcefile =
   sourcefile
 let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 
-let setup_runtime_path path =
-  let u0 = Filename.dirname path in
-  let std = Filename.basename path in
-  let _path = Filename.dirname u0 in
-  let rescript = Filename.basename u0 in
-  (match rescript.[0] with
-  | '@' ->
-    (* scoped package *)
-    Bs_version.package_name := rescript ^ "/" ^ std
-  | _ -> Bs_version.package_name := std
-  | exception _ -> Bs_version.package_name := std);
-  Js_config.customize_runtime := Some path
+let setup_runtime_path path = Runtime_package.path := path
 
 let process_file sourcefile ?kind ppf =
   (* This is a better default then "", it will be changed later
@@ -204,12 +193,6 @@ let eval (s : string) ~suffix =
   if not !Clflags.verbose then try Sys.remove tmpfile with _ -> ()
 
 (* let (//) = Filename.concat *)
-
-let print_standard_library () =
-  let standard_library = Config.standard_library in
-  print_string standard_library;
-  print_newline ();
-  exit 0
 
 let bs_version_string = "ReScript " ^ Bs_version.version
 
@@ -378,9 +361,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-ignore-parse-errors",
       set Clflags.ignore_parse_errors,
       "*internal* continue after parse errors" );
-    ( "-where",
-      unit_call print_standard_library,
-      "*internal* Print location of standard library and exit" );
     ( "-verbose",
       set Clflags.verbose,
       "*internal* Print calls to external commands" );
@@ -391,7 +371,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       clear Clflags.keep_locs,
       "*internal* Do not keep locations in .cmi files" );
     ("-nopervasives", set Clflags.nopervasives, "*internal*");
-    ("-uncurried", unit_call (fun () -> ()), "*internal* deprecated");
     ( "-v",
       unit_call print_version_string,
       "Print compiler version and location of standard library and exit" );
@@ -402,6 +381,10 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-absname",
       set absname,
       "*internal* Show absolute filenames in error messages" );
+    ( "-enable-experimental",
+      string_call Experimental_features.enable_from_string,
+      "Enable experimental features: repeatable, e.g. -enable-experimental \
+       LetUnwrap" );
     (* Not used, the build system did the expansion *)
     ( "-bs-no-bin-annot",
       clear Clflags.binary_annotations,
@@ -412,6 +395,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-unsafe",
       set Clflags.fast,
       "*internal* Do not compile bounds checking on array and string access" );
+    ( "-runtime-path",
+      string_call setup_runtime_path,
+      "*internal* Set the path of the runtime package (@rescript/runtime)" );
     ( "-warn-help",
       unit_call Warnings.help_warnings,
       "Show description of warning numbers" );
@@ -420,9 +406,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       "<list>  Enable or disable error status for warnings according\n\
        to <list>.  See option -w for the syntax of <list>.\n\
        Default setting is " ^ Bsc_warnings.defaults_warn_error );
-    ( "-runtime",
-      string_call setup_runtime_path,
-      "*internal* Set the runtime directory" );
     ( "-make-runtime",
       unit_call Js_packages_state.make_runtime,
       "*internal* make runtime library" );

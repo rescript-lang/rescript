@@ -4,7 +4,7 @@ type location = {
 }
 type locationState
 
-type history = {replaceState: (. locationState, string, string) => unit}
+type history = {replaceState: (locationState, string, string) => unit}
 
 type rec window = {
   history: history,

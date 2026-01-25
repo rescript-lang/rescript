@@ -1,0 +1,136 @@
+type t = int
+
+module Constants = {
+  @inline let minValue = -2147483648
+  @inline let maxValue = 2147483647
+}
+
+external equal: (int, int) => bool = "%equal"
+
+external compare: (int, int) => Stdlib_Ordering.t = "%compare"
+
+@send external toExponential: (int, ~digits: int=?) => string = "toExponential"
+@deprecated({
+  reason: "Use `toExponential` instead",
+  migrate: Int.toExponential(),
+})
+@send
+external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
+
+@send external toFixed: (int, ~digits: int=?) => string = "toFixed"
+@deprecated({
+  reason: "Use `toFixed` instead",
+  migrate: Int.toFixed(),
+})
+@send
+external toFixedWithPrecision: (int, ~digits: int) => string = "toFixed"
+
+@send external toPrecision: (int, ~digits: int=?) => string = "toPrecision"
+@deprecated({
+  reason: "Use `toPrecision` instead",
+  migrate: Int.toPrecision(),
+})
+@send
+external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
+
+@send external toString: (int, ~radix: int=?) => string = "toString"
+@deprecated({
+  reason: "Use `toString` instead",
+  migrate: Int.toString(),
+})
+@send
+external toStringWithRadix: (int, ~radix: int) => string = "toString"
+@send external toLocaleString: int => string = "toLocaleString"
+
+external toFloat: int => float = "%identity"
+external fromFloat: float => int = "%intoffloat"
+
+let fromString: string => option<int> = str => {
+  let? Some(num) = str->Stdlib_Float.fromString
+  num === num->fromFloat->toFloat && Stdlib_Float.isFinite(num) ? Some(num->fromFloat) : None
+}
+
+external mod: (int, int) => int = "%modint"
+
+type rangeOptions = {step?: int, inclusive?: bool}
+
+let abs = x =>
+  if x >= 0 {
+    x
+  } else {
+    -x
+  }
+
+@val external ceil: float => float = "Math.ceil"
+
+let range = (start, end, ~options: rangeOptions={}) => {
+  let isInverted = start > end
+
+  let step = switch options.step {
+  | None => isInverted ? -1 : 1
+  | Some(0) if start !== end =>
+    Stdlib_Error.throw(Stdlib_Error.RangeError.make("Incorrect range arguments"))
+  | Some(n) => n
+  }
+
+  let length = if isInverted === (step >= 0) {
+    0 // infinite because step goes in opposite direction of end
+  } else if step == 0 {
+    options.inclusive === Some(true) ? 1 : 0
+  } else {
+    let range = isInverted ? start - end : end - start
+    let range = options.inclusive === Some(true) ? range + 1 : range
+    ceil(Stdlib_Float.fromInt(range) /. Stdlib_Float.fromInt(abs(step)))->Stdlib_Float.toInt
+  }
+
+  Stdlib_Array.fromInitializer(~length, i => start + i * step)
+}
+
+@deprecated({
+  reason: "Use `range` instead",
+  migrate: Int.range(~options=%insert.unlabelledArgument(2)),
+})
+@send
+let rangeWithOptions = (start, end, options) => range(start, end, ~options)
+
+let clamp = (~min=?, ~max=?, value): int => {
+  let value = switch max {
+  | Some(max) if max < value => max
+  | _ => value
+  }
+  switch min {
+  | Some(min) if min > value => min
+  | _ => value
+  }
+}
+
+external bitwiseAnd: (int, int) => int = "%andint"
+external bitwiseOr: (int, int) => int = "%orint"
+external bitwiseXor: (int, int) => int = "%xorint"
+
+external bitwiseNot: int => int = "%bitnot_int"
+
+external shiftLeft: (int, int) => int = "%lslint"
+external shiftRight: (int, int) => int = "%asrint"
+external shiftRightUnsigned: (int, int) => int = "%lsrint"
+
+module Bitwise = {
+  external land: (int, int) => int = "%andint"
+  external lor: (int, int) => int = "%orint"
+  external lxor: (int, int) => int = "%xorint"
+
+  external lsl: (int, int) => int = "%lslint"
+  external lsr: (int, int) => int = "%lsrint"
+  external asr: (int, int) => int = "%asrint"
+
+  let lnot = x => lxor(x, -1)
+}
+
+external ignore: int => unit = "%ignore"
+
+module Ref = {
+  type t = ref<int>
+
+  external increment: ref<int> => unit = "%incr"
+  external decrement: ref<int> => unit = "%decr"
+}

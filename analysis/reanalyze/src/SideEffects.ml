@@ -18,7 +18,7 @@ let whiteTableSideEffects =
 
 let pathIsWhitelistedForSideEffects path =
   path
-  |> Common.Path.onOkPath ~whenContainsApply:false ~f:(fun s ->
+  |> DcePath.onOkPath ~whenContainsApply:false ~f:(fun s ->
          Hashtbl.mem (Lazy.force whiteTableSideEffects) s)
 
 let rec exprNoSideEffects (expr : Typedtree.expression) =

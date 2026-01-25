@@ -374,7 +374,7 @@ Path fnTakingRecord
     "kind": 12,
     "tags": [],
     "detail": "'a => Type.t",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "\n`typeof(value)` exposes JavaScript's `typeof` operator and returns a `Type.t` enum.\nIt helps you inspect values that come from JavaScript APIs.\n\n## Examples\n\n```rescript\ntypeof(1) == #number\ntypeof(\"a\") == #string\n```\n"}
   }]
 
 Complete src/CompletionExpressions.res 69:25
@@ -832,7 +832,7 @@ Path fnTakingCallback
     "kind": 12,
     "tags": [],
     "detail": "('a, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailExn == list{2}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not throw a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailExn == list{2}\n```\n"}
   }]
 
 Complete src/CompletionExpressions.res 165:22
@@ -1235,8 +1235,8 @@ Path fnTakingPolyVariant
   }]
 
 Complete src/CompletionExpressions.res 281:24
-posCursor:[281:24] posNoWhite:[281:23] Found expr:[281:3->290:18]
-Pexp_apply ...[281:3->281:22] (...[281:23->281:25], ...[290:0->290:16])
+posCursor:[281:24] posNoWhite:[281:23] Found expr:[281:3->302:1]
+Pexp_apply ...[281:3->281:22] (...[281:23->281:25], ...[290:0->290:16], ...[292:2->301:20])
 Completable: Cexpression CArgument Value[fnTakingPolyVariant]($0)=#
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

@@ -98,8 +98,6 @@ val jsx_version_of_int : int -> jsx_version option
 
 val jsx_module_of_string : string -> jsx_module
 
-val customize_runtime : string option ref
-
 val as_pp : bool ref
 
 val self_stack : string Stack.t

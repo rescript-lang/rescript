@@ -17,11 +17,11 @@ let rec implementation items =
 let cmt cmt_annots =
   match cmt_annots with
   | Cmt_format.Interface signature ->
-    if !Common.Cli.debug && signature.sig_items = [] then
+    if !Cli.debug && signature.sig_items = [] then
       Log_.item "Interface %d@." (signature.sig_items |> List.length);
     interface signature.sig_items
   | Implementation structure ->
-    if !Common.Cli.debug && structure.str_items = [] then
+    if !Cli.debug && structure.str_items = [] then
       Log_.item "Implementation %d@." (structure.str_items |> List.length);
     implementation structure.str_items
   | _ -> None

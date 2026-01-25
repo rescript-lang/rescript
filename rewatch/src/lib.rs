@@ -5,6 +5,7 @@ pub mod config;
 pub mod format;
 pub mod helpers;
 pub mod lock;
+pub mod project_context;
 pub mod queue;
 pub mod sourcedirs;
 pub mod watcher;

@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "definitions": {
     "module-format": {
-      "enum": ["esmodule", "commonjs", "es6", "es6-global"],
-      "description": "es6 and es6-global are deprecated. Default: commonjs."
+      "enum": ["esmodule", "commonjs"],
+      "description": "Output module format. Default: esmodule."
     },
     "suffix-spec": {
       "type": "string",
@@ -124,7 +124,8 @@
       "type": "object",
       "properties": {
         "cmd": {
-          "type": "string"
+          "type": "string",
+          "description": "Shell command to run after each JS file is compiled. The absolute path to the output JS file is appended as an argument. The path respects the `in-source` setting. The command runs in the directory containing the rescript.json where it is defined."
         }
       }
     },
@@ -165,7 +166,6 @@
               "type": "string",
               "description": "name of the directory"
             },
-
             "type": {
               "enum": ["dev"]
             },
@@ -311,15 +311,14 @@
           "type": "string",
           "description": "JSX module. Either \"react\" for React, or (since v11.1) any valid module name to apply a generic JSX transform."
         },
-        "mode": {
-          "type": "string",
-          "enum": ["classic", "automatic"],
-          "description": "JSX transformation mode"
+        "preserve": {
+          "type": "boolean",
+          "description": "Whether to preserve the JSX in the output. Requires `version` to be set."
         }
       },
       "additionalProperties": false
     },
-    "bsc-flags": {
+    "compiler-flags": {
       "oneOf": [
         {
           "type": "array",
@@ -327,21 +326,6 @@
             "type": "string"
           },
           "description": "Default: `[\"-no-alias-deps\"]`"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "kind": {
-              "enum": ["reset", "prefix", "append"]
-            },
-            "flags": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          "description": "(Not implemented yet)"
         }
       ]
     },
@@ -389,15 +373,15 @@
       "items": {
         "type": "string"
       },
-      "description": "a list of directories that bsb will not look into"
+      "description": "a list of directories that the build system will not look into"
     },
-    "bs-dependencies": {
+    "dependencies": {
       "$ref": "#/definitions/dependencies",
-      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`"
+      "description": "ReScript dependencies of the library, like in package.json. Currently searches in `node_modules`."
     },
-    "bs-dev-dependencies": {
+    "dev-dependencies": {
       "$ref": "#/definitions/dependencies",
-      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`"
+      "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`."
     },
     "generators": {
       "type": "array",
@@ -422,8 +406,8 @@
       "$ref": "#/definitions/gentype-specs",
       "description": "gentype config, see cristianoc/genType for more details"
     },
-    "bsc-flags": {
-      "$ref": "#/definitions/bsc-flags",
+    "compiler-flags": {
+      "$ref": "#/definitions/compiler-flags",
       "description": "Flags passed to bsc.exe"
     },
     "warnings": {
@@ -458,15 +442,11 @@
     },
     "js-post-build": {
       "$ref": "#/definitions/js-post-build",
-      "description": "(Experimental) post-processing hook. bsb will invoke `cmd ${file}` whenever a `${file}` is changed"
+      "description": "Post-processing hook. The build system will invoke `cmd <absolute-path-to-js-file>` after each JS file is compiled. The path respects the `in-source` setting: when true, the path is next to the source file; when false, the path is in the `lib/<module>/` directory. The command runs in the directory containing the rescript.json where it is defined."
     },
     "package-specs": {
       "$ref": "#/definitions/package-specs",
       "description": "ReScript can currently output to [Commonjs](https://en.wikipedia.org/wiki/CommonJS), and [ES6 modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)"
-    },
-    "external-stdlib": {
-      "type": "string",
-      "description": "Use the external stdlib library instead of the one shipped with the compiler package"
     },
     "bs-external-includes": {
       "type": "array",
@@ -485,6 +465,17 @@
     "editor": {
       "$ref": "#/definitions/editor",
       "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
+    },
+    "experimental-features": {
+      "type": "object",
+      "description": "Enable experimental compiler features.",
+      "properties": {
+        "LetUnwrap": {
+          "type": "boolean",
+          "description": "Enable `let?` syntax."
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

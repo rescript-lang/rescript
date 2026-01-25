@@ -55,7 +55,7 @@ let f = {
     let arr = init(10000000, i => float_of_int(i))
     let b = arr->map(i => i +. i -. 1.)
     let v = b->reduceReverse(0., \"+.")
-    v->Js.Float.toString->Js.log
+    v->Js.Float.toString->Console.log
   }
 }
 
@@ -64,7 +64,7 @@ let f2 = () => {
   let arr = init(30_000_000, i => float_of_int(i))
   let b = arr->map(i => i +. i -. 1.)
   let v = b->reduceReverse(0., \"+.")
-  v->Js.Float.toString->Js.log
+  v->Js.Float.toString->Console.log
 }
 
 /* let time label f = */
@@ -80,17 +80,8 @@ let f2 = () => {
 
 let () = f2()
 
-/* ocamlbuild */
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 let v = ref(0)
 
@@ -98,7 +89,7 @@ let all_v = ref(list{})
 
 let add5 = (a0, a1, a2, a3, a4) => {
   /* [@bs.noinline] ; */ /* Makes sense for debugging */
-  Js.log((a0, a1, a2, a3, a4))
+  Console.log((a0, a1, a2, a3, a4))
   all_v := list{v.contents, ...all_v.contents}
   a0 + a1 + a2 + a3 + a4
 }
@@ -144,11 +135,10 @@ let b = f(0)(3, 5)
 let c = g(0)(3, 4)
 let d = g(0)(3, 5)
 
-let () = {
-  eq(__LOC__, a, 10)
-  eq(__LOC__, b, 11)
-  eq(__LOC__, c, 10)
-  eq(__LOC__, d, 11)
-  eq(__LOC__, all_v.contents, list{8, 6, 6, 4, 4, 2})
-}
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("earger curry a", () => eq(__LOC__, a, 10))
+  test("earger curry b", () => eq(__LOC__, b, 11))
+  test("earger curry c", () => eq(__LOC__, c, 10))
+  test("earger curry d", () => eq(__LOC__, d, 11))
+  test("earger curry all_v", () => eq(__LOC__, all_v.contents, list{8, 6, 6, 4, 4, 2}))
+})

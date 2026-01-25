@@ -8,11 +8,9 @@ const { stderr } = await execBuild();
 
 if (
   ![
-    "Error: Invalid rescript.json: implementation and interface have different path names or different cases src/demo vs src/Demo\n",
+    "Could not initialize build: Implementation and interface have different path names or different cases: `src/demo.res` vs `src/Demo.resi`\n",
     // Windows: path separator
-    "Error: Invalid rescript.json: implementation and interface have different path names or different cases src\\demo vs src\\Demo\n",
-    // Linux: files are parsed in different order
-    "Error: Invalid rescript.json: implementation and interface have different path names or different cases src/Demo vs src/demo\n",
+    "Could not initialize build: Implementation and interface have different path names or different cases: `src\\demo.res` vs `src\\Demo.resi`\n",
   ].includes(normalizeNewlines(stderr))
 ) {
   assert.fail(stderr);

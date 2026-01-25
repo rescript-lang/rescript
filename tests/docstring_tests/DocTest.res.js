@@ -6,16 +6,19 @@ import * as Nodeurl from "node:url";
 import * as Nodepath from "node:path";
 import * as ArrayUtils from "./ArrayUtils.res.js";
 import * as SpawnAsync from "./SpawnAsync.res.js";
-import * as Stdlib_Int from "rescript/lib/es6/Stdlib_Int.js";
-import * as Stdlib_Dict from "rescript/lib/es6/Stdlib_Dict.js";
-import * as Stdlib_Array from "rescript/lib/es6/Stdlib_Array.js";
-import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
-import * as Stdlib_JsError from "rescript/lib/es6/Stdlib_JsError.js";
-import * as Primitive_string from "rescript/lib/es6/Primitive_string.js";
+import * as Stdlib_Int from "@rescript/runtime/lib/es6/Stdlib_Int.mjs";
+import * as Stdlib_Dict from "@rescript/runtime/lib/es6/Stdlib_Dict.mjs";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.mjs";
+import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.mjs";
+import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.mjs";
+import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.mjs";
 import * as Promises from "node:fs/promises";
-import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
+import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.mjs";
+import * as BinsJs from "../../cli/common/bins.js";
 
-let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
+let rescript_tools_exe = BinsJs.rescript_tools_exe;
+
+let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node")), "Failed to convert node version to Int");
 
 let ignoreRuntimeTests = [
   [
@@ -41,6 +44,13 @@ let ignoreRuntimeTests = [
   [
     24,
     ["Stdlib_RegExp.escape"]
+  ],
+  [
+    1000,
+    [
+      "Stdlib_DataView.getFloat16",
+      "Stdlib_DataView.setFloat16"
+    ]
   ]
 ];
 
@@ -49,8 +59,7 @@ function getOutput(buffer) {
 }
 
 async function extractDocFromFile(file) {
-  let toolsBin = Nodepath.join(process.cwd(), "cli", "rescript-tools.js");
-  let match = await SpawnAsync.run(toolsBin, [
+  let match = await SpawnAsync.run(rescript_tools_exe, [
     "extract-codeblocks",
     file,
     "--transform-assert-equal"
@@ -61,7 +70,7 @@ async function extractDocFromFile(file) {
     let e = Primitive_exceptions.internalToException(raw_e);
     if (e.RE_EXN_ID === "JsExn") {
       console.error(e._1);
-      return Stdlib_JsError.panic("Failed to extract code blocks from " + file);
+      return Stdlib_JsError.panic(`Failed to extract code blocks from ` + file);
     }
     throw e;
   }
@@ -69,8 +78,10 @@ async function extractDocFromFile(file) {
 
 let batchSize = Nodeos.cpus().length;
 
+let runtimePath = Nodepath.join("packages", "@rescript", "runtime");
+
 async function extractExamples() {
-  let files = Nodefs.readdirSync("runtime");
+  let files = Nodefs.readdirSync(runtimePath);
   let docFiles = files.filter(f => {
     if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
       return false;
@@ -82,15 +93,16 @@ async function extractExamples() {
       return false;
     }
   });
-  console.log("Extracting examples from " + docFiles.length.toString() + " runtime files...");
+  console.log(`Extracting examples from ` + docFiles.length.toString() + ` runtime files...`);
   let examples = [];
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
-    let doc = await extractDocFromFile(Nodepath.join("runtime", f));
+    let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
     if (doc.TAG === "Ok") {
       examples.push(...doc._0.filter(d => d.code.includes("assertEqual(")));
       return;
     }
     console.error(doc._0);
+    return Stdlib_JsError.panic(`Error extracting code blocks for ` + f);
   });
   examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   return examples;
@@ -118,28 +130,45 @@ async function main() {
         }
       });
       if (ignoreExample) {
-        console.warn("Ignoring " + example.id + " tests. Not supported by Node " + nodeVersion.toString());
+        console.warn(`Ignoring ` + example.id + ` tests. Not supported by Node ` + nodeVersion.toString());
         return;
       }
       let code = example.code;
       if (code.length === 0) {
         return;
+      } else if (code.includes("await")) {
+        return `testAsync("` + example.name + `", async () => {
+  module Test = {
+    ` + code + `
+  }
+  ()
+})`;
       } else {
-        return "test(\"" + example.name + "\", () => {\n  module Test = {\n    " + code + "\n  }\n  ()\n})";
+        return `test("` + example.name + `", () => {
+  module Test = {
+    ` + code + `
+  }
+  ()
+})`;
       }
     });
-    if (codeExamples.length <= 0) {
+    if (codeExamples.length === 0) {
       return;
     }
-    let content = "describe(\"" + key + "\", () => {\n" + codeExamples.join("\n") + "\n })";
+    let content = `describe("` + key + `", () => {
+` + codeExamples.join("\n") + `
+ })`;
     output.push(content);
   });
   let dirname = Nodepath.dirname(Nodeurl.fileURLToPath(import.meta.url));
   let filepath = Nodepath.join(dirname, "generated_mocha_test.res");
-  let fileContent = "open Mocha\n@@warning(\"-32-34-60-37-109-3-44\")\n\n" + output.join("\n");
+  let fileContent = `open Mocha
+@@warning("-32-34-60-37-109-3-44")
+
+` + output.join("\n");
   return await Promises.writeFile(filepath, fileContent);
 }
 
 await main();
 
-/* nodeVersion Not a pure module */
+/* rescript_tools_exe Not a pure module */

@@ -1,15 +1,6 @@
 open Belt
-
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 module A = List
 
@@ -50,12 +41,6 @@ let f = () => {
   module(Make(H): S)
 }
 
-let () = eq(__LOC__, C.length(list{1, 2}), 2)
-
-module H = Make(Make(Make(Make(F))))
-
-let () = eq(__LOC__, v.contents, 12)
-
 let g = () => {
   module A0 = List
   /* since module alias compiled to no code,  
@@ -82,15 +67,26 @@ let xx = () => {
   module(Make(A3): S)
 }
 
-let () = eq(__LOC__, g(), 4)
+describe(__MODULE__, () => {
+  test("module alias basic operations", () => {
+    eq(__LOC__, C.length(list{1, 2}), 2)
+  })
 
-let () = {
-  module V = unpack(xx(): S) /* xx () not inlined in 4.06 */
-  eq(__LOC__, V.length(list{1, 2, 3}), 3)
-  eq(__LOC__, v.contents, 15)
-  module H = unpack(f(): S)
-  eq(__LOC__, H.length(list{1, 2}), 2)
-  eq(__LOC__, v.contents, 21)
-}
+  test("module alias with Make functor", () => {
+    module H = Make(Make(Make(Make(F))))
+    eq(__LOC__, v.contents, 12)
+  })
 
-Mt.from_pair_suites(__MODULE__, suites.contents)
+  test("module alias unpacking", () => {
+    eq(__LOC__, g(), 4)
+  })
+
+  test("module alias with functor applications", () => {
+    module V = unpack(xx(): S) /* xx () not inlined in 4.06 */
+    eq(__LOC__, V.length(list{1, 2, 3}), 3)
+    eq(__LOC__, v.contents, 15)
+    module H = unpack(f(): S)
+    eq(__LOC__, H.length(list{1, 2}), 2)
+    eq(__LOC__, v.contents, 21)
+  })
+})

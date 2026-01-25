@@ -95,13 +95,35 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_newtype (s, body) ->
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
-  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async} -> (
+  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async; arity; default}
+    -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
       (* Handle @async x => y => ... is in async context *)
       async_context := (old_in_function_def && !async_context) || async;
+      (* The default mapper would descend into nested [Pexp_fun] nodes (used for
+         additional parameters) before visiting the function body. Those
+         nested calls see [async = false] and would reset [async_context] to
+         false, so by the time we translate the body we incorrectly think we are
+         outside of an async function. This shows up with function-level
+         [@directive] (GH #7974): the directive attribute lives on the outer
+         async lambda, while extra parameters are represented as nested
+         functions. Rebuild the function manually to keep the async flag alive
+         until the body is processed. *)
+      let attrs = self.attributes self e.pexp_attributes in
+      let default = Option.map (self.expr self) default in
+      let lhs = self.pat self pat in
+      let saved_in_function_def = !in_function_def in
       in_function_def := true;
-      Ast_async.make_function_async ~async (default_expr_mapper self e)
+      (* Keep reporting nested parameters as part of a function definition so
+         they propagate async context exactly like the original mapper. *)
+      let rhs = self.expr self body in
+      in_function_def := saved_in_function_def;
+      let mapped =
+        Ast_helper.Exp.fun_ ~loc:e.pexp_loc ~attrs ~arity ~async label default
+          lhs rhs
+      in
+      Ast_async.make_function_async ~async mapped
     | Meth_callback _, pexp_attributes ->
       (* FIXME: does it make sense to have a label for [this] ? *)
       async_context := false;
@@ -143,6 +165,133 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ] ) ->
     default_expr_mapper self
       {e with pexp_desc = Pexp_ifthenelse (b, t_exp, Some f_exp)}
+    (* Transform:
+     - `@let.unwrap let Ok(inner_pat) = expr`
+     - `@let.unwrap let Error(inner_pat) = expr`
+     - `@let.unwrap let Some(inner_pat) = expr`
+     - `@let.unwrap let None = expr`
+     ...into switches *)
+  | Pexp_let
+      ( Nonrecursive,
+        [
+          {
+            pvb_pat =
+              {
+                ppat_desc =
+                  ( Ppat_construct
+                      ({txt = Lident ("Ok" as variant_name)}, Some _)
+                  | Ppat_construct
+                      ({txt = Lident ("Error" as variant_name)}, Some _)
+                  | Ppat_construct
+                      ({txt = Lident ("Some" as variant_name)}, Some _)
+                  | Ppat_construct
+                      ({txt = Lident ("None" as variant_name)}, None) );
+              } as pvb_pat;
+            pvb_expr;
+            pvb_attributes;
+          };
+        ],
+        body )
+    when Ast_attributes.has_unwrap_attr pvb_attributes -> (
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap);
+    let variant : [`Result_Ok | `Result_Error | `Option_Some | `Option_None] =
+      match variant_name with
+      | "Ok" -> `Result_Ok
+      | "Error" -> `Result_Error
+      | "Some" -> `Option_Some
+      | _ -> `Option_None
+    in
+    match pvb_expr.pexp_desc with
+    | Pexp_pack _ -> default_expr_mapper self e
+    | _ ->
+      let cont_case =
+        {
+          Parsetree.pc_bar = None;
+          pc_lhs = pvb_pat;
+          pc_guard = None;
+          pc_rhs = body;
+        }
+      in
+      let loc = {pvb_pat.ppat_loc with loc_ghost = true} in
+      (* Extract the variable name from the pattern (e.g., myVar from Some(myVar)) *)
+      let var_name =
+        match pvb_pat.ppat_desc with
+        | Ppat_construct (_, Some inner_pat) -> (
+          match Ast_pat.is_single_variable_pattern_conservative inner_pat with
+          | Some name when name <> "" -> name
+          | _ -> "x")
+        | _ -> "x"
+      in
+      let early_case =
+        match variant with
+        (* Result: continue on Ok(_), early-return on Error(e) *)
+        | `Result_Ok ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc
+                   {txt = Lident "Error"; loc}
+                   (Some (Ast_helper.Pat.any ~loc ())))
+                {txt = var_name; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
+          }
+        (* Result: continue on Error(_), early-return on Ok(x) *)
+        | `Result_Error ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc {txt = Lident "Ok"; loc}
+                   (Some (Ast_helper.Pat.any ~loc ())))
+                {txt = var_name; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
+          }
+        (* Option: continue on Some(_), early-return on None *)
+        | `Option_Some ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc} None)
+                {txt = var_name; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
+          }
+        (* Option: continue on None, early-return on Some(x) *)
+        | `Option_None ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc {txt = Lident "Some"; loc}
+                   (Some (Ast_helper.Pat.any ~loc ())))
+                {txt = var_name; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident var_name; loc};
+          }
+      in
+      default_expr_mapper self
+        {
+          e with
+          pexp_desc = Pexp_match (pvb_expr, [early_case; cont_case]);
+          pexp_attributes = e.pexp_attributes @ pvb_attributes;
+        })
+  | Pexp_let (_, [{pvb_pat; pvb_attributes}], _)
+    when Ast_attributes.has_unwrap_attr pvb_attributes ->
+    (* Catch all unsupported cases for `let?` *)
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Unsupported_type)
   | Pexp_let
       ( Nonrecursive,
         [
@@ -333,6 +482,24 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Parsetree.structure_item =
   match str.pstr_desc with
+  | Pstr_value (_, vbs)
+    when List.exists
+           (fun (vb : Parsetree.value_binding) ->
+             Ast_attributes.has_unwrap_attr vb.pvb_attributes)
+           vbs ->
+    let vb =
+      List.find
+        (fun (vb : Parsetree.value_binding) ->
+          Ast_attributes.has_unwrap_attr vb.pvb_attributes)
+        vbs
+    in
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Toplevel)
   | Pstr_type (rf, tdcls) (* [ {ptype_attributes} as tdcl ] *) ->
     Ast_tdcls.handle_tdcls_in_stru self str rf tdcls
   | Pstr_primitive prim
@@ -568,6 +735,14 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
               aux then_expr @ aux else_expr
             | Pexp_construct (_, Some expr) -> aux expr
             | Pexp_fun {rhs = expr} | Pexp_newtype (_, expr) -> aux expr
+            | Pexp_constraint (expr, _) -> aux expr
+            | Pexp_match (expr, cases) ->
+              let case_results =
+                List.fold_left
+                  (fun acc (case : Parsetree.case) -> aux case.pc_rhs @ acc)
+                  [] cases
+              in
+              aux expr @ case_results
             | _ -> acc
           in
           aux pvb_expr @ spelunk_vbs acc tl

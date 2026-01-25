@@ -1282,7 +1282,7 @@ and print_type_declaration ~state ~name ~equal_sign ~rec_flag i
           manifest;
           Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
           print_private_flag td.ptype_private;
-          print_record_declaration ~state lds cmt_tbl;
+          print_record_declaration ~record_loc:td.ptype_loc ~state lds cmt_tbl;
         ]
     | Ptype_variant cds ->
       let manifest =
@@ -1370,8 +1370,8 @@ and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
             manifest;
             Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
             print_private_flag td.ptype_private;
-            print_record_declaration ?inline_record_definitions ~state lds
-              cmt_tbl;
+            print_record_declaration ?inline_record_definitions
+              ~record_loc:td.ptype_loc ~state lds cmt_tbl;
           ]
     | Ptype_variant cds ->
       let manifest =
@@ -1465,12 +1465,22 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
   Doc.concat [printed_variance; print_typ_expr ~state typ cmt_tbl]
 
 and print_record_declaration ?check_break_from_loc ?inline_record_definitions
-    ~state (lds : Parsetree.label_declaration list) cmt_tbl =
+    ?record_loc ~state (lds : Parsetree.label_declaration list) cmt_tbl =
+  let get_field_start_line (ld : Parsetree.label_declaration) =
+    (* For spread fields (...), use the type location instead of pld_loc
+       because pld_loc may incorrectly include preceding whitespace *)
+    if ld.pld_name.txt = "..." then ld.pld_type.ptyp_loc.loc_start.pos_lnum
+    else ld.pld_loc.loc_start.pos_lnum
+  in
   let force_break =
-    match (check_break_from_loc, lds, List.rev lds) with
+    match (check_break_from_loc, record_loc, lds) with
     | Some loc, _, _ -> loc.Location.loc_start.pos_lnum < loc.loc_end.pos_lnum
-    | _, first :: _, last :: _ ->
-      first.pld_loc.loc_start.pos_lnum < last.pld_loc.loc_end.pos_lnum
+    | None, Some loc, first :: _ ->
+      (* Check if first field is on a different line than the opening brace *)
+      loc.loc_start.pos_lnum < get_field_start_line first
+    | None, None, first :: _ ->
+      let last = List.hd (List.rev lds) in
+      get_field_start_line first < last.pld_loc.loc_end.pos_lnum
     | _, _, _ -> false
   in
   Doc.breakable_group ~force_break
@@ -1883,9 +1893,22 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         typ_expr.ptyp_loc.Location.loc_start.pos_lnum
         < typ_expr.ptyp_loc.loc_end.pos_lnum
       in
-      let print_row_field = function
+      let print_row_field i = function
         | Parsetree.Rtag ({txt; loc}, attrs, true, []) ->
-          let doc =
+          let comment_attrs, attrs =
+            ParsetreeViewer.partition_doc_comment_attributes attrs
+          in
+          let comment_doc =
+            match comment_attrs with
+            | [] -> Doc.nil
+            | comment_attrs ->
+              print_doc_comments ~sep:Doc.hard_line ~state cmt_tbl comment_attrs
+          in
+          let bar =
+            if i > 0 || comment_attrs <> [] then Doc.text "| "
+            else Doc.if_breaks (Doc.text "| ") Doc.nil
+          in
+          let tag_doc =
             Doc.group
               (Doc.concat
                  [
@@ -1893,8 +1916,21 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
                    Doc.concat [Doc.text "#"; print_poly_var_ident txt];
                  ])
           in
-          print_comments doc cmt_tbl loc
-        | Rtag ({txt}, attrs, truth, types) ->
+          Doc.concat [comment_doc; bar; print_comments tag_doc cmt_tbl loc]
+        | Rtag ({txt; loc}, attrs, truth, types) ->
+          let comment_attrs, attrs =
+            ParsetreeViewer.partition_doc_comment_attributes attrs
+          in
+          let comment_doc =
+            match comment_attrs with
+            | [] -> Doc.nil
+            | comment_attrs ->
+              print_doc_comments ~sep:Doc.hard_line ~state cmt_tbl comment_attrs
+          in
+          let bar =
+            if i > 0 || comment_attrs <> [] then Doc.text "| "
+            else Doc.if_breaks (Doc.text "| ") Doc.nil
+          in
           let do_type t =
             match t.Parsetree.ptyp_desc with
             | Ptyp_tuple _ -> print_typ_expr ~state t cmt_tbl
@@ -1909,21 +1945,25 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
           let cases =
             if truth then Doc.concat [Doc.line; Doc.text "& "; cases] else cases
           in
-          Doc.group
-            (Doc.concat
-               [
-                 print_attributes ~state attrs cmt_tbl;
-                 Doc.concat [Doc.text "#"; print_poly_var_ident txt];
-                 cases;
-               ])
-        | Rinherit core_type -> print_typ_expr ~state core_type cmt_tbl
+          let tag_doc =
+            Doc.group
+              (Doc.concat
+                 [
+                   print_attributes ~state attrs cmt_tbl;
+                   Doc.concat [Doc.text "#"; print_poly_var_ident txt];
+                   cases;
+                 ])
+          in
+          Doc.concat [comment_doc; bar; print_comments tag_doc cmt_tbl loc]
+        | Rinherit core_type ->
+          let bar =
+            if i > 0 then Doc.text "| "
+            else Doc.if_breaks (Doc.text "| ") Doc.nil
+          in
+          Doc.concat [bar; print_typ_expr ~state core_type cmt_tbl]
       in
-      let docs = List.map print_row_field row_fields in
-      let cases = Doc.join ~sep:(Doc.concat [Doc.line; Doc.text "| "]) docs in
-      let cases =
-        if docs = [] then cases
-        else Doc.concat [Doc.if_breaks (Doc.text "| ") Doc.nil; cases]
-      in
+      let docs = List.mapi print_row_field row_fields in
+      let cases = Doc.join ~sep:Doc.line docs in
       let opening_symbol =
         if closed_flag = Open then Doc.concat [Doc.greater_than; Doc.line]
         else if labels_opt = None then Doc.soft_line
@@ -2093,11 +2133,20 @@ and print_type_parameter ~state {attrs; lbl; typ} cmt_tbl =
 
 and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     i =
+  let has_unwrap = ref false in
   let attrs =
-    print_attributes ~state ~loc:vb.pvb_pat.ppat_loc vb.pvb_attributes cmt_tbl
+    vb.pvb_attributes
+    |> List.filter_map (function
+         | {Asttypes.txt = "let.unwrap"}, _ ->
+           has_unwrap := true;
+           None
+         | attr -> Some attr)
   in
+  let attrs = print_attributes ~state ~loc:vb.pvb_pat.ppat_loc attrs cmt_tbl in
   let header =
-    if i == 0 then Doc.concat [Doc.text "let "; rec_flag] else Doc.text "and "
+    if i == 0 then
+      Doc.concat [Doc.text (if !has_unwrap then "let? " else "let "); rec_flag]
+    else Doc.text "and "
   in
   match vb with
   | {
@@ -3214,7 +3263,14 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
          *   b: 2,
          *  }` -> record is written on multiple lines, break the group *)
         let force_break =
-          e.pexp_loc.loc_start.pos_lnum < e.pexp_loc.loc_end.pos_lnum
+          match (spread_expr, rows) with
+          | Some expr, _ ->
+            (* If there's a spread, compare with spread expression's location *)
+            e.pexp_loc.loc_start.pos_lnum < expr.pexp_loc.loc_start.pos_lnum
+          | None, first_row :: _ ->
+            (* Otherwise, compare with the first row's location *)
+            e.pexp_loc.loc_start.pos_lnum < first_row.lid.loc.loc_start.pos_lnum
+          | None, [] -> false
         in
         let punning_allowed =
           match (spread_expr, rows) with
@@ -3768,7 +3824,7 @@ and print_unary_expression ~state expr cmt_tbl =
       | "~+." -> "+."
       | "~-" -> "-"
       | "~-." -> "-."
-      | "~~" -> "~"
+      | "~~~" -> "~~~"
       | "not" -> "!"
       | _ -> assert false)
   in
@@ -3976,6 +4032,11 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
     ->
     let lhs_has_comment_below = has_comment_below cmt_tbl lhs.pexp_loc in
     let lhs_doc = print_operand ~is_lhs:true ~is_multiline:false lhs op in
+    (* For pipe RHS, use pipe-specific rewrite to omit redundant first underscore *)
+    let rhs =
+      if op = "->" then ParsetreeViewer.rewrite_underscore_apply_in_pipe rhs
+      else rhs
+    in
     let rhs_doc = print_operand ~is_lhs:false ~is_multiline:false rhs op in
     Doc.group
       (Doc.concat
@@ -4440,9 +4501,10 @@ and print_pexp_apply ~state expr cmt_tbl =
   | _ -> assert false
 
 and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
-  let name = print_jsx_name tag_name in
+  let name = print_jsx_name tag_name.txt in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
-  let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_name.loc in
+  let tag_loc = tag_name.loc in
+  let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_loc in
   let tag_has_no_props = List.length props == 0 in
   let closing_token_loc =
     ParsetreeViewer.unary_element_closing_token expr_loc
@@ -4462,9 +4524,7 @@ and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
         ]
   in
   let opening_tag =
-    print_comments
-      (Doc.concat [Doc.less_than; name])
-      cmt_tbl tag_name.Asttypes.loc
+    print_comments (Doc.concat [Doc.less_than; name]) cmt_tbl tag_loc
   in
   let opening_tag_doc =
     if tag_has_trailing_comment && not tag_has_no_props then
@@ -4489,20 +4549,7 @@ and print_jsx_container_tag ~state tag_name
     (children : Parsetree.jsx_children)
     (closing_tag : Parsetree.jsx_closing_container_tag option)
     (pexp_loc : Location.t) cmt_tbl =
-  let name = print_jsx_name tag_name in
-  let last_prop_has_comment_after =
-    let rec visit props =
-      match props with
-      | [] -> None
-      | [x] -> Some x
-      | _ :: xs -> visit xs
-    in
-    let last_prop = visit props in
-    match last_prop with
-    | None -> false
-    | Some last_prop ->
-      has_trailing_comments cmt_tbl (ParsetreeViewer.get_jsx_prop_loc last_prop)
-  in
+  let name = print_jsx_name tag_name.txt in
   let opening_greater_than_loc =
     {
       Warnings.loc_start = opening_greater_than;
@@ -4510,7 +4557,7 @@ and print_jsx_container_tag ~state tag_name
       loc_ghost = false;
     }
   in
-  let opening_greater_than_has_leading_comments, opening_greater_than_doc =
+  let _opening_greater_than_has_leading_comments, opening_greater_than_doc =
     let has_leading_comments =
       has_leading_comments cmt_tbl opening_greater_than_loc
     in
@@ -4521,8 +4568,8 @@ and print_jsx_container_tag ~state tag_name
   (* <div className="test" /> *)
   let has_children =
     match children with
-    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
-    | JSXChildrenItems [] -> false
+    | _ :: _ -> true
+    | [] -> false
   in
   let line_sep = get_line_sep_for_jsx_children children in
   let print_children children =
@@ -4543,8 +4590,11 @@ and print_jsx_container_tag ~state tag_name
       let closing_tag_loc =
         ParsetreeViewer.container_element_closing_tag_loc closing_tag
       in
+      let closing_name =
+        print_jsx_name closing_tag.jsx_closing_container_tag_name.txt
+      in
       print_comments
-        (Doc.concat [Doc.text "</"; name; Doc.greater_than])
+        (Doc.concat [Doc.text "</"; closing_name; Doc.greater_than])
         cmt_tbl closing_tag_loc
   in
   Doc.group
@@ -4553,52 +4603,36 @@ and print_jsx_container_tag ~state tag_name
          Doc.group
            (Doc.concat
               [
-                print_comments
-                  (Doc.concat [Doc.less_than; name])
-                  cmt_tbl tag_name.Asttypes.loc;
-                (if List.length formatted_props == 0 then Doc.nil
-                 else
-                   Doc.indent
-                     (Doc.concat
-                        [
-                          Doc.line;
-                          Doc.group (Doc.join formatted_props ~sep:Doc.line);
-                        ]));
-                (* 
-                if the element name has a single comment on the same line
+                (* Opening tag name and props *)
+                (let tag_loc = tag_name.loc in
 
-                <A // foo
-                >
-                </A>
-
-                We need to force a newline.
-               *)
-                (if
-                   has_trailing_single_line_comment cmt_tbl
-                     tag_name.Asttypes.loc
-                 then Doc.concat [Doc.hard_line; opening_greater_than_doc]
-                   (*
-                  if the last prop has trailing comment
-
-                  <A
-                    prop=value
-                    // comments
-                  >
-                  </A>
-
-                  or there are leading comments before `>`
-
-                  <A
-                    // comments
-                  >
-
-                  then put > on the next line
-                 *)
-                 else if
-                   last_prop_has_comment_after
-                   || opening_greater_than_has_leading_comments
-                 then Doc.concat [Doc.soft_line; opening_greater_than_doc]
-                 else opening_greater_than_doc);
+                 let opening_tag_name_doc =
+                   print_comments
+                     (Doc.concat [Doc.less_than; name])
+                     cmt_tbl tag_loc
+                 in
+                 let props_block_doc =
+                   if List.length formatted_props == 0 then Doc.nil
+                   else
+                     Doc.indent
+                       (Doc.concat
+                          [
+                            Doc.line;
+                            Doc.group (Doc.join formatted_props ~sep:Doc.line);
+                          ])
+                 in
+                 let after_name_and_props_doc =
+                   (* if the element name has a single comment on the same line, force newline before '>' *)
+                   if has_trailing_single_line_comment cmt_tbl tag_loc then
+                     Doc.concat [Doc.hard_line; opening_greater_than_doc]
+                   else Doc.concat [Doc.soft_line; opening_greater_than_doc]
+                 in
+                 Doc.concat
+                   [
+                     opening_tag_name_doc;
+                     props_block_doc;
+                     after_name_and_props_doc;
+                   ]);
               ]);
          Doc.concat
            [
@@ -4624,8 +4658,8 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
   in
   let has_children =
     match children with
-    | JSXChildrenItems [] -> false
-    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
+    | [] -> false
+    | _ :: _ -> true
   in
   let line_sep = get_line_sep_for_jsx_children children in
   Doc.group
@@ -4639,18 +4673,15 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
        ])
 
 and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
-  match children with
-  | JSXChildrenSpreading _ -> Doc.line
-  | JSXChildrenItems children ->
-    if
-      List.length children > 1
-      || List.exists
-           (function
-             | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
-             | _ -> false)
-           children
-    then Doc.hard_line
-    else Doc.line
+  if
+    List.length children > 1
+    || List.exists
+         (function
+           | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
+           | _ -> false)
+         children
+  then Doc.hard_line
+  else Doc.line
 
 and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
@@ -4687,9 +4718,8 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
       print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
   in
   match children with
-  | JSXChildrenItems [] -> Doc.nil
-  | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
-  | JSXChildrenItems children ->
+  | [] -> Doc.nil
+  | children ->
     let rec visit acc children =
       match children with
       | [] -> acc
@@ -4783,19 +4813,26 @@ and print_jsx_prop ~state prop cmt_tbl =
 and print_jsx_props ~state props cmt_tbl : Doc.t list =
   props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
 
-and print_jsx_name {txt = lident} =
-  let print_ident = print_ident_like ~allow_uident:true ~allow_hyphen:true in
-  let rec flatten acc lident =
-    match lident with
-    | Longident.Lident txt -> print_ident txt :: acc
-    | Ldot (lident, txt) -> flatten (print_ident txt :: acc) lident
-    | _ -> acc
-  in
-  match lident with
-  | Longident.Lident txt -> print_ident txt
-  | _ as lident ->
-    let segments = flatten [] lident in
-    Doc.join ~sep:Doc.dot segments
+and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
+  match tag_name with
+  | Parsetree.JsxTagInvalid invalid ->
+    (* Preserve exactly what the parser recorded as invalid *)
+    Doc.text invalid
+  | Parsetree.JsxLowerTag name ->
+    print_ident_like ~allow_uident:true ~allow_hyphen:true name
+  | Parsetree.JsxQualifiedLowerTag {path; name} ->
+    let upper_segs = Longident.flatten path in
+    let printed_upper =
+      upper_segs |> List.map (print_ident_like ~allow_uident:true)
+    in
+    let printed_lower =
+      print_ident_like ~allow_uident:true ~allow_hyphen:true name
+    in
+    Doc.join ~sep:Doc.dot (printed_upper @ [printed_lower])
+  | Parsetree.JsxUpperTag path ->
+    let segs = Longident.flatten path in
+    let printed = segs |> List.map (print_ident_like ~allow_uident:true) in
+    Doc.join ~sep:Doc.dot printed
 
 and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
     =
@@ -5116,8 +5153,6 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
       match Parens.expr expr with
       | Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
-      | Nothing when ParsetreeViewer.is_unary_bitnot_expression expr ->
-        add_parens doc
       | Nothing -> doc
     in
     let loc = {arg_loc with loc_end = expr.pexp_loc.loc_end} in

@@ -9,7 +9,10 @@ module V4A = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
+    let make = (
+      {?className, children, _}: props<_, _, 'ref>,
+      ref: Js.Nullable.t<'ref>,
+    ): React.element =>
       ReactDOM.jsxs(
         "div",
         {
@@ -37,14 +40,15 @@ module V4A = {
 
   let make = (_: props) => {
     let input = React.useRef(Js.Nullable.null)
-
-    ReactDOM.jsx(
-      "div",
-      {
-        children: ?ReactDOM.someElement(
-          React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
-        ),
-      },
+    (
+      ReactDOM.jsx(
+        "div",
+        {
+          children: ?ReactDOM.someElement(
+            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+          ),
+        },
+      ): React.element
     )
   }
   let make = {
@@ -63,7 +67,10 @@ module V4AUncurried = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
+    let make = (
+      {?className, children, _}: props<_, _, 'ref>,
+      ref: Js.Nullable.t<'ref>,
+    ): React.element =>
       ReactDOM.jsxs(
         "div",
         {
@@ -91,14 +98,15 @@ module V4AUncurried = {
 
   let make = (_: props) => {
     let input = React.useRef(Js.Nullable.null)
-
-    ReactDOM.jsx(
-      "div",
-      {
-        children: ?ReactDOM.someElement(
-          React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
-        ),
-      },
+    (
+      ReactDOM.jsx(
+        "div",
+        {
+          children: ?ReactDOM.someElement(
+            React.jsx(FancyInput.make, {ref: input, children: {React.string("Click to focus")}}),
+          ),
+        },
+      ): React.element
     )
   }
   let make = {

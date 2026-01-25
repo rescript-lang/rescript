@@ -13,13 +13,12 @@ module Select: {
     items: 'items,
   }
 
-  let make: React.componentLike<
+  let make: React.component<
     props<
       module(T with type t = 'a and type key = 'key),
       option<'key>,
       option<'key> => unit,
       array<'a>,
     >,
-    React.element,
   >
 }

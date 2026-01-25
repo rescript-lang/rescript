@@ -16,6 +16,7 @@ pub enum Error {
     ParsingLockfile(std::num::ParseIntError),
     ReadingLockfile(std::io::Error),
     WritingLockfile(std::io::Error),
+    ProjectFolderMissing(std::path::PathBuf),
 }
 
 impl std::fmt::Display for Error {
@@ -31,6 +32,10 @@ impl std::fmt::Display for Error {
                 format!("Could not read lockfile: \n {e} \n  (try removing it and running the command again)")
             }
             Error::WritingLockfile(e) => format!("Could not write lockfile: \n {e}"),
+            Error::ProjectFolderMissing(path) => format!(
+                "Could not write lockfile because the specified project folder does not exist: {}",
+                path.to_string_lossy()
+            ),
         };
         write!(f, "{msg}")
     }
@@ -41,35 +46,91 @@ pub enum Lock {
     Error(Error),
 }
 
-fn exists(to_check_pid: u32) -> bool {
+fn pid_exists(to_check_pid: u32) -> bool {
     System::new_all()
         .processes()
         .iter()
         .any(|(pid, _process)| pid.as_u32() == to_check_pid)
 }
 
-fn create(lockfile_location: &Path, pid: u32) -> Lock {
-    // Create /lib if not exists
-    if let Some(Err(e)) = lockfile_location.parent().map(fs::create_dir_all) {
-        return Lock::Error(Error::WritingLockfile(e));
-    };
-
-    File::create(lockfile_location)
-        .and_then(|mut file| file.write(pid.to_string().as_bytes()).map(|_| Lock::Aquired(pid)))
-        .unwrap_or_else(|e| Lock::Error(Error::WritingLockfile(e)))
-}
-
 pub fn get(folder: &str) -> Lock {
-    let location = Path::new(folder).join("lib").join(LOCKFILE);
+    let project_folder = Path::new(folder);
+    if !project_folder.exists() {
+        return Lock::Error(Error::ProjectFolderMissing(project_folder.to_path_buf()));
+    }
+
+    let lib_dir = project_folder.join("lib");
+    let location = lib_dir.join(LOCKFILE);
     let pid = process::id();
 
+    // When a lockfile already exists we parse its PID: if the process is still alive we refuse to
+    // proceed, otherwise we will overwrite the stale lock with our own PID.
     match fs::read_to_string(&location) {
-        Err(e) if (e.kind() == std::io::ErrorKind::NotFound) => create(&location, pid),
-        Err(e) => Lock::Error(Error::ReadingLockfile(e)),
-        Ok(s) => match s.parse::<u32>() {
-            Ok(parsed_pid) if !exists(parsed_pid) => create(&location, pid),
-            Ok(parsed_pid) => Lock::Error(Error::Locked(parsed_pid)),
-            Err(e) => Lock::Error(Error::ParsingLockfile(e)),
+        Ok(contents) => match contents.parse::<u32>() {
+            Ok(parsed_pid) if pid_exists(parsed_pid) => return Lock::Error(Error::Locked(parsed_pid)),
+            Ok(_) => (),
+            Err(e) => return Lock::Error(Error::ParsingLockfile(e)),
         },
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+        Err(e) => return Lock::Error(Error::ReadingLockfile(e)),
+    }
+
+    if let Err(e) = fs::create_dir_all(&lib_dir) {
+        return Lock::Error(Error::WritingLockfile(e));
+    }
+
+    // Rewrite the lockfile with our own PID.
+    match File::create(&location) {
+        Ok(mut file) => match file.write(pid.to_string().as_bytes()) {
+            Ok(_) => Lock::Aquired(pid),
+            Err(e) => Lock::Error(Error::WritingLockfile(e)),
+        },
+        Err(e) => Lock::Error(Error::WritingLockfile(e)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn returns_error_when_project_folder_missing() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let missing_folder = temp_dir.path().join("missing_project");
+
+        match get(missing_folder.to_str().expect("path should be valid")) {
+            Lock::Error(Error::ProjectFolderMissing(path)) => {
+                assert_eq!(path, missing_folder);
+            }
+            _ => panic!("expected ProjectFolderMissing error"),
+        }
+
+        assert!(
+            !missing_folder.exists(),
+            "missing project folder should not be created"
+        );
+    }
+
+    #[test]
+    fn creates_lock_when_project_folder_exists() {
+        let temp_dir = TempDir::new().expect("temp dir should be created");
+        let project_folder = temp_dir.path().join("project");
+        fs::create_dir(&project_folder).expect("project folder should be created");
+
+        match get(project_folder.to_str().expect("path should be valid")) {
+            Lock::Aquired(_) => {}
+            _ => panic!("expected lock to be acquired"),
+        }
+
+        assert!(
+            project_folder.join("lib").exists(),
+            "lib directory should be created"
+        );
+        assert!(
+            project_folder.join("lib").join(LOCKFILE).exists(),
+            "lockfile should be created"
+        );
     }
 }

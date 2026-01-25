@@ -25,7 +25,7 @@ let Foo = {
 
 function Async_jsx$Bar(props) {
   return <div>
-    <Async_jsx$Foo />
+    <Foo.make />
   </div>;
 }
 

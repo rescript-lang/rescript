@@ -195,13 +195,13 @@ module RootWithWeb3 = {
     React.useEffect4(() =>
       switch (context.library, context.account) {
       | (Some(library), Some(account)) =>
-        library.getBalance(. account)
+        library.getBalance(account)
         ->Promise.Js.catch(_ => Promise.resolved(None))
         ->Promise.get(newBalance =>
           dispatch(
             LoadAddress(
               account,
-              newBalance->Belt.Option.flatMap(balance => Eth.make(balance.toString(.))),
+              newBalance->Belt.Option.flatMap(balance => Eth.make(balance.toString())),
             ),
           )
         )

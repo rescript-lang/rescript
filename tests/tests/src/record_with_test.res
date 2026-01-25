@@ -1,3 +1,6 @@
+open Mocha
+open Test_utils
+
 type proto = {
   syntax: option<string>,
   imports: int,
@@ -31,9 +34,8 @@ let u_v = {...v, imports: 0}
 
 let f = (g, h) => {...g(h), imports: 0}
 
-let suites = {
-  open Mt
-  list{("eq_with", _ => Eq(v, u_v))}
-}
-
-Mt.from_pair_suites(__MODULE__, suites)
+describe(__MODULE__, () => {
+  test("eq_with", () => {
+    eq(__LOC__, v, u_v)
+  })
+})

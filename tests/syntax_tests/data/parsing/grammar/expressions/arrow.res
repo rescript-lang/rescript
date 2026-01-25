@@ -67,13 +67,13 @@ let f = (~a as x : option<int>=?, ~b as y : option<int>=?, c) => switch (x, y) {
 // trailing comma
 let f = (a, b,) => a + b
 
-let f = (.) => ()
-let f = (. ()) => ()
-let f = (. a, b, c) => ()
-let f = (. a, b, . c, d) => ()
-let f = (. a, . b, .c) => ()
-let f = (. @attr ~a, b, . @attr ~c, d) => ()
-let f = (. @attr ~a, @attrOnB b, . @attr ~c, @attrOnD d) => ()
+let f = () => ()
+let f = (()) => ()
+let f = (a, b, c) => ()
+let f = (a, b, c, d) => ()
+let f = (a, b, c) => ()
+let f = (@attr ~a, b, @attr ~c, d) => ()
+let f = (@attr ~a, @attrOnB b, @attr ~c, @attrOnD d) => ()
 
 let f = list => list()
 
@@ -103,6 +103,10 @@ let un = (():u)
 type d<'a,'b> = ('a,'b)
 let c = (): d<'a,'b> => (1,2)
 
+let arr = (): array<nullable<int>> => []
+
 let fn = f => f;
 type f = int => unit;
 let a = fn(_ => (): f);
+
+let returnsArrayOption = (): option<array<string>> => Some(["foo"])

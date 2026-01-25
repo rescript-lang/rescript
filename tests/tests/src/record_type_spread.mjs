@@ -41,6 +41,30 @@ let x = {
   c: "hello"
 };
 
+let v1 = {
+  TAG: "One",
+  a: "",
+  b: 1,
+  c: undefined,
+  d: undefined
+};
+
+let v2 = {
+  TAG: "Two",
+  a: "",
+  b: "1",
+  c: undefined,
+  d: undefined
+};
+
+let v3 = {
+  TAG: "Three",
+  a: "",
+  b: true,
+  c: undefined,
+  d: undefined
+};
+
 export {
   getY,
   getX,
@@ -48,5 +72,8 @@ export {
   d,
   x,
   DeepSub,
+  v1,
+  v2,
+  v3,
 }
 /* No side effect */
