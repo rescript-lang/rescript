@@ -13,22 +13,6 @@ else
   exit 1
 fi
 
-exit_watcher() {
-  # kill watcher by removing lock file
-  rm lib/rescript.lock
-}
-
-# Wait until a file exists (with timeout in seconds, default 30)
-wait_for_file() {
-  local file="$1"; local timeout="${2:-30}"
-  while [ "$timeout" -gt 0 ]; do
-    [ -f "$file" ] && return 0
-    sleep 1
-    timeout=$((timeout - 1))
-  done
-  return 1
-}
-
 # Start watcher and capture logs for debugging
 rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"

@@ -38,6 +38,7 @@
 
 - Formatter no longer writes files when contents are already correctly formatted. https://github.com/rescript-lang/rescript/pull/8209
 - Build system: Only log verbose "Generating AST for module" when actually parsing. https://github.com/rescript-lang/rescript/pull/8210
+- Build system: Watch only source folders from build state instead of the entire project directory, and report missing configured source folders. https://github.com/rescript-lang/rescript/pull/8219
 
 #### :house: Internal
 
