@@ -2468,7 +2468,10 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
     if p.token == Token::DotDotDot {
         p.next();
         let spread_start = p.start_pos.clone();
-        let mut spread = parse_unary_expr(p);
+        // Parse the spread expression including binary operators like ->
+        // We need to handle expressions like: {...states->sequence, valuesOpt: None}
+        let operand = parse_unary_expr(p);
+        let mut spread = parse_binary_expr(p, operand, 0, ExprContext::Ordinary);
         // Check for type constraint on spread: {...make() : myRecord, foo: bar}
         if p.token == Token::Colon {
             p.next();
