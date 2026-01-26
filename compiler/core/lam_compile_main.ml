@@ -134,8 +134,15 @@ let compile
 #endif      
     Lam_compile_env.reset () ;
   in 
-  let lam, may_required_modules = Lam_convert.convert export_ident_sets lam in 
+  let lam, may_required_modules = Lam_convert.convert export_ident_sets lam in
 
+  (* Print Lambda sexp for parity testing with Rust compiler *)
+  let () =
+    if !Clflags.dump_lambda_sexp then
+      Format.eprintf "%a@." Sexp_lambda.print_lambda lam;
+    if !Clflags.dump_lambda_sexp_locs then
+      Format.eprintf "%a@." Sexp_lambda.print_lambda_with_locs lam
+  in
 
   let lam = _d "initial"  lam in
   let lam  = Lam_pass_deep_flatten.deep_flatten lam in
