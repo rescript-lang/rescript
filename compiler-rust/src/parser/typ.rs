@@ -608,20 +608,34 @@ fn parse_type_args(p: &mut Parser<'_>) -> Vec<CoreType> {
 
 /// Parse a function type with labeled arguments.
 fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position) -> CoreType {
+    // Capture position before the first uncurried marker - OCaml includes . in argument type location
+    let first_uncurried_start = p.start_pos.clone();
     // Skip uncurried marker
-    p.optional(&Token::Dot);
+    let first_has_dot = p.optional(&Token::Dot);
 
     // Track both the TypeArg and its start position (for arrow location)
     let mut params: Vec<(TypeArg, crate::location::Position)> = vec![];
+    let mut is_first_param = true;
 
     while p.token != Token::Rparen && p.token != Token::Eof {
+        // Capture position before the uncurried marker - OCaml includes . in argument type location
+        let uncurried_start = if is_first_param {
+            first_uncurried_start.clone()
+        } else {
+            p.start_pos.clone()
+        };
         // Allow dotted parameters for uncurried segments (ignored for now).
-        p.optional(&Token::Dot);
+        let has_dot = if is_first_param {
+            is_first_param = false;
+            first_has_dot
+        } else {
+            p.optional(&Token::Dot)
+        };
         let param_attrs = parse_attributes(p);
         // Capture start position before label - OCaml includes the ~ in arrow location
         let param_start = p.start_pos.clone();
 
-        let (mut label, typ) = if p.token == Token::Tilde {
+        let (mut label, mut typ) = if p.token == Token::Tilde {
             p.next();
             let (name, name_loc) = parse_lident(p);
             p.expect(Token::Colon);
@@ -631,6 +645,14 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             let typ = parse_typ_expr(p);
             (ArgLabel::Nolabel, typ)
         };
+
+        // OCaml includes the uncurried marker (.) in the argument type's location
+        if has_dot {
+            typ = CoreType {
+                ptyp_loc: Location::from_positions(uncurried_start.clone(), typ.ptyp_loc.loc_end.clone()),
+                ..typ
+            };
+        }
 
         // Optional labeled args: `~x: t=?`
         if p.token == Token::Equal {
