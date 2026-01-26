@@ -659,13 +659,14 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         };
 
         // OCaml includes the uncurried marker (.) in the argument type's location,
-        // but only for simple types (Lident), not for qualified types (Ldot)
+        // but only for simple Ptyp_constr types (Lident), not for qualified types (Ldot)
+        // or other types like Ptyp_var
         if has_dot {
-            let is_simple_type = match &typ.ptyp_desc {
-                CoreTypeDesc::Ptyp_constr(lid, _) => matches!(lid.txt, Longident::Lident(_)),
-                _ => true, // For non-Ptyp_constr types, include the dot
-            };
-            if is_simple_type {
+            let is_simple_constr = matches!(
+                &typ.ptyp_desc,
+                CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
+            );
+            if is_simple_constr {
                 typ = CoreType {
                     ptyp_loc: Location::from_positions(uncurried_start.clone(), typ.ptyp_loc.loc_end.clone()),
                     ..typ
