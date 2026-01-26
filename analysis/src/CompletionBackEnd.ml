@@ -756,6 +756,50 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
         findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
       | None -> []))
 
+let getExceptionNamesFromCmt ~(env : QueryEnv.t) ~full =
+  let moduleName = env.file.moduleName in
+  match Hashtbl.find_opt full.package.pathsForModule moduleName with
+  | None -> []
+  | Some paths ->
+    let uri = getUri paths in
+    let cmt_path = getCmtPath ~uri paths in
+    ProcessCmt.exceptionsForCmt ~cmt:cmt_path
+
+let completionsForThrowArg ~(env : QueryEnv.t) ~full =
+  let exn_typ = Predef.type_exn in
+  let names_from_cmt = getExceptionNamesFromCmt ~env ~full in
+  names_from_cmt
+  |> List.map (fun (name, hasArgs) ->
+         let insertText =
+           if hasArgs then Printf.sprintf "%s($0)" name else name
+         in
+         Completion.create name ~env ~kind:(Completion.Value exn_typ)
+           ~includesSnippets:hasArgs ~insertText)
+
+let completionsForThrow ~(env : QueryEnv.t) ~full =
+  let exn_typ = Predef.type_exn in
+  let names_from_cmt = getExceptionNamesFromCmt ~env ~full in
+  let completions_from_cmt =
+    names_from_cmt
+    |> List.map (fun (name, hasArgs) ->
+           let insertText =
+             if hasArgs then Printf.sprintf "throw(%s($0))" name
+             else Printf.sprintf "throw(%s)" name
+           in
+           Completion.create
+             (Printf.sprintf "throw(%s)" name)
+             ~env ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+             ~insertText ~filterText:"throw")
+  in
+  Completion.create "JsError.throwWithMessage" ~env
+    ~kind:(Completion.Value exn_typ) ~includesSnippets:true
+    ~detail:"Throw a JavaScript error, example: `throw new Error(str)`"
+    ~insertText:"JsError.throwWithMessage(\"$0\")"
+  :: Completion.create "JsExn.throw" ~env ~kind:(Completion.Value exn_typ)
+       ~includesSnippets:true ~insertText:"JsExn.throw($0)"
+       ~detail:"Throw any JavaScript value, example: `throw 100`"
+  :: completions_from_cmt
+
 (** Completions intended for piping, from a completion path. *)
 let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos
     ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath =
@@ -1010,7 +1054,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | Some (Tpromise (env, typ), _env) ->
       [Completion.create "dummy" ~env ~kind:(Completion.Value typ)]
     | _ -> [])
-  | CPId {path; completionContext; loc} ->
+  | CPId {path; completionContext; loc} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPId";
     (* Looks up the type of an identifier.
 
@@ -1048,7 +1092,10 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | _ -> byPath
       else byPath
     in
-    result
+    match (result, path) with
+    | [], [prefix] when Utils.startsWith "throw" prefix ->
+      completionsForThrow ~env ~full
+    | _ -> result)
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
     match
@@ -2280,105 +2327,125 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         fallbackOrEmpty ~items ())
     | None -> fallbackOrEmpty ())
   | Cexpression {contextPath; prefix; nested} -> (
-    let isAmbigiousRecordBodyOrJsxWrap =
-      match (contextPath, nested) with
-      | CJsxPropValue _, [NRecordBody _] -> true
+    (* Special case: completing argument to throw() should return exception constructors *)
+    let isThrowArg =
+      match contextPath with
+      | CArgument
+          {
+            functionContextPath =
+              CPId {path = ["throw"]; completionContext = Value};
+            argumentLabel = Unlabelled _;
+          } ->
+        true
       | _ -> false
     in
-    if Debug.verbose () then
-      (* This happens in this scenario: `<SomeComponent someProp={<com>}`
-           Here, we don't know whether `{}` is just wraps for the type of
-           `someProp`, or if it's a record body where we want to complete
-            for the fields in the record. We need to look up what the type is
-           first before deciding what completions to show. So we do that here.*)
-      if isAmbigiousRecordBodyOrJsxWrap then
-        print_endline
-          "[process_completable]--> Cexpression special case: JSX prop value \
-           that might be record body or JSX wrap"
-      else print_endline "[process_completable]--> Cexpression";
-    (* Completions for local things like variables in scope, modules in the
+    if isThrowArg then
+      completionsForThrowArg ~env ~full
+      |> List.filter (fun (c : Completion.t) ->
+             prefix = "" || Utils.startsWith c.name prefix)
+    else
+      let isAmbigiousRecordBodyOrJsxWrap =
+        match (contextPath, nested) with
+        | CJsxPropValue _, [NRecordBody _] -> true
+        | _ -> false
+      in
+      if Debug.verbose () then
+        (* This happens in this scenario: `<SomeComponent someProp={<com>}`
+             Here, we don't know whether `{}` is just wraps for the type of
+             `someProp`, or if it's a record body where we want to complete
+              for the fields in the record. We need to look up what the type is
+             first before deciding what completions to show. So we do that here.*)
+        if isAmbigiousRecordBodyOrJsxWrap then
+          print_endline
+            "[process_completable]--> Cexpression special case: JSX prop value \
+             that might be record body or JSX wrap"
+        else print_endline "[process_completable]--> Cexpression";
+      (* Completions for local things like variables in scope, modules in the
        project, etc. We only add completions when there's a prefix of some sort
        we can filter on, since we know we're in some sort of context, and
        therefore don't want to overwhelm the user with completion items. *)
-    let regularCompletions =
-      if prefix = "" then []
-      else
-        prefix
-        |> getComplementaryCompletionsForTypedValue ~opens ~allFiles ~env ~scope
-    in
-    match
-      contextPath
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
-      |> completionsGetCompletionType ~full
-    with
-    | None ->
-      if Debug.verbose () then
-        print_endline
-          "[process_completable]--> could not get completions for context path";
-      regularCompletions
-    | Some (typ, env) -> (
-      match typ |> TypeUtils.resolveNested ~env ~full ~nested with
+      let regularCompletions =
+        if prefix = "" then []
+        else
+          prefix
+          |> getComplementaryCompletionsForTypedValue ~opens ~allFiles ~env
+               ~scope
+      in
+      match
+        contextPath
+        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+             ~exact:true ~scope
+        |> completionsGetCompletionType ~full
+      with
       | None ->
         if Debug.verbose () then
           print_endline
-            "[process_completable]--> could not resolve nested expression path";
-        if isAmbigiousRecordBodyOrJsxWrap then (
+            "[process_completable]--> could not get completions for context \
+             path";
+        regularCompletions
+      | Some (typ, env) -> (
+        match typ |> TypeUtils.resolveNested ~env ~full ~nested with
+        | None ->
           if Debug.verbose () then
             print_endline
-              "[process_completable]--> case is ambigious Jsx prop vs record \
-               body case, complete also for the JSX prop value directly";
-          let itemsForRawJsxPropValue =
-            typ
-            |> completeTypedValue ~rawOpens ~mode:Expression ~full ~prefix
-                 ~completionContext:None
-          in
-          itemsForRawJsxPropValue @ regularCompletions)
-        else regularCompletions
-      | Some (typ, _env, completionContext, typeArgContext) -> (
-        if Debug.verbose () then
-          print_endline
-            "[process_completable]--> found type in nested expression \
-             completion";
-        (* Wrap the insert text in braces when we're completing the root of a
+              "[process_completable]--> could not resolve nested expression \
+               path";
+          if isAmbigiousRecordBodyOrJsxWrap then (
+            if Debug.verbose () then
+              print_endline
+                "[process_completable]--> case is ambigious Jsx prop vs record \
+                 body case, complete also for the JSX prop value directly";
+            let itemsForRawJsxPropValue =
+              typ
+              |> completeTypedValue ~rawOpens ~mode:Expression ~full ~prefix
+                   ~completionContext:None
+            in
+            itemsForRawJsxPropValue @ regularCompletions)
+          else regularCompletions
+        | Some (typ, _env, completionContext, typeArgContext) -> (
+          if Debug.verbose () then
+            print_endline
+              "[process_completable]--> found type in nested expression \
+               completion";
+          (* Wrap the insert text in braces when we're completing the root of a
            JSX prop value. *)
-        let wrapInsertTextInBraces =
-          if List.length nested > 0 then false
-          else
-            match contextPath with
-            | CJsxPropValue _ -> true
-            | _ -> false
-        in
-        let items =
-          typ
-          |> completeTypedValue ?typeArgContext ~rawOpens ~mode:Expression ~full
-               ~prefix ~completionContext
-          |> List.map (fun (c : Completion.t) ->
-                 if wrapInsertTextInBraces then
-                   {
-                     c with
-                     insertText =
-                       (match c.insertText with
-                       | None -> None
-                       | Some text -> Some ("{" ^ text ^ "}"));
-                   }
-                 else c)
-        in
-        match (prefix, completionContext) with
-        | "", _ -> items
-        | _, None ->
+          let wrapInsertTextInBraces =
+            if List.length nested > 0 then false
+            else
+              match contextPath with
+              | CJsxPropValue _ -> true
+              | _ -> false
+          in
           let items =
-            if List.length regularCompletions > 0 then
-              (* The client will occasionally sort the list of completions alphabetically, disregarding the order
+            typ
+            |> completeTypedValue ?typeArgContext ~rawOpens ~mode:Expression
+                 ~full ~prefix ~completionContext
+            |> List.map (fun (c : Completion.t) ->
+                   if wrapInsertTextInBraces then
+                     {
+                       c with
+                       insertText =
+                         (match c.insertText with
+                         | None -> None
+                         | Some text -> Some ("{" ^ text ^ "}"));
+                     }
+                   else c)
+          in
+          match (prefix, completionContext) with
+          | "", _ -> items
+          | _, None ->
+            let items =
+              if List.length regularCompletions > 0 then
+                (* The client will occasionally sort the list of completions alphabetically, disregarding the order
                  in which we send it. This fixes that by providing a sort text making the typed completions
                  guaranteed to end up on top. *)
-              items
-              |> List.map (fun (c : Completion.t) ->
-                     {c with sortText = Some ("A" ^ " " ^ c.name)})
-            else items
-          in
-          items @ regularCompletions
-        | _ -> items)))
+                items
+                |> List.map (fun (c : Completion.t) ->
+                       {c with sortText = Some ("A" ^ " " ^ c.name)})
+              else items
+            in
+            items @ regularCompletions
+          | _ -> items)))
   | CexhaustiveSwitch {contextPath; exprLoc} ->
     let range = Utils.rangeOfLoc exprLoc in
     let printFailwithStr num = "${" ^ string_of_int num ^ ":%todo}" in
