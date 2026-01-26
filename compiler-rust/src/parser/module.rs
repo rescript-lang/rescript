@@ -1489,7 +1489,8 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
             }
 
             let decl = TypeDeclaration {
-                ptype_name: mknoloc(type_name),
+                // OCaml uses the full longident location for the type name location
+                ptype_name: with_loc(type_name, type_loc.clone()),
                 ptype_params: params,
                 ptype_cstrs: cstrs,
                 ptype_kind: TypeKind::Ptype_abstract,
@@ -3320,11 +3321,11 @@ fn parse_module_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Modu
             parse_module_type(p)
         } else {
             // Module alias: module X = M
+            // OCaml uses a ghost location for Pmty_alias in module declarations
             let lid = parse_module_long_ident(p);
-            let loc = p.mk_loc(&lid.loc.loc_start, &p.prev_end_pos);
             ModuleType {
                 pmty_desc: ModuleTypeDesc::Pmty_alias(lid),
-                pmty_loc: loc,
+                pmty_loc: Location::none(),
                 pmty_attributes: vec![],
             }
         }

@@ -265,14 +265,36 @@ fn core_type(typ: &CoreType) -> Sexp {
     let desc = match &typ.ptyp_desc {
         CoreTypeDesc::Ptyp_any => Sexp::atom("Ptyp_any"),
         CoreTypeDesc::Ptyp_var(var) => Sexp::list(vec![Sexp::atom("Ptyp_var"), Sexp::atom(&quote_string(var))]),
-        CoreTypeDesc::Ptyp_arrow { arg, ret, arity: ar } => Sexp::list(vec![
-            Sexp::atom("Ptyp_arrow"),
-            arg_label(&arg.lbl),
-            attributes(&arg.attrs),
-            core_type(&arg.typ),
-            core_type(ret),
-            arity(ar),
-        ]),
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity: ar } => {
+            // OCaml's attribute placement depends on whether there's a label:
+            // - For Nolabel: attributes go on the type
+            // - For Labelled/Optional: attributes stay in the arrow slot
+            let is_labeled = !matches!(arg.lbl, ArgLabel::Nolabel);
+            let (arrow_attrs, arg_typ_sexp) = if arg.attrs.is_empty() {
+                (attributes(&[]), core_type(&arg.typ))
+            } else if is_labeled {
+                // Labeled: attributes stay in arrow slot
+                (attributes(&arg.attrs), core_type(&arg.typ))
+            } else {
+                // Nolabel: merge attributes onto the type
+                let mut merged_attrs = arg.attrs.clone();
+                merged_attrs.extend(arg.typ.ptyp_attributes.clone());
+                let merged_typ = CoreType {
+                    ptyp_desc: arg.typ.ptyp_desc.clone(),
+                    ptyp_loc: arg.typ.ptyp_loc.clone(),
+                    ptyp_attributes: merged_attrs,
+                };
+                (attributes(&[]), core_type(&merged_typ))
+            };
+            Sexp::list(vec![
+                Sexp::atom("Ptyp_arrow"),
+                arg_label(&arg.lbl),
+                arrow_attrs,
+                arg_typ_sexp,
+                core_type(ret),
+                arity(ar),
+            ])
+        }
         CoreTypeDesc::Ptyp_tuple(types) => {
             Sexp::list(vec![Sexp::atom("Ptyp_tuple"), Sexp::list(map_empty(types, core_type))])
         }

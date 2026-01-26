@@ -631,9 +631,17 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         } else {
             p.optional(&Token::Dot)
         };
+        // Capture start position BEFORE attributes for arrow location
+        // OCaml includes attributes in the arrow type location
+        let pre_attrs_start = p.start_pos.clone();
         let param_attrs = parse_attributes(p);
         // Capture start position before label - OCaml includes the ~ in arrow location
-        let param_start = p.start_pos.clone();
+        // But if there are attributes, the arrow should start at the attribute
+        let param_start = if param_attrs.is_empty() {
+            p.start_pos.clone()
+        } else {
+            pre_attrs_start
+        };
 
         let (mut label, mut typ) = if p.token == Token::Tilde {
             p.next();
