@@ -2970,6 +2970,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
 
     // Parse the rest of the block as the body
     let rest = parse_block_body(p);
+    let is_implicit_body = rest.is_none();
     let body = rest.unwrap_or_else(|| {
         // OCaml: when block ends without trailing expression, implicit () is at the } position
         let loc = p.mk_loc(&p.start_pos, &p.end_pos);
@@ -2978,17 +2979,11 @@ fn parse_let_in_block_with_continuation_and_attrs(
 
     // OCaml: Pexp_let location extends to cover body if body is not implicit ()
     // But if body IS implicit (), use the binding end position
-    let let_end = if matches!(body.pexp_desc, ExpressionDesc::Pexp_let(..)) {
-        // If body is another let, use its location end
-        body.pexp_loc.loc_end.clone()
-    } else if matches!(
-        body.pexp_desc,
-        ExpressionDesc::Pexp_construct(Located { txt: Longident::Lident(ref s), .. }, None) if s == "()"
-    ) {
+    let let_end = if is_implicit_body {
         // If body is implicit unit at }, use the binding end (before semicolon)
         bindings.last().map(|b| b.pvb_loc.loc_end.clone()).unwrap_or(p.prev_end_pos.clone())
     } else {
-        // Otherwise use body's end
+        // Otherwise use body's end (this includes Pexp_let and explicit expressions)
         body.pexp_loc.loc_end.clone()
     };
 
@@ -3479,12 +3474,19 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
 
     // Parse the rest as the body
     let rest = parse_switch_case_body(p);
+    let is_implicit_body = rest.is_none();
     let body = rest.unwrap_or_else(|| {
         let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         ast_helper::make_unit(loc)
     });
 
-    let loc = p.mk_loc(&start_pos, &body.pexp_loc.loc_end);
+    // If body is implicit (), use binding end; otherwise use body's end
+    let let_end = if is_implicit_body {
+        bindings.last().map(|b| b.pvb_loc.loc_end.clone()).unwrap_or(p.prev_end_pos.clone())
+    } else {
+        body.pexp_loc.loc_end.clone()
+    };
+    let loc = p.mk_loc(&start_pos, &let_end);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_let(rec_flag, bindings, Box::new(body)),
