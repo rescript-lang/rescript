@@ -100,22 +100,33 @@ fn transform_placeholder_application(
     partial: bool,
     loc: Location,
 ) -> Expression {
-    // Check if any argument is an underscore placeholder
-    let has_placeholder = args.iter().any(|(_, expr)| is_underscore_placeholder(expr));
+    // Find the first underscore placeholder and get its location
+    let underscore_loc = args
+        .iter()
+        .find_map(|(_, expr)| {
+            if is_underscore_placeholder(expr) {
+                Some(expr.pexp_loc.clone())
+            } else {
+                None
+            }
+        });
 
-    if !has_placeholder {
-        // No placeholders, return normal Pexp_apply
-        return Expression {
-            pexp_desc: ExpressionDesc::Pexp_apply {
-                funct,
-                args,
-                partial,
-                transformed_jsx: false,
-            },
-            pexp_loc: loc,
-            pexp_attributes: vec![],
-        };
-    }
+    let underscore_loc = match underscore_loc {
+        Some(loc) => loc,
+        None => {
+            // No placeholders, return normal Pexp_apply
+            return Expression {
+                pexp_desc: ExpressionDesc::Pexp_apply {
+                    funct,
+                    args,
+                    partial,
+                    transformed_jsx: false,
+                },
+                pexp_loc: loc,
+                pexp_attributes: vec![],
+            };
+        }
+    };
 
     // Replace all underscores with __x
     let var_name = "__x";
@@ -132,13 +143,14 @@ fn transform_placeholder_application(
             partial,
             transformed_jsx: false,
         },
-        pexp_loc: loc.clone(),
+        pexp_loc: loc,
         pexp_attributes: vec![],
     };
 
     // Create Pexp_fun wrapping the application
+    // OCaml: pattern has ppat_loc: Location.none, but StringLoc uses underscore's location
     let pattern = Pattern {
-        ppat_desc: PatternDesc::Ppat_var(mknoloc(var_name.to_string())),
+        ppat_desc: PatternDesc::Ppat_var(with_loc(var_name.to_string(), underscore_loc.clone())),
         ppat_loc: Location::none(),
         ppat_attributes: vec![],
     };
@@ -149,10 +161,10 @@ fn transform_placeholder_application(
             default: None,
             lhs: pattern,
             rhs: Box::new(inner_apply),
-            arity: Arity::Unknown,
+            arity: Arity::Full(1),
             is_async: false,
         },
-        pexp_loc: loc,
+        pexp_loc: underscore_loc,
         pexp_attributes: vec![],
     }
 }

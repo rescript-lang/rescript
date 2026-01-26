@@ -4,7 +4,7 @@
 //! into pattern AST nodes.
 
 use super::ast::*;
-use super::core::{ast_helper, mknoloc, recover, with_loc};
+use super::core::{ast_helper, mknoloc, recover, template_literal_attr, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::longident::Longident;
 use super::state::Parser;
@@ -649,7 +649,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                                     Some(single)
                                 }
                             } else {
-                                let tuple_loc = p.mk_loc(&tuple_start, &p.prev_end_pos);
+                                // OCaml uses p.end_pos (end of next token after `)`) for tuple location
+                                let tuple_loc = p.mk_loc(&tuple_start, &p.end_pos);
                                 Some(Pattern {
                                     ppat_desc: PatternDesc::Ppat_tuple(patterns),
                                     ppat_loc: tuple_loc,
@@ -663,7 +664,7 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                             // C((a,b)) = single tuple argument = Ppat_tuple([Ppat_tuple([a,b])])
                             // C(a,b) = multiple arguments = Ppat_tuple([a, b])
                             if matches!(first.ppat_desc, PatternDesc::Ppat_tuple(_)) {
-                                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+                                let loc = p.mk_loc(&start_pos, &p.end_pos);
                                 Some(Pattern {
                                     ppat_desc: PatternDesc::Ppat_tuple(vec![first]),
                                     ppat_loc: loc,
@@ -835,7 +836,8 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
                         Some(single)
                     }
                 } else {
-                    let tuple_loc = p.mk_loc(&tuple_start, &p.prev_end_pos);
+                    // OCaml uses p.end_pos (end of next token after `)`) for tuple location
+                    let tuple_loc = p.mk_loc(&tuple_start, &p.end_pos);
                     Some(Pattern {
                         ppat_desc: PatternDesc::Ppat_tuple(patterns),
                         ppat_loc: tuple_loc,
@@ -1182,7 +1184,7 @@ fn parse_template_literal_pattern(p: &mut Parser<'_>, start_pos: crate::location
     Pattern {
         ppat_desc: PatternDesc::Ppat_constant(Constant::String(text, Some("js".to_string()))),
         ppat_loc: loc,
-        ppat_attributes: vec![],
+        ppat_attributes: vec![template_literal_attr()],
     }
 }
 
