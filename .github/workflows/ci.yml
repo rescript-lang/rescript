@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [master, 11.0_release]
+    branches: [master, maintenance/*]
     # See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+-*"
 
   pull_request:
-    branches: [master, 11.0_release]
+    branches: [master, maintenance/*]
 
 concurrency:
   group: ci-${{ github.ref }}-1
