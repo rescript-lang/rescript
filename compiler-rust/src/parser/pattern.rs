@@ -910,11 +910,9 @@ fn parse_list_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         if p.token == Token::DotDotDot {
-            // OCaml includes ... in the spread pattern location
-            let spread_start = p.start_pos.clone();
+            // OCaml does NOT include ... in the spread pattern location
             p.next();
-            let mut spread_pat = parse_constrained_pattern(p);
-            spread_pat.ppat_loc.loc_start = spread_start;
+            let spread_pat = parse_constrained_pattern(p);
             spread = Some(spread_pat);
             // Allow trailing comma after spread: list{a, ...rest,}
             p.optional(&Token::Comma);

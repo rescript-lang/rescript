@@ -966,10 +966,9 @@ fn parse_poly_variant_type(p: &mut Parser<'_>) -> CoreType {
 
     let fields = parse_row_fields(p);
 
-    // OCaml's Ptyp_variant location ends BEFORE the closing ], not after
-    let end_pos = p.start_pos.clone();
+    // OCaml's Ptyp_variant location ends at prev_end_pos (end of last row field), BEFORE the closing ]
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
     p.expect(Token::Rbracket);
-    let loc = p.mk_loc(&start_pos, &end_pos);
 
     CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_variant(fields, closed, low_tags),
@@ -1099,7 +1098,8 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
 
             // Parse arguments inside parentheses
             // Track if they're comma-separated (tuple wrap) vs ampersand-separated (no wrap)
-            let (args, comma_separated, had_parens) = if p.token == Token::Lparen {
+            let (args, comma_separated, had_parens, lparen_pos, rparen_end_pos) = if p.token == Token::Lparen {
+                let lparen_pos = p.start_pos.clone();
                 p.next();
                 let mut args = vec![];
                 let mut has_comma = false;
@@ -1113,9 +1113,10 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
                     }
                 }
                 p.expect(Token::Rparen);
-                (args, has_comma, true)
+                let rparen_end_pos = p.prev_end_pos.clone();
+                (args, has_comma, true, Some(lparen_pos), Some(rparen_end_pos))
             } else {
-                (vec![], false, false)
+                (vec![], false, false, None, None)
             };
 
             // Track if the tag itself is constant (no args in parens)
@@ -1132,9 +1133,10 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
             // Only wrap in Ptyp_tuple for comma-separated args inside parens (e.g., #A(int, string))
             // Don't wrap ampersand-separated constraints (e.g., #T([<u2]) & ([<u1]))
             let constraints = if comma_separated && constraints.len() >= 2 {
+                // OCaml includes the parentheses in the tuple location
                 let loc = p.mk_loc(
-                    &constraints.first().unwrap().ptyp_loc.loc_start,
-                    &constraints.last().unwrap().ptyp_loc.loc_end,
+                    lparen_pos.as_ref().unwrap(),
+                    rparen_end_pos.as_ref().unwrap(),
                 );
                 vec![CoreType {
                     ptyp_desc: CoreTypeDesc::Ptyp_tuple(constraints),
