@@ -219,8 +219,16 @@ fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
     // Apply leading attributes to the pattern
     if !attrs.is_empty() {
         let loc = p.mk_loc(&start_pos, &pat.ppat_loc.loc_end);
+        // OCaml also extends the inner StringLoc in Ppat_var to include attributes
+        let new_desc = match pat.ppat_desc {
+            PatternDesc::Ppat_var(var_loc) => {
+                let extended_loc = p.mk_loc(&start_pos, &var_loc.loc.loc_end);
+                PatternDesc::Ppat_var(with_loc(var_loc.txt, extended_loc))
+            }
+            other => other,
+        };
         pat = Pattern {
-            ppat_desc: pat.ppat_desc,
+            ppat_desc: new_desc,
             ppat_loc: loc,
             ppat_attributes: [attrs, pat.ppat_attributes].concat(),
         };
@@ -236,27 +244,38 @@ fn parse_single_pattern_with_alias(p: &mut Parser<'_>) -> Pattern {
     let mut pat = parse_single_pattern(p);
 
     // Handle pattern aliases (pat as name) for this single branch
+    // Supports attributes on the alias: `pat as @attr name`
     while p.token == Token::As {
         p.next();
-        let name = match &p.token {
+        // Parse any attributes before the alias name (e.g., @zz in `as @zz z`)
+        let alias_start = p.start_pos.clone();
+        let alias_attrs = parse_attributes(p);
+        let (name, name_loc) = match &p.token {
             Token::Lident(name) => {
                 let name = name.clone();
-                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                 p.next();
-                with_loc(name, loc)
+                (name, name_loc)
             }
             _ => {
                 p.err(DiagnosticCategory::Message(
                     "Expected identifier after 'as'".to_string(),
                 ));
-                with_loc("_".to_string(), p.mk_loc(&p.start_pos, &p.end_pos))
+                let err_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                ("_".to_string(), err_loc)
             }
+        };
+        // If there are attributes, extend the name location to include them (OCaml behavior)
+        let name_with_attrs_loc = if alias_attrs.is_empty() {
+            name_loc
+        } else {
+            p.mk_loc(&alias_start, &p.prev_end_pos)
         };
         let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         pat = Pattern {
-            ppat_desc: PatternDesc::Ppat_alias(Box::new(pat), name),
+            ppat_desc: PatternDesc::Ppat_alias(Box::new(pat), with_loc(name, name_with_attrs_loc)),
             ppat_loc: loc,
-            ppat_attributes: vec![],
+            ppat_attributes: alias_attrs,
         };
     }
 
