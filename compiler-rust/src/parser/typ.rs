@@ -198,7 +198,9 @@ fn parse_arrow_type_rest(
     // Parse return type without alias - `as` binds looser than `=>`
     // So `int => unit as 'a` is `(int => unit) as 'a`, not `int => (unit as 'a)`
     let return_type = parse_typ_expr_inner(p, true);
-    let loc = p.mk_loc(&start_pos, &return_type.ptyp_loc.loc_end);
+    // OCaml uses prev_end_pos (actual end after parsing return type), not return_type's ptyp_loc.loc_end
+    // This matters for Ptyp_variant return types whose ptyp_loc doesn't include the closing ]
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     let arg = TypeArg {
         attrs: vec![],
@@ -249,7 +251,8 @@ fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
         // Parse return type without alias - `as` binds looser than `=>`
         let return_type = parse_typ_expr_inner(p, true);
 
-        let loc = p.mk_loc(&start_pos, &return_type.ptyp_loc.loc_end);
+        // OCaml uses prev_end_pos (actual end after parsing return type), not return_type's ptyp_loc.loc_end
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         let arg = TypeArg {
             attrs,
             lbl,
@@ -660,9 +663,10 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     p.expect(Token::EqualGreater);
     // Parse return type without alias - `as` binds looser than `=>`
     let return_type = parse_typ_expr_inner(p, true);
-
-    // Build the arrow type from params
-    let loc = p.mk_loc(&start_pos, &return_type.ptyp_loc.loc_end);
+    // OCaml uses prev_end_pos (actual end after parsing return type) for arrow locations,
+    // not return_type's ptyp_loc.loc_end. This matters for Ptyp_variant return types
+    // whose ptyp_loc doesn't include the closing ]
+    let arrow_end_pos = p.prev_end_pos.clone();
 
     if params.is_empty() {
         let unit_loc = p.mk_loc(&start_pos, &rparen_end_pos);
@@ -676,24 +680,29 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     // The total arity is the number of parameters
     let total_arity = params.len();
 
-    let result = params.into_iter().rev().fold(return_type, |acc, (param, param_start)| {
-        // Each arrow's location spans from the label (if any) to the end of return
-        // OCaml includes the ~ in the location for labeled arguments
-        let arrow_loc = Location::from_positions(
-            param_start,
-            acc.ptyp_loc.loc_end.clone(),
-        );
-        CoreType {
-            ptyp_desc: CoreTypeDesc::Ptyp_arrow {
-                arg: Box::new(param),
-                ret: Box::new(acc),
-                // Inner arrows don't have arity annotation
-                arity: Arity::Unknown,
-            },
-            ptyp_loc: arrow_loc,
-            ptyp_attributes: vec![],
-        }
-    });
+    // Fold with (type, end_position) to track the correct end position
+    // The first iteration uses arrow_end_pos, subsequent iterations use the arrow's end
+    let (result, _) = params.into_iter().rev().fold(
+        (return_type, arrow_end_pos),
+        |(acc, end_pos), (param, param_start)| {
+            // Each arrow's location spans from the label (if any) to the end of return
+            // OCaml includes the ~ in the location for labeled arguments
+            let arrow_loc = Location::from_positions(param_start.clone(), end_pos);
+            let arrow = CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                    arg: Box::new(param),
+                    ret: Box::new(acc),
+                    // Inner arrows don't have arity annotation
+                    arity: Arity::Unknown,
+                },
+                ptyp_loc: arrow_loc,
+                ptyp_attributes: vec![],
+            };
+            // Next iteration should use this arrow's end position
+            let next_end = arrow.ptyp_loc.loc_end.clone();
+            (arrow, next_end)
+        },
+    );
 
     // Update the outermost arrow to have the full arity
     let result = match result.ptyp_desc {
@@ -919,12 +928,13 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
             Some(name) => {
                 let field_start = p.start_pos.clone();
                 p.next();
+                // OCaml's Otag location only includes the field name, not the type
+                let name_loc = p.mk_loc(&field_start, &p.prev_end_pos);
                 // Check for optional field marker
                 let _is_optional = p.optional(&Token::Question);
                 p.expect(Token::Colon);
                 let typ = parse_typ_expr(p);
-                let loc = p.mk_loc(&field_start, &p.prev_end_pos);
-                fields.push(ObjectField::Otag(with_loc(name, loc), field_attrs, typ));
+                fields.push(ObjectField::Otag(with_loc(name, name_loc), field_attrs, typ));
             }
             None => {
                 p.err(DiagnosticCategory::Message(

@@ -2338,6 +2338,12 @@ fn parse_type_declaration_with_context(
         cstrs.push((var, typ, p.mk_loc(&start_pos, &p.prev_end_pos)));
     }
 
+    // In type declarations with qualified type constructors (Ldot),
+    // OCaml uses the same location for both the CoreType and the longident
+    // (just the constructor name, not including type arguments).
+    // For unqualified (Lident), the CoreType uses full extent.
+    let manifest = manifest.map(fix_type_manifest_location);
+
     let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
     Some(TypeDeclaration {
         ptype_name: name,
@@ -2349,6 +2355,26 @@ fn parse_type_declaration_with_context(
         ptype_attributes: attrs,
         ptype_loc: loc,
     })
+}
+
+/// Fix the location of a Ptyp_constr in a type manifest context.
+/// For qualified identifiers (Ldot), OCaml uses the same location for both
+/// the CoreType and the longident. For unqualified (Lident), it uses full extent.
+fn fix_type_manifest_location(typ: CoreType) -> CoreType {
+    match &typ.ptyp_desc {
+        CoreTypeDesc::Ptyp_constr(lid, _) => {
+            // Only adjust for qualified identifiers (Ldot)
+            if matches!(lid.txt, Longident::Ldot(..)) {
+                CoreType {
+                    ptyp_loc: lid.loc.clone(),
+                    ..typ
+                }
+            } else {
+                typ
+            }
+        }
+        _ => typ,
+    }
 }
 
 /// Parse type parameters.
