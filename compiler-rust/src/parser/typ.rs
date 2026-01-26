@@ -134,6 +134,72 @@ pub fn parse_typ_expr(p: &mut Parser<'_>) -> CoreType {
     parse_type_alias(p, typ)
 }
 
+/// Parse a polymorphic type expression.
+/// Like parse_typ_expr but with special handling for `'a => T` patterns.
+/// OCaml's parse_poly_type_expr has a special case where single type vars
+/// followed by `=>` use the type var's location for the arrow, not start_pos.
+/// This is used for record field types where `'a => T` should NOT include
+/// the `'` in the arrow type's location.
+pub fn parse_poly_type_expr(p: &mut Parser<'_>) -> CoreType {
+    // Special case: single type var followed by =>
+    if p.token == Token::SingleQuote {
+        // Try to parse as single type var
+        let result = p.lookahead(|state| {
+            state.next(); // consume '
+            match &state.token {
+                Token::Lident(_) | Token::Uident(_) => {
+                    state.next(); // consume name
+                    // Check if followed by => (not another type var or .)
+                    state.token == Token::EqualGreater
+                }
+                _ => false,
+            }
+        });
+
+        if result {
+            // It's a single type var followed by =>
+            p.next(); // consume '
+            let var_start = p.start_pos.clone();
+            let name = match &p.token {
+                Token::Lident(n) | Token::Uident(n) => {
+                    let n = n.clone();
+                    p.next();
+                    n
+                }
+                _ => "a".to_string(),
+            };
+            let var_loc = p.mk_loc(&var_start, &p.prev_end_pos);
+            let typ = CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                ptyp_loc: var_loc.clone(),
+                ptyp_attributes: vec![],
+            };
+            p.next(); // consume =>
+            let return_type = parse_typ_expr_inner(p, true);
+            // Use typ.ptyp_loc.loc_start (the var's location, excluding ')
+            let loc = p.mk_loc(&typ.ptyp_loc.loc_start, &p.prev_end_pos);
+            let arg = TypeArg {
+                attrs: vec![],
+                lbl: ArgLabel::Nolabel,
+                typ,
+            };
+            return CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                    arg: Box::new(arg),
+                    ret: Box::new(return_type),
+                    arity: Arity::Full(1),
+                },
+                ptyp_loc: loc,
+                ptyp_attributes: vec![],
+            };
+        }
+    }
+
+    // Fall through to regular type expression parsing
+    let typ = parse_typ_expr_inner(p, true);
+    parse_type_alias(p, typ)
+}
+
 /// Parse a type expression without allowing arrow types at the top level.
 /// Used for return type annotations like `(x): int => body`.
 pub fn parse_typ_expr_no_arrow(p: &mut Parser<'_>) -> CoreType {
@@ -188,7 +254,8 @@ fn parse_typ_expr_inner(p: &mut Parser<'_>, es6_arrow: bool) -> CoreType {
 }
 
 /// Parse the rest of an arrow type.
-/// `start_pos` is the position before parsing the first argument (to include any leading `'` for type vars).
+/// `start_pos` is the position before parsing the first argument.
+/// OCaml's parse_arrow_type_rest uses start_pos (before the argument) for location.
 fn parse_arrow_type_rest(
     p: &mut Parser<'_>,
     param_type: CoreType,
@@ -198,8 +265,9 @@ fn parse_arrow_type_rest(
     // Parse return type without alias - `as` binds looser than `=>`
     // So `int => unit as 'a` is `(int => unit) as 'a`, not `int => (unit as 'a)`
     let return_type = parse_typ_expr_inner(p, true);
-    // OCaml uses prev_end_pos (actual end after parsing return type), not return_type's ptyp_loc.loc_end
-    // This matters for Ptyp_variant return types whose ptyp_loc doesn't include the closing ]
+    // OCaml's parse_arrow_type_rest uses start_pos (before the argument),
+    // NOT param_type.ptyp_loc.loc_start. This is different from the special case
+    // in parse_poly_type_expr which uses typ.ptyp_loc.loc_start.
     let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     let arg = TypeArg {

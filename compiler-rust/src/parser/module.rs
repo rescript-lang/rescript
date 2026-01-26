@@ -2798,12 +2798,12 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
 
     // Check for spread syntax: ...typeName
     if p.token == Token::DotDotDot {
-        let spread_start = p.start_pos.clone();
         p.next();
-        // Name location is just the "..." part
-        let name_loc = p.mk_loc(&spread_start, &p.prev_end_pos);
+        // OCaml uses start_pos (which may include |) for name location as well
+        let name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         let spread_type = typ::parse_typ_expr(p);
-        let loc = p.mk_loc(&spread_start, &p.prev_end_pos);
+        // Declaration location includes type
+        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         return Some(ConstructorDeclaration {
             pcd_name: with_loc("...".to_string(), name_loc),
             pcd_args: ConstructorArguments::Pcstr_tuple(vec![spread_type]),
@@ -3093,10 +3093,10 @@ fn parse_label_declaration(
             }
         } else {
             // Not a record - parse as regular type (object type)
-            typ::parse_typ_expr(p)
+            typ::parse_poly_type_expr(p)
         }
     } else {
-        typ::parse_typ_expr(p)
+        typ::parse_poly_type_expr(p)
     };
 
     let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
