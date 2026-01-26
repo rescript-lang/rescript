@@ -2171,7 +2171,8 @@ fn make_props_record_type(name: &str, loc: &Location, named_types: &[NamedType])
 
     StructureItem {
         pstr_desc: StructureItemDesc::Pstr_type(RecFlag::Nonrecursive, vec![type_decl]),
-        pstr_loc: loc.clone(),
+        // OCaml's Str.type_ without ~loc uses Location.none
+        pstr_loc: empty_loc(),
     }
 }
 
@@ -2255,7 +2256,8 @@ fn make_props_abstract_type(name: &str, loc: &Location, manifest: &CoreType, typ
 
     StructureItem {
         pstr_desc: StructureItemDesc::Pstr_type(RecFlag::Nonrecursive, vec![type_decl]),
-        pstr_loc: loc.clone(),
+        // OCaml's Str.type_ without ~loc uses Location.none
+        pstr_loc: empty_loc(),
     }
 }
 
@@ -2310,7 +2312,8 @@ fn make_props_abstract_type_with_live(name: &str, loc: &Location, manifest: &Cor
 
     StructureItem {
         pstr_desc: StructureItemDesc::Pstr_type(RecFlag::Nonrecursive, vec![type_decl]),
-        pstr_loc: loc.clone(),
+        // OCaml's Str.type_ without ~loc uses Location.none
+        pstr_loc: empty_loc(),
     }
 }
 

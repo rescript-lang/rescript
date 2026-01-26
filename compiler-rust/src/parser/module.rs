@@ -1017,13 +1017,14 @@ fn parse_functor_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
     let rhs_module_expr = parse_module_expr(p);
 
     // Apply return type constraint if present
-    // Pmod_constraint(expr, type) represents "expr : type" and the location
-    // should span from the start of the module type to the end of the module expr
+    // Pmod_constraint(expr, type) represents "expr : type"
+    // OCaml creates a backwards location from mod_expr start to mod_type end,
+    // which acts as a ghost location since the body comes after the type constraint
     let rhs_module_expr = match return_type {
         Some(mod_type) => {
             let loc = p.mk_loc(
-                &mod_type.pmty_loc.loc_start,
-                &rhs_module_expr.pmod_loc.loc_end,
+                &rhs_module_expr.pmod_loc.loc_start,
+                &mod_type.pmty_loc.loc_end,
             );
             ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_constraint(
@@ -1370,7 +1371,11 @@ fn parse_primary_module_type(p: &mut Parser<'_>) -> ModuleType {
             p.next();
             let inner = parse_module_type(p);
             p.expect(Token::Rparen);
-            inner
+            // OCaml updates the location to include the parentheses
+            ModuleType {
+                pmty_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+                ..inner
+            }
         }
         Token::Module => {
             // module type of M

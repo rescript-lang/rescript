@@ -3322,7 +3322,8 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             // Parse the rest as the body
             let rest = parse_switch_case_body(p);
             let body = rest.unwrap_or_else(|| {
-                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
+                // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
+                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
                 ast_helper::make_unit(loc)
             });
 
@@ -3372,7 +3373,8 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                 // Parse the rest as the body
                 let rest = parse_switch_case_body(p);
                 let body = rest.unwrap_or_else(|| {
-                    let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
+                    // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
+                    let loc = p.mk_loc(&p.start_pos, &p.end_pos);
                     ast_helper::make_unit(loc)
                 });
 
@@ -3402,7 +3404,8 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             // Parse the rest as the body
             let rest = parse_switch_case_body(p);
             let body = rest.unwrap_or_else(|| {
-                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
+                // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
+                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
                 ast_helper::make_unit(loc)
             });
 
@@ -3537,9 +3540,9 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
 
     // Parse the rest as the body
     let rest = parse_switch_case_body(p);
-    let is_implicit_body = rest.is_none();
     let body = rest.unwrap_or_else(|| {
-        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+        // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
+        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
         ast_helper::make_unit(loc)
     });
 
@@ -3626,7 +3629,8 @@ fn parse_first_class_module_expr_inner(p: &mut Parser<'_>, start_pos: Position) 
 fn parse_switch_case_block(p: &mut Parser<'_>) -> Expression {
     // Use the new recursive parser that properly nests let/module/open/exception
     parse_switch_case_body(p).unwrap_or_else(|| {
-        let loc = p.mk_loc(&p.start_pos, &p.prev_end_pos);
+        // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
+        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
         ast_helper::make_unit(loc)
     })
 }
