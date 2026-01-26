@@ -470,7 +470,7 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
             let token_end = p.prev_end_pos.clone();
             let operand = parse_unary_expr(p);
             (
-                super::core::make_unary_expr(p, start_pos, token_end, token, operand),
+                super::core::make_unary_expr(p, start_pos.clone(), token_end, token, operand),
                 false,
             )
         }
@@ -483,7 +483,7 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
                     parse_es6_arrow_expression(
                         p,
                         true,
-                        Some(start_pos),
+                        Some(start_pos.clone()),
                         attrs.clone(),
                         context,
                     ),
@@ -498,6 +498,20 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
             }
         }
         Token::Await => (parse_await_expression(p), false),
+        Token::Assert => {
+            // Handle assert directly to preserve attribute location in expr location
+            p.next();
+            let arg = parse_expr(p);
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            (
+                Expression {
+                    pexp_desc: ExpressionDesc::Pexp_assert(Box::new(arg)),
+                    pexp_loc: loc,
+                    pexp_attributes: vec![],
+                },
+                false,
+            )
+        }
         _ => {
             let is_arrow = context != ExprContext::When
                 && super::core::is_es6_arrow_expression(
@@ -578,8 +592,8 @@ pub fn parse_await_expression(p: &mut Parser<'_>) -> Expression {
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_await(Box::new(expr)),
-        pexp_loc: loc.clone(),
-        pexp_attributes: vec![super::core::make_await_attr(loc)],
+        pexp_loc: loc,
+        pexp_attributes: vec![],
     }
 }
 
@@ -1811,10 +1825,6 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                             ],
                             loc,
                         );
-                        // Add attribute to preserve bracket syntax
-                        apply_expr
-                            .pexp_attributes
-                            .push((mknoloc("res.array.set".to_string()), Payload::PStr(vec![])));
                         expr = apply_expr;
                     }
                 } else {
