@@ -85,7 +85,7 @@ let v1 = V1
 
 module DoubleNested = ModuleWithDocComment.Nested.NestedAgain
 
-let uncurried = (. x) => x + 1
+let uncurried = (x) => x + 1
 
 module Inner = {
   type tInner = int

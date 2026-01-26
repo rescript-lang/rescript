@@ -1,9 +1,9 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
-/* let () = 
-  eq __LOC__ 0 (Weak.length (Weak.create 0));
-  eq __LOC__ 1 (Weak.length (Weak.create 1)) */
-
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("weak array commented out tests", () => {
+    // Tests are commented out, just verify compilation
+    eq(__LOC__, 1, 1)
+  })
+})

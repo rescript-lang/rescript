@@ -141,8 +141,10 @@ let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
     sourceDirectories |> List.map (Filename.concat path) |> StringSet.of_list
   in
   let files =
+    (* Use maxDepth to prevent infinite recursion where `rescript` depends on `@rescript/runtime`,
+       but `@rescript/runtime` also has `rescript` as a dev dependency *)
     dirs |> StringSet.elements
-    |> List.map (fun name -> Files.collect name isSourceFile)
+    |> List.map (fun name -> Files.collect ~maxDepth:2 name isSourceFile)
     |> List.concat |> StringSet.of_list
   in
   dirs
@@ -239,7 +241,6 @@ let findDependencyFiles base config =
                (ModuleResolution.resolveNodeModulePath ~startPath:base name)
                (fun path ->
                  let rescriptJsonPath = path /+ "rescript.json" in
-                 let bsconfigJsonPath = path /+ "bsconfig.json" in
 
                  let parseText text =
                    match Json.parse text with
@@ -270,10 +271,7 @@ let findDependencyFiles base config =
 
                  match Files.readFile rescriptJsonPath with
                  | Some text -> parseText text
-                 | None -> (
-                   match Files.readFile bsconfigJsonPath with
-                   | Some text -> parseText text
-                   | None -> None))
+                 | None -> None)
            in
 
            match result with

@@ -229,6 +229,7 @@ let make = (~thing: result<someVariant, unit>) => {
   //                     ^com
   | _ => ()
   }
+  React.null
 }
 
 type results = {

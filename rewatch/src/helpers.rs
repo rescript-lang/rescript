@@ -1,10 +1,15 @@
 use crate::build::packages;
+use crate::config::Config;
+use crate::helpers;
+use crate::project_context::ProjectContext;
+use anyhow::anyhow;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
+
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
@@ -14,17 +19,43 @@ pub mod deserialize;
 pub mod emojis {
     use console::Emoji;
     pub static COMMAND: Emoji<'_, '_> = Emoji("🏃 ", "");
-    pub static TREE: Emoji<'_, '_> = Emoji("📦 ", "");
     pub static SWEEP: Emoji<'_, '_> = Emoji("🧹 ", "");
-    pub static LOOKING_GLASS: Emoji<'_, '_> = Emoji("👀 ", "");
     pub static CODE: Emoji<'_, '_> = Emoji("🧱 ", "");
     pub static SWORDS: Emoji<'_, '_> = Emoji("🤺 ", "");
-    pub static DEPS: Emoji<'_, '_> = Emoji("🌴 ", "");
     pub static CHECKMARK: Emoji<'_, '_> = Emoji("✅ ", "");
     pub static CROSS: Emoji<'_, '_> = Emoji("❌ ", "");
     pub static SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
-    pub static COMPILE_STATE: Emoji<'_, '_> = Emoji("📝 ", "");
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
+}
+
+// Cached check: does the given directory contain a node_modules subfolder?
+fn has_node_modules_cached(project_context: &ProjectContext, dir: &Path) -> bool {
+    match project_context.node_modules_exist_cache.read() {
+        Ok(cache) => {
+            if let Some(exists) = cache.get(dir) {
+                return *exists;
+            }
+        }
+        Err(poisoned) => {
+            log::warn!("node_modules_exist_cache read lock poisoned; recovering");
+            let cache = poisoned.into_inner();
+            if let Some(exists) = cache.get(dir) {
+                return *exists;
+            }
+        }
+    }
+    let exists = dir.join("node_modules").exists();
+    match project_context.node_modules_exist_cache.write() {
+        Ok(mut cache) => {
+            cache.insert(dir.to_path_buf(), exists);
+        }
+        Err(poisoned) => {
+            log::warn!("node_modules_exist_cache write lock poisoned; recovering");
+            let mut cache = poisoned.into_inner();
+            cache.insert(dir.to_path_buf(), exists);
+        }
+    }
+    exists
 }
 
 /// This trait is used to strip the verbatim prefix from a Windows path.
@@ -100,6 +131,157 @@ impl LexicalAbsolute for Path {
 
 pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
+}
+
+// Tap-style helper: cache and return the value (single clone for cache insert)
+fn cache_package_tap(
+    project_context: &ProjectContext,
+    key: &(PathBuf, String),
+    value: PathBuf,
+) -> anyhow::Result<PathBuf> {
+    match project_context.packages_cache.write() {
+        Ok(mut cache) => {
+            cache.insert(key.clone(), value.clone());
+        }
+        Err(poisoned) => {
+            log::warn!("packages_cache write lock poisoned; recovering");
+            let mut cache = poisoned.into_inner();
+            cache.insert(key.clone(), value.clone());
+        }
+    }
+    Ok(value)
+}
+
+/// Tries to find a path for input package_name.
+/// The node_modules folder may be found at different levels in the case of a monorepo.
+/// This helper tries a variety of paths.
+pub fn try_package_path(
+    package_config: &Config,
+    project_context: &ProjectContext,
+    package_name: &str,
+) -> anyhow::Result<PathBuf> {
+    // try cached result first, keyed by (package_dir, package_name)
+    let pkg_name = package_name.to_string();
+    let package_dir = package_config
+        .path
+        .parent()
+        .ok_or_else(|| {
+            anyhow!(
+                "Expected {} to have a parent folder",
+                package_config.path.to_string_lossy()
+            )
+        })?
+        .to_path_buf();
+
+    let cache_key = (package_dir.clone(), pkg_name.clone());
+    match project_context.packages_cache.read() {
+        Ok(cache) => {
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
+        }
+        Err(poisoned) => {
+            log::warn!("packages_cache read lock poisoned; recovering");
+            let cache = poisoned.into_inner();
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
+        }
+    }
+
+    // package folder + node_modules + package_name
+    // This can happen in the following scenario:
+    // The ProjectContext has a MonoRepoContext::MonorepoRoot.
+    // We are reading a dependency from the root package.
+    // And that local dependency has a hoisted dependency.
+    // Example, we need to find package_name `foo` in the following scenario:
+    // root/packages/a/node_modules/foo
+    let path_from_current_package = helpers::package_path(&package_dir, package_name);
+
+    // current folder + node_modules + package_name
+    let path_from_current_config = project_context
+        .current_config
+        .path
+        .parent()
+        .ok_or_else(|| {
+            anyhow!(
+                "Expected {} to have a parent folder",
+                project_context.current_config.path.to_string_lossy()
+            )
+        })
+        .map(|parent_path| package_path(parent_path, package_name))?;
+
+    // root folder + node_modules + package_name
+    let path_from_root = package_path(project_context.get_root_path(), package_name);
+    if path_from_current_package.exists() {
+        cache_package_tap(project_context, &cache_key, path_from_current_package)
+    } else if path_from_current_config.exists() {
+        cache_package_tap(project_context, &cache_key, path_from_current_config)
+    } else if path_from_root.exists() {
+        cache_package_tap(project_context, &cache_key, path_from_root)
+    } else {
+        // As a last resort, when we're in a Single project context, traverse upwards
+        // starting from the parent of the package root (package_config.path.parent().parent())
+        // and probe each ancestor's node_modules for the dependency. This covers hoisted
+        // workspace setups when building a package standalone.
+        if project_context.monorepo_context.is_none() {
+            match package_config.path.parent().and_then(|p| p.parent()) {
+                Some(start_dir) => {
+                    return find_dep_in_upward_node_modules(project_context, start_dir, package_name)
+                        .and_then(|p| cache_package_tap(project_context, &cache_key, p));
+                }
+                None => {
+                    log::debug!(
+                        "try_package_path: cannot compute start directory for upward traversal from '{}'",
+                        package_config.path.to_string_lossy()
+                    );
+                }
+            }
+        }
+
+        Err(anyhow!(
+            "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
+        ))
+    }
+}
+
+fn find_dep_in_upward_node_modules(
+    project_context: &ProjectContext,
+    start_dir: &Path,
+    package_name: &str,
+) -> anyhow::Result<PathBuf> {
+    log::debug!(
+        "try_package_path: falling back to upward traversal for '{}' starting at '{}'",
+        package_name,
+        start_dir.to_string_lossy()
+    );
+
+    let mut current = Some(start_dir);
+    while let Some(dir) = current {
+        if has_node_modules_cached(project_context, dir) {
+            let candidate = package_path(dir, package_name);
+            log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
+            if candidate.exists() {
+                log::debug!(
+                    "try_package_path: found '{}' at '{}' via upward traversal",
+                    package_name,
+                    candidate.to_string_lossy()
+                );
+                return Ok(candidate);
+            }
+        }
+        current = dir.parent();
+    }
+    log::debug!(
+        "try_package_path: no '{}' found during upward traversal from '{}'",
+        package_name,
+        start_dir.to_string_lossy()
+    );
+    Err(anyhow!(
+        "try_package_path: upward traversal did not find '{}' starting at '{}'",
+        package_name,
+        start_dir.to_string_lossy()
+    ))
 }
 
 pub fn get_abs_path(path: &Path) -> PathBuf {
@@ -189,29 +371,6 @@ pub fn get_bsc() -> PathBuf {
         .canonicalize()
         .expect("Could not get bsc path, did you set environment variable RESCRIPT_BSC_EXE ?")
         .to_stripped_verbatim_path()
-}
-
-pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
-    let bin_dir = Path::new("node_modules").join("rescript").join("cli");
-
-    match (
-        root_path
-            .join(&bin_dir)
-            .join("rescript-legacy.js")
-            .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path),
-        workspace_root.map(|workspace_root| {
-            workspace_root
-                .join(&bin_dir)
-                .join("rescript-legacy.js")
-                .canonicalize()
-                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        }),
-    ) {
-        (Ok(path), _) => path,
-        (_, Some(Ok(path))) => path,
-        _ => panic!("Could not find rescript-legacy.exe"),
-    }
 }
 
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
@@ -354,13 +513,7 @@ pub fn compute_file_hash(path: &Path) -> Option<blake3::Hash> {
 }
 
 fn has_rescript_config(path: &Path) -> bool {
-    path.join("bsconfig.json").exists() || path.join("rescript.json").exists()
-}
-
-pub fn get_workspace_root(package_root: &Path) -> Option<PathBuf> {
-    std::path::PathBuf::from(&package_root)
-        .parent()
-        .and_then(get_nearest_config)
+    path.join("rescript.json").exists()
 }
 
 // traverse up the directory tree until we find a config.json, if not return None
@@ -389,4 +542,11 @@ pub fn get_source_file_from_rescript_file(path: &Path, suffix: &str) -> PathBuf 
         // suffix.to_string includes the ., so we need to remove it
         &suffix.to_string()[1..],
     )
+}
+
+pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) -> bool {
+    canonical_package_path.starts_with(workspace_path)
+        && !canonical_package_path
+            .components()
+            .any(|c| c.as_os_str() == "node_modules")
 }

@@ -267,9 +267,7 @@ module M = struct
 end
 
 module E = struct
-  let iter_jsx_children sub = function
-    | JSXChildrenSpreading e -> sub.expr sub e
-    | JSXChildrenItems xs -> List.iter (sub.expr sub) xs
+  let iter_jsx_children sub xs = List.iter (sub.expr sub) xs
 
   let iter_jsx_prop sub = function
     | JSXPropPunning (_, name) -> iter_loc sub name

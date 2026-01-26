@@ -23,18 +23,17 @@ let rec ruleToDict = (dict, rule) => {
 and toJson = rules => rules->Belt.Array.reduce(Js.Dict.empty(), ruleToDict)->Js.Json.object_
 
 module Make = (CssImplementation: Css_Core.CssImplementationIntf) => {
-  let merge = (. stylenames) => CssImplementation.mergeStyles(. stylenames)
+  let merge = (stylenames) => CssImplementation.mergeStyles(stylenames)
 
-  let insertRule = (. rule) => CssImplementation.injectRaw(. rule)
+  let insertRule = (rule) => CssImplementation.injectRaw(rule)
 
-  let style = (. rules) => CssImplementation.make(. rules->toJson)
+  let style = (rules) => CssImplementation.make(rules->toJson)
 
-  let global = (. selector, rules) =>
-    CssImplementation.injectRule(. [(selector, toJson(rules))]->Js.Dict.fromArray->Js.Json.object_)
+  let global = (selector, rules) =>
+    CssImplementation.injectRule([(selector, toJson(rules))]->Js.Dict.fromArray->Js.Json.object_)
 
-  let keyframes = (. frames) =>
-    CssImplementation.makeKeyFrames(.
-      frames->Belt.Array.reduceU(Js.Dict.empty(), (. dict, (stop, rules)) => {
+  let keyframes = (frames) =>
+    CssImplementation.makeKeyFrames(frames->Belt.Array.reduceU(Js.Dict.empty(), (dict, (stop, rules)) => {
         Js.Dict.set(dict, Js.Int.toString(stop) ++ "%", toJson(rules))
         dict
       }),
@@ -42,7 +41,7 @@ module Make = (CssImplementation: Css_Core.CssImplementationIntf) => {
 }
 
 let join = (strings, separator) =>
-  strings->Belt.Array.reduceWithIndexU("", (. acc, item, index) =>
+  strings->Belt.Array.reduceWithIndexU("", (acc, item, index) =>
     index == 0 ? item : acc ++ (separator ++ item)
   )
 
@@ -1685,7 +1684,7 @@ let backgroundSize = x => D(
 )
 
 let fontFace = (~fontFamily, ~src, ~fontStyle=?, ~fontWeight=?, ~fontDisplay=?, ()) => {
-  let fontStyle = Js.Option.map((. value) => FontStyle.toString(value), fontStyle)
+  let fontStyle = Js.Option.map((value) => FontStyle.toString(value), fontStyle)
   let src =
     src
     ->Belt.Array.map(x =>

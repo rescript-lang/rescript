@@ -20,11 +20,11 @@ warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
 reset='\033[0m'
 
-diff=$(git ls-files --modified src/expected)
+diff=$(git ls-files --modified src/expected not_compiled/expected)
 if [[ $diff = "" ]]; then
   printf "${successGreen}✅ No analysis_tests snapshot changes detected.${reset}\n"
 else
   printf "${warningYellow}⚠️ The analysis_tests snapshot doesn't match. Double check that the output is correct, run 'make test-analysis' and stage the diff.\n${diff}\n${reset}"
-  git --no-pager diff src/expected
+  git --no-pager diff src/expected not_compiled/expected
   exit 1
 fi

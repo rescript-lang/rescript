@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inline_record_escape.res[0m:[2m5:15[0m
+
+  3 [2m│[0m let g = (v: x) =>
+  4 [2m│[0m   switch v {
+  [1;31m5[0m [2m│[0m   | One(r) => [1;31mr[0m
+  6 [2m│[0m   }
+  7 [2m│[0m 
+
+  This use of an inlined record is not allowed: its anonymous type would escape its constructor scope.
+  Possible solutions: 
+  - Destructure the fields you're interested in from the inline record
+  - Change the underlying type to use a defined record as payload instead of an inline record. That will let you use the payload without destructuring it first

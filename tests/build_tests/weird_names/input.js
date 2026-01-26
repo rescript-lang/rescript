@@ -4,7 +4,7 @@ import * as assert from "node:assert";
 import * as path from "node:path";
 import { setup } from "#dev/process";
 
-const { execBuild } = setup(import.meta.dirname);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
 const out = await execBuild();
 
@@ -24,6 +24,7 @@ const files = [
 
 for (const f of files) {
   const { name } = path.parse(f);
-  const mod = await import(`./lib/es6/src/${name}.js`);
+  const mod = await import(`./src/${name}.js`);
   assert.deepEqual(mod.a, 1);
 }
+await execClean();

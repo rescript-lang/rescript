@@ -1,0 +1,4 @@
+lib/bs
+lib/ocaml
+*.lock
+.buildstamp

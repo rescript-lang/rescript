@@ -1,5 +1,3 @@
-module Array = Ocaml_Array
-
 type rec tree<'a> =
   | Lf
   | Br('a, tree<'a>, tree<'a>)
@@ -171,7 +169,7 @@ module Int_array: {
   let of_array = arr => {
     let v = ref(empty)
     for i in 0 to Belt.Array.length(arr) - 1 {
-      v := push_back(v.contents, arr[i])
+      v := push_back(v.contents, arr->Array.getUnsafe(i))
     }
     v.contents
   }

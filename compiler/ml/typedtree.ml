@@ -75,7 +75,7 @@ and expression_desc =
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: Noloc.arg_label;
+      arg_label: arg_label;
       arity: arity;
       param: Ident.t;
       case: case;
@@ -84,7 +84,7 @@ and expression_desc =
     }
   | Texp_apply of {
       funct: expression;
-      args: (Noloc.arg_label * expression option) list;
+      args: (arg_label * expression option) list;
       partial: bool;
       transformed_jsx: bool;
     }
@@ -303,7 +303,7 @@ and core_type = {
   ctyp_attributes: attribute list;
 }
 
-and arg = {attrs: attributes; lbl: Noloc.arg_label; typ: core_type}
+and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
 
 and core_type_desc =
   | Ttyp_any

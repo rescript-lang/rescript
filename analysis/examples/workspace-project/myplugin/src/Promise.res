@@ -4,7 +4,7 @@ exception JsExn(Js.Exn.t)
 external unsafeToJsExn: exn => Js.Exn.t = "%identity"
 
 @new
-external make: ((@uncurry (. 'a) => unit, (. 'e) => unit) => unit) => t<'a> = "Promise"
+external make: ((@uncurry ('a) => unit, ('e) => unit) => unit) => t<'a> = "Promise"
 
 @val @scope("Promise")
 external resolve: 'a => t<'a> = "resolve"

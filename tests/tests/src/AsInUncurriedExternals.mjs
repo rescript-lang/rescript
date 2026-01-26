@@ -19,9 +19,12 @@ function shouldNotFail(objectMode, name) {
   return 3;
 }
 
+let x = somescope.somefn({foo:true});
+
 export {
   mo,
   options,
   shouldNotFail,
+  x,
 }
-/* No side effect */
+/* x Not a pure module */

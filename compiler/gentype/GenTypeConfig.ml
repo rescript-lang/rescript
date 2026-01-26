@@ -103,13 +103,9 @@ let set_debug ~gtconf =
   | _ -> ()
 
 let compiler_config_file = "rescript.json"
-let legacy_compiler_config_file = "bsconfig.json"
 
 let rec find_project_root ~dir =
-  if
-    Sys.file_exists (Filename.concat dir compiler_config_file)
-    || Sys.file_exists (Filename.concat dir legacy_compiler_config_file)
-  then dir
+  if Sys.file_exists (Filename.concat dir compiler_config_file) then dir
   else
     let parent = dir |> Filename.dirname in
     if parent = dir then (
@@ -159,9 +155,9 @@ let read_config ~get_config_file ~namespace =
       (* Give priority to gentypeconfig, followed by package-specs *)
       match (module_string, package_specs_module_string) with
       | Some "commonjs", _ -> CommonJS
-      | Some ("esmodule" | "es6"), _ -> ESModule
+      | Some "esmodule", _ -> ESModule
       | None, Some "commonjs" -> CommonJS
-      | None, Some ("esmodule" | "es6" | "es6-global") -> ESModule
+      | None, Some "esmodule" -> ESModule
       | _ -> default.module_
     in
     let module_resolution =
@@ -177,14 +173,9 @@ let read_config ~get_config_file ~namespace =
       | Some b -> b
     in
     let generated_file_extension = generated_file_extension_string_option in
-    let external_stdlib = bsconf |> get_string_option "external-stdlib" in
-    let platform_lib =
-      match external_stdlib with
-      | None -> "rescript"
-      | Some external_stdlib -> external_stdlib
-    in
+    let platform_lib = "rescript" in
     if !Debug.config then (
-      Log_.item "Project roLiterals.bsconfig_jsonot: %s\n" project_root;
+      Log_.item "Project root: %s\n" project_root;
       if bsb_project_root <> project_root then
         Log_.item "bsb project root: %s\n" bsb_project_root;
       Log_.item "Config module:%s shims:%d entries \n"
@@ -203,10 +194,8 @@ let read_config ~get_config_file ~namespace =
       | _ -> default.suffix
     in
     let bs_dependencies =
-      match
-        (bsconf |> get_opt "dependencies", bsconf |> get_opt "bs-dependencies")
-      with
-      | Some (Arr {content}), None | None, Some (Arr {content}) ->
+      match bsconf |> get_opt "dependencies" with
+      | Some (Arr {content}) ->
         let strings = ref [] in
         content
         |> Array.iter (fun x ->
@@ -243,9 +232,9 @@ let read_config ~get_config_file ~namespace =
   in
   let default_config = {default with project_root; bsb_project_root} in
   match get_config_file ~project_root with
-  | Some bs_config_file -> (
+  | Some config_file -> (
     try
-      let json = bs_config_file |> Ext_json_parse.parse_json_from_file in
+      let json = config_file |> Ext_json_parse.parse_json_from_file in
       match json with
       | Obj {map = bsconf} -> (
         match bsconf |> get_opt "gentypeconfig" with

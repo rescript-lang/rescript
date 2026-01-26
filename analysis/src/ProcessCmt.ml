@@ -431,7 +431,8 @@ let rec getModulePath mod_desc =
   | Tmod_constraint (expr, _typ, _constraint, _coercion) ->
     getModulePath expr.mod_desc
 
-let rec forStructureItem ~env ~(exported : Exported.t) item =
+let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
+    item =
   match item.Typedtree.str_desc with
   | Tstr_value (_isRec, bindings) ->
     let items = ref [] in
@@ -439,22 +440,75 @@ let rec forStructureItem ~env ~(exported : Exported.t) item =
       match pat.Typedtree.pat_desc with
       | Tpat_var (ident, name)
       | Tpat_alias (_, ident, name) (* let x : t = ... *) ->
-        let item = pat.pat_type in
-        let declared =
-          addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
-            ~extent:pat.pat_loc ~item attributes
-            (Exported.add exported Exported.Value)
-            Stamps.addValue
+        (* Detect first-class module unpack patterns and register them as modules. *)
+        let unpack_loc_opt =
+          match
+            pat.pat_extra
+            |> Utils.filterMap (function
+                 | Typedtree.Tpat_unpack, loc, _ -> Some loc
+                 | _ -> None)
+          with
+          | loc :: _ -> Some loc
+          | [] -> None
         in
-        items :=
-          {
-            Module.kind = Module.Value declared.item;
-            name = declared.name.txt;
-            docstring = declared.docstring;
-            deprecated = declared.deprecated;
-            loc = declared.extentLoc;
-          }
-          :: !items
+        if unpack_loc_opt <> None then
+          match (Shared.dig pat.pat_type).desc with
+          | Tpackage (path, _, _) ->
+            let declared =
+              ProcessAttributes.newDeclared ~item:(Module.Ident path)
+                ~extent:(Option.get unpack_loc_opt)
+                ~name ~stamp:(Ident.binding_time ident) ~modulePath:NotVisible
+                false attributes
+            in
+            Stamps.addModule env.stamps (Ident.binding_time ident) declared;
+            items :=
+              {
+                Module.kind =
+                  Module
+                    {
+                      type_ = declared.item;
+                      isModuleType = isModuleType declared;
+                    };
+                name = declared.name.txt;
+                docstring = declared.docstring;
+                deprecated = declared.deprecated;
+                loc = declared.extentLoc;
+              }
+              :: !items
+          | _ ->
+            let item = pat.pat_type in
+            let declared =
+              addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
+                ~extent:pat.pat_loc ~item attributes
+                (Exported.add exported Exported.Value)
+                Stamps.addValue
+            in
+            items :=
+              {
+                Module.kind = Module.Value declared.item;
+                name = declared.name.txt;
+                docstring = declared.docstring;
+                deprecated = declared.deprecated;
+                loc = declared.extentLoc;
+              }
+              :: !items
+        else
+          let item = pat.pat_type in
+          let declared =
+            addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
+              ~extent:pat.pat_loc ~item attributes
+              (Exported.add exported Exported.Value)
+              Stamps.addValue
+          in
+          items :=
+            {
+              Module.kind = Module.Value declared.item;
+              name = declared.name.txt;
+              docstring = declared.docstring;
+              deprecated = declared.deprecated;
+              loc = declared.extentLoc;
+            }
+            :: !items
       | Tpat_tuple pats | Tpat_array pats | Tpat_construct (_, _, pats) ->
         pats |> List.iter (fun p -> handlePattern [] p)
       | Tpat_or (p, _, _) -> handlePattern [] p
@@ -467,6 +521,8 @@ let rec forStructureItem ~env ~(exported : Exported.t) item =
       (fun {Typedtree.vb_pat; vb_attributes} ->
         handlePattern vb_attributes vb_pat)
       bindings;
+    bindings
+    |> List.iter (fun {Typedtree.vb_expr} -> scanLetModules ~env vb_expr);
     !items
   | Tstr_module
       {mb_id; mb_attributes; mb_loc; mb_name = name; mb_expr = {mod_desc}}
@@ -576,16 +632,14 @@ and forModule ~env mod_desc moduleName =
   | Tmod_functor (ident, argName, maybeType, resultExpr) ->
     (match maybeType with
     | None -> ()
-    | Some t -> (
-      match forTreeModuleType ~name:argName.txt ~env t with
-      | None -> ()
-      | Some kind ->
-        let stamp = Ident.binding_time ident in
-        let declared =
-          ProcessAttributes.newDeclared ~item:kind ~name:argName
-            ~extent:t.Typedtree.mty_loc ~stamp ~modulePath:NotVisible false []
-        in
-        Stamps.addModule env.stamps stamp declared));
+    | Some t ->
+      let kind = forTypeModule ~name:argName.txt ~env t.mty_type in
+      let stamp = Ident.binding_time ident in
+      let declared =
+        ProcessAttributes.newDeclared ~item:kind ~name:argName
+          ~extent:argName.loc ~stamp ~modulePath:NotVisible false []
+      in
+      Stamps.addModule env.stamps stamp declared);
     forModule ~env resultExpr.mod_desc moduleName
   | Tmod_apply (functor_, _arg, _coercion) ->
     forModule ~env functor_.mod_desc moduleName
@@ -598,6 +652,69 @@ and forModule ~env mod_desc moduleName =
     let env = env |> Env.addModule ~name:moduleName in
     let modTypeKind = forTypeModule ~name:moduleName ~env typ in
     Constraint (modKind, modTypeKind)
+
+(*
+  Walk a typed expression and register any `let module M = ...` bindings as local
+  modules in stamps. This makes trailing-dot completion work for aliases like `M.`
+  that are introduced inside expression scopes. The declared module is marked as
+  NotVisible (non-exported) and the extent is the alias identifier location so
+  scope lookups match precisely.
+*)
+and scanLetModules ~env (e : Typedtree.expression) =
+  match e.exp_desc with
+  | Texp_letmodule (id, name, mexpr, body) ->
+    let stamp = Ident.binding_time id in
+    let item = forModule ~env mexpr.mod_desc name.txt in
+    let declared =
+      ProcessAttributes.newDeclared ~item ~extent:name.loc ~name ~stamp
+        ~modulePath:NotVisible false []
+    in
+    Stamps.addModule env.stamps stamp declared;
+    scanLetModules ~env body
+  | Texp_let (_rf, bindings, body) ->
+    List.iter (fun {Typedtree.vb_expr} -> scanLetModules ~env vb_expr) bindings;
+    scanLetModules ~env body
+  | Texp_apply {funct; args; _} ->
+    scanLetModules ~env funct;
+    args
+    |> List.iter (function
+         | _, Some e -> scanLetModules ~env e
+         | _, None -> ())
+  | Texp_tuple exprs -> List.iter (scanLetModules ~env) exprs
+  | Texp_sequence (e1, e2) ->
+    scanLetModules ~env e1;
+    scanLetModules ~env e2
+  | Texp_match (e, cases, exn_cases, _) ->
+    scanLetModules ~env e;
+    let scan_case {Typedtree.c_lhs = _; c_guard; c_rhs} =
+      (match c_guard with
+      | Some g -> scanLetModules ~env g
+      | None -> ());
+      scanLetModules ~env c_rhs
+    in
+    List.iter scan_case cases;
+    List.iter scan_case exn_cases
+  | Texp_function {case; _} ->
+    let {Typedtree.c_lhs = _; c_guard; c_rhs} = case in
+    (match c_guard with
+    | Some g -> scanLetModules ~env g
+    | None -> ());
+    scanLetModules ~env c_rhs
+  | Texp_try (e, cases) ->
+    scanLetModules ~env e;
+    cases
+    |> List.iter (fun {Typedtree.c_lhs = _; c_guard; c_rhs} ->
+           (match c_guard with
+           | Some g -> scanLetModules ~env g
+           | None -> ());
+           scanLetModules ~env c_rhs)
+  | Texp_ifthenelse (e1, e2, e3Opt) -> (
+    scanLetModules ~env e1;
+    scanLetModules ~env e2;
+    match e3Opt with
+    | Some e3 -> scanLetModules ~env e3
+    | None -> ())
+  | _ -> ()
 
 and forStructure ~name ~env strItems =
   let exported = Exported.init () in

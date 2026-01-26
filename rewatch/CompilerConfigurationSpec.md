@@ -1,37 +1,36 @@
 ## ReScript build configuration
 
-This document contains a list of all bsconfig parameters with remarks, and whether they are already implemented in rewatch. It is based on https://rescript-lang.org/docs/manual/latest/build-configuration-schema.
+This document contains a list of all config parameters with remarks, and whether they are already implemented in rewatch. It is based on https://rescript-lang.org/docs/manual/latest/build-configuration-schema.
 
-| Parameter            | JSON type               | Remark | Implemented? |
-| -------------------- | ----------------------- | ------ | :----------: |
-| version              | string                  |        |     [_]      |
-| name                 | string                  |        |     [x]      |
-| namespace            | boolean                 |        |     [x]      |
-| namespace            | string                  |        |     [x]      |
-| sources              | string                  |        |     [x]      |
-| sources              | array of string         |        |     [x]      |
-| sources              | Source                  |        |     [x]      |
-| sources              | array of Source         |        |     [x]      |
-| ignored-dirs         | array of string         |        |     [_]      |
-| dependencies         | array of string         |        |     [x]      |
-| dev-dependencies     | array of string         |        |     [x]      |
-| generators           | array of Rule-Generator |        |     [_]      |
-| cut-generators       | boolean                 |        |     [_]      |
-| jsx                  | JSX                     |        |     [x]      |
-| gentypeconfig        | Gentype                 |        |     [_]      |
-| compiler-flags       | array of string         |        |     [x]      |
-| warnings             | Warnings                |        |     [x]      |
-| ppx-flags            | array of string         |        |     [x]      |
-| pp-flags             | array of string         |        |     [_]      |
-| js-post-build        | Js-Post-Build           |        |     [_]      |
-| package-specs        | array of Module-Format  |        |     [_]      |
-| package-specs        | array of Package-Spec   |        |     [x]      |
-| entries              | array of Target-Item    |        |     [_]      |
-| use-stdlib           | boolean                 |        |     [_]      |
-| external-stdlib      | string                  |        |     [_]      |
-| bs-external-includes | array of string         |        |     [_]      |
-| suffix               | Suffix                  |        |     [x]      |
-| reanalyze            | Reanalyze               |        |     [_]      |
+| Parameter             | JSON type               | Remark                                                      | Implemented? |
+| --------------------- | ----------------------- | ----------------------------------------------------------- | :----------: |
+| name                  | string                  |                                                             |     [x]      |
+| namespace             | boolean                 |                                                             |     [x]      |
+| namespace             | string                  |                                                             |     [x]      |
+| sources               | string                  |                                                             |     [x]      |
+| sources               | array of string         |                                                             |     [x]      |
+| sources               | Source                  |                                                             |     [x]      |
+| sources               | array of Source         |                                                             |     [x]      |
+| ignored-dirs          | array of string         |                                                             |     [_]      |
+| dependencies          | array of string         |                                                             |     [x]      |
+| dev-dependencies      | array of string         |                                                             |     [x]      |
+| generators            | array of Rule-Generator |                                                             |     [_]      |
+| cut-generators        | boolean                 |                                                             |     [_]      |
+| jsx                   | JSX                     |                                                             |     [x]      |
+| gentypeconfig         | Gentype                 |                                                             |     [x]      |
+| compiler-flags        | array of string         |                                                             |     [x]      |
+| warnings              | Warnings                |                                                             |     [x]      |
+| ppx-flags             | array of string         |                                                             |     [x]      |
+| pp-flags              | array of string         |                                                             |     [_]      |
+| js-post-build         | Js-Post-Build           | Path respects `in-source` setting; stdout/stderr are logged |     [x]      |
+| package-specs         | array of Module-Format  |                                                             |     [_]      |
+| package-specs         | array of Package-Spec   |                                                             |     [x]      |
+| entries               | array of Target-Item    |                                                             |     [_]      |
+| bs-external-includes  | array of string         |                                                             |     [_]      |
+| suffix                | Suffix                  |                                                             |     [x]      |
+| reanalyze             | Reanalyze               | Reanalyze config; ignored by rewatch                        |     [x]      |
+| experimental-features | ExperimentalFeatures    |                                                             |     [x]      |
+| editor                | object                  | VS Code tooling only; ignored by rewatch                    |     [x]      |
 
 ### Source
 
@@ -111,6 +110,17 @@ enum: "classic" | "automatic"
 
 enum: | "dce" | "exception" | "termination"
 
+### ExperimentalFeatures
+
+An object of feature flags to enable experimental compiler behavior. Only supported by Rewatch.
+
+- Keys: feature identifiers (PascalCase)
+- Values: boolean (true to enable)
+
+Currently supported features:
+
+- LetUnwrap: Enable `let?` syntax.
+
 ### Warnings
 
 | Parameter | JSON type | Remark | Implemented? |
@@ -121,9 +131,18 @@ enum: | "dce" | "exception" | "termination"
 
 ### Js-Post-Build
 
-| Parameter | JSON type | Remark | Implemented? |
-| --------- | --------- | ------ | :----------: |
-| cmd       | string    |        |     [_]      |
+| Parameter | JSON type | Remark                            | Implemented? |
+| --------- | --------- | --------------------------------- | :----------: |
+| cmd       | string    | Receives absolute path to JS file |     [x]      |
+
+The path passed to the command respects the `in-source` setting:
+
+- `in-source: true` → path next to the source file (e.g., `src/Foo.js`)
+- `in-source: false` → path in `lib/<module>/` directory (e.g., `lib/es6/src/Foo.mjs`)
+
+The command runs with the same working directory as the rewatch process (typically the project root).
+
+stdout and stderr from the command are logged.
 
 ### Package-Spec
 
@@ -135,7 +154,9 @@ enum: | "dce" | "exception" | "termination"
 
 ### Module-Format
 
-enum: "commonjs" | "es6" | "es6-global"
+enum: "esmodule" | "commonjs"
+
+default: "esmodule"
 
 ### Suffix
 

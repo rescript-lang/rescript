@@ -20,10 +20,10 @@ let rec is_number = (expr: t) =>
 let sym = x => Val(Symbol(x))
 
 let rec compare = (context, state, a, b) =>
-  /* Js.log {j|$a vs $b |j}; */
+  /* Console.log {j|$a vs $b |j}; */
   switch (a, b, context) {
   | (Neg(x), y, _) | (x, Neg(y), _) =>
-    /* Js.log ""; */
+    /* Console.log ""; */
     compare(context, state, x, y)
   | (Val(_), Val(_), _) => 111
   | (Gcd(na, da), Gcd(nb, db), _)
@@ -44,4 +44,4 @@ let a = Sum(list{sym("a"), Val(Natural(2))})
 let b = sym("x")
 type st = {complex: bool}
 let empty = () => {complex: true}
-let _ = Js.log(compare(InSum, empty(), a, b))
+let _ = Console.log(compare(InSum, empty(), a, b))

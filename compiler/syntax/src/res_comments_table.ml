@@ -1496,7 +1496,7 @@ and walk_expression expr t comments =
                 {
                   txt =
                     Longident.Lident
-                      ("~+" | "~+." | "~-" | "~-." | "~~" | "not" | "!");
+                      ("~+" | "~+." | "~-" | "~-." | "~~~" | "not" | "!");
                 };
           };
         args = [(Nolabel, arg_expr)];
@@ -1517,7 +1517,8 @@ and walk_expression expr t comments =
                     Longident.Lident
                       ( ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!="
                       | "!==" | "<=" | ">=" | "+" | "+." | "-" | "-." | "++"
-                      | "^" | "*" | "*." | "/" | "/." | "**" | "->" | "<>" );
+                      | "|||" | "^^^" | "&&&" | "*" | "*." | "/" | "/." | "**"
+                      | "->" | "<>" );
                 };
           };
         args = [(Nolabel, operand1); (Nolabel, operand2)];
@@ -1658,12 +1659,7 @@ and walk_expression expr t comments =
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest = partition_by_on_same_line opening_token comments in
     attach t.trailing opening_token on_same_line;
-    let exprs =
-      match children with
-      | Parsetree.JSXChildrenSpreading e -> [e]
-      | Parsetree.JSXChildrenItems xs -> xs
-    in
-    let xs = exprs |> List.map (fun e -> Expression e) in
+    let xs = children |> List.map (fun e -> Expression e) in
     walk_list xs t rest
   | Pexp_jsx_element
       (Jsx_unary_element
@@ -1682,12 +1678,14 @@ and walk_expression expr t comments =
         | [] -> closing_token_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line tag_name.loc
+      let name_loc = tag_name.loc in
+      partition_adjacent_trailing_before_next_token_on_same_line name_loc
         next_token comments
     in
 
     (* Only attach comments to the element name if they are on the same line *)
-    attach t.trailing tag_name.loc after_opening_tag_name;
+    let name_loc = tag_name.loc in
+    attach t.trailing name_loc after_opening_tag_name;
     match props with
     | [] ->
       let before_closing_token, _rest =
@@ -1726,11 +1724,13 @@ and walk_expression expr t comments =
         | [] -> opening_greater_than_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line
-        tag_name_start.loc next_token comments
+      let name_loc = tag_name_start.loc in
+      partition_adjacent_trailing_before_next_token_on_same_line name_loc
+        next_token comments
     in
     (* Only attach comments to the element name if they are on the same line *)
-    attach t.trailing tag_name_start.loc after_opening_tag_name;
+    let name_loc = tag_name_start.loc in
+    attach t.trailing name_loc after_opening_tag_name;
     let rest =
       match props with
       | [] ->
@@ -1765,7 +1765,7 @@ and walk_expression expr t comments =
         partition_leading_trailing rest closing_tag_loc
     in
     match children with
-    | Parsetree.JSXChildrenItems [] -> (
+    | [] -> (
       (* attach all comments to the closing tag if there are no children *)
       match closing_tag with
       | None ->
@@ -1797,11 +1797,7 @@ and walk_expression expr t comments =
           (* if the closing tag is on the same line, attach comments to the opening tag *)
           attach t.leading closing_tag_loc comments_for_children)
     | children ->
-      let children_nodes =
-        match children with
-        | Parsetree.JSXChildrenSpreading e -> [Expression e]
-        | Parsetree.JSXChildrenItems xs -> List.map (fun e -> Expression e) xs
-      in
+      let children_nodes = List.map (fun e -> Expression e) children in
 
       walk_list children_nodes t comments_for_children
     (* It is less likely that there are comments inside the closing tag, 

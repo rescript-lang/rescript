@@ -8,10 +8,15 @@ test:
 	make -C deadcode test
 	make -C termination test
 
+# Order-independence test for reanalyze - not run by default (takes longer)
+# Verifies that processing files in different orders produces identical results
+test-reanalyze-order-independence:
+	make -C deadcode test-reanalyze-order-independence
+
 clean:
 	make -C deadcode clean
 	make -C termination clean
 
 .DEFAULT_GOAL := build
 
-.PHONY: build clean clean test
+.PHONY: build clean test test-reanalyze-order-independence

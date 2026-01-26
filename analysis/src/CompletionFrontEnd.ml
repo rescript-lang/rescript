@@ -303,10 +303,7 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
   | Pexp_apply {funct = e1; args} -> (
     match exprToContextPath ~inJsxContext e1 with
     | None -> None
-    | Some contexPath ->
-      Some
-        (CPApply (contexPath, args |> List.map fst |> List.map Asttypes.to_noloc))
-    )
+    | Some contexPath -> Some (CPApply (contexPath, args |> List.map fst)))
   | Pexp_tuple exprs ->
     let exprsAsContextPaths =
       exprs |> List.filter_map (exprToContextPath ~inJsxContext)
@@ -538,8 +535,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         p
     | Ppat_type _ -> ()
     | Ppat_unpack {txt; loc} ->
-      scope :=
-        !scope |> Scope.addValue ~name:txt ~loc ?contextPath:contextPathToSave
+      scope := !scope |> Scope.addModule ~name:txt ~loc
     | Ppat_exception p -> scopePattern ~patternPath ?contextPath p
     | Ppat_extension _ -> ()
     | Ppat_open (_, p) -> scopePattern ~patternPath ?contextPath p
@@ -1341,53 +1337,95 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 {
                   jsx_container_element_tag_name_start = compName;
                   jsx_container_element_props = props;
-                } ) ->
+                } ) -> (
           inJsxContext := true;
+          let is_valid_tag_for_props =
+            match compName.txt with
+            | Parsetree.JsxTagInvalid _ -> false
+            | _ -> true
+          in
           let children =
             match expr.pexp_desc with
             | Pexp_jsx_element
                 (Jsx_container_element
                    {jsx_container_element_children = children}) ->
               children
-            | _ -> JSXChildrenItems []
+            | _ -> []
           in
-          let jsxProps =
-            CompletionJsx.extractJsxProps ~compName ~props ~children
+          let compName_loc = compName.loc in
+          let compName_lid =
+            Ast_helper.Jsx.longident_of_jsx_tag_name compName.txt
           in
-          let compNamePath = flattenLidCheckDot ~jsx:true compName in
-          if debug then
-            Printf.printf "JSX <%s:%s %s> _children:%s\n"
-              (compNamePath |> String.concat ".")
-              (Loc.toString compName.loc)
-              (jsxProps.props
-              |> List.map
-                   (fun ({name; posStart; posEnd; exp} : CompletionJsx.prop) ->
-                     Printf.sprintf "%s[%s->%s]=...%s" name
-                       (Pos.toString posStart) (Pos.toString posEnd)
-                       (Loc.toString exp.pexp_loc))
-              |> String.concat " ")
-              (match jsxProps.childrenStart with
-              | None -> "None"
-              | Some childrenPosStart -> Pos.toString childrenPosStart);
+          let jsxPropsOpt =
+            if is_valid_tag_for_props then
+              Some
+                (CompletionJsx.extractJsxProps
+                   ~compName:(Location.mkloc compName_lid compName_loc)
+                   ~props ~children)
+            else None
+          in
+          let compNamePath =
+            flattenLidCheckDot ~jsx:true
+              {txt = compName_lid; loc = compName_loc}
+          in
+          (if debug then
+             match jsxPropsOpt with
+             | Some jsxProps ->
+               Printf.printf "JSX <%s:%s %s> _children:%s\n"
+                 (compNamePath |> String.concat ".")
+                 (Loc.toString compName_loc)
+                 (jsxProps.props
+                 |> List.map
+                      (fun
+                        ({name; posStart; posEnd; exp} : CompletionJsx.prop) ->
+                        Printf.sprintf "%s[%s->%s]=...%s" name
+                          (Pos.toString posStart) (Pos.toString posEnd)
+                          (Loc.toString exp.pexp_loc))
+                 |> String.concat " ")
+                 (match jsxProps.childrenStart with
+                 | None -> "None"
+                 | Some childrenPosStart -> Pos.toString childrenPosStart)
+             | None ->
+               Printf.printf "JSX <%s:%s > _children:None\n"
+                 (compNamePath |> String.concat ".")
+                 (Loc.toString compName_loc));
+          (* If the tag name is an uppercase path and the cursor is right after a dot (e.g., <O.|),
+             prefer module member completion over JSX prop suggestions. *)
+          (match compName.txt with
+          | Parsetree.JsxUpperTag _ when blankAfterCursor = Some '.' ->
+            setResult
+              (Cpath
+                 (CPId
+                    {
+                      loc = compName_loc;
+                      path = compNamePath;
+                      completionContext = Module;
+                    }))
+          | _ -> ());
           let jsxCompletable =
-            match expr.pexp_desc with
-            | Pexp_jsx_element
-                (Jsx_container_element
-                   {
-                     jsx_container_element_closing_tag = None;
-                     jsx_container_element_children =
-                       JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
-                   }) ->
-              (* This is a weird edge case where there is no closing tag but there are children *)
+            match (jsxPropsOpt, expr.pexp_desc) with
+            | ( Some _,
+                Pexp_jsx_element
+                  (Jsx_container_element
+                     {
+                       jsx_container_element_closing_tag = None;
+                       jsx_container_element_children = _ :: _;
+                     }) ) ->
               None
-            | _ ->
+            | Some jsxProps, _ ->
               CompletionJsx.findJsxPropsCompletable ~jsxProps
                 ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
-                ~posAfterCompName:(Loc.end_ compName.loc)
+                ~posAfterCompName:(Loc.end_ compName_loc)
                 ~firstCharBeforeCursorNoWhite ~charAtCursor
+            | None, _ -> None
           in
-          if jsxCompletable <> None then setResultOpt jsxCompletable
-          else if compName.loc |> Loc.hasPos ~pos:posBeforeCursor then
+          (match jsxCompletable with
+          | Some _ as res -> setResultOpt res
+          | None -> ());
+          if
+            jsxCompletable = None
+            && compName_loc |> Loc.hasPos ~pos:posBeforeCursor
+          then
             setResult
               (match compNamePath with
               | [prefix] when Char.lowercase_ascii prefix.[0] = prefix.[0] ->
@@ -1396,11 +1434,14 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 Cpath
                   (CPId
                      {
-                       loc = compName.loc;
+                       loc = compName_loc;
                        path = compNamePath;
                        completionContext = Module;
                      }))
-          else iterateJsxProps ~iterator jsxProps
+          else
+            match jsxPropsOpt with
+            | Some jsxProps -> iterateJsxProps ~iterator jsxProps
+            | None -> ())
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
@@ -1654,6 +1695,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
   in
   let module_expr (iterator : Ast_iterator.iterator)
       (me : Parsetree.module_expr) =
+    let processed = ref false in
     (match me.pmod_desc with
     | Pmod_ident lid when lid.loc |> Loc.hasPos ~pos:posBeforeCursor ->
       let lidPath = flattenLidCheckDot lid in
@@ -1665,8 +1707,17 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       setResult
         (Cpath
            (CPId {loc = lid.loc; path = lidPath; completionContext = Module}))
+    | Pmod_functor (name, maybeType, body) ->
+      let oldScope = !scope in
+      scope := !scope |> Scope.addModule ~name:name.txt ~loc:name.loc;
+      (match maybeType with
+      | None -> ()
+      | Some mt -> iterator.module_type iterator mt);
+      iterator.module_expr iterator body;
+      scope := oldScope;
+      processed := true
     | _ -> ());
-    Ast_iterator.default_iterator.module_expr iterator me
+    if not !processed then Ast_iterator.default_iterator.module_expr iterator me
   in
   let module_type (iterator : Ast_iterator.iterator)
       (mt : Parsetree.module_type) =

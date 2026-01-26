@@ -1,4 +1,4 @@
-Js.log(Inner_define.N.add(1, 2))
+Console.log(Inner_define.N.add(1, 2))
 
 open Inner_define
 

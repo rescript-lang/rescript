@@ -24,6 +24,22 @@ open Typedtree
 
 exception Dont_match
 
+(* When comparing externals in signatures, re-derive arity/from_constructor from
+   the value's type so abstract aliases (e.g. opaque function types) don't keep
+   default zeros stored in the primitive descriptor, which would make equal
+   externals look different. *)
+let normalize_primitive ~env val_type (prim : Primitive.description) =
+  match Ctype.get_arity env val_type with
+  | Some prim_arity ->
+    let prim_from_constructor =
+      match (Ctype.repr val_type).desc with
+      | Tconstr _ -> true
+      | _ -> prim.prim_from_constructor
+    in
+    Primitive.with_arity prim ~arity:prim_arity
+      ~from_constructor:prim_from_constructor
+  | None -> prim
+
 let value_descriptions ~loc env name (vd1 : Types.value_description)
     (vd2 : Types.value_description) =
   Builtin_attributes.check_deprecated_inclusion ~def:vd1.val_loc
@@ -31,6 +47,8 @@ let value_descriptions ~loc env name (vd1 : Types.value_description)
   if Ctype.moregeneral env true vd1.val_type vd2.val_type then
     match (vd1.val_kind, vd2.val_kind) with
     | Val_prim p1, Val_prim p2 ->
+      let p1 = normalize_primitive ~env vd1.val_type p1 in
+      let p2 = normalize_primitive ~env vd2.val_type p2 in
       if !Primitive.coerce p1 p2 then Tcoerce_none else raise Dont_match
     | Val_prim p, _ ->
       let pc =

@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "rescript legacy build",
+    "build": "rescript build",
     "clean": "rescript clean",
     "dev": "rescript -w"
   },

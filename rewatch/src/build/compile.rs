@@ -6,19 +6,74 @@ use super::build_types::*;
 use super::logs;
 use super::packages;
 use crate::config;
+use crate::config::Config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
+use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use console::style;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use rayon::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
+use std::sync::OnceLock;
 use std::time::SystemTime;
 
+/// Execute js-post-build command for a compiled JavaScript file.
+/// The command runs in the directory containing the rescript.json that defines it.
+/// The absolute path to the JS file is passed as an argument.
+fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
+    let full_command = format!("{} {}", cmd, js_file_path.display());
+
+    debug!(
+        "Executing js-post-build: {} (in {})",
+        full_command,
+        working_dir.display()
+    );
+
+    let output = if cfg!(target_os = "windows") {
+        Command::new("cmd")
+            .args(["/C", &full_command])
+            .current_dir(working_dir)
+            .output()
+    } else {
+        Command::new("sh")
+            .args(["-c", &full_command])
+            .current_dir(working_dir)
+            .output()
+    };
+
+    match output {
+        Ok(output) => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+
+            // Always log stdout/stderr - the user explicitly configured this command
+            // and likely cares about its output
+            if !stdout.is_empty() {
+                info!("{}", stdout.trim());
+            }
+            if !stderr.is_empty() {
+                warn!("{}", stderr.trim());
+            }
+
+            if !output.status.success() {
+                Err(anyhow!(
+                    "js-post-build command failed for {}",
+                    js_file_path.display()
+                ))
+            } else {
+                Ok(())
+            }
+        }
+        Err(e) => Err(anyhow!("Failed to execute js-post-build command: {}", e)),
+    }
+}
+
 pub fn compile(
-    build_state: &mut BuildState,
+    build_state: &mut BuildCommandState,
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
@@ -154,21 +209,15 @@ pub fn compile(
                                 .get_package(&module.package_name)
                                 .expect("Package not found");
 
-                            let root_package =
-                                build_state.get_package(&build_state.root_config_name).unwrap();
-
                             let interface_result = match source_file.interface.to_owned() {
                                 Some(Interface { path, .. }) => {
                                     let result = compile_file(
                                         package,
-                                        root_package,
                                         &helpers::get_ast_path(&path),
                                         module,
                                         true,
-                                        &build_state.bsc_path,
-                                        &build_state.packages,
-                                        &build_state.project_root,
-                                        &build_state.workspace_root,
+                                        build_state,
+                                        build_state.get_warn_error_override(),
                                     );
                                     Some(result)
                                 }
@@ -176,14 +225,11 @@ pub fn compile(
                             };
                             let result = compile_file(
                                 package,
-                                root_package,
                                 &helpers::get_ast_path(&source_file.implementation.path),
                                 module,
                                 false,
-                                &build_state.bsc_path,
-                                &build_state.packages,
-                                &build_state.project_root,
-                                &build_state.workspace_root,
+                                build_state,
+                                build_state.get_warn_error_override(),
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -250,70 +296,109 @@ pub fn compile(
                 }
             }
 
-            let module = build_state
-                .modules
-                .get_mut(module_name)
-                .ok_or(anyhow!("Module not found"))?;
+            let package_name = {
+                let module = build_state
+                    .build_state
+                    .modules
+                    .get(module_name)
+                    .ok_or(anyhow!("Module not found"))?;
+                module.package_name.clone()
+            };
 
             let package = build_state
+                .build_state
                 .packages
-                .get(&module.package_name)
+                .get(&package_name)
                 .ok_or(anyhow!("Package name not found"))?;
 
-            match module.source_type {
-                SourceType::MlMap(ref mut mlmap) => {
-                    module.compile_dirty = false;
-                    mlmap.parse_dirty = false;
-                }
-                SourceType::SourceFile(ref mut source_file) => {
-                    match result {
+            // Process results and update module state
+            let (compile_warning, compile_error, interface_warning, interface_error) = {
+                let module = build_state
+                    .build_state
+                    .modules
+                    .get_mut(module_name)
+                    .ok_or(anyhow!("Module not found"))?;
+
+                let (compile_warning, compile_error) = match module.source_type {
+                    SourceType::MlMap(ref mut mlmap) => {
+                        module.compile_dirty = false;
+                        mlmap.parse_dirty = false;
+                        (None, None)
+                    }
+                    SourceType::SourceFile(ref mut source_file) => match result {
                         Ok(Some(err)) => {
+                            let warning_text = err.to_string();
                             source_file.implementation.compile_state = CompileState::Warning;
-                            logs::append(package, err);
-                            compile_warnings.push_str(err);
+                            source_file.implementation.compile_warnings = Some(warning_text.clone());
+                            (Some(warning_text), None)
                         }
                         Ok(None) => {
                             source_file.implementation.compile_state = CompileState::Success;
+                            source_file.implementation.compile_warnings = None;
+                            (None, None)
                         }
                         Err(err) => {
                             source_file.implementation.compile_state = CompileState::Error;
-                            logs::append(package, &err.to_string());
-                            compile_errors.push_str(&err.to_string());
+                            source_file.implementation.compile_warnings = None;
+                            (None, Some(err.to_string()))
                         }
-                    };
-                    match interface_result {
-                        Some(Ok(Some(err))) => {
-                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                            logs::append(package, &err.to_string());
-                            compile_warnings.push_str(&err.to_string());
-                        }
-                        Some(Ok(None)) => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.compile_state = CompileState::Success;
+                    },
+                };
+
+                let (interface_warning, interface_error) =
+                    if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+                        match interface_result {
+                            Some(Ok(Some(err))) => {
+                                let warning_text = err.to_string();
+                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
+                                source_file.interface.as_mut().unwrap().compile_warnings =
+                                    Some(warning_text.clone());
+                                (Some(warning_text), None)
                             }
+                            Some(Ok(None)) => {
+                                if let Some(interface) = source_file.interface.as_mut() {
+                                    interface.compile_state = CompileState::Success;
+                                    interface.compile_warnings = None;
+                                }
+                                (None, None)
+                            }
+                            Some(Err(err)) => {
+                                source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                                source_file.interface.as_mut().unwrap().compile_warnings = None;
+                                (None, Some(err.to_string()))
+                            }
+                            _ => (None, None),
                         }
-
-                        Some(Err(err)) => {
-                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
-                            logs::append(package, &err.to_string());
-                            compile_errors.push_str(&err.to_string());
-                        }
-                        _ => (),
+                    } else {
+                        (None, None)
                     };
 
-                    match (result, interface_result) {
-                        // successfull compilation
-                        (Ok(None), Some(Ok(None))) | (Ok(None), None) => {
-                            module.compile_dirty = false;
-                            module.last_compiled_cmi = Some(SystemTime::now());
-                            module.last_compiled_cmt = Some(SystemTime::now());
-                        }
-                        // some error or warning
-                        (Err(_), _) | (_, Some(Err(_))) | (Ok(Some(_)), _) | (_, Some(Ok(Some(_)))) => {
-                            module.compile_dirty = true;
-                        }
-                    }
+                // Update compilation timestamps for successful compilation
+                if result.is_ok() && interface_result.as_ref().is_none_or(|r| r.is_ok()) {
+                    module.compile_dirty = false;
+                    module.last_compiled_cmi = Some(SystemTime::now());
+                    module.last_compiled_cmt = Some(SystemTime::now());
                 }
+
+                (compile_warning, compile_error, interface_warning, interface_error)
+            };
+
+            // Handle logging outside the mutable borrow
+            if let Some(warning) = compile_warning {
+                logs::append(package, &warning);
+                compile_warnings.push_str(&warning);
+            }
+            if let Some(error) = compile_error {
+                logs::append(package, &error);
+                compile_errors.push_str(&error);
+            }
+            if let Some(warning) = interface_warning {
+                logs::append(package, &warning);
+                compile_warnings.push_str(&warning);
+            }
+            if let Some(error) = interface_error {
+                logs::append(package, &error);
+                compile_errors.push_str(&error);
             }
         }
 
@@ -331,40 +416,113 @@ pub fn compile(
                     .collect::<Vec<(&String, &Module)>>(),
             );
 
-            compile_errors.push_str(&format!(
-                "\n{}\n{}\n",
+            let guidance = "Possible solutions:\n- Extract shared code into a new module both depend on.\n";
+            let message = format!(
+                "\n{}\n{}\n{}",
                 style("Can't continue... Found a circular dependency in your code:").red(),
-                dependency_cycle::format(&cycle)
-            ))
+                dependency_cycle::format(&cycle, build_state),
+                guidance
+            );
+
+            // Append the error to the logs of all packages involved in the cycle,
+            // so editor tooling can surface it from .compiler.log
+            let mut touched_packages = AHashSet::<String>::new();
+            for module_name in cycle.iter() {
+                if let Some(module) = build_state.get_module(module_name)
+                    && touched_packages.insert(module.package_name.clone())
+                    && let Some(package) = build_state.get_package(&module.package_name)
+                {
+                    logs::append(package, &message);
+                }
+            }
+
+            compile_errors.push_str(&message)
         }
         if !compile_errors.is_empty() {
             break;
         };
     }
 
+    // Collect warnings from modules that were not recompiled in this build
+    // but still have stored warnings from a previous compilation.
+    // This ensures warnings are not lost during incremental builds in watch mode.
+    for (module_name, module) in build_state.modules.iter() {
+        if compile_universe.contains(module_name) {
+            continue;
+        }
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            let package = build_state.get_package(&module.package_name);
+            if let Some(ref warning) = source_file.implementation.compile_warnings {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+            if let Some(ref interface) = source_file.interface
+                && let Some(ref warning) = interface.compile_warnings
+            {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+        }
+    }
+
     Ok((compile_errors, compile_warnings, num_compiled_modules))
+}
+
+static RUNTIME_PATH_MEMO: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn get_runtime_path(package_config: &Config, project_context: &ProjectContext) -> Result<PathBuf> {
+    if let Some(p) = RUNTIME_PATH_MEMO.get() {
+        return Ok(p.clone());
+    }
+
+    let resolved = match std::env::var("RESCRIPT_RUNTIME") {
+        Ok(runtime_path) => Ok(PathBuf::from(runtime_path)),
+        Err(_) => match helpers::try_package_path(package_config, project_context, "@rescript/runtime") {
+            Ok(runtime_path) => Ok(runtime_path),
+            Err(err) => Err(anyhow!(
+                "The rescript runtime package could not be found.\nPlease set RESCRIPT_RUNTIME environment variable or make sure the runtime package is installed.\nError: {err}"
+            )),
+        },
+    }?;
+
+    let _ = RUNTIME_PATH_MEMO.set(resolved.clone());
+    Ok(resolved)
+}
+
+pub fn get_runtime_path_args(
+    package_config: &Config,
+    project_context: &ProjectContext,
+) -> Result<Vec<String>> {
+    let runtime_path = get_runtime_path(package_config, project_context)?;
+    Ok(vec![
+        "-runtime-path".to_string(),
+        runtime_path.to_string_lossy().to_string(),
+    ])
 }
 
 pub fn compiler_args(
     config: &config::Config,
-    root_config: &config::Config,
     ast_path: &Path,
     file_path: &Path,
     is_interface: bool,
     has_interface: bool,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     // if packages are known, we pass a reference here
-    // this saves us a scan to find their paths
+    // this saves us a scan to find their paths.
+    // This is None when called by build::get_compiler_args
     packages: &Option<&AHashMap<String, packages::Package>>,
     // Is the file listed as "type":"dev"?
     is_type_dev: bool,
     is_local_dep: bool,
-) -> Vec<String> {
+    // Command-line --warn-error flag override (takes precedence over rescript.json config)
+    warn_error_override: Option<String>,
+) -> Result<Vec<String>> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
-
-    let dependency_paths = get_dependency_paths(config, project_root, workspace_root, packages, is_type_dev);
-
+    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -388,12 +546,14 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
+    let root_config = project_context.get_root_config();
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
-    let warning_args = config.get_warning_args(is_local_dep);
+    let experimental_args = root_config.get_experimental_features_args();
+    let warning_args = config.get_warning_args(is_local_dep, warn_error_override);
 
     let read_cmi_args = match has_interface {
         true => {
@@ -422,7 +582,7 @@ pub fn compiler_args(
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
-                        spec.module,
+                        spec.module.as_str(),
                         if spec.in_source {
                             file_path.parent().unwrap().to_str().unwrap().to_string()
                         } else {
@@ -442,14 +602,17 @@ pub fn compiler_args(
             .collect()
     };
 
-    vec![
+    let runtime_path_args = get_runtime_path_args(config, project_context)?;
+
+    Ok(vec![
         namespace_args,
         read_cmi_args,
         vec![
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
         ],
-        dependency_paths.concat(),
+        runtime_path_args,
+        dependency_paths,
         jsx_args,
         jsx_module_args,
         jsx_mode_args,
@@ -457,6 +620,7 @@ pub fn compiler_args(
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
+        experimental_args,
         // vec!["-warn-error".to_string(), "A".to_string()],
         // ^^ this one fails for bisect-ppx
         // this is the default
@@ -470,7 +634,7 @@ pub fn compiler_args(
         // ],
         vec![ast_path.to_string_lossy().to_string()],
     ]
-    .concat()
+    .concat())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -497,11 +661,10 @@ impl DependentPackage {
 
 fn get_dependency_paths(
     config: &config::Config,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     packages: &Option<&AHashMap<String, packages::Package>>,
     is_file_type_dev: bool,
-) -> Vec<Vec<String>> {
+) -> Vec<String> {
     let normal_deps = config
         .dependencies
         .clone()
@@ -534,7 +697,9 @@ fn get_dependency_paths(
                     .as_ref()
                     .map(|package| package.path.clone())
             } else {
-                packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
+                // packages will only be None when called by build::get_compiler_args
+                // in that case we can safely pass config as the package config.
+                packages::read_dependency(package_name, config, project_context).ok()
             }
             .map(|canonicalized_path| {
                 vec![
@@ -555,19 +720,24 @@ fn get_dependency_paths(
             dependency_path
         })
         .collect::<Vec<Vec<String>>>()
+        .concat()
 }
 
 fn compile_file(
     package: &packages::Package,
-    root_package: &packages::Package,
     ast_path: &Path,
     module: &Module,
     is_interface: bool,
-    bsc_path: &Path,
-    packages: &AHashMap<String, packages::Package>,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
-) -> Result<Option<String>, String> {
+    build_state: &BuildState,
+    warn_error_override: Option<String>,
+) -> Result<Option<String>> {
+    let BuildState {
+        packages,
+        project_context,
+        compiler_info,
+        ..
+    } = build_state;
+    let root_config = build_state.get_root_config();
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
@@ -577,26 +747,26 @@ fn compile_file(
             sourcetype,
             ast_path.to_string_lossy()
         )),
-    }?;
+    }
+    .map_err(|e| anyhow!(e))?;
     let basename =
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
     let to_mjs_args = compiler_args(
         &package.config,
-        &root_package.config,
         ast_path,
         implementation_file_path,
         is_interface,
         has_interface,
-        project_root,
-        workspace_root,
+        project_context,
         &Some(packages),
         is_type_dev,
         package.is_local_dep,
-    );
+        warn_error_override,
+    )?;
 
-    let to_mjs = Command::new(bsc_path)
+    let to_mjs = Command::new(&compiler_info.bsc_path)
         .current_dir(
             build_path_abs
                 .canonicalize()
@@ -611,9 +781,9 @@ fn compile_file(
         Ok(x) if !x.status.success() => {
             let stderr = String::from_utf8_lossy(&x.stderr);
             let stdout = String::from_utf8_lossy(&x.stdout);
-            Err(stderr.to_string() + &stdout)
+            Err(anyhow!(stderr.to_string() + &stdout))
         }
-        Err(e) => Err(format!(
+        Err(e) => Err(anyhow!(
             "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
@@ -621,7 +791,7 @@ fn compile_file(
                 .expect("stdout should be non-null")
                 .to_string();
 
-            let dir = std::path::Path::new(implementation_file_path).parent().unwrap();
+            let dir = Path::new(implementation_file_path).parent().unwrap();
 
             // perhaps we can do this copying somewhere else
             if !is_interface {
@@ -709,28 +879,64 @@ fn compile_file(
             }
 
             // copy js file
-            root_package.config.get_package_specs().iter().for_each(|spec| {
-                if spec.in_source {
-                    if let SourceType::SourceFile(SourceFile {
+            root_config.get_package_specs().iter().for_each(|spec| {
+                if spec.in_source
+                    && let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
                         ..
                     }) = &module.source_type
-                    {
-                        let source = helpers::get_source_file_from_rescript_file(
-                            &Path::new(&package.path).join(path),
-                            &root_package.config.get_suffix(spec),
-                        );
-                        let destination = helpers::get_source_file_from_rescript_file(
-                            &package.get_build_path().join(path),
-                            &root_package.config.get_suffix(spec),
-                        );
+                {
+                    let source = helpers::get_source_file_from_rescript_file(
+                        &Path::new(&package.path).join(path),
+                        &root_config.get_suffix(spec),
+                    );
+                    let destination = helpers::get_source_file_from_rescript_file(
+                        &package.get_build_path().join(path),
+                        &root_config.get_suffix(spec),
+                    );
 
-                        if source.exists() {
-                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
-                        }
+                    if source.exists() {
+                        let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
                     }
                 }
             });
+
+            // Execute js-post-build command if configured
+            // Only run for implementation files (not interfaces)
+            if !is_interface
+                && let Some(js_post_build) = &package.config.js_post_build
+                && let SourceType::SourceFile(SourceFile {
+                    implementation: Implementation { path, .. },
+                    ..
+                }) = &module.source_type
+            {
+                // Execute post-build command for each package spec (each output format)
+                for spec in root_config.get_package_specs() {
+                    // Determine the correct JS file path based on in-source setting:
+                    // - in-source: true  -> next to the source file (e.g., src/Foo.js)
+                    // - in-source: false -> in lib/<module>/ directory (e.g., lib/es6/src/Foo.js)
+                    let js_file = if spec.in_source {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    } else {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path)
+                                .join("lib")
+                                .join(spec.get_out_of_source_dir())
+                                .join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    };
+
+                    if js_file.exists() {
+                        // Fail the build if post-build command fails (matches bsb behavior with &&)
+                        // Run in the package's directory (where rescript.json is defined)
+                        execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
+                    }
+                }
+            }
 
             if helpers::contains_ascii_characters(&err) {
                 if package.is_local_dep {
@@ -768,7 +974,7 @@ pub fn mark_modules_with_deleted_deps_dirty(build_state: &mut BuildState) {
 //
 // We could clean up the build after errors. But I think we probably still need
 // to do this, because people can also force quit the watcher of
-pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
+pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildCommandState) {
     let mut modules_with_expired_deps: AHashSet<String> = AHashSet::new();
     build_state
         .modules
@@ -827,10 +1033,9 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
 
                             if let (Some(last_compiled_dependent), Some(last_compiled)) =
                                 (dependent_module.last_compiled_cmt, module.last_compiled_cmt)
+                                && last_compiled_dependent < last_compiled
                             {
-                                if last_compiled_dependent < last_compiled {
-                                    modules_with_expired_deps.insert(dependent.to_string());
-                                }
+                                modules_with_expired_deps.insert(dependent.to_string());
                             }
                         }
                     }

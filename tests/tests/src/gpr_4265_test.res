@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 open Belt
 let mockMap = MutableMap.Int.make()
@@ -15,6 +14,6 @@ let _ = add(486)
 let _ = remove(1726)
 let n1 = mockMap->MutableMap.Int.getExn(6667)
 
-eq(__LOC__, n, n1)
-
-Mt.from_pair_suites(__FILE__, suites.contents)
+describe(__MODULE__, () => {
+  test("mutable map operations", () => eq(__LOC__, n, n1))
+})

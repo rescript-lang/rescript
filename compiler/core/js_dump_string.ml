@@ -24,6 +24,8 @@
 
 module P = Ext_pp
 
+open Ext_utf8
+
 (** Avoid to allocate single char string too many times*)
 let array_str1 = Array.init 256 (fun i -> String.make 1 (Char.chr i))
 
@@ -56,40 +58,86 @@ let ( +> ) = Ext_buffer.add_string
 let escape_to_buffer f (* ?(utf=false)*) s =
   let pp_raw_string f (* ?(utf=false)*) s =
     let l = String.length s in
-    for i = 0 to l - 1 do
-      let c = String.unsafe_get s i in
+    let i = ref 0 in
+    while !i < l do
+      let c = String.unsafe_get s !i in
       match c with
-      | '\b' -> f +> "\\b"
-      | '\012' -> f +> "\\f"
-      | '\n' -> f +> "\\n"
-      | '\r' -> f +> "\\r"
-      | '\t' -> f +> "\\t"
+      | '\b' ->
+        f +> "\\b";
+        incr i
+      | '\012' ->
+        f +> "\\f";
+        incr i
+      | '\n' ->
+        f +> "\\n";
+        incr i
+      | '\r' ->
+        f +> "\\r";
+        incr i
+      | '\t' ->
+        f +> "\\t";
+        incr i
       (* This escape sequence is not supported by IE < 9
                | '\011' -> "\\v"
-         IE < 9 treats '\v' as 'v' instead of a vertical tab ('\x0B').
-         If cross-browser compatibility is a concern, use \x0B instead of \v.
+          IE < 9 treats '\v' as 'v' instead of a vertical tab ('\x0B').
+          If cross-browser compatibility is a concern, use \x0B instead of \v.
 
-         Another thing to note is that the \v and \0 escapes are not allowed in JSON strings.
-      *)
+          Another thing to note is that the \v and \0 escapes are not allowed in JSON strings.
+       *)
       | '\000'
-        when i = l - 1
+        when !i = l - 1
              ||
-             let next = String.unsafe_get s (i + 1) in
+             let next = String.unsafe_get s (!i + 1) in
              next < '0' || next > '9' ->
-        f +> "\\0"
-      | '\\' (* when not utf*) -> f +> "\\\\"
+        f +> "\\0";
+        incr i
+      | '\\' (* when not utf*) ->
+        f +> "\\\\";
+        incr i
       | '\000' .. '\031' | '\127' ->
         let c = Char.code c in
         f +> "\\x";
         f +> Array.unsafe_get array_conv (c lsr 4);
-        f +> Array.unsafe_get array_conv (c land 0xf)
-      | '\128' .. '\255' (* when not utf*) ->
-        let c = Char.code c in
-        f +> "\\x";
-        f +> Array.unsafe_get array_conv (c lsr 4);
-        f +> Array.unsafe_get array_conv (c land 0xf)
-      | '\"' -> f +> "\\\"" (* quote*)
-      | _ -> f +> Array.unsafe_get array_str1 (Char.code c)
+        f +> Array.unsafe_get array_conv (c land 0xf);
+        incr i
+      | '\128' .. '\255' -> (
+        (* Check if this is part of a valid UTF-8 sequence *)
+        let utf8_byte = classify c in
+        match utf8_byte with
+        | Single _ ->
+          (* Single byte >= 128, escape it *)
+          let c = Char.code c in
+          f +> "\\x";
+          f +> Array.unsafe_get array_conv (c lsr 4);
+          f +> Array.unsafe_get array_conv (c land 0xf);
+          incr i
+        | Leading (n, _) ->
+          (* Start of UTF-8 sequence, output the whole sequence as-is *)
+          let rec output_utf8_sequence pos remaining =
+            if remaining > 0 && pos < l then (
+              let byte = String.unsafe_get s pos in
+              f +> Array.unsafe_get array_str1 (Char.code byte);
+              output_utf8_sequence (pos + 1) (remaining - 1))
+          in
+          output_utf8_sequence !i (n + 1);
+          (* Skip the continuation bytes *)
+          i := !i + n + 1
+        | Cont _ ->
+          (* Continuation byte, should be handled as part of Leading case *)
+          incr i
+        | Invalid ->
+          (* Invalid UTF-8 byte, escape it *)
+          let c = Char.code c in
+          f +> "\\x";
+          f +> Array.unsafe_get array_conv (c lsr 4);
+          f +> Array.unsafe_get array_conv (c land 0xf);
+          incr i)
+      | '\"' ->
+        f +> "\\\"";
+        incr i (* quote*)
+      | _ ->
+        f +> Array.unsafe_get array_str1 (Char.code c);
+        incr i
     done
   in
   f +> "\"";

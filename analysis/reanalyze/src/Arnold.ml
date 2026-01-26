@@ -107,10 +107,10 @@ module Stats = struct
 
   let logLoop () = incr nInfiniteLoops
 
-  let logCache ~functionCall ~hit ~loc =
+  let logCache ~config ~functionCall ~hit ~loc =
     incr nCacheChecks;
     if hit then incr nCacheHits;
-    if !Common.Cli.debug then
+    if config.DceConfig.cli.debug then
       Log_.warning ~forStats:false ~loc
         (Termination
            {
@@ -123,8 +123,8 @@ module Stats = struct
                  (FunctionCall.toString functionCall);
            })
 
-  let logResult ~functionCall ~loc ~resString =
-    if !Common.Cli.debug then
+  let logResult ~config ~functionCall ~loc ~resString =
+    if config.DceConfig.cli.debug then
       Log_.warning ~forStats:false ~loc
         (Termination
            {
@@ -582,16 +582,17 @@ module ExtendFunctionTable = struct
             Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
         }
       when kindOpt <> None ->
-      let checkArg ((argLabel : Asttypes.Noloc.arg_label), _argOpt) =
+      let checkArg ((argLabel : Asttypes.arg_label), _argOpt) =
         match (argLabel, kindOpt) with
-        | (Labelled l | Optional l), Some kind ->
+        | (Labelled {txt = l} | Optional {txt = l}), Some kind ->
           kind |> List.for_all (fun {Kind.label} -> label <> l)
         | _ -> true
       in
       if args |> List.for_all checkArg then Some (path, loc) else None
     | _ -> None
 
-  let traverseExpr ~functionTable ~progressFunctions ~valueBindingsTable =
+  let traverseExpr ~config ~functionTable ~progressFunctions ~valueBindingsTable
+      =
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
@@ -609,7 +610,7 @@ module ExtendFunctionTable = struct
             if not (callee |> FunctionTable.isInFunctionInTable ~functionTable)
             then (
               functionTable |> FunctionTable.addFunction ~functionName;
-              if !Common.Cli.debug then
+              if config.DceConfig.cli.debug then
                 Log_.warning ~forStats:false ~loc
                   (Termination
                      {
@@ -624,14 +625,14 @@ module ExtendFunctionTable = struct
         when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
         let functionName = Path.name callee in
         args
-        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
                match (argLabel, argOpt |> extractLabelledArgument) with
-               | Labelled label, Some (path, loc)
+               | Labelled {txt = label}, Some (path, loc)
                  when path |> FunctionTable.isInFunctionInTable ~functionTable
                  ->
                  functionTable
                  |> FunctionTable.addLabelToKind ~functionName ~label;
-                 if !Common.Cli.debug then
+                 if config.DceConfig.cli.debug then
                    Log_.warning ~forStats:false ~loc
                      (Termination
                         {
@@ -648,16 +649,16 @@ module ExtendFunctionTable = struct
     in
     {super with Tast_mapper.expr}
 
-  let run ~functionTable ~progressFunctions ~valueBindingsTable
+  let run ~config ~functionTable ~progressFunctions ~valueBindingsTable
       (expression : Typedtree.expression) =
     let traverseExpr =
-      traverseExpr ~functionTable ~progressFunctions ~valueBindingsTable
+      traverseExpr ~config ~functionTable ~progressFunctions ~valueBindingsTable
     in
     expression |> traverseExpr.expr traverseExpr |> ignore
 end
 
 module CheckExpressionWellFormed = struct
-  let traverseExpr ~functionTable ~valueBindingsTable =
+  let traverseExpr ~config ~functionTable ~valueBindingsTable =
     let super = Tast_mapper.default in
     let checkIdent ~path ~loc =
       if path |> FunctionTable.isInFunctionInTable ~functionTable then
@@ -672,11 +673,11 @@ module CheckExpressionWellFormed = struct
         ->
         let functionName = Path.name functionPath in
         args
-        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
                match argOpt |> ExtendFunctionTable.extractLabelledArgument with
                | Some (path, loc) -> (
                  match argLabel with
-                 | Labelled label -> (
+                 | Labelled {txt = label} -> (
                    if
                      functionTable
                      |> FunctionTable.functionGetKindOfLabel ~functionName
@@ -698,7 +699,7 @@ module CheckExpressionWellFormed = struct
                          |> FunctionTable.addFunction ~functionName;
                        functionTable
                        |> FunctionTable.addLabelToKind ~functionName ~label;
-                       if !Common.Cli.debug then
+                       if config.DceConfig.cli.debug then
                          Log_.warning ~forStats:false ~loc:body.exp_loc
                            (Termination
                               {
@@ -717,14 +718,17 @@ module CheckExpressionWellFormed = struct
     in
     {super with Tast_mapper.expr}
 
-  let run ~functionTable ~valueBindingsTable (expression : Typedtree.expression)
-      =
-    let traverseExpr = traverseExpr ~functionTable ~valueBindingsTable in
+  let run ~config ~functionTable ~valueBindingsTable
+      (expression : Typedtree.expression) =
+    let traverseExpr =
+      traverseExpr ~config ~functionTable ~valueBindingsTable
+    in
     expression |> traverseExpr.expr traverseExpr |> ignore
 end
 
 module Compile = struct
   type ctx = {
+    config: DceConfig.t;
     currentFunctionName: FunctionName.t;
     functionTable: FunctionTable.t;
     innerRecursiveFunctions: (FunctionName.t, FunctionName.t) Hashtbl.t;
@@ -732,7 +736,9 @@ module Compile = struct
   }
 
   let rec expression ~ctx (expr : Typedtree.expression) =
-    let {currentFunctionName; functionTable; isProgressFunction} = ctx in
+    let {config; currentFunctionName; functionTable; isProgressFunction} =
+      ctx
+    in
     let loc = expr.exp_loc in
     let notImplemented case =
       Log_.error ~loc
@@ -761,7 +767,7 @@ module Compile = struct
           let argsFromKind =
             innerFunctionDefinition.kind
             |> List.map (fun (entry : Kind.entry) ->
-                   ( Asttypes.Noloc.Labelled entry.label,
+                   ( Asttypes.Labelled {txt = entry.label; loc = Location.none},
                      Some
                        {
                          expr with
@@ -785,7 +791,7 @@ module Compile = struct
             args
             |> List.find_opt (fun arg ->
                    match arg with
-                   | Asttypes.Noloc.Labelled s, Some _ -> s = label
+                   | Asttypes.Labelled {txt = s}, Some _ -> s = label
                    | _ -> false)
           in
           let argOpt =
@@ -872,7 +878,7 @@ module Compile = struct
       Hashtbl.replace ctx.innerRecursiveFunctions oldFunctionName
         newFunctionName;
       newFunctionDefinition.body <- Some (vb_expr |> expression ~ctx:newCtx);
-      if !Common.Cli.debug then
+      if config.DceConfig.cli.debug then
         Log_.warning ~forStats:false ~loc:pat_loc
           (Termination
              {
@@ -1067,8 +1073,9 @@ module Eval = struct
   let lookupCache ~functionCall (cache : cache) =
     Hashtbl.find_opt cache functionCall
 
-  let updateCache ~functionCall ~loc ~state (cache : cache) =
-    Stats.logResult ~functionCall ~resString:(state |> State.toString) ~loc;
+  let updateCache ~config ~functionCall ~loc ~state (cache : cache) =
+    Stats.logResult ~config ~functionCall ~resString:(state |> State.toString)
+      ~loc;
     if not (Hashtbl.mem cache functionCall) then
       Hashtbl.replace cache functionCall state
 
@@ -1099,7 +1106,7 @@ module Eval = struct
       true)
     else false
 
-  let rec runFunctionCall ~cache ~callStack ~functionArgs ~functionTable
+  let rec runFunctionCall ~config ~cache ~callStack ~functionArgs ~functionTable
       ~madeProgressOn ~loc ~state functionCallToInstantiate : State.t =
     let pos = loc.Location.loc_start in
     let functionCall =
@@ -1111,7 +1118,7 @@ module Eval = struct
     let stateAfterCall =
       match cache |> lookupCache ~functionCall with
       | Some stateAfterCall ->
-        Stats.logCache ~functionCall ~hit:true ~loc;
+        Stats.logCache ~config ~functionCall ~hit:true ~loc;
         {
           stateAfterCall with
           trace = Trace.Tcall (call, stateAfterCall.progress);
@@ -1124,7 +1131,7 @@ module Eval = struct
             ~loc ~state
         then {state with trace = Trace.Tcall (call, state.progress)}
         else (
-          Stats.logCache ~functionCall ~hit:false ~loc;
+          Stats.logCache ~config ~functionCall ~hit:false ~loc;
           let functionDefinition =
             functionTable |> FunctionTable.getFunctionDefinition ~functionName
           in
@@ -1136,10 +1143,11 @@ module Eval = struct
           in
           let stateAfterCall =
             body
-            |> run ~cache ~callStack ~functionArgs:functionCall.functionArgs
-                 ~functionTable ~madeProgressOn ~state:(State.init ())
+            |> run ~config ~cache ~callStack
+                 ~functionArgs:functionCall.functionArgs ~functionTable
+                 ~madeProgressOn ~state:(State.init ())
           in
-          cache |> updateCache ~functionCall ~loc ~state:stateAfterCall;
+          cache |> updateCache ~config ~functionCall ~loc ~state:stateAfterCall;
           (* Invariant: run should restore the callStack *)
           callStack |> CallStack.removeFunctionCall ~functionCall;
           let trace = Trace.Tcall (call, stateAfterCall.progress) in
@@ -1147,12 +1155,12 @@ module Eval = struct
     in
     State.seq state stateAfterCall
 
-  and run ~(cache : cache) ~callStack ~functionArgs ~functionTable
+  and run ~config ~(cache : cache) ~callStack ~functionArgs ~functionTable
       ~madeProgressOn ~state (command : Command.t) : State.t =
     match command with
     | Call (FunctionCall functionCall, loc) ->
       functionCall
-      |> runFunctionCall ~cache ~callStack ~functionArgs ~functionTable
+      |> runFunctionCall ~config ~cache ~callStack ~functionArgs ~functionTable
            ~madeProgressOn ~loc ~state
     | Call ((ProgressFunction _ as call), _pos) ->
       let state1 =
@@ -1177,7 +1185,7 @@ module Eval = struct
         | c :: nextCommands ->
           let state1 =
             c
-            |> run ~cache ~callStack ~functionArgs ~functionTable
+            |> run ~config ~cache ~callStack ~functionArgs ~functionTable
                  ~madeProgressOn ~state
           in
           let madeProgressOn, callStack =
@@ -1200,7 +1208,7 @@ module Eval = struct
         commands
         |> List.map (fun c ->
                c
-               |> run ~cache ~callStack ~functionArgs ~functionTable
+               |> run ~config ~cache ~callStack ~functionArgs ~functionTable
                     ~madeProgressOn ~state:stateNoTrace)
       in
       State.seq state (states |> State.unorderedSequence)
@@ -1211,36 +1219,36 @@ module Eval = struct
         commands
         |> List.map (fun c ->
                c
-               |> run ~cache ~callStack ~functionArgs ~functionTable
+               |> run ~config ~cache ~callStack ~functionArgs ~functionTable
                     ~madeProgressOn ~state:stateNoTrace)
       in
       State.seq state (states |> State.nondet)
     | SwitchOption {functionCall; loc; some; none} -> (
       let stateAfterCall =
         functionCall
-        |> runFunctionCall ~cache ~callStack ~functionArgs ~functionTable
-             ~madeProgressOn ~loc ~state
+        |> runFunctionCall ~config ~cache ~callStack ~functionArgs
+             ~functionTable ~madeProgressOn ~loc ~state
       in
       match stateAfterCall.valuesOpt with
       | None ->
         Command.nondet [some; none]
-        |> run ~cache ~callStack ~functionArgs ~functionTable ~madeProgressOn
-             ~state:stateAfterCall
+        |> run ~config ~cache ~callStack ~functionArgs ~functionTable
+             ~madeProgressOn ~state:stateAfterCall
       | Some values ->
         let runOpt c progressOpt =
           match progressOpt with
           | None -> State.init ~progress:Progress ()
           | Some progress ->
             c
-            |> run ~cache ~callStack ~functionArgs ~functionTable
+            |> run ~config ~cache ~callStack ~functionArgs ~functionTable
                  ~madeProgressOn ~state:(State.init ~progress ())
         in
         let stateNone = values |> Values.getNone |> runOpt none in
         let stateSome = values |> Values.getSome |> runOpt some in
         State.seq stateAfterCall (State.nondet [stateSome; stateNone]))
 
-  let analyzeFunction ~cache ~functionTable ~loc functionName =
-    if !Common.Cli.debug then
+  let analyzeFunction ~config ~cache ~functionTable ~loc functionName =
+    if config.DceConfig.cli.debug then
       Log_.log "@[<v 2>@,@{<warning>Termination Analysis@} for @{<info>%s@}@]@."
         functionName;
     let pos = loc.Location.loc_start in
@@ -1261,10 +1269,10 @@ module Eval = struct
       in
       let state =
         body
-        |> run ~cache ~callStack ~functionArgs ~functionTable
+        |> run ~config ~cache ~callStack ~functionArgs ~functionTable
              ~madeProgressOn:FunctionCallSet.empty ~state:(State.init ())
       in
-      cache |> updateCache ~functionCall ~loc ~state
+      cache |> updateCache ~config ~functionCall ~loc ~state
 end
 
 let progressFunctionsFromAttributes attributes =
@@ -1283,7 +1291,7 @@ let progressFunctionsFromAttributes attributes =
       | _ -> [])
   else None
 
-let traverseAst ~valueBindingsTable =
+let traverseAst ~config ~valueBindingsTable =
   let super = Tast_mapper.default in
   let value_bindings (self : Tast_mapper.mapper) (recFlag, valueBindings) =
     (* Update the table of value bindings for variables *)
@@ -1350,12 +1358,13 @@ let traverseAst ~valueBindingsTable =
       recursiveDefinitions
       |> List.iter (fun (_, body) ->
              body
-             |> ExtendFunctionTable.run ~functionTable ~progressFunctions
-                  ~valueBindingsTable);
+             |> ExtendFunctionTable.run ~config ~functionTable
+                  ~progressFunctions ~valueBindingsTable);
       recursiveDefinitions
       |> List.iter (fun (_, body) ->
              body
-             |> CheckExpressionWellFormed.run ~functionTable ~valueBindingsTable);
+             |> CheckExpressionWellFormed.run ~config ~functionTable
+                  ~valueBindingsTable);
       functionTable
       |> Hashtbl.iter
            (fun
@@ -1374,17 +1383,19 @@ let traverseAst ~valueBindingsTable =
                            |> Compile.expression
                                 ~ctx:
                                   {
+                                    config;
                                     currentFunctionName = functionName;
                                     functionTable;
                                     innerRecursiveFunctions = Hashtbl.create 1;
                                     isProgressFunction;
                                   }))
                       ~functionName);
-      if !Common.Cli.debug then FunctionTable.dump functionTable;
+      if config.DceConfig.cli.debug then FunctionTable.dump functionTable;
       let cache = Eval.createCache () in
       functionsToAnalyze
       |> List.iter (fun (functionName, loc) ->
-             functionName |> Eval.analyzeFunction ~cache ~functionTable ~loc);
+             functionName
+             |> Eval.analyzeFunction ~config ~cache ~functionTable ~loc);
       Stats.newRecursiveFunctions ~numFunctions:(Hashtbl.length functionTable));
     valueBindings
     |> List.iter (fun valueBinding ->
@@ -1393,16 +1404,16 @@ let traverseAst ~valueBindingsTable =
   in
   {super with Tast_mapper.value_bindings}
 
-let processStructure (structure : Typedtree.structure) =
+let processStructure ~config (structure : Typedtree.structure) =
   Stats.newFile ();
   let valueBindingsTable = Hashtbl.create 1 in
-  let traverseAst = traverseAst ~valueBindingsTable in
+  let traverseAst = traverseAst ~config ~valueBindingsTable in
   structure |> traverseAst.structure traverseAst |> ignore
 
-let processCmt (cmt_infos : Cmt_format.cmt_infos) =
+let processCmt ~config ~file:_ (cmt_infos : Cmt_format.cmt_infos) =
   match cmt_infos.cmt_annots with
   | Interface _ -> ()
-  | Implementation structure -> processStructure structure
+  | Implementation structure -> processStructure ~config structure
   | _ -> ()
 
-let reportStats () = Stats.dump ~ppf:Format.std_formatter
+let reportStats ~config:_ = Stats.dump ~ppf:Format.std_formatter

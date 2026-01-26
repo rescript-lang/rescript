@@ -56,7 +56,7 @@ let _ = log3(
   ~req=#Int(7),
   ~opt=?(
     _ => {
-      Js.log("trace")
+      Console.log("trace")
       None
     }
   )(),

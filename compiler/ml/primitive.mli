@@ -27,6 +27,9 @@ type description = private {
 
 val set_transformed_jsx : description -> transformed_jsx:bool -> description
 
+val with_arity :
+  description -> arity:int -> from_constructor:bool -> description
+
 (* Invariant [List.length d.prim_native_repr_args = d.prim_arity] *)
 
 val parse_declaration :

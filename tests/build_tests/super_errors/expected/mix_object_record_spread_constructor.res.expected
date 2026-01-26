@@ -1,0 +1,11 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/mix_object_record_spread_constructor.res[0m:[2m3:21-33[0m
+
+  1 [2m│[0m type obj = {"name": string}
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m type t = V({...obj, [1;31mlabel: string[0m})
+  4 [2m│[0m 
+
+  You cannot mix a record field with an object type spread.
+  Remove the record field or change it to an object field (e.g. "label": ...).

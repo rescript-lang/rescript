@@ -10,8 +10,13 @@ let dict = {
   KEY: 1
 };
 
+let x = {
+  "🎉": 42
+};
+
 export {
   fn1,
   dict,
+  x,
 }
 /* No side effect */

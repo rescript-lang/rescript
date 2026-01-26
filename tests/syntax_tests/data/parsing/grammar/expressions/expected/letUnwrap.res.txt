@@ -1,0 +1,4 @@
+let Ok foo = someResult[@@let.unwrap ]
+let Some bar = someOption[@@let.unwrap ]
+let Some baz = someOption[@@let.unwrap ]
+and Some bar = someOtherOption[@@let.unwrap ]

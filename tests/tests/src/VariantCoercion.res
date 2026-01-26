@@ -139,7 +139,7 @@ module CoerceVariantBinaryOp = {
     }
 
   for x in 1 to (B :> int) {
-    Js.log(x)
+    Console.log(x)
   }
 
   type flagStr = | @as("one") One | @as("two") Two

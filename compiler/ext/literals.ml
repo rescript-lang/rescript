@@ -72,11 +72,7 @@ let node_modules_length = String.length "node_modules"
 
 let package_json = "package.json"
 
-let bsconfig_json = "bsconfig.json"
-
 let rescript_json = "rescript.json"
-
-let build_ninja = "build.ninja"
 
 (* Name of the library file created for each external dependency. *)
 let library_file = "lib"
@@ -123,12 +119,6 @@ let esmodule = "esmodule"
 
 let commonjs = "commonjs"
 
-let es6 = "es6"
-(* [@@deprecated "Will be removed in v12"] *)
-
-let es6_global = "es6-global"
-(* [@@deprecated "Will be removed in v12"] *)
-
 let unused_attribute = "Unused attribute "
 
 (** Used when produce node compatible paths *)
@@ -140,8 +130,6 @@ let node_current = "."
 
 let gentype_import1 = "genType.import"
 let gentype_import2 = "gentype.import"
-
-let bsbuild_cache = ".bsbuild"
 
 let sourcedirs_meta = ".sourcedirs.json"
 

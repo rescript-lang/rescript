@@ -174,7 +174,6 @@ for (let i$1 = 0; i$1 <= 100000; ++i$1) {
   if (!mem(i$1, v)) {
     console.log("impossible");
   }
-  
 }
 
 for (let i$2 = 0; i$2 <= 100000; ++i$2) {

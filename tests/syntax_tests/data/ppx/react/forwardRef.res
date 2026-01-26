@@ -28,7 +28,7 @@ module V4A = {
 module V4AUncurried = {
   module FancyInput = {
     @react.component
-    let make = React.forwardRef((. ~className=?, ~children, ref) =>
+    let make = React.forwardRef((~className=?, ~children, ref) =>
       <div>
         <input
           type_="text"

@@ -75,7 +75,7 @@ and for_ident = ident
 and for_direction = Js_op.direction_flag
 and property_map = (property_name * expression) list
 and length_object = Js_op.length_object
-and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes
+and delim = External_arg_spec.delim = DNone | DStarJ | DNoQuotes | DBackQuotes
 
 and expression_desc =
   | Length of expression * length_object

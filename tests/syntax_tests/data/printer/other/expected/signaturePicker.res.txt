@@ -28,7 +28,8 @@ let make = () => {
     <div className="pr-2 font-bold text-gray-400 text-lg"> {"Signature"->string} </div>
     <select
       id="country"
-      className="transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-none font-bold text-2xl text-gray-600 bg-transparent">
+      className="transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-none font-bold text-2xl text-gray-600 bg-transparent"
+    >
       {options
       ->Belt.List.map(option =>
         <option key={option->TimeSignature.toString}>
@@ -47,7 +48,8 @@ let make = () => {
       fill="none"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className="text-gray-400">
+      className="text-gray-400"
+    >
       <polyline points="6 9 12 15 18 9" />
     </svg>
   </label>

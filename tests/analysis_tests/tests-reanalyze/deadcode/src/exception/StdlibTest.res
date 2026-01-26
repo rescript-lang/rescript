@@ -1,14 +1,14 @@
-@raises(JsExn)
+@throws(JsExn)
 let optionGetExn = o => o->Option.getExn
 
-@raises(Not_found)
+@throws(Not_found)
 let resultGetExn = r => r->Result.getExn
 
-@raises(Invalid_argument)
+@throws(Invalid_argument)
 let nullGetExn = n => n->Null.getExn
 
-@raises(JsExn)
+@throws(JsExn)
 let bigIntFromStringExn = s => s->BigInt.fromStringOrThrow
 
-@raises(JsExn)
+@throws(JsExn)
 let jsonParseExn = s => s->JSON.parseOrThrow

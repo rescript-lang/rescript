@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/ternary_branch_mismatch.res[0m:[2m1:24-26[0m
+
+  [1;31m1[0m [2m│[0m let x = true ? "123" : [1;31m123[0m
+  2 [2m│[0m 
+
+  This has type: [1;31mint[0m
+  But this ternary is expected to return: [1;33mstring[0m
+
+  Ternaries ([1;33m?[0m and [1;33m:[0m) must return the same type in both branches.
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

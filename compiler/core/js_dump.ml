@@ -729,6 +729,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | DStarJ -> P.string f ("\"" ^ txt ^ "\"")
       | DNoQuotes -> P.string f txt
       | DNone -> Js_dump_string.pp_string f txt
+      | DBackQuotes -> P.string f ("`" ^ txt ^ "`")
     in
     cxt
   | Raw_js_code {code = s; code_info = info} -> (
@@ -1104,6 +1105,14 @@ and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
 and print_jsx cxt ?(spread_props : J.expression option)
     ?(key : J.expression option) ~(level : int) f (fnName : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
+  (* TODO: make fragment detection respect custom JSX runtime modules instead of
+     assuming "JsxRuntime". *)
+  let is_fragment =
+    match tag.expression_desc with
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) ->
+      true
+    | _ -> false
+  in
   let print_tag cxt =
     match tag.expression_desc with
     (* "div" or any other primitive tag *)
@@ -1111,7 +1120,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
       P.string f txt;
       cxt
     (* fragment *)
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> cxt
+    | _ when is_fragment -> cxt
     (* A user defined component or external component *)
     | _ -> expression ~level cxt f tag
   in
@@ -1128,6 +1137,11 @@ and print_jsx cxt ?(spread_props : J.expression option)
           else Some [e]
         else None)
       fields
+    (* For fragments without children we normalize to an empty list so they
+       print as <></> instead of </> which is invalid JSX. *)
+    |> function
+    | None when is_fragment -> Some []
+    | other -> other
   in
   let print_props cxt props =
     (* If a key is present, should be printed before the spread props,
@@ -1168,7 +1182,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
       match children_opt with
       | Some _ -> cxt
       | None ->
-        (* Put a space the tag name and /> *)
+        (* Put a space between the tag name and /> *)
         P.space f;
         cxt)
     else
@@ -1364,9 +1378,7 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
     P.space f;
     let cxt = brace_block cxt f s1 in
     match s2 with
-    | [] | [{statement_desc = Block [] | Exp {expression_desc = Var _}}] ->
-      P.newline f;
-      cxt
+    | [] | [{statement_desc = Block [] | Exp {expression_desc = Var _}}] -> cxt
     | [({statement_desc = If _} as nest)]
     | [{statement_desc = Block [({statement_desc = If _; _} as nest)]; _}] ->
       P.space f;

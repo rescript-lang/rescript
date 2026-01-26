@@ -1,0 +1,80 @@
+(** Cross-file items collected during AST processing.
+    
+    These are references that span file boundaries and need to be resolved
+    after all files are processed. *)
+
+(** {2 Item types} *)
+
+type exception_ref = {exception_path: DcePath.t; loc_from: Location.t}
+
+type optional_arg_call = {
+  pos_from: Lexing.position;
+  pos_to: Lexing.position;
+  arg_names: string list;
+  arg_names_maybe: string list;
+}
+
+type function_ref = {pos_from: Lexing.position; pos_to: Lexing.position}
+
+(** {2 Types} *)
+
+type t = {
+  exception_refs: exception_ref list;
+  optional_arg_calls: optional_arg_call list;
+  function_refs: function_ref list;
+}
+
+type builder = {
+  mutable exception_refs: exception_ref list;
+  mutable optional_arg_calls: optional_arg_call list;
+  mutable function_refs: function_ref list;
+}
+
+(** {2 Builder API} *)
+
+let create_builder () : builder =
+  {exception_refs = []; optional_arg_calls = []; function_refs = []}
+
+let add_exception_ref (b : builder) ~exception_path ~loc_from =
+  b.exception_refs <- {exception_path; loc_from} :: b.exception_refs
+
+let add_optional_arg_call (b : builder) ~pos_from ~pos_to ~arg_names
+    ~arg_names_maybe =
+  b.optional_arg_calls <-
+    {pos_from; pos_to; arg_names; arg_names_maybe} :: b.optional_arg_calls
+
+let add_function_reference (b : builder) ~pos_from ~pos_to =
+  b.function_refs <- {pos_from; pos_to} :: b.function_refs
+
+(** {2 Merge API} *)
+
+let merge_all (builders : builder list) : t =
+  let exception_refs =
+    builders |> List.concat_map (fun b -> b.exception_refs)
+  in
+  let optional_arg_calls =
+    builders |> List.concat_map (fun b -> b.optional_arg_calls)
+  in
+  let function_refs = builders |> List.concat_map (fun b -> b.function_refs) in
+  {exception_refs; optional_arg_calls; function_refs}
+
+(** {2 Builder extraction for reactive merge} *)
+
+let builder_to_t (builder : builder) : t =
+  {
+    exception_refs = builder.exception_refs;
+    optional_arg_calls = builder.optional_arg_calls;
+    function_refs = builder.function_refs;
+  }
+
+(** {2 Processing API} *)
+
+let process_exception_refs (t : t) ~refs ~file_deps ~find_exception ~config =
+  t.exception_refs
+  |> List.iter (fun {exception_path; loc_from} ->
+         match find_exception exception_path with
+         | None -> ()
+         | Some loc_to ->
+           DeadCommon.addValueReference ~config ~refs ~file_deps
+             ~binding:Location.none ~addFileReference:true ~locFrom:loc_from
+             ~locTo:loc_to)

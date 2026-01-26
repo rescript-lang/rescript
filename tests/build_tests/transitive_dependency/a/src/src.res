@@ -1,1 +1,1 @@
-Js.Console.log("src")
+Console.log("src")

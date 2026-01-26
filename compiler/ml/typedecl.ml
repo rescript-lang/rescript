@@ -28,6 +28,7 @@ type error =
   | Repeated_parameter
   | Duplicate_constructor of string
   | Duplicate_label of string * string option
+  | Object_spread_with_record_field of string
   | Recursive_abbrev of string
   | Cycle_in_def of string * type_expr
   | Definition_mismatch of type_expr * Includecore.type_mismatch list
@@ -255,13 +256,61 @@ let transl_labels ?record_name env closed lbls =
   in
   (lbls, lbls')
 
+let first_non_spread_field (lbls_ : Parsetree.label_declaration list) =
+  List.find_map
+    (fun (ld : Parsetree.label_declaration) ->
+      if ld.pld_name.txt <> "..." then Some ld else None)
+    lbls_
+
 let transl_constructor_arguments env closed = function
   | Pcstr_tuple l ->
     let l = List.map (transl_simple_type env closed) l in
     (Types.Cstr_tuple (List.map (fun t -> t.ctyp_type) l), Cstr_tuple l)
-  | Pcstr_record l ->
+  | Pcstr_record l -> (
     let lbls, lbls' = transl_labels env closed l in
-    (Types.Cstr_record lbls', Cstr_record lbls)
+    let expanded =
+      Record_type_spread.expand_labels_with_type_spreads env lbls lbls'
+    in
+    match expanded with
+    | Some (lbls, lbls') -> (Types.Cstr_record lbls', Cstr_record lbls)
+    | None -> (
+      match l with
+      | [{pld_name = {txt = "..."}; pld_type = spread_typ; _}] ->
+        (* Ambiguous `{...t}`: if only spread present and it doesn't resolve to a
+           record type, treat it as an object-typed tuple argument. *)
+        let obj_ty =
+          Ast_helper.Typ.object_ ~loc:spread_typ.ptyp_loc
+            [Parsetree.Oinherit spread_typ]
+            Asttypes.Closed
+        in
+        let cty = transl_simple_type env closed obj_ty in
+        (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])
+      | _ -> (
+        (* Could not resolve spread to a record type, but additional record
+           fields are present. Mirror declaration logic and reject mixing
+           object-type spreads with record fields. *)
+        match first_non_spread_field l with
+        | Some ld ->
+          raise
+            (Error (ld.pld_loc, Object_spread_with_record_field ld.pld_name.txt))
+        | None -> (
+          (* Be defensive: treat as an object-typed tuple if somehow only spreads
+             are present but not caught by the single-spread case. *)
+          let fields =
+            Ext_list.filter_map l (fun ld ->
+                match ld.pld_name.txt with
+                | "..." -> Some (Parsetree.Oinherit ld.pld_type)
+                | _ -> None)
+          in
+          match fields with
+          | [] -> (Types.Cstr_record lbls', Cstr_record lbls)
+          | _ ->
+            let obj_ty =
+              Ast_helper.Typ.object_ ~loc:(List.hd l).pld_loc fields
+                Asttypes.Closed
+            in
+            let cty = transl_simple_type env closed obj_ty in
+            (Types.Cstr_tuple [cty.ctyp_type], Cstr_tuple [cty])))))
 
 let make_constructor env type_path type_params sargs sret_type =
   match sret_type with
@@ -582,64 +631,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
         transl_labels ~record_name:sdecl.ptype_name.txt env true lbls
       in
       let lbls_opt =
-        match Record_type_spread.has_type_spread lbls with
-        | true ->
-          let rec extract t =
-            match t.desc with
-            | Tpoly (t, []) -> extract t
-            | _ -> Ctype.repr t
-          in
-          let mk_lbl (l : Types.label_declaration)
-              (ld_type : Typedtree.core_type)
-              (type_vars : (string * Types.type_expr) list) :
-              Typedtree.label_declaration =
-            {
-              ld_id = l.ld_id;
-              ld_name = {txt = Ident.name l.ld_id; loc = l.ld_loc};
-              ld_mutable = l.ld_mutable;
-              ld_optional = l.ld_optional;
-              ld_type =
-                {
-                  ld_type with
-                  ctyp_type =
-                    Record_type_spread.substitute_type_vars type_vars l.ld_type;
-                };
-              ld_loc = l.ld_loc;
-              ld_attributes = l.ld_attributes;
-            }
-          in
-          let rec process_lbls acc lbls lbls' =
-            match (lbls, lbls') with
-            | {ld_name = {txt = "..."}; ld_type} :: rest, _ :: rest' -> (
-              match
-                Ctype.extract_concrete_typedecl env (extract ld_type.ctyp_type)
-              with
-              | _p0, _p, {type_kind = Type_record (fields, _repr); type_params}
-                ->
-                let type_vars =
-                  Record_type_spread.extract_type_vars type_params
-                    ld_type.ctyp_type
-                in
-                process_lbls
-                  ( fst acc
-                    @ Ext_list.map fields (fun l -> mk_lbl l ld_type type_vars),
-                    snd acc
-                    @ Ext_list.map fields (fun l ->
-                          {
-                            l with
-                            ld_type =
-                              Record_type_spread.substitute_type_vars type_vars
-                                l.ld_type;
-                          }) )
-                  rest rest'
-              | _ -> assert false
-              | exception _ -> None)
-            | lbl :: rest, lbl' :: rest' ->
-              process_lbls (fst acc @ [lbl], snd acc @ [lbl']) rest rest'
-            | _ -> Some acc
-          in
-          process_lbls ([], []) lbls lbls'
-        | false -> Some (lbls, lbls')
+        Record_type_spread.expand_labels_with_type_spreads env lbls lbls'
       in
       let rec check_duplicates loc (lbls : Typedtree.label_declaration list)
           seen =
@@ -663,24 +655,38 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
               else if optional then Record_regular
               else Record_regular ),
           sdecl )
-      | None ->
-        (* Could not find record type decl for ...t: assume t is an object type and this is syntax ambiguity *)
-        type_record_as_object := true;
-        let fields =
-          Ext_list.map lbls_ (fun ld ->
-              match ld.pld_name.txt with
-              | "..." -> Parsetree.Oinherit ld.pld_type
-              | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
-        in
-        let sdecl =
-          {
-            sdecl with
-            ptype_kind = Ptype_abstract;
-            ptype_manifest =
-              Some (Ast_helper.Typ.object_ ~loc:sdecl.ptype_loc fields Closed);
-          }
-        in
-        (Ttype_abstract, Type_abstract, sdecl))
+      | None -> (
+        (* Could not find record type decl for ...t. This happens when the spread
+           target is not a record type (e.g. an object type). If additional
+           fields are present in the record, this mixes a record field with an
+           object-type spread and should be rejected. If only the spread exists,
+           reinterpret as an object type for backwards compatibility. *)
+        (* TODO: We really really need to make this "spread that needs to be resolved" 
+        concept 1st class in the AST or similar. This is quite hacky and fragile as
+        is.*)
+        match first_non_spread_field lbls_ with
+        | Some ld ->
+          (* Error on the first record field mixed with an object spread. *)
+          raise
+            (Error (ld.pld_loc, Object_spread_with_record_field ld.pld_name.txt))
+        | None ->
+          (* Only a spread present: treat as object type (syntax ambiguity). *)
+          type_record_as_object := true;
+          let fields =
+            Ext_list.map lbls_ (fun ld ->
+                match ld.pld_name.txt with
+                | "..." -> Parsetree.Oinherit ld.pld_type
+                | _ -> Otag (ld.pld_name, ld.pld_attributes, ld.pld_type))
+          in
+          let sdecl =
+            {
+              sdecl with
+              ptype_kind = Ptype_abstract;
+              ptype_manifest =
+                Some (Ast_helper.Typ.object_ ~loc:sdecl.ptype_loc fields Closed);
+            }
+          in
+          (Ttype_abstract, Type_abstract, sdecl)))
     | Ptype_open -> (Ttype_open, Type_open, sdecl)
   in
   let tman, man =
@@ -818,6 +824,12 @@ let check_constraints ~type_record_as_object env sdecl (_, decl) =
             styl tyl
         | Cstr_record tyl, Pcstr_record styl ->
           check_constraints_labels env visited tyl styl
+        | ( Cstr_tuple [ty],
+            Pcstr_record [{pld_name = {txt = "..."}; pld_type; _}] ) ->
+          (* Ambiguous `{...t}` parsed as record with a single spread; typer may
+             reinterpret as an object tuple argument. Accept this and check the
+             single tuple arg against the source location of the spread type. *)
+          check_constraints_rec env pld_type.ptyp_loc visited ty
         | _ -> assert false);
         match (pcd_res, cd_res) with
         | Some sr, Some r -> check_constraints_rec env sr.ptyp_loc visited r
@@ -2110,6 +2122,12 @@ let report_error ppf = function
       "The field @{<info>%s@} is defined several times in this record. Fields \
        can only be added once to a record."
       s
+  | Object_spread_with_record_field field_name ->
+    fprintf ppf
+      "@[You cannot mix a record field with an object type spread.@\n\
+       Remove the record field or change it to an object field (e.g. \"%s\": \
+       ...).@]"
+      field_name
   | Invalid_attribute msg -> fprintf ppf "%s" msg
   | Duplicate_label (s, Some record_name) ->
     fprintf ppf

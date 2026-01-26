@@ -1,0 +1,2 @@
+let {type} = r
+

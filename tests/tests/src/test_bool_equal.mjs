@@ -54,7 +54,6 @@ function assertions() {
       Error: new Error()
     };
   }
-  
 }
 
 function f0(x) {

@@ -263,9 +263,7 @@ module M = struct
 end
 
 module E = struct
-  let map_jsx_children sub = function
-    | JSXChildrenSpreading e -> JSXChildrenSpreading (sub.expr sub e)
-    | JSXChildrenItems xs -> JSXChildrenItems (List.map (sub.expr sub) xs)
+  let map_jsx_children sub xs = List.map (sub.expr sub) xs
 
   let map_jsx_prop sub = function
     | JSXPropPunning (optional, name) ->

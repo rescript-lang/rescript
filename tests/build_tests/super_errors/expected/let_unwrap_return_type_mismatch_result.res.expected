@@ -1,0 +1,19 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/let_unwrap_return_type_mismatch_result.res[0m:[2m6:8-12[0m
+
+  4 [2m│[0m 
+  5 [2m│[0m let fn = (): int => {
+  [1;31m6[0m [2m│[0m   let? [1;31mOk(v)[0m = Error("fail")
+  7 [2m│[0m   42
+  8 [2m│[0m }
+
+  This has type: [1;31mresult<'a, string>[0m
+  But this [1;33mlet?[0m is used where this type is expected: [1;33mint[0m
+
+  This [1;33mlet?[0m unwraps a [1;33mresult[0m; use it where the enclosing function or let binding returns a [1;33mresult[0m so [1;33mError[0m can propagate.
+
+  Possible solutions:
+  - Change the enclosing function or let binding to return [1;33mresult<'ok, 'error>[0m; use [1;33mOk[0m for success, and [1;33mlet?[0m will propagate [1;33mError[0m.
+  - Replace [1;33mlet?[0m with a [1;33mswitch[0m and handle the [1;33mError[0m case explicitly.
+  - If you want a default value instead of early return, unwrap using [1;33mResult.getOr(default)[0m.

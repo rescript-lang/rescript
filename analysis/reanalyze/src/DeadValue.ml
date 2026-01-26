@@ -2,23 +2,23 @@
 
 open DeadCommon
 
-let checkAnyValueBindingWithNoSideEffects
+let checkAnyValueBindingWithNoSideEffects ~config ~decls ~file
+    ~(modulePath : ModulePath.t)
     ({vb_pat = {pat_desc}; vb_expr = expr; vb_loc = loc} :
       Typedtree.value_binding) =
   match pat_desc with
   | Tpat_any when (not (SideEffects.checkExpr expr)) && not loc.loc_ghost ->
     let name = "_" |> Name.create ~isInterface:false in
-    let currentModulePath = ModulePath.getCurrent () in
-    let path = currentModulePath.path @ [!Common.currentModuleName] in
+    let path = modulePath.path @ [FileContext.module_name_tagged file] in
     name
-    |> addValueDeclaration ~path ~loc ~moduleLoc:currentModulePath.loc
-         ~sideEffects:false
+    |> addValueDeclaration ~config ~decls ~file ~path ~loc
+         ~moduleLoc:modulePath.loc ~sideEffects:false
   | _ -> ()
 
-let collectValueBinding super self (vb : Typedtree.value_binding) =
-  let oldCurrentBindings = !Current.bindings in
-  let oldLastBinding = !Current.lastBinding in
-  checkAnyValueBindingWithNoSideEffects vb;
+let collectValueBinding ~config ~decls ~file ~(current_binding : Location.t)
+    ~(modulePath : ModulePath.t) (vb : Typedtree.value_binding) =
+  let oldLastBinding = current_binding in
+  checkAnyValueBindingWithNoSideEffects ~config ~decls ~file ~modulePath vb;
   let loc =
     match vb.vb_pat.pat_desc with
     | Tpat_var (id, {loc = {loc_start; loc_ghost} as loc})
@@ -28,17 +28,16 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
       let name = Ident.name id |> Name.create ~isInterface:false in
       let optionalArgs =
         vb.vb_expr.exp_type |> DeadOptionalArgs.fromTypeExpr
-        |> Common.OptionalArgs.fromList
+        |> OptionalArgs.fromList
       in
       let exists =
-        match PosHash.find_opt decls loc_start with
+        match Declarations.find_opt_builder decls loc_start with
         | Some {declKind = Value r} ->
           r.optionalArgs <- optionalArgs;
           true
         | _ -> false
       in
-      let currentModulePath = ModulePath.getCurrent () in
-      let path = currentModulePath.path @ [!Common.currentModuleName] in
+      let path = modulePath.path @ [FileContext.module_name_tagged file] in
       let isFirstClassModule =
         match vb.vb_expr.exp_type.desc with
         | Tpackage _ -> true
@@ -49,9 +48,9 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
          let isToplevel = oldLastBinding = Location.none in
          let sideEffects = SideEffects.checkExpr vb.vb_expr in
          name
-         |> addValueDeclaration ~isToplevel ~loc
-              ~moduleLoc:currentModulePath.loc ~optionalArgs ~path ~sideEffects);
-      (match PosHash.find_opt decls loc_start with
+         |> addValueDeclaration ~config ~decls ~file ~isToplevel ~loc
+              ~moduleLoc:modulePath.loc ~optionalArgs ~path ~sideEffects);
+      (match Declarations.find_opt_builder decls loc_start with
       | None -> ()
       | Some decl ->
         (* Value bindings contain the correct location for the entire declaration: update final position.
@@ -59,11 +58,11 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
         let declKind =
           match decl.declKind with
           | Value vk ->
-            Common.DeclKind.Value
+            Decl.Kind.Value
               {vk with sideEffects = SideEffects.checkExpr vb.vb_expr}
           | dk -> dk
         in
-        PosHash.replace decls loc_start
+        Declarations.replace_builder decls loc_start
           {
             decl with
             declKind;
@@ -71,16 +70,12 @@ let collectValueBinding super self (vb : Typedtree.value_binding) =
             posStart = vb.vb_loc.loc_start;
           });
       loc
-    | _ -> !Current.lastBinding
+    | _ -> current_binding
   in
-  Current.bindings := PosSet.add loc.loc_start !Current.bindings;
-  Current.lastBinding := loc;
-  let r = super.Tast_mapper.value_binding self vb in
-  Current.bindings := oldCurrentBindings;
-  Current.lastBinding := oldLastBinding;
-  r
+  loc
 
-let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
+let processOptionalArgs ~config ~cross_file ~expType ~(locFrom : Location.t)
+    ~(binding : Location.t) ~locTo ~path args =
   if expType |> DeadOptionalArgs.hasOptionalArgs then (
     let supplied = ref [] in
     let suppliedMaybe = ref [] in
@@ -104,27 +99,33 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
              | None -> Some false
            in
            match lbl with
-           | Asttypes.Noloc.Optional s when not locFrom.loc_ghost ->
+           | Asttypes.Optional {txt = s} when not locFrom.loc_ghost ->
              if argIsSupplied <> Some false then supplied := s :: !supplied;
              if argIsSupplied = None then suppliedMaybe := s :: !suppliedMaybe
            | _ -> ());
     (!supplied, !suppliedMaybe)
-    |> DeadOptionalArgs.addReferences ~locFrom ~locTo ~path)
+    |> DeadOptionalArgs.addReferences ~config ~cross_file ~locFrom ~locTo
+         ~binding ~path)
 
-let rec collectExpr super self (e : Typedtree.expression) =
+let rec collectExpr ~config ~refs ~file_deps ~cross_file
+    ~(last_binding : Location.t) super self (e : Typedtree.expression) =
   let locFrom = e.exp_loc in
+  let binding = last_binding in
   (match e.exp_desc with
   | Texp_ident (_path, _, {Types.val_loc = {loc_ghost = false; _} as locTo}) ->
     (* if Path.name _path = "rc" then assert false; *)
     if locFrom = locTo && _path |> Path.name = "emptyArray" then (
       (* Work around lowercase jsx with no children producing an artifact `emptyArray`
          which is called from its own location as many things are generated on the same location. *)
-      if !Common.Cli.debug then
+      if config.DceConfig.cli.debug then
         Log_.item "addDummyReference %s --> %s@."
-          (Location.none.loc_start |> Common.posToString)
-          (locTo.loc_start |> Common.posToString);
-      ValueReferences.add locTo.loc_start Location.none.loc_start)
-    else addValueReference ~addFileReference:true ~locFrom ~locTo
+          (Location.none.loc_start |> Pos.toString)
+          (locTo.loc_start |> Pos.toString);
+      References.add_value_ref refs ~posTo:locTo.loc_start
+        ~posFrom:Location.none.loc_start)
+    else
+      addValueReference ~config ~refs ~file_deps ~binding ~addFileReference:true
+        ~locFrom ~locTo
   | Texp_apply
       {
         funct =
@@ -137,9 +138,9 @@ let rec collectExpr super self (e : Typedtree.expression) =
         args;
       } ->
     args
-    |> processOptionalArgs ~expType:exp_type
+    |> processOptionalArgs ~config ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
-         ~locTo ~path
+         ~binding:last_binding ~locTo ~path
   | Texp_let
       ( (* generated for functions with optional args *)
         Nonrecursive,
@@ -178,22 +179,25 @@ let rec collectExpr super self (e : Typedtree.expression) =
          && Ident.name etaArg = "eta"
          && Path.name idArg2 = "arg" ->
     args
-    |> processOptionalArgs ~expType:exp_type
+    |> processOptionalArgs ~config ~cross_file ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
-         ~locTo ~path
+         ~binding:last_binding ~locTo ~path
   | Texp_field
       (_, _, {lbl_loc = {Location.loc_start = posTo; loc_ghost = false}; _}) ->
     if !Config.analyzeTypes then
-      DeadType.addTypeReference ~posTo ~posFrom:locFrom.loc_start
+      DeadType.addTypeReference ~config ~refs ~posTo ~posFrom:locFrom.loc_start
   | Texp_construct
       ( _,
         {cstr_loc = {Location.loc_start = posTo; loc_ghost} as locTo; cstr_tag},
         _ ) ->
     (match cstr_tag with
-    | Cstr_extension path -> path |> DeadException.markAsUsed ~locFrom ~locTo
+    | Cstr_extension path ->
+      path
+      |> DeadException.markAsUsed ~config ~refs ~file_deps ~cross_file ~binding
+           ~locFrom ~locTo
     | _ -> ());
     if !Config.analyzeTypes && not loc_ghost then
-      DeadType.addTypeReference ~posTo ~posFrom:locFrom.loc_start
+      DeadType.addTypeReference ~config ~refs ~posTo ~posFrom:locFrom.loc_start
   | Texp_record {fields} ->
     fields
     |> Array.iter (fun (_, record_label_definition, _) ->
@@ -202,7 +206,9 @@ let rec collectExpr super self (e : Typedtree.expression) =
              ->
              (* Punned field in OCaml projects has ghost location in expression *)
              let e = {e with exp_loc = {exp_loc with loc_ghost = false}} in
-             collectExpr super self e |> ignore
+             collectExpr ~config ~refs ~file_deps ~cross_file ~last_binding
+               super self e
+             |> ignore
            | _ -> ())
   | _ -> ());
   super.Tast_mapper.expr self e
@@ -217,7 +223,8 @@ let rec collectExpr super self (e : Typedtree.expression) =
   With this annotation we declare a new type for each branch to allow the
   function to be typed.
   *)
-let collectPattern : _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
+let collectPattern ~config ~refs :
+    _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
  fun super self pat ->
   let posFrom = pat.Typedtree.pat_loc.loc_start in
   (match pat.pat_desc with
@@ -225,7 +232,7 @@ let collectPattern : _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
     cases
     |> List.iter (fun (_loc, {Types.lbl_loc = {loc_start = posTo}}, _pat, _) ->
            if !Config.analyzeTypes then
-             DeadType.addTypeReference ~posFrom ~posTo)
+             DeadType.addTypeReference ~config ~refs ~posFrom ~posTo)
   | _ -> ());
   super.Tast_mapper.pat self pat
 
@@ -235,13 +242,31 @@ let rec getSignature (moduleType : Types.module_type) =
   | Mty_functor (_, _mtParam, mt) -> getSignature mt
   | _ -> []
 
-let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
-    (si : Types.signature_item) =
-  let oldModulePath = ModulePath.getCurrent () in
-  (match si with
+let rec processSignatureItem ~config ~decls ~file ~doTypes ~doValues ~moduleLoc
+    ~(modulePath : ModulePath.t) ~path (si : Types.signature_item) =
+  match si with
   | Sig_type (id, t, _) when doTypes ->
     if !Config.analyzeTypes then
-      DeadType.addDeclaration ~typeId:id ~typeKind:t.type_kind
+      (* Extract manifest type path for type re-exports (type y = x = {...}).
+         Use full Path.t so cross-module re-exports work (Path.Pdot, aliases, etc.). *)
+      let manifestTypePath =
+        match t.type_manifest with
+        | Some {desc = Tconstr (path, _, _)} -> (
+          let p = path |> DcePath.fromPathT in
+          match p with
+          | [typeName] ->
+            let moduleContext =
+              modulePath.path @ [FileContext.module_name_tagged file]
+            in
+            Some (typeName :: moduleContext)
+          | _ ->
+            Some
+              (if FileContext.isInterface file then DcePath.moduleToInterface p
+               else DcePath.moduleToImplementation p))
+        | _ -> None
+      in
+      DeadType.addDeclaration ~config ~decls ~file ~modulePath ~typeId:id
+        ~typeKind:t.type_kind ~manifestTypePath
   | Sig_value (id, {Types.val_loc = loc; val_kind = kind; val_type})
     when doValues ->
     if not loc.Location.loc_ghost then
@@ -252,24 +277,22 @@ let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
       in
       if (not isPrimitive) || !Config.analyzeExternals then
         let optionalArgs =
-          val_type |> DeadOptionalArgs.fromTypeExpr
-          |> Common.OptionalArgs.fromList
+          val_type |> DeadOptionalArgs.fromTypeExpr |> OptionalArgs.fromList
         in
 
         (* if Ident.name id = "someValue" then
            Printf.printf "XXX %s\n" (Ident.name id); *)
         Ident.name id
         |> Name.create ~isInterface:false
-        |> addValueDeclaration ~loc ~moduleLoc ~optionalArgs ~path
-             ~sideEffects:false
+        |> addValueDeclaration ~config ~decls ~file ~loc ~moduleLoc
+             ~optionalArgs ~path ~sideEffects:false
   | Sig_module (id, {Types.md_type = moduleType; md_loc = moduleLoc}, _)
   | Sig_modtype (id, {Types.mtd_type = Some moduleType; mtd_loc = moduleLoc}) ->
-    ModulePath.setCurrent
-      {
-        oldModulePath with
-        loc = moduleLoc;
-        path = (id |> Ident.name |> Name.create) :: oldModulePath.path;
-      };
+    let modulePath' =
+      ModulePath.enterModule modulePath
+        ~name:(id |> Ident.name |> Name.create)
+        ~loc:moduleLoc
+    in
     let collect =
       match si with
       | Sig_modtype _ -> false
@@ -278,94 +301,159 @@ let rec processSignatureItem ~doTypes ~doValues ~moduleLoc ~path
     if collect then
       getSignature moduleType
       |> List.iter
-           (processSignatureItem ~doTypes ~doValues ~moduleLoc
+           (processSignatureItem ~config ~decls ~file ~doTypes ~doValues
+              ~moduleLoc ~modulePath:modulePath'
               ~path:((id |> Ident.name |> Name.create) :: path))
-  | _ -> ());
-  ModulePath.setCurrent oldModulePath
+  | _ -> ()
 
 (* Traverse the AST *)
-let traverseStructure ~doTypes ~doExternals =
-  let super = Tast_mapper.default in
-  let expr self e = e |> collectExpr super self in
-  let pat self p = p |> collectPattern super self in
-  let value_binding self vb = vb |> collectValueBinding super self in
-  let structure_item self (structureItem : Typedtree.structure_item) =
-    let oldModulePath = ModulePath.getCurrent () in
-    (match structureItem.str_desc with
-    | Tstr_module {mb_expr; mb_id; mb_loc} -> (
-      let hasInterface =
-        match mb_expr.mod_desc with
-        | Tmod_constraint _ -> true
-        | _ -> false
-      in
-      ModulePath.setCurrent
-        {
-          oldModulePath with
-          loc = mb_loc;
-          path = (mb_id |> Ident.name |> Name.create) :: oldModulePath.path;
-        };
-      if hasInterface then
-        match mb_expr.mod_type with
-        | Mty_signature signature ->
-          signature
-          |> List.iter
-               (processSignatureItem ~doTypes ~doValues:false
-                  ~moduleLoc:mb_expr.mod_loc
-                  ~path:
-                    ((ModulePath.getCurrent ()).path
-                    @ [!Common.currentModuleName]))
-        | _ -> ())
-    | Tstr_primitive vd when doExternals && !Config.analyzeExternals ->
-      let currentModulePath = ModulePath.getCurrent () in
-      let path = currentModulePath.path @ [!Common.currentModuleName] in
-      let exists =
-        match PosHash.find_opt decls vd.val_loc.loc_start with
-        | Some {declKind = Value _} -> true
-        | _ -> false
-      in
-      let id = vd.val_id |> Ident.name in
-      Printf.printf "Primitive %s\n" id;
-      if
-        (not exists) && id <> "unsafe_expr"
-        (* see https://github.com/BuckleScript/bucklescript/issues/4532 *)
-      then
-        id
-        |> Name.create ~isInterface:false
-        |> addValueDeclaration ~path ~loc:vd.val_loc
-             ~moduleLoc:currentModulePath.loc ~sideEffects:false
-    | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
-      if !Config.analyzeTypes then
-        typeDeclarations
-        |> List.iter (fun (typeDeclaration : Typedtree.type_declaration) ->
-               DeadType.addDeclaration ~typeId:typeDeclaration.typ_id
-                 ~typeKind:typeDeclaration.typ_type.type_kind)
-    | Tstr_include {incl_mod; incl_type} -> (
-      match incl_mod.mod_desc with
-      | Tmod_ident (_path, _lid) ->
-        let currentPath =
-          (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
-        in
-        incl_type
-        |> List.iter
-             (processSignatureItem ~doTypes
-                ~doValues:false (* TODO: also values? *)
-                ~moduleLoc:incl_mod.mod_loc ~path:currentPath)
-      | _ -> ())
-    | Tstr_exception {ext_id = id; ext_loc = loc} ->
-      let path =
-        (ModulePath.getCurrent ()).path @ [!Common.currentModuleName]
-      in
-      let name = id |> Ident.name |> Name.create in
-      name |> DeadException.add ~path ~loc ~strLoc:structureItem.str_loc
-    | _ -> ());
-    let result = super.structure_item self structureItem in
-    ModulePath.setCurrent oldModulePath;
-    result
+let traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
+    ~doExternals (structure : Typedtree.structure) : unit =
+  let rec create_mapper (last_binding : Location.t) (modulePath : ModulePath.t)
+      =
+    let super = Tast_mapper.default in
+    let rec mapper =
+      {
+        super with
+        expr =
+          (fun _self e ->
+            e
+            |> collectExpr ~config ~refs ~file_deps ~cross_file ~last_binding
+                 super mapper);
+        pat = (fun _self p -> p |> collectPattern ~config ~refs super mapper);
+        structure_item =
+          (fun _self (structureItem : Typedtree.structure_item) ->
+            let modulePath_for_item_opt =
+              match structureItem.str_desc with
+              | Tstr_module {mb_expr; mb_id; mb_loc} ->
+                let hasInterface =
+                  match mb_expr.mod_desc with
+                  | Tmod_constraint _ -> true
+                  | _ -> false
+                in
+                let modulePath' =
+                  ModulePath.enterModule modulePath
+                    ~name:(mb_id |> Ident.name |> Name.create)
+                    ~loc:mb_loc
+                in
+                if hasInterface then
+                  match mb_expr.mod_type with
+                  | Mty_signature signature ->
+                    signature
+                    |> List.iter
+                         (processSignatureItem ~config ~decls ~file ~doTypes
+                            ~doValues:false ~moduleLoc:mb_expr.mod_loc
+                            ~modulePath:modulePath'
+                            ~path:
+                              (modulePath'.path
+                              @ [FileContext.module_name_tagged file]))
+                  | _ -> ()
+                else ();
+                Some modulePath'
+              | Tstr_primitive vd when doExternals && !Config.analyzeExternals
+                ->
+                let path =
+                  modulePath.path @ [FileContext.module_name_tagged file]
+                in
+                let exists =
+                  match
+                    Declarations.find_opt_builder decls vd.val_loc.loc_start
+                  with
+                  | Some {declKind = Value _} -> true
+                  | _ -> false
+                in
+                let id = vd.val_id |> Ident.name in
+                Printf.printf "Primitive %s\n" id;
+                if
+                  (not exists) && id <> "unsafe_expr"
+                  (* see https://github.com/BuckleScript/bucklescript/issues/4532 *)
+                then
+                  id
+                  |> Name.create ~isInterface:false
+                  |> addValueDeclaration ~config ~decls ~file ~path
+                       ~loc:vd.val_loc ~moduleLoc:modulePath.loc
+                       ~sideEffects:false;
+                None
+              | Tstr_type (_recFlag, typeDeclarations) when doTypes ->
+                if !Config.analyzeTypes then
+                  typeDeclarations
+                  |> List.iter
+                       (fun (typeDeclaration : Typedtree.type_declaration) ->
+                         (* Extract manifest type path for type re-exports (type y = x = {...}). *)
+                         let manifestTypePath =
+                           match typeDeclaration.typ_manifest with
+                           | Some {ctyp_desc = Ttyp_constr (path, _, _)} -> (
+                             let p = path |> DcePath.fromPathT in
+                             match p with
+                             | [typeName] ->
+                               let moduleContext =
+                                 modulePath.path
+                                 @ [FileContext.module_name_tagged file]
+                               in
+                               Some (typeName :: moduleContext)
+                             | _ ->
+                               Some
+                                 (if FileContext.isInterface file then
+                                    DcePath.moduleToInterface p
+                                  else DcePath.moduleToImplementation p))
+                           | _ -> None
+                         in
+                         DeadType.addDeclaration ~config ~decls ~file
+                           ~modulePath ~typeId:typeDeclaration.typ_id
+                           ~typeKind:typeDeclaration.typ_type.type_kind
+                           ~manifestTypePath);
+                None
+              | Tstr_include {incl_mod; incl_type} ->
+                (match incl_mod.mod_desc with
+                | Tmod_ident (_path, _lid) ->
+                  let currentPath =
+                    modulePath.path @ [FileContext.module_name_tagged file]
+                  in
+                  incl_type
+                  |> List.iter
+                       (processSignatureItem ~config ~decls ~file ~doTypes
+                          ~doValues:false (* TODO: also values? *)
+                          ~moduleLoc:incl_mod.mod_loc ~modulePath
+                          ~path:currentPath)
+                | _ -> ());
+                None
+              | Tstr_exception {ext_id = id; ext_loc = loc} ->
+                let path =
+                  modulePath.path @ [FileContext.module_name_tagged file]
+                in
+                let name = id |> Ident.name |> Name.create in
+                ignore
+                  (DeadException.add ~config ~decls ~file ~path ~loc
+                     ~strLoc:structureItem.str_loc ~moduleLoc:modulePath.loc
+                     name);
+                None
+              | _ -> None
+            in
+            let mapper_for_item =
+              match modulePath_for_item_opt with
+              | None -> mapper
+              | Some modulePath_for_item ->
+                create_mapper last_binding modulePath_for_item
+            in
+            super.structure_item mapper_for_item structureItem);
+        value_binding =
+          (fun _self vb ->
+            let loc =
+              vb
+              |> collectValueBinding ~config ~decls ~file
+                   ~current_binding:last_binding ~modulePath
+            in
+            let nested_mapper = create_mapper loc modulePath in
+            super.Tast_mapper.value_binding nested_mapper vb);
+      }
+    in
+    mapper
   in
-  {super with expr; pat; structure_item; value_binding}
+  let mapper = create_mapper Location.none ModulePath.initial in
+  mapper.structure mapper structure |> ignore
 
 (* Merge a location's references to another one's *)
-let processValueDependency
+let processValueDependency ~config ~decls ~refs ~file_deps ~cross_file
     ( ({
          val_loc =
            {loc_start = {pos_fname = fnTo} as posTo; loc_ghost = ghost1} as
@@ -380,12 +468,17 @@ let processValueDependency
         Types.value_description) ) =
   if (not ghost1) && (not ghost2) && posTo <> posFrom then (
     let addFileReference = fileIsImplementationOf fnTo fnFrom in
-    addValueReference ~addFileReference ~locFrom ~locTo;
-    DeadOptionalArgs.addFunctionReference ~locFrom ~locTo)
+    addValueReference ~config ~refs ~file_deps ~binding:Location.none
+      ~addFileReference ~locFrom ~locTo;
+    DeadOptionalArgs.addFunctionReference ~config ~decls ~cross_file ~locFrom
+      ~locTo)
 
-let processStructure ~cmt_value_dependencies ~doTypes ~doExternals
+let processStructure ~config ~decls ~refs ~file_deps ~cross_file ~file
+    ~cmt_value_dependencies ~doTypes ~doExternals
     (structure : Typedtree.structure) =
-  let traverseStructure = traverseStructure ~doTypes ~doExternals in
-  structure |> traverseStructure.structure traverseStructure |> ignore;
+  traverseStructure ~config ~decls ~refs ~file_deps ~cross_file ~file ~doTypes
+    ~doExternals structure;
   let valueDependencies = cmt_value_dependencies |> List.rev in
-  valueDependencies |> List.iter processValueDependency
+  valueDependencies
+  |> List.iter
+       (processValueDependency ~config ~decls ~refs ~file_deps ~cross_file)

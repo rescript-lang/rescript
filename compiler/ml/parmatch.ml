@@ -1386,17 +1386,27 @@ let print_pat pat =
 
 (* strictly more powerful than exhaust; however, exhaust
    was kept for backwards compatibility *)
-let rec exhaust_gadt (ext : Path.t option) pss n =
-  match pss with
-  | [] -> Rsome [omegas n]
-  | [] :: _ -> Rnone
-  | pss -> (
-    if not (all_coherent (simplified_first_col pss)) then
-      (* We're considering an ill-typed branch, we won't actually be able to
+
+(* Limit to prevent exponential blowup in exhaustiveness checking.
+   When the limit is exceeded, we conservatively report the pattern as
+   non-exhaustive (Rnone) which may cause false warnings but prevents hangs. *)
+let exhaust_gadt_limit = 1000
+
+let rec exhaust_gadt_aux count (ext : Path.t option) pss n =
+  (* Bail out if we've done too many recursive calls to prevent exponential blowup *)
+  if !count > exhaust_gadt_limit then Rnone
+  else (
+    incr count;
+    match pss with
+    | [] -> Rsome [omegas n]
+    | [] :: _ -> Rnone
+    | pss -> (
+      if not (all_coherent (simplified_first_col pss)) then
+        (* We're considering an ill-typed branch, we won't actually be able to
          produce a well typed value taking that branch. *)
-      Rnone
-    else
-      (* Assuming the first column is ill-typed but considered coherent, we
+        Rnone
+      else
+        (* Assuming the first column is ill-typed but considered coherent, we
          might end up producing an ill-typed witness of non-exhaustivity
          corresponding to the current branch.
 
@@ -1406,29 +1416,29 @@ let rec exhaust_gadt (ext : Path.t option) pss n =
          If [exhaust] has been called by [do_check_fragile], then it is possible
          we might fail to warn the user that the matching is fragile. See for
          example testsuite/tests/warnings/w04_failure.ml. *)
-      let q0 = discr_pat omega pss in
-      match filter_all q0 pss with
-      (* first column of pss is made of variables only *)
-      | [] -> (
-        match exhaust_gadt ext (filter_extra pss) (n - 1) with
-        | Rsome r -> Rsome (List.map (fun row -> q0 :: row) r)
-        | r -> r)
-      | constrs -> (
-        let try_non_omega (p, pss) =
-          if is_absent_pat p then Rnone
+        let q0 = discr_pat omega pss in
+        match filter_all q0 pss with
+        (* first column of pss is made of variables only *)
+        | [] -> (
+          match exhaust_gadt_aux count ext (filter_extra pss) (n - 1) with
+          | Rsome r -> Rsome (List.map (fun row -> q0 :: row) r)
+          | r -> r)
+        | constrs -> (
+          let try_non_omega (p, pss) =
+            if is_absent_pat p then Rnone
+            else
+              match
+                exhaust_gadt_aux count ext pss
+                  (List.length (simple_match_args p omega) + n - 1)
+              with
+              | Rsome r -> Rsome (List.map (fun row -> set_args p row) r)
+              | r -> r
+          in
+          let before = try_many_gadt try_non_omega constrs in
+          if full_match false constrs && not (should_extend ext constrs) then
+            before
           else
-            match
-              exhaust_gadt ext pss
-                (List.length (simple_match_args p omega) + n - 1)
-            with
-            | Rsome r -> Rsome (List.map (fun row -> set_args p row) r)
-            | r -> r
-        in
-        let before = try_many_gadt try_non_omega constrs in
-        if full_match false constrs && not (should_extend ext constrs) then
-          before
-        else
-          (*
+            (*
               D = filter_extra pss is the default matrix
               as it is included in pss, one can avoid
               recursive calls on specialized matrices,
@@ -1436,23 +1446,24 @@ let rec exhaust_gadt (ext : Path.t option) pss n =
             * D exhaustive => pss exhaustive
             * D non-exhaustive => we have a non-filtered value
             *)
-          let r = exhaust_gadt ext (filter_extra pss) (n - 1) in
-          match r with
-          | Rnone -> before
-          | Rsome r -> (
-            try
-              let p = build_other ext constrs in
-              let dug = List.map (fun tail -> p :: tail) r in
-              match before with
-              | Rnone -> Rsome dug
-              | Rsome x -> Rsome (x @ dug)
-            with
-            (* cannot occur, since constructors don't make a full signature *)
-            | Empty ->
-              fatal_error "Parmatch.exhaust")))
+            let r = exhaust_gadt_aux count ext (filter_extra pss) (n - 1) in
+            match r with
+            | Rnone -> before
+            | Rsome r -> (
+              try
+                let p = build_other ext constrs in
+                let dug = List.map (fun tail -> p :: tail) r in
+                match before with
+                | Rnone -> Rsome dug
+                | Rsome x -> Rsome (x @ dug)
+              with
+              (* cannot occur, since constructors don't make a full signature *)
+              | Empty ->
+                fatal_error "Parmatch.exhaust"))))
 
 let exhaust_gadt ext pss n =
-  let ret = exhaust_gadt ext pss n in
+  let count = ref 0 in
+  let ret = exhaust_gadt_aux count ext pss n in
   match ret with
   | Rnone -> Rnone
   | Rsome lst ->
@@ -2013,7 +2024,7 @@ let ppat_of_type env ty =
     (Conv.mkpat Parsetree.Ppat_any, Hashtbl.create 0, Hashtbl.create 0)
   | pats -> Conv.conv (orify_many pats)
 
-let do_check_partial ?pred exhaust loc casel pss =
+let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
   match pss with
   | [] ->
     (*
@@ -2071,6 +2082,11 @@ let do_check_partial ?pred exhaust loc casel pss =
                     Matching over values of extensible variant types (the \
                     *extension* above)\n\
                     must include a wild card pattern in order to be exhaustive.";
+               (match partial_match_warning_hint with
+               | None -> ()
+               | Some h when String.length h > 0 ->
+                 Buffer.add_string buf ("\n\n  " ^ h)
+               | Some _ -> ());
                Buffer.contents buf
              with _ -> ""
            in
@@ -2083,8 +2099,8 @@ let do_check_partial_normal loc casel pss =
   do_check_partial exhaust loc casel pss
  *)
 
-let do_check_partial_gadt pred loc casel pss =
-  do_check_partial ~pred exhaust_gadt loc casel pss
+let do_check_partial_gadt ?partial_match_warning_hint pred loc casel pss =
+  do_check_partial ?partial_match_warning_hint ~pred exhaust_gadt loc casel pss
 
 (*****************)
 (* Fragile check *)
@@ -2265,9 +2281,9 @@ let check_partial_param do_check_partial do_check_fragile loc casel =
       do_check_partial_normal
       do_check_fragile_normal*)
 
-let check_partial_gadt pred loc casel =
+let check_partial_gadt ?partial_match_warning_hint pred loc casel =
   check_partial_param
-    (do_check_partial_gadt pred)
+    (do_check_partial_gadt ?partial_match_warning_hint pred)
     do_check_fragile_gadt loc casel
 
 (*************************************)

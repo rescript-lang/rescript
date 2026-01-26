@@ -46,13 +46,12 @@ let init () =
                   ->
                     let txt = "param" in
                     Ast_comb.single_non_rec_value ?attrs:gentype_attrs pld_name
+                      (* arity will always be 1 since these are single param functions *)
                       (Ast_compatible.fun_ ~arity:(Some 1)
                          (Pat.constraint_ (Pat.var {txt; loc}) core_type)
                          (Exp.field
                             (Exp.ident {txt = Lident txt; loc})
-                            {txt = Longident.Lident pld_label; loc})
-                      (*arity will alwys be 1 since these are single param functions*)
-                      |> handle_uncurried_accessor_tranform ~arity:1))
+                            {txt = Longident.Lident pld_label; loc})))
               | Ptype_variant constructor_declarations ->
                 Ext_list.map constructor_declarations
                   (fun

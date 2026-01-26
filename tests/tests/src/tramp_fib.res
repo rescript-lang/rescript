@@ -1,8 +1,7 @@
 @@config({flags: ["-w", "a", "-bs-noassertfalse"]})
 
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 type rec bounce<'a> = Continue('a) | Suspend(unit => bounce<'a>)
 /* https://eli.thegreenplace.net/2017/on-recursion-continuations-and-trampolines/ */
@@ -50,8 +49,13 @@ and isOdd = n =>
   | _ => isEven(n - 1)
   }
 /* Suspend (fun [@bs] () -> isEven (n - 1)) */
-eq(__LOC__, iter(u), 89)
 
-eq(__LOC__, isEven(20_000)->iter, true)
+describe(__MODULE__, () => {
+  test("fibonacci trampoline", () => {
+    eq(__LOC__, iter(u), 89)
+  })
 
-Mt.from_pair_suites(__LOC__, suites.contents)
+  test("even/odd trampoline", () => {
+    eq(__LOC__, isEven(20_000)->iter, true)
+  })
+})

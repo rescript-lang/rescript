@@ -1,3 +1,8 @@
-open Mt
+open Mocha
+open Test_utils
 
-from_suites("boolean", list{("bool_equal", Test_bool_equal.assertions)})
+describe("boolean", () => {
+  test("bool_equal", () => {
+    Test_bool_equal.assertions()
+  })
+})

@@ -89,7 +89,11 @@ val find_all_labels :
   Longident.t ->
   (label_description * (unit -> unit)) list
 val find_value :
-  Env.t -> Location.t -> Longident.t -> Path.t * value_description
+  ?deprecated_context:Cmt_utils.deprecated_used_context ->
+  Env.t ->
+  Location.t ->
+  Longident.t ->
+  Path.t * value_description
 val find_module :
   Env.t -> Location.t -> Longident.t -> Path.t * module_declaration
 val lookup_module : ?load:bool -> Env.t -> Location.t -> Longident.t -> Path.t

@@ -10,7 +10,6 @@
  (enabled_if
   (and
    (<> %{profile} browser)
-   (>= %{ocaml_version} "4.14.0")
    (or
     (= %{system} macosx)
     ; or one of Linuxes (see https://github.com/ocaml/ocaml/issues/10613)

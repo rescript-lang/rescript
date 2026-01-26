@@ -33,11 +33,6 @@ export const runtimeEsmOutputDir = path.resolve(projectDir, "lib", "es6");
 export const rewatchDir = path.resolve(projectDir, "rewatch");
 
 /**
- * path: `<projectDir>/ninja/`
- */
-export const ninjaDir = path.resolve(projectDir, "ninja");
-
-/**
  * path: `<projectDir>/tests/`
  */
 export const testDir = path.resolve(projectDir, "tests");
@@ -58,6 +53,11 @@ export const buildTestDir = path.resolve(testDir, "build_tests");
 export const docstringTestDir = path.resolve(testDir, "docstring_tests");
 
 /**
+ * path: `<projectDir>/tests/commonjs_tests/`
+ */
+export const commonjsTestDir = path.resolve(testDir, "commonjs_tests");
+
+/**
  * path: `<projectDir>/compiler/common/bs_version.ml`
  */
 export const compilerVersionFile = path.resolve(
@@ -67,12 +67,12 @@ export const compilerVersionFile = path.resolve(
 );
 
 /**
- * path: `<projectDir>/packages/artifacts.txt`
+ * path: `<projectDir>/packages/artifacts.json`
  */
 export const artifactListFile = path.resolve(
   projectDir,
   "packages",
-  "artifacts.txt",
+  "artifacts.json",
 );
 
 /**

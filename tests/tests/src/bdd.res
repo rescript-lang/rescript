@@ -15,8 +15,6 @@
 /* Translated to Caml by Xavier Leroy */
 /* Original code written in SML by ... */
 
-module Array = Ocaml_Array
-
 type rec bdd = One | Zero | Node(bdd, int, int, bdd)
 
 let rec eval = (bdd, vars) =>
@@ -24,7 +22,7 @@ let rec eval = (bdd, vars) =>
   | Zero => false
   | One => true
   | Node(l, v, _, h) =>
-    if vars[v] {
+    if vars->Array.getUnsafe(v) {
       eval(h, vars)
     } else {
       eval(l, vars)
@@ -57,14 +55,14 @@ let resize = newSize => {
       | Node(l, v, _, h) =>
         let ind = land(hashVal(getId(l), getId(h), v), newSz_1)
 
-        newArr[ind] = list{n, ...newArr[ind]}
+        newArr->Array.setUnsafe(ind, list{n, ...newArr->Array.getUnsafe(ind)})
         copyBucket(ns)
       | _ => assert(false)
       }
     }
 
   for n in 0 to sz_1.contents {
-    copyBucket(arr[n])
+    copyBucket(arr->Array.getUnsafe(n))
   }
   htab := newArr
   sz_1 := newSz_1
@@ -72,13 +70,13 @@ let resize = newSize => {
 
 let rec insert = (idl, idh, v, ind, bucket, newNode) =>
   if n_items.contents <= sz_1.contents {
-    htab.contents[ind] = list{newNode, ...bucket}
+    htab.contents->Array.setUnsafe(ind, list{newNode, ...bucket})
     incr(n_items)
   } else {
     resize(sz_1.contents + sz_1.contents + 2)
     let ind = land(hashVal(idl, idh, v), sz_1.contents)
 
-    htab.contents[ind] = list{newNode, ...htab.contents[ind]}
+    htab.contents->Array.setUnsafe(ind, list{newNode, ...htab.contents->Array.getUnsafe(ind)})
   }
 
 let resetUnique = () => {
@@ -96,7 +94,7 @@ let mkNode = (low, v, high) => {
     low
   } else {
     let ind = land(hashVal(idl, idh, v), sz_1.contents)
-    let bucket = htab.contents[ind]
+    let bucket = htab.contents->Array.getUnsafe(ind)
     let rec lookup = b =>
       switch b {
       | list{} =>
@@ -163,13 +161,13 @@ let rec not = n =>
   | Node(l, v, id, r) =>
     let h = mod(id, cacheSize)
 
-    if id == notslot1[h] {
-      notslot2[h]
+    if id == notslot1->Array.getUnsafe(h) {
+      notslot2->Array.getUnsafe(h)
     } else {
       let f = mkNode(!l, v, !r)
 
-      notslot1[h] = id
-      notslot2[h] = f
+      notslot1->Array.setUnsafe(h, id)
+      notslot2->Array.setUnsafe(h, f)
       f
     }
   }
@@ -181,8 +179,8 @@ let rec and2 = (n1, n2) =>
     | Node(l2, v2, i2, r2) =>
       let h = hash(i1, i2)
 
-      if i1 == andslot1[h] && i2 == andslot2[h] {
-        andslot3[h]
+      if i1 == andslot1->Array.getUnsafe(h) && i2 == andslot2->Array.getUnsafe(h) {
+        andslot3->Array.getUnsafe(h)
       } else {
         let f = switch cmpVar(v1, v2) {
         | EQUAL => mkNode(and2(l1, l2), v1, and2(r1, r2))
@@ -190,9 +188,9 @@ let rec and2 = (n1, n2) =>
         | GREATER => mkNode(and2(n1, l2), v2, and2(n1, r2))
         }
 
-        andslot1[h] = i1
-        andslot2[h] = i2
-        andslot3[h] = f
+        andslot1->Array.setUnsafe(h, i1)
+        andslot2->Array.setUnsafe(h, i2)
+        andslot3->Array.setUnsafe(h, f)
         f
       }
     | Zero => Zero
@@ -209,8 +207,8 @@ let rec xor = (n1, n2) =>
     | Node(l2, v2, i2, r2) =>
       let h = hash(i1, i2)
 
-      if i1 == andslot1[h] && i2 == andslot2[h] {
-        andslot3[h]
+      if i1 == andslot1->Array.getUnsafe(h) && i2 == andslot2->Array.getUnsafe(h) {
+        andslot3->Array.getUnsafe(h)
       } else {
         let f = switch cmpVar(v1, v2) {
         | EQUAL => mkNode(xor(l1, l2), v1, xor(r1, r2))
@@ -218,9 +216,9 @@ let rec xor = (n1, n2) =>
         | GREATER => mkNode(xor(n1, l2), v2, xor(n1, r2))
         }
 
-        andslot1[h] = i1
-        andslot2[h] = i2
-        andslot3[h] = f
+        andslot1->Array.setUnsafe(h, i1)
+        andslot2->Array.setUnsafe(h, i2)
+        andslot3->Array.setUnsafe(h, f)
         f
       }
     | Zero => n1
@@ -258,7 +256,7 @@ let random = () => {
 let random_vars = n => {
   let vars = Belt.Array.make(n, false)
   for i in 0 to n - 1 {
-    vars[i] = random()
+    vars->Array.setUnsafe(i, random())
   }
   vars
 }
@@ -277,14 +275,14 @@ let test_hwb = (bdd, vars) => {
      where n is the number of "true" elements in vars. */
   let ntrue = ref(0)
   for i in 0 to Belt.Array.length(vars) - 1 {
-    if vars[i] {
+    if vars->Array.getUnsafe(i) {
       incr(ntrue)
     }
   }
   bool_equal(
     eval(bdd, vars),
     if ntrue.contents > 0 {
-      vars[ntrue.contents - 1]
+      vars->Array.getUnsafe(ntrue.contents - 1)
     } else {
       false
     },

@@ -34,4 +34,4 @@ let (a, b, c, d, e) = (f, f1, f2, f3, f4)
 
 @inline let f6 = 1
 
-let () = Js.log((xx, xx0))
+let () = Console.log((xx, xx0))

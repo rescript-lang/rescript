@@ -1,6 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => Mt.eq_suites(~test_id, ~suites, loc, x, y)
+open Mocha
+open Test_utils
 
 module rec Int32: {
   type t
@@ -37,17 +36,19 @@ module A = {
   }
 }
 
-eq(__LOC__, Lazy.get(A.Inta.a), 3)
-/* expect raise Undefined_recursive_module */
-eq(
-  __LOC__,
-  4,
-  try {
-    ignore(Int3.u(3))
-    3
-  } catch {
-  | Undefined_recursive_module(_) => 4
-  },
-)
-
-let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("recursive module test", () => {
+    eq(__LOC__, Lazy.get(A.Inta.a), 3)
+    /* expect raise Undefined_recursive_module */
+    eq(
+      __LOC__,
+      4,
+      try {
+        ignore(Int3.u(3))
+        3
+      } catch {
+      | Undefined_recursive_module(_) => 4
+      },
+    )
+  })
+})

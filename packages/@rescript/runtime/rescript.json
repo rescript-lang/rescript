@@ -1,0 +1,37 @@
+{
+  "name": "@rescript/runtime",
+  "experimental-features": {
+    "LetUnwrap": true
+  },
+  "sources": [
+    {
+      "dir": "."
+    }
+  ],
+  "package-specs": [
+    {
+      "module": "commonjs",
+      "suffix": ".cjs",
+      "in-source": false
+    },
+    {
+      "module": "esmodule",
+      "suffix": ".mjs",
+      "in-source": false
+    }
+  ],
+  "compiler-flags": [
+    "-make-runtime",
+    "-nostdlib",
+    "-nopervasives",
+    "-open Pervasives",
+    "-no-keep-locs",
+    "-no-alias-deps",
+    "-bs-no-version-header",
+    "-bs-no-check-div-by-zero",
+    "-bs-cross-module-opt",
+    "-unsafe",
+    "-w -3+50",
+    "-warn-error A"
+  ]
+}

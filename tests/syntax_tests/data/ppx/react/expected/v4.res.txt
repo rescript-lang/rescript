@@ -1,6 +1,9 @@
 @res.jsxComponentProps
-type props<'x, 'y> = {x: 'x, y: 'y} // Component with type constraint
-let make = ({x, y, _}: props<string, string>) => React.string(x ++ y)
+type props<'x, 'y> = {
+  x: 'x, // Component with type constraint
+  y: 'y,
+}
+let make = ({x, y, _}: props<string, string>): React.element => React.string(x ++ y)
 let make = {
   let \"V4" = (props: props<_>) => make(props)
   \"V4"
@@ -9,9 +12,11 @@ let make = {
 module AnotherName = {
   @res.jsxComponentProps
   type // Component with another name than "make"
-  props<'x> = {x: 'x}
+  props<'x> = {
+    x: 'x,
+  }
 
-  let anotherName = ({x, _}: props<_>) => React.string(x)
+  let anotherName = ({x, _}: props<_>): React.element => React.string(x)
   let anotherName = {
     let \"V4$AnotherName$anotherName" = (props: props<_>) => anotherName(props)
 
@@ -21,9 +26,11 @@ module AnotherName = {
 
 module Uncurried = {
   @res.jsxComponentProps
-  type props<'x> = {x: 'x}
+  type props<'x> = {
+    x: 'x,
+  }
 
-  let make = ({x, _}: props<_>) => React.string(x)
+  let make = ({x, _}: props<_>): React.element => React.string(x)
   let make = {
     let \"V4$Uncurried" = (props: props<_>) => make(props)
 
@@ -33,23 +40,29 @@ module Uncurried = {
 
 module type TUncurried = {
   @res.jsxComponentProps
-  type props<'x> = {x: 'x}
+  type props<'x> = {
+    x: 'x,
+  }
 
-  let make: React.componentLike<props<string>, React.element>
+  let make: React.component<props<string>>
 }
 
 module E = {
   @res.jsxComponentProps @live
-  type props<'x> = {x: 'x}
+  type props<'x> = {
+    x: 'x,
+  }
 
-  external make: React.componentLike<props<string>, React.element> = "default"
+  external make: React.component<props<string>> = "default"
 }
 
 module EUncurried = {
   @res.jsxComponentProps @live
-  type props<'x> = {x: 'x}
+  type props<'x> = {
+    x: 'x,
+  }
 
-  external make: React.componentLike<props<string>, React.element> = "default"
+  external make: React.component<props<string>> = "default"
 }
 
 module Rec = {
@@ -57,8 +70,7 @@ module Rec = {
   type props = {}
 
   let rec make = {
-    @merlin.focus
-    let \"make$Internal" = (_: props) => {
+    let \"make$Internal" = (_: props): React.element => {
       make(({}: props))
     }
     let make = {
@@ -75,8 +87,7 @@ module Rec1 = {
   type props = {}
 
   let rec make = {
-    @merlin.focus
-    let \"make$Internal" = (_: props) => {
+    let \"make$Internal" = (_: props): React.element => {
       React.null
     }
     let make = {
@@ -93,8 +104,7 @@ module Rec2 = {
   type props = {}
 
   let rec make = {
-    @merlin.focus
-    let \"make$Internal" = (_: props) => {
+    let \"make$Internal" = (_: props): React.element => {
       mm(({}: props))
     }
     let make = {

@@ -9,7 +9,7 @@ let flat = 34
   * @returns A signed message
  ")
 @genType
-let signMessage = (. message, key) => message ++ string_of_int(key)
+let signMessage = (message, key) => message ++ string_of_int(key)
 
 @genType
 let one = a => a + 0
@@ -21,31 +21,31 @@ let two = (a, b) => a + b + 0
 let tree = (a, b, c) => a + b + c + 0
 
 @genType
-let oneU = (. a) => a + 0
+let oneU = (a) => a + 0
 
 @genType
-let twoU = (. a, b) => a + b + 0
+let twoU = (a, b) => a + b + 0
 
 @genType
-let treeU = (. a, b, c) => a + b + c + 0
+let treeU = (a, b, c) => a + b + c + 0
 
 @genType
 let useParam = param => param + 34
 
 @genType
-let useParamU = (. param) => param + 34
+let useParamU = (param) => param + 34
 
 @genType
 let unnamed1 = (_: int) => 34
 
 @genType
-let unnamed1U = (. _: int) => 34
+let unnamed1U = (_: int) => 34
 
 @genType
 let unnamed2 = (_: int, _: int) => 34
 
 @genType
-let unnamed2U = (. _: int, _: int) => 34
+let unnamed2U = (_: int, _: int) => 34
 
 @genType
 let grouped = (~x, ~y, a, b, c, ~z) => x + y + a + b + c + z
@@ -54,7 +54,7 @@ let grouped = (~x, ~y, a, b, c, ~z) => x + y + a + b + c + z
 let unitArgWithoutConversion = () => "abc"
 
 @genType
-let unitArgWithoutConversionU = (. ()) => "abc"
+let unitArgWithoutConversionU = (()) => "abc"
 
 type t =
   | A
@@ -64,4 +64,4 @@ type t =
 let unitArgWithConversion = () => A
 
 @genType
-let unitArgWithConversionU = (. ()) => A
+let unitArgWithConversionU = (()) => A

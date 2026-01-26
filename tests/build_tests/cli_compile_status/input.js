@@ -6,28 +6,28 @@ import { normalizeNewlines } from "#dev/utils";
 
 const { rescript } = setup(import.meta.dirname);
 
-// Shows compile time for `rescript build` command
+// Shows build output for `rescript build` command
 let out = await rescript("build");
+// Timing text only appears with TTY/progress output; plain output omits it.
 assert.match(
   normalizeNewlines(out.stdout),
-  />>>> Start compiling\nDependency Finished\n>>>> Finish compiling \d+ mseconds/,
+  /Parsed \d+ source files( in [0-9.]+s)?/,
 );
-
-// Shows compile time for `rescript` command
-out = await rescript("build");
 assert.match(
   normalizeNewlines(out.stdout),
-  />>>> Start compiling\nDependency Finished\n>>>> Finish compiling \d+ mseconds/,
+  /Compiled \d+ modules( in [0-9.]+s)?/,
 );
 
-// Doesn't show compile time for `rescript build -verbose` command
-// Because we can't be sure that -verbose is a valid argument
-// And bsb won't fail with a usage message.
-// It works this way not only for -verbose, but any other arg, including -h/--help/-help
-out = await rescript("build", ["-verbose"]);
-
+// Shows build output for `rescript` command
+out = await rescript("");
 assert.match(
   normalizeNewlines(out.stdout),
-  /Package stack: test {2}\nDependency Finished\n/,
+  /Parsed \d+ source files( in [0-9.]+s)?/,
 );
-assert.match(normalizeNewlines(out.stdout), /ninja.exe"? -C lib[\\/]bs ?\n/);
+assert.match(
+  normalizeNewlines(out.stdout),
+  /Compiled \d+ modules( in [0-9.]+s)?/,
+);
+
+out = await rescript("build", ["-v"]);
+assert.match(normalizeNewlines(out.stdout), /Created project context/);

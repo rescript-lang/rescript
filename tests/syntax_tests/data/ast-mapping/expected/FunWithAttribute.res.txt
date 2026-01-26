@@ -1,0 +1,1 @@
+type fn = (@as("something") ~foo: string) => int

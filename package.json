@@ -1,6 +1,6 @@
 {
   "name": "rescript",
-  "version": "12.0.0-beta.5",
+  "version": "13.0.0-alpha.2",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
@@ -26,31 +26,35 @@
     "Cristiano Calcagno (https://github.com/cristianoc)",
     "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+    "Florian Verdonck (https://github.com/nojaf)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
     "Jaap Frolich (https://github.com/jfrolich)",
     "Matthias Le Brun (https://github.com/bloodyowl)",
     "Patrick Ecker (https://github.com/ryyppy)",
     "Paul Tsnobiladzé (https://github.com/tsnobip)",
+    "Shulhi Sapli (https://github.com/shulhi)",
     "Woonki Moon (https://github.com/mununki)"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=20.11.0"
   },
   "bin": {
     "bsc": "cli/bsc.js",
-    "bstracing": "cli/bstracing.js",
     "rescript": "cli/rescript.js",
-    "rescript-legacy": "cli/rescript-legacy.js",
     "rescript-tools": "cli/rescript-tools.js"
   },
   "scripts": {
     "test": "node scripts/test.js -all",
-    "test-bsb": "node scripts/test.js -bsb",
+    "test-build": "node scripts/test.js -build",
     "test-ocaml": "node scripts/test.js -ounit",
-    "check": "biome check --changed --no-errors-on-unmatched .",
+    "check": "biome check --no-errors-on-unmatched .",
     "check:all": "biome check .",
-    "format": "biome check --changed --no-errors-on-unmatched . --fix",
+    "format": "biome check --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc",
     "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
@@ -60,9 +64,7 @@
     "COPYING",
     "COPYING.LESSER",
     "CREDITS.md",
-    "ninja.COPYING",
     "docs/docson/build-schema.json",
-    "lib",
     "cli"
   ],
   "exports": {
@@ -72,8 +74,10 @@
   },
   "imports": {
     "#cli/*": "./cli/common/*.js",
-    "#dev/*": "./lib_dev/*.js",
-    "#lib/minisocket": "./lib/minisocket.js"
+    "#dev/*": "./lib_dev/*.js"
+  },
+  "dependencies": {
+    "@rescript/runtime": "workspace:packages/@rescript/runtime"
   },
   "optionalDependencies": {
     "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64",
@@ -83,25 +87,26 @@
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "@types/node": "^20.14.9",
+    "@biomejs/biome": "2.3.11",
+    "@types/node": "^25.0.3",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
-    "mocha": "10.8.2",
-    "nyc": "15.0.0",
+    "mocha": "11.7.5",
+    "nyc": "17.1.0",
     "semver": "^7.7.2",
-    "typescript": "5.8.2"
+    "typescript": "5.9.3"
   },
   "workspaces": [
-    "packages/*",
+    "packages/playground",
     "packages/@rescript/*",
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/docstring_tests",
     "tests/gentype_tests/**",
     "tests/tools_tests",
+    "tests/commonjs_tests",
     "scripts/res"
   ],
-  "packageManager": "yarn@4.9.1",
+  "packageManager": "yarn@4.12.0",
   "preferUnplugged": true
 }

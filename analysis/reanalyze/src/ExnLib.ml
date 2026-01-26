@@ -240,5 +240,5 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
                   (e |> Exceptions.fromList)));
   table
 
-let find (path : Common.Path.t) =
-  Hashtbl.find_opt raisesLibTable (path |> Common.Path.toName)
+let find (path : DcePath.t) =
+  Hashtbl.find_opt raisesLibTable (path |> DcePath.toName)

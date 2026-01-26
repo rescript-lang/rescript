@@ -121,10 +121,7 @@ let user = /* before */ {
   /* c4 */ "age" /* c5 */: /* c6 */ 31 /* c7 */,
 } // after
 
-let spreadUser = {
-  /* before */ ...user1 /* after */,
-  /* c0 */ age /* c1 */: /* c2 */ 32 /* c3 */,
-}
+let spreadUser = {/* before */ ...user1 /* after */, /* c0 */ age /* c1 */: /* c2 */ 32 /* c3 */}
 
 // Pexp_field
 let x = /* before */ user /* c0 */./* c1 */ name /* c2 */

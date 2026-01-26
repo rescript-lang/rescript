@@ -326,8 +326,8 @@ module E = struct
     match e.pexp_desc with
     | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
       ->
-      JSXChildrenItems (visit e)
-    | _ -> JSXChildrenSpreading (sub.expr sub e)
+      visit e
+    | _ -> [sub.expr sub e]
 
   let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
       (e : expression) : Parsetree.jsx_prop option =
@@ -396,10 +396,23 @@ module E = struct
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
       let props, children = extract_props_and_children sub args in
+      let jsx_tag : Pt.jsx_tag_name =
+        match tag_name.txt with
+        | Longident.Lident s
+          when String.length s > 0 && Char.lowercase_ascii s.[0] = s.[0] ->
+          Pt.JsxLowerTag s
+        | Longident.Lident _ -> Pt.JsxUpperTag tag_name.txt
+        | Longident.Ldot (path, last)
+          when String.length last > 0
+               && Char.lowercase_ascii last.[0] = last.[0] ->
+          Pt.JsxQualifiedLowerTag {path; name = last}
+        | _ -> Pt.JsxUpperTag tag_name.txt
+      in
+      let jsx_tag_name = {txt = jsx_tag; loc = tag_name.loc} in
       match children with
-      | None -> jsx_unary_element ~loc ~attrs tag_name props
+      | None -> jsx_unary_element ~loc ~attrs jsx_tag_name props
       | Some children ->
-        jsx_container_element ~loc ~attrs tag_name props Lexing.dummy_pos
+        jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
           children None)
     | Pexp_apply (e, l) ->
       let e =

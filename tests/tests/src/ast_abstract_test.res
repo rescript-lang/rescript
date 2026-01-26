@@ -1,13 +1,5 @@
-let suites: ref<Mt.pair_suites> = ref(list{})
-let test_id = ref(0)
-let eq = (loc, x, y) => {
-  incr(test_id)
-  suites :=
-    list{
-      (loc ++ (" id " ++ Js.Int.toString(test_id.contents)), _ => Mt.Eq(x, y)),
-      ...suites.contents,
-    }
-}
+open Mocha
+open Test_utils
 
 @deriving({jsConverter: newType})
 type t<'a> = {
@@ -30,10 +22,8 @@ let idx = v => eq(__LOC__, xFromJs(xToJs(v)), v)
 let x0 = xToJs(#a)
 let x1 = xToJs(#b)
 
-let () = {
-  idx(#a)
-  idx(#b)
-  idx(#c)
-}
-
-Mt.from_pair_suites(__MODULE__, suites.contents)
+describe(__MODULE__, () => {
+  test("jsConverter roundtrip for #a", () => idx(#a))
+  test("jsConverter roundtrip for #b", () => idx(#b))
+  test("jsConverter roundtrip for #c", () => idx(#c))
+})

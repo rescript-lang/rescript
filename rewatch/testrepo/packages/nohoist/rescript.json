@@ -1,0 +1,5 @@
+{
+  "name": "@testrepo/nohoist",
+  "sources": ["src"],
+  "dependencies": ["rescript-bun"]
+}

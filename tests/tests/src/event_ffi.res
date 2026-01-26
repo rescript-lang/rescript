@@ -48,7 +48,7 @@ let h34 = x => x(1, 2, 3)(4)
 
 let ocaml_run = (b, c) => ((x, y, z) => x + y + z)(1, b, c)
 
-let a0 = () => Js.log("hi")
+let a0 = () => Console.log("hi")
 let a1 = () => x => x
 let a2 = (x, y) => x + y
 let a3 = (x, y, z) => x + y + z
@@ -61,6 +61,6 @@ let a3 = (x, y, z) => x + y + z
 
 let test_as: (_ as 'b, 'a => 'a) => 'b = Belt.List.map
 
-let xx: unit => _ => unit = () => _ => Js.log(3)
+let xx: unit => _ => unit = () => _ => Console.log(3)
 
 /* let test_hihi = hihi _ [@bs] */

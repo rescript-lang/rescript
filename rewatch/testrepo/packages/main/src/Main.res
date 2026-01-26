@@ -1,7 +1,7 @@
-Js.log("01")
+Console.log("01")
 Dep01.log()
 
-Js.log(InternalDep.value)
+Console.log(InternalDep.value)
 
 module Array = Belt.Array
 module String = Js.String

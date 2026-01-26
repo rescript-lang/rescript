@@ -1,1 +1,1 @@
-Js.log(__MODULE__)
+Console.log(__MODULE__)

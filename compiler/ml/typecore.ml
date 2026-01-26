@@ -42,7 +42,7 @@ type error =
       context: type_clash_context option;
     }
   | Apply_non_function of type_expr
-  | Apply_wrong_label of Noloc.arg_label * type_expr
+  | Apply_wrong_label of arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: jsx_prop_error_info option;
@@ -61,7 +61,7 @@ type error =
   | Not_subtype of
       Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of Noloc.arg_label * type_expr
+  | Abstract_wrong_label of arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -88,7 +88,7 @@ type error =
       function_type: type_expr;
       expected_arity: int;
       provided_arity: int;
-      provided_args: Asttypes.Noloc.arg_label list;
+      provided_args: Asttypes.arg_label list;
       function_name: Longident.t option;
     }
   | Field_not_optional of string * type_expr
@@ -756,11 +756,10 @@ let print_expr_type_clash ~context env loc trace ppf =
       ~pp_sep:(fun ppf _ -> fprintf ppf ",@ ")
       (fun ppf (label, argtype) ->
         match label with
-        | Asttypes.Noloc.Nolabel ->
-          fprintf ppf "@[%a@]" Printtyp.type_expr argtype
-        | Labelled label ->
+        | Asttypes.Nolabel -> fprintf ppf "@[%a@]" Printtyp.type_expr argtype
+        | Labelled {txt = label} ->
           fprintf ppf "@[(~%s: %a)@]" label Printtyp.type_expr argtype
-        | Optional label ->
+        | Optional {txt = label} ->
           fprintf ppf "@[(?%s: %a)@]" label Printtyp.type_expr argtype)
   in
   match missing_arguments with
@@ -1722,13 +1721,14 @@ let partial_pred ~lev ?mode ?explode env expected_ty constrs labels p =
     set_state state env;
     None
 
-let check_partial ?(lev = get_current_level ()) env expected_ty loc cases =
+let check_partial ?(lev = get_current_level ()) ?partial_match_warning_hint env
+    expected_ty loc cases =
   let explode =
     match cases with
     | [_] -> 5
     | _ -> 0
   in
-  Parmatch.check_partial_gadt
+  Parmatch.check_partial_gadt ?partial_match_warning_hint
     (partial_pred ~lev ~explode env expected_ty)
     loc cases
 
@@ -1891,7 +1891,6 @@ and is_nonexpansive_opt = function
 let rec approx_type env sty =
   match sty.ptyp_desc with
   | Ptyp_arrow {arg = {lbl = p}; ret = sty; arity} ->
-    let p = Asttypes.to_noloc p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
@@ -1910,7 +1909,6 @@ let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
-    let p = Asttypes.to_noloc p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
@@ -2242,12 +2240,12 @@ let extract_function_name funct =
   | _ -> None
 
 type lazy_args =
-  (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
+  (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
-type targs = (Asttypes.Noloc.arg_label * Typedtree.expression option) list
-let rec type_exp ~context ?recarg env sexp =
+type targs = (Asttypes.arg_label * Typedtree.expression option) list
+let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
-  type_expect ~context ?recarg env sexp (newvar ())
+  type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
 
 (* Typing of an expression with an expected type.
    This provide better error messages, and allows controlled
@@ -2255,18 +2253,31 @@ let rec type_exp ~context ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ~context ?in_function ?recarg env sexp ty_expected =
+and type_expect ~context ?deprecated_context ?in_function ?recarg env sexp
+    ty_expected =
+  (* Special errors for braced identifiers passed to records *)
+  let context =
+    match sexp.pexp_desc with
+    | Pexp_ident _ ->
+      if
+        sexp.pexp_attributes
+        |> List.exists (fun (attr, _) -> attr.txt = "res.braces")
+      then Some Error_message_utils.BracedIdent
+      else context
+    | _ -> context
+  in
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ~context ?in_function ?recarg env sexp ty_expected)
+        type_expect_ ?deprecated_context ~context ?in_function ?recarg env sexp
+          ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
   exp
 
-and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
-    =
+and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
+    env sexp ty_expected =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
@@ -2283,7 +2294,14 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
   in
   match sexp.pexp_desc with
   | Pexp_ident lid ->
-    let path, desc = Typetexp.find_value env lid.loc lid.txt in
+    let path, desc =
+      Typetexp.find_value
+        ?deprecated_context:
+          (match deprecated_context with
+          | None -> Some Reference
+          | v -> v)
+        env lid.loc lid.txt
+    in
     (if !Clflags.annotations then
        let dloc = desc.Types.val_loc in
        let annot =
@@ -2370,7 +2388,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         arity;
         async;
       } ->
-    let l = Asttypes.to_noloc l in
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2413,7 +2430,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
-    let l = Asttypes.to_noloc l in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
@@ -2421,7 +2437,9 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
-    let funct = type_exp ~context:None env sfunct in
+    let funct =
+      type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
+    in
     let ty = instance env funct.exp_type in
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;
@@ -2474,12 +2492,21 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     (* Note: val_caselist = [] and exn_caselist = [], i.e. a fully
        empty pattern matching can be generated by Camlp4 with its
        revised syntax.  Let's accept it for backward compatibility. *)
+    let call_context =
+      if
+        Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
+            match txt with
+            | "let.unwrap" -> true
+            | _ -> false)
+      then `LetUnwrap
+      else `Switch
+    in
     let val_cases, partial =
-      type_cases ~call_context:`Switch env arg.exp_type ty_expected true loc
+      type_cases ~call_context env arg.exp_type ty_expected true loc
         val_caselist
     in
     let exn_cases, _ =
-      type_cases ~call_context:`Switch env Predef.type_exn ty_expected false loc
+      type_cases ~call_context env Predef.type_exn ty_expected false loc
         exn_caselist
     in
     re
@@ -2826,13 +2853,25 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_ifthenelse (scond, sifso, sifnot) -> (
+    (* TODO(attributes) Unify the attribute handling in the parser and rest of the compiler. *)
+    let is_ternary =
+      let rec has_ternary = function
+        | [] -> false
+        | ({Location.txt = "res.ternary"}, _) :: _ -> true
+        | _ :: rest -> has_ternary rest
+      in
+      has_ternary sexp.pexp_attributes
+    in
+    let return_context =
+      if is_ternary then Some TernaryReturn else Some IfReturn
+    in
     let cond =
       type_expect ~context:(Some IfCondition) env scond Predef.type_bool
     in
     match sifnot with
     | None ->
       let ifso =
-        type_expect ~context:(Some IfReturn) env sifso Predef.type_unit
+        type_expect ~context:return_context env sifso Predef.type_unit
       in
       rue
         {
@@ -2844,10 +2883,10 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
           exp_env = env;
         }
     | Some sifnot ->
-      let ifso = type_expect ~context:(Some IfReturn) env sifso ty_expected in
-      let ifnot = type_expect ~context:(Some IfReturn) env sifnot ty_expected in
+      let ifso = type_expect ~context:return_context env sifso ty_expected in
+      let ifnot = type_expect ~context:return_context env sifnot ty_expected in
       (* Keep sharing *)
-      unify_exp ~context:(Some IfReturn) env ifnot ifso.exp_type;
+      unify_exp ~context:return_context env ifnot ifso.exp_type;
       re
         {
           exp_desc = Texp_ifthenelse (cond, ifso, Some ifnot);
@@ -3414,11 +3453,16 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
           instance_def Predef.type_string
-        | _ ->
-          unify env lhs_type (instance_def Predef.type_int);
-          instance_def Predef.type_int
+        | _ -> (
+          try
+            unify env lhs_type (instance_def Predef.type_int);
+            instance_def Predef.type_int
+          with Ctype.Unify trace ->
+            raise
+              (Error (lhs.exp_loc, env, Expr_type_clash {trace; context = None}))
+          )
       in
-      let targs = [(to_noloc lhs_label, Some lhs)] in
+      let targs = [(lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
@@ -3482,9 +3526,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
             let rhs = type_expect ~context:None env rhs_expr Predef.type_int in
             (lhs, rhs, instance_def Predef.type_int))
       in
-      let targs =
-        [(to_noloc lhs_label, Some lhs); (to_noloc rhs_label, Some rhs)]
-      in
+      let targs = [(lhs_label, Some lhs); (rhs_label, Some rhs)] in
       Some (targs, result_type)
     | _ -> None)
   | _ -> None
@@ -3537,7 +3579,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
                    function_type = funct.exp_type;
                    expected_arity = arity;
                    provided_arity = List.length sargs;
-                   provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                   provided_args = sargs |> List.map (fun (a, _) -> a);
                    function_name = extract_function_name funct;
                  } ));
       arity
@@ -3559,7 +3601,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
                     function_type = funct.exp_type;
                     expected_arity = required_args + newarity;
                     provided_arity = required_args;
-                    provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                    provided_args = sargs |> List.map (fun (a, _) -> a);
                     function_name = extract_function_name funct;
                   } )));
       let new_t =
@@ -3587,11 +3629,10 @@ and type_application ~context total_app env funct (sargs : sargs) :
       in
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
-        | Tarrow ({lbl = Optional l; typ = t1}, t2, _, _) ->
-          ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
+        | Tarrow ({lbl; typ = t1}, t2, _, _) when is_optional lbl ->
+          ignored := (lbl, t1, ty_fun.level) :: !ignored;
           let arg =
-            ( Noloc.Optional l,
-              Some (fun () -> option_none (instance env t1) Location.none) )
+            (lbl, Some (fun () -> option_none (instance env t1) Location.none))
           in
           type_unknown_args max_arity ~args:(arg :: args) ~top_arity:None
             omitted t2 []
@@ -3603,7 +3644,6 @@ and type_application ~context total_app env funct (sargs : sargs) :
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
     | (l1, sarg1) :: sargl ->
-      let l1 = to_noloc l1 in
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
@@ -3620,7 +3660,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
                   ({lbl = l1; typ = t1}, t2, Clink (ref Cunknown), top_arity)));
           (t1, t2)
         | Tarrow ({lbl = l; typ = t1}, t2, _, _)
-          when Asttypes.Noloc.same_arg_label l l1 && arity_ok ->
+          when Asttypes.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
           let ty_fun =
@@ -3673,13 +3713,13 @@ and type_application ~context total_app env funct (sargs : sargs) :
               Some (fun () -> option_none (instance env ty) Location.none) ))
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
-          if (not optional) && is_optional_loc l' then
+          if (not optional) && is_optional l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
           ( sargs,
             omitted,
             Some
-              (if (not optional) || is_optional_loc l' then fun () ->
+              (if (not optional) || is_optional l' then fun () ->
                  type_argument
                    ~context:
                      (type_clash_context_for_function_argument ~label:l' context
@@ -3863,8 +3903,9 @@ and type_statement ~context env sexp =
 
 (* Typing of match cases *)
 
-and type_cases ~(call_context : [`Switch | `Function | `Try]) ?in_function env
-    ty_arg ty_res partial_flag loc caselist : _ * Typedtree.partial =
+and type_cases ~(call_context : [`LetUnwrap | `Switch | `Function | `Try])
+    ?in_function env ty_arg ty_res partial_flag loc caselist :
+    _ * Typedtree.partial =
   (* ty_arg is _fully_ generalized *)
   let patterns = List.map (fun {pc_lhs = p} -> p) caselist in
   let contains_polyvars = List.exists contains_polymorphic_variant patterns in
@@ -3982,6 +4023,7 @@ and type_cases ~(call_context : [`Switch | `Function | `Try]) ?in_function env
               (match call_context with
               | `Switch -> Some SwitchReturn
               | `Try -> Some TryReturn
+              | `LetUnwrap -> Some LetUnwrapReturn
               | `Function -> None)
             ?in_function ext_env sexp ty_res'
         in
@@ -4179,7 +4221,24 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
   List.iter2
     (fun pat (attrs, exp) ->
       Builtin_attributes.warning_scope ~ppwarning:false attrs (fun () ->
-          ignore (check_partial env pat.pat_type pat.pat_loc [case pat exp])))
+          let partial_match_warning_hint =
+            if Experimental_features.is_enabled Experimental_features.LetUnwrap
+            then
+              let ty = repr (Ctype.expand_head env pat.pat_type) in
+              match ty.desc with
+              | Tconstr (path, _, _)
+                when Path.same path Predef.path_option
+                     || Path.same path Predef.path_result ->
+                Some
+                  "Hint: You can use `let?` to automatically unwrap this \
+                   expression."
+              | _ -> None
+            else None
+          in
+          ignore
+            (check_partial ?partial_match_warning_hint env pat.pat_type
+               pat.pat_loc
+               [case pat exp])))
     pat_list
     (List.map2 (fun (attrs, _) e -> (attrs, e)) spatl exp_list);
   end_def ();
@@ -4410,7 +4469,7 @@ let report_error env loc ppf error =
         type_expr typ)
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
-      | Noloc.Nolabel ->
+      | Nolabel ->
         fprintf ppf "The argument at this position should be labelled."
       | l ->
         fprintf ppf "This function does not take the argument @{<info>%s@}."
@@ -4492,7 +4551,7 @@ let report_error env loc ppf error =
       fprintf ppf "the expected type is@ %a@]" type_expr ty)
   | Abstract_wrong_label (l, ty) ->
     let label_mark = function
-      | Noloc.Nolabel -> "but its first argument is not labelled"
+      | Nolabel -> "but its first argument is not labelled"
       | l ->
         sprintf "but its first argument is labelled %s" (prefixed_label_name l)
     in
@@ -4546,8 +4605,14 @@ let report_error env loc ppf error =
       "@[Exception patterns must be at the top level of a match case.@]"
   | Inlined_record_escape ->
     fprintf ppf
-      "@[This form is not allowed as the type of the inlined record could \
-       escape.@]"
+      "@[This use of an inlined record is not allowed: its anonymous type \
+       would escape its constructor scope.@,\
+       @,\
+       Possible solutions: @,\
+       - Destructure the fields you're interested in from the inline record@,\
+       - Change the underlying type to use a defined record as payload instead \
+       of an inline record. That will let you use the payload without \
+       destructuring it first"
   | Inlined_record_expected ->
     fprintf ppf "@[This constructor expects an inlined record argument.@]"
   | Invalid_extension_constructor_payload ->
@@ -4589,12 +4654,10 @@ let report_error env loc ppf error =
 
     (* Unlabelled arg counts *)
     let args_from_type_unlabelled =
-      args_from_type
-      |> List.filter (fun arg -> arg = Noloc.Nolabel)
-      |> List.length
+      args_from_type |> List.filter (fun arg -> arg = Nolabel) |> List.length
     in
     let sargs_unlabelled =
-      sargs |> List.filter (fun arg -> arg = Noloc.Nolabel) |> List.length
+      sargs |> List.filter (fun arg -> arg = Nolabel) |> List.length
     in
     let mismatch_in_unlabelled_args =
       args_from_type_unlabelled <> sargs_unlabelled
@@ -4605,14 +4668,14 @@ let report_error env loc ppf error =
       args_from_type
       |> List.filter_map (fun arg ->
              match arg with
-             | Noloc.Labelled n -> Some n
+             | Labelled {txt = n} -> Some n
              | Optional _ | Nolabel -> None)
     in
     let passed_named_args =
       sargs
       |> List.filter_map (fun arg ->
              match arg with
-             | Noloc.Labelled n | Optional n -> Some n
+             | Labelled {txt} | Optional {txt} -> Some txt
              | Nolabel -> None)
     in
     let missing_required_args =
@@ -4625,7 +4688,7 @@ let report_error env loc ppf error =
       args_from_type
       |> List.filter_map (fun arg ->
              match arg with
-             | Noloc.Labelled n | Optional n -> Some n
+             | Labelled {txt = n} | Optional {txt = n} -> Some n
              | Nolabel -> None)
     in
     let superfluous_args =
@@ -4644,11 +4707,17 @@ let report_error env loc ppf error =
 
     if not is_fallback then fprintf ppf "@,";
 
-    if List.length missing_required_args > 0 then
+    if List.length missing_required_args > 0 then (
       fprintf ppf "@,- Missing arguments that must be provided: %s"
         (missing_required_args
         |> List.map (fun v -> "~" ^ v)
         |> String.concat ", ");
+
+      fprintf ppf
+        "@,\
+         - Hint: Did you want to partially apply the function? You can do that \
+         by putting `...` just before the closing parens of the function call. \
+         Example: @{<info>yourFn(~arg1=someVar, ...)@}");
 
     if List.length superfluous_args > 0 then
       fprintf ppf "@,- Called with arguments it does not take: %s"

@@ -2,11 +2,13 @@ let f = a => Js.Promise.resolve(a + a)
 
 module C0 = {
   @res.jsxComponentProps
-  type props<'a> = {a: 'a}
+  type props<'a> = {
+    a: 'a,
+  }
 
   let make = async ({a, _}: props<_>) => {
     let a = await f(a)
-    ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
+    (ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})}): React.element)
   }
   let make = {
     let \"AsyncAwait$C0" = (props: props<_>) => Jsx.promise(make(props))
@@ -17,9 +19,11 @@ module C0 = {
 
 module C1 = {
   @res.jsxComponentProps
-  type props<'status> = {status: 'status}
+  type props<'status> = {
+    status: 'status,
+  }
 
-  let make = async ({status, _}: props<_>) => {
+  let make = async ({status, _}: props<_>): React.element => {
     switch status {
     | #on => React.string("on")
     | #off => React.string("off")

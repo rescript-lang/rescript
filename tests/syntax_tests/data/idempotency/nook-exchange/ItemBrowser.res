@@ -202,7 +202,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
     <div className=Styles.cards>
       {filteredItems
       ->Belt.Array.slice(~offset=pageOffset * numResultsPerPage, ~len=numResultsPerPage)
-      ->Belt.Array.mapWithIndexU((. i, item) =>
+      ->Belt.Array.mapWithIndexU((i, item) =>
         <ItemCard item isLoggedIn showLogin key={string_of_int(item.id) ++ string_of_int(i)} />
       )
       ->React.array}

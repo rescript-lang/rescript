@@ -1,13 +1,25 @@
 [2K No implementation file found for interface file (skipping): src/ModuleWithInterface2.resi
-Cleaned 1/60
-Parsed 1 source files
+Cleaned 1/432
+Parsed 2 source files
 Compiled 2 modules
 
-The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
-Use 'dependencies' instead.
+  [1;33mWarning number 32[0m
+  [36m/packages/watch-warnings/src/ModuleA.res[0m:[2m1:5-15[0m
 
-The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
-Use 'dev-dependencies' instead.
+  [1;33m1[0m [2m│[0m let [1;33munusedValue[0m = 42
+  2 [2m│[0m 
+  3 [2m│[0m let hello = () => Console.log("hello")
 
-The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
-Use 'compiler-flags' instead.
+  unused value unusedValue.
+
+
+
+The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
+
+Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.

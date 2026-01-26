@@ -8,7 +8,7 @@ module App = {
       ~coder=SerializeQueryParam.stringArray,
     )
     (
-      Belt.Array.mapU(locations, (. locationId) => {
+      Belt.Array.mapU(locations, (locationId) => {
         let (primaryColor, secondaryColor) = ColorStack.getColor(~location=locationId, colors)
         {
           Location.primaryColor: primaryColor,
@@ -30,7 +30,7 @@ module App = {
       ~queryFragment,
       ~coder={
         encode: x => SerializeQueryParam.string.encode(encode(x)),
-        decode: x => SerializeQueryParam.string.decode(x)->Js.Option.andThen((. x) => decode(x)),
+        decode: x => SerializeQueryParam.string.decode(x)->Js.Option.andThen((x) => decode(x)),
       },
     )
 
@@ -102,7 +102,7 @@ module App = {
       ~queryFragment="threshold",
       ~coder={
         encode: x => Belt.Option.getWithDefault(x, 1)->SerializeQueryParam.int.encode,
-        decode: x => SerializeQueryParam.int.decode(x)->Js.Option.map((. x) => Some(x)),
+        decode: x => SerializeQueryParam.int.decode(x)->Js.Option.map((x) => Some(x)),
       },
     )
     let startDate = UseQueryParam.hook(

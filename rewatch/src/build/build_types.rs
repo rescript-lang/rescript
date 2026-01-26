@@ -1,6 +1,9 @@
 use crate::build::packages::{Namespace, Package};
+use crate::config::Config;
+use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
-use std::{fmt::Display, path::PathBuf, time::SystemTime};
+use blake3::Hash;
+use std::{fmt::Display, ops::Deref, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseState {
@@ -24,6 +27,10 @@ pub struct Interface {
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
     pub parse_dirty: bool,
+    /// Compiler warning output (from bsc stderr) stored for re-emission
+    /// during incremental builds when this module is not recompiled.
+    /// Written to `.compiler.log` on each build cycle.
+    pub compile_warnings: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +40,10 @@ pub struct Implementation {
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
     pub parse_dirty: bool,
+    /// Compiler warning output (from bsc stderr) stored for re-emission
+    /// during incremental builds when this module is not recompiled.
+    /// Written to `.compiler.log` on each build cycle.
+    pub compile_warnings: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -87,17 +98,40 @@ impl Module {
     }
 }
 
+/// Core build state containing all the essential data needed for compilation.
+/// This is the minimal state required for basic build operations like cleaning.
+/// Used by commands that don't need command-line specific overrides (e.g., `clean`).
 #[derive(Debug)]
 pub struct BuildState {
+    pub project_context: ProjectContext,
     pub modules: AHashMap<String, Module>,
     pub packages: AHashMap<String, Package>,
     pub module_names: AHashSet<String>,
-    pub project_root: PathBuf,
-    pub root_config_name: String,
     pub deleted_modules: AHashSet<String>,
-    pub bsc_path: PathBuf,
-    pub workspace_root: Option<PathBuf>,
+    pub compiler_info: CompilerInfo,
     pub deps_initialized: bool,
+}
+
+/// Extended build state that includes command-line specific overrides.
+/// Wraps `BuildState` and adds command-specific data like warning overrides.
+/// Used by commands that need to respect CLI flags (e.g., `build`, `watch`).
+///
+/// The separation exists because:
+/// - `clean` command only needs core build data, no CLI overrides
+/// - `build`/`watch` commands need both core data AND CLI overrides
+/// - This prevents the "code smell" of optional fields that are None for some commands
+#[derive(Debug)]
+pub struct BuildCommandState {
+    pub build_state: BuildState,
+    // Command-line --warn-error flag override (takes precedence over rescript.json config)
+    pub warn_error_override: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompilerInfo {
+    pub bsc_path: PathBuf,
+    pub bsc_hash: Hash,
+    pub runtime_path: PathBuf,
 }
 
 impl BuildState {
@@ -108,22 +142,19 @@ impl BuildState {
     pub fn get_module(&self, module_name: &str) -> Option<&Module> {
         self.modules.get(module_name)
     }
+
     pub fn new(
-        project_root: PathBuf,
-        root_config_name: String,
+        project_context: ProjectContext,
         packages: AHashMap<String, Package>,
-        workspace_root: Option<PathBuf>,
-        bsc_path: PathBuf,
+        compiler: CompilerInfo,
     ) -> Self {
         Self {
+            project_context,
             module_names: AHashSet::new(),
             modules: AHashMap::new(),
             packages,
-            project_root,
-            root_config_name,
             deleted_modules: AHashSet::new(),
-            workspace_root,
-            bsc_path,
+            compiler_info: compiler,
             deps_initialized: false,
         }
     }
@@ -131,6 +162,52 @@ impl BuildState {
     pub fn insert_module(&mut self, module_name: &str, module: Module) {
         self.modules.insert(module_name.to_owned(), module);
         self.module_names.insert(module_name.to_owned());
+    }
+
+    pub fn get_root_config(&self) -> &Config {
+        self.project_context.get_root_config()
+    }
+}
+
+impl BuildCommandState {
+    pub fn new(
+        project_context: ProjectContext,
+        packages: AHashMap<String, Package>,
+        compiler: CompilerInfo,
+        warn_error_override: Option<String>,
+    ) -> Self {
+        Self {
+            build_state: BuildState::new(project_context, packages, compiler),
+            warn_error_override,
+        }
+    }
+
+    pub fn get_warn_error_override(&self) -> Option<String> {
+        self.warn_error_override.clone()
+    }
+
+    pub fn module_name_package_pairs(&self) -> Vec<(String, String)> {
+        self.build_state
+            .modules
+            .iter()
+            .map(|(name, module)| (name.clone(), module.package_name.clone()))
+            .collect()
+    }
+}
+
+// Implement Deref to automatically delegate method calls to the inner BuildState
+impl Deref for BuildCommandState {
+    type Target = BuildState;
+
+    fn deref(&self) -> &Self::Target {
+        &self.build_state
+    }
+}
+
+// Implement DerefMut to allow mutable access to the inner BuildState
+impl std::ops::DerefMut for BuildCommandState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.build_state
     }
 }
 

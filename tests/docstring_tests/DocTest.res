@@ -1,5 +1,8 @@
 open Node
 
+@module("../../cli/common/bins.js")
+external rescript_tools_exe: string = "rescript_tools_exe"
+
 // Only major version
 let nodeVersion =
   Process.version
@@ -35,6 +38,11 @@ let ignoreRuntimeTests = [
     24,
     ["Stdlib_RegExp.escape"],
   ),
+  (
+    // Not available in Node.js yet
+    1000,
+    ["Stdlib_DataView.getFloat16", "Stdlib_DataView.setFloat16"],
+  ),
 ]
 
 let getOutput = buffer =>
@@ -43,10 +51,8 @@ let getOutput = buffer =>
   ->Array.join("")
 
 let extractDocFromFile = async file => {
-  let toolsBin = Path.join([Process.cwd(), "cli", "rescript-tools.js"])
-
   let {stdout} = await SpawnAsync.run(
-    ~command=toolsBin,
+    ~command=rescript_tools_exe,
     ~args=["extract-codeblocks", file, "--transform-assert-equal"],
   )
 
@@ -64,8 +70,10 @@ let extractDocFromFile = async file => {
 
 let batchSize = OS.cpus()->Array.length
 
+let runtimePath = Path.join(["packages", "@rescript", "runtime"])
+
 let extractExamples = async () => {
-  let files = Fs.readdirSync("runtime")
+  let files = Fs.readdirSync(runtimePath)
 
   let docFiles = files->Array.filter(f =>
     switch f {
@@ -81,12 +89,14 @@ let extractExamples = async () => {
 
   let examples = []
   await docFiles->ArrayUtils.forEachAsyncInBatches(~batchSize, async f => {
-    let doc = await extractDocFromFile(Path.join(["runtime", f]))
+    let doc = await extractDocFromFile(Path.join([runtimePath, f]))
     switch doc {
     | Ok(doc) =>
       // TODO: Should this be a flag in the actual command instead, to only include code blocks with tests?
       examples->Array.pushMany(doc->Array.filter(d => d.code->String.includes("assertEqual(")))
-    | Error(e) => Console.error(e)
+    | Error(e) =>
+      Console.error(e)
+      JsError.panic(`Error extracting code blocks for ${f}`)
     }
   })
 
@@ -136,10 +146,20 @@ let main = async () => {
 
         if code->String.length === 0 {
           None
+        } else if code->String.includes("await") {
+          // Same as below, but wrap in async to make top-level awaits work.
+          Some(
+            `testAsync("${example.name}", async () => {
+  module Test = {
+    ${code}
+  }
+  ()
+})`,
+          )
         } else {
           // Let's add the examples inside a Test module because some examples
           // have type definitions that are not supported inside a block.
-          // Also add unit type `()`
+          // Also add unit type `()`.
           Some(
             `test("${example.name}", () => {
   module Test = {

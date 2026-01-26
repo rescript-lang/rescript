@@ -421,7 +421,11 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
     | [obj] ->
       let obj = translate_scoped_access scopes obj in
       E.dot obj name
-    | _ -> assert false
+    | _ ->
+      (* This should have been caught in the frontend validation. *)
+      invalid_arg
+        "Internal compiler error: @get external called with wrong number of \
+         arguments. Expected exactly one object argument."
     (* Note these assertion happens in call site *))
   | Js_set {js_set_name = name; js_set_scopes = scopes} -> (
     (* assert (js_splice = false) ;  *)

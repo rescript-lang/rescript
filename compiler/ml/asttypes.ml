@@ -57,18 +57,6 @@ module Noloc = struct
     | Nolabel (* x => ...*)
     | Labelled of string (*  ~label => ... *)
     | Optional of string (* ~(label=e) => ... *)
-
-  let same_arg_label (x : arg_label) y =
-    match x with
-    | Nolabel -> y = Nolabel
-    | Labelled s -> (
-      match y with
-      | Labelled s0 -> s = s0
-      | _ -> false)
-    | Optional s -> (
-      match y with
-      | Optional s0 -> s = s0
-      | _ -> false)
 end
 
 let to_arg_label ?(loc = Location.none) lbl =
