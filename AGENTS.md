@@ -72,6 +72,8 @@ The Makefile’s targets build on each other in this order:
 
 - **Use tight timeouts when testing compiler/parser** - When running the compiler or parser in tests, always use a short timeout (e.g., 5-10 seconds). Compilation should be fast, and logic errors can cause infinite loops or hangs. A tight timeout ensures these issues are caught quickly rather than blocking indefinitely.
 
+- **Handle concurrent agent work gracefully** - If compilation fails due to errors in code you didn't touch, another agent may be actively working on that part of the codebase. Do NOT modify their files and NEVER use `git stash`. Simply wait 30 seconds and retry the build. Repeat this until compilation succeeds—the other agent will fix their changes shortly.
+
 ## Compiler Architecture
 
 ### Compilation Pipeline
@@ -529,6 +531,8 @@ packages/@rescript/darwin-arm64/bin/bsc.exe myfile.res
 4. **Test with the same inputs** - Run both compilers on the same `.res` files to verify behavior matches
 
 The goal is byte-for-byte identical output where possible, or at minimum functionally equivalent output.
+
+- **Investigate parity differences at the source** - When you find a difference between Rust and OCaml output, don't just try to match the output superficially. Read the corresponding OCaml implementation to understand *why* it produces that output. The root cause is often in a different place than where the symptom appears.
 
 ### Syntax Tests for Rust Parser
 
