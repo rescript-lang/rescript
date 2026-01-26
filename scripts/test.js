@@ -19,6 +19,7 @@ import {
   node,
   rescript,
   shell,
+  yarn,
 } from "#dev/process";
 
 let ounitTest = false;
@@ -26,6 +27,7 @@ let mochaTest = false;
 let buildTest = false;
 let formatTest = false;
 let runtimeDocstrings = false;
+let daemonTest = false;
 
 if (process.argv.includes("-ounit")) {
   ounitTest = true;
@@ -47,12 +49,17 @@ if (process.argv.includes("-docstrings")) {
   runtimeDocstrings = true;
 }
 
+if (process.argv.includes("-daemon")) {
+  daemonTest = true;
+}
+
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   buildTest = true;
   formatTest = true;
   runtimeDocstrings = true;
+  daemonTest = true;
 }
 
 if (formatTest) {
@@ -201,4 +208,18 @@ if (runtimeDocstrings) {
       stdio: "inherit",
     });
   }
+}
+
+if (daemonTest) {
+  console.log("Installing daemon test fixture dependencies");
+  await yarn("install", [], {
+    cwd: path.join(projectDir, "tests/daemon_tests/fixture"),
+    stdio: "inherit",
+  });
+
+  console.log("Running daemon tests");
+  await yarn("workspace @tests/daemon-tests test", [], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }

@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`js-post-build > executes js-post-build command after compilation 1`] = `
+[
+  "rpc.build[working_dir=packages/with-post-build]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.incremental_build[module_count=1]",
+  "      build.parse[dirty_modules=1]",
+  "      build.compile",
+  "        build.js_post_build[command=node post-build.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
+  "          build.js_post_build_stdout",
+]
+`;
+
+exports[`js-post-build > executes js-post-build with custom command after config change 1`] = `
+[
+  "rpc.clean[working_dir=packages/with-post-build]",
+  "  clean.execute[scope=@daemon-test/with-post-build]",
+  "rpc.build[working_dir=packages/with-post-build]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.incremental_build[module_count=1]",
+  "      build.parse[dirty_modules=1]",
+  "      build.compile",
+  "        build.js_post_build[command=node post-build-stderr.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
+  "          build.js_post_build_stderr",
+]
+`;

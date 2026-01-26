@@ -1,1 +1,13 @@
+
+The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
+
+Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 Could not initialize build: Duplicate module name: DuplicateModule. Found in packages/main/src/dupe-a/DuplicateModule.res and packages/main/src/dupe-b/DuplicateModule.res. Rename one of these files.
+
+Incremental build failed. Error: [2KFailed to Compile. See Errors Above

@@ -1,3 +1,4 @@
+use crate::build::BuildReporter;
 use crate::build::packages;
 use crate::helpers;
 use crate::helpers::deserialize::*;
@@ -359,10 +360,11 @@ pub fn flatten_flags(flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
 
 /// Since ppx-flags could be one or more, and could potentially be nested, this function takes the
 /// flags and flattens them.
-pub fn flatten_ppx_flags(
+pub fn flatten_ppx_flags<R: BuildReporter>(
     project_context: &ProjectContext,
     package_config: &Config,
     flags: &Option<Vec<OneOrMore<String>>>,
+    reporter: &R,
 ) -> Result<Vec<String>> {
     match flags {
         None => Ok(vec![]),
@@ -376,6 +378,7 @@ pub fn flatten_ppx_flags(
                                 package_config,
                                 project_context,
                                 &format!("{}{}{}", &package_config.name, MAIN_SEPARATOR, y),
+                                reporter,
                             )
                             .map(|p| p.to_string_lossy().to_string())?;
 
@@ -384,8 +387,9 @@ pub fn flatten_ppx_flags(
                         }
                         _ => {
                             acc.push(String::from("-ppx"));
-                            let path = helpers::try_package_path(package_config, project_context, y)
-                                .map(|p| p.to_string_lossy().to_string())?;
+                            let path =
+                                helpers::try_package_path(package_config, project_context, y, reporter)
+                                    .map(|p| p.to_string_lossy().to_string())?;
                             acc.push(path);
                         }
                     }
@@ -398,9 +402,10 @@ pub fn flatten_ppx_flags(
                             package_config,
                             project_context,
                             &format!("{}{}{}", package_config.name, MAIN_SEPARATOR, &ys[0]),
+                            reporter,
                         )
                         .map(|p| p.to_string_lossy().to_string())?,
-                        _ => helpers::try_package_path(package_config, project_context, &ys[0])
+                        _ => helpers::try_package_path(package_config, project_context, &ys[0], reporter)
                             .map(|p| p.to_string_lossy().to_string())?,
                     };
                     acc.push(String::from("-ppx"));

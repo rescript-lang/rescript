@@ -45,8 +45,9 @@ fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir>
     match package.path.strip_prefix(root_package_path) {
         Err(_) => AHashSet::new(),
         Ok(relative_path) => package
-            .dirs
+            .sources
             .as_ref()
+            .map(|s| &s.dirs)
             .unwrap_or(&AHashSet::new())
             .iter()
             .map(|path| relative_path.join(path))
@@ -105,7 +106,7 @@ pub fn print(buildstate: &BuildState) {
     let collected: Vec<(AHashSet<Dir>, AHashMap<PackageName, AbsolutePath>, CmtScanEntry)> = buildstate
         .packages
         .par_iter()
-        .filter(|(_name, package)| package.is_local_dep && package.source_files.is_some())
+        .filter(|(_name, package)| package.is_local && package.sources.is_some())
         .map(|(_name, package)| {
             // Extract Directories
             let dirs = package_to_dirs(package, &root_package.path);
@@ -125,8 +126,9 @@ pub fn print(buildstate: &BuildState) {
             let build_root = pkg_rel.join("lib").join("bs");
             let scan_dirs = sort_paths(
                 package
-                    .dirs
+                    .sources
                     .as_ref()
+                    .map(|s| &s.dirs)
                     .unwrap_or(&AHashSet::new())
                     .iter()
                     .cloned()

@@ -1,6 +1,7 @@
+use crate::build::BuildReporter;
 use crate::helpers;
 
-use super::build_types::{BuildCommandState, CompilerInfo};
+use super::build_types::{BuildState, CompilerInfo};
 use super::packages;
 use super::{clean, logs};
 use ahash::AHashMap;
@@ -31,9 +32,10 @@ fn get_rescript_config_hash(package: &packages::Package) -> Option<String> {
     helpers::compute_file_hash(&package.config.path).map(|hash| hash.to_hex().to_string())
 }
 
-pub fn verify_compiler_info(
+pub fn verify_compiler_info<R: BuildReporter>(
     packages: &AHashMap<String, packages::Package>,
     compiler: &CompilerInfo,
+    _reporter: &R,
 ) -> CompilerCheckResult {
     let mismatched_packages = packages
         .values()
@@ -61,38 +63,38 @@ pub fn verify_compiler_info(
 
             let mut mismatch = false;
             if parsed.bsc_path != current_bsc_path_str {
-                log::debug!(
-                    "compiler-info mismatch for {}: bsc_path changed (stored='{}', current='{}')",
-                    package.name,
-                    parsed.bsc_path,
-                    current_bsc_path_str
+                tracing::debug!(
+                    package = %package.name,
+                    stored = %parsed.bsc_path,
+                    current = %current_bsc_path_str,
+                    "compiler-info mismatch: bsc_path changed"
                 );
                 mismatch = true;
             }
             if parsed.bsc_hash != current_bsc_hash_hex {
-                log::debug!(
-                    "compiler-info mismatch for {}: bsc_hash changed (stored='{}', current='{}')",
-                    package.name,
-                    parsed.bsc_hash,
-                    current_bsc_hash_hex
+                tracing::debug!(
+                    package = %package.name,
+                    stored = %parsed.bsc_hash,
+                    current = %current_bsc_hash_hex,
+                    "compiler-info mismatch: bsc_hash changed"
                 );
                 mismatch = true;
             }
             if parsed.runtime_path != current_runtime_path_str {
-                log::debug!(
-                    "compiler-info mismatch for {}: runtime_path changed (stored='{}', current='{}')",
-                    package.name,
-                    parsed.runtime_path,
-                    current_runtime_path_str
+                tracing::debug!(
+                    package = %package.name,
+                    stored = %parsed.runtime_path,
+                    current = %current_runtime_path_str,
+                    "compiler-info mismatch: runtime_path changed"
                 );
                 mismatch = true;
             }
             if parsed.rescript_config_hash != current_rescript_config_hash {
-                log::debug!(
-                    "compiler-info mismatch for {}: rescript_config_hash changed (stored='{}', current='{}')",
-                    package.name,
-                    parsed.rescript_config_hash,
-                    current_rescript_config_hash
+                tracing::debug!(
+                    package = %package.name,
+                    stored = %parsed.rescript_config_hash,
+                    current = %current_rescript_config_hash,
+                    "compiler-info mismatch: rescript_config_hash changed"
                 );
                 mismatch = true;
             }
@@ -104,7 +106,7 @@ pub fn verify_compiler_info(
     let cleaned_count = mismatched_packages.len();
     mismatched_packages.par_iter().for_each(|package| {
         // suppress progress printing during init to avoid breaking step output
-        clean::clean_package(false, true, package);
+        clean::clean_package(package);
     });
     if cleaned_count == 0 {
         CompilerCheckResult::SameCompilerAsLastRun
@@ -113,7 +115,7 @@ pub fn verify_compiler_info(
     }
 }
 
-pub fn write_compiler_info(build_state: &BuildCommandState) {
+pub fn write_compiler_info<R: BuildReporter>(build_state: &BuildState, _reporter: &R) {
     let bsc_path = build_state.compiler_info.bsc_path.to_string_lossy().to_string();
     let bsc_hash = build_state.compiler_info.bsc_hash.to_hex().to_string();
     let runtime_path = build_state
@@ -149,10 +151,10 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
             let contents = match serde_json::to_string_pretty(&out) {
                 Ok(s) => s,
                 Err(err) => {
-                    log::error!(
-                        "Failed to serialize compiler-info for package {}: {}. Skipping write.",
-                        package.name,
-                        err
+                    tracing::error!(
+                        package = %package.name,
+                        error = %err,
+                        "Failed to serialize compiler-info. Skipping write."
                     );
                     return;
                 }
@@ -174,29 +176,29 @@ pub fn write_compiler_info(build_state: &BuildCommandState) {
                 let tmp = info_path.with_extension("json.tmp");
                 if let Ok(mut f) = File::create(&tmp) {
                     if let Err(err) = f.write_all(contents.as_bytes()) {
-                        log::error!(
-                            "Failed to write compiler-info for package {} to temporary file {}: {}. Skipping rename.",
-                            package.name,
-                            tmp.display(),
-                            err
+                        tracing::error!(
+                            package = %package.name,
+                            tmp_file = %tmp.display(),
+                            error = %err,
+                            "Failed to write compiler-info to temporary file. Skipping rename."
                         );
                         let _ = std::fs::remove_file(&tmp);
                         return;
                     }
                     if let Err(err) = f.sync_all() {
-                        log::error!(
-                            "Failed to flush compiler-info for package {}: {}. Skipping rename.",
-                            package.name,
-                            err
+                        tracing::error!(
+                            package = %package.name,
+                            error = %err,
+                            "Failed to flush compiler-info. Skipping rename."
                         );
                         let _ = std::fs::remove_file(&tmp);
                         return;
                     }
                     if let Err(err) = std::fs::rename(&tmp, &info_path) {
-                        log::error!(
-                            "Failed to atomically replace compiler-info for package {}: {}.",
-                            package.name,
-                            err
+                        tracing::error!(
+                            package = %package.name,
+                            error = %err,
+                            "Failed to atomically replace compiler-info."
                         );
                         let _ = std::fs::remove_file(&tmp);
                     }

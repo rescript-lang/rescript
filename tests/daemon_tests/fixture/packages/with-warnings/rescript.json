@@ -1,0 +1,16 @@
+{
+  "name": "@daemon-test/with-warnings",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "warnings": {
+    "number": "+1000",
+    "error": "-2000"
+  }
+}

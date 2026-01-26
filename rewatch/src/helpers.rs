@@ -1,8 +1,9 @@
+//! Pure utility helpers that don't require a BuildReporter.
+//!
+//! For package resolution helpers that need reporter support (daemon context),
+//! see the `package_resolution` submodule.
+
 use crate::build::packages;
-use crate::config::Config;
-use crate::helpers;
-use crate::project_context::ProjectContext;
-use anyhow::anyhow;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
@@ -15,6 +16,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub type StdErr = String;
 
 pub mod deserialize;
+pub mod package_resolution;
+
+// Re-export try_package_path for backwards compatibility
+pub use package_resolution::try_package_path;
 
 pub mod emojis {
     use console::Emoji;
@@ -26,36 +31,6 @@ pub mod emojis {
     pub static CROSS: Emoji<'_, '_> = Emoji("❌ ", "");
     pub static SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
-}
-
-// Cached check: does the given directory contain a node_modules subfolder?
-fn has_node_modules_cached(project_context: &ProjectContext, dir: &Path) -> bool {
-    match project_context.node_modules_exist_cache.read() {
-        Ok(cache) => {
-            if let Some(exists) = cache.get(dir) {
-                return *exists;
-            }
-        }
-        Err(poisoned) => {
-            log::warn!("node_modules_exist_cache read lock poisoned; recovering");
-            let cache = poisoned.into_inner();
-            if let Some(exists) = cache.get(dir) {
-                return *exists;
-            }
-        }
-    }
-    let exists = dir.join("node_modules").exists();
-    match project_context.node_modules_exist_cache.write() {
-        Ok(mut cache) => {
-            cache.insert(dir.to_path_buf(), exists);
-        }
-        Err(poisoned) => {
-            log::warn!("node_modules_exist_cache write lock poisoned; recovering");
-            let mut cache = poisoned.into_inner();
-            cache.insert(dir.to_path_buf(), exists);
-        }
-    }
-    exists
 }
 
 /// This trait is used to strip the verbatim prefix from a Windows path.
@@ -133,157 +108,6 @@ pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
 }
 
-// Tap-style helper: cache and return the value (single clone for cache insert)
-fn cache_package_tap(
-    project_context: &ProjectContext,
-    key: &(PathBuf, String),
-    value: PathBuf,
-) -> anyhow::Result<PathBuf> {
-    match project_context.packages_cache.write() {
-        Ok(mut cache) => {
-            cache.insert(key.clone(), value.clone());
-        }
-        Err(poisoned) => {
-            log::warn!("packages_cache write lock poisoned; recovering");
-            let mut cache = poisoned.into_inner();
-            cache.insert(key.clone(), value.clone());
-        }
-    }
-    Ok(value)
-}
-
-/// Tries to find a path for input package_name.
-/// The node_modules folder may be found at different levels in the case of a monorepo.
-/// This helper tries a variety of paths.
-pub fn try_package_path(
-    package_config: &Config,
-    project_context: &ProjectContext,
-    package_name: &str,
-) -> anyhow::Result<PathBuf> {
-    // try cached result first, keyed by (package_dir, package_name)
-    let pkg_name = package_name.to_string();
-    let package_dir = package_config
-        .path
-        .parent()
-        .ok_or_else(|| {
-            anyhow!(
-                "Expected {} to have a parent folder",
-                package_config.path.to_string_lossy()
-            )
-        })?
-        .to_path_buf();
-
-    let cache_key = (package_dir.clone(), pkg_name.clone());
-    match project_context.packages_cache.read() {
-        Ok(cache) => {
-            if let Some(cached) = cache.get(&cache_key) {
-                return Ok(cached.clone());
-            }
-        }
-        Err(poisoned) => {
-            log::warn!("packages_cache read lock poisoned; recovering");
-            let cache = poisoned.into_inner();
-            if let Some(cached) = cache.get(&cache_key) {
-                return Ok(cached.clone());
-            }
-        }
-    }
-
-    // package folder + node_modules + package_name
-    // This can happen in the following scenario:
-    // The ProjectContext has a MonoRepoContext::MonorepoRoot.
-    // We are reading a dependency from the root package.
-    // And that local dependency has a hoisted dependency.
-    // Example, we need to find package_name `foo` in the following scenario:
-    // root/packages/a/node_modules/foo
-    let path_from_current_package = helpers::package_path(&package_dir, package_name);
-
-    // current folder + node_modules + package_name
-    let path_from_current_config = project_context
-        .current_config
-        .path
-        .parent()
-        .ok_or_else(|| {
-            anyhow!(
-                "Expected {} to have a parent folder",
-                project_context.current_config.path.to_string_lossy()
-            )
-        })
-        .map(|parent_path| package_path(parent_path, package_name))?;
-
-    // root folder + node_modules + package_name
-    let path_from_root = package_path(project_context.get_root_path(), package_name);
-    if path_from_current_package.exists() {
-        cache_package_tap(project_context, &cache_key, path_from_current_package)
-    } else if path_from_current_config.exists() {
-        cache_package_tap(project_context, &cache_key, path_from_current_config)
-    } else if path_from_root.exists() {
-        cache_package_tap(project_context, &cache_key, path_from_root)
-    } else {
-        // As a last resort, when we're in a Single project context, traverse upwards
-        // starting from the parent of the package root (package_config.path.parent().parent())
-        // and probe each ancestor's node_modules for the dependency. This covers hoisted
-        // workspace setups when building a package standalone.
-        if project_context.monorepo_context.is_none() {
-            match package_config.path.parent().and_then(|p| p.parent()) {
-                Some(start_dir) => {
-                    return find_dep_in_upward_node_modules(project_context, start_dir, package_name)
-                        .and_then(|p| cache_package_tap(project_context, &cache_key, p));
-                }
-                None => {
-                    log::debug!(
-                        "try_package_path: cannot compute start directory for upward traversal from '{}'",
-                        package_config.path.to_string_lossy()
-                    );
-                }
-            }
-        }
-
-        Err(anyhow!(
-            "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
-        ))
-    }
-}
-
-fn find_dep_in_upward_node_modules(
-    project_context: &ProjectContext,
-    start_dir: &Path,
-    package_name: &str,
-) -> anyhow::Result<PathBuf> {
-    log::debug!(
-        "try_package_path: falling back to upward traversal for '{}' starting at '{}'",
-        package_name,
-        start_dir.to_string_lossy()
-    );
-
-    let mut current = Some(start_dir);
-    while let Some(dir) = current {
-        if has_node_modules_cached(project_context, dir) {
-            let candidate = package_path(dir, package_name);
-            log::debug!("try_package_path: checking '{}'", candidate.to_string_lossy());
-            if candidate.exists() {
-                log::debug!(
-                    "try_package_path: found '{}' at '{}' via upward traversal",
-                    package_name,
-                    candidate.to_string_lossy()
-                );
-                return Ok(candidate);
-            }
-        }
-        current = dir.parent();
-    }
-    log::debug!(
-        "try_package_path: no '{}' found during upward traversal from '{}'",
-        package_name,
-        start_dir.to_string_lossy()
-    );
-    Err(anyhow!(
-        "try_package_path: upward traversal did not find '{}' starting at '{}'",
-        package_name,
-        start_dir.to_string_lossy()
-    ))
-}
-
 pub fn get_abs_path(path: &Path) -> PathBuf {
     let abs_path_buf = PathBuf::from(path);
 
@@ -346,11 +170,11 @@ pub fn contains_ascii_characters(str: &str) -> bool {
 }
 
 pub fn create_path(path: &Path) {
-    fs::DirBuilder::new().recursive(true).create(path).unwrap();
+    let _ = fs::DirBuilder::new().recursive(true).create(path);
 }
 
 pub fn create_path_for_path(path: &Path) {
-    fs::DirBuilder::new().recursive(true).create(path).unwrap();
+    let _ = fs::DirBuilder::new().recursive(true).create(path);
 }
 
 pub fn get_bin_dir() -> PathBuf {
@@ -516,7 +340,7 @@ fn has_rescript_config(path: &Path) -> bool {
     path.join("rescript.json").exists()
 }
 
-// traverse up the directory tree until we find a config.json, if not return None
+// traverse up the directory tree until we find a rescript.json, if not return None
 pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
     let mut current_dir = path_buf.to_owned();
     loop {
@@ -530,8 +354,63 @@ pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
     }
 }
 
+/// Check if a config is listed as a dependency in another (workspace) config.
+pub fn is_config_listed_in_workspace(
+    current_config: &crate::config::Config,
+    workspace_config: &crate::config::Config,
+) -> bool {
+    let deps = workspace_config.dependencies.as_ref();
+    let dev_deps = workspace_config.dev_dependencies.as_ref();
+
+    deps.is_some_and(|d| d.contains(&current_config.name))
+        || dev_deps.is_some_and(|d| d.contains(&current_config.name))
+}
+
+/// Find the workspace root for a given path.
+/// If the path is inside a monorepo package that's listed in a parent's dependencies,
+/// returns the parent (workspace root). Otherwise returns the nearest rescript.json location.
+pub fn get_workspace_root(path: &Path) -> Option<PathBuf> {
+    let current = get_nearest_config(path)?;
+
+    // Check if there's a parent rescript.json that lists us as a dependency
+    if let Some(parent) = current.parent()
+        && let Some(parent_config_path) = get_nearest_config(parent)
+        && let (Ok(current_config), Ok(parent_config)) = (
+            packages::read_config(&current),
+            packages::read_config(&parent_config_path),
+        )
+        && is_config_listed_in_workspace(&current_config, &parent_config)
+    {
+        return Some(parent_config_path);
+    }
+
+    Some(current)
+}
+
+/// Given a working directory and root path, determine the scope package name.
+/// Returns None if working_dir is the root (build all), or Some(package_name) if
+/// working_dir is a child package.
+pub fn get_scope_package_from_working_dir(working_dir: &Path, root_path: &Path) -> Option<String> {
+    let working_dir = working_dir.canonicalize().ok()?;
+    let root_path = root_path.canonicalize().ok()?;
+
+    if working_dir == root_path {
+        return None; // At root, no scope
+    }
+
+    // Check if working_dir has a rescript.json
+    if working_dir.join("rescript.json").exists() {
+        // Read the package name from the config
+        if let Ok(config) = packages::read_config(&working_dir) {
+            return Some(config.name);
+        }
+    }
+
+    None
+}
+
 pub fn read_file(path: &Path) -> Result<String, std::io::Error> {
-    let mut file = File::open(path).expect("file not found");
+    let mut file = File::open(path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     Ok(contents)

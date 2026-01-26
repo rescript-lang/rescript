@@ -1,0 +1,15 @@
+{
+  "name": "@daemon-test/with-post-build",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "js-post-build": {
+    "cmd": "node post-build.mjs"
+  }
+}

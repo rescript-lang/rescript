@@ -1,0 +1,7 @@
+{
+  "name": "@daemon-test/app",
+  "private": true,
+  "dependencies": {
+    "@daemon-test/library": "workspace:*"
+  }
+}

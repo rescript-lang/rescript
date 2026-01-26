@@ -3,7 +3,7 @@ use crate::config::Config;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use blake3::Hash;
-use std::{fmt::Display, ops::Deref, path::PathBuf, time::SystemTime};
+use std::{fmt::Display, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseState {
@@ -112,21 +112,6 @@ pub struct BuildState {
     pub deps_initialized: bool,
 }
 
-/// Extended build state that includes command-line specific overrides.
-/// Wraps `BuildState` and adds command-specific data like warning overrides.
-/// Used by commands that need to respect CLI flags (e.g., `build`, `watch`).
-///
-/// The separation exists because:
-/// - `clean` command only needs core build data, no CLI overrides
-/// - `build`/`watch` commands need both core data AND CLI overrides
-/// - This prevents the "code smell" of optional fields that are None for some commands
-#[derive(Debug)]
-pub struct BuildCommandState {
-    pub build_state: BuildState,
-    // Command-line --warn-error flag override (takes precedence over rescript.json config)
-    pub warn_error_override: Option<String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct CompilerInfo {
     pub bsc_path: PathBuf,
@@ -159,6 +144,46 @@ impl BuildState {
         }
     }
 
+    /// Create an empty build state with just project context and compiler info.
+    /// Packages will be discovered later when the first client connects.
+    pub fn empty(project_context: ProjectContext, compiler: CompilerInfo) -> Self {
+        Self {
+            project_context,
+            module_names: AHashSet::new(),
+            modules: AHashMap::new(),
+            packages: AHashMap::new(),
+            deleted_modules: AHashSet::new(),
+            compiler_info: compiler,
+            deps_initialized: false,
+        }
+    }
+
+    /// Check if packages have been initialized.
+    pub fn has_packages(&self) -> bool {
+        !self.packages.is_empty()
+    }
+
+    /// Initialize packages if not already done.
+    /// This is called on the first client request to discover packages with a proper reporter.
+    pub fn initialize_packages<R: super::BuildReporter>(
+        &mut self,
+        filter: &Option<regex::Regex>,
+        reporter: &R,
+    ) -> anyhow::Result<()> {
+        if self.has_packages() {
+            return Ok(());
+        }
+        // Log the project context info here since it was created with NoopReporter during daemon startup
+        tracing::debug!(
+            root = ?self.project_context.get_root_path(),
+            "Created project context"
+        );
+        let empty_scope: AHashSet<String> = AHashSet::new();
+        self.packages =
+            super::packages::make_with_scope(filter, &self.project_context, Some(&empty_scope), reporter)?;
+        Ok(())
+    }
+
     pub fn insert_module(&mut self, module_name: &str, module: Module) {
         self.modules.insert(module_name.to_owned(), module);
         self.module_names.insert(module_name.to_owned());
@@ -167,47 +192,36 @@ impl BuildState {
     pub fn get_root_config(&self) -> &Config {
         self.project_context.get_root_config()
     }
-}
-
-impl BuildCommandState {
-    pub fn new(
-        project_context: ProjectContext,
-        packages: AHashMap<String, Package>,
-        compiler: CompilerInfo,
-        warn_error_override: Option<String>,
-    ) -> Self {
-        Self {
-            build_state: BuildState::new(project_context, packages, compiler),
-            warn_error_override,
-        }
-    }
-
-    pub fn get_warn_error_override(&self) -> Option<String> {
-        self.warn_error_override.clone()
-    }
 
     pub fn module_name_package_pairs(&self) -> Vec<(String, String)> {
-        self.build_state
-            .modules
+        self.modules
             .iter()
             .map(|(name, module)| (name.clone(), module.package_name.clone()))
             .collect()
     }
-}
 
-// Implement Deref to automatically delegate method calls to the inner BuildState
-impl Deref for BuildCommandState {
-    type Target = BuildState;
-
-    fn deref(&self) -> &Self::Target {
-        &self.build_state
+    /// Ensure sources are loaded for the specified packages and modules are parsed.
+    /// If `packages_to_load` is None, ensures all packages have sources loaded.
+    /// This is used by the daemon to lazily expand the build state.
+    ///
+    /// Returns Ok(()) on success, or an error if parsing fails (e.g., duplicate modules).
+    pub fn ensure_packages_loaded<R: super::BuildReporter>(
+        &mut self,
+        packages_to_load: Option<&ahash::AHashSet<String>>,
+        reporter: &R,
+    ) -> anyhow::Result<()> {
+        super::packages::ensure_sources_loaded(&mut self.packages, packages_to_load);
+        // After loading sources, we need to parse them into modules.
+        // parse_packages is idempotent - it handles already-parsed modules via Entry::Occupied.
+        super::packages::parse_packages(self, reporter)
     }
-}
 
-// Implement DerefMut to allow mutable access to the inner BuildState
-impl std::ops::DerefMut for BuildCommandState {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.build_state
+    /// Check if all local packages have their sources loaded.
+    pub fn all_local_packages_loaded(&self) -> bool {
+        self.packages
+            .values()
+            .filter(|p| p.is_local)
+            .all(|p| p.sources.is_some())
     }
 }
 

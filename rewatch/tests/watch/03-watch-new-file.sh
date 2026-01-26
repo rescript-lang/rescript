@@ -15,8 +15,9 @@ else
   exit 1
 fi
 
-# Start watcher
+# Start watcher and capture PID for cleanup
 rewatch_bg watch > rewatch.log 2>&1 &
+WATCHER_PID=$!
 success "Watcher Started"
 
 # Wait for initial build to complete
@@ -28,7 +29,13 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 1
+# Wait for watcher to be ready (file watchers set up)
+if ! wait_for_watcher_ready "./rewatch.log" 10; then
+  error "Watcher did not become ready"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
 
 # Create a new file in the source directory
 cat > ./src/NewWatchTestFile.res << 'EOF'

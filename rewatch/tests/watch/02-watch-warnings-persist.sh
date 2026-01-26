@@ -38,8 +38,18 @@ wait_for_pattern_count() {
   return 1
 }
 
-# Start watcher and capture stderr (where warnings are printed)
-rewatch_bg watch > /dev/null 2> rewatch-stderr.log &
+# Start watcher and capture output (stdout to log, stderr to separate file for warnings)
+rewatch_bg watch > rewatch.log 2> rewatch-stderr.log &
+WATCHER_PID=$!
+
+# Wait for watcher to be ready (file watchers set up)
+if ! wait_for_watcher_ready "./rewatch.log" 30; then
+  error "Watcher did not become ready"
+  cat rewatch.log
+  cat rewatch-stderr.log
+  exit_watcher
+  exit 1
+fi
 
 # Wait for initial compilation to produce the warning
 if ! wait_for_pattern rewatch-stderr.log "unused value unusedValue" 30; then
@@ -71,12 +81,15 @@ printf 'let world = () => Console.log("world")\n' > ./packages/watch-warnings/sr
 
 sleep 1
 
-exit_watcher
+if exit_watcher; then
+  success "Daemon shut down cleanly"
+else
+  rm -f rewatch-stderr.log
+  exit 1
+fi
 
-sleep 2
-
-# Clean up log file
-rm -f rewatch-stderr.log
+# Clean up log files
+rm -f rewatch.log rewatch-stderr.log
 
 # Verify no leftover changes
 if git diff --exit-code ./packages/watch-warnings > /dev/null 2>&1;

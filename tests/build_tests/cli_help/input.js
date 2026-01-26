@@ -10,7 +10,7 @@ const { rescript } = setup(import.meta.dirname);
 const cliHelp =
   "ReScript - Fast, Simple, Fully Typed JavaScript from the Future\n" +
   "\n" +
-  "Usage: rescript [OPTIONS] <COMMAND>\n" +
+  "Usage: rescript <COMMAND>\n" +
   "\n" +
   "Commands:\n" +
   "  build          Build the project (default command)\n" +
@@ -21,10 +21,8 @@ const cliHelp =
   "  help           Print this message or the help of the given subcommand(s)\n" +
   "\n" +
   "Options:\n" +
-  "  -v, --verbose...  Increase logging verbosity\n" +
-  "  -q, --quiet...    Decrease logging verbosity\n" +
-  "  -h, --help        Print help\n" +
-  "  -V, --version     Print version\n" +
+  "  -h, --help     Print help\n" +
+  "  -V, --version  Print version\n" +
   "\n" +
   "Notes:\n" +
   "  - If no command is provided, the build command is run by default. See `rescript help build` for more information.\n" +
@@ -40,9 +38,7 @@ const buildHelp =
   "\n" +
   "Options:\n" +
   "  -f, --filter <FILTER>            Filter source files by regex. E.g., filter out test files for compilation while doing feature work\n" +
-  "  -v, --verbose...                 Increase logging verbosity\n" +
   "  -a, --after-build <AFTER_BUILD>  Run an additional command after build. E.g., play a sound or run a test suite when done compiling\n" +
-  "  -q, --quiet...                   Decrease logging verbosity\n" +
   '      --warn-error <WARN_ERROR>    Override warning configuration from rescript.json. Example: --warn-error "+3+8+11+12+26+27+31+32+33+34+35+39+44+45+110"\n' +
   "  -n, --no-timing [<NO_TIMING>]    Disable output timing [default: false] [possible values: true, false]\n" +
   "  -h, --help                       Print help\n";
@@ -50,15 +46,13 @@ const buildHelp =
 const cleanHelp =
   "Clean the build artifacts\n" +
   "\n" +
-  "Usage: rescript clean [OPTIONS] [FOLDER]\n" +
+  "Usage: rescript clean [FOLDER]\n" +
   "\n" +
   "Arguments:\n" +
   "  [FOLDER]  Path to the project or subproject. This folder must contain a rescript.json file [default: .]\n" +
   "\n" +
   "Options:\n" +
-  "  -v, --verbose...  Increase logging verbosity\n" +
-  "  -q, --quiet...    Decrease logging verbosity\n" +
-  "  -h, --help        Print help\n";
+  "  -h, --help  Print help\n";
 
 const formatHelp =
   "Format ReScript files\n" +
@@ -70,23 +64,19 @@ const formatHelp =
   "\n" +
   "Options:\n" +
   "  -c, --check          Check formatting status without applying changes\n" +
-  "  -v, --verbose...     Increase logging verbosity\n" +
-  "  -q, --quiet...       Decrease logging verbosity\n" +
   "  -s, --stdin <STDIN>  Read the code from stdin and print the formatted code to stdout [possible values: .res, .resi]\n" +
   "  -h, --help           Print help\n";
 
 const compilerArgsHelp =
   "Print the compiler arguments for a ReScript source file\n" +
   "\n" +
-  "Usage: rescript compiler-args [OPTIONS] <PATH>\n" +
+  "Usage: rescript compiler-args <PATH>\n" +
   "\n" +
   "Arguments:\n" +
   "  <PATH>  Path to a ReScript source file (.res or .resi)\n" +
   "\n" +
   "Options:\n" +
-  "  -v, --verbose...  Increase logging verbosity\n" +
-  "  -q, --quiet...    Decrease logging verbosity\n" +
-  "  -h, --help        Print help\n";
+  "  -h, --help  Print help\n";
 
 /**
  * @param {string[]} params
@@ -175,7 +165,7 @@ await test(["clean", "--foo"], {
     "\n" +
     "  tip: to pass '--foo' as a value, use '-- --foo'\n" +
     "\n" +
-    "Usage: rescript clean [OPTIONS] [FOLDER]\n" +
+    "Usage: rescript clean [FOLDER]\n" +
     "\n" +
     "For more information, try '--help'.\n",
   status: 2,

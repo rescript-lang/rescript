@@ -1,0 +1,74 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`format > format --check exits 0 when files are formatted 1`] = `
+[
+  "rpc.format[working_dir=., check=true, is_stdin=false]",
+  "  work_queue.handle_format_collect_files",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "  format.execute[file_count=11, check=true]",
+]
+`;
+
+exports[`format > format --check exits non-zero when files need formatting 1`] = `
+[
+  "rpc.format[working_dir=., check=true, is_stdin=false]",
+  "  format.execute[file_count=1, check=true]",
+]
+`;
+
+exports[`format > formats a specific file 1`] = `
+[
+  "rpc.format[working_dir=., check=false, is_stdin=false]",
+  "  format.execute[file_count=1, check=false]",
+  "    format.write_file[file=src/Root.res]",
+]
+`;
+
+exports[`format > formats from child package (scoped) 1`] = `
+[
+  "rpc.format[working_dir=packages/library, check=false, is_stdin=false]",
+  "  work_queue.handle_format_collect_files",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "  format.execute[file_count=1, check=false]",
+]
+`;
+
+exports[`format > formats project files from root 1`] = `
+[
+  "rpc.format[working_dir=., check=false, is_stdin=false]",
+  "  work_queue.handle_format_collect_files",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "  format.execute[file_count=11, check=false]",
+]
+`;
+
+exports[`format > formats stdin with --stdin .res 1`] = `
+[
+  "rpc.format[working_dir=., check=false, is_stdin=true]",
+  "  format.stdin[ext=.res]",
+]
+`;

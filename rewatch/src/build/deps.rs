@@ -101,18 +101,23 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
     build_state
         .modules
         .par_iter()
-        .map(|(module_name, module)| match &module.source_type {
-            SourceType::MlMap(_) => (module_name.to_string(), module.deps.to_owned()),
+        .filter_map(|(module_name, module)| match &module.source_type {
+            SourceType::MlMap(_) => Some((module_name.to_string(), module.deps.to_owned())),
             SourceType::SourceFile(source_file) => {
-                let package = build_state
-                    .get_package(&module.package_name)
-                    .expect("Package not found");
+                let Some(package) = build_state.get_package(&module.package_name) else {
+                    log::warn!(
+                        "Package '{}' not found for module '{}' during dependency resolution",
+                        module.package_name,
+                        module_name
+                    );
+                    return None;
+                };
                 let ast_path = helpers::get_ast_path(&source_file.implementation.path);
                 if module.deps_dirty || !build_state.deps_initialized {
                     let mut deps = get_dep_modules(
                         &ast_path.to_string_lossy(),
                         package.namespace.to_suffix(),
-                        package.modules.as_ref().unwrap(),
+                        &package.sources.as_ref().unwrap().modules,
                         all_mod,
                         package,
                         build_state,
@@ -124,7 +129,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         deps.extend(get_dep_modules(
                             &iast_path.to_string_lossy(),
                             package.namespace.to_suffix(),
-                            package.modules.as_ref().unwrap(),
+                            &package.sources.as_ref().unwrap().modules,
                             all_mod,
                             package,
                             build_state,
@@ -139,9 +144,9 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         _ => (),
                     }
                     deps.remove(module_name);
-                    (module_name.to_string(), deps)
+                    Some((module_name.to_string(), deps))
                 } else {
-                    (module_name.to_string(), module.deps.to_owned())
+                    Some((module_name.to_string(), module.deps.to_owned()))
                 }
             }
         })

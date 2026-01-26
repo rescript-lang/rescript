@@ -15,8 +15,9 @@ else
   exit 1
 fi
 
-# Start watcher and capture output
+# Start watcher and capture PID for cleanup
 rewatch_bg watch > rewatch.log 2>&1 &
+WATCHER_PID=$!
 success "Watcher Started"
 
 # Wait for initial build to complete
@@ -27,6 +28,14 @@ if ! wait_for_file "./src/Test.mjs" 20; then
   exit 1
 fi
 success "Initial build completed"
+
+# Wait for watcher to be ready (file watchers set up)
+if ! wait_for_watcher_ready "./rewatch.log" 10; then
+  error "Watcher did not become ready"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
 
 # Create .res files in subdirectories that are NOT source dirs.
 mkdir -p ./random-dir

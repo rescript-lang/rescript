@@ -14,7 +14,6 @@
 use std::{env, ffi::OsString, ops::Deref};
 
 use clap::{Args, CommandFactory, Parser, Subcommand, error::ErrorKind};
-use clap_verbosity_flag::InfoLevel;
 use regex::Regex;
 
 fn parse_regex(s: &str) -> Result<Regex, regex::Error> {
@@ -42,16 +41,6 @@ pub enum FileExtension {
   - If no command is provided, the [1mbuild[0m command is run by default. See `rescript help build` for more information.
   - To create a new ReScript project, or to add ReScript to an existing project, use https://github.com/rescript-lang/create-rescript-app.")]
 pub struct Cli {
-    /// Verbosity:
-    /// -v -> Debug
-    /// -vv -> Trace
-    /// -q -> Warn
-    /// -qq -> Error
-    /// -qqq -> Off.
-    /// Default (/ no argument given): 'info'
-    #[command(flatten)]
-    pub verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
-
     /// The command to run. If not provided it will default to build.
     #[command(subcommand)]
     pub command: Command,
@@ -99,24 +88,7 @@ fn should_default_to_build(err: &clap::Error, args: &[OsString]) -> bool {
 }
 
 fn is_global_flag(arg: &OsString) -> bool {
-    matches!(
-        arg.to_str(),
-        Some(
-            "-v" | "-vv"
-                | "-vvv"
-                | "-vvvv"
-                | "-q"
-                | "-qq"
-                | "-qqq"
-                | "-qqqq"
-                | "--verbose"
-                | "--quiet"
-                | "-h"
-                | "--help"
-                | "-V"
-                | "--version"
-        )
-    )
+    matches!(arg.to_str(), Some("-h" | "--help" | "-V" | "--version"))
 }
 
 fn first_non_global_arg(args: &[OsString]) -> Option<&OsString> {
@@ -225,7 +197,6 @@ pub struct BuildArgs {
 mod tests {
     use super::*;
     use clap::error::ErrorKind;
-    use log::LevelFilter;
 
     fn parse(args: &[&str]) -> Result<Cli, clap::Error> {
         let raw_args: Vec<OsString> = args.iter().map(OsString::from).collect();
@@ -250,23 +221,11 @@ mod tests {
     }
 
     #[test]
-    fn trailing_global_flag_is_treated_as_global() {
-        let cli = parse(&["rescript", "my-project", "-v"]).expect("expected build command");
-
-        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Debug);
-        match cli.command {
-            Command::Build(build_args) => assert_eq!(build_args.folder.folder, "my-project"),
-            other => panic!("expected build command, got {other:?}"),
-        }
-    }
-
-    #[test]
     fn double_dash_keeps_following_args_positional() {
-        let cli = parse(&["rescript", "--", "-v"]).expect("expected build command");
+        let cli = parse(&["rescript", "--", "--help"]).expect("expected build command");
 
-        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Info);
         match cli.command {
-            Command::Build(build_args) => assert_eq!(build_args.folder.folder, "-v"),
+            Command::Build(build_args) => assert_eq!(build_args.folder.folder, "--help"),
             other => panic!("expected build command, got {other:?}"),
         }
     }
@@ -291,13 +250,6 @@ mod tests {
     }
 
     #[test]
-    fn build_allows_global_verbose_flag() {
-        let cli = parse(&["rescript", "build", "-v"]).expect("expected build command");
-        assert_eq!(cli.verbose.log_level_filter(), LevelFilter::Debug);
-        assert!(matches!(cli.command, Command::Build(_)));
-    }
-
-    #[test]
     fn build_option_is_parsed_normally() {
         let cli = parse(&["rescript", "build", "--no-timing"]).expect("expected build command");
 
@@ -305,14 +257,6 @@ mod tests {
             Command::Build(build_args) => assert!(build_args.no_timing),
             other => panic!("expected build command, got {other:?}"),
         }
-    }
-
-    // Subcommand flag handling.
-    #[test]
-    fn respects_global_flag_before_subcommand() {
-        let cli = parse(&["rescript", "-v", "watch"]).expect("expected watch command");
-
-        assert!(matches!(cli.command, Command::Watch(_)));
     }
 
     #[test]
@@ -339,7 +283,7 @@ mod tests {
         let err = parse(&["rescript", "--help"]).expect_err("expected clap help error");
         assert_eq!(err.kind(), ErrorKind::DisplayHelp);
         let rendered = err.to_string();
-        assert!(rendered.contains("Usage: rescript [OPTIONS] <COMMAND>"));
+        assert!(rendered.contains("Usage: rescript <COMMAND>"));
     }
 
     #[test]
@@ -421,6 +365,18 @@ pub enum Command {
         /// Path to a ReScript source file (.res or .resi)
         #[command()]
         path: String,
+    },
+    /// Start the daemon server (internal command)
+    #[command(hide = true)]
+    Daemon {
+        #[command(flatten)]
+        folder: FolderArg,
+    },
+    /// Connect to the daemon and stream debug events
+    #[command(hide = true)]
+    Debug {
+        #[command(flatten)]
+        folder: FolderArg,
     },
 }
 

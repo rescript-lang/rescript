@@ -1,18 +1,17 @@
 use super::build_types::*;
 use super::packages;
 use crate::build;
+use crate::build::BuildReporter;
 use crate::build::packages::Package;
 use crate::config::Config;
 use crate::helpers;
-use crate::helpers::emojis::*;
 use crate::project_context::ProjectContext;
 use ahash::AHashSet;
 use anyhow::Result;
-use console::style;
 use rayon::prelude::*;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
+use tracing::info_span;
 
 fn remove_ast(package: &packages::Package, source_file: &Path) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
@@ -62,34 +61,46 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_config: &Config) {
-    // get all rescript file locations
+fn clean_source_files_scoped(
+    build_state: &BuildState,
+    root_config: &Config,
+    scoped_local_packages: &AHashSet<String>,
+) {
+    // get all rescript file locations for packages in scope
     let rescript_file_locations = build_state
         .modules
         .values()
-        .filter_map(|module| match &module.source_type {
-            SourceType::SourceFile(source_file) => {
-                build_state.packages.get(&module.package_name).map(|package| {
-                    root_config
-                        .get_package_specs()
-                        .into_iter()
-                        .filter_map(|spec| {
-                            if spec.in_source {
-                                Some((
-                                    package.path.join(&source_file.implementation.path),
-                                    match spec.suffix {
-                                        None => root_config.get_suffix(&spec),
-                                        Some(suffix) => suffix,
-                                    },
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<(PathBuf, String)>>()
-                })
+        .filter_map(|module| {
+            // Clean a package if it's a scoped local package or an external dependency
+            let package = build_state.packages.get(&module.package_name)?;
+            let should_clean = scoped_local_packages.contains(&module.package_name) || !package.is_local;
+            if !should_clean {
+                return None;
             }
-            _ => None,
+            match &module.source_type {
+                SourceType::SourceFile(source_file) => {
+                    build_state.packages.get(&module.package_name).map(|package| {
+                        root_config
+                            .get_package_specs()
+                            .into_iter()
+                            .filter_map(|spec| {
+                                if spec.in_source {
+                                    Some((
+                                        package.path.join(&source_file.implementation.path),
+                                        match spec.suffix {
+                                            None => root_config.get_suffix(&spec),
+                                            Some(suffix) => suffix,
+                                        },
+                                    ))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect::<Vec<(PathBuf, String)>>()
+                    })
+                }
+                _ => None,
+            }
         })
         .flatten()
         .collect::<Vec<(PathBuf, String)>>();
@@ -102,9 +113,10 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config) {
 // TODO: change to scan_previous_build => CompileAssetsState
 // and then do cleanup on that state (for instance remove all .mjs files that are not in the state)
 
-pub fn cleanup_previous_build(
-    build_state: &mut BuildCommandState,
+pub fn cleanup_previous_build<R: BuildReporter>(
+    build_state: &mut BuildState,
     compile_assets_state: CompileAssetsState,
+    _reporter: &R,
 ) -> (usize, usize) {
     // delete the .mjs file which appear in our previous compile assets
     // but does not exists anymore
@@ -112,6 +124,7 @@ pub fn cleanup_previous_build(
     // location of rescript file is in the AST
     // delete the .mjs file for which we DO have a compiler asset, but don't have a
     // rescript file anymore (path is found in the .ast file)
+
     let diff = compile_assets_state
         .ast_rescript_file_locations
         .difference(&compile_assets_state.rescript_file_locations)
@@ -119,94 +132,81 @@ pub fn cleanup_previous_build(
 
     let diff_len = diff.len();
 
-    let deleted_interfaces = diff
+    let deleted_interfaces: AHashSet<String> = diff
         .par_iter()
-        .map(|res_file_location| {
+        .filter_map(|res_file_location| {
             let AstModule {
                 module_name,
                 package_name,
                 ast_file_path,
                 suffix,
                 ..
-            } = compile_assets_state
-                .ast_modules
-                .get(*res_file_location)
-                .expect("Could not find module name for ast file");
+            } = compile_assets_state.ast_modules.get(*res_file_location)?;
 
-            let package = build_state
-                .packages
-                .get(package_name)
-                .expect("Could not find package");
+            let package = build_state.packages.get(package_name)?;
             remove_compile_assets(package, res_file_location);
             remove_mjs_file(res_file_location, suffix);
             remove_iast(package, res_file_location);
             remove_ast(package, res_file_location);
             match helpers::get_extension(ast_file_path).as_str() {
                 "iast" => Some(module_name.to_owned()),
-                "ast" => None,
                 _ => None,
             }
         })
-        .collect::<Vec<Option<String>>>()
-        .iter()
-        .filter_map(|module_name| module_name.to_owned())
-        .collect::<AHashSet<String>>();
+        .collect::<Vec<String>>()
+        .into_iter()
+        .collect();
 
-    compile_assets_state
+    for res_file_location in compile_assets_state
         .ast_rescript_file_locations
         .intersection(&compile_assets_state.rescript_file_locations)
-        .for_each(|res_file_location| {
-            let AstModule {
-                module_name,
-                last_modified: ast_last_modified,
-                ast_file_path,
-                ..
-            } = compile_assets_state
-                .ast_modules
-                .get(res_file_location)
-                .expect("Could not find module name for ast file");
-            let module = build_state
-                .modules
-                .get_mut(module_name)
-                .expect("Could not find module for ast file");
+    {
+        let Some(AstModule {
+            module_name,
+            last_modified: ast_last_modified,
+            ast_file_path,
+            ..
+        }) = compile_assets_state.ast_modules.get(res_file_location)
+        else {
+            continue;
+        };
+        let Some(module) = build_state.modules.get_mut(module_name) else {
+            continue;
+        };
 
-            let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
-            // if there is a new AST but it has not been compiled yet, we mark the module as compile dirty
-            // we do this by checking if the cmt file is newer than the AST file. We always compile the
-            // interface AND implementation. For some reason the CMI file is not always rewritten if it
-            // doesn't have any changes, that's why we just look at the CMT file.
-            if let Some(cmt_last_modified) = cmt_last_modified
-                && cmt_last_modified > ast_last_modified
-                && !deleted_interfaces.contains(module_name)
-            {
-                module.compile_dirty = false;
-            }
+        let cmt_last_modified = compile_assets_state.cmt_modules.get(module_name);
+        // if there is a new AST but it has not been compiled yet, we mark the module as compile dirty
+        // we do this by checking if the cmt file is newer than the AST file. We always compile the
+        // interface AND implementation. For some reason the CMI file is not always rewritten if it
+        // doesn't have any changes, that's why we just look at the CMT file.
+        if let Some(cmt_last_modified) = cmt_last_modified
+            && cmt_last_modified > ast_last_modified
+            && !deleted_interfaces.contains(module_name)
+        {
+            module.compile_dirty = false;
+        }
 
-            match &mut module.source_type {
-                SourceType::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
-                SourceType::SourceFile(source_file) => {
-                    if helpers::is_interface_ast_file(ast_file_path) {
-                        let interface = source_file
-                            .interface
-                            .as_mut()
-                            .expect("Could not find interface for module");
-
+        match &mut module.source_type {
+            SourceType::MlMap(_) => unreachable!("MlMap is not matched with a ReScript file"),
+            SourceType::SourceFile(source_file) => {
+                if helpers::is_interface_ast_file(ast_file_path) {
+                    if let Some(interface) = source_file.interface.as_mut() {
                         let source_last_modified = interface.last_modified;
                         if ast_last_modified > &source_last_modified {
                             interface.parse_dirty = false;
                         }
-                    } else {
-                        let implementation = &mut source_file.implementation;
-                        let source_last_modified = implementation.last_modified;
-                        if ast_last_modified > &source_last_modified
-                            && !deleted_interfaces.contains(module_name)
-                        {
-                            implementation.parse_dirty = false;
-                        }
+                    }
+                } else {
+                    let implementation = &mut source_file.implementation;
+                    let source_last_modified = implementation.last_modified;
+                    if ast_last_modified > &source_last_modified && !deleted_interfaces.contains(module_name)
+                    {
+                        implementation.parse_dirty = false;
                     }
                 }
             }
-        });
+        }
+    }
 
     compile_assets_state
         .cmi_modules
@@ -300,9 +300,11 @@ fn has_compile_warnings(module: &Module) -> bool {
     )
 }
 
-pub fn cleanup_after_build(build_state: &BuildCommandState) {
+pub fn cleanup_after_build(build_state: &BuildState) {
     build_state.modules.par_iter().for_each(|(_module_name, module)| {
-        let package = build_state.get_package(&module.package_name).unwrap();
+        let Some(package) = build_state.get_package(&module.package_name) else {
+            return;
+        };
         if has_parse_warnings(module)
             && let SourceType::SourceFile(source_file) = &module.source_type
         {
@@ -332,43 +334,61 @@ pub fn cleanup_after_build(build_state: &BuildCommandState) {
     });
 }
 
-pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()> {
-    let project_context = ProjectContext::new(path)?;
-    let compiler_info = build::get_compiler_info(&project_context)?;
-    let packages = packages::make(&None, &project_context, show_progress)?;
+pub fn clean<R: build::BuildReporter>(
+    root_path: &Path,
+    scope_to_package: Option<&str>,
+    reporter: &R,
+) -> Result<()> {
+    // Always create ProjectContext at root, scope is passed as input parameter
+    let project_context = ProjectContext::new(root_path)?;
+    let compiler_info = build::get_compiler_info(&project_context, reporter)?;
+    let packages = packages::make(&None, &project_context, reporter)?;
 
-    let timing_clean_compiler_assets = Instant::now();
-    if !plain_output && show_progress {
-        print!(
-            "{} {}Cleaning compiler assets...",
-            style("[1/2]").bold().dim(),
-            SWEEP
-        );
-        let _ = std::io::stdout().flush();
+    // Determine which local packages to clean based on scope
+    let scoped_local_packages = match scope_to_package {
+        Some(entry_pkg) => packages::compute_build_scope(&packages, entry_pkg),
+        None => project_context.get_scoped_local_packages(),
     };
 
-    for (_, package) in &packages {
-        clean_package(show_progress, plain_output, package)
+    // Count packages to clean for the span
+    let packages_to_clean: Vec<&String> = packages
+        .iter()
+        .filter_map(|(name, package)| {
+            if scoped_local_packages.contains(name) || !package.is_local {
+                Some(name)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let timing_clean_compiler_assets = Instant::now();
+
+    {
+        let _span = info_span!("clean.compiler_assets", package_count = packages_to_clean.len(),).entered();
+
+        for (name, package) in &packages {
+            // Clean a package if:
+            // 1. It's a scoped local package, OR
+            // 2. It's not a local package (i.e., it's an external dependency in node_modules)
+            if scoped_local_packages.contains(name) || !package.is_local {
+                let _pkg_span = info_span!("clean.package", package = %name).entered();
+                clean_package(package)
+            }
+        }
     }
 
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
-    if !plain_output && show_progress {
-        println!(
-            "{}{} {}Cleaned compiler assets in {:.2}s",
-            LINE_CLEAR,
-            style("[1/2]").bold().dim(),
-            SWEEP,
-            timing_clean_compiler_assets_elapsed.as_secs_f64()
-        );
-        let _ = std::io::stdout().flush();
-    }
+    reporter.report(build::BuildProgress::CleanedCompilerAssets {
+        duration_seconds: timing_clean_compiler_assets_elapsed.as_secs_f64(),
+    });
 
     let timing_clean_mjs = Instant::now();
     let mut build_state = BuildState::new(project_context, packages, compiler_info);
-    packages::parse_packages(&mut build_state)?;
+    packages::parse_packages(&mut build_state, reporter)?;
     let root_config = build_state.get_root_config();
-    let suffix_for_print = match root_config.package_specs {
+    let suffix = match root_config.package_specs {
         None => match &root_config.suffix {
             None => String::from(".js"),
             Some(suffix) => suffix.clone(),
@@ -387,50 +407,21 @@ pub fn clean(path: &Path, show_progress: bool, plain_output: bool) -> Result<()>
             .join(", "),
     };
 
-    if !plain_output && show_progress {
-        print!(
-            "{} {}Cleaning {} files...",
-            style("[2/2]").bold().dim(),
-            SWEEP,
-            suffix_for_print
-        );
-        let _ = std::io::stdout().flush();
+    {
+        let _span = info_span!("clean.js_files", suffix = %suffix).entered();
+        clean_source_files_scoped(&build_state, root_config, &scoped_local_packages);
     }
-
-    clean_source_files(&build_state, root_config);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
-    if !plain_output && show_progress {
-        println!(
-            "{}{} {}Cleaned {} files in {:.2}s",
-            LINE_CLEAR,
-            style("[2/2]").bold().dim(),
-            SWEEP,
-            suffix_for_print,
-            timing_clean_mjs_elapsed.as_secs_f64()
-        );
-        let _ = std::io::stdout().flush();
-    }
+    reporter.report(build::BuildProgress::CleanedJsFiles {
+        suffix,
+        duration_seconds: timing_clean_mjs_elapsed.as_secs_f64(),
+    });
 
     Ok(())
 }
 
-pub fn clean_package(show_progress: bool, plain_output: bool, package: &Package) {
-    if show_progress {
-        if plain_output {
-            println!("Cleaning {}", package.name)
-        } else {
-            print!(
-                "{}{} {}Cleaning {}...",
-                LINE_CLEAR,
-                style("[1/2]").bold().dim(),
-                SWEEP,
-                package.name
-            );
-        }
-        let _ = std::io::stdout().flush();
-    }
-
+pub fn clean_package(package: &Package) {
     let path_str = package.get_build_path();
     let path = std::path::Path::new(&path_str);
     let _ = std::fs::remove_dir_all(path);

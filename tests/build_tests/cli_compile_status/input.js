@@ -28,6 +28,3 @@ assert.match(
   normalizeNewlines(out.stdout),
   /Compiled \d+ modules( in [0-9.]+s)?/,
 );
-
-out = await rescript("build", ["-v"]);
-assert.match(normalizeNewlines(out.stdout), /Created project context/);

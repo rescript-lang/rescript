@@ -9,6 +9,13 @@ error_output=$(rewatch clean 2>&1)
 if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
+  # Verify daemon shut down after clean
+  if daemon_stopped; then
+    success "Daemon stopped after clean"
+  else
+    error "Expected daemon to stop but socket still exists"
+    exit 1
+  fi
 else
   error "Error Cleaning Repo"
   printf "%s\n" "$error_output" >&2

@@ -1,0 +1,77 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`build-structural-errors > build fails with a dependency cycle (non-zero exit) 1`] = `
+[
+  "rpc.build[working_dir=.]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "    build.incremental_build[module_count=11]",
+  "      build.parse[dirty_modules=10]",
+  "      build.compile",
+  "      build.compile_error",
+  "build.js_post_build[command=node post-build.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
+  "  build.js_post_build_stdout",
+]
+`;
+
+exports[`build-structural-errors > build fails with a dependency cycle 1`] = `
+[
+  "rpc.build[working_dir=.]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "    build.incremental_build[module_count=11]",
+  "      build.parse[dirty_modules=10]",
+  "      build.compile",
+  "      build.compile_error",
+  "build.js_post_build[command=node post-build.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
+  "  build.js_post_build_stdout",
+]
+`;
+
+exports[`build-structural-errors > build fails with duplicate module names (non-zero exit) 1`] = `
+[
+  "rpc.build[working_dir=.]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+]
+`;
+
+exports[`build-structural-errors > build fails with duplicate module names 1`] = `
+[
+  "rpc.build[working_dir=.]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+]
+`;

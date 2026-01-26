@@ -1,0 +1,39 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler-args > does not load package sources when serving compiler args for an unloaded package 1`] = `
+[
+  "rpc.build[working_dir=packages/library]",
+  "  work_queue.handle_build",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.incremental_build[module_count=1]",
+  "      build.parse[dirty_modules=1]",
+  "      build.compile",
+  "rpc.get_compiler_args[file_path=packages/app/src/App.res]",
+]
+`;
+
+exports[`compiler-args > includes warning flags in both parser_args and compiler_args 1`] = `
+[
+  "rpc.get_compiler_args[file_path=packages/with-warnings/src/Sample.res]",
+]
+`;
+
+exports[`compiler-args > returns compiler args for a file in a child package 1`] = `
+[
+  "rpc.get_compiler_args[file_path=packages/library/src/Library.res]",
+]
+`;
+
+exports[`compiler-args > returns compiler args without a prior build 1`] = `
+[
+  "rpc.get_compiler_args[file_path=src/Root.res]",
+]
+`;
+
+exports[`compiler-args > returns identical output regardless of working directory 1`] = `
+[
+  "rpc.get_compiler_args[file_path=packages/library/src/Library.res]",
+  "rpc.get_compiler_args[file_path=packages/library/src/Library.res]",
+]
+`;

@@ -1,0 +1,458 @@
+syntax = "proto3";
+package rescript.daemon;
+
+service RescriptDaemon {
+  // Client registration - must be called first to get client_id
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Build operations - all return unified event stream
+  // Client must filter events by their client_id
+  rpc Build(BuildRequest) returns (stream DaemonEvent);
+  rpc Clean(CleanRequest) returns (stream DaemonEvent);
+  rpc Watch(WatchRequest) returns (stream DaemonEvent);
+
+  // File change notifications (from watch client)
+  rpc NotifyFileChange(FileChangeNotification) returns (FileChangeAck);
+
+  // Config change notification (from watch client when rescript.json changes)
+  rpc NotifyConfigChange(ConfigChangeNotification) returns (ConfigChangeAck);
+
+  // Format support
+  rpc Format(FormatRequest) returns (stream DaemonEvent);
+
+  // Debugging - same unified stream, debug client processes all events (no filtering)
+  rpc Debug(DebugRequest) returns (stream DaemonEvent);
+  rpc GetClients(GetClientsRequest) returns (GetClientsResponse);
+
+  // Lifecycle
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+  rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
+
+  // Compiler args query (used by editor tooling)
+  rpc GetCompilerArgs(CompilerArgsRequest) returns (CompilerArgsResponse);
+}
+
+// =============================================================================
+// Unified Event Stream
+// =============================================================================
+
+// Single event type for all daemon-to-client communication.
+// All clients receive the same stream; each client filters for relevant events.
+// The debug client must handle ALL variants exhaustively.
+message DaemonEvent {
+  string timestamp = 1;
+  oneof event {
+    // Client lifecycle events
+    ClientConnected client_connected = 2;
+    ClientDisconnected client_disconnected = 3;
+
+    // Build lifecycle events
+    BuildStarted build_started = 4;
+    BuildFinished build_finished = 5;
+
+    // Build progress events
+    Cleaned cleaned = 6;
+    Parsed parsed = 7;
+    Compiling compiling = 8;
+    Compiled compiled = 9;
+    GeneratingAst generating_ast = 24;
+
+    // Clean progress events
+    CleanedCompilerAssets cleaned_compiler_assets = 10;
+    CleanedJsFiles cleaned_js_files = 11;
+
+    // Build errors (structured)
+    CircularDependency circular_dependency = 12;
+    UnallowedDependency unallowed_dependency = 13;
+    PackageTreeError package_tree_error = 14;
+    ModuleNotFound module_not_found = 28;
+    InitializationError initialization_error = 30;
+
+    // Build warnings (structured)
+    ConfigWarning config_warning = 25;
+    DuplicatedPackage duplicated_package = 26;
+    MissingImplementation missing_implementation = 27;
+    PackageNameMismatch package_name_mismatch = 29;
+
+    // Compiler output (pass-through from bsc)
+    CompilerWarning compiler_warning = 16;
+    CompilerError compiler_error = 17;
+
+    // Post-build command output
+    JsPostBuildOutput js_post_build_output = 33;
+
+    // File watching
+    FileChanged file_changed = 18;
+    WatchPaths watch_paths = 32;
+
+    // Format events
+    FormatStarted format_started = 19;
+    FormatFinished format_finished = 20;
+    FormatProgress format_progress = 21;
+    FormatCheckFailed format_check_failed = 22;
+    FormattedStdin formatted_stdin = 23;
+  }
+}
+
+// =============================================================================
+// Client Lifecycle Events
+// =============================================================================
+
+message ClientConnected {
+  uint64 client_id = 1;
+  ClientType client_type = 2;
+  string working_directory = 3;
+}
+
+message ClientDisconnected {
+  uint64 client_id = 1;
+  ClientType client_type = 2;
+}
+
+enum ClientType {
+  CLIENT_BUILD = 0;
+  CLIENT_WATCH = 1;
+  CLIENT_CLEAN = 2;
+  CLIENT_DEBUG = 3;
+  CLIENT_FORMAT = 4;
+}
+
+// =============================================================================
+// Build Lifecycle Events
+// =============================================================================
+
+message BuildStarted {
+  uint64 client_id = 1;
+  BuildType build_type = 2;
+  optional int32 file_change_count = 3;  // Only set for file-change triggered builds
+  bool is_initial = 4;                   // True for initial watch build
+}
+
+enum BuildType {
+  BUILD_FULL = 0;
+  BUILD_INCREMENTAL = 1;
+}
+
+message BuildFinished {
+  uint64 client_id = 1;
+  bool success = 2;
+  double duration_seconds = 3;
+  optional int32 module_count = 4;
+  optional string error = 5;
+  bool is_clean = 6;  // True if this was a clean operation
+}
+
+// =============================================================================
+// Build Progress Events
+// =============================================================================
+
+message Cleaned {
+  uint64 client_id = 1;
+  int32 cleaned_count = 2;
+  int32 total_count = 3;
+  double duration_seconds = 4;
+  bool due_to_compiler_update = 5;
+}
+
+message Parsed {
+  uint64 client_id = 1;
+  int32 parsed_count = 2;
+  double duration_seconds = 3;
+}
+
+// Incremental compile progress (sent as each module compiles)
+message Compiling {
+  uint64 client_id = 1;
+  int32 current_count = 2;
+  int32 total_count = 3;
+}
+
+message Compiled {
+  uint64 client_id = 1;
+  int32 compiled_count = 2;
+  double duration_seconds = 3;
+}
+
+// Progress event for AST generation
+message GeneratingAst {
+  uint64 client_id = 1;
+  string module_name = 2;
+}
+
+// =============================================================================
+// Clean Progress Events
+// =============================================================================
+
+message CleanedCompilerAssets {
+  uint64 client_id = 1;
+  double duration_seconds = 2;
+}
+
+message CleanedJsFiles {
+  uint64 client_id = 1;
+  string suffix = 2;
+  double duration_seconds = 3;
+}
+
+// =============================================================================
+// Build Errors (Structured)
+// =============================================================================
+
+message CircularDependency {
+  uint64 client_id = 1;
+  string cycle_description = 2;  // Formatted dependency cycle (e.g., "A → B → C → A")
+}
+
+message UnallowedDependency {
+  uint64 client_id = 1;
+  string package_name = 2;
+  repeated UnallowedDependencyGroup groups = 3;
+}
+
+message UnallowedDependencyGroup {
+  string deps_type = 1;        // "dependencies" or "dev-dependencies"
+  repeated string deps = 2;    // List of unallowed dependency names
+}
+
+message PackageTreeError {
+  uint64 client_id = 1;
+  string package_name = 2;
+  string error = 3;
+}
+
+// Internal error when a module cannot be found during build
+message ModuleNotFound {
+  uint64 client_id = 1;
+  string module_name = 2;
+}
+
+// =============================================================================
+// Compiler Output Messages
+// =============================================================================
+
+// Compiler warnings (pass-through from bsc, already formatted)
+message CompilerWarning {
+  uint64 client_id = 1;
+  string message = 2;
+}
+
+// Compiler errors (pass-through from bsc, already formatted)
+message CompilerError {
+  uint64 client_id = 1;
+  string message = 2;
+}
+
+// Output from js-post-build command
+message JsPostBuildOutput {
+  uint64 client_id = 1;
+  string command = 2;       // The command that was executed
+  string js_file = 3;       // The JS file the command was run for
+  optional string stdout = 4;  // stdout output (if any)
+  optional string stderr = 5;  // stderr output (if any)
+}
+
+// Error during build initialization (e.g., duplicate modules, config errors)
+message InitializationError {
+  uint64 client_id = 1;
+  string message = 2;
+}
+
+// =============================================================================
+// Build Warnings (Structured)
+// =============================================================================
+
+// Warning about unsupported or unknown config fields
+message ConfigWarning {
+  uint64 client_id = 1;
+  string package_name = 2;
+  string field_name = 3;
+  ConfigWarningKind kind = 4;
+}
+
+enum ConfigWarningKind {
+  CONFIG_UNSUPPORTED = 0;  // Field not supported by ReScript 12's build system
+  CONFIG_UNKNOWN = 1;      // Unknown field, will be ignored
+}
+
+// Warning about duplicated package in dependencies
+message DuplicatedPackage {
+  uint64 client_id = 1;
+  string package_name = 2;
+  string chosen_path = 3;    // Path of the chosen package
+  string duplicate_path = 4; // Path of the duplicate
+  string parent_path = 5;    // Path where duplicate was found
+}
+
+// Warning about interface file without implementation
+message MissingImplementation {
+  uint64 client_id = 1;
+  string interface_file = 2;
+}
+
+// Warning about package name mismatch between package.json and rescript.json
+message PackageNameMismatch {
+  uint64 client_id = 1;
+  string package_path = 2;
+  string package_json_name = 3;
+  string rescript_json_name = 4;
+}
+
+// =============================================================================
+// File Watching Events
+// =============================================================================
+
+message FileChanged {
+  string path = 1;
+  FileChangeType change_type = 2;
+}
+
+enum FileChangeType {
+  MODIFIED = 0;
+  CREATED = 1;
+  DELETED = 2;
+  RENAMED = 3;
+}
+
+// A source directory entry with its watching mode
+message WatchSourcePath {
+  string path = 1;        // Absolute path to source directory
+  bool recursive = 2;     // Whether to watch subdirectories recursively
+}
+
+// Daemon → Watch Client: tells the client which paths to watch
+message WatchPaths {
+  uint64 client_id = 1;
+  repeated WatchSourcePath source_paths = 2;  // Source directories to watch
+  repeated string config_paths = 3;           // Absolute paths to rescript.json files
+}
+
+// Watch Client → Daemon: a config file (rescript.json) changed
+message ConfigChangeNotification {
+  string path = 1;  // Absolute path to the rescript.json that changed
+}
+
+message ConfigChangeAck {
+  bool accepted = 1;
+}
+
+// =============================================================================
+// Format Events
+// =============================================================================
+
+message FormatStarted {
+  uint64 client_id = 1;
+  bool is_check = 2;           // True if checking format, false if formatting
+  bool is_stdin = 3;           // True if formatting stdin
+  int32 file_count = 4;        // Number of files to format (0 for stdin)
+}
+
+message FormatFinished {
+  uint64 client_id = 1;
+  bool success = 2;
+  double duration_seconds = 3;
+  int32 formatted_count = 4;
+  int32 failed_count = 5;      // Files that need formatting (in check mode)
+}
+
+message FormatProgress {
+  uint64 client_id = 1;
+  int32 formatted_count = 2;
+  int32 total_count = 3;
+}
+
+message FormatCheckFailed {
+  uint64 client_id = 1;
+  string file = 2;  // Path to file that needs formatting
+}
+
+message FormattedStdin {
+  uint64 client_id = 1;
+  string content = 2;  // Formatted content from stdin
+}
+
+// =============================================================================
+// Request/Response Messages
+// =============================================================================
+
+message BuildRequest {
+  string working_directory = 1;  // Where client was invoked
+  optional string filter = 2;    // Module filter regex
+  optional string warn_error = 3; // Override warning configuration
+}
+
+message CleanRequest {
+  string working_directory = 1;  // Where client was invoked
+}
+
+message WatchRequest {
+  string working_directory = 1;  // Where client was invoked
+  optional string filter = 2;    // Module filter regex
+}
+
+message FileChangeNotification {
+  string path = 1;
+  FileChangeType change_type = 2;
+}
+
+message FileChangeAck {
+  bool accepted = 1;
+}
+
+message FormatRequest {
+  string working_directory = 1;  // Where client was invoked (determines scoped packages)
+  bool check = 2;                // If true, check formatting without modifying files
+  repeated string files = 3;     // Specific files to format (empty = all files in scope)
+  optional string stdin_ext = 4; // If set, format stdin with this extension (.res or .resi)
+  optional string stdin_content = 5; // Content to format when using --stdin (read by client, sent here)
+}
+
+message DebugRequest {}
+
+message GetClientsRequest {}
+
+message GetClientsResponse {
+  repeated ConnectedClient clients = 1;
+}
+
+message ConnectedClient {
+  uint64 id = 1;
+  ClientType client_type = 2;
+  string working_directory = 3;
+  string connected_at = 4;  // Formatted timestamp
+}
+
+message PingRequest {}
+message PingResponse {
+  bool ready = 1;
+}
+
+message ShutdownRequest {}
+message ShutdownResponse {}
+
+message DisconnectRequest {
+  uint64 client_id = 1;  // The client ID to disconnect
+}
+message DisconnectResponse {}
+
+message CompilerArgsRequest {
+  string file_path = 1;  // Absolute path to a .res or .resi file
+}
+
+message CompilerArgsResponse {
+  repeated string compiler_args = 1;  // Arguments for bsc compilation
+  repeated string parser_args = 2;    // Arguments for bsc parsing/AST generation
+}
+
+// =============================================================================
+// Registration (Client Handshake)
+// =============================================================================
+
+message RegisterRequest {
+  ClientType client_type = 1;
+  string working_directory = 2;
+}
+
+message RegisterResponse {
+  uint64 client_id = 1;  // Unique ID for this client session
+}

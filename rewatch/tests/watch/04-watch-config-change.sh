@@ -15,8 +15,9 @@ else
   exit 1
 fi
 
-# Start watcher and capture all output
+# Start watcher and capture PID for cleanup
 rewatch_bg watch > rewatch.log 2>&1 &
+WATCHER_PID=$!
 success "Watcher Started"
 
 # Wait for initial build to complete
@@ -28,7 +29,13 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-sleep 2
+# Wait for watcher to be ready (file watchers set up)
+if ! wait_for_watcher_ready "./rewatch.log" 10; then
+  error "Watcher did not become ready"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
 
 # Change the suffix in rescript.json (same approach as suffix test)
 replace "s/.mjs/.res.mjs/g" rescript.json
@@ -52,7 +59,7 @@ else
 fi
 
 # Verify the watcher is still running (didn't crash on config change)
-if [ -f lib/rescript.lock ]; then
+if [ -f lib/bs/rescript.pid ]; then
   success "Watcher still running after config change"
 else
   error "Watcher crashed after config change"

@@ -1,126 +1,145 @@
 use anyhow::Result;
-use console::Term;
-use log::LevelFilter;
-use std::{io::Write, path::Path};
+use std::path::Path;
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{cli, client, cmd, daemon};
 
 fn main() -> Result<()> {
     let cli = cli::parse_with_default().unwrap_or_else(|err| err.exit());
 
-    let log_level_filter = cli.verbose.log_level_filter();
-
-    let stdout_logger = env_logger::Builder::new()
-        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
-        .filter_level(log_level_filter)
-        .target(env_logger::fmt::Target::Stdout)
-        .build();
-
-    let stderr_logger = env_logger::Builder::new()
-        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
-        .filter_level(log_level_filter)
-        .target(env_logger::fmt::Target::Stderr)
-        .build();
-
-    log::set_max_level(log_level_filter);
-    log::set_boxed_logger(Box::new(SplitLogger {
-        stdout: stdout_logger,
-        stderr: stderr_logger,
-    }))
-    .expect("Failed to initialize logger");
-
-    let is_tty: bool = Term::stdout().is_term() && Term::stderr().is_term();
-    let plain_output = !is_tty;
-
-    // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
-    // level, we should never show that.
-    let show_progress = log_level_filter == LevelFilter::Info;
-
     match cli.command {
         cli::Command::CompilerArgs { path } => {
-            println!("{}", build::get_compiler_args(Path::new(&path))?);
-            std::process::exit(0);
+            let runtime = tokio::runtime::Runtime::new()?;
+            let result = runtime.block_on(client::get_compiler_args(Path::new(&path)));
+            match result {
+                Ok(json) => {
+                    println!("{}", json);
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("{:#}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         cli::Command::Build(build_args) => {
-            let _lock = get_lock(&build_args.folder);
-
-            match build::build(
-                &build_args.filter,
-                Path::new(&build_args.folder as &str),
-                show_progress,
+            let runtime = tokio::runtime::Runtime::new()?;
+            let result = runtime.block_on(client::build(
+                &build_args.folder,
+                build_args.filter.as_ref().map(|r| r.as_str().to_string()),
+                build_args.warn_error.warn_error.clone(),
                 build_args.no_timing,
-                true, // create_sourcedirs is now always enabled
-                plain_output,
-                (*build_args.warn_error).clone(),
-            ) {
+            ));
+
+            match result {
+                Ok(success) => {
+                    if success {
+                        if let Some(args_after_build) = (*build_args.after_build).clone() {
+                            cmd::run(args_after_build)
+                        }
+                        std::process::exit(0)
+                    } else {
+                        std::process::exit(1)
+                    }
+                }
                 Err(e) => {
                     eprintln!("{:#}", e);
                     std::process::exit(1)
                 }
-                Ok(_) => {
-                    if let Some(args_after_build) = (*build_args.after_build).clone() {
-                        cmd::run(args_after_build)
-                    }
-                    std::process::exit(0)
-                }
-            };
+            }
         }
         cli::Command::Watch(watch_args) => {
-            let _lock = get_lock(&watch_args.folder);
-
-            match watcher::start(
-                &watch_args.filter,
-                show_progress,
+            let runtime = tokio::runtime::Runtime::new()?;
+            let result = runtime.block_on(client::watch(
                 &watch_args.folder,
+                watch_args.filter.as_ref().map(|r| r.as_str().to_string()),
                 (*watch_args.after_build).clone(),
-                true, // create_sourcedirs is now always enabled
-                plain_output,
-                (*watch_args.warn_error).clone(),
-            ) {
+            ));
+
+            match result {
+                Ok(()) => Ok(()),
                 Err(e) => {
                     eprintln!("{:#}", e);
                     std::process::exit(1)
                 }
-                Ok(_) => Ok(()),
             }
         }
         cli::Command::Clean { folder } => {
-            let _lock = get_lock(&folder);
-            build::clean::clean(Path::new(&folder as &str), show_progress, plain_output)
+            let runtime = tokio::runtime::Runtime::new()?;
+            let result = runtime.block_on(client::clean(&folder));
+
+            match result {
+                Ok(success) => {
+                    if success {
+                        std::process::exit(0)
+                    } else {
+                        std::process::exit(1)
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{:#}", e);
+                    std::process::exit(1)
+                }
+            }
         }
-        cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
-    }
-}
+        cli::Command::Format { stdin, check, files } => {
+            let runtime = tokio::runtime::Runtime::new()?;
 
-fn get_lock(folder: &str) -> lock::Lock {
-    match lock::get(folder) {
-        lock::Lock::Error(error) => {
-            eprintln!("Could not start ReScript build: {error}");
-            std::process::exit(1);
+            // Dispatch to the appropriate format function based on arguments
+            let result = runtime.block_on(async {
+                if let Some(ext) = stdin {
+                    // Format stdin with the given extension
+                    let ext_str = match ext {
+                        cli::FileExtension::Res => ".res".to_string(),
+                        cli::FileExtension::Resi => ".resi".to_string(),
+                    };
+                    client::format::format_stdin(ext_str).await
+                } else if check {
+                    // Check formatting
+                    if files.is_empty() {
+                        client::format::check_format_project().await
+                    } else {
+                        client::format::check_format_files(files).await
+                    }
+                } else {
+                    // Format files
+                    if files.is_empty() {
+                        client::format::format_project().await
+                    } else {
+                        client::format::format_files(files).await
+                    }
+                }
+            });
+
+            match result {
+                Ok(success) => {
+                    if success {
+                        std::process::exit(0)
+                    } else {
+                        std::process::exit(1)
+                    }
+                }
+                Err(e) => {
+                    eprintln!("{:#}", e);
+                    std::process::exit(1)
+                }
+            }
         }
-        acquired_lock => acquired_lock,
-    }
-}
-
-struct SplitLogger {
-    stdout: env_logger::Logger,
-    stderr: env_logger::Logger,
-}
-
-impl log::Log for SplitLogger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
-        self.stdout.enabled(metadata) || self.stderr.enabled(metadata)
-    }
-
-    fn log(&self, record: &log::Record) {
-        match record.level() {
-            log::Level::Error | log::Level::Warn => self.stderr.log(record),
-            _ => self.stdout.log(record),
+        // Hidden command used internally by client::start_daemon_if_needed() to spawn
+        // the daemon as a background process. Not intended for direct user invocation.
+        cli::Command::Daemon { folder } => {
+            let root = Path::new(&folder as &str).canonicalize()?;
+            let runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(daemon::start(root))
         }
-    }
+        cli::Command::Debug { folder } => {
+            let root = client::find_project_root(Path::new(&folder as &str))?;
 
-    fn flush(&self) {
-        self.stdout.flush();
-        self.stderr.flush();
+            // Start daemon if not running (debug clients can also launch the daemon)
+            let runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(async {
+                client::start_daemon_if_needed(&root).await?;
+                client::debug(&root).await
+            })
+        }
     }
 }
