@@ -201,7 +201,7 @@ fn main() {
             }
             "ast" => print_signature_ast(&signature, &mut io::stdout()),
             "binary" => {
-                // OCaml -print binary format:
+                // OCaml -print binary format (current parsetree):
                 // 1. Magic: "Caml1999N022" (raw string, not marshaled) for interfaces
                 // 2. Marshaled filename (using output_value)
                 // 3. Marshaled signature (using output_value)
@@ -217,6 +217,26 @@ fn main() {
                 // Marshal signature
                 let mut w = MarshalWriter::new();
                 signature.marshal(&mut w);
+                let _ = io::stdout().write_all(&w.finish());
+            }
+            "binary0" => {
+                // Parsetree0 binary format (frozen PPX-compatible format):
+                // Same layout as binary but with parsetree0 types
+
+                // Convert to parsetree0
+                let sig0 = mapper_to0::map_signature(&signature);
+
+                // Write magic
+                let _ = io::stdout().write_all(b"Caml1999N022");
+
+                // Marshal filename
+                let mut w = MarshalWriter::new();
+                filename.marshal(&mut w);
+                let _ = io::stdout().write_all(&w.finish());
+
+                // Marshal parsetree0 signature
+                let mut w = MarshalWriter::new();
+                sig0.marshal(&mut w);
                 let _ = io::stdout().write_all(&w.finish());
             }
             "comments" => print_comments(&parser, &mut io::stdout()),
@@ -277,7 +297,7 @@ fn main() {
             }
             "ast" => print_structure_ast(&structure, &mut io::stdout()),
             "binary" => {
-                // OCaml -print binary format:
+                // OCaml -print binary format (current parsetree):
                 // 1. Magic: "Caml1999M022" (raw string, not marshaled) for implementations
                 // 2. Marshaled filename (using output_value)
                 // 3. Marshaled structure (using output_value)
@@ -293,6 +313,26 @@ fn main() {
                 // Marshal structure
                 let mut w = MarshalWriter::new();
                 structure.marshal(&mut w);
+                let _ = io::stdout().write_all(&w.finish());
+            }
+            "binary0" => {
+                // Parsetree0 binary format (frozen PPX-compatible format):
+                // Same layout as binary but with parsetree0 types
+
+                // Convert to parsetree0
+                let str0 = mapper_to0::map_structure(&structure);
+
+                // Write magic
+                let _ = io::stdout().write_all(b"Caml1999M022");
+
+                // Marshal filename
+                let mut w = MarshalWriter::new();
+                filename.marshal(&mut w);
+                let _ = io::stdout().write_all(&w.finish());
+
+                // Marshal parsetree0 structure
+                let mut w = MarshalWriter::new();
+                str0.marshal(&mut w);
                 let _ = io::stdout().write_all(&w.finish());
             }
             "comments" => print_comments(&parser, &mut io::stdout()),

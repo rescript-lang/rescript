@@ -194,7 +194,7 @@ end = struct
       ("-recover", Arg.Unit (fun () -> recover := true), "Emit partial ast");
       ( "-print",
         Arg.String (fun txt -> print := txt),
-        "Print either binary, ml, ast, sexp, comments, tokens or res. Default: \
+        "Print either binary, binary0, ml, ast, sexp, sexp-locs, sexp0-locs, comments, tokens or res. Default: \
          res" );
       ( "-width",
         Arg.Int (fun w -> width := w),
@@ -236,16 +236,18 @@ module CliArgProcessor = struct
     let print_engine =
       match target with
       | "binary" -> Res_driver_binary.print_engine
+      | "binary0" -> Res_driver_binary0.print_engine
       | "ml" -> Res_driver_ml_printer.print_engine
       | "ast" -> Res_ast_debugger.print_engine
       | "sexp" -> Res_ast_debugger.sexp_print_engine
       | "sexp-locs" -> Res_ast_debugger.sexp_locs_print_engine
+      | "sexp0-locs" -> Res_ast_debugger.sexp0_locs_print_engine
       | "comments" -> Res_ast_debugger.comments_print_engine
       | "tokens" -> Res_token_debugger.token_print_engine
       | "res" -> Res_driver.print_engine
       | target ->
         print_endline
-          ("-print needs to be either binary, ml, ast, sexp, sexp-locs, comments, tokens \
+          ("-print needs to be either binary, binary0, ml, ast, sexp, sexp-locs, sexp0-locs, comments, tokens \
             or res. You provided " ^ target);
         exit 1
     in
