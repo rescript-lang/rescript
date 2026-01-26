@@ -1965,19 +1965,8 @@ fn get_label(label: &ArgLabel) -> String {
 }
 
 fn empty_loc() -> Location {
-    let pos = Position {
-        file_name: String::new(),
-        line: 0,
-        bol: 0,
-        cnum: 0,
-        id: PositionId::default_id(),
-    };
-    Location {
-        loc_start: pos.clone(),
-        loc_end: pos,
-        loc_ghost: true,
-        id: LocationId::default_id(),
-    }
+    // Use Location::none() to match OCaml's Location.none (serialized as (loc 1 -1 1 -1))
+    Location::none()
 }
 
 /// Recursively extract named arguments from a function expression

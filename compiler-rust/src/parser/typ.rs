@@ -503,7 +503,11 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                     parse_tuple_type(p, start_pos, typ)
                 } else {
                     p.expect(Token::Rparen);
-                    typ
+                    // OCaml includes the surrounding parentheses in the type's location
+                    CoreType {
+                        ptyp_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+                        ..typ
+                    }
                 }
             }
         }

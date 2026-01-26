@@ -1694,7 +1694,7 @@ fn parse_let_bindings(
 
         // Handle optional type annotation: let x: int = ...
         // Also track locally abstract types for Pexp_newtype wrapping
-        let (pat, newtype_info) = if p.token == Token::Colon {
+        let (pat, newtype_info, is_locally_abstract) = if p.token == Token::Colon {
             p.next();
 
             // Check if this is `type a.` syntax (locally abstract types)
@@ -1737,38 +1737,67 @@ fn parse_let_bindings(
                 ppat_loc: loc,
                 ppat_attributes: vec![],
             };
-            (pat, newtype_info)
+            (pat, newtype_info, is_locally_abstract)
         } else {
-            (pat, None)
+            (pat, None, false)
         };
 
         p.expect(Token::Equal);
         let mut expr = expr::parse_expr(p);
 
+        // Compute binding location BEFORE wrapping (OCaml uses this for locally abstract type locations)
+        let binding_loc = p.mk_loc(&binding_start, &p.prev_end_pos);
+
+        // For locally abstract types, OCaml uses the binding location for the pattern constraint and Ptyp_poly
+        let pat = if is_locally_abstract {
+            // Update Ppat_constraint and inner Ptyp_poly locations to use the binding location
+            if let PatternDesc::Ppat_constraint(inner_pat, typ) = pat.ppat_desc {
+                // Update the Ptyp_poly location to use binding location
+                let updated_typ = match typ.ptyp_desc {
+                    CoreTypeDesc::Ptyp_poly(vars, inner) => CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, inner),
+                        ptyp_loc: binding_loc.clone(),
+                        ptyp_attributes: typ.ptyp_attributes,
+                    },
+                    _ => typ,
+                };
+                Pattern {
+                    ppat_desc: PatternDesc::Ppat_constraint(inner_pat, updated_typ),
+                    ppat_loc: binding_loc.clone(),
+                    ppat_attributes: pat.ppat_attributes,
+                }
+            } else {
+                pat
+            }
+        } else {
+            pat
+        };
+
         // Wrap expression in Pexp_newtype for locally abstract types
         // Also add Pexp_constraint with the inner type (from Ptyp_poly)
+        // OCaml uses the binding location for all these wrappers
         if let Some((newtype_vars, inner_type)) = newtype_info {
             // First wrap the expression in Pexp_constraint with the inner type
-            let loc = expr.pexp_loc.clone();
+            // OCaml uses the binding location for this Pexp_constraint
             expr = Expression {
                 pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), inner_type),
-                pexp_loc: loc,
+                pexp_loc: binding_loc.clone(),
                 pexp_attributes: vec![],
             };
 
             // Then wrap in Pexp_newtype for each type variable
             // Fold in reverse order so that the outermost newtype is the first variable
+            // OCaml uses the binding location for all Pexp_newtype wrappers
             for var in newtype_vars.into_iter().rev() {
-                let loc = expr.pexp_loc.clone();
                 expr = Expression {
                     pexp_desc: ExpressionDesc::Pexp_newtype(var, Box::new(expr)),
-                    pexp_loc: loc,
+                    pexp_loc: binding_loc.clone(),
                     pexp_attributes: vec![],
                 };
             }
         }
 
-        let loc = p.mk_loc(&binding_start, &p.prev_end_pos);
+        let loc = binding_loc;
         bindings.push(ValueBinding {
             pvb_pat: pat,
             pvb_expr: expr,

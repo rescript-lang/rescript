@@ -826,8 +826,8 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
                     let single = patterns.into_iter().next().unwrap();
                     // If the single argument is itself a tuple, wrap it
                     if matches!(single.ppat_desc, PatternDesc::Ppat_tuple(_)) {
-                        // OCaml: wrapper tuple location starts at outer ( not at constructor
-                        let wrap_loc = p.mk_loc(&lparen_pos, &p.prev_end_pos);
+                        // OCaml: wrapper tuple location extends to end of next token
+                        let wrap_loc = p.mk_loc(&lparen_pos, &p.end_pos);
                         Some(Pattern {
                             ppat_desc: PatternDesc::Ppat_tuple(vec![single]),
                             ppat_loc: wrap_loc,
@@ -850,8 +850,9 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
                 // If the single argument is itself a tuple, wrap it in another
                 // single-element tuple. This distinguishes C((a,b)) from C(a,b).
                 if matches!(first.ppat_desc, PatternDesc::Ppat_tuple(_)) {
-                    // OCaml: wrapper tuple location starts at outer ( not at constructor
-                    let wrap_loc = p.mk_loc(&lparen_pos, &p.prev_end_pos);
+                    // OCaml: wrapper tuple location starts at outer ( and extends to end of next token
+                    // This means in `Some((a,b)) =>`, the wrapper tuple includes the ` =>`
+                    let wrap_loc = p.mk_loc(&lparen_pos, &p.end_pos);
                     Some(Pattern {
                         ppat_desc: PatternDesc::Ppat_tuple(vec![first]),
                         ppat_loc: wrap_loc,

@@ -325,7 +325,11 @@ fn core_type(typ: &CoreType) -> Sexp {
         ]),
         CoreTypeDesc::Ptyp_poly(lbls, t) => Sexp::list(vec![
             Sexp::atom("Ptyp_poly"),
-            Sexp::list(map_empty(lbls, |l| Sexp::atom(&quote_string(&l.txt)))),
+            // OCaml includes location for each type variable: (("a" (loc ...)))
+            Sexp::list(map_empty(lbls, |l| Sexp::list(vec![
+                Sexp::atom(&quote_string(&l.txt)),
+                location(&l.loc),
+            ]))),
             core_type(t),
         ]),
         CoreTypeDesc::Ptyp_package((mod_name, constraints)) => Sexp::list(vec![
