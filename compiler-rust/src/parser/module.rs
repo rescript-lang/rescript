@@ -124,6 +124,8 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
 
     let desc = match &p.token {
         Token::Open => {
+            // OCaml's popen_loc starts at 'open', not at outer attributes
+            let open_start = p.start_pos.clone();
             p.next();
             // Check for open! override flag
             let override_flag = if p.token == Token::Bang {
@@ -133,7 +135,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 OverrideFlag::Fresh
             };
             let lid = parse_module_long_ident(p);
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&open_start, &p.prev_end_pos);
             Some(StructureItemDesc::Pstr_open(OpenDescription {
                 popen_lid: lid,
                 popen_override: override_flag,
@@ -384,6 +386,8 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
 
     let desc = match &p.token {
         Token::Open => {
+            // OCaml's popen_loc starts at 'open', not at outer attributes
+            let open_start = p.start_pos.clone();
             p.next();
             // Check for override flag: open! M
             let override_flag = if p.token == Token::Bang {
@@ -393,7 +397,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 OverrideFlag::Fresh
             };
             let lid = parse_module_long_ident(p);
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc(&open_start, &p.prev_end_pos);
             Some(SignatureItemDesc::Psig_open(OpenDescription {
                 popen_lid: lid,
                 popen_override: override_flag,
@@ -2006,14 +2010,20 @@ fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension 
     };
 
     // Constructors (with optional leading `|`).
-    if p.token == Token::Bar {
+    // OCaml includes the `|` in the constructor location
+    let mut bar_start = if p.token == Token::Bar {
+        let pos = p.start_pos.clone();
         p.next();
-    }
+        Some(pos)
+    } else {
+        None
+    };
 
     let mut constructors = vec![];
     while p.token != Token::Eof {
-        constructors.push(parse_extension_constructor(p, vec![], None));
+        constructors.push(parse_extension_constructor(p, vec![], bar_start.clone()));
         if p.token == Token::Bar {
+            bar_start = Some(p.start_pos.clone());
             p.next();
             continue;
         }
