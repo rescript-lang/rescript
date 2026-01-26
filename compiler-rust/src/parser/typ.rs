@@ -289,8 +289,9 @@ fn parse_type_attributes(p: &mut Parser<'_>) -> Attributes {
     loop {
         match &p.token {
             Token::At => {
-                p.next();
+                // Capture start_pos BEFORE consuming @ so attribute location includes the @
                 let start_pos = p.start_pos.clone();
+                p.next();
                 // Parse attribute id (possibly with path)
                 let id = parse_attribute_id(p);
                 // Parse optional payload

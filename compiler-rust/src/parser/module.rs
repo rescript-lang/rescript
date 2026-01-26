@@ -30,13 +30,16 @@ pub struct InlineTypesContext {
     pub found_inline_types: Vec<(String, Location, TypeKind)>,
     /// Type parameters from the outer type declaration
     pub params: Vec<(CoreType, Variance)>,
+    /// Location of the outer type's name (used for inline type declarations)
+    pub outer_name_loc: Location,
 }
 
 impl InlineTypesContext {
-    fn new(params: Vec<(CoreType, Variance)>) -> Self {
+    fn new(params: Vec<(CoreType, Variance)>, outer_name_loc: Location) -> Self {
         Self {
             found_inline_types: vec![],
             params,
+            outer_name_loc,
         }
     }
 }
@@ -475,7 +478,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             p.next();
             if p.token == Token::Typ {
                 p.next();
-                let mtd = parse_module_type_declaration(p, attrs.clone());
+                let mtd = parse_module_type_declaration(p, attrs.clone(), false);
                 Some(SignatureItemDesc::Psig_modtype(mtd))
             } else if p.token == Token::Rec {
                 p.next();
@@ -1306,18 +1309,31 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
     let body = parse_module_type_no_with(p);
     let end_pos = body.pmty_loc.loc_end.clone();
 
-    params.into_iter().rev().fold(body, |acc, param| {
-        let loc = p.mk_loc(&param.start_pos, &end_pos);
-        ModuleType {
-            pmty_desc: ModuleTypeDesc::Pmty_functor(
-                param.name,
-                param.param.map(Box::new),
-                Box::new(acc),
-            ),
-            pmty_loc: loc,
-            pmty_attributes: param.attrs,
-        }
-    })
+    // OCaml includes the opening `(` in the outermost Pmty_functor location
+    // For inner functors (in multi-param), use the param's start position
+    let params_len = params.len();
+    params
+        .into_iter()
+        .enumerate()
+        .rev()
+        .fold(body, |acc, (idx, param)| {
+            // Last param in iteration (first in original order) uses functor_start
+            let start = if idx == params_len - 1 {
+                functor_start.clone()
+            } else {
+                param.start_pos
+            };
+            let loc = p.mk_loc(&start, &end_pos);
+            ModuleType {
+                pmty_desc: ModuleTypeDesc::Pmty_functor(
+                    param.name,
+                    param.param.map(Box::new),
+                    Box::new(acc),
+                ),
+                pmty_loc: loc,
+                pmty_attributes: param.attrs,
+            }
+        })
 }
 
 /// Parse a primary module type.
@@ -1864,7 +1880,7 @@ fn parse_type_declarations(
 
     loop {
         // Create context for this declaration
-        let inline_ctx = RefCell::new(InlineTypesContext::new(vec![]));
+        let inline_ctx = RefCell::new(InlineTypesContext::new(vec![], Location::none()));
         if let Some(decl) = parse_type_declaration_with_context(p, next_attrs, &inline_ctx, decl_start.clone()) {
             // Collect inline types from the context
             let ctx = inline_ctx.borrow();
@@ -1876,8 +1892,10 @@ fn parse_type_declarations(
                     Payload::PStr(vec![]),
                 );
                 for (inline_name, loc, type_kind) in ctx.found_inline_types.iter() {
+                    // OCaml uses the outer type's name location for inline type ptype_name,
+                    // not the inline type's location
                     let inline_decl = TypeDeclaration {
-                        ptype_name: with_loc(inline_name.clone(), loc.clone()),
+                        ptype_name: with_loc(inline_name.clone(), ctx.outer_name_loc.clone()),
                         ptype_params: ctx.params.clone(),
                         ptype_cstrs: vec![],
                         ptype_kind: type_kind.clone(),
@@ -1936,7 +1954,7 @@ fn parse_type_declarations(
 /// Note: This captures start_pos at the current position, which should be the type name.
 /// For accurate ptype_loc, use parse_type_declaration_with_context with the correct start position.
 fn parse_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> Option<TypeDeclaration> {
-    let inline_ctx = RefCell::new(InlineTypesContext::new(vec![]));
+    let inline_ctx = RefCell::new(InlineTypesContext::new(vec![], Location::none()));
     let start_pos = p.start_pos.clone();
     parse_type_declaration_with_context(p, outer_attrs, &inline_ctx, start_pos)
 }
@@ -2065,8 +2083,12 @@ fn parse_type_declaration_with_context(
         vec![]
     };
 
-    // Store params in context for inline type declarations
-    inline_ctx.borrow_mut().params = params.clone();
+    // Store params and outer name location in context for inline type declarations
+    {
+        let mut ctx = inline_ctx.borrow_mut();
+        ctx.params = params.clone();
+        ctx.outer_name_loc = name.loc.clone();
+    }
 
     // The type name path for inline record desugaring
     let current_type_name_path = vec![name.txt.clone()];
@@ -3191,7 +3213,7 @@ fn parse_module_definition(p: &mut Parser<'_>, module_start: Position, attrs: At
     // Check for module type
     if p.token == Token::Typ {
         p.next();
-        let mtd = parse_module_type_declaration(p, attrs);
+        let mtd = parse_module_type_declaration(p, attrs, true);
         return Some(StructureItemDesc::Pstr_modtype(mtd));
     }
 
@@ -3425,8 +3447,10 @@ fn parse_rec_module_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) ->
 }
 
 /// Parse a module type declaration.
-fn parse_module_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> ModuleTypeDeclaration {
-    let start_pos = p.start_pos.clone();
+/// `in_structure` indicates whether this is in a structure (.res) or signature (.resi).
+/// In structure context, OCaml passes ~loc, in signature context it doesn't (uses Location.none).
+fn parse_module_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes, in_structure: bool) -> ModuleTypeDeclaration {
+    let name_start = p.start_pos.clone();
     let inner_attrs = parse_attributes(p);
     // Merge outer (signature item level) attrs with inner (name level) attrs
     let attrs = [outer_attrs, inner_attrs].concat();
@@ -3453,7 +3477,14 @@ fn parse_module_type_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) ->
         None
     };
 
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    // In structure context (parse_module_type_impl), OCaml passes ~loc:(mk_loc name_start p.prev_end_pos)
+    // In signature context (parse_module_type_declaration), OCaml doesn't pass ~loc, uses Location.none
+    let loc = if in_structure {
+        p.mk_loc(&name_start, &p.prev_end_pos)
+    } else {
+        Location::none()
+    };
+
     ModuleTypeDeclaration {
         pmtd_name: name,
         pmtd_type: typ,
