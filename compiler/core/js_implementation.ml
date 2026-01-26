@@ -55,6 +55,10 @@ let after_parsing_sig ppf outputprefix ast =
       let tsg = Typemod.transl_signature initial_env ast in
       if !Clflags.dump_typedtree then
         fprintf ppf "%a@." Printtyped.interface tsg;
+      print_if ppf Clflags.dump_typed_sexp
+        Sexp_typedtree.print_typed_signature tsg;
+      print_if ppf Clflags.dump_typed_sexp_locs
+        Sexp_typedtree.print_typed_signature_with_locs tsg;
       let sg = tsg.sig_type in
       ignore (Includemod.signatures initial_env sg sg);
       Delayed_checks.force_delayed_checks ();
@@ -141,11 +145,19 @@ let after_parsing_impl ppf outputprefix (ast : Parsetree.structure) =
       let typedtree_coercion = (typedtree, coercion) in
       print_if ppf Clflags.dump_typedtree
         Printtyped.implementation_with_coercion typedtree_coercion;
+      print_if ppf Clflags.dump_typed_sexp
+        Sexp_typedtree.print_typed_structure typedtree;
+      print_if ppf Clflags.dump_typed_sexp_locs
+        Sexp_typedtree.print_typed_structure_with_locs typedtree;
       (if !Js_config.cmi_only then Warnings.check_fatal ()
        else
          let lambda, exports =
            Translmod.transl_implementation modulename typedtree_coercion
          in
+         print_if ppf Clflags.dump_lambda_sexp
+           Sexp_lambda.print_lambda lambda;
+         print_if ppf Clflags.dump_lambda_sexp_locs
+           Sexp_lambda.print_lambda_with_locs lambda;
          let js_program =
            print_if_pipe ppf Clflags.dump_rawlambda Printlambda.lambda lambda
            |> Lam_compile_main.compile outputprefix exports

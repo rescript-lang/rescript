@@ -2068,6 +2068,8 @@ fn type_application(
         ExpressionDesc::Texp_apply {
             funct: Box::new(typed_funct),
             args: typed_args,
+            partial: false,
+            transformed_jsx: false,
         },
         loc.clone(),
         result_ty,
@@ -2278,6 +2280,7 @@ fn type_function(
             body: cases,
             partial: Partial::Total,
             arity,
+            async_: false,
         },
         loc.clone(),
         func_ty,
@@ -2803,6 +2806,8 @@ fn type_await(
         ExpressionDesc::Texp_apply {
             funct: Box::new(typed_inner),
             args: vec![], // Await is a special form, not a regular application
+            partial: false,
+            transformed_jsx: false,
         },
         loc.clone(),
         expected_ty,

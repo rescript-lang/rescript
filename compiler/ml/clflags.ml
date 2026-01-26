@@ -38,6 +38,14 @@ and dump_rawlambda = ref false (* -drawlambda *)
 
 and dump_lambda = ref false (* -dlambda *)
 
+and dump_typed_sexp = ref false (* -dtyped-sexp *)
+
+and dump_typed_sexp_locs = ref false (* -dtyped-sexp-locs *)
+
+and dump_lambda_sexp = ref false (* -dlambda-sexp *)
+
+and dump_lambda_sexp_locs = ref false (* -dlambda-sexp-locs *)
+
 and only_parse = ref false (* -only-parse *)
 
 and editor_mode = ref false (* -editor-mode *)
@@ -50,7 +58,11 @@ let reset_dump_state () =
   dump_source := false;
   dump_parsetree := false;
   dump_typedtree := false;
-  dump_rawlambda := false
+  dump_typed_sexp := false;
+  dump_typed_sexp_locs := false;
+  dump_rawlambda := false;
+  dump_lambda_sexp := false;
+  dump_lambda_sexp_locs := false
 
 let keep_locs = ref true (* -keep-locs *)
 

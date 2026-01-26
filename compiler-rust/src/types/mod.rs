@@ -39,6 +39,7 @@ pub mod decl;
 pub mod env;
 pub mod includemod;
 pub mod path;
+pub mod sexp_typedtree;
 pub mod type_expr;
 pub mod typecore;
 pub mod typedtree;

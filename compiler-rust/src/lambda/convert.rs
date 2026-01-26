@@ -100,8 +100,9 @@ impl LambdaConverter {
                 body,
                 partial,
                 arity,
+                async_: _,
             } => self.convert_function(expr.exp_loc.clone(), params, body, *partial, *arity),
-            ExpressionDesc::Texp_apply { funct, args } => {
+            ExpressionDesc::Texp_apply { funct, args, partial: _, transformed_jsx: _ } => {
                 self.convert_apply(expr.exp_loc.clone(), funct, args)
             }
             ExpressionDesc::Texp_match(scrut, cases, _exn_cases, partial) => {

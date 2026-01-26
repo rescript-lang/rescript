@@ -10,6 +10,7 @@ use crate::js_ir::printer::print_program;
 use crate::lambda::compile::LambdaCompiler;
 use crate::lambda::convert::LambdaConverter;
 use crate::parser::{module, Parser};
+use crate::types::sexp_typedtree::{print_typed_structure, print_typed_structure_with_locs};
 use crate::types::{initial_env, type_structure, TypeCheckContext, TypeContext};
 
 /// Compiler options that can be passed to the driver.
@@ -17,6 +18,10 @@ use crate::types::{initial_env, type_structure, TypeCheckContext, TypeContext};
 pub struct CompilerOptions {
     /// Print the Lambda IR to stderr (like OCaml's -drawlambda)
     pub dump_lambda: bool,
+    /// Print the typed tree as sexp to stderr (like OCaml's -dtyped-sexp)
+    pub dump_typed_sexp: bool,
+    /// Print the typed tree as sexp with locations to stderr (like OCaml's -dtyped-sexp-locs)
+    pub dump_typed_sexp_locs: bool,
 }
 
 /// Compile ReScript source to JavaScript.
@@ -44,6 +49,16 @@ pub fn compile_source_to_js_with_options(
     let env = initial_env(&type_ctx);
     let (typed_structure, _env) = type_structure(&mut tctx, &env, &structure)
         .map_err(|e| anyhow!("Type checking failed: {e:?}"))?;
+
+    // Print typed tree if requested
+    if options.dump_typed_sexp {
+        let mut stderr = std::io::stderr();
+        let _ = print_typed_structure(&type_ctx, &typed_structure, &mut stderr);
+    }
+    if options.dump_typed_sexp_locs {
+        let mut stderr = std::io::stderr();
+        let _ = print_typed_structure_with_locs(&type_ctx, &typed_structure, &mut stderr);
+    }
 
     // Typedtree -> Lambda
     let mut converter = LambdaConverter::new();

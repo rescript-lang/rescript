@@ -191,6 +191,8 @@ pub enum ExpressionDesc {
         body: Vec<Case>,
         partial: Partial,
         arity: Arity,
+        /// Whether this is an async function.
+        async_: bool,
     },
 
     /// Application: `E(E1, ..., En)`.
@@ -198,6 +200,10 @@ pub enum ExpressionDesc {
     Texp_apply {
         funct: Box<Expression>,
         args: Vec<ApplyArg>,
+        /// Whether this is a partial application.
+        partial: bool,
+        /// Whether this was transformed from JSX.
+        transformed_jsx: bool,
     },
 
     /// Match: `switch E { | P1 => E1 | ... }`.

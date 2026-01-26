@@ -20,6 +20,8 @@ use std::path::{Path, PathBuf};
 struct Options {
     bs_ast: bool,
     dump_lambda: bool,
+    dump_typed_sexp: bool,
+    dump_typed_sexp_locs: bool,
     output: Option<PathBuf>,
     package_outputs: Vec<String>,
     namespace: Option<String>,
@@ -43,6 +45,8 @@ fn run() -> Result<()> {
             match arg.as_str() {
                 "-bs-ast" => opts.bs_ast = true,
                 "-drawlambda" => opts.dump_lambda = true,
+                "-dtyped-sexp" => opts.dump_typed_sexp = true,
+                "-dtyped-sexp-locs" => opts.dump_typed_sexp_locs = true,
                 "-o" | "-output" => {
                     if let Some(val) = args.next() {
                         opts.output = Some(PathBuf::from(val));
@@ -114,6 +118,8 @@ fn run() -> Result<()> {
 
     let compiler_opts = CompilerOptions {
         dump_lambda: opts.dump_lambda,
+        dump_typed_sexp: opts.dump_typed_sexp,
+        dump_typed_sexp_locs: opts.dump_typed_sexp_locs,
     };
     let js = compile_file_to_js_with_options(&source_path, &compiler_opts)?;
     write_outputs(&source_path, &js, &opts)
