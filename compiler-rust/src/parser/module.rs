@@ -949,12 +949,19 @@ fn parse_functor_arg(p: &mut Parser<'_>) -> Option<FunctorArg> {
 
 /// Parse functor arguments: ( arg1, arg2, ... )
 fn parse_functor_args(p: &mut Parser<'_>) -> Vec<FunctorArg> {
-    let start_pos = p.start_pos.clone();
+    // Capture position before ( - OCaml includes ( in the first arg's location
+    let paren_start_pos = p.start_pos.clone();
     p.expect(Token::Lparen);
 
     let mut args = vec![];
+    let mut is_first = true;
     while p.token != Token::Rparen && p.token != Token::Eof {
-        if let Some(arg) = parse_functor_arg(p) {
+        if let Some(mut arg) = parse_functor_arg(p) {
+            // For the first argument, OCaml includes the opening ( in the functor location
+            if is_first {
+                arg.start_pos = paren_start_pos.clone();
+                is_first = false;
+            }
             args.push(arg);
         } else {
             break;
@@ -974,9 +981,9 @@ fn parse_functor_args(p: &mut Parser<'_>) -> Vec<FunctorArg> {
     if args.is_empty() {
         vec![FunctorArg {
             attrs: vec![],
-            name: with_loc("*".to_string(), p.mk_loc(&start_pos, &p.prev_end_pos)),
+            name: with_loc("*".to_string(), p.mk_loc(&paren_start_pos, &p.prev_end_pos)),
             mod_type: None,
-            start_pos,
+            start_pos: paren_start_pos,
         }]
     } else {
         args
