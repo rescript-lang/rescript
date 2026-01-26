@@ -2,6 +2,24 @@
 
 This file provides guidance to AI coding assistants when working with code in this repository.
 
+## ⚠️ Repository Setup - READ FIRST
+
+This repository has two Git remotes configured:
+
+- `origin` → `rescript-lang/rescript` (upstream public repo - **READ ONLY**)
+- `private` → `jfrolich/rescript-rust` (private development repo)
+
+**IMPORTANT: Only push to the `private` remote.** Never push directly to `origin`.
+
+```bash
+# Push changes to private repo
+git push private
+
+# Pull updates from upstream (if needed)
+git fetch origin
+git merge origin/master
+```
+
 ## Quick Start: Essential Commands
 
 ```bash
@@ -241,6 +259,7 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 - Use DCO sign-off: `Signed-Off-By: Your Name <email>`
 - Include appropriate tests with all changes
 - Build must pass before committing
+- **Commit incrementally** - Make small, focused commits as you complete each logical unit of work rather than accumulating many changes into one large commit. Each commit should have a clear, descriptive message explaining what was changed and why. This makes it easier to review changes, bisect issues, and understand the evolution of the codebase.
 
 ### Code Quality
 - Follow existing patterns in the codebase
@@ -608,6 +627,57 @@ When the Rust printer output differs from OCaml, common issues include:
 - **Multi-line formatting**: Record/array breaking should match
 - **Parenthesization**: Extra or missing parens around expressions
 - **Exotic identifiers**: `~~~compare` should not become `\"~~~"(compare)`
+
+### AST Parity Test Suite
+
+The AST parity test suite (`scripts/test_parser_ast_parity.sh`) comprehensively compares the Rust and OCaml parser outputs across multiple dimensions:
+
+**Tests performed:**
+1. **sexp parity** - AST structure matches between OCaml and Rust
+2. **sexp-locs parity** - AST structure + locations match
+3. **sexp0-locs parity** - parsetree→parsetree0→sexp output matches (single-trip)
+4. **Roundtrip structure parity** - After parsetree→parsetree0→parsetree, both parsers produce same AST
+5. **Roundtrip location parity** - Locations preserved correctly through parsetree0 conversion
+6. **Binary parity** - Marshalled parsetree0 is byte-identical (critical for PPX compatibility)
+
+#### Running the AST Parity Tests
+
+```bash
+# Run all tests (default: 16 parallel jobs)
+./scripts/test_parser_ast_parity.sh
+
+# Test a single file (fastest for iteration)
+./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
+
+# Test files matching a pattern
+./scripts/test_parser_ast_parity.sh "printer/expr"
+
+# Quick mode - stop on first failure
+./scripts/test_parser_ast_parity.sh --quick
+
+# Verbose mode - show each file being tested
+./scripts/test_parser_ast_parity.sh -v tests/syntax_tests/data/printer/expr/apply.res
+
+# Adjust parallelism
+./scripts/test_parser_ast_parity.sh -j8
+```
+
+#### Quick Iteration Workflow
+
+When fixing parity issues, use single-file mode for fast feedback:
+
+```bash
+# 1. Find a failing file from the test output
+# 2. Test just that file
+./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
+
+# 3. Make changes to Rust parser
+# 4. Rebuild
+cargo build --manifest-path compiler-rust/Cargo.toml --release
+
+# 5. Re-test the single file
+./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
+```
 
 ### Key Design Decisions
 
