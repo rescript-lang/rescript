@@ -28,6 +28,8 @@
 
 #### :house: Internal
 
+- speed up dev container test by installing ocaml in docker image instead of in `postCreate.sh`. https://github.com/rescript-lang/rescript/pull/8230
+
 # 13.0.0-alpha.1
 
 #### :boom: Breaking Change
