@@ -13,6 +13,4 @@ RUN sudo apt-get update && export DEBIAN_FRONTEND=noninteractive \
 ARG OPAM_VERSION=2.5.0
 RUN printf '\n\n' | bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh) --version $OPAM_VERSION"
 
-COPY rescript.opam tools.opam ./
-
-RUN opam init -y --auto-setup --bare --disable-sandboxing && opam switch create 5.3.0 && opam install . --with-test --with-dev-setup -y
+RUN opam init -y --auto-setup --bare --disable-sandboxing && opam switch create 5.3.0 

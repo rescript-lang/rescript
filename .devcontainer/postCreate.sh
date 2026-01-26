@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# Install dev dependencies from OPAM
+opam install . --with-test --with-dev-setup -y
+
+# Add OPAM environment setup to shell startup script
+echo 'eval $(opam env)' >> ~/.zshrc
+echo 'eval $(opam env)' >> ~/.bashrc
+
 nvm install
 
 corepack enable
