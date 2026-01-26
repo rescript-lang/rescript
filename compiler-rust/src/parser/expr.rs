@@ -479,11 +479,12 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
             p.next();
             if super::core::is_es6_arrow_expression(p, context == ExprContext::TernaryTrueBranch) {
                 // Pass attrs to arrow expression - they're consumed
+                // OCaml: async function location starts AFTER async, not including it
                 (
                     parse_es6_arrow_expression(
                         p,
                         true,
-                        Some(start_pos.clone()),
+                        None, // Don't include "async" in the function location
                         attrs.clone(),
                         context,
                     ),
@@ -690,11 +691,14 @@ pub fn parse_es6_arrow_expression(
                 // Only the outermost function (last in fold, first in original list) gets arity
                 // After reversing, index 0 in fold corresponds to the innermost function
                 // The last iteration (i == total_arity - 1) is the outermost function
-                let arity = if i == total_arity - 1 {
+                let is_outermost = i == total_arity - 1;
+                let arity = if is_outermost {
                     Arity::Full(total_arity)
                 } else {
                     Arity::Unknown
                 };
+                // Only the outermost function gets is_async: true (OCaml behavior)
+                let fn_is_async = is_outermost && is_async;
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_fun {
                         arg_label: param.label,
@@ -702,7 +706,7 @@ pub fn parse_es6_arrow_expression(
                         lhs: pat,
                         rhs: Box::new(acc),
                         arity,
-                        is_async,
+                        is_async: fn_is_async,
                     },
                     pexp_loc: loc,
                     pexp_attributes: vec![],
