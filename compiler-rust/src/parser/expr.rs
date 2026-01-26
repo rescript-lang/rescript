@@ -2820,6 +2820,12 @@ fn parse_let_in_block_with_continuation_and_attrs(
     p: &mut Parser<'_>,
     leading_attrs: Attributes,
 ) -> Expression {
+    // If there are leading attributes, the value_binding location should start from them
+    // OCaml includes leading attributes in the binding location
+    let binding_start_pos = leading_attrs
+        .first()
+        .map(|attr| attr.0.loc.loc_start.clone())
+        .unwrap_or_else(|| p.start_pos.clone());
     let start_pos = p.start_pos.clone();
 
     // Consume let token
@@ -2915,7 +2921,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
         }
     }
 
-    let first_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let first_loc = p.mk_loc(&binding_start_pos, &p.prev_end_pos);
 
     // Combine leading_attrs with let.unwrap attribute if this is let?
     let first_attrs = if unwrap {
@@ -2991,7 +2997,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
         body.pexp_loc.loc_end.clone()
     };
 
-    let loc = p.mk_loc(&start_pos, &let_end);
+    let loc = p.mk_loc(&binding_start_pos, &let_end);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_let(rec_flag, bindings, Box::new(body)),

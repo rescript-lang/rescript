@@ -608,12 +608,15 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     // Skip uncurried marker
     p.optional(&Token::Dot);
 
-    let mut params = vec![];
+    // Track both the TypeArg and its start position (for arrow location)
+    let mut params: Vec<(TypeArg, crate::location::Position)> = vec![];
 
     while p.token != Token::Rparen && p.token != Token::Eof {
         // Allow dotted parameters for uncurried segments (ignored for now).
         p.optional(&Token::Dot);
         let param_attrs = parse_attributes(p);
+        // Capture start position before label - OCaml includes the ~ in arrow location
+        let param_start = p.start_pos.clone();
 
         let (mut label, typ) = if p.token == Token::Tilde {
             p.next();
@@ -641,11 +644,11 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             }
         }
 
-        params.push(TypeArg {
+        params.push((TypeArg {
             attrs: param_attrs,
             lbl: label,
             typ,
-        });
+        }, param_start));
 
         if !p.optional(&Token::Comma) {
             break;
@@ -663,20 +666,21 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
 
     if params.is_empty() {
         let unit_loc = p.mk_loc(&start_pos, &rparen_end_pos);
-        params.push(TypeArg {
+        params.push((TypeArg {
             attrs: vec![],
             lbl: ArgLabel::Nolabel,
-            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], unit_loc.clone(), unit_loc),
-        });
+            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], unit_loc.clone(), unit_loc.clone()),
+        }, start_pos.clone()));
     }
 
     // The total arity is the number of parameters
     let total_arity = params.len();
 
-    let result = params.into_iter().rev().fold(return_type, |acc, param| {
-        // Each arrow's location spans from its first argument to the end of return
+    let result = params.into_iter().rev().fold(return_type, |acc, (param, param_start)| {
+        // Each arrow's location spans from the label (if any) to the end of return
+        // OCaml includes the ~ in the location for labeled arguments
         let arrow_loc = Location::from_positions(
-            param.typ.ptyp_loc.loc_start.clone(),
+            param_start,
             acc.ptyp_loc.loc_end.clone(),
         );
         CoreType {
