@@ -1199,10 +1199,13 @@ fn parse_poly_variant_pattern(p: &mut Parser<'_>) -> Pattern {
     if p.token == Token::DotDotDot {
         p.next();
         // Parse a type identifier - can be lident or Uident.Uident.lident
+        // Track start position of the type path for location
+        let type_start = p.start_pos.clone();
         let lid = parse_type_longident(p);
+        let lid_loc = p.mk_loc(&type_start, &p.prev_end_pos);
         let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         return Pattern {
-            ppat_desc: PatternDesc::Ppat_type(mknoloc(lid)),
+            ppat_desc: PatternDesc::Ppat_type(with_loc(lid, lid_loc)),
             ppat_loc: loc,
             ppat_attributes: vec![],
         };
