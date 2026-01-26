@@ -123,67 +123,77 @@ let partial = function
   | Total -> Sexp.atom "Total"
 
 (* Type expression printer - follows Tlink chains via Btype.repr *)
-let rec type_expr te =
-  let te = Btype.repr te in  (* Follow Tlink chains *)
-  match te.Types.desc with
-  | Tvar name -> Sexp.list [Sexp.atom "Tvar"; opt_string name]
-  | Tarrow (arg, ret, _, arity) ->
+(* Uses a visited set to prevent infinite recursion on cyclic types *)
+let type_expr te =
+  (* Use a hash table with physical identity for cycle detection *)
+  let visited = Hashtbl.create 16 in
+  let rec aux te =
+    let te = Btype.repr te in  (* Follow Tlink chains *)
+    (* Check if we've already visited this type (cycle detection) *)
+    if Hashtbl.mem visited (Obj.repr te) then
+      Sexp.atom "<cycle>"
+    else begin
+      Hashtbl.add visited (Obj.repr te) ();
+      match te.Types.desc with
+      | Tvar name -> Sexp.list [Sexp.atom "Tvar"; opt_string name]
+      | Tarrow (arg, ret, _, arity) ->
+        Sexp.list [
+          Sexp.atom "Tarrow";
+          sexp_arg_label arg.Types.lbl;
+          aux arg.Types.typ;
+          aux ret;
+          opt (fun a -> Sexp.atom (string_of_int a)) arity;
+        ]
+      | Ttuple l -> Sexp.list (Sexp.atom "Ttuple" :: List.map aux l)
+      | Tconstr (p, args, _) ->
+        Sexp.list [Sexp.atom "Tconstr"; path p; Sexp.list (List.map aux args)]
+      | Tobject (ty, _) ->
+        Sexp.list [Sexp.atom "Tobject"; aux ty]
+      | Tfield (name, kind, ty1, ty2) ->
+        let kind_str = match Btype.field_kind_repr kind with
+          | Fpresent -> "Fpresent"
+          | Fabsent -> "Fabsent"
+          | Fvar _ -> "Fvar"
+        in
+        Sexp.list [Sexp.atom "Tfield"; string name; Sexp.atom kind_str; aux ty1; aux ty2]
+      | Tnil -> Sexp.atom "Tnil"
+      | Tlink _ -> Sexp.atom "Tlink"  (* Should not happen after Btype.repr *)
+      | Tsubst ty -> Sexp.list [Sexp.atom "Tsubst"; aux ty]
+      | Tvariant row -> row_desc_aux row
+      | Tunivar name -> Sexp.list [Sexp.atom "Tunivar"; opt_string name]
+      | Tpoly (ty, tyl) ->
+        Sexp.list [Sexp.atom "Tpoly"; aux ty; Sexp.list (List.map aux tyl)]
+      | Tpackage (p, lids, tyl) ->
+        Sexp.list [
+          Sexp.atom "Tpackage";
+          path p;
+          Sexp.list (List.map (fun l -> longident l) lids);
+          Sexp.list (List.map aux tyl);
+        ]
+    end
+  and row_desc_aux row =
+    let row = Btype.row_repr row in
     Sexp.list [
-      Sexp.atom "Tarrow";
-      sexp_arg_label arg.Types.lbl;
-      type_expr arg.Types.typ;
-      type_expr ret;
-      opt (fun a -> Sexp.atom (string_of_int a)) arity;
+      Sexp.atom "Tvariant";
+      Sexp.list (List.map (fun (l, rf) ->
+        Sexp.list [string l; row_field_aux rf]
+      ) row.Types.row_fields);
+      Sexp.atom (if row.Types.row_closed then "closed" else "open");
+      Sexp.atom (if row.Types.row_fixed then "fixed" else "not_fixed");
     ]
-  | Ttuple l -> Sexp.list (Sexp.atom "Ttuple" :: List.map type_expr l)
-  | Tconstr (p, args, _) ->
-    Sexp.list [Sexp.atom "Tconstr"; path p; Sexp.list (List.map type_expr args)]
-  | Tobject (ty, _) ->
-    Sexp.list [Sexp.atom "Tobject"; type_expr ty]
-  | Tfield (name, kind, ty1, ty2) ->
-    let kind_str = match Btype.field_kind_repr kind with
-      | Fpresent -> "Fpresent"
-      | Fabsent -> "Fabsent"
-      | Fvar _ -> "Fvar"
-    in
-    Sexp.list [Sexp.atom "Tfield"; string name; Sexp.atom kind_str; type_expr ty1; type_expr ty2]
-  | Tnil -> Sexp.atom "Tnil"
-  | Tlink _ -> Sexp.atom "Tlink"  (* Should not happen after Btype.repr *)
-  | Tsubst ty -> Sexp.list [Sexp.atom "Tsubst"; type_expr ty]
-  | Tvariant row -> row_desc row
-  | Tunivar name -> Sexp.list [Sexp.atom "Tunivar"; opt_string name]
-  | Tpoly (ty, tyl) ->
-    Sexp.list [Sexp.atom "Tpoly"; type_expr ty; Sexp.list (List.map type_expr tyl)]
-  | Tpackage (p, lids, tyl) ->
-    Sexp.list [
-      Sexp.atom "Tpackage";
-      path p;
-      Sexp.list (List.map (fun l -> longident l) lids);
-      Sexp.list (List.map type_expr tyl);
-    ]
-
-and row_desc row =
-  let row = Btype.row_repr row in
-  Sexp.list [
-    Sexp.atom "Tvariant";
-    Sexp.list (List.map (fun (l, rf) ->
-      Sexp.list [string l; row_field rf]
-    ) row.Types.row_fields);
-    Sexp.atom (if row.Types.row_closed then "closed" else "open");
-    Sexp.atom (if row.Types.row_fixed then "fixed" else "not_fixed");
-  ]
-
-and row_field rf =
-  match Btype.row_field_repr rf with
-  | Rpresent None -> Sexp.atom "Rpresent_none"
-  | Rpresent (Some ty) -> Sexp.list [Sexp.atom "Rpresent"; type_expr ty]
-  | Reither (c, tyl, _, _) ->
-    Sexp.list [
-      Sexp.atom "Reither";
-      Sexp.atom (if c then "const" else "non_const");
-      Sexp.list (List.map type_expr tyl);
-    ]
-  | Rabsent -> Sexp.atom "Rabsent"
+  and row_field_aux rf =
+    match Btype.row_field_repr rf with
+    | Rpresent None -> Sexp.atom "Rpresent_none"
+    | Rpresent (Some ty) -> Sexp.list [Sexp.atom "Rpresent"; aux ty]
+    | Reither (c, tyl, _, _) ->
+      Sexp.list [
+        Sexp.atom "Reither";
+        Sexp.atom (if c then "const" else "non_const");
+        Sexp.list (List.map aux tyl);
+      ]
+    | Rabsent -> Sexp.atom "Rabsent"
+  in
+  aux te
 
 (* Pattern *)
 let rec pattern ~with_locs p =
