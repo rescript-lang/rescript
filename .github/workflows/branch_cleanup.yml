@@ -14,8 +14,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          ignore-branches: "release-*"
-          ignored-prefixes: "rc/"
+          # ignore-branches: ""
+          ignored-prefixes: "maintenance/"
           last-commit-age-days: 90
           dry-run: true
           rate-limit: true
