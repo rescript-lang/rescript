@@ -2323,16 +2323,19 @@ fn parse_type_declaration_with_context(
     // Parse constraints (constraint 't = type)
     let mut cstrs = vec![];
     while p.token == Token::Constraint {
+        // OCaml includes "constraint" keyword in the type variable and constraint locations
+        let cstr_start = p.start_pos.clone();
         p.next();
         // Parse the type variable
         p.expect(Token::SingleQuote);
         let var = if let Token::Lident(name) = &p.token {
             let name = name.clone();
-            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+            let var_end = p.end_pos.clone();
             p.next();
+            // OCaml: type variable location starts at "constraint" keyword
             CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_var(name),
-                ptyp_loc: loc,
+                ptyp_loc: p.mk_loc(&cstr_start, &var_end),
                 ptyp_attributes: vec![],
             }
         } else {
@@ -2343,7 +2346,8 @@ fn parse_type_declaration_with_context(
         };
         p.expect(Token::Equal);
         let typ = typ::parse_typ_expr(p);
-        cstrs.push((var, typ, p.mk_loc(&start_pos, &p.prev_end_pos)));
+        // OCaml: constraint tuple location also starts at "constraint" keyword
+        cstrs.push((var, typ, p.mk_loc(&cstr_start, &p.prev_end_pos)));
     }
 
     // In type declarations with qualified type constructors (Ldot),

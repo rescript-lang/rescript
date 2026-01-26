@@ -1334,12 +1334,13 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 pstr_loc: loc.clone(),
             };
 
+            // OCaml uses ghost location for the Pexp_extension when parsing regex literals
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_extension((
-                    with_loc("re".to_string(), loc.clone()),
+                    with_loc("re".to_string(), loc),
                     Payload::PStr(vec![str_item]),
                 )),
-                pexp_loc: loc,
+                pexp_loc: Location::none(),
                 pexp_attributes: vec![],
             }
         }
@@ -2615,23 +2616,33 @@ fn parse_block_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 
     let mut expr = body.unwrap_or_else(|| ast_helper::make_unit(loc.clone()));
 
-    // OCaml includes the opening `{` in the pattern's location for braced arrow functions.
-    // It also shifts the Pexp_fun's location to start at `=>`.
-    // This preserves information about the bracing context.
+    // OCaml's braced arrow function handling depends on the pattern type and parenthesization:
+    // - For {(pattern) => body}: Pexp_fun starts at `(`, pattern is NOT extended
+    // - For {name => body} with Ppat_var: Pexp_fun starts at `=>`, pattern IS extended to include `{`
+    // - For {_ => body} with Ppat_any: Pexp_fun starts at `_`, pattern is NOT extended
     if let ExpressionDesc::Pexp_fun { ref mut lhs, .. } = expr.pexp_desc {
-        // Extend the pattern's location to start at the opening brace
-        lhs.ppat_loc.loc_start = start_pos.clone();
+        // Check if the pattern's current start is right after the brace (meaning no paren)
+        if lhs.ppat_loc.loc_start.cnum == start_pos.cnum + 1 {
+            // Only extend Ppat_var patterns to include `{`
+            // Ppat_any and other patterns are NOT extended
+            if let super::ast::PatternDesc::Ppat_var(ref mut var_loc) = lhs.ppat_desc {
+                // Extend pattern and var to include `{`
+                lhs.ppat_loc.loc_start = start_pos.clone();
+                var_loc.loc.loc_start = start_pos.clone();
 
-        // Also extend the inner location for Ppat_var (OCaml includes `{` in the variable location too)
-        if let super::ast::PatternDesc::Ppat_var(ref mut var_loc) = lhs.ppat_desc {
-            var_loc.loc.loc_start = start_pos.clone();
+                // Set Pexp_fun start to after the pattern (at the `=` of `=>`)
+                expr.pexp_loc.loc_start = lhs.ppat_loc.loc_end.clone();
+                expr.pexp_loc.loc_start.cnum += 1; // Skip space after pattern
+            } else {
+                // For non-Ppat_var like {_ => ...}: Pexp_fun starts at the pattern
+                expr.pexp_loc.loc_start = lhs.ppat_loc.loc_start.clone();
+            }
+        } else {
+            // Parenthesized pattern like {(x) => ...}: Pexp_fun starts at `(`
+            let mut fun_start = start_pos.clone();
+            fun_start.cnum += 1;
+            expr.pexp_loc.loc_start = fun_start;
         }
-
-        // Adjust the Pexp_fun's location to start just after the pattern ends
-        // (at the `=>` position, which is pattern_end + 1 for space)
-        // OCaml starts at the `=` of `=>`, which is pattern_end + 1 character
-        expr.pexp_loc.loc_start = lhs.ppat_loc.loc_end.clone();
-        expr.pexp_loc.loc_start.cnum += 1; // Skip space after pattern
     }
 
     // Add res.braces attribute to mark this as a braced expression
@@ -2682,7 +2693,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 ast_helper::make_unit(loc)
             });
 
-            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            // OCaml uses p.prev_end_pos for Pexp_open location
+            let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_open(override_flag, lid, Box::new(body)),
                 pexp_loc: loc,
@@ -2756,7 +2768,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                     ast_helper::make_unit(loc)
                 });
 
-                let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
+                // OCaml uses p.prev_end_pos for Pexp_letmodule location
+                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_letmodule(
                         module_name,
@@ -2786,7 +2799,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 ast_helper::make_unit(loc)
             });
 
-            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            // OCaml uses p.prev_end_pos for Pexp_letexception location
+            let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_letexception(ext, Box::new(body)),
                 pexp_loc: loc,
@@ -3002,15 +3016,9 @@ fn parse_let_in_block_with_continuation_and_attrs(
         ast_helper::make_unit(loc)
     });
 
-    // OCaml: Pexp_let location extends to cover body if body is not implicit ()
-    // But if body IS implicit (), use the binding end position
-    let let_end = if is_implicit_body {
-        // If body is implicit unit at }, use the binding end (before semicolon)
-        bindings.last().map(|b| b.pvb_loc.loc_end.clone()).unwrap_or(p.prev_end_pos.clone())
-    } else {
-        // Otherwise use body's end (this includes Pexp_let and explicit expressions)
-        body.pexp_loc.loc_end.clone()
-    };
+    // OCaml: Pexp_let location always uses p.prev_end_pos after parsing body
+    // This is different from body.pexp_loc.loc_end in some cases
+    let let_end = p.prev_end_pos.clone();
 
     let loc = p.mk_loc(&binding_start_pos, &let_end);
 
@@ -3291,7 +3299,8 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                 ast_helper::make_unit(loc)
             });
 
-            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            // OCaml uses p.prev_end_pos for Pexp_open location
+            let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_open(OverrideFlag::Fresh, lid, Box::new(body)),
                 pexp_loc: loc,
@@ -3340,7 +3349,8 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                     ast_helper::make_unit(loc)
                 });
 
-                let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
+                // OCaml uses p.prev_end_pos for Pexp_letmodule location
+                let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_letmodule(
                         module_name,
@@ -3369,7 +3379,8 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                 ast_helper::make_unit(loc)
             });
 
-            let loc = p.mk_loc(&expr_start, &body.pexp_loc.loc_end);
+            // OCaml uses p.prev_end_pos for Pexp_letexception location
+            let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_letexception(ext, Box::new(body)),
                 pexp_loc: loc,
@@ -3505,13 +3516,8 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
         ast_helper::make_unit(loc)
     });
 
-    // If body is implicit (), use binding end; otherwise use body's end
-    let let_end = if is_implicit_body {
-        bindings.last().map(|b| b.pvb_loc.loc_end.clone()).unwrap_or(p.prev_end_pos.clone())
-    } else {
-        body.pexp_loc.loc_end.clone()
-    };
-    let loc = p.mk_loc(&start_pos, &let_end);
+    // OCaml: Pexp_let location always uses p.prev_end_pos after parsing body
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
     Expression {
         pexp_desc: ExpressionDesc::Pexp_let(rec_flag, bindings, Box::new(body)),

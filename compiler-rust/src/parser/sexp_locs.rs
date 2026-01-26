@@ -688,8 +688,8 @@ fn type_declaration(td: &TypeDeclaration) -> Sexp {
         ]),
         Sexp::list(vec![
             Sexp::atom("ptype_cstrs"),
-            Sexp::list(map_empty(&td.ptype_cstrs, |(t1, t2, _)| {
-                Sexp::list(vec![core_type(t1), core_type(t2)])
+            Sexp::list(map_empty(&td.ptype_cstrs, |(t1, t2, loc)| {
+                Sexp::list(vec![core_type(t1), core_type(t2), location(loc)])
             })),
         ]),
         Sexp::list(vec![Sexp::atom("ptype_kind"), type_kind(&td.ptype_kind)]),
