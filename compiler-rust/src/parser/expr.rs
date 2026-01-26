@@ -1779,6 +1779,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     {
                         // String index: obj["prop"] = value -> Pexp_apply("#=", [Pexp_send(obj, "prop"), value])
                         // First create the Pexp_send for property access
+                        // Use rbracket_end for location (OCaml includes the ] in the location)
                         let send_expr = Expression {
                             pexp_desc: ExpressionDesc::Pexp_send(
                                 Box::new(expr),
@@ -1787,7 +1788,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                     loc: index.pexp_loc.clone(),
                                 },
                             ),
-                            pexp_loc: p.mk_loc(&start, &index.pexp_loc.loc_end),
+                            pexp_loc: p.mk_loc(&start, &rbracket_end),
                             pexp_attributes: vec![],
                         };
                         // Create the "#=" operator
@@ -1830,7 +1831,8 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 } else {
                     // Check if index is a string constant for Pexp_send (JS object access)
                     // or use Array.get for other index types
-                    let loc = p.mk_loc(&start, &p.prev_end_pos);
+                    // Use rbracket_end for the location end (OCaml includes the ] in the location)
+                    let loc = p.mk_loc(&start, &rbracket_end);
 
                     if let ExpressionDesc::Pexp_constant(Constant::String(s, _)) =
                         &index.pexp_desc
@@ -2171,19 +2173,10 @@ fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         let is_spread = p.token == Token::DotDotDot;
-        let spread_start = if is_spread {
-            // OCaml includes ... in the spread expression location
-            let pos = p.start_pos.clone();
+        if is_spread {
             p.next();
-            Some(pos)
-        } else {
-            None
-        };
-        let mut expr = parse_constrained_or_coerced_expr(p);
-        // Extend spread expression location to include ...
-        if let Some(start) = spread_start {
-            expr.pexp_loc.loc_start = start;
         }
+        let expr = parse_constrained_or_coerced_expr(p);
         items.push((is_spread, expr));
 
         if !p.optional(&Token::Comma) {
@@ -2831,6 +2824,8 @@ fn parse_let_in_block_with_continuation_and_attrs(
         _ => false,
     };
     p.next();
+    // Track let? position for let.unwrap attribute location
+    let let_end_pos = p.prev_end_pos.clone();
 
     // Check for rec
     let rec_flag = if p.token == Token::Rec {
@@ -2921,8 +2916,9 @@ fn parse_let_in_block_with_continuation_and_attrs(
     // Combine leading_attrs with let.unwrap attribute if this is let?
     let first_attrs = if unwrap {
         let mut attrs = leading_attrs;
+        let unwrap_loc = p.mk_loc(&start_pos, &let_end_pos);
         attrs.push((
-            mknoloc("let.unwrap".to_string()),
+            with_loc("let.unwrap".to_string(), unwrap_loc),
             Payload::PStr(vec![]),
         ));
         attrs
@@ -3394,6 +3390,8 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
         _ => false,
     };
     p.next();
+    // Track let? position for let.unwrap attribute location
+    let let_end_pos = p.prev_end_pos.clone();
 
     // Check for rec
     let rec_flag = if p.token == Token::Rec {
@@ -3428,8 +3426,9 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
 
     // Add let.unwrap attribute if this is let?
     let first_attrs = if unwrap {
+        let unwrap_loc = p.mk_loc(&start_pos, &let_end_pos);
         vec![(
-            mknoloc("let.unwrap".to_string()),
+            with_loc("let.unwrap".to_string(), unwrap_loc),
             Payload::PStr(vec![]),
         )]
     } else {

@@ -9,7 +9,7 @@ use super::diagnostics::DiagnosticCategory;
 use super::longident::Longident;
 use super::state::Parser;
 use super::token::Token;
-use crate::location::Located;
+use crate::location::{Located, Position};
 
 // ============================================================================
 // Attribute Parsing for Patterns
@@ -42,9 +42,11 @@ fn parse_attribute(p: &mut Parser<'_>) -> Option<Attribute> {
     if p.token != Token::At {
         return None;
     }
+    // Capture position before @ so attribute location includes it
+    let start_pos = p.start_pos.clone();
     p.next();
 
-    let attr_id = parse_attribute_id(p);
+    let attr_id = parse_attribute_id(p, start_pos);
 
     // Only parse Lparen as payload if it's immediately adjacent to the attribute ID
     // (no whitespace between them). e.g., @attr(payload) vs @attr (expression)
@@ -62,8 +64,8 @@ fn parse_attribute(p: &mut Parser<'_>) -> Option<Attribute> {
 }
 
 /// Parse an attribute identifier.
-fn parse_attribute_id(p: &mut Parser<'_>) -> Located<String> {
-    let start_pos = p.start_pos.clone();
+/// The `start_pos` parameter should be the position BEFORE the `@` was consumed.
+fn parse_attribute_id(p: &mut Parser<'_>, start_pos: Position) -> Located<String> {
     let mut parts = vec![];
 
     loop {
@@ -961,6 +963,9 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             break;
         }
 
+        // Capture the end of the longident before parsing colon and pattern
+        let lid_end_pos = p.prev_end_pos.clone();
+
         let lid_unloc = super::core::build_longident(&parts);
         let pun_name = parts.last().cloned().unwrap_or("_".to_string());
 
@@ -973,8 +978,9 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
                 p.next();
             }
             let pat = parse_pattern(p);
-            let loc = p.mk_loc(&field_start, &p.prev_end_pos);
-            (with_loc(lid_unloc, loc), pat, opt)
+            // Longident location only covers the field name, not the pattern
+            let lid_loc = p.mk_loc(&field_start, &lid_end_pos);
+            (with_loc(lid_unloc, lid_loc), pat, opt)
         } else if p.token == Token::Question {
             // field? (optional punning after field name - less common)
             p.next();

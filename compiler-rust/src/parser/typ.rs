@@ -758,9 +758,10 @@ fn parse_attribute(p: &mut Parser<'_>) -> Option<Attribute> {
     if p.token != Token::At {
         return None;
     }
+    // Capture position before @ so attribute location includes it
+    let start_pos = p.start_pos.clone();
     p.next();
 
-    let start_pos = p.start_pos.clone();
     let attr_id_str = parse_attribute_id(p);
     let attr_id = with_loc(attr_id_str, p.mk_loc(&start_pos, &p.prev_end_pos));
 
