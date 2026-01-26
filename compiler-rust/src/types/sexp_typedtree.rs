@@ -13,8 +13,13 @@ use crate::types::typedtree::{
     ExtensionConstructorKind, ModuleBinding, ModuleExpr, ModuleExprDesc,
     ModuleTypeConstraint, OpenDeclaration, Partial, Pattern, PatternDesc,
     RecordLabelDefinition, Structure, StructureItem, StructureItemDesc,
-    TypedCoreType, TypedCoreTypeDesc, ValueBinding,
+    TypedCoreType, TypedCoreTypeDesc, ValueBinding, TypeExtension,
 };
+use crate::types::decl::{
+    TypeDeclaration, TypeKind, ConstructorDeclaration, LabelDeclaration, ConstructorArguments,
+    Attribute as DeclAttribute,
+};
+use crate::types::asttypes::{PrivateFlag as DeclPrivateFlag, MutableFlag as DeclMutableFlag};
 use crate::types::variance::Variance;
 use crate::types::btype;
 use std::io::Write;
@@ -194,6 +199,38 @@ fn sexp_mutable_flag(flag: &MutableFlag) -> Sexp {
     match flag {
         MutableFlag::Immutable => Sexp::atom("Immutable"),
         MutableFlag::Mutable => Sexp::atom("Mutable"),
+    }
+}
+
+// Versions for decl.rs types (asttypes module)
+fn sexp_decl_private_flag(flag: &DeclPrivateFlag) -> Sexp {
+    match flag {
+        DeclPrivateFlag::Public => Sexp::atom("Public"),
+        DeclPrivateFlag::Private => Sexp::atom("Private"),
+    }
+}
+
+fn sexp_decl_mutable_flag(flag: &DeclMutableFlag) -> Sexp {
+    match flag {
+        DeclMutableFlag::Immutable => Sexp::atom("Immutable"),
+        DeclMutableFlag::Mutable => Sexp::atom("Mutable"),
+    }
+}
+
+// Attribute helper for decl.rs Attribute type
+fn sexp_decl_attributes(_with_locs: bool, attrs: &[DeclAttribute]) -> Sexp {
+    if attrs.is_empty() {
+        Sexp::list(vec![Sexp::atom("attributes")])
+    } else {
+        Sexp::list(vec![
+            Sexp::atom("attributes"),
+            Sexp::list(attrs.iter().map(|attr| {
+                Sexp::list(vec![
+                    string(&attr.attr_name.txt),
+                    Sexp::atom("<payload>"),  // Simplified payload
+                ])
+            }).collect()),
+        ])
     }
 }
 
@@ -1006,6 +1043,137 @@ fn sexp_module_expr_desc(ctx: &TypeContext<'_>, with_locs: bool, desc: &ModuleEx
 }
 
 // ============================================================================
+// Type Declarations (from decl.rs)
+// ============================================================================
+
+fn sexp_type_declaration(ctx: &TypeContext<'_>, with_locs: bool, td: &TypeDeclaration) -> Sexp {
+    // Note: This prints TypeDeclaration from decl.rs, which is the internal representation.
+    // OCaml's Typedtree.type_declaration has more fields (typ_id, typ_name, typ_params as core_type, etc.)
+    // We print what we have available.
+    let loc_sexp = if with_locs {
+        vec![location(with_locs, &td.type_loc)]
+    } else {
+        vec![]
+    };
+    let mut items = vec![Sexp::atom("type_declaration")];
+    items.extend(loc_sexp);
+    items.push(Sexp::list(vec![
+        Sexp::atom("params"),
+        Sexp::list(td.type_params.iter().map(|te| sexp_type_expr(ctx, *te)).collect()),
+    ]));
+    items.push(Sexp::list(vec![
+        Sexp::atom("kind"),
+        sexp_type_kind(ctx, with_locs, &td.type_kind),
+    ]));
+    items.push(Sexp::list(vec![
+        Sexp::atom("private"),
+        sexp_decl_private_flag(&td.type_private),
+    ]));
+    items.push(Sexp::list(vec![
+        Sexp::atom("manifest"),
+        opt(|te: &TypeExprRef| sexp_type_expr(ctx, *te), &td.type_manifest),
+    ]));
+    items.push(sexp_decl_attributes(with_locs, &td.type_attributes));
+    Sexp::list(items)
+}
+
+fn sexp_type_kind(ctx: &TypeContext<'_>, with_locs: bool, kind: &TypeKind) -> Sexp {
+    match kind {
+        TypeKind::TypeAbstract => Sexp::atom("Ttype_abstract"),
+        TypeKind::TypeVariant(cds) => {
+            let mut items = vec![Sexp::atom("Ttype_variant")];
+            items.extend(cds.iter().map(|cd| sexp_constructor_decl(ctx, with_locs, cd)));
+            Sexp::list(items)
+        }
+        TypeKind::TypeRecord(lds, _repr) => {
+            let mut items = vec![Sexp::atom("Ttype_record")];
+            items.extend(lds.iter().map(|ld| sexp_label_decl(ctx, with_locs, ld)));
+            Sexp::list(items)
+        }
+        TypeKind::TypeOpen => Sexp::atom("Ttype_open"),
+    }
+}
+
+fn sexp_constructor_decl(ctx: &TypeContext<'_>, with_locs: bool, cd: &ConstructorDeclaration) -> Sexp {
+    let loc_sexp = if with_locs {
+        vec![location(with_locs, &cd.cd_loc)]
+    } else {
+        vec![]
+    };
+    let mut items = vec![
+        Sexp::atom("constructor_declaration"),
+        sexp_ident(&cd.cd_id),
+        string(&cd.cd_id.name()),
+    ];
+    items.extend(loc_sexp);
+    items.push(sexp_constructor_args(ctx, with_locs, &cd.cd_args));
+    items.push(opt(|te: &TypeExprRef| sexp_type_expr(ctx, *te), &cd.cd_res));
+    items.push(sexp_decl_attributes(with_locs, &cd.cd_attributes));
+    Sexp::list(items)
+}
+
+fn sexp_constructor_args(ctx: &TypeContext<'_>, with_locs: bool, args: &ConstructorArguments) -> Sexp {
+    match args {
+        ConstructorArguments::CstrTuple(types) => {
+            let mut items = vec![Sexp::atom("Cstr_tuple")];
+            items.extend(types.iter().map(|te| sexp_type_expr(ctx, *te)));
+            Sexp::list(items)
+        }
+        ConstructorArguments::CstrRecord(lds) => {
+            let mut items = vec![Sexp::atom("Cstr_record")];
+            items.extend(lds.iter().map(|ld| sexp_label_decl(ctx, with_locs, ld)));
+            Sexp::list(items)
+        }
+    }
+}
+
+fn sexp_label_decl(ctx: &TypeContext<'_>, with_locs: bool, ld: &LabelDeclaration) -> Sexp {
+    let loc_sexp = if with_locs {
+        vec![location(with_locs, &ld.ld_loc)]
+    } else {
+        vec![]
+    };
+    let mut items = vec![
+        Sexp::atom("label_declaration"),
+        sexp_ident(&ld.ld_id),
+        string(&ld.ld_id.name()),
+    ];
+    items.extend(loc_sexp);
+    items.push(sexp_decl_mutable_flag(&ld.ld_mutable));
+    items.push(Sexp::atom(if ld.ld_optional { "optional" } else { "required" }));
+    items.push(sexp_type_expr(ctx, ld.ld_type));
+    items.push(sexp_decl_attributes(with_locs, &ld.ld_attributes));
+    Sexp::list(items)
+}
+
+fn sexp_type_extension(ctx: &TypeContext<'_>, with_locs: bool, te: &TypeExtension) -> Sexp {
+    let loc_sexp = if with_locs {
+        vec![location(with_locs, &te.tyext_loc)]
+    } else {
+        vec![]
+    };
+    let mut items = vec![
+        Sexp::atom("type_extension"),
+        sexp_path(&te.tyext_path),
+        sexp_longident(&te.tyext_txt.txt),
+    ];
+    items.extend(loc_sexp);
+    items.push(Sexp::list(vec![
+        Sexp::atom("params"),
+        Sexp::list(te.tyext_params.iter().map(|(ct, v)| {
+            Sexp::list(vec![sexp_core_type(ctx, with_locs, ct), sexp_variance(v)])
+        }).collect()),
+    ]));
+    items.push(Sexp::list(vec![
+        Sexp::atom("constructors"),
+        Sexp::list(te.tyext_constructors.iter().map(|ec| sexp_extension_constructor(ctx, with_locs, ec)).collect()),
+    ]));
+    items.push(sexp_private_flag(&te.tyext_private));
+    items.push(sexp_attributes(with_locs, &te.tyext_attributes));
+    Sexp::list(items)
+}
+
+// ============================================================================
 // Extension Constructor
 // ============================================================================
 
@@ -1134,16 +1302,15 @@ fn sexp_structure_item_desc(ctx: &TypeContext<'_>, with_locs: bool, desc: &Struc
             // Simplified - would need full value_description handling
             Sexp::list(vec![Sexp::atom("Tstr_primitive"), Sexp::atom("<value_description>")])
         }
-        StructureItemDesc::Tstr_type(flag, _tds) => {
-            // Simplified - would need full type_declaration handling
+        StructureItemDesc::Tstr_type(flag, tds) => {
             Sexp::list(vec![
                 Sexp::atom("Tstr_type"),
                 sexp_rec_flag(flag),
-                Sexp::atom("<type_declarations>"),
+                Sexp::list(tds.iter().map(|td| sexp_type_declaration(ctx, with_locs, td)).collect()),
             ])
         }
-        StructureItemDesc::Tstr_typext(_te) => {
-            Sexp::list(vec![Sexp::atom("Tstr_typext"), Sexp::atom("<type_extension>")])
+        StructureItemDesc::Tstr_typext(te) => {
+            Sexp::list(vec![Sexp::atom("Tstr_typext"), sexp_type_extension(ctx, with_locs, te)])
         }
         StructureItemDesc::Tstr_exception(ec) => {
             Sexp::list(vec![
