@@ -477,10 +477,19 @@ pub mod ast_helper {
     }
 
     /// Create a constructor pattern.
-    pub fn make_construct_pat(lid: Longident, arg: Option<Pattern>, loc: Location) -> Pattern {
+    ///
+    /// Note: We use separate locations for lid_loc and ppat_loc:
+    /// - lid_loc: Just the constructor name (e.g., `Some` at columns 28-32)
+    /// - ppat_loc: Full pattern extent (e.g., `Some(y)` at columns 28-35)
+    pub fn make_construct_pat(
+        lid: Longident,
+        arg: Option<Pattern>,
+        lid_loc: Location,
+        ppat_loc: Location,
+    ) -> Pattern {
         make_pat(
-            PatternDesc::Ppat_construct(with_loc(lid, loc.clone()), arg.map(Box::new)),
-            loc,
+            PatternDesc::Ppat_construct(with_loc(lid, lid_loc), arg.map(Box::new)),
+            ppat_loc,
         )
     }
 
@@ -516,21 +525,24 @@ pub mod ast_helper {
             );
         }
 
+        // The outermost pattern uses the full list{...} location
+        result.ppat_loc = loc;
         result
     }
 
     /// Create a type constructor.
     ///
-    /// Note: We intentionally create a NEW Location for ptyp_loc (using from_positions)
-    /// instead of cloning. This matches OCaml's behavior where lid.loc and ptyp_loc
-    /// are different Location objects that share the same Position objects inside.
-    pub fn make_type_constr(lid: Longident, args: Vec<CoreType>, loc: Location) -> CoreType {
-        // Create a separate Location for ptyp_loc (different LocationId, shares positions)
-        let ptyp_loc = Location::from_positions(loc.loc_start.clone(), loc.loc_end.clone());
-        make_typ(
-            CoreTypeDesc::Ptyp_constr(with_loc(lid, loc), args),
-            ptyp_loc,
-        )
+    /// Note: We use separate locations for lid and ptyp_loc:
+    /// - lid_loc: just the type constructor identifier
+    /// - ptyp_loc: full extent including type arguments
+    /// This matches OCaml's behavior.
+    pub fn make_type_constr(
+        lid: Longident,
+        args: Vec<CoreType>,
+        lid_loc: Location,
+        ptyp_loc: Location,
+    ) -> CoreType {
+        make_typ(CoreTypeDesc::Ptyp_constr(with_loc(lid, lid_loc), args), ptyp_loc)
     }
 }
 

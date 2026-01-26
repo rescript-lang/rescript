@@ -131,6 +131,30 @@ fn variance(v: &Variance) -> Sexp {
     })
 }
 
+fn arity(a: &Arity) -> Sexp {
+    match a {
+        Arity::Full(n) => Sexp::list(vec![Sexp::atom("Some"), Sexp::atom(&n.to_string())]),
+        Arity::Unknown => Sexp::atom("None"),
+    }
+}
+
+fn position_opt(pos: &Option<crate::location::Position>) -> Sexp {
+    match pos {
+        None => Sexp::atom("None"),
+        Some(p) => {
+            let col = p.cnum - p.bol;
+            Sexp::list(vec![
+                Sexp::atom("Some"),
+                Sexp::list(vec![
+                    Sexp::atom("pos"),
+                    Sexp::atom(&p.line.to_string()),
+                    Sexp::atom(&col.to_string()),
+                ]),
+            ])
+        }
+    }
+}
+
 fn arg_label(lbl: &ArgLabel) -> Sexp {
     match lbl {
         ArgLabel::Nolabel => Sexp::atom("Nolabel"),
@@ -241,11 +265,13 @@ fn core_type(typ: &CoreType) -> Sexp {
     let desc = match &typ.ptyp_desc {
         CoreTypeDesc::Ptyp_any => Sexp::atom("Ptyp_any"),
         CoreTypeDesc::Ptyp_var(var) => Sexp::list(vec![Sexp::atom("Ptyp_var"), Sexp::atom(&quote_string(var))]),
-        CoreTypeDesc::Ptyp_arrow { arg, ret, .. } => Sexp::list(vec![
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity: ar } => Sexp::list(vec![
             Sexp::atom("Ptyp_arrow"),
             arg_label(&arg.lbl),
+            attributes(&arg.attrs),
             core_type(&arg.typ),
             core_type(ret),
+            arity(ar),
         ]),
         CoreTypeDesc::Ptyp_tuple(types) => {
             Sexp::list(vec![Sexp::atom("Ptyp_tuple"), Sexp::list(map_empty(types, core_type))])
@@ -286,7 +312,7 @@ fn core_type(typ: &CoreType) -> Sexp {
         ]),
         CoreTypeDesc::Ptyp_extension(ext) => Sexp::list(vec![Sexp::atom("Ptyp_extension"), extension(ext)]),
     };
-    Sexp::list(vec![Sexp::atom("core_type"), location(&typ.ptyp_loc), desc])
+    Sexp::list(vec![Sexp::atom("core_type"), location(&typ.ptyp_loc), desc, attributes(&typ.ptyp_attributes)])
 }
 
 fn object_field(field: &ObjectField) -> Sexp {
@@ -371,7 +397,12 @@ fn pattern(p: &Pattern) -> Sexp {
             Sexp::atom("Ppat_record"),
             closed_flag(flag),
             Sexp::list(map_empty(fields, |f| {
-                Sexp::list(vec![longident(&f.lid.txt), location(&f.lid.loc), pattern(&f.pat)])
+                Sexp::list(vec![
+                    longident(&f.lid.txt),
+                    location(&f.lid.loc),
+                    pattern(&f.pat),
+                    Sexp::atom(if f.opt { "true" } else { "false" }),
+                ])
             })),
         ]),
         PatternDesc::Ppat_array(pats) => {
@@ -393,7 +424,7 @@ fn pattern(p: &Pattern) -> Sexp {
             Sexp::list(vec![Sexp::atom("Ppat_open"), longident(&lid.txt), location(&lid.loc), pattern(pat)])
         }
     };
-    Sexp::list(vec![Sexp::atom("pattern"), location(&p.ppat_loc), descr])
+    Sexp::list(vec![Sexp::atom("pattern"), location(&p.ppat_loc), descr, attributes(&p.ppat_attributes)])
 }
 
 // ============================================================================
@@ -415,7 +446,8 @@ fn expression(expr: &Expression) -> Sexp {
             default: opt_default,
             lhs: pat,
             rhs: body,
-            ..
+            arity: ar,
+            is_async,
         } => Sexp::list(vec![
             Sexp::atom("Pexp_fun"),
             arg_label(lbl),
@@ -425,11 +457,15 @@ fn expression(expr: &Expression) -> Sexp {
             },
             pattern(pat),
             expression(body),
+            arity(ar),
+            Sexp::atom(if *is_async { "true" } else { "false" }),
         ]),
-        ExpressionDesc::Pexp_apply { funct, args, .. } => Sexp::list(vec![
+        ExpressionDesc::Pexp_apply { funct, args, partial: is_partial, transformed_jsx } => Sexp::list(vec![
             Sexp::atom("Pexp_apply"),
             expression(funct),
             Sexp::list(map_empty(args, |(lbl, e)| Sexp::list(vec![arg_label(lbl), expression(e)]))),
+            Sexp::atom(if *is_partial { "true" } else { "false" }),
+            Sexp::atom(if *transformed_jsx { "true" } else { "false" }),
         ]),
         ExpressionDesc::Pexp_match(scrutinee, cases) => Sexp::list(vec![
             Sexp::atom("Pexp_match"),
@@ -464,7 +500,12 @@ fn expression(expr: &Expression) -> Sexp {
         ExpressionDesc::Pexp_record(fields, opt_base) => Sexp::list(vec![
             Sexp::atom("Pexp_record"),
             Sexp::list(map_empty(fields, |f| {
-                Sexp::list(vec![longident(&f.lid.txt), location(&f.lid.loc), expression(&f.expr)])
+                Sexp::list(vec![
+                    longident(&f.lid.txt),
+                    location(&f.lid.loc),
+                    expression(&f.expr),
+                    Sexp::atom(if f.opt { "true" } else { "false" }),
+                ])
             })),
             match opt_base {
                 None => Sexp::atom("None"),
@@ -550,7 +591,7 @@ fn expression(expr: &Expression) -> Sexp {
         ExpressionDesc::Pexp_await(e) => Sexp::list(vec![Sexp::atom("Pexp_await"), expression(e)]),
         ExpressionDesc::Pexp_jsx_element(jsx) => jsx_element(jsx),
     };
-    Sexp::list(vec![Sexp::atom("expression"), location(&expr.pexp_loc), desc])
+    Sexp::list(vec![Sexp::atom("expression"), location(&expr.pexp_loc), desc, attributes(&expr.pexp_attributes)])
 }
 
 fn jsx_element(jsx: &JsxElement) -> Sexp {
@@ -584,6 +625,7 @@ fn jsx_prop(prop: &JsxProp) -> Sexp {
 fn case(c: &Case) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("case"),
+        Sexp::list(vec![Sexp::atom("pc_bar"), position_opt(&c.pc_bar)]),
         Sexp::list(vec![Sexp::atom("pc_lhs"), pattern(&c.pc_lhs)]),
         Sexp::list(vec![
             Sexp::atom("pc_guard"),
@@ -692,6 +734,7 @@ fn label_declaration(ld: &LabelDeclaration) -> Sexp {
         Sexp::atom(&quote_string(&ld.pld_name.txt)),
         location(&ld.pld_name.loc),
         mutable_flag(&ld.pld_mutable),
+        Sexp::atom(if ld.pld_optional { "true" } else { "false" }),
         core_type(&ld.pld_type),
         attributes(&ld.pld_attributes),
     ])
@@ -892,6 +935,7 @@ fn open_description(od: &OpenDescription) -> Sexp {
         location(&od.popen_loc),
         longident(&od.popen_lid.txt),
         location(&od.popen_lid.loc),
+        override_flag(&od.popen_override),
         attributes(&od.popen_attributes),
     ])
 }

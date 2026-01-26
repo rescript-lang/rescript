@@ -208,7 +208,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         }
         Token::External => {
             p.next();
-            let vd = parse_value_description(p, attrs.clone());
+            let vd = parse_value_description(p, attrs.clone(), start_pos.clone());
             Some(StructureItemDesc::Pstr_primitive(vd))
         }
         Token::Exception => {
@@ -271,27 +271,37 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             // Capture start position BEFORE consuming %% so extension location includes it
             let ext_start = p.start_pos.clone();
             p.next();
-            // Parse extension name (can be identifier or keyword like `private`)
+            // Parse extension name - can be dotted like %%item.extension
             let id_start = ext_start.clone();
-            let id_name = match &p.token {
-                Token::Lident(name) | Token::Uident(name) => {
-                    let name = name.clone();
+            let mut parts = vec![];
+            loop {
+                match &p.token {
+                    Token::Lident(name) | Token::Uident(name) => {
+                        parts.push(name.clone());
+                        p.next();
+                    }
+                    // Keywords can be used as extension names (e.g., %%private)
+                    token if token.is_keyword() => {
+                        parts.push(token.to_string());
+                        p.next();
+                    }
+                    _ if parts.is_empty() => {
+                        p.err(DiagnosticCategory::Message(
+                            "Expected extension identifier".to_string(),
+                        ));
+                        parts.push("error".to_string());
+                        break;
+                    }
+                    _ => break,
+                }
+                // Check for dot to continue dotted extension name
+                if p.token == Token::Dot {
                     p.next();
-                    name
+                } else {
+                    break;
                 }
-                // Keywords can be used as extension names (e.g., %%private)
-                token if token.is_keyword() => {
-                    let name = token.to_string();
-                    p.next();
-                    name
-                }
-                _ => {
-                    p.err(DiagnosticCategory::Message(
-                        "Expected extension identifier".to_string(),
-                    ));
-                    "error".to_string()
-                }
-            };
+            }
+            let id_name = parts.join(".");
             let id = with_loc(id_name, p.mk_loc(&id_start, &p.prev_end_pos));
             // Parse optional payload
             let payload = if p.token == Token::Lparen {
@@ -389,8 +399,11 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             }))
         }
         Token::Let { .. } => {
+            // For signature let declarations, OCaml's value_description location
+            // starts at 'let', not at the attributes (different from external in structure)
+            let let_pos = p.start_pos.clone();
             p.next();
-            let vd = parse_value_description(p, attrs.clone());
+            let vd = parse_value_description(p, attrs.clone(), let_pos);
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Typ => {
@@ -448,7 +461,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
         }
         Token::External => {
             p.next();
-            let vd = parse_value_description(p, attrs.clone());
+            let vd = parse_value_description(p, attrs.clone(), start_pos.clone());
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Exception => {
@@ -990,11 +1003,13 @@ fn parse_functor_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
     let rhs_module_expr = parse_module_expr(p);
 
     // Apply return type constraint if present
+    // Pmod_constraint(expr, type) represents "expr : type" and the location
+    // should span from the start of the module type to the end of the module expr
     let rhs_module_expr = match return_type {
         Some(mod_type) => {
             let loc = p.mk_loc(
-                &rhs_module_expr.pmod_loc.loc_start,
-                &mod_type.pmty_loc.loc_end,
+                &mod_type.pmty_loc.loc_start,
+                &rhs_module_expr.pmod_loc.loc_end,
             );
             ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_constraint(
@@ -1434,6 +1449,13 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
             } else {
                 p.expect(Token::Equal);
             }
+            // Check for private keyword: type t = private string
+            let private = if p.token == Token::Private {
+                p.next();
+                PrivateFlag::Private
+            } else {
+                PrivateFlag::Public
+            };
             let typ = typ::parse_typ_expr(p);
 
             // Parse type constraints: constraint 'a = int constraint 'b = string
@@ -1464,7 +1486,7 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
                 ptype_params: params,
                 ptype_cstrs: cstrs,
                 ptype_kind: TypeKind::Ptype_abstract,
-                ptype_private: PrivateFlag::Public,
+                ptype_private: private,
                 ptype_manifest: Some(typ),
                 ptype_attributes: vec![],
                 ptype_loc: type_loc,
@@ -2167,8 +2189,10 @@ fn parse_type_declaration_with_context(
             Token::At | Token::DocComment { .. } => {
                 // Check if this is a variant constructor with attribute: @attr Constr
                 // vs a manifest type with attribute: @attr Type.t
+                // vs an open type with attribute: @attr ..
+                // vs a record type with attribute: @attr {x: int}
                 // Lookahead to see if there's a Uident after the attribute that's NOT followed by `.`
-                let is_variant = p.lookahead(|state| {
+                let what_follows = p.lookahead(|state| {
                     // Skip attributes and doc comments
                     while matches!(state.token, Token::At | Token::DocComment { .. }) {
                         if matches!(state.token, Token::DocComment { .. }) {
@@ -2198,19 +2222,51 @@ fn parse_type_declaration_with_context(
                             }
                         }
                     }
-                    // It's a variant if we see Uident NOT followed by `.` (type path)
-                    if matches!(state.token, Token::Uident(_)) {
+                    // Check what comes after attributes
+                    if state.token == Token::DotDot {
+                        "open"
+                    } else if state.token == Token::Lbrace {
+                        "record_or_object"
+                    } else if matches!(state.token, Token::Uident(_)) {
                         state.next();
-                        state.token != Token::Dot
+                        if state.token != Token::Dot {
+                            "variant"
+                        } else {
+                            "manifest"
+                        }
                     } else {
-                        false
+                        "manifest"
                     }
                 });
-                if is_variant {
-                    let constructors = parse_constructors_without_leading_bar(p);
-                    kind = TypeKind::Ptype_variant(constructors);
-                } else {
-                    manifest = Some(typ::parse_typ_expr(p));
+                match what_follows {
+                    "variant" => {
+                        let constructors = parse_constructors_without_leading_bar(p);
+                        kind = TypeKind::Ptype_variant(constructors);
+                    }
+                    "open" => {
+                        // Parse attributes and then ..
+                        let _attrs = parse_attributes(p);
+                        if p.token == Token::DotDot {
+                            p.next();
+                            kind = TypeKind::Ptype_open;
+                        }
+                    }
+                    "record_or_object" => {
+                        // Parse attributes then check if record or object
+                        let attrs = parse_attributes(p);
+                        if p.token == Token::Lbrace {
+                            if looks_like_object_type_after_lbrace(p) {
+                                let mut typ = typ::parse_typ_expr(p);
+                                typ.ptyp_attributes = attrs;
+                                manifest = Some(typ);
+                            } else {
+                                kind = parse_type_kind(p, Some(inline_ctx), Some(&current_type_name_path));
+                            }
+                        }
+                    }
+                    _ => {
+                        manifest = Some(typ::parse_typ_expr(p));
+                    }
                 }
             }
             Token::DotDot => {
@@ -2353,6 +2409,8 @@ fn parse_type_params_angle(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
     if p.token != Token::LessThan {
         return params;
     }
+    // Enter diamond mode to prevent >= from being tokenized as a single token
+    p.set_diamond_mode();
     p.next(); // consume <
 
     while p.token != Token::GreaterThan && p.token != Token::Eof {
@@ -2493,6 +2551,7 @@ fn parse_type_params_angle(p: &mut Parser<'_>) -> Vec<(CoreType, Variance)> {
     }
 
     p.expect(Token::GreaterThan);
+    p.pop_diamond_mode();
     params
 }
 
@@ -2652,10 +2711,12 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
     if p.token == Token::DotDotDot {
         let spread_start = p.start_pos.clone();
         p.next();
+        // Name location is just the "..." part
+        let name_loc = p.mk_loc(&spread_start, &p.prev_end_pos);
         let spread_type = typ::parse_typ_expr(p);
         let loc = p.mk_loc(&spread_start, &p.prev_end_pos);
         return Some(ConstructorDeclaration {
-            pcd_name: with_loc("...".to_string(), loc.clone()),
+            pcd_name: with_loc("...".to_string(), name_loc),
             pcd_args: ConstructorArguments::Pcstr_tuple(vec![spread_type]),
             pcd_res: None,
             pcd_loc: loc,
@@ -2724,6 +2785,8 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
             p.next(); // consume {
             let labels = parse_label_declarations(p, None, None);
             p.expect(Token::Rbrace);
+            // Allow trailing comma after inline record: Foo({...},)
+            p.optional(&Token::Comma);
             p.expect(Token::Rparen);
             ConstructorArguments::Pcstr_record(labels)
         } else {
@@ -2778,10 +2841,12 @@ fn parse_label_declarations(
         if p.token == Token::DotDotDot {
             let start_pos = p.start_pos.clone();
             p.next();
+            // Name location is just the "..." part
+            let name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             let spread_type = typ::parse_typ_expr(p);
             let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             labels.push(LabelDeclaration {
-                pld_name: with_loc("...".to_string(), loc.clone()),
+                pld_name: with_loc("...".to_string(), name_loc),
                 pld_mutable: MutableFlag::Immutable,
                 pld_type: spread_type,
                 pld_loc: loc,
@@ -2846,10 +2911,27 @@ fn parse_label_declaration(
     // Check for optional field marker
     let is_optional = p.optional(&Token::Question);
 
-    p.expect(Token::Colon);
+    // Check for field punning: {form} is shorthand for {form: form}
+    // If no colon, the type name is the same as the field name
+    let is_punning = p.token != Token::Colon;
+
+    if !is_punning {
+        p.expect(Token::Colon);
+    }
 
     // Check if the field type is an inline record
-    let typ = if p.token == Token::Lbrace && inline_ctx.is_some() && extended_path.is_some() {
+    let typ = if is_punning {
+        // Field punning: {form} becomes {form: form}
+        // The type is a simple type constructor with the field name
+        CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_constr(
+                with_loc(Longident::Lident(name.txt.clone()), name.loc.clone()),
+                vec![],
+            ),
+            ptyp_loc: name.loc.clone(),
+            ptyp_attributes: vec![],
+        }
+    } else if p.token == Token::Lbrace && inline_ctx.is_some() && extended_path.is_some() {
         // Check if this looks like a record (starts with Lident, Mutable, At, or DotDotDot)
         let looks_like_record = p.lookahead(|state| {
             state.next(); // Skip {
@@ -2940,8 +3022,12 @@ fn parse_label_declaration(
 }
 
 /// Parse a value description (for external).
-fn parse_value_description(p: &mut Parser<'_>, outer_attrs: Attributes) -> ValueDescription {
-    let start_pos = p.start_pos.clone();
+/// `loc_start` should be the position before any outer attributes (to match OCaml's location).
+fn parse_value_description(
+    p: &mut Parser<'_>,
+    outer_attrs: Attributes,
+    loc_start: crate::location::Position,
+) -> ValueDescription {
     let inner_attrs = parse_attributes(p);
     // Merge outer (structure-level) attrs with inner (name-level) attrs
     let attrs = [outer_attrs, inner_attrs].concat();
@@ -2984,7 +3070,7 @@ fn parse_value_description(p: &mut Parser<'_>, outer_attrs: Attributes) -> Value
         vec![]
     };
 
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc(&loc_start, &p.prev_end_pos);
     ValueDescription {
         pval_name: name,
         pval_type: typ,
@@ -3089,7 +3175,8 @@ fn parse_module_definition(p: &mut Parser<'_>, module_start: Position, attrs: At
         let mut mod_expr = parse_module_expr(p);
 
         if let Some(mod_type) = mod_type {
-            let loc = p.mk_loc(&mod_expr.pmod_loc.loc_start, &mod_type.pmty_loc.loc_end);
+            // Location spans from module type start to module expr end
+            let loc = p.mk_loc(&mod_type.pmty_loc.loc_start, &mod_expr.pmod_loc.loc_end);
             mod_expr = ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_constraint(
                     Box::new(mod_expr),

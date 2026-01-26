@@ -56,9 +56,11 @@ pub mod typ;
 pub mod utf8;
 pub mod sexp;
 pub mod sexp_locs;
+pub mod sexp_locs0;
 pub mod jsx_ppx;
 pub mod ml_printer;
 pub mod format;
+pub mod formatter;
 
 // Re-exports
 pub use ast::*;

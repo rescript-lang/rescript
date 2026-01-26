@@ -17,7 +17,7 @@
 use clap::Parser as ClapParser;
 use rescript_compiler::binary_ast::{mapper_from0, mapper_to0, Marshal, MarshalWriter};
 use rescript_compiler::parser::{
-    code_frame, jsx_ppx, ml_printer, module, print_signature, printer, sexp, sexp_locs, Parser,
+    code_frame, jsx_ppx, ml_printer, module, print_signature, printer, sexp, sexp_locs, sexp_locs0, Parser,
     ParserMode, Scanner, SignatureItem, Structure,
 };
 use std::fs;
@@ -147,11 +147,12 @@ fn main() {
     let is_interface = args.interface || filename.ends_with(".resi") || filename.ends_with(".mli");
 
     // Determine parser mode based on output format
-    // For sexp/res/ml output (printer), use Default mode which does extra tuple wrapping
-    // For type checking, use ParseForTypeChecker mode
+    // For sexp/res output (printer), use Default mode where strings get None delimiter
+    // For ML output and type checking, use ParseForTypeChecker mode where strings get Some("js") delimiter
+    // This matches OCaml's for_printer flag behavior
     let mode = match args.print.as_str() {
-        "sexp" | "sexp-locs" | "res" | "ml" | "ast" => ParserMode::Default,
-        _ => ParserMode::ParseForTypeChecker,
+        "sexp" | "sexp-locs" | "sexp0-locs" | "res" | "ast" => ParserMode::Default,
+        "ml" | _ => ParserMode::ParseForTypeChecker,
     };
 
     // Parse the file
@@ -194,6 +195,10 @@ fn main() {
             "res" => print_signature_res(&signature, &mut io::stdout()),
             "sexp" => sexp::print_signature(&signature, &mut io::stdout()),
             "sexp-locs" => sexp_locs::print_signature(&signature, &mut io::stdout()),
+            "sexp0-locs" => {
+                let sig0 = mapper_to0::map_signature(&signature);
+                sexp_locs0::print_signature(&sig0, &mut io::stdout());
+            }
             "ast" => print_signature_ast(&signature, &mut io::stdout()),
             "binary" => {
                 // OCaml -print binary format:
@@ -266,6 +271,10 @@ fn main() {
             }
             "sexp" => sexp::print_structure(&structure, &mut io::stdout()),
             "sexp-locs" => sexp_locs::print_structure(&structure, &mut io::stdout()),
+            "sexp0-locs" => {
+                let str0 = mapper_to0::map_structure(&structure);
+                sexp_locs0::print_structure(&str0, &mut io::stdout());
+            }
             "ast" => print_structure_ast(&structure, &mut io::stdout()),
             "binary" => {
                 // OCaml -print binary format:

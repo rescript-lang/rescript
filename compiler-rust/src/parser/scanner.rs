@@ -32,6 +32,7 @@ pub enum ScannerMode {
 pub struct ScannerSnapshot {
     ch: char,
     offset: usize,
+    offset16: usize,
     line_offset: usize,
     lnum: i32,
     mode: Vec<ScannerMode>,
@@ -56,6 +57,8 @@ pub struct Scanner<'src> {
     ch: char,
     /// Current character offset in source (= byte offset in original Latin-1 file).
     offset: usize,
+    /// UTF-16 code units since line start (for OCaml-compatible column counting).
+    offset16: usize,
     /// Byte offset of current line start.
     line_offset: usize,
     /// Current line number (1-indexed).
@@ -101,6 +104,7 @@ impl<'src> Scanner<'src> {
             src_char_count,
             ch,
             offset: 0,
+            offset16: 0,
             line_offset: 0,
             lnum: 1,
             mode: Vec::new(),
@@ -138,6 +142,7 @@ impl<'src> Scanner<'src> {
         ScannerSnapshot {
             ch: self.ch,
             offset: self.offset,
+            offset16: self.offset16,
             line_offset: self.line_offset,
             lnum: self.lnum,
             mode: self.mode.clone(),
@@ -151,6 +156,7 @@ impl<'src> Scanner<'src> {
     pub fn restore(&mut self, snapshot: ScannerSnapshot) {
         self.ch = snapshot.ch;
         self.offset = snapshot.offset;
+        self.offset16 = snapshot.offset16;
         self.line_offset = snapshot.line_offset;
         self.lnum = snapshot.lnum;
         self.mode = snapshot.mode;
@@ -175,9 +181,9 @@ impl<'src> Scanner<'src> {
     /// This mimics OCaml where each call to the scanner's position function
     /// allocates a new position record.
     ///
-    /// For byte-accurate positions (OCaml parity), we use character offset directly.
-    /// Since the source is Latin-1 encoded (each original byte → one char), the
-    /// character offset equals the original byte offset.
+    /// For OCaml parity, we use `line_offset + offset16` for cnum.
+    /// This matches OCaml where `pos_cnum = scanner.line_offset + scanner.offset16`,
+    /// giving us UTF-16 code unit counting for columns.
     pub fn position(&mut self) -> Position {
         let id = PositionId::from_raw(self.position_id_counter);
         self.position_id_counter += 1;
@@ -185,7 +191,7 @@ impl<'src> Scanner<'src> {
             &self.filename,
             self.lnum,
             self.line_offset as i32,
-            self.offset as i32, // Use character offset (= byte offset in Latin-1)
+            (self.line_offset + self.offset16) as i32, // UTF-16 code unit position
             id,
         )
     }
@@ -200,20 +206,56 @@ impl<'src> Scanner<'src> {
     ///
     /// For Latin-1 source (each original byte → one char), the character offset
     /// equals the byte offset. We use chars().nth() for proper character indexing.
+    ///
+    /// We track offset16 (UTF-16 code units since line start) for OCaml-compatible
+    /// column counting. The UTF-16 length depends on the UTF-8 byte classification:
+    /// - ASCII/Single (0x00-0x7F): 1
+    /// - Continuation (0x80-0xBF): 0 (don't count continuation bytes)
+    /// - Leading 2-byte (0xC0-0xDF): 1 (BMP)
+    /// - Leading 3-byte (0xE0-0xEF): 1 (BMP)
+    /// - Leading 4-byte (0xF0-0xF7): 2 (surrogate pair)
+    /// - Invalid (0xF8-0xFF): 1
     fn next(&mut self) {
         if self.offset >= self.src_char_count {
             self.ch = EOF_CHAR;
             return;
         }
 
+        let next_offset = self.offset + 1;
+
+        // Calculate UTF-16 length based on UTF-8 byte classification
+        let byte = self.ch as u32;
+        let utf16len = if byte & 0x80 == 0 {
+            // Single byte (ASCII): 0b0xxxxxxx
+            1
+        } else if byte & 0x40 == 0 {
+            // Continuation byte: 0b10xxxxxx
+            0
+        } else if byte & 0x20 == 0 {
+            // Leading 2-byte: 0b110xxxxx
+            1
+        } else if byte & 0x10 == 0 {
+            // Leading 3-byte: 0b1110xxxx
+            1
+        } else if byte & 0x08 == 0 {
+            // Leading 4-byte: 0b11110xxx (needs surrogate pair)
+            2
+        } else {
+            // Invalid byte
+            1
+        };
+
         // Handle newlines - update line tracking
         if self.ch == '\n' {
-            self.line_offset = self.offset + 1;
+            self.line_offset = next_offset;
+            self.offset16 = 0;
             self.lnum += 1;
+        } else {
+            self.offset16 += utf16len;
         }
 
         // Move to next character
-        self.offset += 1;
+        self.offset = next_offset;
         self.ch = self.src.chars().nth(self.offset).unwrap_or(EOF_CHAR);
     }
 

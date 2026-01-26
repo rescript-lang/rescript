@@ -1,24 +1,19 @@
 //! ML Printer (OCaml-compatible output)
 //!
 //! This module provides printing functions that output AST in a format
-//! compatible with OCaml's Pprintast module. Used for testing and debugging.
+//! compatible with OCaml's Pprintast module. Uses the OCaml-compatible
+//! Format module for proper line breaking with box-based formatting.
 
 use std::io::Write;
 
 use crate::location::Located;
 use super::ast::*;
+use super::formatter::{BoxKind, Formatter};
 use super::longident::Longident;
 
-/// Print structure in ML format (like Pprintast in OCaml)
-pub fn print_structure_ml(structure: &Structure, out: &mut impl Write) {
-    for (i, item) in structure.iter().enumerate() {
-        if i > 0 {
-            let _ = out.write_all(b"\n");
-        }
-        print_structure_item_ml(item, out);
-    }
-    // No trailing newline - OCaml doesn't add one
-}
+// ============================================================================
+// Helper functions
+// ============================================================================
 
 /// Count the arity of nested Pexp_fun expressions
 fn count_function_arity(expr: &Expression) -> usize {
@@ -31,7 +26,7 @@ fn count_function_arity(expr: &Expression) -> usize {
 /// Check if pattern is a simple variable with given name (and no attributes)
 fn pattern_is_simple_var(pat: &Pattern, name: &str) -> bool {
     if !pat.ppat_attributes.is_empty() {
-        return false; // Patterns with attributes can't use short form
+        return false;
     }
     match &pat.ppat_desc {
         PatternDesc::Ppat_var(var) => var.txt == name,
@@ -40,292 +35,20 @@ fn pattern_is_simple_var(pat: &Pattern, name: &str) -> bool {
 }
 
 /// Check if pattern needs parens when used as a function parameter
-/// Patterns like `Constructor` or `Constructor arg` need parens
 fn pattern_needs_parens_as_param(pat: &Pattern) -> bool {
     match &pat.ppat_desc {
-        // Construct patterns need parens: (None), (Some x)
-        // But unit () and empty list [] don't need extra parens
-        // Cons pattern :: already adds its own parens in print_pattern_ml
-        PatternDesc::Ppat_construct(lid, _arg) => {
+        PatternDesc::Ppat_construct(lid, arg) => {
             match &lid.txt {
-                Longident::Lident(name) if name == "()" || name == "[]" || name == "::" => false,
-                _ => true, // All other constructors (with or without args) need parens
+                // () and [] don't need parens, but :: with args does
+                Longident::Lident(name) if name == "()" || name == "[]" => false,
+                Longident::Lident(name) if name == "::" => arg.is_some(),
+                _ => true,
             }
         }
-        // Variant with argument needs parens: (`Tag x)
         PatternDesc::Ppat_variant(_, Some(_)) => true,
-        // Alias patterns need parens: (p as x)
         PatternDesc::Ppat_alias(_, _) => true,
-        // Or patterns need parens: (A | B)
         PatternDesc::Ppat_or(_, _) => true,
-        // Constraint patterns already add their own parens in print_pattern_ml
-        // so don't add extra parens here
         _ => false,
-    }
-}
-
-/// Print a function parameter in inline format (for value binding)
-fn print_inline_param_ml(
-    label: &ArgLabel,
-    default: &Option<Box<Expression>>,
-    pat: &Pattern,
-    out: &mut impl Write,
-) {
-    match label {
-        ArgLabel::Nolabel => {
-            // Wrap complex patterns in parens (like constructor patterns with args)
-            if pattern_needs_parens_as_param(pat) {
-                let _ = write!(out, "(");
-                print_pattern_ml(pat, out);
-                let _ = write!(out, ") ");
-            } else {
-                print_pattern_ml(pat, out);
-                let _ = write!(out, " ");
-            }
-        }
-        ArgLabel::Labelled(name) => {
-            if pattern_is_simple_var(pat, &name.txt) {
-                // ~name  (double space when pattern matches label)
-                let _ = write!(out, "~{}  ", name.txt);
-            } else {
-                // ~name:pattern
-                let _ = write!(out, "~{}:", name.txt);
-                print_pattern_ml(pat, out);
-                let _ = write!(out, "  ");
-            }
-        }
-        ArgLabel::Optional(name) => {
-            if let Some(def) = default {
-                if pattern_is_simple_var(pat, &name.txt) {
-                    // ?(name= default)  when pattern matches label
-                    let _ = write!(out, "?({}= ", name.txt);
-                    print_expression_ml(def, out);
-                    let _ = write!(out, ")  ");
-                } else {
-                    // ?name:(pattern= default)
-                    let _ = write!(out, "?{}:(", name.txt);
-                    print_pattern_ml(pat, out);
-                    let _ = write!(out, "= ");
-                    print_expression_ml(def, out);
-                    let _ = write!(out, ")  ");
-                }
-            } else if pattern_is_simple_var(pat, &name.txt) {
-                // ?name  (double space when pattern matches label)
-                let _ = write!(out, "?{}  ", name.txt);
-            } else {
-                // ?name:pattern
-                let _ = write!(out, "?{}:", name.txt);
-                print_pattern_ml(pat, out);
-                let _ = write!(out, "  ");
-            }
-        }
-    }
-}
-
-/// Print a value binding with inlined function parameters (if expr is a function)
-/// Transforms: `let f = fun x -> fun y -> body` into `let f [arity:2]x y = body`
-fn print_value_binding_ml(pat: &Pattern, expr: &Expression, out: &mut impl Write) {
-    // If expression has attributes, don't inline
-    if !expr.pexp_attributes.is_empty() {
-        print_pattern_ml(pat, out);
-        let _ = write!(out, " = ");
-        print_expression_ml(expr, out);
-        return;
-    }
-
-    match &expr.pexp_desc {
-        ExpressionDesc::Pexp_fun {
-            arg_label,
-            default,
-            lhs,
-            rhs,
-            arity,
-            is_async,
-        } => {
-            // Print the binding pattern
-            print_pattern_ml(pat, out);
-            let _ = write!(out, " ");
-
-            // Print async before arity
-            if *is_async {
-                let _ = write!(out, "async ");
-            }
-
-            // Print arity annotation if known
-            if let Arity::Full(n) = arity {
-                let _ = write!(out, "[arity:{}]", n);
-            } else {
-                // Compute arity by counting nested funs
-                let computed_arity = count_function_arity(expr);
-                if computed_arity > 0 {
-                    let _ = write!(out, "[arity:{}]", computed_arity);
-                }
-            }
-
-            // Print first parameter
-            print_inline_param_ml(arg_label, default, lhs, out);
-
-            // Print remaining parameters and get the body
-            let body = print_remaining_inline_params_ml(rhs, out);
-
-            // Print = body
-            let _ = write!(out, "= ");
-            // Use no outer parens for simple applies
-            print_expression_ml_no_outer_parens(body, out);
-        }
-        _ => {
-            // Not a function, print normally
-            print_pattern_ml(pat, out);
-            let _ = write!(out, " = ");
-            // Use no outer parens for simple applies
-            print_expression_ml_no_outer_parens(expr, out);
-        }
-    }
-}
-
-/// Print remaining inline parameters and return the body expression
-fn print_remaining_inline_params_ml<'a>(
-    expr: &'a Expression,
-    out: &mut impl Write,
-) -> &'a Expression {
-    // Don't inline if this expression has attributes
-    if !expr.pexp_attributes.is_empty() {
-        return expr;
-    }
-
-    match &expr.pexp_desc {
-        ExpressionDesc::Pexp_fun {
-            arg_label,
-            default,
-            lhs,
-            rhs,
-            ..
-        } => {
-            print_inline_param_ml(arg_label, default, lhs, out);
-            print_remaining_inline_params_ml(rhs, out)
-        }
-        _ => expr,
-    }
-}
-
-fn print_structure_item_ml(item: &StructureItem, out: &mut impl Write) {
-    match &item.pstr_desc {
-        StructureItemDesc::Pstr_eval(expr, _attrs) => {
-            let _ = write!(out, ";;");
-            // Print without parens for top-level eval
-            print_expression_ml_no_outer_parens(expr, out);
-        }
-        StructureItemDesc::Pstr_value(rec_flag, bindings) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => " rec",
-                RecFlag::Nonrecursive => "",
-            };
-            let _ = write!(out, "let{}", rec_str);
-            for (i, binding) in bindings.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " and");
-                }
-                let _ = write!(out, " ");
-                print_value_binding_ml(&binding.pvb_pat, &binding.pvb_expr, out);
-            }
-        }
-        StructureItemDesc::Pstr_primitive(vd) => {
-            let _ = write!(out, "external {} : ", vd.pval_name.txt);
-            print_core_type_ml(&vd.pval_type, out);
-            for prim in &vd.pval_prim {
-                let _ = write!(out, " = \"{}\"", prim);
-            }
-        }
-        StructureItemDesc::Pstr_type(rec_flag, decls) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => "",
-                RecFlag::Nonrecursive => " nonrec",
-            };
-            for (i, decl) in decls.iter().enumerate() {
-                if i == 0 {
-                    let _ = write!(out, "type{} ", rec_str);
-                } else {
-                    let _ = write!(out, " and ");
-                }
-                print_type_declaration_ml(decl, out);
-            }
-        }
-        StructureItemDesc::Pstr_typext(ext) => {
-            let _ = write!(out, "type ");
-            print_longident(&ext.ptyext_path.txt, out);
-            let _ = write!(out, " += ");
-            for (i, ctor) in ext.ptyext_constructors.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " | ");
-                }
-                print_extension_constructor_ml(ctor, out);
-            }
-        }
-        StructureItemDesc::Pstr_exception(ext) => {
-            let _ = write!(out, "exception ");
-            print_extension_constructor_ml(ext, out);
-        }
-        StructureItemDesc::Pstr_module(mb) => {
-            let _ = write!(out, "module {} = ", mb.pmb_name.txt);
-            print_module_expr_ml(&mb.pmb_expr, out);
-        }
-        StructureItemDesc::Pstr_recmodule(mbs) => {
-            for (i, mb) in mbs.iter().enumerate() {
-                if i == 0 {
-                    let _ = write!(out, "module rec {} = ", mb.pmb_name.txt);
-                } else {
-                    let _ = write!(out, " and {} = ", mb.pmb_name.txt);
-                }
-                print_module_expr_ml(&mb.pmb_expr, out);
-            }
-        }
-        StructureItemDesc::Pstr_modtype(mtd) => {
-            let _ = write!(out, "module type {}", mtd.pmtd_name.txt);
-            if let Some(mt) = &mtd.pmtd_type {
-                let _ = write!(out, " = ");
-                print_module_type_ml(mt, out);
-            }
-        }
-        StructureItemDesc::Pstr_open(od) => {
-            let _ = write!(out, "open ");
-            print_longident(&od.popen_lid.txt, out);
-        }
-        StructureItemDesc::Pstr_include(incl) => {
-            let _ = write!(out, "include ");
-            print_module_expr_ml(&incl.pincl_mod, out);
-        }
-        StructureItemDesc::Pstr_attribute((name, _payload)) => {
-            let _ = write!(out, "[@@{}]", name.txt);
-        }
-        StructureItemDesc::Pstr_extension((name, _payload), _attrs) => {
-            let _ = write!(out, "[%%{}]", name.txt);
-        }
-    }
-}
-
-/// Print a payload in ML format
-fn print_payload_ml(payload: &Payload, out: &mut impl Write) {
-    match payload {
-        Payload::PStr(items) => {
-            for item in items {
-                print_structure_item_ml(item, out);
-            }
-        }
-        Payload::PSig(_) => {
-            let _ = write!(out, "...");
-        }
-        Payload::PTyp(typ) => {
-            let _ = write!(out, ": ");
-            print_core_type_ml(typ, out);
-        }
-        Payload::PPat(pat, guard) => {
-            let _ = write!(out, "? ");
-            print_pattern_ml(pat, out);
-            if let Some(g) = guard {
-                let _ = write!(out, " when ");
-                print_expression_ml(g, out);
-            }
-        }
     }
 }
 
@@ -334,26 +57,39 @@ fn payload_is_empty(payload: &Payload) -> bool {
     matches!(payload, Payload::PStr(items) if items.is_empty())
 }
 
+/// Check if a constant is negative (starts with -)
+fn constant_is_negative(c: &Constant) -> bool {
+    match c {
+        Constant::Integer(s, _) | Constant::Float(s, _) => s.starts_with('-'),
+        _ => false,
+    }
+}
+
+/// Check if a pattern is a cons pattern (::)
+fn is_cons_pattern(p: &Pattern) -> bool {
+    if let PatternDesc::Ppat_construct(lid, _) = &p.ppat_desc {
+        if let Longident::Lident(name) = &lid.txt {
+            return name == "::";
+        }
+    }
+    false
+}
+
 /// Check if a string represents an infix operator
 fn is_infix_operator(name: &str) -> bool {
-    // Special infix operators (multi-char starting with special chars)
     const INFIX_SPECIALS: &[&str] =
         &[":=", "!=", "::", "mod", "land", "lor", "lxor", "lsl", "lsr", "asr", "or"];
     if INFIX_SPECIALS.contains(&name) {
         return true;
     }
-
-    // Operators that start with these chars are infix
     const INFIX_SYMBOLS: &[char] = &[
         '=', '<', '>', '@', '^', '|', '&', '+', '-', '*', '/', '$', '%', '#',
     ];
-
     if let Some(c) = name.chars().next() {
         if INFIX_SYMBOLS.contains(&c) {
             return true;
         }
     }
-
     false
 }
 
@@ -367,6 +103,12 @@ fn is_prefix_operator(name: &str) -> bool {
     }
 }
 
+/// Check if an identifier needs parens when printed as a value
+/// (OCaml wraps operators in parens when used as values)
+fn ident_needs_parens(name: &str) -> bool {
+    is_infix_operator(name) || is_prefix_operator(name)
+}
+
 /// Get operator name if expression is an identifier that is an operator
 fn get_operator_name(expr: &Expression) -> Option<&str> {
     match &expr.pexp_desc {
@@ -378,17 +120,17 @@ fn get_operator_name(expr: &Expression) -> Option<&str> {
     }
 }
 
-/// Check if expression needs parens in binary context (operators, function args, etc.)
+/// Check if expression needs parens in binary context
 fn needs_parens_in_binary_context(expr: &Expression) -> bool {
     match &expr.pexp_desc {
-        // These need parens from outside - they don't have their own
         ExpressionDesc::Pexp_ifthenelse(_, _, _)
         | ExpressionDesc::Pexp_let(_, _, _)
         | ExpressionDesc::Pexp_fun { .. }
+        | ExpressionDesc::Pexp_match(_, _)
+        | ExpressionDesc::Pexp_try(_, _)
         | ExpressionDesc::Pexp_sequence(_, _)
         | ExpressionDesc::Pexp_await(_) => true,
-        // Note: match, try, while, for already print their own parens in print_expression_ml_inner
-        // so they don't need extra parens here
+        // Note: for/while have do...done delimiters so don't need extra parens
         ExpressionDesc::Pexp_apply { args, .. } if !args.is_empty() => true,
         _ => false,
     }
@@ -406,7 +148,7 @@ fn is_infix_application(expr: &Expression) -> bool {
     false
 }
 
-/// Check if expression is a prefix operator application (like `~~~ a`)
+/// Check if expression is a prefix operator application
 fn is_prefix_application(expr: &Expression) -> bool {
     if let ExpressionDesc::Pexp_apply { funct, args, .. } = &expr.pexp_desc {
         if args.len() == 1 {
@@ -429,8 +171,6 @@ fn application_has_labeled_args(expr: &Expression) -> bool {
 
 /// Check if expression needs parens when used as a labeled argument value
 fn needs_parens_as_labeled_arg(expr: &Expression) -> bool {
-    // Prefix applications (like `~~~ a`) already add their own parens in the printer,
-    // so don't add extra outer parens for them
     if is_prefix_application(expr) {
         return false;
     }
@@ -439,91 +179,55 @@ fn needs_parens_as_labeled_arg(expr: &Expression) -> bool {
 
 /// Check if expression needs parens when used as an unlabeled function argument
 fn needs_parens_as_function_arg(expr: &Expression) -> bool {
-    // Prefix applications (like `~~~ a`) already add their own parens in the printer,
-    // so don't add extra outer parens for them
     if is_prefix_application(expr) {
         return false;
     }
     needs_parens_in_binary_context(expr) || application_has_labeled_args(expr)
 }
 
-/// Check if expression already prints its own parens in print_expression_ml_inner
+/// Check if expression already prints its own parens
 fn expression_has_own_parens(expr: &Expression) -> bool {
+    matches!(&expr.pexp_desc, ExpressionDesc::Pexp_assert(_))
+}
+
+/// Check if expression is "simple" - doesn't need parens
+fn is_simple_expression(expr: &Expression) -> bool {
+    if !expr.pexp_attributes.is_empty() {
+        return false;
+    }
     matches!(
         &expr.pexp_desc,
-        ExpressionDesc::Pexp_match(_, _)
-            | ExpressionDesc::Pexp_try(_, _)
-            | ExpressionDesc::Pexp_while(_, _)
+        ExpressionDesc::Pexp_ident(_)
+            | ExpressionDesc::Pexp_constant(_)
+            | ExpressionDesc::Pexp_tuple(_)
+            | ExpressionDesc::Pexp_array(_)
+            | ExpressionDesc::Pexp_record(_, _)
+            | ExpressionDesc::Pexp_constraint(_, _)
+            | ExpressionDesc::Pexp_coerce(_, _, _)
+            | ExpressionDesc::Pexp_variant(_, None)
+            | ExpressionDesc::Pexp_construct(_, None)
+            | ExpressionDesc::Pexp_pack(_)
+            | ExpressionDesc::Pexp_field(_, _)  // Field access is simple
+            // OCaml's simple_expr handles these directly (no paren wrapping)
             | ExpressionDesc::Pexp_for(_, _, _, _, _)
-            | ExpressionDesc::Pexp_assert(_)
+            | ExpressionDesc::Pexp_while(_, _)
     )
 }
 
-/// Print expression with parens if needed as a function argument
-fn print_expression_ml_parens_if_complex(expr: &Expression, out: &mut impl Write) {
-    let attrs = printable_attributes(&expr.pexp_attributes);
-    let has_attrs = !attrs.is_empty();
-    let needs_parens = needs_parens_as_function_arg(expr);
-    let has_own_parens = expression_has_own_parens(expr);
-
-    // Expressions with attributes need the ((expr)[@attr]) format
-    if has_attrs {
-        // For expressions that have their own parens (match/try/etc.), use (expr[@attr])
-        // For other expressions, use ((expr)[@attr])
-        if has_own_parens {
-            // Expression already has its own parens, just wrap with one outer paren
-            let _ = write!(out, "(");
-            print_expression_ml_inner(expr, out, false);
-            for (name, payload) in attrs {
-                let _ = write!(out, "[@{}", name.txt);
-                if !payload_is_empty(payload) {
-                    let _ = write!(out, " ");
-                    print_payload_ml(payload, out);
-                }
-                let _ = write!(out, " ]");
-            }
-            let _ = write!(out, ")");
-        } else {
-            // Expression doesn't have its own parens, use double parens
-            let _ = write!(out, "((");
-            print_expression_ml_inner(expr, out, false);
-            let _ = write!(out, ")");
-            for (name, payload) in attrs {
-                let _ = write!(out, "[@{}", name.txt);
-                if !payload_is_empty(payload) {
-                    let _ = write!(out, " ");
-                    print_payload_ml(payload, out);
-                }
-                let _ = write!(out, " ]");
-            }
-            let _ = write!(out, ")");
-        }
-    } else if needs_parens && !has_own_parens {
-        // Complex expression that doesn't have its own parens - wrap in parens
-        let _ = write!(out, "(");
-        print_expression_ml_inner(expr, out, false);
-        let _ = write!(out, ")");
-    } else {
-        // Either not complex, or expression has its own parens (match/try/etc.)
-        print_expression_ml_inner(expr, out, false);
-    }
-}
-
-/// Check if expression content is multi-line (contains newlines when printed)
-fn expression_is_multiline(expr: &Expression) -> bool {
-    match &expr.pexp_desc {
-        ExpressionDesc::Pexp_constant(Constant::String(s, _)) => s.contains('\n'),
-        _ => false,
-    }
+/// Check if expression needs parens in "semi" context (array/list elements)
+fn needs_parens_in_semi_context(expr: &Expression) -> bool {
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_fun { .. }
+            | ExpressionDesc::Pexp_match(_, _)
+            | ExpressionDesc::Pexp_try(_, _)
+            | ExpressionDesc::Pexp_sequence(_, _)
+    )
 }
 
 /// Check if an attribute is internal and should not be printed
-/// These are parser/compiler annotations that OCaml's pprintast doesn't show
 fn is_internal_attribute(name: &str) -> bool {
-    matches!(
-        name,
-        "res.await" | "res.array.access"
-    )
+    matches!(name, "res.await" | "res.array.access")
 }
 
 /// Filter attributes to only include ones that should be printed
@@ -534,885 +238,50 @@ fn printable_attributes(attrs: &[(Located<String>, Payload)]) -> Vec<&(Located<S
         .collect()
 }
 
-fn print_expression_ml(expr: &Expression, out: &mut impl Write) {
-    let attrs = printable_attributes(&expr.pexp_attributes);
-    let has_attrs = !attrs.is_empty();
-    if has_attrs {
-        // OCaml format: ((expr)[@attr ]) or with newline before attr if multiline
-        let _ = write!(out, "((");
-        // Use use_parens = false inside the double parens to avoid triple nesting
-        print_expression_ml_inner(expr, out, false);
-        let _ = write!(out, ")");
-        // If expression is multiline, put attributes on new line with indent
-        let multiline = expression_is_multiline(expr);
-        for (name, payload) in attrs {
-            if multiline {
-                let _ = write!(out, "\n  ");
-            }
-            let _ = write!(out, "[@{}", name.txt);
-            if !payload_is_empty(payload) {
-                let _ = write!(out, " ");
-                print_payload_ml(payload, out);
-            }
-            let _ = write!(out, " ]");
-        }
-        let _ = write!(out, ")");
-    } else {
-        // Don't add parens by default - let the specific expression types handle it
-        print_expression_ml_inner(expr, out, false);
-    }
+/// Check if attributes contain a specific attribute name
+fn has_attribute(attrs: &[(Located<String>, Payload)], name: &str) -> bool {
+    attrs.iter().any(|(n, _)| n.txt == name)
 }
 
-/// Print expression without outer parentheses (for top-level eval statements)
-fn print_expression_ml_no_outer_parens(expr: &Expression, out: &mut impl Write) {
-    let attrs = printable_attributes(&expr.pexp_attributes);
-    let has_attrs = !attrs.is_empty();
-    if has_attrs {
-        let _ = write!(out, "(");
-    }
-    print_expression_ml_inner(expr, out, false);
-    if has_attrs {
-        for (name, payload) in attrs {
-            let _ = write!(out, "[@{}", name.txt);
-            if !payload_is_empty(payload) {
-                let _ = write!(out, " ");
-                print_payload_ml(payload, out);
-            }
-            let _ = write!(out, " ]");
-        }
-        let _ = write!(out, ")");
-    }
-}
+/// Collect list elements from a cons pattern
+fn collect_list_elements(expr: &Expression) -> (Vec<&Expression>, bool) {
+    let mut elements = Vec::new();
+    let mut current = expr;
 
-/// Print fun body - strips the outer parens from nested funs
-/// OCaml prints `fun [arity:2]acc -> fun curr -> body` not `fun acc -> (fun curr -> body)`
-fn print_fun_body_ml(expr: &Expression, out: &mut impl Write) {
-    match &expr.pexp_desc {
-        ExpressionDesc::Pexp_fun {
-            arg_label,
-            default,
-            lhs,
-            rhs,
-            ..
-        } if expr.pexp_attributes.is_empty() => {
-            // Print nested fun without wrapping parens
-            let _ = write!(out, "fun ");
-            print_arg_label_ml(arg_label, out);
-            if let Some(def) = default {
-                let _ = write!(out, "?(");
-                print_pattern_ml(lhs, out);
-                let _ = write!(out, " = ");
-                print_expression_ml(def, out);
-                let _ = write!(out, ")");
-            } else {
-                print_pattern_ml(lhs, out);
-            }
-            let _ = write!(out, " -> ");
-            print_fun_body_ml(rhs, out);
+    loop {
+        if !current.pexp_attributes.is_empty() {
+            elements.push(current);
+            return (elements, false);
         }
-        _ => {
-            // Not a nested fun, print without outer parens (infix ops don't need parens here)
-            print_expression_ml_no_outer_parens(expr, out);
-        }
-    }
-}
 
-fn print_expression_ml_inner(expr: &Expression, out: &mut impl Write, use_parens: bool) {
-    match &expr.pexp_desc {
-        ExpressionDesc::Pexp_ident(lid) => {
-            print_longident(&lid.txt, out);
-        }
-        ExpressionDesc::Pexp_constant(c) => {
-            // Wrap negative numbers in parens to match OCaml output
-            let is_negative = match c {
-                Constant::Integer(s, _) | Constant::Float(s, _) => s.starts_with('-'),
-                _ => false,
-            };
-            if is_negative {
-                let _ = write!(out, "(");
-            }
-            print_constant_ml(c, out);
-            if is_negative {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            let rec_str = match rec_flag {
-                RecFlag::Recursive => " rec",
-                RecFlag::Nonrecursive => "",
-            };
-            if use_parens {
-                let _ = write!(out, "(");
-            }
-            let _ = write!(out, "let{}", rec_str);
-            for (i, binding) in bindings.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " and");
-                }
-                let _ = write!(out, " ");
-                print_pattern_ml(&binding.pvb_pat, out);
-                let _ = write!(out, " = ");
-                print_expression_ml(&binding.pvb_expr, out);
-            }
-            let _ = write!(out, " in ");
-            print_expression_ml(body, out);
-            if use_parens {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_fun {
-            arg_label,
-            default,
-            lhs,
-            rhs,
-            arity,
-            is_async,
-        } => {
-            // Print with arity annotation
-            let arity_value = match arity {
-                Arity::Full(n) => Some(*n),
-                Arity::Unknown => {
-                    // Compute arity by counting nested funs
-                    let computed = count_function_arity(expr);
-                    if computed > 0 {
-                        Some(computed)
-                    } else {
-                        None
+        match &current.pexp_desc {
+            ExpressionDesc::Pexp_construct(lid, None) => {
+                if let Longident::Lident(name) = &lid.txt {
+                    if name == "[]" {
+                        return (elements, true);
                     }
                 }
-            };
-            if use_parens {
-                let _ = write!(out, "(");
+                elements.push(current);
+                return (elements, false);
             }
-            // Print async before fun
-            if *is_async {
-                let _ = write!(out, "async ");
-            }
-            let _ = write!(out, "fun ");
-            if let Some(n) = arity_value {
-                let _ = write!(out, "[arity:{}]", n);
-            }
-            print_arg_label_ml(arg_label, out);
-            if let Some(def) = default {
-                let _ = write!(out, "?(");
-                print_pattern_ml(lhs, out);
-                let _ = write!(out, " = ");
-                print_expression_ml(def, out);
-                let _ = write!(out, ")");
-            } else {
-                print_pattern_ml(lhs, out);
-            }
-            let _ = write!(out, " -> ");
-            // Print nested funs without the outer parens
-            print_fun_body_ml(rhs, out);
-            if use_parens {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
-            // Check if this is an infix or prefix operator application
-            if let Some(op_name) = get_operator_name(funct) {
-                if is_infix_operator(op_name) && args.len() == 2 {
-                    // Binary infix: print as `lhs op rhs`
-                    // Add parens around complex expressions (if/let/fun/match/try/sequence)
-                    let (_, lhs) = &args[0];
-                    let (_, rhs) = &args[1];
-                    // Use parens when we're inside something else (use_parens = true)
-                    if use_parens {
-                        let _ = write!(out, "(");
-                    }
-                    // Use print_expression_ml_parens_if_complex for operands
-                    print_expression_ml_parens_if_complex(lhs, out);
-                    let _ = write!(out, " {} ", op_name);
-                    print_expression_ml_parens_if_complex(rhs, out);
-                    // Print partial marker if applicable
-                    if *partial {
-                        let _ = write!(out, " ...");
-                    }
-                    if use_parens {
-                        let _ = write!(out, ")");
-                    }
-                    return;
-                } else if is_prefix_operator(op_name) && args.len() == 1 {
-                    // Unary prefix: print as `(op arg)`
-                    let (_, arg) = &args[0];
-                    let _ = write!(out, "(");
-                    let _ = write!(out, "{} ", op_name);
-                    print_expression_ml_parens_if_complex(arg, out);
-                    if *partial {
-                        let _ = write!(out, " ...");
-                    }
-                    let _ = write!(out, ")");
-                    return;
-                }
-            }
-            // Default: prefix application
-            // Only use parens if needed (determined by use_parens flag)
-            if use_parens {
-                let _ = write!(out, "(");
-            }
-            print_expression_ml(funct, out);
-            for (label, arg) in args {
-                let _ = write!(out, " ");
-                // Check if labeled arg matches the form ~name where arg is just `name`
-                print_arg_with_label_ml(label, arg, out);
-            }
-            // Print partial marker if applicable
-            if *partial {
-                let _ = write!(out, " ...");
-            }
-            if use_parens {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_match(scrutinee, cases) => {
-            let _ = write!(out, "(match ");
-            print_expression_ml(scrutinee, out);
-            let _ = write!(out, " with");
-            for case in cases {
-                let _ = write!(out, " | ");
-                print_pattern_ml(&case.pc_lhs, out);
-                if let Some(guard) = &case.pc_guard {
-                    let _ = write!(out, " when ");
-                    print_expression_ml(guard, out);
-                }
-                let _ = write!(out, " -> ");
-                print_expression_ml(&case.pc_rhs, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_try(body, cases) => {
-            let _ = write!(out, "(try ");
-            print_expression_ml(body, out);
-            let _ = write!(out, " with");
-            for case in cases {
-                let _ = write!(out, " | ");
-                print_pattern_ml(&case.pc_lhs, out);
-                if let Some(guard) = &case.pc_guard {
-                    let _ = write!(out, " when ");
-                    print_expression_ml(guard, out);
-                }
-                let _ = write!(out, " -> ");
-                print_expression_ml(&case.pc_rhs, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_tuple(exprs) => {
-            let _ = write!(out, "(");
-            for (i, e) in exprs.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, ", ");
-                }
-                print_expression_ml(e, out);
-            }
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_construct(lid, arg) => {
-            print_longident(&lid.txt, out);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_expression_ml(a, out);
-            }
-        }
-        ExpressionDesc::Pexp_variant(label, arg) => {
-            let _ = write!(out, "`{}", label);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_expression_ml(a, out);
-            }
-        }
-        ExpressionDesc::Pexp_record(fields, base) => {
-            let _ = write!(out, "{{");
-            if let Some(b) = base {
-                print_expression_ml(b, out);
-                let _ = write!(out, " with ");
-            }
-            for (i, field) in fields.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, "; ");
-                }
-                print_longident(&field.lid.txt, out);
-                let _ = write!(out, " = ");
-                print_expression_ml(&field.expr, out);
-            }
-            let _ = write!(out, "}}");
-        }
-        ExpressionDesc::Pexp_field(obj, field) => {
-            print_expression_ml(obj, out);
-            let _ = write!(out, ".");
-            print_longident(&field.txt, out);
-        }
-        ExpressionDesc::Pexp_setfield(obj, field, value) => {
-            print_expression_ml(obj, out);
-            let _ = write!(out, ".");
-            print_longident(&field.txt, out);
-            let _ = write!(out, " <- ");
-            print_expression_ml(value, out);
-        }
-        ExpressionDesc::Pexp_array(elems) => {
-            let _ = write!(out, "[|");
-            for (i, e) in elems.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, ";");
-                }
-                print_expression_ml(e, out);
-            }
-            let _ = write!(out, "|]");
-        }
-        ExpressionDesc::Pexp_ifthenelse(cond, then_expr, else_expr) => {
-            if use_parens {
-                let _ = write!(out, "(");
-            }
-            let _ = write!(out, "if ");
-            print_expression_ml(cond, out);
-            let _ = write!(out, " then ");
-            print_expression_ml(then_expr, out);
-            if let Some(e) = else_expr {
-                let _ = write!(out, " else ");
-                print_expression_ml(e, out);
-            }
-            if use_parens {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_sequence(e1, e2) => {
-            if use_parens {
-                let _ = write!(out, "(");
-            }
-            print_expression_ml(e1, out);
-            let _ = write!(out, "; ");
-            print_expression_ml(e2, out);
-            if use_parens {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_while(cond, body) => {
-            let _ = write!(out, "(while ");
-            print_expression_ml(cond, out);
-            let _ = write!(out, " do ");
-            print_expression_ml(body, out);
-            let _ = write!(out, " done)");
-        }
-        ExpressionDesc::Pexp_for(pat, start, end, dir, body) => {
-            let _ = write!(out, "(for ");
-            print_pattern_ml(pat, out);
-            let _ = write!(out, " = ");
-            print_expression_ml(start, out);
-            let dir_str = match dir {
-                DirectionFlag::Upto => " to ",
-                DirectionFlag::Downto => " downto ",
-            };
-            let _ = write!(out, "{}", dir_str);
-            print_expression_ml(end, out);
-            let _ = write!(out, " do ");
-            print_expression_ml(body, out);
-            let _ = write!(out, " done)");
-        }
-        ExpressionDesc::Pexp_constraint(e, t) => {
-            let _ = write!(out, "(");
-            print_expression_ml(e, out);
-            let _ = write!(out, " : ");
-            print_core_type_ml(t, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_coerce(e, t1, t2) => {
-            let _ = write!(out, "(");
-            print_expression_ml(e, out);
-            if let Some(t) = t1 {
-                let _ = write!(out, " : ");
-                print_core_type_ml(t, out);
-            }
-            let _ = write!(out, " :> ");
-            print_core_type_ml(t2, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_send(e, meth) => {
-            print_expression_ml(e, out);
-            let _ = write!(out, "#{}", meth.txt);
-        }
-        ExpressionDesc::Pexp_letmodule(name, mexpr, body) => {
-            let _ = write!(out, "(let module {} = ", name.txt);
-            print_module_expr_ml(mexpr, out);
-            let _ = write!(out, " in ");
-            print_expression_ml(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_letexception(ext, body) => {
-            let _ = write!(out, "(let exception ");
-            print_extension_constructor_ml(ext, out);
-            let _ = write!(out, " in ");
-            print_expression_ml(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_assert(e) => {
-            let _ = write!(out, "(assert ");
-            print_expression_ml(e, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_newtype(name, body) => {
-            let _ = write!(out, "(fun (type {}) -> ", name.txt);
-            print_expression_ml(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_pack(mexpr) => {
-            let _ = write!(out, "(module ");
-            print_module_expr_ml(mexpr, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_open(_override_flag, lid, body) => {
-            let _ = write!(out, "(let open ");
-            print_longident(&lid.txt, out);
-            let _ = write!(out, " in ");
-            print_expression_ml(body, out);
-            let _ = write!(out, ")");
-        }
-        ExpressionDesc::Pexp_extension((name, _payload)) => {
-            let _ = write!(out, "[%%{}]", name.txt);
-        }
-        ExpressionDesc::Pexp_await(e) => {
-            // Print await with argument in parens if needed (like simple_expr in OCaml)
-            let _ = write!(out, "await ");
-            // Wrap the argument in parens - OCaml uses simple_expr which adds parens for complex exprs
-            let needs_parens = !matches!(
-                &e.pexp_desc,
-                ExpressionDesc::Pexp_ident(_)
-                    | ExpressionDesc::Pexp_constant(_)
-                    | ExpressionDesc::Pexp_construct(_, None)
-                    | ExpressionDesc::Pexp_tuple(_)
-                    | ExpressionDesc::Pexp_array(_)
-                    | ExpressionDesc::Pexp_record(_, _)
-            );
-            if needs_parens {
-                let _ = write!(out, "(");
-            }
-            print_expression_ml(e, out);
-            if needs_parens {
-                let _ = write!(out, ")");
-            }
-        }
-        ExpressionDesc::Pexp_jsx_element(_jsx) => {
-            let _ = write!(out, "<jsx>");
-        }
-    }
-}
-
-fn print_pattern_ml(pat: &Pattern, out: &mut impl Write) {
-    let has_attrs = !pat.ppat_attributes.is_empty();
-    if has_attrs {
-        let _ = write!(out, "((");
-    }
-    print_pattern_ml_inner(pat, out);
-    if has_attrs {
-        let _ = write!(out, ")");
-        for (name, payload) in &pat.ppat_attributes {
-            let _ = write!(out, "[@{}", name.txt);
-            if !payload_is_empty(payload) {
-                let _ = write!(out, " ");
-                print_payload_ml(payload, out);
-            }
-            let _ = write!(out, " ]");
-        }
-        let _ = write!(out, ")");
-    }
-}
-
-fn print_pattern_ml_inner(pat: &Pattern, out: &mut impl Write) {
-    match &pat.ppat_desc {
-        PatternDesc::Ppat_any => {
-            let _ = write!(out, "_");
-        }
-        PatternDesc::Ppat_var(name) => {
-            let _ = write!(out, "{}", name.txt);
-        }
-        PatternDesc::Ppat_alias(p, name) => {
-            let _ = write!(out, "(");
-            print_pattern_ml(p, out);
-            let _ = write!(out, " as {})", name.txt);
-        }
-        PatternDesc::Ppat_constant(c) => {
-            print_constant_ml(c, out);
-        }
-        PatternDesc::Ppat_interval(c1, c2) => {
-            print_constant_ml(c1, out);
-            let _ = write!(out, " .. ");
-            print_constant_ml(c2, out);
-        }
-        PatternDesc::Ppat_tuple(pats) => {
-            let _ = write!(out, "(");
-            for (i, p) in pats.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, ", ");
-                }
-                print_pattern_ml(p, out);
-            }
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_construct(lid, arg) => {
-            // Special case for cons pattern: print as (x::xs) not (:: (x, xs))
-            if let Longident::Lident(name) = &lid.txt {
-                if name == "::" {
-                    if let Some(a) = arg {
-                        // The argument should be a tuple (head, tail)
-                        if let PatternDesc::Ppat_tuple(elements) = &a.ppat_desc {
-                            if elements.len() == 2 {
-                                let _ = write!(out, "(");
-                                print_pattern_ml(&elements[0], out);
-                                let _ = write!(out, "::");
-                                print_pattern_ml(&elements[1], out);
-                                let _ = write!(out, ")");
-                                return;
+            ExpressionDesc::Pexp_construct(lid, Some(arg)) => {
+                if let Longident::Lident(name) = &lid.txt {
+                    if name == "::" {
+                        if let ExpressionDesc::Pexp_tuple(items) = &arg.pexp_desc {
+                            if items.len() == 2 && arg.pexp_attributes.is_empty() {
+                                elements.push(&items[0]);
+                                current = &items[1];
+                                continue;
                             }
                         }
                     }
                 }
+                elements.push(current);
+                return (elements, false);
             }
-            print_longident(&lid.txt, out);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_pattern_ml(a, out);
-            }
-        }
-        PatternDesc::Ppat_variant(label, arg) => {
-            let _ = write!(out, "`{}", label);
-            if let Some(a) = arg {
-                let _ = write!(out, " ");
-                print_pattern_ml(a, out);
-            }
-        }
-        PatternDesc::Ppat_record(fields, closed) => {
-            let _ = write!(out, "{{ ");
-            for (i, field) in fields.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, "; ");
-                }
-                // Check if we can use punning: { name } instead of { name = name }
-                let field_name = match &field.lid.txt {
-                    Longident::Lident(name) => Some(name.as_str()),
-                    Longident::Ldot(_, name) => Some(name.as_str()),
-                    _ => None,
-                };
-                let is_punned = if let Some(fname) = field_name {
-                    matches!(&field.pat.ppat_desc, PatternDesc::Ppat_var(var) if var.txt == fname)
-                } else {
-                    false
-                };
-
-                if is_punned {
-                    // Use punned form: just the field name
-                    print_longident(&field.lid.txt, out);
-                } else {
-                    print_longident(&field.lid.txt, out);
-                    let _ = write!(out, " = ");
-                    print_pattern_ml(&field.pat, out);
-                }
-            }
-            if matches!(closed, ClosedFlag::Open) {
-                let _ = write!(out, "; _");
-            }
-            let _ = write!(out, " }}");
-        }
-        PatternDesc::Ppat_array(pats) => {
-            let _ = write!(out, "[|");
-            for (i, p) in pats.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, ";");
-                }
-                print_pattern_ml(p, out);
-            }
-            let _ = write!(out, "|]");
-        }
-        PatternDesc::Ppat_or(p1, p2) => {
-            let _ = write!(out, "(");
-            print_pattern_ml(p1, out);
-            let _ = write!(out, " | ");
-            print_pattern_ml(p2, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_constraint(p, t) => {
-            let _ = write!(out, "(");
-            print_pattern_ml(p, out);
-            let _ = write!(out, " : ");
-            print_core_type_ml(t, out);
-            let _ = write!(out, ")");
-        }
-        PatternDesc::Ppat_type(lid) => {
-            let _ = write!(out, "#");
-            print_longident(&lid.txt, out);
-        }
-        PatternDesc::Ppat_unpack(name) => {
-            let _ = write!(out, "(module {})", name.txt);
-        }
-        PatternDesc::Ppat_exception(p) => {
-            let _ = write!(out, "exception ");
-            print_pattern_ml(p, out);
-        }
-        PatternDesc::Ppat_extension((name, _)) => {
-            let _ = write!(out, "[%%{}]", name.txt);
-        }
-        PatternDesc::Ppat_open(lid, p) => {
-            print_longident(&lid.txt, out);
-            let _ = write!(out, ".(");
-            print_pattern_ml(p, out);
-            let _ = write!(out, ")");
-        }
-    }
-}
-
-fn print_core_type_ml(typ: &CoreType, out: &mut impl Write) {
-    match &typ.ptyp_desc {
-        CoreTypeDesc::Ptyp_any => {
-            let _ = write!(out, "_");
-        }
-        CoreTypeDesc::Ptyp_var(name) => {
-            let _ = write!(out, "'{}", name);
-        }
-        CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
-            print_arg_label_ml(&arg.lbl, out);
-            print_core_type_ml(&arg.typ, out);
-            let _ = write!(out, " -> ");
-            print_core_type_ml(ret, out);
-            // Print arity annotation if known
-            if let Arity::Full(n) = arity {
-                let _ = write!(out, " (a:{})", n);
-            }
-        }
-        CoreTypeDesc::Ptyp_tuple(types) => {
-            let _ = write!(out, "(");
-            for (i, t) in types.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " * ");
-                }
-                print_core_type_ml(t, out);
-            }
-            let _ = write!(out, ")");
-        }
-        CoreTypeDesc::Ptyp_constr(lid, args) => {
-            if !args.is_empty() {
-                if args.len() == 1 {
-                    print_core_type_ml(&args[0], out);
-                    let _ = write!(out, " ");
-                } else {
-                    let _ = write!(out, "(");
-                    for (i, t) in args.iter().enumerate() {
-                        if i > 0 {
-                            let _ = write!(out, ", ");
-                        }
-                        print_core_type_ml(t, out);
-                    }
-                    let _ = write!(out, ") ");
-                }
-            }
-            print_longident(&lid.txt, out);
-        }
-        CoreTypeDesc::Ptyp_object(fields, closed) => {
-            let _ = write!(out, "<");
-            for (i, field) in fields.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, "; ");
-                }
-                match field {
-                    ObjectField::Otag(name, _attrs, typ) => {
-                        let _ = write!(out, "{}: ", name.txt);
-                        print_core_type_ml(typ, out);
-                    }
-                    ObjectField::Oinherit(typ) => {
-                        print_core_type_ml(typ, out);
-                    }
-                }
-            }
-            if matches!(closed, ClosedFlag::Open) {
-                let _ = write!(out, "; ..");
-            }
-            let _ = write!(out, ">");
-        }
-        CoreTypeDesc::Ptyp_alias(t, name) => {
-            let _ = write!(out, "(");
-            print_core_type_ml(t, out);
-            let _ = write!(out, " as '{})", name);
-        }
-        CoreTypeDesc::Ptyp_variant(rows, closed, labels) => {
-            let _ = write!(out, "[");
-            match closed {
-                ClosedFlag::Open => {
-                    let _ = write!(out, "> ");
-                }
-                ClosedFlag::Closed => {
-                    if labels.is_some() {
-                        let _ = write!(out, "< ");
-                    }
-                }
-            }
-            for (i, row) in rows.iter().enumerate() {
-                if i > 0 {
-                    let _ = write!(out, " | ");
-                }
-                match row {
-                    RowField::Rtag(label, _attrs, empty, types) => {
-                        let _ = write!(out, "`{}", label.txt);
-                        if !*empty || !types.is_empty() {
-                            let _ = write!(out, " of ");
-                            for (j, t) in types.iter().enumerate() {
-                                if j > 0 {
-                                    let _ = write!(out, " & ");
-                                }
-                                print_core_type_ml(t, out);
-                            }
-                        }
-                    }
-                    RowField::Rinherit(typ) => {
-                        print_core_type_ml(typ, out);
-                    }
-                }
-            }
-            if let Some(lbls) = labels {
-                let _ = write!(out, " > ");
-                for (i, lbl) in lbls.iter().enumerate() {
-                    if i > 0 {
-                        let _ = write!(out, " ");
-                    }
-                    let _ = write!(out, "`{}", lbl);
-                }
-            }
-            let _ = write!(out, "]");
-        }
-        CoreTypeDesc::Ptyp_poly(vars, t) => {
-            if !vars.is_empty() {
-                for var in vars {
-                    let _ = write!(out, "'{} ", var.txt);
-                }
-                let _ = write!(out, ". ");
-            }
-            print_core_type_ml(t, out);
-        }
-        CoreTypeDesc::Ptyp_package((lid, constraints)) => {
-            let _ = write!(out, "(module ");
-            print_longident(&lid.txt, out);
-            for (path, typ) in constraints {
-                let _ = write!(out, " with type ");
-                print_longident(&path.txt, out);
-                let _ = write!(out, " = ");
-                print_core_type_ml(typ, out);
-            }
-            let _ = write!(out, ")");
-        }
-        CoreTypeDesc::Ptyp_extension((name, _)) => {
-            let _ = write!(out, "[%%{}]", name.txt);
-        }
-    }
-}
-
-fn print_arg_label_ml(label: &ArgLabel, out: &mut impl Write) {
-    match label {
-        ArgLabel::Nolabel => {}
-        ArgLabel::Labelled(s) => {
-            let _ = write!(out, "~{}:", s.txt);
-        }
-        ArgLabel::Optional(s) => {
-            let _ = write!(out, "?{}:", s.txt);
-        }
-    }
-}
-
-/// Print a labeled argument, using short form ~name when value is just an identifier with same name
-fn print_arg_with_label_ml(label: &ArgLabel, arg: &Expression, out: &mut impl Write) {
-    // Check if we can use the short form: ~name instead of ~name:name
-    match label {
-        ArgLabel::Labelled(name) => {
-            if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
-                if let Longident::Lident(arg_name) = &lid.txt {
-                    if arg_name == &name.txt && arg.pexp_attributes.is_empty() {
-                        // Use short form: just ~name
-                        let _ = write!(out, "~{}", name.txt);
-                        return;
-                    }
-                }
-            }
-            // Full form: ~name:value (with parens for complex expressions)
-            let _ = write!(out, "~{}:", name.txt);
-            if needs_parens_as_labeled_arg(arg) {
-                let _ = write!(out, "(");
-                print_expression_ml(arg, out);
-                let _ = write!(out, ")");
-            } else {
-                print_expression_ml(arg, out);
-            }
-        }
-        ArgLabel::Optional(name) => {
-            if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
-                if let Longident::Lident(arg_name) = &lid.txt {
-                    if arg_name == &name.txt && arg.pexp_attributes.is_empty() {
-                        // Use short form: just ?name
-                        let _ = write!(out, "?{}", name.txt);
-                        return;
-                    }
-                }
-            }
-            // Full form: ?name:value (with parens for complex expressions)
-            let _ = write!(out, "?{}:", name.txt);
-            if needs_parens_as_labeled_arg(arg) {
-                let _ = write!(out, "(");
-                print_expression_ml(arg, out);
-                let _ = write!(out, ")");
-            } else {
-                print_expression_ml(arg, out);
-            }
-        }
-        ArgLabel::Nolabel => {
-            // Use parens for complex expressions when used as function arguments
-            print_expression_ml_parens_if_complex(arg, out);
-        }
-    }
-}
-
-fn print_constant_ml(c: &Constant, out: &mut impl Write) {
-    match c {
-        Constant::Integer(s, suffix) => {
-            let _ = write!(out, "{}", s);
-            if let Some(c) = suffix {
-                let _ = write!(out, "{}", c);
-            }
-        }
-        Constant::Char(i) => {
-            // Escape special characters in character literals
-            // OCaml uses decimal escapes (\170 for char 170), not octal
-            let escaped = match *i {
-                0x5C => "\\\\".to_string(),      // backslash -> '\\'
-                0x27 => "\\'".to_string(),       // single quote -> '\''
-                0x0A => "\\n".to_string(),       // newline -> '\n'
-                0x09 => "\\t".to_string(),       // tab -> '\t'
-                0x08 => "\\b".to_string(),       // backspace -> '\b'
-                0x0D => "\\r".to_string(),       // carriage return -> '\r'
-                n if (0x20..=0x7E).contains(&n) => {
-                    // Printable ASCII (excluding backslash and quote which are handled above)
-                    if let Some(c) = char::from_u32(n as u32) {
-                        c.to_string()
-                    } else {
-                        format!("\\{}", n) // Decimal escape
-                    }
-                }
-                n => format!("\\{}", n),         // Decimal escape for other chars
-            };
-            let _ = write!(out, "'{}'", escaped);
-        }
-        Constant::String(s, delim) => {
-            // Use the original delimiter if available (for JS strings, template literals, etc.)
-            if let Some(d) = delim {
-                if d.is_empty() {
-                    // Empty delimiter means regular double-quoted string
-                    let _ = write!(out, "\"{}\"", escape_string(s));
-                } else {
-                    // Use the original delimiter (e.g., "js", "j")
-                    let _ = write!(out, "{{{}|{}|{}}}", d, s, d);
-                }
-            } else {
-                // No delimiter, use js| format for plain strings
-                let _ = write!(out, "{{js|{}|js}}", s);
-            }
-        }
-        Constant::Float(s, suffix) => {
-            let _ = write!(out, "{}", s);
-            if let Some(c) = suffix {
-                let _ = write!(out, "{}", c);
+            _ => {
+                elements.push(current);
+                return (elements, false);
             }
         }
     }
@@ -1433,306 +302,2180 @@ fn escape_string(s: &str) -> String {
     result
 }
 
-fn print_longident(lid: &Longident, out: &mut impl Write) {
-    match lid {
-        Longident::Lident(name) => {
-            let _ = write!(out, "{}", name);
+// ============================================================================
+// Public API
+// ============================================================================
+
+/// Print structure in ML format (like Pprintast in OCaml)
+pub fn print_structure_ml(structure: &Structure, out: &mut impl Write) {
+    let mut f = Formatter::new(out);
+    for (i, item) in structure.iter().enumerate() {
+        if i > 0 {
+            f.newline();
         }
-        Longident::Ldot(prefix, name) => {
-            print_longident(prefix, out);
-            let _ = write!(out, ".{}", name);
+        print_structure_item(&mut f, item);
+    }
+    f.flush();
+}
+
+/// Print signature in ML format
+pub fn print_signature_ml(signature: &[SignatureItem], out: &mut impl Write) {
+    let mut f = Formatter::new(out);
+    for (i, item) in signature.iter().enumerate() {
+        if i > 0 {
+            f.space();
         }
-        Longident::Lapply(m1, m2) => {
-            print_longident(m1, out);
-            let _ = write!(out, "(");
-            print_longident(m2, out);
-            let _ = write!(out, ")");
+        print_signature_item(&mut f, item);
+    }
+    // Only add trailing newline if there are items
+    if !signature.is_empty() {
+        f.newline();
+    }
+    f.flush();
+}
+
+// ============================================================================
+// Structure items
+// ============================================================================
+
+fn print_structure_item<W: Write>(f: &mut Formatter<W>, item: &StructureItem) {
+    match &item.pstr_desc {
+        StructureItemDesc::Pstr_eval(expr, attrs) => {
+            f.string(";;");
+            print_expression_no_outer_parens(f, expr);
+            print_item_attributes(f, attrs);
+        }
+        StructureItemDesc::Pstr_value(rec_flag, bindings) => {
+            let rec_str = match rec_flag {
+                RecFlag::Recursive => "let rec ",
+                RecFlag::Nonrecursive => "let ",
+            };
+            for (i, binding) in bindings.iter().enumerate() {
+                if i > 0 {
+                    f.newline();
+                }
+                f.open_box(BoxKind::HOV, 2);
+                if i > 0 {
+                    f.string("and ");
+                } else {
+                    f.string(rec_str);
+                }
+                print_value_binding(f, &binding.pvb_pat, &binding.pvb_expr);
+                // Value binding attributes
+                print_item_attributes(f, &binding.pvb_attributes);
+                f.close_box();
+            }
+        }
+        StructureItemDesc::Pstr_primitive(vd) => {
+            f.open_box(BoxKind::HOV, 2);
+            f.string("external ");
+            f.string(&vd.pval_name.txt);
+            f.string(" : ");
+            print_core_type(f, &vd.pval_type);
+            for prim in &vd.pval_prim {
+                f.string(" = \"");
+                f.string(prim);
+                f.string("\"");
+            }
+            print_item_attributes(f, &vd.pval_attributes);
+            f.close_box();
+        }
+        StructureItemDesc::Pstr_type(rec_flag, decls) => {
+            let rec_str = match rec_flag {
+                RecFlag::Recursive => "",
+                RecFlag::Nonrecursive => " nonrec",
+            };
+            for (i, decl) in decls.iter().enumerate() {
+                if i == 0 {
+                    f.string("type");
+                    f.string(rec_str);
+                    f.string(" ");
+                } else {
+                    f.newline();
+                    f.string("and ");
+                }
+                print_type_declaration(f, decl);
+            }
+        }
+        StructureItemDesc::Pstr_typext(ext) => {
+            f.string("type ");
+            print_longident(f, &ext.ptyext_path.txt);
+            f.string(" += ");
+            for (i, ctor) in ext.ptyext_constructors.iter().enumerate() {
+                if i > 0 {
+                    f.string(" | ");
+                }
+                print_extension_constructor(f, ctor);
+            }
+        }
+        StructureItemDesc::Pstr_exception(ext) => {
+            f.string("exception ");
+            print_extension_constructor(f, ext);
+        }
+        StructureItemDesc::Pstr_module(mb) => {
+            f.string("module ");
+            f.string(&mb.pmb_name.txt);
+            f.string(" = ");
+            print_module_expr(f, &mb.pmb_expr);
+        }
+        StructureItemDesc::Pstr_recmodule(mbs) => {
+            for (i, mb) in mbs.iter().enumerate() {
+                if i == 0 {
+                    f.string("module rec ");
+                } else {
+                    f.string(" and ");
+                }
+                f.string(&mb.pmb_name.txt);
+                f.string(" = ");
+                print_module_expr(f, &mb.pmb_expr);
+            }
+        }
+        StructureItemDesc::Pstr_modtype(mtd) => {
+            f.string("module type ");
+            f.string(&mtd.pmtd_name.txt);
+            if let Some(mt) = &mtd.pmtd_type {
+                // OCaml has trailing space from name + space before =
+                f.string("  = ");
+                print_module_type(f, mt);
+            }
+        }
+        StructureItemDesc::Pstr_open(od) => {
+            f.string("open");
+            if matches!(od.popen_override, OverrideFlag::Override) {
+                f.string("!");
+            }
+            f.string(" ");
+            print_longident(f, &od.popen_lid.txt);
+            print_item_attributes(f, &od.popen_attributes);
+        }
+        StructureItemDesc::Pstr_include(incl) => {
+            f.string("include ");
+            print_module_expr(f, &incl.pincl_mod);
+            print_item_attributes(f, &incl.pincl_attributes);
+        }
+        StructureItemDesc::Pstr_attribute((name, payload)) => {
+            // Standalone/floating attributes use [@@@...] (3 @)
+            f.string("[@@@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            } else {
+                f.string(" ");
+            }
+            f.string("]");
+        }
+        StructureItemDesc::Pstr_extension((name, payload), attrs) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            print_item_attributes(f, attrs);
+            f.close_box();
         }
     }
 }
 
-fn print_type_declaration_ml(decl: &TypeDeclaration, out: &mut impl Write) {
-    // Print type parameters
+// ============================================================================
+// Value bindings
+// ============================================================================
+
+fn print_value_binding<W: Write>(f: &mut Formatter<W>, pat: &Pattern, expr: &Expression) {
+    if !expr.pexp_attributes.is_empty() {
+        print_pattern(f, pat);
+        f.string(" =");
+        f.space();
+        print_expression(f, expr);
+        return;
+    }
+
+    // Special case: Ppat_constraint with Ptyp_poly type is printed without outer parens
+    // e.g. "let t : 'a . t = x" instead of "let (t : 'a . t) = x"
+    if let PatternDesc::Ppat_constraint(inner_pat, typ) = &pat.ppat_desc {
+        if matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(..)) {
+            print_pattern(f, inner_pat);
+            f.string(" : ");
+            print_core_type(f, typ);
+            f.string(" =");
+            f.space();
+            print_expression_no_outer_parens(f, expr);
+            return;
+        }
+    }
+
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_fun {
+            arg_label,
+            default,
+            lhs,
+            rhs,
+            arity,
+            is_async,
+        } => {
+            print_pattern(f, pat);
+            f.string(" ");
+
+            if *is_async {
+                f.string("async ");
+            }
+
+            // Print arity annotation
+            if let Arity::Full(n) = arity {
+                f.string(&format!("[arity:{}]", n));
+            } else {
+                let computed_arity = count_function_arity(expr);
+                if computed_arity > 0 {
+                    f.string(&format!("[arity:{}]", computed_arity));
+                }
+            }
+
+            print_inline_param(f, arg_label, default, lhs);
+            let body = print_remaining_inline_params(f, rhs);
+
+            f.string("=");
+            f.space();
+            print_expression_no_outer_parens(f, body);
+        }
+        _ => {
+            print_pattern(f, pat);
+            f.string(" =");
+            f.space();
+            print_expression_no_outer_parens(f, expr);
+        }
+    }
+}
+
+fn print_inline_param<W: Write>(
+    f: &mut Formatter<W>,
+    label: &ArgLabel,
+    default: &Option<Box<Expression>>,
+    pat: &Pattern,
+) {
+    match label {
+        ArgLabel::Nolabel => {
+            if pattern_needs_parens_as_param(pat) {
+                f.string("(");
+                print_pattern(f, pat);
+                f.string(") ");
+            } else {
+                print_pattern(f, pat);
+                f.string(" ");
+            }
+        }
+        ArgLabel::Labelled(name) => {
+            if pattern_is_simple_var(pat, &name.txt) {
+                f.string("~");
+                f.string(&name.txt);
+                f.string("  ");
+            } else {
+                f.string("~");
+                f.string(&name.txt);
+                f.string(":");
+                print_pattern(f, pat);
+                f.string("  ");
+            }
+        }
+        ArgLabel::Optional(name) => {
+            if let Some(def) = default {
+                if pattern_is_simple_var(pat, &name.txt) {
+                    f.string("?(");
+                    f.string(&name.txt);
+                    f.string("= ");
+                    print_expression(f, def);
+                    f.string(")  ");
+                } else {
+                    f.string("?");
+                    f.string(&name.txt);
+                    f.string(":(");
+                    print_pattern(f, pat);
+                    f.string("= ");
+                    print_expression(f, def);
+                    f.string(")  ");
+                }
+            } else if pattern_is_simple_var(pat, &name.txt) {
+                f.string("?");
+                f.string(&name.txt);
+                f.string("  ");
+            } else {
+                f.string("?");
+                f.string(&name.txt);
+                f.string(":");
+                print_pattern(f, pat);
+                f.string("  ");
+            }
+        }
+    }
+}
+
+fn print_remaining_inline_params<'a, W: Write>(
+    f: &mut Formatter<W>,
+    expr: &'a Expression,
+) -> &'a Expression {
+    if !expr.pexp_attributes.is_empty() {
+        return expr;
+    }
+
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_fun {
+            arg_label,
+            default,
+            lhs,
+            rhs,
+            ..
+        } => {
+            print_inline_param(f, arg_label, default, lhs);
+            print_remaining_inline_params(f, rhs)
+        }
+        _ => expr,
+    }
+}
+
+// ============================================================================
+// Expressions
+// ============================================================================
+
+fn print_expression<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+
+    if has_attrs {
+        // OCaml Format: pp f "((%a)@,%a)" (expression ctxt) {x with pexp_attributes = []} (attributes ctxt) x.pexp_attributes
+        // No explicit box - the cut allows breaking before attributes
+        f.string("((");
+        print_expression_inner(f, expr, false);
+        f.string(")");
+        for (name, payload) in attrs {
+            f.cut();
+            f.string("[@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            }
+            f.string(" ]");
+        }
+        f.string(")");
+    } else {
+        print_expression_inner(f, expr, false);
+    }
+}
+
+fn print_expression_no_outer_parens<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+
+    if has_attrs {
+        // OCaml Format: pp f "((%a)@,%a)" - double parens with inner around expr
+        f.string("((");
+        print_expression_inner(f, expr, false);
+        f.string(")");
+        for (name, payload) in attrs {
+            f.cut(); // Allow break before attribute
+            f.string("[@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            }
+            f.string(" ]");
+        }
+        f.string(")");
+    } else {
+        print_expression_inner(f, expr, false);
+    }
+}
+
+fn print_expression_simple<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    // OCaml's simple_expr wraps non-simple expressions in parens
+    // BUT: attributed expressions already produce ((expr)[@attr]) structure
+    // so we don't add extra parens for them
+    let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
+
+    if is_simple_expression(expr) {
+        print_expression(f, expr);
+    } else if has_attrs {
+        // Attributed expressions already produce their own parens structure
+        print_expression(f, expr);
+    } else {
+        f.string("(");
+        print_expression(f, expr);
+        f.string(")");
+    }
+}
+
+fn print_expression_semi_context<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+    let needs_semi_parens = needs_parens_in_semi_context(expr);
+    let is_simple = is_simple_expression(expr);
+
+    if has_attrs {
+        f.string("((");
+        print_expression_inner(f, expr, false);
+        f.string(")");
+        for (name, payload) in attrs {
+            f.cut(); // Allow break before attribute
+            f.string("[@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            }
+            f.string(" ]");
+        }
+        f.string(")");
+    } else if needs_semi_parens {
+        f.string("((");
+        print_expression_inner(f, expr, false);
+        f.string("))");
+    } else if !is_simple {
+        f.string("(");
+        print_expression_inner(f, expr, false);
+        f.string(")");
+    } else {
+        print_expression_inner(f, expr, false);
+    }
+}
+
+fn print_expression_list_context<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+    let needs_semi_parens = needs_parens_in_semi_context(expr);
+
+    if has_attrs {
+        f.string("(");
+        print_expression_inner(f, expr, false);
+        for (name, payload) in attrs {
+            f.cut(); // Allow break before attribute
+            f.string("[@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            }
+            f.string(" ]");
+        }
+        f.string(")");
+    } else if needs_semi_parens {
+        f.string("(");
+        print_expression_inner(f, expr, false);
+        f.string(")");
+    } else {
+        print_expression(f, expr);
+    }
+}
+
+fn print_expression_parens_if_complex<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+    let needs_parens = needs_parens_as_function_arg(expr);
+    let has_own_parens = expression_has_own_parens(expr);
+
+    if has_attrs {
+        // OCaml Format: pp f "((%a)@,%a)" - cut before attributes allows line break there
+        if has_own_parens {
+            f.string("(");
+            print_expression_inner(f, expr, false);
+            for (name, payload) in attrs {
+                f.cut(); // Allow break before attribute
+                f.string("[@");
+                f.string(&name.txt);
+                if !payload_is_empty(payload) {
+                    f.string(" ");
+                    print_payload(f, payload);
+                }
+                f.string(" ]");
+            }
+            f.string(")");
+        } else {
+            f.string("((");
+            print_expression_inner(f, expr, false);
+            f.string(")");
+            for (name, payload) in attrs {
+                f.cut(); // Allow break before attribute
+                f.string("[@");
+                f.string(&name.txt);
+                if !payload_is_empty(payload) {
+                    f.string(" ");
+                    print_payload(f, payload);
+                }
+                f.string(" ]");
+            }
+            f.string(")");
+        }
+    } else if needs_parens && !has_own_parens {
+        f.string("(");
+        print_expression_inner(f, expr, false);
+        f.string(")");
+    } else {
+        print_expression_inner(f, expr, false);
+    }
+}
+
+fn print_fun_body<W: Write>(f: &mut Formatter<W>, expr: &Expression) {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_fun {
+            arg_label,
+            default,
+            lhs,
+            rhs,
+            ..
+        } if expr.pexp_attributes.is_empty() => {
+            f.string("fun ");
+            print_arg_label_expr(f, arg_label);
+            if let Some(def) = default {
+                f.string("?(");
+                print_pattern(f, lhs);
+                f.string(" = ");
+                print_expression(f, def);
+                f.string(")");
+            } else {
+                print_pattern(f, lhs);
+            }
+            f.string(" -> ");
+            print_fun_body(f, rhs);
+        }
+        _ => {
+            print_expression_no_outer_parens(f, expr);
+        }
+    }
+}
+
+fn print_expression_inner<W: Write>(f: &mut Formatter<W>, expr: &Expression, use_parens: bool) {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(lid) => {
+            // OCaml wraps operators in parens when used as values
+            if let Longident::Lident(name) = &lid.txt {
+                if ident_needs_parens(name) {
+                    f.string("(");
+                    f.string(name);
+                    f.string(")");
+                    return;
+                }
+            }
+            print_longident(f, &lid.txt);
+        }
+        ExpressionDesc::Pexp_constant(c) => {
+            let is_negative = match c {
+                Constant::Integer(s, _) | Constant::Float(s, _) => s.starts_with('-'),
+                _ => false,
+            };
+            if is_negative {
+                f.string("(");
+            }
+            print_constant(f, c);
+            if is_negative {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
+            let rec_str = match rec_flag {
+                RecFlag::Recursive => " rec",
+                RecFlag::Nonrecursive => "",
+            };
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 2);
+            f.string("let");
+            f.string(rec_str);
+            for (i, binding) in bindings.iter().enumerate() {
+                if i > 0 {
+                    f.string(" and");
+                }
+                f.string(" ");
+                print_pattern(f, &binding.pvb_pat);
+                f.string(" = ");
+                print_expression(f, &binding.pvb_expr);
+            }
+            f.string(" in");
+            f.space();
+            print_expression(f, body);
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_fun {
+            arg_label,
+            default,
+            lhs,
+            rhs,
+            arity,
+            is_async,
+        } => {
+            let arity_value = match arity {
+                Arity::Full(n) => Some(*n),
+                Arity::Unknown => {
+                    let computed = count_function_arity(expr);
+                    if computed > 0 { Some(computed) } else { None }
+                }
+            };
+            if use_parens {
+                f.string("(");
+            }
+            if *is_async {
+                f.string("async ");
+            }
+            f.string("fun ");
+            if let Some(n) = arity_value {
+                f.string(&format!("[arity:{}]", n));
+            }
+            print_arg_label_expr(f, arg_label);
+            if let Some(def) = default {
+                f.string("?(");
+                print_pattern(f, lhs);
+                f.string(" = ");
+                print_expression(f, def);
+                f.string(")");
+            } else {
+                print_pattern(f, lhs);
+            }
+            f.string(" -> ");
+            print_fun_body(f, rhs);
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
+            // Array access with @res.array.access
+            if has_attribute(&expr.pexp_attributes, "res.array.access") && args.len() == 2 {
+                let (_, arr) = &args[0];
+                let (_, idx) = &args[1];
+                f.string("(");
+                print_expression(f, arr);
+                f.string(".(");
+                print_expression(f, idx);
+                f.string("))");
+                return;
+            }
+
+            // Infix/prefix operators
+            if let Some(op_name) = get_operator_name(funct) {
+                if is_infix_operator(op_name) && args.len() == 2 {
+                    let (_, lhs) = &args[0];
+                    let (_, rhs) = &args[1];
+                    if use_parens {
+                        f.string("(");
+                    }
+                    f.open_box(BoxKind::HOV, 2);
+                    // OCaml uses simple_expr which wraps non-simple exprs in parens
+                    print_expression_simple(f, lhs);
+                    f.space();
+                    f.string(op_name);
+                    f.space();
+                    print_expression_simple(f, rhs);
+                    if *partial {
+                        f.string(" ...");
+                    }
+                    f.close_box();
+                    if use_parens {
+                        f.string(")");
+                    }
+                    return;
+                } else if is_prefix_operator(op_name) && args.len() == 1 {
+                    let (_, arg) = &args[0];
+                    // OCaml converts ~-, ~+, ~-., ~+., ~~ to shorter forms unless arg is a constant
+                    // (to avoid (- 1) being parsed as negative literal)
+                    let shortened_op = match op_name {
+                        "~-" | "~+" | "~-." | "~+." | "~~" => {
+                            if !matches!(&arg.pexp_desc, ExpressionDesc::Pexp_constant(_)) {
+                                &op_name[1..] // Remove leading ~
+                            } else {
+                                op_name
+                            }
+                        }
+                        _ => op_name,
+                    };
+                    // OCaml: @[<2>%s@;%a@] - no outer parens
+                    f.open_box(BoxKind::HOV, 2);
+                    f.string(shortened_op);
+                    f.space();
+                    print_expression_simple(f, arg);
+                    if *partial {
+                        f.string(" ...");
+                    }
+                    f.close_box();
+                    return;
+                }
+            }
+
+            // Default: prefix application
+            // OCaml: pp f "@[<hov2>%a@ %a@]" with break hint between func and args
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 2);
+            print_expression(f, funct);
+            for (label, arg) in args {
+                f.space(); // Break hint between func and args
+                print_arg_with_label(f, label, arg);
+            }
+            if *partial {
+                f.string(" ...");
+            }
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_match(scrutinee, cases) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::HOV, 2);
+            f.string("match ");
+            print_expression(f, scrutinee);
+            f.close_box();
+            f.space();
+            f.string("with");
+            f.close_box();
+            for case in cases {
+                f.space();
+                f.string("| ");
+                // OCaml: @[<2>%a%a@;->@;%a@]
+                f.open_box(BoxKind::HOV, 2);
+                print_pattern(f, &case.pc_lhs);
+                if let Some(guard) = &case.pc_guard {
+                    f.space();
+                    f.string("when ");
+                    print_expression(f, guard);
+                }
+                f.space();
+                f.string("->");
+                f.space();
+                print_expression(f, &case.pc_rhs);
+                f.close_box();
+            }
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_try(body, cases) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 0);
+            f.open_box(BoxKind::HV, 2);
+            f.string("try ");
+            print_expression(f, body);
+            f.close_box();
+            f.space();
+            f.open_box(BoxKind::HOV, 0);
+            f.string("with");
+            for case in cases {
+                f.space();
+                f.string("| ");
+                f.open_box(BoxKind::HOV, 2);
+                print_pattern(f, &case.pc_lhs);
+                if let Some(guard) = &case.pc_guard {
+                    f.string(" when ");
+                    print_expression(f, guard);
+                }
+                f.string(" -> ");
+                print_expression(f, &case.pc_rhs);
+                f.close_box();
+            }
+            f.close_box();
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_tuple(exprs) => {
+            f.string("(");
+            for (i, e) in exprs.iter().enumerate() {
+                if i > 0 {
+                    f.string(", ");
+                }
+                print_expression(f, e);
+            }
+            f.string(")");
+        }
+        ExpressionDesc::Pexp_construct(lid, arg) => {
+            // Special handling for list syntax
+            if let Longident::Lident(name) = &lid.txt {
+                if name == "::" {
+                    let (elements, is_complete) = collect_list_elements(expr);
+                    if is_complete && !elements.is_empty() {
+                        f.string("[");
+                        for (i, elem) in elements.iter().enumerate() {
+                            if i > 0 {
+                                f.string("; ");
+                            }
+                            print_expression_list_context(f, elem);
+                        }
+                        f.string("]");
+                        return;
+                    }
+                    for (i, elem) in elements.iter().enumerate() {
+                        if i > 0 {
+                            f.string(" :: ");
+                        }
+                        print_expression(f, elem);
+                    }
+                    return;
+                } else if name == "[]" {
+                    f.string("[]");
+                    return;
+                } else if name == "()" {
+                    f.string("()");
+                    return;
+                }
+            }
+            print_longident(f, &lid.txt);
+            if let Some(a) = arg {
+                f.string(" ");
+                print_expression(f, a);
+            }
+        }
+        ExpressionDesc::Pexp_variant(label, arg) => {
+            f.string("`");
+            f.string(label);
+            if let Some(a) = arg {
+                f.string(" ");
+                print_expression(f, a);
+            }
+        }
+        ExpressionDesc::Pexp_record(fields, base) => {
+            f.string("{ ");
+            if let Some(b) = base {
+                print_expression(f, b);
+                f.string(" with ");
+            }
+            for (i, field) in fields.iter().enumerate() {
+                if i > 0 {
+                    f.string("; ");
+                }
+                print_longident(f, &field.lid.txt);
+                f.string(" = ");
+                print_expression(f, &field.expr);
+            }
+            f.string(" }");
+        }
+        ExpressionDesc::Pexp_field(obj, field) => {
+            print_expression_simple(f, obj);
+            f.string(".");
+            print_longident(f, &field.txt);
+        }
+        ExpressionDesc::Pexp_setfield(obj, field, value) => {
+            print_expression(f, obj);
+            f.string(".");
+            print_longident(f, &field.txt);
+            f.string(" <- ");
+            print_expression(f, value);
+        }
+        ExpressionDesc::Pexp_array(elems) => {
+            f.open_box(BoxKind::HOV, 0);
+            f.open_box(BoxKind::HOV, 2);
+            f.string("[|");
+            for (i, e) in elems.iter().enumerate() {
+                if i > 0 {
+                    f.string(";");
+                }
+                print_expression_semi_context(f, e);
+            }
+            f.string("|]");
+            f.close_box();
+            f.close_box();
+        }
+        ExpressionDesc::Pexp_ifthenelse(cond, then_expr, else_expr) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::HOV, 2);
+            f.string("if ");
+            print_expression(f, cond);
+            f.close_box();
+            f.space();
+            f.open_box(BoxKind::HOV, 2);
+            f.string("then ");
+            print_expression(f, then_expr);
+            f.close_box();
+            if let Some(e) = else_expr {
+                f.space();
+                f.open_box(BoxKind::HOV, 2);
+                f.string("else ");
+                print_expression(f, e);
+                f.close_box();
+            }
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_sequence(e1, e2) => {
+            if use_parens {
+                f.string("(");
+            }
+            // First element - wrap if it's a let (but not sequence, which prints flat)
+            if matches!(&e1.pexp_desc, ExpressionDesc::Pexp_let(_, _, _)) {
+                f.string("(");
+                print_expression(f, e1);
+                f.string(")");
+            } else {
+                print_expression(f, e1);
+            }
+            f.string("; ");
+            // Second element - wrap if it's a let (sequence nests without extra parens)
+            if matches!(&e2.pexp_desc, ExpressionDesc::Pexp_let(_, _, _)) {
+                f.string("(");
+                print_expression(f, e2);
+                f.string(")");
+            } else {
+                print_expression(f, e2);
+            }
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_while(cond, body) => {
+            // OCaml: @[<2>while@;%a@;do@;%a@;done@]
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 2);
+            f.string("while");
+            f.space();
+            print_expression(f, cond);
+            f.space();
+            f.string("do");
+            f.space();
+            print_expression(f, body);
+            f.space();
+            f.string("done");
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_for(pat, start, end, dir, body) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.string("for ");
+            print_pattern(f, pat);
+            f.string(" = ");
+            print_expression(f, start);
+            let dir_str = match dir {
+                DirectionFlag::Upto => " to ",
+                DirectionFlag::Downto => " downto ",
+            };
+            f.string(dir_str);
+            print_expression(f, end);
+            f.string(" do ");
+            print_expression(f, body);
+            f.string(" done");
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_constraint(e, t) => {
+            f.string("(");
+            print_expression(f, e);
+            f.string(" : ");
+            print_core_type(f, t);
+            f.string(")");
+        }
+        ExpressionDesc::Pexp_coerce(e, t1, t2) => {
+            f.string("(");
+            print_expression(f, e);
+            if let Some(t) = t1 {
+                f.string(" : ");
+                print_core_type(f, t);
+            }
+            f.string(" :> ");
+            print_core_type(f, t2);
+            f.string(")");
+        }
+        ExpressionDesc::Pexp_send(e, meth) => {
+            print_expression(f, e);
+            f.string("#");
+            f.string(&meth.txt);
+        }
+        ExpressionDesc::Pexp_letmodule(name, mexpr, body) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 2);
+            f.string("let module ");
+            f.string(&name.txt);
+            f.string(" = ");
+            print_module_expr(f, mexpr);
+            f.string(" in");
+            f.space();
+            print_expression(f, body);
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_letexception(ext, body) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 2);
+            f.string("let exception ");
+            print_extension_constructor(f, ext);
+            // OCaml has @;%a for attributes which produces trailing space even when no attrs
+            f.string("  in"); // Double space to match OCaml's trailing break from constructor_declaration
+            f.space();
+            print_expression(f, body);
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_assert(e) => {
+            // OCaml: @[<hov2>assert@ %a@] - no parens
+            // Parens come from simple_expr when needed
+            f.open_box(BoxKind::HOV, 2);
+            f.string("assert ");
+            print_expression_simple(f, e);
+            f.close_box();
+        }
+        ExpressionDesc::Pexp_newtype(name, body) => {
+            f.string("(fun (type ");
+            f.string(&name.txt);
+            f.string(") -> ");
+            print_expression(f, body);
+            f.string(")");
+        }
+        ExpressionDesc::Pexp_pack(mexpr) => {
+            f.string("(module ");
+            print_module_expr(f, mexpr);
+            f.string(")");
+        }
+        ExpressionDesc::Pexp_open(_override_flag, lid, body) => {
+            if use_parens {
+                f.string("(");
+            }
+            f.open_box(BoxKind::HOV, 2);
+            f.string("let open ");
+            print_longident(f, &lid.txt);
+            f.string(" in");
+            f.space();
+            print_expression(f, body);
+            f.close_box();
+            if use_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_extension((name, payload)) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            f.close_box();
+        }
+        ExpressionDesc::Pexp_await(e) => {
+            f.string("await ");
+            let needs_parens = !matches!(
+                &e.pexp_desc,
+                ExpressionDesc::Pexp_ident(_)
+                    | ExpressionDesc::Pexp_constant(_)
+                    | ExpressionDesc::Pexp_construct(_, None)
+                    | ExpressionDesc::Pexp_tuple(_)
+                    | ExpressionDesc::Pexp_array(_)
+                    | ExpressionDesc::Pexp_record(_, _)
+            );
+            if needs_parens {
+                f.string("(");
+            }
+            print_expression(f, e);
+            if needs_parens {
+                f.string(")");
+            }
+        }
+        ExpressionDesc::Pexp_jsx_element(_jsx) => {
+            f.string("<jsx>");
+        }
+    }
+}
+
+// ============================================================================
+// Patterns
+// ============================================================================
+
+fn print_pattern<W: Write>(f: &mut Formatter<W>, pat: &Pattern) {
+    let has_attrs = !pat.ppat_attributes.is_empty();
+    if has_attrs {
+        f.string("((");
+    }
+    print_pattern_inner(f, pat);
+    if has_attrs {
+        f.string(")");
+        for (name, payload) in &pat.ppat_attributes {
+            f.cut(); // Allow break before attribute
+            f.string("[@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            }
+            f.string(" ]");
+        }
+        f.string(")");
+    }
+}
+
+fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, pat: &Pattern) {
+    match &pat.ppat_desc {
+        PatternDesc::Ppat_any => {
+            f.string("_");
+        }
+        PatternDesc::Ppat_var(name) => {
+            f.string(&name.txt);
+        }
+        PatternDesc::Ppat_alias(p, name) => {
+            // OCaml: @[<2>%a@;as@;%a@] - no outer parens
+            print_pattern(f, p);
+            f.string(" as ");
+            f.string(&name.txt);
+        }
+        PatternDesc::Ppat_constant(c) => {
+            // Negative numbers need parentheses in patterns
+            if constant_is_negative(c) {
+                f.string("(");
+                print_constant(f, c);
+                f.string(")");
+            } else {
+                print_constant(f, c);
+            }
+        }
+        PatternDesc::Ppat_interval(c1, c2) => {
+            // Negative numbers in intervals need parentheses
+            let c1_needs_parens = constant_is_negative(c1);
+            let c2_needs_parens = constant_is_negative(c2);
+            if c1_needs_parens {
+                f.string("(");
+            }
+            print_constant(f, c1);
+            if c1_needs_parens {
+                f.string(")");
+            }
+            f.string("..");
+            if c2_needs_parens {
+                f.string("(");
+            }
+            print_constant(f, c2);
+            if c2_needs_parens {
+                f.string(")");
+            }
+        }
+        PatternDesc::Ppat_tuple(pats) => {
+            f.string("(");
+            for (i, p) in pats.iter().enumerate() {
+                if i > 0 {
+                    f.string(", ");
+                }
+                // Alias patterns inside tuples need parentheses
+                let needs_parens = matches!(p.ppat_desc, PatternDesc::Ppat_alias(..));
+                if needs_parens {
+                    f.string("(");
+                }
+                print_pattern(f, p);
+                if needs_parens {
+                    f.string(")");
+                }
+            }
+            f.string(")");
+        }
+        PatternDesc::Ppat_construct(lid, arg) => {
+            // Special case for cons pattern - no outer parens by default
+            if let Longident::Lident(name) = &lid.txt {
+                if name == "::" {
+                    if let Some(a) = arg {
+                        if let PatternDesc::Ppat_tuple(elements) = &a.ppat_desc {
+                            if elements.len() == 2 {
+                                // Left element needs parens if it's an alias or constraint
+                                let left_needs_parens = pattern_needs_parens_as_param(&elements[0]);
+                                if left_needs_parens {
+                                    f.string("(");
+                                }
+                                print_pattern(f, &elements[0]);
+                                if left_needs_parens {
+                                    f.string(")");
+                                }
+                                f.string("::");
+                                // Right element needs parens if it's an alias (so it doesn't
+                                // look like `(x::xs) as tail`)
+                                let right_needs_parens = matches!(
+                                    &elements[1].ppat_desc,
+                                    PatternDesc::Ppat_alias(..)
+                                );
+                                if right_needs_parens {
+                                    f.string("(");
+                                }
+                                print_pattern(f, &elements[1]);
+                                if right_needs_parens {
+                                    f.string(")");
+                                }
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            print_longident(f, &lid.txt);
+            if let Some(a) = arg {
+                f.string(" ");
+                // Alias patterns in constructor arguments need parentheses
+                let needs_parens = matches!(a.ppat_desc, PatternDesc::Ppat_alias(..));
+                if needs_parens {
+                    f.string("(");
+                }
+                print_pattern(f, a);
+                if needs_parens {
+                    f.string(")");
+                }
+            }
+        }
+        PatternDesc::Ppat_variant(label, arg) => {
+            f.string("`");
+            f.string(label);
+            if let Some(a) = arg {
+                f.string(" ");
+                print_pattern(f, a);
+            }
+        }
+        PatternDesc::Ppat_record(fields, closed) => {
+            f.string("{ ");
+            for (i, field) in fields.iter().enumerate() {
+                if i > 0 {
+                    f.string("; ");
+                }
+                let field_name = match &field.lid.txt {
+                    Longident::Lident(name) => Some(name.as_str()),
+                    Longident::Ldot(_, name) => Some(name.as_str()),
+                    _ => None,
+                };
+                let is_punned = if let Some(fname) = field_name {
+                    matches!(&field.pat.ppat_desc, PatternDesc::Ppat_var(var) if var.txt == fname)
+                } else {
+                    false
+                };
+
+                if is_punned {
+                    print_longident(f, &field.lid.txt);
+                } else {
+                    print_longident(f, &field.lid.txt);
+                    f.string(" = ");
+                    print_pattern(f, &field.pat);
+                }
+            }
+            if matches!(closed, ClosedFlag::Open) {
+                f.string(";_}");
+            } else {
+                f.string(" }");
+            }
+        }
+        PatternDesc::Ppat_array(pats) => {
+            f.string("[|");
+            for (i, p) in pats.iter().enumerate() {
+                if i > 0 {
+                    f.string(";");
+                }
+                print_pattern(f, p);
+            }
+            f.string("|]");
+        }
+        PatternDesc::Ppat_or(p1, p2) => {
+            print_pattern(f, p1);
+            f.string("|");
+            print_pattern(f, p2);
+        }
+        PatternDesc::Ppat_constraint(p, t) => {
+            f.string("(");
+            // Alias, or, and cons patterns inside constraints need extra parens
+            let needs_inner_parens = matches!(
+                p.ppat_desc,
+                PatternDesc::Ppat_alias(..) | PatternDesc::Ppat_or(..)
+            ) || is_cons_pattern(p);
+            if needs_inner_parens {
+                f.string("(");
+            }
+            print_pattern(f, p);
+            if needs_inner_parens {
+                f.string(")");
+            }
+            f.string(" : ");
+            print_core_type(f, t);
+            f.string(")");
+        }
+        PatternDesc::Ppat_type(lid) => {
+            f.string("#");
+            print_longident(f, &lid.txt);
+        }
+        PatternDesc::Ppat_unpack(name) => {
+            f.string("(module ");
+            f.string(&name.txt);
+            f.string(")");
+        }
+        PatternDesc::Ppat_exception(p) => {
+            f.string("exception ");
+            // Or-patterns and alias patterns inside exception need parentheses
+            let needs_parens = matches!(
+                p.ppat_desc,
+                PatternDesc::Ppat_or(..) | PatternDesc::Ppat_alias(..)
+            );
+            if needs_parens {
+                f.string("(");
+            }
+            print_pattern(f, p);
+            if needs_parens {
+                f.string(")");
+            }
+        }
+        PatternDesc::Ppat_extension((name, payload)) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            f.close_box();
+        }
+        PatternDesc::Ppat_open(lid, p) => {
+            print_longident(f, &lid.txt);
+            f.string(".(");
+            print_pattern(f, p);
+            f.string(")");
+        }
+    }
+}
+
+// ============================================================================
+// Types
+// ============================================================================
+
+fn print_core_type<W: Write>(f: &mut Formatter<W>, typ: &CoreType) {
+    // Types with attributes are wrapped: ((type)[@attr ])
+    let has_attrs = printable_attributes(&typ.ptyp_attributes).len() > 0;
+    if has_attrs {
+        f.string("((");
+    }
+    print_core_type_inner(f, typ);
+    if has_attrs {
+        f.string(")");
+        print_attributes(f, &typ.ptyp_attributes);
+        f.string(")");
+    }
+}
+
+fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, typ: &CoreType) {
+    match &typ.ptyp_desc {
+        CoreTypeDesc::Ptyp_any => {
+            f.string("_");
+        }
+        CoreTypeDesc::Ptyp_var(name) => {
+            f.string("'");
+            f.string(name);
+        }
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
+            print_arg_label(f, &arg.lbl);
+            // Arrow types as labeled args need parentheses
+            let arg_needs_parens = !matches!(arg.lbl, ArgLabel::Nolabel)
+                && matches!(arg.typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+            if arg_needs_parens {
+                f.string("(");
+            }
+            print_core_type(f, &arg.typ);
+            if arg_needs_parens {
+                f.string(")");
+            }
+            f.string(" -> ");
+            print_core_type(f, ret);
+            if let Arity::Full(n) = arity {
+                f.string(&format!(" (a:{})", n));
+            }
+        }
+        CoreTypeDesc::Ptyp_tuple(types) => {
+            f.string("(");
+            for (i, t) in types.iter().enumerate() {
+                if i > 0 {
+                    f.string(" * ");
+                }
+                // Alias types inside tuple need parens for precedence
+                let needs_parens = matches!(t.ptyp_desc, CoreTypeDesc::Ptyp_alias(..));
+                if needs_parens {
+                    f.string("(");
+                }
+                print_core_type(f, t);
+                if needs_parens {
+                    f.string(")");
+                }
+            }
+            f.string(")");
+        }
+        CoreTypeDesc::Ptyp_constr(lid, args) => {
+            // OCaml format: list ~first:"(" ~last:")@;" (core_type ctxt) ~sep:",@;" f l
+            // On single line: (type , type ) constructor
+            if !args.is_empty() {
+                if args.len() == 1 {
+                    print_core_type(f, &args[0]);
+                    // Single arg has @; after = space
+                    f.string(" ");
+                } else {
+                    f.string("(");
+                    for (i, t) in args.iter().enumerate() {
+                        if i > 0 {
+                            // Separator is ,@; = comma + break = ", "
+                            f.string(", ");
+                        }
+                        print_core_type(f, t);
+                    }
+                    // last is ")@;" = ) + break = ") "
+                    f.string(") ");
+                }
+            }
+            print_longident(f, &lid.txt);
+        }
+        CoreTypeDesc::Ptyp_object(fields, closed) => {
+            // OCaml format: @[<hov2><@ %a%a@ > @]
+            // Field format: @[<hov2>%s: %a@ %a@ @]
+            f.string("< ");
+            for (i, field) in fields.iter().enumerate() {
+                if i > 0 {
+                    f.string(";");
+                }
+                match field {
+                    ObjectField::Otag(name, attrs, typ) => {
+                        // OCaml format: @[<hov2>%s: %a@ %a@ @]
+                        // = name: type (break) attrs (break) close_box
+                        // On single line: name: type<space>attrs<space>
+                        f.string(&name.txt);
+                        f.string(": ");
+                        print_core_type(f, typ);
+                        // After type: @ (break = space)
+                        f.string(" ");
+                        // Attributes: %a then @ (break)
+                        let printable = printable_attributes(attrs);
+                        if !printable.is_empty() {
+                            print_attributes(f, attrs);
+                        }
+                        // Final break from @ before @]
+                        f.string(" ");
+                    }
+                    ObjectField::Oinherit(typ) => {
+                        // OCaml format: @[<hov2>%a@ @]
+                        print_core_type(f, typ);
+                        f.string(" ");
+                    }
+                }
+            }
+            // Open object suffix
+            // OCaml field_var: if fields empty then ".." else " ;.."
+            if matches!(closed, ClosedFlag::Open) {
+                if fields.is_empty() {
+                    f.string("..");
+                } else {
+                    // Note: leading space before ;.. (combines with field's trailing space)
+                    f.string(" ;..");
+                }
+            }
+            f.string(" > ");
+        }
+        CoreTypeDesc::Ptyp_alias(t, name) => {
+            // Arrow types inside alias need parens for precedence
+            let needs_parens = matches!(t.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+            if needs_parens {
+                f.string("(");
+            }
+            print_core_type(f, t);
+            if needs_parens {
+                f.string(")");
+            }
+            f.string(" as '");
+            f.string(name);
+        }
+        CoreTypeDesc::Ptyp_variant(rows, closed, labels) => {
+            // OCaml: @[<2>[%a%a]@] with complex formatting
+            f.string("[");
+
+            // Empty variant cases
+            if rows.is_empty() {
+                match closed {
+                    ClosedFlag::Open => f.string(">"),
+                    ClosedFlag::Closed => {}
+                }
+            } else {
+                // Non-empty: prefix + list
+                match (closed, &labels) {
+                    (ClosedFlag::Closed, None) => f.string(" "), // Just break
+                    (ClosedFlag::Closed, Some(_)) => f.string("< "), // < + break
+                    (ClosedFlag::Open, _) => f.string("> "), // > + break
+                }
+
+                for (i, row) in rows.iter().enumerate() {
+                    if i > 0 {
+                        // Separator: @;<1 -2>| = break + " | " on same line
+                        f.string(" | ");
+                    }
+                    match row {
+                        RowField::Rtag(label, attrs, empty, types) => {
+                            // OCaml: @[<2>%a%a@;%a@]
+                            f.string("`");
+                            f.string(&label.txt);
+                            if !*empty || !types.is_empty() {
+                                // of@; = " of "
+                                f.string(" of ");
+                                for (j, t) in types.iter().enumerate() {
+                                    if j > 0 {
+                                        f.string("&");
+                                    }
+                                    print_core_type(f, t);
+                                }
+                            }
+                            // Trailing break (@;) then attrs
+                            f.string(" ");
+                            print_attributes(f, attrs);
+                        }
+                        RowField::Rinherit(typ) => {
+                            print_core_type(f, typ);
+                        }
+                    }
+                }
+            }
+
+            // Low labels (present for some polymorphic variants)
+            // OCaml: Some [] | None -> () (do nothing)
+            //        Some xs -> print "> " then labels
+            if let Some(lbls) = labels {
+                if !lbls.is_empty() {
+                    f.string("> ");
+                    for (i, lbl) in lbls.iter().enumerate() {
+                        if i > 0 {
+                            f.string(" ");
+                        }
+                        f.string("`");
+                        f.string(lbl);
+                    }
+                }
+            }
+            f.string("]");
+        }
+        CoreTypeDesc::Ptyp_poly(vars, t) => {
+            if !vars.is_empty() {
+                for var in vars {
+                    f.string("'");
+                    f.string(&var.txt);
+                    f.string(" ");
+                }
+                f.string(". ");
+            }
+            print_core_type(f, t);
+        }
+        CoreTypeDesc::Ptyp_package((lid, constraints)) => {
+            f.string("(module ");
+            print_longident(f, &lid.txt);
+            for (path, typ) in constraints {
+                f.string(" with type ");
+                print_longident(f, &path.txt);
+                f.string(" = ");
+                print_core_type(f, typ);
+            }
+            f.string(")");
+        }
+        CoreTypeDesc::Ptyp_extension((name, payload)) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            f.close_box();
+        }
+    }
+    // Note: attributes handled in print_core_type wrapper
+}
+
+// ============================================================================
+// Labels and arguments
+// ============================================================================
+
+fn print_arg_label<W: Write>(f: &mut Formatter<W>, label: &ArgLabel) {
+    // In OCaml types, labeled arguments are printed as "label:type" without ~
+    match label {
+        ArgLabel::Nolabel => {}
+        ArgLabel::Labelled(s) => {
+            f.string(&s.txt);
+            f.string(":");
+        }
+        ArgLabel::Optional(s) => {
+            f.string("?");
+            f.string(&s.txt);
+            f.string(":");
+        }
+    }
+}
+
+/// Print arg label for expression context (uses ~)
+fn print_arg_label_expr<W: Write>(f: &mut Formatter<W>, label: &ArgLabel) {
+    match label {
+        ArgLabel::Nolabel => {}
+        ArgLabel::Labelled(s) => {
+            f.string("~");
+            f.string(&s.txt);
+            f.string(":");
+        }
+        ArgLabel::Optional(s) => {
+            f.string("?");
+            f.string(&s.txt);
+            f.string(":");
+        }
+    }
+}
+
+fn print_arg_with_label<W: Write>(f: &mut Formatter<W>, label: &ArgLabel, arg: &Expression) {
+    match label {
+        ArgLabel::Labelled(name) => {
+            if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
+                if let Longident::Lident(arg_name) = &lid.txt {
+                    if arg_name == &name.txt && arg.pexp_attributes.is_empty() {
+                        f.string("~");
+                        f.string(&name.txt);
+                        return;
+                    }
+                }
+            }
+            f.string("~");
+            f.string(&name.txt);
+            f.string(":");
+            // OCaml uses simple_expr which wraps non-simple exprs in parens
+            print_expression_simple(f, arg);
+        }
+        ArgLabel::Optional(name) => {
+            if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
+                if let Longident::Lident(arg_name) = &lid.txt {
+                    if arg_name == &name.txt && arg.pexp_attributes.is_empty() {
+                        f.string("?");
+                        f.string(&name.txt);
+                        return;
+                    }
+                }
+            }
+            f.string("?");
+            f.string(&name.txt);
+            f.string(":");
+            // OCaml uses simple_expr which wraps non-simple exprs in parens
+            print_expression_simple(f, arg);
+        }
+        ArgLabel::Nolabel => {
+            // OCaml uses simple_expr which wraps non-simple exprs in parens
+            print_expression_simple(f, arg);
+        }
+    }
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+fn print_constant<W: Write>(f: &mut Formatter<W>, c: &Constant) {
+    match c {
+        Constant::Integer(s, suffix) => {
+            f.string(s);
+            if let Some(c) = suffix {
+                f.string(&c.to_string());
+            }
+        }
+        Constant::Char(i) => {
+            let escaped = match *i {
+                0x5C => "\\\\".to_string(),
+                0x27 => "\\'".to_string(),
+                0x0A => "\\n".to_string(),
+                0x09 => "\\t".to_string(),
+                0x08 => "\\b".to_string(),
+                0x0D => "\\r".to_string(),
+                n if (0x20..=0x7E).contains(&n) => {
+                    if let Some(c) = char::from_u32(n as u32) {
+                        c.to_string()
+                    } else {
+                        format!("\\{}", n)
+                    }
+                }
+                n => format!("\\{}", n),
+            };
+            f.string("'");
+            f.string(&escaped);
+            f.string("'");
+        }
+        Constant::String(s, delim) => {
+            // Match OCaml's pprintast.ml:
+            // - None -> %S (quoted string with escaping)
+            // - Some(delim) -> {delim|...|delim} (delimited string)
+            if let Some(d) = delim {
+                f.string("{");
+                f.string(d);
+                f.string("|");
+                f.string(s);
+                f.string("|");
+                f.string(d);
+                f.string("}");
+            } else {
+                f.string("\"");
+                f.string(&escape_string(s));
+                f.string("\"");
+            }
+        }
+        Constant::Float(s, suffix) => {
+            f.string(s);
+            if let Some(c) = suffix {
+                f.string(&c.to_string());
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Longident
+// ============================================================================
+
+fn print_longident<W: Write>(f: &mut Formatter<W>, lid: &Longident) {
+    match lid {
+        Longident::Lident(name) => {
+            f.string(name);
+        }
+        Longident::Ldot(prefix, name) => {
+            print_longident(f, prefix);
+            f.string(".");
+            f.string(name);
+        }
+        Longident::Lapply(m1, m2) => {
+            print_longident(f, m1);
+            f.string("(");
+            print_longident(f, m2);
+            f.string(")");
+        }
+    }
+}
+
+// ============================================================================
+// Payload
+// ============================================================================
+
+fn print_payload<W: Write>(f: &mut Formatter<W>, payload: &Payload) {
+    match payload {
+        Payload::PStr(items) => {
+            // Special case: single Pstr_eval prints just the expression
+            if items.len() == 1 {
+                if let StructureItemDesc::Pstr_eval(expr, attrs) = &items[0].pstr_desc {
+                    print_expression(f, expr);
+                    print_item_attributes(f, attrs);
+                    return;
+                }
+            }
+            for (i, item) in items.iter().enumerate() {
+                print_structure_item(f, item);
+                if i < items.len() - 1 {
+                    f.string("\n  ");
+                }
+            }
+        }
+        Payload::PSig(sig_items) => {
+            // Print signature items with : prefix and newlines between items
+            f.string(":");
+            for (i, item) in sig_items.iter().enumerate() {
+                print_signature_item(f, item);
+                if i < sig_items.len() - 1 {
+                    f.string("\n    ");
+                }
+            }
+        }
+        Payload::PTyp(typ) => {
+            f.string(":");
+            print_core_type(f, typ);
+        }
+        Payload::PPat(pat, guard) => {
+            f.string("?");
+            print_pattern(f, pat);
+            if let Some(g) = guard {
+                f.string(" when ");
+                print_expression(f, g);
+            }
+        }
+    }
+}
+
+// ============================================================================
+// Type declarations
+// ============================================================================
+
+fn print_type_declaration<W: Write>(f: &mut Formatter<W>, decl: &TypeDeclaration) {
     if !decl.ptype_params.is_empty() {
         if decl.ptype_params.len() == 1 {
-            print_core_type_ml(&decl.ptype_params[0].0, out);
-            let _ = write!(out, " ");
+            print_core_type(f, &decl.ptype_params[0].0);
+            f.string(" ");
         } else {
-            let _ = write!(out, "(");
+            f.string("(");
             for (i, (t, _)) in decl.ptype_params.iter().enumerate() {
                 if i > 0 {
-                    let _ = write!(out, ", ");
+                    f.string(", ");
                 }
-                print_core_type_ml(t, out);
+                print_core_type(f, t);
             }
-            let _ = write!(out, ") ");
+            f.string(") ");
         }
     }
-    let _ = write!(out, "{}", decl.ptype_name.txt);
+    f.string(&decl.ptype_name.txt);
 
-    // Print manifest
     if let Some(manifest) = &decl.ptype_manifest {
-        let _ = write!(out, " = ");
+        f.string(" = ");
         if matches!(decl.ptype_private, PrivateFlag::Private) {
-            let _ = write!(out, "private ");
+            f.string("private ");
         }
-        print_core_type_ml(manifest, out);
+        print_core_type(f, manifest);
     }
 
-    // Print kind
     match &decl.ptype_kind {
         TypeKind::Ptype_abstract => {}
         TypeKind::Ptype_variant(ctors) => {
-            let _ = write!(out, " = ");
+            f.string(" =");
             if matches!(decl.ptype_private, PrivateFlag::Private) {
-                let _ = write!(out, "private ");
+                f.string(" private");
             }
             for (i, ctor) in ctors.iter().enumerate() {
+                // Each constructor starts on a new line with | prefix
                 if i > 0 {
-                    let _ = write!(out, " | ");
+                    f.string("\n  | ");
+                } else {
+                    f.string("\n  | ");
                 }
-                let _ = write!(out, "{}", ctor.pcd_name.txt);
+                f.string(&ctor.pcd_name.txt);
                 match &ctor.pcd_args {
                     ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                        let _ = write!(out, " of ");
+                        f.string(" of ");
                         for (j, arg) in args.iter().enumerate() {
                             if j > 0 {
-                                let _ = write!(out, " * ");
+                                f.string(" * ");
                             }
-                            print_core_type_ml(arg, out);
+                            print_core_type(f, arg);
                         }
                     }
                     ConstructorArguments::Pcstr_record(fields) => {
-                        let _ = write!(out, " of {{");
+                        f.string(" of {\n  ");
                         for (j, field) in fields.iter().enumerate() {
                             if j > 0 {
-                                let _ = write!(out, "; ");
+                                f.string(";\n  ");
                             }
                             if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                                let _ = write!(out, "mutable ");
+                                f.string("mutable ");
                             }
-                            let _ = write!(out, "{}: ", field.pld_name.txt);
-                            print_core_type_ml(&field.pld_type, out);
+                            f.string(&field.pld_name.txt);
+                            f.string(": ");
+                            print_core_type(f, &field.pld_type);
                         }
-                        let _ = write!(out, "}}");
+                        f.string("}");
                     }
                     _ => {}
                 }
                 if let Some(res) = &ctor.pcd_res {
-                    let _ = write!(out, " : ");
-                    print_core_type_ml(res, out);
+                    f.string(": ");
+                    print_core_type(f, res);
                 }
+                // Trailing space after each constructor
+                f.string(" ");
             }
         }
         TypeKind::Ptype_record(fields) => {
-            let _ = write!(out, " =");
+            f.string(" =");
             if matches!(decl.ptype_private, PrivateFlag::Private) {
-                let _ = write!(out, " private");
+                f.string(" private");
             }
-            // OCaml breaks line before { when there are multiple type parameters
             if decl.ptype_params.len() > 1 {
-                let _ = write!(out, "\n  {{\n");
+                f.string("\n  {\n");
             } else {
-                let _ = write!(out, " {{\n");
+                f.string(" {\n");
             }
             for (i, field) in fields.iter().enumerate() {
-                let _ = write!(out, "  "); // 2-space indent
+                f.string("  ");
                 if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                    let _ = write!(out, "mutable ");
+                    f.string("mutable ");
                 }
-                let _ = write!(out, "{}: ", field.pld_name.txt);
-                print_core_type_ml(&field.pld_type, out);
+                f.string(&field.pld_name.txt);
+                f.string(": ");
+                print_core_type(f, &field.pld_type);
                 if i < fields.len() - 1 {
-                    let _ = write!(out, " ;\n");
+                    f.string(" ;\n");
                 } else {
-                    let _ = write!(out, " }}");
+                    f.string(" }");
                 }
             }
         }
         TypeKind::Ptype_open => {
-            let _ = write!(out, " = ..");
+            f.string(" = ..");
         }
     }
+
+    // Type attributes
+    print_item_attributes(f, &decl.ptype_attributes);
 }
 
-fn print_extension_constructor_ml(ext: &ExtensionConstructor, out: &mut impl Write) {
-    let _ = write!(out, "{}", ext.pext_name.txt);
+fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, ext: &ExtensionConstructor) {
+    f.string(&ext.pext_name.txt);
     match &ext.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
             match args {
                 ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                    let _ = write!(out, " of ");
+                    f.string(" of ");
                     for (i, arg) in args.iter().enumerate() {
                         if i > 0 {
-                            let _ = write!(out, " * ");
+                            f.string(" * ");
                         }
-                        print_core_type_ml(arg, out);
+                        print_core_type(f, arg);
                     }
+                    f.string(" ");
                 }
                 ConstructorArguments::Pcstr_record(fields) => {
-                    let _ = write!(out, " of {{");
+                    f.string(" of {\n  ");
                     for (i, field) in fields.iter().enumerate() {
                         if i > 0 {
-                            let _ = write!(out, "; ");
+                            f.string("; ");
                         }
                         if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                            let _ = write!(out, "mutable ");
+                            f.string("mutable ");
                         }
-                        let _ = write!(out, "{}: ", field.pld_name.txt);
-                        print_core_type_ml(&field.pld_type, out);
+                        f.string(&field.pld_name.txt);
+                        f.string(": ");
+                        print_core_type(f, &field.pld_type);
                     }
-                    let _ = write!(out, "}}");
+                    f.string(" } ");
                 }
-                _ => {}
+                _ => {
+                    // No args - add trailing space
+                    f.string(" ");
+                }
             }
             if let Some(r) = res {
-                let _ = write!(out, " : ");
-                print_core_type_ml(r, out);
+                f.string(": ");
+                print_core_type(f, r);
+                f.string(" ");
             }
         }
         ExtensionConstructorKind::Pext_rebind(lid) => {
-            let _ = write!(out, " = ");
-            print_longident(&lid.txt, out);
+            // Print attributes before rebind
+            print_attributes(f, &ext.pext_attributes);
+            f.string(" = ");
+            print_longident(f, &lid.txt);
+            return; // Don't print attributes twice
         }
+    }
+    // Print attributes
+    print_attributes(f, &ext.pext_attributes);
+}
+
+// ============================================================================
+// Modules
+// ============================================================================
+
+fn print_module_expr<W: Write>(f: &mut Formatter<W>, mexpr: &ModuleExpr) {
+    // Print attributes on module expressions: ((mexpr)[@attr ])
+    let has_attrs = printable_attributes(&mexpr.pmod_attributes).len() > 0;
+    if has_attrs {
+        f.string("((");
+    }
+    print_module_expr_inner(f, mexpr);
+    if has_attrs {
+        f.string(")");
+        print_attributes(f, &mexpr.pmod_attributes);
+        f.string(")");
     }
 }
 
-fn print_module_expr_ml(mexpr: &ModuleExpr, out: &mut impl Write) {
+fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, mexpr: &ModuleExpr) {
     match &mexpr.pmod_desc {
         ModuleExprDesc::Pmod_ident(lid) => {
-            print_longident(&lid.txt, out);
+            print_longident(f, &lid.txt);
         }
         ModuleExprDesc::Pmod_structure(items) => {
-            let _ = write!(out, "struct ");
+            f.string("struct ");
             for item in items {
-                print_structure_item_ml(item, out);
-                let _ = write!(out, " ");
+                print_structure_item(f, item);
+                f.string(" ");
             }
-            let _ = write!(out, "end");
+            f.string("end");
         }
         ModuleExprDesc::Pmod_functor(name, mtype, body) => {
-            let _ = write!(out, "functor (");
-            let _ = write!(out, "{}", name.txt);
+            f.string("functor (");
+            f.string(&name.txt);
             if let Some(mt) = mtype {
-                let _ = write!(out, " : ");
-                print_module_type_ml(mt, out);
+                f.string(" : ");
+                print_module_type(f, mt);
             }
-            let _ = write!(out, ") -> ");
-            print_module_expr_ml(body, out);
+            f.string(") -> ");
+            print_module_expr(f, body);
         }
         ModuleExprDesc::Pmod_apply(m1, m2) => {
-            print_module_expr_ml(m1, out);
-            let _ = write!(out, "(");
-            print_module_expr_ml(m2, out);
-            let _ = write!(out, ")");
+            print_module_expr(f, m1);
+            f.string("(");
+            print_module_expr(f, m2);
+            f.string(")");
         }
         ModuleExprDesc::Pmod_constraint(m, mt) => {
-            let _ = write!(out, "(");
-            print_module_expr_ml(m, out);
-            let _ = write!(out, " : ");
-            print_module_type_ml(mt, out);
-            let _ = write!(out, ")");
+            f.string("(");
+            print_module_expr(f, m);
+            f.string(" : ");
+            print_module_type(f, mt);
+            f.string(")");
         }
         ModuleExprDesc::Pmod_unpack(e) => {
-            let _ = write!(out, "(val ");
-            print_expression_ml(e, out);
-            let _ = write!(out, ")");
+            f.string("(val ");
+            print_expression(f, e);
+            f.string(")");
         }
-        ModuleExprDesc::Pmod_extension((name, _)) => {
-            let _ = write!(out, "[%%{}]", name.txt);
+        ModuleExprDesc::Pmod_extension((name, payload)) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            f.close_box();
         }
     }
 }
 
-fn print_module_type_ml(mtype: &ModuleType, out: &mut impl Write) {
+fn print_module_type<W: Write>(f: &mut Formatter<W>, mtype: &ModuleType) {
+    // Print attributes on module types: ((mtype)[@attr ])
+    let has_attrs = printable_attributes(&mtype.pmty_attributes).len() > 0;
+    if has_attrs {
+        f.string("((");
+    }
+    print_module_type_inner(f, mtype);
+    if has_attrs {
+        f.string(")");
+        print_attributes(f, &mtype.pmty_attributes);
+        f.string(")");
+    }
+}
+
+fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, mtype: &ModuleType) {
     match &mtype.pmty_desc {
         ModuleTypeDesc::Pmty_ident(lid) => {
-            print_longident(&lid.txt, out);
+            print_longident(f, &lid.txt);
         }
         ModuleTypeDesc::Pmty_signature(items) => {
-            let _ = write!(out, "sig ");
-            for item in items {
-                print_signature_item_ml(item, out);
-                let _ = write!(out, " ");
+            // OCaml uses HV box - breaks all items or none based on fit
+            f.string("sig");
+            if items.is_empty() {
+                f.string("  end");
+            } else {
+                f.string(" ");
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        f.string(" ");
+                    }
+                    print_signature_item(f, item);
+                }
+                f.string(" end");
             }
-            let _ = write!(out, "end");
         }
         ModuleTypeDesc::Pmty_functor(name, arg_type, ret_type) => {
-            let _ = write!(out, "functor (");
-            let _ = write!(out, "{}", name.txt);
-            if let Some(mt) = arg_type {
-                let _ = write!(out, " : ");
-                print_module_type_ml(mt, out);
+            // Anonymous functors (name = "_") are printed as just "ArgType -> RetType"
+            // Named functors are printed as "functor (Name : ArgType) -> RetType"
+            if name.txt == "_" {
+                if let Some(mt) = arg_type {
+                    print_module_type(f, mt);
+                }
+                f.string(" -> ");
+                print_module_type(f, ret_type);
+            } else {
+                f.string("functor (");
+                f.string(&name.txt);
+                if let Some(mt) = arg_type {
+                    f.string(" : ");
+                    print_module_type(f, mt);
+                }
+                f.string(") -> ");
+                print_module_type(f, ret_type);
             }
-            let _ = write!(out, ") -> ");
-            print_module_type_ml(ret_type, out);
         }
         ModuleTypeDesc::Pmty_with(mt, constraints) => {
-            print_module_type_ml(mt, out);
+            print_module_type(f, mt);
             for constraint in constraints {
                 match constraint {
                     WithConstraint::Pwith_type(lid, decl) => {
-                        let _ = write!(out, " with type ");
-                        print_longident(&lid.txt, out);
-                        let _ = write!(out, " = ");
+                        f.string(" with type  ");
+                        print_longident(f, &lid.txt);
+                        f.string(" =  ");
                         if let Some(manifest) = &decl.ptype_manifest {
-                            print_core_type_ml(manifest, out);
+                            print_core_type(f, manifest);
                         }
                     }
                     WithConstraint::Pwith_module(lid1, lid2) => {
-                        let _ = write!(out, " with module ");
-                        print_longident(&lid1.txt, out);
-                        let _ = write!(out, " = ");
-                        print_longident(&lid2.txt, out);
+                        f.string(" with module ");
+                        print_longident(f, &lid1.txt);
+                        f.string(" = ");
+                        print_longident(f, &lid2.txt);
                     }
                     WithConstraint::Pwith_typesubst(lid, decl) => {
-                        let _ = write!(out, " with type ");
-                        print_longident(&lid.txt, out);
-                        let _ = write!(out, " := ");
+                        f.string(" with type ");
+                        print_longident(f, &lid.txt);
+                        f.string(" := ");
                         if let Some(manifest) = &decl.ptype_manifest {
-                            print_core_type_ml(manifest, out);
+                            print_core_type(f, manifest);
                         }
                     }
                     WithConstraint::Pwith_modsubst(lid1, lid2) => {
-                        let _ = write!(out, " with module ");
-                        print_longident(&lid1.txt, out);
-                        let _ = write!(out, " := ");
-                        print_longident(&lid2.txt, out);
+                        f.string(" with module ");
+                        print_longident(f, &lid1.txt);
+                        f.string(" := ");
+                        print_longident(f, &lid2.txt);
                     }
                 }
             }
         }
         ModuleTypeDesc::Pmty_typeof(mexpr) => {
-            let _ = write!(out, "module type of ");
-            print_module_expr_ml(mexpr, out);
+            f.string("module type of ");
+            print_module_expr(f, mexpr);
         }
-        ModuleTypeDesc::Pmty_extension((name, _)) => {
-            let _ = write!(out, "[%%{}]", name.txt);
+        ModuleTypeDesc::Pmty_extension((name, payload)) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            f.close_box();
         }
         ModuleTypeDesc::Pmty_alias(lid) => {
-            let _ = write!(out, "(module ");
-            print_longident(&lid.txt, out);
-            let _ = write!(out, ")");
+            f.string("(module ");
+            print_longident(f, &lid.txt);
+            f.string(")");
         }
     }
 }
 
-/// Print signature in ML format
-pub fn print_signature_ml(signature: &[SignatureItem], out: &mut impl Write) {
-    for (i, item) in signature.iter().enumerate() {
-        if i > 0 {
-            let _ = out.write_all(b" ");
-        }
-        print_signature_item_ml(item, out);
-    }
-    let _ = out.write_all(b"\n");
-}
+// ============================================================================
+// Signature items
+// ============================================================================
 
-fn print_signature_item_ml(item: &SignatureItem, out: &mut impl Write) {
+fn print_signature_item<W: Write>(f: &mut Formatter<W>, item: &SignatureItem) {
     match &item.psig_desc {
         SignatureItemDesc::Psig_value(vd) => {
-            let _ = write!(out, "val {} : ", vd.pval_name.txt);
-            print_core_type_ml(&vd.pval_type, out);
+            if vd.pval_prim.is_empty() {
+                f.string("val ");
+            } else {
+                f.string("external ");
+            }
+            f.string(&vd.pval_name.txt);
+            f.string(" : ");
+            print_core_type(f, &vd.pval_type);
+            for prim in &vd.pval_prim {
+                f.string(" = \"");
+                f.string(prim);
+                f.string("\"");
+            }
+            print_item_attributes(f, &vd.pval_attributes);
         }
         SignatureItemDesc::Psig_type(rec_flag, decls) => {
             let rec_str = match rec_flag {
@@ -1741,62 +2484,123 @@ fn print_signature_item_ml(item: &SignatureItem, out: &mut impl Write) {
             };
             for (i, decl) in decls.iter().enumerate() {
                 if i == 0 {
-                    let _ = write!(out, "type{} ", rec_str);
+                    f.string("type");
+                    f.string(rec_str);
+                    f.string(" ");
                 } else {
-                    let _ = write!(out, " and ");
+                    f.string(" and ");
                 }
-                print_type_declaration_ml(decl, out);
+                print_type_declaration(f, decl);
             }
         }
         SignatureItemDesc::Psig_typext(ext) => {
-            let _ = write!(out, "type ");
-            print_longident(&ext.ptyext_path.txt, out);
-            let _ = write!(out, " += ");
+            f.string("type ");
+            print_longident(f, &ext.ptyext_path.txt);
+            f.string(" += ");
             for (i, ctor) in ext.ptyext_constructors.iter().enumerate() {
                 if i > 0 {
-                    let _ = write!(out, " | ");
+                    f.string(" | ");
                 }
-                print_extension_constructor_ml(ctor, out);
+                print_extension_constructor(f, ctor);
             }
         }
         SignatureItemDesc::Psig_exception(ext) => {
-            let _ = write!(out, "exception ");
-            print_extension_constructor_ml(ext, out);
+            f.string("exception ");
+            print_extension_constructor(f, ext);
         }
         SignatureItemDesc::Psig_module(md) => {
-            let _ = write!(out, "module {} : ", md.pmd_name.txt);
-            print_module_type_ml(&md.pmd_type, out);
+            f.string("module ");
+            f.string(&md.pmd_name.txt);
+            f.string(" : ");
+            print_module_type(f, &md.pmd_type);
         }
         SignatureItemDesc::Psig_recmodule(mds) => {
             for (i, md) in mds.iter().enumerate() {
                 if i == 0 {
-                    let _ = write!(out, "module rec {} : ", md.pmd_name.txt);
+                    f.string("module rec ");
                 } else {
-                    let _ = write!(out, " and {} : ", md.pmd_name.txt);
+                    f.string(" and ");
                 }
-                print_module_type_ml(&md.pmd_type, out);
+                f.string(&md.pmd_name.txt);
+                f.string(" : ");
+                print_module_type(f, &md.pmd_type);
             }
         }
         SignatureItemDesc::Psig_modtype(mtd) => {
-            let _ = write!(out, "module type {}", mtd.pmtd_name.txt);
+            f.string("module type ");
+            f.string(&mtd.pmtd_name.txt);
             if let Some(mt) = &mtd.pmtd_type {
-                let _ = write!(out, " = ");
-                print_module_type_ml(mt, out);
+                // OCaml has trailing space from name + space before =
+                f.string("  = ");
+                print_module_type(f, mt);
             }
         }
         SignatureItemDesc::Psig_open(od) => {
-            let _ = write!(out, "open ");
-            print_longident(&od.popen_lid.txt, out);
+            f.string("open");
+            if matches!(od.popen_override, OverrideFlag::Override) {
+                f.string("!");
+            }
+            f.string(" ");
+            print_longident(f, &od.popen_lid.txt);
+            print_item_attributes(f, &od.popen_attributes);
         }
         SignatureItemDesc::Psig_include(incl) => {
-            let _ = write!(out, "include ");
-            print_module_type_ml(&incl.pincl_mod, out);
+            f.string("include ");
+            print_module_type(f, &incl.pincl_mod);
+            print_item_attributes(f, &incl.pincl_attributes);
         }
-        SignatureItemDesc::Psig_attribute((name, _)) => {
-            let _ = write!(out, "[@@{}]", name.txt);
+        SignatureItemDesc::Psig_attribute((name, payload)) => {
+            // Standalone/floating attributes use [@@@...] (3 @)
+            f.string("[@@@");
+            f.string(&name.txt);
+            if !payload_is_empty(payload) {
+                f.string(" ");
+                print_payload(f, payload);
+            } else {
+                f.string(" ");
+            }
+            f.string("]");
         }
-        SignatureItemDesc::Psig_extension((name, _), _) => {
-            let _ = write!(out, "[%%{}]", name.txt);
+        SignatureItemDesc::Psig_extension((name, payload), attrs) => {
+            f.open_box(BoxKind::H, 2);
+            f.string("[%%");
+            f.string(&name.txt);
+            f.space();
+            print_payload(f, payload);
+            f.string("]");
+            print_item_attributes(f, attrs);
+            f.close_box();
+        }
+    }
+}
+
+fn print_item_attributes<W: Write>(f: &mut Formatter<W>, attrs: &[(Located<String>, Payload)]) {
+    let attrs = printable_attributes(attrs);
+    for (name, payload) in attrs {
+        f.string("[@@");
+        f.string(&name.txt);
+        if !payload_is_empty(payload) {
+            f.string(" ");
+            print_payload(f, payload);
+            f.string("]");
+        } else {
+            f.string(" ]");
+        }
+    }
+}
+
+/// Print attributes with single @ (for expressions, types, patterns)
+fn print_attributes<W: Write>(f: &mut Formatter<W>, attrs: &[(Located<String>, Payload)]) {
+    let attrs = printable_attributes(attrs);
+    for (name, payload) in attrs {
+        f.string("[@");
+        f.string(&name.txt);
+        if !payload_is_empty(payload) {
+            f.string(" ");
+            print_payload(f, payload);
+            f.string("]");
+        } else {
+            f.string(" ]");
         }
     }
 }

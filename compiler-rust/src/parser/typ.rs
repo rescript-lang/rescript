@@ -172,29 +172,33 @@ fn parse_type_alias(p: &mut Parser<'_>, typ: CoreType) -> CoreType {
 
 /// Parse a type expression with optional ES6 arrow support.
 fn parse_typ_expr_inner(p: &mut Parser<'_>, es6_arrow: bool) -> CoreType {
+    let start_pos = p.start_pos.clone(); // Capture before parsing anything
     let attrs = parse_type_attributes(p);
 
     if es6_arrow && super::core::is_es6_arrow_type(p) {
         parse_es6_arrow_type(p, attrs)
     } else {
-        let mut typ = parse_atomic_typ_expr(p, attrs, es6_arrow);
+        let typ = parse_atomic_typ_expr(p, attrs, es6_arrow);
         if es6_arrow && p.token == Token::EqualGreater {
-            typ = parse_arrow_type_rest(p, typ);
+            parse_arrow_type_rest(p, typ, start_pos)
+        } else {
+            typ
         }
-        typ
     }
 }
 
 /// Parse the rest of an arrow type.
-fn parse_arrow_type_rest(p: &mut Parser<'_>, param_type: CoreType) -> CoreType {
+/// `start_pos` is the position before parsing the first argument (to include any leading `'` for type vars).
+fn parse_arrow_type_rest(
+    p: &mut Parser<'_>,
+    param_type: CoreType,
+    start_pos: crate::location::Position,
+) -> CoreType {
     p.expect(Token::EqualGreater);
     // Parse return type without alias - `as` binds looser than `=>`
     // So `int => unit as 'a` is `(int => unit) as 'a`, not `int => (unit as 'a)`
     let return_type = parse_typ_expr_inner(p, true);
-    let loc = p.mk_loc(
-        &param_type.ptyp_loc.loc_start,
-        &return_type.ptyp_loc.loc_end,
-    );
+    let loc = p.mk_loc(&start_pos, &return_type.ptyp_loc.loc_end);
 
     let arg = TypeArg {
         attrs: vec![],
@@ -206,8 +210,8 @@ fn parse_arrow_type_rest(p: &mut Parser<'_>, param_type: CoreType) -> CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_arrow {
             arg: Box::new(arg),
             ret: Box::new(return_type),
-            // OCaml uses ~arity:None for parsed type expressions
-            arity: Arity::Unknown,
+            // Simple unlabeled arrow has arity 1
+            arity: Arity::Full(1),
         },
         ptyp_loc: loc,
         ptyp_attributes: vec![],
@@ -388,8 +392,8 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
             let mut vars: Vec<StringLoc> = vec![];
 
             while p.token == Token::SingleQuote {
-                let var_start = p.start_pos.clone();
-                p.next();
+                p.next(); // consume the single quote first
+                let var_start = p.start_pos.clone(); // capture start position AFTER the quote
                 let name = match &p.token {
                     Token::Lident(name) | Token::Uident(name) => {
                         let name = name.clone();
@@ -419,7 +423,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
             } else if let Some(first) = vars.first() {
                 CoreType {
                     ptyp_desc: CoreTypeDesc::Ptyp_var(first.txt.clone()),
-                    ptyp_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+                    ptyp_loc: first.loc.clone(), // Use the variable's location (excludes the ')
                     ptyp_attributes: vec![],
                 }
             } else {
@@ -487,7 +491,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                 // Unit type: ()
                 p.next();
                 let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
-                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], loc)
+                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], loc.clone(), loc)
             } else {
                 // Parenthesized type or tuple
                 let typ = parse_typ_expr(p);
@@ -560,6 +564,9 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
     }
 
     let lid = super::core::build_longident(&path_parts);
+    // Capture location of just the identifier (to match OCaml's lid.loc)
+    let lid_end_pos = p.prev_end_pos.clone();
+    let lid_loc = p.mk_loc(&start_pos, &lid_end_pos);
 
     // Parse optional type arguments
     let args = if p.token == Token::LessThan {
@@ -573,8 +580,9 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
         vec![]
     };
 
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
-    ast_helper::make_type_constr(lid, args, loc)
+    // ptyp_loc includes the full extent (identifier + type args)
+    let ptyp_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    ast_helper::make_type_constr(lid, args, lid_loc, ptyp_loc)
 }
 
 /// Parse type arguments.
@@ -658,25 +666,50 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         params.push(TypeArg {
             attrs: vec![],
             lbl: ArgLabel::Nolabel,
-            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], unit_loc),
+            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], unit_loc.clone(), unit_loc),
         });
     }
 
-    params
-        .into_iter()
-        .rev()
-        .fold(return_type, |acc, param| {
-            // OCaml uses ~arity:None for parsed type expressions
-            CoreType {
-                ptyp_desc: CoreTypeDesc::Ptyp_arrow {
-                    arg: Box::new(param),
-                    ret: Box::new(acc),
-                    arity: Arity::Unknown,
-                },
-                ptyp_loc: loc.clone(),
-                ptyp_attributes: vec![],
-            }
-        })
+    // The total arity is the number of parameters
+    let total_arity = params.len();
+
+    let result = params.into_iter().rev().fold(return_type, |acc, param| {
+        // Each arrow's location spans from its first argument to the end of return
+        let arrow_loc = Location::from_positions(
+            param.typ.ptyp_loc.loc_start.clone(),
+            acc.ptyp_loc.loc_end.clone(),
+        );
+        CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                arg: Box::new(param),
+                ret: Box::new(acc),
+                // Inner arrows don't have arity annotation
+                arity: Arity::Unknown,
+            },
+            ptyp_loc: arrow_loc,
+            ptyp_attributes: vec![],
+        }
+    });
+
+    // Update the outermost arrow to have the full arity
+    let result = match result.ptyp_desc {
+        CoreTypeDesc::Ptyp_arrow { arg, ret, .. } => CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                arg,
+                ret,
+                arity: Arity::Full(total_arity),
+            },
+            ptyp_loc: result.ptyp_loc,
+            ptyp_attributes: result.ptyp_attributes,
+        },
+        _ => result,
+    };
+
+    // The outermost arrow should start at start_pos (the opening paren) not at first arg
+    CoreType {
+        ptyp_loc: Location::from_positions(start_pos, result.ptyp_loc.loc_end.clone()),
+        ..result
+    }
 }
 
 /// Parse a lowercase identifier.
@@ -1277,9 +1310,9 @@ fn parse_package_constraints(p: &mut Parser<'_>) -> Vec<(super::ast::Loc<Longide
 
 /// Parse an extension.
 fn parse_extension(p: &mut Parser<'_>) -> Extension {
-    p.expect(Token::Percent);
-
+    // OCaml includes the % in the extension name location
     let id_start = p.start_pos.clone();
+    p.expect(Token::Percent);
     let mut parts: Vec<String> = vec![];
 
     loop {

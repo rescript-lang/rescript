@@ -160,15 +160,41 @@ fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
 
     let mut pat = parse_atomic_pattern(p);
 
-    // Handle interval patterns: 1 .. 2, 'a' .. 'z'
+    // Handle interval patterns: 1 .. 2, 'a' .. 'z', -1 .. -1., etc.
     if p.token == Token::DotDot {
         if let PatternDesc::Ppat_constant(from) = &pat.ppat_desc {
             match from {
-                Constant::Integer(..) | Constant::Char(..) => {
+                Constant::Integer(..) | Constant::Char(..) | Constant::Float(..) => {
                     let from = from.clone();
                     p.next();
                     let to = match &p.token {
-                        Token::Int { .. } | Token::Codepoint { .. } => super::expr::parse_constant(p),
+                        Token::Int { .. } | Token::Codepoint { .. } | Token::Float { .. } => {
+                            super::expr::parse_constant(p)
+                        }
+                        Token::Minus => {
+                            // Handle negative numbers: -1, -1.0
+                            p.next();
+                            match &p.token {
+                                Token::Int { i, suffix } => {
+                                    let value = format!("-{}", i);
+                                    let suffix = suffix.clone();
+                                    p.next();
+                                    Constant::Integer(value, suffix)
+                                }
+                                Token::Float { f, suffix } => {
+                                    let value = format!("-{}", f);
+                                    let suffix = suffix.clone();
+                                    p.next();
+                                    Constant::Float(value, suffix)
+                                }
+                                _ => {
+                                    p.err(DiagnosticCategory::Message(
+                                        "Expected number after '-' in interval pattern".to_string(),
+                                    ));
+                                    Constant::Integer("0".to_string(), None)
+                                }
+                            }
+                        }
                         _ => {
                             p.err(DiagnosticCategory::Message(
                                 "Expected constant after '..' in pattern".to_string(),
@@ -201,21 +227,13 @@ fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
     pat
 }
 
-/// Parse a pattern.
-pub fn parse_pattern(p: &mut Parser<'_>) -> Pattern {
+/// Parse a single pattern with optional alias (atomic + interval + as name).
+/// Used by or-pattern parsing so each branch can have its own alias.
+fn parse_single_pattern_with_alias(p: &mut Parser<'_>) -> Pattern {
     let start_pos = p.start_pos.clone();
     let mut pat = parse_single_pattern(p);
 
-    // Handle or-patterns
-    if p.token == Token::Bar {
-        pat = parse_or_pattern(p, pat, start_pos.clone());
-    }
-
-    // Note: Type constraints (pat : type) are NOT handled here.
-    // Callers that need constraints should use parse_constrained_pattern.
-    // This matches OCaml's design where parse_pattern doesn't consume `:`.
-
-    // Handle pattern aliases (pat as name)
+    // Handle pattern aliases (pat as name) for this single branch
     while p.token == Token::As {
         p.next();
         let name = match &p.token {
@@ -243,6 +261,25 @@ pub fn parse_pattern(p: &mut Parser<'_>) -> Pattern {
     pat
 }
 
+/// Parse a pattern.
+pub fn parse_pattern(p: &mut Parser<'_>) -> Pattern {
+    let start_pos = p.start_pos.clone();
+
+    // Parse first pattern with its alias (if any)
+    let mut pat = parse_single_pattern_with_alias(p);
+
+    // Handle or-patterns - each branch can have its own alias
+    if p.token == Token::Bar {
+        pat = parse_or_pattern(p, pat, start_pos.clone());
+    }
+
+    // Note: Type constraints (pat : type) are NOT handled here.
+    // Callers that need constraints should use parse_constrained_pattern.
+    // This matches OCaml's design where parse_pattern doesn't consume `:`.
+
+    pat
+}
+
 /// Parse an or-pattern (pat1 | pat2).
 fn parse_or_pattern(
     p: &mut Parser<'_>,
@@ -253,8 +290,9 @@ fn parse_or_pattern(
 
     while p.token == Token::Bar {
         p.next();
-        // Use parse_single_pattern to handle interval patterns like 'a' .. 'z'
-        patterns.push(parse_single_pattern(p));
+        // Use parse_single_pattern_with_alias so each branch can have its own alias
+        // e.g., `_ as _y | _ as _x` parses as `(_ as _y) | (_ as _x)`
+        patterns.push(parse_single_pattern_with_alias(p));
     }
 
     // Build left-associative or-pattern chain: A | B | C => ((A | B) | C)
@@ -294,7 +332,7 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
 
 /// Create a unit construct pattern `()`.
 pub fn make_unit_construct_pattern(loc: crate::location::Location) -> Pattern {
-    ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc)
+    ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc.clone(), loc)
 }
 
 /// Parse an optional alias `as name` after a pattern.
@@ -397,15 +435,19 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             // Check for alias (as)
             if p.token == Token::As {
                 p.next();
+                // Capture alias name position BEFORE parsing it
+                let alias_start = p.start_pos.clone();
                 let alias = parse_lident(p);
-                let alias_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+                // OCaml: alias name location is just the name, not the whole pattern
+                let alias_name_loc = p.mk_loc(&alias_start, &p.prev_end_pos);
+                let overall_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 let inner = ast_helper::make_var_pat(name, loc);
                 Pattern {
                     ppat_desc: PatternDesc::Ppat_alias(
                         Box::new(inner),
-                        with_loc(alias, alias_loc.clone()),
+                        with_loc(alias, alias_name_loc),
                     ),
-                    ppat_loc: alias_loc,
+                    ppat_loc: overall_loc,
                     ppat_attributes: vec![],
                 }
             } else {
@@ -430,7 +472,7 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             p.next();
             let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             let lid = Longident::Lident(if is_true { "true" } else { "false" }.to_string());
-            ast_helper::make_construct_pat(lid, None, loc)
+            ast_helper::make_construct_pat(lid, None, loc.clone(), loc)
         }
         Token::Lparen => {
             p.next();
@@ -438,16 +480,18 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 // Unit pattern: ()
                 p.next();
                 let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
-                ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc)
+                ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc.clone(), loc)
             } else {
                 // Parenthesized pattern or tuple
-                let pat = parse_constrained_pattern(p);
+                let mut pat = parse_constrained_pattern(p);
                 if p.token == Token::Comma {
                     // Tuple pattern - consume first comma, then parse rest
                     p.next();
                     parse_tuple_pattern(p, start_pos, pat, vec![])
                 } else {
                     p.expect(Token::Rparen);
+                    // Extend the pattern's location to include the parentheses
+                    pat.ppat_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                     pat
                 }
             }
@@ -493,8 +537,12 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             };
 
             let pkg_type = if p.token == Token::Colon {
+                // OCaml: core_type location starts from after the colon
+                let colon_pos = p.start_pos.clone();
                 p.next();
-                Some(super::typ::parse_package_type(p))
+                let mut typ = super::typ::parse_package_type(p);
+                typ.ptyp_loc.loc_start = colon_pos;
+                Some(typ)
             } else {
                 None
             };
@@ -502,9 +550,10 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             p.expect(Token::Rparen);
             let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
+            // OCaml: Ppat_unpack location is just the name, not the whole module(...)
             let unpack = Pattern {
-                ppat_desc: PatternDesc::Ppat_unpack(name_loc),
-                ppat_loc: loc.clone(),
+                ppat_desc: PatternDesc::Ppat_unpack(name_loc.clone()),
+                ppat_loc: name_loc.loc,
                 ppat_attributes: vec![],
             };
 
@@ -538,6 +587,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 let lid = mknoloc(Longident::Lident("::".to_string()));
 
                 let arg = if p.token == Token::Lparen {
+                    // Capture position of ( for tuple location (OCaml includes parens)
+                    let lparen_pos = p.start_pos.clone();
                     p.next();
                     if p.token == Token::Rparen {
                         p.next();
@@ -545,12 +596,14 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                         Some(ast_helper::make_construct_pat(
                             Longident::Lident("()".to_string()),
                             None,
+                            unit_loc.clone(),
                             unit_loc,
                         ))
                     } else {
                         let first = parse_pattern(p);
                         if p.token == Token::Comma {
-                            let tuple_start = first.ppat_loc.loc_start.clone();
+                            // OCaml includes the ( in the tuple location
+                            let tuple_start = lparen_pos.clone();
                             let mut patterns = vec![first];
                             while p.token == Token::Comma {
                                 p.next();
@@ -604,15 +657,10 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                     None
                 };
 
-                let loc = if arg.is_some() {
-                    p.mk_loc(&start_pos, &p.prev_end_pos)
-                } else {
-                    lid_loc
-                };
-
+                // OCaml uses just the constructor name location, not including the argument
                 Pattern {
                     ppat_desc: PatternDesc::Ppat_construct(lid, arg.map(Box::new)),
-                    ppat_loc: loc,
+                    ppat_loc: lid_loc,
                     ppat_attributes: vec![],
                 }
             }
@@ -720,14 +768,18 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
 
     // Check for constructor argument
     let arg = if p.token == Token::Lparen {
+        // Capture position of ( for tuple location (OCaml includes parens)
+        let lparen_pos = p.start_pos.clone();
         p.next();
         if p.token == Token::Rparen {
             p.next();
             // Empty parentheses - unit pattern
-            let unit_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            // OCaml: unit pattern location starts at ( not at constructor name
+            let unit_loc = p.mk_loc(&lparen_pos, &p.prev_end_pos);
             Some(ast_helper::make_construct_pat(
                 Longident::Lident("()".to_string()),
                 None,
+                unit_loc.clone(),
                 unit_loc,
             ))
         } else {
@@ -735,7 +787,8 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
             let first = parse_constrained_pattern(p);
             if p.token == Token::Comma {
                 // Possible multiple arguments - parse remaining
-                let tuple_start = first.ppat_loc.loc_start.clone();
+                // OCaml includes the ( in the tuple location
+                let tuple_start = lparen_pos.clone();
                 let mut patterns = vec![first];
                 while p.token == Token::Comma {
                     p.next();
@@ -794,7 +847,7 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
         loc.clone()
     };
 
-    ast_helper::make_construct_pat(lid, arg, full_loc)
+    ast_helper::make_construct_pat(lid, arg, loc, full_loc)
 }
 
 // ============================================================================
@@ -808,7 +861,8 @@ fn parse_array_pattern(p: &mut Parser<'_>) -> Pattern {
 
     let mut patterns = vec![];
     while p.token != Token::Rbracket && p.token != Token::Eof {
-        patterns.push(parse_pattern(p));
+        // Use parse_constrained_pattern to support [1 : int, 2 : int] syntax
+        patterns.push(parse_constrained_pattern(p));
         if !p.optional(&Token::Comma) {
             break;
         }
@@ -833,8 +887,12 @@ fn parse_list_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         if p.token == Token::DotDotDot {
+            // OCaml includes ... in the spread pattern location
+            let spread_start = p.start_pos.clone();
             p.next();
-            spread = Some(parse_constrained_pattern(p));
+            let mut spread_pat = parse_constrained_pattern(p);
+            spread_pat.ppat_loc.loc_start = spread_start;
+            spread = Some(spread_pat);
             // Allow trailing comma after spread: list{a, ...rest,}
             p.optional(&Token::Comma);
             break;
@@ -998,9 +1056,9 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
 
 /// Parse an extension pattern: %ext or %ext.with.dots(payload)
 fn parse_extension_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) -> Pattern {
+    // OCaml includes the % in the extension name location
+    let id_start = start_pos.clone();
     p.expect(Token::Percent);
-
-    let id_start = p.start_pos.clone();
     let mut parts: Vec<String> = vec![];
 
     loop {
@@ -1160,6 +1218,7 @@ fn parse_poly_variant_pattern(p: &mut Parser<'_>) -> Pattern {
             Some(Box::new(ast_helper::make_construct_pat(
                 Longident::Lident("()".to_string()),
                 None,
+                unit_loc.clone(),
                 unit_loc,
             )))
         } else {
