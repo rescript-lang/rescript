@@ -22,6 +22,10 @@ pub struct CompilerOptions {
     pub dump_typed_sexp: bool,
     /// Print the typed tree as sexp with locations to stderr (like OCaml's -dtyped-sexp-locs)
     pub dump_typed_sexp_locs: bool,
+    /// Print the Lambda IR as sexp to stderr (like OCaml's -dlambda-sexp)
+    pub dump_lambda_sexp: bool,
+    /// Print the Lambda IR as sexp with locations to stderr (like OCaml's -dlambda-sexp-locs)
+    pub dump_lambda_sexp_locs: bool,
 }
 
 /// Compile ReScript source to JavaScript.
@@ -67,6 +71,20 @@ pub fn compile_source_to_js_with_options(
     // Print Lambda IR if requested
     if options.dump_lambda {
         eprintln!("{}", crate::lambda::print::LambdaPrinter::new(&lambda));
+    }
+
+    // Print Lambda sexp if requested
+    if options.dump_lambda_sexp {
+        use std::io::Write;
+        let mut stderr = std::io::stderr();
+        let _ = crate::lambda::sexp_lambda::print_lambda(&lambda, &mut stderr);
+        let _ = stderr.flush();
+    }
+    if options.dump_lambda_sexp_locs {
+        use std::io::Write;
+        let mut stderr = std::io::stderr();
+        let _ = crate::lambda::sexp_lambda::print_lambda_with_locs(&lambda, &mut stderr);
+        let _ = stderr.flush();
     }
 
     // Lambda -> JS IR

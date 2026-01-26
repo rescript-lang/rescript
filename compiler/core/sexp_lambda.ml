@@ -93,36 +93,38 @@ let inline_attribute (attr : Lambda.inline_attribute) =
   | Never_inline -> Sexp.atom "Never_inline"
   | Default_inline -> Sexp.atom "Default_inline"
 
+(* Mutable flag *)
+let mutable_flag_sexp = function
+  | Mutable -> Sexp.atom "Mutable"
+  | Immutable -> Sexp.atom "Immutable"
+
 (* Tag info *)
-let rec tag_info (info : Lambda.tag_info) =
+let tag_info (info : Lambda.tag_info) =
   match info with
-  | Blk_constructor {name; num_nonconst; tag; attrs} ->
+  | Blk_constructor {name; num_nonconst; tag; attrs = _} ->
     Sexp.list [
       Sexp.atom "Blk_constructor";
       string name;
       int num_nonconst;
-      opt (fun t ->
-        Sexp.list [Sexp.atom "tag"; string t.Ast_untagged_variants.name]
-      ) tag;
-      (* Skip attrs for now - they're complex *)
-      Sexp.atom "attrs";
+      int tag;
     ]
   | Blk_tuple -> Sexp.atom "Blk_tuple"
   | Blk_poly_var s -> Sexp.list [Sexp.atom "Blk_poly_var"; string s]
-  | Blk_record fields ->
-    Sexp.list (Sexp.atom "Blk_record" ::
-      List.map (fun (name, _) -> string name) (Array.to_list fields))
-  | Blk_record_inlined {name; num_nonconst; fields; tag} ->
+  | Blk_record {fields; mutable_flag} ->
+    Sexp.list [
+      Sexp.atom "Blk_record";
+      Sexp.list (List.map (fun (name, _) -> string name) (Array.to_list fields));
+      mutable_flag_sexp mutable_flag;
+    ]
+  | Blk_record_inlined {name; num_nonconst; tag; fields; mutable_flag; attrs = _} ->
     Sexp.list [
       Sexp.atom "Blk_record_inlined";
       string name;
       int num_nonconst;
+      int tag;
       Sexp.list (List.map (fun (name, _) -> string name) (Array.to_list fields));
-      opt (fun t -> Sexp.list [Sexp.atom "tag"; string t.Ast_untagged_variants.name]) tag;
+      mutable_flag_sexp mutable_flag;
     ]
-  | Blk_record_ext fields ->
-    Sexp.list (Sexp.atom "Blk_record_ext" ::
-      List.map (fun (name, _) -> string name) (Array.to_list fields))
   | Blk_module fields ->
     Sexp.list (Sexp.atom "Blk_module" :: List.map string fields)
   | Blk_module_export _ ->
@@ -130,12 +132,18 @@ let rec tag_info (info : Lambda.tag_info) =
   | Blk_extension -> Sexp.atom "Blk_extension"
   | Blk_some -> Sexp.atom "Blk_some"
   | Blk_some_not_nested -> Sexp.atom "Blk_some_not_nested"
+  | Blk_record_ext {fields; mutable_flag} ->
+    Sexp.list [
+      Sexp.atom "Blk_record_ext";
+      Sexp.list (List.map string (Array.to_list fields));
+      mutable_flag_sexp mutable_flag;
+    ]
 
 (* Field debug info *)
 let field_dbg_info (info : Lam_compat.field_dbg_info) =
   match info with
-  | Fld_na s -> Sexp.list [Sexp.atom "Fld_na"; opt_string s]
-  | Fld_record {name} -> Sexp.list [Sexp.atom "Fld_record"; string name]
+  | Fld_record {name; mutable_flag} ->
+    Sexp.list [Sexp.atom "Fld_record"; string name; mutable_flag_sexp mutable_flag]
   | Fld_module {name} -> Sexp.list [Sexp.atom "Fld_module"; string name]
   | Fld_record_inline {name} -> Sexp.list [Sexp.atom "Fld_record_inline"; string name]
   | Fld_record_extension {name} -> Sexp.list [Sexp.atom "Fld_record_extension"; string name]
@@ -145,7 +153,6 @@ let field_dbg_info (info : Lam_compat.field_dbg_info) =
   | Fld_extension -> Sexp.atom "Fld_extension"
   | Fld_variant -> Sexp.atom "Fld_variant"
   | Fld_cons -> Sexp.atom "Fld_cons"
-  | Fld_array -> Sexp.atom "Fld_array"
 
 (* Set field debug info *)
 let set_field_dbg_info (info : Lam_compat.set_field_dbg_info) =
@@ -153,11 +160,6 @@ let set_field_dbg_info (info : Lam_compat.set_field_dbg_info) =
   | Fld_record_set s -> Sexp.list [Sexp.atom "Fld_record_set"; string s]
   | Fld_record_inline_set s -> Sexp.list [Sexp.atom "Fld_record_inline_set"; string s]
   | Fld_record_extension_set s -> Sexp.list [Sexp.atom "Fld_record_extension_set"; string s]
-
-(* Mutable flag *)
-let mutable_flag = function
-  | Mutable -> Sexp.atom "Mutable"
-  | Immutable -> Sexp.atom "Immutable"
 
 (* Pointer info *)
 let pointer_info (info : Lam_constant.pointer_info) =
@@ -177,8 +179,10 @@ let pointer_info (info : Lam_constant.pointer_info) =
 let string_delim (delim : External_arg_spec.delim option) =
   match delim with
   | None -> Sexp.atom "None"
+  | Some DNone -> Sexp.list [Sexp.atom "Some"; Sexp.atom "DNone"]
   | Some DNoQuotes -> Sexp.list [Sexp.atom "Some"; Sexp.atom "DNoQuotes"]
   | Some DStarJ -> Sexp.list [Sexp.atom "Some"; Sexp.atom "DStarJ"]
+  | Some DBackQuotes -> Sexp.list [Sexp.atom "Some"; Sexp.atom "DBackQuotes"]
 
 (* Constant *)
 let rec constant (c : Lam_constant.t) =
@@ -240,7 +244,7 @@ let primitive ~with_locs (prim : Lam_primitive.t) =
   | Pis_null_undefined -> Sexp.atom "Pis_null_undefined"
   | Pimport -> Sexp.atom "Pimport"
   | Pmakeblock (tag, info, mut) ->
-    Sexp.list [Sexp.atom "Pmakeblock"; int tag; tag_info info; mutable_flag mut]
+    Sexp.list [Sexp.atom "Pmakeblock"; int tag; tag_info info; mutable_flag_sexp mut]
   | Pfield (n, info) ->
     Sexp.list [Sexp.atom "Pfield"; int n; field_dbg_info info]
   | Psetfield (n, info) ->

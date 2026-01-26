@@ -34,6 +34,7 @@ pub mod convert;
 pub mod free_variables;
 pub mod primitive;
 pub mod print;
+pub mod sexp_lambda;
 pub mod subst;
 pub mod tag_info;
 

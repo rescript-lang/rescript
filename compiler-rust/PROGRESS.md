@@ -1091,6 +1091,14 @@ Phase 3 is being developed for Lambda IR transformations and JavaScript code gen
   - S-expression style output for debugging
   - 8 tests passing
 
+- [x] **Lambda Sexp Parity Testing** (`src/lambda/sexp_lambda.rs`)
+  - S-expression output matching OCaml's `sexp_lambda.ml` format
+  - `print_lambda()` and `print_lambda_with_locs()` public API
+  - Full coverage of all Lambda constructors and primitives
+  - CLI flags: `-dlambda-sexp` and `-dlambda-sexp-locs`
+  - Test script: `scripts/test_lambda_parity.sh`
+  - Used for verifying Lambda IR parity between OCaml and Rust compilers
+
 - [x] **Compilation Context** (`src/lambda/compile_context.rs`)
   - `Continuation` enum for what to do with expression results
   - `TailType`, `MaybeTail`, `Tail` for tail position tracking
@@ -1176,6 +1184,7 @@ Phase 3 is being developed for Lambda IR transformations and JavaScript code gen
 | `src/lambda/subst.rs` | ✅ Complete | Variable substitution |
 | `src/lambda/beta_reduce.rs` | ✅ Complete | Beta reduction |
 | `src/lambda/print.rs` | ✅ Complete | Pretty printing for debugging |
+| `src/lambda/sexp_lambda.rs` | ✅ Complete | S-expression output for parity testing |
 | `src/lambda/compile_context.rs` | ✅ Complete | Compilation context |
 | `src/binary_ast/mod.rs` | ✅ Complete | Binary AST module root |
 | `src/binary_ast/marshal.rs` | ✅ Complete | OCaml Marshal format writer |
