@@ -43,12 +43,48 @@ pub fn has_template_literal_attr(attrs: &[Attribute]) -> bool {
     attrs.iter().any(|attr| attr.0.txt == "res.template")
 }
 
-/// Check if an expression is a ternary expression (if-then-else).
+/// Check if an expression has the ternary attribute.
+pub fn has_ternary_attribute(attrs: &Attributes) -> bool {
+    attrs.iter().any(|attr| attr.0.txt == "res.ternary")
+}
+
+/// Check if an expression is a ternary expression.
+/// This checks for the res.ternary attribute which is added by the parser
+/// for expressions like `cond ? a : b` (as opposed to `if cond { a } else { b }`).
 pub fn is_ternary_expr(expr: &Expression) -> bool {
-    matches!(
-        &expr.pexp_desc,
-        ExpressionDesc::Pexp_ifthenelse(_, _, Some(_))
-    )
+    // Check for res.ternary attribute - this distinguishes ternary from if-then-else
+    has_ternary_attribute(&expr.pexp_attributes)
+}
+
+/// Collect the parts of a ternary expression chain.
+/// Returns a list of (condition, consequent) pairs and the final alternate expression.
+pub fn collect_ternary_parts(
+    expr: &Expression,
+) -> (Vec<(&Expression, &Expression)>, &Expression) {
+    let mut parts = Vec::new();
+    let mut current = expr;
+
+    loop {
+        match &current.pexp_desc {
+            ExpressionDesc::Pexp_ifthenelse(condition, consequent, Some(alternate))
+                if has_ternary_attribute(&current.pexp_attributes) =>
+            {
+                parts.push((condition.as_ref(), consequent.as_ref()));
+                current = alternate;
+            }
+            _ => break,
+        }
+    }
+
+    (parts, current)
+}
+
+/// Filter out ternary attributes from a list of attributes.
+pub fn filter_ternary_attributes(attrs: &Attributes) -> Vec<&Attribute> {
+    attrs
+        .iter()
+        .filter(|attr| attr.0.txt != "res.ternary")
+        .collect()
 }
 
 /// Check if an expression is a if-then-else (any form).
@@ -753,6 +789,81 @@ pub fn mod_expr_functor(mod_expr: &ModuleExpr) -> (Vec<FunctorParam<'_>>, &Modul
 /// Check if attributes contain the await attribute.
 pub fn has_await_attribute(attrs: &Attributes) -> bool {
     attrs.iter().any(|attr| attr.0.txt == "res.await")
+}
+
+// ============================================================================
+// Array/String Access Detection
+// ============================================================================
+
+/// Check if an expression is `Array.get(arr, idx)`.
+pub fn is_array_access(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            if args.len() != 2 {
+                return false;
+            }
+            if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
+                if let Longident::Ldot(base, method) = &lid.txt {
+                    if let Longident::Lident(module) = base.as_ref() {
+                        return module == "Array" && method == "get";
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Check if an expression is `Array.set(arr, idx, value)`.
+pub fn is_array_set(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            if args.len() != 3 {
+                return false;
+            }
+            if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
+                if let Longident::Ldot(base, method) = &lid.txt {
+                    if let Longident::Lident(module) = base.as_ref() {
+                        return module == "Array" && method == "set";
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Check if an expression is `String.get(str, idx)`.
+pub fn is_string_access(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            if args.len() != 2 {
+                return false;
+            }
+            if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
+                if let Longident::Ldot(base, method) = &lid.txt {
+                    if let Longident::Lident(module) = base.as_ref() {
+                        return module == "String" && method == "get";
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Check if an expression is a rewritten underscore apply sugar pattern.
+/// i.e., the pattern `_` that comes from `arr[_]` being rewritten to `(__x) => Array.get(__x, _)`.
+pub fn is_rewritten_underscore_apply_sugar(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(lid) => {
+            matches!(&lid.txt, Longident::Lident(name) if name == "_")
+        }
+        _ => false,
+    }
 }
 
 /// Partition attributes into doc comments and regular attributes.
