@@ -426,9 +426,10 @@ impl Doc {
                             buffer.push('\n');
                             pos = 0;
                         } else {
-                            // Trim trailing whitespace
-                            let trimmed = buffer.trim_end();
-                            buffer.truncate(trimmed.len());
+                            // Trim trailing spaces only (not all whitespace - preserve newlines!)
+                            // This mimics OCaml's flush_newline which only trims ' ' characters
+                            let trimmed_len = buffer.trim_end_matches(' ').len();
+                            buffer.truncate(trimmed_len);
                             buffer.push('\n');
                             for _ in 0..indent {
                                 buffer.push(' ');
@@ -443,8 +444,10 @@ impl Doc {
                                 pos += 1;
                             }
                             LineStyle::Hard => {
-                                let trimmed = buffer.trim_end();
-                                buffer.truncate(trimmed.len());
+                                // Trim trailing spaces only (not all whitespace - preserve newlines!)
+                                // This mimics OCaml's flush_newline which only trims ' ' characters
+                                let trimmed_len = buffer.trim_end_matches(' ').len();
+                                buffer.truncate(trimmed_len);
                                 buffer.push('\n');
                                 pos = 0;
                             }
@@ -562,5 +565,32 @@ mod tests {
         assert_eq!(doc.to_string(80), "[a, b]");
         // When breaks: [\n  a,\n  b,\n]
         assert_eq!(doc.to_string(5), "[\n  a,\n  b,\n]");
+    }
+
+    #[test]
+    fn test_double_hard_line() {
+        // Test that two consecutive hard_lines produce a blank line
+        let doc = Doc::concat(vec![
+            Doc::text("a"),
+            Doc::hard_line(),
+            Doc::hard_line(),
+            Doc::text("b"),
+        ]);
+        assert_eq!(doc.to_string(80), "a\n\nb");
+    }
+
+    #[test]
+    fn test_double_hard_line_in_breakable_group() {
+        // Test that two consecutive hard_lines work inside breakable_group
+        let doc = Doc::breakable_group(
+            Doc::concat(vec![
+                Doc::text("a"),
+                Doc::hard_line(),
+                Doc::hard_line(),
+                Doc::text("b"),
+            ]),
+            true,
+        );
+        assert_eq!(doc.to_string(80), "a\n\nb");
     }
 }
