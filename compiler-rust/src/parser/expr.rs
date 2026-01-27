@@ -488,15 +488,17 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
         }
         Token::Lident(s) if s == "async" => {
             // async arrow function
+            // Capture the async keyword position for Pexp_newtype locations
+            let async_pos = p.start_pos.clone();
             p.next();
             if super::core::is_es6_arrow_expression(p, context == ExprContext::TernaryTrueBranch) {
                 // Pass attrs to arrow expression - they're consumed
-                // OCaml: async function location starts AFTER async, not including it
+                // OCaml: Pexp_fun location starts AFTER async (not including it)
+                // But Pexp_newtype location DOES include async
                 (
-                    parse_es6_arrow_expression(
+                    parse_es6_arrow_expression_async(
                         p,
-                        true,
-                        None, // Don't include "async" in the function location
+                        Some(async_pos), // for Pexp_newtype
                         attrs.clone(),
                         context,
                     ),
@@ -610,6 +612,20 @@ pub fn parse_await_expression(p: &mut Parser<'_>) -> Expression {
     }
 }
 
+/// Parse an ES6 arrow function expression for async functions.
+/// The `async_pos` is used for Pexp_newtype locations (which include 'async').
+fn parse_es6_arrow_expression_async(
+    p: &mut Parser<'_>,
+    async_pos: Option<Position>,
+    arrow_attrs: Attributes,
+    context: ExprContext,
+) -> Expression {
+    // For async functions:
+    // - Pexp_fun location starts AFTER async (the default p.start_pos)
+    // - Pexp_newtype location includes async (async_pos)
+    parse_es6_arrow_expression_internal(p, true, None, async_pos, arrow_attrs, context)
+}
+
 /// Parse an ES6 arrow function expression.
 pub fn parse_es6_arrow_expression(
     p: &mut Parser<'_>,
@@ -618,7 +634,21 @@ pub fn parse_es6_arrow_expression(
     arrow_attrs: Attributes,
     context: ExprContext,
 ) -> Expression {
+    parse_es6_arrow_expression_internal(p, is_async, arrow_start_pos, None, arrow_attrs, context)
+}
+
+/// Internal implementation of ES6 arrow expression parsing.
+fn parse_es6_arrow_expression_internal(
+    p: &mut Parser<'_>,
+    is_async: bool,
+    arrow_start_pos: Option<Position>,
+    newtype_start_pos: Option<Position>, // For async, the position including 'async'
+    arrow_attrs: Attributes,
+    context: ExprContext,
+) -> Expression {
     let start_pos = arrow_start_pos.unwrap_or_else(|| p.start_pos.clone());
+    // For async functions, newtype_start_pos is set to the 'async' position
+    let newtype_start = newtype_start_pos.unwrap_or_else(|| start_pos.clone());
     p.leave_breadcrumb(Grammar::Es6ArrowExpr);
 
     // Parse parameters
@@ -661,13 +691,25 @@ pub fn parse_es6_arrow_expression(
     // If there are type params but no term params, add an implicit unit param
     let arrow_expr = if term_params.is_empty() && type_params.is_some() {
         // Implicit unit parameter for type-only arrow
-        let unit_loc = type_params.as_ref().map(|tp| p.mk_loc(&tp.start_pos, &end_pos)).unwrap();
+        // OCaml uses the location of the parenthesized type params group for the implicit unit PATTERN
+        // but the Pexp_fun location spans from the paren start to the end of the body
+        let tp = type_params.as_ref().unwrap();
+        let (unit_pat_loc, pexp_fun_loc) = match (&tp.paren_start_pos, &tp.paren_end_pos) {
+            (Some(start), Some(paren_end)) => (
+                p.mk_loc(start, paren_end),  // Pattern: from ( to )
+                p.mk_loc(start, &end_pos),   // Pexp_fun: from ( to end of body
+            ),
+            _ => {
+                let loc = p.mk_loc(&tp.start_pos, &end_pos);
+                (loc.clone(), loc)
+            }
+        };
         let unit_pat = Pattern {
             ppat_desc: PatternDesc::Ppat_construct(
-                with_loc(Longident::Lident("()".to_string()), unit_loc.clone()),
+                with_loc(Longident::Lident("()".to_string()), unit_pat_loc.clone()),
                 None,
             ),
-            ppat_loc: unit_loc.clone(),
+            ppat_loc: unit_pat_loc,
             ppat_attributes: vec![],
         };
         Expression {
@@ -676,10 +718,10 @@ pub fn parse_es6_arrow_expression(
                 default: None,
                 lhs: unit_pat,
                 rhs: Box::new(body),
-                arity: Arity::Unknown,
+                arity: Arity::Full(1),  // Implicit unit param has arity 1
                 is_async,
             },
-            pexp_loc: unit_loc,
+            pexp_loc: pexp_fun_loc,
             pexp_attributes: vec![],
         }
     } else {
@@ -727,24 +769,41 @@ pub fn parse_es6_arrow_expression(
     };
 
     // Handle newtype parameters
+    // OCaml's make_newtypes creates the chain without attrs, then adds attrs to outermost
+    // In OCaml, when there are type params, arrow_attrs is prepended to tp.attrs
+    // and all combined attrs go on the outermost Pexp_newtype (not on the outer wrapper)
+    // For async functions, OCaml uses the 'async' keyword position (newtype_start)
+    // For non-async, OCaml uses the 'type' keyword position (tp.start_pos)
     let arrow_expr = match type_params {
         Some(tp) => {
-            let loc = p.mk_loc(&tp.start_pos, &end_pos);
-            tp.locs
-                .into_iter()
-                .rev()
-                .fold(arrow_expr, |acc, name| Expression {
-                    pexp_desc: ExpressionDesc::Pexp_newtype(name, Box::new(acc)),
+            let loc_start = if is_async { &newtype_start } else { &tp.start_pos };
+            let loc = p.mk_loc(loc_start, &end_pos);
+            // OCaml prepends arrow_attrs to tp.attrs
+            let mut combined_attrs = arrow_attrs;
+            combined_attrs.extend(tp.attrs);
+            // Create the Pexp_newtype chain with combined attrs on outermost
+            let mut locs_iter = tp.locs.into_iter().rev().peekable();
+            let mut expr = arrow_expr;
+            while let Some(name) = locs_iter.next() {
+                let is_outermost = locs_iter.peek().is_none();
+                expr = Expression {
+                    pexp_desc: ExpressionDesc::Pexp_newtype(name, Box::new(expr)),
                     pexp_loc: loc.clone(),
-                    pexp_attributes: tp.attrs.clone(),
-                })
+                    // Only outermost gets the combined attrs
+                    pexp_attributes: if is_outermost { combined_attrs.clone() } else { vec![] },
+                };
+            }
+            expr
         }
-        None => arrow_expr,
+        None => Expression {
+            pexp_attributes: arrow_attrs,
+            ..arrow_expr
+        },
     };
 
+    // Only update the location, don't touch pexp_attributes
     Expression {
         pexp_loc: p.mk_loc(&start_pos, &arrow_expr.pexp_loc.loc_end),
-        pexp_attributes: arrow_attrs,
         ..arrow_expr
     }
 }
@@ -814,7 +873,7 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
 
     match &p.token {
         Token::Lparen => {
-            let start_pos = p.start_pos.clone();
+            let lparen_pos = p.start_pos.clone();
             p.next();
 
             // Skip optional dot (uncurried marker)
@@ -824,7 +883,7 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                 // Unit parameter: () or (.)
                 let end_pos = p.end_pos.clone();
                 p.next();
-                let loc = p.mk_loc(&start_pos, &end_pos);
+                let loc = p.mk_loc(&lparen_pos, &end_pos);
                 let unit_pat = Pattern {
                     ppat_desc: PatternDesc::Ppat_construct(
                         with_loc(Longident::Lident("()".to_string()), loc.clone()),
@@ -839,7 +898,7 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                         label: ArgLabel::Nolabel,
                         expr: None,
                         pat: unit_pat,
-                        start_pos,
+                        start_pos: lparen_pos,
                     },
                 ));
             } else if had_dot {
@@ -853,6 +912,9 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                     }
                 }
                 p.expect(Token::Rparen);
+                let rparen_end_pos = p.prev_end_pos.clone();
+                // Set paren positions on the first type param (if any)
+                set_first_type_param_paren_pos(&mut params, &lparen_pos, &rparen_end_pos);
             } else {
                 while p.token != Token::Rparen && p.token != Token::Eof {
                     if let Some(param) = parse_parameter(p) {
@@ -863,6 +925,9 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                     }
                 }
                 p.expect(Token::Rparen);
+                let rparen_end_pos = p.prev_end_pos.clone();
+                // Set paren positions on the first type param (if any)
+                set_first_type_param_paren_pos(&mut params, &lparen_pos, &rparen_end_pos);
             }
         }
         Token::Lident(_) | Token::Underscore => {
@@ -875,6 +940,22 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
     }
 
     params
+}
+
+/// Set paren positions on the first type param in the list (if any).
+/// Used for computing the implicit unit pattern location in type-only arrows.
+fn set_first_type_param_paren_pos(
+    params: &mut [super::core::FundefParameter],
+    lparen_pos: &Position,
+    rparen_end_pos: &Position,
+) {
+    for param in params.iter_mut() {
+        if let super::core::FundefParameter::Type(tp) = param {
+            tp.paren_start_pos = Some(lparen_pos.clone());
+            tp.paren_end_pos = Some(rparen_end_pos.clone());
+            break; // Only set on the first type param
+        }
+    }
 }
 
 /// Parse a single function parameter.
@@ -896,6 +977,9 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
                 attrs,
                 locs: lidents,
                 start_pos,
+                // These are set by parse_parameters for the first type param in parenthesized groups
+                paren_start_pos: None,
+                paren_end_pos: None,
             },
         ));
     }
