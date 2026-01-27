@@ -247,6 +247,26 @@ fn clear_sources_and_modules(build_state: &mut build::build_types::BuildState) {
     build_state.deps_initialized = false;
 }
 
+/// Clear sources and modules only for packages in the given scope.
+/// Packages outside the scope are left intact, preserving state for watch mode.
+fn clear_sources_and_modules_for_scope(
+    build_state: &mut build::build_types::BuildState,
+    scope: &ahash::AHashSet<String>,
+) {
+    for package in build_state.packages.values_mut() {
+        if scope.contains(&package.name) && package.is_local && package.sources.is_some() {
+            package.sources = None;
+        }
+    }
+    build_state
+        .modules
+        .retain(|_, module| !scope.contains(&module.package_name));
+    build_state
+        .module_names
+        .retain(|name| build_state.modules.contains_key(name));
+    build_state.deps_initialized = false;
+}
+
 /// Compute the build scope from working directory.
 fn compute_scope(
     working_directory: &str,
@@ -356,12 +376,6 @@ async fn handle_build(
             let mut guard = ctx.lock_build_state();
             let build_state = &mut *guard;
 
-            // Precondition: rescan sources from disk (build RPC = full build)
-            {
-                let _span = info_span!("build.clear_sources_and_modules").entered();
-                clear_sources_and_modules(build_state);
-            }
-
             // Ensure packages are discovered before computing scope,
             // so compute_build_scope can walk transitive dependencies.
             {
@@ -396,6 +410,17 @@ async fn handle_build(
                 scope = ?scope,
                 "Build scope"
             );
+
+            // Rescan sources from disk for the build scope.
+            // Scoped builds only clear packages in scope, preserving state
+            // for unrelated packages (important when watch mode is active).
+            {
+                let _span = info_span!("build.clear_sources_and_modules").entered();
+                match &scope {
+                    Some(scope) => clear_sources_and_modules_for_scope(build_state, scope),
+                    None => clear_sources_and_modules(build_state),
+                }
+            }
 
             {
                 let _span = info_span!("build.ensure_packages_loaded", scoped = scope.is_some(),).entered();
