@@ -1005,21 +1005,17 @@ fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
         Token::String(s) => {
             let value = s.clone();
             let tag = get_string_tag(p);
-            // Capture positions before advancing
-            let start_pos = p.start_pos.clone();
-            let end_pos = p.end_pos.clone();
+            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
             p.next();
             // Create Pstr_eval(Pexp_constant(Pconst_string(s, tag)))
-            // Use separate mk_loc calls for pexp_loc and pstr_loc so they have
-            // different LocationIds - OCaml creates separate Location objects here
             let expr = Expression {
                 pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(value, tag)),
-                pexp_loc: p.mk_loc(&start_pos, &end_pos),
+                pexp_loc: loc.clone(),
                 pexp_attributes: vec![],
             };
             let item = StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
-                pstr_loc: p.mk_loc(&start_pos, &end_pos),
+                pstr_loc: loc,
             };
             Payload::PStr(vec![item])
         }
