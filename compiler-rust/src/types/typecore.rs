@@ -2236,8 +2236,15 @@ fn type_function(
     let param_ty = ctx.new_var(None);
     let return_ty = ctx.new_var(None);
 
-    // Build function type
-    let func_ty = ctx.new_arrow_simple(param_ty, return_ty);
+    // Convert arity to Option<i32> for the arrow type
+    let arity_opt = match arity {
+        crate::parser::ast::Arity::Full(n) => Some(n as i32),
+        crate::parser::ast::Arity::Unknown => None,
+    };
+
+    // Build function type with arity and label
+    let ctx_label = convert_arg_label_for_ctx(arg_label);
+    let func_ty = ctx.new_arrow(ctx_label, param_ty, return_ty, arity_opt);
     unify_expression_types(tctx, loc, func_ty, expected_ty, None)?;
 
     // Type check parameter pattern
