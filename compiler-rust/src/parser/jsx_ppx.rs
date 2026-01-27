@@ -2901,22 +2901,34 @@ fn append_children_prop(
         });
     } else {
         // Multiple children: wrap in Module.array([...])
-        let loc = children.first().map(|c| c.pexp_loc.clone()).unwrap_or_else(empty_loc);
+        // OCaml uses real location spanning all children for outer expressions but ghost for inner synthesized ones
+        let loc = if let (Some(first), Some(last)) = (children.first(), children.last()) {
+            Location {
+                loc_start: first.pexp_loc.loc_start.clone(),
+                loc_end: last.pexp_loc.loc_end.clone(),
+                loc_ghost: false,
+                id: crate::location::LocationId::default_id(),
+            }
+        } else {
+            empty_loc()
+        };
 
+        // React.array function - uses ghost location for ident, real loc for outer expr
         let array_fn = Expression {
             pexp_desc: ExpressionDesc::Pexp_ident(Loc {
                 txt: module_access_name(config, "array"),
-                loc: loc.clone(),
+                loc: loc.clone(), // OCaml uses the children loc for the longident
             }),
-            pexp_loc: loc.clone(),
+            pexp_loc: empty_loc(), // Ghost location for the ident expression itself
             pexp_attributes: vec![],
         };
 
+        // Array literal containing children - ghost location
         let children_array = Expression {
             pexp_desc: ExpressionDesc::Pexp_array(
                 children.into_iter().map(|c| transform_expression(c, config)).collect()
             ),
-            pexp_loc: loc.clone(),
+            pexp_loc: empty_loc(), // Ghost location for the array
             pexp_attributes: vec![],
         };
 
