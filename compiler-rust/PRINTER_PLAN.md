@@ -107,7 +107,7 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 
 ## Current Status (2026-01-27)
 
-**Test Results:** 140/506 total tests passing (28%)
+**Test Results:** 142/506 total tests passing (28%)
 
 ### Recently Completed
 - ✅ `PrinterState` struct with custom_layout tracking
@@ -157,6 +157,10 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ✅ **Record pattern constraint parens** - `{age: (age2: int)}` properly parenthesized
 - ✅ **First-class module patterns** - `module(P: S)` printed correctly
 - ✅ **Extension payloads** - `%raw("__GC")` now prints the payload
+- ✅ **String.get not converted to bracket syntax** - `String.get(s, i)` preserved, only `Array.get/set` uses brackets
+- ✅ **If-else chains** - `else if` now printed properly instead of `else { if ... }`
+- ✅ **If-let expressions** - `if let Some(x) = foo() { ... }` chain support
+- ✅ **Type parameter variance** - `+` (covariant) and `-` (contravariant) modifiers now printed
 
 ### Known Issues / TODO
 - ❌ Comment attachment: Comments not properly attaching to nodes
@@ -164,7 +168,6 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ❌ Force-break logic for multi-line constructs (preserving source formatting)
 - ❌ Type parameter line breaking for long parameter lists
 - ❌ Dict syntax sugar not preserved (prints as `Primitive_dict.make([])`)
-- ❌ If-else chains: `else if` printed as `else { if ... }`
 - ❌ Some edge cases in expression printing
 
 ## Implementation Plan

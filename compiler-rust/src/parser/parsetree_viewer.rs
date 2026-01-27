@@ -95,6 +95,83 @@ pub fn is_if_then_else_expr(expr: &Expression) -> bool {
     )
 }
 
+/// Check if attributes contain the "res.iflet" marker.
+pub fn has_if_let_attribute(attrs: &[Attribute]) -> bool {
+    attrs.iter().any(|attr| attr.0.txt == "res.iflet")
+}
+
+/// Check if an expression is an "if let" expression.
+/// This is a `Pexp_match` with the `res.iflet` attribute.
+pub fn is_if_let_expr(expr: &Expression) -> bool {
+    matches!(&expr.pexp_desc, ExpressionDesc::Pexp_match(_, _))
+        && has_if_let_attribute(&expr.pexp_attributes)
+}
+
+/// Represents the kind of condition in an if-chain.
+#[derive(Debug)]
+pub enum IfConditionKind<'a> {
+    /// Regular if condition: `if expr { ... }`
+    If(&'a Expression),
+    /// If-let pattern matching: `if let pattern = expr { ... }`
+    IfLet(&'a Pattern, &'a Expression),
+}
+
+/// Collect all the branches of an if-expression chain.
+/// Returns a list of (location, condition_kind, then_expr) tuples and the final else expression.
+pub fn collect_if_expressions(
+    expr: &Expression,
+) -> (Vec<(&Location, IfConditionKind<'_>, &Expression)>, Option<&Expression>) {
+    let mut acc = Vec::new();
+    let mut current = expr;
+
+    loop {
+        let expr_loc = &current.pexp_loc;
+        match &current.pexp_desc {
+            // Regular if-then-else with else branch
+            ExpressionDesc::Pexp_ifthenelse(if_expr, then_expr, Some(else_expr)) => {
+                acc.push((expr_loc, IfConditionKind::If(if_expr.as_ref()), then_expr.as_ref()));
+                current = else_expr.as_ref();
+            }
+            // Regular if-then without else branch (terminal)
+            ExpressionDesc::Pexp_ifthenelse(if_expr, then_expr, None) => {
+                acc.push((expr_loc, IfConditionKind::If(if_expr.as_ref()), then_expr.as_ref()));
+                return (acc, None);
+            }
+            // if let with no else (pattern matches unit constructor in else branch)
+            ExpressionDesc::Pexp_match(condition, cases)
+                if is_if_let_expr(current)
+                    && cases.len() == 2
+                    && cases[0].pc_guard.is_none()
+                    && matches!(
+                        &cases[1].pc_rhs.pexp_desc,
+                        ExpressionDesc::Pexp_construct(lid, _) if matches!(&lid.txt, Longident::Lident(s) if s == "()")
+                    ) =>
+            {
+                let pattern = &cases[0].pc_lhs;
+                let then_expr = &cases[0].pc_rhs;
+                acc.push((expr_loc, IfConditionKind::IfLet(pattern, condition.as_ref()), then_expr));
+                return (acc, None);
+            }
+            // if let with else branch
+            ExpressionDesc::Pexp_match(condition, cases)
+                if is_if_let_expr(current)
+                    && cases.len() == 2
+                    && cases[0].pc_guard.is_none() =>
+            {
+                let pattern = &cases[0].pc_lhs;
+                let then_expr = &cases[0].pc_rhs;
+                let else_expr = &cases[1].pc_rhs;
+                acc.push((expr_loc, IfConditionKind::IfLet(pattern, condition.as_ref()), then_expr));
+                current = else_expr;
+            }
+            // End of chain
+            _ => {
+                return (acc, Some(current));
+            }
+        }
+    }
+}
+
 /// Check if an expression is a simple "single expression" (not a block).
 pub fn is_single_expression(expr: &Expression) -> bool {
     !is_block_expr(expr)

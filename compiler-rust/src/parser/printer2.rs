@@ -1114,23 +1114,6 @@ pub fn print_expression(
                 rhs_doc,
             ]))
         }
-        // String access: String.get(str, idx) -> str[idx]
-        ExpressionDesc::Pexp_apply { args, .. }
-            if parsetree_viewer::is_string_access(e)
-                && !parsetree_viewer::is_rewritten_underscore_apply_sugar(&args[0].1) =>
-        {
-            let parent_expr = &args[0].1;
-            let member_expr = &args[1].1;
-            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl);
-            let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl);
-            Doc::group(Doc::concat(vec![
-                print_attributes(state, &e.pexp_attributes, cmt_tbl),
-                parent_doc,
-                Doc::lbracket(),
-                member_doc,
-                Doc::rbracket(),
-            ]))
-        }
         // Send-set: obj#prop = value -> obj["prop"] = value
         ExpressionDesc::Pexp_apply { funct, args, .. }
             if is_send_set_expr(funct, args) =>
@@ -1929,33 +1912,106 @@ fn print_ternary_operand(
     }
 }
 
-/// Print if expression.
+/// Print if expression chain.
+/// Handles `if`, `else if`, and `if let` chains properly.
 fn print_if_expression(
     state: &PrinterState,
     e: &Expression,
     cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    match &e.pexp_desc {
-        ExpressionDesc::Pexp_ifthenelse(cond, then_expr, else_expr) => {
-            let cond_doc = print_expression_with_comments(state, cond, cmt_tbl);
-            let then_doc = print_expression_block(state, true, then_expr, cmt_tbl);
-            let else_doc = match else_expr {
-                Some(expr) => Doc::concat(vec![
-                    Doc::text(" else "),
-                    print_expression_block(state, true, expr, cmt_tbl),
-                ]),
-                None => Doc::nil(),
+    print_if_chain(state, &e.pexp_attributes, e, cmt_tbl)
+}
+
+/// Print an if-expression chain with proper `else if` flattening.
+fn print_if_chain(
+    state: &PrinterState,
+    pexp_attributes: &Attributes,
+    e: &Expression,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (ifs, else_expr) = parsetree_viewer::collect_if_expressions(e);
+
+    let if_docs: Vec<Doc> = ifs
+        .iter()
+        .enumerate()
+        .map(|(i, (_outer_loc, condition_kind, then_expr))| {
+            let if_txt = if i > 0 {
+                Doc::text("else if ")
+            } else {
+                Doc::text("if ")
             };
-            Doc::concat(vec![
-                Doc::text("if "),
-                cond_doc,
-                Doc::text(" "),
-                then_doc,
-                else_doc,
-            ])
-        }
-        _ => Doc::nil(),
-    }
+
+            let doc = match condition_kind {
+                parsetree_viewer::IfConditionKind::If(if_expr) => {
+                    let condition = if parsetree_viewer::is_block_expr(if_expr) {
+                        print_expression_block(state, true, if_expr, cmt_tbl)
+                    } else {
+                        let doc = print_expression_with_comments(state, if_expr, cmt_tbl);
+                        match parens::expr(if_expr) {
+                            ParenKind::Parenthesized => add_parens(doc),
+                            ParenKind::Braced(loc) => print_braces(doc, if_expr, loc),
+                            ParenKind::Nothing => Doc::if_breaks(add_parens(doc.clone()), doc),
+                        }
+                    };
+
+                    // Strip braces attribute from then_expr if present (from Reason conversion)
+                    let then_expr_to_print = if let Some(_) = parsetree_viewer::process_braces_attr(then_expr) {
+                        then_expr
+                    } else {
+                        then_expr
+                    };
+
+                    Doc::concat(vec![
+                        if_txt,
+                        Doc::group(condition),
+                        Doc::space(),
+                        print_expression_block(state, true, then_expr_to_print, cmt_tbl),
+                    ])
+                }
+                parsetree_viewer::IfConditionKind::IfLet(pattern, condition_expr) => {
+                    let condition_doc = {
+                        let doc = print_expression_with_comments(state, condition_expr, cmt_tbl);
+                        match parens::expr(condition_expr) {
+                            ParenKind::Parenthesized => add_parens(doc),
+                            ParenKind::Braced(loc) => print_braces(doc, condition_expr, loc),
+                            ParenKind::Nothing => doc,
+                        }
+                    };
+
+                    Doc::concat(vec![
+                        if_txt,
+                        Doc::text("let "),
+                        print_pattern(state, pattern, cmt_tbl),
+                        Doc::text(" = "),
+                        condition_doc,
+                        Doc::space(),
+                        print_expression_block(state, true, then_expr, cmt_tbl),
+                    ])
+                }
+            };
+
+            // TODO: Print leading comments for outer_loc
+            doc
+        })
+        .collect();
+
+    let if_docs = Doc::join(Doc::space(), if_docs);
+
+    let else_doc = match else_expr {
+        None => Doc::nil(),
+        Some(expr) => Doc::concat(vec![
+            Doc::text(" else "),
+            print_expression_block(state, true, expr, cmt_tbl),
+        ]),
+    };
+
+    // Filter out fragile match attributes (res.ternary, res.iflet, etc.)
+    let attrs = parsetree_viewer::filter_fragile_match_attributes(&e.pexp_attributes);
+    Doc::concat(vec![
+        print_attributes_from_refs(state, &attrs, cmt_tbl),
+        if_docs,
+        else_doc,
+    ])
 }
 
 /// Print expression block (with braces).
@@ -3967,6 +4023,21 @@ fn print_with_constraint(
     }
 }
 
+/// Print a type parameter with variance (covariant +, contravariant -, or invariant).
+fn print_type_param(
+    state: &PrinterState,
+    typ: &CoreType,
+    variance: &Variance,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let variance_doc = match variance {
+        Variance::Covariant => Doc::text("+"),
+        Variance::Contravariant => Doc::text("-"),
+        Variance::Invariant => Doc::nil(),
+    };
+    Doc::concat(vec![variance_doc, print_typ_expr(state, typ, cmt_tbl)])
+}
+
 /// Print a type declaration with its longident.
 fn print_type_declaration_with_lid(
     state: &PrinterState,
@@ -3981,7 +4052,7 @@ fn print_type_declaration_with_lid(
         let params: Vec<Doc> = decl
             .ptype_params
             .iter()
-            .map(|(typ, _variance)| print_typ_expr(state, typ, cmt_tbl))
+            .map(|(typ, variance)| print_type_param(state, typ, variance, cmt_tbl))
             .collect();
         Doc::concat(vec![
             Doc::less_than(),
@@ -4674,7 +4745,7 @@ fn print_type_declaration_inner(
         let params: Vec<Doc> = decl
             .ptype_params
             .iter()
-            .map(|(typ, _variance)| print_typ_expr(state, typ, cmt_tbl))
+            .map(|(typ, variance)| print_type_param(state, typ, variance, cmt_tbl))
             .collect();
         Doc::concat(vec![
             Doc::less_than(),
@@ -4936,7 +5007,7 @@ fn print_type_extension(
         let params: Vec<Doc> = type_ext
             .ptyext_params
             .iter()
-            .map(|(typ, _variance)| print_typ_expr(state, typ, cmt_tbl))
+            .map(|(typ, variance)| print_type_param(state, typ, variance, cmt_tbl))
             .collect();
         Doc::concat(vec![
             Doc::less_than(),
