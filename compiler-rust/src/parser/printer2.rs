@@ -2579,7 +2579,16 @@ pub fn print_pattern(
         }
         // p as x
         PatternDesc::Ppat_alias(pat, alias) => {
+            let needs_parens = matches!(
+                &pat.ppat_desc,
+                PatternDesc::Ppat_or(_, _) | PatternDesc::Ppat_alias(_, _)
+            );
             let pat_doc = print_pattern(state, pat, cmt_tbl);
+            let pat_doc = if needs_parens {
+                Doc::concat(vec![Doc::text("("), pat_doc, Doc::text(")")])
+            } else {
+                pat_doc
+            };
             Doc::concat(vec![pat_doc, Doc::text(" as "), Doc::text(&alias.txt)])
         }
         // module(M)
@@ -2588,7 +2597,17 @@ pub fn print_pattern(
         }
         // exception pat
         PatternDesc::Ppat_exception(pat) => {
-            Doc::concat(vec![Doc::text("exception "), print_pattern(state, pat, cmt_tbl)])
+            let needs_parens = matches!(
+                &pat.ppat_desc,
+                PatternDesc::Ppat_or(_, _) | PatternDesc::Ppat_alias(_, _)
+            );
+            let pat_doc = print_pattern(state, pat, cmt_tbl);
+            let pat_doc = if needs_parens {
+                Doc::concat(vec![Doc::text("("), pat_doc, Doc::text(")")])
+            } else {
+                pat_doc
+            };
+            Doc::group(Doc::concat(vec![Doc::text("exception"), Doc::line(), pat_doc]))
         }
         // %extension
         PatternDesc::Ppat_extension(ext) => {
