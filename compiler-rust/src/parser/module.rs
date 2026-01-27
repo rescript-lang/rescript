@@ -484,6 +484,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             Some(SignatureItemDesc::Psig_exception(ext))
         }
         Token::Module => {
+            let module_start = p.start_pos.clone();
             p.next();
             if p.token == Token::Typ {
                 p.next();
@@ -491,10 +492,13 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 Some(SignatureItemDesc::Psig_modtype(mtd))
             } else if p.token == Token::Rec {
                 p.next();
-                let mds = parse_rec_module_declarations(p, attrs.clone());
+                // For recursive modules, OCaml's pmd_loc includes attributes BEFORE 'module rec'
+                // OCaml passes start_pos (captured BEFORE attributes) to parse_rec_module_spec
+                let mds = parse_rec_module_declarations(p, attrs.clone(), start_pos.clone());
                 Some(SignatureItemDesc::Psig_recmodule(mds))
             } else {
-                let md = parse_module_declaration(p, attrs.clone());
+                // For non-recursive modules, location starts at name (not 'module')
+                let md = parse_module_declaration(p, attrs.clone(), None);
                 Some(SignatureItemDesc::Psig_module(md))
             }
         }
@@ -1272,8 +1276,10 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
         // Unit parameter: `() => MT` - OCaml uses "*" as the name for generative functors
         let start_pos = functor_start.clone();
         p.next();
+        // OCaml creates a location spanning the `()` for the `*` param name
+        let name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
         params.push(FunctorParam {
-            name: mknoloc("*".to_string()),
+            name: with_loc("*".to_string(), name_loc),
             param: None,
             attrs: vec![],
             start_pos,
@@ -1286,9 +1292,10 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
 
             match &p.token {
                 Token::Underscore => {
-                    let loc = p.mk_loc(&p.start_pos, &p.end_pos);
                     p.next();
-                    let name = with_loc("_".to_string(), loc);
+                    // OCaml's arg_name location spans from start_pos (before attrs) to end of `_`
+                    let name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+                    let name = with_loc("_".to_string(), name_loc);
                     let param = if p.token == Token::Colon {
                         p.next();
                         Some(parse_module_type(p))
@@ -1347,8 +1354,10 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
                     if is_unit {
                         p.next();
                         p.expect(Token::Rparen);
+                        // OCaml creates a location spanning the `()` for the `*` param name
+                        let name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                         params.push(FunctorParam {
-                            name: mknoloc("*".to_string()),
+                            name: with_loc("*".to_string(), name_loc),
                             param: None,
                             attrs: param_attrs,
                             start_pos,
@@ -2325,7 +2334,18 @@ fn parse_type_declaration_with_context(
             Token::Lbrace => {
                 // Record type OR object type ({"x": int})
                 if looks_like_object_type_after_lbrace(p) {
-                    manifest = Some(typ::parse_typ_expr(p));
+                    // Detect if this is a spread-first CLOSED object: `{...spread, fields}`
+                    // (not `{.. ...spread}` or `{. ...spread}`)
+                    // OCaml uses ghost location for this specific case
+                    let is_spread_first = p.lookahead(|state| {
+                        state.next(); // consume {
+                        // Check if first token is DotDotDot (not Dot or DotDot)
+                        state.token == Token::DotDotDot
+                    });
+                    let typ = typ::parse_typ_expr(p);
+                    // Apply ghost location fix for spread-first closed objects
+                    let typ = fix_spread_first_object_manifest(typ, is_spread_first).0;
+                    manifest = Some(typ);
                 } else {
                     kind = parse_type_kind(p, Some(inline_ctx), Some(&current_type_name_path));
                 }
@@ -2513,14 +2533,85 @@ fn parse_type_declaration_with_context(
     })
 }
 
+/// Fix the location of a direct spread-first object type manifest.
+/// ONLY applies to the outermost level when the type starts with `{...spread`
+/// (not `{.. ...spread}` or `{. ...spread}` - those use real locations).
+/// Also propagates ghost loc_start to alias wrappers.
+///
+/// Returns the fixed type and whether the fix was applied.
+fn fix_spread_first_object_manifest(typ: CoreType, is_spread_first: bool) -> (CoreType, bool) {
+    if !is_spread_first {
+        return (typ, false);
+    }
+
+    match typ.ptyp_desc {
+        CoreTypeDesc::Ptyp_object(ref fields, closed) => {
+            // Only for CLOSED objects where first field is Oinherit (spread)
+            // Open objects (from {.. ...spread}) should NOT use ghost location
+            let first_is_spread = fields.first().map_or(false, |f| matches!(f, ObjectField::Oinherit(_)));
+            if first_is_spread && closed == ClosedFlag::Closed {
+                (CoreType {
+                    ptyp_loc: Location::none(),
+                    ..typ
+                }, true)
+            } else {
+                (typ, false)
+            }
+        }
+        CoreTypeDesc::Ptyp_alias(inner, alias) => {
+            // Recurse into inner type
+            let (fixed_inner, applied) = fix_spread_first_object_manifest(*inner, true);
+            if applied {
+                // OCaml uses inner type's loc_start for alias, so if inner is ghost, alias start is ghost too
+                let new_loc = Location {
+                    loc_start: fixed_inner.ptyp_loc.loc_start.clone(),
+                    loc_end: typ.ptyp_loc.loc_end,
+                    loc_ghost: typ.ptyp_loc.loc_ghost,
+                    id: typ.ptyp_loc.id,
+                };
+                (CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_alias(Box::new(fixed_inner), alias),
+                    ptyp_loc: new_loc,
+                    ptyp_attributes: typ.ptyp_attributes,
+                }, true)
+            } else {
+                (CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_alias(Box::new(fixed_inner), alias),
+                    ..typ
+                }, false)
+            }
+        }
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
+            // Recurse into arg ONLY if this is the direct manifest level
+            let (fixed_arg_typ, _) = fix_spread_first_object_manifest(arg.typ, true);
+            let fixed_arg = TypeArg {
+                typ: fixed_arg_typ,
+                ..*arg
+            };
+            (CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                    arg: Box::new(fixed_arg),
+                    ret,
+                    arity,
+                },
+                ..typ
+            }, false)
+        }
+        _ => (typ, false),
+    }
+}
+
 /// Fix the location of a Ptyp_constr in a type manifest context.
 /// For qualified identifiers (Ldot), OCaml uses the same location for both
 /// the CoreType and the longident. For unqualified (Lident), it uses full extent.
+/// EXCEPTION: When the type has attributes, OCaml keeps the full extent including
+/// type arguments (this allows the location to cover the entire attributed type).
 fn fix_type_manifest_location(typ: CoreType) -> CoreType {
     match &typ.ptyp_desc {
         CoreTypeDesc::Ptyp_constr(lid, _) => {
-            // Only adjust for qualified identifiers (Ldot)
-            if matches!(lid.txt, Longident::Ldot(..)) {
+            // Only adjust for qualified identifiers (Ldot) WITHOUT attributes
+            // When there are attributes, OCaml keeps the full extent including type args
+            if matches!(lid.txt, Longident::Ldot(..)) && typ.ptyp_attributes.is_empty() {
                 CoreType {
                     ptyp_loc: lid.loc.clone(),
                     ..typ
@@ -3524,8 +3615,11 @@ fn parse_module_definition(p: &mut Parser<'_>, module_start: Position, attrs: At
 }
 
 /// Parse a module declaration (for signature).
-fn parse_module_declaration(p: &mut Parser<'_>, outer_attrs: Attributes) -> ModuleDeclaration {
-    let start_pos = p.start_pos.clone();
+/// Parse a module declaration.
+/// If `start_pos` is Some, use it for the location (for recursive modules where it includes 'module rec' or 'and').
+/// If `start_pos` is None, capture it at the current position (for non-recursive modules where loc starts at name).
+fn parse_module_declaration(p: &mut Parser<'_>, outer_attrs: Attributes, start_pos: Option<Position>) -> ModuleDeclaration {
+    let start_pos = start_pos.unwrap_or_else(|| p.start_pos.clone());
     let inner_attrs = parse_attributes(p);
     // Merge outer (signature item level) attrs with inner (name level) attrs
     let attrs = [outer_attrs, inner_attrs].concat();
@@ -3604,19 +3698,25 @@ fn parse_attributes_and_binding(p: &mut Parser<'_>) -> Attributes {
 }
 
 /// Parse recursive module declarations (for signature).
-fn parse_rec_module_declarations(p: &mut Parser<'_>, outer_attrs: Attributes) -> Vec<ModuleDeclaration> {
+/// Parse recursive module declarations (for signature).
+/// `start_pos` is the position before `module rec`, captured by the caller.
+fn parse_rec_module_declarations(p: &mut Parser<'_>, outer_attrs: Attributes, start_pos: Position) -> Vec<ModuleDeclaration> {
     let mut decls = vec![];
 
-    // Parse first declaration (gets the outer attrs)
-    decls.push(parse_module_declaration(p, outer_attrs));
+    // Parse first declaration (gets the outer attrs and start_pos from caller)
+    // For recursive modules, location includes 'module rec'
+    decls.push(parse_module_declaration(p, outer_attrs, Some(start_pos)));
 
     // Parse additional declarations with `and`
     // Uses parse_attributes_and_binding which backtracks if attrs aren't followed by `and`
     loop {
+        // Capture start_pos BEFORE consuming `and` (like OCaml)
+        let and_start_pos = p.start_pos.clone();
         let attrs = parse_attributes_and_binding(p);
         if p.token == Token::And {
             p.next();
-            decls.push(parse_module_declaration(p, attrs));
+            // For 'and' declarations, location includes 'and'
+            decls.push(parse_module_declaration(p, attrs, Some(and_start_pos)));
         } else {
             break;
         }
@@ -3826,6 +3926,10 @@ pub fn parse_payload(p: &mut Parser<'_>) -> Payload {
         } else {
             // Parse as expression
             let expr = super::expr::parse_expr(p);
+
+            // OCaml: parse_newline_or_semicolon_structure consumes the semicolon
+            // BEFORE computing the location, so structure item location includes the semicolon
+            p.optional(&Token::Semicolon);
             let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
             items.push(StructureItem {
@@ -3834,8 +3938,8 @@ pub fn parse_payload(p: &mut Parser<'_>) -> Payload {
             });
         }
 
-        // Check for more items (separated by semicolons or just by whitespace)
-        p.optional(&Token::Semicolon);
+        // For non-expression items, check for more items
+        // (Expression items already consumed the semicolon above)
 
         // Stop if we hit the closing paren or EOF
         if p.token == Token::Rparen || p.token == Token::Eof {
