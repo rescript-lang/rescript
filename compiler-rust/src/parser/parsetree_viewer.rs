@@ -128,6 +128,53 @@ pub fn expr_is_uncurried_fun(expr: &Expression) -> bool {
     )
 }
 
+/// Check if an expression is "huggable" (can be printed without line breaks).
+pub fn is_huggable_expression(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_array(_)
+        | ExpressionDesc::Pexp_tuple(_)
+        | ExpressionDesc::Pexp_record(_, _) => true,
+        ExpressionDesc::Pexp_constant(Constant::String(_, Some(_))) => true,
+        ExpressionDesc::Pexp_construct(lid, _)
+            if matches!(
+                lid.txt,
+                Longident::Lident(ref s) if s == "::" || s == "[]"
+            ) =>
+        {
+            true
+        }
+        ExpressionDesc::Pexp_extension(ext) if ext.0.txt == "obj" => true,
+        _ if is_block_expr(expr) => true,
+        _ if is_braced_expr(expr) => true,
+        ExpressionDesc::Pexp_constant(Constant::String(txt, None))
+            if is_multiline_text(txt) =>
+        {
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Check if text contains newlines (is multiline).
+fn is_multiline_text(txt: &str) -> bool {
+    let bytes = txt.as_bytes();
+    let len = bytes.len();
+    let mut i = 0;
+    while i < len {
+        match bytes[i] {
+            b'\n' | b'\r' => return true,
+            b'\\' => {
+                if i + 2 >= len {
+                    return false;
+                }
+                i += 2;
+            }
+            _ => i += 1,
+        }
+    }
+    false
+}
+
 /// Check if a longident represents a binary operator.
 pub fn is_binary_operator(lid: &Longident) -> bool {
     match lid {
