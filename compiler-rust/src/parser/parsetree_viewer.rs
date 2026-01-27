@@ -199,6 +199,29 @@ pub fn is_binary_expression(expr: &Expression) -> bool {
     }
 }
 
+/// Get the operator from a binary expression, if it is one.
+pub fn get_binary_operator(expr: &Expression) -> Option<String> {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            if args.len() != 2 {
+                return None;
+            }
+            match &funct.pexp_desc {
+                ExpressionDesc::Pexp_ident(ident) => {
+                    if let Longident::Lident(op) = &ident.txt {
+                        if not_ghost_operator(op, &ident.loc) {
+                            return Some(op.clone());
+                        }
+                    }
+                    None
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 /// Check if expression is an await expression.
 pub fn expr_is_await(expr: &Expression) -> bool {
     matches!(&expr.pexp_desc, ExpressionDesc::Pexp_await(_))

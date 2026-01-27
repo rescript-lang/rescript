@@ -2189,7 +2189,7 @@ fn print_expression_block(
 /// Print function application.
 fn print_pexp_apply(
     state: &PrinterState,
-    _expr: &Expression,
+    expr: &Expression,
     funct: &Expression,
     args: &[(ArgLabel, Expression)],
     cmt_tbl: &mut CommentTable,
@@ -2199,7 +2199,17 @@ fn print_pexp_apply(
         if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
             if let Longident::Lident(op) = &ident.txt {
                 if parsetree_viewer::is_binary_operator_str(op) {
-                    return print_binary_expression(state, op, args, cmt_tbl);
+                    let doc = print_binary_expression(state, op, args, cmt_tbl);
+                    // Check if the binary expression needs parens (when it has printable attributes)
+                    // We filter to only printable attributes for this check
+                    let printable_attrs: Vec<&Attribute> = expr.pexp_attributes
+                        .iter()
+                        .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
+                        .collect();
+                    if !printable_attrs.is_empty() {
+                        return add_parens(doc);
+                    }
+                    return doc;
                 }
             }
         }
@@ -2227,6 +2237,34 @@ fn print_pexp_apply(
     Doc::group(Doc::concat(vec![funct_doc, args_doc]))
 }
 
+/// Check if a binary operand needs parens considering parent operator precedence.
+fn binary_operand_needs_parens(is_lhs: bool, parent_op: &str, operand: &Expression) -> ParenKind {
+    // First check braces attribute
+    if let Some(attr) = parsetree_viewer::process_braces_attr(operand) {
+        return ParenKind::Braced(attr.0.loc.clone());
+    }
+
+    // Check if it's a binary expression - if so, use precedence comparison
+    if let Some(child_op) = parsetree_viewer::get_binary_operator(operand) {
+        // Use precedence-based check
+        if parens::sub_binary_expr_operand(parent_op, &child_op) {
+            return ParenKind::Parenthesized;
+        }
+        // For RHS, also check right-associativity
+        if !is_lhs && parens::rhs_binary_expr_operand(parent_op, operand) {
+            return ParenKind::Parenthesized;
+        }
+        // Check if operand has printable attributes
+        if parsetree_viewer::has_printable_attributes(&operand.pexp_attributes) {
+            return ParenKind::Parenthesized;
+        }
+        return ParenKind::Nothing;
+    }
+
+    // Fall back to the general binary_expr_operand check for non-binary expressions
+    parens::binary_expr_operand(is_lhs, operand)
+}
+
 /// Print binary expression.
 fn print_binary_expression(
     state: &PrinterState,
@@ -2240,16 +2278,16 @@ fn print_binary_expression(
     let (_, lhs) = &args[0];
     let (_, rhs) = &args[1];
 
-    // Print operands with appropriate parenthesization
+    // Print operands with appropriate parenthesization using precedence-aware check
     let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl);
-    let lhs_doc = match parens::binary_expr_operand(true, lhs) {
+    let lhs_doc = match binary_operand_needs_parens(true, op, lhs) {
         ParenKind::Parenthesized => add_parens(lhs_doc),
         ParenKind::Braced(loc) => print_braces(lhs_doc, lhs, loc),
         ParenKind::Nothing => lhs_doc,
     };
 
     let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl);
-    let rhs_doc = match parens::binary_expr_operand(false, rhs) {
+    let rhs_doc = match binary_operand_needs_parens(false, op, rhs) {
         ParenKind::Parenthesized => add_parens(rhs_doc),
         ParenKind::Braced(loc) => print_braces(rhs_doc, rhs, loc),
         ParenKind::Nothing => rhs_doc,
@@ -4221,11 +4259,11 @@ fn print_value_bindings(
         .enumerate()
         .map(|(i, vb)| {
             let pat = print_pattern(state, &vb.pvb_pat, cmt_tbl);
-            let expr = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl);
+            let printed_expr = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl);
             if i == 0 {
-                Doc::concat(vec![pat, Doc::text(" = "), expr])
+                Doc::concat(vec![pat, Doc::text(" = "), printed_expr])
             } else {
-                Doc::concat(vec![Doc::text("and "), pat, Doc::text(" = "), expr])
+                Doc::concat(vec![Doc::text("and "), pat, Doc::text(" = "), printed_expr])
             }
         })
         .collect();

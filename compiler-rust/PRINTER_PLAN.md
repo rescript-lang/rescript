@@ -107,7 +107,7 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 
 ## Current Status (2026-01-27)
 
-**Test Results:** 142/506 total tests passing (28%)
+**Test Results:** 144/506 total tests passing (28%)
 
 ### Recently Completed
 - ✅ `PrinterState` struct with custom_layout tracking
@@ -163,6 +163,8 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ✅ **Type parameter variance** - `+` (covariant) and `-` (contravariant) modifiers now printed
 - ✅ **Float negation/plus** - `-.` and `+.` printed correctly (not just `-` and `+`)
 - ✅ **Bitwise NOT operator** - `~~~` added to unary operators for proper `-(~~~a)` parenthesization
+- ✅ **Binary expression precedence** - Nested binary expressions use precedence-aware parenthesization (`a && b + c` not `a && (b + c)`)
+- ✅ **Attributed binary expressions** - Binary expressions with attributes get parens (`@ann (x->foo)` not `@ann x->foo`)
 
 ### Known Issues / TODO
 - ❌ Comment attachment: Comments not properly attaching to nodes
