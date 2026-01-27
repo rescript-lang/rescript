@@ -362,13 +362,16 @@ fn parse_type_attributes(p: &mut Parser<'_>) -> Attributes {
                 p.next();
                 // Parse attribute id (possibly with path)
                 let id = parse_attribute_id(p);
+                // Capture end position for attribute id BEFORE parsing payload
+                // OCaml: Location.mkloc id (mk_loc start_pos end_pos) before parse_payload
+                let id_end_pos = p.prev_end_pos.clone();
                 // Parse optional payload
                 let payload = if p.token == Token::Lparen && p.start_pos.cnum == p.prev_end_pos.cnum {
                     parse_payload(p)
                 } else {
                     Payload::PStr(vec![])
                 };
-                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+                let loc = p.mk_loc(&start_pos, &id_end_pos);
                 attrs.push((with_loc(id, loc), payload));
             }
             Token::DocComment { loc, content } => {
@@ -561,9 +564,12 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                 parse_function_type(p, start_pos)
             } else if p.token == Token::Rparen {
                 // Unit type: ()
+                // OCaml: Ast_helper.Typ.constr ~attrs unit_constr []
+                // No ~loc passed, so ptyp_loc defaults to Location.none (ghost)
+                // But lid_loc uses the real location
                 p.next();
-                let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
-                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], loc.clone(), loc)
+                let lid_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, Location::none())
             } else {
                 // Parenthesized type or tuple
                 let typ = parse_typ_expr(p);
@@ -706,19 +712,42 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         } else {
             p.optional(&Token::Dot)
         };
-        // Capture start position BEFORE attributes for arrow location
-        // OCaml includes attributes in the arrow type location
-        let pre_attrs_start = p.start_pos.clone();
-        let param_attrs = parse_attributes(p);
+        // OCaml handles doc comments separately from regular attributes for location purposes.
+        // In OCaml parse_type_parameter:
+        // 1. DocComment is consumed first (doc_attr)
+        // 2. start_pos is captured AFTER doc comment
+        // 3. Regular @-attributes are parsed after start_pos
+        //
+        // So doc comments should NOT be included in arrow location, but @-attrs SHOULD be.
+        let mut doc_attrs = vec![];
+        while let Token::DocComment { loc, content } = &p.token {
+            let loc = loc.clone();
+            let content = content.clone();
+            p.next();
+            doc_attrs.push(super::core::doc_comment_to_attribute(loc, content));
+        }
+
+        // Now capture the start position for the arrow - AFTER doc comments but BEFORE @-attrs
+        // This matches OCaml: let start_pos = p.Parser.start_pos in
+        let post_doc_start = p.start_pos.clone();
+
+        // Parse regular @-style attributes
+        let regular_attrs = parse_regular_attributes(p);
+
+        // Combine: doc_attrs @ regular_attrs (OCaml: doc_attr @ parse_attributes p)
+        let param_attrs: Attributes = doc_attrs.into_iter().chain(regular_attrs.into_iter()).collect();
+
         // Capture start position before label - OCaml includes the ~ in arrow location
         // But if there's an uncurried marker (.), the arrow should start at the .
-        // The uncurried marker takes precedence over attributes for the start position
+        // The uncurried marker takes precedence over @-attributes for the start position
+        // Doc comments do NOT affect the arrow start position
+        let has_regular_attrs = param_attrs.iter().any(|(name, _)| name.txt != "res.doc");
         let param_start = if has_dot {
             // For uncurried parameters, OCaml includes the . in arrow location
             uncurried_start.clone()
-        } else if !param_attrs.is_empty() {
-            // If there are attributes (but no uncurried marker), start at the attribute
-            pre_attrs_start.clone()
+        } else if has_regular_attrs {
+            // If there are @-attributes (but no uncurried marker), start at the attribute
+            post_doc_start.clone()
         } else {
             p.start_pos.clone()
         };
@@ -736,8 +765,9 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
 
         // OCaml includes the uncurried marker (.) in the argument type's location,
         // but only for UNLABELED simple Ptyp_constr types (Lident), not for labeled arguments
-        // or qualified types (Ldot) or other types like Ptyp_var
-        if has_dot && matches!(label, ArgLabel::Nolabel) {
+        // or qualified types (Ldot) or other types like Ptyp_var.
+        // Also, don't modify ghost locations (synthesized unit types from empty parens)
+        if has_dot && matches!(label, ArgLabel::Nolabel) && !typ.ptyp_loc.is_none() {
             let is_simple_constr = matches!(
                 &typ.ptyp_desc,
                 CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
@@ -769,23 +799,27 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         // - For simple Lident types (like `@ignore unit`): type location includes attrs, attrs on type
         // - For other types: type location unchanged, attrs prepended to ptyp_attributes
         // In both cases, the arrow's attrs are empty for unlabeled args with outer attrs
+        // Don't modify ghost locations (synthesized unit types from empty parens)
         let arrow_attrs = if matches!(label, ArgLabel::Nolabel) && !param_attrs.is_empty() {
             let is_simple_lident = matches!(
                 &typ.ptyp_desc,
                 CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
             );
-            if is_simple_lident {
+            if is_simple_lident && !typ.ptyp_loc.is_none() {
                 // For simple Lident types, OCaml creates the type with location starting at attrs
                 // and attrs passed directly to Ast_helper.Typ.constr
                 // If there's an uncurried marker (.), the location should start at the .
+                // Doc comments don't affect type location, only @-attributes do
                 typ.ptyp_loc.loc_start = if has_dot {
                     uncurried_start.clone()
+                } else if has_regular_attrs {
+                    post_doc_start.clone()
                 } else {
-                    pre_attrs_start
+                    typ.ptyp_loc.loc_start.clone()
                 };
                 typ.ptyp_attributes = [param_attrs, typ.ptyp_attributes].concat();
             } else {
-                // For other types, attrs are prepended but location unchanged
+                // For other types (or ghost locations), attrs are prepended but location unchanged
                 typ.ptyp_attributes = [param_attrs, typ.ptyp_attributes].concat();
             }
             // For unlabeled args, attributes go on type, not on arrow
@@ -816,11 +850,14 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     let arrow_end_pos = p.prev_end_pos.clone();
 
     if params.is_empty() {
-        let unit_loc = p.mk_loc(&start_pos, &rparen_end_pos);
+        // OCaml: Ast_helper.Typ.constr unit_constr []
+        // No ~loc passed, so ptyp_loc defaults to Location.none (ghost)
+        // But lid_loc uses the real location
+        let lid_loc = p.mk_loc(&start_pos, &rparen_end_pos);
         params.push((TypeArg {
             attrs: vec![],
             lbl: ArgLabel::Nolabel,
-            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], unit_loc.clone(), unit_loc.clone()),
+            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, Location::none()),
         }, start_pos.clone()));
     }
 
@@ -908,6 +945,18 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
                 attrs.push(super::core::doc_comment_to_attribute(loc, content));
             }
             _ => break,
+        }
+    }
+    attrs
+}
+
+/// Parse only @-style attributes (NOT doc comments).
+/// Used when doc comments need to be handled separately for location purposes.
+fn parse_regular_attributes(p: &mut Parser<'_>) -> Attributes {
+    let mut attrs = vec![];
+    while p.token == Token::At {
+        if let Some(attr) = parse_attribute(p) {
+            attrs.push(attr);
         }
     }
     attrs
@@ -1116,7 +1165,8 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
                 // Check for optional field marker
                 let _is_optional = p.optional(&Token::Question);
                 p.expect(Token::Colon);
-                let typ = parse_typ_expr(p);
+                // OCaml uses parse_poly_type_expr for object field types
+                let typ = parse_poly_type_expr(p);
                 fields.push(ObjectField::Otag(with_loc(name, name_loc), field_attrs, typ));
             }
             None => {
@@ -1390,7 +1440,14 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
             fields.push(RowField::Rtag(tag, attrs, is_constant, constraints));
         } else if matches!(p.token, Token::Lident(_) | Token::Uident(_)) {
             // Inherited row type: Foo.t or just t
-            let typ = parse_type_constr(p);
+            // OCaml: doc comment attributes go on the type's ptyp_attributes
+            let mut typ = parse_type_constr(p);
+            if !attrs.is_empty() {
+                // Prepend attrs to the type's existing attributes
+                let mut new_attrs = attrs;
+                new_attrs.extend(typ.ptyp_attributes);
+                typ.ptyp_attributes = new_attrs;
+            }
             fields.push(RowField::Rinherit(typ));
         } else {
             break;
