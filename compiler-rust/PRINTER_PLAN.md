@@ -107,8 +107,8 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 
 ## Current Status (2026-01-27)
 
-**Test Results:** 95/506 passing (18%)
-- Printer tests: 13/187 passing (6%)
+**Test Results:** 123/506 passing (24%)
+- Printer tests: 37/187 passing (20%)
 
 ### Recently Completed
 - ✅ `PrinterState` struct with custom_layout tracking
@@ -125,14 +125,31 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ✅ With constraints for module types
 - ✅ Fixed constructor escaping (true, false, etc. no longer escaped)
 - ✅ Fixed assert expression formatting
+- ✅ **Blank line preservation** - Fixed `Doc::to_string` to only trim spaces, not newlines
+- ✅ **Ternary expressions** - Now prints `cond ? a : b` instead of `if cond {...}`
+- ✅ **Pexp_send** - Now prints `obj["prop"]` instead of `obj#prop`
+- ✅ **Send-set operator** - `#=` now prints as `obj["prop"] = value`
+- ✅ **Unit arguments** - `fn(())` now prints as `fn()`
+- ✅ **Type constraints** - No longer wrapped in extra parens; `expr: type` not `(expr : type)`
+- ✅ **First-class modules** - `module(M: S)` not `module(M: module(S))`
+- ✅ **Type rec_flag** - `Nonrecursive` prints nothing, `Recursive` prints `"rec "`
+- ✅ **Variant type printing** - Fixed extra space before constructors
+- ✅ **Package type line breaking** - `with` constraints now break properly
+- ✅ **Attribute spacing** - Multiple attributes now have spaces between them
+- ✅ **Labeled argument escaping** - Reserved keywords escaped in type labels (`~\"let"`)
+- ✅ **Private types** - Private flag now printed for abstract, record, variant, open types
+- ✅ **Type constraints** - `constraint 'a = typ` now printed for type declarations
+- ✅ **Argument punning** - `~foo=foo` now prints as `~foo`
 
 ### Known Issues / TODO
 - ❌ Comment attachment: Comments not properly attaching to nodes in module expressions
-- ❌ Blank line preservation between structure items
-- ❌ Array indexing syntax: `streets[0]` prints as `Array.get(streets, 0)`
-- ❌ Some coercion/constraint parenthesization differences
 - ❌ JSX printing needs work
-- ❌ Package type printing needs fixing for `unpack` expressions
+- ❌ Force-break logic for multi-line constructors (preserving source formatting)
+- ❌ Type parameter line breaking for long parameter lists
+- ❌ Dict syntax sugar not preserved (prints as `Primitive_dict.make([])`)
+- ❌ Pattern alias parenthesization
+- ❌ Sequence expression parenthesization for type constraints
+- ❌ Some edge cases in expression printing
 
 ## Implementation Plan
 
