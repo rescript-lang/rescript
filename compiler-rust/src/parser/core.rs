@@ -779,8 +779,14 @@ pub struct FundefTypeParam {
     pub attrs: Attributes,
     /// Located strings for type names.
     pub locs: Vec<Located<String>>,
-    /// Start position.
+    /// Start position (usually the `type` keyword).
     pub start_pos: Position,
+    /// Position of the opening paren (if parenthesized).
+    /// Used for the implicit unit pattern location in type-only arrows.
+    pub paren_start_pos: Option<Position>,
+    /// Position after the closing paren (if parenthesized).
+    /// Used for the implicit unit pattern location in type-only arrows.
+    pub paren_end_pos: Option<Position>,
 }
 
 /// A function definition parameter.
