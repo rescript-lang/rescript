@@ -534,6 +534,10 @@ The goal is byte-for-byte identical output where possible, or at minimum functio
 
 - **Investigate parity differences at the source** - When you find a difference between Rust and OCaml output, don't just try to match the output superficially. Read the corresponding OCaml implementation to understand *why* it produces that output. The root cause is often in a different place than where the symptom appears.
 
+- **Study the OCaml code, not just the output** - When fixing parity issues, you must read and understand the actual OCaml implementation, not just try to reverse-engineer what it does from the output. The goal is to create an *equivalent* Rust implementation that follows the same logic and handles the same edge cases. Simply tweaking Rust code until the output matches is fragile and will miss subtle behaviors. Understand the algorithm, data structures, and invariants in the OCaml code first, then write idiomatic Rust that achieves the same result.
+
+- **Stay focused on hard parity issues** - If achieving parity requires a significant change (refactoring, adding new infrastructure, rethinking an approach), do that work rather than abandoning it for simpler issues. The end goal is 100% parity, and all issues must eventually be fixed. Switching between tasks loses valuable context about the problem you were investigating. It's better to complete a difficult task—even if it takes substantial effort—than to context-switch repeatedly and never finish the hard parts.
+
 ### Syntax Tests for Rust Parser
 
 The syntax tests compare parser/printer output between the Rust and OCaml implementations.
@@ -665,6 +669,33 @@ The AST parity test suite (`scripts/test_parser_ast_parity.sh`) comprehensively 
 # Adjust parallelism
 ./scripts/test_parser_ast_parity.sh -j8
 ```
+
+#### Regression Tracking
+
+The parity test suite tracks regressions using baseline files in `tests/parity_baselines/`. Each test type has its own baseline:
+
+- `sexp_locs.txt` - Files passing sexp-locs parity
+- `binary.txt` - Files passing binary parity
+- `sexp0_locs.txt` - Files passing sexp0-locs parity
+- `binary0.txt` - Files passing binary0 parity
+- `roundtrip_structure.txt` - Files passing roundtrip structure parity
+- `roundtrip_locs.txt` - Files passing roundtrip location parity
+
+**How it works:**
+1. When a file passes a test, it's added to the corresponding baseline (append-only)
+2. On subsequent runs, if a file that's in the baseline fails, it's flagged as a **regression**
+3. Regressions are reported prominently and cause the test to fail
+
+**Why this matters:**
+- Prevents accidentally breaking files that were already working
+- Makes it easy to see which files regressed after a change
+- Baselines grow monotonically as parity improves
+- Committed to git so regressions are caught in CI/PRs
+
+**When you see a regression:**
+1. The output will clearly list which files regressed for each test type
+2. Fix the regression before moving on - don't let parity decrease
+3. The baseline files should never be manually edited to remove entries
 
 #### Quick Iteration Workflow
 

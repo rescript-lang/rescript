@@ -104,3 +104,6 @@ package.tgz
 
 # AI Agents
 .claude/settings.local.json
+
+# Parser parity test baselines (machine-generated, local tracking)
+tests/parity_baselines/*.txt

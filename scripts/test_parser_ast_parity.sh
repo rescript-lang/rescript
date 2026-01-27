@@ -16,6 +16,12 @@
 # 5. Roundtrip structure parity - After roundtrip, AST structure matches
 # 6. Roundtrip location parity - After roundtrip, locations match
 #
+# REGRESSION TRACKING:
+# The script maintains baseline files in tests/parity_baselines/ for each test type.
+# - When a file passes, it's added to the baseline (append-only)
+# - If a file in the baseline fails, it's flagged as a REGRESSION
+# - Regressions cause the test to fail, preventing parity from decreasing
+#
 # NOTE: Printer parity (res/ml output) is tested by test_syntax.sh
 #
 # Uses test files from tests/syntax_tests/data/{idempotency,printer,ppx,conversion,ast-mapping}
@@ -98,6 +104,15 @@ RESET='\033[0m'
 
 # Configuration
 TIMEOUT_SECONDS=5
+
+# Baseline files for regression tracking (one per test type)
+BASELINE_DIR="$PROJECT_ROOT/tests/parity_baselines"
+BASELINE_SEXP_LOCS="$BASELINE_DIR/sexp_locs.txt"
+BASELINE_BINARY="$BASELINE_DIR/binary.txt"
+BASELINE_SEXP0_LOCS="$BASELINE_DIR/sexp0_locs.txt"
+BASELINE_BINARY0="$BASELINE_DIR/binary0.txt"
+BASELINE_ROUNDTRIP_STRUCTURE="$BASELINE_DIR/roundtrip_structure.txt"
+BASELINE_ROUNDTRIP_LOCS="$BASELINE_DIR/roundtrip_locs.txt"
 
 # Check if parsers exist
 if [[ ! -x "$OCAML_PARSER" ]]; then
@@ -403,6 +418,125 @@ for result_file in "$RESULTS_DIR"/*.result; do
     [[ "$rust_fail" -eq 1 ]] && rust_fail_files="$rust_fail_files$file\n"
 done
 
+# Build lists of tested and passing files for each test type
+all_tested_files=""
+sexp_locs_pass_files=""
+binary_pass_files=""
+sexp0_locs_pass_files=""
+binary0_pass_files=""
+roundtrip_structure_pass_files=""
+roundtrip_locs_pass_files=""
+
+for result_file in "$RESULTS_DIR"/*.result; do
+    [[ -f "$result_file" ]] || continue
+    result=$(cat "$result_file")
+    IFS=':' read -r file locs_pass locs_diff sexp0_diff rt_diff rt_locs_diff bin_diff bin0_diff ocaml_fail rust_fail <<< "$result"
+
+    # Track all tested files
+    all_tested_files="$all_tested_files$file\n"
+
+    # A file passes if it didn't fail and didn't have a diff
+    if [[ "$locs_pass" -eq 1 && "$locs_diff" -eq 0 ]]; then
+        sexp_locs_pass_files="$sexp_locs_pass_files$file\n"
+    fi
+    if [[ "$locs_pass" -eq 1 && "$bin_diff" -eq 0 ]]; then
+        binary_pass_files="$binary_pass_files$file\n"
+    fi
+    if [[ "$locs_pass" -eq 1 && "$sexp0_diff" -eq 0 ]]; then
+        sexp0_locs_pass_files="$sexp0_locs_pass_files$file\n"
+    fi
+    if [[ "$locs_pass" -eq 1 && "$bin0_diff" -eq 0 ]]; then
+        binary0_pass_files="$binary0_pass_files$file\n"
+    fi
+    if [[ "$locs_pass" -eq 1 && "$rt_diff" -eq 0 ]]; then
+        roundtrip_structure_pass_files="$roundtrip_structure_pass_files$file\n"
+    fi
+    if [[ "$locs_pass" -eq 1 && "$rt_locs_diff" -eq 0 ]]; then
+        roundtrip_locs_pass_files="$roundtrip_locs_pass_files$file\n"
+    fi
+done
+
+# Get sorted list of all tested files (filtered to test suite only)
+tested_files_sorted=$(echo -e "$all_tested_files" | grep -v "^$" | grep "^syntax_tests/data/" | sort -u)
+
+# Function to detect regressions and update baseline
+# Args: $1=baseline_file, $2=current_pass_files (newline-separated), $3=test_name, $4=tested_files (sorted)
+detect_regressions_and_update() {
+    local baseline_file="$1"
+    local current_pass="$2"
+    local test_name="$3"
+    local tested_files="$4"
+    local regressions=""
+    local new_passes=""
+
+    # Create baseline dir if needed
+    mkdir -p "$(dirname "$baseline_file")"
+
+    # Get current passing files as sorted list
+    # Only include files from the test suite (syntax_tests/data/), not arbitrary paths like /tmp/
+    local current_sorted=$(echo -e "$current_pass" | grep -v "^$" | grep "^syntax_tests/data/" | sort -u)
+
+    if [[ -f "$baseline_file" ]]; then
+        local baseline_sorted=$(sort -u "$baseline_file")
+
+        # Find regressions: files that are in baseline AND were tested AND did not pass
+        # First: files in baseline that were tested
+        local baseline_and_tested=$(comm -12 <(echo "$baseline_sorted") <(echo "$tested_files") || true)
+        # Then: of those, which ones did NOT pass
+        if [[ -n "$baseline_and_tested" ]]; then
+            regressions=$(comm -23 <(echo "$baseline_and_tested") <(echo "$current_sorted") | grep -v "^$" || true)
+        fi
+
+        # Find new passes: files in current but not in baseline
+        new_passes=$(comm -13 <(echo "$baseline_sorted") <(echo "$current_sorted") | grep -v "^$" || true)
+    else
+        # No baseline yet - all current passes are new
+        new_passes="$current_sorted"
+    fi
+
+    # Report regressions
+    if [[ -n "$regressions" ]]; then
+        local reg_count=$(echo "$regressions" | wc -l | tr -d ' ')
+        echo -e "${RED}${BOLD}REGRESSION in $test_name: $reg_count file(s) that previously passed now fail:${RESET}"
+        echo "$regressions" | head -20 | while read -r file; do
+            [[ -n "$file" ]] && echo "  $file"
+        done
+        if [[ $reg_count -gt 20 ]]; then
+            echo "  ... and $((reg_count - 20)) more"
+        fi
+        echo ""
+        # Store regressions in temp for summary
+        echo "$regressions" > "$TEMP_DIR/regressions_${test_name// /_}.txt"
+    fi
+
+    # Append new passes to baseline (only append, never remove)
+    if [[ -n "$new_passes" ]]; then
+        local new_count=$(echo "$new_passes" | wc -l | tr -d ' ')
+        echo -e "${GREEN}New passes in $test_name: $new_count file(s)${RESET}"
+        echo "$new_passes" >> "$baseline_file"
+        # Re-sort and dedupe the baseline file
+        sort -u "$baseline_file" -o "$baseline_file"
+    fi
+}
+
+echo ""
+echo -e "${BOLD}Checking for regressions against baseline...${RESET}"
+echo ""
+
+# Detect regressions for each test type
+detect_regressions_and_update "$BASELINE_SEXP_LOCS" "$sexp_locs_pass_files" "sexp-locs" "$tested_files_sorted"
+detect_regressions_and_update "$BASELINE_BINARY" "$binary_pass_files" "binary" "$tested_files_sorted"
+detect_regressions_and_update "$BASELINE_SEXP0_LOCS" "$sexp0_locs_pass_files" "sexp0-locs" "$tested_files_sorted"
+detect_regressions_and_update "$BASELINE_BINARY0" "$binary0_pass_files" "binary0" "$tested_files_sorted"
+detect_regressions_and_update "$BASELINE_ROUNDTRIP_STRUCTURE" "$roundtrip_structure_pass_files" "roundtrip-structure" "$tested_files_sorted"
+detect_regressions_and_update "$BASELINE_ROUNDTRIP_LOCS" "$roundtrip_locs_pass_files" "roundtrip-locs" "$tested_files_sorted"
+
+# Count total regressions
+total_regressions=0
+for reg_file in "$TEMP_DIR"/regressions_*.txt; do
+    [[ -f "$reg_file" ]] && total_regressions=$((total_regressions + $(wc -l < "$reg_file" | tr -d ' ')))
+done
+
 echo ""
 echo ""
 echo -e "${BOLD}============================================${RESET}"
@@ -410,8 +544,31 @@ echo -e "${BOLD}RESULTS${RESET}"
 echo -e "${BOLD}============================================${RESET}"
 echo ""
 
+# Show baseline statistics
+baseline_sexp_locs_count=0
+baseline_binary_count=0
+baseline_sexp0_locs_count=0
+baseline_binary0_count=0
+baseline_roundtrip_structure_count=0
+baseline_roundtrip_locs_count=0
+
+[[ -f "$BASELINE_SEXP_LOCS" ]] && baseline_sexp_locs_count=$(wc -l < "$BASELINE_SEXP_LOCS" | tr -d ' ')
+[[ -f "$BASELINE_BINARY" ]] && baseline_binary_count=$(wc -l < "$BASELINE_BINARY" | tr -d ' ')
+[[ -f "$BASELINE_SEXP0_LOCS" ]] && baseline_sexp0_locs_count=$(wc -l < "$BASELINE_SEXP0_LOCS" | tr -d ' ')
+[[ -f "$BASELINE_BINARY0" ]] && baseline_binary0_count=$(wc -l < "$BASELINE_BINARY0" | tr -d ' ')
+[[ -f "$BASELINE_ROUNDTRIP_STRUCTURE" ]] && baseline_roundtrip_structure_count=$(wc -l < "$BASELINE_ROUNDTRIP_STRUCTURE" | tr -d ' ')
+[[ -f "$BASELINE_ROUNDTRIP_LOCS" ]] && baseline_roundtrip_locs_count=$(wc -l < "$BASELINE_ROUNDTRIP_LOCS" | tr -d ' ')
+
 echo -e "${BOLD}Summary:${RESET}"
 echo "  Total files tested:         $TOTAL_FILES"
+echo ""
+echo "  ${BOLD}Baseline (files that must not regress):${RESET}"
+echo "    sexp-locs:                $baseline_sexp_locs_count"
+echo "    binary:                   $baseline_binary_count"
+echo "    sexp0-locs:               $baseline_sexp0_locs_count"
+echo "    binary0:                  $baseline_binary0_count"
+echo "    roundtrip-structure:      $baseline_roundtrip_structure_count"
+echo "    roundtrip-locs:           $baseline_roundtrip_locs_count"
 echo ""
 echo "  ${BOLD}Current parsetree parity:${RESET}"
 echo "    sexp-locs matches:        $locs_pass_count"
@@ -587,6 +744,14 @@ echo -e "${BOLD}============================================${RESET}"
 # Determine exit status
 all_pass=true
 exit_code=0
+
+# Check for regressions first - these are the most important failures
+if [[ $total_regressions -gt 0 ]]; then
+    echo -e "${RED}${BOLD}REGRESSION DETECTED: $total_regressions file(s) that previously passed now fail!${RESET}"
+    echo "  Review the regression lists above and fix before proceeding."
+    all_pass=false
+    exit_code=1
+fi
 
 if [[ $locs_diff_count -gt 0 ]]; then
     pct_match=$(python3 -c "print(f'{100 * $locs_pass_count / ($locs_pass_count + $locs_diff_count):.1f}')")
