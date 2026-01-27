@@ -1055,7 +1055,10 @@ pub fn print_expression(
                 Doc::indent(Doc::concat(vec![Doc::line(), rhs])),
             ]))
         }
-        // If-then-else
+        // Ternary or if-then-else
+        ExpressionDesc::Pexp_ifthenelse(_, _, _) if parsetree_viewer::is_ternary_expr(e) => {
+            print_ternary_expression(state, e, cmt_tbl)
+        }
         ExpressionDesc::Pexp_ifthenelse(_, _, _) => {
             print_if_expression(state, e, cmt_tbl)
         }
@@ -1067,21 +1070,136 @@ pub fn print_expression(
         ExpressionDesc::Pexp_let(_, _, _) => {
             print_expression_block(state, true, e, cmt_tbl)
         }
+        // Array access: Array.get(arr, idx) -> arr[idx]
+        ExpressionDesc::Pexp_apply { funct, args, .. }
+            if parsetree_viewer::is_array_access(e)
+                && !parsetree_viewer::is_rewritten_underscore_apply_sugar(&args[0].1) =>
+        {
+            let parent_expr = &args[0].1;
+            let member_expr = &args[1].1;
+            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl);
+            let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl);
+            Doc::group(Doc::concat(vec![
+                print_attributes(state, &e.pexp_attributes, cmt_tbl),
+                parent_doc,
+                Doc::lbracket(),
+                member_doc,
+                Doc::rbracket(),
+            ]))
+        }
+        // Array set: Array.set(arr, idx, value) -> arr[idx] = value
+        ExpressionDesc::Pexp_apply { args, .. }
+            if parsetree_viewer::is_array_set(e) =>
+        {
+            let parent_expr = &args[0].1;
+            let member_expr = &args[1].1;
+            let target_expr = &args[2].1;
+            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl);
+            let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl);
+            let target_doc = print_expression_with_comments(state, target_expr, cmt_tbl);
+            let should_indent = parsetree_viewer::is_binary_expression(target_expr);
+            let rhs_doc = if should_indent {
+                Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), target_doc])))
+            } else {
+                Doc::concat(vec![Doc::space(), target_doc])
+            };
+            Doc::group(Doc::concat(vec![
+                print_attributes(state, &e.pexp_attributes, cmt_tbl),
+                parent_doc,
+                Doc::lbracket(),
+                member_doc,
+                Doc::rbracket(),
+                Doc::text(" ="),
+                rhs_doc,
+            ]))
+        }
+        // String access: String.get(str, idx) -> str[idx]
+        ExpressionDesc::Pexp_apply { args, .. }
+            if parsetree_viewer::is_string_access(e)
+                && !parsetree_viewer::is_rewritten_underscore_apply_sugar(&args[0].1) =>
+        {
+            let parent_expr = &args[0].1;
+            let member_expr = &args[1].1;
+            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl);
+            let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl);
+            Doc::group(Doc::concat(vec![
+                print_attributes(state, &e.pexp_attributes, cmt_tbl),
+                parent_doc,
+                Doc::lbracket(),
+                member_doc,
+                Doc::rbracket(),
+            ]))
+        }
+        // Send-set: obj#prop = value -> obj["prop"] = value
+        ExpressionDesc::Pexp_apply { funct, args, .. }
+            if is_send_set_expr(funct, args) =>
+        {
+            let lhs = &args[0].1;
+            let rhs = &args[1].1;
+            let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl);
+            let should_indent = !parsetree_viewer::is_braced_expr(rhs)
+                && parsetree_viewer::is_binary_expression(rhs);
+            let rhs_doc = if should_indent {
+                Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc])))
+            } else {
+                Doc::concat(vec![Doc::space(), rhs_doc])
+            };
+            let doc = Doc::group(Doc::concat(vec![
+                print_expression_with_comments(state, lhs, cmt_tbl),
+                Doc::text(" ="),
+                rhs_doc,
+            ]));
+            if e.pexp_attributes.is_empty() {
+                doc
+            } else {
+                Doc::group(Doc::concat(vec![
+                    print_attributes(state, &e.pexp_attributes, cmt_tbl),
+                    doc,
+                ]))
+            }
+        }
         // Function application
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             print_pexp_apply(state, e, funct, args, cmt_tbl)
         }
-        // Constraint: (expr : typ)
+        // Constraint with pack: module(M: S)
+        ExpressionDesc::Pexp_constraint(inner, typ)
+            if matches!(&inner.pexp_desc, ExpressionDesc::Pexp_pack(_))
+                && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)) =>
+        {
+            if let ExpressionDesc::Pexp_pack(mod_expr) = &inner.pexp_desc {
+                if let CoreTypeDesc::Ptyp_package(package_type) = &typ.ptyp_desc {
+                    let mod_doc = print_mod_expr(state, mod_expr, cmt_tbl);
+                    // Don't print "module(...)" wrapper - we're already inside module()
+                    let type_doc = print_comments(
+                        print_package_type(state, package_type, false, cmt_tbl),
+                        cmt_tbl,
+                        &typ.ptyp_loc,
+                    );
+                    return Doc::group(Doc::concat(vec![
+                        Doc::text("module("),
+                        Doc::indent(Doc::concat(vec![Doc::soft_line(), mod_doc])),
+                        Doc::text(": "),
+                        type_doc,
+                        Doc::soft_line(),
+                        Doc::rparen(),
+                    ]));
+                }
+            }
+            Doc::nil()
+        }
+        // Constraint: expr: typ (parens added by caller when needed)
         ExpressionDesc::Pexp_constraint(expr, typ) => {
-            let expr_doc = print_expression_with_comments(state, expr, cmt_tbl);
+            let expr_doc = {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl);
+                match parens::expr(expr) {
+                    parens::ParenKind::Parenthesized => add_parens(doc),
+                    parens::ParenKind::Braced(braces) => print_braces(doc, expr, braces),
+                    parens::ParenKind::Nothing => doc,
+                }
+            };
             let typ_doc = print_typ_expr(state, typ, cmt_tbl);
-            Doc::concat(vec![
-                Doc::lparen(),
-                expr_doc,
-                Doc::text(" : "),
-                typ_doc,
-                Doc::rparen(),
-            ])
+            Doc::concat(vec![expr_doc, Doc::text(": "), typ_doc])
         }
         // Coerce: (expr :> typ)
         ExpressionDesc::Pexp_coerce(expr, _, typ) => {
@@ -1183,10 +1301,23 @@ pub fn print_expression(
         ExpressionDesc::Pexp_jsx_element(_) => {
             Doc::text("<jsx />")  // Simplified placeholder
         }
-        // Send (method call): expr#method
-        ExpressionDesc::Pexp_send(expr, method) => {
-            let lhs = print_expression_with_comments(state, expr, cmt_tbl);
-            Doc::concat(vec![lhs, Doc::text("#"), Doc::text(&method.txt)])
+        // Send (method call): expr#method -> expr["method"]
+        ExpressionDesc::Pexp_send(parent_expr, label) => {
+            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl);
+            // Apply parenthesization if needed (like unary_expr_operand)
+            let parent_doc = match parens::unary_expr_operand(parent_expr) {
+                parens::ParenKind::Parenthesized => add_parens(parent_doc),
+                parens::ParenKind::Braced(braces) => print_braces(parent_doc, parent_expr, braces),
+                parens::ParenKind::Nothing => parent_doc,
+            };
+            let member_doc = print_comments(Doc::text(&label.txt), cmt_tbl, &label.loc);
+            let member = Doc::concat(vec![Doc::text("\""), member_doc, Doc::text("\"")]);
+            Doc::group(Doc::concat(vec![
+                parent_doc,
+                Doc::lbracket(),
+                member,
+                Doc::rbracket(),
+            ]))
         }
     };
 
@@ -1701,6 +1832,102 @@ fn is_punned_record_field(field: &ExpressionRecordField) -> bool {
     }
 }
 
+/// Check if expression is a send-set: `#=(lhs, rhs)` where lhs is a Pexp_send.
+fn is_send_set_expr(funct: &Expression, args: &[(ArgLabel, Expression)]) -> bool {
+    if args.len() != 2 {
+        return false;
+    }
+    match &funct.pexp_desc {
+        ExpressionDesc::Pexp_ident(lid) => {
+            matches!(&lid.txt, Longident::Lident(op) if op == "#=")
+        }
+        _ => false,
+    }
+}
+
+/// Print a ternary expression (cond ? then : else).
+fn print_ternary_expression(
+    state: &PrinterState,
+    e: &Expression,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (parts, alternate) = parsetree_viewer::collect_ternary_parts(e);
+
+    let ternary_doc = match parts.as_slice() {
+        [(condition1, consequent1), rest @ ..] => {
+            let rest_doc = rest
+                .iter()
+                .map(|(condition, consequent)| {
+                    Doc::concat(vec![
+                        Doc::line(),
+                        Doc::text(": "),
+                        print_ternary_operand(state, condition, cmt_tbl),
+                        Doc::line(),
+                        Doc::text("? "),
+                        print_ternary_operand(state, consequent, cmt_tbl),
+                    ])
+                })
+                .collect::<Vec<_>>();
+
+            Doc::group(Doc::concat(vec![
+                print_ternary_operand(state, condition1, cmt_tbl),
+                Doc::indent(Doc::concat(vec![
+                    Doc::line(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::text("? "),
+                        print_ternary_operand(state, consequent1, cmt_tbl),
+                    ])),
+                    Doc::concat(rest_doc),
+                    Doc::line(),
+                    Doc::text(": "),
+                    Doc::indent(print_ternary_operand(state, alternate, cmt_tbl)),
+                ])),
+            ]))
+        }
+        _ => Doc::nil(),
+    };
+
+    let attrs = parsetree_viewer::filter_ternary_attributes(&e.pexp_attributes);
+    // Check if any of the filtered attrs are printable (non-parsing attrs)
+    let needs_parens = attrs.iter().any(|attr| parsetree_viewer::is_printable_attribute(attr));
+
+    Doc::concat(vec![
+        print_attributes_from_refs(state, &attrs, cmt_tbl),
+        if needs_parens {
+            add_parens(ternary_doc)
+        } else {
+            ternary_doc
+        },
+    ])
+}
+
+/// Print a ternary operand with appropriate parenthesization.
+fn print_ternary_operand(
+    state: &PrinterState,
+    expr: &Expression,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let doc = print_expression_with_comments(state, expr, cmt_tbl);
+
+    // Check for braces attribute first
+    if let Some(attr) = parsetree_viewer::process_braces_attr(expr) {
+        return print_braces(doc, expr, attr.0.loc.clone());
+    }
+
+    // Check if expression needs parentheses
+    match &expr.pexp_desc {
+        // Pexp_constraint on Pexp_pack doesn't need parens
+        ExpressionDesc::Pexp_constraint(inner, _)
+            if matches!(&inner.pexp_desc, ExpressionDesc::Pexp_pack(_)) =>
+        {
+            doc
+        }
+        // Other constraints need parens
+        ExpressionDesc::Pexp_constraint(_, _) => add_parens(doc),
+        _ => doc,
+    }
+}
+
 /// Print if expression.
 fn print_if_expression(
     state: &PrinterState,
@@ -1817,7 +2044,7 @@ fn print_pexp_apply(
         if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
             if let Longident::Lident(op) = &ident.txt {
                 if parsetree_viewer::is_binary_operator_str(op) {
-                    return print_binary_expression(state, funct, args, cmt_tbl);
+                    return print_binary_expression(state, op, args, cmt_tbl);
                 }
             }
         }
@@ -1848,7 +2075,7 @@ fn print_pexp_apply(
 /// Print binary expression.
 fn print_binary_expression(
     state: &PrinterState,
-    _funct: &Expression,
+    op: &str,
     args: &[(ArgLabel, Expression)],
     cmt_tbl: &mut CommentTable,
 ) -> Doc {
@@ -1858,17 +2085,40 @@ fn print_binary_expression(
     let (_, lhs) = &args[0];
     let (_, rhs) = &args[1];
 
-    // For now, simplified implementation
+    // Print operands with appropriate parenthesization
     let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl);
-    let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl);
+    let lhs_doc = match parens::binary_expr_operand(true, lhs) {
+        ParenKind::Parenthesized => add_parens(lhs_doc),
+        ParenKind::Braced(loc) => print_braces(lhs_doc, lhs, loc),
+        ParenKind::Nothing => lhs_doc,
+    };
 
-    Doc::concat(vec![
-        lhs_doc,
-        Doc::space(),
-        Doc::text("op"),
-        Doc::space(),
-        rhs_doc,
-    ])
+    let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl);
+    let rhs_doc = match parens::binary_expr_operand(false, rhs) {
+        ParenKind::Parenthesized => add_parens(rhs_doc),
+        ParenKind::Braced(loc) => print_braces(rhs_doc, rhs, loc),
+        ParenKind::Nothing => rhs_doc,
+    };
+
+    // Determine if the rhs should be on a new line
+    let should_indent = parens::flatten_operand_rhs(op, rhs);
+
+    if should_indent {
+        Doc::group(Doc::concat(vec![
+            lhs_doc,
+            Doc::space(),
+            Doc::text(op),
+            Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc]))),
+        ]))
+    } else {
+        Doc::concat(vec![
+            lhs_doc,
+            Doc::space(),
+            Doc::text(op),
+            Doc::space(),
+            rhs_doc,
+        ])
+    }
 }
 
 /// Print unary expression.
@@ -1911,6 +2161,22 @@ fn print_arguments(
         return Doc::text("()");
     }
 
+    // Special case: single unit argument () -> just print ()
+    if let [(ArgLabel::Nolabel, expr)] = args {
+        if is_unit_expr(expr) {
+            // Check for leading comments
+            if has_leading_line_comment(cmt_tbl, &expr.pexp_loc) {
+                let cmt = print_comments(Doc::nil(), cmt_tbl, &expr.pexp_loc);
+                return Doc::concat(vec![
+                    Doc::lparen(),
+                    Doc::indent(Doc::group(Doc::concat(vec![Doc::soft_line(), cmt]))),
+                    Doc::rparen(),
+                ]);
+            }
+            return Doc::text("()");
+        }
+    }
+
     let args_doc: Vec<Doc> = args
         .iter()
         .map(|(label, expr)| {
@@ -1918,10 +2184,26 @@ fn print_arguments(
             match label {
                 ArgLabel::Nolabel => expr_doc,
                 ArgLabel::Labelled(name) => {
-                    Doc::concat(vec![Doc::text("~"), Doc::text(&name.txt), Doc::text("="), expr_doc])
+                    // Check for punning: ~name where expr is Pexp_ident(Lident(name))
+                    if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
+                        if let Longident::Lident(ident) = &lid.txt {
+                            if ident == &name.txt && expr.pexp_attributes.is_empty() {
+                                return Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false)]);
+                            }
+                        }
+                    }
+                    Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text("="), expr_doc])
                 }
                 ArgLabel::Optional(name) => {
-                    Doc::concat(vec![Doc::text("~"), Doc::text(&name.txt), Doc::text("=?"), expr_doc])
+                    // Check for punning: ~name=? where expr is Pexp_ident(Lident(name))
+                    if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
+                        if let Longident::Lident(ident) = &lid.txt {
+                            if ident == &name.txt && expr.pexp_attributes.is_empty() {
+                                return Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text("?")]);
+                            }
+                        }
+                    }
+                    Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text("=?"), expr_doc])
                 }
             }
         })
@@ -1937,6 +2219,25 @@ fn print_arguments(
         Doc::soft_line(),
         Doc::rparen(),
     ]))
+}
+
+/// Check if an expression is unit: `()`
+fn is_unit_expr(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_construct(lid, None) => {
+            matches!(&lid.txt, Longident::Lident(s) if s == "()")
+        }
+        _ => false,
+    }
+}
+
+/// Check if there's a leading line comment at a location.
+fn has_leading_line_comment(cmt_tbl: &CommentTable, loc: &Location) -> bool {
+    if let Some(comments) = cmt_tbl.leading.get(loc) {
+        comments.iter().any(|c| c.is_single_line())
+    } else {
+        false
+    }
 }
 
 // ============================================================================
@@ -2636,8 +2937,8 @@ fn print_type_parameter(
     let attrs = print_attributes(state, param.attrs, cmt_tbl);
     let label_doc = match param.lbl {
         ArgLabel::Nolabel => Doc::nil(),
-        ArgLabel::Labelled(name) => Doc::concat(vec![Doc::text("~"), Doc::text(&name.txt), Doc::text(": ")]),
-        ArgLabel::Optional(name) => Doc::concat(vec![Doc::text("~"), Doc::text(&name.txt), Doc::text(": ")]),
+        ArgLabel::Labelled(name) => Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text(": ")]),
+        ArgLabel::Optional(name) => Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text(": ")]),
     };
     let optional_indicator = match param.lbl {
         ArgLabel::Optional(_) => Doc::text("=?"),
@@ -2892,37 +3193,39 @@ fn print_package_type(
     let (lid, constraints) = package_type;
     let lid_doc = print_longident(&lid.txt);
 
-    let constraints_doc = if constraints.is_empty() {
-        Doc::nil()
+    let doc = if constraints.is_empty() {
+        Doc::group(lid_doc)
     } else {
-        Doc::concat(vec![
-            Doc::text(" with "),
-            Doc::join(
-                Doc::text(" and "),
-                constraints
-                    .iter()
-                    .map(|(name, typ)| {
-                        Doc::concat(vec![
-                            Doc::text("type "),
-                            print_longident(&name.txt),
-                            Doc::text(" = "),
-                            print_typ_expr(state, typ, cmt_tbl),
-                        ])
-                    })
-                    .collect(),
-            ),
-        ])
+        // Print constraints with proper line breaking
+        let constraint_docs: Vec<Doc> = constraints
+            .iter()
+            .enumerate()
+            .map(|(i, (name, typ))| {
+                let prefix = if i == 0 { "type " } else { "and type " };
+                Doc::concat(vec![
+                    Doc::text(prefix),
+                    print_longident(&name.txt),
+                    Doc::text(" = "),
+                    print_typ_expr(state, typ, cmt_tbl),
+                ])
+            })
+            .collect();
+
+        Doc::group(Doc::concat(vec![
+            lid_doc,
+            Doc::text(" with"),
+            Doc::indent(Doc::concat(vec![
+                Doc::line(),
+                Doc::join(Doc::line(), constraint_docs),
+            ])),
+            Doc::soft_line(),
+        ]))
     };
 
     if print_module_keyword {
-        Doc::concat(vec![
-            Doc::text("module("),
-            lid_doc,
-            constraints_doc,
-            Doc::text(")"),
-        ])
+        Doc::concat(vec![Doc::text("module("), doc, Doc::rparen()])
     } else {
-        Doc::concat(vec![lid_doc, constraints_doc])
+        doc
     }
 }
 
@@ -2972,10 +3275,12 @@ fn print_attributes_from_refs(
         .iter()
         .map(|attr| print_attribute(state, attr, cmt_tbl))
         .collect();
-    Doc::concat(vec![Doc::concat(attrs_doc), Doc::space()])
+    // Join with space between attributes, add trailing space
+    Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attrs_doc)), Doc::space()])
 }
 
 /// Print attributes inline (for arrow type parameters).
+/// Attributes are joined with line (space when not breaking) and followed by a space.
 fn print_attributes_inline(
     state: &PrinterState,
     attrs: &Attributes,
@@ -2988,7 +3293,11 @@ fn print_attributes_inline(
         .iter()
         .map(|attr| print_attribute(state, attr, cmt_tbl))
         .collect();
-    Doc::concat(attrs_doc)
+    // Join with line (space when not breaking), add trailing space
+    Doc::concat(vec![
+        Doc::group(Doc::join(Doc::line(), attrs_doc)),
+        Doc::space(),
+    ])
 }
 
 
@@ -3793,8 +4102,8 @@ pub fn print_signature_item(
 
         SignatureItemDesc::Psig_type(rec_flag, type_decls) => {
             let rec_doc = match rec_flag {
-                RecFlag::Nonrecursive => Doc::text("nonrec "),
-                RecFlag::Recursive => Doc::nil(),
+                RecFlag::Nonrecursive => Doc::nil(),
+                RecFlag::Recursive => Doc::text("rec "),
             };
             Doc::concat(vec![
                 Doc::text("type "),
@@ -3924,8 +4233,8 @@ pub fn print_structure_item(
 
         StructureItemDesc::Pstr_type(rec_flag, type_decls) => {
             let rec_doc = match rec_flag {
-                RecFlag::Nonrecursive => Doc::text("nonrec "),
-                RecFlag::Recursive => Doc::nil(),
+                RecFlag::Nonrecursive => Doc::nil(),
+                RecFlag::Recursive => Doc::text("rec "),
             };
             Doc::concat(vec![
                 Doc::text("type "),
@@ -4033,37 +4342,114 @@ fn print_type_declaration(
         ])
     };
 
-    let manifest_doc = match &decl.ptype_manifest {
-        Some(typ) => Doc::concat(vec![Doc::text(" = "), print_typ_expr(state, typ, cmt_tbl)]),
-        None => Doc::nil(),
+    // Helper for private flag
+    let private_doc = match decl.ptype_private {
+        PrivateFlag::Private => Doc::text("private "),
+        PrivateFlag::Public => Doc::nil(),
+    };
+
+    // For abstract types: " = private? <manifest type>"
+    // For non-abstract types: manifest is handled separately
+    let manifest_doc = match &decl.ptype_kind {
+        TypeKind::Ptype_abstract => {
+            match &decl.ptype_manifest {
+                Some(typ) => Doc::concat(vec![
+                    Doc::text(" = "),
+                    private_doc.clone(),
+                    print_typ_expr(state, typ, cmt_tbl),
+                ]),
+                None => Doc::nil(),
+            }
+        }
+        TypeKind::Ptype_variant(_) => {
+            // Manifest (if any) is printed without private flag
+            match &decl.ptype_manifest {
+                Some(typ) => Doc::concat(vec![
+                    Doc::text(" = "),
+                    print_typ_expr(state, typ, cmt_tbl),
+                ]),
+                None => Doc::nil(),
+            }
+        }
+        TypeKind::Ptype_record(_) => {
+            // Manifest (if any) is printed without private flag
+            match &decl.ptype_manifest {
+                Some(typ) => Doc::concat(vec![
+                    Doc::text(" = "),
+                    print_typ_expr(state, typ, cmt_tbl),
+                ]),
+                None => Doc::nil(),
+            }
+        }
+        TypeKind::Ptype_open => Doc::nil(),
     };
 
     let kind_doc = match &decl.ptype_kind {
         TypeKind::Ptype_abstract => Doc::nil(),
         TypeKind::Ptype_variant(constrs) => {
             Doc::concat(vec![
-                if decl.ptype_manifest.is_some() { Doc::text(" = ") } else { Doc::text(" = ") },
-                print_constructor_declarations(state, constrs, cmt_tbl),
+                // No trailing space - print_constructor_declarations starts with Doc::line()
+                Doc::text(" ="),
+                print_constructor_declarations(state, constrs, &decl.ptype_private, cmt_tbl),
             ])
         }
         TypeKind::Ptype_record(fields) => {
             Doc::concat(vec![
                 Doc::text(" = "),
+                private_doc.clone(),
                 print_record_declaration(state, fields, cmt_tbl),
             ])
         }
-        TypeKind::Ptype_open => Doc::text(" = .."),
+        TypeKind::Ptype_open => Doc::concat(vec![
+            Doc::text(" = "),
+            private_doc,
+            Doc::text(".."),
+        ]),
     };
 
-    Doc::concat(vec![attrs_doc, name_doc, params_doc, manifest_doc, kind_doc])
+    // Print type constraints (constraint 'a = int)
+    let constraints_doc = print_type_constraints(state, &decl.ptype_cstrs, cmt_tbl);
+
+    Doc::concat(vec![attrs_doc, name_doc, params_doc, manifest_doc, kind_doc, constraints_doc])
+}
+
+/// Print type definition constraints.
+fn print_type_constraints(
+    state: &PrinterState,
+    constraints: &[(CoreType, CoreType, Location)],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    if constraints.is_empty() {
+        return Doc::nil();
+    }
+    let constraint_docs: Vec<Doc> = constraints
+        .iter()
+        .map(|(typ1, typ2, _loc)| {
+            Doc::concat(vec![
+                Doc::text("constraint "),
+                print_typ_expr(state, typ1, cmt_tbl),
+                Doc::text(" = "),
+                print_typ_expr(state, typ2, cmt_tbl),
+            ])
+        })
+        .collect();
+    Doc::indent(Doc::group(Doc::concat(vec![
+        Doc::line(),
+        Doc::group(Doc::join(Doc::line(), constraint_docs)),
+    ])))
 }
 
 /// Print constructor declarations.
 fn print_constructor_declarations(
     state: &PrinterState,
     constrs: &[ConstructorDeclaration],
+    private_flag: &PrivateFlag,
     cmt_tbl: &mut CommentTable,
 ) -> Doc {
+    let private_doc = match private_flag {
+        PrivateFlag::Private => Doc::concat(vec![Doc::text("private"), Doc::line()]),
+        PrivateFlag::Public => Doc::nil(),
+    };
     let docs: Vec<Doc> = constrs
         .iter()
         .enumerate()
@@ -4077,7 +4463,7 @@ fn print_constructor_declarations(
         })
         .collect();
     Doc::group(Doc::concat(vec![
-        Doc::indent(Doc::concat(vec![Doc::line(), Doc::join(Doc::line(), docs)])),
+        Doc::indent(Doc::concat(vec![Doc::line(), private_doc, Doc::join(Doc::line(), docs)])),
     ]))
 }
 
