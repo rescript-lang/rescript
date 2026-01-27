@@ -59,7 +59,7 @@ else
 fi
 
 # Verify the watcher is still running (didn't crash on config change)
-if [ -f lib/bs/rescript.pid ]; then
+if [ -f lib/bs/rescript.daemon.pid ]; then
   success "Watcher still running after config change"
 else
   error "Watcher crashed after config change"

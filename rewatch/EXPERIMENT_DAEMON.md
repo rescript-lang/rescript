@@ -199,7 +199,7 @@ The watch client (`client/watch.rs`) uses a **daemon-driven** watching strategy:
   - SIGTERM/SIGINT → graceful shutdown
   - SIGHUP → ignored (daemon survives terminal close)
   - All clients disconnected → shutdown
-- Writes PID to `<root>/lib/bs/rescript.pid`
+- Writes PID to `<root>/lib/bs/rescript.daemon.pid`
 - Writes socket path to `<root>/lib/bs/rescript.sock.path`
 - Cleans up socket, PID file, and socket path file on exit
 
@@ -358,18 +358,23 @@ This makes it possible to answer questions like:
 The current test infrastructure in `tests/daemon_tests/` does manual trace collection:
 
 # Daemon integration tests (vitest + gRPC)
+
 make test-daemon
 
 # Single test file
+
 cd tests/daemon_tests && npx vitest run tests/build.test.mjs
 
 # Single test by name
+
 cd tests/daemon_tests && npx vitest run -t "builds all packages from root"
 
 # Rust quality
+
 cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
 cargo fmt --check --manifest-path rewatch/Cargo.toml
-```
+
+````
 
 ### Manual Testing
 
@@ -400,16 +405,16 @@ rescript format --check
 echo "let x = 1" | rescript format --stdin .res
 
 # Check for running daemon
-cat lib/bs/rescript.pid           # shows PID if daemon running
+cat lib/bs/rescript.daemon.pid    # shows PID if daemon running
 cat lib/bs/rescript.sock.path     # shows socket path in /tmp
 ls $(cat lib/bs/rescript.sock.path)  # socket exists if daemon alive
 pgrep -f "rescript.exe daemon"        # list daemon processes
 
 # Kill stale daemon
-kill $(cat lib/bs/rescript.pid)
-rm -f lib/bs/rescript.pid lib/bs/rescript.sock.path
+kill $(cat lib/bs/rescript.daemon.pid)
+rm -f lib/bs/rescript.daemon.pid lib/bs/rescript.sock.path
 rm -f $(cat lib/bs/rescript.sock.path 2>/dev/null)  # remove socket from /tmp
-```
+````
 
 ### Automated
 
@@ -435,8 +440,6 @@ Located in `tests/daemon_tests/`. Uses vitest with a gRPC debug client to observ
 - Two test styles:
   - **gRPC-based**: uses `setupTestContext()` to get a debug client + direct RPC calls (build, clean, compiler-args, scope-expansion)
   - **CLI-based**: uses `createProcessHelper()` to spawn the `rescript` binary (format, concurrent-clients, watch-file-changes, build-errors)
-
-
 
 ```bash
 # Run all daemon tests
@@ -496,7 +499,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 rescript build
 
 # Kill stale daemon
 pkill -f "rescript daemon" || true
-rm -f lib/bs/rescript.pid lib/bs/rescript.sock.path
+rm -f lib/bs/rescript.daemon.pid lib/bs/rescript.sock.path
 rm -f /tmp/rescript-*.sock  # clean up sockets from temp dir
 ```
 

@@ -46,7 +46,7 @@ pub fn socket_path_file(root: &Path) -> PathBuf {
 
 /// Returns the path to the daemon PID file for a given project root.
 pub fn pid_path(root: &Path) -> PathBuf {
-    root.join("lib").join("bs").join("rescript.pid")
+    root.join("lib").join("bs").join("rescript.daemon.pid")
 }
 
 /// Returns the path to the daemon error file for a given project root.

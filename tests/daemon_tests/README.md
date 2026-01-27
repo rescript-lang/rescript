@@ -279,7 +279,7 @@ Socket files now live in the system temp directory (`/tmp` on Unix) with hash-ba
 Each sandbox gets a unique socket path, so collisions should not happen. If testing manually:
 
 ```bash
-rm -f lib/bs/rescript.pid lib/bs/rescript.sock.path
+rm -f lib/bs/rescript.daemon.pid lib/bs/rescript.sock.path
 rm -f /tmp/rescript-*.sock
 ```
 

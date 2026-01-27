@@ -63,7 +63,7 @@ exit_watcher() {
   wait_for_daemon_stop 5
 
   # Verify daemon actually stopped
-  local pid_file="lib/bs/rescript.pid"
+  local pid_file="lib/bs/rescript.daemon.pid"
   if [ -f "$pid_file" ]; then
     local daemon_pid=$(cat "$pid_file")
     if [ -n "$daemon_pid" ] && kill -0 $daemon_pid 2>/dev/null; then
