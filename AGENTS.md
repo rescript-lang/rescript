@@ -540,6 +540,8 @@ The goal is byte-for-byte identical output where possible, or at minimum functio
 
 - **Stay focused on hard parity issues** - If achieving parity requires a significant change (refactoring, adding new infrastructure, rethinking an approach), do that work rather than abandoning it for simpler issues. The end goal is 100% parity, and all issues must eventually be fixed. Switching between tasks loses valuable context about the problem you were investigating. It's better to complete a difficult task—even if it takes substantial effort—than to context-switch repeatedly and never finish the hard parts.
 
+- **Commit parity improvements incrementally** - When parity increases (more tests pass), commit immediately with the smallest possible change. Each commit should have a clear, descriptive message explaining what specific parity issue was fixed. This creates a clear history of progress, makes it easy to bisect regressions, and ensures no work is lost. Don't accumulate multiple parity fixes into one large commit.
+
 ### Syntax Tests for Rust Parser
 
 The syntax tests compare parser/printer output between the Rust and OCaml implementations.
