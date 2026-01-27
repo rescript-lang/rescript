@@ -578,12 +578,12 @@ fn expression(expr: &Expression) -> Sexp {
         ]),
         ExpressionDesc::Record(fields, opt_expr) => Sexp::list(vec![
             Sexp::atom("Pexp_record"),
-            Sexp::list(map_empty(fields, |RecordElement { lid, x, opt }| {
+            // parsetree0 doesn't have the opt field, just (longident, expr) pairs
+            Sexp::list(map_empty(fields, |RecordElement { lid, x, .. }| {
                 Sexp::list(vec![
                     longident(&lid.txt),
                     location(&lid.loc),
                     expression(x),
-                    Sexp::atom(if *opt { "true" } else { "false" }),
                 ])
             })),
             match opt_expr {
@@ -839,18 +839,28 @@ fn type_declaration(td: &TypeDeclaration) -> Sexp {
         location(&td.ptype_loc),
         Sexp::atom(&quote_string(&td.ptype_name.txt)),
         location(&td.ptype_name.loc),
-        Sexp::list(map_empty(&td.ptype_params, |(typ, var)| {
-            Sexp::list(vec![core_type(typ), variance(var)])
-        })),
-        Sexp::list(map_empty(&td.ptype_cstrs, |(t1, t2, loc)| {
-            Sexp::list(vec![core_type(t1), core_type(t2), location(loc)])
-        })),
-        type_kind(&td.ptype_kind),
-        private_flag(&td.ptype_private),
-        match &td.ptype_manifest {
-            Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
-            None => Sexp::atom("None"),
-        },
+        // OCaml wraps each field with its name: (ptype_params (...))
+        Sexp::list(vec![
+            Sexp::atom("ptype_params"),
+            Sexp::list(map_empty(&td.ptype_params, |(typ, var)| {
+                Sexp::list(vec![core_type(typ), variance(var)])
+            })),
+        ]),
+        Sexp::list(vec![
+            Sexp::atom("ptype_cstrs"),
+            Sexp::list(map_empty(&td.ptype_cstrs, |(t1, t2, loc)| {
+                Sexp::list(vec![core_type(t1), core_type(t2), location(loc)])
+            })),
+        ]),
+        Sexp::list(vec![Sexp::atom("ptype_kind"), type_kind(&td.ptype_kind)]),
+        Sexp::list(vec![
+            Sexp::atom("ptype_manifest"),
+            match &td.ptype_manifest {
+                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
+                None => Sexp::atom("None"),
+            },
+        ]),
+        Sexp::list(vec![Sexp::atom("ptype_private"), private_flag(&td.ptype_private)]),
         attributes(&td.ptype_attributes),
     ])
 }
@@ -874,11 +884,15 @@ fn constructor_declaration(cd: &ConstructorDeclaration) -> Sexp {
         location(&cd.pcd_loc),
         Sexp::atom(&quote_string(&cd.pcd_name.txt)),
         location(&cd.pcd_name.loc),
-        constructor_arguments(&cd.pcd_args),
-        match &cd.pcd_res {
-            Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
-            None => Sexp::atom("None"),
-        },
+        // OCaml wraps these with field names
+        Sexp::list(vec![Sexp::atom("pcd_args"), constructor_arguments(&cd.pcd_args)]),
+        Sexp::list(vec![
+            Sexp::atom("pcd_res"),
+            match &cd.pcd_res {
+                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
+                None => Sexp::atom("None"),
+            },
+        ]),
         attributes(&cd.pcd_attributes),
     ])
 }
