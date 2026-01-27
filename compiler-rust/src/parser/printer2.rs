@@ -1216,7 +1216,7 @@ pub fn print_expression(
         }
         // Extension
         ExpressionDesc::Pexp_extension(ext) => {
-            print_extension(state, ext, cmt_tbl)
+            print_extension(state, ext, false, cmt_tbl)
         }
         // Match expression
         ExpressionDesc::Pexp_match(expr, cases) => {
@@ -2599,6 +2599,31 @@ pub fn print_pattern(
 
             Doc::breakable_group(Doc::concat(docs), is_spread_over_multiple_lines)
         }
+        // module(M: S) - first-class module with package type
+        PatternDesc::Ppat_constraint(inner, typ)
+            if matches!(&inner.ppat_desc, PatternDesc::Ppat_unpack(_))
+                && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)) =>
+        {
+            if let (
+                PatternDesc::Ppat_unpack(name),
+                CoreTypeDesc::Ptyp_package(package_type),
+            ) = (&inner.ppat_desc, &typ.ptyp_desc)
+            {
+                let name_doc = Doc::text(&name.txt);
+                let name_doc = print_comments(name_doc, cmt_tbl, &inner.ppat_loc);
+                let pkg_doc = print_package_type(state, package_type, false, cmt_tbl);
+                let pkg_doc = print_comments(pkg_doc, cmt_tbl, &typ.ptyp_loc);
+                Doc::concat(vec![
+                    Doc::text("module("),
+                    name_doc,
+                    Doc::text(": "),
+                    pkg_doc,
+                    Doc::text(")"),
+                ])
+            } else {
+                unreachable!()
+            }
+        }
         // p : type
         PatternDesc::Ppat_constraint(pat, typ) => {
             let pat_doc = print_pattern(state, pat, cmt_tbl);
@@ -2639,7 +2664,7 @@ pub fn print_pattern(
         }
         // %extension
         PatternDesc::Ppat_extension(ext) => {
-            Doc::concat(vec![Doc::text("%"), Doc::text(&ext.0.txt)])
+            print_extension(state, ext, false, cmt_tbl)
         }
         // `type identifier
         PatternDesc::Ppat_type(lid) => {
@@ -2798,8 +2823,14 @@ fn print_record_pattern(
                     }
                 } else {
                     let pat_doc = print_pattern(state, &field.pat, cmt_tbl);
+                    // Check if pattern needs parentheses in record row context
+                    let pat_doc = if parens::pattern_record_row_rhs(&field.pat) {
+                        add_parens(pat_doc)
+                    } else {
+                        pat_doc
+                    };
                     if field.opt {
-                        Doc::concat(vec![label, Doc::text(": "), pat_doc, Doc::text("?")])
+                        Doc::concat(vec![label, Doc::text(": "), Doc::text("?"), pat_doc])
                     } else {
                         Doc::concat(vec![label, Doc::text(": "), pat_doc])
                     }
@@ -2853,7 +2884,7 @@ pub fn print_typ_expr(
             Doc::concat(vec![Doc::text("'"), print_ident_like(name, true, false)])
         }
 
-        CoreTypeDesc::Ptyp_extension(ext) => print_extension(state, ext, cmt_tbl),
+        CoreTypeDesc::Ptyp_extension(ext) => print_extension(state, ext, false, cmt_tbl),
 
         CoreTypeDesc::Ptyp_alias(inner_typ, alias) => {
             let needs_parens = matches!(&inner_typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
@@ -4209,13 +4240,94 @@ fn print_attribute(
 // Extension (placeholder)
 // ============================================================================
 
-/// Print an extension.
+/// Print an extension point.
 fn print_extension(
-    _state: &PrinterState,
+    state: &PrinterState,
     ext: &Extension,
-    _cmt_tbl: &mut CommentTable,
+    at_module_lvl: bool,
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    Doc::concat(vec![Doc::text("%"), Doc::text(&ext.0.txt)])
+    let (name, payload) = ext;
+    let ext_name = Doc::concat(vec![
+        Doc::text("%"),
+        if at_module_lvl {
+            Doc::text("%")
+        } else {
+            Doc::nil()
+        },
+        Doc::text(&name.txt),
+    ]);
+    let ext_name = print_comments(ext_name, cmt_tbl, &name.loc);
+    Doc::group(Doc::concat(vec![
+        ext_name,
+        print_payload(state, payload, cmt_tbl),
+    ]))
+}
+
+/// Print a payload of an attribute or extension.
+fn print_payload(state: &PrinterState, payload: &Payload, cmt_tbl: &mut CommentTable) -> Doc {
+    match payload {
+        Payload::PStr(items) if items.is_empty() => Doc::nil(),
+        Payload::PStr(items) => {
+            if let [single] = &items[..] {
+                if let StructureItemDesc::Pstr_eval(expr, attrs) = &single.pstr_desc {
+                    let expr_doc = print_expression_with_comments(state, expr, cmt_tbl);
+                    let needs_parens = !attrs.is_empty();
+                    let should_hug = parsetree_viewer::is_huggable_expression(expr);
+                    if should_hug {
+                        Doc::concat(vec![
+                            Doc::lparen(),
+                            print_attributes(state, attrs, cmt_tbl),
+                            if needs_parens {
+                                add_parens(expr_doc)
+                            } else {
+                                expr_doc
+                            },
+                            Doc::rparen(),
+                        ])
+                    } else {
+                        Doc::concat(vec![
+                            Doc::lparen(),
+                            Doc::indent(Doc::concat(vec![
+                                Doc::soft_line(),
+                                print_attributes(state, attrs, cmt_tbl),
+                                if needs_parens {
+                                    add_parens(expr_doc)
+                                } else {
+                                    expr_doc
+                                },
+                            ])),
+                            Doc::soft_line(),
+                            Doc::rparen(),
+                        ])
+                    }
+                } else {
+                    // General structure - just indicate it exists
+                    Doc::text("(...)")
+                }
+            } else {
+                // Multiple items - indicate structure exists
+                Doc::text("(...)")
+            }
+        }
+        Payload::PSig(_) => Doc::text("(:...)"),
+        Payload::PTyp(typ) => Doc::concat(vec![
+            Doc::text("(: "),
+            print_typ_expr(state, typ, cmt_tbl),
+            Doc::text(")"),
+        ]),
+        Payload::PPat(pat, guard) => {
+            let pat_doc = print_pattern(state, pat, cmt_tbl);
+            let guard_doc = match guard {
+                Some(g) => Doc::concat(vec![
+                    Doc::text(" when "),
+                    print_expression_with_comments(state, g, cmt_tbl),
+                ]),
+                None => Doc::nil(),
+            };
+            Doc::concat(vec![Doc::text("(? "), pat_doc, guard_doc, Doc::text(")")])
+        }
+    }
 }
 
 // ============================================================================
@@ -4329,8 +4441,7 @@ pub fn print_signature_item(
             let attrs_doc = print_attributes(state, attrs, cmt_tbl);
             Doc::concat(vec![
                 attrs_doc,
-                Doc::text("%%"),
-                print_extension(state, ext, cmt_tbl),
+                print_extension(state, ext, true, cmt_tbl),
             ])
         }
     }
@@ -4471,8 +4582,7 @@ pub fn print_structure_item(
             let attrs_doc = print_attributes(state, attrs, cmt_tbl);
             Doc::concat(vec![
                 attrs_doc,
-                Doc::text("%%"),
-                print_extension(state, ext, cmt_tbl),
+                print_extension(state, ext, true, cmt_tbl),
             ])
         }
 

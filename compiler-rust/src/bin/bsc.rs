@@ -9,7 +9,7 @@
 //! All other flags are accepted and ignored.
 
 use anyhow::{anyhow, Context, Result};
-use rescript_compiler::binary_ast::{write_signature_ast, write_structure_ast};
+use rescript_compiler::binary_ast::{write_signature_ast_current, write_structure_ast_current};
 use rescript_compiler::driver::{compile_file_to_js_with_options, CompilerOptions};
 use rescript_compiler::parser::{module, Parser};
 use std::env;
@@ -173,7 +173,7 @@ fn generate_ast(input: &Path, output: Option<PathBuf>) -> Result<()> {
                 parser.diagnostics().len()
             ));
         }
-        write_signature_ast(&out_path, &source_path, &signature)
+        write_signature_ast_current(&out_path, &source_path, &signature)
             .with_context(|| format!("Failed to write {}", out_path.display()))?;
     } else {
         // Parse structure (implementation file)
@@ -184,7 +184,7 @@ fn generate_ast(input: &Path, output: Option<PathBuf>) -> Result<()> {
                 parser.diagnostics().len()
             ));
         }
-        write_structure_ast(&out_path, &source_path, &structure)
+        write_structure_ast_current(&out_path, &source_path, &structure)
             .with_context(|| format!("Failed to write {}", out_path.display()))?;
     }
 

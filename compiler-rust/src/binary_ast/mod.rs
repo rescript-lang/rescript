@@ -62,6 +62,6 @@ pub use marshal::MarshalWriter;
 pub use parsetree0::*;
 pub use serialize::Marshal;
 pub use writer::{
-    write_signature_ast, write_signature_ast_to_vec, write_structure_ast,
-    write_structure_ast_to_vec,
+    write_signature_ast, write_signature_ast_current, write_signature_ast_to_vec,
+    write_structure_ast, write_structure_ast_current, write_structure_ast_to_vec,
 };
