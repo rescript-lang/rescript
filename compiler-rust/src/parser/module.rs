@@ -1945,10 +1945,13 @@ fn parse_type_declarations(
             if !has_and_after {
                 break;
             }
+            // Capture start position BEFORE parsing attributes/doc comments
+            // OCaml does: let start_pos = p.Parser.start_pos in let attrs = parse_attributes_and_binding p in
+            // So the location should include the doc comment
+            decl_start = p.start_pos.clone();
             // Parse the attributes/doc comments, then consume `and`
             next_attrs = parse_attributes(p);
             if p.token == Token::And {
-                decl_start = p.start_pos.clone(); // Capture 'and' position
                 p.next();
             }
         } else {
@@ -2745,9 +2748,10 @@ fn parse_type_kind(
             TypeKind::Ptype_variant(constructors)
         }
         Token::Lbrace => {
-            // Record type
+            // Record type - capture { position for first field's location (OCaml extends first spread field's loc to {)
+            let lbrace_pos = p.start_pos.clone();
             p.next();
-            let labels = parse_label_declarations(p, inline_ctx, current_type_name_path);
+            let labels = parse_label_declarations(p, inline_ctx, current_type_name_path, Some(lbrace_pos));
             p.expect(Token::Rbrace);
             TypeKind::Ptype_record(labels)
         }
@@ -2886,8 +2890,9 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
                 )
             });
         if is_inline_record {
+            let lbrace_pos = p.start_pos.clone();
             p.next(); // consume {
-            let labels = parse_label_declarations(p, None, None);
+            let labels = parse_label_declarations(p, None, None, Some(lbrace_pos));
             p.expect(Token::Rbrace);
             // Allow trailing comma after inline record: Foo({...},)
             p.optional(&Token::Comma);
@@ -2905,8 +2910,9 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
             ConstructorArguments::Pcstr_tuple(args)
         }
     } else if p.token == Token::Lbrace {
+        let lbrace_pos = p.start_pos.clone();
         p.next();
-        let labels = parse_label_declarations(p, None, None);
+        let labels = parse_label_declarations(p, None, None, Some(lbrace_pos));
         p.expect(Token::Rbrace);
         ConstructorArguments::Pcstr_record(labels)
     } else {
@@ -2933,12 +2939,16 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
 
 /// Parse record label declarations.
 /// Handles both regular fields and spread syntax (...typ).
+/// `lbrace_pos` is the position of the opening `{` - OCaml extends the first spread field's
+/// location back to this position.
 fn parse_label_declarations(
     p: &mut Parser<'_>,
     inline_ctx: Option<&RefCell<InlineTypesContext>>,
     current_type_name_path: Option<&Vec<String>>,
+    lbrace_pos: Option<Position>,
 ) -> Vec<LabelDeclaration> {
     let mut labels = vec![];
+    let mut is_first = true;
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
         // Handle spread: ...typ - represented as a label with name "..."
@@ -2948,7 +2958,21 @@ fn parse_label_declarations(
             // Name location is just the "..." part
             let name_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             let spread_type = typ::parse_typ_expr(p);
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            // OCaml extends the first spread field's location back to the { position
+            let loc_start = if is_first {
+                lbrace_pos.as_ref().unwrap_or(&start_pos)
+            } else {
+                &start_pos
+            };
+            // OCaml has different end position handling for first vs non-first spread fields:
+            // - First spread field: location extends to p.end_pos (includes comma/brace)
+            // - Non-first spread fields: location uses typ.ptyp_loc.loc_end
+            let loc_end = if is_first {
+                p.end_pos.clone()
+            } else {
+                spread_type.ptyp_loc.loc_end.clone()
+            };
+            let loc = p.mk_loc(loc_start, &loc_end);
             labels.push(LabelDeclaration {
                 pld_name: with_loc("...".to_string(), name_loc),
                 pld_mutable: MutableFlag::Immutable,
@@ -2957,6 +2981,7 @@ fn parse_label_declarations(
                 pld_attributes: vec![],
                 pld_optional: false,
             });
+            is_first = false;
             if !p.optional(&Token::Comma) {
                 break;
             }
@@ -2966,6 +2991,7 @@ fn parse_label_declarations(
         if let Some(l) = parse_label_declaration(p, inline_ctx, current_type_name_path) {
             labels.push(l);
         }
+        is_first = false;
         if !p.optional(&Token::Comma) {
             break;
         }
@@ -3081,7 +3107,7 @@ fn parse_label_declaration(
             p.next(); // consume {
             let inline_ctx = inline_ctx.unwrap();
             let extended_path = extended_path.as_ref().unwrap();
-            let labels = parse_label_declarations(p, Some(inline_ctx), Some(extended_path));
+            let labels = parse_label_declarations(p, Some(inline_ctx), Some(extended_path), Some(type_start_pos.clone()));
             p.expect(Token::Rbrace);
             let type_loc = p.mk_loc(&type_start_pos, &p.prev_end_pos);
 
@@ -3114,7 +3140,8 @@ fn parse_label_declaration(
         typ::parse_poly_type_expr(p)
     };
 
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    // OCaml uses typ.ptyp_loc.loc_end for label declaration's end, not p.prev_end_pos
+    let loc = p.mk_loc(&start_pos, &typ.ptyp_loc.loc_end);
     Some(LabelDeclaration {
         pld_name: name,
         pld_mutable: mutable,
