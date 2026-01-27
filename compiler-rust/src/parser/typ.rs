@@ -712,14 +712,15 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         let param_attrs = parse_attributes(p);
         // Capture start position before label - OCaml includes the ~ in arrow location
         // But if there's an uncurried marker (.), the arrow should start at the .
-        // And if there are attributes, the arrow should start at the attribute
-        let param_start = if has_dot && param_attrs.is_empty() {
-            // For uncurried unlabeled parameters, OCaml includes the . in arrow location
+        // The uncurried marker takes precedence over attributes for the start position
+        let param_start = if has_dot {
+            // For uncurried parameters, OCaml includes the . in arrow location
             uncurried_start.clone()
-        } else if param_attrs.is_empty() {
-            p.start_pos.clone()
-        } else {
+        } else if !param_attrs.is_empty() {
+            // If there are attributes (but no uncurried marker), start at the attribute
             pre_attrs_start.clone()
+        } else {
+            p.start_pos.clone()
         };
 
         let (mut label, mut typ) = if p.token == Token::Tilde {
@@ -776,7 +777,12 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             if is_simple_lident {
                 // For simple Lident types, OCaml creates the type with location starting at attrs
                 // and attrs passed directly to Ast_helper.Typ.constr
-                typ.ptyp_loc.loc_start = pre_attrs_start;
+                // If there's an uncurried marker (.), the location should start at the .
+                typ.ptyp_loc.loc_start = if has_dot {
+                    uncurried_start.clone()
+                } else {
+                    pre_attrs_start
+                };
                 typ.ptyp_attributes = [param_attrs, typ.ptyp_attributes].concat();
             } else {
                 // For other types, attrs are prepended but location unchanged

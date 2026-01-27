@@ -1050,7 +1050,8 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
         match &p.token {
             Token::String(key) => {
                 let key = key.clone();
-                let key_start = p.start_pos.clone();
+                // OCaml: let loc = mk_loc p.start_pos p.end_pos - captures key location BEFORE consuming
+                let key_loc = p.mk_loc(&p.start_pos, &p.end_pos);
                 p.next();
 
                 p.expect(Token::Colon);
@@ -1059,9 +1060,9 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
                 let opt = p.optional(&Token::Question);
 
                 let pat = parse_pattern(p);
-                let loc = p.mk_loc(&key_start, &p.prev_end_pos);
+                // OCaml: Location.mkloc (Longident.Lident s) loc - uses key location, not whole field
                 fields.push(PatternRecordField {
-                    lid: with_loc(Longident::Lident(key), loc),
+                    lid: with_loc(Longident::Lident(key), key_loc),
                     pat,
                     opt,
                 });
@@ -1082,11 +1083,12 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
     p.expect(Token::Rbrace);
     let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
-    // Dict patterns are parsed directly as open record patterns (not wrapped in extension)
+    // OCaml: adds (Location.mknoloc "res.dictPattern", PStr []) attribute
+    // Dict patterns are parsed as open record patterns with the dictPattern attribute
     Pattern {
         ppat_desc: PatternDesc::Ppat_record(fields, ClosedFlag::Open),
         ppat_loc: loc,
-        ppat_attributes: vec![],
+        ppat_attributes: vec![(mknoloc("res.dictPattern".to_string()), Payload::PStr(vec![]))],
     }
 }
 
