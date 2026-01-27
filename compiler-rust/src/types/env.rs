@@ -620,8 +620,14 @@ fn add_binary_primitive(
     arg2_ty: TypeExprRef,
     ret_ty: TypeExprRef,
 ) {
-    let func_ty = ctx.new_arrow_simple(arg1_ty, ctx.new_arrow_simple(arg2_ty, ret_ty));
+    // Inner arrow: arg2 -> ret, arity None (partial application gives arity 1)
+    let inner_ty = ctx.new_arrow_simple(arg2_ty, ret_ty);
+    // Outer arrow: arg1 -> (arg2 -> ret), arity 2 (full application)
+    let func_ty = ctx.new_arrow(crate::types::ArgLabel::Nolabel, arg1_ty, inner_ty, Some(2));
     let id = Ident::create_persistent(name);
+    // Primitives come from Pervasives module
+    let pervasives_id = Ident::create_persistent("Pervasives");
+    let path = Path::pdot(Path::pident(pervasives_id), name.to_string());
     let desc = ValueDescription {
         val_type: func_ty,
         val_kind: ValueKind::ValPrim(PrimitiveDescription {
@@ -632,6 +638,7 @@ fn add_binary_primitive(
         }),
         val_loc: Location::none(),
         val_attributes: vec![],
+        val_path: Some(path),
     };
     env.add_value(id, desc);
 }
@@ -645,8 +652,12 @@ fn add_unary_primitive(
     arg_ty: TypeExprRef,
     ret_ty: TypeExprRef,
 ) {
-    let func_ty = ctx.new_arrow_simple(arg_ty, ret_ty);
+    // Unary operators have arity 1
+    let func_ty = ctx.new_arrow(crate::types::ArgLabel::Nolabel, arg_ty, ret_ty, Some(1));
     let id = Ident::create_persistent(name);
+    // Primitives come from Pervasives module
+    let pervasives_id = Ident::create_persistent("Pervasives");
+    let path = Path::pdot(Path::pident(pervasives_id), name.to_string());
     let desc = ValueDescription {
         val_type: func_ty,
         val_kind: ValueKind::ValPrim(PrimitiveDescription {
@@ -657,6 +668,7 @@ fn add_unary_primitive(
         }),
         val_loc: Location::none(),
         val_attributes: vec![],
+        val_path: Some(path),
     };
     env.add_value(id, desc);
 }
@@ -681,6 +693,7 @@ mod tests {
             val_kind: super::super::decl::ValueKind::ValReg,
             val_loc: Location::none(),
             val_attributes: vec![],
+            val_path: None,
         };
         env.add_value(id.clone(), desc);
 
@@ -723,12 +736,14 @@ mod tests {
             val_kind: super::super::decl::ValueKind::ValReg,
             val_loc: Location::none(),
             val_attributes: vec![],
+            val_path: None,
         };
         let desc2 = ValueDescription {
             val_type: TypeExprRef(2),
             val_kind: super::super::decl::ValueKind::ValReg,
             val_loc: Location::none(),
             val_attributes: vec![],
+            val_path: None,
         };
 
         env.add_value(id1, desc1);
@@ -748,6 +763,7 @@ mod tests {
             val_kind: super::super::decl::ValueKind::ValReg,
             val_loc: Location::none(),
             val_attributes: vec![],
+            val_path: None,
         };
 
         let env2 = env.with_value(id, desc);
@@ -767,6 +783,7 @@ mod tests {
             val_kind: super::super::decl::ValueKind::ValReg,
             val_loc: Location::none(),
             val_attributes: vec![],
+            val_path: None,
         };
         env.add_value(id.clone(), desc);
 

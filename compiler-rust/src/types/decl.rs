@@ -26,6 +26,8 @@ pub struct ValueDescription {
     pub val_loc: Location,
     /// Attributes
     pub val_attributes: Vec<Attribute>,
+    /// Full path to the value (for module items, None for local bindings)
+    pub val_path: Option<Path>,
 }
 
 /// Kind of value.

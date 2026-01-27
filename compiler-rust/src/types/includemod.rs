@@ -533,6 +533,7 @@ mod tests {
                 val_kind: ValueKind::ValReg,
                 val_loc: Location::none(),
                 val_attributes: vec![],
+                val_path: None,
             },
         )];
 
@@ -554,6 +555,7 @@ mod tests {
                 val_kind: ValueKind::ValReg,
                 val_loc: Location::none(),
                 val_attributes: vec![],
+                val_path: None,
             },
         )];
         let sig_sig: Signature = vec![SignatureItem::SigValue(
@@ -563,6 +565,7 @@ mod tests {
                 val_kind: ValueKind::ValReg,
                 val_loc: Location::none(),
                 val_attributes: vec![],
+                val_path: None,
             },
         )];
 
@@ -607,6 +610,7 @@ mod tests {
                     val_kind: ValueKind::ValReg,
                     val_loc: Location::none(),
                     val_attributes: vec![],
+                    val_path: None,
                 },
             ),
             SignatureItem::SigType(

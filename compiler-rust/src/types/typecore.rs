@@ -2157,6 +2157,7 @@ fn type_case(
             val_kind: crate::types::ValueKind::ValReg,
             val_loc: pv.loc.clone(),
             val_attributes: vec![],
+            val_path: None,
         };
         case_env.add_value(pv.id.clone(), desc);
     }
@@ -2272,6 +2273,7 @@ fn type_function(
             val_kind: crate::types::ValueKind::ValReg,
             val_loc: pv.loc.clone(),
             val_attributes: vec![],
+            val_path: None,
         };
         body_env.add_value(pv.id.clone(), desc);
     }
@@ -2350,6 +2352,7 @@ fn type_for(
             val_kind: crate::types::ValueKind::ValReg,
             val_loc: pv.loc.clone(),
             val_attributes: vec![],
+            val_path: None,
         };
         body_env.add_value(pv.id.clone(), desc);
     }
@@ -3039,6 +3042,7 @@ fn type_let_bindings(
                     val_kind: crate::types::ValueKind::ValReg,
                     val_loc: binding.pvb_loc.clone(),
                     val_attributes: vec![],
+                    val_path: None,
                 };
                 new_env.add_value(id, desc);
             }
@@ -3092,6 +3096,7 @@ fn type_let_bindings(
                 val_kind: crate::types::ValueKind::ValReg,
                 val_loc: binding.pvb_loc.clone(),
                 val_attributes: vec![],
+                val_path: None,
             };
             new_env.add_value(pv.id.clone(), desc);
         }
@@ -3199,7 +3204,12 @@ impl Env {
     /// Look up a value by longident.
     pub fn lookup_value_by_lid(&self, lid: &Longident) -> TypeCoreResult<(Path, ValueDescription)> {
         match self.find_value_with_id(lid.to_string().as_str()) {
-            Ok((id, desc)) => Ok((Path::pident(id.clone()), desc.clone())),
+            Ok((id, desc)) => {
+                // Use the stored path if available (e.g., for Pervasives primitives),
+                // otherwise construct from identifier
+                let path = desc.val_path.clone().unwrap_or_else(|| Path::pident(id.clone()));
+                Ok((path, desc.clone()))
+            }
             Err(_) => Err(TypeCoreError::UndefinedMethod {
                 ty: TypeExprRef(0), // Placeholder
                 method: lid.to_string(),

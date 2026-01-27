@@ -293,6 +293,7 @@ fn type_structure_item(
                 val_kind: crate::types::ValueKind::ValReg,
                 val_loc: loc.clone(),
                 val_attributes: vec![],
+                val_path: None,
             });
             Ok((
                 StructureItem {
@@ -837,6 +838,7 @@ fn extend_env_with_bindings(env: &Env, bindings: &[ValueBinding]) -> Env {
                 val_kind: crate::types::ValueKind::ValReg,
                 val_loc: binding.vb_loc.clone(),
                 val_attributes: vec![],
+                val_path: None,
             };
             new_env.add_value(id.clone(), val_desc);
         }
