@@ -595,6 +595,121 @@ pub fn rewrite_underscore_apply(expr: &Expression) -> Option<Expression> {
     }
 }
 
+// ============================================================================
+// Type Analysis
+// ============================================================================
+
+/// A type parameter extracted from an arrow type.
+#[derive(Debug)]
+pub struct TypeParameter<'a> {
+    /// Attributes on the parameter.
+    pub attrs: &'a Attributes,
+    /// Parameter label.
+    pub lbl: &'a ArgLabel,
+    /// Parameter type.
+    pub typ: &'a CoreType,
+}
+
+/// Check if attributes contain the "@as" attribute.
+fn has_as_attr(attrs: &Attributes) -> bool {
+    attrs.iter().any(|attr| attr.0.txt == "as")
+}
+
+/// Extract arrow type components: (attrs_before, args, return_type)
+///
+/// This decomposes an arrow type like `(a, b) => c` into its argument list
+/// and return type. The `max_arity` parameter limits how many arguments to extract.
+pub fn arrow_type<'a>(
+    typ: &'a CoreType,
+    max_arity: Option<usize>,
+) -> (&'a Attributes, Vec<TypeParameter<'a>>, &'a CoreType) {
+    let max_arity = max_arity.unwrap_or(usize::MAX);
+
+    fn process<'a>(
+        attrs_before: &'a Attributes,
+        acc: Vec<TypeParameter<'a>>,
+        typ: &'a CoreType,
+        remaining_arity: usize,
+    ) -> (&'a Attributes, Vec<TypeParameter<'a>>, &'a CoreType) {
+        if remaining_arity == 0 {
+            return (attrs_before, acc, typ);
+        }
+
+        match &typ.ptyp_desc {
+            CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
+                // Stop at explicitly-aritied arrow if we already have arguments
+                if matches!(arity, Arity::Full(_)) && !acc.is_empty() && arg.attrs.is_empty() {
+                    return (attrs_before, acc, typ);
+                }
+
+                // Unlabeled argument with no attrs - continue processing
+                if matches!(arg.lbl, ArgLabel::Nolabel) && arg.attrs.is_empty() {
+                    let mut new_acc = acc;
+                    new_acc.push(TypeParameter {
+                        attrs: &arg.attrs,
+                        lbl: &arg.lbl,
+                        typ: &arg.typ,
+                    });
+                    return process(attrs_before, new_acc, ret, remaining_arity - 1);
+                }
+
+                // Unlabeled argument with attrs - return as final type
+                if matches!(arg.lbl, ArgLabel::Nolabel) {
+                    return (attrs_before, acc, typ);
+                }
+
+                // Labeled argument - continue processing
+                // Calculate adjusted arity for @as workaround
+                let adjusted_arity = if matches!(
+                    &arg.typ.ptyp_desc,
+                    CoreTypeDesc::Ptyp_any
+                ) && has_as_attr(&arg.typ.ptyp_attributes)
+                {
+                    remaining_arity
+                } else {
+                    remaining_arity - 1
+                };
+
+                let mut new_acc = acc;
+                new_acc.push(TypeParameter {
+                    attrs: &arg.attrs,
+                    lbl: &arg.lbl,
+                    typ: &arg.typ,
+                });
+                process(attrs_before, new_acc, ret, adjusted_arity)
+            }
+
+            _ => (attrs_before, acc, typ),
+        }
+    }
+
+    match &typ.ptyp_desc {
+        CoreTypeDesc::Ptyp_arrow { .. } => {
+            // Start processing with the type's attributes as attrs_before,
+            // and process the type without those attributes
+            process(&typ.ptyp_attributes, Vec::new(), typ, max_arity)
+        }
+        _ => process(&EMPTY_ATTRS, Vec::new(), typ, max_arity),
+    }
+}
+
+/// Empty attributes constant for returning references.
+static EMPTY_ATTRS: Attributes = Vec::new();
+
+/// Partition attributes into doc comments and regular attributes.
+pub fn partition_doc_comment_attributes(attrs: &Attributes) -> (Vec<&Attribute>, Vec<&Attribute>) {
+    let mut doc_comments = Vec::new();
+    let mut others = Vec::new();
+    for attr in attrs {
+        if attr.0.txt == "res.doc" || attr.0.txt == "ocaml.doc" {
+            doc_comments.push(attr);
+        } else {
+            others.push(attr);
+        }
+    }
+    (doc_comments, others)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

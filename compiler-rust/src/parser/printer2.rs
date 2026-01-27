@@ -1321,14 +1321,313 @@ fn print_list_expression(
     ]))
 }
 
+/// Callback printing mode.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum InCallback {
+    NoCallback,
+    FitsOnOneLine,
+    ArgumentsFitOnOneLine,
+}
+
 /// Print arrow expression (function).
 fn print_arrow_expression(
-    _state: &PrinterState,
-    _e: &Expression,
-    _cmt_tbl: &mut CommentTable,
+    state: &PrinterState,
+    e: &Expression,
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    // Simplified placeholder - full implementation needed
-    Doc::text("() => ...")
+    let (is_async, parameters, return_expr) = parsetree_viewer::fun_expr(e);
+    let attrs_on_arrow = &e.pexp_attributes;
+
+    // Extract type constraint if present
+    let (return_expr, typ_constraint) = match &return_expr.pexp_desc {
+        ExpressionDesc::Pexp_constraint(expr, typ) => (expr.as_ref(), Some(typ)),
+        _ => (return_expr, None),
+    };
+
+    let has_constraint = typ_constraint.is_some();
+
+    // Print parameters
+    let parameters_doc = print_expr_fun_parameters(
+        state,
+        InCallback::NoCallback,
+        is_async,
+        has_constraint,
+        &parameters,
+        cmt_tbl,
+    );
+
+    // Print return expression
+    let return_expr_doc = {
+        let opt_braces = parsetree_viewer::process_braces_attr(return_expr);
+        let should_inline = match (&return_expr.pexp_desc, opt_braces) {
+            (_, Some(_)) => true,
+            (
+                ExpressionDesc::Pexp_array(_)
+                | ExpressionDesc::Pexp_tuple(_)
+                | ExpressionDesc::Pexp_construct(_, Some(_))
+                | ExpressionDesc::Pexp_record(_, _),
+                _,
+            ) => true,
+            _ => false,
+        };
+        let should_indent = !matches!(
+            &return_expr.pexp_desc,
+            ExpressionDesc::Pexp_sequence(_, _)
+                | ExpressionDesc::Pexp_let(_, _, _)
+                | ExpressionDesc::Pexp_letmodule(_, _, _)
+                | ExpressionDesc::Pexp_letexception(_, _)
+                | ExpressionDesc::Pexp_open(_, _, _)
+        );
+
+        let return_doc = {
+            let doc = print_expression_with_comments(state, return_expr, cmt_tbl);
+            match parens::expr(return_expr) {
+                ParenKind::Parenthesized => add_parens(doc),
+                ParenKind::Braced(loc) => print_braces(doc, return_expr, loc),
+                ParenKind::Nothing => doc,
+            }
+        };
+
+        if should_inline {
+            Doc::concat(vec![Doc::space(), return_doc])
+        } else {
+            Doc::group(if should_indent {
+                Doc::indent(Doc::concat(vec![Doc::line(), return_doc]))
+            } else {
+                Doc::concat(vec![Doc::space(), return_doc])
+            })
+        }
+    };
+
+    // Print type constraint
+    let typ_constraint_doc = match typ_constraint {
+        Some(typ) => {
+            let typ_doc = print_typ_expr(state, typ, cmt_tbl);
+            let typ_doc = if parens::arrow_return_typ_expr(typ) {
+                add_parens(typ_doc)
+            } else {
+                typ_doc
+            };
+            Doc::concat(vec![Doc::text(": "), typ_doc])
+        }
+        None => Doc::nil(),
+    };
+
+    let attrs = print_attributes(state, attrs_on_arrow, cmt_tbl);
+
+    Doc::group(Doc::concat(vec![
+        attrs,
+        parameters_doc,
+        typ_constraint_doc,
+        Doc::text(" =>"),
+        return_expr_doc,
+    ]))
+}
+
+/// Print function parameters.
+fn print_expr_fun_parameters(
+    state: &PrinterState,
+    in_callback: InCallback,
+    is_async: bool,
+    has_constraint: bool,
+    parameters: &[parsetree_viewer::FunParam<'_>],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    use parsetree_viewer::FunParam;
+
+    // Handle special single parameter cases
+    match parameters {
+        // let f = _ => ()
+        [FunParam::Parameter {
+            attrs,
+            label: ArgLabel::Nolabel,
+            default_expr: None,
+            pat,
+        }] if attrs.is_empty() && matches!(&pat.ppat_desc, PatternDesc::Ppat_any) => {
+            let doc = if has_constraint {
+                Doc::text("(_)")
+            } else {
+                Doc::text("_")
+            };
+            let doc = print_comments(doc, cmt_tbl, &pat.ppat_loc);
+            return if is_async { add_async(doc) } else { doc };
+        }
+        // let f = a => ()
+        [FunParam::Parameter {
+            attrs,
+            label: ArgLabel::Nolabel,
+            default_expr: None,
+            pat,
+        }] if attrs.is_empty()
+            && matches!(&pat.ppat_desc, PatternDesc::Ppat_var(_))
+            && pat.ppat_attributes.is_empty() =>
+        {
+            if let PatternDesc::Ppat_var(string_loc) = &pat.ppat_desc {
+                let var = print_ident_like(&string_loc.txt, false, false);
+                let var = if has_constraint { add_parens(var) } else { var };
+                let doc = if is_async { add_async(var) } else { var };
+                return print_comments(doc, cmt_tbl, &string_loc.loc);
+            }
+        }
+        // let f = () => ()
+        [FunParam::Parameter {
+            attrs,
+            label: ArgLabel::Nolabel,
+            default_expr: None,
+            pat,
+        }] if attrs.is_empty()
+            && matches!(
+                &pat.ppat_desc,
+                PatternDesc::Ppat_construct(lid, None)
+                    if lid.txt == Longident::Lident("()".to_string())
+            ) =>
+        {
+            let doc = Doc::text("()");
+            let doc = if is_async { add_async(doc) } else { doc };
+            return print_comments(doc, cmt_tbl, &pat.ppat_loc);
+        }
+        _ => {}
+    }
+
+    // General case: multiple parameters or complex single parameter
+    let fits_on_one_line = matches!(in_callback, InCallback::FitsOnOneLine);
+    let should_hug = parameters_should_hug(parameters);
+
+    let lparen = if is_async { add_async(Doc::lparen()) } else { Doc::lparen() };
+
+    let printed_params = Doc::concat(vec![
+        if should_hug || fits_on_one_line {
+            Doc::nil()
+        } else {
+            Doc::soft_line()
+        },
+        Doc::join(
+            Doc::concat(vec![Doc::comma(), Doc::line()]),
+            parameters
+                .iter()
+                .map(|p| print_exp_fun_parameter(state, p, cmt_tbl))
+                .collect(),
+        ),
+    ]);
+
+    Doc::group(Doc::concat(vec![
+        lparen,
+        if should_hug || fits_on_one_line {
+            printed_params
+        } else {
+            Doc::concat(vec![
+                Doc::indent(printed_params),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+            ])
+        },
+        Doc::rparen(),
+    ]))
+}
+
+/// Check if parameters should be hugged (printed without line breaks).
+fn parameters_should_hug(parameters: &[parsetree_viewer::FunParam<'_>]) -> bool {
+    use parsetree_viewer::FunParam;
+    match parameters {
+        [FunParam::Parameter {
+            attrs,
+            label: ArgLabel::Nolabel,
+            default_expr: None,
+            pat,
+        }] if attrs.is_empty() => is_huggable_pattern(pat),
+        _ => false,
+    }
+}
+
+/// Print a single function parameter.
+fn print_exp_fun_parameter(
+    state: &PrinterState,
+    param: &parsetree_viewer::FunParam<'_>,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    use parsetree_viewer::FunParam;
+    match param {
+        FunParam::NewType { attrs, name } => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl);
+            Doc::group(Doc::concat(vec![
+                attrs_doc,
+                Doc::text("type "),
+                print_comments(print_ident_like(&name.txt, false, false), cmt_tbl, &name.loc),
+            ]))
+        }
+        FunParam::Parameter {
+            attrs,
+            label,
+            default_expr,
+            pat,
+        } => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl);
+            let default_doc = match default_expr {
+                Some(expr) => Doc::concat(vec![
+                    Doc::text("="),
+                    print_expression_with_comments(state, expr, cmt_tbl),
+                ]),
+                None => Doc::nil(),
+            };
+
+            let label_with_pattern = match (label, &pat.ppat_desc) {
+                (ArgLabel::Nolabel, _) => print_pattern(state, pat, cmt_tbl),
+                // ~d (punning)
+                (ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl), PatternDesc::Ppat_var(var))
+                    if lbl.txt == var.txt =>
+                {
+                    Doc::concat(vec![
+                        print_attributes(state, &pat.ppat_attributes, cmt_tbl),
+                        Doc::text("~"),
+                        print_ident_like(&lbl.txt, false, false),
+                    ])
+                }
+                // ~d: typ (punning with type)
+                (
+                    ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl),
+                    PatternDesc::Ppat_constraint(inner, typ),
+                ) if matches!(&inner.ppat_desc, PatternDesc::Ppat_var(v) if lbl.txt == v.txt) => {
+                    Doc::concat(vec![
+                        print_attributes(state, &pat.ppat_attributes, cmt_tbl),
+                        Doc::text("~"),
+                        print_ident_like(&lbl.txt, false, false),
+                        Doc::text(": "),
+                        print_typ_expr(state, typ, cmt_tbl),
+                    ])
+                }
+                // ~d as x or ~d=pat
+                (ArgLabel::Labelled(lbl), _) => Doc::concat(vec![
+                    Doc::text("~"),
+                    print_ident_like(&lbl.txt, false, false),
+                    Doc::text(" as "),
+                    print_pattern(state, pat, cmt_tbl),
+                ]),
+                (ArgLabel::Optional(lbl), _) => Doc::concat(vec![
+                    Doc::text("~"),
+                    print_ident_like(&lbl.txt, false, false),
+                    Doc::text(" as "),
+                    print_pattern(state, pat, cmt_tbl),
+                ]),
+            };
+
+            let opt_marker = match label {
+                ArgLabel::Optional(_) => Doc::text("=?"),
+                _ => Doc::nil(),
+            };
+
+            Doc::group(Doc::concat(vec![
+                attrs_doc,
+                label_with_pattern,
+                default_doc,
+                opt_marker,
+            ]))
+        }
+    }
+}
+
+/// Add async marker to a doc.
+fn add_async(doc: Doc) -> Doc {
+    Doc::concat(vec![Doc::text("async "), doc])
 }
 
 /// Print record expression.
@@ -1639,50 +1938,1052 @@ fn print_arguments(
 }
 
 // ============================================================================
-// Pattern Printing (placeholder)
+// Pattern Printing
 // ============================================================================
+
+/// Print a pattern with comments.
+pub fn print_pattern_with_comments(
+    state: &PrinterState,
+    pat: &Pattern,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let doc = print_pattern(state, pat, cmt_tbl);
+    print_comments(doc, cmt_tbl, &pat.ppat_loc)
+}
 
 /// Print a pattern.
 pub fn print_pattern(
-    _state: &PrinterState,
+    state: &PrinterState,
     pat: &Pattern,
-    _cmt_tbl: &mut CommentTable,
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    // Simplified placeholder - full implementation needed
-    match &pat.ppat_desc {
+    let pattern_without_attrs = match &pat.ppat_desc {
+        // _
         PatternDesc::Ppat_any => Doc::text("_"),
-        PatternDesc::Ppat_var(name) => Doc::text(&name.txt),
-        PatternDesc::Ppat_constant(c) => print_constant(false, c),
-        PatternDesc::Ppat_tuple(pats) => {
-            let docs: Vec<Doc> = pats.iter().map(|_| Doc::text("_")).collect();
+        // x
+        PatternDesc::Ppat_var(var) => print_ident_like(&var.txt, false, false),
+        // 42, "hello", 'a', etc.
+        PatternDesc::Ppat_constant(c) => {
+            let template_literal = parsetree_viewer::has_template_literal_attr(&pat.ppat_attributes);
+            print_constant(template_literal, c)
+        }
+        // (p1, p2, ...)
+        PatternDesc::Ppat_tuple(patterns) => {
+            Doc::group(Doc::concat(vec![
+                Doc::lparen(),
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::join(
+                        Doc::concat(vec![Doc::text(","), Doc::line()]),
+                        patterns
+                            .iter()
+                            .map(|p| print_pattern(state, p, cmt_tbl))
+                            .collect(),
+                    ),
+                ])),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+                Doc::rparen(),
+            ]))
+        }
+        // []
+        PatternDesc::Ppat_array(patterns) if patterns.is_empty() => {
+            Doc::concat(vec![
+                Doc::lbracket(),
+                print_comments_inside(cmt_tbl, &pat.ppat_loc),
+                Doc::rbracket(),
+            ])
+        }
+        // [p1, p2, ...]
+        PatternDesc::Ppat_array(patterns) => {
+            Doc::group(Doc::concat(vec![
+                Doc::text("["),
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::join(
+                        Doc::concat(vec![Doc::text(","), Doc::line()]),
+                        patterns
+                            .iter()
+                            .map(|p| print_pattern(state, p, cmt_tbl))
+                            .collect(),
+                    ),
+                ])),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+                Doc::text("]"),
+            ]))
+        }
+        // ()
+        PatternDesc::Ppat_construct(lid, None)
+            if lid.txt == Longident::Lident("()".to_string()) =>
+        {
             Doc::concat(vec![
                 Doc::lparen(),
-                Doc::join(Doc::text(", "), docs),
+                print_comments_inside(cmt_tbl, &pat.ppat_loc),
                 Doc::rparen(),
             ])
         }
-        _ => Doc::text("<pattern>"),
+        // list{}
+        PatternDesc::Ppat_construct(lid, None)
+            if lid.txt == Longident::Lident("[]".to_string()) =>
+        {
+            Doc::concat(vec![
+                Doc::text("list{"),
+                print_comments_inside(cmt_tbl, &pat.ppat_loc),
+                Doc::rbrace(),
+            ])
+        }
+        // list{p1, p2, ...spread}
+        PatternDesc::Ppat_construct(lid, _)
+            if lid.txt == Longident::Lident("::".to_string()) =>
+        {
+            print_list_pattern(state, pat, cmt_tbl)
+        }
+        // Constructor(args)
+        PatternDesc::Ppat_construct(constr_name, constructor_args) => {
+            let constr = print_longident_loc(constr_name, cmt_tbl);
+            let args_doc = match constructor_args {
+                None => Doc::nil(),
+                Some(arg) => match &arg.ppat_desc {
+                    PatternDesc::Ppat_construct(lid, None)
+                        if lid.txt == Longident::Lident("()".to_string()) =>
+                    {
+                        Doc::concat(vec![
+                            Doc::lparen(),
+                            print_comments_inside(cmt_tbl, &arg.ppat_loc),
+                            Doc::rparen(),
+                        ])
+                    }
+                    // Some((1, 2))
+                    PatternDesc::Ppat_tuple(pats) if pats.len() == 1 => {
+                        if let PatternDesc::Ppat_tuple(_) = &pats[0].ppat_desc {
+                            Doc::concat(vec![
+                                Doc::lparen(),
+                                print_pattern(state, &pats[0], cmt_tbl),
+                                Doc::rparen(),
+                            ])
+                        } else {
+                            print_pattern_constructor_args(state, Some(arg), cmt_tbl)
+                        }
+                    }
+                    PatternDesc::Ppat_tuple(patterns) => {
+                        Doc::concat(vec![
+                            Doc::lparen(),
+                            Doc::indent(Doc::concat(vec![
+                                Doc::soft_line(),
+                                Doc::join(
+                                    Doc::concat(vec![Doc::comma(), Doc::line()]),
+                                    patterns
+                                        .iter()
+                                        .map(|p| print_pattern(state, p, cmt_tbl))
+                                        .collect(),
+                                ),
+                            ])),
+                            Doc::trailing_comma(),
+                            Doc::soft_line(),
+                            Doc::rparen(),
+                        ])
+                    }
+                    _ => {
+                        let arg_doc = print_pattern(state, arg, cmt_tbl);
+                        let should_hug = is_huggable_pattern(arg);
+                        Doc::concat(vec![
+                            Doc::lparen(),
+                            if should_hug {
+                                arg_doc
+                            } else {
+                                Doc::concat(vec![
+                                    Doc::indent(Doc::concat(vec![Doc::soft_line(), arg_doc])),
+                                    Doc::trailing_comma(),
+                                    Doc::soft_line(),
+                                ])
+                            },
+                            Doc::rparen(),
+                        ])
+                    }
+                },
+            };
+            Doc::group(Doc::concat(vec![constr, args_doc]))
+        }
+        // #variant
+        PatternDesc::Ppat_variant(label, None) => {
+            Doc::concat(vec![Doc::text("#"), print_poly_var_ident(label)])
+        }
+        // #variant(args)
+        PatternDesc::Ppat_variant(label, Some(arg)) => {
+            let variant_name = Doc::concat(vec![Doc::text("#"), print_poly_var_ident(label)]);
+            let args_doc = match &arg.ppat_desc {
+                PatternDesc::Ppat_construct(lid, None)
+                    if lid.txt == Longident::Lident("()".to_string()) =>
+                {
+                    Doc::text("()")
+                }
+                PatternDesc::Ppat_tuple(patterns) => {
+                    Doc::concat(vec![
+                        Doc::lparen(),
+                        Doc::indent(Doc::concat(vec![
+                            Doc::soft_line(),
+                            Doc::join(
+                                Doc::concat(vec![Doc::comma(), Doc::line()]),
+                                patterns
+                                    .iter()
+                                    .map(|p| print_pattern(state, p, cmt_tbl))
+                                    .collect(),
+                            ),
+                        ])),
+                        Doc::trailing_comma(),
+                        Doc::soft_line(),
+                        Doc::rparen(),
+                    ])
+                }
+                _ => {
+                    let arg_doc = print_pattern(state, arg, cmt_tbl);
+                    let should_hug = is_huggable_pattern(arg);
+                    Doc::concat(vec![
+                        Doc::lparen(),
+                        if should_hug {
+                            arg_doc
+                        } else {
+                            Doc::concat(vec![
+                                Doc::indent(Doc::concat(vec![Doc::soft_line(), arg_doc])),
+                                Doc::trailing_comma(),
+                                Doc::soft_line(),
+                            ])
+                        },
+                        Doc::rparen(),
+                    ])
+                }
+            };
+            Doc::group(Doc::concat(vec![variant_name, args_doc]))
+        }
+        // {field1, field2: pat, ...spread}
+        PatternDesc::Ppat_record(fields, closed) => {
+            print_record_pattern(state, fields, &closed, cmt_tbl)
+        }
+        // p | p
+        PatternDesc::Ppat_or(p1, p2) => {
+            let p1_doc = print_pattern(state, p1, cmt_tbl);
+            let p2_doc = print_pattern(state, p2, cmt_tbl);
+            Doc::group(Doc::concat(vec![p1_doc, Doc::text(" | "), p2_doc]))
+        }
+        // p : type
+        PatternDesc::Ppat_constraint(pat, typ) => {
+            let pat_doc = print_pattern(state, pat, cmt_tbl);
+            let typ_doc = print_typ_expr(state, typ, cmt_tbl);
+            Doc::concat(vec![pat_doc, Doc::text(": "), typ_doc])
+        }
+        // p as x
+        PatternDesc::Ppat_alias(pat, alias) => {
+            let pat_doc = print_pattern(state, pat, cmt_tbl);
+            Doc::concat(vec![pat_doc, Doc::text(" as "), Doc::text(&alias.txt)])
+        }
+        // module(M)
+        PatternDesc::Ppat_unpack(name) => {
+            Doc::concat(vec![Doc::text("module("), Doc::text(&name.txt), Doc::text(")")])
+        }
+        // exception pat
+        PatternDesc::Ppat_exception(pat) => {
+            Doc::concat(vec![Doc::text("exception "), print_pattern(state, pat, cmt_tbl)])
+        }
+        // %extension
+        PatternDesc::Ppat_extension(ext) => {
+            Doc::concat(vec![Doc::text("%"), Doc::text(&ext.0.txt)])
+        }
+        // `type identifier
+        PatternDesc::Ppat_type(lid) => {
+            Doc::concat(vec![Doc::text("#..."), print_longident(&lid.txt)])
+        }
+        // interval: 'a'..'z'
+        PatternDesc::Ppat_interval(c1, c2) => {
+            Doc::concat(vec![
+                print_constant(false, c1),
+                Doc::text(".."),
+                print_constant(false, c2),
+            ])
+        }
+        // open M.(pat)
+        PatternDesc::Ppat_open(lid, pat) => {
+            Doc::concat(vec![
+                print_longident(&lid.txt),
+                Doc::text("."),
+                Doc::lparen(),
+                print_pattern(state, pat, cmt_tbl),
+                Doc::rparen(),
+            ])
+        }
+    };
+
+    // Handle attributes
+    if pat.ppat_attributes.is_empty() {
+        pattern_without_attrs
+    } else {
+        let attrs = print_attributes(state, &pat.ppat_attributes, cmt_tbl);
+        Doc::concat(vec![attrs, pattern_without_attrs])
+    }
+}
+
+/// Check if a pattern is "huggable" (can be printed without line breaks).
+fn is_huggable_pattern(pat: &Pattern) -> bool {
+    matches!(
+        &pat.ppat_desc,
+        PatternDesc::Ppat_array(_)
+            | PatternDesc::Ppat_tuple(_)
+            | PatternDesc::Ppat_record(_, _)
+            | PatternDesc::Ppat_variant(_, _)
+            | PatternDesc::Ppat_construct(_, _)
+    )
+}
+
+/// Print pattern constructor args.
+fn print_pattern_constructor_args(
+    state: &PrinterState,
+    arg: Option<&Pattern>,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match arg {
+        None => Doc::nil(),
+        Some(p) => {
+            let doc = print_pattern(state, p, cmt_tbl);
+            let should_hug = is_huggable_pattern(p);
+            Doc::concat(vec![
+                Doc::lparen(),
+                if should_hug {
+                    doc
+                } else {
+                    Doc::concat(vec![
+                        Doc::indent(Doc::concat(vec![Doc::soft_line(), doc])),
+                        Doc::trailing_comma(),
+                        Doc::soft_line(),
+                    ])
+                },
+                Doc::rparen(),
+            ])
+        }
+    }
+}
+
+/// Print list pattern.
+fn print_list_pattern(
+    state: &PrinterState,
+    pat: &Pattern,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (patterns, tail) = parsetree_viewer::collect_list_patterns(pat);
+
+    let should_hug = matches!((&patterns[..], tail),
+        ([single], Some(t)) if is_huggable_pattern(single)
+            && matches!(&t.ppat_desc, PatternDesc::Ppat_construct(lid, None)
+                if lid.txt == Longident::Lident("[]".to_string())));
+
+    let tail_doc = match tail {
+        Some(t) => match &t.ppat_desc {
+            PatternDesc::Ppat_construct(lid, None)
+                if lid.txt == Longident::Lident("[]".to_string()) =>
+            {
+                Doc::nil()
+            }
+            _ => {
+                Doc::concat(vec![
+                    Doc::text(","),
+                    Doc::line(),
+                    Doc::text("..."),
+                    print_pattern(state, t, cmt_tbl),
+                ])
+            }
+        },
+        None => Doc::nil(),
+    };
+
+    let children = Doc::concat(vec![
+        if should_hug { Doc::nil() } else { Doc::soft_line() },
+        Doc::join(
+            Doc::concat(vec![Doc::text(","), Doc::line()]),
+            patterns
+                .iter()
+                .map(|p| print_pattern(state, *p, cmt_tbl))
+                .collect(),
+        ),
+        tail_doc,
+    ]);
+
+    Doc::group(Doc::concat(vec![
+        Doc::text("list{"),
+        if should_hug {
+            children
+        } else {
+            Doc::concat(vec![
+                Doc::indent(children),
+                Doc::if_breaks(Doc::text(","), Doc::nil()),
+                Doc::soft_line(),
+            ])
+        },
+        Doc::rbrace(),
+    ]))
+}
+
+/// Print record pattern.
+fn print_record_pattern(
+    state: &PrinterState,
+    fields: &[PatternRecordField],
+    closed: &ClosedFlag,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let fields_doc = Doc::join(
+        Doc::concat(vec![Doc::text(","), Doc::line()]),
+        fields
+            .iter()
+            .map(|field| {
+                let label = print_lident(&field.lid.txt);
+                // Check for punning
+                if is_punned_pattern_field(field) {
+                    if field.opt {
+                        Doc::concat(vec![label, Doc::text("?")])
+                    } else {
+                        label
+                    }
+                } else {
+                    let pat_doc = print_pattern(state, &field.pat, cmt_tbl);
+                    if field.opt {
+                        Doc::concat(vec![label, Doc::text(": "), pat_doc, Doc::text("?")])
+                    } else {
+                        Doc::concat(vec![label, Doc::text(": "), pat_doc])
+                    }
+                }
+            })
+            .collect(),
+    );
+
+    let open_doc = match closed {
+        ClosedFlag::Closed => Doc::nil(),
+        ClosedFlag::Open => {
+            if fields.is_empty() {
+                Doc::text("_")
+            } else {
+                Doc::concat(vec![Doc::text(","), Doc::line(), Doc::text("_")])
+            }
+        }
+    };
+
+    Doc::group(Doc::concat(vec![
+        Doc::lbrace(),
+        Doc::indent(Doc::concat(vec![Doc::soft_line(), fields_doc, open_doc])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::rbrace(),
+    ]))
+}
+
+/// Check if a pattern record field is punned.
+fn is_punned_pattern_field(field: &PatternRecordField) -> bool {
+    match (&field.lid.txt, &field.pat.ppat_desc) {
+        (Longident::Lident(name), PatternDesc::Ppat_var(var)) => name == &var.txt,
+        _ => false,
     }
 }
 
 // ============================================================================
-// Type Printing (placeholder)
+// Type Printing
 // ============================================================================
 
 /// Print a type expression.
 pub fn print_typ_expr(
-    _state: &PrinterState,
+    state: &PrinterState,
     typ: &CoreType,
-    _cmt_tbl: &mut CommentTable,
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    // Simplified placeholder - full implementation needed
-    match &typ.ptyp_desc {
+    let rendered_type = match &typ.ptyp_desc {
         CoreTypeDesc::Ptyp_any => Doc::text("_"),
-        CoreTypeDesc::Ptyp_var(name) => Doc::concat(vec![Doc::text("'"), Doc::text(name.clone())]),
-        CoreTypeDesc::Ptyp_constr(lid, _) => print_longident(&lid.txt),
-        _ => Doc::text("<type>"),
+
+        CoreTypeDesc::Ptyp_var(name) => {
+            Doc::concat(vec![Doc::text("'"), print_ident_like(name, true, false)])
+        }
+
+        CoreTypeDesc::Ptyp_extension(ext) => print_extension(state, ext, cmt_tbl),
+
+        CoreTypeDesc::Ptyp_alias(inner_typ, alias) => {
+            let needs_parens = matches!(inner_typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+            let typ_doc = print_typ_expr(state, inner_typ, cmt_tbl);
+            let typ_doc = if needs_parens {
+                Doc::concat(vec![Doc::lparen(), typ_doc, Doc::rparen()])
+            } else {
+                typ_doc
+            };
+            Doc::concat(vec![
+                typ_doc,
+                Doc::text(" as "),
+                Doc::concat(vec![Doc::text("'"), print_ident_like(alias, false, false)]),
+            ])
+        }
+
+        CoreTypeDesc::Ptyp_object(fields, open_flag) => {
+            print_object(state, fields, open_flag, false, cmt_tbl)
+        }
+
+        CoreTypeDesc::Ptyp_arrow { arity, .. } => {
+            print_arrow_type(state, typ, arity.clone(), cmt_tbl)
+        }
+
+        CoreTypeDesc::Ptyp_constr(lid, args) => {
+            // Handle special case: object type inside type constructor
+            if let [single_arg] = args.as_slice() {
+                if let CoreTypeDesc::Ptyp_object(fields, open_flag) = &single_arg.ptyp_desc {
+                    let constr_name = print_lident_path(lid, cmt_tbl);
+                    return Doc::concat(vec![
+                        constr_name,
+                        Doc::less_than(),
+                        print_object(state, fields, open_flag, true, cmt_tbl),
+                        Doc::greater_than(),
+                    ]);
+                }
+                // Handle tuple inside constructor
+                if let CoreTypeDesc::Ptyp_tuple(types) = &single_arg.ptyp_desc {
+                    let constr_name = print_lident_path(lid, cmt_tbl);
+                    return Doc::group(Doc::concat(vec![
+                        constr_name,
+                        Doc::less_than(),
+                        print_tuple_type(state, types, true, cmt_tbl),
+                        Doc::greater_than(),
+                    ]));
+                }
+            }
+
+            let constr_name = print_lident_path(lid, cmt_tbl);
+            if args.is_empty() {
+                constr_name
+            } else {
+                Doc::group(Doc::concat(vec![
+                    constr_name,
+                    Doc::less_than(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::soft_line(),
+                        Doc::join(
+                            Doc::concat(vec![Doc::text(","), Doc::line()]),
+                            args.iter()
+                                .map(|arg| print_typ_expr(state, arg, cmt_tbl))
+                                .collect(),
+                        ),
+                    ])),
+                    Doc::trailing_comma(),
+                    Doc::soft_line(),
+                    Doc::greater_than(),
+                ]))
+            }
+        }
+
+        CoreTypeDesc::Ptyp_tuple(types) => print_tuple_type(state, types, false, cmt_tbl),
+
+        CoreTypeDesc::Ptyp_poly(vars, inner_typ) => {
+            if vars.is_empty() {
+                print_typ_expr(state, inner_typ, cmt_tbl)
+            } else {
+                Doc::concat(vec![
+                    Doc::join(
+                        Doc::space(),
+                        vars.iter()
+                            .map(|var| {
+                                Doc::concat(vec![Doc::text("'"), Doc::text(var.txt.clone())])
+                            })
+                            .collect(),
+                    ),
+                    Doc::text("."),
+                    Doc::space(),
+                    print_typ_expr(state, inner_typ, cmt_tbl),
+                ])
+            }
+        }
+
+        CoreTypeDesc::Ptyp_package(package_type) => {
+            print_package_type(state, package_type, true, cmt_tbl)
+        }
+
+        CoreTypeDesc::Ptyp_variant(row_fields, closed_flag, labels_opt) => {
+            print_variant_type(state, row_fields, closed_flag, labels_opt, typ, cmt_tbl)
+        }
+    };
+
+    // Handle attributes
+    let should_print_its_own_attributes =
+        matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+
+    if !typ.ptyp_attributes.is_empty() && !should_print_its_own_attributes {
+        let (doc_comment_attrs, other_attrs) =
+            parsetree_viewer::partition_doc_comment_attributes(&typ.ptyp_attributes);
+        let comment_doc = if doc_comment_attrs.is_empty() {
+            Doc::nil()
+        } else {
+            print_doc_comments(state, &doc_comment_attrs, cmt_tbl)
+        };
+        let attrs_doc = if other_attrs.is_empty() {
+            Doc::nil()
+        } else {
+            print_attributes_from_refs(state, &other_attrs, cmt_tbl)
+        };
+        Doc::group(Doc::concat(vec![comment_doc, attrs_doc, rendered_type]))
+    } else {
+        rendered_type
     }
 }
+
+/// Print an arrow type.
+fn print_arrow_type(
+    state: &PrinterState,
+    typ: &CoreType,
+    arity: Arity,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let max_arity = match &arity {
+        Arity::Full(n) => Some(*n),
+        Arity::Unknown => None,
+    };
+
+    let (attrs_before, args, return_type) = parsetree_viewer::arrow_type(typ, max_arity);
+
+    let return_type_needs_parens =
+        matches!(return_type.ptyp_desc, CoreTypeDesc::Ptyp_alias(_, _));
+
+    let return_doc = {
+        let doc = print_typ_expr(state, return_type, cmt_tbl);
+        if return_type_needs_parens {
+            Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+        } else {
+            doc
+        }
+    };
+
+    if args.is_empty() {
+        return Doc::nil();
+    }
+
+    // Single unlabeled argument with no attrs
+    if args.len() == 1 {
+        let arg = &args[0];
+        if matches!(arg.lbl, ArgLabel::Nolabel) && arg.attrs.is_empty() {
+            let has_attrs_before = !attrs_before.is_empty();
+            let attrs = if has_attrs_before {
+                print_attributes_inline(state, attrs_before, cmt_tbl)
+            } else {
+                Doc::nil()
+            };
+            let typ_doc = {
+                let doc = print_typ_expr(state, arg.typ, cmt_tbl);
+                match &arg.typ.ptyp_desc {
+                    CoreTypeDesc::Ptyp_arrow { .. }
+                    | CoreTypeDesc::Ptyp_tuple(_)
+                    | CoreTypeDesc::Ptyp_alias(_, _) => add_parens(doc),
+                    _ => doc,
+                }
+            };
+            return Doc::group(Doc::concat(vec![
+                Doc::group(attrs),
+                Doc::group(if has_attrs_before {
+                    Doc::concat(vec![
+                        Doc::lparen(),
+                        Doc::indent(Doc::concat(vec![
+                            Doc::soft_line(),
+                            typ_doc,
+                            Doc::text(" => "),
+                            return_doc,
+                        ])),
+                        Doc::soft_line(),
+                        Doc::rparen(),
+                    ])
+                } else {
+                    Doc::concat(vec![typ_doc, Doc::text(" => "), return_doc])
+                }),
+            ]));
+        }
+    }
+
+    // Multiple arguments or labeled argument
+    let attrs = print_attributes_inline(state, attrs_before, cmt_tbl);
+    let rendered_args = Doc::concat(vec![
+        attrs,
+        Doc::text("("),
+        Doc::indent(Doc::concat(vec![
+            Doc::soft_line(),
+            Doc::join(
+                Doc::concat(vec![Doc::text(","), Doc::line()]),
+                args.iter()
+                    .map(|param| print_type_parameter(state, param, cmt_tbl))
+                    .collect(),
+            ),
+        ])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::text(")"),
+    ]);
+
+    Doc::group(Doc::concat(vec![
+        rendered_args,
+        Doc::text(" => "),
+        return_doc,
+    ]))
+}
+
+/// Print a type parameter (argument in an arrow type).
+fn print_type_parameter(
+    state: &PrinterState,
+    param: &parsetree_viewer::TypeParameter<'_>,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs = print_attributes(state, param.attrs, cmt_tbl);
+    let label_doc = match param.lbl {
+        ArgLabel::Nolabel => Doc::nil(),
+        ArgLabel::Labelled(name) => Doc::concat(vec![Doc::text("~"), Doc::text(&name.txt), Doc::text(": ")]),
+        ArgLabel::Optional(name) => Doc::concat(vec![Doc::text("~"), Doc::text(&name.txt), Doc::text(": ")]),
+    };
+    let optional_indicator = match param.lbl {
+        ArgLabel::Optional(_) => Doc::text("=?"),
+        _ => Doc::nil(),
+    };
+    let typ_doc = print_typ_expr(state, param.typ, cmt_tbl);
+
+    Doc::group(Doc::concat(vec![attrs, label_doc, typ_doc, optional_indicator]))
+}
+
+/// Print tuple type.
+fn print_tuple_type(
+    state: &PrinterState,
+    types: &[CoreType],
+    inline: bool,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let tuple = Doc::concat(vec![
+        Doc::lparen(),
+        Doc::indent(Doc::concat(vec![
+            Doc::soft_line(),
+            Doc::join(
+                Doc::concat(vec![Doc::text(","), Doc::line()]),
+                types
+                    .iter()
+                    .map(|t| print_typ_expr(state, t, cmt_tbl))
+                    .collect(),
+            ),
+        ])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::rparen(),
+    ]);
+    if inline {
+        tuple
+    } else {
+        Doc::group(tuple)
+    }
+}
+
+/// Print object type.
+fn print_object(
+    state: &PrinterState,
+    fields: &[ObjectField],
+    open_flag: &ClosedFlag,
+    inline: bool,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    if fields.is_empty() {
+        let dot_or_dotdot = match open_flag {
+            ClosedFlag::Closed => Doc::text("."),
+            ClosedFlag::Open => Doc::text(".."),
+        };
+        return Doc::concat(vec![Doc::lbrace(), dot_or_dotdot, Doc::rbrace()]);
+    }
+
+    let open_doc = match open_flag {
+        ClosedFlag::Closed => Doc::nil(),
+        ClosedFlag::Open => {
+            // Check if first field is inherit
+            if matches!(fields.first(), Some(ObjectField::Oinherit(_))) {
+                Doc::text(".. ")
+            } else {
+                Doc::text("..")
+            }
+        }
+    };
+
+    let fields_doc = Doc::join(
+        Doc::concat(vec![Doc::text(","), Doc::line()]),
+        fields
+            .iter()
+            .map(|field| print_object_field(state, field, cmt_tbl))
+            .collect(),
+    );
+
+    let doc = Doc::concat(vec![
+        Doc::lbrace(),
+        open_doc,
+        Doc::indent(Doc::concat(vec![Doc::soft_line(), fields_doc])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::rbrace(),
+    ]);
+
+    if inline {
+        doc
+    } else {
+        Doc::group(doc)
+    }
+}
+
+/// Print an object field.
+fn print_object_field(
+    state: &PrinterState,
+    field: &ObjectField,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match field {
+        ObjectField::Otag(label, attrs, typ) => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl);
+            let label_doc = Doc::text(format!("\"{}\"", label.txt));
+            let typ_doc = print_typ_expr(state, typ, cmt_tbl);
+            Doc::concat(vec![attrs_doc, label_doc, Doc::text(": "), typ_doc])
+        }
+        ObjectField::Oinherit(typ) => {
+            Doc::concat(vec![Doc::text("..."), print_typ_expr(state, typ, cmt_tbl)])
+        }
+    }
+}
+
+/// Print polymorphic variant type.
+fn print_variant_type(
+    state: &PrinterState,
+    row_fields: &[RowField],
+    closed_flag: &ClosedFlag,
+    labels_opt: &Option<Vec<String>>,
+    typ: &CoreType,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let force_break = typ.ptyp_loc.loc_start.line < typ.ptyp_loc.loc_end.line;
+
+    let docs: Vec<Doc> = row_fields
+        .iter()
+        .enumerate()
+        .map(|(i, field)| print_row_field(state, i, field, cmt_tbl))
+        .collect();
+
+    let cases = Doc::join(Doc::line(), docs);
+
+    let opening_symbol = if *closed_flag == ClosedFlag::Open {
+        Doc::concat(vec![Doc::greater_than(), Doc::line()])
+    } else if labels_opt.is_none() {
+        Doc::soft_line()
+    } else {
+        Doc::concat(vec![Doc::less_than(), Doc::line()])
+    };
+
+    let labels = match labels_opt {
+        None => Doc::nil(),
+        Some(labels) if labels.is_empty() => Doc::nil(),
+        Some(labels) => Doc::concat(
+            labels
+                .iter()
+                .map(|label| {
+                    Doc::concat(vec![Doc::line(), Doc::text("#"), print_poly_var_ident(label)])
+                })
+                .collect(),
+        ),
+    };
+
+    let closing_symbol = match labels_opt {
+        None => Doc::nil(),
+        Some(labels) if labels.is_empty() => Doc::nil(),
+        _ => Doc::text(" >"),
+    };
+
+    Doc::breakable_group(
+        Doc::concat(vec![
+            Doc::lbracket(),
+            Doc::indent(Doc::concat(vec![
+                opening_symbol,
+                cases,
+                closing_symbol,
+                labels,
+            ])),
+            Doc::soft_line(),
+            Doc::rbracket(),
+        ]),
+        force_break,
+    )
+}
+
+/// Print a row field (polymorphic variant constructor).
+fn print_row_field(
+    state: &PrinterState,
+    index: usize,
+    field: &RowField,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match field {
+        RowField::Rtag(label, attrs, has_empty_payload, types) => {
+            let (doc_attrs, other_attrs) =
+                parsetree_viewer::partition_doc_comment_attributes(attrs);
+            let comment_doc = if doc_attrs.is_empty() {
+                Doc::nil()
+            } else {
+                print_doc_comments(state, &doc_attrs, cmt_tbl)
+            };
+            let bar = if index > 0 || !doc_attrs.is_empty() {
+                Doc::text("| ")
+            } else {
+                Doc::if_breaks(Doc::text("| "), Doc::nil())
+            };
+
+            let types_doc = if types.is_empty() {
+                Doc::nil()
+            } else {
+                let printed_types: Vec<Doc> = types
+                    .iter()
+                    .map(|t| {
+                        if matches!(t.ptyp_desc, CoreTypeDesc::Ptyp_tuple(_)) {
+                            print_typ_expr(state, t, cmt_tbl)
+                        } else {
+                            Doc::concat(vec![
+                                Doc::lparen(),
+                                print_typ_expr(state, t, cmt_tbl),
+                                Doc::rparen(),
+                            ])
+                        }
+                    })
+                    .collect();
+                let cases = Doc::join(
+                    Doc::concat(vec![Doc::line(), Doc::text("& ")]),
+                    printed_types,
+                );
+                if *has_empty_payload {
+                    Doc::concat(vec![Doc::line(), Doc::text("& "), cases])
+                } else {
+                    cases
+                }
+            };
+
+            let attrs_doc = print_attributes_from_refs(state, &other_attrs, cmt_tbl);
+            let tag_doc = Doc::group(Doc::concat(vec![
+                attrs_doc,
+                Doc::concat(vec![Doc::text("#"), print_poly_var_ident(&label.txt)]),
+                types_doc,
+            ]));
+
+            Doc::concat(vec![comment_doc, bar, tag_doc])
+        }
+        RowField::Rinherit(typ) => {
+            let bar = if index > 0 {
+                Doc::text("| ")
+            } else {
+                Doc::if_breaks(Doc::text("| "), Doc::nil())
+            };
+            Doc::concat(vec![bar, print_typ_expr(state, typ, cmt_tbl)])
+        }
+    }
+}
+
+
+/// Print a package type.
+fn print_package_type(
+    state: &PrinterState,
+    package_type: &PackageType,
+    print_module_keyword: bool,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (lid, constraints) = package_type;
+    let lid_doc = print_longident(&lid.txt);
+
+    let constraints_doc = if constraints.is_empty() {
+        Doc::nil()
+    } else {
+        Doc::concat(vec![
+            Doc::text(" with "),
+            Doc::join(
+                Doc::text(" and "),
+                constraints
+                    .iter()
+                    .map(|(name, typ)| {
+                        Doc::concat(vec![
+                            Doc::text("type "),
+                            print_longident(&name.txt),
+                            Doc::text(" = "),
+                            print_typ_expr(state, typ, cmt_tbl),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ])
+    };
+
+    if print_module_keyword {
+        Doc::concat(vec![
+            Doc::text("module("),
+            lid_doc,
+            constraints_doc,
+            Doc::text(")"),
+        ])
+    } else {
+        Doc::concat(vec![lid_doc, constraints_doc])
+    }
+}
+
+/// Print doc comment attributes.
+fn print_doc_comments(
+    _state: &PrinterState,
+    doc_attrs: &[&Attribute],
+    _cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let docs: Vec<Doc> = doc_attrs
+        .iter()
+        .filter_map(|attr| {
+            // Doc comments are stored as Payload::PStr containing a Pstr_eval
+            // with a Pexp_constant(Constant::String(...))
+            if let Payload::PStr(items) = &attr.1 {
+                if let Some(item) = items.first() {
+                    if let StructureItemDesc::Pstr_eval(expr, _) = &item.pstr_desc {
+                        if let ExpressionDesc::Pexp_constant(Constant::String(content, _)) =
+                            &expr.pexp_desc
+                        {
+                            return Some(Doc::concat(vec![
+                                Doc::text("/** "),
+                                Doc::text(content.clone()),
+                                Doc::text(" */"),
+                                Doc::hard_line(),
+                            ]));
+                        }
+                    }
+                }
+            }
+            None
+        })
+        .collect();
+    Doc::concat(docs)
+}
+
+/// Print attributes from borrowed references.
+fn print_attributes_from_refs(
+    state: &PrinterState,
+    attrs: &[&Attribute],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    if attrs.is_empty() {
+        return Doc::nil();
+    }
+    let attrs_doc: Vec<Doc> = attrs
+        .iter()
+        .map(|attr| print_attribute(state, attr, cmt_tbl))
+        .collect();
+    Doc::concat(vec![Doc::concat(attrs_doc), Doc::space()])
+}
+
+/// Print attributes inline (for arrow type parameters).
+fn print_attributes_inline(
+    state: &PrinterState,
+    attrs: &Attributes,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    if attrs.is_empty() {
+        return Doc::nil();
+    }
+    let attrs_doc: Vec<Doc> = attrs
+        .iter()
+        .map(|attr| print_attribute(state, attr, cmt_tbl))
+        .collect();
+    Doc::concat(attrs_doc)
+}
+
 
 // ============================================================================
 // Module Printing (placeholder)
@@ -1795,12 +3096,76 @@ fn print_value_bindings(
 
 /// Print attributes.
 fn print_attributes(
-    _state: &PrinterState,
-    _attrs: &[Attribute],
-    _cmt_tbl: &mut CommentTable,
+    state: &PrinterState,
+    attrs: &[Attribute],
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    // Simplified - attributes need full implementation
-    Doc::nil()
+    if attrs.is_empty() {
+        return Doc::nil();
+    }
+    let docs: Vec<Doc> = attrs
+        .iter()
+        .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
+        .map(|attr| print_attribute(state, attr, cmt_tbl))
+        .collect();
+    if docs.is_empty() {
+        Doc::nil()
+    } else {
+        Doc::concat(vec![Doc::concat(docs), Doc::space()])
+    }
+}
+
+/// Print a single attribute.
+fn print_attribute(
+    state: &PrinterState,
+    attr: &Attribute,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (name, payload) = attr;
+    let attr_name = Doc::text(format!("@{}", name.txt));
+
+    let payload_doc = match payload {
+        Payload::PStr(items) if items.is_empty() => Doc::nil(),
+        Payload::PStr(items) => {
+            // Print structure items - for simple cases, try to extract the expression
+            if items.len() == 1 {
+                if let StructureItemDesc::Pstr_eval(expr, _) = &items[0].pstr_desc {
+                    return Doc::concat(vec![
+                        attr_name,
+                        Doc::text("("),
+                        print_expression_with_comments(state, expr, cmt_tbl),
+                        Doc::text(")"),
+                        Doc::space(),
+                    ]);
+                }
+            }
+            // Fall back to a simple representation for complex payloads
+            Doc::concat(vec![Doc::text("("), Doc::text("..."), Doc::text(")")])
+        }
+        Payload::PTyp(typ) => {
+            Doc::concat(vec![
+                Doc::text("("),
+                print_typ_expr(state, typ, cmt_tbl),
+                Doc::text(")"),
+            ])
+        }
+        Payload::PSig(_) => Doc::text("(: ...)"),
+        Payload::PPat(pat, guard) => {
+            let pat_doc = print_pattern(state, pat, cmt_tbl);
+            match guard {
+                Some(expr) => Doc::concat(vec![
+                    Doc::text("(? "),
+                    pat_doc,
+                    Doc::text(" when "),
+                    print_expression_with_comments(state, expr, cmt_tbl),
+                    Doc::text(")"),
+                ]),
+                None => Doc::concat(vec![Doc::text("(? "), pat_doc, Doc::text(")")]),
+            }
+        }
+    };
+
+    Doc::concat(vec![attr_name, payload_doc, Doc::space()])
 }
 
 // ============================================================================
