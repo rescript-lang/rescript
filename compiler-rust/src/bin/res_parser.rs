@@ -21,7 +21,7 @@
 use clap::Parser as ClapParser;
 use rescript_compiler::binary_ast::{mapper_from0, mapper_to0, Marshal, MarshalWriter};
 use rescript_compiler::parser::{
-    code_frame, jsx_ppx, ml_printer, module, print_signature, printer, sexp, sexp_locs, sexp_locs0, Parser,
+    code_frame, jsx_ppx, ml_printer, module, print_signature, printer, printer2, sexp, sexp_locs, sexp_locs0, Parser,
     ParserMode, Scanner, SignatureItem, Structure,
 };
 use std::fs;
@@ -285,12 +285,11 @@ fn main() {
             }
             "res" => {
                 let output =
-                    printer::print_structure_with_comments(&structure, parser.comments());
+                    printer2::print_structure_with_comments(&structure, parser.comments().to_vec());
                 if !output.is_empty() {
                     // Convert Latin-1 chars back to bytes to preserve original file encoding
                     let bytes: Vec<u8> = output.chars().map(|c| c as u8).collect();
                     let _ = io::stdout().write_all(&bytes);
-                    let _ = io::stdout().write_all(b"\n");
                 }
             }
             "sexp" => sexp::print_structure(&structure, &mut io::stdout()),
