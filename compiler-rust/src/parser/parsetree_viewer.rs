@@ -385,8 +385,17 @@ pub enum FunParam<'a> {
 /// Extract function parameters from a potentially nested function expression.
 /// Returns (is_async, parameters, body).
 pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
-    // Check for async attribute
-    let is_async = expr.pexp_attributes.iter().any(|attr| attr.0.txt == "res.async");
+    // Check for async attribute OR is_async field in Pexp_fun
+    let mut is_async = expr.pexp_attributes.iter().any(|attr| attr.0.txt == "res.async");
+
+    // Also check is_async field on the first Pexp_fun
+    if let ExpressionDesc::Pexp_fun {
+        is_async: expr_is_async,
+        ..
+    } = &expr.pexp_desc
+    {
+        is_async = is_async || *expr_is_async;
+    }
 
     let mut params = Vec::new();
     let mut current = expr;
