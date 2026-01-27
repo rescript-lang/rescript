@@ -2643,7 +2643,10 @@ pub fn print_pattern(
         }
         // `type identifier
         PatternDesc::Ppat_type(lid) => {
-            Doc::concat(vec![Doc::text("#..."), print_longident(&lid.txt)])
+            // Use print_lident for proper escaping of exotic identifiers
+            let doc = print_lident(&lid.txt);
+            let doc = print_comments(doc, cmt_tbl, &lid.loc);
+            Doc::concat(vec![Doc::text("#..."), doc])
         }
         // interval: 'a' .. 'z'
         PatternDesc::Ppat_interval(c1, c2) => {
