@@ -161,6 +161,8 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ✅ **If-else chains** - `else if` now printed properly instead of `else { if ... }`
 - ✅ **If-let expressions** - `if let Some(x) = foo() { ... }` chain support
 - ✅ **Type parameter variance** - `+` (covariant) and `-` (contravariant) modifiers now printed
+- ✅ **Float negation/plus** - `-.` and `+.` printed correctly (not just `-` and `+`)
+- ✅ **Bitwise NOT operator** - `~~~` added to unary operators for proper `-(~~~a)` parenthesization
 
 ### Known Issues / TODO
 - ❌ Comment attachment: Comments not properly attaching to nodes
