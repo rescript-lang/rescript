@@ -1061,6 +1061,7 @@ mod tests {
                     val_kind: ValueKind::ValReg,
                     val_loc: Location::none(),
                     val_attributes: vec![],
+                    val_path: None,
                 },
             ),
             Location::none(),
