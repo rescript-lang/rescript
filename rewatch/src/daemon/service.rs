@@ -719,34 +719,7 @@ impl RescriptDaemon for DaemonService {
                 );
                 let result = tokio::task::spawn_blocking(move || -> Result<String, String> {
                     stdin_span.in_scope(|| {
-                        use std::io::Write;
-                        use std::process::Command;
-
-                        let bsc_path = crate::helpers::get_bsc();
-
-                        let mut temp_file = tempfile::Builder::new()
-                            .suffix(&ext)
-                            .tempfile()
-                            .map_err(|e| format!("Failed to create temp file: {}", e))?;
-
-                        temp_file
-                            .write_all(content.as_bytes())
-                            .map_err(|e| format!("Failed to write to temp file: {}", e))?;
-
-                        let temp_path = temp_file.path();
-
-                        let output = Command::new(&bsc_path)
-                            .arg("-format")
-                            .arg(temp_path)
-                            .output()
-                            .map_err(|e| format!("Failed to run bsc: {}", e))?;
-
-                        if output.status.success() {
-                            String::from_utf8(output.stdout)
-                                .map_err(|e| format!("Invalid UTF-8 in output: {}", e))
-                        } else {
-                            Err(String::from_utf8_lossy(&output.stderr).to_string())
-                        }
+                        build::format::format_stdin(&content, &ext)
                     })
                 })
                 .await;
@@ -809,64 +782,12 @@ impl RescriptDaemon for DaemonService {
 
             let format_result = tokio::task::spawn_blocking(move || {
                 format_span_clone.in_scope(|| {
-                    use rayon::prelude::*;
-                    use std::fs;
-                    use std::process::Command;
-                    use std::sync::atomic::{AtomicUsize, Ordering};
-
-                    let bsc_path = crate::helpers::get_bsc();
-                    let batch_size = 4 * num_cpus::get();
-                    let formatted_count = AtomicUsize::new(0);
-                    let failed_count = AtomicUsize::new(0);
-
-                    let result: Result<(), String> =
-                        files.par_chunks(batch_size).try_for_each(|batch| {
-                            batch.iter().try_for_each(|file| {
-                                let mut cmd = Command::new(&bsc_path);
-                                // Always get formatted output to stdout for comparison
-                                cmd.arg("-format").arg(file);
-
-                                let output =
-                                    cmd.output().map_err(|e| format!("Failed to run bsc: {}", e))?;
-
-                                if output.status.success() {
-                                    let original_content = fs::read_to_string(file)
-                                        .map_err(|e| format!("Failed to read {}: {}", file, e))?;
-                                    let formatted_content = String::from_utf8_lossy(&output.stdout);
-                                    if original_content != formatted_content {
-                                        if check {
-                                            failed_count.fetch_add(1, Ordering::SeqCst);
-                                            let _ = tx.blocking_send(make_format_check_failed(
-                                                client_id,
-                                                file.clone(),
-                                            ));
-                                        } else {
-                                            // Only emit span when we actually write the file
-                                            let _file_span = tracing::info_span!(
-                                                "format.write_file",
-                                                file = %file,
-                                            )
-                                            .entered();
-
-                                            fs::write(file, &*formatted_content).map_err(|e| {
-                                                format!("Failed to write {}: {}", file, e)
-                                            })?;
-                                        }
-                                    }
-                                    formatted_count.fetch_add(1, Ordering::SeqCst);
-                                } else {
-                                    let stderr_str = String::from_utf8_lossy(&output.stderr);
-                                    return Err(format!("Error formatting {}: {}", file, stderr_str));
-                                }
-                                Ok(())
-                            })
-                        });
-
-                    (
-                        result,
-                        formatted_count.load(Ordering::SeqCst),
-                        failed_count.load(Ordering::SeqCst),
-                    )
+                    build::format::format_files(&files, check, &|file| {
+                        let _ = tx.blocking_send(make_format_check_failed(
+                            client_id,
+                            file.to_string(),
+                        ));
+                    })
                 })
             });
 
@@ -895,7 +816,7 @@ impl RescriptDaemon for DaemonService {
             let duration = start.elapsed();
 
             match format_result.await {
-                Ok((Ok(()), formatted, failed)) => {
+                Ok((formatted, failed, None)) => {
                     let success = failed == 0;
                     state.emit_format_finished(client_id, success, duration.as_secs_f64(), formatted as i32, failed as i32);
                     if !success {
@@ -907,7 +828,7 @@ impl RescriptDaemon for DaemonService {
                     }
                     yield Ok(make_format_finished(client_id, success, formatted as i32, failed as i32));
                 }
-                Ok((Err(e), formatted, failed)) => {
+                Ok((formatted, failed, Some(e))) => {
                     state.emit_format_finished(client_id, false, duration.as_secs_f64(), formatted as i32, failed as i32);
                     yield Ok(make_compiler_error(client_id, e));
                     yield Ok(make_format_finished(client_id, false, formatted as i32, failed as i32));

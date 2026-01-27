@@ -3,6 +3,7 @@ pub mod clean;
 pub mod compile;
 pub mod compiler_info;
 pub mod deps;
+pub mod format;
 pub mod logs;
 pub mod namespaces;
 pub mod packages;
