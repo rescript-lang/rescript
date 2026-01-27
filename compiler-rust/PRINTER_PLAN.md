@@ -107,8 +107,7 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 
 ## Current Status (2026-01-27)
 
-**Test Results:** 123/506 passing (24%)
-- Printer tests: 37/187 passing (20%)
+**Test Results:** Printer tests: 39/172 passing (22%)
 
 ### Recently Completed
 - ✅ `PrinterState` struct with custom_layout tracking
@@ -126,6 +125,14 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ✅ Fixed constructor escaping (true, false, etc. no longer escaped)
 - ✅ Fixed assert expression formatting
 - ✅ **Blank line preservation** - Fixed `Doc::to_string` to only trim spaces, not newlines
+- ✅ **Type attributes position** - Attributes now printed before `type` keyword
+- ✅ **Type name escaping** - Reserved words properly escaped in type declarations
+- ✅ **Record field escaping** - Reserved words properly escaped in record fields
+- ✅ **Type extension printing** - `print_type_extension` implemented
+- ✅ **Polyvariant escaping** - Fixed double `#` issue in exotic polyvariant names
+- ✅ **Pipe before attributed constructors** - `| @attr Constructor` now has leading pipe
+- ✅ **Constraint patterns in cases** - `(-3.14: float)` properly parenthesized
+- ✅ **Expression block recursion** - Fixed infinite recursion for Pexp_letmodule etc.
 - ✅ **Ternary expressions** - Now prints `cond ? a : b` instead of `if cond {...}`
 - ✅ **Pexp_send** - Now prints `obj["prop"]` instead of `obj#prop`
 - ✅ **Send-set operator** - `#=` now prints as `obj["prop"] = value`
