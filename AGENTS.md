@@ -718,6 +718,30 @@ cargo build --manifest-path compiler-rust/Cargo.toml --release
 ./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
 ```
 
+#### Known sexp-locs Parity Issues (5 files remaining at 99.5%)
+
+The following files have known location parity differences that require more complex fixes:
+
+1. **DocComments.res** - Doc comment attribute location handling
+   - Issue: Attribute end positions differ; type locations with doc comments have wrong start positions
+   - Root cause: Doc comments need different location tracking in attribute parsing
+
+2. **UncurriedByDefault.res** - Ghost locations vs real locations
+   - Issue: OCaml uses ghost location `(loc 1 -1 1 -1)` for synthesized unit types, Rust uses real locations
+   - Root cause: Need to identify when OCaml synthesizes types and use `Location::none()`
+
+3. **underscoreApply.res** - Underscore-apply transformation locations
+   - Issue: Synthetic `__x` variable locations differ (OCaml uses last `_`, Rust uses first)
+   - Root cause: Underscore-apply PPX transformation needs location adjustment
+
+4. **attributes.res** - Attribute location end positions
+   - Issue: Structure item location end positions and attribute locations differ by 1-3 characters
+   - Root cause: Attribute payload parsing location handling
+
+5. **variant.res** - Missing doc comment attributes
+   - Issue: Doc comments on variant constructors not being converted to `res.doc` attributes
+   - Root cause: Doc comment to attribute conversion for variant constructor contexts
+
 ### Key Design Decisions
 
 - **Thread-safe ID generation** - `IdGenerator` with `AtomicI32` instead of global `currentstamp`
