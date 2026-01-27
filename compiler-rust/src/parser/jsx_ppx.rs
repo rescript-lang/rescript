@@ -502,6 +502,9 @@ fn transform_react_component_binding(
         };
 
         // Outer function with props parameter
+        // OCaml: Exp.fun_ ~arity:(Some total_arity) ~async:is_async Nolabel None
+        // Note: OCaml line 765 does NOT pass ~attrs, so this inner expression has no attributes
+        // The outer wrapper (line 632) is the one that gets ~attrs:binding.pvb_expr.pexp_attributes
         Expression {
             pexp_desc: ExpressionDesc::Pexp_fun {
                 arg_label: ArgLabel::Nolabel,
@@ -509,14 +512,16 @@ fn transform_react_component_binding(
                 lhs: constrained_pattern,
                 rhs: Box::new(inner_with_ref),
                 arity: Arity::Full(total_arity),
-                is_async: false,
+                is_async,
             },
             // OCaml uses ghost location for the inner Pexp_fun
             pexp_loc: empty_loc(),
-            pexp_attributes: filtered_attrs.clone(),
+            pexp_attributes: vec![],
         }
     } else {
         // Normal case without forwardRef
+        // OCaml: Exp.fun_ ~arity:(Some total_arity) ~async:is_async Nolabel None
+        // Note: OCaml line 765 does NOT pass ~attrs, so this inner expression has no attributes
         Expression {
             pexp_desc: ExpressionDesc::Pexp_fun {
                 arg_label: ArgLabel::Nolabel,
@@ -524,11 +529,11 @@ fn transform_react_component_binding(
                 lhs: constrained_pattern,
                 rhs: Box::new(expression),
                 arity: Arity::Full(total_arity),
-                is_async: false,
+                is_async,
             },
             // OCaml uses ghost location for the inner Pexp_fun
             pexp_loc: empty_loc(),
-            pexp_attributes: filtered_attrs.clone(),
+            pexp_attributes: vec![],
         }
     };
 
@@ -574,7 +579,8 @@ fn transform_react_component_binding(
                 ppat_loc: empty_loc(),
                 ppat_attributes: vec![],
             },
-            pvb_expr: make_props_wrapper_expr_with_ref(&fn_name, rec_flag, config, has_props_constraint, has_forward_ref, is_async),
+            // OCaml line 632: ~attrs:binding.pvb_expr.pexp_attributes
+            pvb_expr: make_props_wrapper_expr_with_ref(&fn_name, rec_flag, config, has_props_constraint, has_forward_ref, is_async, binding.pvb_expr.pexp_attributes.clone()),
             pvb_attributes: vec![],
             pvb_loc: empty_loc(),
         };
@@ -804,18 +810,16 @@ fn transform_react_component_with_props_binding(
     };
 
     // Create the new binding
-    // OCaml uses real locations for the public make binding:
-    // - pvb_loc uses pstr_loc (the entire structure_item location including @react.componentWithProps)
-    // - pattern uses the original fn_name location
+    // OCaml's make_new_binding uses empty_loc for both pvb_loc and ppat_loc
     let new_binding = ValueBinding {
         pvb_pat: Pattern {
-            ppat_desc: PatternDesc::Ppat_var(Loc { txt: fn_name.clone(), loc: fn_name_loc.clone() }),
-            ppat_loc: fn_name_loc,
+            ppat_desc: PatternDesc::Ppat_var(Loc { txt: fn_name.clone(), loc: empty_loc() }),
+            ppat_loc: empty_loc(),
             ppat_attributes: vec![],
         },
         pvb_expr: internal_expr,
         pvb_attributes: filtered_attrs.clone(),
-        pvb_loc: pstr_loc.clone(),
+        pvb_loc: empty_loc(),
     };
 
     // Handle recursive vs non-recursive
@@ -838,6 +842,11 @@ fn transform_react_component_with_props_binding(
             // For non-recursive: wrap the function body with React.element constraint
             let transformed_expr = transform_expression(binding.pvb_expr, config);
             let constrained_expr = wrap_function_body_with_constraint(transformed_expr, config);
+            // OCaml line 905-909: clear pexp_attributes (they were moved to wrapper_expr)
+            let constrained_expr = Expression {
+                pexp_attributes: vec![],
+                ..constrained_expr
+            };
             let modified_binding = ValueBinding {
                 pvb_pat: binding.pvb_pat,
                 pvb_expr: constrained_expr,
@@ -1058,7 +1067,8 @@ fn make_props_wrapper_expr(fn_name: &str, _rec_flag: RecFlag, _config: &JsxConfi
 }
 
 /// Create wrapper expression with forwardRef support: (props, ref) => fnName(props, ref)
-fn make_props_wrapper_expr_with_ref(fn_name: &str, _rec_flag: RecFlag, _config: &JsxConfig, has_props: bool, has_forward_ref: bool, is_async: bool) -> Expression {
+/// expr_attrs: the original expression's attributes (e.g., @directive) to put on the outer Pexp_fun
+fn make_props_wrapper_expr_with_ref(fn_name: &str, _rec_flag: RecFlag, _config: &JsxConfig, has_props: bool, has_forward_ref: bool, is_async: bool, expr_attrs: Attributes) -> Expression {
     let props_pattern = Pattern {
         ppat_desc: PatternDesc::Ppat_var(Loc { txt: "props".to_string(), loc: empty_loc() }),
         ppat_loc: empty_loc(),
@@ -1166,6 +1176,9 @@ fn make_props_wrapper_expr_with_ref(fn_name: &str, _rec_flag: RecFlag, _config: 
         apply_expr
     };
 
+    // The wrapper expression does NOT have is_async (OCaml line 632 uses Exp.fun_ without ~async)
+    // The is_async parameter is only used for wrapping with Jsx.promise
+    // OCaml line 632: ~attrs:binding.pvb_expr.pexp_attributes
     Expression {
         pexp_desc: ExpressionDesc::Pexp_fun {
             arg_label: ArgLabel::Nolabel,
@@ -1176,7 +1189,7 @@ fn make_props_wrapper_expr_with_ref(fn_name: &str, _rec_flag: RecFlag, _config: 
             is_async: false,
         },
         pexp_loc: empty_loc(),
-        pexp_attributes: vec![],
+        pexp_attributes: expr_attrs,
     }
 }
 
