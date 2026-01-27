@@ -109,6 +109,16 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 
 **Test Results:** Printer tests: 39/172 passing (22%)
 
+By category:
+- pattern: 9/19 (47%)
+- typexpr: 7/13 (54%)
+- expr: 6/55 (11%)
+- typeDef: 4/10 (40%)
+- other: 5/16 (31%)
+- modExpr: 2/7 (29%)
+- modType: 1/7 (14%)
+- structure: 1/13 (8%)
+
 ### Recently Completed
 - ✅ `PrinterState` struct with custom_layout tracking
 - ✅ Core helper functions: `print_comments`, `print_list`, `print_listi`, etc.
@@ -147,6 +157,7 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 - ✅ **Private types** - Private flag now printed for abstract, record, variant, open types
 - ✅ **Type constraints** - `constraint 'a = typ` now printed for type declarations
 - ✅ **Argument punning** - `~foo=foo` now prints as `~foo`
+- ✅ **Async functions** - `is_async` field in Pexp_fun now checked to preserve async keyword
 
 ### Known Issues / TODO
 - ❌ Comment attachment: Comments not properly attaching to nodes in module expressions
