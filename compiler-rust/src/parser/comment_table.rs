@@ -98,6 +98,64 @@ impl CommentTable {
     pub fn get_first_leading_comment(&self, loc: &Location) -> Option<&Comment> {
         self.leading.get(loc).and_then(|comments| comments.first())
     }
+
+    /// Walk a structure and attach comments to appropriate AST nodes.
+    ///
+    /// This is a simplified implementation that attaches comments based on position.
+    /// A full implementation would walk the entire AST tree.
+    pub fn walk_structure(&mut self, structure: &[StructureItem], comments: Vec<Comment>) {
+        if comments.is_empty() || structure.is_empty() {
+            if !comments.is_empty() {
+                // Attach remaining comments to "inside" of the file
+                Self::attach(&mut self.inside, Location::none(), comments);
+            }
+            return;
+        }
+
+        // Simple implementation: attach comments to the nearest structure item
+        let mut remaining_comments = comments;
+
+        for (i, item) in structure.iter().enumerate() {
+            let loc = &item.pstr_loc;
+
+            // Find comments that belong to this item
+            let (leading, rest): (Vec<Comment>, Vec<Comment>) = remaining_comments
+                .into_iter()
+                .partition(|c| c.loc().loc_end.cnum <= loc.loc_start.cnum);
+
+            // Find comments that are after this item but before the next
+            let next_start = if i + 1 < structure.len() {
+                structure[i + 1].pstr_loc.loc_start.cnum
+            } else {
+                i32::MAX
+            };
+
+            let (trailing, rest): (Vec<_>, Vec<_>) = rest
+                .into_iter()
+                .partition(|c| {
+                    c.loc().loc_start.cnum >= loc.loc_end.cnum
+                        && c.loc().loc_end.cnum <= next_start
+                        && c.loc().loc_start.line == loc.loc_end.line
+                });
+
+            // Attach leading comments
+            if !leading.is_empty() {
+                Self::attach(&mut self.leading, loc.clone(), leading);
+            }
+
+            // Attach trailing comments
+            if !trailing.is_empty() {
+                Self::attach(&mut self.trailing, loc.clone(), trailing);
+            }
+
+            remaining_comments = rest;
+        }
+
+        // Any remaining comments go to "inside" at end of file
+        if !remaining_comments.is_empty() {
+            Self::attach(&mut self.inside, Location::none(), remaining_comments);
+        }
+    }
 }
 
 /// Partitions a list of comments into three groups based on their position relative to a location:
