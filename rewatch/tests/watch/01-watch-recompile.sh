@@ -15,31 +15,33 @@ else
   exit 1
 fi
 
-# Start watcher and capture logs for debugging
+# Start watcher and capture PID for cleanup
 rewatch_bg watch > rewatch.log 2>&1 &
+WATCHER_PID=$!
 success "Watcher Started"
+
+# Wait for watcher to be ready (file watchers set up)
+if ! wait_for_watcher_ready "./rewatch.log" 30; then
+  error "Watcher did not become ready"
+  cat rewatch.log
+  exit_watcher
+  exit 1
+fi
 
 # Trigger a recompilation
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
 
-# Wait for the compiled JS to show up (can be slow in CI)
+# Wait for the compiled JS to contain our new code
 target=./packages/main/src/Main.mjs
-if ! wait_for_file "$target" 20; then
-  error "Expected output not found: $target"
+if ! wait_for_file_content "$target" "added-by-test" 20; then
+  error "Expected output not found in $target"
   ls -la ./packages/main/src || true
+  cat "$target" 2>/dev/null || true
   tail -n 200 rewatch.log || true
   exit_watcher
   exit 1
 fi
-
-if node ./packages/main/src/Main.mjs | grep 'added-by-test' &> /dev/null;
-then
-  success "Output is correct"
-else
-  error "Output is incorrect"
-  exit_watcher
-  exit 1
-fi
+success "Output is correct"
 
 sleep 1
 
@@ -56,4 +58,8 @@ else
   exit 1
 fi
 
-exit_watcher
+if exit_watcher; then
+  success "Daemon shut down cleanly"
+else
+  exit 1
+fi

@@ -4,24 +4,19 @@ use crate::helpers;
 use ahash::{AHashMap, AHashSet};
 use anyhow::anyhow;
 use anyhow::{Context, Result};
-use log::debug;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
-pub enum MonoRepoContext {
-    /// Monorepo root - contains local dependencies (symlinked in node_modules)
-    MonorepoRoot {
-        local_dependencies: AHashSet<String>, // names of local deps
-        local_dev_dependencies: AHashSet<String>,
-    },
-    /// Package within a monorepo - has a parent workspace
-    MonorepoPackage { parent_config: Box<Config> },
+/// Monorepo context - contains local dependencies (symlinked in node_modules)
+pub struct MonorepoContext {
+    pub local_dependencies: AHashSet<String>,
+    pub local_dev_dependencies: AHashSet<String>,
 }
 
 pub struct ProjectContext {
     pub current_config: Config,
-    pub monorepo_context: Option<MonoRepoContext>,
+    pub monorepo_context: Option<MonorepoContext>,
     pub node_modules_exist_cache: RwLock<AHashMap<PathBuf, bool>>, // caches whether a directory contains a node_modules subfolder
     pub packages_cache: RwLock<AHashMap<(PathBuf, String), PathBuf>>, // caches full results of helpers::try_package_path per (package_dir, package_name)
 }
@@ -60,7 +55,7 @@ impl fmt::Debug for ProjectContext {
                     &self.current_config.path.to_string_lossy()
                 )
             }
-            Some(MonoRepoContext::MonorepoRoot {
+            Some(MonorepoContext {
                 local_dependencies,
                 local_dev_dependencies,
             }) => {
@@ -74,16 +69,6 @@ impl fmt::Debug for ProjectContext {
                     &self.current_config.path.to_string_lossy(),
                     deps,
                     dev_deps
-                )
-            }
-            Some(MonoRepoContext::MonorepoPackage { parent_config }) => {
-                write!(
-                    f,
-                    "MonorepoPackage:\n  \"{}\" at \"{}\"\n  with parent \"{}\" at \"{}\"",
-                    &self.current_config.name,
-                    &self.current_config.path.to_string_lossy(),
-                    parent_config.name,
-                    parent_config.path.to_string_lossy()
                 )
             }
         }
@@ -108,11 +93,11 @@ fn read_local_packages(
                 local_dependencies.insert(dep.to_string());
             }
 
-            debug!(
-                "Dependency \"{}\" is a {}local package at \"{}\"",
-                dep,
-                if is_local { "" } else { "non-" },
-                dep_path.display()
+            tracing::debug!(
+                dependency = %dep,
+                is_local = is_local,
+                path = %dep_path.display(),
+                "Dependency resolved"
             );
         }
     }
@@ -139,7 +124,7 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
     } else {
         Ok(ProjectContext {
             current_config,
-            monorepo_context: Some(MonoRepoContext::MonorepoRoot {
+            monorepo_context: Some(MonorepoContext {
                 local_dependencies,
                 local_dev_dependencies,
             }),
@@ -147,21 +132,6 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
             packages_cache: RwLock::new(AHashMap::new()),
         })
     }
-}
-
-fn is_config_listed_in_workspace(current_config: &Config, workspace_config: &Config) -> bool {
-    workspace_config
-        .dependencies
-        .to_owned()
-        .unwrap_or_default()
-        .iter()
-        .any(|dep| dep == &current_config.name)
-        || workspace_config
-            .dev_dependencies
-            .to_owned()
-            .unwrap_or_default()
-            .iter()
-            .any(|dep| dep == &current_config.name)
 }
 
 impl ProjectContext {
@@ -186,17 +156,17 @@ impl ProjectContext {
                         e
                     )),
                     Ok(workspace_config)
-                        if is_config_listed_in_workspace(&current_config, &workspace_config) =>
+                        if helpers::is_config_listed_in_workspace(&current_config, &workspace_config) =>
                     {
                         // There is a parent rescript.json, and it has a reference to the current package.
-                        Ok(ProjectContext {
-                            current_config,
-                            monorepo_context: Some(MonoRepoContext::MonorepoPackage {
-                                parent_config: Box::new(workspace_config),
-                            }),
-                            node_modules_exist_cache: RwLock::new(AHashMap::new()),
-                            packages_cache: RwLock::new(AHashMap::new()),
-                        })
+                        // Always create context at the parent (root) level - scoping is passed as a parameter to commands.
+                        let parent_path = parent_config_path.parent().ok_or_else(|| {
+                            anyhow!(
+                                "Parent config path \"{}\" does not have a parent folder",
+                                parent_config_path.to_string_lossy()
+                            )
+                        })?;
+                        monorepo_or_single_project(parent_path, workspace_config)
                     }
                     Ok(_) => {
                         // There is a parent rescript.json, but it has no reference to the current package.
@@ -207,41 +177,41 @@ impl ProjectContext {
             }
         };
         context.iter().for_each(|pc| {
-            debug!("Created project context {:#?} for \"{}\"", pc, path.display());
+            tracing::debug!(
+                context = ?pc,
+                path = %path.display(),
+                "Created project context"
+            );
         });
         context
     }
 
     pub fn get_root_config(&self) -> &Config {
-        match &self.monorepo_context {
-            None => &self.current_config,
-            Some(MonoRepoContext::MonorepoRoot { .. }) => &self.current_config,
-            Some(MonoRepoContext::MonorepoPackage { parent_config }) => parent_config,
-        }
+        // With MonorepoPackage removed, current_config is always the root config
+        &self.current_config
     }
 
     pub fn get_root_path(&self) -> &Path {
         self.get_root_config().path.parent().unwrap()
     }
 
-    /// Returns the local packages relevant for the current context.
-    /// Either a single project, all projects from a monorepo or a single package inside a monorepo.
+    /// Returns all local packages in the project.
+    /// For a single project, returns just that project.
+    /// For a monorepo root, returns the root package plus all local dependencies.
+    /// Scoping to specific packages is now handled by passing scope as a parameter to commands.
     pub fn get_scoped_local_packages(&self) -> AHashSet<String> {
         let mut local_packages = AHashSet::<String>::new();
         match &self.monorepo_context {
             None => {
                 local_packages.insert(self.current_config.name.clone());
             }
-            Some(MonoRepoContext::MonorepoRoot {
+            Some(MonorepoContext {
                 local_dependencies,
                 local_dev_dependencies,
             }) => {
                 local_packages.insert(self.current_config.name.clone());
                 local_packages.extend(local_dependencies.iter().cloned());
                 local_packages.extend(local_dev_dependencies.iter().cloned());
-            }
-            Some(MonoRepoContext::MonorepoPackage { .. }) => {
-                local_packages.insert(self.current_config.name.clone());
             }
         };
         local_packages

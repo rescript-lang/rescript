@@ -142,7 +142,7 @@ fn find_cycle_bfs(
     None
 }
 
-pub fn format(cycle: &[String], build_state: &BuildCommandState) -> String {
+pub fn format(cycle: &[String], build_state: &BuildState) -> String {
     let mut nodes = cycle.to_vec();
     if nodes.is_empty() {
         return String::new();

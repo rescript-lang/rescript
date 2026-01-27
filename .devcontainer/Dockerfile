@@ -7,6 +7,7 @@ RUN sudo apt-get update && export DEBIAN_FRONTEND=noninteractive \
     cmake \
     musl-tools \
     ninja-build \
+    protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
 # Install OPAM

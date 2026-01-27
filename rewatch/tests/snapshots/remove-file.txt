@@ -1,17 +1,3 @@
-Cleaned 1/432
-Parsed 1 source files
-Compiled 2 modules
-
-  [1;33mWarning number 32[0m
-  [36m/packages/watch-warnings/src/ModuleA.res[0m:[2m1:5-15[0m
-
-  [1;33m1[0m [2m│[0m let [1;33munusedValue[0m = 42
-  2 [2m│[0m 
-  3 [2m│[0m let hello = () => Console.log("hello")
-
-  unused value unusedValue.
-
-
 
 The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
 
@@ -22,6 +8,8 @@ Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprec
 Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 
 Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+Cleaned 1/432
+Parsed 1 source files
 
   [1;31mWe've found a bug for you![0m
   [36m/packages/dep01/src/Dep01.res[0m:[2m3:9-17[0m
@@ -38,5 +26,16 @@ Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-c
   - Did you include the file's directory to the "sources" in rescript.json?
   
 
+Compiled 2 modules
 
-Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
+  [1;33mWarning number 32[0m
+  [36m/packages/watch-warnings/src/ModuleA.res[0m:[2m1:5-15[0m
+
+  [1;33m1[0m [2m│[0m let [1;33munusedValue[0m = 42
+  2 [2m│[0m 
+  3 [2m│[0m let hello = () => Console.log("hello")
+
+  unused value unusedValue.
+
+
+Incremental build failed. Error: [2KFailed to Compile. See Errors Above

@@ -1,11 +1,10 @@
 pub mod build;
 pub mod cli;
+pub mod client;
 pub mod cmd;
 pub mod config;
-pub mod format;
+pub mod daemon;
 pub mod helpers;
-pub mod lock;
 pub mod project_context;
 pub mod queue;
 pub mod sourcedirs;
-pub mod watcher;

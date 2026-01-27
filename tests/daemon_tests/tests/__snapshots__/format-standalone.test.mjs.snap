@@ -1,0 +1,59 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`format-equivalence > format --check produces same exit code with and without daemon 1`] = `
+[
+  "rpc.format[working_dir=., check=true, is_stdin=false]",
+  "  work_queue.handle_format_collect_files",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "  format.execute[file_count=11, check=true]",
+]
+`;
+
+exports[`format-equivalence > format --check reports same failures with and without daemon 1`] = `
+[
+  "rpc.format[working_dir=., check=true, is_stdin=false]",
+  "  work_queue.handle_format_collect_files",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "  format.execute[file_count=11, check=true]",
+]
+`;
+
+exports[`format-equivalence > format project collects same files with and without daemon 1`] = `
+[
+  "rpc.format[working_dir=., check=true, is_stdin=false]",
+  "  work_queue.handle_format_collect_files",
+  "    build.initialize_packages",
+  "    build.load_package_sources[package=@daemon-test/app]",
+  "    build.load_package_sources[package=@daemon-test/library]",
+  "    build.load_package_sources[package=@daemon-test/namespaced]",
+  "    build.load_package_sources[package=@daemon-test/with-dev-deps]",
+  "    build.load_package_sources[package=@daemon-test/with-interface]",
+  "    build.load_package_sources[package=@daemon-test/with-post-build]",
+  "    build.load_package_sources[package=@daemon-test/with-warnings]",
+  "    build.load_package_sources[package=daemon-test-fixture]",
+  "  format.execute[file_count=11, check=true]",
+]
+`;
+
+exports[`format-equivalence > format stdin produces same output with and without daemon 1`] = `
+[
+  "rpc.format[working_dir=., check=false, is_stdin=true]",
+  "  format.stdin[ext=.res]",
+]
+`;

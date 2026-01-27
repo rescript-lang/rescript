@@ -1,0 +1,13 @@
+{
+  "name": "@daemon-test/app",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "dependencies": ["@daemon-test/library"]
+}

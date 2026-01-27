@@ -25,8 +25,9 @@ node -e "
   fs.writeFileSync('$DEP01_CONFIG', JSON.stringify(config, null, 2) + '\n');
 "
 
-# Start watcher and capture output (use -vv to get error logs)
-rewatch_bg -vv watch > rewatch.log 2>&1 &
+# Start watcher and capture PID for cleanup
+rewatch_bg watch > rewatch.log 2>&1 &
+WATCHER_PID=$!
 success "Watcher Started"
 
 # Wait for initial build to complete
@@ -39,11 +40,20 @@ if ! wait_for_file "./src/Test.mjs" 20; then
 fi
 success "Initial build completed"
 
-# Check that the error about the missing folder was logged
-if grep -q 'Could not read folder.*nonexistent-folder' rewatch.log; then
-  success "Missing source folder error was reported"
+# Wait for watcher to be ready (file watchers set up)
+if ! wait_for_watcher_ready "./rewatch.log" 10; then
+  error "Watcher did not become ready"
+  cat rewatch.log
+  git checkout "$DEP01_CONFIG"
+  exit_watcher
+  exit 1
+fi
+
+# Check that the warning about the missing folder was logged
+if grep -q 'could not watch.*nonexistent-folder' rewatch.log; then
+  success "Missing source folder warning was reported"
 else
-  error "Missing source folder error was NOT reported"
+  error "Missing source folder warning was NOT reported"
   cat rewatch.log
   git checkout "$DEP01_CONFIG"
   exit_watcher

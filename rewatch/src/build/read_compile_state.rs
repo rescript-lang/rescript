@@ -1,5 +1,6 @@
 use super::build_types::*;
 use super::packages;
+use crate::build::BuildReporter;
 use crate::helpers;
 use ahash::{AHashMap, AHashSet};
 use rayon::prelude::*;
@@ -7,7 +8,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssetsState> {
+pub fn read<R: BuildReporter>(
+    build_state: &mut BuildState,
+    _reporter: &R,
+) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
     let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
@@ -18,8 +22,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
-
+                let package = build_state.packages.get(&module.package_name)?;
                 Some(PathBuf::from(&package.path).join(&source_file.implementation.path))
             }
             _ => None,
@@ -31,7 +34,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
             .modules
             .values()
             .filter_map(|module| {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(&module.package_name)?;
                 module
                     .get_interface()
                     .as_ref()
@@ -40,12 +43,25 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
             .collect::<AHashSet<PathBuf>>(),
     );
 
-    // scan all ast files in all packages
+    // Scan AST files only from packages that have their sources loaded.
+    // In a scoped build, packages outside the scope don't have sources loaded,
+    // and we must not scan their build artifacts. Otherwise, cleanup_previous_build
+    // would see AST files from unscoped packages but no corresponding .res files
+    // in rescript_file_locations (which comes from build_state.modules), and would
+    // incorrectly delete those packages' .mjs files.
     let compile_assets = build_state
         .packages
         .par_iter()
-        .map(|(_, package)| {
-            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
+        .filter(|(_, package)| package.sources.is_some())
+        .map(|(_pkg_name, package)| {
+            let ocaml_build_path = package.get_ocaml_build_path();
+            let read_dir = match fs::read_dir(&ocaml_build_path) {
+                Ok(rd) => rd,
+                Err(_e) => {
+                    // Directory doesn't exist yet - that's fine for new packages
+                    return vec![];
+                }
+            };
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {
@@ -53,14 +69,17 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                         let extension = path.extension().and_then(|e| e.to_str());
                         match extension {
                             Some(ext) => match ext {
-                                "iast" | "ast" | "cmi" | "cmt" => Some((
-                                    path.to_owned(),
-                                    entry.metadata().unwrap().modified().unwrap(),
-                                    ext.to_owned(),
-                                    package.name.to_owned(),
-                                    package.namespace.to_owned(),
-                                    package.is_root,
-                                )),
+                                "iast" | "ast" | "cmi" | "cmt" => {
+                                    let modified = entry.metadata().unwrap().modified().unwrap();
+                                    Some((
+                                        path.to_owned(),
+                                        modified,
+                                        ext.to_owned(),
+                                        package.name.to_owned(),
+                                        package.namespace.to_owned(),
+                                        package.is_root,
+                                    ))
+                                }
                                 _ => None,
                             },
                             None => None,
@@ -68,7 +87,7 @@ pub fn read(build_state: &mut BuildCommandState) -> anyhow::Result<CompileAssets
                     }
                     Err(_) => None,
                 })
-                .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>()
+                .collect()
         })
         .flatten()
         .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>();

@@ -2,40 +2,48 @@ use super::build_types::*;
 use super::logs;
 use super::namespaces;
 use crate::build::packages::Package;
+use crate::build::{BuildProgress, BuildReporter};
 use crate::config;
 use crate::config::{Config, OneOrMore};
 use crate::helpers;
 use crate::project_context::ProjectContext;
 use ahash::AHashSet;
 use anyhow::anyhow;
-use log::debug;
+
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-pub fn generate_asts(
-    build_state: &mut BuildCommandState,
+pub fn generate_asts<R: BuildReporter>(
+    build_state: &mut BuildState,
+    warn_error: Option<String>,
     inc: impl Fn() + std::marker::Sync,
+    reporter: &R,
 ) -> anyhow::Result<String> {
     let mut has_failure = false;
     let mut stderr = "".to_string();
 
-    build_state
+    let results = build_state
         .modules
         .par_iter()
-        .map(|(module_name, module)| {
-            let package = build_state
-                .get_package(&module.package_name)
-                .expect("Package not found");
+        .filter_map(|(module_name, module)| {
+            let Some(package) = build_state.get_package(&module.package_name) else {
+                log::warn!(
+                    "Package '{}' not found for module '{}' during AST generation",
+                    module.package_name,
+                    module_name
+                );
+                return None;
+            };
             match &module.source_type {
                 SourceType::MlMap(_mlmap) => {
                     let path = package.get_mlmap_path();
-                    (
+                    Some((
                         module_name.to_owned(),
                         Ok((Path::new(&path).to_path_buf(), None)),
                         Ok(None),
                         false,
-                    )
+                    ))
                 }
 
                 SourceType::SourceFile(source_file) => {
@@ -46,13 +54,16 @@ pub fn generate_asts(
                             .map(|i| i.parse_dirty)
                             .unwrap_or(false)
                     {
-                        debug!("Generating AST for module: {module_name}");
+                        reporter.report(BuildProgress::GeneratingAst {
+                            module_name: module_name.clone(),
+                        });
                         inc();
                         let ast_result = generate_ast(
                             package.to_owned(),
                             &source_file.implementation.path.to_owned(),
                             build_state,
-                            build_state.get_warn_error_override(),
+                            warn_error.clone(),
+                            reporter,
                         )
                         .map_err(|e| e.to_string());
 
@@ -62,7 +73,8 @@ pub fn generate_asts(
                                     package.to_owned(),
                                     &interface_file_path.to_owned(),
                                     build_state,
-                                    build_state.get_warn_error_override(),
+                                    warn_error.clone(),
+                                    reporter,
                                 ) {
                                     Ok(v) => Ok(Some(v)),
                                     Err(e) => Err(e.to_string()),
@@ -89,107 +101,101 @@ pub fn generate_asts(
                         )
                     };
 
-                    (module_name.to_owned(), ast_result, iast_result, dirty)
+                    Some((module_name.to_owned(), ast_result, iast_result, dirty))
                 }
             }
         })
-        .collect::<Vec<(
-            String,
-            Result<(PathBuf, Option<helpers::StdErr>), String>,
-            Result<Option<(PathBuf, Option<helpers::StdErr>)>, String>,
-            bool,
-        )>>()
-        .into_iter()
-        .for_each(|(module_name, ast_result, iast_result, is_dirty)| {
-            // Get package name first to avoid borrow checker issues
-            let package_name = build_state
-                .build_state
-                .modules
-                .get(&module_name)
-                .map(|module| module.package_name.clone())
-                .unwrap_or_else(|| {
-                    eprintln!("Module not found: {module_name}");
-                    String::new()
+        .collect::<Vec<_>>();
+
+    for (module_name, ast_result, iast_result, is_dirty) in results {
+        // Get package name first to avoid borrow checker issues
+        let package_name = build_state
+            .modules
+            .get(&module_name)
+            .map(|module| module.package_name.clone())
+            .unwrap_or_else(|| {
+                reporter.report(BuildProgress::ModuleNotFound {
+                    module_name: module_name.clone(),
                 });
+                String::new()
+            });
 
-            let package = build_state
-                .build_state
-                .packages
-                .get(&package_name)
-                .expect("Package not found");
+        let Some(package) = build_state.packages.get(&package_name) else {
+            continue;
+        };
 
-            if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
-                // if the module is dirty, mark it also compile_dirty
-                // do NOT set to false if the module is not parse_dirty, it needs to keep
-                // the compile_dirty flag if it was set before
-                if is_dirty {
-                    module.compile_dirty = true;
-                    module.deps_dirty = true;
-                }
-                if let SourceType::SourceFile(ref mut source_file) = module.source_type {
-                    // We get Err(x) when there is a parse error. When it's Ok(_, Some(
-                    // stderr_warnings )), the outputs are warnings
-                    match ast_result {
-                        // In case of an internal dependency, we want to keep on
-                        // propagating the warning with every compile. So we mark it as dirty for
-                        // the next round
-                        Ok((_path, Some(stderr_warnings))) if package.is_local_dep => {
-                            source_file.implementation.parse_state = ParseState::Warning;
-                            source_file.implementation.parse_dirty = true;
-                            logs::append(package, &stderr_warnings);
-                            stderr.push_str(&stderr_warnings);
-                        }
-                        Ok((_path, Some(_))) | Ok((_path, None)) => {
-                            source_file.implementation.parse_state = ParseState::Success;
-                            source_file.implementation.parse_dirty = false;
-                        }
-                        Err(err) => {
-                            // Some compilation error
-                            source_file.implementation.parse_state = ParseState::ParseError;
-                            source_file.implementation.parse_dirty = true;
-                            logs::append(package, &err);
-                            has_failure = true;
-                            stderr.push_str(&err);
-                        }
-                    };
-
-                    // We get Err(x) when there is a parse error. When it's Ok(_, Some(( _path,
-                    // stderr_warnings ))), the outputs are warnings
-                    match iast_result {
-                        // In case of an internal dependency, we want to keep on
-                        // propagating the warning with every compile. So we mark it as dirty for
-                        // the next round
-                        Ok(Some((_path, Some(stderr_warnings)))) if package.is_local_dep => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::Warning;
-                                interface.parse_dirty = true;
-                            }
-                            logs::append(package, &stderr_warnings);
-                            stderr.push_str(&stderr_warnings);
-                        }
-                        Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::Success;
-                                interface.parse_dirty = false;
-                            }
-                        }
-                        Err(err) => {
-                            // Some compilation error
-                            if let Some(interface) = source_file.interface.as_mut() {
-                                interface.parse_state = ParseState::ParseError;
-                                interface.parse_dirty = true;
-                            }
-                            logs::append(package, &err);
-                            has_failure = true;
-                            stderr.push_str(&err);
-                        }
-                        Ok(None) => {
-                            // The file had no interface file associated
-                        }
+        if let Some(module) = build_state.modules.get_mut(&module_name) {
+            // if the module is dirty, mark it also compile_dirty
+            // do NOT set to false if the module is not parse_dirty, it needs to keep
+            // the compile_dirty flag if it was set before
+            if is_dirty {
+                module.compile_dirty = true;
+                module.deps_dirty = true;
+            }
+            if let SourceType::SourceFile(ref mut source_file) = module.source_type {
+                // We get Err(x) when there is a parse error. When it's Ok(_, Some(
+                // stderr_warnings )), the outputs are warnings
+                match ast_result {
+                    // In case of an internal dependency, we want to keep on
+                    // propagating the warning with every compile. So we mark it as dirty for
+                    // the next round
+                    Ok((_path, Some(stderr_warnings))) if package.is_local => {
+                        source_file.implementation.parse_state = ParseState::Warning;
+                        source_file.implementation.parse_dirty = true;
+                        logs::append(package, &stderr_warnings);
+                        stderr.push_str(&stderr_warnings);
+                    }
+                    Ok((_path, Some(_))) | Ok((_path, None)) => {
+                        source_file.implementation.parse_state = ParseState::Success;
+                        source_file.implementation.parse_dirty = false;
+                    }
+                    Err(err) => {
+                        // Some compilation error
+                        source_file.implementation.parse_state = ParseState::ParseError;
+                        source_file.implementation.parse_dirty = true;
+                        logs::append(package, &err);
+                        has_failure = true;
+                        stderr.push_str(&err);
                     }
                 };
-            }
-        });
+
+                // We get Err(x) when there is a parse error. When it's Ok(_, Some(( _path,
+                // stderr_warnings ))), the outputs are warnings
+                match iast_result {
+                    // In case of an internal dependency, we want to keep on
+                    // propagating the warning with every compile. So we mark it as dirty for
+                    // the next round
+                    Ok(Some((_path, Some(stderr_warnings)))) if package.is_local => {
+                        if let Some(interface) = source_file.interface.as_mut() {
+                            interface.parse_state = ParseState::Warning;
+                            interface.parse_dirty = true;
+                        }
+                        logs::append(package, &stderr_warnings);
+                        stderr.push_str(&stderr_warnings);
+                    }
+                    Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
+                        if let Some(interface) = source_file.interface.as_mut() {
+                            interface.parse_state = ParseState::Success;
+                            interface.parse_dirty = false;
+                        }
+                    }
+                    Err(err) => {
+                        // Some compilation error
+                        if let Some(interface) = source_file.interface.as_mut() {
+                            interface.parse_state = ParseState::ParseError;
+                            interface.parse_dirty = true;
+                        }
+                        logs::append(package, &err);
+                        has_failure = true;
+                        stderr.push_str(&err);
+                    }
+                    Ok(None) => {
+                        // The file had no interface file associated
+                    }
+                }
+            };
+        }
+    }
 
     // compile the mlmaps of dirty modules
     // first collect dirty packages
@@ -204,24 +210,28 @@ pub fn generate_asts(
     let module_package_pairs = build_state.module_name_package_pairs();
 
     for (module_name, package_name) in module_package_pairs {
-        if let Some(module) = build_state.build_state.modules.get_mut(&module_name) {
+        if let Some(module) = build_state.modules.get_mut(&module_name) {
             let is_dirty = match &module.source_type {
                 SourceType::MlMap(_) => {
                     if dirty_packages.contains(&package_name) {
-                        let package = build_state
-                            .build_state
-                            .packages
-                            .get(&package_name)
-                            .expect("Package not found");
+                        let Some(package) = build_state.packages.get(&package_name) else {
+                            log::warn!(
+                                "Package '{}' not found for module '{}' during mlmap compilation",
+                                package_name,
+                                module_name
+                            );
+                            continue;
+                        };
                         // probably better to do this in a different function
                         // specific to compiling mlmaps
                         let compile_path = package.get_mlmap_compile_path();
                         let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
                         if let Err(err) = namespaces::compile_mlmap(
-                            &build_state.build_state.project_context,
+                            &build_state.project_context,
                             package,
                             &module_name,
-                            &build_state.build_state.compiler_info.bsc_path,
+                            &build_state.compiler_info.bsc_path,
+                            reporter,
                         ) {
                             has_failure = true;
                             stderr.push_str(&format!("{err}\n"));
@@ -234,22 +244,13 @@ pub fn generate_asts(
                             .expect("namespace should be set for mlmap module");
                         let base_build_path = package.get_build_path().join(&suffix);
                         let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmi"),
-                            base_ocaml_build_path.with_extension("cmi"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmt"),
-                            base_ocaml_build_path.with_extension("cmt"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("cmj"),
-                            base_ocaml_build_path.with_extension("cmj"),
-                        );
-                        let _ = std::fs::copy(
-                            base_build_path.with_extension("mlmap"),
-                            base_ocaml_build_path.with_extension("mlmap"),
-                        );
+                        for ext in ["cmi", "cmt", "cmj", "mlmap"] {
+                            let src = base_build_path.with_extension(ext);
+                            let dest = base_ocaml_build_path.with_extension(ext);
+                            if let Err(e) = std::fs::copy(&src, &dest) {
+                                log::warn!("Failed to copy {} to {}: {}", src.display(), dest.display(), e);
+                            }
+                        }
                         match (mlmap_hash, mlmap_hash_after) {
                             (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
                             _ => true,
@@ -273,13 +274,14 @@ pub fn generate_asts(
     }
 }
 
-pub fn parser_args(
+pub fn parser_args<R: BuildReporter>(
     project_context: &ProjectContext,
     package_config: &Config,
     filename: &Path,
     contents: &str,
     is_local_dep: bool,
     warn_error_override: Option<String>,
+    reporter: &R,
 ) -> anyhow::Result<(PathBuf, Vec<String>)> {
     let root_config = project_context.get_root_config();
     let file = &filename;
@@ -288,6 +290,7 @@ pub fn parser_args(
         project_context,
         package_config,
         &filter_ppx_flags(&package_config.ppx_flags, contents),
+        reporter,
     )?;
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
@@ -322,14 +325,15 @@ pub fn parser_args(
     ))
 }
 
-fn generate_ast(
+fn generate_ast<R: BuildReporter>(
     package: Package,
     filename: &Path,
     build_state: &BuildState,
     warn_error_override: Option<String>,
+    reporter: &R,
 ) -> anyhow::Result<(PathBuf, Option<helpers::StdErr>)> {
     let file_path = PathBuf::from(&package.path).join(filename);
-    let contents = helpers::read_file(&file_path).expect("Error reading file");
+    let contents = helpers::read_file(&file_path)?;
 
     let build_path_abs = package.get_build_path();
     let (ast_path, parser_args) = parser_args(
@@ -337,8 +341,9 @@ fn generate_ast(
         &package.config,
         filename,
         &contents,
-        package.is_local_dep,
+        package.is_local,
         warn_error_override,
+        reporter,
     )?;
 
     // generate the dir of the ast_path (it mirrors the source file dir)
@@ -373,7 +378,7 @@ fn generate_ast(
             }
         }
         _ => {
-            log::info!("Parsing file {}...", filename.display());
+            tracing::info!(file = %filename.display(), "Parsing file");
 
             Err(anyhow!(
                 "Could not find canonicalize_string_path for file {} in package {}",

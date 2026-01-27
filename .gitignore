@@ -98,5 +98,8 @@ tests/analysis_tests/**/*.bs.js
 package.tgz
 *.exe
 
+# Daemon
+lib/bs/
+
 # AI Agents
 .claude/settings.local.json

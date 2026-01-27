@@ -3,6 +3,7 @@ pub mod clean;
 pub mod compile;
 pub mod compiler_info;
 pub mod deps;
+pub mod format;
 pub mod logs;
 pub mod namespaces;
 pub mod packages;
@@ -12,21 +13,126 @@ pub mod read_compile_state;
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::build::compiler_info::{CompilerCheckResult, verify_compiler_info, write_compiler_info};
-use crate::helpers::emojis::*;
-use crate::helpers::{self};
+use crate::helpers;
 use crate::project_context::ProjectContext;
 use crate::sourcedirs;
-use anyhow::{Context, Result, anyhow};
+use ahash::AHashSet;
+use anyhow::{Result, anyhow};
 use build_types::*;
-use console::style;
-use indicatif::{ProgressBar, ProgressStyle};
-use log::log_enabled;
 use serde::Serialize;
 use std::fmt;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::time::{Duration, Instant};
+use tracing::info_span;
+
+/// Progress events emitted during build
+#[derive(Debug, Clone)]
+pub enum BuildProgress {
+    /// Build artifacts cleaned (during build)
+    Cleaned {
+        cleaned_count: i32,
+        total_count: i32,
+        duration_seconds: f64,
+        due_to_compiler_update: bool,
+    },
+    /// Source files parsed
+    Parsed {
+        parsed_count: i32,
+        duration_seconds: f64,
+    },
+    /// Incremental compile progress (sent as each module compiles)
+    Compiling { current_count: i32, total_count: i32 },
+    /// AST generation progress
+    GeneratingAst { module_name: String },
+    /// Modules compiled (final)
+    Compiled {
+        compiled_count: i32,
+        duration_seconds: f64,
+    },
+    /// Compiler warning (pass-through from bsc, already formatted)
+    CompilerWarning(String),
+    /// Compiler error (pass-through from bsc, already formatted)
+    CompilerError(String),
+    /// Compiler assets cleaned (during clean command)
+    CleanedCompilerAssets { duration_seconds: f64 },
+    /// JS files cleaned (during clean command)
+    CleanedJsFiles { suffix: String, duration_seconds: f64 },
+    /// Circular dependency detected in the codebase
+    CircularDependency { cycle_description: String },
+    /// Unallowed dependency detected in package configuration
+    UnallowedDependency {
+        package_name: String,
+        groups: Vec<UnallowedDependencyGroup>,
+    },
+    /// Error building the package tree
+    PackageTreeError { package_name: String, error: String },
+    /// Module not found during build
+    ModuleNotFound { module_name: String },
+    /// Config warning (unsupported or unknown field)
+    ConfigWarning {
+        package_name: String,
+        field_name: String,
+        kind: ConfigWarningKind,
+    },
+    /// Duplicated package warning
+    DuplicatedPackage {
+        package_name: String,
+        chosen_path: String,
+        duplicate_path: String,
+        parent_path: String,
+    },
+    /// Interface file without implementation
+    MissingImplementation { interface_file: String },
+    /// Error during build initialization (e.g., duplicate modules, config errors)
+    InitializationError(String),
+    /// Package name mismatch between package.json and rescript.json
+    PackageNameMismatch {
+        package_path: String,
+        package_json_name: String,
+        rescript_json_name: String,
+    },
+    /// Output from js-post-build command
+    JsPostBuildOutput {
+        command: String,
+        js_file: String,
+        stdout: Option<String>,
+        stderr: Option<String>,
+    },
+}
+
+/// Kind of config warning
+#[derive(Debug, Clone)]
+pub enum ConfigWarningKind {
+    /// Field not supported by ReScript 12's build system
+    Unsupported,
+    /// Unknown field, will be ignored
+    Unknown,
+}
+
+/// A group of unallowed dependencies of a specific type
+#[derive(Debug, Clone)]
+pub struct UnallowedDependencyGroup {
+    pub deps_type: String,
+    pub deps: Vec<String>,
+}
+
+/// Trait for reporting build progress
+pub trait BuildReporter: Send + Sync {
+    fn report(&self, progress: BuildProgress);
+}
+
+/// A no-op reporter that discards all progress messages.
+/// Used for standalone operations like `get_compiler_args` that don't need progress reporting.
+pub struct NoopReporter;
+
+impl BuildReporter for NoopReporter {
+    fn report(&self, _progress: BuildProgress) {
+        // Discard all progress
+    }
+}
 
 fn is_dirty(module: &Module) -> bool {
     match module.source_type {
@@ -55,33 +161,42 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
-pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
+/// Compute compiler arguments for a given file using a provided ProjectContext.
+/// This is the core implementation used by both standalone and daemon modes.
+pub fn get_compiler_args_with_context<R: BuildReporter>(
+    rescript_file_path: &Path,
+    project_context: &ProjectContext,
+    reporter: &R,
+) -> Result<CompilerArgs> {
     let filename = &helpers::get_abs_path(rescript_file_path);
-    let current_package = helpers::get_abs_path(
+    let current_package_path = helpers::get_abs_path(
         &helpers::get_nearest_config(rescript_file_path).expect("Couldn't find package root"),
     );
-    let project_context = ProjectContext::new(&current_package)?;
 
-    let is_type_dev = match filename.strip_prefix(&current_package) {
+    // Read the config for the file's package (may differ from project root in a monorepo)
+    let file_package_config = packages::read_config(&current_package_path)?;
+
+    let is_type_dev = match filename.strip_prefix(&current_package_path) {
         Err(_) => false,
-        Ok(relative_path) => project_context
-            .current_config
-            .find_is_type_dev_for_path(relative_path),
+        Ok(relative_path) => file_package_config.find_is_type_dev_for_path(relative_path),
     };
 
     // make PathBuf from package root and get the relative path for filename
-    let relative_filename = filename.strip_prefix(PathBuf::from(&current_package)).unwrap();
+    let relative_filename = filename
+        .strip_prefix(PathBuf::from(&current_package_path))
+        .unwrap();
 
-    let file_path = PathBuf::from(&current_package).join(filename);
-    let contents = helpers::read_file(&file_path).expect("Error reading file");
+    let file_path = PathBuf::from(&current_package_path).join(filename);
+    let contents = helpers::read_file(&file_path)?;
 
     let (ast_path, parser_args) = parser_args(
-        &project_context,
-        &project_context.current_config,
+        project_context,
+        &file_package_config,
         relative_filename,
         &contents,
         /* is_local_dep */ true,
         /* warn_error_override */ None,
+        reporter,
     )?;
     let is_interface = filename.to_string_lossy().ends_with('i');
     let has_interface = if is_interface {
@@ -92,33 +207,61 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         PathBuf::from(&interface_filename).exists()
     };
     let compiler_args = compile::compiler_args(
-        &project_context.current_config,
+        &file_package_config,
         &ast_path,
         relative_filename,
         is_interface,
         has_interface,
-        &project_context,
+        project_context,
         &None,
         is_type_dev,
         true,
         None, // No warn_error_override for compiler-args command
+        reporter,
     )?;
 
-    let result = serde_json::to_string_pretty(&CompilerArgs {
+    Ok(CompilerArgs {
         compiler_args,
         parser_args,
-    })?;
-
-    Ok(result)
+    })
 }
 
-pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInfo> {
+/// Compute compiler args without a pre-existing ProjectContext.
+/// This creates a fresh ProjectContext from scratch. Used when no daemon/cache is available.
+/// Uses NoopReporter since this is a synchronous query for editor tooling - debug/trace
+/// messages during package resolution are intentionally discarded.
+pub fn get_compiler_args_standalone(rescript_file_path: &Path) -> Result<CompilerArgs> {
+    let current_package = helpers::get_abs_path(
+        &helpers::get_nearest_config(rescript_file_path)
+            .ok_or_else(|| anyhow!("Couldn't find package root"))?,
+    );
+    let noop_reporter = NoopReporter;
+    let project_context = ProjectContext::new(&current_package)?;
+
+    get_compiler_args_with_context(rescript_file_path, &project_context, &noop_reporter)
+}
+
+/// Standalone entry point for getting compiler args as JSON (used when no daemon is running).
+pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
+    let result = get_compiler_args_standalone(rescript_file_path)?;
+    let json = serde_json::to_string_pretty(&result)?;
+
+    Ok(json)
+}
+
+pub fn get_compiler_info<R: BuildReporter>(
+    project_context: &ProjectContext,
+    reporter: &R,
+) -> Result<CompilerInfo> {
     let bsc_path = helpers::get_bsc();
+
     let bsc_hash = helpers::compute_file_hash(&bsc_path).ok_or(anyhow!(
         "Failed to compute bsc hash for {}",
         bsc_path.to_string_lossy()
     ))?;
-    let runtime_path = compile::get_runtime_path(&project_context.current_config, project_context)?;
+
+    let runtime_path = compile::get_runtime_path(&project_context.current_config, project_context, reporter)?;
+
     Ok(CompilerInfo {
         bsc_path,
         bsc_hash,
@@ -126,78 +269,84 @@ pub fn get_compiler_info(project_context: &ProjectContext) -> Result<CompilerInf
     })
 }
 
-pub fn initialize_build(
+pub fn initialize_build<R: BuildReporter>(
     default_timing: Option<Duration>,
     filter: &Option<regex::Regex>,
-    show_progress: bool,
     path: &Path,
-    plain_output: bool,
-    warn_error: Option<String>,
-) -> Result<BuildCommandState> {
+    reporter: &R,
+) -> Result<BuildState> {
+    initialize_build_with_scope(default_timing, filter, path, None, reporter)
+}
+
+/// Initialize build with optional scoping to a specific package.
+/// If `scope_to_package` is Some, only load sources for that package and its dependencies.
+/// If None, load sources for all packages (full build).
+pub fn initialize_build_with_scope<R: BuildReporter>(
+    default_timing: Option<Duration>,
+    filter: &Option<regex::Regex>,
+    path: &Path,
+    scope_to_package: Option<&str>,
+    reporter: &R,
+) -> Result<BuildState> {
     let project_context = ProjectContext::new(path)?;
-    let compiler = get_compiler_info(&project_context)?;
+    let compiler = get_compiler_info(&project_context, reporter)?;
 
     let timing_clean_start = Instant::now();
-    let packages = packages::make(filter, &project_context, show_progress)?;
 
-    let compiler_check = verify_compiler_info(&packages, &compiler);
+    // Compute which packages to load based on scope
+    let packages_to_load: Option<AHashSet<String>> = match scope_to_package {
+        Some(entry_pkg) => {
+            // First discover all packages without loading sources to compute scope
+            let packages_without_sources =
+                packages::make_with_scope(filter, &project_context, Some(&AHashSet::new()), reporter)?;
+            Some(packages::compute_build_scope(
+                &packages_without_sources,
+                entry_pkg,
+            ))
+        }
+        None => None, // Load all packages
+    };
 
-    if !packages::validate_packages_dependencies(&packages) {
+    // Load packages with appropriate scope
+    let packages = packages::make_with_scope(filter, &project_context, packages_to_load.as_ref(), reporter)?;
+
+    let compiler_check = verify_compiler_info(&packages, &compiler, reporter);
+
+    if !packages::validate_packages_dependencies(&packages, reporter) {
         return Err(anyhow!("Failed to validate package dependencies"));
     }
 
-    let mut build_state = BuildCommandState::new(project_context, packages, compiler, warn_error);
-    packages::parse_packages(&mut build_state)?;
+    let mut build_state = BuildState::new(project_context, packages, compiler);
+    packages::parse_packages(&mut build_state, reporter)?;
 
-    let compile_assets_state = read_compile_state::read(&mut build_state)?;
+    let compile_assets_state = read_compile_state::read(&mut build_state, reporter)?;
 
-    let (diff_cleanup, total_cleanup) = clean::cleanup_previous_build(&mut build_state, compile_assets_state);
+    let (diff_cleanup, total_cleanup) =
+        clean::cleanup_previous_build(&mut build_state, compile_assets_state, reporter);
     let timing_clean_total = timing_clean_start.elapsed();
 
-    if show_progress {
-        if plain_output {
-            if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
-                // Snapshot-friendly output (no progress prefixes or emojis)
-                println!("Cleaned previous build due to compiler update");
-            }
-            println!("Cleaned {diff_cleanup}/{total_cleanup}")
-        } else {
-            if let CompilerCheckResult::CleanedPackagesDueToCompiler = compiler_check {
-                println!(
-                    "{}{} {}Cleaned previous build due to compiler update",
-                    LINE_CLEAR,
-                    style("[1/3]").bold().dim(),
-                    SWEEP
-                );
-            }
-            println!(
-                "{}{} {}Cleaned {}/{} in {:.2}s",
-                LINE_CLEAR,
-                style("[1/3]").bold().dim(),
-                SWEEP,
-                diff_cleanup,
-                total_cleanup,
-                default_timing.unwrap_or(timing_clean_total).as_secs_f64()
-            );
-        }
-    }
+    let due_to_compiler_update = matches!(compiler_check, CompilerCheckResult::CleanedPackagesDueToCompiler);
+
+    reporter.report(BuildProgress::Cleaned {
+        cleaned_count: diff_cleanup as i32,
+        total_count: total_cleanup as i32,
+        duration_seconds: default_timing.unwrap_or(timing_clean_total).as_secs_f64(),
+        due_to_compiler_update,
+    });
 
     Ok(build_state)
-}
-
-fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
-    style(format!("[{current}/{total}]")).bold().dim()
 }
 
 #[derive(Debug, Clone)]
 pub enum IncrementalBuildErrorKind {
     SourceFileParseError,
     CompileError(Option<String>),
+    /// Error during build initialization (e.g., duplicate modules, config errors)
+    InitializationError(String),
 }
 
 #[derive(Debug, Clone)]
 pub struct IncrementalBuildError {
-    pub plain_output: bool,
     pub kind: IncrementalBuildErrorKind,
 }
 
@@ -205,148 +354,142 @@ impl fmt::Display for IncrementalBuildError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.kind {
             IncrementalBuildErrorKind::SourceFileParseError => {
-                if self.plain_output {
-                    write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
-                } else {
-                    write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
-                }
+                write!(f, "Could not parse Source Files")
             }
             IncrementalBuildErrorKind::CompileError(Some(e)) => {
-                if self.plain_output {
-                    write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
-                } else {
-                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
-                }
+                write!(f, "Failed to Compile. Error: {e}")
             }
             IncrementalBuildErrorKind::CompileError(None) => {
-                if self.plain_output {
-                    write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
-                } else {
-                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
-                }
+                write!(f, "Failed to Compile. See Errors Above")
+            }
+            IncrementalBuildErrorKind::InitializationError(e) => {
+                write!(f, "{e}")
             }
         }
     }
 }
 
-pub fn incremental_build(
-    build_state: &mut BuildCommandState,
+pub fn incremental_build<R: BuildReporter>(
+    build_state: &mut BuildState,
+    warn_error: Option<String>,
+    filter: Option<regex::Regex>,
     default_timing: Option<Duration>,
-    initial_build: bool,
-    show_progress: bool,
-    only_incremental: bool,
     create_sourcedirs: bool,
-    plain_output: bool,
+    reporter: &R,
 ) -> Result<(), IncrementalBuildError> {
     logs::initialize(&build_state.packages);
-    let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
-    let pb = if !plain_output && show_progress {
-        ProgressBar::new(num_dirty_modules)
-    } else {
-        ProgressBar::hidden()
+    let matches_filter = |name: &str| -> bool {
+        match &filter {
+            Some(re) => re.is_match(name),
+            None => true,
+        }
     };
-    let mut current_step = if only_incremental { 1 } else { 2 };
-    let total_steps = if only_incremental { 2 } else { 3 };
-    pb.set_style(
-        ProgressStyle::with_template(&format!(
-            "{} {}Parsing... {{spinner}} {{pos}}/{{len}} {{msg}}",
-            format_step(current_step, total_steps),
-            CODE
-        ))
-        .unwrap(),
+    let dirty_module_names: Vec<&String> = build_state
+        .modules
+        .iter()
+        .filter(|(name, m)| is_dirty(m) && matches_filter(name))
+        .map(|(name, _)| name)
+        .collect();
+    let num_dirty_modules = dirty_module_names.len() as u64;
+
+    // Debug: Show dirty modules
+    tracing::debug!(
+        total_modules = build_state.modules.len(),
+        dirty_modules = num_dirty_modules,
+        "incremental_build"
     );
-
-    let timing_parse_start = Instant::now();
-    let timing_ast = Instant::now();
-    let result_asts = parse::generate_asts(build_state, || pb.inc(1));
-    let timing_ast_elapsed = timing_ast.elapsed();
-
-    let parse_warnings = match result_asts {
-        Ok(warnings) => {
-            pb.finish();
-            warnings
-        }
-        Err(err) => {
-            logs::finalize(&build_state.packages);
-
-            if !plain_output && show_progress {
-                eprintln!(
-                    "{}{} {}Error parsing source files in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    CROSS,
-                    default_timing.unwrap_or(timing_ast_elapsed).as_secs_f64()
-                );
-                pb.finish();
-            }
-
-            eprintln!("{}", &err);
-            return Err(IncrementalBuildError {
-                kind: IncrementalBuildErrorKind::SourceFileParseError,
-                plain_output,
-            });
-        }
-    };
-    let deleted_modules = build_state.deleted_modules.clone();
-    deps::get_deps(build_state, &deleted_modules);
-    let timing_parse_total = timing_parse_start.elapsed();
-
-    if show_progress {
-        if plain_output {
-            println!("Parsed {num_dirty_modules} source files")
-        } else {
-            println!(
-                "{}{} {}Parsed {} source files in {:.2}s",
-                LINE_CLEAR,
-                format_step(current_step, total_steps),
-                CODE,
-                num_dirty_modules,
-                default_timing.unwrap_or(timing_parse_total).as_secs_f64()
-            );
+    for (name, module) in build_state.modules.iter() {
+        if is_dirty(module) && matches_filter(name) {
+            tracing::debug!(module = %name, "dirty module");
         }
     }
+
+    let timing_parse_start = Instant::now();
+    let (parse_warnings, timing_parse_total) = {
+        let dirty_modules_str = dirty_module_names
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        let _span = info_span!(
+            "build.parse",
+            dirty_modules = num_dirty_modules,
+            dirty_module_names = dirty_modules_str.as_str()
+        )
+        .entered();
+
+        let result_asts = parse::generate_asts(build_state, warn_error.clone(), || {}, reporter);
+
+        let parse_warnings = match result_asts {
+            Ok(warnings) => warnings,
+            Err(err) => {
+                let _error_span = info_span!("build.parse_error").entered();
+                logs::finalize(&build_state.packages);
+                reporter.report(BuildProgress::CompilerError(err.to_string()));
+                return Err(IncrementalBuildError {
+                    kind: IncrementalBuildErrorKind::SourceFileParseError,
+                });
+            }
+        };
+
+        {
+            let _span = info_span!("build.get_deps").entered();
+            let deleted_modules = build_state.deleted_modules.clone();
+            deps::get_deps(build_state, &deleted_modules);
+        }
+
+        (parse_warnings, timing_parse_start.elapsed())
+    };
+
+    reporter.report(BuildProgress::Parsed {
+        parsed_count: num_dirty_modules as i32,
+        duration_seconds: default_timing.unwrap_or(timing_parse_total).as_secs_f64(),
+    });
+
     if helpers::contains_ascii_characters(&parse_warnings) {
-        eprintln!("{}", &parse_warnings);
+        reporter.report(BuildProgress::CompilerWarning(parse_warnings.clone()));
     }
 
     mark_modules_with_expired_deps_dirty(build_state);
-    mark_modules_with_deleted_deps_dirty(&mut build_state.build_state);
-    current_step += 1;
+    mark_modules_with_deleted_deps_dirty(build_state);
 
-    //print all the compile_dirty modules
-    if log_enabled!(log::Level::Trace) {
-        for (module_name, module) in build_state.modules.iter() {
-            if module.compile_dirty {
-                println!("compile dirty: {module_name}");
-            }
+    // Report all compile_dirty modules at trace level
+    for (module_name, module) in build_state.modules.iter() {
+        if module.compile_dirty {
+            tracing::trace!(module = %module_name, "compile dirty");
         }
-    };
+    }
 
     let start_compiling = Instant::now();
-    let pb = if !plain_output && show_progress {
-        ProgressBar::new(build_state.modules.len().try_into().unwrap())
-    } else {
-        ProgressBar::hidden()
-    };
-    pb.set_style(
-        ProgressStyle::with_template(&format!(
-            "{} {}Compiling... {{spinner}} {{pos}}/{{len}} {{msg}}",
-            format_step(current_step, total_steps),
-            SWORDS
-        ))
-        .unwrap(),
-    );
 
-    let (compile_errors, compile_warnings, num_compiled_modules) = compile::compile(
-        build_state,
-        show_progress,
-        || pb.inc(1),
-        |size| pb.set_length(size),
-    )
-    .map_err(|e| IncrementalBuildError {
-        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
-        plain_output,
-    })?;
+    // Use atomics for progress tracking so closures can update and report
+    let current_count = AtomicI32::new(0);
+    let total_count = AtomicI32::new(0);
+
+    let compile_result = {
+        let _span = info_span!("build.compile").entered();
+        compile::compile(
+            build_state,
+            warn_error,
+            &filter,
+            true,
+            || {
+                let current = current_count.fetch_add(1, Ordering::SeqCst) + 1;
+                let total = total_count.load(Ordering::SeqCst);
+                reporter.report(BuildProgress::Compiling {
+                    current_count: current,
+                    total_count: total,
+                });
+            },
+            |size| {
+                total_count.store(size as i32, Ordering::SeqCst);
+            },
+            reporter,
+        )
+        .map_err(|e| IncrementalBuildError {
+            kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+        })?
+    };
 
     let compile_duration = start_compiling.elapsed();
 
@@ -354,96 +497,30 @@ pub fn incremental_build(
     if create_sourcedirs {
         sourcedirs::print(build_state);
     }
-    pb.finish();
-    if !compile_errors.is_empty() {
-        if show_progress {
-            if plain_output {
-                eprintln!("Compiled {num_compiled_modules} modules")
-            } else {
-                eprintln!(
-                    "{}{} {}Compiled {} modules in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    CROSS,
-                    num_compiled_modules,
-                    default_timing.unwrap_or(compile_duration).as_secs_f64()
-                );
-            }
-        }
-        if helpers::contains_ascii_characters(&compile_warnings) {
-            eprintln!("{}", &compile_warnings);
-        }
-        if initial_build {
-            log_config_warnings(build_state);
-        }
-        if helpers::contains_ascii_characters(&compile_errors) {
-            eprintln!("{}", &compile_errors);
-        }
+
+    reporter.report(BuildProgress::Compiled {
+        compiled_count: compile_result.num_compiled_modules as i32,
+        duration_seconds: default_timing.unwrap_or(compile_duration).as_secs_f64(),
+    });
+
+    if helpers::contains_ascii_characters(&compile_result.compile_warnings) {
+        let _warning_span = info_span!("build.compile_warning").entered();
+        reporter.report(BuildProgress::CompilerWarning(
+            compile_result.compile_warnings.clone(),
+        ));
+    }
+
+    if compile_result.had_errors {
+        let _error_span = info_span!("build.compile_error").entered();
+        // Errors have already been reported via structured events (CompilerError, CircularDependency, etc.)
         Err(IncrementalBuildError {
             kind: IncrementalBuildErrorKind::CompileError(None),
-            plain_output,
         })
     } else {
-        if show_progress {
-            if plain_output {
-                println!("Compiled {num_compiled_modules} modules")
-            } else {
-                println!(
-                    "{}{} {}Compiled {} modules in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    SWORDS,
-                    num_compiled_modules,
-                    default_timing.unwrap_or(compile_duration).as_secs_f64()
-                );
-            }
-        }
-
-        if helpers::contains_ascii_characters(&compile_warnings) {
-            eprintln!("{}", &compile_warnings);
-        }
-        if initial_build {
-            log_config_warnings(build_state);
-        }
-
         // Write per-package compiler metadata to `lib/bs/compiler-info.json` (idempotent)
-        write_compiler_info(build_state);
-
+        write_compiler_info(build_state, reporter);
         Ok(())
     }
-}
-
-fn log_config_warnings(build_state: &BuildCommandState) {
-    build_state.packages.iter().for_each(|(_, package)| {
-        // Only warn for local dependencies, not external packages
-        if package.is_local_dep {
-            package
-                .config
-                .get_unsupported_fields()
-                .iter()
-                .for_each(|field| log_unsupported_config_field(&package.name, field));
-
-            package
-                .config
-                .get_unknown_fields()
-                .iter()
-                .for_each(|field| log_unknown_config_field(&package.name, field));
-        }
-    });
-}
-
-fn log_unsupported_config_field(package_name: &str, field_name: &str) {
-    let warning = format!(
-        "The field '{field_name}' found in the package config of '{package_name}' is not supported by ReScript 12's new build system."
-    );
-    eprintln!("\n{}", style(warning).yellow());
-}
-
-fn log_unknown_config_field(package_name: &str, field_name: &str) {
-    let warning = format!(
-        "Unknown field '{field_name}' found in the package config of '{package_name}'. This option will be ignored."
-    );
-    eprintln!("\n{}", style(warning).yellow());
 }
 
 // write build.ninja files in the packages after a non-incremental build
@@ -451,67 +528,12 @@ fn log_unknown_config_field(package_name: &str, field_name: &str) {
 // is watching this file.
 // we don't need to do this in an incremental build because there are no file
 // changes (deletes / additions)
-pub fn write_build_ninja(build_state: &BuildCommandState) {
+pub fn write_build_ninja(build_state: &BuildState) {
     for package in build_state.packages.values() {
         // write empty file:
-        let mut f = File::create(package.get_build_path().join("build.ninja")).expect("Unable to write file");
-        f.write_all(b"").expect("unable to write to ninja file");
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-pub fn build(
-    filter: &Option<regex::Regex>,
-    path: &Path,
-    show_progress: bool,
-    no_timing: bool,
-    create_sourcedirs: bool,
-    plain_output: bool,
-    warn_error: Option<String>,
-) -> Result<BuildCommandState> {
-    let default_timing: Option<std::time::Duration> = if no_timing {
-        Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
-    } else {
-        None
-    };
-    let timing_total = Instant::now();
-    let mut build_state = initialize_build(
-        default_timing,
-        filter,
-        show_progress,
-        path,
-        plain_output,
-        warn_error,
-    )
-    .with_context(|| "Could not initialize build")?;
-
-    match incremental_build(
-        &mut build_state,
-        default_timing,
-        true,
-        show_progress,
-        false,
-        create_sourcedirs,
-        plain_output,
-    ) {
-        Ok(_) => {
-            if !plain_output && show_progress {
-                let timing_total_elapsed = timing_total.elapsed();
-                println!(
-                    "\n{}{}Finished Compilation in {:.2}s",
-                    LINE_CLEAR,
-                    SPARKLES,
-                    default_timing.unwrap_or(timing_total_elapsed).as_secs_f64()
-                );
-            }
-            clean::cleanup_after_build(&build_state);
-            write_build_ninja(&build_state);
-            Ok(build_state)
-        }
-        Err(e) => {
-            clean::cleanup_after_build(&build_state);
-            write_build_ninja(&build_state);
-            Err(anyhow!("Incremental build failed. Error: {e}"))
+        let path = package.get_build_path().join("build.ninja");
+        if let Ok(mut f) = File::create(&path) {
+            let _ = f.write_all(b"");
         }
     }
 }

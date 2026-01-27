@@ -1,3 +1,4 @@
+use crate::build::BuildReporter;
 use crate::build::compile::get_runtime_path_args;
 use crate::build::packages;
 use crate::helpers::StrippedVerbatimPath;
@@ -27,17 +28,17 @@ pub fn gen_mlmap(
     package: &packages::Package,
     namespace: &str,
     depending_modules: &AHashSet<String>,
-) -> PathBuf {
+) -> Result<PathBuf> {
     let build_path_abs = package.get_build_path();
     // we don't really need to create a digest, because we track if we need to
     // recompile in a different way but we need to put it in the file for it to
     // be readable.
 
     let path = build_path_abs.join(format!("{namespace}.mlmap"));
-    let mut file = File::create(&path).expect("Unable to create mlmap");
+    let mut file = File::create(&path).map_err(|e| anyhow!("Unable to create mlmap: {e}"))?;
 
     file.write_all(b"randjbuildsystem\n")
-        .expect("Unable to write mlmap");
+        .map_err(|e| anyhow!("Unable to write mlmap: {e}"))?;
 
     let mut modules = Vec::from_iter(depending_modules.to_owned());
     modules.sort();
@@ -46,24 +47,25 @@ pub fn gen_mlmap(
         // (only contains A-Z a-z 0-9 and _ and only starts with a capital letter)
         // if not, it does not make sense to export as part of the name space
         // this helps compile times of exotic modules such as MyModule.test
-        file.write_all(module.as_bytes()).unwrap();
-        file.write_all(b"\n").unwrap();
+        file.write_all(module.as_bytes())?;
+        file.write_all(b"\n")?;
     }
 
-    path
+    Ok(path)
 }
 
-pub fn compile_mlmap(
+pub fn compile_mlmap<R: BuildReporter>(
     project_context: &ProjectContext,
     package: &packages::Package,
     namespace: &str,
     bsc_path: &Path,
+    reporter: &R,
 ) -> Result<()> {
     let build_path_abs = package.get_build_path();
     let mlmap_name = format!("{namespace}.mlmap");
     let mut args: Vec<String> = vec![];
     // include `-runtime-path` arg
-    args.extend(get_runtime_path_args(&package.config, project_context)?);
+    args.extend(get_runtime_path_args(&package.config, project_context, reporter)?);
     // remaining flags
     args.extend([
         "-w".to_string(),

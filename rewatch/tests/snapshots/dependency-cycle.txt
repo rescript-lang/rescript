@@ -1,5 +1,25 @@
+
+The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
+
+Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 Cleaned 0/432
 Parsed 2 source files
+
+Can't continue... Found a circular dependency in your code:
+Dep01 (packages/dep01/src/Dep01.res)
+ → Dep02 (packages/dep02/src/Dep02.res)
+ → NS (packages/new-namespace/src/NS.res)
+ → NewNamespace.NS_alias (packages/new-namespace/src/NS_alias.res)
+ → Dep01 (packages/dep01/src/Dep01.res)
+Possible solutions:
+- Extract shared code into a new module both depend on.
+
 Compiled 1 modules
 
   [1;33mWarning number 32[0m
@@ -12,24 +32,4 @@ Compiled 1 modules
   unused value unusedValue.
 
 
-
-The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
-
-Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Can't continue... Found a circular dependency in your code:
-Dep01 (packages/dep01/src/Dep01.res)
- → Dep02 (packages/dep02/src/Dep02.res)
- → NS (packages/new-namespace/src/NS.res)
- → NewNamespace.NS_alias (packages/new-namespace/src/NS_alias.res)
- → Dep01 (packages/dep01/src/Dep01.res)
-Possible solutions:
-- Extract shared code into a new module both depend on.
-
-Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
+Incremental build failed. Error: [2KFailed to Compile. See Errors Above

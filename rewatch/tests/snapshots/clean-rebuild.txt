@@ -1,3 +1,13 @@
+
+The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
+
+Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
+
+Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
 Cleaned 0/0
 Parsed 430 source files
 Compiled 430 modules
@@ -11,14 +21,3 @@ Compiled 430 modules
 
   unused value unusedValue.
 
-
-
-The field 'ignored-dirs' found in the package config of '@testrepo/deprecated-config' is not supported by ReScript 12's new build system.
-
-Unknown field 'some-new-field' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.
-
-Unknown field 'bsc-flags' found in the package config of '@testrepo/deprecated-config'. This option will be ignored.

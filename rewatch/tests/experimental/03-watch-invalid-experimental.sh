@@ -18,7 +18,6 @@ out=$(rewatch watch 2>&1)
 status=$?
 
 mv rescript.json.bak rescript.json
-rm -f lib/rescript.lock
 
 if [ $status -eq 0 ]; then
   error "Expected watch to fail for invalid experimental-features list"

@@ -1,0 +1,21 @@
+{
+  "name": "daemon-test-fixture",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".mjs",
+  "dependencies": [
+    "@daemon-test/app",
+    "@daemon-test/library",
+    "@daemon-test/with-dev-deps",
+    "@daemon-test/namespaced",
+    "@daemon-test/with-warnings",
+    "@daemon-test/with-interface",
+    "@daemon-test/with-post-build"
+  ]
+}

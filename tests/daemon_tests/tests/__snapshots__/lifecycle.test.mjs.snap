@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lifecycle > exits when all clients disconnect 1`] = `[]`;
+
+exports[`lifecycle > lists connected clients via GetClients 1`] = `
+[
+  "rpc.get_clients[client_count=1]",
+]
+`;
+
+exports[`lifecycle > responds to Ping 1`] = `[]`;
