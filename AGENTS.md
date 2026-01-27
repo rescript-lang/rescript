@@ -261,7 +261,7 @@ The compiler is designed for fast feedback loops and scales to large codebases:
 - Use DCO sign-off: `Signed-Off-By: Your Name <email>`
 - Include appropriate tests with all changes
 - Build must pass before committing
-- **Commit incrementally** - Make small, focused commits as you complete each logical unit of work rather than accumulating many changes into one large commit. Each commit should have a clear, descriptive message explaining what was changed and why. This makes it easier to review changes, bisect issues, and understand the evolution of the codebase.
+- **Commit atomically** - Each commit should address exactly one concern (one bug fix, one feature, one refactor). When making multiple related changes, split them into separate atomic commits. For example, if fixing a parity issue requires adding a new field to a struct and then using that field in parsing logic, make two commits: one for the struct change, one for the parsing logic. This makes it easier to review changes, bisect issues, revert specific changes if needed, and understand the evolution of the codebase. Each commit message should clearly describe what was changed and why.
 
 ### Code Quality
 - Follow existing patterns in the codebase
@@ -540,7 +540,7 @@ The goal is byte-for-byte identical output where possible, or at minimum functio
 
 - **Stay focused on hard parity issues** - If achieving parity requires a significant change (refactoring, adding new infrastructure, rethinking an approach), do that work rather than abandoning it for simpler issues. The end goal is 100% parity, and all issues must eventually be fixed. Switching between tasks loses valuable context about the problem you were investigating. It's better to complete a difficult task—even if it takes substantial effort—than to context-switch repeatedly and never finish the hard parts.
 
-- **Commit parity improvements incrementally** - When parity increases (more tests pass), commit immediately with the smallest possible change. Each commit should have a clear, descriptive message explaining what specific parity issue was fixed. This creates a clear history of progress, makes it easy to bisect regressions, and ensures no work is lost. Don't accumulate multiple parity fixes into one large commit.
+- **Commit parity improvements atomically** - When parity increases (more tests pass), commit immediately with atomic commits. Each commit should address one specific fix (e.g., "fix location for recursive module declarations" not "fix various location issues"). This creates a clear history of progress, makes it easy to bisect regressions, and ensures no work is lost. If a fix requires multiple steps (e.g., adding a struct field, then using it), make separate commits for each step.
 
 ### Syntax Tests for Rust Parser
 
