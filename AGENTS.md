@@ -523,6 +523,8 @@ packages/@rescript/darwin-arm64/bin/bsc.exe myfile.res
 
 ### Following the Reference Implementation
 
+**CRITICAL PRINCIPLE**: The Rust parser is a **1:1 rewrite** of the OCaml parser. All logic must be the same, translated into idiomatic Rust. The **only** architectural difference is eliminating global state to enable parallel compilation. Do not "improve" algorithms, change data structures, or deviate from the OCaml implementation's approach—even if you think there's a better way. Parity is the priority; optimizations can come later after we have identical behavior.
+
 **IMPORTANT**: When implementing features in the Rust compiler, always compare against the OCaml reference implementation:
 
 1. **Lambda IR comparison** - Use `-drawlambda` on both compilers to compare the intermediate representation
