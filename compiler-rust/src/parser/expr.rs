@@ -2954,8 +2954,10 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 let mut module_expr = super::module::parse_module_expr(p);
 
                 // If there's a type constraint, wrap the expression
+                // For `module M: T = E`, the constraint type T appears before =, so
+                // the location spans from mod_type start to module_expr end
                 if let Some(mod_type) = mod_type {
-                    let loc = p.mk_loc(&module_expr.pmod_loc.loc_start, &mod_type.pmty_loc.loc_end);
+                    let loc = p.mk_loc(&mod_type.pmty_loc.loc_start, &module_expr.pmod_loc.loc_end);
                     module_expr = ModuleExpr {
                         pmod_desc: ModuleExprDesc::Pmod_constraint(
                             Box::new(module_expr),

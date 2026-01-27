@@ -5,7 +5,7 @@
 
 use std::cell::RefCell;
 
-use crate::location::{Location, Position};
+use crate::location::{Located, Location, Position};
 
 use super::ast::*;
 use super::core::{is_es6_arrow_functor, mknoloc, recover, with_loc};
@@ -565,36 +565,53 @@ pub fn parse_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
     let start_pos = p.start_pos.clone();
 
     // Handle await keyword
-    let has_await = if p.token == Token::Await {
+    // OCaml lines 6622-6629: capture await start_pos BEFORE consuming, end_pos AFTER consuming
+    // NOTE: OCaml uses p.end_pos after consuming await, which is the end of the NEXT token
+    let await_loc = if p.token == Token::Await {
+        let await_start = p.start_pos.clone();
         p.next();
-        true
+        // OCaml: let end_pos = p.end_pos in - this is the end of the token AFTER await
+        let await_end = p.end_pos.clone();
+        Some(p.mk_loc(&await_start, &await_end))
     } else {
-        false
+        None
     };
 
     // Parse attributes (e.g., @functorAttr)
     let mut attrs = parse_attributes(p);
 
     // Add await attribute if present
-    if has_await {
+    // OCaml line 6632: make_await_attr loc_await
+    if let Some(loc) = await_loc {
         attrs.insert(
             0,
             (
-                mknoloc("res.await".to_string()),
+                Located {
+                    txt: "res.await".to_string(),
+                    loc,
+                },
                 Payload::PStr(vec![]),
             ),
         );
     }
 
     // Check if this is a functor: (args) => body or (args) : type => body
-    let expr = if is_es6_arrow_functor(p) {
-        parse_functor_module_expr(p)
+    // For primary expressions, capture start_pos for location override (OCaml line 6503)
+    let (expr, primary_start_pos) = if is_es6_arrow_functor(p) {
+        (parse_functor_module_expr(p), None)
     } else {
-        parse_primary_module_expr(p)
+        let primary_start = p.start_pos.clone();
+        (parse_primary_module_expr(p), Some(primary_start))
     };
 
     // Handle module application: F(X)
-    let expr = parse_module_apply(p, expr);
+    let mut expr = parse_module_apply(p, expr);
+
+    // OCaml line 6512: {mod_expr with pmod_loc = mk_loc start_pos p.prev_end_pos}
+    // Override the outermost location after module application processing
+    if let Some(primary_start) = primary_start_pos {
+        expr.pmod_loc = p.mk_loc(&primary_start, &p.prev_end_pos);
+    }
 
     // Handle module constraint: M : S
     let expr = if p.token == Token::Colon {
@@ -629,36 +646,53 @@ pub fn parse_module_expr_without_constraint(p: &mut Parser<'_>) -> ModuleExpr {
     let start_pos = p.start_pos.clone();
 
     // Handle await keyword
-    let has_await = if p.token == Token::Await {
+    // OCaml lines 6622-6629: capture await start_pos BEFORE consuming, end_pos AFTER consuming
+    // NOTE: OCaml uses p.end_pos after consuming await, which is the end of the NEXT token
+    let await_loc = if p.token == Token::Await {
+        let await_start = p.start_pos.clone();
         p.next();
-        true
+        // OCaml: let end_pos = p.end_pos in - this is the end of the token AFTER await
+        let await_end = p.end_pos.clone();
+        Some(p.mk_loc(&await_start, &await_end))
     } else {
-        false
+        None
     };
 
     // Parse attributes (e.g., @functorAttr)
     let mut attrs = parse_attributes(p);
 
     // Add await attribute if present
-    if has_await {
+    // OCaml line 6632: make_await_attr loc_await
+    if let Some(loc) = await_loc {
         attrs.insert(
             0,
             (
-                mknoloc("res.await".to_string()),
+                Located {
+                    txt: "res.await".to_string(),
+                    loc,
+                },
                 Payload::PStr(vec![]),
             ),
         );
     }
 
     // Check if this is a functor: (args) => body or (args) : type => body
-    let expr = if is_es6_arrow_functor(p) {
-        parse_functor_module_expr(p)
+    // For primary expressions, capture start_pos for location override (OCaml line 6503)
+    let (expr, primary_start_pos) = if is_es6_arrow_functor(p) {
+        (parse_functor_module_expr(p), None)
     } else {
-        parse_primary_module_expr(p)
+        let primary_start = p.start_pos.clone();
+        (parse_primary_module_expr(p), Some(primary_start))
     };
 
     // Handle module application: F(X)
-    let expr = parse_module_apply(p, expr);
+    let mut expr = parse_module_apply(p, expr);
+
+    // OCaml line 6512: {mod_expr with pmod_loc = mk_loc start_pos p.prev_end_pos}
+    // Override the outermost location after module application processing
+    if let Some(primary_start) = primary_start_pos {
+        expr.pmod_loc = p.mk_loc(&primary_start, &p.prev_end_pos);
+    }
 
     // NOTE: We intentionally DON'T handle `: type` constraint here
 
@@ -812,13 +846,17 @@ fn parse_module_apply(p: &mut Parser<'_>, func: ModuleExpr) -> ModuleExpr {
     // Module application only happens on the same line
     // A ( on a new line should not be treated as module application
     while p.token == Token::Lparen && p.prev_end_pos.line >= p.start_pos.line {
-        let start = result.pmod_loc.loc_start.clone();
+        // OCaml: let start_pos = p.Parser.start_pos in
+        // Capture lparen position before consuming it
+        let lparen_pos = p.start_pos.clone();
         p.next();
 
         let args = if p.token == Token::Rparen {
             // Empty argument: F()
             p.next();
-            let loc = p.mk_loc(&p.prev_end_pos, &p.prev_end_pos);
+            // OCaml: let loc = mk_loc start_pos p.prev_end_pos in
+            // For empty args, loc spans from lparen to after rparen
+            let loc = p.mk_loc(&lparen_pos, &p.prev_end_pos);
             vec![ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_structure(vec![]),
                 pmod_loc: loc,
@@ -842,11 +880,17 @@ fn parse_module_apply(p: &mut Parser<'_>, func: ModuleExpr) -> ModuleExpr {
             args
         };
 
-        let loc = p.mk_loc(&start, &p.prev_end_pos);
+        // OCaml: List.fold_left (fun mod_expr arg ->
+        //   Ast_helper.Mod.apply
+        //     ~loc:(mk_loc mod_expr.pmod_loc.loc_start arg.pmod_loc.loc_end)
+        //     mod_expr arg)
+        //   mod_expr args
+        // Each nested apply gets loc from current result start to current arg end
         for arg in args {
+            let loc = p.mk_loc(&result.pmod_loc.loc_start, &arg.pmod_loc.loc_end);
             result = ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_apply(Box::new(result), Box::new(arg)),
-                pmod_loc: loc.clone(),
+                pmod_loc: loc,
                 pmod_attributes: vec![],
             };
         }
