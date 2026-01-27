@@ -177,6 +177,12 @@ pub fn compile<R: BuildReporter>(
     let compile_universe_count = compile_universe.len();
     set_length(compile_universe_count as u64);
 
+    tracing::info!(
+        dirty_modules = dirty_modules.len(),
+        compile_universe = compile_universe_count,
+        "build.compile_universe"
+    );
+
     // start off with all modules that have no deps in this compile universe
     let mut in_progress_modules = compile_universe
         .iter()
@@ -192,12 +198,14 @@ pub fn compile<R: BuildReporter>(
         files_current_loop_count = 0;
         loop_count += 1;
 
-        tracing::trace!(
+        let loop_span = tracing::info_span!(
+            "build.compile_loop",
+            loop_count = loop_count,
             compiled = files_total_count,
             total = compile_universe.len(),
-            loop_count = loop_count,
-            "Compile loop"
+            in_progress = in_progress_modules.len(),
         );
+        let _loop_guard = loop_span.enter();
 
         let current_in_progres_modules = in_progress_modules.clone();
 
@@ -231,6 +239,15 @@ pub fn compile<R: BuildReporter>(
                             ))
                         }
                         SourceType::SourceFile(source_file) => {
+                            let _file_span = tracing::info_span!(
+                                parent: &loop_span,
+                                "build.compile_file",
+                                module = %module_name,
+                                package = %module.package_name,
+                                has_interface = source_file.interface.is_some(),
+                            )
+                            .entered();
+
                             let cmi_path = helpers::get_compiler_asset(
                                 package,
                                 &package.namespace,
