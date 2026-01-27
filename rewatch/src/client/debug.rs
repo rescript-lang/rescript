@@ -419,6 +419,8 @@ impl App {
                     format!("{} ({})", e.command, output_info),
                 )
             }
+            // Heartbeats are keepalive signals — don't show in debug TUI
+            DaemonEventVariant::Heartbeat(_) => return,
         };
 
         self.logs.push(LogEntry {

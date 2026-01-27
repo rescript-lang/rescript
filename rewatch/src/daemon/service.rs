@@ -140,6 +140,8 @@ fn event_matches_client(event: &DaemonEvent, client_id: u64) -> bool {
         Some(Event::FileChanged(_)) => true,
         // WatchPaths is targeted at the watch client
         Some(Event::WatchPaths(e)) => e.client_id == client_id,
+        // Heartbeat is targeted at a specific client
+        Some(Event::Heartbeat(e)) => e.client_id == client_id,
         None => false,
     }
 }
@@ -509,14 +511,30 @@ impl RescriptDaemon for DaemonService {
                 });
             });
 
-            while let Some(result) = event_stream.next().await {
-                match result {
-                    Ok(event) => {
-                        if event_matches_client(&event, client_id) {
-                            yield Ok(event);
+            // Send periodic heartbeats so broken connections are detected
+            // even when no build activity is happening.
+            let mut heartbeat_interval = tokio::time::interval(std::time::Duration::from_secs(30));
+            heartbeat_interval.tick().await; // consume the immediate first tick
+
+            loop {
+                tokio::select! {
+                    result = event_stream.next() => {
+                        match result {
+                            Some(Ok(event)) => {
+                                if event_matches_client(&event, client_id) {
+                                    yield Ok(event);
+                                }
+                            }
+                            Some(Err(_)) => continue,
+                            None => break,
                         }
                     }
-                    Err(_) => continue,
+                    _ = heartbeat_interval.tick() => {
+                        yield Ok(DaemonEvent {
+                            timestamp: timestamp(),
+                            event: Some(Event::Heartbeat(super::proto::Heartbeat { client_id })),
+                        });
+                    }
                 }
             }
         };

@@ -324,6 +324,7 @@ This inconsistency will cause issues with package resolution.",
             | Event::BuildStarted(_)
             | Event::FileChanged(_)
             | Event::WatchPaths(_)
+            | Event::Heartbeat(_)
             | Event::FormatStarted(_)
             | Event::FormatFinished(_)
             | Event::FormatProgress(_)

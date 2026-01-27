@@ -1,11 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
+use tokio::time::sleep;
 use tokio_stream::StreamExt;
 
 #[cfg(unix)]
@@ -116,23 +117,96 @@ fn setup_watchers(
     state
 }
 
-/// Run watch mode via the daemon
+/// Outcome of a single watch session.
+enum SessionExit {
+    /// User-initiated shutdown (signal). Don't retry.
+    Clean,
+    /// gRPC stream broke. Retry with reconnection.
+    StreamError(String),
+}
+
+/// Return a short description of a daemon event variant for diagnostic logging.
+fn event_description(event: &DaemonEventVariant) -> &'static str {
+    match event {
+        DaemonEventVariant::ClientConnected(_) => "ClientConnected",
+        DaemonEventVariant::ClientDisconnected(_) => "ClientDisconnected",
+        DaemonEventVariant::BuildStarted(_) => "BuildStarted",
+        DaemonEventVariant::BuildFinished(_) => "BuildFinished",
+        DaemonEventVariant::Cleaned(_) => "Cleaned",
+        DaemonEventVariant::Parsed(_) => "Parsed",
+        DaemonEventVariant::Compiling(_) => "Compiling",
+        DaemonEventVariant::Compiled(_) => "Compiled",
+        DaemonEventVariant::CleanedCompilerAssets(_) => "CleanedCompilerAssets",
+        DaemonEventVariant::CleanedJsFiles(_) => "CleanedJsFiles",
+        DaemonEventVariant::CircularDependency(_) => "CircularDependency",
+        DaemonEventVariant::UnallowedDependency(_) => "UnallowedDependency",
+        DaemonEventVariant::PackageTreeError(_) => "PackageTreeError",
+        DaemonEventVariant::ModuleNotFound(_) => "ModuleNotFound",
+        DaemonEventVariant::InitializationError(_) => "InitializationError",
+        DaemonEventVariant::CompilerWarning(_) => "CompilerWarning",
+        DaemonEventVariant::CompilerError(_) => "CompilerError",
+        DaemonEventVariant::ConfigWarning(_) => "ConfigWarning",
+        DaemonEventVariant::DuplicatedPackage(_) => "DuplicatedPackage",
+        DaemonEventVariant::MissingImplementation(_) => "MissingImplementation",
+        DaemonEventVariant::PackageNameMismatch(_) => "PackageNameMismatch",
+        DaemonEventVariant::FileChanged(_) => "FileChanged",
+        DaemonEventVariant::WatchPaths(_) => "WatchPaths",
+        DaemonEventVariant::Heartbeat(_) => "Heartbeat",
+        DaemonEventVariant::FormatStarted(_) => "FormatStarted",
+        DaemonEventVariant::FormatFinished(_) => "FormatFinished",
+        DaemonEventVariant::FormatProgress(_) => "FormatProgress",
+        DaemonEventVariant::FormatCheckFailed(_) => "FormatCheckFailed",
+        DaemonEventVariant::FormattedStdin(_) => "FormattedStdin",
+        DaemonEventVariant::JsPostBuildOutput(_) => "JsPostBuildOutput",
+    }
+}
+
+/// Run watch mode via the daemon, reconnecting on stream errors.
 pub async fn run(folder: &str, filter: Option<String>, after_build: Option<String>) -> Result<()> {
     let root = connection::find_project_root(Path::new(folder))?;
     let working_dir = Path::new(folder).canonicalize()?;
 
-    let mut client = connection::connect_or_start(&root).await?;
+    let mut delay = Duration::from_secs(1);
+    let max_delay = Duration::from_secs(30);
+
+    loop {
+        match run_watch_session(&root, &working_dir, &filter, &after_build).await {
+            Ok(SessionExit::Clean) => return Ok(()),
+            Ok(SessionExit::StreamError(msg)) => {
+                eprintln!(
+                    "Connection to daemon lost ({}). Reconnecting in {}s...",
+                    msg,
+                    delay.as_secs()
+                );
+                sleep(delay).await;
+                delay = (delay * 2).min(max_delay);
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
+/// Run a single watch session. Returns `SessionExit::Clean` on signal,
+/// `SessionExit::StreamError` on gRPC stream failure, or `Err` for
+/// non-recoverable errors (e.g. initialization failure).
+async fn run_watch_session(
+    root: &Path,
+    working_dir: &Path,
+    filter: &Option<String>,
+    after_build: &Option<String>,
+) -> Result<SessionExit> {
+    let mut client = connection::connect_or_start(root).await?;
 
     // Send watch request to daemon
     let request = WatchRequest {
         working_directory: working_dir.to_string_lossy().to_string(),
-        filter,
+        filter: filter.clone(),
     };
 
     let mut build_stream = client.watch(request).await?.into_inner();
 
     // Clone client for file/config change notifications
-    let mut notify_client = connection::connect(&root).await?;
+    let mut notify_client = connection::connect(root).await?;
 
     // Set up signal handlers for graceful shutdown
     #[cfg(unix)]
@@ -151,6 +225,9 @@ pub async fn run(folder: &str, filter: Option<String>, after_build: Option<Strin
     // Track client_id for graceful disconnect
     let mut client_id: Option<u64> = None;
 
+    // Track the last event received for diagnostic logging on stream errors
+    let mut last_event: &str = "none";
+
     loop {
         tokio::select! {
             // Handle SIGTERM for graceful shutdown
@@ -165,7 +242,7 @@ pub async fn run(folder: &str, filter: Option<String>, after_build: Option<Strin
                 if let Some(id) = client_id {
                     let _ = notify_client.disconnect(DisconnectRequest { client_id: id }).await;
                 }
-                break;
+                return Ok(SessionExit::Clean);
             }
 
             // Handle SIGINT (Ctrl-C) for graceful shutdown
@@ -180,7 +257,7 @@ pub async fn run(folder: &str, filter: Option<String>, after_build: Option<Strin
                 if let Some(id) = client_id {
                     let _ = notify_client.disconnect(DisconnectRequest { client_id: id }).await;
                 }
-                break;
+                return Ok(SessionExit::Clean);
             }
 
             // Handle file system events
@@ -254,6 +331,11 @@ pub async fn run(folder: &str, filter: Option<String>, after_build: Option<Strin
             Some(result) = build_stream.next() => {
                 match result {
                     Ok(event) => {
+                        // Track the last event for diagnostic logging
+                        if let Some(ref evt) = event.event {
+                            last_event = event_description(evt);
+                        }
+
                         // Check if this is a WatchPaths event — update our watchers
                         if let Some(DaemonEventVariant::WatchPaths(ref watch_paths)) = event.event {
                             let source_paths: Vec<(PathBuf, bool)> = watch_paths
@@ -272,6 +354,11 @@ pub async fn run(folder: &str, filter: Option<String>, after_build: Option<Strin
                             if is_first_setup {
                                 println!("Watching for file changes... (Ctrl-C to exit)\n");
                             }
+                            continue;
+                        }
+
+                        // Silently consume heartbeats
+                        if matches!(event.event, Some(DaemonEventVariant::Heartbeat(_))) {
                             continue;
                         }
 
@@ -300,25 +387,23 @@ pub async fn run(folder: &str, filter: Option<String>, after_build: Option<Strin
 
                         // Run after_build command on successful completion
                         if is_success
-                            && let Some(ref cmd_str) = after_build
+                            && let Some(cmd_str) = after_build
                         {
                             cmd::run(cmd_str.clone());
                         }
                     }
                     Err(e) => {
-                        eprintln!("Stream error: {}", e);
-                        // Send disconnect to daemon so it can clean up
+                        eprintln!("Stream error (last event: {}): {}", last_event, e);
+                        // Best-effort disconnect — connection is likely broken
                         if let Some(id) = client_id {
                             let _ = notify_client.disconnect(DisconnectRequest { client_id: id }).await;
                         }
-                        break;
+                        return Ok(SessionExit::StreamError(e.to_string()));
                     }
                 }
             }
         }
     }
-
-    Ok(())
 }
 
 /// Check if a path is a config file (rescript.json) that we're watching.

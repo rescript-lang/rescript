@@ -91,6 +91,9 @@ message DaemonEvent {
     FormatProgress format_progress = 21;
     FormatCheckFailed format_check_failed = 22;
     FormattedStdin formatted_stdin = 23;
+
+    // Keepalive
+    Heartbeat heartbeat = 34;
   }
 }
 
@@ -362,6 +365,16 @@ message FormatCheckFailed {
 message FormattedStdin {
   uint64 client_id = 1;
   string content = 2;  // Formatted content from stdin
+}
+
+// =============================================================================
+// Keepalive
+// =============================================================================
+
+// Periodic heartbeat sent on long-lived streams (e.g., watch) so broken
+// connections are detected even when no build activity is happening.
+message Heartbeat {
+  uint64 client_id = 1;
 }
 
 // =============================================================================

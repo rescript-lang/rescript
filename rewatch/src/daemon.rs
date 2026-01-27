@@ -9,6 +9,7 @@ mod work_queue;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::Result;
 use tokio::net::UnixListener;
@@ -111,6 +112,8 @@ pub async fn start(root: PathBuf) -> Result<()> {
     };
 
     Server::builder()
+        .http2_keepalive_interval(Some(Duration::from_secs(10)))
+        .http2_keepalive_timeout(Some(Duration::from_secs(5)))
         .add_service(proto::rescript_daemon_server::RescriptDaemonServer::new(service))
         .serve_with_incoming_shutdown(uds_stream, shutdown_monitor(shutdown_rx))
         .await?;

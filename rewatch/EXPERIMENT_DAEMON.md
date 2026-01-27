@@ -115,6 +115,7 @@ Eliminate lockfile limitation via gRPC daemon that owns build state. Commands (`
 | Client isolation       | client_id on all events                | Concurrent builds don't interfere, each sees only its own      |
 | Per-build CLI flags    | Passed to build, not stored            | Flags like `--warn-error` apply per-build without persisting   |
 | Scoping via path       | `get_scope_package_from_working_dir()` | Working dir determines scope, passed as parameter to commands  |
+| Connection resilience  | HTTP/2 keepalive + heartbeat + retry   | Daemon detects dead clients, watch client auto-reconnects      |
 
 ## How It Works
 
@@ -190,6 +191,16 @@ The watch client (`client/watch.rs`) uses a **daemon-driven** watching strategy:
 
 **Signal handling:** Watch client uses `tokio::signal::unix` to handle SIGTERM/SIGINT. On signal, sends `DisconnectRequest` to daemon before exiting cleanly.
 
+**Reconnection:** On gRPC stream errors, the watch client automatically reconnects:
+
+- `run()` wraps each session in a retry loop with exponential backoff (1s → 2s → 4s → ... → 30s cap)
+- `run_watch_session()` returns `SessionExit::Clean` (signal, no retry) or `SessionExit::StreamError` (retry)
+- On reconnect, `connect_or_start()` handles starting a new daemon if the old one died
+- File watchers are recreated fresh via `WatchPaths` event each session — no state carryover needed
+- Logs the last event received before the error for diagnostics
+
+**Heartbeat:** Daemon sends `Heartbeat` event every 30s on the watch stream. This ensures broken connections are detected even during idle periods (no build activity). The heartbeat write failing on the server side triggers tonic to drop the stream, firing `scopeguard` cleanup.
+
 **CompileType enum:** `Incremental`, `SourceCreated`, `SourceDeleted`, `SourceRenamed`, `ConfigChange`
 
 ### Daemon Lifecycle
@@ -199,6 +210,7 @@ The watch client (`client/watch.rs`) uses a **daemon-driven** watching strategy:
   - SIGTERM/SIGINT → graceful shutdown
   - SIGHUP → ignored (daemon survives terminal close)
   - All clients disconnected → shutdown
+- HTTP/2 keepalive: `http2_keepalive_interval(10s)` + `http2_keepalive_timeout(5s)` on tonic server — detects dead clients within ~15s even if no application traffic
 - Writes PID to `<root>/lib/bs/rescript.daemon.pid`
 - Writes socket path to `<root>/lib/bs/rescript.sock.path`
 - Cleans up socket, PID file, and socket path file on exit
@@ -312,6 +324,7 @@ Update after each session. Reflect current state, not history.
 - **std::sync::Mutex in async**: Works because locking only in `spawn_blocking`, but footgun
 - **No protocol versioning**: Client/daemon must be same version
 - **Unix-only**: No Windows support (needs named pipes or TCP)
+- **Reconnection is watch-only**: Build/clean/format clients don't retry on stream errors (they're short-lived, so restart is acceptable)
 
 ## Testing
 
