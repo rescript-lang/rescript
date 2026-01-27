@@ -21,8 +21,8 @@ Fix the Rust ReScript printer to produce output that is idempotent (parse→prin
 - **Test command**: Compare two roundtrips:
   ```bash
   P="./compiler-rust/target/release/res_parser_rust"
-  $P --print res file.res > /tmp/r1.res
-  $P --print res /tmp/r1.res > /tmp/r2.res
+  $P -print res file.res > /tmp/r1.res
+  $P -print res /tmp/r1.res > /tmp/r2.res
   diff /tmp/r1.res /tmp/r2.res
   ```
 
@@ -118,7 +118,7 @@ These indicate the printer isn't idempotent:
    _build/install/default/bin/res_parser -print res file.res
 
    # Rust printer output
-   ./compiler-rust/target/release/res_parser_rust --print res file.res
+   ./compiler-rust/target/release/res_parser_rust -print res file.res
 
    # Compare
    diff <(ocaml_cmd) <(rust_cmd)
@@ -155,8 +155,8 @@ To find ROUNDTRIP_DIFF files (your scope):
 # List files with printer idempotency issues (DIFF)
 P="./compiler-rust/target/release/res_parser_rust"
 for f in tests/syntax_tests/data/**/*.res; do
-  $P --print res "$f" > /tmp/r1.res 2>/dev/null || continue  # Skip parse failures
-  $P --print res /tmp/r1.res > /tmp/r2.res 2>/dev/null || continue  # Skip re-parse failures (parser task)
+  $P -print res "$f" > /tmp/r1.res 2>/dev/null || continue  # Skip parse failures
+  $P -print res /tmp/r1.res > /tmp/r2.res 2>/dev/null || continue  # Skip re-parse failures (parser task)
   diff -q /tmp/r1.res /tmp/r2.res > /dev/null || echo "$f"  # Your scope: DIFF cases
 done
 ```
@@ -169,8 +169,8 @@ Files where re-parsing fails (ROUNDTRIP_PARSE_FAIL) are also blocked by parser t
 Run the full roundtrip test:
 ```bash
 for f in tests/syntax_tests/data/**/*.res; do
-  ./compiler-rust/target/release/res_parser_rust --print res "$f" > /tmp/r1.res 2>/dev/null || continue
-  ./compiler-rust/target/release/res_parser_rust --print res /tmp/r1.res > /tmp/r2.res 2>/dev/null || { echo "PARSE_FAIL: $f"; continue; }
+  ./compiler-rust/target/release/res_parser_rust -print res "$f" > /tmp/r1.res 2>/dev/null || continue
+  ./compiler-rust/target/release/res_parser_rust -print res /tmp/r1.res > /tmp/r2.res 2>/dev/null || { echo "PARSE_FAIL: $f"; continue; }
   diff -q /tmp/r1.res /tmp/r2.res > /dev/null || echo "DIFF: $f"
 done | grep -c "^DIFF"
 ```

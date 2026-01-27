@@ -189,11 +189,10 @@ test_single_file() {
     local ocaml_fail=0 rust_fail=0
 
     # Determine if it's an interface file
-    local intf_flag_ocaml="" intf_flag_rust=""
+    local intf_flag=""
     case "$file" in
         *.resi)
-            intf_flag_ocaml="-interface"
-            intf_flag_rust="--interface"
+            intf_flag="-interface"
             ;;
     esac
 
@@ -203,7 +202,7 @@ test_single_file() {
 
     # Run OCaml parser with sexp-locs (primary test - includes all attributes)
     local ocaml_success=false
-    if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -print sexp-locs "$file" > "$file_temp/ocaml.sexp-locs" 2>/dev/null; then
+    if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print sexp-locs "$file" > "$file_temp/ocaml.sexp-locs" 2>/dev/null; then
         ocaml_success=true
     else
         ocaml_fail=1
@@ -211,7 +210,7 @@ test_single_file() {
 
     # Run Rust parser with sexp-locs
     local rust_success=false
-    if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --print sexp-locs "$file" > "$file_temp/rust.sexp-locs" 2>/dev/null; then
+    if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print sexp-locs "$file" > "$file_temp/rust.sexp-locs" 2>/dev/null; then
         rust_success=true
     else
         rust_fail=1
@@ -227,8 +226,8 @@ test_single_file() {
         fi
 
         # Test sexp0-locs
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -print sexp0-locs "$file" > "$file_temp/ocaml.sexp0-locs" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --print sexp0-locs "$file" > "$file_temp/rust.sexp0-locs" 2>/dev/null; then
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print sexp0-locs "$file" > "$file_temp/ocaml.sexp0-locs" 2>/dev/null && \
+           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print sexp0-locs "$file" > "$file_temp/rust.sexp0-locs" 2>/dev/null; then
             if ! diff -q "$file_temp/ocaml.sexp0-locs" "$file_temp/rust.sexp0-locs" > /dev/null 2>&1; then
                 sexp0_locs_diff=1
                 diff -u "$file_temp/ocaml.sexp0-locs" "$file_temp/rust.sexp0-locs" > "$TEMP_DIR/sexp0_locs_diffs/$safe_name.diff" 2>&1 || true
@@ -237,10 +236,10 @@ test_single_file() {
 
         # Test roundtrip parity
         local ocaml_roundtrip_ok=false rust_roundtrip_ok=false
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -test-ast-conversion -print sexp "$file" > "$file_temp/ocaml.roundtrip.sexp" 2>/dev/null; then
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -test-ast-conversion -print sexp "$file" > "$file_temp/ocaml.roundtrip.sexp" 2>/dev/null; then
             ocaml_roundtrip_ok=true
         fi
-        if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --test-ast-conversion --print sexp "$file" > "$file_temp/rust.roundtrip.sexp" 2>/dev/null; then
+        if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -test-ast-conversion -print sexp "$file" > "$file_temp/rust.roundtrip.sexp" 2>/dev/null; then
             rust_roundtrip_ok=true
         fi
         if $ocaml_roundtrip_ok && $rust_roundtrip_ok; then
@@ -251,8 +250,8 @@ test_single_file() {
         fi
 
         # Test roundtrip locations
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -test-ast-conversion -print sexp-locs "$file" > "$file_temp/ocaml.roundtrip.sexp-locs" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --test-ast-conversion --print sexp-locs "$file" > "$file_temp/rust.roundtrip.sexp-locs" 2>/dev/null; then
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -test-ast-conversion -print sexp-locs "$file" > "$file_temp/ocaml.roundtrip.sexp-locs" 2>/dev/null && \
+           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -test-ast-conversion -print sexp-locs "$file" > "$file_temp/rust.roundtrip.sexp-locs" 2>/dev/null; then
             if ! diff -q "$file_temp/ocaml.roundtrip.sexp-locs" "$file_temp/rust.roundtrip.sexp-locs" > /dev/null 2>&1; then
                 roundtrip_locs_diff=1
                 diff -u "$file_temp/ocaml.roundtrip.sexp-locs" "$file_temp/rust.roundtrip.sexp-locs" > "$TEMP_DIR/roundtrip_locs_parity_diffs/$safe_name.diff" 2>&1 || true
@@ -260,8 +259,8 @@ test_single_file() {
         fi
 
         # Test binary parity (current parsetree format)
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -print binary "$file" > "$file_temp/ocaml.binary" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --print binary "$file" > "$file_temp/rust.binary" 2>/dev/null; then
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print binary "$file" > "$file_temp/ocaml.binary" 2>/dev/null && \
+           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print binary "$file" > "$file_temp/rust.binary" 2>/dev/null; then
             if ! diff -q "$file_temp/ocaml.binary" "$file_temp/rust.binary" > /dev/null 2>&1; then
                 binary_diff=1
                 {
@@ -275,8 +274,8 @@ test_single_file() {
         fi
 
         # Test binary0 parity (parsetree0 format - PPX compatible)
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -print binary0 "$file" > "$file_temp/ocaml.binary0" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --print binary0 "$file" > "$file_temp/rust.binary0" 2>/dev/null; then
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print binary0 "$file" > "$file_temp/ocaml.binary0" 2>/dev/null && \
+           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print binary0 "$file" > "$file_temp/rust.binary0" 2>/dev/null; then
             if ! diff -q "$file_temp/ocaml.binary0" "$file_temp/rust.binary0" > /dev/null 2>&1; then
                 binary0_diff=1
                 {

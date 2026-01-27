@@ -29,7 +29,7 @@ Complete the Rust ReScript parser to handle all ReScript syntax and eliminate pa
 - **OCaml reference**: `compiler/syntax/src/res_core.ml` (~7365 lines)
 - **Test command**: Run from project root (use a 5s timeout per file):
   ```bash
-  ./compiler-rust/target/release/res_parser_rust --print res <file>
+  ./compiler-rust/target/release/res_parser_rust -print res <file>
   ```
 
 ## Missing Features (by priority)

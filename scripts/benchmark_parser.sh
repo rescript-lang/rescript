@@ -63,8 +63,7 @@ RESULTS_FILE="$TEMP_DIR/results.csv"
 echo "file,ocaml_us,rust_us,status" > "$RESULTS_FILE"
 
 # Function to measure execution time in microseconds using python
-# OCaml parser uses: res_parser -print res file
-# Rust parser uses: res_parser_rust --print res file (or -p res file)
+# Both parsers use: res_parser -print res file (single-dash for OCaml compatibility)
 measure_time_us() {
     local parser="$1"
     local parser_type="$2"  # "ocaml" or "rust"
@@ -88,16 +87,10 @@ total_us = 0
 for i in range(runs):
     cmd = [parser]
     if intf_flag:
-        if parser_type == "ocaml":
-            cmd.append(intf_flag)  # -interface
-        else:
-            cmd.append("--interface")  # Rust uses long form
+        cmd.append(intf_flag)  # -interface (same for both parsers)
 
-    # Print format differs between parsers
-    if parser_type == "ocaml":
-        cmd.extend(["-print", "res", file])
-    else:
-        cmd.extend(["--print", "res", file])
+    # Both parsers use single-dash format
+    cmd.extend(["-print", "res", file])
 
     start = time.perf_counter()
     try:

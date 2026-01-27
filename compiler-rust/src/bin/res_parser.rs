@@ -3,16 +3,20 @@
 //! This CLI provides a drop-in replacement for the OCaml `res_parser` CLI,
 //! enabling the Rust parser to run the existing syntax tests.
 //!
+//! Uses the same single-dash CLI format as the OCaml parser for compatibility.
+//!
 //! Usage:
 //!   res_parser_rust [options] <file>
 //!
 //! Options:
-//!   -print <format>    Output format: ml, res, sexp, ast, comments, tokens
-//!   -recover           Enable error recovery mode
-//!   -interface         Parse as interface file
-//!   -width <n>         Line width for printer (default: 100)
-//!   -jsx-version <n>   JSX version (3 or 4)
-//!   -jsx-module <mod>  JSX module (default: react)
+//!   -print <format>         Output format: ml, res, sexp, sexp-locs, sexp0-locs, binary, binary0, ast, comments, tokens
+//!   -recover                Enable error recovery mode
+//!   -interface              Parse as interface file
+//!   -width <n>              Line width for printer (default: 100)
+//!   -jsx-version <n>        JSX version (3 or 4)
+//!   -jsx-module <mod>       JSX module (default: react)
+//!   -test-ast-conversion    Test AST conversion roundtrip (parsetree -> parsetree0 -> parsetree)
+//!   -typechecker            Parse for typechecker (not printer)
 
 use clap::Parser as ClapParser;
 use rescript_compiler::binary_ast::{mapper_from0, mapper_to0, Marshal, MarshalWriter};

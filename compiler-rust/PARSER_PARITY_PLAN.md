@@ -73,7 +73,7 @@ PARSER=rust ./scripts/test_syntax.sh
 
 # Compare single file
 diff <(./_build/install/default/bin/res_parser -print sexp-locs test.res) \
-     <(./compiler-rust/target/release/res_parser_rust --print sexp-locs test.res)
+     <(./compiler-rust/target/release/res_parser_rust -print sexp-locs test.res)
 ```
 
 ### Workflow for Fixing Parity Issues
@@ -86,7 +86,7 @@ diff <(./_build/install/default/bin/res_parser -print sexp-locs test.res) \
 2. **View the difference**
    ```bash
    diff <(./_build/install/default/bin/res_parser -print sexp-locs file.res) \
-        <(./compiler-rust/target/release/res_parser_rust --print sexp-locs file.res)
+        <(./compiler-rust/target/release/res_parser_rust -print sexp-locs file.res)
    ```
 
 3. **Identify the discrepancy** - Which node has wrong value/location?
@@ -163,7 +163,7 @@ The `-test-ast-conversion` flag in both parsers performs this roundtrip:
 ./_build/install/default/bin/res_parser -test-ast-conversion file.res
 
 # Test roundtrip with Rust
-./compiler-rust/target/release/res_parser_rust --test-ast-conversion file.res
+./compiler-rust/target/release/res_parser_rust -test-ast-conversion file.res
 ```
 
 ### What IS Preserved
@@ -197,7 +197,7 @@ Both OCaml and Rust should produce identical roundtrip results:
 ```bash
 # Verify structure parity after roundtrip
 diff <(ocaml_parser -test-ast-conversion -print sexp file.res) \
-     <(rust_parser --test-ast-conversion --print sexp file.res)
+     <(rust_parser -test-ast-conversion -print sexp file.res)
 ```
 
 ### Recommended Additional Testing
@@ -214,7 +214,7 @@ done
 # Test OCaml and Rust produce same roundtrip result
 for f in tests/syntax_tests/data/parsing/grammar/**/*.res; do
   diff <(ocaml -test-ast-conversion -print sexp "$f") \
-       <(rust --test-ast-conversion --print sexp "$f") || echo "DIFF: $f"
+       <(rust -test-ast-conversion -print sexp "$f") || echo "DIFF: $f"
 done
 ```
 

@@ -171,19 +171,17 @@ run_parser_ast_tests() {
         fi
 
         # Determine if it's an interface file
-        local intf_flag_ocaml=""
-        local intf_flag_rust=""
+        local intf_flag=""
         case "$file" in
             *.resi)
-                intf_flag_ocaml="-interface"
-                intf_flag_rust="--interface"
+                intf_flag="-interface"
                 ;;
         esac
 
         # Run OCaml parser
         local ocaml_output="$TEMP_DIR/ocaml.sexp"
         local ocaml_success=true
-        if ! timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag_ocaml -print sexp "$file" > "$ocaml_output" 2>/dev/null; then
+        if ! timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print sexp "$file" > "$ocaml_output" 2>/dev/null; then
             ocaml_success=false
             ocaml_fail_count=$((ocaml_fail_count + 1))
         fi
@@ -191,7 +189,7 @@ run_parser_ast_tests() {
         # Run Rust parser
         local rust_output="$TEMP_DIR/rust.sexp"
         local rust_success=true
-        if ! timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag_rust --print sexp "$file" > "$rust_output" 2>/dev/null; then
+        if ! timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print sexp "$file" > "$rust_output" 2>/dev/null; then
             rust_success=false
             rust_fail_count=$((rust_fail_count + 1))
             failed_files="$failed_files$file (Rust parse error)\n"
