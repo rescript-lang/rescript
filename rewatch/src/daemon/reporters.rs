@@ -7,6 +7,9 @@
 //! - Broadcast channel (for client UX - build output, errors, warnings)
 //! - OpenTelemetry spans (for observability - timing, counts, debugging)
 
+use std::sync::mpsc;
+use std::time::Duration;
+
 use chrono::Local;
 use tokio::sync::broadcast;
 
@@ -20,23 +23,113 @@ use super::proto::{
     UnallowedDependencyGroup as ProtoUnallowedDependencyGroup, daemon_event::Event,
 };
 
+/// How often high-frequency per-module events (like Compiling) are flushed
+/// to the broadcast channel. Only the latest value is sent each interval.
+const COMPILING_FLUSH_INTERVAL: Duration = Duration::from_millis(50);
+
 /// Reporter that sends progress messages through a tokio broadcast channel.
 /// All clients receive updates; each client filters by their client_id.
 /// Converts BuildProgress to DaemonEvent before sending.
+///
+/// High-frequency per-module events (`Compiling`) are throttled: a background
+/// thread samples the latest value every 50ms and sends it to the broadcast
+/// channel, preventing channel overflow in large builds.
 pub struct BroadcastReporter {
     tx: broadcast::Sender<DaemonEvent>,
     client_id: u64,
+    /// Channel for throttled Compiling events. The background thread reads
+    /// from this and flushes the latest value every 50ms.
+    compiling_tx: mpsc::Sender<(i32, i32)>,
 }
 
 impl BroadcastReporter {
     pub fn new(tx: broadcast::Sender<DaemonEvent>, client_id: u64) -> Self {
-        Self { tx, client_id }
+        let (compiling_tx, compiling_rx) = mpsc::channel::<(i32, i32)>();
+        let broadcast_tx = tx.clone();
+
+        // Background thread that samples Compiling events and flushes
+        // the latest value to the broadcast channel every 50ms.
+        std::thread::spawn(move || {
+            Self::compiling_flush_loop(compiling_rx, broadcast_tx, client_id);
+        });
+
+        Self {
+            tx,
+            client_id,
+            compiling_tx,
+        }
+    }
+
+    /// Reads Compiling events from the channel, keeping only the latest.
+    /// Flushes to broadcast every 50ms. Exits when the sender is dropped.
+    fn compiling_flush_loop(
+        rx: mpsc::Receiver<(i32, i32)>,
+        tx: broadcast::Sender<DaemonEvent>,
+        client_id: u64,
+    ) {
+        loop {
+            // Block until first event arrives (or sender drops)
+            let (mut current, mut total) = match rx.recv() {
+                Ok(val) => val,
+                Err(_) => return, // Sender dropped, we're done
+            };
+
+            // Drain any additional events that arrived, keeping the latest
+            while let Ok(val) = rx.try_recv() {
+                current = val.0;
+                total = val.1;
+            }
+
+            // Send the latest value to broadcast
+            let _ = tx.send(progress_to_event(
+                BuildProgress::Compiling {
+                    current_count: current,
+                    total_count: total,
+                },
+                client_id,
+            ));
+
+            // Wait before flushing again. If the sender drops during this
+            // sleep, we'll drain remaining events on the next iteration.
+            match rx.recv_timeout(COMPILING_FLUSH_INTERVAL) {
+                Ok(val) => {
+                    current = val.0;
+                    total = val.1;
+                    // Drain any extras that arrived during the sleep
+                    while let Ok(val) = rx.try_recv() {
+                        current = val.0;
+                        total = val.1;
+                    }
+                    let _ = tx.send(progress_to_event(
+                        BuildProgress::Compiling {
+                            current_count: current,
+                            total_count: total,
+                        },
+                        client_id,
+                    ));
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    // No new events during the interval, loop back to blocking recv
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    // Sender dropped, flush final value and exit
+                    let _ = tx.send(progress_to_event(
+                        BuildProgress::Compiling {
+                            current_count: current,
+                            total_count: total,
+                        },
+                        client_id,
+                    ));
+                    return;
+                }
+            }
+        }
     }
 }
 
 impl BuildReporter for BroadcastReporter {
     fn report(&self, progress: BuildProgress) {
-        // Emit OpenTelemetry span events for key progress types
+        // Emit OpenTelemetry events for key progress types
         emit_tracing_event(&progress, self.client_id);
 
         // Skip high-frequency per-module events that are only useful as OTEL traces.
@@ -44,7 +137,17 @@ impl BuildReporter for BroadcastReporter {
             return;
         }
 
-        // Send to broadcast channel for client UX
+        // Throttle Compiling events through the background flush thread.
+        if let BuildProgress::Compiling {
+            current_count,
+            total_count,
+        } = &progress
+        {
+            let _ = self.compiling_tx.send((*current_count, *total_count));
+            return;
+        }
+
+        // Send everything else directly to broadcast channel
         let _ = self.tx.send(progress_to_event(progress, self.client_id));
     }
 }
