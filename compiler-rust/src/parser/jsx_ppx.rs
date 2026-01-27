@@ -265,8 +265,9 @@ fn transform_value_bindings(
 }
 
 /// Detect forwardRef wrapper and extract inner function
-/// Returns (wrapper_fn, has_forward_ref, inner_expression)
-fn spelunk_for_fun_expression(expr: &Expression) -> (Option<Box<dyn Fn(Expression) -> Expression + '_>>, bool, &Expression) {
+/// Returns (wrapper_expr, has_forward_ref, inner_expression)
+/// wrapper_expr is the original wrapper (e.g., React.forwardRef) expression with its source location
+fn spelunk_for_fun_expression(expr: &Expression) -> (Option<&Expression>, bool, &Expression) {
     match &expr.pexp_desc {
         // let make = (~prop) => ...
         ExpressionDesc::Pexp_fun { .. } | ExpressionDesc::Pexp_newtype(_, _) => {
@@ -281,7 +282,8 @@ fn spelunk_for_fun_expression(expr: &Expression) -> (Option<Box<dyn Fn(Expressio
         ExpressionDesc::Pexp_apply { funct, args, .. } if args.len() == 1 && matches!(&args[0].0, ArgLabel::Nolabel) => {
             let (_, _, inner_expr) = spelunk_for_fun_expression(&args[0].1);
             let has_forward_ref = is_forward_ref(funct);
-            (None, has_forward_ref, inner_expr)
+            // Return the original funct expression (e.g., React.forwardRef) to preserve its source location
+            (if has_forward_ref { Some(funct.as_ref()) } else { None }, has_forward_ref, inner_expr)
         }
         ExpressionDesc::Pexp_sequence(_, inner) => {
             let (_, has_forward_ref, inner_expr) = spelunk_for_fun_expression(inner);
@@ -310,8 +312,10 @@ fn transform_react_component_binding(
     }
     config.has_component = true;
 
-    // Get function name from pattern
+    // Get function name and location from pattern
     let fn_name = get_fn_name(&binding.pvb_pat);
+    let fn_name_loc = get_fn_name_loc(&binding.pvb_pat);
+    let original_binding_loc = binding.pvb_loc.clone();
 
     // Check for sharedProps: @react.component(:sharedProps<T>)
     let core_type_of_attr = core_type_of_attrs(&binding.pvb_attributes);
@@ -320,7 +324,8 @@ fn transform_react_component_binding(
         .unwrap_or_default();
 
     // Detect forwardRef and get inner expression
-    let (_, has_forward_ref, inner_expr) = spelunk_for_fun_expression(&binding.pvb_expr);
+    // wrapper_expr is the original React.forwardRef expression with its source location
+    let (wrapper_expr, has_forward_ref, inner_expr) = spelunk_for_fun_expression(&binding.pvb_expr);
 
     // Detect if function is async
     let is_async = is_async_function(&binding.pvb_expr);
@@ -344,7 +349,7 @@ fn transform_react_component_binding(
     let props_type = if let Some(manifest) = &core_type_of_attr {
         make_props_abstract_type("props", pstr_loc, manifest, &typ_vars_of_core_type)
     } else {
-        make_props_record_type("props", pstr_loc, &named_type_list)
+        make_props_record_type("props", pstr_loc, &named_type_list, has_forward_ref)
     };
 
     // Build the internal expression pattern (use inner expression to handle forwardRef)
@@ -382,13 +387,24 @@ fn transform_react_component_binding(
         named_type_list.iter()
             .filter(|nt| nt.label != "key")
             .filter_map(|nt| {
-                // For forwardRef, 'ref' param should be Ptyp_var "ref"
+                // For forwardRef, 'ref' param should be Ptyp_var "ref" when interior_type is Ptyp_any
+                // OCaml: if interior_type is Ptyp_any, use ref_type_var loc (actual location)
+                // Otherwise, strip Js.Nullable wrapper when has_forward_ref
                 if nt.label == "ref" && has_forward_ref {
-                    return Some(CoreType {
-                        ptyp_desc: CoreTypeDesc::Ptyp_var("ref".to_string()),
-                        ptyp_loc: empty_loc(),
-                        ptyp_attributes: vec![],
-                    });
+                    match &nt.interior_type.ptyp_desc {
+                        CoreTypeDesc::Ptyp_any => {
+                            // OCaml uses actual param location for Ptyp_var when interior is Ptyp_any
+                            return Some(CoreType {
+                                ptyp_desc: CoreTypeDesc::Ptyp_var("ref".to_string()),
+                                ptyp_loc: nt.loc.clone(),
+                                ptyp_attributes: vec![],
+                            });
+                        }
+                        _ => {
+                            // Strip explicit Js.Nullable.t in case of forwardRef
+                            return strip_js_nullable(&nt.interior_type);
+                        }
+                    }
                 }
                 // For optional args, OCaml strips the option wrapper
                 if nt.is_optional && nt.has_explicit_type {
@@ -424,17 +440,20 @@ fn transform_react_component_binding(
         // Find ref arg and its alias from extracted args
         let ref_arg = args.iter().find(|a| a.alias == "ref" || a.alias == "_ref");
         let ref_alias = ref_arg.map(|a| a.alias.clone()).unwrap_or_else(|| "ref".to_string());
+        // OCaml uses the original location from the ref parameter
+        let ref_loc = ref_arg.map(|a| a.loc.clone()).unwrap_or_else(empty_loc);
 
-        // Create ref parameter - use actual alias from args
+        // Create ref parameter - use actual alias and location from args
         let base_ref_pattern = Pattern {
-            ppat_desc: PatternDesc::Ppat_var(Loc { txt: ref_alias.clone(), loc: empty_loc() }),
-            ppat_loc: empty_loc(),
+            ppat_desc: PatternDesc::Ppat_var(Loc { txt: ref_alias.clone(), loc: ref_loc.clone() }),
+            ppat_loc: ref_loc.clone(),
             ppat_attributes: vec![],
         };
 
         // Only add type constraint if alias doesn't start with "_" (underscore means unused)
         let ref_pattern = if !ref_alias.starts_with('_') {
             // Type is Js.Nullable.t<'ref>
+            // OCaml calls ref_type Location.none, so inner Ptyp_var uses ghost location
             let ref_type_var = CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_var("ref".to_string()),
                 ptyp_loc: empty_loc(),
@@ -458,6 +477,7 @@ fn transform_react_component_binding(
                 ptyp_attributes: vec![],
             };
 
+            // OCaml uses ghost location for the outer Ppat_constraint
             Pattern {
                 ppat_desc: PatternDesc::Ppat_constraint(Box::new(base_ref_pattern), js_nullable_t),
                 ppat_loc: empty_loc(),
@@ -491,7 +511,8 @@ fn transform_react_component_binding(
                 arity: Arity::Full(total_arity),
                 is_async: false,
             },
-            pexp_loc: binding.pvb_expr.pexp_loc.clone(),
+            // OCaml uses ghost location for the inner Pexp_fun
+            pexp_loc: empty_loc(),
             pexp_attributes: filtered_attrs.clone(),
         }
     } else {
@@ -505,7 +526,8 @@ fn transform_react_component_binding(
                 arity: Arity::Full(total_arity),
                 is_async: false,
             },
-            pexp_loc: binding.pvb_expr.pexp_loc.clone(),
+            // OCaml uses ghost location for the inner Pexp_fun
+            pexp_loc: empty_loc(),
             pexp_attributes: filtered_attrs.clone(),
         }
     };
@@ -588,42 +610,62 @@ fn transform_react_component_binding(
     };
 
     // For forwardRef, wrap full_expression with React.forwardRef(...)
+    // Use the original wrapper_expr to preserve source locations
     let final_full_expression = if has_forward_ref {
-        Expression {
-            pexp_desc: ExpressionDesc::Pexp_apply {
-                funct: Box::new(Expression {
-                    pexp_desc: ExpressionDesc::Pexp_ident(Loc {
-                        txt: Longident::Ldot(
-                            Box::new(Longident::Lident("React".to_string())),
-                            "forwardRef".to_string(),
-                        ),
-                        loc: empty_loc(),
+        if let Some(wrapper) = wrapper_expr {
+            // Use original wrapper expression from source (preserves location)
+            Expression {
+                pexp_desc: ExpressionDesc::Pexp_apply {
+                    funct: Box::new(wrapper.clone()),
+                    args: vec![(ArgLabel::Nolabel, full_expression)],
+                    partial: false,
+                    transformed_jsx: false,
+                },
+                // OCaml uses ghost location for the outer Pexp_apply
+                pexp_loc: empty_loc(),
+                pexp_attributes: vec![],
+            }
+        } else {
+            // Fallback: create fresh expression (shouldn't happen)
+            Expression {
+                pexp_desc: ExpressionDesc::Pexp_apply {
+                    funct: Box::new(Expression {
+                        pexp_desc: ExpressionDesc::Pexp_ident(Loc {
+                            txt: Longident::Ldot(
+                                Box::new(Longident::Lident("React".to_string())),
+                                "forwardRef".to_string(),
+                            ),
+                            loc: empty_loc(),
+                        }),
+                        pexp_loc: empty_loc(),
+                        pexp_attributes: vec![],
                     }),
-                    pexp_loc: empty_loc(),
-                    pexp_attributes: vec![],
-                }),
-                args: vec![(ArgLabel::Nolabel, full_expression)],
-                partial: false,
-                transformed_jsx: false,
-            },
-            pexp_loc: pstr_loc.clone(),
-            pexp_attributes: vec![],
+                    args: vec![(ArgLabel::Nolabel, full_expression)],
+                    partial: false,
+                    transformed_jsx: false,
+                },
+                pexp_loc: empty_loc(),
+                pexp_attributes: vec![],
+            }
         }
     } else {
         full_expression
     };
 
     // For nonrecursive, create a new binding with the wrapper
+    // OCaml uses real locations for the public make binding:
+    // - pvb_loc uses pstr_loc (the entire structure_item location including @react.component)
+    // - pattern uses the original fn_name location
     let new_binding = if rec_flag == RecFlag::Nonrecursive && !full_module_name.is_empty() {
         Some(ValueBinding {
             pvb_pat: Pattern {
-                ppat_desc: PatternDesc::Ppat_var(Loc { txt: fn_name, loc: empty_loc() }),
-                ppat_loc: empty_loc(),
+                ppat_desc: PatternDesc::Ppat_var(Loc { txt: fn_name, loc: fn_name_loc.clone() }),
+                ppat_loc: fn_name_loc,
                 ppat_attributes: vec![],
             },
             pvb_expr: final_full_expression,
             pvb_attributes: vec![],
-            pvb_loc: empty_loc(),
+            pvb_loc: pstr_loc.clone(),
         })
     } else {
         None
@@ -638,7 +680,7 @@ fn transform_react_component_binding(
 fn transform_react_component_with_props_binding(
     binding: ValueBinding,
     rec_flag: RecFlag,
-    _pstr_loc: &Location,
+    pstr_loc: &Location,
     config: &mut JsxConfig,
 ) -> (ValueBinding, Option<ValueBinding>) {
     // Check for multiple components in the same module
@@ -649,8 +691,9 @@ fn transform_react_component_with_props_binding(
     }
     config.has_component = true;
 
-    // Get function name from pattern
+    // Get function name and location from pattern
     let fn_name = get_fn_name(&binding.pvb_pat);
+    let fn_name_loc = get_fn_name_loc(&binding.pvb_pat);
     let internal_fn_name = format!("{}$Internal", fn_name);
     let full_module_name = make_module_name(config, &fn_name);
 
@@ -761,15 +804,18 @@ fn transform_react_component_with_props_binding(
     };
 
     // Create the new binding
+    // OCaml uses real locations for the public make binding:
+    // - pvb_loc uses pstr_loc (the entire structure_item location including @react.componentWithProps)
+    // - pattern uses the original fn_name location
     let new_binding = ValueBinding {
         pvb_pat: Pattern {
-            ppat_desc: PatternDesc::Ppat_var(Loc { txt: fn_name.clone(), loc: empty_loc() }),
-            ppat_loc: empty_loc(),
+            ppat_desc: PatternDesc::Ppat_var(Loc { txt: fn_name.clone(), loc: fn_name_loc.clone() }),
+            ppat_loc: fn_name_loc,
             ppat_attributes: vec![],
         },
         pvb_expr: internal_expr,
         pvb_attributes: filtered_attrs.clone(),
-        pvb_loc: empty_loc(),
+        pvb_loc: pstr_loc.clone(),
     };
 
     // Handle recursive vs non-recursive
@@ -1271,9 +1317,10 @@ fn add_default_value_matches(mut expr: Expression, args: &[ExtractedArg]) -> Exp
                 pexp_attributes: vec![],
             };
 
+            // OCaml uses the original arg location for the let binding pattern
             let binding = ValueBinding {
                 pvb_pat: Pattern {
-                    ppat_desc: PatternDesc::Ppat_var(Loc { txt: alias.clone(), loc: empty_loc() }),
+                    ppat_desc: PatternDesc::Ppat_var(Loc { txt: alias.clone(), loc: arg.loc.clone() }),
                     ppat_loc: empty_loc(),
                     ppat_attributes: vec![],
                 },
@@ -1431,24 +1478,28 @@ fn transform_react_component_sig(
     };
 
     // Create new value description with component type
+    // OCaml: Typ.constr (Location.mkloc (Lident "props") psig_loc) params
+    // Typ.constr without ~loc uses Location.none for ptyp_loc
     let props_type_ref = CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_constr(
-            Loc { txt: Longident::Lident("props".to_string()), loc: empty_loc() },
+            Loc { txt: Longident::Lident("props".to_string()), loc: loc.clone() }, // longident uses psig_loc
             props_type_params,
         ),
-        ptyp_loc: loc.clone(),
+        ptyp_loc: empty_loc(), // OCaml: Typ.constr without ~loc defaults to Location.none
         ptyp_attributes: vec![],
     };
 
+    // OCaml: {pval_type with ptyp_desc = new_external_type}
+    // This preserves pval_type's original ptyp_loc
     let component_type = CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_constr(
             Loc {
                 txt: Longident::Ldot(Box::new(Longident::Lident("React".to_string())), "component".to_string()),
-                loc: empty_loc(),
+                loc: loc.clone(), // OCaml: {loc = psig_loc; txt = ...}
             },
             vec![props_type_ref],
         ),
-        ptyp_loc: loc.clone(),
+        ptyp_loc: vd.pval_type.ptyp_loc.clone(), // OCaml: {pval_type with ...} preserves ptyp_loc
         ptyp_attributes: vec![],
     };
 
@@ -1552,15 +1603,18 @@ fn transform_react_component_external(
             .collect()
     };
 
+    // OCaml uses the external's full location for the props type and its longident
     let props_type_ref = CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_constr(
-            Loc { txt: Longident::Lident("props".to_string()), loc: empty_loc() },
+            Loc { txt: Longident::Lident("props".to_string()), loc: loc.clone() },
             props_type_params,
         ),
         ptyp_loc: loc.clone(),
         ptyp_attributes: vec![],
     };
 
+    // OCaml uses the original return type's location for the outer core_type,
+    // and the external's full location for the longident
     let component_type = CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_constr(
             Loc {
@@ -1568,11 +1622,11 @@ fn transform_react_component_external(
                     Box::new(Longident::Lident(config.module_name.clone())),
                     "component".to_string(),
                 ),
-                loc: empty_loc(),
+                loc: loc.clone(),
             },
             vec![props_type_ref],
         ),
-        ptyp_loc: loc.clone(),
+        ptyp_loc: vd.pval_type.ptyp_loc.clone(),
         ptyp_attributes: vec![],
     };
 
@@ -1600,9 +1654,10 @@ fn make_props_record_type_with_live(name: &str, loc: &Location, named_types: &[N
 
     let label_decls: Vec<LabelDeclaration> = named_types.iter()
         .map(|nt| {
+            // OCaml uses ghost location for the Ptyp_var inside label declarations
             let type_var = CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_var(safe_type_from_value(&nt.label)),
-                ptyp_loc: nt.loc.clone(),
+                ptyp_loc: empty_loc(),
                 ptyp_attributes: vec![],
             };
 
@@ -1620,7 +1675,7 @@ fn make_props_record_type_with_live(name: &str, loc: &Location, named_types: &[N
         })
         .collect();
 
-    // Type parameters
+    // Type parameters - these keep the real location (OCaml uses real locs for ptype_params)
     let type_params: Vec<(CoreType, Variance)> = named_types.iter()
         .filter(|nt| nt.label != "key")
         .map(|nt| {
@@ -1643,6 +1698,7 @@ fn make_props_record_type_with_live(name: &str, loc: &Location, named_types: &[N
         Payload::PStr(vec![]),
     );
 
+    // OCaml uses ghost location for the generated props type structure_item
     StructureItem {
         pstr_desc: StructureItemDesc::Pstr_type(
             RecFlag::Nonrecursive,
@@ -1657,7 +1713,7 @@ fn make_props_record_type_with_live(name: &str, loc: &Location, named_types: &[N
                 ptype_loc: loc.clone(),
             }],
         ),
-        pstr_loc: loc.clone(),
+        pstr_loc: empty_loc(),
     }
 }
 
@@ -1672,7 +1728,15 @@ fn collect_prop_types_rec(typ: &CoreType, types: &mut Vec<(ArgLabel, Attributes,
     if let CoreTypeDesc::Ptyp_arrow { arg, ret, .. } = &typ.ptyp_desc {
         let label = &arg.lbl;
         if is_labelled(label) || is_optional(label) {
-            types.push((label.clone(), arg.attrs.clone(), typ.ptyp_loc.clone(), arg.typ.clone()));
+            // OCaml uses different locations based on whether return is another arrow:
+            // - If ret is arrow: use typ.ptyp_loc (the enclosing arrow's location)
+            // - If ret is not arrow (last arg): use ret.ptyp_loc (return type's location)
+            let loc = if matches!(ret.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. }) {
+                typ.ptyp_loc.clone()
+            } else {
+                ret.ptyp_loc.clone()
+            };
+            types.push((label.clone(), arg.attrs.clone(), loc, arg.typ.clone()));
         }
         collect_prop_types_rec(ret, types);
     }
@@ -1742,6 +1806,19 @@ fn get_fn_name(pat: &Pattern) -> String {
     }
 }
 
+/// Get the location of the function name from a pattern
+/// For Ppat_constraint, returns the OUTER constraint's location (not the inner pattern's)
+/// This matches OCaml's jsx_v4.ml: `let binding_pat_loc = binding.pvb_pat.ppat_loc`
+fn get_fn_name_loc(pat: &Pattern) -> Location {
+    match &pat.ppat_desc {
+        PatternDesc::Ppat_var(loc) => loc.loc.clone(),
+        // For constrained patterns, use the constraint's location (the full span including type annotation)
+        // OCaml uses binding.pvb_pat.ppat_loc which is the outer Ppat_constraint's location
+        PatternDesc::Ppat_constraint(_, _) => pat.ppat_loc.clone(),
+        _ => pat.ppat_loc.clone(),
+    }
+}
+
 fn make_module_name(config: &JsxConfig, fn_name: &str) -> String {
     // Build component name: file_name + nested_modules (in order, not reversed)
     // If fn_name is not "make", append it to the nested modules
@@ -1782,6 +1859,30 @@ fn strip_option(core_type: &CoreType) -> Option<CoreType> {
     match &core_type.ptyp_desc {
         CoreTypeDesc::Ptyp_constr(lid, args) if lid.txt.last() == "option" && args.len() == 1 => {
             args.first().cloned()
+        }
+        _ => Some(core_type.clone()),
+    }
+}
+
+/// Strip `Js.Nullable.t<T>` wrapper from a type, returning just `T`
+fn strip_js_nullable(core_type: &CoreType) -> Option<CoreType> {
+    match &core_type.ptyp_desc {
+        CoreTypeDesc::Ptyp_constr(lid, args) if args.len() == 1 => {
+            // Check for Js.Nullable.t
+            if let Longident::Ldot(outer, inner) = &lid.txt {
+                if inner == "t" {
+                    if let Longident::Ldot(js, nullable) = outer.as_ref() {
+                        if nullable == "Nullable" {
+                            if let Longident::Lident(js_name) = js.as_ref() {
+                                if js_name == "Js" {
+                                    return args.first().cloned();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Some(core_type.clone())
         }
         _ => Some(core_type.clone()),
     }
@@ -1867,9 +1968,10 @@ fn constrain_jsx_return(expr: Expression, config: &JsxConfig) -> Expression {
         }
         _ => {
             // Default: wrap with constraint
+            // OCaml uses ghost location for the synthesized Pexp_constraint wrapper
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr.clone()), element_type),
-                pexp_loc: expr.pexp_loc.clone(),
+                pexp_loc: empty_loc(),
                 pexp_attributes: vec![],
             }
         }
@@ -1912,12 +2014,13 @@ fn try_find_key_prop(props: &[JsxProp]) -> Option<(ArgLabel, Expression)> {
                 } else {
                     ArgLabel::Labelled(label_loc)
                 };
+                // OCaml: Exp.ident without ~loc defaults to Location.none (ghost)
                 let expr = Expression {
                     pexp_desc: ExpressionDesc::Pexp_ident(Loc {
                         txt: Longident::Lident("key".to_string()),
                         loc: name.loc.clone(),
                     }),
-                    pexp_loc: name.loc.clone(),
+                    pexp_loc: empty_loc(),
                     pexp_attributes: vec![],
                 };
                 return Some((arg_label, expr));
@@ -2116,20 +2219,22 @@ fn check_duplicated_labels(named_types: &[NamedType]) {
     }
 }
 
-fn make_props_record_type(name: &str, loc: &Location, named_types: &[NamedType]) -> StructureItem {
+fn make_props_record_type(name: &str, loc: &Location, named_types: &[NamedType], has_forward_ref: bool) -> StructureItem {
     // Check for duplicate labels (OCaml: check_duplicated_label)
     check_duplicated_labels(named_types);
 
     let label_decls: Vec<LabelDeclaration> = named_types.iter()
         .map(|nt| {
+            // OCaml uses ghost location for the Ptyp_var inside label declarations
             let type_var = CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_var(safe_type_from_value(&nt.label)),
-                ptyp_loc: nt.loc.clone(),
+                ptyp_loc: empty_loc(),
                 ptyp_attributes: vec![],
             };
 
             // Key prop is always optional in type declaration (OCaml: if label = "key" then ~optional:true)
-            let is_optional = if nt.label == "key" { true } else { nt.is_optional };
+            // For forwardRef, ref is also always optional
+            let is_optional = if nt.label == "key" || (nt.label == "ref" && has_forward_ref) { true } else { nt.is_optional };
 
             LabelDeclaration {
                 pld_name: Loc { txt: nt.label.clone(), loc: nt.loc.clone() },
@@ -2183,9 +2288,10 @@ fn make_props_record_type_sig(name: &str, loc: &Location, named_types: &[NamedTy
 
     let label_decls: Vec<LabelDeclaration> = named_types.iter()
         .map(|nt| {
+            // OCaml uses ghost location for the Ptyp_var inside label declarations
             let type_var = CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_var(safe_type_from_value(&nt.label)),
-                ptyp_loc: nt.loc.clone(),
+                ptyp_loc: empty_loc(),
                 ptyp_attributes: vec![],
             };
 
@@ -2232,7 +2338,8 @@ fn make_props_record_type_sig(name: &str, loc: &Location, named_types: &[NamedTy
 
     SignatureItem {
         psig_desc: SignatureItemDesc::Psig_type(RecFlag::Nonrecursive, vec![type_decl]),
-        psig_loc: loc.clone(),
+        // OCaml: Sig.type_ without ~loc uses Location.none
+        psig_loc: empty_loc(),
     }
 }
 
@@ -2280,7 +2387,8 @@ fn make_props_abstract_type_sig(name: &str, loc: &Location, manifest: &CoreType,
 
     SignatureItem {
         psig_desc: SignatureItemDesc::Psig_type(RecFlag::Nonrecursive, vec![type_decl]),
-        psig_loc: loc.clone(),
+        // OCaml: Sig.type_ without ~loc uses Location.none
+        psig_loc: empty_loc(),
     }
 }
 
@@ -2345,7 +2453,8 @@ fn make_props_abstract_type_sig_with_live(name: &str, loc: &Location, manifest: 
 
     SignatureItem {
         psig_desc: SignatureItemDesc::Psig_type(RecFlag::Nonrecursive, vec![type_decl]),
-        psig_loc: loc.clone(),
+        // OCaml: Sig.type_ without ~loc uses Location.none
+        psig_loc: empty_loc(),
     }
 }
 
@@ -2871,6 +2980,7 @@ fn append_children_prop(
                 };
                 let some_element_path = Longident::Ldot(Box::new(element_binding), "someElement".to_string());
 
+                // OCaml: Exp.apply without ~loc uses Location.none (default_loc = ref Location.none)
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_apply {
                         funct: Box::new(Expression {
@@ -2885,7 +2995,7 @@ fn append_children_prop(
                         partial: false,
                         transformed_jsx: false,
                     },
-                    pexp_loc: child.pexp_loc.clone(),
+                    pexp_loc: empty_loc(), // OCaml: Exp.apply without ~loc defaults to Location.none
                     pexp_attributes: vec![],
                 }
             }
@@ -2953,13 +3063,44 @@ fn append_children_prop(
     props
 }
 
+/// Get location from a JSX prop
+fn loc_from_prop(prop: &JsxProp) -> Location {
+    match prop {
+        JsxProp::Punning { name, .. } => name.loc.clone(),
+        JsxProp::Value { name, value, .. } => {
+            // Location spans from name start to value end
+            Location {
+                loc_start: name.loc.loc_start.clone(),
+                loc_end: value.pexp_loc.loc_end.clone(),
+                loc_ghost: false,
+                id: LocationId::default_id(),
+            }
+        }
+        JsxProp::Spreading { loc, .. } => loc.clone(),
+    }
+}
+
 /// Create props record from JSX props - matches OCaml's mk_record_from_props
 fn mk_record_from_props(
     jsx_expr_loc: &Location,
     props: &[JsxProp],
     config: &JsxConfig,
 ) -> Expression {
-    // Filter out key prop
+    // Calculate location from ALL props (including key) - OCaml does this before filtering
+    let loc = if props.is_empty() {
+        jsx_expr_loc.clone()
+    } else {
+        let first = loc_from_prop(&props[0]);
+        let last = loc_from_prop(props.last().unwrap());
+        Location {
+            loc_start: first.loc_start,
+            loc_end: last.loc_end,
+            loc_ghost: false,
+            id: LocationId::default_id(),
+        }
+    };
+
+    // Filter out key prop AFTER calculating location
     let props: Vec<&JsxProp> = props.iter()
         .filter(|p| match p {
             JsxProp::Punning { name, .. } | JsxProp::Value { name, .. } => name.txt != "key",
@@ -3022,20 +3163,6 @@ fn mk_record_from_props(
             }
         })
         .collect();
-
-    // Calculate location from props range
-    let loc = if record_fields.is_empty() {
-        jsx_expr_loc.clone()
-    } else {
-        let first = &record_fields.first().unwrap().lid.loc;
-        let last = &record_fields.last().unwrap().lid.loc;
-        Location {
-            loc_start: first.loc_start.clone(),
-            loc_end: last.loc_end.clone(),
-            loc_ghost: false,
-            id: LocationId::default_id(),
-        }
-    };
 
     // Handle empty record with spread
     match (&record_fields[..], &spread_base) {

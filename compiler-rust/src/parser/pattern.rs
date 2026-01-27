@@ -571,21 +571,25 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             p.expect(Token::Rparen);
             let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
 
-            // OCaml: Ppat_unpack location is just the name, not the whole module(...)
-            let unpack = Pattern {
-                ppat_desc: PatternDesc::Ppat_unpack(name_loc.clone()),
-                ppat_loc: name_loc.loc,
-                ppat_attributes: vec![],
-            };
-
+            // OCaml: When there's a constraint, Ppat_unpack's ppat_loc is just the name location.
+            // Without constraint, it spans the full module(...) syntax.
             if let Some(typ) = pkg_type {
+                let unpack = Pattern {
+                    ppat_desc: PatternDesc::Ppat_unpack(name_loc.clone()),
+                    ppat_loc: name_loc.loc.clone(),
+                    ppat_attributes: vec![],
+                };
                 Pattern {
                     ppat_desc: PatternDesc::Ppat_constraint(Box::new(unpack), typ),
                     ppat_loc: loc,
                     ppat_attributes: vec![],
                 }
             } else {
-                unpack
+                Pattern {
+                    ppat_desc: PatternDesc::Ppat_unpack(name_loc.clone()),
+                    ppat_loc: loc,
+                    ppat_attributes: vec![],
+                }
             }
         }
         Token::Hash => parse_poly_variant_pattern(p),
@@ -958,6 +962,9 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
         if opt_punning {
             p.next();
         }
+        // For optional punned fields, the pattern location starts after the '?'
+        // OCaml: the pattern location is just the identifier, not including '? '
+        let pat_start = if opt_punning { p.start_pos.clone() } else { field_start.clone() };
 
         // Support qualified record labels in patterns: {Module.label: pat}
         // (also needed for ambiguity disambiguation, mirroring OCaml syntax).
@@ -1011,7 +1018,8 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             (with_loc(lid_unloc, loc), pat, true)
         } else {
             // Punning: field is same as variable (use last identifier in the path)
-            let loc = p.mk_loc(&field_start, &p.prev_end_pos);
+            // For optional punned fields, the pattern location is just the identifier (using pat_start)
+            let loc = p.mk_loc(&pat_start, &p.prev_end_pos);
             let pat = ast_helper::make_var_pat(pun_name, loc.clone());
             (with_loc(lid_unloc, loc), pat, opt_punning)
         };

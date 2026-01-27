@@ -749,6 +749,65 @@ pub fn parse_es6_arrow_expression(
     }
 }
 
+/// Parse ES6 arrow expression with pre-built term parameters.
+/// Used for special cases like `{ident =>}` where OCaml extends the pattern location.
+fn parse_es6_arrow_expression_with_params(
+    p: &mut Parser<'_>,
+    is_async: bool,
+    term_params: Vec<super::core::FundefTermParam>,
+    _context: ExprContext,
+) -> Expression {
+    p.leave_breadcrumb(Grammar::Es6ArrowExpr);
+
+    // The => has already been consumed in parse_braced_arrow_ident
+
+    // Parse body
+    let body = parse_expr(p);
+
+    p.eat_breadcrumb();
+    let end_pos = p.prev_end_pos.clone();
+
+    // Compute arity for the outermost function
+    let total_arity = term_params.len();
+    term_params
+        .into_iter()
+        .rev()
+        .enumerate()
+        .fold(body, |acc, (i, param)| {
+            // OCaml: for braced arrow {x => body}, Pexp_fun location starts at =>
+            // The pattern location is from `{` to end of ident
+            // So Pexp_fun starts at pattern.loc_end + 1 (skipping space after ident)
+            let mut fun_loc = p.mk_loc(&param.pat.ppat_loc.loc_end, &end_pos);
+            fun_loc.loc_start.cnum += 1; // Skip past the space after pattern (to the `=` of `=>`)
+
+            let mut pat = param.pat;
+            if !param.attrs.is_empty() {
+                let mut attrs = param.attrs;
+                attrs.extend(pat.ppat_attributes);
+                pat.ppat_attributes = attrs;
+            }
+            let is_outermost = i == total_arity - 1;
+            let arity = if is_outermost {
+                Arity::Full(total_arity)
+            } else {
+                Arity::Unknown
+            };
+            let fn_is_async = is_outermost && is_async;
+            Expression {
+                pexp_desc: ExpressionDesc::Pexp_fun {
+                    arg_label: param.label,
+                    default: param.expr.map(Box::new),
+                    lhs: pat,
+                    rhs: Box::new(acc),
+                    arity,
+                    is_async: fn_is_async,
+                },
+                pexp_loc: fun_loc,
+                pexp_attributes: vec![],
+            }
+        })
+}
+
 /// Parse function parameters.
 fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
     let mut params = vec![];
@@ -861,10 +920,18 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
             Token::Colon => {
                 // ~name: type
                 // OCaml: var_pat location includes ~ (from tilde to end of name)
+                // But if there are attributes, it includes those too (from start_pos)
                 p.next();
                 let typ = super::typ::parse_typ_expr(p);
                 let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
-                let var_pat = ast_helper::make_var_pat(lbl_name.clone(), name_loc_with_tilde.clone());
+                // Use start_pos if there are attributes, otherwise use tilde_pos
+                // OCaml includes @as() attributes in the inner Ppat_var location
+                let var_loc = if attrs.is_empty() {
+                    name_loc_with_tilde.clone()
+                } else {
+                    p.mk_loc(&start_pos, &name_loc_with_tilde.loc_end)
+                };
+                let var_pat = ast_helper::make_var_pat(lbl_name.clone(), var_loc);
                 let pat = Pattern {
                     ppat_desc: PatternDesc::Ppat_constraint(Box::new(var_pat), typ),
                     ppat_loc: loc,
@@ -1450,9 +1517,13 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
             }
         }
         Token::LessThan => parse_jsx(p),
-        Token::Backtick => parse_template_literal(p),
-        Token::TemplateTail { .. } => parse_template_literal(p),
-        Token::TemplatePart { .. } => parse_template_literal(p),
+        Token::Backtick | Token::TemplateTail { .. } | Token::TemplatePart { .. } => {
+            // OCaml: after parse_template_expr, overrides location to [start_pos, p.prev_end_pos)
+            // This ensures the outer expression location spans from opening to closing backtick
+            let mut expr = parse_template_literal(p);
+            expr.pexp_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            expr
+        }
         Token::Hash => {
             // Polyvariant: #tag or #tag(arg)
             p.next();
@@ -1619,19 +1690,22 @@ pub fn parse_constrained_or_coerced_expr(p: &mut Parser<'_>) -> Expression {
         let typ = super::typ::parse_typ_expr(p);
         // Check for coercion: (expr : type :> type)
         if p.token == Token::ColonGreaterThan {
+            // OCaml: The inner Pexp_constraint has a location that ends at the constraint type,
+            // not extending to the outer coercion target type
+            let constraint_loc = p.mk_loc(&expr.pexp_loc.loc_start, &typ.ptyp_loc.loc_end);
             p.next();
             let target_typ = super::typ::parse_typ_expr(p);
-            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &target_typ.ptyp_loc.loc_end);
+            let coerce_loc = p.mk_loc(&expr.pexp_loc.loc_start, &target_typ.ptyp_loc.loc_end);
             // OCaml represents (x : t :> int) as Pexp_coerce(Pexp_constraint(x, t), int)
             // The constraint is nested inside the expression, not as the optional middle type
             let constraint_expr = Expression {
                 pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(expr), typ),
-                pexp_loc: loc.clone(),
+                pexp_loc: constraint_loc,
                 pexp_attributes: vec![],
             };
             Expression {
                 pexp_desc: ExpressionDesc::Pexp_coerce(Box::new(constraint_expr), None, target_typ),
-                pexp_loc: loc,
+                pexp_loc: coerce_loc,
                 pexp_attributes: vec![],
             }
         } else {
@@ -1788,13 +1862,15 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     p.next();
                     let equal_end = p.prev_end_pos.clone();
                     let value = parse_expr(p);
-                    let loc = p.mk_loc(&start, &p.prev_end_pos);
 
                     // Check if index is a string constant for object property assignment
                     if let ExpressionDesc::Pexp_constant(Constant::String(s, _)) =
                         &index.pexp_desc
                     {
                         // String index: obj["prop"] = value -> Pexp_apply("#=", [Pexp_send(obj, "prop"), value])
+                        // OCaml: loc = mk_loc start_pos rhs_expr.pexp_loc.loc_end
+                        // Use the inner expression's end, not prev_end_pos (which includes braces)
+                        let loc = p.mk_loc(&start, &value.pexp_loc.loc_end);
                         // First create the Pexp_send for property access
                         // Use rbracket_end for location (OCaml includes the ] in the location)
                         let send_expr = Expression {
@@ -1825,6 +1901,9 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         );
                     } else {
                         // Non-string index: arr[index] = value -> Array.set(arr, index, value)
+                        // OCaml: loc = mk_loc start_pos p.prev_end_pos
+                        // Uses prev_end_pos (includes braces) for Array.set
+                        let loc = p.mk_loc(&start, &p.prev_end_pos);
                         // Use the bracket location [index] for the synthesized Array.set identifier
                         // (matching OCaml's array_loc = mk_loc lbracket rbracket)
                         let array_set = ast_helper::make_ident(
@@ -1834,7 +1913,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                             ),
                             bracket_loc.clone(),
                         );
-                        let mut apply_expr = ast_helper::make_apply(
+                        let apply_expr = ast_helper::make_apply(
                             array_set,
                             vec![
                                 (ArgLabel::Nolabel, expr),
@@ -2185,16 +2264,19 @@ fn parse_array_expr(p: &mut Parser<'_>) -> Expression {
 /// - `list{...xs, 1, ...ys}` becomes `Belt.List.concatMany([xs, 1 :: ys])`
 fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     // Token::List already consumed the opening '{'
-    // Each item is (is_spread, expr)
-    let mut items: Vec<(bool, Expression)> = vec![];
+    // Each item is (is_spread, expr, spread_start_pos)
+    // For spread items, spread_start_pos is before `...`; for non-spread, it's at the expr start
+    let mut items: Vec<(bool, Expression, Position, Position)> = vec![];
 
     while p.token != Token::Rbrace && p.token != Token::Eof {
+        let item_start_pos = p.prev_end_pos.clone(); // OCaml: p.Parser.prev_end_pos
         let is_spread = p.token == Token::DotDotDot;
         if is_spread {
             p.next();
         }
         let expr = parse_constrained_or_coerced_expr(p);
-        items.push((is_spread, expr));
+        let item_end_pos = p.prev_end_pos.clone();
+        items.push((is_spread, expr, item_start_pos, item_end_pos));
 
         if !p.optional(&Token::Comma) {
             break;
@@ -2215,17 +2297,21 @@ fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
         }
         1 => {
             // Single segment: just build with :: constructors
-            let (exprs, spread) = segments.into_iter().next().unwrap();
-            let mut result = make_list_expression(&loc, exprs, spread);
+            // OCaml: spread expression keeps its original location in single segment case
+            let (exprs, spread, _, _) = segments.into_iter().next().unwrap();
+            let mut result = make_list_expression_simple(&loc, exprs, spread);
             // The outermost expression should have the full list location
             result.pexp_loc = loc;
             result
         }
         _ => {
             // Multiple segments: use Belt.List.concatMany([...])
+            // OCaml uses segment locations for sub-expressions
             let sub_exprs: Vec<Expression> = segments
                 .into_iter()
-                .map(|(exprs, spread)| make_list_expression(&loc, exprs, spread))
+                .map(|(exprs, spread, seg_start, seg_end)| {
+                    make_list_expression_with_loc(p, exprs, spread, seg_start, seg_end)
+                })
                 .collect();
 
             let array_expr = Expression {
@@ -2271,38 +2357,43 @@ fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 /// Split list items by spread into segments.
 /// Each segment contains (non_spread_items, optional_spread_at_end).
 /// A spread at the beginning of items starts a new segment.
-fn split_list_by_spread(
-    items: Vec<(bool, Expression)>,
-) -> Vec<(Vec<Expression>, Option<Expression>)> {
-    let mut segments: Vec<(Vec<Expression>, Option<Expression>)> = vec![];
-    let mut current_exprs: Vec<Expression> = vec![];
+/// Segment data: (non_spread_exprs, optional_spread, segment_start, segment_end)
+/// OCaml tracks segment extents: start is first non-spread item (or spread), end is spread/last item
+type ListSegment = (Vec<Expression>, Option<Expression>, Position, Position);
 
-    for (is_spread, expr) in items {
+fn split_list_by_spread(
+    items: Vec<(bool, Expression, Position, Position)>,
+) -> Vec<ListSegment> {
+    // OCaml processes items in reverse using fold_left, building segments as:
+    // - spread: create new segment ([], spread, spread_start, spread_end)
+    // - non-spread with existing segment: prepend to segment, update start to non-spread's start
+    // - non-spread with empty: create ([item], None, item_start, item_end)
+    //
+    // We'll process forward then reverse to match OCaml's final order.
+    let mut segments: Vec<ListSegment> = vec![];
+
+    // Process in reverse to match OCaml's fold_left from reversed list
+    for (is_spread, expr, item_start, item_end) in items.into_iter().rev() {
         if is_spread {
-            // Spread starts a new segment (with current items) and this spread becomes the tail
-            if !current_exprs.is_empty() || !segments.is_empty() {
-                // If we have accumulated exprs, they go into a segment with this spread as tail
-                segments.push((std::mem::take(&mut current_exprs), Some(expr)));
-            } else {
-                // First item is spread - just set it as the spread of first segment
-                segments.push((vec![], Some(expr)));
-            }
+            // Spread: create new segment
+            segments.push((vec![], Some(expr), item_start, item_end));
+        } else if let Some(last) = segments.last_mut() {
+            // Non-spread with existing segment: prepend and update start
+            last.0.push(expr);
+            last.2 = item_start;
         } else {
-            current_exprs.push(expr);
+            // Non-spread with no segments: create segment with no spread
+            segments.push((vec![expr], None, item_start, item_end));
         }
     }
 
-    // Handle remaining non-spread items
-    if !current_exprs.is_empty() {
-        segments.push((current_exprs, None));
+    // Reverse each segment's exprs (they were added in reverse order)
+    for seg in &mut segments {
+        seg.0.reverse();
     }
 
-    // Handle edge case: if we have no segments but also no items
-    if segments.is_empty() {
-        // Will be handled by the empty case
-        return vec![];
-    }
-
+    // Reverse segments to get correct order
+    segments.reverse();
     segments
 }
 
@@ -2321,27 +2412,25 @@ fn make_empty_list(loc: &Location) -> Expression {
     }
 }
 
-/// Build a list expression from items and optional spread tail
+/// Build a list expression from items and optional spread tail (simple version)
+/// Used for single-segment lists where OCaml does NOT update spread location
 /// `[e1, e2]` → `e1 :: (e2 :: [])`
 /// `[e1, e2, ...rest]` → `e1 :: (e2 :: rest)`
-fn make_list_expression(
+fn make_list_expression_simple(
     loc: &Location,
     exprs: Vec<Expression>,
     spread: Option<Expression>,
 ) -> Expression {
-    // For lists with spread, the inner cons cells end at the spread's end, not at }
-    // For lists without spread, they end at the empty list's end (which is loc.loc_end)
+    // For lists with spread, the inner cons cells end at the spread's end
+    // For lists without spread, they end at the empty list's end
     let list_end = spread
         .as_ref()
         .map(|s| s.pexp_loc.loc_end.clone())
         .unwrap_or_else(|| loc.loc_end.clone());
-    // Start with either the spread tail or empty list
     let tail = spread.unwrap_or_else(|| make_empty_list(loc));
 
     // Fold from right: 3 :: [] -> 2 :: (3 :: []) -> 1 :: (2 :: (3 :: []))
-    // Each cons cell location starts at its element and ends at the list end
     exprs.into_iter().rev().fold(tail, |acc, item| {
-        // Location for this cons cell: from item's start to list end
         let cons_loc = Location::from_positions(item.pexp_loc.loc_start.clone(), list_end.clone());
         let tuple = Expression {
             pexp_desc: ExpressionDesc::Pexp_tuple(vec![item, acc]),
@@ -2360,6 +2449,63 @@ fn make_list_expression(
             pexp_attributes: vec![],
         }
     })
+}
+
+/// Build a list expression for multi-segment lists with explicit segment locations
+/// OCaml uses the segment's start/end for the sub-expression location
+/// And updates the final expression's pexp_loc to segment extent
+fn make_list_expression_with_loc(
+    p: &Parser<'_>,
+    exprs: Vec<Expression>,
+    spread: Option<Expression>,
+    seg_start: Position,
+    seg_end: Position,
+) -> Expression {
+    let seg_loc = p.mk_loc(&seg_start, &seg_end);
+
+    // Build the list using cons cells
+    let list_end = seg_loc.loc_end.clone();
+    let tail = spread.unwrap_or_else(|| {
+        // Empty list with ghost location (same as OCaml's make_list_expression)
+        let ghost_loc = Location::none();
+        Expression {
+            pexp_desc: ExpressionDesc::Pexp_construct(
+                Loc {
+                    txt: Longident::Lident("[]".to_string()),
+                    loc: ghost_loc.clone(),
+                },
+                None,
+            ),
+            pexp_loc: ghost_loc,
+            pexp_attributes: vec![],
+        }
+    });
+
+    let expr = exprs.into_iter().rev().fold(tail, |acc, item| {
+        let cons_loc = Location::from_positions(item.pexp_loc.loc_start.clone(), list_end.clone());
+        let tuple = Expression {
+            pexp_desc: ExpressionDesc::Pexp_tuple(vec![item, acc]),
+            pexp_loc: cons_loc.clone(),
+            pexp_attributes: vec![],
+        };
+        Expression {
+            pexp_desc: ExpressionDesc::Pexp_construct(
+                Loc {
+                    txt: Longident::Lident("::".to_string()),
+                    loc: cons_loc.clone(),
+                },
+                Some(Box::new(tuple)),
+            ),
+            pexp_loc: cons_loc,
+            pexp_attributes: vec![],
+        }
+    });
+
+    // OCaml: `{expr with pexp_loc = loc}` updates outermost expression's location
+    Expression {
+        pexp_loc: seg_loc,
+        ..expr
+    }
 }
 
 /// Parse a dict expression dict{"key": value, ...}.
@@ -2562,6 +2708,21 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
         return parse_js_object_expr(p, start_pos);
     }
 
+    // Check for braced arrow function: {ident =>} (like OCaml's special case)
+    // OCaml handles {ident =>} specially by extending the pattern location to include {
+    let is_braced_arrow_ident = p.lookahead(|state| {
+        if let Token::Lident(_) = &state.token {
+            state.next();
+            matches!(state.token, Token::EqualGreater)
+        } else {
+            false
+        }
+    });
+
+    if is_braced_arrow_ident {
+        return parse_braced_arrow_ident(p, start_pos);
+    }
+
     // Fall back to block expression
     parse_block_expr(p, start_pos)
 }
@@ -2582,6 +2743,78 @@ fn is_block_expression_start(token: &Token) -> bool {
             | Token::Try
             | Token::At // attribute
     )
+}
+
+/// Parse the special `{ident => body}` braced arrow function.
+/// OCaml extends the pattern location to include `{` for this case.
+fn parse_braced_arrow_ident(p: &mut Parser<'_>, start_pos: Position) -> Expression {
+    // Get the identifier
+    let ident_name = match &p.token {
+        Token::Lident(name) => name.clone(),
+        _ => panic!("Expected Lident in parse_braced_arrow_ident"),
+    };
+    let ident_start = p.start_pos.clone();
+    p.next();
+    let ident_end = p.prev_end_pos.clone();
+
+    // The pattern location is from `{` to end of ident (like OCaml)
+    let pat_loc = p.mk_loc(&start_pos, &ident_end);
+    let var_loc = pat_loc.clone();
+
+    // Create the pattern with extended location
+    let pat = Pattern {
+        ppat_desc: PatternDesc::Ppat_var(with_loc(ident_name.clone(), var_loc)),
+        ppat_loc: pat_loc,
+        ppat_attributes: vec![],
+    };
+
+    // Expect and consume =>
+    p.expect(Token::EqualGreater);
+
+    // The parameter's start_pos is the `{` position (for OCaml compatibility)
+    let term_param = super::core::FundefTermParam {
+        attrs: vec![],
+        label: ArgLabel::Nolabel,
+        expr: None,
+        pat,
+        start_pos: start_pos.clone(),
+    };
+
+    // Parse as an arrow expression with the pre-built parameter
+    let arrow_expr =
+        parse_es6_arrow_expression_with_params(p, false, vec![term_param], ExprContext::Ordinary);
+
+    // Parse any binary operators
+    let arrow_expr = parse_binary_expr(p, arrow_expr, 1, ExprContext::Ordinary);
+    let arrow_expr = parse_ternary_expr(p, arrow_expr);
+
+    // Handle semicolon and continuation (block expression semantics)
+    p.optional(&Token::Semicolon);
+
+    let expr = if p.token != Token::Rbrace && p.token != Token::Eof {
+        // There's more content - parse as sequence
+        if let Some(rest) = parse_block_body(p) {
+            let new_loc = p.mk_loc(&arrow_expr.pexp_loc.loc_start, &rest.pexp_loc.loc_end);
+            Expression {
+                pexp_desc: ExpressionDesc::Pexp_sequence(Box::new(arrow_expr), Box::new(rest)),
+                pexp_loc: new_loc,
+                pexp_attributes: vec![],
+            }
+        } else {
+            arrow_expr
+        }
+    } else {
+        arrow_expr
+    };
+
+    p.expect(Token::Rbrace);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+
+    // Add res.braces attribute
+    let braces_attr = make_braces_attr(loc);
+    let mut result = expr;
+    result.pexp_attributes.insert(0, braces_attr);
+    result
 }
 
 /// Parse an expression block body WITHOUT adding res.braces.
@@ -2616,34 +2849,10 @@ fn parse_block_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 
     let mut expr = body.unwrap_or_else(|| ast_helper::make_unit(loc.clone()));
 
-    // OCaml's braced arrow function handling depends on the pattern type and parenthesization:
-    // - For {(pattern) => body}: Pexp_fun starts at `(`, pattern is NOT extended
-    // - For {name => body} with Ppat_var: Pexp_fun starts at `=>`, pattern IS extended to include `{`
-    // - For {_ => body} with Ppat_any: Pexp_fun starts at `_`, pattern is NOT extended
-    if let ExpressionDesc::Pexp_fun { ref mut lhs, .. } = expr.pexp_desc {
-        // Check if the pattern's current start is right after the brace (meaning no paren)
-        if lhs.ppat_loc.loc_start.cnum == start_pos.cnum + 1 {
-            // Only extend Ppat_var patterns to include `{`
-            // Ppat_any and other patterns are NOT extended
-            if let super::ast::PatternDesc::Ppat_var(ref mut var_loc) = lhs.ppat_desc {
-                // Extend pattern and var to include `{`
-                lhs.ppat_loc.loc_start = start_pos.clone();
-                var_loc.loc.loc_start = start_pos.clone();
-
-                // Set Pexp_fun start to after the pattern (at the `=` of `=>`)
-                expr.pexp_loc.loc_start = lhs.ppat_loc.loc_end.clone();
-                expr.pexp_loc.loc_start.cnum += 1; // Skip space after pattern
-            } else {
-                // For non-Ppat_var like {_ => ...}: Pexp_fun starts at the pattern
-                expr.pexp_loc.loc_start = lhs.ppat_loc.loc_start.clone();
-            }
-        } else {
-            // Parenthesized pattern like {(x) => ...}: Pexp_fun starts at `(`
-            let mut fun_start = start_pos.clone();
-            fun_start.cnum += 1;
-            expr.pexp_loc.loc_start = fun_start;
-        }
-    }
+    // Note: The special {ident =>} case is handled separately by parse_braced_arrow_ident.
+    // For other arrow functions inside braces ({_ => ...}, {() => ...}, {(x, y) => ...}),
+    // parse_es6_arrow_expression already sets the location correctly at line 745-749.
+    // We should NOT override it here.
 
     // Add res.braces attribute to mark this as a braced expression
     let braces_attr = make_braces_attr(loc);
@@ -3123,6 +3332,9 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
         if opt_punning {
             p.next();
         }
+        // For optional punned fields, the expression location starts after the '?'
+        // OCaml: the expression location is just the identifier, not including '? '
+        let expr_start = if opt_punning { p.start_pos.clone() } else { field_start.clone() };
 
         // Support qualified record labels: {Module.label: value}
         let mut parts: Vec<String> = vec![];
@@ -3167,7 +3379,8 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
             (with_loc(lid_unloc, lid_loc), expr, opt)
         } else {
             // Punning: field is same as variable
-            let loc = p.mk_loc(&field_start, &p.prev_end_pos);
+            // For optional punned fields, the expression location is just the identifier (using expr_start)
+            let loc = p.mk_loc(&expr_start, &p.prev_end_pos);
             let expr = ast_helper::make_ident(Longident::Lident(pun_name), loc.clone());
             (with_loc(lid_unloc, loc), expr, opt_punning)
         };
@@ -4251,30 +4464,25 @@ fn parse_template_literal_with_prefix(
     };
 
     // Parse template parts
+    // OCaml's structure: capture start_pos BEFORE next_template_literal_token, then scan
     let mut parts: Vec<(Expression, Option<Expression>)> = vec![];
 
+    // First part: position starts at the opening backtick
+    let mut text_start_pos = p.start_pos.clone();
+
     // Handle the case where we start with a backtick
-    // Track the backtick position for OCaml-compatible locations
-    let backtick_pos = p.start_pos.clone();
     if p.token == Token::Backtick {
         // After backtick, switch to template literal scanning mode
         p.next_template_literal_token();
     }
 
-    let mut is_first_part = true;
     loop {
-        // For OCaml compatibility, the first string part's location includes the opening backtick
-        let text_start_pos = if is_first_part {
-            backtick_pos.clone()
-        } else {
-            p.start_pos.clone()
-        };
-        is_first_part = false;
         match &p.token {
-            Token::TemplatePart { text, .. } => {
+            Token::TemplatePart { text, pos } => {
                 // Part before an interpolation ${
                 let text = text.clone();
-                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
+                // OCaml uses the embedded last_pos from the token, not p.end_pos
+                let text_loc = p.mk_loc(&text_start_pos, pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String(text, part_prefix.clone()),
                     text_loc,
@@ -4284,13 +4492,17 @@ fn parse_template_literal_with_prefix(
                 // Parse the interpolation expression
                 let expr = parse_expr(p);
                 parts.push((str_expr, Some(expr)));
+                // OCaml captures start_pos BEFORE next_template_literal_token
+                // At this point, p.start_pos is at the closing }
+                text_start_pos = p.start_pos.clone();
                 // After the interpolation, switch back to template literal scanning
                 p.next_template_literal_token();
             }
-            Token::TemplateTail { text, .. } => {
+            Token::TemplateTail { text, pos } => {
                 // Final part or simple template string
                 let text = text.clone();
-                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
+                // OCaml uses the embedded last_pos from the token, not p.end_pos
+                let text_loc = p.mk_loc(&text_start_pos, pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String(text, part_prefix.clone()),
                     text_loc,
@@ -4344,19 +4556,9 @@ fn parse_template_literal_with_prefix(
         // Creates: tag([strings], [values]) with res.taggedTemplate attribute
         let (prefix_ident, prefix_loc) = prefix.unwrap();
 
-        // OCaml excludes the closing backtick from the last string part's location
-        let strings: Vec<Expression> = parts
-            .iter()
-            .enumerate()
-            .map(|(i, (s, _))| {
-                let mut s = s.clone();
-                // Only adjust the last string part (the one with no interpolation following)
-                if i == parts.len() - 1 {
-                    s.pexp_loc.loc_end.cnum -= 1;
-                }
-                s
-            })
-            .collect();
+        // String parts already have correct locations from the token's pos field
+        // (which is the position OF the closing delimiter, not after it)
+        let strings: Vec<Expression> = parts.iter().map(|(s, _)| s.clone()).collect();
         let values: Vec<Expression> = parts.iter().filter_map(|(_, v)| v.clone()).collect();
 
         let strings_array = Expression {
@@ -4400,10 +4602,17 @@ fn parse_template_literal_with_prefix(
         // Creates: str1 ++ val1 ++ str2 ++ val2 ... with res.template attribute
 
         // If there's only one part with no interpolation, just return the string
-        // OCaml includes the backticks in the expression location
+        // For non-prefixed templates (prefix=None), OCaml sets location to (start_pos, prev_end_pos)
+        // For prefixed templates (like json`...`), the string part location should be used
         if parts.len() == 1 && parts[0].1.is_none() {
             let (mut str_expr, _) = parts.into_iter().next().unwrap();
-            str_expr.pexp_loc.loc_start = start_pos;
+            if prefix.is_none() {
+                // Non-prefixed: OCaml overrides location in parse_atomic_expr to include backticks
+                str_expr.pexp_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            } else {
+                // Prefixed (like json`...`): keep string part's location but adjust start to backtick
+                str_expr.pexp_loc.loc_start = start_pos;
+            }
             return str_expr;
         }
 
@@ -4453,29 +4662,37 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
     let template_literal_attr = (mknoloc("res.template".to_string()), Payload::PStr(vec![]));
 
     // Parse template parts
+    // OCaml's structure: capture start_pos BEFORE next_template_literal_token, then scan
     let mut parts: Vec<(Expression, Option<Expression>)> = vec![];
+
+    // First part: position starts at the opening backtick
+    let mut text_start_pos = p.start_pos.clone();
 
     if p.token == Token::Backtick {
         p.next_template_literal_token();
     }
 
     loop {
-        let text_start_pos = p.start_pos.clone();
         match &p.token {
-            Token::TemplatePart { text, .. } => {
+            Token::TemplatePart { text, pos } => {
                 let text = text.clone();
-                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
+                // OCaml uses the embedded last_pos from the token, not p.end_pos
+                let text_loc = p.mk_loc(&text_start_pos, pos);
                 let mut str_expr =
                     ast_helper::make_constant(Constant::String(text, Some("js".to_string())), text_loc);
                 str_expr.pexp_attributes.push(template_literal_attr.clone());
                 p.next();
                 let expr = parse_expr(p);
                 parts.push((str_expr, Some(expr)));
+                // OCaml captures start_pos BEFORE next_template_literal_token
+                // At this point, p.start_pos is at the closing }
+                text_start_pos = p.start_pos.clone();
                 p.next_template_literal_token();
             }
-            Token::TemplateTail { text, .. } => {
+            Token::TemplateTail { text, pos } => {
                 let text = text.clone();
-                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
+                // OCaml uses the embedded last_pos from the token, not p.end_pos
+                let text_loc = p.mk_loc(&text_start_pos, pos);
                 let mut str_expr =
                     ast_helper::make_constant(Constant::String(text, Some("js".to_string())), text_loc);
                 str_expr.pexp_attributes.push(template_literal_attr.clone());

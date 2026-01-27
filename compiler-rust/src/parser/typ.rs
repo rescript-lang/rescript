@@ -238,13 +238,13 @@ fn parse_type_alias(p: &mut Parser<'_>, typ: CoreType) -> CoreType {
 
 /// Parse a type expression with optional ES6 arrow support.
 fn parse_typ_expr_inner(p: &mut Parser<'_>, es6_arrow: bool) -> CoreType {
-    let start_pos = p.start_pos.clone(); // Capture before parsing anything
+    let start_pos = p.start_pos.clone(); // Capture before parsing anything (including attributes)
     let attrs = parse_type_attributes(p);
 
     if es6_arrow && super::core::is_es6_arrow_type(p) {
         parse_es6_arrow_type(p, attrs)
     } else {
-        let typ = parse_atomic_typ_expr(p, attrs, es6_arrow);
+        let typ = parse_atomic_typ_expr(p, attrs.clone(), es6_arrow);
         if es6_arrow && p.token == Token::EqualGreater {
             parse_arrow_type_rest(p, typ, start_pos)
         } else {
@@ -657,6 +657,8 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
     };
 
     // ptyp_loc includes the full extent (identifier + type args)
+    // Note: For Ldot types in certain contexts (type manifests, arrow parameters),
+    // the location is adjusted later to exclude type args.
     let ptyp_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
     ast_helper::make_type_constr(lid, args, lid_loc, ptyp_loc)
 }
@@ -709,11 +711,15 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         let pre_attrs_start = p.start_pos.clone();
         let param_attrs = parse_attributes(p);
         // Capture start position before label - OCaml includes the ~ in arrow location
-        // But if there are attributes, the arrow should start at the attribute
-        let param_start = if param_attrs.is_empty() {
+        // But if there's an uncurried marker (.), the arrow should start at the .
+        // And if there are attributes, the arrow should start at the attribute
+        let param_start = if has_dot && param_attrs.is_empty() {
+            // For uncurried unlabeled parameters, OCaml includes the . in arrow location
+            uncurried_start.clone()
+        } else if param_attrs.is_empty() {
             p.start_pos.clone()
         } else {
-            pre_attrs_start
+            pre_attrs_start.clone()
         };
 
         let (mut label, mut typ) = if p.token == Token::Tilde {
@@ -728,9 +734,9 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         };
 
         // OCaml includes the uncurried marker (.) in the argument type's location,
-        // but only for simple Ptyp_constr types (Lident), not for qualified types (Ldot)
-        // or other types like Ptyp_var
-        if has_dot {
+        // but only for UNLABELED simple Ptyp_constr types (Lident), not for labeled arguments
+        // or qualified types (Ldot) or other types like Ptyp_var
+        if has_dot && matches!(label, ArgLabel::Nolabel) {
             let is_simple_constr = matches!(
                 &typ.ptyp_desc,
                 CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
@@ -758,8 +764,32 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             }
         }
 
+        // For unlabeled arguments with attributes, OCaml behavior depends on the type:
+        // - For simple Lident types (like `@ignore unit`): type location includes attrs, attrs on type
+        // - For other types: type location unchanged, attrs prepended to ptyp_attributes
+        // In both cases, the arrow's attrs are empty for unlabeled args with outer attrs
+        let arrow_attrs = if matches!(label, ArgLabel::Nolabel) && !param_attrs.is_empty() {
+            let is_simple_lident = matches!(
+                &typ.ptyp_desc,
+                CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
+            );
+            if is_simple_lident {
+                // For simple Lident types, OCaml creates the type with location starting at attrs
+                // and attrs passed directly to Ast_helper.Typ.constr
+                typ.ptyp_loc.loc_start = pre_attrs_start;
+                typ.ptyp_attributes = [param_attrs, typ.ptyp_attributes].concat();
+            } else {
+                // For other types, attrs are prepended but location unchanged
+                typ.ptyp_attributes = [param_attrs, typ.ptyp_attributes].concat();
+            }
+            // For unlabeled args, attributes go on type, not on arrow
+            vec![]
+        } else {
+            param_attrs
+        };
+
         params.push((TypeArg {
-            attrs: param_attrs,
+            attrs: arrow_attrs,
             lbl: label,
             typ,
         }, param_start));
@@ -929,8 +959,11 @@ fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
         }
         _ => {
             // Try to parse as an expression
+            // Capture start_pos BEFORE parsing, like OCaml does in parse_payload
+            let start_pos = p.start_pos.clone();
             let expr = super::expr::parse_expr(p);
-            let loc = expr.pexp_loc.clone();
+            // OCaml structure_item location spans from before expression to after
+            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
             let item = StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
                 pstr_loc: loc,
@@ -1066,6 +1099,46 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
 // ============================================================================
 // Polymorphic Variant Type
 // ============================================================================
+
+/// Parse polymorphic variant type args: `(typ1, typ2, ...)` for intersection types.
+/// OCaml's `parse_polymorphic_variant_type_args` behavior:
+/// - For a single non-tuple type, returns it without updating location (no parens in loc)
+/// - For multiple types or a single tuple, creates a Ptyp_tuple with full parenthesis location
+fn parse_polymorphic_variant_type_args(p: &mut Parser<'_>) -> CoreType {
+    let start_pos = p.start_pos.clone();
+    p.expect(Token::Lparen);
+
+    let mut args = vec![];
+    while p.token != Token::Rparen && p.token != Token::Eof {
+        args.push(parse_typ_expr(p));
+        if !p.optional(&Token::Comma) {
+            break;
+        }
+    }
+    p.expect(Token::Rparen);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+
+    match args.as_slice() {
+        // Single tuple type - wrap it in another tuple (OCaml's type checker mode)
+        // Actually OCaml does: `if p.mode = ParseForTypeChecker then typ else Ast_helper.Typ.tuple`
+        // For parity, we follow the else branch (default mode)
+        [typ] if matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_tuple(_)) => {
+            CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_tuple(args),
+                ptyp_loc: loc,
+                ptyp_attributes: vec![],
+            }
+        }
+        // Single non-tuple type - return as-is (without parenthesis location!)
+        [typ] => typ.clone(),
+        // Multiple types - create tuple with full parenthesis location
+        _ => CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_tuple(args),
+            ptyp_loc: loc,
+            ptyp_attributes: vec![],
+        },
+    }
+}
 
 /// Parse a polymorphic variant type.
 fn parse_poly_variant_type(p: &mut Parser<'_>) -> CoreType {
@@ -1245,10 +1318,17 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
             let is_constant = !had_parens || args.is_empty();
 
             // Parse intersection constraints: #tag & typ1 & typ2
+            // OCaml calls parse_polymorphic_variant_type_args after &, which expects parens
+            // and handles single types specially (no paren location in the type)
             let mut constraints = args;
             while p.token == Token::Ampersand {
                 p.next();
-                constraints.push(parse_typ_expr_inner(p, false));
+                // OCaml expects parentheses after & and uses parse_polymorphic_variant_type_args
+                if p.token == Token::Lparen {
+                    constraints.push(parse_polymorphic_variant_type_args(p));
+                } else {
+                    constraints.push(parse_typ_expr_inner(p, false));
+                }
             }
 
             // Only wrap in Ptyp_tuple for comma-separated args inside parens (e.g., #A(int, string))

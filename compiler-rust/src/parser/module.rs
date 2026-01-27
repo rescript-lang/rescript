@@ -146,13 +146,16 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         Token::Let { unwrap } => {
             let unwrap = *unwrap;
             p.next();
+            // Position after let/let? for let.unwrap attribute location
+            // OCaml uses p.Parser.start_pos which is the START of the NEXT token (after whitespace)
+            let let_end_pos = p.start_pos.clone();
             let rec_flag = if p.token == Token::Rec {
                 p.next();
                 RecFlag::Recursive
             } else {
                 RecFlag::Nonrecursive
             };
-            let bindings = parse_let_bindings(p, start_pos.clone(), rec_flag, attrs.clone(), unwrap);
+            let bindings = parse_let_bindings(p, start_pos.clone(), let_end_pos, rec_flag, attrs.clone(), unwrap);
             Some(StructureItemDesc::Pstr_value(rec_flag, bindings))
         }
         Token::Typ => {
@@ -539,9 +542,17 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
         }
     };
 
-    desc.map(|d| SignatureItem {
-        psig_desc: d,
-        psig_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+    desc.map(|d| {
+        // OCaml includes optional trailing semicolon in signature_item location
+        let end_pos = if p.token == Token::Semicolon {
+            p.end_pos.clone()
+        } else {
+            p.prev_end_pos.clone()
+        };
+        SignatureItem {
+            psig_desc: d,
+            psig_loc: p.mk_loc(&start_pos, &end_pos),
+        }
     })
 }
 
@@ -707,9 +718,15 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
                         pmod_attributes: vec![],
                     }
                 } else {
-                let inner = parse_module_expr(p);
-                p.expect(Token::Rparen);
-                inner
+                    let inner = parse_module_expr(p);
+                    p.expect(Token::Rparen);
+                    // OCaml: parse_primary_mod_expr updates the location to include the parens
+                    // {mod_expr with pmod_loc = mk_loc start_pos p.prev_end_pos}
+                    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+                    ModuleExpr {
+                        pmod_loc: loc,
+                        ..inner
+                    }
                 }
             }
         }
@@ -1498,7 +1515,8 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
                 p.expect(Token::SingleQuote);
                 let var = if let Token::Lident(name) = &p.token {
                     let name = name.clone();
-                    let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                    // OCaml: ident_loc spans from 'constraint' keyword to end of identifier
+                    let loc = p.mk_loc(&cstr_start, &p.end_pos);
                     p.next();
                     CoreType {
                         ptyp_desc: CoreTypeDesc::Ptyp_var(name),
@@ -1671,48 +1689,47 @@ fn parse_type_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
 
 /// Parse let bindings.
 /// `start_pos` should be the position BEFORE the `let` keyword for the first binding.
+/// `let_end_pos` should be the position AFTER the `let`/`let?` keyword (for let.unwrap attribute location).
 fn parse_let_bindings(
     p: &mut Parser<'_>,
     start_pos: Position,
+    let_end_pos: Position,
     _rec_flag: RecFlag,
     outer_attrs: Attributes,
     unwrap: bool,
 ) -> Vec<ValueBinding> {
     let mut bindings = vec![];
-    let mut binding_start = start_pos;
+    let mut binding_start = start_pos.clone();
+    // Track the location for let.unwrap attribute
+    // For first binding: from start_pos to let_end_pos
+    // For and bindings: captured at end of previous iteration when we see 'and'
+    let mut unwrap_attr_start = start_pos;
+    let mut unwrap_attr_end = let_end_pos;
 
     loop {
         let mut attrs = parse_attributes(p);
+
+        // Handle `and` after attributes: `@attr and foo = ...`
+        // We need to check for And here and capture its location for let.unwrap
+        if p.token == Token::And {
+            // Capture `and` keyword location for let.unwrap attribute
+            unwrap_attr_start = p.start_pos.clone();
+            unwrap_attr_end = p.end_pos.clone();
+            p.next(); // consume `and`
+        }
+
         // For the first binding, prepend the outer attributes
         if bindings.is_empty() {
             attrs = [outer_attrs.clone(), attrs].concat();
         }
         // Add let.unwrap attribute if this is let? (for all bindings, including `and` bindings)
+        // OCaml uses: mk_loc start_pos end_pos (not ghost!)
         if unwrap {
+            let unwrap_loc = p.mk_loc(&unwrap_attr_start, &unwrap_attr_end);
             attrs.push((
-                mknoloc("let.unwrap".to_string()),
+                with_loc("let.unwrap".to_string(), unwrap_loc),
                 Payload::PStr(vec![]),
             ));
-        }
-
-        // Handle `and` after attributes: `@attr and foo = ...`
-        // The `and` keyword is consumed here if present.
-        if p.token == Token::And {
-            // If this is the first binding, `and` is unexpected
-            if bindings.is_empty() {
-                p.err(DiagnosticCategory::Message(
-                    "Unexpected token: And".to_string(),
-                ));
-            }
-            p.next(); // consume `and`
-        } else if !bindings.is_empty() {
-            // Not `and` and not the first binding - we're done
-            // But wait, we already consumed attributes. This shouldn't happen
-            // if we properly check for continuation before starting a new iteration.
-            // Since we already parsed attributes, we need to continue.
-            // However, if we're here, it means we didn't have `and` after the previous binding.
-            // This is a logic error - let's not hit this case.
-            // Actually, we get here on the first iteration where bindings is empty.
         }
 
         let pat = pattern::parse_pattern(p);
@@ -1726,7 +1743,9 @@ fn parse_let_bindings(
             // Only `type a.` syntax generates Pexp_newtype, not `'a.` syntax
             let is_locally_abstract = p.token == Token::Typ;
 
-            let typ = typ::parse_typ_expr(p);
+            // OCaml uses parse_poly_type_expr here (not parse_typ_expr)
+            // This has special handling for `'a => T` to exclude the `'` from arrow location
+            let typ = typ::parse_poly_type_expr(p);
 
             // Extract type variables and inner type if this is a Ptyp_poly from `type a.` syntax
             // The inner type is used directly for Pexp_constraint (with Ptyp_constr for type vars)
@@ -1833,6 +1852,10 @@ fn parse_let_bindings(
         // Check for `and` to continue with more bindings.
         // Also handle attributes/doc comments before `and`: `@attr and ...` or `/** doc */ and ...`
         if p.token == Token::And {
+            // Capture `and` keyword location for let.unwrap attribute in next binding
+            // OCaml uses p.Parser.start_pos and p.Parser.end_pos (before consuming 'and')
+            unwrap_attr_start = p.start_pos.clone();
+            unwrap_attr_end = p.end_pos.clone();
             // Capture start position BEFORE consuming `and` for next binding
             binding_start = p.start_pos.clone();
             p.next();
@@ -2452,6 +2475,23 @@ fn fix_type_manifest_location(typ: CoreType) -> CoreType {
                 }
             } else {
                 typ
+            }
+        }
+        CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
+            // Also adjust Ldot types in arrow parameter positions
+            // But NOT in return types - OCaml keeps type args in return type ptyp_loc
+            let fixed_arg = TypeArg {
+                typ: fix_type_manifest_location(arg.typ.clone()),
+                ..*arg.clone()
+            };
+            // Return type is NOT fixed - OCaml includes type args for return types
+            CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                    arg: Box::new(fixed_arg),
+                    ret: ret.clone(),
+                    arity: *arity,
+                },
+                ..typ
             }
         }
         _ => typ,
