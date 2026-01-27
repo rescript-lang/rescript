@@ -3414,7 +3414,11 @@ fn parse_value_description(
     };
 
     p.expect(Token::Colon);
+    // OCaml: InExternal.status := true before parsing type
+    let was_in_external = p.in_external;
+    p.in_external = true;
     let typ = typ::parse_typ_expr(p);
+    p.in_external = was_in_external;
 
     // Parse optional primitive
     let prim = if p.token == Token::Equal {

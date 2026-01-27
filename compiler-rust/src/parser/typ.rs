@@ -862,7 +862,18 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     }
 
     // The total arity is the number of parameters
-    let total_arity = params.len();
+    // OCaml: When in external, decrement arity for labeled @as(_) parameters
+    // These are parameters where: label is Labelled, type is Ptyp_any, and has @as attribute
+    let as_underscore_count = if p.in_external {
+        params.iter().filter(|(param, _)| {
+            matches!(param.lbl, ArgLabel::Labelled(_))
+                && matches!(param.typ.ptyp_desc, CoreTypeDesc::Ptyp_any)
+                && param.typ.ptyp_attributes.iter().any(|(attr, _)| attr.txt == "as")
+        }).count()
+    } else {
+        0
+    };
+    let total_arity = params.len() - as_underscore_count;
 
     // Fold with (type, end_position) to track the correct end position
     // The first iteration uses arrow_end_pos, subsequent iterations use the arrow's end
