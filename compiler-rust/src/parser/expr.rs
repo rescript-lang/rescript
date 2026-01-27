@@ -100,16 +100,19 @@ fn transform_placeholder_application(
     partial: bool,
     loc: Location,
 ) -> Expression {
-    // Find the first underscore placeholder and get its location
+    // Find the LAST underscore placeholder and get its location
+    // OCaml uses a mutable ref that gets overwritten for each underscore found,
+    // so the last one's location is used
     let underscore_loc = args
         .iter()
-        .find_map(|(_, expr)| {
+        .filter_map(|(_, expr)| {
             if is_underscore_placeholder(expr) {
                 Some(expr.pexp_loc.clone())
             } else {
                 None
             }
-        });
+        })
+        .last();
 
     let underscore_loc = match underscore_loc {
         Some(loc) => loc,
@@ -1828,6 +1831,10 @@ fn parse_constrained_expr_in_arg(p: &mut Parser<'_>) -> Expression {
 
 /// Parse a primary expression (handles field access, method calls, array indexing).
 pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool) -> Expression {
+    // OCaml: let start_pos = operand.pexp_loc.loc_start in
+    // Capture start position from operand BEFORE any transformations (like underscore apply)
+    // This ensures that subsequent operations (field access, etc.) use the original location
+    let start_pos = operand.pexp_loc.loc_start.clone();
     let mut expr = operand;
 
     loop {
@@ -1844,7 +1851,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         if p.token == Token::Equal {
                             p.next();
                             let value = parse_expr(p);
-                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
                                     Box::new(expr),
@@ -1855,7 +1862,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                 pexp_attributes: vec![],
                             };
                         } else {
-                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_field(
                                     Box::new(expr),
@@ -1876,7 +1883,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         if p.token == Token::Equal {
                             p.next();
                             let value = parse_expr(p);
-                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
                                     Box::new(expr),
@@ -1887,7 +1894,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                 pexp_attributes: vec![],
                             };
                         } else {
-                            let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
+                            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_field(
                                     Box::new(expr),
@@ -1902,7 +1909,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         // Module-qualified field access: expr.Module.field
                         // Parse the path (e.g., Lexing.pos_fname) and create Pexp_field
                         let field_path = parse_value_path_after_dot(p);
-                        let loc = p.mk_loc(&expr.pexp_loc.loc_start, &field_path.loc.loc_end);
+                        let loc = p.mk_loc(&start_pos, &field_path.loc.loc_end);
                         expr = Expression {
                             pexp_desc: ExpressionDesc::Pexp_field(Box::new(expr), field_path),
                             pexp_loc: loc,
@@ -1919,6 +1926,10 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     break;
                 }
                 let (args, partial) = parse_call_args(p);
+                // OCaml: let loc = {fun_expr.pexp_loc with loc_end = p.prev_end_pos} in
+                // For function calls, use expr's current location start, NOT the original operand's start
+                // This is important for chained calls like f(a, _, b)(x, y) where the second call
+                // should start from the Pexp_fun's location (the underscore position)
                 let loc = p.mk_loc(&expr.pexp_loc.loc_start, &p.prev_end_pos);
                 // Apply placeholder transformation: f(a, _, b) => fun __x -> f(a, __x, b)
                 expr = transform_placeholder_application(Box::new(expr), args, partial, loc);
@@ -1932,7 +1943,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     break;
                 }
                 // Array indexing or assignment
-                let start = expr.pexp_loc.loc_start.clone();
+                // Use the captured start_pos from the operand, not expr (which may have been transformed)
                 // Capture the bracket location for Array.set/get identifiers
                 // OCaml uses the location from [ to ] for synthesized Array.set/get
                 let lbracket_start = p.start_pos.clone();
@@ -1955,7 +1966,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         // String index: obj["prop"] = value -> Pexp_apply("#=", [Pexp_send(obj, "prop"), value])
                         // OCaml: loc = mk_loc start_pos rhs_expr.pexp_loc.loc_end
                         // Use the inner expression's end, not prev_end_pos (which includes braces)
-                        let loc = p.mk_loc(&start, &value.pexp_loc.loc_end);
+                        let loc = p.mk_loc(&start_pos, &value.pexp_loc.loc_end);
                         // First create the Pexp_send for property access
                         // Use rbracket_end for location (OCaml includes the ] in the location)
                         let send_expr = Expression {
@@ -1966,7 +1977,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                                     loc: index.pexp_loc.clone(),
                                 },
                             ),
-                            pexp_loc: p.mk_loc(&start, &rbracket_end),
+                            pexp_loc: p.mk_loc(&start_pos, &rbracket_end),
                             pexp_attributes: vec![],
                         };
                         // Create the "#=" operator
@@ -1988,7 +1999,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         // Non-string index: arr[index] = value -> Array.set(arr, index, value)
                         // OCaml: loc = mk_loc start_pos p.prev_end_pos
                         // Uses prev_end_pos (includes braces) for Array.set
-                        let loc = p.mk_loc(&start, &p.prev_end_pos);
+                        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                         // Use the bracket location [index] for the synthesized Array.set identifier
                         // (matching OCaml's array_loc = mk_loc lbracket rbracket)
                         let array_set = ast_helper::make_ident(
@@ -2013,7 +2024,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     // Check if index is a string constant for Pexp_send (JS object access)
                     // or use Array.get for other index types
                     // Use rbracket_end for the location end (OCaml includes the ] in the location)
-                    let loc = p.mk_loc(&start, &rbracket_end);
+                    let loc = p.mk_loc(&start_pos, &rbracket_end);
 
                     if let ExpressionDesc::Pexp_constant(Constant::String(s, _)) =
                         &index.pexp_desc
