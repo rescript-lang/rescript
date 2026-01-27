@@ -33,7 +33,7 @@ use crate::parser::ast::{
 };
 use crate::parser::longident::Longident;
 use crate::types::typedtree::{
-    Constant, EnvRef, Expression, ExpressionDesc, Pattern, PatternDesc, ValueBinding,
+    ArrowArg, Constant, EnvRef, Expression, ExpressionDesc, Pattern, PatternDesc, ValueBinding,
 };
 use crate::types::{Env, Path, TypeContext, TypeError, TypeExprRef, UnifyState, ValueDescription};
 
@@ -536,21 +536,33 @@ fn transl_type_inner(
             Ok((ctyp, ty))
         }
 
-        CTD::Ptyp_arrow { arg, ret, arity: _ } => {
+        CTD::Ptyp_arrow { arg, ret, arity } => {
             // Arrow type: T1 -> T2
             let (arg_ctyp, arg_ty) = transl_type_inner(tctx, env, &arg.typ)?;
             let (ret_ctyp, ret_ty) = transl_type_inner(tctx, env, ret)?;
 
+            // Convert Arity to Option<i32> for typed tree (matches OCaml's arity option)
+            let arity_opt = match arity {
+                crate::parser::ast::Arity::Full(n) => Some(*n as i32),
+                crate::parser::ast::Arity::Unknown => None,
+            };
+
             // Convert parser ArgLabel to types ArgLabel for TypeContext
             let ctx_lbl = convert_arg_label_for_ctx(&arg.lbl);
-            let arrow_ty = ctx.new_arrow(ctx_lbl, arg_ty, ret_ty, None);
+            let arrow_ty = ctx.new_arrow(ctx_lbl, arg_ty, ret_ty, arity_opt);
 
-            // Use the parser's ArgLabel for TypedCoreTypeDesc
+            // Create ArrowArg structure matching OCaml's
+            let arrow_arg = ArrowArg {
+                attrs: arg.attrs.clone(),
+                lbl: arg.lbl.clone(),
+                typ: Box::new(arg_ctyp),
+            };
+
             let ctyp = TypedCoreType {
                 ctyp_desc: TypedCoreTypeDesc::Ttyp_arrow(
-                    arg.lbl.clone(),
-                    Box::new(arg_ctyp),
+                    arrow_arg,
                     Box::new(ret_ctyp),
+                    arity_opt,
                 ),
                 ctyp_type: arrow_ty,
                 ctyp_env: EnvRef(0),

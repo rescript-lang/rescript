@@ -374,13 +374,26 @@ pub struct TypedCoreType {
     pub ctyp_attributes: Attributes,
 }
 
+/// Arrow argument structure for Ttyp_arrow.
+/// Matches OCaml's `arg = {attrs: attributes; lbl: arg_label; typ: core_type}`.
+#[derive(Debug, Clone)]
+pub struct ArrowArg {
+    /// Attributes on the argument.
+    pub attrs: Attributes,
+    /// Argument label.
+    pub lbl: ArgLabel,
+    /// Argument type (boxed to prevent infinite size).
+    pub typ: Box<TypedCoreType>,
+}
+
 /// Typed core type description.
 #[derive(Debug, Clone)]
 pub enum TypedCoreTypeDesc {
     /// Type variable: `'a`.
     Ttyp_var(Option<String>),
-    /// Arrow type: `T1 -> T2`.
-    Ttyp_arrow(ArgLabel, Box<TypedCoreType>, Box<TypedCoreType>),
+    /// Arrow type: `T1 -> T2` with optional arity.
+    /// Structure: (arg, ret, arity) where arg contains (attrs, lbl, typ).
+    Ttyp_arrow(ArrowArg, Box<TypedCoreType>, Option<i32>),
     /// Tuple type: `(T1, ..., Tn)`.
     Ttyp_tuple(Vec<TypedCoreType>),
     /// Type constructor: `t`, `M.t`, `('a, 'b) t`.
@@ -575,7 +588,7 @@ pub enum StructureItemDesc {
     /// Primitive declaration: `external f : t = "..."`.
     Tstr_primitive(ValueDescription),
     /// Type declaration: `type t = ...`.
-    Tstr_type(RecFlag, Vec<TypeDeclaration>),
+    Tstr_type(RecFlag, Vec<TypedTypeDeclaration>),
     /// Type extension: `type t += ...`.
     Tstr_typext(TypeExtension),
     /// Exception declaration: `exception C`.
@@ -594,8 +607,92 @@ pub enum StructureItemDesc {
     Tstr_attribute(crate::parser::ast::Attribute),
 }
 
-// Re-export TypeDeclaration from decl for convenience
-pub use crate::types::TypeDeclaration;
+// Re-export TypeDeclaration from decl for convenience (internal representation)
+pub use crate::types::TypeDeclaration as InternalTypeDeclaration;
+
+/// Typed type declaration for the typed tree.
+/// Matches OCaml's Typedtree.type_declaration.
+#[derive(Debug, Clone)]
+pub struct TypedTypeDeclaration {
+    /// Type identifier.
+    pub typ_id: Ident,
+    /// Type name with location.
+    pub typ_name: Loc<String>,
+    /// Type parameters with variance.
+    pub typ_params: Vec<(TypedCoreType, Variance)>,
+    /// Internal type declaration for the environment.
+    pub typ_type: InternalTypeDeclaration,
+    /// Type constraints.
+    pub typ_cstrs: Vec<(TypedCoreType, TypedCoreType, Location)>,
+    /// Type kind.
+    pub typ_kind: TypedTypeKind,
+    /// Private flag.
+    pub typ_private: PrivateFlag,
+    /// Manifest type (for type aliases).
+    pub typ_manifest: Option<TypedCoreType>,
+    /// Location.
+    pub typ_loc: Location,
+    /// Attributes.
+    pub typ_attributes: Attributes,
+}
+
+/// Typed type kind.
+#[derive(Debug, Clone)]
+pub enum TypedTypeKind {
+    /// Abstract type.
+    Ttype_abstract,
+    /// Variant type with constructors.
+    Ttype_variant(Vec<TypedConstructorDeclaration>),
+    /// Record type with labels.
+    Ttype_record(Vec<TypedLabelDeclaration>),
+    /// Open type.
+    Ttype_open,
+}
+
+/// Typed constructor declaration.
+#[derive(Debug, Clone)]
+pub struct TypedConstructorDeclaration {
+    /// Constructor identifier.
+    pub cd_id: Ident,
+    /// Constructor name with location.
+    pub cd_name: Loc<String>,
+    /// Constructor arguments.
+    pub cd_args: TypedConstructorArguments,
+    /// Result type (for GADTs).
+    pub cd_res: Option<TypedCoreType>,
+    /// Location.
+    pub cd_loc: Location,
+    /// Attributes.
+    pub cd_attributes: Attributes,
+}
+
+/// Typed constructor arguments.
+#[derive(Debug, Clone)]
+pub enum TypedConstructorArguments {
+    /// Tuple arguments.
+    Cstr_tuple(Vec<TypedCoreType>),
+    /// Record arguments.
+    Cstr_record(Vec<TypedLabelDeclaration>),
+}
+
+/// Typed label declaration for records.
+#[derive(Debug, Clone)]
+pub struct TypedLabelDeclaration {
+    /// Label identifier.
+    pub ld_id: Ident,
+    /// Label name with location.
+    pub ld_name: Loc<String>,
+    /// Whether the label is mutable.
+    pub ld_mutable: MutableFlag,
+    /// Whether the label is optional.
+    pub ld_optional: bool,
+    /// Label type.
+    pub ld_type: TypedCoreType,
+    /// Location.
+    pub ld_loc: Location,
+    /// Attributes.
+    pub ld_attributes: Attributes,
+}
 
 /// A type extension.
 #[derive(Debug, Clone)]
