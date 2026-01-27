@@ -696,6 +696,65 @@ pub fn arrow_type<'a>(
 /// Empty attributes constant for returning references.
 static EMPTY_ATTRS: Attributes = Vec::new();
 
+// ============================================================================
+// Module Analysis
+// ============================================================================
+
+/// Extract functor applications from a module expression.
+///
+/// For `F(A)(B)(C)`, returns `([A, B, C], F)`.
+pub fn mod_expr_apply(mod_expr: &ModuleExpr) -> (Vec<&ModuleExpr>, &ModuleExpr) {
+    fn loop_apply<'a>(acc: Vec<&'a ModuleExpr>, mod_expr: &'a ModuleExpr) -> (Vec<&'a ModuleExpr>, &'a ModuleExpr) {
+        match &mod_expr.pmod_desc {
+            ModuleExprDesc::Pmod_apply(next, arg) => {
+                let mut new_acc = vec![arg.as_ref()];
+                new_acc.extend(acc);
+                loop_apply(new_acc, next)
+            }
+            _ => (acc, mod_expr),
+        }
+    }
+    loop_apply(Vec::new(), mod_expr)
+}
+
+/// A functor parameter.
+pub struct FunctorParam<'a> {
+    /// Attributes on the parameter.
+    pub attrs: &'a Attributes,
+    /// Parameter name.
+    pub lbl: &'a StringLoc,
+    /// Optional module type constraint.
+    pub mod_type: Option<&'a ModuleType>,
+}
+
+/// Extract functor parameters from a module expression.
+///
+/// For `(A: X, B: Y) => body`, returns `([(attrs, A, Some(X)), (attrs, B, Some(Y))], body)`.
+pub fn mod_expr_functor(mod_expr: &ModuleExpr) -> (Vec<FunctorParam<'_>>, &ModuleExpr) {
+    fn loop_functor<'a>(acc: Vec<FunctorParam<'a>>, mod_expr: &'a ModuleExpr) -> (Vec<FunctorParam<'a>>, &'a ModuleExpr) {
+        match &mod_expr.pmod_desc {
+            ModuleExprDesc::Pmod_functor(lbl, mod_type, return_mod_expr) => {
+                let param = FunctorParam {
+                    attrs: &mod_expr.pmod_attributes,
+                    lbl,
+                    mod_type: mod_type.as_ref().map(|t| t.as_ref()),
+                };
+                let mut new_acc = acc;
+                new_acc.push(param);
+                loop_functor(new_acc, return_mod_expr)
+            }
+            _ => (acc, mod_expr),
+        }
+    }
+    let (params, body) = loop_functor(Vec::new(), mod_expr);
+    (params, body)
+}
+
+/// Check if attributes contain the await attribute.
+pub fn has_await_attribute(attrs: &Attributes) -> bool {
+    attrs.iter().any(|attr| attr.0.txt == "res.await")
+}
+
 /// Partition attributes into doc comments and regular attributes.
 pub fn partition_doc_comment_attributes(attrs: &Attributes) -> (Vec<&Attribute>, Vec<&Attribute>) {
     let mut doc_comments = Vec::new();

@@ -680,8 +680,15 @@ pub fn print_string_loc(sloc: &StringLoc, cmt_tbl: &mut CommentTable) -> Doc {
 }
 
 /// Print a longident location.
+/// Print a longident location with escaping (for value identifiers).
 pub fn print_longident_loc(lid: &Loc<Longident>, cmt_tbl: &mut CommentTable) -> Doc {
     let doc = print_lident(&lid.txt);
+    print_comments(doc, cmt_tbl, &lid.loc)
+}
+
+/// Print a longident location without escaping (for module paths).
+pub fn print_longident_location(lid: &Loc<Longident>, cmt_tbl: &mut CommentTable) -> Doc {
+    let doc = print_longident(&lid.txt);
     print_comments(doc, cmt_tbl, &lid.loc)
 }
 
@@ -847,7 +854,7 @@ pub fn print_expression(
         }
         // Other constructors
         ExpressionDesc::Pexp_construct(longident_loc, args) => {
-            let constr = print_longident_loc(longident_loc, cmt_tbl);
+            let constr = print_longident_location(longident_loc, cmt_tbl);
             let args_doc = match args {
                 None => Doc::nil(),
                 Some(arg) => match &arg.pexp_desc {
@@ -1103,12 +1110,7 @@ pub fn print_expression(
         // Assert
         ExpressionDesc::Pexp_assert(expr) => {
             let rhs = print_expression_with_comments(state, expr, cmt_tbl);
-            let rhs = match parens::assert_or_await_expr_rhs(false, expr) {
-                ParenKind::Parenthesized => add_parens(rhs),
-                ParenKind::Braced(loc) => print_braces(rhs, expr, loc),
-                ParenKind::Nothing => rhs,
-            };
-            Doc::concat(vec![Doc::text("assert "), rhs])
+            Doc::concat(vec![Doc::text("assert("), rhs, Doc::text(")")])
         }
         // Await
         ExpressionDesc::Pexp_await(expr) => {
@@ -2041,7 +2043,7 @@ pub fn print_pattern(
         }
         // Constructor(args)
         PatternDesc::Ppat_construct(constr_name, constructor_args) => {
-            let constr = print_longident_loc(constr_name, cmt_tbl);
+            let constr = print_longident_location(constr_name, cmt_tbl);
             let args_doc = match constructor_args {
                 None => Doc::nil(),
                 Some(arg) => match &arg.ppat_desc {
@@ -2401,18 +2403,23 @@ pub fn print_typ_expr(
         CoreTypeDesc::Ptyp_extension(ext) => print_extension(state, ext, cmt_tbl),
 
         CoreTypeDesc::Ptyp_alias(inner_typ, alias) => {
-            let needs_parens = matches!(inner_typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+            let needs_parens = matches!(&inner_typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
             let typ_doc = print_typ_expr(state, inner_typ, cmt_tbl);
-            let typ_doc = if needs_parens {
-                Doc::concat(vec![Doc::lparen(), typ_doc, Doc::rparen()])
+            if needs_parens {
+                Doc::concat(vec![
+                    Doc::lparen(),
+                    typ_doc,
+                    Doc::rparen(),
+                    Doc::text(" as "),
+                    Doc::concat(vec![Doc::text("'"), print_ident_like(alias, false, false)]),
+                ])
             } else {
-                typ_doc
-            };
-            Doc::concat(vec![
-                typ_doc,
-                Doc::text(" as "),
-                Doc::concat(vec![Doc::text("'"), print_ident_like(alias, false, false)]),
-            ])
+                Doc::concat(vec![
+                    typ_doc,
+                    Doc::text(" as "),
+                    Doc::concat(vec![Doc::text("'"), print_ident_like(alias, false, false)]),
+                ])
+            }
         }
 
         CoreTypeDesc::Ptyp_object(fields, open_flag) => {
@@ -2986,17 +2993,568 @@ fn print_attributes_inline(
 
 
 // ============================================================================
-// Module Printing (placeholder)
+// Module Printing
 // ============================================================================
 
 /// Print a module expression.
 fn print_mod_expr(
-    _state: &PrinterState,
-    _mod_expr: &ModuleExpr,
-    _cmt_tbl: &mut CommentTable,
+    state: &PrinterState,
+    mod_expr: &ModuleExpr,
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    // Simplified placeholder
-    Doc::text("<module>")
+    let doc = match &mod_expr.pmod_desc {
+        ModuleExprDesc::Pmod_ident(lid) => {
+            print_longident_location(lid, cmt_tbl)
+        }
+
+        ModuleExprDesc::Pmod_structure(structure) if structure.is_empty() => {
+            let should_break = mod_expr.pmod_loc.loc_start.line < mod_expr.pmod_loc.loc_end.line;
+            Doc::breakable_group(
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    print_comments_inside(cmt_tbl, &mod_expr.pmod_loc),
+                    Doc::rbrace(),
+                ]),
+                should_break,
+            )
+        }
+
+        ModuleExprDesc::Pmod_structure(structure) => {
+            Doc::breakable_group(
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::soft_line(),
+                        print_structure(state, structure, cmt_tbl),
+                    ])),
+                    Doc::soft_line(),
+                    Doc::rbrace(),
+                ]),
+                true,
+            )
+        }
+
+        ModuleExprDesc::Pmod_unpack(expr) => {
+            // Check if we should "hug" the expression
+            let should_hug = match &expr.pexp_desc {
+                ExpressionDesc::Pexp_let(_, _, _) => true,
+                ExpressionDesc::Pexp_constraint(inner, typ) => {
+                    matches!(&inner.pexp_desc, ExpressionDesc::Pexp_let(_, _, _))
+                        && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_))
+                }
+                _ => false,
+            };
+
+            // Extract module constraint if present
+            let (expr_to_print, module_constraint) = match &expr.pexp_desc {
+                ExpressionDesc::Pexp_constraint(inner_expr, typ) => {
+                    match &typ.ptyp_desc {
+                        CoreTypeDesc::Ptyp_package(package_type) => {
+                            let package_doc = print_package_type(state, package_type, false, cmt_tbl);
+                            let package_doc = print_comments(package_doc, cmt_tbl, &typ.ptyp_loc);
+                            let type_doc = Doc::group(Doc::concat(vec![
+                                Doc::text(":"),
+                                Doc::indent(Doc::concat(vec![Doc::line(), package_doc])),
+                            ]));
+                            (inner_expr.as_ref(), type_doc)
+                        }
+                        _ => (expr.as_ref(), Doc::nil()),
+                    }
+                }
+                _ => (expr.as_ref(), Doc::nil()),
+            };
+
+            let unpack_doc = Doc::group(Doc::concat(vec![
+                print_expression_with_comments(state, expr_to_print, cmt_tbl),
+                module_constraint,
+            ]));
+
+            Doc::group(Doc::concat(vec![
+                Doc::text("unpack("),
+                if should_hug {
+                    unpack_doc
+                } else {
+                    Doc::concat(vec![
+                        Doc::indent(Doc::concat(vec![Doc::soft_line(), unpack_doc])),
+                        Doc::soft_line(),
+                    ])
+                },
+                Doc::rparen(),
+            ]))
+        }
+
+        ModuleExprDesc::Pmod_extension(ext) => {
+            print_extension_at_module_level(state, ext, cmt_tbl, false)
+        }
+
+        ModuleExprDesc::Pmod_apply(_, _) => {
+            let (args, call_expr) = parsetree_viewer::mod_expr_apply(mod_expr);
+
+            let is_unit_sugar = match args.as_slice() {
+                [arg] => matches!(&arg.pmod_desc, ModuleExprDesc::Pmod_structure(s) if s.is_empty()),
+                _ => false,
+            };
+
+            let should_hug = match args.as_slice() {
+                [arg] => matches!(&arg.pmod_desc, ModuleExprDesc::Pmod_structure(_)),
+                _ => false,
+            };
+
+            Doc::group(Doc::concat(vec![
+                print_mod_expr(state, call_expr, cmt_tbl),
+                if is_unit_sugar {
+                    print_mod_apply_arg(state, args[0], cmt_tbl)
+                } else {
+                    Doc::concat(vec![
+                        Doc::lparen(),
+                        if should_hug {
+                            print_mod_apply_arg(state, args[0], cmt_tbl)
+                        } else {
+                            Doc::indent(Doc::concat(vec![
+                                Doc::soft_line(),
+                                Doc::join(
+                                    Doc::concat(vec![Doc::comma(), Doc::line()]),
+                                    args.iter()
+                                        .map(|arg| print_mod_apply_arg(state, arg, cmt_tbl))
+                                        .collect(),
+                                ),
+                            ]))
+                        },
+                        if !should_hug {
+                            Doc::concat(vec![Doc::trailing_comma(), Doc::soft_line()])
+                        } else {
+                            Doc::nil()
+                        },
+                        Doc::rparen(),
+                    ])
+                },
+            ]))
+        }
+
+        ModuleExprDesc::Pmod_constraint(mod_expr_inner, mod_type) => {
+            Doc::concat(vec![
+                print_mod_expr(state, mod_expr_inner, cmt_tbl),
+                Doc::text(": "),
+                print_module_type(state, mod_type, cmt_tbl),
+            ])
+        }
+
+        ModuleExprDesc::Pmod_functor(_, _, _) => {
+            print_mod_functor(state, mod_expr, cmt_tbl)
+        }
+    };
+
+    // Handle await attribute
+    let doc = if parsetree_viewer::has_await_attribute(&mod_expr.pmod_attributes) {
+        match &mod_expr.pmod_desc {
+            ModuleExprDesc::Pmod_constraint(_, _) => {
+                Doc::concat(vec![Doc::text("await "), Doc::lparen(), doc, Doc::rparen()])
+            }
+            _ => Doc::concat(vec![Doc::text("await "), doc]),
+        }
+    } else {
+        doc
+    };
+
+    print_comments(doc, cmt_tbl, &mod_expr.pmod_loc)
+}
+
+/// Print a functor module expression.
+fn print_mod_functor(
+    state: &PrinterState,
+    mod_expr: &ModuleExpr,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (parameters, return_mod_expr) = parsetree_viewer::mod_expr_functor(mod_expr);
+
+    // Extract return constraint if present
+    let (return_constraint, return_body) = match &return_mod_expr.pmod_desc {
+        ModuleExprDesc::Pmod_constraint(inner_mod_expr, mod_type) => {
+            let constraint_doc = print_module_type(state, mod_type, cmt_tbl);
+            let constraint_doc = if parens::mod_expr_functor_constraint(mod_type) {
+                add_parens(constraint_doc)
+            } else {
+                constraint_doc
+            };
+            let mod_constraint = Doc::concat(vec![Doc::text(": "), constraint_doc]);
+            (mod_constraint, print_mod_expr(state, inner_mod_expr, cmt_tbl))
+        }
+        _ => (Doc::nil(), print_mod_expr(state, return_mod_expr, cmt_tbl)),
+    };
+
+    let parameters_doc = match parameters.as_slice() {
+        // Unit parameter: `()`
+        [param] if param.lbl.txt == "*" && param.mod_type.is_none() => {
+            Doc::group(Doc::concat(vec![
+                print_attributes(state, param.attrs, cmt_tbl),
+                Doc::text("()"),
+            ]))
+        }
+        // Single unlabeled parameter without type: just the name
+        [param] if param.attrs.is_empty() && param.mod_type.is_none() => Doc::text(&param.lbl.txt),
+        // Multiple parameters
+        _ => {
+            Doc::group(Doc::concat(vec![
+                Doc::lparen(),
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::join(
+                        Doc::concat(vec![Doc::comma(), Doc::line()]),
+                        parameters
+                            .iter()
+                            .map(|param| print_mod_functor_param(state, param, cmt_tbl))
+                            .collect(),
+                    ),
+                ])),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+                Doc::rparen(),
+            ]))
+        }
+    };
+
+    Doc::group(Doc::concat(vec![
+        parameters_doc,
+        return_constraint,
+        Doc::text(" => "),
+        return_body,
+    ]))
+}
+
+/// Print a functor parameter.
+fn print_mod_functor_param(
+    state: &PrinterState,
+    param: &parsetree_viewer::FunctorParam<'_>,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let cmt_loc = match param.mod_type {
+        None => param.lbl.loc.clone(),
+        Some(mod_type) => {
+            let mut loc = param.lbl.loc.clone();
+            loc.loc_end = mod_type.pmty_loc.loc_end.clone();
+            loc
+        }
+    };
+
+    let attrs = print_attributes(state, param.attrs, cmt_tbl);
+    let lbl_doc = if param.lbl.txt == "*" {
+        Doc::text("()")
+    } else {
+        Doc::text(&param.lbl.txt)
+    };
+    let lbl_doc = print_comments(lbl_doc, cmt_tbl, &param.lbl.loc);
+
+    let doc = Doc::group(Doc::concat(vec![
+        attrs,
+        lbl_doc,
+        match param.mod_type {
+            None => Doc::nil(),
+            Some(mod_type) => Doc::concat(vec![
+                Doc::text(": "),
+                print_module_type(state, mod_type, cmt_tbl),
+            ]),
+        },
+    ]));
+
+    print_comments(doc, cmt_tbl, &cmt_loc)
+}
+
+/// Print a module apply argument.
+fn print_mod_apply_arg(
+    state: &PrinterState,
+    mod_expr: &ModuleExpr,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match &mod_expr.pmod_desc {
+        ModuleExprDesc::Pmod_structure(s) if s.is_empty() => Doc::text("()"),
+        _ => print_mod_expr(state, mod_expr, cmt_tbl),
+    }
+}
+
+/// Print a module type.
+fn print_module_type(
+    state: &PrinterState,
+    mty: &ModuleType,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let doc = match &mty.pmty_desc {
+        ModuleTypeDesc::Pmty_ident(lid) => {
+            print_longident_location(lid, cmt_tbl)
+        }
+
+        ModuleTypeDesc::Pmty_signature(signature) if signature.is_empty() => {
+            let should_break = mty.pmty_loc.loc_start.line < mty.pmty_loc.loc_end.line;
+            Doc::breakable_group(
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    print_comments_inside(cmt_tbl, &mty.pmty_loc),
+                    Doc::rbrace(),
+                ]),
+                should_break,
+            )
+        }
+
+        ModuleTypeDesc::Pmty_signature(signature) => {
+            Doc::breakable_group(
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::soft_line(),
+                        print_signature(state, signature, cmt_tbl),
+                    ])),
+                    Doc::soft_line(),
+                    Doc::rbrace(),
+                ]),
+                true,
+            )
+        }
+
+        ModuleTypeDesc::Pmty_functor(_, _, _) => {
+            print_module_type_functor(state, mty, cmt_tbl)
+        }
+
+        ModuleTypeDesc::Pmty_with(mod_type, with_constraints) => {
+            let base_doc = print_module_type(state, mod_type, cmt_tbl);
+            let constraints_doc = Doc::join(
+                Doc::line(),
+                with_constraints
+                    .iter()
+                    .enumerate()
+                    .map(|(i, constraint)| {
+                        let prefix = if i == 0 { "with " } else { "and " };
+                        Doc::concat(vec![
+                            Doc::text(prefix),
+                            print_with_constraint(state, constraint, cmt_tbl),
+                        ])
+                    })
+                    .collect(),
+            );
+            Doc::group(Doc::concat(vec![
+                base_doc,
+                Doc::indent(Doc::concat(vec![Doc::line(), constraints_doc])),
+            ]))
+        }
+
+        ModuleTypeDesc::Pmty_typeof(mod_expr) => {
+            Doc::concat(vec![
+                Doc::text("module type of "),
+                print_mod_expr(state, mod_expr, cmt_tbl),
+            ])
+        }
+
+        ModuleTypeDesc::Pmty_extension(ext) => {
+            print_extension_at_module_level(state, ext, cmt_tbl, false)
+        }
+
+        ModuleTypeDesc::Pmty_alias(lid) => {
+            Doc::concat(vec![
+                Doc::text("module "),
+                print_longident_location(lid, cmt_tbl),
+            ])
+        }
+    };
+
+    let doc = if parsetree_viewer::has_await_attribute(&mty.pmty_attributes) {
+        Doc::concat(vec![Doc::text("await "), doc])
+    } else {
+        doc
+    };
+
+    print_comments(doc, cmt_tbl, &mty.pmty_loc)
+}
+
+/// Print a functor module type.
+fn print_module_type_functor(
+    state: &PrinterState,
+    mty: &ModuleType,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let (parameters, return_mty) = mod_type_functor(mty);
+
+    let parameters_doc = match parameters.as_slice() {
+        // Unit parameter: `()`
+        [(lbl, None)] if lbl.txt == "*" => Doc::text("()"),
+        // Single unlabeled parameter without type: just the name
+        [(lbl, None)] => Doc::text(&lbl.txt),
+        // Multiple parameters
+        _ => {
+            Doc::group(Doc::concat(vec![
+                Doc::lparen(),
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::join(
+                        Doc::concat(vec![Doc::comma(), Doc::line()]),
+                        parameters
+                            .iter()
+                            .map(|(lbl, opt_mty)| {
+                                let lbl_doc = if lbl.txt == "*" {
+                                    Doc::text("()")
+                                } else {
+                                    Doc::text(&lbl.txt)
+                                };
+                                let lbl_doc = print_comments(lbl_doc, cmt_tbl, &lbl.loc);
+                                match opt_mty {
+                                    None => lbl_doc,
+                                    Some(mty) => Doc::group(Doc::concat(vec![
+                                        lbl_doc,
+                                        Doc::text(": "),
+                                        print_module_type(state, mty, cmt_tbl),
+                                    ])),
+                                }
+                            })
+                            .collect(),
+                    ),
+                ])),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+                Doc::rparen(),
+            ]))
+        }
+    };
+
+    Doc::group(Doc::concat(vec![
+        parameters_doc,
+        Doc::text(" => "),
+        print_module_type(state, return_mty, cmt_tbl),
+    ]))
+}
+
+/// Extract functor parameters from a module type.
+fn mod_type_functor(mty: &ModuleType) -> (Vec<(&StringLoc, Option<&ModuleType>)>, &ModuleType) {
+    fn loop_functor<'a>(
+        acc: Vec<(&'a StringLoc, Option<&'a ModuleType>)>,
+        mty: &'a ModuleType,
+    ) -> (Vec<(&'a StringLoc, Option<&'a ModuleType>)>, &'a ModuleType) {
+        match &mty.pmty_desc {
+            ModuleTypeDesc::Pmty_functor(lbl, mod_type, return_mty) => {
+                let mut new_acc = acc;
+                new_acc.push((lbl, mod_type.as_ref().map(|t| t.as_ref())));
+                loop_functor(new_acc, return_mty)
+            }
+            _ => (acc, mty),
+        }
+    }
+    loop_functor(Vec::new(), mty)
+}
+
+/// Print a with constraint.
+fn print_with_constraint(
+    state: &PrinterState,
+    constraint: &WithConstraint,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match constraint {
+        WithConstraint::Pwith_type(lid, type_decl) => {
+            Doc::concat(vec![
+                Doc::text("type "),
+                print_type_declaration_with_lid(state, lid, type_decl, cmt_tbl),
+            ])
+        }
+        WithConstraint::Pwith_module(lid1, lid2) => {
+            Doc::concat(vec![
+                Doc::text("module "),
+                print_longident_location(lid1, cmt_tbl),
+                Doc::text(" = "),
+                print_longident_location(lid2, cmt_tbl),
+            ])
+        }
+        WithConstraint::Pwith_typesubst(lid, type_decl) => {
+            Doc::concat(vec![
+                Doc::text("type "),
+                print_type_declaration_with_lid(state, lid, type_decl, cmt_tbl),
+            ])
+        }
+        WithConstraint::Pwith_modsubst(lid1, lid2) => {
+            Doc::concat(vec![
+                Doc::text("module "),
+                print_longident_location(lid1, cmt_tbl),
+                Doc::text(" := "),
+                print_longident_location(lid2, cmt_tbl),
+            ])
+        }
+    }
+}
+
+/// Print a type declaration with its longident.
+fn print_type_declaration_with_lid(
+    state: &PrinterState,
+    lid: &Loc<Longident>,
+    decl: &TypeDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let name_doc = print_lident(&lid.txt);
+    let params_doc = if decl.ptype_params.is_empty() {
+        Doc::nil()
+    } else {
+        let params: Vec<Doc> = decl
+            .ptype_params
+            .iter()
+            .map(|(typ, _variance)| print_typ_expr(state, typ, cmt_tbl))
+            .collect();
+        Doc::concat(vec![
+            Doc::less_than(),
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), params),
+            Doc::greater_than(),
+        ])
+    };
+
+    let manifest_doc = match &decl.ptype_manifest {
+        Some(typ) => Doc::concat(vec![Doc::text(" = "), print_typ_expr(state, typ, cmt_tbl)]),
+        None => Doc::nil(),
+    };
+
+    Doc::concat(vec![name_doc, params_doc, manifest_doc])
+}
+
+/// Print extension at module level.
+fn print_extension_at_module_level(
+    state: &PrinterState,
+    ext: &Extension,
+    cmt_tbl: &mut CommentTable,
+    _at_module_lvl: bool,
+) -> Doc {
+    let (name, payload) = ext;
+    let name_doc = Doc::text(format!("%{}", name.txt));
+
+    let payload_doc = match payload {
+        Payload::PStr(items) if items.is_empty() => Doc::nil(),
+        Payload::PStr(items) => {
+            Doc::concat(vec![
+                Doc::text("("),
+                print_structure(state, items, cmt_tbl),
+                Doc::text(")"),
+            ])
+        }
+        Payload::PTyp(typ) => {
+            Doc::concat(vec![
+                Doc::text("("),
+                print_typ_expr(state, typ, cmt_tbl),
+                Doc::text(")"),
+            ])
+        }
+        Payload::PSig(items) => {
+            Doc::concat(vec![
+                Doc::text("("),
+                print_signature(state, items, cmt_tbl),
+                Doc::text(")"),
+            ])
+        }
+        Payload::PPat(pat, guard) => {
+            let pat_doc = print_pattern(state, pat, cmt_tbl);
+            match guard {
+                Some(expr) => Doc::concat(vec![
+                    Doc::text("("),
+                    pat_doc,
+                    Doc::text(" when "),
+                    print_expression_with_comments(state, expr, cmt_tbl),
+                    Doc::text(")"),
+                ]),
+                None => Doc::concat(vec![Doc::text("("), pat_doc, Doc::text(")")]),
+            }
+        }
+    };
+
+    Doc::concat(vec![name_doc, payload_doc])
 }
 
 // ============================================================================
@@ -3111,7 +3669,7 @@ fn print_attributes(
     if docs.is_empty() {
         Doc::nil()
     } else {
-        Doc::concat(vec![Doc::concat(docs), Doc::space()])
+        Doc::concat(vec![Doc::group(Doc::join(Doc::space(), docs)), Doc::space()])
     }
 }
 
@@ -3135,7 +3693,6 @@ fn print_attribute(
                         Doc::text("("),
                         print_expression_with_comments(state, expr, cmt_tbl),
                         Doc::text(")"),
-                        Doc::space(),
                     ]);
                 }
             }
@@ -3165,7 +3722,7 @@ fn print_attribute(
         }
     };
 
-    Doc::concat(vec![attr_name, payload_doc, Doc::space()])
+    Doc::concat(vec![attr_name, payload_doc])
 }
 
 // ============================================================================
@@ -3179,6 +3736,627 @@ fn print_extension(
     _cmt_tbl: &mut CommentTable,
 ) -> Doc {
     Doc::concat(vec![Doc::text("%"), Doc::text(&ext.0.txt)])
+}
+
+// ============================================================================
+// Structure Printing
+// ============================================================================
+
+/// Print a structure (list of structure items).
+pub fn print_structure(
+    state: &PrinterState,
+    structure: &[StructureItem],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    if structure.is_empty() {
+        return print_comments_inside_file(cmt_tbl);
+    }
+
+    print_list(
+        |item: &StructureItem| &item.pstr_loc,
+        structure,
+        |item: &StructureItem, cmt_tbl: &mut CommentTable| print_structure_item(state, item, cmt_tbl),
+        cmt_tbl,
+        false,
+    )
+}
+
+/// Print a signature (list of signature items).
+pub fn print_signature(
+    state: &PrinterState,
+    signature: &[SignatureItem],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    if signature.is_empty() {
+        return print_comments_inside_file(cmt_tbl);
+    }
+
+    print_list(
+        |item: &SignatureItem| &item.psig_loc,
+        signature,
+        |item: &SignatureItem, cmt_tbl: &mut CommentTable| print_signature_item(state, item, cmt_tbl),
+        cmt_tbl,
+        false,
+    )
+}
+
+/// Print a signature item.
+pub fn print_signature_item(
+    state: &PrinterState,
+    item: &SignatureItem,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match &item.psig_desc {
+        SignatureItemDesc::Psig_value(val_desc) => {
+            print_value_description(state, val_desc, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_type(rec_flag, type_decls) => {
+            let rec_doc = match rec_flag {
+                RecFlag::Nonrecursive => Doc::text("nonrec "),
+                RecFlag::Recursive => Doc::nil(),
+            };
+            Doc::concat(vec![
+                Doc::text("type "),
+                rec_doc,
+                print_type_declarations(state, type_decls, cmt_tbl),
+            ])
+        }
+
+        SignatureItemDesc::Psig_typext(type_ext) => {
+            print_type_extension(state, type_ext, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_exception(ext_constr) => {
+            Doc::concat(vec![
+                Doc::text("exception "),
+                print_extension_constructor(state, ext_constr, cmt_tbl),
+            ])
+        }
+
+        SignatureItemDesc::Psig_module(mod_decl) => {
+            print_module_declaration(state, mod_decl, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_recmodule(mod_decls) => {
+            print_rec_module_declarations(state, mod_decls, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_modtype(mod_type_decl) => {
+            print_module_type_declaration(state, mod_type_decl, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_open(open_desc) => {
+            print_open_description(state, open_desc, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_include(include_desc) => {
+            print_include_description(state, include_desc, cmt_tbl)
+        }
+
+        SignatureItemDesc::Psig_attribute(attr) => {
+            Doc::concat(vec![Doc::text("@@"), print_attribute(state, attr, cmt_tbl)])
+        }
+
+        SignatureItemDesc::Psig_extension(ext, attrs) => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl);
+            Doc::concat(vec![
+                attrs_doc,
+                Doc::text("%%"),
+                print_extension(state, ext, cmt_tbl),
+            ])
+        }
+    }
+}
+
+/// Print a module declaration.
+fn print_module_declaration(
+    state: &PrinterState,
+    decl: &ModuleDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &decl.pmd_attributes, cmt_tbl);
+    let name_doc = Doc::text(&decl.pmd_name.txt);
+    let type_doc = print_module_type(state, &decl.pmd_type, cmt_tbl);
+
+    Doc::concat(vec![
+        attrs_doc,
+        Doc::text("module "),
+        name_doc,
+        Doc::text(": "),
+        type_doc,
+    ])
+}
+
+/// Print recursive module declarations.
+fn print_rec_module_declarations(
+    state: &PrinterState,
+    decls: &[ModuleDeclaration],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let docs: Vec<Doc> = decls
+        .iter()
+        .enumerate()
+        .map(|(i, decl)| {
+            let prefix = if i == 0 {
+                Doc::text("module rec ")
+            } else {
+                Doc::text("and ")
+            };
+            let name_doc = Doc::text(&decl.pmd_name.txt);
+            let type_doc = print_module_type(state, &decl.pmd_type, cmt_tbl);
+            Doc::concat(vec![prefix, name_doc, Doc::text(": "), type_doc])
+        })
+        .collect();
+    Doc::join(Doc::hard_line(), docs)
+}
+
+/// Print an include description.
+fn print_include_description(
+    state: &PrinterState,
+    include_desc: &IncludeDescription,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &include_desc.pincl_attributes, cmt_tbl);
+    let mod_doc = print_module_type(state, &include_desc.pincl_mod, cmt_tbl);
+
+    Doc::concat(vec![attrs_doc, Doc::text("include "), mod_doc])
+}
+
+/// Print a structure item.
+pub fn print_structure_item(
+    state: &PrinterState,
+    item: &StructureItem,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    match &item.pstr_desc {
+        StructureItemDesc::Pstr_value(rec_flag, bindings) => {
+            let rec_doc = match rec_flag {
+                RecFlag::Nonrecursive => Doc::nil(),
+                RecFlag::Recursive => Doc::text("rec "),
+            };
+            Doc::concat(vec![
+                Doc::text("let "),
+                rec_doc,
+                print_value_bindings(state, bindings, cmt_tbl),
+            ])
+        }
+
+        StructureItemDesc::Pstr_type(rec_flag, type_decls) => {
+            let rec_doc = match rec_flag {
+                RecFlag::Nonrecursive => Doc::text("nonrec "),
+                RecFlag::Recursive => Doc::nil(),
+            };
+            Doc::concat(vec![
+                Doc::text("type "),
+                rec_doc,
+                print_type_declarations(state, type_decls, cmt_tbl),
+            ])
+        }
+
+        StructureItemDesc::Pstr_primitive(val_desc) => {
+            print_value_description(state, val_desc, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_typext(type_ext) => {
+            print_type_extension(state, type_ext, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_exception(ext_constr) => {
+            Doc::concat(vec![
+                Doc::text("exception "),
+                print_extension_constructor(state, ext_constr, cmt_tbl),
+            ])
+        }
+
+        StructureItemDesc::Pstr_module(mod_binding) => {
+            print_module_binding(state, mod_binding, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_recmodule(mod_bindings) => {
+            print_rec_module_bindings(state, mod_bindings, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_modtype(mod_type_decl) => {
+            print_module_type_declaration(state, mod_type_decl, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_open(open_desc) => {
+            print_open_description(state, open_desc, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_include(include_decl) => {
+            print_include_declaration(state, include_decl, cmt_tbl)
+        }
+
+        StructureItemDesc::Pstr_attribute(attr) => {
+            Doc::concat(vec![Doc::text("@@"), print_attribute(state, attr, cmt_tbl)])
+        }
+
+        StructureItemDesc::Pstr_extension(ext, attrs) => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl);
+            Doc::concat(vec![
+                attrs_doc,
+                Doc::text("%%"),
+                print_extension(state, ext, cmt_tbl),
+            ])
+        }
+
+        StructureItemDesc::Pstr_eval(expr, attrs) => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl);
+            Doc::concat(vec![
+                attrs_doc,
+                print_expression_with_comments(state, expr, cmt_tbl),
+            ])
+        }
+    }
+}
+
+/// Print type declarations.
+fn print_type_declarations(
+    state: &PrinterState,
+    decls: &[TypeDeclaration],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let docs: Vec<Doc> = decls
+        .iter()
+        .enumerate()
+        .map(|(i, decl)| {
+            let prefix = if i == 0 { Doc::nil() } else { Doc::text("and ") };
+            Doc::concat(vec![prefix, print_type_declaration(state, decl, cmt_tbl)])
+        })
+        .collect();
+    Doc::join(Doc::hard_line(), docs)
+}
+
+/// Print a type declaration.
+fn print_type_declaration(
+    state: &PrinterState,
+    decl: &TypeDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &decl.ptype_attributes, cmt_tbl);
+    let name_doc = Doc::text(&decl.ptype_name.txt);
+
+    let params_doc = if decl.ptype_params.is_empty() {
+        Doc::nil()
+    } else {
+        let params: Vec<Doc> = decl
+            .ptype_params
+            .iter()
+            .map(|(typ, _variance)| print_typ_expr(state, typ, cmt_tbl))
+            .collect();
+        Doc::concat(vec![
+            Doc::less_than(),
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), params),
+            Doc::greater_than(),
+        ])
+    };
+
+    let manifest_doc = match &decl.ptype_manifest {
+        Some(typ) => Doc::concat(vec![Doc::text(" = "), print_typ_expr(state, typ, cmt_tbl)]),
+        None => Doc::nil(),
+    };
+
+    let kind_doc = match &decl.ptype_kind {
+        TypeKind::Ptype_abstract => Doc::nil(),
+        TypeKind::Ptype_variant(constrs) => {
+            Doc::concat(vec![
+                if decl.ptype_manifest.is_some() { Doc::text(" = ") } else { Doc::text(" = ") },
+                print_constructor_declarations(state, constrs, cmt_tbl),
+            ])
+        }
+        TypeKind::Ptype_record(fields) => {
+            Doc::concat(vec![
+                Doc::text(" = "),
+                print_record_declaration(state, fields, cmt_tbl),
+            ])
+        }
+        TypeKind::Ptype_open => Doc::text(" = .."),
+    };
+
+    Doc::concat(vec![attrs_doc, name_doc, params_doc, manifest_doc, kind_doc])
+}
+
+/// Print constructor declarations.
+fn print_constructor_declarations(
+    state: &PrinterState,
+    constrs: &[ConstructorDeclaration],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let docs: Vec<Doc> = constrs
+        .iter()
+        .enumerate()
+        .map(|(i, constr)| {
+            let bar = if i == 0 {
+                Doc::if_breaks(Doc::text("| "), Doc::nil())
+            } else {
+                Doc::text("| ")
+            };
+            Doc::concat(vec![bar, print_constructor_declaration(state, constr, cmt_tbl)])
+        })
+        .collect();
+    Doc::group(Doc::concat(vec![
+        Doc::indent(Doc::concat(vec![Doc::line(), Doc::join(Doc::line(), docs)])),
+    ]))
+}
+
+/// Print a constructor declaration.
+fn print_constructor_declaration(
+    state: &PrinterState,
+    constr: &ConstructorDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &constr.pcd_attributes, cmt_tbl);
+    let name_doc = Doc::text(&constr.pcd_name.txt);
+
+    let args_doc = match &constr.pcd_args {
+        ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
+        ConstructorArguments::Pcstr_tuple(types) => {
+            let type_docs: Vec<Doc> = types
+                .iter()
+                .map(|t| print_typ_expr(state, t, cmt_tbl))
+                .collect();
+            Doc::concat(vec![
+                Doc::text("("),
+                Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), type_docs),
+                Doc::text(")"),
+            ])
+        }
+        ConstructorArguments::Pcstr_record(fields) => {
+            Doc::concat(vec![
+                Doc::text("("),
+                print_record_declaration(state, fields, cmt_tbl),
+                Doc::text(")"),
+            ])
+        }
+    };
+
+    let res_doc = match &constr.pcd_res {
+        Some(typ) => Doc::concat(vec![Doc::text(": "), print_typ_expr(state, typ, cmt_tbl)]),
+        None => Doc::nil(),
+    };
+
+    Doc::concat(vec![attrs_doc, name_doc, args_doc, res_doc])
+}
+
+/// Print record declaration.
+fn print_record_declaration(
+    state: &PrinterState,
+    fields: &[LabelDeclaration],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let field_docs: Vec<Doc> = fields
+        .iter()
+        .map(|field| print_label_declaration(state, field, cmt_tbl))
+        .collect();
+    Doc::group(Doc::concat(vec![
+        Doc::lbrace(),
+        Doc::indent(Doc::concat(vec![
+            Doc::soft_line(),
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), field_docs),
+        ])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::rbrace(),
+    ]))
+}
+
+/// Print a label declaration (record field).
+fn print_label_declaration(
+    state: &PrinterState,
+    field: &LabelDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &field.pld_attributes, cmt_tbl);
+    let mutable_doc = if field.pld_mutable == MutableFlag::Mutable {
+        Doc::text("mutable ")
+    } else {
+        Doc::nil()
+    };
+    let name_doc = Doc::text(&field.pld_name.txt);
+    let typ_doc = print_typ_expr(state, &field.pld_type, cmt_tbl);
+
+    Doc::concat(vec![attrs_doc, mutable_doc, name_doc, Doc::text(": "), typ_doc])
+}
+
+/// Print value description (external declaration).
+fn print_value_description(
+    state: &PrinterState,
+    val_desc: &ValueDescription,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &val_desc.pval_attributes, cmt_tbl);
+    let name_doc = Doc::text(&val_desc.pval_name.txt);
+    let typ_doc = print_typ_expr(state, &val_desc.pval_type, cmt_tbl);
+
+    let prim_doc = if val_desc.pval_prim.is_empty() {
+        Doc::nil()
+    } else {
+        let prims: Vec<Doc> = val_desc.pval_prim.iter().map(|s| Doc::text(format!("\"{}\"", s))).collect();
+        Doc::concat(vec![Doc::text(" = "), Doc::join(Doc::space(), prims)])
+    };
+
+    Doc::concat(vec![
+        attrs_doc,
+        Doc::text("external "),
+        name_doc,
+        Doc::text(": "),
+        typ_doc,
+        prim_doc,
+    ])
+}
+
+/// Print type extension.
+fn print_type_extension(
+    _state: &PrinterState,
+    _type_ext: &TypeExtension,
+    _cmt_tbl: &mut CommentTable,
+) -> Doc {
+    Doc::text("<type extension>")
+}
+
+/// Print extension constructor.
+fn print_extension_constructor(
+    state: &PrinterState,
+    ext_constr: &ExtensionConstructor,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &ext_constr.pext_attributes, cmt_tbl);
+    let name_doc = Doc::text(&ext_constr.pext_name.txt);
+
+    let kind_doc = match &ext_constr.pext_kind {
+        ExtensionConstructorKind::Pext_decl(args, res) => {
+            let args_doc = match args {
+                ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
+                ConstructorArguments::Pcstr_tuple(types) => {
+                    let type_docs: Vec<Doc> = types
+                        .iter()
+                        .map(|t| print_typ_expr(state, t, cmt_tbl))
+                        .collect();
+                    Doc::concat(vec![
+                        Doc::text("("),
+                        Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), type_docs),
+                        Doc::text(")"),
+                    ])
+                }
+                ConstructorArguments::Pcstr_record(fields) => {
+                    Doc::concat(vec![
+                        Doc::text("({"),
+                        print_record_declaration(state, fields, cmt_tbl),
+                        Doc::text("})"),
+                    ])
+                }
+            };
+            let res_doc = match res {
+                Some(typ) => Doc::concat(vec![Doc::text(": "), print_typ_expr(state, typ, cmt_tbl)]),
+                None => Doc::nil(),
+            };
+            Doc::concat(vec![args_doc, res_doc])
+        }
+        ExtensionConstructorKind::Pext_rebind(lid) => {
+            Doc::concat(vec![Doc::text(" = "), print_longident(&lid.txt)])
+        }
+    };
+
+    Doc::concat(vec![attrs_doc, name_doc, kind_doc])
+}
+
+/// Print module binding.
+fn print_module_binding(
+    state: &PrinterState,
+    binding: &ModuleBinding,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &binding.pmb_attributes, cmt_tbl);
+    let name_doc = Doc::text(&binding.pmb_name.txt);
+    let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl);
+
+    Doc::concat(vec![
+        attrs_doc,
+        Doc::text("module "),
+        name_doc,
+        Doc::text(" = "),
+        expr_doc,
+    ])
+}
+
+/// Print recursive module bindings.
+fn print_rec_module_bindings(
+    state: &PrinterState,
+    bindings: &[ModuleBinding],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let docs: Vec<Doc> = bindings
+        .iter()
+        .enumerate()
+        .map(|(i, binding)| {
+            let prefix = if i == 0 {
+                Doc::text("module rec ")
+            } else {
+                Doc::text("and ")
+            };
+            let name_doc = Doc::text(&binding.pmb_name.txt);
+            let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl);
+            Doc::concat(vec![prefix, name_doc, Doc::text(" = "), expr_doc])
+        })
+        .collect();
+    Doc::join(Doc::hard_line(), docs)
+}
+
+/// Print module type declaration.
+fn print_module_type_declaration(
+    state: &PrinterState,
+    decl: &ModuleTypeDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &decl.pmtd_attributes, cmt_tbl);
+    let name_doc = Doc::text(&decl.pmtd_name.txt);
+    let typ_doc = match &decl.pmtd_type {
+        Some(mty) => Doc::concat(vec![Doc::text(" = "), print_module_type(state, mty, cmt_tbl)]),
+        None => Doc::nil(),
+    };
+
+    Doc::concat(vec![
+        attrs_doc,
+        Doc::text("module type "),
+        name_doc,
+        typ_doc,
+    ])
+}
+
+/// Print open description.
+fn print_open_description(
+    state: &PrinterState,
+    open_desc: &OpenDescription,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &open_desc.popen_attributes, cmt_tbl);
+    let lid_doc = print_longident(&open_desc.popen_lid.txt);
+
+    Doc::concat(vec![attrs_doc, Doc::text("open "), lid_doc])
+}
+
+/// Print include declaration.
+fn print_include_declaration(
+    state: &PrinterState,
+    include_decl: &IncludeDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &include_decl.pincl_attributes, cmt_tbl);
+    let mod_doc = print_mod_expr(state, &include_decl.pincl_mod, cmt_tbl);
+
+    Doc::concat(vec![attrs_doc, Doc::text("include "), mod_doc])
+}
+
+// ============================================================================
+// Main Entry Points
+// ============================================================================
+
+/// Default print width.
+pub const DEFAULT_PRINT_WIDTH: i32 = 100;
+
+/// Print a structure with comments to a string.
+pub fn print_implementation(
+    structure: &[StructureItem],
+    comments: Vec<Comment>,
+    width: i32,
+) -> String {
+    let mut cmt_tbl = CommentTable::new();
+    cmt_tbl.walk_structure(structure, comments);
+    let state = PrinterState::init();
+    let doc = print_structure(&state, structure, &mut cmt_tbl);
+    let output = doc.to_string(width);
+    if output.is_empty() {
+        output
+    } else {
+        format!("{}\n", output)
+    }
+}
+
+/// Print a structure with comments using default width.
+pub fn print_structure_with_comments(structure: &[StructureItem], comments: Vec<Comment>) -> String {
+    print_implementation(structure, comments, DEFAULT_PRINT_WIDTH)
 }
 
 #[cfg(test)]
