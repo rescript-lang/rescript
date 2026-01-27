@@ -16,7 +16,8 @@
       "packages/pure-dev",
       "packages/with-ppx",
       "packages/nohoist",
-      "packages/standalone"
+      "packages/standalone",
+      "packages/watch-warnings"
     ],
     "nohoist": [
       "rescript-bun"

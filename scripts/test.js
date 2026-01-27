@@ -106,6 +106,18 @@ if (mochaTest) {
     cwd: projectDir,
     stdio: "inherit",
   });
+
+  // CommonJS tests
+  const commonjsTestDir = path.join(projectDir, "tests/commonjs_tests");
+  await execBuild([], {
+    cwd: commonjsTestDir,
+    stdio: "inherit",
+  });
+
+  await node("tests/commonjs_tests/src/belt_import.js", [], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }
 
 if (bsbTest) {

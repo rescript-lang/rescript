@@ -4,7 +4,11 @@
     "dir": "src",
     "subdirs": true
   },
-  "js-post-build": { "cmd": "cat" },
+  "package-specs": {
+    "module": "commonjs",
+    "in-source": true
+  },
+  "js-post-build": { "cmd": "node ./log-path.js" },
   "warnings": {
     "error": "+101"
   }

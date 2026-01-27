@@ -13,7 +13,7 @@ use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use anyhow::{Result, anyhow};
 use console::style;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use rayon::prelude::*;
 use std::path::Path;
 use std::path::PathBuf;
@@ -22,29 +22,53 @@ use std::sync::OnceLock;
 use std::time::SystemTime;
 
 /// Execute js-post-build command for a compiled JavaScript file.
-/// Unlike bsb which passes relative paths, rewatch passes absolute paths for clarity.
-fn execute_post_build_command(cmd: &str, js_file_path: &Path) -> Result<()> {
+/// The command runs in the directory containing the rescript.json that defines it.
+/// The absolute path to the JS file is passed as an argument.
+fn execute_post_build_command(cmd: &str, js_file_path: &Path, working_dir: &Path) -> Result<()> {
     let full_command = format!("{} {}", cmd, js_file_path.display());
 
+    debug!(
+        "Executing js-post-build: {} (in {})",
+        full_command,
+        working_dir.display()
+    );
+
     let output = if cfg!(target_os = "windows") {
-        Command::new("cmd").args(["/C", &full_command]).output()
+        Command::new("cmd")
+            .args(["/C", &full_command])
+            .current_dir(working_dir)
+            .output()
     } else {
-        Command::new("sh").args(["-c", &full_command]).output()
+        Command::new("sh")
+            .args(["-c", &full_command])
+            .current_dir(working_dir)
+            .output()
     };
 
     match output {
-        Ok(output) if !output.status.success() => {
+        Ok(output) => {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            Err(anyhow!(
-                "js-post-build command failed for {}: {}{}",
-                js_file_path.display(),
-                stderr,
-                stdout
-            ))
+
+            // Always log stdout/stderr - the user explicitly configured this command
+            // and likely cares about its output
+            if !stdout.is_empty() {
+                info!("{}", stdout.trim());
+            }
+            if !stderr.is_empty() {
+                warn!("{}", stderr.trim());
+            }
+
+            if !output.status.success() {
+                Err(anyhow!(
+                    "js-post-build command failed for {}",
+                    js_file_path.display()
+                ))
+            } else {
+                Ok(())
+            }
         }
         Err(e) => Err(anyhow!("Failed to execute js-post-build command: {}", e)),
-        Ok(_) => Ok(()),
     }
 }
 
@@ -303,15 +327,19 @@ pub fn compile(
                     }
                     SourceType::SourceFile(ref mut source_file) => match result {
                         Ok(Some(err)) => {
+                            let warning_text = err.to_string();
                             source_file.implementation.compile_state = CompileState::Warning;
-                            (Some(err.to_string()), None)
+                            source_file.implementation.compile_warnings = Some(warning_text.clone());
+                            (Some(warning_text), None)
                         }
                         Ok(None) => {
                             source_file.implementation.compile_state = CompileState::Success;
+                            source_file.implementation.compile_warnings = None;
                             (None, None)
                         }
                         Err(err) => {
                             source_file.implementation.compile_state = CompileState::Error;
+                            source_file.implementation.compile_warnings = None;
                             (None, Some(err.to_string()))
                         }
                     },
@@ -321,17 +349,22 @@ pub fn compile(
                     if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                         match interface_result {
                             Some(Ok(Some(err))) => {
+                                let warning_text = err.to_string();
                                 source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
-                                (Some(err.to_string()), None)
+                                source_file.interface.as_mut().unwrap().compile_warnings =
+                                    Some(warning_text.clone());
+                                (Some(warning_text), None)
                             }
                             Some(Ok(None)) => {
                                 if let Some(interface) = source_file.interface.as_mut() {
                                     interface.compile_state = CompileState::Success;
+                                    interface.compile_warnings = None;
                                 }
                                 (None, None)
                             }
                             Some(Err(err)) => {
                                 source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                                source_file.interface.as_mut().unwrap().compile_warnings = None;
                                 (None, Some(err.to_string()))
                             }
                             _ => (None, None),
@@ -408,6 +441,32 @@ pub fn compile(
         if !compile_errors.is_empty() {
             break;
         };
+    }
+
+    // Collect warnings from modules that were not recompiled in this build
+    // but still have stored warnings from a previous compilation.
+    // This ensures warnings are not lost during incremental builds in watch mode.
+    for (module_name, module) in build_state.modules.iter() {
+        if compile_universe.contains(module_name) {
+            continue;
+        }
+        if let SourceType::SourceFile(ref source_file) = module.source_type {
+            let package = build_state.get_package(&module.package_name);
+            if let Some(ref warning) = source_file.implementation.compile_warnings {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+            if let Some(ref interface) = source_file.interface
+                && let Some(ref warning) = interface.compile_warnings
+            {
+                if let Some(package) = package {
+                    logs::append(package, warning);
+                }
+                compile_warnings.push_str(warning);
+            }
+        }
     }
 
     Ok((compile_errors, compile_warnings, num_compiled_modules))
@@ -853,14 +912,28 @@ fn compile_file(
             {
                 // Execute post-build command for each package spec (each output format)
                 for spec in root_config.get_package_specs() {
-                    let js_file = helpers::get_source_file_from_rescript_file(
-                        &package.get_build_path().join(path),
-                        &root_config.get_suffix(&spec),
-                    );
+                    // Determine the correct JS file path based on in-source setting:
+                    // - in-source: true  -> next to the source file (e.g., src/Foo.js)
+                    // - in-source: false -> in lib/<module>/ directory (e.g., lib/es6/src/Foo.js)
+                    let js_file = if spec.in_source {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    } else {
+                        helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path)
+                                .join("lib")
+                                .join(spec.get_out_of_source_dir())
+                                .join(path),
+                            &root_config.get_suffix(&spec),
+                        )
+                    };
 
                     if js_file.exists() {
                         // Fail the build if post-build command fails (matches bsb behavior with &&)
-                        execute_post_build_command(&js_post_build.cmd, &js_file)?;
+                        // Run in the package's directory (where rescript.json is defined)
+                        execute_post_build_command(&js_post_build.cmd, &js_file, &package.path)?;
                     }
                 }
             }

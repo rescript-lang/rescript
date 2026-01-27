@@ -1,6 +1,6 @@
 {
   "name": "@rescript/win32-x64",
-  "version": "12.1.0",
+  "version": "12.2.0-rc.1",
   "description": "ReScript binaries for Windows x86_64",
   "type": "module",
   "homepage": "https://rescript-lang.org",

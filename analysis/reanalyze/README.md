@@ -60,6 +60,8 @@ rescript-tools reanalyze -config -reactive -timing -runs 3
 | `-churn n` | Remove/re-add n random files between runs (incremental correctness/perf testing) |
 | `-timing` | Report timing of analysis phases |
 | `-mermaid` | Output Mermaid diagram of reactive pipeline (to stderr) |
+| `-transitive` | Force transitive reporting (overrides rescript.json) |
+| `-no-transitive` | Disable transitive reporting (overrides rescript.json) |
 | `-debug` | Print debug information |
 | `-json` | Output in JSON format |
 | `-ci` | Internal flag for CI mode |
@@ -67,6 +69,18 @@ rescript-tools reanalyze -config -reactive -timing -runs 3
 ## Architecture
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for details on the analysis pipeline.
+
+### Regenerating the checked-in reactive pipeline diagram
+
+`analysis/reanalyze/diagrams/reactive-pipeline-full.mmd` is generated from the live reactive graph printer (`Reactive.to_mermaid()`), and **we check in the non-transitive (`-no-transitive`) variant** because that is where cross-file `hasRefBelow` suppression is relevant (and where reactive invalidation bugs are easiest to spot).
+
+To regenerate it:
+
+```bash
+# Run from any ReScript project (so -config works), then capture stderr:
+rescript-tools reanalyze -config -reactive -no-transitive -mermaid \
+  >/dev/null 2> analysis/reanalyze/diagrams/reactive-pipeline-full.mmd
+```
 
 The DCE analysis is structured as a pure pipeline:
 

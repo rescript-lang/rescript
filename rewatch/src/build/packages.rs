@@ -284,6 +284,7 @@ pub fn read_dependency(
 ///    registered for the parent packages. Especially relevant for peerDependencies.
 /// 2. In parallel performs IO to read the dependencies config and
 ///    recursively continues operation for their dependencies as well.
+/// 3. Detects and warns about duplicate packages (same name, different paths).
 fn read_dependencies(
     registered_dependencies_set: &mut AHashSet<String>,
     project_context: &ProjectContext,
@@ -302,6 +303,37 @@ fn read_dependencies(
         .iter()
         .filter_map(|package_name| {
             if registered_dependencies_set.contains(package_name) {
+                // Package already registered - check for duplicate (different path)
+                // Re-resolve from current package and from root to compare paths
+                if let Ok(current_path) = read_dependency(package_name, package_config, project_context)
+                    && let Ok(chosen_path) = read_dependency(package_name, &project_context.current_config, project_context)
+                    && current_path != chosen_path
+                {
+                    // Different paths - this is a duplicate
+                    let root_path = project_context.get_root_path();
+                    let chosen_relative = chosen_path
+                        .strip_prefix(root_path)
+                        .unwrap_or(&chosen_path);
+                    let duplicate_relative = current_path
+                        .strip_prefix(root_path)
+                        .unwrap_or(&current_path);
+                    let current_package_path = package_config
+                        .path
+                        .parent()
+                        .map(|p| p.to_path_buf())
+                        .unwrap_or_else(|| PathBuf::from("."));
+                    let parent_relative = current_package_path
+                        .strip_prefix(root_path)
+                        .unwrap_or(&current_package_path);
+
+                    eprintln!(
+                        "Duplicated package: {} ./{} (chosen) vs ./{} in ./{}",
+                        package_name,
+                        chosen_relative.to_string_lossy(),
+                        duplicate_relative.to_string_lossy(),
+                        parent_relative.to_string_lossy()
+                    );
+                }
                 None
             } else {
                 registered_dependencies_set.insert(package_name.to_owned());
@@ -481,6 +513,7 @@ This inconsistency will cause issues with package resolution.\n",
 fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
+
     let current_package = {
         let config = &project_context.current_config;
         let folder = config
@@ -500,6 +533,7 @@ fn read_packages(project_context: &ProjectContext, show_progress: bool) -> Resul
         show_progress,
         /* is local dep */ true,
     ));
+
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
             let package = make_package(d.config.to_owned(), &d.path, false, d.is_local_dep);
@@ -772,6 +806,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                         compile_state: CompileState::Pending,
                                         last_modified: metadata.modified,
                                         parse_dirty: true,
+                                        compile_warnings: None,
                                     },
                                     interface: None,
                                 }),
@@ -843,6 +878,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
+                                            compile_warnings: None,
                                         });
                                     }
                                 })
@@ -856,6 +892,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
+                                            compile_warnings: None,
                                         },
                                         interface: Some(Interface {
                                             path: file.to_owned(),
@@ -863,6 +900,7 @@ pub fn parse_packages(build_state: &mut BuildState) -> Result<()> {
                                             compile_state: CompileState::Pending,
                                             last_modified: metadata.modified,
                                             parse_dirty: true,
+                                            compile_warnings: None,
                                         }),
                                     }),
                                     deps: AHashSet::new(),

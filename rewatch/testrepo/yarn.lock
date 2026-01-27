@@ -159,6 +159,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/watch-warnings@workspace:packages/watch-warnings":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/watch-warnings@workspace:packages/watch-warnings"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/with-dev-deps@workspace:packages/with-dev-deps":
   version: 0.0.0-use.local
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"

@@ -4,6 +4,8 @@ module FileContext = struct
   (** Get module name as Name.t tagged with interface/implementation info *)
   let module_name_tagged file =
     file.module_name |> Name.create ~isInterface:file.is_interface
+
+  let isInterface (file : t) = file.is_interface
 end
 
 (* Adapted from https://github.com/LexiFi/dead_code_analyzer *)
@@ -82,7 +84,7 @@ let addValueReference ~config ~refs ~file_deps ~(binding : Location.t)
 
 let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
     ~declKind ~path ~(loc : Location.t) ?(posAdjustment = Decl.Nothing)
-    ~moduleLoc (name : Name.t) =
+    ?manifestTypePath ~moduleLoc (name : Name.t) =
   let pos = loc.loc_start in
   let posStart =
     match posStart with
@@ -110,6 +112,7 @@ let addDeclaration_ ~config ~decls ~(file : FileContext.t) ?posEnd ?posStart
         moduleLoc;
         posAdjustment;
         path = name :: path;
+        manifestTypePath;
         pos;
         posEnd;
         posStart;
@@ -181,6 +184,16 @@ let reportDeclaration ~config ~hasRefBelow ?checkModuleDead ?shouldReport
     match shouldReport with
     | Some f -> f decl
     | None -> decl.report
+  in
+  (* For type re-exports (type y = x = {...}), the re-exported record/variant
+     labels are restated but not independently actionable. Avoid duplicate/noisy
+     warnings by suppressing reporting for the re-exported copy. *)
+  let should_report =
+    should_report
+    &&
+    match (decl.declKind, decl.manifestTypePath) with
+    | (RecordLabel | VariantCase), Some _ -> false
+    | _ -> true
   in
   if not should_report then []
   else

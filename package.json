@@ -1,6 +1,6 @@
 {
   "name": "rescript",
-  "version": "12.1.0",
+  "version": "12.2.0-rc.1",
   "description": "ReScript toolchain",
   "type": "module",
   "keywords": [
@@ -105,6 +105,7 @@
     "tests/docstring_tests",
     "tests/gentype_tests/**",
     "tests/tools_tests",
+    "tests/commonjs_tests",
     "scripts/res"
   ],
   "packageManager": "yarn@4.10.3",
