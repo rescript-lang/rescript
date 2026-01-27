@@ -759,30 +759,36 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
                 p.expect(Token::Lparen);
                 let expr = expr::parse_expr(p);
                 let final_expr = if p.token == Token::Colon {
+                    // OCaml captures colon position for package type location start
+                    let colon_pos = p.start_pos.clone();
                     p.next();
                     // Parse module type and convert to Ptyp_package
                     let mod_type = parse_module_type(p);
                     // Create Ptyp_package from module type
+                    // OCaml uses colon_start for the package type location start
+                    let pkg_loc = p.mk_loc(&colon_pos, &mod_type.pmty_loc.loc_end);
                     let pkg_type = CoreType {
                         ptyp_desc: CoreTypeDesc::Ptyp_package(
                             module_type_to_package(&mod_type),
                         ),
-                        ptyp_loc: mod_type.pmty_loc.clone(),
+                        ptyp_loc: pkg_loc,
                         ptyp_attributes: vec![],
                     };
-                    // Wrap expression in Pexp_constraint
+                    // OCaml: expect Rparen first, then create constraint with loc including Rparen
+                    p.expect(Token::Rparen);
+                    let constraint_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                     Expression {
                         pexp_desc: ExpressionDesc::Pexp_constraint(
                             Box::new(expr),
                             pkg_type,
                         ),
-                        pexp_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+                        pexp_loc: constraint_loc,
                         pexp_attributes: vec![],
                     }
                 } else {
+                    p.expect(Token::Rparen);
                     expr
                 };
-                p.expect(Token::Rparen);
                 let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
                 ModuleExpr {
                     pmod_desc: ModuleExprDesc::Pmod_unpack(Box::new(final_expr)),

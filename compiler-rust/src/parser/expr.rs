@@ -3800,11 +3800,18 @@ fn parse_first_class_module_expr_inner(p: &mut Parser<'_>, start_pos: Position) 
     // Check for type annotation: module(Expr: ModType)
     // This becomes Pexp_constraint(Pexp_pack(ME), Ptyp_package(...))
     let package_type = if p.token == Token::Colon {
-        // OCaml includes the : in the package type location
+        // OCaml captures colon_start BEFORE consuming colon, then parses attributes,
+        // then passes colon_start to parse_package_type
         let colon_pos = p.start_pos.clone();
         p.next();
+        // Parse any attributes between : and the module identifier
+        let attrs = parse_attributes(p);
         let mut pkg_type = super::typ::parse_package_type(p);
         pkg_type.ptyp_loc.loc_start = colon_pos;
+        // Attach any attributes parsed
+        if !attrs.is_empty() {
+            pkg_type.ptyp_attributes.extend(attrs);
+        }
         Some(pkg_type)
     } else {
         None
