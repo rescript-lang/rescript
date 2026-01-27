@@ -40,6 +40,7 @@ pub mod ast;
 pub mod benchmark;
 pub mod code_frame;
 pub mod comment;
+pub mod comment_table;
 pub mod core;
 pub mod diagnostics;
 pub mod doc;
