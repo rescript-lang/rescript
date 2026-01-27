@@ -132,6 +132,8 @@ const SUMMARY_SPAN_NAMES = new Set([
   "build.parse",
   "build.parse_error",
   "build.compile",
+  "build.compile_wave",
+  "build.compile_file",
   "build.compile_error",
   "build.compile_warning",
   "build.initialize_packages",
@@ -158,6 +160,8 @@ const SUMMARY_ATTRS = {
   "build.incremental_build": ["module_count"],
   "build.load_package_sources": ["package"],
   "build.parse": ["dirty_modules"],
+  "build.compile_wave": ["wave", "file_count"],
+  "build.compile_file": ["module"],
   "build.js_post_build": ["command", "js_file"],
   file_change: ["path", "change_type"],
   "format.execute": ["file_count", "check"],
@@ -229,50 +233,71 @@ function treeToSummary(tree) {
  */
 const PARALLEL_SPAN_PATTERNS = [
   "build.load_package_sources",
+  "build.compile_file",
   "format.write_file",
 ];
 
 /**
- * Sort consecutive lines matching parallel span patterns alphabetically.
+ * Sort consecutive blocks matching parallel span patterns alphabetically.
+ * A "block" is a matching line plus any deeper-indented children below it.
+ * This ensures spans with children (e.g., compile_file with js_post_build)
+ * are sorted as a unit rather than being split by their children.
+ *
  * @param {string[]} lines - Summary lines
- * @returns {string[]} - Lines with parallel spans sorted
+ * @returns {string[]} - Lines with parallel span blocks sorted
  */
 function sortParallelSpans(lines) {
   const result = [];
   let currentPattern = null;
-  let collectedLines = [];
+  // Each block is { key: string, lines: string[] }
+  let collectedBlocks = [];
+  let currentBlockIndent = 0;
+
+  function flushBlocks() {
+    if (collectedBlocks.length > 0) {
+      collectedBlocks.sort((a, b) => a.key.localeCompare(b.key));
+      for (const block of collectedBlocks) {
+        result.push(...block.lines);
+      }
+      collectedBlocks = [];
+    }
+  }
 
   for (const line of lines) {
     const matchedPattern = PARALLEL_SPAN_PATTERNS.find(p => line.includes(p));
+    const indent = line.search(/\S/);
+
+    // If we're collecting blocks and this line is a deeper-indented child,
+    // append it to the current block
+    if (
+      collectedBlocks.length > 0 &&
+      !matchedPattern &&
+      indent > currentBlockIndent
+    ) {
+      collectedBlocks[collectedBlocks.length - 1].lines.push(line);
+      continue;
+    }
 
     if (matchedPattern && matchedPattern === currentPattern) {
-      // Continue collecting lines of the same pattern
-      collectedLines.push(line);
+      // Another block of the same pattern
+      collectedBlocks.push({ key: line.trim(), lines: [line] });
+      currentBlockIndent = indent;
     } else {
-      // Flush any collected lines (sorted)
-      if (collectedLines.length > 0) {
-        collectedLines.sort();
-        result.push(...collectedLines);
-        collectedLines = [];
-      }
+      // Different pattern or not a pattern — flush and reset
+      flushBlocks();
 
       if (matchedPattern) {
-        // Start collecting a new pattern
         currentPattern = matchedPattern;
-        collectedLines.push(line);
+        currentBlockIndent = indent;
+        collectedBlocks.push({ key: line.trim(), lines: [line] });
       } else {
-        // Not a parallel span, just add it
         currentPattern = null;
         result.push(line);
       }
     }
   }
 
-  // Flush remaining collected lines
-  if (collectedLines.length > 0) {
-    collectedLines.sort();
-    result.push(...collectedLines);
-  }
+  flushBlocks();
 
   return result;
 }

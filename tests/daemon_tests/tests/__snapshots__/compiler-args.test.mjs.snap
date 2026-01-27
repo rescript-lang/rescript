@@ -9,6 +9,8 @@ exports[`compiler-args > does not load package sources when serving compiler arg
   "    build.incremental_build[module_count=1]",
   "      build.parse[dirty_modules=1]",
   "      build.compile",
+  "        build.compile_wave[file_count=1]",
+  "          build.compile_file[module=Library]",
   "rpc.get_compiler_args[file_path=packages/app/src/App.res]",
 ]
 `;

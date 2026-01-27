@@ -198,14 +198,12 @@ pub fn compile<R: BuildReporter>(
         files_current_loop_count = 0;
         loop_count += 1;
 
-        let loop_span = tracing::info_span!(
-            "build.compile_loop",
-            loop_count = loop_count,
-            compiled = files_total_count,
-            total = compile_universe.len(),
-            in_progress = in_progress_modules.len(),
+        let wave_span = tracing::info_span!(
+            "build.compile_wave",
+            wave = loop_count,
+            file_count = in_progress_modules.len(),
         );
-        let _loop_guard = loop_span.enter();
+        let _wave_guard = wave_span.enter();
 
         let current_in_progres_modules = in_progress_modules.clone();
 
@@ -240,7 +238,7 @@ pub fn compile<R: BuildReporter>(
                         }
                         SourceType::SourceFile(source_file) => {
                             let _file_span = tracing::info_span!(
-                                parent: &loop_span,
+                                parent: &wave_span,
                                 "build.compile_file",
                                 module = %module_name,
                                 package = %module.package_name,

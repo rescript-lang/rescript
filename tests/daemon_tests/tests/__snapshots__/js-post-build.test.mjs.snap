@@ -9,8 +9,10 @@ exports[`js-post-build > executes js-post-build command after compilation 1`] = 
   "    build.incremental_build[module_count=1]",
   "      build.parse[dirty_modules=1]",
   "      build.compile",
-  "        build.js_post_build[command=node post-build.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
-  "          build.js_post_build_stdout",
+  "        build.compile_wave[file_count=1]",
+  "          build.compile_file[module=PostBuild]",
+  "            build.js_post_build[command=node post-build.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
+  "              build.js_post_build_stdout",
 ]
 `;
 
@@ -25,7 +27,9 @@ exports[`js-post-build > executes js-post-build with custom command after config
   "    build.incremental_build[module_count=1]",
   "      build.parse[dirty_modules=1]",
   "      build.compile",
-  "        build.js_post_build[command=node post-build-stderr.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
-  "          build.js_post_build_stderr",
+  "        build.compile_wave[file_count=1]",
+  "          build.compile_file[module=PostBuild]",
+  "            build.js_post_build[command=node post-build-stderr.mjs, js_file=packages/with-post-build/src/PostBuild.mjs]",
+  "              build.js_post_build_stderr",
 ]
 `;
