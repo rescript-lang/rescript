@@ -17,6 +17,7 @@
 #   -j, --parallel N  Run N tests in parallel (default: 16)
 #   -v, --verbose     Show progress for each file
 #   -l, --locs        Test with locations (-dlambda-sexp-locs)
+#   -r, --raw         Test raw/unoptimized lambda (-drawlambda)
 #   -h, --help        Show this help message
 #
 # EXAMPLES:
@@ -39,6 +40,7 @@ QUICK_MODE=false
 PARALLEL_JOBS=16
 VERBOSE=false
 TEST_LOCS=false
+TEST_RAW=false
 FILE_ARG=""
 
 while [[ $# -gt 0 ]]; do
@@ -62,6 +64,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -l|--locs)
             TEST_LOCS=true
+            shift
+            ;;
+        -r|--raw)
+            TEST_RAW=true
             shift
             ;;
         -h|--help)
@@ -114,10 +120,12 @@ echo "OCaml bsc: $OCAML_BSC"
 echo "Rust bsc:  $RUST_BSC"
 echo "Timeout: ${TIMEOUT_SECONDS}s"
 echo "Parallel jobs: $PARALLEL_JOBS"
-if $TEST_LOCS; then
-    echo "Testing: sexp-locs"
+if $TEST_RAW; then
+    echo "Testing: raw lambda (-drawlambda)"
+elif $TEST_LOCS; then
+    echo "Testing: sexp-locs (-dlambda-sexp-locs)"
 else
-    echo "Testing: sexp"
+    echo "Testing: sexp (-dlambda-sexp)"
 fi
 echo ""
 
@@ -159,7 +167,7 @@ mkdir -p "$RESULTS_DIR"
 mkdir -p "$TEMP_DIR/diffs"
 
 # Export variables for parallel execution
-export OCAML_BSC RUST_BSC TIMEOUT_SECONDS TEMP_DIR QUICK_MODE VERBOSE TEST_LOCS RESULTS_DIR
+export OCAML_BSC RUST_BSC TIMEOUT_SECONDS TEMP_DIR QUICK_MODE VERBOSE TEST_LOCS TEST_RAW RESULTS_DIR
 
 # Function to test a single file - writes results to a file
 test_single_file() {
@@ -177,7 +185,9 @@ test_single_file() {
 
     # Determine flags
     local lambda_flag="-dlambda-sexp"
-    if $TEST_LOCS; then
+    if $TEST_RAW; then
+        lambda_flag="-drawlambda"
+    elif $TEST_LOCS; then
         lambda_flag="-dlambda-sexp-locs"
     fi
 
