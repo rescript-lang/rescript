@@ -83,6 +83,9 @@ pub struct Parser<'src> {
     /// Each call to `mk_loc` gets a new ID, enabling identity-based sharing in Marshal.
     /// Uses atomic to allow mk_loc to take &self (avoiding borrow conflicts).
     location_id_counter: AtomicU32,
+    /// Whether we're currently parsing an external definition.
+    /// Used for arity calculation of @as(_) labeled parameters.
+    pub in_external: bool,
 }
 
 impl<'src> Parser<'src> {
@@ -106,6 +109,7 @@ impl<'src> Parser<'src> {
             comments: Vec::new(),
             regions: vec![RegionStatus::Report],
             location_id_counter: AtomicU32::new(1), // Start at 1, 0 is reserved for default/uninitialized
+            in_external: false,
         };
         // Scan the first token
         parser.next();
