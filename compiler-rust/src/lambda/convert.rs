@@ -298,15 +298,10 @@ impl LambdaConverter {
         partial: crate::types::typedtree::Partial,
         arity: crate::parser::ast::Arity,
     ) -> Lambda {
-        // Debug: print arity
-        eprintln!("convert_function: arity={:?}, params.len={}", arity, params.len());
-
         // Use arity to flatten nested functions into a single multi-param function
         // e.g., `(x, y) => x + y` has arity 2 but is represented as nested functions
         let (all_params, final_body, final_partial) =
             self.flatten_function_by_arity(params, cases, partial, arity);
-
-        eprintln!("  after flatten: all_params.len={}", all_params.len());
 
         let mut param_ids = Vec::new();
         for (idx, param) in all_params.iter().enumerate() {
