@@ -111,7 +111,6 @@ fn event_matches_client(event: &DaemonEvent, client_id: u64) -> bool {
         Some(Event::Parsed(e)) => e.client_id == client_id,
         Some(Event::Compiling(e)) => e.client_id == client_id,
         Some(Event::Compiled(e)) => e.client_id == client_id,
-        Some(Event::GeneratingAst(e)) => e.client_id == client_id,
         Some(Event::CleanedCompilerAssets(e)) => e.client_id == client_id,
         Some(Event::CleanedJsFiles(e)) => e.client_id == client_id,
         Some(Event::CircularDependency(e)) => e.client_id == client_id,

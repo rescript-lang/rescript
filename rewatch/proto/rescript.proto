@@ -56,7 +56,6 @@ message DaemonEvent {
     Parsed parsed = 7;
     Compiling compiling = 8;
     Compiled compiled = 9;
-    GeneratingAst generating_ast = 24;
 
     // Clean progress events
     CleanedCompilerAssets cleaned_compiler_assets = 10;
@@ -172,12 +171,6 @@ message Compiled {
   uint64 client_id = 1;
   int32 compiled_count = 2;
   double duration_seconds = 3;
-}
-
-// Progress event for AST generation
-message GeneratingAst {
-  uint64 client_id = 1;
-  string module_name = 2;
 }
 
 // =============================================================================

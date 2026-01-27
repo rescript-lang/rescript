@@ -328,8 +328,7 @@ This inconsistency will cause issues with package resolution.",
             | Event::FormatFinished(_)
             | Event::FormatProgress(_)
             | Event::FormatCheckFailed(_)
-            | Event::FormattedStdin(_)
-            | Event::GeneratingAst(_) => {}
+            | Event::FormattedStdin(_) => {}
         }
     }
 

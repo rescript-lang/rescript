@@ -15,8 +15,8 @@ use crate::build::{BuildProgress, BuildReporter};
 use super::proto::{
     CircularDependency, Cleaned, CleanedCompilerAssets, CleanedJsFiles, Compiled, CompilerError,
     CompilerWarning, Compiling, ConfigWarning, ConfigWarningKind as ProtoConfigWarningKind, DaemonEvent,
-    DuplicatedPackage, GeneratingAst, InitializationError, JsPostBuildOutput, MissingImplementation,
-    ModuleNotFound, PackageNameMismatch, PackageTreeError, Parsed, UnallowedDependency,
+    DuplicatedPackage, InitializationError, JsPostBuildOutput, MissingImplementation, ModuleNotFound,
+    PackageNameMismatch, PackageTreeError, Parsed, UnallowedDependency,
     UnallowedDependencyGroup as ProtoUnallowedDependencyGroup, daemon_event::Event,
 };
 
@@ -38,6 +38,11 @@ impl BuildReporter for BroadcastReporter {
     fn report(&self, progress: BuildProgress) {
         // Emit OpenTelemetry span events for key progress types
         emit_tracing_event(&progress, self.client_id);
+
+        // Skip high-frequency per-module events that are only useful as OTEL traces.
+        if matches!(progress, BuildProgress::GeneratingAst { .. }) {
+            return;
+        }
 
         // Send to broadcast channel for client UX
         let _ = self.tx.send(progress_to_event(progress, self.client_id));
@@ -119,7 +124,7 @@ fn emit_tracing_event(progress: &BuildProgress, client_id: u64) {
             );
         }
         BuildProgress::GeneratingAst { module_name } => {
-            tracing::trace!(
+            tracing::info!(
                 client_id = client_id,
                 module_name = %module_name,
                 "build.generating_ast"
@@ -181,10 +186,9 @@ pub fn progress_to_event(progress: BuildProgress, client_id: u64) -> DaemonEvent
             current_count,
             total_count,
         }),
-        BuildProgress::GeneratingAst { module_name } => Event::GeneratingAst(GeneratingAst {
-            client_id,
-            module_name,
-        }),
+        BuildProgress::GeneratingAst { .. } => {
+            unreachable!("GeneratingAst is filtered before reaching progress_to_event")
+        }
         BuildProgress::Compiled {
             compiled_count,
             duration_seconds,
