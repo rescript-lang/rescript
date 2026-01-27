@@ -389,14 +389,24 @@ fn type_structure_item(
                                             crate::parser::ast::MutableFlag::Immutable => crate::types::MutableFlag::Immutable,
                                             crate::parser::ast::MutableFlag::Mutable => crate::types::MutableFlag::Mutable,
                                         };
+                                        // OCaml wraps label types in Tpoly for potential generalization
+                                        let poly_type_ref = ctx.new_poly(type_ref, vec![]);
                                         internal_labels.push(crate::types::LabelDeclaration {
                                             ld_id: Ident::create_persistent(&lbl.pld_name.txt),
                                             ld_mutable: mutable_flag,
                                             ld_optional: lbl.pld_optional,
-                                            ld_type: type_ref,
+                                            ld_type: poly_type_ref,
                                             ld_loc: lbl.pld_loc.clone(),
                                             ld_attributes: vec![],
                                         });
+                                        // OCaml wraps label types in Ttyp_poly for typed tree
+                                        let poly_typed_core_type = TypedCoreType {
+                                            ctyp_desc: TypedCoreTypeDesc::Ttyp_poly(vec![], Box::new(typed_core_type.clone())),
+                                            ctyp_type: poly_type_ref,
+                                            ctyp_env: typed_core_type.ctyp_env,
+                                            ctyp_loc: typed_core_type.ctyp_loc.clone(),
+                                            ctyp_attributes: vec![],
+                                        };
                                         typed_labels.push(TypedLabelDeclaration {
                                             ld_id: Ident::create_persistent(&lbl.pld_name.txt),
                                             ld_name: crate::location::Located {
@@ -405,7 +415,7 @@ fn type_structure_item(
                                             },
                                             ld_mutable: lbl.pld_mutable.clone(),
                                             ld_optional: lbl.pld_optional,
-                                            ld_type: typed_core_type,
+                                            ld_type: poly_typed_core_type,
                                             ld_loc: lbl.pld_loc.clone(),
                                             ld_attributes: lbl.pld_attributes.clone(),
                                         });
@@ -480,14 +490,24 @@ fn type_structure_item(
                                 crate::parser::ast::MutableFlag::Immutable => crate::types::MutableFlag::Immutable,
                                 crate::parser::ast::MutableFlag::Mutable => crate::types::MutableFlag::Mutable,
                             };
+                            // OCaml wraps label types in Tpoly for potential generalization
+                            let poly_type_ref = ctx.new_poly(type_ref, vec![]);
                             internal_labels.push(crate::types::LabelDeclaration {
                                 ld_id: Ident::create_persistent(&lbl.pld_name.txt),
                                 ld_mutable: mutable_flag,
                                 ld_optional: lbl.pld_optional,
-                                ld_type: type_ref,
+                                ld_type: poly_type_ref,
                                 ld_loc: lbl.pld_loc.clone(),
                                 ld_attributes: vec![],
                             });
+                            // OCaml wraps label types in Ttyp_poly for typed tree
+                            let poly_typed_core_type = TypedCoreType {
+                                ctyp_desc: TypedCoreTypeDesc::Ttyp_poly(vec![], Box::new(typed_core_type.clone())),
+                                ctyp_type: poly_type_ref,
+                                ctyp_env: typed_core_type.ctyp_env,
+                                ctyp_loc: typed_core_type.ctyp_loc.clone(),
+                                ctyp_attributes: vec![],
+                            };
                             typed_tree_labels.push(TypedLabelDeclaration {
                                 ld_id: Ident::create_persistent(&lbl.pld_name.txt),
                                 ld_name: crate::location::Located {
@@ -496,7 +516,7 @@ fn type_structure_item(
                                 },
                                 ld_mutable: lbl.pld_mutable.clone(),
                                 ld_optional: lbl.pld_optional,
-                                ld_type: typed_core_type,
+                                ld_type: poly_typed_core_type,
                                 ld_loc: lbl.pld_loc.clone(),
                                 ld_attributes: lbl.pld_attributes.clone(),
                             });
