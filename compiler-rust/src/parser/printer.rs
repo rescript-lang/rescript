@@ -113,44 +113,84 @@ impl Printer {
         }
     }
 
-    /// Check if an identifier needs escaping because it contains non-identifier characters.
-    /// Valid identifiers start with a-z, A-Z, or _ and continue with a-z, A-Z, 0-9, ', or _.
-    fn needs_exotic_escaping(s: &str) -> bool {
+    /// Classify an identifier to determine how it should be printed.
+    /// This matches OCaml's classify_ident_content function.
+    ///
+    /// - `allow_uident`: If true, uppercase letters are allowed at the start (for module/type names).
+    /// - `allow_hyphen`: If true, hyphens are allowed in the identifier (for JSX tag names).
+    ///
+    /// Returns true if the identifier needs escaping.
+    fn needs_escaping(s: &str, allow_uident: bool, allow_hyphen: bool) -> bool {
+        // Keywords always need escaping (except true/false which are boolean literals)
+        if Token::is_keyword_txt(s) && s != "true" && s != "false" {
+            return true;
+        }
+
         if s.is_empty() {
             return true;
         }
+
         let bytes = s.as_bytes();
-        // First character must be a-z, A-Z, or _
+
+        // Check first character
         match bytes[0] {
-            b'a'..=b'z' | b'A'..=b'Z' | b'_' => {}
+            // Backslash means it's already an escaped/uppercase exotic identifier
+            b'\\' => return false,
+            // Uppercase allowed only if allow_uident is true
+            b'A'..=b'Z' => {
+                if !allow_uident {
+                    return true;
+                }
+            }
+            // Lowercase and underscore always allowed
+            b'a'..=b'z' | b'_' => {}
+            // Anything else needs escaping
             _ => return true,
         }
-        // Subsequent characters must be a-z, A-Z, 0-9, ', or _
+
+        // Check subsequent characters
         for &b in &bytes[1..] {
             match b {
-                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'\'' | b'_' => {}
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'\'' | b'_' => {}
+                b'-' if allow_hyphen => {}
                 _ => return true,
             }
         }
+
         false
     }
 
     /// Write an identifier, escaping it if it's a keyword or exotic.
     /// Keywords like "switch" need to be written as \"switch" in ReScript.
     /// Exotic identifiers like "=" also need escaping: \"="
+    ///
+    /// By default, identifiers starting with uppercase letters need escaping.
+    /// Use `write_ident_allow_uident` for contexts where uppercase is allowed (module names, etc.).
     fn write_ident(&mut self, s: &str) {
-        // Check if the identifier is already in escaped form (e.g. "switch")
-        if s.starts_with('"') && s.ends_with('"') && s.len() > 2 {
-            // This is an escaped identifier - add backslash prefix
-            self.write("\\");
-            self.write(s);
-        } else if Token::is_keyword_txt(s) && s != "true" && s != "false" {
-            // Escape keywords except true/false which are boolean literals
+        self.write_ident_with_options(s, false, false);
+    }
+
+    /// Write an identifier allowing uppercase first characters (for module names, type constructors, etc.)
+    fn write_ident_allow_uident(&mut self, s: &str) {
+        self.write_ident_with_options(s, true, false);
+    }
+
+    /// Write an identifier with configurable escaping rules.
+    fn write_ident_with_options(&mut self, s: &str, allow_uident: bool, allow_hyphen: bool) {
+        if Self::needs_escaping(s, allow_uident, allow_hyphen) {
             self.write("\\\"");
             self.write(s);
             self.write("\"");
-        } else if Self::needs_exotic_escaping(s) {
-            // Escape exotic identifiers containing non-identifier characters
+        } else {
+            self.write(s);
+        }
+    }
+
+    /// Write a type variable name with proper escaping.
+    /// Type variables allow uppercase letters (e.g., 'T, 'Element).
+    fn write_type_var(&mut self, s: &str) {
+        // Type variables allow uppercase, so use allow_uident=true
+        if Self::needs_escaping(s, true, false) {
             self.write("\\\"");
             self.write(s);
             self.write("\"");
@@ -335,8 +375,8 @@ impl Printer {
             if let Longident::Lident(name) = &path.txt {
                 if let Longident::Lident(field_name) = &field.lid.txt {
                     if name == field_name && !field.opt {
-                        // Punned field - just the name
-                        return name.clone();
+                        // Punned field - just the name (with escaping)
+                        return self.ident_to_string(name);
                     }
                 }
             }
@@ -344,8 +384,8 @@ impl Printer {
 
         let mut result = String::new();
 
-        // Field name
-        result.push_str(&self.longident_to_string(&field.lid.txt));
+        // Field name (with escaping for keywords/exotic idents)
+        result.push_str(&self.lident_to_string(&field.lid.txt));
         result.push_str(": ");
 
         // Optional marker
@@ -369,6 +409,28 @@ impl Printer {
             Longident::Lapply(a, b) => {
                 format!("{}({})", self.longident_to_string(a), self.longident_to_string(b))
             }
+        }
+    }
+
+    /// Convert a longident to string, escaping the final segment if needed.
+    fn lident_to_string(&self, lid: &Longident) -> String {
+        match lid {
+            Longident::Lident(name) => self.ident_to_string(name),
+            Longident::Ldot(prefix, name) => {
+                format!("{}.{}", self.longident_to_string(prefix), self.ident_to_string(name))
+            }
+            Longident::Lapply(_, _) => {
+                "printLident: Longident.Lapply is not supported".to_string()
+            }
+        }
+    }
+
+    /// Convert an identifier to string, escaping if needed.
+    fn ident_to_string(&self, name: &str) -> String {
+        if Self::needs_escaping(name, false, false) {
+            format!("\\\"{}\"", name)
+        } else {
+            name.to_string()
         }
     }
 
@@ -430,7 +492,7 @@ impl Printer {
                 self.record_field_to_string(field)
             } else {
                 // Single field without spread - no punning
-                let mut result = self.longident_to_string(&field.lid.txt);
+                let mut result = self.lident_to_string(&field.lid.txt);
                 result.push_str(": ");
                 if field.opt {
                     result.push_str("?");
@@ -861,10 +923,17 @@ impl Printer {
 
     /// Print a structure.
     pub fn print_structure(&mut self, structure: &Structure) {
+        let mut prev_loc_end_line = 0;
         for (i, item) in structure.iter().enumerate() {
             if i > 0 {
-                self.newline();
-                self.newline();
+                // Add blank line only if there was a blank line in the source
+                let item_start_line = item.pstr_loc.loc_start.line;
+                if item_start_line - prev_loc_end_line > 1 {
+                    self.newline();
+                    self.newline();
+                } else {
+                    self.newline();
+                }
             }
             if self.comments_enabled() {
                 self.print_comments_before_loc(&item.pstr_loc);
@@ -873,6 +942,7 @@ impl Printer {
             if self.comments_enabled() {
                 self.print_trailing_comments_for_loc(&item.pstr_loc);
             }
+            prev_loc_end_line = item.pstr_loc.loc_end.line;
         }
         if self.comments_enabled() {
             self.flush_remaining_comments();
@@ -933,7 +1003,12 @@ impl Printer {
                 self.print_module_type_declaration(mtd);
             }
             StructureItemDesc::Pstr_open(od) => {
-                self.write("open ");
+                self.print_attributes(&od.popen_attributes);
+                self.write("open");
+                if od.popen_override == OverrideFlag::Override {
+                    self.write("!");
+                }
+                self.write(" ");
                 self.print_longident(&od.popen_lid.txt);
             }
             StructureItemDesc::Pstr_include(incl) => {
@@ -1037,13 +1112,14 @@ impl Printer {
             ArgLabel::Nolabel => return false,
         };
 
-        // Check if arg is a ghost ident with the same name
+        // OCaml's punning detection: label matches the ident name, no attributes, simple ident
+        if !arg.pexp_attributes.is_empty() {
+            return false;
+        }
+
         if let ExpressionDesc::Pexp_ident(lid) = &arg.pexp_desc {
             if let Longident::Lident(ident_name) = &lid.txt {
-                // Check if the location is ghost (synthetic, not in source)
-                if arg.pexp_loc.loc_ghost && ident_name == label_name {
-                    return true;
-                }
+                return ident_name == label_name;
             }
         }
 
@@ -1430,7 +1506,8 @@ impl Printer {
     fn print_expression_desc(&mut self, expr: &Expression, needs_parens: bool) {
         match &expr.pexp_desc {
             ExpressionDesc::Pexp_ident(lid) => {
-                self.print_longident(&lid.txt);
+                // Use print_lident to escape keywords (e.g., \"type", \"let")
+                self.print_lident(&lid.txt);
             }
             ExpressionDesc::Pexp_constant(c) => {
                 // Check if this is a template literal string
@@ -1617,7 +1694,7 @@ impl Printer {
                 self.write("switch ");
                 self.print_expression_in_subexpr(scrutinee);
                 self.write(" {");
-                self.indent();
+                // Cases are NOT indented - they align with 'switch'
                 for case in cases {
                     self.newline();
                     self.write("| ");
@@ -1629,7 +1706,6 @@ impl Printer {
                     self.write(" => ");
                     self.print_expression_in_subexpr(&case.pc_rhs);
                 }
-                self.dedent();
                 self.newline();
                 self.write("}");
             }
@@ -1637,7 +1713,7 @@ impl Printer {
                 self.write("try ");
                 self.print_expression_in_subexpr(body);
                 self.write(" catch {");
-                self.indent();
+                // Cases are NOT indented - they align with 'try'
                 for case in cases {
                     self.newline();
                     self.write("| ");
@@ -1649,7 +1725,6 @@ impl Printer {
                     self.write(" => ");
                     self.print_expression_in_subexpr(&case.pc_rhs);
                 }
-                self.dedent();
                 self.newline();
                 self.write("}");
             }
@@ -1694,7 +1769,23 @@ impl Printer {
                         }
                         if let Some(arg) = arg {
                             self.write("(");
-                            self.print_expression_in_subexpr(arg);
+                            // If the argument is a tuple, unwrap it to avoid double parens
+                            match &arg.pexp_desc {
+                                ExpressionDesc::Pexp_tuple(exprs) => {
+                                    for (i, e) in exprs.iter().enumerate() {
+                                        if i > 0 {
+                                            self.write(", ");
+                                        }
+                                        self.print_expression_in_subexpr(e);
+                                    }
+                                }
+                                ExpressionDesc::Pexp_construct(inner_lid, None)
+                                    if inner_lid.txt.to_string() == "()" =>
+                                {
+                                    // Unit argument - print nothing inside parens
+                                }
+                                _ => self.print_expression_in_subexpr(arg),
+                            }
                             self.write(")");
                         }
                     }
@@ -1734,7 +1825,8 @@ impl Printer {
                 if self.comments_enabled() {
                     self.print_comments_before_loc(&lid.loc);
                 }
-                self.print_longident(&lid.txt);
+                // Use print_lident to escape keywords like \"type"
+                self.print_lident(&lid.txt);
                 if self.comments_enabled() {
                     self.print_trailing_comments_for_loc(&lid.loc);
                 }
@@ -1745,7 +1837,8 @@ impl Printer {
                 if self.comments_enabled() {
                     self.print_comments_before_loc(&lid.loc);
                 }
-                self.print_longident(&lid.txt);
+                // Use print_lident to escape keywords like \"type"
+                self.print_lident(&lid.txt);
                 if self.comments_enabled() {
                     self.print_trailing_comments_for_loc(&lid.loc);
                 }
@@ -1880,8 +1973,9 @@ impl Printer {
                 self.write("}");
             }
             ExpressionDesc::Pexp_assert(expr) => {
-                self.write("assert ");
-                self.print_expression_in_subexpr(expr);
+                self.write("assert(");
+                self.print_expression(expr);
+                self.write(")");
             }
             ExpressionDesc::Pexp_pack(modexpr) => {
                 self.write("module(");
@@ -2000,7 +2094,8 @@ impl Printer {
                     return;
                 }
                 self.write("%");
-                self.write_ident(&ext.0.txt);
+                // Extension names are not escaped (e.g., %let not %\"let")
+                self.write(&ext.0.txt);
                 self.print_extension_payload(&ext.1);
             }
             ExpressionDesc::Pexp_newtype(name, body) => {
@@ -2290,7 +2385,7 @@ impl Printer {
             }
             CoreTypeDesc::Ptyp_var(name) => {
                 self.write("'");
-                self.write(name);
+                self.write_type_var(name);
             }
             CoreTypeDesc::Ptyp_arrow { .. } => {
                 self.print_arrow_type(typ, allow_breaks);
@@ -2323,7 +2418,8 @@ impl Printer {
             }
             CoreTypeDesc::Ptyp_constr(lid, args) => {
                 // ReScript uses angle bracket syntax: constr<args>
-                self.print_longident(&lid.txt);
+                // Use print_lident to escape the final segment (e.g., Module.\"type")
+                self.print_lident(&lid.txt);
                 if !args.is_empty() {
                     self.write("<");
                     for (i, arg) in args.iter().enumerate() {
@@ -2378,7 +2474,15 @@ impl Printer {
                 self.write("}");
             }
             CoreTypeDesc::Ptyp_alias(typ, name) => {
+                // Arrow types need parens when inside an alias
+                let needs_parens = matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+                if needs_parens {
+                    self.write("(");
+                }
                 self.print_core_type_with_comments(typ, allow_breaks);
+                if needs_parens {
+                    self.write(")");
+                }
                 self.write(" as '");
                 self.write(name);
             }
@@ -2429,9 +2533,25 @@ impl Printer {
     }
 
     fn print_arrow_type(&mut self, typ: &CoreType, allow_breaks: bool) {
+        // Get the arity from the outermost arrow type
+        let arity = if let CoreTypeDesc::Ptyp_arrow { arity, .. } = &typ.ptyp_desc {
+            *arity
+        } else {
+            Arity::Unknown
+        };
+
+        // Collect arguments up to the arity limit
+        let max_arity = match arity {
+            Arity::Full(n) => n,
+            Arity::Unknown => usize::MAX,
+        };
+
         let mut args: Vec<&TypeArg> = vec![];
         let mut current = typ;
         while let CoreTypeDesc::Ptyp_arrow { arg, ret, .. } = &current.ptyp_desc {
+            if args.len() >= max_arity {
+                break;
+            }
             args.push(arg.as_ref());
             current = ret.as_ref();
         }
@@ -2443,8 +2563,16 @@ impl Printer {
         }
 
         let has_label = args.iter().any(|arg| !matches!(arg.lbl, ArgLabel::Nolabel));
+        let has_attrs = args.iter().any(|arg| !arg.attrs.is_empty());
 
-        if has_label {
+        // Use uncurried format (a, b) => c when:
+        // - there are labels, or
+        // - there are multiple arguments and arity is known
+        let use_uncurried = has_label
+            || has_attrs
+            || (args.len() > 1 && matches!(arity, Arity::Full(_)));
+
+        if use_uncurried {
             self.write("(");
             for (i, arg) in args.iter().enumerate() {
                 if i > 0 {
@@ -2481,7 +2609,7 @@ impl Printer {
             return;
         }
 
-        // Right associative arrow chain.
+        // Curried format: a => b => c (single argument with no label)
         for (i, arg) in args.iter().enumerate() {
             if i > 0 {
                 self.write(" => ");
@@ -2720,10 +2848,17 @@ impl Printer {
 
     /// Print a signature (interface file content).
     pub fn print_signature(&mut self, signature: &[SignatureItem]) {
+        let mut prev_loc_end_line = 0;
         for (i, item) in signature.iter().enumerate() {
             if i > 0 {
-                self.newline();
-                self.newline();
+                // Add blank line only if there was a blank line in the source
+                let item_start_line = item.psig_loc.loc_start.line;
+                if item_start_line - prev_loc_end_line > 1 {
+                    self.newline();
+                    self.newline();
+                } else {
+                    self.newline();
+                }
             }
             if self.comments_enabled() {
                 self.print_comments_before_loc(&item.psig_loc);
@@ -2732,6 +2867,7 @@ impl Printer {
             if self.comments_enabled() {
                 self.print_trailing_comments_for_loc(&item.psig_loc);
             }
+            prev_loc_end_line = item.psig_loc.loc_end.line;
         }
         if self.comments_enabled() {
             self.flush_remaining_comments();
@@ -2742,10 +2878,7 @@ impl Printer {
     pub fn print_signature_item(&mut self, item: &SignatureItem) {
         match &item.psig_desc {
             SignatureItemDesc::Psig_value(vd) => {
-                self.write("let ");
-                self.write_ident(&vd.pval_name.txt);
-                self.write(": ");
-                self.print_core_type(&vd.pval_type);
+                self.print_value_description(vd);
             }
             SignatureItemDesc::Psig_type(rec_flag, decls) => {
                 self.print_type_declarations(*rec_flag, decls);
@@ -2786,6 +2919,7 @@ impl Printer {
                 self.print_module_type_declaration(mtd);
             }
             SignatureItemDesc::Psig_open(od) => {
+                self.print_attributes(&od.popen_attributes);
                 self.write("open");
                 if od.popen_override == OverrideFlag::Override {
                     self.write("!");
@@ -2936,35 +3070,124 @@ impl Printer {
                 }
             }
             TypeKind::Ptype_variant(constructors) => {
+                // Print manifest if present (e.g., type t = User.t = ...)
+                if let Some(manifest) = &decl.ptype_manifest {
+                    self.write(" = ");
+                    self.print_core_type(manifest);
+                }
                 self.write(" =");
                 if decl.ptype_private == PrivateFlag::Private {
                     self.write(" private");
                 }
-                for ctor in constructors {
-                    self.newline();
-                    self.write("  | ");
-                    self.print_constructor_declaration(ctor);
-                }
+                self.print_constructor_declarations(constructors, &decl.ptype_loc);
             }
             TypeKind::Ptype_record(fields) => {
+                // Print manifest if present (e.g., type t = User.t = {...})
+                if let Some(manifest) = &decl.ptype_manifest {
+                    self.write(" = ");
+                    self.print_core_type(manifest);
+                }
                 self.write(" = ");
                 if decl.ptype_private == PrivateFlag::Private {
                     self.write("private ");
                 }
-                self.write("{");
-                for field in fields {
-                    self.newline();
-                    self.write("  ");
-                    self.print_label_declaration(field);
-                    // Add comma after each field (including last)
-                    self.write(",");
-                }
-                self.newline();
-                self.write("}");
+                self.print_record_declaration(fields, &decl.ptype_loc);
             }
             TypeKind::Ptype_open => {
-                self.write(" = ..");
+                self.write(" = ");
+                if decl.ptype_private == PrivateFlag::Private {
+                    self.write("private ");
+                }
+                self.write("..");
             }
+        }
+
+        // Print type constraints
+        self.print_type_constraints(&decl.ptype_cstrs);
+    }
+
+    /// Print constructor declarations for a variant type.
+    fn print_constructor_declarations(
+        &mut self,
+        constructors: &[ConstructorDeclaration],
+        loc: &Location,
+    ) {
+        if constructors.is_empty() {
+            return;
+        }
+
+        // Check if the variant should be printed on multiple lines
+        // Based on whether it spans multiple lines in the source
+        let force_break = if let (Some(first), Some(last)) =
+            (constructors.first(), constructors.last())
+        {
+            first.pcd_loc.loc_start.line < last.pcd_loc.loc_end.line
+        } else {
+            false
+        };
+
+        if force_break {
+            // Multi-line format with pipe before each constructor
+            for ctor in constructors {
+                self.newline();
+                self.write("  | ");
+                self.print_constructor_declaration(ctor);
+            }
+        } else {
+            // Single-line format
+            self.write(" ");
+            for (i, ctor) in constructors.iter().enumerate() {
+                if i > 0 {
+                    self.write(" | ");
+                }
+                self.print_constructor_declaration(ctor);
+            }
+        }
+    }
+
+    /// Print type constraints (constraint 'a = 'b).
+    fn print_type_constraints(&mut self, cstrs: &[(CoreType, CoreType, Location)]) {
+        for (t1, t2, _loc) in cstrs {
+            self.write(" constraint ");
+            self.print_core_type(t1);
+            self.write(" = ");
+            self.print_core_type(t2);
+        }
+    }
+
+    /// Print a record declaration with proper formatting.
+    /// Uses single-line format for short records and multi-line for longer ones.
+    fn print_record_declaration(&mut self, fields: &[LabelDeclaration], loc: &Location) {
+        if fields.is_empty() {
+            self.write("{}");
+            return;
+        }
+
+        // Check if the record should be printed on multiple lines
+        // Based on whether it spans multiple lines in the source
+        let force_break = loc.loc_start.line < loc.loc_end.line;
+
+        if force_break {
+            // Multi-line format
+            self.write("{");
+            for field in fields {
+                self.newline();
+                self.write("  ");
+                self.print_label_declaration(field);
+                self.write(",");
+            }
+            self.newline();
+            self.write("}");
+        } else {
+            // Single-line format
+            self.write("{");
+            for (i, field) in fields.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.print_label_declaration(field);
+            }
+            self.write("}");
         }
     }
 
@@ -2986,6 +3209,7 @@ impl Printer {
             }
             return;
         }
+        // Constructor names are not escaped - they're expected to start with uppercase
         self.write(&ctor.pcd_name.txt);
         if self.comments_enabled() {
             self.print_trailing_comments_for_loc(&ctor.pcd_name.loc);
@@ -3027,13 +3251,20 @@ impl Printer {
         if self.comments_enabled() {
             self.print_comments_before_loc(&field.pld_loc);
         }
+        // Print attributes inline before the field
+        self.print_attributes_inline(&field.pld_attributes);
         if field.pld_mutable == MutableFlag::Mutable {
             self.write("mutable ");
         }
         if self.comments_enabled() {
             self.print_comments_before_loc(&field.pld_name.loc);
         }
-        self.write(&field.pld_name.txt);
+        // Use write_ident to escape keywords like "module", "let", etc.
+        self.write_ident(&field.pld_name.txt);
+        // Print optional marker after field name
+        if field.pld_optional {
+            self.write("?");
+        }
         if self.comments_enabled() {
             self.print_trailing_comments_for_loc(&field.pld_name.loc);
         }
@@ -3041,6 +3272,17 @@ impl Printer {
         self.print_core_type(&field.pld_type);
         if self.comments_enabled() {
             self.print_trailing_comments_for_loc(&field.pld_loc);
+        }
+    }
+
+    /// Print attributes inline (without newlines).
+    fn print_attributes_inline(&mut self, attrs: &Attributes) {
+        for attr in attrs {
+            if !Self::is_internal_attribute(attr) {
+                self.write("@");
+                self.print_attribute(attr);
+                self.write(" ");
+            }
         }
     }
 
@@ -3096,31 +3338,84 @@ impl Printer {
     /// Print a type extension.
     fn print_type_extension(&mut self, ext: &TypeExtension) {
         self.write("type ");
-        self.print_longident(&ext.ptyext_path.txt);
+        // Use print_lident to escape keywords in the type path
+        self.print_lident(&ext.ptyext_path.txt);
+
+        // Print type parameters if any
+        if !ext.ptyext_params.is_empty() {
+            self.write("<");
+            for (i, (typ, _variance)) in ext.ptyext_params.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.print_core_type(typ);
+            }
+            self.write(">");
+        }
+
         self.write(" +=");
         if ext.ptyext_private == PrivateFlag::Private {
             self.write(" private");
         }
-        for ctor in &ext.ptyext_constructors {
-            self.newline();
-            self.write("| ");
-            self.print_extension_constructor(ctor);
+
+        // Determine if we should break to a new line
+        // Based on OCaml: break if first constructor is on different line than path ends,
+        // or if constructors span multiple lines
+        let force_break = match (
+            ext.ptyext_constructors.first(),
+            ext.ptyext_constructors.last(),
+        ) {
+            (Some(first), Some(last)) => {
+                first.pext_loc.loc_start.line > ext.ptyext_path.loc.loc_end.line
+                    || first.pext_loc.loc_start.line < last.pext_loc.loc_end.line
+            }
+            _ => false,
+        };
+
+        if force_break {
+            for ctor in &ext.ptyext_constructors {
+                self.newline();
+                self.write("| ");
+                self.print_extension_constructor(ctor);
+            }
+        } else {
+            // Single constructor on same line - print inline with space
+            for (i, ctor) in ext.ptyext_constructors.iter().enumerate() {
+                if i > 0 {
+                    self.newline();
+                    self.write("| ");
+                } else {
+                    self.write(" ");
+                }
+                self.print_extension_constructor(ctor);
+            }
         }
     }
 
     /// Print a value description.
     fn print_value_description(&mut self, vd: &ValueDescription) {
-        self.write("external ");
+        // Print attributes first
+        self.print_attributes(&vd.pval_attributes);
+
+        // "external" if there are primitives, otherwise "let"
+        let is_external = !vd.pval_prim.is_empty();
+        if is_external {
+            self.write("external ");
+        } else {
+            self.write("let ");
+        }
+
         if self.comments_enabled() {
             self.print_comments_before_loc(&vd.pval_name.loc);
         }
-        self.write(&vd.pval_name.txt);
+        self.write_ident(&vd.pval_name.txt);
         if self.comments_enabled() {
             self.print_trailing_comments_for_loc(&vd.pval_name.loc);
         }
         self.write(": ");
         self.print_core_type(&vd.pval_type);
-        if !vd.pval_prim.is_empty() {
+
+        if is_external {
             self.write(" = ");
             for (i, prim) in vd.pval_prim.iter().enumerate() {
                 if i > 0 {
@@ -3301,18 +3596,60 @@ impl Printer {
     // ========================================================================
 
     /// Print a longident.
+    /// Print a longident without any escaping.
+    /// This is used for module paths where all segments are expected to be valid module names.
+    /// Matches OCaml's print_longident function.
     fn print_longident(&mut self, lid: &Longident) {
         match lid {
-            Longident::Lident(s) => self.write_ident(s),
+            Longident::Lident(s) => self.write(s),
             Longident::Ldot(prefix, s) => {
                 self.print_longident(prefix);
                 self.write(".");
-                self.write_ident(s);
+                self.write(s);
             }
             Longident::Lapply(f, arg) => {
                 self.print_longident(f);
                 self.write("(");
                 self.print_longident(arg);
+                self.write(")");
+            }
+        }
+    }
+
+    /// Print a longident with escaping for the final segment only.
+    /// Path segments (module names) are not escaped, but the final segment is escaped
+    /// if it's a keyword or exotic identifier.
+    /// Matches OCaml's print_lident function.
+    fn print_lident(&mut self, lid: &Longident) {
+        match lid {
+            Longident::Lident(s) => self.write_ident(s),
+            Longident::Ldot(prefix, s) => {
+                // Print the prefix path without escaping
+                self.print_longident_path_only(prefix);
+                self.write(".");
+                // Escape the final segment
+                self.write_ident(s);
+            }
+            Longident::Lapply(_, _) => {
+                // Lapply is not supported for lident
+                self.write("printLident: Longident.Lapply is not supported");
+            }
+        }
+    }
+
+    /// Print the path part of a longident (all segments except final) without escaping.
+    fn print_longident_path_only(&mut self, lid: &Longident) {
+        match lid {
+            Longident::Lident(s) => self.write(s),
+            Longident::Ldot(prefix, s) => {
+                self.print_longident_path_only(prefix);
+                self.write(".");
+                self.write(s);
+            }
+            Longident::Lapply(f, arg) => {
+                self.print_longident_path_only(f);
+                self.write("(");
+                self.print_longident_path_only(arg);
                 self.write(")");
             }
         }
