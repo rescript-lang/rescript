@@ -889,6 +889,32 @@ pub fn partition_doc_comment_attributes(attrs: &Attributes) -> (Vec<&Attribute>,
     (doc_comments, others)
 }
 
+// ============================================================================
+// Pattern Analysis
+// ============================================================================
+
+/// Collect all patterns in an or-pattern chain.
+/// For example, `Red | Blue | Green` becomes `[Red, Blue, Green]`.
+/// For `Red | (Blue | Green)`, this becomes `[Red, Ppat_or(Blue, Green)]`,
+/// preserving the nested or-pattern (which should be wrapped in parens when printed).
+pub fn collect_or_pattern_chain(pat: &Pattern) -> Vec<&Pattern> {
+    fn loop_collect<'a>(pattern: &'a Pattern, chain: &mut Vec<&'a Pattern>) {
+        match &pattern.ppat_desc {
+            PatternDesc::Ppat_or(left, right) => {
+                loop_collect(left, chain);
+                chain.push(right.as_ref());
+            }
+            _ => {
+                chain.push(pattern);
+            }
+        }
+    }
+
+    let mut result = Vec::new();
+    loop_collect(pat, &mut result);
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

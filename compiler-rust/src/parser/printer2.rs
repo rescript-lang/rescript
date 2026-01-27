@@ -2566,10 +2566,38 @@ pub fn print_pattern(
             print_record_pattern(state, fields, &closed, cmt_tbl)
         }
         // p | p
-        PatternDesc::Ppat_or(p1, p2) => {
-            let p1_doc = print_pattern(state, p1, cmt_tbl);
-            let p2_doc = print_pattern(state, p2, cmt_tbl);
-            Doc::group(Doc::concat(vec![p1_doc, Doc::text(" | "), p2_doc]))
+        PatternDesc::Ppat_or(_, _) => {
+            // Collect the entire or-chain into a flat list
+            let or_chain = parsetree_viewer::collect_or_pattern_chain(pat);
+            let docs: Vec<Doc> = or_chain
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let pattern_doc = print_pattern(state, p, cmt_tbl);
+                    // Wrap nested or-patterns in parentheses
+                    let pattern_doc = if matches!(&p.ppat_desc, PatternDesc::Ppat_or(_, _)) {
+                        add_parens(pattern_doc)
+                    } else {
+                        pattern_doc
+                    };
+                    if i == 0 {
+                        pattern_doc
+                    } else {
+                        Doc::concat(vec![Doc::line(), Doc::text("| "), pattern_doc])
+                    }
+                })
+                .collect();
+
+            // Check if the pattern spans multiple lines in source
+            let is_spread_over_multiple_lines = if let (Some(first), Some(last)) =
+                (or_chain.first(), or_chain.last())
+            {
+                first.ppat_loc.loc_start.line < last.ppat_loc.loc_end.line
+            } else {
+                false
+            };
+
+            Doc::breakable_group(Doc::concat(docs), is_spread_over_multiple_lines)
         }
         // p : type
         PatternDesc::Ppat_constraint(pat, typ) => {
