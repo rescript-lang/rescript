@@ -1254,8 +1254,10 @@ fn parse_poly_variant_pattern(p: &mut Parser<'_>) -> Pattern {
         p.next();
         if p.token == Token::Rparen {
             // Empty: #tag()
-            p.next();
+            // OCaml creates the unit pattern location BEFORE consuming `)`,
+            // so the location only covers the `(` character.
             let unit_loc = p.mk_loc(&tuple_start, &p.prev_end_pos);
+            p.next();
             Some(Box::new(ast_helper::make_construct_pat(
                 Longident::Lident("()".to_string()),
                 None,

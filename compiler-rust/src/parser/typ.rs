@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use crate::location::{Located, Location};
+use crate::location::{Located, Location, Position};
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
@@ -1047,6 +1047,39 @@ fn parse_record_or_object_type(p: &mut Parser<'_>) -> CoreType {
     // Note: Don't parse arrow rest here - let the caller (parse_typ_expr_inner) handle it.
     // This is important for correct precedence of arrows in function return types.
     typ
+}
+
+/// Parse object type body after `{` has been consumed.
+/// This is used by constructor argument parsing where OCaml captures start_pos AFTER consuming `{`.
+/// The caller should pass the position AFTER consuming `{` as `start_pos`.
+pub fn parse_object_type_body(p: &mut Parser<'_>, start_pos: Position) -> CoreType {
+    // Check for open/closed markers: {. ... } or {.. ... }
+    let closed = if p.token == Token::DotDot {
+        p.next();
+        ClosedFlag::Open
+    } else if p.token == Token::Dot {
+        p.next();
+        ClosedFlag::Closed
+    } else {
+        ClosedFlag::Closed
+    };
+
+    let fields = parse_object_fields(p);
+    p.expect(Token::Rbrace);
+    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let typ = CoreType {
+        ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
+        ptyp_loc: loc,
+        ptyp_attributes: vec![],
+    };
+    // Handle type alias: {...} as 'name
+    let typ = parse_type_alias(p, typ);
+    // Handle arrow rest if present
+    if p.token == Token::EqualGreater {
+        parse_arrow_type_rest(p, typ, start_pos)
+    } else {
+        typ
+    }
 }
 
 /// Parse object fields.

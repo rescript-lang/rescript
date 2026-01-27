@@ -1557,11 +1557,12 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 p.next();
                 // Handle empty parens: #tag() is a variant with unit argument
                 if p.token == Token::Rparen {
-                    let unit_loc = p.mk_loc(&p.start_pos, &p.start_pos);
                     p.next();
+                    // OCaml uses the full () location for both the expression and the longident
+                    let unit_loc = p.mk_loc(&lparen_pos, &p.prev_end_pos);
                     Some(Box::new(Expression {
                         pexp_desc: ExpressionDesc::Pexp_construct(
-                            mknoloc(Longident::Lident("()".to_string())),
+                            with_loc(Longident::Lident("()".to_string()), unit_loc.clone()),
                             None,
                         ),
                         pexp_loc: unit_loc,

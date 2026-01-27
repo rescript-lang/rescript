@@ -1385,14 +1385,14 @@ fn parse_paren_functor_module_type(p: &mut Parser<'_>) -> ModuleType {
 
     // OCaml includes the opening `(` in the outermost Pmty_functor location
     // For inner functors (in multi-param), use the param's start position
-    let params_len = params.len();
+    // After enumerate().rev(), idx==0 is the first param in original order
     params
         .into_iter()
         .enumerate()
         .rev()
         .fold(body, |acc, (idx, param)| {
-            // Last param in iteration (first in original order) uses functor_start
-            let start = if idx == params_len - 1 {
+            // First param in original order (idx==0) uses functor_start (opening paren)
+            let start = if idx == 0 {
                 functor_start.clone()
             } else {
                 param.start_pos
@@ -2992,8 +2992,53 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
             ConstructorArguments::Pcstr_record(labels)
         } else {
             let mut args = vec![];
+            // OCaml's parse_constr_decl_args has special handling for object types
+            // ONLY for the first argument: it captures start_pos AFTER consuming `{`,
+            // so the object type location excludes the opening brace.
+            // Subsequent arguments use parse_comma_delimited_region with normal parse_typ_expr.
+            let mut is_first = true;
             while p.token != Token::Rparen && p.token != Token::Eof {
-                args.push(typ::parse_typ_expr(p));
+                let arg = if is_first && p.token == Token::Lbrace {
+                    // Check if this is an object type (has ., .., ..., or string keys)
+                    let is_object = p.lookahead(|state| {
+                        state.next(); // consume {
+                        // Skip any leading attributes
+                        while state.token == Token::At {
+                            state.next();
+                            if matches!(state.token, Token::Lident(_) | Token::Uident(_) | Token::Module) {
+                                state.next();
+                            }
+                            if state.token == Token::Lparen {
+                                let mut depth = 1;
+                                state.next();
+                                while depth > 0 && state.token != Token::Eof {
+                                    match state.token {
+                                        Token::Lparen => depth += 1,
+                                        Token::Rparen => depth -= 1,
+                                        _ => {}
+                                    }
+                                    state.next();
+                                }
+                            }
+                        }
+                        matches!(
+                            state.token,
+                            Token::String(_) | Token::Dot | Token::DotDot | Token::DotDotDot | Token::Rbrace
+                        )
+                    });
+                    if is_object {
+                        // Consume `{` and capture start_pos AFTER (like OCaml)
+                        p.next();
+                        let start_pos = p.start_pos.clone();
+                        typ::parse_object_type_body(p, start_pos)
+                    } else {
+                        typ::parse_typ_expr(p)
+                    }
+                } else {
+                    typ::parse_typ_expr(p)
+                };
+                args.push(arg);
+                is_first = false;
                 if !p.optional(&Token::Comma) {
                     break;
                 }
