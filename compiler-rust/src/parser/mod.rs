@@ -48,6 +48,8 @@ pub mod expr;
 pub mod grammar;
 pub mod longident;
 pub mod module;
+pub mod parens;
+pub mod parsetree_viewer;
 pub mod pattern;
 pub mod printer;
 pub mod printer2;
