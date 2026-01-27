@@ -2830,12 +2830,10 @@ fn mk_react_jsx(
     ];
     args.extend(key_and_unit);
 
+    // Note: jsx_expr uses empty_loc() for ghost locations - don't overwrite it
+    // The attributes go on the outer Pexp_apply, not on the jsx function ident
     ExpressionDesc::Pexp_apply {
-        funct: Box::new(Expression {
-            pexp_desc: jsx_expr.pexp_desc,
-            pexp_loc: loc.clone(),
-            pexp_attributes: attrs.clone(),
-        }),
+        funct: Box::new(jsx_expr),
         args,
         partial: false,
         transformed_jsx: true,
