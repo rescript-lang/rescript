@@ -1999,6 +1999,12 @@ fn print_expression_block(
         }
         ExpressionDesc::Pexp_sequence(e1, e2) => {
             let e1_doc = print_expression_with_comments(state, e1, cmt_tbl);
+            // Check if expression needs parentheses
+            let e1_doc = match parens::expr(e1) {
+                ParenKind::Parenthesized => add_parens(e1_doc),
+                ParenKind::Braced(loc) => print_braces(e1_doc, e1, loc),
+                ParenKind::Nothing => e1_doc,
+            };
             let e2_doc = print_expression_block(state, false, e2, cmt_tbl);
             if braces {
                 Doc::concat(vec![
@@ -2104,6 +2110,12 @@ fn print_expression_block(
         }
         _ => {
             let doc = print_expression_with_comments(state, e, cmt_tbl);
+            // Check if expression needs parentheses
+            let doc = match parens::expr(e) {
+                ParenKind::Parenthesized => add_parens(doc),
+                ParenKind::Braced(loc) => print_braces(doc, e, loc),
+                ParenKind::Nothing => doc,
+            };
             if braces {
                 Doc::concat(vec![
                     Doc::lbrace(),
