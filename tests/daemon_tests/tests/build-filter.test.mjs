@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collectStream } from "../helpers/grpc-client.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests the --filter CLI flag. This flag passes a regex to the daemon that
 // filters which modules are included in compilation.

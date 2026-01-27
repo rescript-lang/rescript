@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests the --warn-error CLI flag. This flag is passed through the daemon to
 // bsc as -warn-error <value>, promoting specific warnings to errors.

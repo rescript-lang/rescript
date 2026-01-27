@@ -61,7 +61,7 @@ tests/daemon_tests/
 │   ├── sandbox.mjs             # createSandbox(), removeSandbox()
 │   ├── daemon.mjs              # startDaemon(), stopDaemon()
 │   ├── grpc-client.mjs         # createClient(), createDebugClient(), collectStream()
-│   ├── test-context-v2.mjs     # runDaemonTest() - main test harness
+│   ├── test-context.mjs     # runDaemonTest() - main test harness
 │   ├── otel-receiver.mjs       # OTLP HTTP receiver for collecting spans
 │   ├── assertions.mjs          # countSourceFiles(), countModules(), getAllPackages()
 │   ├── process.mjs             # createRescriptCli() with build(), clean(), format(), spawnWatch()
@@ -76,12 +76,12 @@ tests/daemon_tests/
 
 ## Key Helpers
 
-### `helpers/test-context-v2.mjs`
+### `helpers/test-context.mjs`
 
 The main test harness. Use `runDaemonTest()` for all daemon tests:
 
 ```javascript
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 it("my test", () =>
   runDaemonTest(async ({ sandbox, build, clean, watch, writeFile, deleteFile }) => {
@@ -133,7 +133,7 @@ The context provides:
 
 ```javascript
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 describe("my-feature", () => {
   it("does something", () =>
@@ -291,7 +291,7 @@ rm -f /tmp/rescript-*.sock
 ### Snapshot failures
 
 When snapshots fail, the diff shows what changed. Common causes:
-- New spans added to the daemon (update `SUMMARY_SPAN_NAMES` in test-context-v2.mjs)
+- New spans added to the daemon (update `SUMMARY_SPAN_NAMES` in test-context.mjs)
 - Attribute values changed (check if the change is expected)
 - Build order changed (parallel spans are sorted alphabetically, but dependency order matters)
 

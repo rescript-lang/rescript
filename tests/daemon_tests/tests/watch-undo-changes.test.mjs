@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests that undoing changes in watch mode leaves no stale artifacts.
 // The daemon's incremental rebuild should correctly handle "undo" scenarios

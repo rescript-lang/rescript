@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests concurrent client access to the daemon. The core value proposition of
 // the daemon architecture is eliminating lockfile conflicts: multiple CLI

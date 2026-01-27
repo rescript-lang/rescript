@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests that watch mode responds to file changes. The watch client uses
 // notify-rs to detect file system changes and sends NotifyFileChange RPCs to

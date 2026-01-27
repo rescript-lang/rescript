@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests file deletion scenarios. The daemon holds the module graph in memory,
 // so deleting a source file must correctly invalidate that module and report

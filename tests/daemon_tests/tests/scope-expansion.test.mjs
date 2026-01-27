@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // The daemon lazily loads packages based on which working_directory a client
 // connects from. When a build is requested from a leaf package, only that

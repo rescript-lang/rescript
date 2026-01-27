@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests the Build RPC: a client connects, the daemon compiles all packages in
 // scope, and emits build lifecycle events. Verifies the basic happy path, that

@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
 import { createSandbox, removeSandbox } from "../helpers/sandbox.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests the Clean command. Clean removes build artifacts from disk (compiler
 // assets, generated JS files) but the daemon remains running and can build

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests the GetCompilerArgs RPC. The daemon creates a ProjectContext at startup
 // (parsing root rescript.json + resolving monorepo context), but does NOT load

@@ -1,7 +1,14 @@
 import child_process from "node:child_process";
-import { closeSync, existsSync, openSync, readFileSync } from "node:fs";
+import {
+  closeSync,
+  createWriteStream,
+  existsSync,
+  openSync,
+  readFileSync,
+} from "node:fs";
 import { mkdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import { setTimeout as sleep } from "node:timers/promises";
 // Vitest uses Vite's module resolution which doesn't support Node.js subpath
 // imports (#cli/bins). We resolve the binary path directly instead.
@@ -39,17 +46,24 @@ export async function startDaemon(projectRoot, options = {}) {
   const daemonLogPath = join(projectRoot, "lib", "bs", "daemon.log");
   const daemonErrPath = join(projectRoot, "lib", "bs", "daemon.err");
   const outFd = openSync(daemonLogPath, "w");
-  const errFd = openSync(daemonErrPath, "w");
 
   const proc = child_process.spawn(rescript_exe, ["daemon", projectRoot], {
-    stdio: ["ignore", outFd, errFd],
+    stdio: ["ignore", outFd, "pipe"],
     detached: true,
     env,
   });
 
-  // Close the file descriptors in the parent process
+  // Close the stdout fd in the parent process
   closeSync(outFd);
-  closeSync(errFd);
+
+  // Pipe stderr through a timestamper into the error log file
+  const errStream = createWriteStream(daemonErrPath);
+  const rl = createInterface({ input: proc.stderr });
+  rl.on("line", line => {
+    errStream.write(`[${new Date().toISOString()}] ${line}\n`);
+  });
+  rl.on("close", () => errStream.end());
+
   proc.unref();
 
   // Poll for socket path file + ping with 5s timeout
@@ -87,9 +101,25 @@ export async function startDaemon(projectRoot, options = {}) {
   try {
     proc.kill();
   } catch {}
+
+  // Read daemon logs for diagnostics
+  let logInfo = "";
+  try {
+    const log = readFileSync(daemonLogPath, "utf-8").trim();
+    if (log) logInfo += `\n--- daemon.log ---\n${log}`;
+  } catch {}
+  try {
+    const err = readFileSync(daemonErrPath, "utf-8").trim();
+    if (err) logInfo += `\n--- daemon.err ---\n${err}`;
+  } catch {}
+
   throw new Error(
     `Daemon failed to start within 5s at ${projectRoot}` +
-      (lastError ? `: ${lastError.message}` : ""),
+      (lastError ? `: ${lastError.message}` : "") +
+      (socketPath
+        ? `\nSocket path: ${socketPath}`
+        : "\nSocket path file not found") +
+      logInfo,
   );
 }
 

@@ -1,7 +1,7 @@
 import { rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests file rename scenarios where a module has both .res and .resi files.
 // When only the .res file is renamed but the .resi is left behind, the daemon

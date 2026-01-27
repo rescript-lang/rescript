@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests that compiler warnings from non-recompiled modules persist across
 // incremental rebuilds. The daemon must cache and replay warnings from modules

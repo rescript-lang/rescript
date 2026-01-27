@@ -6,7 +6,7 @@
  */
 
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 describe("otel", () => {
   it("emits spans for build operations", () =>

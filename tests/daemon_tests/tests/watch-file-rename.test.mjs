@@ -1,7 +1,7 @@
 import { rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests file rename scenarios. A rename is effectively a delete + create at
 // the filesystem level. The daemon must handle this correctly: the old module

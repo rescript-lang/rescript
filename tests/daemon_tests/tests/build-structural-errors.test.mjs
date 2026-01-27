@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests structural build errors: dependency cycles and duplicate modules.
 // These correspond to bash tests compile/09 and compile/10 in rewatch/tests.

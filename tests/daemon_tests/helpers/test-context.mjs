@@ -5,9 +5,9 @@
  * Spans are converted to a nested tree and serialized for comparison.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
+import path, { join } from "node:path";
 import { expect } from "vitest";
 import { startDaemon, stopDaemon } from "./daemon.mjs";
 import {
@@ -313,6 +313,88 @@ export function normalizePaths(summary, sandboxPath) {
 }
 
 /**
+ * Read a file's contents, returning empty string if it doesn't exist.
+ * @param {string} filePath
+ * @returns {string}
+ */
+function readFileSafe(filePath) {
+  try {
+    return readFileSync(filePath, "utf-8");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Dump diagnostic information to stderr when a test fails or times out.
+ * @param {string|null} sandbox - Sandbox path (for daemon log files)
+ * @param {object|null} daemon - Daemon process info
+ * @param {object|null} otelReceiver - OTEL receiver (for collected spans)
+ */
+function dumpDiagnostics(sandbox, daemon, otelReceiver) {
+  const now = new Date().toISOString();
+  console.error(`\n=== DAEMON TEST DIAGNOSTICS (${now}) ===\n`);
+
+  // Daemon process state
+  if (daemon) {
+    const pid = daemon.process.pid;
+    let alive = false;
+    try {
+      process.kill(pid, 0);
+      alive = true;
+    } catch {}
+    console.error(`Daemon PID: ${pid}, alive: ${alive}`);
+  } else {
+    console.error("Daemon: not started");
+  }
+
+  // Daemon logs
+  if (sandbox) {
+    const logContent = readFileSafe(join(sandbox, "lib", "bs", "daemon.log"));
+    const errContent = readFileSafe(join(sandbox, "lib", "bs", "daemon.err"));
+
+    if (logContent) {
+      console.error("\n--- daemon.log ---");
+      console.error(logContent);
+    } else {
+      console.error("\n--- daemon.log: (empty) ---");
+    }
+
+    if (errContent) {
+      console.error("\n--- daemon.err ---");
+      console.error(errContent);
+    }
+  }
+
+  // Collected OTEL spans
+  if (otelReceiver) {
+    const spans = otelReceiver.getSpans();
+    console.error(`\n--- OTEL spans collected: ${spans.length} ---`);
+    if (spans.length > 0) {
+      for (const span of spans) {
+        const startMs = span.startTimeUnixNano
+          ? new Date(
+              Number(BigInt(span.startTimeUnixNano) / 1_000_000n),
+            ).toISOString()
+          : "?";
+        const duration =
+          span.endTimeUnixNano && span.startTimeUnixNano
+            ? Number(
+                (BigInt(span.endTimeUnixNano) -
+                  BigInt(span.startTimeUnixNano)) /
+                  1_000_000n,
+              )
+            : "?";
+        const status = span.status?.code ? ` status=${span.status.code}` : "";
+        console.error(`  [${startMs}] ${span.name} (${duration}ms)${status}`);
+      }
+    }
+  }
+
+  console.error("\n=== END DIAGNOSTICS ===\n");
+}
+
+/**
  * Run a daemon test with snapshot-based span assertions.
  *
  * The test flow is:
@@ -333,6 +415,12 @@ export async function runDaemonTest(scenario, options = {}) {
   let sandbox = null;
   let debugClient = null;
   const watchHandles = [];
+
+  // Use onTestFailed to dump diagnostics when vitest aborts us (e.g. timeout)
+  const { onTestFailed } = await import("vitest");
+  onTestFailed(() => {
+    dumpDiagnostics(sandbox, daemon, otelReceiver);
+  });
 
   try {
     // Setup

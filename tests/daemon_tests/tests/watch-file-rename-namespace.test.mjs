@@ -1,7 +1,7 @@
 import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests file rename scenarios in namespaced packages. Namespaces add complexity
 // because module names are scoped within the namespace, affecting how dependent

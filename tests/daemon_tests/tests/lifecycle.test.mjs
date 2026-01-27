@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests the daemon's lifecycle management: health checks (Ping), client
 // introspection (GetClients), and automatic shutdown when all clients

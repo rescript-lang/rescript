@@ -2,7 +2,7 @@ import { glob, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { countSourceFiles } from "../helpers/assertions.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 
 // Tests that the daemon detects rescript.json changes in watch mode and
 // triggers a rebuild. The suffix setting is a root-level config option

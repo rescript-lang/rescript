@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { createRescriptCli } from "../helpers/process.mjs";
-import { runDaemonTest } from "../helpers/test-context-v2.mjs";
+import { runDaemonTest } from "../helpers/test-context.mjs";
 import { waitForProcessExit } from "../helpers/wait.mjs";
 
 // Tests watch mode: a watch client spawns via the CLI binary, connects to the
