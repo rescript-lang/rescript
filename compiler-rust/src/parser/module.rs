@@ -243,11 +243,13 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             }
         }
         Token::Include => {
+            // OCaml: parse_include_statement captures start_pos before consuming Include
+            let include_start = p.start_pos.clone();
             p.next();
             let mod_expr = parse_module_expr(p);
             Some(StructureItemDesc::Pstr_include(IncludeDeclaration {
                 pincl_mod: mod_expr,
-                pincl_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+                pincl_loc: p.mk_loc(&include_start, &p.prev_end_pos),
                 pincl_attributes: attrs.clone(),
             }))
         }
