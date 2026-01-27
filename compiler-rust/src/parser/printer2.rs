@@ -646,6 +646,7 @@ fn is_valid_numeric_polyvar_number(s: &str) -> bool {
 }
 
 /// Print a polyvariant identifier with proper escaping.
+/// This does NOT include the leading `#` - call sites should add it.
 pub fn print_poly_var_ident(txt: &str) -> Doc {
     // Numeric poly-vars don't need quotes
     if is_valid_numeric_polyvar_number(txt) {
@@ -657,13 +658,13 @@ pub fn print_poly_var_ident(txt: &str) -> Doc {
             // UppercaseExoticIdent follows the \"..." format
             // but the first char is \ which we need to skip
             if txt.starts_with('\\') && txt.len() > 1 {
-                Doc::concat(vec![Doc::text("#\""), Doc::text(&txt[1..]), Doc::text("\"")])
+                Doc::concat(vec![Doc::text("\""), Doc::text(&txt[1..]), Doc::text("\"")])
             } else {
-                Doc::concat(vec![Doc::text("#\""), Doc::text(txt), Doc::text("\"")])
+                Doc::concat(vec![Doc::text("\""), Doc::text(txt), Doc::text("\"")])
             }
         }
         IdentifierStyle::ExoticIdent => {
-            Doc::concat(vec![Doc::text("#\""), Doc::text(txt), Doc::text("\"")])
+            Doc::concat(vec![Doc::text("\""), Doc::text(txt), Doc::text("\"")])
         }
         IdentifierStyle::NormalIdent => Doc::text(txt),
     }
@@ -2496,11 +2497,11 @@ pub fn print_pattern(
         PatternDesc::Ppat_type(lid) => {
             Doc::concat(vec![Doc::text("#..."), print_longident(&lid.txt)])
         }
-        // interval: 'a'..'z'
+        // interval: 'a' .. 'z'
         PatternDesc::Ppat_interval(c1, c2) => {
             Doc::concat(vec![
                 print_constant(false, c1),
-                Doc::text(".."),
+                Doc::text(" .. "),
                 print_constant(false, c2),
             ])
         }
@@ -3908,6 +3909,20 @@ fn print_try_expression(
     ])
 }
 
+/// Check if a pattern needs parentheses in a case context.
+/// Constraint patterns like `(p: typ)` need parens at the case level.
+fn case_pattern_needs_parens(pattern: &Pattern) -> bool {
+    match &pattern.ppat_desc {
+        // Constraint patterns need parens: | (p: typ) => ...
+        // Exception: module(M: S) doesn't need extra parens
+        PatternDesc::Ppat_constraint(inner, typ) => {
+            !(matches!(&inner.ppat_desc, PatternDesc::Ppat_unpack(_))
+                && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)))
+        }
+        _ => false,
+    }
+}
+
 /// Print match cases.
 fn print_cases(
     state: &PrinterState,
@@ -3918,6 +3933,11 @@ fn print_cases(
         .iter()
         .map(|case| {
             let pat = print_pattern(state, &case.pc_lhs, cmt_tbl);
+            let pat = if case_pattern_needs_parens(&case.pc_lhs) {
+                Doc::concat(vec![Doc::text("("), pat, Doc::text(")")])
+            } else {
+                pat
+            };
             let body = print_expression_with_comments(state, &case.pc_rhs, cmt_tbl);
             Doc::concat(vec![
                 Doc::hard_line(),
@@ -4105,10 +4125,17 @@ pub fn print_signature_item(
                 RecFlag::Nonrecursive => Doc::nil(),
                 RecFlag::Recursive => Doc::text("rec "),
             };
+            // Extract attributes from first type declaration to print before "type"
+            let attrs_doc = if let Some(first_decl) = type_decls.first() {
+                print_attributes(state, &first_decl.ptype_attributes, cmt_tbl)
+            } else {
+                Doc::nil()
+            };
             Doc::concat(vec![
+                attrs_doc,
                 Doc::text("type "),
                 rec_doc,
-                print_type_declarations(state, type_decls, cmt_tbl),
+                print_type_declarations_no_first_attrs(state, type_decls, cmt_tbl),
             ])
         }
 
@@ -4236,10 +4263,17 @@ pub fn print_structure_item(
                 RecFlag::Nonrecursive => Doc::nil(),
                 RecFlag::Recursive => Doc::text("rec "),
             };
+            // Extract attributes from first type declaration to print before "type"
+            let attrs_doc = if let Some(first_decl) = type_decls.first() {
+                print_attributes(state, &first_decl.ptype_attributes, cmt_tbl)
+            } else {
+                Doc::nil()
+            };
             Doc::concat(vec![
+                attrs_doc,
                 Doc::text("type "),
                 rec_doc,
-                print_type_declarations(state, type_decls, cmt_tbl),
+                print_type_declarations_no_first_attrs(state, type_decls, cmt_tbl),
             ])
         }
 
@@ -4318,14 +4352,60 @@ fn print_type_declarations(
     Doc::join(Doc::hard_line(), docs)
 }
 
+/// Print type declarations without attributes on the first declaration.
+/// Used when attributes are printed before the "type" keyword.
+fn print_type_declarations_no_first_attrs(
+    state: &PrinterState,
+    decls: &[TypeDeclaration],
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    let docs: Vec<Doc> = decls
+        .iter()
+        .enumerate()
+        .map(|(i, decl)| {
+            let prefix = if i == 0 { Doc::nil() } else { Doc::text("and ") };
+            if i == 0 {
+                // Skip attributes for first declaration - they're printed before "type"
+                Doc::concat(vec![prefix, print_type_declaration_no_attrs(state, decl, cmt_tbl)])
+            } else {
+                Doc::concat(vec![prefix, print_type_declaration(state, decl, cmt_tbl)])
+            }
+        })
+        .collect();
+    Doc::join(Doc::hard_line(), docs)
+}
+
 /// Print a type declaration.
 fn print_type_declaration(
     state: &PrinterState,
     decl: &TypeDeclaration,
     cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    let attrs_doc = print_attributes(state, &decl.ptype_attributes, cmt_tbl);
-    let name_doc = Doc::text(&decl.ptype_name.txt);
+    print_type_declaration_inner(state, decl, cmt_tbl, true)
+}
+
+/// Print a type declaration without attributes.
+fn print_type_declaration_no_attrs(
+    state: &PrinterState,
+    decl: &TypeDeclaration,
+    cmt_tbl: &mut CommentTable,
+) -> Doc {
+    print_type_declaration_inner(state, decl, cmt_tbl, false)
+}
+
+/// Print a type declaration with optional attributes.
+fn print_type_declaration_inner(
+    state: &PrinterState,
+    decl: &TypeDeclaration,
+    cmt_tbl: &mut CommentTable,
+    include_attrs: bool,
+) -> Doc {
+    let attrs_doc = if include_attrs {
+        print_attributes(state, &decl.ptype_attributes, cmt_tbl)
+    } else {
+        Doc::nil()
+    };
+    let name_doc = print_ident_like(&decl.ptype_name.txt, false, false);
 
     let params_doc = if decl.ptype_params.is_empty() {
         Doc::nil()
@@ -4450,12 +4530,19 @@ fn print_constructor_declarations(
         PrivateFlag::Private => Doc::concat(vec![Doc::text("private"), Doc::line()]),
         PrivateFlag::Public => Doc::nil(),
     };
+    // Check if first constructor has attributes - if so, always show the bar
+    let first_has_attrs = constrs.first().map_or(false, |c| !c.pcd_attributes.is_empty());
     let docs: Vec<Doc> = constrs
         .iter()
         .enumerate()
         .map(|(i, constr)| {
             let bar = if i == 0 {
-                Doc::if_breaks(Doc::text("| "), Doc::nil())
+                if first_has_attrs {
+                    // Always show bar when first constructor has attributes
+                    Doc::text("| ")
+                } else {
+                    Doc::if_breaks(Doc::text("| "), Doc::nil())
+                }
             } else {
                 Doc::text("| ")
             };
@@ -4540,7 +4627,7 @@ fn print_label_declaration(
     } else {
         Doc::nil()
     };
-    let name_doc = Doc::text(&field.pld_name.txt);
+    let name_doc = print_ident_like(&field.pld_name.txt, false, false);
     let typ_doc = print_typ_expr(state, &field.pld_type, cmt_tbl);
 
     Doc::concat(vec![attrs_doc, mutable_doc, name_doc, Doc::text(": "), typ_doc])
@@ -4575,11 +4662,48 @@ fn print_value_description(
 
 /// Print type extension.
 fn print_type_extension(
-    _state: &PrinterState,
-    _type_ext: &TypeExtension,
-    _cmt_tbl: &mut CommentTable,
+    state: &PrinterState,
+    type_ext: &TypeExtension,
+    cmt_tbl: &mut CommentTable,
 ) -> Doc {
-    Doc::text("<type extension>")
+    let attrs_doc = print_attributes(state, &type_ext.ptyext_attributes, cmt_tbl);
+    let path_doc = print_lident(&type_ext.ptyext_path.txt);
+
+    let params_doc = if type_ext.ptyext_params.is_empty() {
+        Doc::nil()
+    } else {
+        let params: Vec<Doc> = type_ext
+            .ptyext_params
+            .iter()
+            .map(|(typ, _variance)| print_typ_expr(state, typ, cmt_tbl))
+            .collect();
+        Doc::concat(vec![
+            Doc::less_than(),
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), params),
+            Doc::greater_than(),
+        ])
+    };
+
+    let private_doc = match type_ext.ptyext_private {
+        PrivateFlag::Private => Doc::text("private "),
+        PrivateFlag::Public => Doc::nil(),
+    };
+
+    let constructors_doc: Vec<Doc> = type_ext
+        .ptyext_constructors
+        .iter()
+        .map(|constr| print_extension_constructor(state, constr, cmt_tbl))
+        .collect();
+
+    Doc::concat(vec![
+        attrs_doc,
+        Doc::text("type "),
+        path_doc,
+        params_doc,
+        Doc::text(" += "),
+        private_doc,
+        Doc::join(Doc::concat(vec![Doc::line(), Doc::text("| ")]), constructors_doc),
+    ])
 }
 
 /// Print extension constructor.
