@@ -2299,8 +2299,10 @@ fn print_unary_expression(
 
     // Convert internal operator names
     let printed_op = match op {
-        "~-" | "~-." => "-",
-        "~+" | "~+." => "+",
+        "~-" => "-",
+        "~-." => "-.",
+        "~+" => "+",
+        "~+." => "+.",
         "~~~" => "~~~",
         "not" => "!",
         _ => op,

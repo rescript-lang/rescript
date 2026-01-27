@@ -353,7 +353,7 @@ pub fn is_unary_expression(expr: &Expression) -> bool {
 pub fn is_unary_operator(lid: &Longident) -> bool {
     match lid {
         Longident::Lident(op) => {
-            matches!(op.as_str(), "~+" | "~+." | "~-" | "~-." | "!" | "not")
+            matches!(op.as_str(), "~+" | "~+." | "~-" | "~-." | "~~~" | "!" | "not")
         }
         _ => false,
     }
