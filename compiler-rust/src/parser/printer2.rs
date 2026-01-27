@@ -2190,19 +2190,22 @@ fn print_binary_expression(
     // Determine if the rhs should be on a new line
     let should_indent = parens::flatten_operand_rhs(op, rhs);
 
+    // Pipe-first (->) doesn't have spaces around it
+    let is_pipe_first = op == "->";
+
     if should_indent {
         Doc::group(Doc::concat(vec![
             lhs_doc,
-            Doc::space(),
+            if is_pipe_first { Doc::nil() } else { Doc::space() },
             Doc::text(op),
             Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc]))),
         ]))
     } else {
         Doc::concat(vec![
             lhs_doc,
-            Doc::space(),
+            if is_pipe_first { Doc::nil() } else { Doc::space() },
             Doc::text(op),
-            Doc::space(),
+            if is_pipe_first { Doc::nil() } else { Doc::space() },
             rhs_doc,
         ])
     }
