@@ -2016,6 +2016,92 @@ fn print_expression_block(
                 Doc::concat(vec![e1_doc, Doc::hard_line(), e2_doc])
             }
         }
+        ExpressionDesc::Pexp_letmodule(name, mod_expr, body) => {
+            let mod_doc = print_mod_expr(state, mod_expr, cmt_tbl);
+            let body_doc = print_expression_block(state, false, body, cmt_tbl);
+            if braces {
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::hard_line(),
+                        Doc::text("module "),
+                        Doc::text(&name.txt),
+                        Doc::text(" = "),
+                        mod_doc,
+                        Doc::hard_line(),
+                        body_doc,
+                    ])),
+                    Doc::hard_line(),
+                    Doc::rbrace(),
+                ])
+            } else {
+                Doc::concat(vec![
+                    Doc::text("module "),
+                    Doc::text(&name.txt),
+                    Doc::text(" = "),
+                    mod_doc,
+                    Doc::hard_line(),
+                    body_doc,
+                ])
+            }
+        }
+        ExpressionDesc::Pexp_letexception(ext_constr, body) => {
+            let ext_doc = print_extension_constructor(state, ext_constr, cmt_tbl);
+            let body_doc = print_expression_block(state, false, body, cmt_tbl);
+            if braces {
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::hard_line(),
+                        Doc::text("exception "),
+                        ext_doc,
+                        Doc::hard_line(),
+                        body_doc,
+                    ])),
+                    Doc::hard_line(),
+                    Doc::rbrace(),
+                ])
+            } else {
+                Doc::concat(vec![
+                    Doc::text("exception "),
+                    ext_doc,
+                    Doc::hard_line(),
+                    body_doc,
+                ])
+            }
+        }
+        ExpressionDesc::Pexp_open(override_flag, lid, body) => {
+            let override_doc = match override_flag {
+                OverrideFlag::Override => Doc::text("!"),
+                OverrideFlag::Fresh => Doc::nil(),
+            };
+            let body_doc = print_expression_block(state, false, body, cmt_tbl);
+            if braces {
+                Doc::concat(vec![
+                    Doc::lbrace(),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::hard_line(),
+                        Doc::text("open"),
+                        override_doc,
+                        Doc::text(" "),
+                        print_longident(&lid.txt),
+                        Doc::hard_line(),
+                        body_doc,
+                    ])),
+                    Doc::hard_line(),
+                    Doc::rbrace(),
+                ])
+            } else {
+                Doc::concat(vec![
+                    Doc::text("open"),
+                    override_doc,
+                    Doc::text(" "),
+                    print_longident(&lid.txt),
+                    Doc::hard_line(),
+                    body_doc,
+                ])
+            }
+        }
         _ => {
             let doc = print_expression_with_comments(state, e, cmt_tbl);
             if braces {

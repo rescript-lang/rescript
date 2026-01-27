@@ -265,14 +265,12 @@ fn map_constant(c: &current::Constant) -> pt0::Constant {
         current::Constant::Integer(s, opt) => pt0::Constant::Integer(s.clone(), *opt),
         current::Constant::Char(i) => pt0::Constant::Char(*i),
         current::Constant::String(s, opt) => {
-            // OCaml transforms "js" delimiter to "*j" (escaped_j_delimiter) in Ast_config.process_str
-            // For binary parity, we need to apply the same transformation:
-            // - None or Some("js") -> Some("*j") for regular double-quoted strings
-            // - Some("json") -> Some("json") (keep as is)
-            // - Other delimiters -> keep as is
+            // OCaml maps None (regular strings) to Some("js") in parsetree0.
+            // The "*j" transformation happens later in Ast_config.process_str during compilation,
+            // NOT during parsetree0 conversion.
+            // For parsetree0 parity, we just need to convert None -> Some("js").
             let mapped_delim = match opt {
-                None => Some("*j".to_string()),
-                Some(d) if d == "js" => Some("*j".to_string()),
+                None => Some("js".to_string()),
                 other => other.clone(),
             };
             pt0::Constant::String(s.clone(), mapped_delim)
@@ -1291,8 +1289,8 @@ mod tests {
         let c2 = map_constant(&current::Constant::Char(65));
         assert!(matches!(c2, pt0::Constant::Char(65)));
 
-        // Note: None delimiter is mapped to Some("*j") for OCaml binary parity
+        // Note: None delimiter is mapped to Some("js") for OCaml parsetree0 parity
         let c3 = map_constant(&current::Constant::String("hello".to_string(), None));
-        assert!(matches!(c3, pt0::Constant::String(s, Some(d)) if s == "hello" && d == "*j"));
+        assert!(matches!(c3, pt0::Constant::String(s, Some(d)) if s == "hello" && d == "js"));
     }
 }
