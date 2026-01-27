@@ -107,17 +107,7 @@ val print_expression : state:State.t -> Parsetree.expression -> CommentTable.t -
 
 ## Current Status (2026-01-27)
 
-**Test Results:** Printer tests: 39/172 passing (22%)
-
-By category:
-- pattern: 9/19 (47%)
-- typexpr: 7/13 (54%)
-- expr: 6/55 (11%)
-- typeDef: 4/10 (40%)
-- other: 5/16 (31%)
-- modExpr: 2/7 (29%)
-- modType: 1/7 (14%)
-- structure: 1/13 (8%)
+**Test Results:** 140/506 total tests passing (28%)
 
 ### Recently Completed
 - ✅ `PrinterState` struct with custom_layout tracking
@@ -158,15 +148,23 @@ By category:
 - ✅ **Type constraints** - `constraint 'a = typ` now printed for type declarations
 - ✅ **Argument punning** - `~foo=foo` now prints as `~foo`
 - ✅ **Async functions** - `is_async` field in Pexp_fun now checked to preserve async keyword
+- ✅ **Pipe-first spacing** - `->` operator no longer has spaces around it
+- ✅ **Sequence constraint parens** - `(foo(): unit)` in sequences preserves parentheses
+- ✅ **Pattern alias parens** - `(x as y) as z` and `(Foo | Bar) as x` properly parenthesized
+- ✅ **Exception pattern parens** - `exception (A | B)` properly parenthesized
+- ✅ **Or-pattern printing** - Nested or-patterns wrapped in parens, e.g. `Red | (Blue | Green)`
+- ✅ **Ppat_type escaping** - `#...\"type"` exotic identifiers properly escaped
+- ✅ **Record pattern constraint parens** - `{age: (age2: int)}` properly parenthesized
+- ✅ **First-class module patterns** - `module(P: S)` printed correctly
+- ✅ **Extension payloads** - `%raw("__GC")` now prints the payload
 
 ### Known Issues / TODO
-- ❌ Comment attachment: Comments not properly attaching to nodes in module expressions
+- ❌ Comment attachment: Comments not properly attaching to nodes
 - ❌ JSX printing needs work
-- ❌ Force-break logic for multi-line constructors (preserving source formatting)
+- ❌ Force-break logic for multi-line constructs (preserving source formatting)
 - ❌ Type parameter line breaking for long parameter lists
 - ❌ Dict syntax sugar not preserved (prints as `Primitive_dict.make([])`)
-- ❌ Pattern alias parenthesization
-- ❌ Sequence expression parenthesization for type constraints
+- ❌ If-else chains: `else if` printed as `else { if ... }`
 - ❌ Some edge cases in expression printing
 
 ## Implementation Plan
