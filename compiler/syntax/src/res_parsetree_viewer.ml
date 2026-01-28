@@ -429,6 +429,8 @@ let has_attributes attrs =
 
 let is_array_access expr =
   match expr.pexp_desc with
+  | Pexp_index _ -> true
+  (* TODO: Now we have dedicated index access, we can clean up the below AST? *)
   | Pexp_apply
       {
         funct =

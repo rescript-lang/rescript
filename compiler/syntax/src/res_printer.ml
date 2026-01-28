@@ -3383,8 +3383,28 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         | Braced braces -> print_braces doc container braces
         | Nothing -> doc
       in
-      let index_doc = print_expression_with_comments ~state index cmt_tbl in
-      Doc.concat [container_doc; Doc.lbracket; index_doc; Doc.rbracket]
+      let index_has_braces, index_doc =
+        let doc = print_expression_with_comments ~state index cmt_tbl in
+        match Parens.expr index with
+        | Parens.Parenthesized -> (false, add_parens doc)
+        | Braced braces -> (true, print_braces doc index braces)
+        | Nothing -> (false, doc)
+      in
+      if index_has_braces then
+        Doc.concat [container_doc; Doc.lbracket; index_doc; Doc.rbracket]
+      else
+        Doc.concat
+          [
+            container_doc;
+            Doc.group
+              (Doc.concat
+                 [
+                   Doc.lbracket;
+                   Doc.indent (Doc.concat [Doc.soft_line; index_doc]);
+                   Doc.soft_line;
+                   Doc.rbracket;
+                 ]);
+          ]
     | Pexp_setindex (container, index, value) ->
       (* Write: container[index] = value *)
       let container_doc =
@@ -3394,16 +3414,47 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         | Braced braces -> print_braces doc container braces
         | Nothing -> doc
       in
-      let index_doc = print_expression_with_comments ~state index cmt_tbl in
-      let value_doc = print_expression_with_comments ~state value cmt_tbl in
+      let index_has_braces, index_doc =
+        let doc = print_expression_with_comments ~state index cmt_tbl in
+        match Parens.expr index with
+        | Parens.Parenthesized -> (false, add_parens doc)
+        | Braced braces -> (true, print_braces doc index braces)
+        | Nothing -> (false, doc)
+      in
+      let value_has_braces, value_doc =
+        let doc = print_expression_with_comments ~state value cmt_tbl in
+        match Parens.set_field_expr_rhs value with
+        | Parens.Parenthesized -> (false, add_parens doc)
+        | Braced braces -> (true, print_braces doc value braces)
+        | Nothing -> (false, doc)
+      in
+      let should_indent =
+        (not value_has_braces) && ParsetreeViewer.is_binary_expression value
+      in
+      let bracket_doc =
+        if index_has_braces then
+          Doc.concat [container_doc; Doc.lbracket; index_doc; Doc.rbracket]
+        else
+          Doc.concat
+            [
+              container_doc;
+              Doc.group
+                (Doc.concat
+                   [
+                     Doc.lbracket;
+                     Doc.indent (Doc.concat [Doc.soft_line; index_doc]);
+                     Doc.soft_line;
+                     Doc.rbracket;
+                   ]);
+            ]
+      in
       Doc.concat
         [
-          container_doc;
-          Doc.lbracket;
-          index_doc;
-          Doc.rbracket;
-          Doc.text " = ";
-          value_doc;
+          bracket_doc;
+          Doc.text " =";
+          (if should_indent then
+             Doc.group (Doc.indent (Doc.concat [Doc.line; value_doc]))
+           else Doc.concat [Doc.space; value_doc]);
         ]
     | Pexp_ifthenelse (_ifExpr, _thenExpr, _elseExpr)
       when ParsetreeViewer.is_ternary_expr e ->
