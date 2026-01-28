@@ -178,10 +178,16 @@ let iter_expression f e =
     | Pexp_letexception (_, e)
     | Pexp_field (e, _) ->
       expr e
-    | Pexp_while (e1, e2) | Pexp_sequence (e1, e2) | Pexp_setfield (e1, _, e2)
-      ->
+    | Pexp_while (e1, e2)
+    | Pexp_sequence (e1, e2)
+    | Pexp_setfield (e1, _, e2)
+    | Pexp_index (e1, e2) ->
       expr e1;
       expr e2
+    | Pexp_setindex (e1, e2, e3) ->
+      expr e1;
+      expr e2;
+      expr e3
     | Pexp_ifthenelse (e1, e2, eo) ->
       expr e1;
       expr e2;
@@ -2828,6 +2834,51 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     rue
       {
         exp_desc = Texp_setfield (record, label_loc, label, newval);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance_def Predef.type_unit;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_index (scontainer, sindex) ->
+    (* Read access: arr[i] -> array<'a> -> int -> 'a *)
+    let container = type_exp ~context:None env scontainer in
+    let index =
+      type_expect ~context:None env sindex (instance_def Predef.type_int)
+    in
+    let element_type = newgenvar () in
+    let array_type = instance_def (Predef.type_array element_type) in
+    unify_exp ~context:None env container array_type;
+    rue
+      {
+        exp_desc = Texp_index (container, index);
+        exp_loc = loc;
+        exp_extra = [];
+        exp_type = instance env element_type;
+        exp_attributes = sexp.pexp_attributes;
+        exp_env = env;
+      }
+  | Pexp_setindex (scontainer, sindex, svalue) ->
+    (* Write access: arr[i] = v -> array<'a> -> int -> 'a -> unit *)
+    let container = type_exp ~context:None env scontainer in
+    let index =
+      type_expect ~context:None env sindex (instance_def Predef.type_int)
+    in
+    (* Extract element type from container to preserve arity information *)
+    let element_type =
+      match (expand_head env container.exp_type).desc with
+      | Tconstr (Pident {name = "array"}, [element_ty], _) -> element_ty
+      | _ ->
+        (* Fallback: create fresh type variable and unify *)
+        let element_type = newgenvar () in
+        let array_type = instance_def (Predef.type_array element_type) in
+        unify_exp ~context:None env container array_type;
+        element_type
+    in
+    let value = type_expect ~context:None env svalue element_type in
+    rue
+      {
+        exp_desc = Texp_setindex (container, index, value);
         exp_loc = loc;
         exp_extra = [];
         exp_type = instance_def Predef.type_unit;

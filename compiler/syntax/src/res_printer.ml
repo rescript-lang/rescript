@@ -3374,6 +3374,37 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_setfield (expr1, longident_loc, expr2) ->
       print_set_field_expr ~state e.pexp_attributes expr1 longident_loc expr2
         e.pexp_loc cmt_tbl
+    | Pexp_index (container, index) ->
+      (* Read: container[index] *)
+      let container_doc =
+        let doc = print_expression_with_comments ~state container cmt_tbl in
+        match Parens.field_expr container with
+        | Parens.Parenthesized -> add_parens doc
+        | Braced braces -> print_braces doc container braces
+        | Nothing -> doc
+      in
+      let index_doc = print_expression_with_comments ~state index cmt_tbl in
+      Doc.concat [container_doc; Doc.lbracket; index_doc; Doc.rbracket]
+    | Pexp_setindex (container, index, value) ->
+      (* Write: container[index] = value *)
+      let container_doc =
+        let doc = print_expression_with_comments ~state container cmt_tbl in
+        match Parens.field_expr container with
+        | Parens.Parenthesized -> add_parens doc
+        | Braced braces -> print_braces doc container braces
+        | Nothing -> doc
+      in
+      let index_doc = print_expression_with_comments ~state index cmt_tbl in
+      let value_doc = print_expression_with_comments ~state value cmt_tbl in
+      Doc.concat
+        [
+          container_doc;
+          Doc.lbracket;
+          index_doc;
+          Doc.rbracket;
+          Doc.text " = ";
+          value_doc;
+        ]
     | Pexp_ifthenelse (_ifExpr, _thenExpr, _elseExpr)
       when ParsetreeViewer.is_ternary_expr e ->
       let parts, alternate = ParsetreeViewer.collect_ternary_parts e in

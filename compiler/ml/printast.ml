@@ -294,6 +294,18 @@ and expression i ppf x =
     expression i ppf e1;
     longident_loc i ppf li;
     expression i ppf e2
+  | Pexp_index (e1, e2) ->
+    line i ppf "Pexp_index\n";
+    expression i ppf e1;
+    line i ppf "index:\n";
+    expression i ppf e2
+  | Pexp_setindex (e1, e2, e3) ->
+    line i ppf "Pexp_setindex\n";
+    expression i ppf e1;
+    line i ppf "index:\n";
+    expression i ppf e2;
+    line i ppf "value:\n";
+    expression i ppf e3
   | Pexp_array l ->
     line i ppf "Pexp_array\n";
     list i expression ppf l

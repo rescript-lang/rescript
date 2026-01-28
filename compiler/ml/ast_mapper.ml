@@ -313,6 +313,10 @@ module E = struct
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
     | Pexp_setfield (e1, lid, e2) ->
       setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid) (sub.expr sub e2)
+    | Pexp_index (e1, e2) ->
+      index ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+    | Pexp_setindex (e1, e2, e3) ->
+      setindex ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2) (sub.expr sub e3)
     | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
     | Pexp_ifthenelse (e1, e2, e3) ->
       ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)

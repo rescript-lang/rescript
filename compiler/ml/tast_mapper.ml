@@ -232,6 +232,10 @@ let expr sub x =
     | Texp_field (exp, lid, ld) -> Texp_field (sub.expr sub exp, lid, ld)
     | Texp_setfield (exp1, lid, ld, exp2) ->
       Texp_setfield (sub.expr sub exp1, lid, ld, sub.expr sub exp2)
+    | Texp_index (exp1, exp2) ->
+      Texp_index (sub.expr sub exp1, sub.expr sub exp2)
+    | Texp_setindex (exp1, exp2, exp3) ->
+      Texp_setindex (sub.expr sub exp1, sub.expr sub exp2, sub.expr sub exp3)
     | Texp_array list -> Texp_array (List.map (sub.expr sub) list)
     | Texp_ifthenelse (exp1, exp2, expo) ->
       Texp_ifthenelse
