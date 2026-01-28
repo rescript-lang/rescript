@@ -7,6 +7,7 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::location::{Location, LocationId, Position};
+use crate::parse_arena::{LocIdx, ParseArena, PosIdx};
 
 use super::comment::Comment;
 use super::diagnostics::{DiagnosticCategory, ParserDiagnostic};
@@ -49,6 +50,10 @@ pub struct ParserSnapshot {
     diagnostics_len: usize,
     comments_len: usize,
     location_id_counter: u32,
+    /// Arena position count at snapshot time (for truncation on restore).
+    arena_positions_len: usize,
+    /// Arena location count at snapshot time (for truncation on restore).
+    arena_locations_len: usize,
 }
 
 /// Parser state for ReScript.
@@ -58,6 +63,7 @@ pub struct ParserSnapshot {
 /// - Scanner for lexical analysis
 /// - Breadcrumbs for error recovery
 /// - Collected errors, diagnostics, and comments
+/// - Arena for interned positions and locations
 pub struct Parser<'src> {
     /// Parser mode.
     pub mode: ParserMode,
@@ -79,10 +85,13 @@ pub struct Parser<'src> {
     comments: Vec<Comment>,
     /// Stack of region statuses for error deduplication.
     regions: Vec<RegionStatus>,
-    /// Counter for generating unique LocationIds.
+    /// Counter for generating unique LocationIds (legacy, for Location-based code).
     /// Each call to `mk_loc` gets a new ID, enabling identity-based sharing in Marshal.
     /// Uses atomic to allow mk_loc to take &self (avoiding borrow conflicts).
     location_id_counter: AtomicU32,
+    /// Arena for interned positions and locations.
+    /// Used for efficient location storage with LocIdx/PosIdx indices.
+    arena: ParseArena,
     /// Whether we're currently parsing an external definition.
     /// Used for arity calculation of @as(_) labeled parameters.
     pub in_external: bool,
@@ -109,6 +118,7 @@ impl<'src> Parser<'src> {
             comments: Vec::new(),
             regions: vec![RegionStatus::Report],
             location_id_counter: AtomicU32::new(1), // Start at 1, 0 is reserved for default/uninitialized
+            arena: ParseArena::new(),
             in_external: false,
         };
         // Scan the first token
@@ -126,6 +136,88 @@ impl<'src> Parser<'src> {
     pub fn mk_loc(&self, start: &Position, end: &Position) -> Location {
         let id = self.location_id_counter.fetch_add(1, Ordering::Relaxed);
         Location::from_positions_with_id(start.clone(), end.clone(), LocationId::from_raw(id))
+    }
+
+    // ========== Arena-based location methods ==========
+
+    /// Get a reference to the parse arena.
+    pub fn arena(&self) -> &ParseArena {
+        &self.arena
+    }
+
+    /// Get a mutable reference to the parse arena.
+    pub fn arena_mut(&mut self) -> &mut ParseArena {
+        &mut self.arena
+    }
+
+    /// Push a position into the arena and return its index.
+    pub fn push_pos(&mut self, pos: Position) -> PosIdx {
+        self.arena.push_position(pos)
+    }
+
+    /// Push the current start position into the arena.
+    pub fn push_start_pos(&mut self) -> PosIdx {
+        self.arena.push_position(self.start_pos.clone())
+    }
+
+    /// Push the current end position into the arena.
+    pub fn push_end_pos(&mut self) -> PosIdx {
+        self.arena.push_position(self.end_pos.clone())
+    }
+
+    /// Push the previous end position into the arena.
+    pub fn push_prev_end_pos(&mut self) -> PosIdx {
+        self.arena.push_position(self.prev_end_pos.clone())
+    }
+
+    /// Create and push a location from position indices.
+    pub fn mk_loc_idx(&mut self, start: PosIdx, end: PosIdx) -> LocIdx {
+        self.arena.mk_loc(start, end)
+    }
+
+    /// Create and push a location from raw positions.
+    pub fn mk_loc_from_positions(&mut self, start: &Position, end: &Position) -> LocIdx {
+        self.arena.mk_loc_from_positions(start, end)
+    }
+
+    /// Get the "none" location index.
+    pub fn none_loc(&self) -> LocIdx {
+        self.arena.none_loc()
+    }
+
+    /// Get the start position of a location.
+    pub fn loc_start(&self, loc: LocIdx) -> &Position {
+        self.arena.loc_start(loc)
+    }
+
+    /// Get the end position of a location.
+    pub fn loc_end(&self, loc: LocIdx) -> &Position {
+        self.arena.loc_end(loc)
+    }
+
+    /// Get the start position index of a location.
+    pub fn loc_start_idx(&self, loc: LocIdx) -> PosIdx {
+        self.arena.loc_start_idx(loc)
+    }
+
+    /// Get the end position index of a location.
+    pub fn loc_end_idx(&self, loc: LocIdx) -> PosIdx {
+        self.arena.loc_end_idx(loc)
+    }
+
+    /// Check if a location is ghost.
+    pub fn loc_ghost(&self, loc: LocIdx) -> bool {
+        self.arena.loc_ghost(loc)
+    }
+
+    /// Convert a LocIdx to a full Location struct.
+    pub fn to_location(&self, loc: LocIdx) -> Location {
+        self.arena.to_location(loc)
+    }
+
+    /// Create a location spanning from one location's start to another's end.
+    pub fn mk_loc_spanning(&mut self, start_loc: LocIdx, end_loc: LocIdx) -> LocIdx {
+        self.arena.mk_loc_spanning(start_loc, end_loc)
     }
 
     /// Record a diagnostic error.
@@ -333,12 +425,16 @@ impl<'src> Parser<'src> {
             diagnostics_len: self.diagnostics.len(),
             comments_len: self.comments.len(),
             location_id_counter: self.location_id_counter.load(Ordering::Relaxed),
+            arena_positions_len: self.arena.position_count(),
+            arena_locations_len: self.arena.location_count(),
         }
     }
 
     /// Restore parser state from a snapshot.
     ///
     /// Used to backtrack after speculative parsing.
+    /// Note: Arena allocations made during speculative parsing are not freed,
+    /// but the indices won't be stored in the AST since we're restoring state.
     pub fn restore(&mut self, snapshot: ParserSnapshot) {
         self.scanner.restore(snapshot.scanner_snapshot);
         self.token = snapshot.token;
@@ -349,6 +445,9 @@ impl<'src> Parser<'src> {
         self.diagnostics.truncate(snapshot.diagnostics_len);
         self.comments.truncate(snapshot.comments_len);
         self.location_id_counter.store(snapshot.location_id_counter, Ordering::Relaxed);
+        // Note: We don't truncate arena allocations as it's harmless to keep them.
+        // The indices from speculative parsing won't be stored in the final AST.
+        let _ = (snapshot.arena_positions_len, snapshot.arena_locations_len);
     }
 
     /// Check if parsing made progress.
