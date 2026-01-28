@@ -27,6 +27,7 @@
 use std::collections::HashMap;
 
 use crate::location::{LocationId, PositionId};
+use crate::parse_arena::{LocIdx, ParseArena, PosIdx};
 
 /// Magic number for small Marshal format
 const MAGIC_NUMBER_SMALL: u32 = 0x8495A6BE;
@@ -105,6 +106,14 @@ pub struct MarshalWriter {
     /// Uses LocationId to determine when locations should be shared (like OCaml's pointer sharing)
     pub location_id_table: HashMap<LocationId, u32>,
 
+    /// Maps PosIdx to object counter (for arena-based Position sharing)
+    /// Same index = same object, will be shared in output
+    position_idx_table: HashMap<PosIdx, u32>,
+
+    /// Maps LocIdx to object counter (for arena-based Location sharing)
+    /// Same index = same object, will be shared in output
+    location_idx_table: HashMap<LocIdx, u32>,
+
     /// Current object counter (incremented each time we record a sharable object)
     obj_counter: u32,
 
@@ -133,6 +142,8 @@ impl MarshalWriter {
             location_content_table: HashMap::new(),
             location_table: HashMap::new(),
             location_id_table: HashMap::new(),
+            position_idx_table: HashMap::new(),
+            location_idx_table: HashMap::new(),
             obj_counter: 0,
             size_32: 0,
             size_64: 0,
@@ -150,6 +161,8 @@ impl MarshalWriter {
             location_content_table: HashMap::new(),
             location_table: HashMap::new(),
             location_id_table: HashMap::new(),
+            position_idx_table: HashMap::new(),
+            location_idx_table: HashMap::new(),
             obj_counter: 0,
             size_32: 0,
             size_64: 0,
@@ -168,6 +181,8 @@ impl MarshalWriter {
         self.string_table.clear();
         self.position_table.clear();
         self.location_table.clear();
+        self.position_idx_table.clear();
+        self.location_idx_table.clear();
         self.obj_counter = 0;
         self.size_32 = 0;
         self.size_64 = 0;
@@ -521,6 +536,74 @@ impl MarshalWriter {
 
         // Record for future content-based sharing
         self.location_content_table.insert(content_key, obj_idx);
+
+        true
+    }
+
+    // ========== Arena-based position/location methods ==========
+
+    /// Write a Position by arena index with sharing.
+    ///
+    /// If a Position with the same PosIdx has been written before, writes a shared
+    /// reference. Otherwise looks up the position in the arena and writes it.
+    ///
+    /// Same index = same object, will be shared in output.
+    pub fn write_pos_idx(&mut self, idx: PosIdx, arena: &ParseArena) -> bool {
+        // Check if this position index was already written
+        if let Some(&obj_idx) = self.position_idx_table.get(&idx) {
+            let d = self.obj_counter - obj_idx;
+            self.write_shared_ref(d);
+            return false;
+        }
+
+        // Look up the position in the arena
+        let pos = arena.get_position(idx);
+
+        // Record the object index BEFORE writing
+        let obj_idx = self.obj_counter;
+
+        // Write the Position block
+        self.write_block_header(0, 4);
+        self.write_string_shared(&pos.file_name);
+        self.write_int(pos.line as i64);
+        self.write_int(pos.bol as i64);
+        self.write_int(pos.cnum as i64);
+
+        // Record for future sharing
+        self.position_idx_table.insert(idx, obj_idx);
+
+        true
+    }
+
+    /// Write a Location by arena index with sharing.
+    ///
+    /// If a Location with the same LocIdx has been written before, writes a shared
+    /// reference. Otherwise looks up the location in the arena and writes it.
+    ///
+    /// Same index = same object, will be shared in output.
+    pub fn write_loc_idx(&mut self, idx: LocIdx, arena: &ParseArena) -> bool {
+        // Check if this location index was already written
+        if let Some(&obj_idx) = self.location_idx_table.get(&idx) {
+            let d = self.obj_counter - obj_idx;
+            self.write_shared_ref(d);
+            return false;
+        }
+
+        // Look up the location in the arena
+        let loc = arena.get_location(idx);
+
+        // Record the object index BEFORE writing
+        let obj_idx = self.obj_counter;
+
+        // Write the Location block
+        self.write_block_header(0, 3);
+        // Write start and end positions (with sharing by their indices)
+        self.write_pos_idx(loc.loc_start, arena);
+        self.write_pos_idx(loc.loc_end, arena);
+        self.write_int(if loc.loc_ghost { 1 } else { 0 });
+
+        // Record for future sharing
+        self.location_idx_table.insert(idx, obj_idx);
 
         true
     }
