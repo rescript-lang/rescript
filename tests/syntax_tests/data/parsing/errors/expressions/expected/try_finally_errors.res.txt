@@ -1,0 +1,71 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/try_finally_errors.res:2:36-5:3
+
+  1 │ // Test try without catch or finally
+  2 │ let missingBoth = try doSomething()
+  3 │ 
+  4 │ // Test try with malformed finally
+  5 │ try doSomething() finally
+  6 │ 
+  7 │ // Test try with empty finally block
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/try_finally_errors.res:5:18-25
+
+  3 │ 
+  4 │ // Test try with malformed finally
+  5 │ try doSomething() finally
+  6 │ 
+  7 │ // Test try with empty finally block
+
+  Did you forget a `catch` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/try_finally_errors.res:26:35-42
+
+  24 │ 
+  25 │ // Test malformed patterns in catch with finally
+  26 │ try doSomething() catch {| invalid pattern => ()} finally cleanup()
+  27 │ 
+  28 │ // Test missing closing brace in finally
+
+  Did you forget a `=>` here?
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/try_finally_errors.res:37:23-38:1
+
+  35 │ // Test try-finally with invalid syntax in finally block
+  36 │ try doSomething() finally {
+  37 │   let invalid_syntax =
+  38 │ }
+
+  This let-binding misses an expression
+
+let missingBoth = try doSomething () with
+;;try doSomething () with finally try doSomething () with finally {  }
+;;try doSomething () with | _ -> () finally cleanup ()
+;;finally
+;;extraCleanup ()
+;;finally
+;;cleanup ()
+;;try doSomething () with finally cleanup ()
+;;catch
+;;(([%rescript.exprhole ]; (fun [arity:1]_ -> ()))[@res.braces ])
+;;try doSomething () with finally catch
+;;(([%rescript.exprhole ]; (fun [arity:1]_ -> ()))[@res.braces ])
+;;try doSomething () with finally try innerOp () with finally innerCleanup ()
+;;try doSomething () with | invalid -> (fun [arity:1]pattern -> ()) finally
+  cleanup ()
+;;try doSomething () with finally
+  ((cleanup ();
+    (try doSomething () with finally cleanup ());
+    extraToken;
+    (try doSomething () with finally
+     ((let invalid_syntax = [%rescript.exprhole ] in ())[@res.braces ])))
+  [@res.braces ])

@@ -228,7 +228,10 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
       Lam.stringswitch (simplif l)
         (Ext_list.map_snd sw simplif)
         (Ext_option.map d simplif)
-    | Ltrywith (l1, v, l2) -> Lam.try_ (simplif l1) v (simplif l2)
+    | Ltrywith (l1, v, l2, finally_expr) ->
+      Lam.try_ (simplif l1) v
+        (Ext_option.map l2 simplif)
+        (Ext_option.map finally_expr simplif)
     | Lifthenelse (l1, l2, l3) -> Lam.if_ (simplif l1) (simplif l2) (simplif l3)
     | Lsequence (l1, l2) -> Lam.seq (simplif l1) (simplif l2)
     | Lwhile (l1, l2) -> Lam.while_ (simplif l1) (simplif l2)

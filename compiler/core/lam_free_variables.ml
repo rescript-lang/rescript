@@ -37,10 +37,11 @@ let pass_free_variables (l : Lam.t) : Set_ident.t =
       free e1;
       free e2;
       Ext_list.iter vars (fun id -> fv := Set_ident.remove !fv id)
-    | Ltrywith (e1, exn, e2) ->
+    | Ltrywith (e1, exn, e2, finally_expr) ->
       free e1;
-      free e2;
-      fv := Set_ident.remove !fv exn
+      Ext_option.iter e2 free;
+      fv := Set_ident.remove !fv exn;
+      Ext_option.iter finally_expr free
     | Lfunction {body; params} ->
       free body;
       Ext_list.iter params (fun param -> fv := Set_ident.remove !fv param)

@@ -700,14 +700,15 @@ and scanLetModules ~env (e : Typedtree.expression) =
     | Some g -> scanLetModules ~env g
     | None -> ());
     scanLetModules ~env c_rhs
-  | Texp_try (e, cases) ->
+  | Texp_try (e, cases, finally_expr) ->
     scanLetModules ~env e;
     cases
     |> List.iter (fun {Typedtree.c_lhs = _; c_guard; c_rhs} ->
            (match c_guard with
            | Some g -> scanLetModules ~env g
            | None -> ());
-           scanLetModules ~env c_rhs)
+           scanLetModules ~env c_rhs);
+    finally_expr |> Option.iter (scanLetModules ~env)
   | Texp_ifthenelse (e1, e2, e3Opt) -> (
     scanLetModules ~env e1;
     scanLetModules ~env e2;

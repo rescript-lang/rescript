@@ -298,10 +298,11 @@ and expression i ppf x =
     expression i ppf e;
     list i case ppf l1;
     list i case ppf l2
-  | Texp_try (e, l) ->
+  | Texp_try (e, l, finally) ->
     line i ppf "Texp_try\n";
     expression i ppf e;
-    list i case ppf l
+    list i case ppf l;
+    Ext_option.iter finally (expression i ppf)
   | Texp_tuple l ->
     line i ppf "Texp_tuple\n";
     list i expression ppf l

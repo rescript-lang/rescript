@@ -43,7 +43,8 @@ let hit_mask (mask : Hash_set_ident_mask.t) (l : Lam.t) : bool =
     | Lvar id -> hit_var id
     | Lassign (id, e) -> hit_var id || hit e
     | Lstaticcatch (e1, (_, _), e2) -> hit e1 || hit e2
-    | Ltrywith (e1, _exn, e2) -> hit e1 || hit e2
+    | Ltrywith (e1, _exn, e2, finally_expr) ->
+      hit e1 || Ext_option.exists e2 hit || Ext_option.exists finally_expr hit
     | Lfunction {body; params = _} -> hit body
     | Llet (_str, _id, arg, body) -> hit arg || hit body
     | Lletrec (decl, body) -> hit body || hit_list_snd decl

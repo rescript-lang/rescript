@@ -125,7 +125,12 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
     | None -> all_lambdas meta (Ext_list.map sw snd)
     | Some v -> all_lambdas meta (v :: Ext_list.map sw snd))
   | Lstaticcatch (_, _, handler) -> get_arity meta handler
-  | Ltrywith (l1, _, l2) -> all_lambdas meta [l1; l2]
+  | Ltrywith (l1, _, Some l2, Some finally_expr) ->
+    all_lambdas meta [l1; l2; finally_expr]
+  | Ltrywith (l1, _, Some l2, None) -> all_lambdas meta [l1; l2]
+  | Ltrywith (l1, _, None, Some finally_expr) ->
+    all_lambdas meta [l1; finally_expr]
+  | Ltrywith (l1, _, None, None) -> all_lambdas meta [l1]
   | Lifthenelse (_, l2, l3) -> all_lambdas meta [l2; l3]
   | Lsequence (_, l2) -> get_arity meta l2
   | Lstaticraise _ (* since it will not be in tail position *) -> Lam_arity.na

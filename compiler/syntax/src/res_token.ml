@@ -281,3 +281,4 @@ let is_keyword_txt str =
   with Not_found -> false
 
 let catch = Lident "catch"
+let finally = Lident "finally"

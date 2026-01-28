@@ -775,12 +775,20 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       (transl_exp funct) oargs e.exp_loc
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
-  | Texp_try (body, pat_expr_list) ->
+  | Texp_try (body, pat_expr_list, finally_expr) ->
     let id = Typecore.name_pattern "exn" pat_expr_list in
-    Ltrywith
-      ( transl_exp body,
-        id,
-        Matching.for_trywith (Lvar id) (transl_cases_try pat_expr_list) )
+    let finally_lambda =
+      match finally_expr with
+      | None -> None
+      | Some expr -> Some (transl_exp expr)
+    in
+    let catch_handler =
+      match pat_expr_list with
+      | [] -> None (* No catch cases *)
+      | _ :: _ ->
+        Some (Matching.for_trywith (Lvar id) (transl_cases_try pat_expr_list))
+    in
+    Ltrywith (transl_exp body, id, catch_handler, finally_lambda)
   | Texp_tuple el -> (
     let ll = transl_list el in
     try Lconst (Const_block (Blk_tuple, List.map extract_constant ll))
@@ -1251,7 +1259,8 @@ and transl_match e arg pat_expr_list exn_pat_expr_list partial =
       ( Ltrywith
           ( Lstaticraise (static_exception_id, body),
             id,
-            Matching.for_trywith (Lvar id) exn_cases ),
+            Some (Matching.for_trywith (Lvar id) exn_cases),
+            None ),
         (static_exception_id, val_ids),
         handler )
   in

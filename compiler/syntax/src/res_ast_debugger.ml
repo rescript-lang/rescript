@@ -584,12 +584,15 @@ module SexpAst = struct
             expression expr;
             Sexp.list (map_empty ~f:case cases);
           ]
-      | Pexp_try (expr, cases) ->
+      | Pexp_try (expr, cases, finally_expr) ->
         Sexp.list
           [
             Sexp.atom "Pexp_try";
             expression expr;
             Sexp.list (map_empty ~f:case cases);
+            (match finally_expr with
+            | None -> Sexp.atom "None"
+            | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
           ]
       | Pexp_tuple exprs ->
         Sexp.list

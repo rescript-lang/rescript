@@ -127,9 +127,10 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
     | Lstaticcatch (l1, (_, _), l2) ->
       collect l1;
       collect l2
-    | Ltrywith (l1, _, l2) ->
+    | Ltrywith (l1, _, l2, finally_expr) ->
       collect l1;
-      collect l2
+      Ext_option.iter l2 collect;
+      Ext_option.iter finally_expr collect
     | Lifthenelse (l1, l2, l3) ->
       collect l1;
       collect l2;
