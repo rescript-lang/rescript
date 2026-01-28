@@ -25,7 +25,7 @@ let make = () => {
   }
 
   <label className="flex items-center">
-    <div className="pr-2 font-bold text-gray-400 text-lg"> {"Signature"->string} </div>
+    <div className="pr-2 font-bold text-gray-400 text-lg">{"Signature"->string}</div>
     <select
       id="country"
       className="transition duration-150 ease-in-out sm:text-sm sm:leading-5 border-none font-bold text-2xl text-gray-600 bg-transparent"

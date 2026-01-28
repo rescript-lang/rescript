@@ -7,6 +7,9 @@ module ResPrinter = Res_printer
 module Scanner = Res_scanner
 module Parser = Res_parser
 
+let is_jsx_text_enabled () =
+  Experimental_features.is_enabled Experimental_features.JsxText
+
 let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
 
@@ -3003,34 +3006,123 @@ and parse_jsx_props p : Parsetree.jsx_prop list =
   parse_region ~grammar:Grammar.JsxAttribute ~f:parse_jsx_prop p
 
 and parse_jsx_children p : Parsetree.jsx_children =
+  if is_jsx_text_enabled () then
+    (* JSX text RFC: https://github.com/rescript-lang/rescript/blob/master/docs/jsx-text-rfc.md *)
+    parse_jsx_children_2 p
+  else
+    let rec loop p children =
+      match p.Parser.token with
+      | Token.Eof -> children
+      | LessThan when Scanner.peekSlash p.scanner -> children
+      | LessThan ->
+        (* Imagine: <div> <Navbar /> <
+         * is `<` the start of a jsx-child? <div …
+         * or is it the start of a closing tag?  </div>
+         * reconsiderLessThan peeks at the next token and
+         * determines the correct token to disambiguate *)
+        let child =
+          parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
+        in
+        loop p (child :: children)
+      | token when Grammar.is_jsx_child_start token ->
+        let child =
+          parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
+        in
+        loop p (child :: children)
+      | _ -> children
+    in
+    match p.Parser.token with
+    | DotDotDot ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message ErrorMessages.spread_children_no_longer_supported);
+      Parser.next p;
+      [parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p]
+    | _ -> List.rev (loop p [])
+
+and _nojaf_dump_token prefix p =
+  let start_line = p.Parser.start_pos.Lexing.pos_lnum in
+  let start_col =
+    p.Parser.start_pos.Lexing.pos_cnum - p.Parser.start_pos.Lexing.pos_bol + 1
+  in
+  let end_line = p.Parser.end_pos.Lexing.pos_lnum in
+  let end_col =
+    p.Parser.end_pos.Lexing.pos_cnum - p.Parser.end_pos.Lexing.pos_bol + 1
+  in
+
+  Format.printf "%s %s (%d,%d-%d,%d)\n" prefix
+    (Res_token.to_string p.token)
+    start_line start_col end_line end_col
+
+and parse_jsx_children_2 (p : Parser.t) : Parsetree.jsx_children =
   let rec loop p children =
     match p.Parser.token with
     | Token.Eof -> children
-    | LessThan when Scanner.peekSlash p.scanner -> children
+    (* next jsx child start or closing of current element *)
     | LessThan ->
-      (* Imagine: <div> <Navbar /> <
-       * is `<` the start of a jsx-child? <div …
-       * or is it the start of a closing tag?  </div>
-       * reconsiderLessThan peeks at the next token and
-       * determines the correct token to disambiguate *)
+      if Scanner.peekSlash p.scanner then children
+      else
+        let child = parse_jsx p in
+        child :: loop p children
+    (* Expression hole *)
+    | Lbrace ->
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
-      loop p (child :: children)
-    | token when Grammar.is_jsx_child_start token ->
-      let child =
-        parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
-      in
-      loop p (child :: children)
-    | _ -> children
+      child :: loop p children
+    | Rbrace -> failwith "Nested children not supported"
+    | _text_token ->
+      let text_expr = parse_jsx_text p in
+      text_expr :: loop p children
   in
-  match p.Parser.token with
-  | DotDotDot ->
-    Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
-      (Diagnostics.message ErrorMessages.spread_children_no_longer_supported);
-    Parser.next p;
-    [parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p]
-  | _ -> List.rev (loop p [])
+  loop p []
+
+(**
+    Parse tokens as regular string inside a jsx element.
+    See https://facebook.github.io/jsx/#prod-JSXText
+  *)
+and parse_jsx_text p : Parsetree.expression =
+  (* Use prev_end_pos to capture any leading whitespace that the scanner skipped *)
+  let raw_start_pos = p.Parser.prev_end_pos in
+  let start_pos = p.Parser.start_pos in
+  let rec visit p =
+    match p.Parser.token with
+    | GreaterThan ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message
+           "Unexpected token. Did you mean `{\">\"}` or `&gt;`?");
+      Parser.next p;
+      Recover.default_expr ()
+    | Rbrace ->
+      Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+        (Diagnostics.message
+           "Unexpected token. Did you mean `{\"}\"}` or `&rbrace;`?");
+      Parser.next p;
+      Recover.default_expr ()
+    (* Nested children or the closing of the current element, so we can return the text as child. *)
+    | LessThan | Lbrace ->
+      let end_pos = p.Parser.start_pos in
+      let loc = mk_loc start_pos end_pos in
+      let raw_text =
+        String.sub p.scanner.src raw_start_pos.pos_cnum
+          (end_pos.pos_cnum - raw_start_pos.pos_cnum)
+      in
+      let text = String.trim raw_text in
+      let leading_space =
+        String.length raw_text > 0
+        && (raw_text.[0] = ' ' || raw_text.[0] = '\t' || raw_text.[0] = '\n')
+      in
+      let trailing_space =
+        String.length raw_text > 0
+        &&
+        let last = raw_text.[String.length raw_text - 1] in
+        last = ' ' || last = '\t' || last = '\n'
+      in
+      Ast_helper.Exp.jsx_text ~loc ~leading_space ~trailing_space text
+    | _text_token ->
+      Parser.next p;
+      visit p
+  in
+  visit p
 
 and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in

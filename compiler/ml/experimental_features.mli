@@ -1,4 +1,4 @@
-type feature = LetUnwrap
+type feature = LetUnwrap | JsxText
 
 val enable_from_string : string -> unit
 val is_enabled : feature -> bool
