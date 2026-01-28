@@ -3,7 +3,8 @@
 //! This module contains the main parsing functions that convert a token
 //! stream into an AST. It mirrors `res_core.ml` from the OCaml implementation.
 
-use crate::location::{Located, Location, Position};
+use crate::location::Position;
+use crate::parse_arena::{Located, LocIdx};
 
 use super::ast::*;
 use super::diagnostics::DiagnosticCategory;
@@ -16,21 +17,17 @@ use super::token::Token;
 // Location Helpers
 // ============================================================================
 
-/// Create a location from start and end positions.
-pub fn mk_loc(start: &Position, end: &Position) -> Location {
-    Location::from_positions(start.clone(), end.clone())
-}
-
 /// Create a located value with the given location.
-pub fn with_loc<T>(txt: T, loc: Location) -> Located<T> {
-    Located { txt, loc }
+pub fn with_loc<T>(txt: T, loc: LocIdx) -> Loc<T> {
+    Loc { txt, loc }
 }
 
 /// Create a located value with no location (ghost).
-pub fn mknoloc<T>(txt: T) -> Located<T> {
-    Located {
+/// Uses the pre-allocated "none" location at index 0.
+pub fn mknoloc<T>(txt: T) -> Loc<T> {
+    Loc {
         txt,
-        loc: Location::none(),
+        loc: LocIdx::none(),
     }
 }
 
@@ -47,7 +44,7 @@ pub mod recover {
         let id = mknoloc("rescript.exprhole".to_string());
         Expression {
             pexp_desc: ExpressionDesc::Pexp_extension((id, Payload::PStr(vec![]))),
-            pexp_loc: Location::none(),
+            pexp_loc: LocIdx::none(),
             pexp_attributes: vec![],
         }
     }
@@ -57,7 +54,7 @@ pub mod recover {
         let id = mknoloc("rescript.typehole".to_string());
         CoreType {
             ptyp_desc: CoreTypeDesc::Ptyp_extension((id, Payload::PStr(vec![]))),
-            ptyp_loc: Location::none(),
+            ptyp_loc: LocIdx::none(),
             ptyp_attributes: vec![],
         }
     }
@@ -67,7 +64,7 @@ pub mod recover {
         let id = mknoloc("rescript.patternhole".to_string());
         Pattern {
             ppat_desc: PatternDesc::Ppat_extension((id, Payload::PStr(vec![]))),
-            ppat_loc: Location::none(),
+            ppat_loc: LocIdx::none(),
             ppat_attributes: vec![],
         }
     }
@@ -76,7 +73,7 @@ pub mod recover {
     pub fn default_module_expr() -> ModuleExpr {
         ModuleExpr {
             pmod_desc: ModuleExprDesc::Pmod_structure(vec![]),
-            pmod_loc: Location::none(),
+            pmod_loc: LocIdx::none(),
             pmod_attributes: vec![],
         }
     }
@@ -85,7 +82,7 @@ pub mod recover {
     pub fn default_module_type() -> ModuleType {
         ModuleType {
             pmty_desc: ModuleTypeDesc::Pmty_signature(vec![]),
-            pmty_loc: Location::none(),
+            pmty_loc: LocIdx::none(),
             pmty_attributes: vec![],
         }
     }
@@ -504,21 +501,19 @@ pub mod ast_helper {
         let mut result = match spread {
             Some(pat) => pat,
             None => {
-                let nil_loc = Location {
-                    loc_ghost: true,
-                    ..loc.clone()
-                };
-                let nil = with_loc(Longident::Lident("[]".to_string()), nil_loc.clone());
+                // Use ghost location for the empty list constructor
+                let nil_loc = LocIdx::none();
+                let nil = with_loc(Longident::Lident("[]".to_string()), nil_loc);
                 make_pat(PatternDesc::Ppat_construct(nil, None), nil_loc)
             }
         };
 
         // Build :: chain from the end
         for item in items.into_iter().rev() {
-            let tuple_loc = p.mk_loc(&item.ppat_loc.loc_start, &result.ppat_loc.loc_end);
-            let cons_loc = tuple_loc.clone();
+            let tuple_loc = p.mk_loc(&p.loc_start(item.ppat_loc), &p.loc_end(result.ppat_loc));
+            let cons_loc = tuple_loc;
             let tuple = make_pat(PatternDesc::Ppat_tuple(vec![item, result]), tuple_loc);
-            let cons = with_loc(Longident::Lident("::".to_string()), cons_loc.clone());
+            let cons = with_loc(Longident::Lident("::".to_string()), cons_loc);
             result = make_pat(
                 PatternDesc::Ppat_construct(cons, Some(Box::new(tuple))),
                 cons_loc,
@@ -612,7 +607,7 @@ pub fn make_unary_expr(
     };
 
     let op_expr = ast_helper::make_ident(Longident::Lident(operator), token_loc);
-    let loc = p.mk_loc(&start_pos, &operand.pexp_loc.loc_end);
+    let loc = p.mk_loc(&start_pos, &p.loc_end(operand.pexp_loc));
 
     ast_helper::make_apply(op_expr, vec![(ArgLabel::Nolabel, operand)], loc)
 }
@@ -934,7 +929,7 @@ mod tests {
 
     #[test]
     fn test_ast_helper_make_expr() {
-        let loc = Location::none();
+        let loc = LocIdx::none();
         let expr = ast_helper::make_expr(
             ExpressionDesc::Pexp_constant(Constant::Integer("42".to_string(), None)),
             loc.clone(),
@@ -947,7 +942,7 @@ mod tests {
 
     #[test]
     fn test_ast_helper_make_var_pat() {
-        let loc = Location::none();
+        let loc = LocIdx::none();
         let pat = ast_helper::make_var_pat("x".to_string(), loc);
         assert!(matches!(pat.ppat_desc, PatternDesc::Ppat_var(_)));
     }

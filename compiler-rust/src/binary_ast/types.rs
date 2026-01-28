@@ -6,6 +6,7 @@
 use super::marshal::MarshalWriter;
 use super::serialize::Marshal;
 use crate::location::{Located, Location, Position};
+use crate::parse_arena::{self, LocIdx, PosIdx};
 use crate::parser::longident::Longident;
 
 // ========== Position (Lexing.position) ==========
@@ -87,7 +88,7 @@ impl Marshal for Location {
     }
 }
 
-// ========== Located<T> ('a loc) ==========
+// ========== Located<T> ('a loc) from crate::location ==========
 
 impl<T: Marshal> Marshal for Located<T> {
     /// Serialize a Located<T> to Marshal format.
@@ -98,6 +99,43 @@ impl<T: Marshal> Marshal for Located<T> {
     /// ```
     ///
     /// Encoded as a block with tag 0 and 2 fields.
+    fn marshal(&self, w: &mut MarshalWriter) {
+        w.write_block_header(0, 2);
+        self.txt.marshal(w);
+        self.loc.marshal(w);
+    }
+}
+
+// ========== Arena-based types ==========
+
+impl Marshal for PosIdx {
+    /// Serialize a PosIdx by looking up the position in the arena.
+    /// Requires that MarshalWriter::set_arena() was called first.
+    fn marshal(&self, w: &mut MarshalWriter) {
+        let arena = w.get_arena();
+        w.write_pos_idx(*self, arena);
+    }
+}
+
+impl Marshal for LocIdx {
+    /// Serialize a LocIdx by looking up the location in the arena.
+    /// Requires that MarshalWriter::set_arena() was called first.
+    fn marshal(&self, w: &mut MarshalWriter) {
+        let arena = w.get_arena();
+        w.write_loc_idx(*self, arena);
+    }
+}
+
+impl<T: Marshal> Marshal for parse_arena::Located<T> {
+    /// Serialize a parse_arena::Located<T> to Marshal format.
+    ///
+    /// OCaml type:
+    /// ```ocaml
+    /// type 'a loc = { txt: 'a; loc: t }
+    /// ```
+    ///
+    /// Encoded as a block with tag 0 and 2 fields.
+    /// Uses arena-based LocIdx for the location.
     fn marshal(&self, w: &mut MarshalWriter) {
         w.write_block_header(0, 2);
         self.txt.marshal(w);

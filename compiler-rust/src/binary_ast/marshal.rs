@@ -114,6 +114,11 @@ pub struct MarshalWriter {
     /// Same index = same object, will be shared in output
     location_idx_table: HashMap<LocIdx, u32>,
 
+    /// Optional reference to ParseArena for LocIdx marshalling.
+    /// Set via `set_arena()` before marshalling AST with LocIdx fields.
+    /// Uses raw pointer to avoid lifetime constraints.
+    arena: Option<*const ParseArena>,
+
     /// Current object counter (incremented each time we record a sharable object)
     obj_counter: u32,
 
@@ -144,6 +149,7 @@ impl MarshalWriter {
             location_id_table: HashMap::new(),
             position_idx_table: HashMap::new(),
             location_idx_table: HashMap::new(),
+            arena: None,
             obj_counter: 0,
             size_32: 0,
             size_64: 0,
@@ -163,9 +169,31 @@ impl MarshalWriter {
             location_id_table: HashMap::new(),
             position_idx_table: HashMap::new(),
             location_idx_table: HashMap::new(),
+            arena: None,
             obj_counter: 0,
             size_32: 0,
             size_64: 0,
+        }
+    }
+
+    /// Set the ParseArena to use for LocIdx marshalling.
+    /// Must be called before marshalling AST with LocIdx fields.
+    ///
+    /// # Safety
+    /// The arena must remain valid for the duration of marshalling.
+    pub fn set_arena(&mut self, arena: &ParseArena) {
+        self.arena = Some(arena as *const ParseArena);
+    }
+
+    /// Get the arena reference, panics if not set.
+    pub fn get_arena(&self) -> &ParseArena {
+        // SAFETY: We trust that set_arena was called with a valid arena
+        // and that the arena remains valid during marshalling.
+        unsafe {
+            self.arena
+                .expect("MarshalWriter::set_arena must be called before marshalling LocIdx")
+                .as_ref()
+                .unwrap()
         }
     }
 

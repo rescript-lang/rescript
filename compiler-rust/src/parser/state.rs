@@ -126,19 +126,49 @@ impl<'src> Parser<'src> {
         parser
     }
 
-    /// Create a location with a unique ID for identity-based sharing in Marshal.
+    /// Create a location from positions and push to arena.
     ///
-    /// Each call generates a new LocationId. When the returned Location is cloned,
-    /// the clones share the same ID (and will be shared in the Marshal output).
-    ///
-    /// Uses atomic counter to take &self, avoiding borrow conflicts when
-    /// passing position references like `p.mk_loc(&start_pos, &p.prev_end_pos)`.
-    pub fn mk_loc(&self, start: &Position, end: &Position) -> Location {
-        let id = self.location_id_counter.fetch_add(1, Ordering::Relaxed);
-        Location::from_positions_with_id(start.clone(), end.clone(), LocationId::from_raw(id))
+    /// Returns a LocIdx that can be used to look up the location later.
+    /// Note: Positions must be cloned before calling this to avoid borrow conflicts.
+    pub fn mk_loc(&mut self, start: &Position, end: &Position) -> LocIdx {
+        self.arena.mk_loc_from_positions(start, end)
+    }
+
+    /// Create a location from start position to prev_end_pos.
+    /// This is a common pattern that avoids borrow conflicts.
+    pub fn mk_loc_to_prev_end(&mut self, start: &Position) -> LocIdx {
+        let end = self.prev_end_pos.clone();
+        self.arena.mk_loc_from_positions(start, &end)
+    }
+
+    /// Create a location from start position to end_pos.
+    /// This is a common pattern that avoids borrow conflicts.
+    pub fn mk_loc_to_end(&mut self, start: &Position) -> LocIdx {
+        let end = self.end_pos.clone();
+        self.arena.mk_loc_from_positions(start, &end)
+    }
+
+    /// Create a location for the current token (start_pos to end_pos).
+    pub fn mk_loc_current(&mut self) -> LocIdx {
+        let start = self.start_pos.clone();
+        let end = self.end_pos.clone();
+        self.arena.mk_loc_from_positions(&start, &end)
+    }
+
+    /// Create a location from start_pos to prev_end_pos.
+    pub fn mk_loc_start_to_prev_end(&mut self) -> LocIdx {
+        let start = self.start_pos.clone();
+        let end = self.prev_end_pos.clone();
+        self.arena.mk_loc_from_positions(&start, &end)
     }
 
     // ========== Arena-based location methods ==========
+
+    /// Get the internal ParseArena for marshalling.
+    /// Only use this after parsing is complete.
+    pub fn into_arena(self) -> ParseArena {
+        self.arena
+    }
 
     /// Get a reference to the parse arena.
     pub fn arena(&self) -> &ParseArena {
@@ -185,14 +215,14 @@ impl<'src> Parser<'src> {
         self.arena.none_loc()
     }
 
-    /// Get the start position of a location.
-    pub fn loc_start(&self, loc: LocIdx) -> &Position {
-        self.arena.loc_start(loc)
+    /// Get the start position of a location (cloned).
+    pub fn loc_start(&self, loc: LocIdx) -> Position {
+        self.arena.loc_start(loc).clone()
     }
 
-    /// Get the end position of a location.
-    pub fn loc_end(&self, loc: LocIdx) -> &Position {
-        self.arena.loc_end(loc)
+    /// Get the end position of a location (cloned).
+    pub fn loc_end(&self, loc: LocIdx) -> Position {
+        self.arena.loc_end(loc).clone()
     }
 
     /// Get the start position index of a location.
@@ -213,6 +243,13 @@ impl<'src> Parser<'src> {
     /// Convert a LocIdx to a full Location struct.
     pub fn to_location(&self, loc: LocIdx) -> Location {
         self.arena.to_location(loc)
+    }
+
+    /// Convert a full Location struct to LocIdx (push to arena).
+    /// Use this when converting from Token locations (which use crate::location::Location)
+    /// to AST locations (which use LocIdx).
+    pub fn from_location(&mut self, loc: &Location) -> LocIdx {
+        self.arena.from_location(loc)
     }
 
     /// Create a location spanning from one location's start to another's end.

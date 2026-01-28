@@ -5,9 +5,12 @@
 
 use std::cell::RefCell;
 
-use crate::location::{Located, Location, Position};
+use crate::location::Position;
+use crate::parse_arena::{Located, LocIdx};
 
+// Import Location as alias to LocIdx from ast
 use super::ast::*;
+use super::ast::Location;
 use super::core::{is_es6_arrow_functor, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::expr;
@@ -270,7 +273,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         }
         Token::ModuleComment { loc, content } => {
             // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
-            let loc = loc.clone();
+            let loc = p.from_location(loc);
             let content = content.clone();
             p.next();
             let attr = super::core::doc_comment_to_attribute(loc, content);
@@ -526,7 +529,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
         }
         Token::ModuleComment { loc, content } => {
             // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
-            let loc = loc.clone();
+            let loc = p.from_location(loc);
             let content = content.clone();
             p.next();
             let attr = super::core::doc_comment_to_attribute(loc, content);
@@ -806,7 +809,7 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
                     let mod_type = parse_module_type(p);
                     // Create Ptyp_package from module type
                     // OCaml uses colon_start for the package type location start
-                    let pkg_loc = p.mk_loc(&colon_pos, &mod_type.pmty_loc.loc_end);
+                    let pkg_loc = p.mk_loc(&colon_pos, &p.loc_end(mod_type.pmty_loc));
                     let pkg_type = CoreType {
                         ptyp_desc: CoreTypeDesc::Ptyp_package(
                             module_type_to_package(&mod_type),
@@ -893,7 +896,7 @@ fn parse_module_apply(p: &mut Parser<'_>, func: ModuleExpr) -> ModuleExpr {
         //   mod_expr args
         // Each nested apply gets loc from current result start to current arg end
         for arg in args {
-            let loc = p.mk_loc(&result.pmod_loc.loc_start, &arg.pmod_loc.loc_end);
+            let loc = p.mk_loc(&p.loc_start(result.pmod_loc), &p.loc_end(arg.pmod_loc));
             result = ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_apply(Box::new(result), Box::new(arg)),
                 pmod_loc: loc,
@@ -1096,8 +1099,8 @@ fn parse_functor_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
     let rhs_module_expr = match return_type {
         Some(mod_type) => {
             let loc = p.mk_loc(
-                &rhs_module_expr.pmod_loc.loc_start,
-                &mod_type.pmty_loc.loc_end,
+                &p.loc_start(rhs_module_expr.pmod_loc),
+                &p.loc_end(mod_type.pmty_loc),
             );
             ModuleExpr {
                 pmod_desc: ModuleExprDesc::Pmod_constraint(

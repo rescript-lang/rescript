@@ -9,7 +9,8 @@ use super::diagnostics::DiagnosticCategory;
 use super::longident::Longident;
 use super::state::Parser;
 use super::token::Token;
-use crate::location::{Located, Position};
+use crate::location::Position;
+use crate::parse_arena::{Located, LocIdx};
 
 // ============================================================================
 // Attribute Parsing for Patterns
@@ -26,7 +27,7 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
                 }
             }
             Token::DocComment { loc, content } => {
-                let loc = loc.clone();
+                let loc = p.from_location(loc);
                 let content = content.clone();
                 p.next();
                 attrs.push(super::core::doc_comment_to_attribute(loc, content));
@@ -105,7 +106,7 @@ fn parse_payload(p: &mut Parser<'_>) -> Payload {
         let expr = super::expr::parse_expr(p);
         items.push(StructureItem {
             pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
-            pstr_loc: crate::location::Location::none(),
+            pstr_loc: LocIdx::none(),
         });
 
         if !p.optional(&Token::Comma) && !p.optional(&Token::Semicolon) {
@@ -218,11 +219,11 @@ fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
 
     // Apply leading attributes to the pattern
     if !attrs.is_empty() {
-        let loc = p.mk_loc(&start_pos, &pat.ppat_loc.loc_end);
+        let loc = p.mk_loc(&start_pos, &p.loc_end(pat.ppat_loc));
         // OCaml also extends the inner StringLoc in Ppat_var to include attributes
         let new_desc = match pat.ppat_desc {
             PatternDesc::Ppat_var(var_loc) => {
-                let extended_loc = p.mk_loc(&start_pos, &var_loc.loc.loc_end);
+                let extended_loc = p.mk_loc(&start_pos, &p.loc_end(var_loc.loc));
                 PatternDesc::Ppat_var(with_loc(var_loc.txt, extended_loc))
             }
             other => other,
@@ -321,7 +322,7 @@ fn parse_or_pattern(
     patterns
         .into_iter()
         .reduce(|acc, pat| {
-            let loc = p.mk_loc(&acc.ppat_loc.loc_start, &pat.ppat_loc.loc_end);
+            let loc = p.mk_loc(&p.loc_start(acc.ppat_loc), &p.loc_end(pat.ppat_loc));
             Pattern {
                 ppat_desc: PatternDesc::Ppat_or(Box::new(acc), Box::new(pat)),
                 ppat_loc: loc,
@@ -340,7 +341,7 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
         // Use no-arrow parsing so the `=>` token isn't consumed as part of a type
         // when we're in contexts like switch cases: `| pat: t => expr`.
         let typ = super::typ::parse_typ_expr_no_arrow(p);
-        let loc = p.mk_loc(&pat.ppat_loc.loc_start, &typ.ptyp_loc.loc_end);
+        let loc = p.mk_loc(&p.loc_start(pat.ppat_loc), &p.loc_end(typ.ptyp_loc));
         Pattern {
             ppat_desc: PatternDesc::Ppat_constraint(Box::new(pat), typ),
             ppat_loc: loc,
@@ -352,8 +353,8 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
 }
 
 /// Create a unit construct pattern `()`.
-pub fn make_unit_construct_pattern(loc: crate::location::Location) -> Pattern {
-    ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc.clone(), loc)
+pub fn make_unit_construct_pattern(loc: Location) -> Pattern {
+    ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc, loc)
 }
 
 /// Parse an optional alias `as name` after a pattern.
@@ -365,7 +366,7 @@ pub fn parse_alias_pattern(
     mut pat: Pattern,
     _attrs: Vec<Attribute>,
 ) -> Pattern {
-    let start_pos = pat.ppat_loc.loc_start.clone();
+    let start_pos = p.loc_start(pat.ppat_loc);
     while p.token == Token::As {
         p.next();
         let name = match &p.token {
@@ -530,7 +531,7 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
         Token::Exception => {
             p.next();
             let pat = parse_atomic_pattern(p);
-            let loc = p.mk_loc(&start_pos, &pat.ppat_loc.loc_end);
+            let loc = p.mk_loc(&start_pos, &p.loc_end(pat.ppat_loc));
             Pattern {
                 ppat_desc: PatternDesc::Ppat_exception(Box::new(pat)),
                 ppat_loc: loc,
@@ -562,7 +563,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 let colon_pos = p.start_pos.clone();
                 p.next();
                 let mut typ = super::typ::parse_package_type(p);
-                typ.ptyp_loc.loc_start = colon_pos;
+                // Recreate location starting from colon position
+                typ.ptyp_loc = p.mk_loc(&colon_pos, &p.loc_end(typ.ptyp_loc));
                 Some(typ)
             } else {
                 None

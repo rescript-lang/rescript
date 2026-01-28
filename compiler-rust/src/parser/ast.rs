@@ -9,13 +9,18 @@
 #![allow(non_camel_case_types)]
 #![allow(missing_docs)]
 
-use crate::location::{Located, Location, Position};
+use crate::location::Position;
+use crate::parse_arena::{Located, LocIdx};
 use serde::{Deserialize, Serialize};
 
 use super::longident::Longident;
 
 /// Re-export Located for convenience.
+/// Note: Located<T> uses LocIdx for efficient arena-based storage.
 pub type Loc<T> = Located<T>;
+
+/// Location type alias - uses arena index for efficient storage.
+pub type Location = LocIdx;
 
 /// A string with location information.
 pub type StringLoc = Located<String>;

@@ -69,6 +69,19 @@ impl ArenaIdx for LocIdx {
     }
 }
 
+impl LocIdx {
+    /// Check if this is the "none" location (index 0).
+    /// The "none" location is pre-allocated at index 0 in every ParseArena.
+    pub fn is_none(&self) -> bool {
+        self.0 == 0
+    }
+
+    /// Create the "none" location index (same as default).
+    pub fn none() -> Self {
+        Self(0)
+    }
+}
+
 // ============================================================================
 // InternedLocation (stored in arena)
 // ============================================================================
@@ -271,6 +284,22 @@ impl ParseArena {
             self.get_position(loc.loc_start).clone(),
             self.get_position(loc.loc_end).clone(),
         )
+    }
+
+    /// Convert a full Location to a LocIdx by pushing its positions to the arena.
+    /// Useful for migrating code that creates Location values.
+    pub fn from_location(&mut self, loc: &Location) -> LocIdx {
+        let start_idx = self.push_position(loc.loc_start.clone());
+        let end_idx = self.push_position(loc.loc_end.clone());
+        self.push_loc(start_idx, end_idx, loc.loc_ghost)
+    }
+
+    /// Convert a Located<T> using crate::location::Location to one using LocIdx.
+    pub fn from_located<T: Clone>(&mut self, located: &crate::location::Located<T>) -> Located<T> {
+        Located {
+            txt: located.txt.clone(),
+            loc: self.from_location(&located.loc),
+        }
     }
 }
 
