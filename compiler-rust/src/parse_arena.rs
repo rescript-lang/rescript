@@ -301,6 +301,14 @@ impl ParseArena {
             loc: self.from_location(&located.loc),
         }
     }
+
+    /// Convert a Located<T> using LocIdx to one using crate::location::Location.
+    pub fn to_located<T: Clone>(&self, located: &Located<T>) -> crate::location::Located<T> {
+        crate::location::Located {
+            txt: located.txt.clone(),
+            loc: self.to_location(located.loc),
+        }
+    }
 }
 
 // ============================================================================

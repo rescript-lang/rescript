@@ -3,7 +3,7 @@
 //! This module provides functions to determine when parentheses or braces
 //! are needed in printed output. It's a port of OCaml's `res_parens.ml`.
 
-use crate::location::Location;
+use crate::parse_arena::LocIdx;
 use crate::parser::ast::*;
 use crate::parser::longident::Longident;
 use crate::parser::parsetree_viewer;
@@ -14,7 +14,7 @@ pub enum ParenKind {
     /// Parentheses are needed
     Parenthesized,
     /// Braces are needed at the given location
-    Braced(Location),
+    Braced(LocIdx),
     /// No wrapping needed
     Nothing,
 }
@@ -238,7 +238,7 @@ pub fn rhs_binary_expr_operand(parent_operator: &str, rhs: &Expression) -> bool 
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) if funct.pexp_attributes.is_empty() => {
                     if let Longident::Lident(operator) = &ident.txt {
-                        if parsetree_viewer::not_ghost_operator(operator, &ident.loc) {
+                        if parsetree_viewer::not_ghost_operator(operator, ident.loc.is_none()) {
                             let prec_parent =
                                 parsetree_viewer::operator_precedence(parent_operator);
                             let prec_child = parsetree_viewer::operator_precedence(operator);
@@ -264,7 +264,7 @@ pub fn flatten_operand_rhs(parent_operator: &str, rhs: &Expression) -> bool {
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) => {
                     if let Longident::Lident(operator) = &ident.txt {
-                        if parsetree_viewer::not_ghost_operator(operator, &ident.loc) {
+                        if parsetree_viewer::not_ghost_operator(operator, ident.loc.is_none()) {
                             let prec_parent =
                                 parsetree_viewer::operator_precedence(parent_operator);
                             let prec_child = parsetree_viewer::operator_precedence(operator);

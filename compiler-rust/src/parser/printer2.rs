@@ -3819,7 +3819,7 @@ fn print_mod_functor_param(
         None => param.lbl.loc.clone(),
         Some(mod_type) => {
             let mut loc = param.lbl.loc.clone();
-            loc.loc_end = mod_type.pmty_loc.loc_end.clone();
+            loc.loc_end = p.loc_end(mod_type.pmty_loc);
             loc
         }
     };

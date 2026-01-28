@@ -3,7 +3,7 @@
 //! This module provides helper functions for analyzing and inspecting the AST.
 //! It's a port of OCaml's `res_parsetree_viewer.ml`.
 
-use crate::location::Location;
+use crate::parse_arena::LocIdx;
 use crate::parser::ast::*;
 use crate::parser::longident::Longident;
 
@@ -120,7 +120,7 @@ pub enum IfConditionKind<'a> {
 /// Returns a list of (location, condition_kind, then_expr) tuples and the final else expression.
 pub fn collect_if_expressions(
     expr: &Expression,
-) -> (Vec<(&Location, IfConditionKind<'_>, &Expression)>, Option<&Expression>) {
+) -> (Vec<(&LocIdx, IfConditionKind<'_>, &Expression)>, Option<&Expression>) {
     let mut acc = Vec::new();
     let mut current = expr;
 
@@ -187,7 +187,7 @@ pub fn is_binary_expression(expr: &Expression) -> bool {
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) => {
                     if let Longident::Lident(op) = &ident.txt {
-                        not_ghost_operator(op, &ident.loc)
+                        not_ghost_operator(op, ident.loc.is_none())
                     } else {
                         false
                     }
@@ -209,7 +209,7 @@ pub fn get_binary_operator(expr: &Expression) -> Option<String> {
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) => {
                     if let Longident::Lident(op) = &ident.txt {
-                        if not_ghost_operator(op, &ident.loc) {
+                        if not_ghost_operator(op, ident.loc.is_none()) {
                             return Some(op.clone());
                         }
                     }
@@ -704,8 +704,8 @@ pub fn is_unary_operator_str(op: &str) -> bool {
 
 /// Check if operator is not a ghost operator.
 /// Ghost operators are internal and shouldn't be printed as binary ops.
-pub fn not_ghost_operator(op: &str, loc: &Location) -> bool {
-    is_binary_operator_str(op) && !(loc.loc_ghost && op == "++")
+pub fn not_ghost_operator(op: &str, is_ghost: bool) -> bool {
+    is_binary_operator_str(op) && !(is_ghost && op == "++")
 }
 
 // ============================================================================

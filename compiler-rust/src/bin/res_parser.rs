@@ -175,7 +175,7 @@ fn main() {
         }
 
         // Apply JSX PPX transformation
-        let signature = jsx_ppx::transform_signature(signature, args.jsx_version);
+        let signature = jsx_ppx::transform_signature(signature, args.jsx_version, parser.arena_mut());
 
         // Apply AST conversion round-trip if requested (for testing)
         let signature = if args.test_ast_conversion {
@@ -262,7 +262,7 @@ fn main() {
         }
 
         // Apply JSX PPX transformation
-        let structure = jsx_ppx::transform_structure(structure, args.jsx_version);
+        let structure = jsx_ppx::transform_structure(structure, args.jsx_version, parser.arena_mut());
 
         // Apply AST conversion round-trip if requested (for testing)
         let structure = if args.test_ast_conversion {

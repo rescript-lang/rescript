@@ -5,7 +5,8 @@
 
 use std::collections::HashSet;
 
-use crate::location::{Located, Location, Position};
+use crate::location::Position;
+use crate::parse_arena::{Located, LocIdx};
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
@@ -168,7 +169,7 @@ pub fn parse_poly_type_expr(p: &mut Parser<'_>) -> CoreType {
                 }
                 _ => "a".to_string(),
             };
-            let var_loc = p.mk_loc(&var_start, &p.prev_end_pos);
+            let var_loc = p.mk_loc_to_prev_end(&var_start);
             let typ = CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_var(name),
                 ptyp_loc: var_loc.clone(),
@@ -177,7 +178,8 @@ pub fn parse_poly_type_expr(p: &mut Parser<'_>) -> CoreType {
             p.next(); // consume =>
             let return_type = parse_typ_expr_inner(p, true);
             // Use typ.ptyp_loc.loc_start (the var's location, excluding ')
-            let loc = p.mk_loc(&typ.ptyp_loc.loc_start, &p.prev_end_pos);
+            let end_pos = p.prev_end_pos.clone();
+            let loc = p.mk_loc_from_start_of(typ.ptyp_loc, &end_pos);
             let arg = TypeArg {
                 attrs: vec![],
                 lbl: ArgLabel::Nolabel,
@@ -225,7 +227,8 @@ fn parse_type_alias(p: &mut Parser<'_>, typ: CoreType) -> CoreType {
                 "a".to_string()
             }
         };
-        let loc = p.mk_loc(&typ.ptyp_loc.loc_start, &p.prev_end_pos);
+        let end_pos = p.prev_end_pos.clone();
+        let loc = p.mk_loc_from_start_of(typ.ptyp_loc, &end_pos);
         return CoreType {
             ptyp_desc: CoreTypeDesc::Ptyp_alias(Box::new(typ), var_name),
             ptyp_loc: loc,
@@ -268,7 +271,7 @@ fn parse_arrow_type_rest(
     // OCaml's parse_arrow_type_rest uses start_pos (before the argument),
     // NOT param_type.ptyp_loc.loc_start. This is different from the special case
     // in parse_poly_type_expr which uses typ.ptyp_loc.loc_start.
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
 
     let arg = TypeArg {
         attrs: vec![],
@@ -320,7 +323,7 @@ fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
         let return_type = parse_typ_expr_inner(p, true);
 
         // OCaml uses prev_end_pos (actual end after parsing return type), not return_type's ptyp_loc.loc_end
-        let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+        let loc = p.mk_loc_to_prev_end(&start_pos);
         let arg = TypeArg {
             attrs,
             lbl,
@@ -375,9 +378,10 @@ fn parse_type_attributes(p: &mut Parser<'_>) -> Attributes {
                 attrs.push((with_loc(id, loc), payload));
             }
             Token::DocComment { loc, content } => {
-                let loc = loc.clone();
+                let loc_cloned = loc.clone();
                 let content = content.clone();
                 p.next();
+                let loc = p.from_location(&loc_cloned);
                 attrs.push(super::core::doc_comment_to_attribute(loc, content));
             }
             _ => break,
@@ -448,13 +452,13 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                 let var_start = p.start_pos.clone();
                 let name = name.clone();
                 p.next();
-                let var_loc = p.mk_loc(&var_start, &p.prev_end_pos);
+                let var_loc = p.mk_loc_to_prev_end(&var_start);
                 vars.push(with_loc(name, var_loc));
             }
 
             p.expect(Token::Dot);
             let body = parse_typ_expr(p);
-            let loc = p.mk_loc(&start_pos, &body.ptyp_loc.loc_end);
+            let loc = p.mk_loc_to_end_of(&start_pos, body.ptyp_loc);
             CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, Box::new(body)),
                 ptyp_loc: loc,
@@ -482,14 +486,14 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                         "a".to_string()
                     }
                 };
-                let var_loc = p.mk_loc(&var_start, &p.prev_end_pos);
+                let var_loc = p.mk_loc_to_prev_end(&var_start);
                 vars.push(with_loc(name, var_loc));
             }
 
             if p.token == Token::Dot && !vars.is_empty() {
                 p.next();
                 let body = parse_typ_expr(p);
-                let loc = p.mk_loc(&start_pos, &body.ptyp_loc.loc_end);
+                let loc = p.mk_loc_to_end_of(&start_pos, body.ptyp_loc);
                 CoreType {
                     ptyp_desc: CoreTypeDesc::Ptyp_poly(vars, Box::new(body)),
                     ptyp_loc: loc,
@@ -511,7 +515,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
         Token::Underscore => {
             // Any type: _
             p.next();
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc_to_prev_end(&start_pos);
             CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_any,
                 ptyp_loc: loc,
@@ -568,8 +572,8 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                 // No ~loc passed, so ptyp_loc defaults to Location.none (ghost)
                 // But lid_loc uses the real location
                 p.next();
-                let lid_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
-                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, Location::none())
+                let lid_loc = p.mk_loc_to_prev_end(&start_pos);
+                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, LocIdx::none())
             } else {
                 // Parenthesized type or tuple
                 let typ = parse_typ_expr(p);
@@ -580,7 +584,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                     p.expect(Token::Rparen);
                     // OCaml includes the surrounding parentheses in the type's location
                     CoreType {
-                        ptyp_loc: p.mk_loc(&start_pos, &p.prev_end_pos),
+                        ptyp_loc: p.mk_loc_to_prev_end(&start_pos),
                         ..typ
                     }
                 }
@@ -596,7 +600,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
         Token::Percent => {
             // Extension: %ext
             let ext = parse_extension(p);
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc_to_prev_end(&start_pos);
             CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_extension(ext),
                 ptyp_loc: loc,
@@ -665,7 +669,7 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
     // ptyp_loc includes the full extent (identifier + type args)
     // Note: For Ldot types in certain contexts (type manifests, arrow parameters),
     // the location is adjusted later to exclude type args.
-    let ptyp_loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let ptyp_loc = p.mk_loc_to_prev_end(&start_pos);
     ast_helper::make_type_constr(lid, args, lid_loc, ptyp_loc)
 }
 
@@ -724,6 +728,7 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             let loc = loc.clone();
             let content = content.clone();
             p.next();
+            let loc = p.from_location(&loc);
             doc_attrs.push(super::core::doc_comment_to_attribute(loc, content));
         }
 
@@ -773,8 +778,9 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
                 CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
             );
             if is_simple_constr {
+                let end_pos = p.loc_end(typ.ptyp_loc).clone();
                 typ = CoreType {
-                    ptyp_loc: Location::from_positions(uncurried_start.clone(), typ.ptyp_loc.loc_end.clone()),
+                    ptyp_loc: p.mk_loc_from_positions(&uncurried_start, &end_pos),
                     ..typ
                 };
             }
@@ -810,12 +816,13 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
                 // and attrs passed directly to Ast_helper.Typ.constr
                 // If there's an uncurried marker (.), the location should start at the .
                 // Doc comments don't affect type location, only @-attributes do
-                typ.ptyp_loc.loc_start = if has_dot {
-                    uncurried_start.clone()
+                let end_pos = p.loc_end(typ.ptyp_loc).clone();
+                typ.ptyp_loc = if has_dot {
+                    p.mk_loc_from_positions(&uncurried_start, &end_pos)
                 } else if has_regular_attrs {
-                    post_doc_start.clone()
+                    p.mk_loc_from_positions(&post_doc_start, &end_pos)
                 } else {
-                    typ.ptyp_loc.loc_start.clone()
+                    typ.ptyp_loc
                 };
                 typ.ptyp_attributes = [param_attrs, typ.ptyp_attributes].concat();
             } else {
@@ -857,7 +864,7 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         params.push((TypeArg {
             attrs: vec![],
             lbl: ArgLabel::Nolabel,
-            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, Location::none()),
+            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, LocIdx::none()),
         }, start_pos.clone()));
     }
 
@@ -875,29 +882,29 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     };
     let total_arity = params.len() - as_underscore_count;
 
-    // Fold with (type, end_position) to track the correct end position
+    // Build the arrow type from right to left, tracking the end position
     // The first iteration uses arrow_end_pos, subsequent iterations use the arrow's end
-    let (result, _) = params.into_iter().rev().fold(
-        (return_type, arrow_end_pos),
-        |(acc, end_pos), (param, param_start)| {
-            // Each arrow's location spans from the label (if any) to the end of return
-            // OCaml includes the ~ in the location for labeled arguments
-            let arrow_loc = Location::from_positions(param_start.clone(), end_pos);
-            let arrow = CoreType {
-                ptyp_desc: CoreTypeDesc::Ptyp_arrow {
-                    arg: Box::new(param),
-                    ret: Box::new(acc),
-                    // Inner arrows don't have arity annotation
-                    arity: Arity::Unknown,
-                },
-                ptyp_loc: arrow_loc,
-                ptyp_attributes: vec![],
-            };
-            // Next iteration should use this arrow's end position
-            let next_end = arrow.ptyp_loc.loc_end.clone();
-            (arrow, next_end)
-        },
-    );
+    let mut acc = return_type;
+    let mut end_pos = arrow_end_pos;
+    for (param, param_start) in params.into_iter().rev() {
+        // Each arrow's location spans from the label (if any) to the end of return
+        // OCaml includes the ~ in the location for labeled arguments
+        let arrow_loc = p.mk_loc_from_positions(&param_start, &end_pos);
+        let arrow = CoreType {
+            ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                arg: Box::new(param),
+                ret: Box::new(acc),
+                // Inner arrows don't have arity annotation
+                arity: Arity::Unknown,
+            },
+            ptyp_loc: arrow_loc,
+            ptyp_attributes: vec![],
+        };
+        // Next iteration should use this arrow's end position
+        end_pos = p.loc_end(arrow.ptyp_loc).clone();
+        acc = arrow;
+    }
+    let result = acc;
 
     // Update the outermost arrow to have the full arity
     let result = match result.ptyp_desc {
@@ -914,8 +921,9 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
     };
 
     // The outermost arrow should start at start_pos (the opening paren) not at first arg
+    let end_pos = p.loc_end(result.ptyp_loc).clone();
     CoreType {
-        ptyp_loc: Location::from_positions(start_pos, result.ptyp_loc.loc_end.clone()),
+        ptyp_loc: p.mk_loc_from_positions(&start_pos, &end_pos),
         ..result
     }
 }
@@ -927,14 +935,14 @@ fn parse_lident(p: &mut Parser<'_>) -> (String, Location) {
         Token::Lident(name) => {
             let name = name.clone();
             p.next();
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc_to_prev_end(&start_pos);
             (name, loc)
         }
         _ => {
             p.err(DiagnosticCategory::Message(
                 "Expected lowercase identifier".to_string(),
             ));
-            ("_".to_string(), Location::none())
+            ("_".to_string(), LocIdx::none())
         }
     }
 }
@@ -950,9 +958,10 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
                 }
             }
             Token::DocComment { loc, content } => {
-                let loc = loc.clone();
+                let loc_cloned = loc.clone();
                 let content = content.clone();
                 p.next();
+                let loc = p.from_location(&loc_cloned);
                 attrs.push(super::core::doc_comment_to_attribute(loc, content));
             }
             _ => break,
@@ -983,7 +992,7 @@ fn parse_attribute(p: &mut Parser<'_>) -> Option<Attribute> {
     p.next();
 
     let attr_id_str = parse_attribute_id(p);
-    let attr_id = with_loc(attr_id_str, p.mk_loc(&start_pos, &p.prev_end_pos));
+    let attr_id = with_loc(attr_id_str, p.mk_loc_to_prev_end(&start_pos));
 
     // Only parse Lparen as payload if it's immediately adjacent to the attribute ID
     let is_adjacent = p.start_pos.cnum == p.prev_end_pos.cnum;
@@ -1005,7 +1014,7 @@ fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
         Token::String(s) => {
             let value = s.clone();
             let tag = get_string_tag(p);
-            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+            let loc = p.mk_loc_current();
             p.next();
             // Create Pstr_eval(Pexp_constant(Pconst_string(s, tag)))
             let expr = Expression {
@@ -1029,7 +1038,7 @@ fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
             let start_pos = p.start_pos.clone();
             let expr = super::expr::parse_expr(p);
             // OCaml structure_item location spans from before expression to after
-            let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+            let loc = p.mk_loc_to_prev_end(&start_pos);
             let item = StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
                 pstr_loc: loc,
@@ -1064,7 +1073,7 @@ fn parse_tuple_type(
     }
 
     p.expect(Token::Rparen);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
 
     CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_tuple(types),
@@ -1096,7 +1105,7 @@ fn parse_record_or_object_type(p: &mut Parser<'_>) -> CoreType {
 
     let fields = parse_object_fields(p);
     p.expect(Token::Rbrace);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
     let typ = CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
         ptyp_loc: loc,
@@ -1126,7 +1135,7 @@ pub fn parse_object_type_body(p: &mut Parser<'_>, start_pos: Position) -> CoreTy
 
     let fields = parse_object_fields(p);
     p.expect(Token::Rbrace);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
     let typ = CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_object(fields, closed),
         ptyp_loc: loc,
@@ -1172,7 +1181,7 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
                 let field_start = p.start_pos.clone();
                 p.next();
                 // OCaml's Otag location only includes the field name, not the type
-                let name_loc = p.mk_loc(&field_start, &p.prev_end_pos);
+                let name_loc = p.mk_loc_to_prev_end(&field_start);
                 // Check for optional field marker
                 let _is_optional = p.optional(&Token::Question);
                 p.expect(Token::Colon);
@@ -1216,7 +1225,7 @@ fn parse_polymorphic_variant_type_args(p: &mut Parser<'_>) -> CoreType {
         }
     }
     p.expect(Token::Rparen);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
 
     match args.as_slice() {
         // Single tuple type - wrap it in another tuple (OCaml's type checker mode)
@@ -1261,7 +1270,7 @@ fn parse_poly_variant_type(p: &mut Parser<'_>) -> CoreType {
     let fields = parse_row_fields(p);
 
     // OCaml's Ptyp_variant location ends at prev_end_pos (end of last row field), BEFORE the closing ]
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
     p.expect(Token::Rbracket);
 
     CoreType {
@@ -1317,7 +1326,7 @@ fn parse_poly_variant_type_simple(p: &mut Parser<'_>) -> CoreType {
         vec![]
     };
 
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
     let tag_loc = loc.clone();
 
     let fields = vec![RowField::Rtag(
@@ -1356,29 +1365,29 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
             let tag = match &p.token {
                 Token::Lident(name) | Token::Uident(name) => {
                     let name = name.clone();
-                    let loc = p.mk_loc(&hash_start, &p.end_pos);
+                    let loc = p.mk_loc_to_end(&hash_start);
                     p.next();
                     with_loc(name, loc)
                 }
                 Token::Int { i, .. } => {
                     let tag = i.clone();
-                    let loc = p.mk_loc(&hash_start, &p.end_pos);
+                    let loc = p.mk_loc_to_end(&hash_start);
                     p.next();
                     with_loc(tag, loc)
                 }
                 Token::String(s) => {
                     let tag = s.clone();
-                    let loc = p.mk_loc(&hash_start, &p.end_pos);
+                    let loc = p.mk_loc_to_end(&hash_start);
                     p.next();
                     with_loc(tag, loc)
                 }
                 Token::True => {
-                    let loc = p.mk_loc(&hash_start, &p.end_pos);
+                    let loc = p.mk_loc_to_end(&hash_start);
                     p.next();
                     with_loc("true".to_string(), loc)
                 }
                 Token::False => {
-                    let loc = p.mk_loc(&hash_start, &p.end_pos);
+                    let loc = p.mk_loc_to_end(&hash_start);
                     p.next();
                     with_loc("false".to_string(), loc)
                 }
@@ -1493,7 +1502,7 @@ pub fn parse_package_type(p: &mut Parser<'_>) -> CoreType {
         vec![]
     };
 
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
 
     CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_package((lid, constraints)),
@@ -1520,7 +1529,7 @@ fn parse_package_type_with_parens(
     };
 
     p.expect(Token::Rparen);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
 
     CoreType {
         ptyp_desc: CoreTypeDesc::Ptyp_package((lid, constraints)),
@@ -1558,7 +1567,7 @@ fn parse_module_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
     }
 
     let lid = super::core::build_longident(&path_parts);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
     with_loc(lid, loc)
 }
 
@@ -1595,7 +1604,7 @@ fn parse_type_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
     }
 
     let lid = super::core::build_longident(&path_parts);
-    let loc = p.mk_loc(&start_pos, &p.prev_end_pos);
+    let loc = p.mk_loc_to_prev_end(&start_pos);
     with_loc(lid, loc)
 }
 
@@ -1657,7 +1666,7 @@ fn parse_extension(p: &mut Parser<'_>) -> Extension {
         mknoloc("error".to_string())
     } else {
         let id = parts.join(".");
-        with_loc(id, p.mk_loc(&id_start, &p.prev_end_pos))
+        with_loc(id, p.mk_loc_to_prev_end(&id_start))
     };
 
     // Parse optional payload: %ext(payload)

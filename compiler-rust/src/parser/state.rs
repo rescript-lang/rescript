@@ -257,6 +257,20 @@ impl<'src> Parser<'src> {
         self.arena.mk_loc_spanning(start_loc, end_loc)
     }
 
+    /// Create a location from a start Position to another location's end.
+    /// Useful pattern: `p.mk_loc_to_end_of(&start_pos, body.some_loc)`
+    pub fn mk_loc_to_end_of(&mut self, start: &Position, end_loc: LocIdx) -> LocIdx {
+        let end = self.arena.loc_end(end_loc).clone();
+        self.arena.mk_loc_from_positions(start, &end)
+    }
+
+    /// Create a location from another location's start to an end Position.
+    /// Useful pattern: `p.mk_loc_from_start_of(body.some_loc, &end_pos)`
+    pub fn mk_loc_from_start_of(&mut self, start_loc: LocIdx, end: &Position) -> LocIdx {
+        let start = self.arena.loc_start(start_loc).clone();
+        self.arena.mk_loc_from_positions(&start, end)
+    }
+
     /// Record a diagnostic error.
     ///
     /// Errors are only recorded if the current region has `Report` status.

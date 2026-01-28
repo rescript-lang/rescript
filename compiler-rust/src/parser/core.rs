@@ -492,7 +492,7 @@ pub mod ast_helper {
 
     /// Create a list pattern `[a, b, ...rest]`.
     pub fn make_list_pattern(
-        p: &Parser<'_>,
+        p: &mut Parser<'_>,
         loc: Location,
         items: Vec<Pattern>,
         spread: Option<Pattern>,
@@ -556,7 +556,7 @@ fn negate_string(s: &str) -> String {
 
 /// Create a unary expression from an operator token and operand.
 pub fn make_unary_expr(
-    p: &Parser<'_>,
+    p: &mut Parser<'_>,
     start_pos: Position,
     token_end: Position,
     token: Token,
@@ -614,7 +614,7 @@ pub fn make_unary_expr(
 
 /// Create an infix operator expression.
 pub fn make_infix_operator(
-    p: &Parser<'_>,
+    p: &mut Parser<'_>,
     token: Token,
     start_pos: Position,
     end_pos: Position,

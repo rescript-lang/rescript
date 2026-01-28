@@ -1121,7 +1121,7 @@ fn parse_lident_list(p: &mut Parser<'_>) -> Vec<Located<String>> {
     let mut lidents = vec![];
     while let Token::Lident(name) = &p.token {
         let name = name.clone();
-        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+        let loc = p.mk_loc_current();
         p.next();
         lidents.push(with_loc(name, loc));
     }
@@ -1133,7 +1133,7 @@ fn parse_lident(p: &mut Parser<'_>) -> (String, Location) {
     match &p.token {
         Token::Lident(name) => {
             let name = name.clone();
-            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+            let loc = p.mk_loc_current();
             p.next();
             (name, loc)
         }
@@ -1157,9 +1157,10 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
                 }
             }
             Token::DocComment { loc, content } => {
-                let loc = p.from_location(loc);
+                let loc = loc.clone();
                 let content = content.clone();
                 p.next();
+                let loc = p.from_location(&loc);
                 attrs.push(super::core::doc_comment_to_attribute(loc, content));
             }
             _ => break,
@@ -1843,7 +1844,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 match &p.token {
                     Token::Lident(name) => {
                         let name = name.clone();
-                        let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                        let name_loc = p.mk_loc_current();
                         p.next();
 
                         // Check for field assignment: expr.field = value
@@ -1875,7 +1876,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     Token::String(name) => {
                         // Quoted field access: expr."switch"
                         let name = name.clone();
-                        let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                        let name_loc = p.mk_loc_current();
                         p.next();
 
                         // Check for field assignment: expr."field" = value
@@ -2514,7 +2515,7 @@ fn make_empty_list(loc: Location) -> Expression {
 /// `[e1, e2]` → `e1 :: (e2 :: [])`
 /// `[e1, e2, ...rest]` → `e1 :: (e2 :: rest)`
 fn make_list_expression_simple(
-    p: &Parser<'_>,
+    p: &mut Parser<'_>,
     loc: Location,
     exprs: Vec<Expression>,
     spread: Option<Expression>,
@@ -2523,19 +2524,20 @@ fn make_list_expression_simple(
     // For lists without spread, they end at the empty list's end
     let list_end = spread
         .as_ref()
-        .map(|s| p.loc_end(s.pexp_loc))
-        .unwrap_or_else(|| p.loc_end(loc));
-    let tail = spread.unwrap_or_else(|| make_empty_list(loc));
+        .map(|s| p.loc_end(s.pexp_loc).clone())
+        .unwrap_or_else(|| p.loc_end(loc).clone());
+    let mut acc = spread.unwrap_or_else(|| make_empty_list(loc));
 
-    // Fold from right: 3 :: [] -> 2 :: (3 :: []) -> 1 :: (2 :: (3 :: []))
-    exprs.into_iter().rev().fold(tail, |acc, item| {
-        let cons_loc = p.mk_loc(&p.loc_start(item.pexp_loc), &list_end);
+    // Build from right: 3 :: [] -> 2 :: (3 :: []) -> 1 :: (2 :: (3 :: []))
+    for item in exprs.into_iter().rev() {
+        let item_start = p.loc_start(item.pexp_loc).clone();
+        let cons_loc = p.mk_loc_from_positions(&item_start, &list_end);
         let tuple = Expression {
             pexp_desc: ExpressionDesc::Pexp_tuple(vec![item, acc]),
             pexp_loc: cons_loc,
             pexp_attributes: vec![],
         };
-        Expression {
+        acc = Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
                     txt: Longident::Lident("::".to_string()),
@@ -2545,25 +2547,26 @@ fn make_list_expression_simple(
             ),
             pexp_loc: cons_loc,
             pexp_attributes: vec![],
-        }
-    })
+        };
+    }
+    acc
 }
 
 /// Build a list expression for multi-segment lists with explicit segment locations
 /// OCaml uses the segment's start/end for the sub-expression location
 /// And updates the final expression's pexp_loc to segment extent
 fn make_list_expression_with_loc(
-    p: &Parser<'_>,
+    p: &mut Parser<'_>,
     exprs: Vec<Expression>,
     spread: Option<Expression>,
     seg_start: Position,
     seg_end: Position,
 ) -> Expression {
-    let seg_loc = p.mk_loc(&seg_start, &seg_end);
+    let seg_loc = p.mk_loc_from_positions(&seg_start, &seg_end);
 
     // Build the list using cons cells
     let list_end = seg_end;
-    let tail = spread.unwrap_or_else(|| {
+    let mut acc = spread.unwrap_or_else(|| {
         // Empty list with ghost location (same as OCaml's make_list_expression)
         let ghost_loc = LocIdx::none();
         Expression {
@@ -2579,14 +2582,15 @@ fn make_list_expression_with_loc(
         }
     });
 
-    let expr = exprs.into_iter().rev().fold(tail, |acc, item| {
-        let cons_loc = p.mk_loc(&p.loc_start(item.pexp_loc), &list_end);
+    for item in exprs.into_iter().rev() {
+        let item_start = p.loc_start(item.pexp_loc).clone();
+        let cons_loc = p.mk_loc_from_positions(&item_start, &list_end);
         let tuple = Expression {
             pexp_desc: ExpressionDesc::Pexp_tuple(vec![item, acc]),
             pexp_loc: cons_loc,
             pexp_attributes: vec![],
         };
-        Expression {
+        acc = Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
                     txt: Longident::Lident("::".to_string()),
@@ -2596,13 +2600,13 @@ fn make_list_expression_with_loc(
             ),
             pexp_loc: cons_loc,
             pexp_attributes: vec![],
-        }
-    });
+        };
+    }
 
     // OCaml: `{expr with pexp_loc = loc}` updates outermost expression's location
     Expression {
         pexp_loc: seg_loc,
-        ..expr
+        ..acc
     }
 }
 
@@ -2996,7 +3000,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             let rest = parse_block_body(p);
             let body = rest.unwrap_or_else(|| {
                 // OCaml: when block ends without trailing expression, implicit () is at the } position
-                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let loc = p.mk_loc_current();
                 ast_helper::make_unit(loc)
             });
 
@@ -3073,7 +3077,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 let rest = parse_block_body(p);
                 let body = rest.unwrap_or_else(|| {
                     // OCaml: when block ends without trailing expression, implicit () is at the } position
-                    let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                    let loc = p.mk_loc_current();
                     ast_helper::make_unit(loc)
                 });
 
@@ -3104,7 +3108,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             let rest = parse_block_body(p);
             let body = rest.unwrap_or_else(|| {
                 // OCaml: when block ends without trailing expression, implicit () is at the } position
-                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let loc = p.mk_loc_current();
                 ast_helper::make_unit(loc)
             });
 
@@ -3348,7 +3352,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
     let is_implicit_body = rest.is_none();
     let body = rest.unwrap_or_else(|| {
         // OCaml: when block ends without trailing expression, implicit () is at the } position
-        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+        let loc = p.mk_loc_current();
         ast_helper::make_unit(loc)
     });
 
@@ -3370,7 +3374,7 @@ fn parse_module_name(p: &mut Parser<'_>) -> Located<String> {
     match &p.token {
         Token::Uident(name) => {
             let name = name.clone();
-            let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+            let loc = p.mk_loc_current();
             p.next();
             with_loc(name, loc)
         }
@@ -3636,7 +3640,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             let rest = parse_switch_case_body(p);
             let body = rest.unwrap_or_else(|| {
                 // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
-                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let loc = p.mk_loc_current();
                 ast_helper::make_unit(loc)
             });
 
@@ -3687,7 +3691,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                 let rest = parse_switch_case_body(p);
                 let body = rest.unwrap_or_else(|| {
                     // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
-                    let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                    let loc = p.mk_loc_current();
                     ast_helper::make_unit(loc)
                 });
 
@@ -3718,7 +3722,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             let rest = parse_switch_case_body(p);
             let body = rest.unwrap_or_else(|| {
                 // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
-                let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let loc = p.mk_loc_current();
                 ast_helper::make_unit(loc)
             });
 
@@ -3855,7 +3859,7 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
     let rest = parse_switch_case_body(p);
     let body = rest.unwrap_or_else(|| {
         // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
-        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+        let loc = p.mk_loc_current();
         ast_helper::make_unit(loc)
     });
 
@@ -3951,7 +3955,7 @@ fn parse_switch_case_block(p: &mut Parser<'_>) -> Expression {
     // Use the new recursive parser that properly nests let/module/open/exception
     parse_switch_case_body(p).unwrap_or_else(|| {
         // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
-        let loc = p.mk_loc(&p.start_pos, &p.end_pos);
+        let loc = p.mk_loc_current();
         ast_helper::make_unit(loc)
     })
 }
@@ -4355,7 +4359,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
             }
             Token::Lident(name) => {
                 let name = name.clone();
-                let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let name_loc = p.mk_loc_current();
                 p.next();
 
                 if p.token == Token::Equal {
@@ -4389,7 +4393,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
                 p.next();
                 if let Token::Lident(name) = &p.token {
                     let name = name.clone();
-                    let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                    let name_loc = p.mk_loc_current();
                     p.next();
                     props.push(JsxProp::Punning {
                         optional: true,
@@ -4400,7 +4404,7 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
             token if token.is_keyword() => {
                 // JSX props may use keyword-like identifiers (rare but valid).
                 let name = token.to_string();
-                let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                let name_loc = p.mk_loc_current();
                 p.next();
 
                 if p.token == Token::Equal {
@@ -4465,7 +4469,7 @@ fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
                 match &p.token {
                     Token::Lident(name) => {
                         let name = name.clone();
-                        let name_loc = p.mk_loc(&p.start_pos, &p.end_pos);
+                        let name_loc = p.mk_loc_current();
                         p.next();
                         let loc_start_pos = p.loc_start(expr.pexp_loc);
                 let loc = p.mk_loc_to_prev_end(&loc_start_pos);
@@ -4590,8 +4594,9 @@ fn parse_template_literal_with_prefix(
             Token::TemplatePart { text, pos } => {
                 // Part before an interpolation ${
                 let text = text.clone();
+                let pos = pos.clone();
                 // OCaml uses the embedded last_pos from the token, not p.end_pos
-                let text_loc = p.mk_loc(&text_start_pos, pos);
+                let text_loc = p.mk_loc_from_positions(&text_start_pos, &pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String(text, part_prefix.clone()),
                     text_loc,
@@ -4610,8 +4615,9 @@ fn parse_template_literal_with_prefix(
             Token::TemplateTail { text, pos } => {
                 // Final part or simple template string
                 let text = text.clone();
+                let pos = pos.clone();
                 // OCaml uses the embedded last_pos from the token, not p.end_pos
-                let text_loc = p.mk_loc(&text_start_pos, pos);
+                let text_loc = p.mk_loc_from_positions(&text_start_pos, &pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String(text, part_prefix.clone()),
                     text_loc,
@@ -4623,7 +4629,7 @@ fn parse_template_literal_with_prefix(
             }
             Token::Backtick => {
                 // Empty template string
-                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc_to_end(&text_start_pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String("".to_string(), part_prefix.clone()),
                     text_loc,
@@ -4785,8 +4791,9 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
         match &p.token {
             Token::TemplatePart { text, pos } => {
                 let text = text.clone();
+                let pos = pos.clone();
                 // OCaml uses the embedded last_pos from the token, not p.end_pos
-                let text_loc = p.mk_loc(&text_start_pos, pos);
+                let text_loc = p.mk_loc_from_positions(&text_start_pos, &pos);
                 let mut str_expr =
                     ast_helper::make_constant(Constant::String(text, Some("js".to_string())), text_loc);
                 str_expr.pexp_attributes.push(template_literal_attr.clone());
@@ -4800,8 +4807,9 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
             }
             Token::TemplateTail { text, pos } => {
                 let text = text.clone();
+                let pos = pos.clone();
                 // OCaml uses the embedded last_pos from the token, not p.end_pos
-                let text_loc = p.mk_loc(&text_start_pos, pos);
+                let text_loc = p.mk_loc_from_positions(&text_start_pos, &pos);
                 let mut str_expr =
                     ast_helper::make_constant(Constant::String(text, Some("js".to_string())), text_loc);
                 str_expr.pexp_attributes.push(template_literal_attr.clone());
@@ -4811,7 +4819,7 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
             }
             Token::Backtick => {
                 // Empty template string
-                let text_loc = p.mk_loc(&text_start_pos, &p.end_pos);
+                let text_loc = p.mk_loc_to_end(&text_start_pos);
                 let mut str_expr = ast_helper::make_constant(
                     Constant::String("".to_string(), Some("js".to_string())),
                     text_loc,

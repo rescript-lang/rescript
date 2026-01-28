@@ -35,12 +35,9 @@ use std::path::Path;
 use super::deps::{extract_signature_deps, extract_structure_deps};
 use super::mapper_to0::{map_signature, map_structure};
 use super::marshal::MarshalWriter;
-use super::parsetree0 as pt0;
 use super::serialize::Marshal;
+use crate::parse_arena::ParseArena;
 use crate::parser::ast::{Signature, Structure};
-
-// Import current parsetree marshal implementations
-use super::current_marshal;
 
 /// The separator character used in the binary AST format.
 const MAGIC_SEP_CHAR: u8 = b'\n';
@@ -51,6 +48,7 @@ const MAGIC_SEP_CHAR: u8 = b'\n';
 ///
 /// * `output_path` - Path to the output .ast file
 /// * `source_path` - Absolute path to the source file
+/// * `arena` - The parse arena containing location data
 /// * `ast` - The parsed structure AST
 ///
 /// # Returns
@@ -59,13 +57,14 @@ const MAGIC_SEP_CHAR: u8 = b'\n';
 pub fn write_structure_ast(
     output_path: &Path,
     source_path: &str,
+    arena: &ParseArena,
     ast: &Structure,
 ) -> io::Result<()> {
     // 1. Extract dependencies
     let deps = extract_structure_deps(ast);
 
     // 2. Convert AST to parsetree0 format
-    let ast0 = map_structure(ast);
+    let ast0 = map_structure(arena, ast);
 
     // 3. Write the binary AST file
     write_ast_file(output_path, source_path, &deps, &ast0)
@@ -77,6 +76,7 @@ pub fn write_structure_ast(
 ///
 /// * `output_path` - Path to the output .iast file
 /// * `source_path` - Absolute path to the source file
+/// * `arena` - The parse arena containing location data
 /// * `ast` - The parsed signature AST
 ///
 /// # Returns
@@ -85,13 +85,14 @@ pub fn write_structure_ast(
 pub fn write_signature_ast(
     output_path: &Path,
     source_path: &str,
+    arena: &ParseArena,
     ast: &Signature,
 ) -> io::Result<()> {
     // 1. Extract dependencies
     let deps = extract_signature_deps(ast);
 
     // 2. Convert AST to parsetree0 format
-    let ast0 = map_signature(ast);
+    let ast0 = map_signature(arena, ast);
 
     // 3. Write the binary AST file
     write_ast_file(output_path, source_path, &deps, &ast0)
@@ -169,16 +170,16 @@ fn write_ast_file<A: Marshal>(
 }
 
 /// Write a structure AST to a Vec<u8> (for testing).
-pub fn write_structure_ast_to_vec(source_path: &str, ast: &Structure) -> Vec<u8> {
+pub fn write_structure_ast_to_vec(source_path: &str, arena: &ParseArena, ast: &Structure) -> Vec<u8> {
     let deps = extract_structure_deps(ast);
-    let ast0 = map_structure(ast);
+    let ast0 = map_structure(arena, ast);
     write_ast_to_vec(source_path, &deps, &ast0)
 }
 
 /// Write a signature AST to a Vec<u8> (for testing).
-pub fn write_signature_ast_to_vec(source_path: &str, ast: &Signature) -> Vec<u8> {
+pub fn write_signature_ast_to_vec(source_path: &str, arena: &ParseArena, ast: &Signature) -> Vec<u8> {
     let deps = extract_signature_deps(ast);
-    let ast0 = map_signature(ast);
+    let ast0 = map_signature(arena, ast);
     write_ast_to_vec(source_path, &deps, &ast0)
 }
 
