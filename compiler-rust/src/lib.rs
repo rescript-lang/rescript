@@ -44,8 +44,10 @@ pub mod context;
 pub mod diagnostics;
 #[allow(unsafe_code)] // FFI requires unsafe
 pub mod ffi;
+pub mod arena;
 pub mod ident;
 pub mod js_ir;
+pub mod parse_arena;
 pub mod lambda;
 pub mod location;
 pub mod parser;
