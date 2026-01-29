@@ -12,7 +12,7 @@ use crate::parser::longident::Longident;
 // ========== Position (Lexing.position) ==========
 
 impl Marshal for Position {
-    /// Serialize a Position to Marshal format with identity-based sharing.
+    /// Serialize a Position to Marshal format.
     ///
     /// OCaml type:
     /// ```ocaml
@@ -25,22 +25,22 @@ impl Marshal for Position {
     /// ```
     ///
     /// Encoded as a block with tag 0 and 4 fields.
-    /// Uses PositionId for identity-based sharing to match OCaml's pointer-based sharing.
+    ///
+    /// NOTE: This impl is for the standalone Position struct which has no identity.
+    /// For proper sharing, use arena-based PosIdx instead.
     fn marshal(&self, w: &mut MarshalWriter) {
-        w.write_position_shared(
-            self.id,
-            &self.file_name,
-            self.line,
-            self.bol,
-            self.cnum,
-        );
+        w.write_block_header(0, 4);
+        w.write_string_shared(&self.file_name);
+        w.write_int(self.line as i64);
+        w.write_int(self.bol as i64);
+        w.write_int(self.cnum as i64);
     }
 }
 
 // ========== Location (Location.t) ==========
 
 impl Marshal for Location {
-    /// Serialize a Location to Marshal format with LocationId-based sharing.
+    /// Serialize a Location to Marshal format.
     ///
     /// OCaml type:
     /// ```ocaml
@@ -52,39 +52,14 @@ impl Marshal for Location {
     /// ```
     ///
     /// Encoded as a block with tag 0 and 3 fields.
-    /// Locations are shared when they have the same LocationId, which happens when:
-    /// - The same Location object is used in multiple places (clone preserves ID)
-    /// This mimics OCaml's pointer-based sharing.
     ///
-    /// NOTE: Locations with ID 0 (default_id) are special "uninitialized" locations
-    /// and are NOT shared - each occurrence is written as a new object.
+    /// NOTE: This impl is for the standalone Location struct which has no identity.
+    /// For proper sharing, use arena-based LocIdx instead.
     fn marshal(&self, w: &mut MarshalWriter) {
-        // Check if we've seen this Location before (by ID)
-        // Skip sharing for ID 0 (default_id) - these are uninitialized locations
-        // that shouldn't be shared (like Location::none(), Location::merge(), etc.)
-        if self.id.raw() != 0 {
-            if let Some(obj_idx) = w.get_location_by_id(self.id) {
-                // Write shared reference to previously written Location
-                let d = w.obj_counter() - obj_idx;
-                w.write_shared_ref(d);
-                return;
-            }
-        }
-
-        // Record this Location's index BEFORE writing (OCaml assigns then increments)
-        let obj_idx = w.obj_counter();
-
-        // Write a new Location block
         w.write_block_header(0, 3);
-        // Positions are shared by identity (PositionId)
         self.loc_start.marshal(w);
         self.loc_end.marshal(w);
         w.write_int(if self.loc_ghost { 1 } else { 0 });
-
-        // Record for future sharing (only if not default_id)
-        if self.id.raw() != 0 {
-            w.record_location_id(self.id, obj_idx);
-        }
     }
 }
 

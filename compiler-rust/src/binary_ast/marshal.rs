@@ -14,8 +14,8 @@
 //!
 //! OCaml's Marshal format uses pointer-based sharing - when two positions
 //! are the SAME object in memory, they get a shared reference (CODE_SHARED8/16/32).
-//! We mimic this using PositionId: positions with the same ID are considered
-//! "the same object" and get shared.
+//! We mimic this using arena indices (PosIdx/LocIdx): positions with the same
+//! index are considered "the same object" and get shared.
 //!
 //! This is critical for byte-for-byte parity with OCaml's parser output.
 //!
@@ -26,7 +26,6 @@
 
 use std::collections::HashMap;
 
-use crate::location::{LocationId, PositionId};
 use crate::parse_arena::{LocIdx, ParseArena, PosIdx};
 
 /// Magic number for small Marshal format
@@ -71,10 +70,6 @@ const CODE_STRING64: u8 = 0x15;
 /// let bytes = writer.finish();
 /// ```
 
-/// Key for Location-based sharing (start_id, end_id, ghost)
-/// Uses PositionId for identity-based sharing like OCaml
-pub type LocationKey = (PositionId, PositionId, bool);
-
 #[derive(Debug)]
 pub struct MarshalWriter {
     /// The output buffer containing encoded data
@@ -85,26 +80,6 @@ pub struct MarshalWriter {
 
     /// Maps string content to object counter (for content-based string sharing)
     string_table: HashMap<String, u32>,
-
-    /// Maps Position ID to object counter (for identity-based Position sharing)
-    /// Uses PositionId instead of content to mimic OCaml's pointer-based sharing
-    position_table: HashMap<PositionId, u32>,
-
-    /// Maps Position content to object counter (for content-based Position sharing)
-    /// Key is (line, bol, cnum) - filename is always shared separately
-    position_content_table: HashMap<(i32, i32, i32), u32>,
-
-    /// Maps Location content to object counter (for content-based Location sharing)
-    /// Key is (start_line, start_bol, start_cnum, end_line, end_bol, end_cnum, ghost)
-    location_content_table: HashMap<(i32, i32, i32, i32, i32, i32, bool), u32>,
-
-    /// Maps Location identity to object counter (for identity-based Location sharing)
-    /// Uses PositionIds of start/end positions to determine identity
-    location_table: HashMap<LocationKey, u32>,
-
-    /// Maps LocationId to object counter (for identity-based Location sharing)
-    /// Uses LocationId to determine when locations should be shared (like OCaml's pointer sharing)
-    pub location_id_table: HashMap<LocationId, u32>,
 
     /// Maps PosIdx to object counter (for arena-based Position sharing)
     /// Same index = same object, will be shared in output
@@ -142,11 +117,6 @@ impl MarshalWriter {
             buffer: Vec::with_capacity(4096),
             obj_table: HashMap::new(),
             string_table: HashMap::new(),
-            position_table: HashMap::new(),
-            position_content_table: HashMap::new(),
-            location_content_table: HashMap::new(),
-            location_table: HashMap::new(),
-            location_id_table: HashMap::new(),
             position_idx_table: HashMap::new(),
             location_idx_table: HashMap::new(),
             arena: None,
@@ -162,11 +132,6 @@ impl MarshalWriter {
             buffer: Vec::with_capacity(capacity),
             obj_table: HashMap::new(),
             string_table: HashMap::new(),
-            position_table: HashMap::new(),
-            position_content_table: HashMap::new(),
-            location_content_table: HashMap::new(),
-            location_table: HashMap::new(),
-            location_id_table: HashMap::new(),
             position_idx_table: HashMap::new(),
             location_idx_table: HashMap::new(),
             arena: None,
@@ -207,8 +172,6 @@ impl MarshalWriter {
         self.buffer.clear();
         self.obj_table.clear();
         self.string_table.clear();
-        self.position_table.clear();
-        self.location_table.clear();
         self.position_idx_table.clear();
         self.location_idx_table.clear();
         self.obj_counter = 0;
@@ -402,170 +365,6 @@ impl MarshalWriter {
     pub fn write_identifier_string(&mut self, s: &str) {
         // Identifiers are NOT shared - each occurrence is a fresh string
         self.write_str(s);
-    }
-
-    /// Write a Position with content-based sharing
-    ///
-    /// Positions with the same content (line, bol, cnum) are shared.
-    /// This approximates OCaml's pointer-based sharing behavior.
-    ///
-    /// NOTE: The PositionId is currently NOT used for sharing because Rust's
-    /// clone semantics differ from OCaml's pointer semantics. In Rust, cloning
-    /// preserves the ID, but every call site that uses a position creates a clone.
-    /// In OCaml, assignment copies a pointer, so only explicit pointer reuse
-    /// creates sharing.
-    ///
-    /// Returns true if the position was written (not shared), false if a shared ref was written.
-    pub fn write_position_shared(
-        &mut self,
-        id: PositionId,
-        file_name: &str,
-        line: i32,
-        bol: i32,
-        cnum: i32,
-    ) -> bool {
-        // Use identity-based sharing: positions with the same PositionId are shared.
-        // This mimics OCaml's pointer-based sharing.
-        // Skip sharing for default ID (0) which is used for dummy/uninitialized positions.
-        if id.raw() != 0 {
-            if let Some(&obj_idx) = self.position_table.get(&id) {
-                // Write a shared reference
-                let d = self.obj_counter - obj_idx;
-                self.write_shared_ref(d);
-                return false;
-            }
-        }
-
-        // Record the object index BEFORE writing
-        let obj_idx = self.obj_counter;
-
-        // Write the Position block
-        self.write_block_header(0, 4);
-        self.write_string_shared(file_name);
-        self.write_int(line as i64);
-        self.write_int(bol as i64);
-        self.write_int(cnum as i64);
-
-        // Record for future identity-based sharing (only for non-default IDs)
-        if id.raw() != 0 {
-            self.position_table.insert(id, obj_idx);
-        }
-
-        true
-    }
-
-    /// Write a Location with identity-based sharing
-    ///
-    /// If a Location with the same start/end PositionIds has been written before,
-    /// writes a shared reference. Otherwise writes the full Location block.
-    ///
-    /// This mimics OCaml's pointer-based sharing - locations are considered
-    /// "the same object" if their start and end positions have the same identities.
-    ///
-    /// Returns true if the location was written (not shared), false if a shared ref was written.
-    #[allow(clippy::too_many_arguments)]
-    pub fn write_location_shared(
-        &mut self,
-        start_id: PositionId,
-        start_file: &str,
-        start_line: i32,
-        start_bol: i32,
-        start_cnum: i32,
-        end_id: PositionId,
-        end_file: &str,
-        end_line: i32,
-        end_bol: i32,
-        end_cnum: i32,
-        ghost: bool,
-    ) -> bool {
-        let loc_key: LocationKey = (start_id, end_id, ghost);
-
-        if let Some(&obj_idx) = self.location_table.get(&loc_key) {
-            // Write a shared reference
-            let d = self.obj_counter - obj_idx;
-            self.write_shared_ref(d);
-            false
-        } else {
-            // Record the object index BEFORE writing (OCaml assigns before increment)
-            let obj_idx = self.obj_counter;
-
-            // Write the Location block (this increments obj_counter after writing)
-            self.write_block_header(0, 3);
-            self.write_position_shared(start_id, start_file, start_line, start_bol, start_cnum);
-            self.write_position_shared(end_id, end_file, end_line, end_bol, end_cnum);
-            self.write_int(if ghost { 1 } else { 0 });
-
-            // Record for future sharing
-            self.location_table.insert(loc_key, obj_idx);
-            true
-        }
-    }
-
-    /// Check if a Location with this LocationId has been written before.
-    /// Returns the object index if found, None otherwise.
-    pub fn get_location_by_id(&self, id: LocationId) -> Option<u32> {
-        self.location_id_table.get(&id).copied()
-    }
-
-    /// Record a LocationId with its object index for future sharing.
-    pub fn record_location_id(&mut self, id: LocationId, obj_idx: u32) {
-        self.location_id_table.insert(id, obj_idx);
-    }
-
-    /// Write a Location with content-based sharing
-    ///
-    /// If a Location with the same content (start/end positions, ghost) has been written before,
-    /// writes a shared reference. Otherwise writes the full Location block with its Positions.
-    ///
-    /// This approximates OCaml's pointer-based sharing - locations with identical content
-    /// are likely to be the same object in OCaml's parser.
-    ///
-    /// Returns true if the location was written (not shared), false if a shared ref was written.
-    #[allow(clippy::too_many_arguments)]
-    pub fn write_location_content_shared(
-        &mut self,
-        _start_id: PositionId,
-        start_file: &str,
-        start_line: i32,
-        start_bol: i32,
-        start_cnum: i32,
-        _end_id: PositionId,
-        end_file: &str,
-        end_line: i32,
-        end_bol: i32,
-        end_cnum: i32,
-        ghost: bool,
-    ) -> bool {
-        // Content-based key for the entire location
-        let content_key = (
-            start_line, start_bol, start_cnum,
-            end_line, end_bol, end_cnum,
-            ghost,
-        );
-
-        if let Some(&obj_idx) = self.location_content_table.get(&content_key) {
-            // Write a shared reference to the previously written Location
-            let d = self.obj_counter - obj_idx;
-            self.write_shared_ref(d);
-            return false;
-        }
-
-        // Record the object index BEFORE writing the Location block
-        let obj_idx = self.obj_counter;
-
-        // Write the Location block
-        self.write_block_header(0, 3);
-        // Write start position (with content-based sharing)
-        self.write_position_shared(_start_id, start_file, start_line, start_bol, start_cnum);
-        // Write end position (with content-based sharing)
-        self.write_position_shared(_end_id, end_file, end_line, end_bol, end_cnum);
-        // Write ghost flag
-        self.write_int(if ghost { 1 } else { 0 });
-
-        // Record for future content-based sharing
-        self.location_content_table.insert(content_key, obj_idx);
-
-        true
     }
 
     // ========== Arena-based position/location methods ==========

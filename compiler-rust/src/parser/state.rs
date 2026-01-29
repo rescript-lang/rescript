@@ -6,7 +6,7 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use crate::location::{Location, LocationId, Position};
+use crate::location::{Location, Position};
 use crate::parse_arena::{LocIdx, ParseArena, PosIdx};
 
 use super::comment::Comment;

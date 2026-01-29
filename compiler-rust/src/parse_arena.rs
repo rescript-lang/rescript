@@ -364,7 +364,6 @@ impl ParseArena {
             loc_start: self.get_position(loc.loc_start).clone(),
             loc_end: self.get_position(loc.loc_end).clone(),
             loc_ghost: loc.loc_ghost,
-            id: crate::location::LocationId::default_id(),
         }
     }
 

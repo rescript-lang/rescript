@@ -9,7 +9,7 @@
 //! - Regular expressions
 //! - All operators and punctuation
 
-use crate::location::{Position, PositionId};
+use crate::location::Position;
 
 use super::comment::{Comment, CommentStyle};
 use super::diagnostics::{DiagnosticCategory, ParserDiagnostic};
@@ -38,7 +38,6 @@ pub struct ScannerSnapshot {
     mode: Vec<ScannerMode>,
     prev_token: Option<Token>,
     diagnostics_len: usize,
-    position_id_counter: u32,
 }
 
 /// The lexical scanner state.
@@ -69,9 +68,6 @@ pub struct Scanner<'src> {
     diagnostics: Vec<ParserDiagnostic>,
     /// Previous non-comment token (for context-sensitive lexing like regex literals).
     prev_token: Option<Token>,
-    /// Counter for generating unique PositionIds.
-    /// Each scanner instance has its own counter to avoid global state.
-    position_id_counter: u32,
 }
 
 /// Result of scanning a token.
@@ -110,8 +106,6 @@ impl<'src> Scanner<'src> {
             mode: Vec::new(),
             diagnostics: Vec::new(),
             prev_token: None,
-            // Start at 1 because 0 is reserved for default/uninitialized positions
-            position_id_counter: 1,
         }
     }
 
@@ -148,7 +142,6 @@ impl<'src> Scanner<'src> {
             mode: self.mode.clone(),
             prev_token: self.prev_token.clone(),
             diagnostics_len: self.diagnostics.len(),
-            position_id_counter: self.position_id_counter,
         }
     }
 
@@ -162,7 +155,6 @@ impl<'src> Scanner<'src> {
         self.mode = snapshot.mode;
         self.prev_token = snapshot.prev_token;
         self.diagnostics.truncate(snapshot.diagnostics_len);
-        self.position_id_counter = snapshot.position_id_counter;
     }
 
     /// Get a reference to the source string.
@@ -175,24 +167,17 @@ impl<'src> Scanner<'src> {
         matches!(self.mode.last(), Some(ScannerMode::Diamond))
     }
 
-    /// Get the current position with a unique PositionId.
-    ///
-    /// Each call creates a NEW position with a unique ID.
-    /// This mimics OCaml where each call to the scanner's position function
-    /// allocates a new position record.
+    /// Get the current position.
     ///
     /// For OCaml parity, we use `line_offset + offset16` for cnum.
     /// This matches OCaml where `pos_cnum = scanner.line_offset + scanner.offset16`,
     /// giving us UTF-16 code unit counting for columns.
-    pub fn position(&mut self) -> Position {
-        let id = PositionId::from_raw(self.position_id_counter);
-        self.position_id_counter += 1;
-        Position::new_with_id(
+    pub fn position(&self) -> Position {
+        Position::new(
             &self.filename,
             self.lnum,
             self.line_offset as i32,
             (self.line_offset + self.offset16) as i32, // UTF-16 code unit position
-            id,
         )
     }
 
