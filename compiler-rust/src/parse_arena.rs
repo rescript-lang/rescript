@@ -26,10 +26,37 @@
 //! assert_eq!(located.txt, "hello");
 //! ```
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::arena::{Arena, ArenaIdx};
+use crate::intern::Interner;
 use crate::location::{Location, Position};
+
+/// Key for position deduplication.
+/// Two positions with the same (file_name, line, bol, cnum) are the same position.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct PosKey {
+    file_name: String,
+    line: i32,
+    bol: i32,
+    cnum: i32,
+}
+
+impl PosKey {
+    fn from_position(pos: &Position) -> Self {
+        Self {
+            file_name: pos.file_name.clone(),
+            line: pos.line,
+            bol: pos.bol,
+            cnum: pos.cnum,
+        }
+    }
+}
+
+// Re-export StrIdx for convenience
+pub use crate::intern::StrIdx;
 
 // ============================================================================
 // Index Types
@@ -134,16 +161,32 @@ impl Default for InternedLocation {
 /// - Lightweight handles: indices are 4 bytes, cheap to copy/compare
 /// - Identity for marshalling: same index = same object
 ///
-/// Note: This does NOT deduplicate values. Each push creates a new entry.
-/// The ParseArena is typically created once at the start of parsing and
-/// passed through the parser. After parsing, it can be used during
-/// marshalling to look up actual values.
-#[derive(Debug, Default)]
+/// This arena deduplicates positions by content - two positions with the same
+/// (file_name, line, bol, cnum) will get the same index. This matches OCaml's
+/// behavior where the same position captured at different times gets shared.
+#[derive(Debug)]
 pub struct ParseArena {
     /// Arena of positions (returns PosIdx).
     positions: Arena<Position, PosIdx>,
     /// Arena of locations (returns LocIdx).
     locations: Arena<InternedLocation, LocIdx>,
+    /// Position deduplication table - maps position content to its index.
+    position_dedup: HashMap<PosKey, PosIdx>,
+    /// String interner for identifier tokens.
+    /// Identifiers with the same content get the same StrIdx, enabling
+    /// identity-based sharing when marshalling (matching OCaml's behavior).
+    strings: Interner,
+}
+
+impl Default for ParseArena {
+    fn default() -> Self {
+        Self {
+            positions: Arena::default(),
+            locations: Arena::default(),
+            position_dedup: HashMap::new(),
+            strings: Interner::new(),
+        }
+    }
 }
 
 impl ParseArena {
@@ -165,11 +208,38 @@ impl ParseArena {
     // ========== Position methods ==========
 
     /// Push a position into the arena and return its index.
+    /// Each call creates a new entry. The position is registered in the
+    /// dedup table only if no entry exists yet (keep first position).
     pub fn push_position(&mut self, pos: Position) -> PosIdx {
-        self.positions.push(pos)
+        let key = PosKey::from_position(&pos);
+        let idx = self.positions.push(pos);
+        // Only register if not already in table (keep first position)
+        self.position_dedup.entry(key).or_insert(idx);
+        idx
+    }
+
+    /// Get the index of a position if it exists in the dedup table.
+    /// Returns None if this position content hasn't been seen before.
+    #[allow(dead_code)]
+    pub fn get_position_idx(&self, pos: &Position) -> Option<PosIdx> {
+        let key = PosKey::from_position(pos);
+        self.position_dedup.get(&key).copied()
+    }
+
+    /// Push a position with deduplication - reuses an existing index if the position
+    /// content matches.
+    pub fn push_position_dedup(&mut self, pos: Position) -> PosIdx {
+        let key = PosKey::from_position(&pos);
+        if let Some(&idx) = self.position_dedup.get(&key) {
+            return idx;
+        }
+        let idx = self.positions.push(pos);
+        self.position_dedup.insert(key, idx);
+        idx
     }
 
     /// Push a position from components.
+    /// NOTE: This creates a NEW position entry, not a deduplicated one.
     pub fn push_pos(&mut self, file_name: impl Into<String>, line: i32, bol: i32, cnum: i32) -> PosIdx {
         self.push_position(Position::new(file_name, line, bol, cnum))
     }
@@ -319,6 +389,26 @@ impl ParseArena {
             txt: located.txt.clone(),
             loc: self.to_location(located.loc),
         }
+    }
+
+    // ========================================================================
+    // String interning
+    // ========================================================================
+
+    /// Intern a string, returning its index.
+    ///
+    /// If the string was previously interned, returns the existing index.
+    /// Otherwise, stores the string and returns a new index.
+    ///
+    /// Use this for strings that should be shared in Marshal output
+    /// (matching OCaml's interning behavior).
+    pub fn intern(&mut self, s: &str) -> StrIdx {
+        self.strings.intern(s)
+    }
+
+    /// Get an interned string by index.
+    pub fn get_interned(&self, idx: StrIdx) -> &str {
+        self.strings.get(idx)
     }
 }
 
