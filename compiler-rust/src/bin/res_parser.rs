@@ -20,8 +20,9 @@
 
 use clap::Parser as ClapParser;
 use rescript_compiler::binary_ast::{mapper_from0, mapper_to0, Marshal, MarshalWriter};
+use rescript_compiler::parse_arena::ParseArena;
 use rescript_compiler::parser::{
-    code_frame, jsx_ppx, ml_printer, module, print_signature, printer, printer2, sexp, sexp_locs, sexp_locs0, Parser,
+    code_frame, jsx_ppx, ml_printer, module, printer2, sexp, sexp_locs, sexp_locs0, Comment, Parser,
     ParserMode, Scanner, SignatureItem, Structure,
 };
 use std::fs;
@@ -179,8 +180,8 @@ fn main() {
 
         // Apply AST conversion round-trip if requested (for testing)
         let signature = if args.test_ast_conversion {
-            let sig0 = mapper_to0::map_signature(&signature);
-            mapper_from0::map_signature(&sig0)
+            let sig0 = mapper_to0::map_signature(parser.arena(), &signature);
+            mapper_from0::map_signature(parser.arena_mut(), &sig0)
         } else {
             signature
         };
@@ -196,11 +197,11 @@ fn main() {
                 let bytes: Vec<u8> = output.chars().map(|c| c as u8).collect();
                 let _ = io::stdout().write_all(&bytes);
             }
-            "res" => print_signature_res(&signature, &mut io::stdout()),
+            "res" => print_signature_res(&signature, parser.comments().to_vec(), parser.arena_mut(), &mut io::stdout()),
             "sexp" => sexp::print_signature(&signature, &mut io::stdout()),
-            "sexp-locs" => sexp_locs::print_signature(&signature, &mut io::stdout()),
+            "sexp-locs" => sexp_locs::print_signature(&signature, parser.arena(), &mut io::stdout()),
             "sexp0-locs" => {
-                let sig0 = mapper_to0::map_signature(&signature);
+                let sig0 = mapper_to0::map_signature(parser.arena(), &signature);
                 sexp_locs0::print_signature(&sig0, &mut io::stdout());
             }
             "ast" => print_signature_ast(&signature, &mut io::stdout()),
@@ -228,7 +229,7 @@ fn main() {
                 // Same layout as binary but with parsetree0 types
 
                 // Convert to parsetree0
-                let sig0 = mapper_to0::map_signature(&signature);
+                let sig0 = mapper_to0::map_signature(parser.arena(), &signature);
 
                 // Write magic
                 let _ = io::stdout().write_all(b"Caml1999N022");
@@ -266,8 +267,8 @@ fn main() {
 
         // Apply AST conversion round-trip if requested (for testing)
         let structure = if args.test_ast_conversion {
-            let str0 = mapper_to0::map_structure(&structure);
-            mapper_from0::map_structure(&str0)
+            let str0 = mapper_to0::map_structure(parser.arena(), &structure);
+            mapper_from0::map_structure(parser.arena_mut(), &str0)
         } else {
             structure
         };
@@ -285,7 +286,7 @@ fn main() {
             }
             "res" => {
                 let output =
-                    printer2::print_structure_with_comments(&structure, parser.comments().to_vec());
+                    printer2::print_structure_with_comments(&structure, parser.comments().to_vec(), parser.arena_mut());
                 if !output.is_empty() {
                     // Convert Latin-1 chars back to bytes to preserve original file encoding
                     let bytes: Vec<u8> = output.chars().map(|c| c as u8).collect();
@@ -293,9 +294,9 @@ fn main() {
                 }
             }
             "sexp" => sexp::print_structure(&structure, &mut io::stdout()),
-            "sexp-locs" => sexp_locs::print_structure(&structure, &mut io::stdout()),
+            "sexp-locs" => sexp_locs::print_structure(&structure, parser.arena(), &mut io::stdout()),
             "sexp0-locs" => {
-                let str0 = mapper_to0::map_structure(&structure);
+                let str0 = mapper_to0::map_structure(parser.arena(), &structure);
                 sexp_locs0::print_structure(&str0, &mut io::stdout());
             }
             "ast" => print_structure_ast(&structure, &mut io::stdout()),
@@ -323,7 +324,7 @@ fn main() {
                 // Same layout as binary but with parsetree0 types
 
                 // Convert to parsetree0
-                let str0 = mapper_to0::map_structure(&structure);
+                let str0 = mapper_to0::map_structure(parser.arena(), &structure);
 
                 // Write magic
                 let _ = io::stdout().write_all(b"Caml1999M022");
@@ -395,14 +396,13 @@ fn print_tokens(source: &str, filename: &str, out: &mut impl Write) {
 // ReScript Printer
 // ============================================================================
 
-fn print_signature_res(signature: &[SignatureItem], out: &mut impl Write) {
-    // Use the built-in printer from the parser module
-    let output = print_signature(signature);
+fn print_signature_res(signature: &[SignatureItem], comments: Vec<Comment>, arena: &mut ParseArena, out: &mut impl Write) {
+    // Use printer2 to print signature
+    let output = printer2::print_signature_with_comments(signature, comments, arena);
     if !output.is_empty() {
         // Convert Latin-1 chars back to bytes to preserve original file encoding
         let bytes: Vec<u8> = output.chars().map(|c| c as u8).collect();
         let _ = out.write_all(&bytes);
-        let _ = out.write_all(b"\n");
     }
 }
 

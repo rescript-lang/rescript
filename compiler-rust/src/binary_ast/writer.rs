@@ -224,7 +224,7 @@ fn write_ast_to_vec<A: Marshal>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::location::Location;
+    use crate::parse_arena::{LocIdx, Located};
     use crate::parser::ast::{
         Constant, Expression, ExpressionDesc, Pattern, PatternDesc, RecFlag, StructureItem,
         StructureItemDesc, ValueBinding,
@@ -237,11 +237,11 @@ mod tests {
                 RecFlag::Nonrecursive,
                 vec![ValueBinding {
                     pvb_pat: Pattern {
-                        ppat_desc: PatternDesc::Ppat_var(crate::location::Located {
+                        ppat_desc: PatternDesc::Ppat_var(Located {
                             txt: name.to_string(),
-                            loc: Location::none(),
+                            loc: LocIdx::none(),
                         }),
-                        ppat_loc: Location::none(),
+                        ppat_loc: LocIdx::none(),
                         ppat_attributes: vec![],
                     },
                     pvb_expr: Expression {
@@ -249,32 +249,37 @@ mod tests {
                             value.to_string(),
                             None,
                         )),
-                        pexp_loc: Location::none(),
+                        pexp_loc: LocIdx::none(),
                         pexp_attributes: vec![],
                     },
                     pvb_attributes: vec![],
-                    pvb_loc: Location::none(),
+                    pvb_loc: LocIdx::none(),
                 }],
             ),
-            pstr_loc: Location::none(),
+            pstr_loc: LocIdx::none(),
         }
     }
 
     fn make_module_ref_expr(module: &str, name: &str) -> Expression {
         Expression {
-            pexp_desc: ExpressionDesc::Pexp_ident(crate::location::Located {
+            pexp_desc: ExpressionDesc::Pexp_ident(Located {
                 txt: Longident::ldot(Longident::lident(module), name),
-                loc: Location::none(),
+                loc: LocIdx::none(),
             }),
-            pexp_loc: Location::none(),
+            pexp_loc: LocIdx::none(),
             pexp_attributes: vec![],
         }
     }
 
+    fn make_test_arena() -> crate::parse_arena::ParseArena {
+        crate::parse_arena::ParseArena::new()
+    }
+
     #[test]
     fn test_empty_structure() {
+        let arena = make_test_arena();
         let ast: Structure = vec![];
-        let result = write_structure_ast_to_vec("/test/empty.res", &ast);
+        let result = write_structure_ast_to_vec("/test/empty.res", &arena, &ast);
 
         // Check header
         let dep_size = u32::from_be_bytes([result[0], result[1], result[2], result[3]]);
@@ -301,8 +306,9 @@ mod tests {
 
     #[test]
     fn test_simple_binding() {
+        let arena = make_test_arena();
         let ast = vec![make_simple_let_binding("x", 42)];
-        let result = write_structure_ast_to_vec("/test/simple.res", &ast);
+        let result = write_structure_ast_to_vec("/test/simple.res", &arena, &ast);
 
         // Should have marshal magic number
         let dep_size = u32::from_be_bytes([result[0], result[1], result[2], result[3]]) as usize;
@@ -317,12 +323,13 @@ mod tests {
 
     #[test]
     fn test_with_dependencies() {
+        let arena = make_test_arena();
         let ast = vec![StructureItem {
             pstr_desc: StructureItemDesc::Pstr_eval(make_module_ref_expr("Array", "map"), vec![]),
-            pstr_loc: Location::none(),
+            pstr_loc: LocIdx::none(),
         }];
 
-        let result = write_structure_ast_to_vec("/test/deps.res", &ast);
+        let result = write_structure_ast_to_vec("/test/deps.res", &arena, &ast);
 
         // Check dependency section
         let dep_size = u32::from_be_bytes([result[0], result[1], result[2], result[3]]) as usize;
@@ -338,21 +345,22 @@ mod tests {
 
     #[test]
     fn test_multiple_dependencies() {
+        let arena = make_test_arena();
         let ast = vec![
             StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(
                     make_module_ref_expr("Array", "map"),
                     vec![],
                 ),
-                pstr_loc: Location::none(),
+                pstr_loc: LocIdx::none(),
             },
             StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(make_module_ref_expr("Js", "log"), vec![]),
-                pstr_loc: Location::none(),
+                pstr_loc: LocIdx::none(),
             },
         ];
 
-        let result = write_structure_ast_to_vec("/test/multi.res", &ast);
+        let result = write_structure_ast_to_vec("/test/multi.res", &arena, &ast);
 
         let dep_size = u32::from_be_bytes([result[0], result[1], result[2], result[3]]) as usize;
 
@@ -362,9 +370,10 @@ mod tests {
 
     #[test]
     fn test_source_path_preserved() {
+        let arena = make_test_arena();
         let ast: Structure = vec![];
         let source_path = "/Users/dev/project/src/Main.res";
-        let result = write_structure_ast_to_vec(source_path, &ast);
+        let result = write_structure_ast_to_vec(source_path, &arena, &ast);
 
         let dep_size = u32::from_be_bytes([result[0], result[1], result[2], result[3]]) as usize;
         let path_start = 4 + dep_size;
@@ -384,8 +393,9 @@ mod tests {
         // Use a temp file in the target directory
         let output_path = std::path::Path::new("target/test_binary_ast_writer.ast");
 
+        let arena = make_test_arena();
         let ast = vec![make_simple_let_binding("x", 1)];
-        write_structure_ast(output_path, "/test/test.res", &ast).unwrap();
+        write_structure_ast(output_path, "/test/test.res", &arena, &ast).unwrap();
 
         // Verify file exists and has content
         let content = fs::read(output_path).unwrap();
@@ -405,8 +415,9 @@ mod tests {
 
     #[test]
     fn test_empty_signature() {
+        let arena = make_test_arena();
         let ast: Signature = vec![];
-        let result = write_signature_ast_to_vec("/test/empty.resi", &ast);
+        let result = write_signature_ast_to_vec("/test/empty.resi", &arena, &ast);
 
         // Should have valid structure
         let dep_size = u32::from_be_bytes([result[0], result[1], result[2], result[3]]);

@@ -576,7 +576,7 @@ impl MarshalWriter {
     /// reference. Otherwise looks up the position in the arena and writes it.
     ///
     /// Same index = same object, will be shared in output.
-    pub fn write_pos_idx(&mut self, idx: PosIdx, arena: &ParseArena) -> bool {
+    pub fn write_pos_idx(&mut self, idx: PosIdx) -> bool {
         // Check if this position index was already written
         if let Some(&obj_idx) = self.position_idx_table.get(&idx) {
             let d = self.obj_counter - obj_idx;
@@ -584,8 +584,8 @@ impl MarshalWriter {
             return false;
         }
 
-        // Look up the position in the arena
-        let pos = arena.get_position(idx);
+        // Look up the position in the arena and clone it to end the borrow
+        let pos = self.get_arena().get_position(idx).clone();
 
         // Record the object index BEFORE writing
         let obj_idx = self.obj_counter;
@@ -609,7 +609,7 @@ impl MarshalWriter {
     /// reference. Otherwise looks up the location in the arena and writes it.
     ///
     /// Same index = same object, will be shared in output.
-    pub fn write_loc_idx(&mut self, idx: LocIdx, arena: &ParseArena) -> bool {
+    pub fn write_loc_idx(&mut self, idx: LocIdx) -> bool {
         // Check if this location index was already written
         if let Some(&obj_idx) = self.location_idx_table.get(&idx) {
             let d = self.obj_counter - obj_idx;
@@ -617,8 +617,8 @@ impl MarshalWriter {
             return false;
         }
 
-        // Look up the location in the arena
-        let loc = arena.get_location(idx);
+        // Look up the location in the arena and clone it to end the borrow
+        let loc = self.get_arena().get_location(idx).clone();
 
         // Record the object index BEFORE writing
         let obj_idx = self.obj_counter;
@@ -626,8 +626,8 @@ impl MarshalWriter {
         // Write the Location block
         self.write_block_header(0, 3);
         // Write start and end positions (with sharing by their indices)
-        self.write_pos_idx(loc.loc_start, arena);
-        self.write_pos_idx(loc.loc_end, arena);
+        self.write_pos_idx(loc.loc_start);
+        self.write_pos_idx(loc.loc_end);
         self.write_int(if loc.loc_ghost { 1 } else { 0 });
 
         // Record for future sharing

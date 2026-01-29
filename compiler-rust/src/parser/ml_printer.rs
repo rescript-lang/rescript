@@ -6,7 +6,7 @@
 
 use std::io::Write;
 
-use crate::location::Located;
+use crate::parse_arena::Located;
 use super::ast::*;
 use super::formatter::{BoxKind, Formatter};
 use super::longident::Longident;

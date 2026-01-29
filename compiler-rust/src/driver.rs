@@ -49,23 +49,23 @@ pub fn compile_source_to_js_with_options(
     // Type check
     let id_gen = IdGenerator::new();
     let type_ctx = TypeContext::new(&id_gen);
-    let mut tctx = TypeCheckContext::new(&type_ctx);
+    let mut tctx = TypeCheckContext::new(&type_ctx, parser.arena());
     let env = initial_env(&type_ctx);
-    let (typed_structure, _env) = type_structure(&mut tctx, &env, &structure)
+    let (typed_structure, _env) = type_structure(&mut tctx, &env, parser.arena(), &structure)
         .map_err(|e| anyhow!("Type checking failed: {e:?}"))?;
 
     // Print typed tree if requested
     if options.dump_typed_sexp {
         let mut stderr = std::io::stderr();
-        let _ = print_typed_structure(&type_ctx, &typed_structure, &mut stderr);
+        let _ = print_typed_structure(parser.arena(), &type_ctx, &typed_structure, &mut stderr);
     }
     if options.dump_typed_sexp_locs {
         let mut stderr = std::io::stderr();
-        let _ = print_typed_structure_with_locs(&type_ctx, &typed_structure, &mut stderr);
+        let _ = print_typed_structure_with_locs(parser.arena(), &type_ctx, &typed_structure, &mut stderr);
     }
 
     // Typedtree -> Lambda
-    let mut converter = LambdaConverter::new();
+    let mut converter = LambdaConverter::new(parser.arena());
     let lambda = converter.convert_structure(&typed_structure);
 
     // Print Lambda IR if requested

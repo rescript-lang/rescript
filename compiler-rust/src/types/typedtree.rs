@@ -18,7 +18,7 @@
 #![allow(non_camel_case_types)]
 
 use crate::ident::Ident;
-use crate::location::{Located, Location};
+use crate::parse_arena::{Located, LocIdx};
 use crate::parser::ast::{
     ArgLabel, Arity, Attributes, ClosedFlag, DirectionFlag, MutableFlag, OverrideFlag, PrivateFlag,
     RecFlag,
@@ -73,9 +73,9 @@ pub struct Pattern {
     /// Pattern description.
     pub pat_desc: PatternDesc,
     /// Source location.
-    pub pat_loc: Location,
+    pub pat_loc: LocIdx,
     /// Extra information (constraints, unpacks, etc.).
-    pub pat_extra: Vec<(PatExtra, Location, Attributes)>,
+    pub pat_extra: Vec<(PatExtra, LocIdx, Attributes)>,
     /// Type of the pattern.
     pub pat_type: TypeExprRef,
     /// Environment at this pattern.
@@ -147,9 +147,9 @@ pub struct Expression {
     /// Expression description.
     pub exp_desc: ExpressionDesc,
     /// Source location.
-    pub exp_loc: Location,
+    pub exp_loc: LocIdx,
     /// Extra information (constraints, opens, newtypes, etc.).
-    pub exp_extra: Vec<(ExpExtra, Location, Attributes)>,
+    pub exp_extra: Vec<(ExpExtra, LocIdx, Attributes)>,
     /// Type of the expression.
     pub exp_type: TypeExprRef,
     /// Environment at this expression.
@@ -352,7 +352,7 @@ pub struct ValueBinding {
     /// Attributes on the binding.
     pub vb_attributes: Attributes,
     /// Location of the binding.
-    pub vb_loc: Location,
+    pub vb_loc: LocIdx,
 }
 
 // ============================================================================
@@ -369,7 +369,7 @@ pub struct TypedCoreType {
     /// Environment at this type.
     pub ctyp_env: EnvRef,
     /// Source location.
-    pub ctyp_loc: Location,
+    pub ctyp_loc: LocIdx,
     /// Attributes.
     pub ctyp_attributes: Attributes,
 }
@@ -416,7 +416,7 @@ pub struct ObjectField {
     /// Field name or inherit.
     pub of_desc: ObjectFieldDesc,
     /// Field location.
-    pub of_loc: Location,
+    pub of_loc: LocIdx,
     /// Field attributes.
     pub of_attributes: Attributes,
 }
@@ -436,7 +436,7 @@ pub struct RowFieldType {
     /// Field description.
     pub rf_desc: RowFieldDesc,
     /// Field location.
-    pub rf_loc: Location,
+    pub rf_loc: LocIdx,
     /// Field attributes.
     pub rf_attributes: Attributes,
 }
@@ -471,7 +471,7 @@ pub struct ModuleExpr {
     /// Module description.
     pub mod_desc: ModuleExprDesc,
     /// Module location.
-    pub mod_loc: Location,
+    pub mod_loc: LocIdx,
     /// Module type.
     pub mod_type: ModuleType,
     /// Module environment.
@@ -573,7 +573,7 @@ pub struct StructureItem {
     /// Item description.
     pub str_desc: StructureItemDesc,
     /// Item location.
-    pub str_loc: Location,
+    pub str_loc: LocIdx,
     /// Item environment.
     pub str_env: EnvRef,
 }
@@ -623,7 +623,7 @@ pub struct TypedTypeDeclaration {
     /// Internal type declaration for the environment.
     pub typ_type: InternalTypeDeclaration,
     /// Type constraints.
-    pub typ_cstrs: Vec<(TypedCoreType, TypedCoreType, Location)>,
+    pub typ_cstrs: Vec<(TypedCoreType, TypedCoreType, LocIdx)>,
     /// Type kind.
     pub typ_kind: TypedTypeKind,
     /// Private flag.
@@ -631,7 +631,7 @@ pub struct TypedTypeDeclaration {
     /// Manifest type (for type aliases).
     pub typ_manifest: Option<TypedCoreType>,
     /// Location.
-    pub typ_loc: Location,
+    pub typ_loc: LocIdx,
     /// Attributes.
     pub typ_attributes: Attributes,
 }
@@ -661,7 +661,7 @@ pub struct TypedConstructorDeclaration {
     /// Result type (for GADTs).
     pub cd_res: Option<TypedCoreType>,
     /// Location.
-    pub cd_loc: Location,
+    pub cd_loc: LocIdx,
     /// Attributes.
     pub cd_attributes: Attributes,
 }
@@ -689,7 +689,7 @@ pub struct TypedLabelDeclaration {
     /// Label type.
     pub ld_type: TypedCoreType,
     /// Location.
-    pub ld_loc: Location,
+    pub ld_loc: LocIdx,
     /// Attributes.
     pub ld_attributes: Attributes,
 }
@@ -708,7 +708,7 @@ pub struct TypeExtension {
     /// Private flag.
     pub tyext_private: PrivateFlag,
     /// Location.
-    pub tyext_loc: Location,
+    pub tyext_loc: LocIdx,
     /// Attributes.
     pub tyext_attributes: Attributes,
 }
@@ -728,7 +728,7 @@ pub struct ModuleBinding {
     /// Module attributes.
     pub mb_attributes: Attributes,
     /// Location.
-    pub mb_loc: Location,
+    pub mb_loc: LocIdx,
 }
 
 /// A module type declaration.
@@ -743,7 +743,7 @@ pub struct ModuleTypeDeclaration {
     /// Attributes.
     pub mtd_attributes: Attributes,
     /// Location.
-    pub mtd_loc: Location,
+    pub mtd_loc: LocIdx,
 }
 
 /// An open declaration.
@@ -758,7 +758,7 @@ pub struct OpenDeclaration {
     /// Attributes.
     pub open_attributes: Attributes,
     /// Location.
-    pub open_loc: Location,
+    pub open_loc: LocIdx,
 }
 
 /// An include declaration.
@@ -771,7 +771,7 @@ pub struct IncludeDeclaration {
     /// Attributes.
     pub incl_attributes: Attributes,
     /// Location.
-    pub incl_loc: Location,
+    pub incl_loc: LocIdx,
 }
 
 /// Signature item (placeholder).
@@ -793,7 +793,7 @@ pub struct ExtensionConstructor {
     /// Constructor kind.
     pub ext_kind: ExtensionConstructorKind,
     /// Location.
-    pub ext_loc: Location,
+    pub ext_loc: LocIdx,
     /// Attributes.
     pub ext_attributes: Attributes,
 }
@@ -828,7 +828,7 @@ pub struct LabelDeclaration {
     /// Label type.
     pub ld_type: TypedCoreType,
     /// Location.
-    pub ld_loc: Location,
+    pub ld_loc: LocIdx,
     /// Attributes.
     pub ld_attributes: Attributes,
 }
@@ -854,7 +854,7 @@ impl Pattern {
     /// Create a new pattern with all fields.
     pub fn new(
         desc: PatternDesc,
-        loc: Location,
+        loc: LocIdx,
         ty: TypeExprRef,
         env: EnvRef,
         attributes: Attributes,
@@ -870,7 +870,7 @@ impl Pattern {
     }
 
     /// Add extra information to this pattern (constraint, unpack, etc.).
-    pub fn with_pat_extra(mut self, extra: PatExtra, loc: Location, attrs: Attributes) -> Self {
+    pub fn with_pat_extra(mut self, extra: PatExtra, loc: LocIdx, attrs: Attributes) -> Self {
         self.pat_extra.push((extra, loc, attrs));
         self
     }
@@ -880,7 +880,7 @@ impl Expression {
     /// Create a new expression with all fields.
     pub fn new(
         desc: ExpressionDesc,
-        loc: Location,
+        loc: LocIdx,
         ty: TypeExprRef,
         env: EnvRef,
         attributes: Attributes,
@@ -896,7 +896,7 @@ impl Expression {
     }
 
     /// Add extra information to this expression.
-    pub fn with_exp_extra(mut self, extra: ExpExtra, loc: Location, attrs: Attributes) -> Self {
+    pub fn with_exp_extra(mut self, extra: ExpExtra, loc: LocIdx, attrs: Attributes) -> Self {
         self.exp_extra.push((extra, loc, attrs));
         self
     }
@@ -915,7 +915,7 @@ impl Case {
 
 impl ValueBinding {
     /// Create a new value binding.
-    pub fn new(pat: Pattern, expr: Expression, loc: Location) -> Self {
+    pub fn new(pat: Pattern, expr: Expression, loc: LocIdx) -> Self {
         ValueBinding {
             vb_pat: pat,
             vb_expr: expr,

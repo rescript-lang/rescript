@@ -11,6 +11,7 @@
 
 use crate::ident::Ident;
 use crate::location::Location;
+use crate::parse_arena::{LocIdx, ParseArena};
 use crate::parser::ast::RecFlag;
 use crate::parser::ast::{
     ModuleExpr as ParsedModuleExpr, ModuleExprDesc as ParsedModuleExprDesc,
@@ -84,12 +85,13 @@ impl From<TypeCoreError> for TypeModError {
 // ============================================================================
 
 /// Type check a module expression.
-pub fn type_module_expr(
-    tctx: &mut TypeCheckContext<'_>,
+pub fn type_module_expr<'a>(
+    tctx: &mut TypeCheckContext<'a>,
     env: &Env,
+    arena: &'a ParseArena,
     mod_expr: &ParsedModuleExpr,
 ) -> TypeModResult<ModuleExpr> {
-    let loc = &mod_expr.pmod_loc;
+    let loc = mod_expr.pmod_loc;
 
     match &mod_expr.pmod_desc {
         ParsedModuleExprDesc::Pmod_ident(lid) => {
@@ -99,7 +101,7 @@ pub fn type_module_expr(
 
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_ident(path, lid.clone()),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -108,11 +110,11 @@ pub fn type_module_expr(
 
         ParsedModuleExprDesc::Pmod_structure(items) => {
             // Module structure: { ... }
-            let (structure, new_env) = type_structure(tctx, env, items)?;
+            let (structure, new_env) = type_structure(tctx, env, arena, items)?;
 
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_structure(structure),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -125,7 +127,7 @@ pub fn type_module_expr(
 
             // Type check the functor body
             // In a full implementation, we would extend the environment with the parameter
-            let typed_body = type_module_expr(tctx, env, body)?;
+            let typed_body = type_module_expr(tctx, env, arena, body)?;
 
             // Translate parameter type if present
             let typed_param_type = param_type
@@ -139,7 +141,7 @@ pub fn type_module_expr(
                     typed_param_type,
                     Box::new(typed_body),
                 ),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -148,8 +150,8 @@ pub fn type_module_expr(
 
         ParsedModuleExprDesc::Pmod_apply(functor, arg) => {
             // Functor application: F(M)
-            let typed_functor = type_module_expr(tctx, env, functor)?;
-            let typed_arg = type_module_expr(tctx, env, arg)?;
+            let typed_functor = type_module_expr(tctx, env, arena, functor)?;
+            let typed_arg = type_module_expr(tctx, env, arena, arg)?;
 
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_apply(
@@ -157,7 +159,7 @@ pub fn type_module_expr(
                     Box::new(typed_arg),
                     ModuleCoercion::Tcoerce_none,
                 ),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -166,7 +168,7 @@ pub fn type_module_expr(
 
         ParsedModuleExprDesc::Pmod_constraint(mod_expr_inner, mod_type) => {
             // Constrained module: (ME: MT)
-            let typed_mod = type_module_expr(tctx, env, mod_expr_inner)?;
+            let typed_mod = type_module_expr(tctx, env, arena, mod_expr_inner)?;
 
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_constraint(
@@ -175,7 +177,7 @@ pub fn type_module_expr(
                     crate::types::typedtree::ModuleTypeConstraint::Tmodtype_implicit,
                     ModuleCoercion::Tcoerce_none,
                 ),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -184,11 +186,11 @@ pub fn type_module_expr(
 
         ParsedModuleExprDesc::Pmod_unpack(expr) => {
             // Unpack: unpack(E)
-            let typed_expr = type_expression(tctx.type_ctx, env, expr)?;
+            let typed_expr = type_expression(tctx.type_ctx, arena, env, expr)?;
 
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_unpack(typed_expr, ModuleType::placeholder()),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -201,12 +203,12 @@ pub fn type_module_expr(
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_ident(
                     Path::pident(Ident::create_local("extension")),
-                    crate::location::Located {
+                    crate::parse_arena::Located {
                         txt: crate::parser::longident::Longident::Lident("extension".to_string()),
-                        loc: loc.clone(),
+                        loc,
                     },
                 ),
-                mod_loc: loc.clone(),
+                mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
                 mod_env: EnvRef(0),
                 mod_attributes: mod_expr.pmod_attributes.clone(),
@@ -220,16 +222,17 @@ pub fn type_module_expr(
 // ============================================================================
 
 /// Type check a structure (module body).
-pub fn type_structure(
-    tctx: &mut TypeCheckContext<'_>,
+pub fn type_structure<'a>(
+    tctx: &mut TypeCheckContext<'a>,
     env: &Env,
+    arena: &'a ParseArena,
     items: &[ParsedStructureItem],
 ) -> TypeModResult<(Structure, Env)> {
     let mut typed_items = Vec::new();
     let mut current_env = env.clone();
 
     for item in items {
-        let (typed_item, new_env) = type_structure_item(tctx, &current_env, item)?;
+        let (typed_item, new_env) = type_structure_item(tctx, &current_env, arena, item)?;
         typed_items.push(typed_item);
         current_env = new_env;
     }
@@ -244,23 +247,24 @@ pub fn type_structure(
 }
 
 /// Type check a structure item.
-fn type_structure_item(
-    tctx: &mut TypeCheckContext<'_>,
+fn type_structure_item<'a>(
+    tctx: &mut TypeCheckContext<'a>,
     env: &Env,
+    arena: &'a ParseArena,
     item: &ParsedStructureItem,
 ) -> TypeModResult<(StructureItem, Env)> {
-    let loc = &item.pstr_loc;
+    let loc = item.pstr_loc;
 
     match &item.pstr_desc {
         ParsedStructureItemDesc::Pstr_eval(expr, attrs) => {
             // Evaluated expression: E
-            let typed_expr = type_expression(tctx.type_ctx, env, expr)?;
+            let typed_expr = type_expression(tctx.type_ctx, arena, env, expr)?;
 
             let desc = StructureItemDesc::Tstr_eval(typed_expr, attrs.clone());
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -269,16 +273,16 @@ fn type_structure_item(
 
         ParsedStructureItemDesc::Pstr_value(rec_flag, bindings) => {
             // Value binding: let P = E
-            let typed_bindings = type_value_bindings(tctx, env, *rec_flag, bindings)?;
+            let typed_bindings = type_value_bindings(tctx, env, arena, *rec_flag, bindings)?;
 
             // Extend environment with new bindings
-            let new_env = extend_env_with_bindings(env, &typed_bindings);
+            let new_env = extend_env_with_bindings(env, arena, &typed_bindings);
 
             let desc = StructureItemDesc::Tstr_value(*rec_flag, typed_bindings);
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 new_env,
@@ -291,14 +295,14 @@ fn type_structure_item(
             let desc = StructureItemDesc::Tstr_primitive(crate::types::ValueDescription {
                 val_type: tctx.type_ctx.new_var(None),
                 val_kind: crate::types::ValueKind::ValReg,
-                val_loc: loc.clone(),
+                val_loc: arena.to_location(loc),
                 val_attributes: vec![],
                 val_path: None,
             });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -334,11 +338,11 @@ fn type_structure_item(
                 let type_arity = internal_type_params.len() as i32;
 
                 // Convert type constraints
-                let mut typ_cstrs: Vec<(TypedCoreType, TypedCoreType, Location)> = Vec::new();
+                let mut typ_cstrs: Vec<(TypedCoreType, TypedCoreType, LocIdx)> = Vec::new();
                 for (ct1, ct2, cstr_loc) in &decl.ptype_cstrs {
                     let (typed_ct1, _) = transl_type(tctx, env, ct1)?;
                     let (typed_ct2, _) = transl_type(tctx, env, ct2)?;
-                    typ_cstrs.push((typed_ct1, typed_ct2, cstr_loc.clone()));
+                    typ_cstrs.push((typed_ct1, typed_ct2, *cstr_loc));
                 }
 
                 // Convert manifest type (type alias)
@@ -397,7 +401,7 @@ fn type_structure_item(
                                             ld_mutable: mutable_flag,
                                             ld_optional: lbl.pld_optional,
                                             ld_type: poly_type_ref,
-                                            ld_loc: lbl.pld_loc.clone(),
+                                            ld_loc: arena.to_location(lbl.pld_loc),
                                             ld_attributes: vec![],
                                         });
                                         // OCaml wraps label types in Ttyp_poly for typed tree
@@ -410,14 +414,14 @@ fn type_structure_item(
                                         };
                                         typed_labels.push(TypedLabelDeclaration {
                                             ld_id: Ident::create_persistent(&lbl.pld_name.txt),
-                                            ld_name: crate::location::Located {
+                                            ld_name: crate::parse_arena::Located {
                                                 txt: lbl.pld_name.txt.clone(),
-                                                loc: lbl.pld_name.loc.clone(),
+                                                loc: lbl.pld_name.loc,
                                             },
                                             ld_mutable: lbl.pld_mutable.clone(),
                                             ld_optional: lbl.pld_optional,
                                             ld_type: poly_typed_core_type,
-                                            ld_loc: lbl.pld_loc.clone(),
+                                            ld_loc: lbl.pld_loc,
                                             ld_attributes: lbl.pld_attributes.clone(),
                                         });
                                     }
@@ -444,20 +448,20 @@ fn type_structure_item(
                                 cd_id: cstr_id.clone(),
                                 cd_args: internal_cd_args,
                                 cd_res: None,
-                                cd_loc: cstr.pcd_loc.clone(),
+                                cd_loc: arena.to_location(cstr.pcd_loc),
                                 cd_attributes: vec![],
                             });
 
                             // Create typed tree constructor declaration
                             typed_tree_cstrs.push(TypedConstructorDeclaration {
                                 cd_id: cstr_id.clone(),
-                                cd_name: crate::location::Located {
+                                cd_name: crate::parse_arena::Located {
                                     txt: cstr.pcd_name.txt.clone(),
-                                    loc: cstr.pcd_name.loc.clone(),
+                                    loc: cstr.pcd_name.loc,
                                 },
                                 cd_args: typed_tree_cd_args,
                                 cd_res: None,
-                                cd_loc: cstr.pcd_loc.clone(),
+                                cd_loc: cstr.pcd_loc,
                                 cd_attributes: cstr.pcd_attributes.clone(),
                             });
 
@@ -474,7 +478,7 @@ fn type_structure_item(
                                 cstr_nonconsts: num_nonconsts,
                                 cstr_generalized: false,
                                 cstr_private: crate::types::PrivateFlag::Public,
-                                cstr_loc: cstr.pcd_loc.clone(),
+                                cstr_loc: arena.to_location(cstr.pcd_loc),
                                 cstr_attributes: vec![],
                                 cstr_inlined: None,
                             }));
@@ -498,7 +502,7 @@ fn type_structure_item(
                                 ld_mutable: mutable_flag,
                                 ld_optional: lbl.pld_optional,
                                 ld_type: poly_type_ref,
-                                ld_loc: lbl.pld_loc.clone(),
+                                ld_loc: arena.to_location(lbl.pld_loc),
                                 ld_attributes: vec![],
                             });
                             // OCaml wraps label types in Ttyp_poly for typed tree
@@ -506,19 +510,19 @@ fn type_structure_item(
                                 ctyp_desc: TypedCoreTypeDesc::Ttyp_poly(vec![], Box::new(typed_core_type.clone())),
                                 ctyp_type: poly_type_ref,
                                 ctyp_env: typed_core_type.ctyp_env,
-                                ctyp_loc: typed_core_type.ctyp_loc.clone(),
+                                ctyp_loc: typed_core_type.ctyp_loc,
                                 ctyp_attributes: vec![],
                             };
                             typed_tree_labels.push(TypedLabelDeclaration {
                                 ld_id: Ident::create_persistent(&lbl.pld_name.txt),
-                                ld_name: crate::location::Located {
+                                ld_name: crate::parse_arena::Located {
                                     txt: lbl.pld_name.txt.clone(),
-                                    loc: lbl.pld_name.loc.clone(),
+                                    loc: lbl.pld_name.loc,
                                 },
                                 ld_mutable: lbl.pld_mutable.clone(),
                                 ld_optional: lbl.pld_optional,
                                 ld_type: poly_typed_core_type,
-                                ld_loc: lbl.pld_loc.clone(),
+                                ld_loc: lbl.pld_loc,
                                 ld_attributes: lbl.pld_attributes.clone(),
                             });
                         }
@@ -538,7 +542,7 @@ fn type_structure_item(
                     type_manifest: None,
                     type_variance: typ_params.iter().map(|(_, v)| *v).collect(),
                     type_newtype_level: None,
-                    type_loc: decl.ptype_loc.clone(),
+                    type_loc: arena.to_location(decl.ptype_loc),
                     type_attributes: vec![],
                     type_immediate: false,
                     type_unboxed: crate::types::UnboxedStatus::default(),
@@ -562,9 +566,9 @@ fn type_structure_item(
                 // Create typed tree type declaration
                 let typed_tree_decl = TypedTypeDeclaration {
                     typ_id: type_id,
-                    typ_name: crate::location::Located {
+                    typ_name: crate::parse_arena::Located {
                         txt: type_name.clone(),
-                        loc: decl.ptype_name.loc.clone(),
+                        loc: decl.ptype_name.loc,
                     },
                     typ_params,
                     typ_type: internal_decl,
@@ -572,7 +576,7 @@ fn type_structure_item(
                     typ_kind: typed_tree_kind,
                     typ_private,
                     typ_manifest,
-                    typ_loc: decl.ptype_loc.clone(),
+                    typ_loc: decl.ptype_loc,
                     typ_attributes: decl.ptype_attributes.clone(),
                 };
 
@@ -583,7 +587,7 @@ fn type_structure_item(
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 new_env,
@@ -594,20 +598,20 @@ fn type_structure_item(
             // Type extension: type t += ...
             let desc = StructureItemDesc::Tstr_typext(TypeExtension {
                 tyext_path: Path::pident(Ident::create_local("placeholder")),
-                tyext_txt: crate::location::Located {
+                tyext_txt: crate::parse_arena::Located {
                     txt: crate::parser::longident::Longident::Lident("placeholder".to_string()),
-                    loc: loc.clone(),
+                    loc,
                 },
                 tyext_params: vec![],
                 tyext_constructors: vec![],
                 tyext_private: crate::parser::ast::PrivateFlag::Public,
-                tyext_loc: loc.clone(),
+                tyext_loc: loc,
                 tyext_attributes: vec![],
             });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -619,9 +623,9 @@ fn type_structure_item(
             let desc =
                 StructureItemDesc::Tstr_exception(crate::types::typedtree::ExtensionConstructor {
                     ext_id: Ident::create_local("Exception"),
-                    ext_name: crate::location::Located {
+                    ext_name: crate::parse_arena::Located {
                         txt: "Exception".to_string(),
-                        loc: loc.clone(),
+                        loc,
                     },
                     ext_type: crate::types::ExtensionConstructor {
                         ext_type_path: Path::pident(Ident::create_local("exn")),
@@ -629,7 +633,7 @@ fn type_structure_item(
                         ext_args: crate::types::ConstructorArguments::CstrTuple(vec![]),
                         ext_ret_type: None,
                         ext_private: crate::types::PrivateFlag::Public,
-                        ext_loc: loc.clone(),
+                        ext_loc: arena.to_location(loc),
                         ext_attributes: vec![],
                         ext_is_exception: true,
                     },
@@ -637,13 +641,13 @@ fn type_structure_item(
                         vec![],
                         None,
                     ),
-                    ext_loc: loc.clone(),
+                    ext_loc: loc,
                     ext_attributes: vec![],
                 });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -652,7 +656,7 @@ fn type_structure_item(
 
         ParsedStructureItemDesc::Pstr_module(mb) => {
             // Module binding: module M = ME
-            let typed_mod = type_module_expr(tctx, env, &mb.pmb_expr)?;
+            let typed_mod = type_module_expr(tctx, env, arena, &mb.pmb_expr)?;
             let mod_id = Ident::create_local(&mb.pmb_name.txt);
 
             let desc = StructureItemDesc::Tstr_module(ModuleBinding {
@@ -660,12 +664,12 @@ fn type_structure_item(
                 mb_name: mb.pmb_name.clone(),
                 mb_expr: typed_mod,
                 mb_attributes: mb.pmb_attributes.clone(),
-                mb_loc: mb.pmb_loc.clone(),
+                mb_loc: mb.pmb_loc,
             });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -676,14 +680,14 @@ fn type_structure_item(
             // Recursive modules: module rec M = ...
             let mut typed_bindings = Vec::new();
             for mb in mbs {
-                let typed_mod = type_module_expr(tctx, env, &mb.pmb_expr)?;
+                let typed_mod = type_module_expr(tctx, env, arena, &mb.pmb_expr)?;
                 let mod_id = Ident::create_local(&mb.pmb_name.txt);
                 typed_bindings.push(ModuleBinding {
                     mb_id: mod_id,
                     mb_name: mb.pmb_name.clone(),
                     mb_expr: typed_mod,
                     mb_attributes: mb.pmb_attributes.clone(),
-                    mb_loc: mb.pmb_loc.clone(),
+                    mb_loc: mb.pmb_loc,
                 });
             }
 
@@ -691,7 +695,7 @@ fn type_structure_item(
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -707,12 +711,12 @@ fn type_structure_item(
                 mtd_name: mtd.pmtd_name.clone(),
                 mtd_type: mtd.pmtd_type.as_ref().map(|_| ModuleType::placeholder()),
                 mtd_attributes: mtd.pmtd_attributes.clone(),
-                mtd_loc: mtd.pmtd_loc.clone(),
+                mtd_loc: mtd.pmtd_loc,
             });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -726,7 +730,7 @@ fn type_structure_item(
             let desc = StructureItemDesc::Tstr_open(OpenDeclaration {
                 open_expr: ModuleExpr {
                     mod_desc: ModuleExprDesc::Tmod_ident(path, open_desc.popen_lid.clone()),
-                    mod_loc: loc.clone(),
+                    mod_loc: loc,
                     mod_type: ModuleType::placeholder(),
                     mod_env: EnvRef(0),
                     mod_attributes: vec![],
@@ -734,12 +738,12 @@ fn type_structure_item(
                 open_override: open_desc.popen_override,
                 open_env: EnvRef(0),
                 open_attributes: open_desc.popen_attributes.clone(),
-                open_loc: loc.clone(),
+                open_loc: loc,
             });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -748,18 +752,18 @@ fn type_structure_item(
 
         ParsedStructureItemDesc::Pstr_include(incl) => {
             // Include declaration: include ME
-            let typed_mod = type_module_expr(tctx, env, &incl.pincl_mod)?;
+            let typed_mod = type_module_expr(tctx, env, arena, &incl.pincl_mod)?;
 
             let desc = StructureItemDesc::Tstr_include(IncludeDeclaration {
                 incl_mod: typed_mod,
                 incl_type: vec![],
                 incl_attributes: incl.pincl_attributes.clone(),
-                incl_loc: incl.pincl_loc.clone(),
+                incl_loc: incl.pincl_loc,
             });
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -772,7 +776,7 @@ fn type_structure_item(
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -800,7 +804,7 @@ fn type_structure_item(
             Ok((
                 StructureItem {
                     str_desc: desc,
-                    str_loc: loc.clone(),
+                    str_loc: loc,
                     str_env: EnvRef(0),
                 },
                 env.clone(),
@@ -814,19 +818,20 @@ fn type_structure_item(
 // ============================================================================
 
 /// Type check value bindings in a structure.
-fn type_value_bindings(
-    tctx: &mut TypeCheckContext<'_>,
+fn type_value_bindings<'a>(
+    tctx: &mut TypeCheckContext<'a>,
     env: &Env,
+    arena: &'a ParseArena,
     rec_flag: RecFlag,
     bindings: &[crate::parser::ast::ValueBinding],
 ) -> TypeModResult<Vec<ValueBinding>> {
     // type_binding takes all bindings at once and returns (Vec<ValueBinding>, Env)
-    let (typed_bindings, _new_env) = type_binding(tctx.type_ctx, env, rec_flag, bindings)?;
+    let (typed_bindings, _new_env) = type_binding(tctx.type_ctx, arena, env, rec_flag, bindings)?;
     Ok(typed_bindings)
 }
 
 /// Extend environment with value bindings.
-fn extend_env_with_bindings(env: &Env, bindings: &[ValueBinding]) -> Env {
+fn extend_env_with_bindings(env: &Env, arena: &ParseArena, bindings: &[ValueBinding]) -> Env {
     let mut new_env = env.clone();
 
     for binding in bindings {
@@ -836,7 +841,7 @@ fn extend_env_with_bindings(env: &Env, bindings: &[ValueBinding]) -> Env {
             let val_desc = crate::types::ValueDescription {
                 val_type: binding.vb_pat.pat_type,
                 val_kind: crate::types::ValueKind::ValReg,
-                val_loc: binding.vb_loc.clone(),
+                val_loc: arena.to_location(binding.vb_loc),
                 val_attributes: vec![],
                 val_path: None,
             };

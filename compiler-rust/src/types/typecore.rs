@@ -27,7 +27,8 @@
 #![allow(dead_code)]
 
 use crate::ident::Ident;
-use crate::location::{Located, Location};
+use crate::location::Location;
+use crate::parse_arena::{Located, LocIdx, ParseArena};
 use crate::parser::ast::{
     ArgLabel, Expression as ParsedExpression, Pattern as ParsedPattern, RecFlag,
 };
@@ -36,6 +37,23 @@ use crate::types::typedtree::{
     ArrowArg, Constant, EnvRef, Expression, ExpressionDesc, Pattern, PatternDesc, ValueBinding,
 };
 use crate::types::{Env, Path, TypeContext, TypeError, TypeExprRef, UnifyState, ValueDescription};
+
+// ============================================================================
+// Location Conversion Helpers
+// ============================================================================
+
+/// Convert a parse_arena::Located<T> to a location::Located<T> with full Location.
+fn convert_located<T: Clone>(loc: &Located<T>, arena: &ParseArena) -> crate::location::Located<T> {
+    crate::location::Located {
+        txt: loc.txt.clone(),
+        loc: arena.to_location(loc.loc),
+    }
+}
+
+/// Convert a LocIdx to a Location using the arena.
+fn convert_loc(loc: LocIdx, arena: &ParseArena) -> Location {
+    arena.to_location(loc)
+}
 
 // ============================================================================
 // Error Types
@@ -289,7 +307,7 @@ pub struct PatternState {
     /// Whether modules are allowed.
     allow_modules: bool,
     /// Module variables collected.
-    module_variables: Vec<(Located<String>, Location)>,
+    module_variables: Vec<(crate::location::Located<String>, Location)>,
 }
 
 /// A pattern variable with its binding information.
@@ -300,7 +318,7 @@ pub struct PatternVariable {
     /// The type.
     pub ty: TypeExprRef,
     /// The name with location.
-    pub name: Located<String>,
+    pub name: crate::location::Located<String>,
     /// The location.
     pub loc: Location,
     /// Whether this is an as-variable.
@@ -318,13 +336,15 @@ impl PatternState {
     }
 
     /// Enter a variable into the pattern state.
+    /// Takes parsed Located<String> (with LocIdx) and arena to convert to Location.
     pub fn enter_variable(
         &mut self,
-        loc: Location,
-        name: Located<String>,
+        loc: LocIdx,
+        name: &Located<String>,
         ty: TypeExprRef,
         is_as_variable: bool,
         is_module: bool,
+        arena: &ParseArena,
     ) -> TypeCoreResult<Ident> {
         // Check for duplicate binding
         if self
@@ -336,11 +356,13 @@ impl PatternState {
         }
 
         let id = Ident::create_local(&name.txt);
+        let full_loc = arena.to_location(loc);
+        let full_name = convert_located(name, arena);
         self.pattern_variables.push(PatternVariable {
             id: id.clone(),
             ty,
-            name: name.clone(),
-            loc: loc.clone(),
+            name: full_name.clone(),
+            loc: full_loc.clone(),
             is_as_variable,
         });
 
@@ -348,7 +370,7 @@ impl PatternState {
             if !self.allow_modules {
                 return Err(TypeCoreError::ModulesNotAllowed);
             }
-            self.module_variables.push((name, loc));
+            self.module_variables.push((full_name, full_loc));
         }
 
         Ok(id)
@@ -383,6 +405,8 @@ impl Default for PatternState {
 pub struct TypeCheckContext<'a> {
     /// Type context for allocation.
     pub type_ctx: &'a TypeContext<'a>,
+    /// Parse arena for location conversion.
+    pub arena: &'a ParseArena,
     /// Unification state.
     pub unify_state: UnifyState,
     /// Newtype level (for local type definitions).
@@ -402,9 +426,10 @@ pub struct TypeCoreDiagnostic {
 
 impl<'a> TypeCheckContext<'a> {
     /// Create a new type check context.
-    pub fn new(type_ctx: &'a TypeContext<'a>) -> Self {
+    pub fn new(type_ctx: &'a TypeContext<'a>, arena: &'a ParseArena) -> Self {
         TypeCheckContext {
             type_ctx,
+            arena,
             unify_state: UnifyState::new(),
             newtype_level: None,
             diagnostics: Vec::new(),
@@ -472,14 +497,14 @@ pub fn convert_constant(cst: &crate::parser::ast::Constant) -> TypeCoreResult<Co
 // ============================================================================
 
 /// Convert a parser ArgLabel to a types ArgLabel (for TypeContext methods).
-fn convert_arg_label_for_ctx(lbl: &crate::parser::ast::ArgLabel) -> crate::types::ArgLabel {
+fn convert_arg_label_for_ctx(lbl: &crate::parser::ast::ArgLabel, arena: &ParseArena) -> crate::types::ArgLabel {
     match lbl {
         crate::parser::ast::ArgLabel::Nolabel => crate::types::ArgLabel::Nolabel,
         crate::parser::ast::ArgLabel::Labelled(s) => {
-            crate::types::ArgLabel::labelled(s.txt.clone(), s.loc.clone())
+            crate::types::ArgLabel::labelled(s.txt.clone(), arena.to_location(s.loc))
         }
         crate::parser::ast::ArgLabel::Optional(s) => {
-            crate::types::ArgLabel::optional(s.txt.clone(), s.loc.clone())
+            crate::types::ArgLabel::optional(s.txt.clone(), arena.to_location(s.loc))
         }
     }
 }
@@ -548,7 +573,7 @@ fn transl_type_inner(
             };
 
             // Convert parser ArgLabel to types ArgLabel for TypeContext
-            let ctx_lbl = convert_arg_label_for_ctx(&arg.lbl);
+            let ctx_lbl = convert_arg_label_for_ctx(&arg.lbl, tctx.arena);
             let arrow_ty = ctx.new_arrow(ctx_lbl, arg_ty, ret_ty, arity_opt);
 
             // Create ArrowArg structure matching OCaml's
@@ -841,7 +866,7 @@ fn type_pattern_inner(
 
         PD::Ppat_var(name) => {
             // Variable pattern
-            let id = state.enter_variable(loc.clone(), name.clone(), expected_ty, false, false)?;
+            let id = state.enter_variable(loc, name, expected_ty, false, false, tctx.arena)?;
             Ok(Pattern::new(
                 PatternDesc::Tpat_var(id, name.clone()),
                 loc,
@@ -857,7 +882,7 @@ fn type_pattern_inner(
             let ty = type_constant(ctx, env, &constant);
 
             // Unify with expected type
-            unify_pattern_types(tctx, &loc, ty, expected_ty)?;
+            unify_pattern_types(tctx, loc, ty, expected_ty)?;
 
             Ok(Pattern::new(
                 PatternDesc::Tpat_constant(constant),
@@ -877,7 +902,7 @@ fn type_pattern_inner(
 
             // Create tuple type and unify
             let tuple_ty = ctx.new_tuple(elem_types.clone());
-            unify_pattern_types(tctx, &loc, tuple_ty, expected_ty)?;
+            unify_pattern_types(tctx, loc, tuple_ty, expected_ty)?;
 
             // Type check each element
             let mut typed_pats = Vec::new();
@@ -904,7 +929,7 @@ fn type_pattern_inner(
             let ty_var = build_as_type(ctx, env, &typed_inner)?;
 
             // Enter the variable with the as-type
-            let id = state.enter_variable(loc.clone(), name.clone(), ty_var, true, false)?;
+            let id = state.enter_variable(loc, name, ty_var, true, false, tctx.arena)?;
 
             Ok(Pattern::new(
                 PatternDesc::Tpat_alias(Box::new(typed_inner), id, name.clone()),
@@ -942,7 +967,7 @@ fn type_pattern_inner(
             let p2_vars: Vec<_> = state.pattern_variables[vars_before..].to_vec();
 
             // Merge variables (they should match)
-            merge_or_pattern_variables(tctx, env, &loc, &p1_vars, &p2_vars)?;
+            merge_or_pattern_variables(tctx, env, loc, &p1_vars, &p2_vars)?;
 
             Ok(Pattern::new(
                 PatternDesc::Tpat_or(Box::new(typed_p1), Box::new(typed_p2), None),
@@ -957,7 +982,7 @@ fn type_pattern_inner(
             // Array pattern
             let elem_ty = ctx.new_var(None);
             let array_ty = env.type_array(ctx, elem_ty);
-            unify_pattern_types(tctx, &loc, array_ty, expected_ty)?;
+            unify_pattern_types(tctx, loc, array_ty, expected_ty)?;
 
             let mut typed_pats = Vec::new();
             for p in pats {
@@ -979,7 +1004,7 @@ fn type_pattern_inner(
             type_pattern_construct(
                 tctx,
                 env,
-                &loc,
+                loc,
                 lid,
                 arg.as_ref().map(|p| p.as_ref()),
                 expected_ty,
@@ -994,7 +1019,7 @@ fn type_pattern_inner(
             type_pattern_variant(
                 tctx,
                 env,
-                &loc,
+                loc,
                 label,
                 arg.as_ref().map(|p| p.as_ref()),
                 expected_ty,
@@ -1009,7 +1034,7 @@ fn type_pattern_inner(
             type_pattern_record(
                 tctx,
                 env,
-                &loc,
+                loc,
                 fields,
                 *closed_flag,
                 expected_ty,
@@ -1024,7 +1049,7 @@ fn type_pattern_inner(
             type_pattern_constraint(
                 tctx,
                 env,
-                &loc,
+                loc,
                 inner_pat,
                 core_type,
                 expected_ty,
@@ -1036,12 +1061,12 @@ fn type_pattern_inner(
 
         PD::Ppat_interval(c1, c2) => {
             // Interval pattern: 'a'..'z'
-            type_pattern_interval(tctx, env, &loc, c1, c2, expected_ty, pat)
+            type_pattern_interval(tctx, env, loc, c1, c2, expected_ty, pat)
         }
 
         PD::Ppat_exception(inner_pat) => {
             // Exception pattern
-            type_pattern_exception(tctx, env, &loc, inner_pat, expected_ty, mode, state, pat)
+            type_pattern_exception(tctx, env, loc, inner_pat, expected_ty, mode, state, pat)
         }
 
         PD::Ppat_open(mod_lid, inner_pat) => {
@@ -1049,7 +1074,7 @@ fn type_pattern_inner(
             type_pattern_open(
                 tctx,
                 env,
-                &loc,
+                loc,
                 mod_lid,
                 inner_pat,
                 expected_ty,
@@ -1076,7 +1101,7 @@ fn type_pattern_inner(
 /// Unify pattern types, raising PatternTypeClash on error.
 fn unify_pattern_types(
     tctx: &mut TypeCheckContext<'_>,
-    _loc: &Location,
+    _loc: LocIdx,
     ty1: TypeExprRef,
     ty2: TypeExprRef,
 ) -> TypeCoreResult<()> {
@@ -1108,7 +1133,7 @@ fn build_as_type(ctx: &TypeContext<'_>, _env: &Env, pat: &Pattern) -> TypeCoreRe
 fn merge_or_pattern_variables(
     tctx: &mut TypeCheckContext<'_>,
     _env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     p1_vars: &[PatternVariable],
     p2_vars: &[PatternVariable],
 ) -> TypeCoreResult<Vec<(Ident, Ident)>> {
@@ -1164,7 +1189,7 @@ fn merge_or_pattern_variables(
 fn type_pattern_construct(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     lid: &Located<Longident>,
     arg: Option<&ParsedPattern>,
     expected_ty: TypeExprRef,
@@ -1247,7 +1272,7 @@ fn type_pattern_construct(
 fn type_pattern_variant(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     label: &str,
     arg: Option<&ParsedPattern>,
     expected_ty: TypeExprRef,
@@ -1286,7 +1311,7 @@ fn type_pattern_variant(
 fn type_pattern_record(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     fields: &[crate::parser::ast::PatternRecordField],
     closed_flag: crate::parser::ast::ClosedFlag,
     expected_ty: TypeExprRef,
@@ -1313,7 +1338,7 @@ fn type_pattern_record(
             lbl_all: crate::types::LabelArrayRef(0),
             lbl_repres: crate::types::RecordRepresentation::RecordRegular,
             lbl_private: crate::types::PrivateFlag::Public,
-            lbl_loc: field.lid.loc.clone(),
+            lbl_loc: tctx.arena.to_location(field.lid.loc),
             lbl_attributes: vec![],
         };
 
@@ -1334,7 +1359,7 @@ fn type_pattern_record(
 fn type_pattern_constraint(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     inner_pat: &ParsedPattern,
     core_type: &crate::parser::ast::CoreType,
     expected_ty: TypeExprRef,
@@ -1368,7 +1393,7 @@ fn type_pattern_constraint(
 fn type_pattern_interval(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     c1: &crate::parser::ast::Constant,
     c2: &crate::parser::ast::Constant,
     expected_ty: TypeExprRef,
@@ -1422,7 +1447,7 @@ fn type_pattern_interval(
 fn type_pattern_exception(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     inner_pat: &ParsedPattern,
     _expected_ty: TypeExprRef,
     mode: PatternMode,
@@ -1453,7 +1478,7 @@ fn type_pattern_exception(
 fn type_pattern_open(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     mod_lid: &Located<Longident>,
     inner_pat: &ParsedPattern,
     expected_ty: TypeExprRef,
@@ -1503,7 +1528,7 @@ pub fn type_expect<'a>(
             let ty = crate::types::instance(ctx, desc.val_type);
 
             // Unify with expected type
-            unify_expression_types(tctx, &loc, ty, expected_ty, context)?;
+            unify_expression_types(tctx, loc, ty, expected_ty, context)?;
 
             Ok(Expression::new(
                 ExpressionDesc::Texp_ident(path, lid.clone(), desc),
@@ -1520,7 +1545,7 @@ pub fn type_expect<'a>(
             let ty = type_constant(ctx, env, &constant);
 
             // Unify with expected type
-            unify_expression_types(tctx, &loc, ty, expected_ty, context)?;
+            unify_expression_types(tctx, loc, ty, expected_ty, context)?;
 
             Ok(Expression::new(
                 ExpressionDesc::Texp_constant(constant),
@@ -1540,7 +1565,7 @@ pub fn type_expect<'a>(
 
             // Create tuple type and unify
             let tuple_ty = ctx.new_tuple(elem_types.clone());
-            unify_expression_types(tctx, &loc, tuple_ty, expected_ty, context)?;
+            unify_expression_types(tctx, loc, tuple_ty, expected_ty, context)?;
 
             // Type check each element
             let mut typed_exprs = Vec::new();
@@ -1611,7 +1636,7 @@ pub fn type_expect<'a>(
             } else {
                 // No else branch - result type should be unit
                 let unit_ty = env.type_unit(ctx);
-                unify_expression_types(tctx, &loc, expected_ty, unit_ty, context)?;
+                unify_expression_types(tctx, loc, expected_ty, unit_ty, context)?;
                 None
             };
 
@@ -1637,7 +1662,7 @@ pub fn type_expect<'a>(
             let typed_body = type_expect(tctx, env, body, unit_ty, None)?;
 
             // While loop has type unit
-            unify_expression_types(tctx, &loc, expected_ty, unit_ty, context)?;
+            unify_expression_types(tctx, loc, expected_ty, unit_ty, context)?;
 
             Ok(Expression::new(
                 ExpressionDesc::Texp_while(Box::new(typed_cond), Box::new(typed_body)),
@@ -1656,7 +1681,7 @@ pub fn type_expect<'a>(
             let typed_e = type_expect(tctx, env, e, bool_ty, None)?;
 
             // Assert has type unit
-            unify_expression_types(tctx, &loc, expected_ty, unit_ty, context)?;
+            unify_expression_types(tctx, loc, expected_ty, unit_ty, context)?;
 
             Ok(Expression::new(
                 ExpressionDesc::Texp_assert(Box::new(typed_e)),
@@ -1672,7 +1697,7 @@ pub fn type_expect<'a>(
             let elem_ty = ctx.new_var(None);
             let array_ty = env.type_array(ctx, elem_ty);
 
-            unify_expression_types(tctx, &loc, array_ty, expected_ty, context)?;
+            unify_expression_types(tctx, loc, array_ty, expected_ty, context)?;
 
             let mut typed_exprs = Vec::new();
             for e in exprs {
@@ -1700,7 +1725,7 @@ pub fn type_expect<'a>(
             type_application(
                 tctx,
                 env,
-                &loc,
+                loc,
                 funct,
                 args,
                 *partial,
@@ -1716,7 +1741,7 @@ pub fn type_expect<'a>(
             type_match(
                 tctx,
                 env,
-                &loc,
+                loc,
                 scrutinee,
                 cases,
                 expected_ty,
@@ -1729,7 +1754,7 @@ pub fn type_expect<'a>(
             type_try(
                 tctx,
                 env,
-                &loc,
+                loc,
                 body,
                 handlers,
                 expected_ty,
@@ -1749,7 +1774,7 @@ pub fn type_expect<'a>(
             type_function(
                 tctx,
                 env,
-                &loc,
+                loc,
                 arg_label,
                 default.as_ref().map(|e| e.as_ref()),
                 lhs,
@@ -1766,7 +1791,7 @@ pub fn type_expect<'a>(
             type_for(
                 tctx,
                 env,
-                &loc,
+                loc,
                 pat,
                 start_expr,
                 end_expr,
@@ -1783,7 +1808,7 @@ pub fn type_expect<'a>(
             type_construct(
                 tctx,
                 env,
-                &loc,
+                loc,
                 lid,
                 arg.as_ref().map(|e| e.as_ref()),
                 expected_ty,
@@ -1796,7 +1821,7 @@ pub fn type_expect<'a>(
             type_variant(
                 tctx,
                 env,
-                &loc,
+                loc,
                 label,
                 arg.as_ref().map(|e| e.as_ref()),
                 expected_ty,
@@ -1809,7 +1834,7 @@ pub fn type_expect<'a>(
             type_record(
                 tctx,
                 env,
-                &loc,
+                loc,
                 fields,
                 base.as_ref().map(|e| e.as_ref()),
                 expected_ty,
@@ -1822,7 +1847,7 @@ pub fn type_expect<'a>(
             type_field(
                 tctx,
                 env,
-                &loc,
+                loc,
                 record_expr,
                 field_lid,
                 expected_ty,
@@ -1835,7 +1860,7 @@ pub fn type_expect<'a>(
             type_setfield(
                 tctx,
                 env,
-                &loc,
+                loc,
                 record_expr,
                 field_lid,
                 new_value,
@@ -1850,7 +1875,7 @@ pub fn type_expect<'a>(
             type_constraint(
                 tctx,
                 env,
-                &loc,
+                loc,
                 inner_expr,
                 core_type,
                 expected_ty,
@@ -1863,7 +1888,7 @@ pub fn type_expect<'a>(
             type_coerce(
                 tctx,
                 env,
-                &loc,
+                loc,
                 inner_expr,
                 opt_from_type.as_ref(),
                 to_type,
@@ -1877,7 +1902,7 @@ pub fn type_expect<'a>(
             type_open(
                 tctx,
                 env,
-                &loc,
+                loc,
                 lid,
                 body,
                 expected_ty,
@@ -1890,7 +1915,7 @@ pub fn type_expect<'a>(
             type_newtype(
                 tctx,
                 env,
-                &loc,
+                loc,
                 name,
                 body,
                 expected_ty,
@@ -1903,7 +1928,7 @@ pub fn type_expect<'a>(
             type_await(
                 tctx,
                 env,
-                &loc,
+                loc,
                 inner_expr,
                 expected_ty,
                 context,
@@ -1916,7 +1941,7 @@ pub fn type_expect<'a>(
             type_send(
                 tctx,
                 env,
-                &loc,
+                loc,
                 obj_expr,
                 method,
                 expected_ty,
@@ -1929,7 +1954,7 @@ pub fn type_expect<'a>(
             type_letexception(
                 tctx,
                 env,
-                &loc,
+                loc,
                 ext_constr,
                 body,
                 expected_ty,
@@ -1942,7 +1967,7 @@ pub fn type_expect<'a>(
             type_extension_expr(
                 tctx,
                 env,
-                &loc,
+                loc,
                 extension,
                 expected_ty,
                 &expr.pexp_attributes,
@@ -1954,7 +1979,7 @@ pub fn type_expect<'a>(
             type_letmodule(
                 tctx,
                 env,
-                &loc,
+                loc,
                 name,
                 module_expr,
                 body,
@@ -1968,7 +1993,7 @@ pub fn type_expect<'a>(
             type_pack(
                 tctx,
                 env,
-                &loc,
+                loc,
                 module_expr,
                 expected_ty,
                 &expr.pexp_attributes,
@@ -1980,7 +2005,7 @@ pub fn type_expect<'a>(
             type_jsx_element(
                 tctx,
                 env,
-                &loc,
+                loc,
                 jsx_element,
                 expected_ty,
                 &expr.pexp_attributes,
@@ -1992,7 +2017,7 @@ pub fn type_expect<'a>(
 /// Unify expression types, raising ExprTypeClash on error.
 fn unify_expression_types(
     tctx: &mut TypeCheckContext<'_>,
-    _loc: &Location,
+    _loc: LocIdx,
     ty1: TypeExprRef,
     ty2: TypeExprRef,
     context: Option<TypeClashContext>,
@@ -2017,7 +2042,7 @@ fn unify_expression_types(
 fn type_application(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     funct: &ParsedExpression,
     args: &[(ArgLabel, ParsedExpression)],
     _partial: bool,
@@ -2094,7 +2119,7 @@ fn type_application(
 fn type_match(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     scrutinee: &ParsedExpression,
     cases: &[crate::parser::ast::Case],
     expected_ty: TypeExprRef,
@@ -2184,7 +2209,7 @@ fn type_case(
 fn type_try(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     body: &ParsedExpression,
     handlers: &[crate::parser::ast::Case],
     expected_ty: TypeExprRef,
@@ -2219,7 +2244,7 @@ fn type_try(
 fn type_function(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     arg_label: &ArgLabel,
     default: Option<&ParsedExpression>,
     param: &ParsedPattern,
@@ -2244,7 +2269,7 @@ fn type_function(
     };
 
     // Build function type with arity and label
-    let ctx_label = convert_arg_label_for_ctx(arg_label);
+    let ctx_label = convert_arg_label_for_ctx(arg_label, tctx.arena);
     let func_ty = ctx.new_arrow(ctx_label, param_ty, return_ty, arity_opt);
     unify_expression_types(tctx, loc, func_ty, expected_ty, None)?;
 
@@ -2315,7 +2340,7 @@ fn type_function(
 fn type_for(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     pat: &ParsedPattern,
     start_expr: &ParsedExpression,
     end_expr: &ParsedExpression,
@@ -2383,7 +2408,7 @@ fn type_for(
 fn type_construct(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     lid: &Located<Longident>,
     arg: Option<&ParsedExpression>,
     expected_ty: TypeExprRef,
@@ -2462,7 +2487,7 @@ fn type_construct(
 fn type_variant(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     label: &str,
     arg: Option<&ParsedExpression>,
     expected_ty: TypeExprRef,
@@ -2497,7 +2522,7 @@ fn type_variant(
 fn type_record(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     fields: &[crate::parser::ast::ExpressionRecordField],
     base: Option<&ParsedExpression>,
     expected_ty: TypeExprRef,
@@ -2542,7 +2567,7 @@ fn type_record(
             lbl_all: crate::types::LabelArrayRef(0), // Placeholder
             lbl_repres: crate::types::RecordRepresentation::RecordRegular,
             lbl_private: crate::types::PrivateFlag::Public,
-            lbl_loc: field.lid.loc.clone(),
+            lbl_loc: tctx.arena.to_location(field.lid.loc),
             lbl_attributes: vec![],
         };
 
@@ -2569,7 +2594,7 @@ fn type_record(
 fn type_field(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     record_expr: &ParsedExpression,
     field_lid: &Located<Longident>,
     expected_ty: TypeExprRef,
@@ -2596,13 +2621,13 @@ fn type_field(
         lbl_all: crate::types::LabelArrayRef(0),
         lbl_repres: crate::types::RecordRepresentation::RecordRegular,
         lbl_private: crate::types::PrivateFlag::Public,
-        lbl_loc: field_lid.loc.clone(),
+        lbl_loc: tctx.arena.to_location(field_lid.loc),
         lbl_attributes: vec![],
     };
 
     Ok(Expression::new(
         ExpressionDesc::Texp_field(Box::new(typed_record), field_lid.clone(), label_desc),
-        loc.clone(),
+        loc,
         field_ty,
         EnvRef(0),
         attributes.to_vec(),
@@ -2614,7 +2639,7 @@ fn type_field(
 fn type_setfield(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     record_expr: &ParsedExpression,
     field_lid: &Located<Longident>,
     new_value: &ParsedExpression,
@@ -2649,7 +2674,7 @@ fn type_setfield(
         lbl_all: crate::types::LabelArrayRef(0),
         lbl_repres: crate::types::RecordRepresentation::RecordRegular,
         lbl_private: crate::types::PrivateFlag::Public,
-        lbl_loc: field_lid.loc.clone(),
+        lbl_loc: tctx.arena.to_location(field_lid.loc),
         lbl_attributes: vec![],
     };
 
@@ -2660,7 +2685,7 @@ fn type_setfield(
             label_desc,
             Box::new(typed_value),
         ),
-        loc.clone(),
+        loc,
         unit_ty,
         EnvRef(0),
         attributes.to_vec(),
@@ -2671,7 +2696,7 @@ fn type_setfield(
 fn type_constraint(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     inner_expr: &ParsedExpression,
     core_type: &crate::parser::ast::CoreType,
     expected_ty: TypeExprRef,
@@ -2704,7 +2729,7 @@ fn type_constraint(
 fn type_coerce(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     inner_expr: &ParsedExpression,
     opt_from_type: Option<&crate::parser::ast::CoreType>,
     to_type: &crate::parser::ast::CoreType,
@@ -2747,8 +2772,8 @@ fn type_coerce(
 fn type_open(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
-    lid: &crate::location::Located<crate::parser::longident::Longident>,
+    loc: LocIdx,
+    lid: &Located<crate::parser::longident::Longident>,
     body: &ParsedExpression,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
@@ -2776,8 +2801,8 @@ fn type_open(
 fn type_newtype(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
-    name: &crate::location::Located<String>,
+    loc: LocIdx,
+    name: &Located<String>,
     body: &ParsedExpression,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
@@ -2808,7 +2833,7 @@ fn type_newtype(
 fn type_await(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     inner_expr: &ParsedExpression,
     expected_ty: TypeExprRef,
     _context: Option<TypeClashContext>,
@@ -2842,9 +2867,9 @@ fn type_await(
 fn type_send(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     obj_expr: &ParsedExpression,
-    method: &crate::location::Located<String>,
+    method: &Located<String>,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
 ) -> TypeCoreResult<Expression> {
@@ -2872,7 +2897,7 @@ fn type_send(
 fn type_letexception(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     _ext_constr: &crate::parser::ast::ExtensionConstructor,
     body: &ParsedExpression,
     expected_ty: TypeExprRef,
@@ -2899,7 +2924,7 @@ fn type_letexception(
 fn type_extension_expr(
     tctx: &mut TypeCheckContext<'_>,
     _env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     _extension: &crate::parser::ast::Extension,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
@@ -2922,8 +2947,8 @@ fn type_extension_expr(
 fn type_letmodule(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
-    loc: &Location,
-    _name: &crate::location::Located<String>,
+    loc: LocIdx,
+    _name: &Located<String>,
     _module_expr: &crate::parser::ast::ModuleExpr,
     body: &ParsedExpression,
     expected_ty: TypeExprRef,
@@ -2951,7 +2976,7 @@ fn type_letmodule(
 fn type_pack(
     tctx: &mut TypeCheckContext<'_>,
     _env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     _module_expr: &crate::parser::ast::ModuleExpr,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
@@ -2968,17 +2993,17 @@ fn type_pack(
         ExpressionDesc::Texp_pack(Box::new(crate::types::typedtree::ModuleExpr {
             mod_desc: crate::types::typedtree::ModuleExprDesc::Tmod_ident(
                 crate::types::Path::pident(Ident::create_local("placeholder")),
-                crate::location::Located {
+                Located {
                     txt: crate::parser::longident::Longident::Lident("placeholder".to_string()),
-                    loc: loc.clone(),
+                    loc,
                 },
             ),
-            mod_loc: loc.clone(),
+            mod_loc: loc,
             mod_type: crate::types::typedtree::ModuleType::placeholder(),
             mod_env: EnvRef(0),
             mod_attributes: vec![],
         })),
-        loc.clone(),
+        loc,
         expected_ty,
         EnvRef(0),
         attributes.to_vec(),
@@ -2989,7 +3014,7 @@ fn type_pack(
 fn type_jsx_element(
     tctx: &mut TypeCheckContext<'_>,
     _env: &Env,
-    loc: &Location,
+    loc: LocIdx,
     _jsx_element: &crate::parser::ast::JsxElement,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
@@ -3040,7 +3065,7 @@ fn type_let_bindings(
                 let desc = ValueDescription {
                     val_type: *ty,
                     val_kind: crate::types::ValueKind::ValReg,
-                    val_loc: binding.pvb_loc.clone(),
+                    val_loc: tctx.arena.to_location(binding.pvb_loc),
                     val_attributes: vec![],
                     val_path: None,
                 };
@@ -3094,7 +3119,7 @@ fn type_let_bindings(
             let desc = ValueDescription {
                 val_type: *ty,
                 val_kind: crate::types::ValueKind::ValReg,
-                val_loc: binding.pvb_loc.clone(),
+                val_loc: tctx.arena.to_location(binding.pvb_loc),
                 val_attributes: vec![],
                 val_path: None,
             };
@@ -3112,10 +3137,11 @@ fn type_let_bindings(
 /// Type check a top-level expression.
 pub fn type_expression<'a>(
     type_ctx: &'a TypeContext<'a>,
+    arena: &'a ParseArena,
     env: &Env,
     expr: &ParsedExpression,
 ) -> TypeCoreResult<Expression> {
-    let mut tctx = TypeCheckContext::new(type_ctx);
+    let mut tctx = TypeCheckContext::new(type_ctx, arena);
 
     // Begin a definition scope
     type_ctx.begin_def();
@@ -3136,11 +3162,12 @@ pub fn type_expression<'a>(
 /// Type check a top-level binding.
 pub fn type_binding<'a>(
     type_ctx: &'a TypeContext<'a>,
+    arena: &'a ParseArena,
     env: &Env,
     rec_flag: RecFlag,
     bindings: &[crate::parser::ast::ValueBinding],
 ) -> TypeCoreResult<(Vec<ValueBinding>, Env)> {
-    let mut tctx = TypeCheckContext::new(type_ctx);
+    let mut tctx = TypeCheckContext::new(type_ctx, arena);
     type_let_bindings(&mut tctx, env, rec_flag, bindings)
 }
 
@@ -3272,18 +3299,19 @@ mod tests {
         let _env = crate::types::initial_env(&ctx);
         let mut state = PatternState::new();
 
+        let arena = ParseArena::new();
+        let loc = LocIdx::none();
         let ty = ctx.new_var(None);
-        let loc = Location::none();
         let name = Located {
             txt: "x".to_string(),
-            loc: loc.clone(),
+            loc,
         };
 
-        let id = state.enter_variable(loc.clone(), name.clone(), ty, false, false);
+        let id = state.enter_variable(loc, &name, ty, false, false, &arena);
         assert!(id.is_ok());
 
         // Duplicate should fail
-        let id2 = state.enter_variable(loc, name, ty, false, false);
+        let id2 = state.enter_variable(loc, &name, ty, false, false, &arena);
         assert!(matches!(id2, Err(TypeCoreError::MultiplyBoundVariable(_))));
     }
 
@@ -3291,7 +3319,8 @@ mod tests {
     fn test_type_check_context_creation() {
         let id_gen = IdGenerator::new();
         let ctx = TypeContext::new(&id_gen);
-        let tctx = TypeCheckContext::new(&ctx);
+        let arena = ParseArena::new();
+        let tctx = TypeCheckContext::new(&ctx, &arena);
 
         assert!(tctx.newtype_level.is_none());
         assert!(tctx.diagnostics.is_empty());

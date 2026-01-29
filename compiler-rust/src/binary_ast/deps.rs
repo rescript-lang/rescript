@@ -721,15 +721,15 @@ impl DependencyCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::location::Location;
+    use crate::parse_arena::{LocIdx, Located};
 
     fn make_ident_expr(lid: Longident) -> Expression {
         Expression {
-            pexp_desc: ExpressionDesc::Pexp_ident(crate::location::Located {
+            pexp_desc: ExpressionDesc::Pexp_ident(Located {
                 txt: lid,
-                loc: Location::none(),
+                loc: LocIdx::none(),
             }),
-            pexp_loc: Location::none(),
+            pexp_loc: LocIdx::none(),
             pexp_attributes: vec![],
         }
     }
@@ -737,7 +737,7 @@ mod tests {
     fn make_eval_item(expr: Expression) -> StructureItem {
         StructureItem {
             pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
-            pstr_loc: Location::none(),
+            pstr_loc: LocIdx::none(),
         }
     }
 

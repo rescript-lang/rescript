@@ -832,11 +832,15 @@ mod tests {
 
     #[test]
     fn test_mk_loc() {
+        use crate::parse_arena::ParseArena;
+        let mut arena = ParseArena::new();
         let start = Position::new("test.res", 1, 0, 0);
         let end = Position::new("test.res", 1, 0, 10);
-        let loc = mk_loc(&start, &end);
-        assert_eq!(loc.loc_start, start);
-        assert_eq!(loc.loc_end, end);
+        let loc_idx = arena.mk_loc_from_positions(&start, &end);
+        // Verify the location can be retrieved from the arena
+        let full_loc = arena.to_location(loc_idx);
+        assert_eq!(full_loc.loc_start, start);
+        assert_eq!(full_loc.loc_end, end);
     }
 
     #[test]

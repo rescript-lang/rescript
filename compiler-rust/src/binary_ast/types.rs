@@ -112,8 +112,7 @@ impl Marshal for PosIdx {
     /// Serialize a PosIdx by looking up the position in the arena.
     /// Requires that MarshalWriter::set_arena() was called first.
     fn marshal(&self, w: &mut MarshalWriter) {
-        let arena = w.get_arena();
-        w.write_pos_idx(*self, arena);
+        w.write_pos_idx(*self);
     }
 }
 
@@ -121,8 +120,7 @@ impl Marshal for LocIdx {
     /// Serialize a LocIdx by looking up the location in the arena.
     /// Requires that MarshalWriter::set_arena() was called first.
     fn marshal(&self, w: &mut MarshalWriter) {
-        let arena = w.get_arena();
-        w.write_loc_idx(*self, arena);
+        w.write_loc_idx(*self);
     }
 }
 
