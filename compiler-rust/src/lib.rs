@@ -46,6 +46,7 @@ pub mod diagnostics;
 pub mod ffi;
 pub mod arena;
 pub mod ident;
+pub mod intern;
 pub mod js_ir;
 pub mod parse_arena;
 pub mod lambda;
