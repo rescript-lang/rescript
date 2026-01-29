@@ -501,8 +501,9 @@ pub mod ast_helper {
         let mut result = match spread {
             Some(pat) => pat,
             None => {
-                // Use ghost location for the empty list constructor
-                let nil_loc = LocIdx::none();
+                // Use a ghost location with the same positions as loc
+                // This matches OCaml's behavior: Location { loc_ghost: true, ..loc }
+                let nil_loc = p.arena_mut().mk_ghost_loc(loc);
                 let nil = with_loc(Longident::Lident("[]".to_string()), nil_loc);
                 make_pat(PatternDesc::Ppat_construct(nil, None), nil_loc)
             }

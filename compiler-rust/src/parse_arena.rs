@@ -276,14 +276,25 @@ impl ParseArena {
         self.get_location(idx).loc_ghost
     }
 
+    /// Create a ghost version of an existing location.
+    /// Returns a new LocIdx with the same positions but loc_ghost=true.
+    pub fn mk_ghost_loc(&mut self, idx: LocIdx) -> LocIdx {
+        let loc = self.get_location(idx);
+        let start = loc.loc_start;
+        let end = loc.loc_end;
+        self.push_loc(start, end, true)
+    }
+
     /// Reconstruct a full Location struct from a LocIdx.
     /// Useful for code that needs the full Location type (e.g., printer).
     pub fn to_location(&self, idx: LocIdx) -> Location {
         let loc = self.get_location(idx);
-        Location::from_positions(
-            self.get_position(loc.loc_start).clone(),
-            self.get_position(loc.loc_end).clone(),
-        )
+        Location {
+            loc_start: self.get_position(loc.loc_start).clone(),
+            loc_end: self.get_position(loc.loc_end).clone(),
+            loc_ghost: loc.loc_ghost,
+            id: crate::location::LocationId::default_id(),
+        }
     }
 
     /// Convert a full Location to a LocIdx by pushing its positions to the arena.

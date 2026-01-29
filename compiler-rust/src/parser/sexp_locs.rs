@@ -19,13 +19,17 @@ fn location(loc: LocIdx, arena: &ParseArena) -> Sexp {
     let loc_end = arena.loc_end(loc);
     let start_col = loc_start.cnum - loc_start.bol;
     let end_col = loc_end.cnum - loc_end.bol;
-    Sexp::list(vec![
+    let mut items = vec![
         Sexp::atom("loc"),
         Sexp::atom(&loc_start.line.to_string()),
         Sexp::atom(&start_col.to_string()),
         Sexp::atom(&loc_end.line.to_string()),
         Sexp::atom(&end_col.to_string()),
-    ])
+    ];
+    if arena.loc_ghost(loc) {
+        items.push(Sexp::atom("ghost"));
+    }
+    Sexp::list(items)
 }
 
 // ============================================================================

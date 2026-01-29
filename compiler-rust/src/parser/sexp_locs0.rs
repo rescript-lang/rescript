@@ -18,13 +18,17 @@ use std::io::Write;
 fn location(loc: &Location) -> Sexp {
     let start_col = loc.loc_start.cnum - loc.loc_start.bol;
     let end_col = loc.loc_end.cnum - loc.loc_end.bol;
-    Sexp::list(vec![
+    let mut items = vec![
         Sexp::atom("loc"),
         Sexp::atom(&loc.loc_start.line.to_string()),
         Sexp::atom(&start_col.to_string()),
         Sexp::atom(&loc.loc_end.line.to_string()),
         Sexp::atom(&end_col.to_string()),
-    ])
+    ];
+    if loc.loc_ghost {
+        items.push(Sexp::atom("ghost"));
+    }
+    Sexp::list(items)
 }
 
 // ============================================================================

@@ -271,17 +271,14 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 Some(StructureItemDesc::Pstr_attribute(attr))
             }
         }
-        Token::ModuleComment { .. } => {
+        Token::ModuleComment { loc, content } => {
             // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
-            // Extract data by taking ownership of the token
-            if let Token::ModuleComment { loc, content } = std::mem::replace(&mut p.token, Token::Eof) {
-                let loc = p.from_location(&loc);
-                p.next();
-                let attr = super::core::doc_comment_to_attribute(loc, content);
-                Some(StructureItemDesc::Pstr_attribute(attr))
-            } else {
-                unreachable!()
-            }
+            let loc_cloned = loc.clone();
+            let content = content.clone();
+            p.next();
+            let loc = p.from_location(&loc_cloned);
+            let attr = super::core::doc_comment_to_attribute(loc, content);
+            Some(StructureItemDesc::Pstr_attribute(attr))
         }
         Token::PercentPercent => {
             // Structure-level extension (%%raw(...), %%private(...), etc.)
@@ -531,16 +528,14 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 Some(SignatureItemDesc::Psig_attribute(attr))
             }
         }
-        Token::ModuleComment { .. } => {
+        Token::ModuleComment { loc, content } => {
             // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
-            if let Token::ModuleComment { loc, content } = std::mem::replace(&mut p.token, Token::Eof) {
-                let loc = p.from_location(&loc);
-                p.next();
-                let attr = super::core::doc_comment_to_attribute(loc, content);
-                Some(SignatureItemDesc::Psig_attribute(attr))
-            } else {
-                unreachable!()
-            }
+            let loc_cloned = loc.clone();
+            let content = content.clone();
+            p.next();
+            let loc = p.from_location(&loc_cloned);
+            let attr = super::core::doc_comment_to_attribute(loc, content);
+            Some(SignatureItemDesc::Psig_attribute(attr))
         }
         Token::Percent | Token::PercentPercent => {
             let ext = parse_extension(p);
@@ -3793,13 +3788,12 @@ fn parse_attributes(p: &mut Parser<'_>) -> Attributes {
                 p.next();
                 attrs.push(parse_attribute_body(p, attr_start));
             }
-            Token::DocComment { .. } => {
-                // Extract data by taking ownership of the token to avoid borrow conflict
-                if let Token::DocComment { loc, content } = std::mem::replace(&mut p.token, Token::Eof) {
-                    let loc = p.from_location(&loc);
-                    p.next();
-                    attrs.push(super::core::doc_comment_to_attribute(loc, content));
-                }
+            Token::DocComment { loc, content } => {
+                let loc_cloned = loc.clone();
+                let content = content.clone();
+                p.next();
+                let loc = p.from_location(&loc_cloned);
+                attrs.push(super::core::doc_comment_to_attribute(loc, content));
             }
             _ => break,
         }

@@ -986,13 +986,15 @@ module SexpAstWithLocs = struct
 
   let location loc =
     let open Location in
-    Sexp.list [
-      Sexp.atom "loc";
-      Sexp.atom (string_of_int loc.loc_start.pos_lnum);
-      Sexp.atom (string_of_int (loc.loc_start.pos_cnum - loc.loc_start.pos_bol));
-      Sexp.atom (string_of_int loc.loc_end.pos_lnum);
-      Sexp.atom (string_of_int (loc.loc_end.pos_cnum - loc.loc_end.pos_bol));
-    ]
+    Sexp.list (
+      [
+        Sexp.atom "loc";
+        Sexp.atom (string_of_int loc.loc_start.pos_lnum);
+        Sexp.atom (string_of_int (loc.loc_start.pos_cnum - loc.loc_start.pos_bol));
+        Sexp.atom (string_of_int loc.loc_end.pos_lnum);
+        Sexp.atom (string_of_int (loc.loc_end.pos_cnum - loc.loc_end.pos_bol));
+      ] @ (if loc.loc_ghost then [Sexp.atom "ghost"] else [])
+    )
 
   let longident l =
     let rec loop l =
@@ -1980,13 +1982,15 @@ module SexpAst0WithLocs = struct
 
   let location loc =
     let open Location in
-    Sexp.list [
-      Sexp.atom "loc";
-      Sexp.atom (string_of_int loc.loc_start.pos_lnum);
-      Sexp.atom (string_of_int (loc.loc_start.pos_cnum - loc.loc_start.pos_bol));
-      Sexp.atom (string_of_int loc.loc_end.pos_lnum);
-      Sexp.atom (string_of_int (loc.loc_end.pos_cnum - loc.loc_end.pos_bol));
-    ]
+    Sexp.list (
+      [
+        Sexp.atom "loc";
+        Sexp.atom (string_of_int loc.loc_start.pos_lnum);
+        Sexp.atom (string_of_int (loc.loc_start.pos_cnum - loc.loc_start.pos_bol));
+        Sexp.atom (string_of_int loc.loc_end.pos_lnum);
+        Sexp.atom (string_of_int (loc.loc_end.pos_cnum - loc.loc_end.pos_bol));
+      ] @ (if loc.loc_ghost then [Sexp.atom "ghost"] else [])
+    )
 
   let longident l =
     let rec loop l =

@@ -2391,7 +2391,10 @@ fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     match segments.len() {
         0 => {
             // Empty list: list{} → []
-            make_empty_list(loc)
+            // OCaml: {expr with pexp_loc = loc} - overwrite ghost pexp_loc with original location
+            let mut expr = make_empty_list(p, loc);
+            expr.pexp_loc = loc;
+            expr
         }
         1 => {
             // Single segment: just build with :: constructors
@@ -2495,17 +2498,22 @@ fn split_list_by_spread(
     segments
 }
 
-/// Build an empty list expression `[]`
-fn make_empty_list(loc: Location) -> Expression {
+/// Build an empty list expression `[]` with ghost locations.
+/// Both pexp_loc and the inner Longident location are ghost.
+/// This matches OCaml's handle_seq base case: construct ~loc nil None (where loc is ghost).
+/// The caller should overwrite pexp_loc if needed (e.g., for outermost list expression).
+fn make_empty_list(p: &mut Parser<'_>, loc: Location) -> Expression {
+    // OCaml: let loc = {loc with Location.loc_ghost = true}
+    let ghost_loc = p.arena_mut().mk_ghost_loc(loc);
     Expression {
         pexp_desc: ExpressionDesc::Pexp_construct(
             Loc {
                 txt: Longident::Lident("[]".to_string()),
-                loc,
+                loc: ghost_loc,
             },
             None,
         ),
-        pexp_loc: loc,
+        pexp_loc: ghost_loc,
         pexp_attributes: vec![],
     }
 }
@@ -2526,7 +2534,7 @@ fn make_list_expression_simple(
         .as_ref()
         .map(|s| p.loc_end(s.pexp_loc).clone())
         .unwrap_or_else(|| p.loc_end(loc).clone());
-    let mut acc = spread.unwrap_or_else(|| make_empty_list(loc));
+    let mut acc = spread.unwrap_or_else(|| make_empty_list(p, loc));
 
     // Build from right: 3 :: [] -> 2 :: (3 :: []) -> 1 :: (2 :: (3 :: []))
     for item in exprs.into_iter().rev() {
