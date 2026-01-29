@@ -188,6 +188,18 @@ impl Position {
     pub fn column_1indexed(&self) -> i32 {
         self.column() + 1
     }
+
+    /// Compare positions by content only, ignoring the id field.
+    ///
+    /// This is useful for deduplication and sharing purposes where
+    /// we care about the position value (file, line, bol, cnum) but
+    /// not the identity (id).
+    pub fn content_eq(&self, other: &Position) -> bool {
+        self.file_name == other.file_name
+            && self.line == other.line
+            && self.bol == other.bol
+            && self.cnum == other.cnum
+    }
 }
 
 /// A location span in source code.
