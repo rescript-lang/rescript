@@ -221,6 +221,7 @@ fn main() {
 
                 // Marshal signature
                 let mut w = MarshalWriter::new();
+                w.set_arena(parser.arena());
                 signature.marshal(&mut w);
                 let _ = io::stdout().write_all(&w.finish());
             }
@@ -241,6 +242,7 @@ fn main() {
 
                 // Marshal parsetree0 signature
                 let mut w = MarshalWriter::new();
+                w.set_arena(parser.arena());
                 sig0.marshal(&mut w);
                 let _ = io::stdout().write_all(&w.finish());
             }
@@ -316,6 +318,7 @@ fn main() {
 
                 // Marshal structure
                 let mut w = MarshalWriter::new();
+                w.set_arena(parser.arena());
                 structure.marshal(&mut w);
                 let _ = io::stdout().write_all(&w.finish());
             }
@@ -336,6 +339,7 @@ fn main() {
 
                 // Marshal parsetree0 structure
                 let mut w = MarshalWriter::new();
+                w.set_arena(parser.arena());
                 str0.marshal(&mut w);
                 let _ = io::stdout().write_all(&w.finish());
             }
