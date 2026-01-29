@@ -748,3 +748,50 @@ The following files have known location parity differences that require more com
 - **Explicit contexts** - `CompilationContext`, `TypeContext` passed through pipeline
 - **Arena-per-compilation** - Type arenas owned by `TypeContext`, not shared
 - **No `static mut`** - All mutable state in explicit contexts
+
+### Binary AST Parity (Completed for Current Parsetree)
+
+**Status:** ✅ Current parsetree format (the active AST format) has 100% binary parity.
+
+The binary AST format uses OCaml's Marshal serialization, which includes back-references for shared objects. When OCaml creates two references to the same memory object, Marshal writes a shared reference (CODE_SHARED8/16/32) instead of duplicating the data.
+
+**What's working:**
+- Current parsetree binary: 100% parity (1049/1049 files identical)
+- sexp-locs: 100% parity (1049/1049 files identical)
+
+**What still needs work (parsetree0 - frozen PPX format):**
+- binary0 has 985 differing files
+- roundtrip (parsetree→parsetree0→parsetree) has differences
+- These are lower priority as they involve the frozen PPX-compatible format
+
+**Key implementation points:**
+
+- **ParseArena** (`compiler-rust/src/parse_arena.rs`): Arena for positions and locations. Same `PosIdx`/`LocIdx` = same object for marshalling purposes.
+  - The "none" position/location are pre-allocated at index 0
+
+- **Marshal writer** (`compiler-rust/src/binary_ast/marshal.rs`): Tables for sharing:
+  - `position_idx_table`: Maps `PosIdx` to object counter for arena-based position sharing
+  - `location_idx_table`: Maps `LocIdx` to object counter for arena-based location sharing
+
+**Testing:**
+
+```bash
+# Run full parity test suite
+./scripts/test_parser_ast_parity.sh
+
+# Test a single file for quick iteration
+./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
+
+# Compare binary output directly
+./_build/install/default/bin/res_parser -print binary FILE > /tmp/ocaml.bin
+./compiler-rust/target/release/res_parser_rust -print binary FILE > /tmp/rust.bin
+diff <(xxd /tmp/ocaml.bin) <(xxd /tmp/rust.bin)
+```
+
+**Debugging tips:**
+
+- When binary differs, look at the hex dump: shared references show up as `04 XX` (CODE_SHARED8), `05 XX XX` (CODE_SHARED16)
+- The offset after the opcode is the "distance back" in object counter terms
+- If Rust has more bytes, it's likely not sharing something OCaml shares
+- If Rust has fewer bytes, it's likely sharing something OCaml doesn't share
+- Add debug prints in `marshal.rs` to trace object counter values
