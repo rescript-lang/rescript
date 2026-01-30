@@ -53,7 +53,8 @@ impl Default for JsxConfig {
 
 /// Extract capitalized file name from a file path
 fn filename_from_loc(loc: &Location, arena: &ParseArena) -> String {
-    let file_name = &arena.loc_start(*loc).file_name;
+    let file_name_idx = arena.loc_start(*loc).file_name;
+    let file_name = arena.get_string(file_name_idx);
     if file_name.is_empty() {
         return String::new();
     }

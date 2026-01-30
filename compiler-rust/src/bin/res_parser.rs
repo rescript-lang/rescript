@@ -376,7 +376,10 @@ fn print_comments(parser: &Parser, out: &mut impl Write) {
 
 /// Print tokens from source
 fn print_tokens(source: &str, filename: &str, out: &mut impl Write) {
-    let mut scanner = Scanner::new(filename, source);
+    // Create a temporary arena to intern the filename
+    let mut arena = ParseArena::new();
+    let filename_idx = arena.intern_string(filename);
+    let mut scanner = Scanner::new(filename_idx, source);
     loop {
         let result = scanner.scan();
         let start_col = result.start_pos.cnum - result.start_pos.bol;

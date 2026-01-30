@@ -37,9 +37,9 @@ use crate::parser::longident::Longident;
 
 /// Key for position deduplication.
 /// Two positions with the same (file_name, line, bol, cnum) are the same position.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct PosKey {
-    file_name: String,
+    file_name: StrIdx,
     line: i32,
     bol: i32,
     cnum: i32,
@@ -48,7 +48,7 @@ struct PosKey {
 impl PosKey {
     fn from_position(pos: &Position) -> Self {
         Self {
-            file_name: pos.file_name.clone(),
+            file_name: pos.file_name,
             line: pos.line,
             bol: pos.bol,
             cnum: pos.cnum,
@@ -221,9 +221,10 @@ impl ParseArena {
     /// a valid "none" location, even without calling `none_loc()` first.
     pub fn new() -> Self {
         let mut arena = Self::default();
-        // Pre-allocate none position and location at index 0
+        // Pre-allocate none file name and position at index 0
         // This way LocIdx::default() == LocIdx(0) is always valid
-        let none_pos = Position::new("_none_", 1, 0, -1);
+        let none_file_idx = arena.strings.intern("_none_");
+        let none_pos = Position::new(none_file_idx, 1, 0, -1);
         let pos_idx = arena.positions.push(none_pos);
         let none_loc = InternedLocation::new(pos_idx, pos_idx, true);
         arena.locations.push(none_loc);
@@ -283,7 +284,8 @@ impl ParseArena {
 
     /// Push a position from components.
     /// Uses deduplication to reuse existing positions with the same content.
-    pub fn push_pos(&mut self, file_name: impl Into<String>, line: i32, bol: i32, cnum: i32) -> PosIdx {
+    /// file_name should be an interned StrIdx (from arena.intern_string).
+    pub fn push_pos(&mut self, file_name: StrIdx, line: i32, bol: i32, cnum: i32) -> PosIdx {
         self.push_position_dedup(Position::new(file_name, line, bol, cnum))
     }
 

@@ -6,6 +6,7 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use crate::intern::StrIdx;
 use crate::location::{Location, Position};
 use crate::parse_arena::{LidentIdx, LocIdx, ParseArena, PosIdx};
 
@@ -107,7 +108,11 @@ impl<'src> Parser<'src> {
 
     /// Create a new parser with a specific mode.
     pub fn with_mode(filename: impl Into<String>, src: &'src str, mode: ParserMode) -> Self {
-        let scanner = Scanner::new(filename, src);
+        // Create arena first so we can intern the filename
+        let mut arena = ParseArena::new();
+        // Intern the filename - this StrIdx will be shared by all positions in this file
+        let filename_idx = arena.intern_string(&filename.into());
+        let scanner = Scanner::new(filename_idx, src);
         let mut parser = Parser {
             mode,
             scanner,
@@ -120,7 +125,7 @@ impl<'src> Parser<'src> {
             comments: Vec::new(),
             regions: vec![RegionStatus::Report],
             location_id_counter: AtomicU32::new(1), // Start at 1, 0 is reserved for default/uninitialized
-            arena: ParseArena::new(),
+            arena,
             in_external: false,
         };
         // Scan the first token
@@ -608,9 +613,15 @@ impl<'src> Parser<'src> {
         self.scanner.pop_diamond_mode();
     }
 
-    /// Get the filename being parsed.
-    pub fn filename(&self) -> &str {
-        &self.scanner.filename
+    /// Get the filename index being parsed.
+    pub fn filename(&self) -> StrIdx {
+        self.scanner.filename
+    }
+
+    /// Get the filename string being parsed.
+    /// Looks up the StrIdx in the arena.
+    pub fn filename_str(&self) -> &str {
+        self.arena.get_string(self.scanner.filename)
     }
 }
 

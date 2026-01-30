@@ -387,15 +387,16 @@ impl MarshalWriter {
             return false;
         }
 
-        // Look up the position in the arena and clone it to end the borrow
-        let pos = self.get_arena().get_position(idx).clone();
+        // Look up the position in the arena and copy it to end the borrow
+        let pos = *self.get_arena().get_position(idx);
 
         // Record the object index BEFORE writing
         let obj_idx = self.obj_counter;
 
         // Write the Position block
         self.write_block_header(0, 4);
-        self.write_str(&pos.file_name);
+        // Use write_str_idx for file name to enable sharing
+        self.write_str_idx(pos.file_name);
         self.write_int(pos.line as i64);
         self.write_int(pos.bol as i64);
         self.write_int(pos.cnum as i64);

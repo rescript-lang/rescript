@@ -12,7 +12,7 @@ use crate::parser::longident::Longident;
 // ========== Position (Lexing.position) ==========
 
 impl Marshal for Position {
-    /// Serialize a Position to Marshal format with content-based sharing.
+    /// Serialize a Position to Marshal format.
     ///
     /// OCaml type:
     /// ```ocaml
@@ -26,11 +26,14 @@ impl Marshal for Position {
     ///
     /// Encoded as a block with tag 0 and 4 fields.
     ///
-    /// Uses content-based sharing: if a position with the same content has been
-    /// written before, writes a shared reference instead of the full block.
-    /// This matches OCaml's behavior where positions are shared by pointer identity.
+    /// Uses StrIdx-based sharing for file names: the same StrIdx will be shared
+    /// in the marshal output via back-references.
     fn marshal(&self, w: &mut MarshalWriter) {
-        w.write_position_content_shared(&self.file_name, self.line, self.bol, self.cnum);
+        w.write_block_header(0, 4);
+        w.write_str_idx(self.file_name);
+        w.write_int(self.line as i64);
+        w.write_int(self.bol as i64);
+        w.write_int(self.cnum as i64);
     }
 }
 

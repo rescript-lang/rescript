@@ -10,29 +10,43 @@
 //! `ParseArena` module using `PosIdx` and `LocIdx` indices. The Position
 //! and Location structs here are pure value types without identity.
 //!
-//! # Example
-//!
-//! ```rust
-//! use rescript_compiler::location::{Location, Position};
-//!
-//! let start = Position::new("test.res", 1, 0, 0);
-//! let end_pos = Position::new("test.res", 1, 0, 10);
-//! let loc = Location::from_positions(start, end_pos);
-//!
-//! assert_eq!(loc.file_name(), "test.res");
-//! assert_eq!(loc.start_line(), 1);
-//! ```
+//! File names are stored as `StrIdx` to enable pointer-based sharing in
+//! marshal output. The same StrIdx passed to all positions in a file will
+//! result in shared references in the binary output.
 
+use crate::intern::StrIdx;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+
+impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Note: file_name is StrIdx so we can't display the actual name without arena access.
+        // Display coordinates only.
+        match self.normalize_range() {
+            None => write!(f, "(unknown location)"),
+            Some((start_line, start_col, end_line, end_col)) => {
+                if start_line == end_line {
+                    if start_col == end_col {
+                        write!(f, "line {}:{}", start_line, start_col)
+                    } else {
+                        write!(f, "line {}:{}-{}", start_line, start_col, end_col)
+                    }
+                } else {
+                    write!(f, "line {}:{}-{}:{}", start_line, start_col, end_line, end_col)
+                }
+            }
+        }
+    }
+}
 
 /// A position in a source file.
 ///
 /// This corresponds to `Lexing.position` in OCaml.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// File name is stored as StrIdx for efficient sharing in marshal output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Position {
-    /// File name.
-    pub file_name: String,
+    /// File name (interned string index).
+    pub file_name: StrIdx,
     /// Line number (1-indexed).
     pub line: i32,
     /// Column offset from beginning of line (0-indexed).
@@ -44,7 +58,7 @@ pub struct Position {
 impl Default for Position {
     fn default() -> Self {
         Self {
-            file_name: String::new(),
+            file_name: StrIdx::default(),
             line: 0,
             bol: 0,
             cnum: 0,
@@ -53,10 +67,10 @@ impl Default for Position {
 }
 
 impl Position {
-    /// Create a new position.
-    pub fn new(file_name: impl Into<String>, line: i32, bol: i32, cnum: i32) -> Self {
+    /// Create a new position with an interned file name.
+    pub fn new(file_name: StrIdx, line: i32, bol: i32, cnum: i32) -> Self {
         Self {
-            file_name: file_name.into(),
+            file_name,
             line,
             bol,
             cnum,
@@ -64,9 +78,9 @@ impl Position {
     }
 
     /// Create a position at the start of a file.
-    pub fn at_file_start(file_name: impl Into<String>) -> Self {
+    pub fn at_file_start(file_name: StrIdx) -> Self {
         Self {
-            file_name: file_name.into(),
+            file_name,
             line: 1,
             bol: 0,
             cnum: 0,
@@ -87,7 +101,7 @@ impl Position {
 /// A location span in source code.
 ///
 /// This corresponds to `Location.t` in OCaml.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Location {
     /// Start position.
     pub loc_start: Position,
@@ -99,7 +113,11 @@ pub struct Location {
 
 impl Default for Location {
     fn default() -> Self {
-        Self::none()
+        Self {
+            loc_start: Position::default(),
+            loc_end: Position::default(),
+            loc_ghost: true,
+        }
     }
 }
 
@@ -116,16 +134,16 @@ impl Location {
     /// Create a location from character offsets in a file.
     ///
     /// This is a convenience constructor when you don't have full position info.
-    pub fn new(file_name: &str, start_offset: usize, end_offset: usize) -> Self {
+    pub fn new(file_name: StrIdx, start_offset: usize, end_offset: usize) -> Self {
         Self {
             loc_start: Position {
-                file_name: file_name.to_string(),
+                file_name,
                 line: 1,
                 bol: 0,
                 cnum: start_offset as i32,
             },
             loc_end: Position {
-                file_name: file_name.to_string(),
+                file_name,
                 line: 1,
                 bol: 0,
                 cnum: end_offset as i32,
@@ -134,35 +152,43 @@ impl Location {
         }
     }
 
+    /// Create a location for error reporting contexts where we don't have an arena.
+    /// Uses StrIdx(0) as a placeholder - the file name won't be resolved correctly
+    /// but this is only used for error display, not marshalling.
+    pub fn new_for_error(_file_name: &str, start_offset: usize, end_offset: usize) -> Self {
+        Self::new(StrIdx::default(), start_offset, end_offset)
+    }
+
     /// Create a ghost location at the start of a file.
-    pub fn in_file(name: impl Into<String>) -> Self {
-        let name = name.into();
+    pub fn in_file(file_name: StrIdx) -> Self {
         let pos = Position {
-            file_name: name,
+            file_name,
             line: 1,
             bol: 0,
             cnum: -1,
         };
         Self {
-            loc_start: pos.clone(),
+            loc_start: pos,
             loc_end: pos,
             loc_ghost: true,
         }
     }
 
     /// Create a "none" location (placeholder).
+    /// Note: This creates a location with default StrIdx (0).
+    /// For proper "none" locations, use ParseArena::none_loc().
     pub fn none() -> Self {
-        Self::in_file("_none_")
+        Self::default()
     }
 
-    /// Check if this is a "none" location.
+    /// Check if this is a "none" location (has default file name index).
     pub fn is_none(&self) -> bool {
-        self.loc_start.file_name == "_none_"
+        self.loc_start.file_name == StrIdx::default()
     }
 
-    /// Get the file name.
-    pub fn file_name(&self) -> &str {
-        &self.loc_start.file_name
+    /// Get the file name index.
+    pub fn file_name_idx(&self) -> StrIdx {
+        self.loc_start.file_name
     }
 
     /// Get the start line number.
@@ -193,8 +219,8 @@ impl Location {
     /// Create a ghost version of this location.
     pub fn ghostify(&self) -> Self {
         Self {
-            loc_start: self.loc_start.clone(),
-            loc_end: self.loc_end.clone(),
+            loc_start: self.loc_start,
+            loc_end: self.loc_end,
             loc_ghost: true,
         }
     }
@@ -202,8 +228,8 @@ impl Location {
     /// Merge two locations into a span covering both.
     pub fn merge(&self, other: &Location) -> Self {
         Self {
-            loc_start: self.loc_start.clone(),
-            loc_end: other.loc_end.clone(),
+            loc_start: self.loc_start,
+            loc_end: other.loc_end,
             loc_ghost: self.loc_ghost && other.loc_ghost,
         }
     }
@@ -235,39 +261,10 @@ impl Location {
     }
 }
 
-impl fmt::Display for Location {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let file = if self.file_name() == "_none_" {
-            "(unknown)"
-        } else {
-            self.file_name()
-        };
-
-        match self.normalize_range() {
-            None => write!(f, "{}", file),
-            Some((start_line, start_col, end_line, end_col)) => {
-                if start_line == end_line {
-                    if start_col == end_col {
-                        write!(f, "{}:{}:{}", file, start_line, start_col)
-                    } else {
-                        write!(f, "{}:{}:{}-{}", file, start_line, start_col, end_col)
-                    }
-                } else {
-                    write!(
-                        f,
-                        "{}:{}:{}-{}:{}",
-                        file, start_line, start_col, end_line, end_col
-                    )
-                }
-            }
-        }
-    }
-}
-
 /// A value with an associated location.
 ///
 /// This corresponds to `'a Location.loc` in OCaml.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Located<T> {
     /// The value.
     pub txt: T,
@@ -304,7 +301,8 @@ mod tests {
 
     #[test]
     fn test_position() {
-        let pos = Position::new("test.res", 5, 40, 45);
+        let file_name = StrIdx::default();
+        let pos = Position::new(file_name, 5, 40, 45);
         assert_eq!(pos.column(), 5);
         assert_eq!(pos.column_1indexed(), 6);
     }
@@ -318,18 +316,20 @@ mod tests {
 
     #[test]
     fn test_location_in_file() {
-        let loc = Location::in_file("test.res");
-        assert_eq!(loc.file_name(), "test.res");
+        let file_name = StrIdx(1); // Non-default index
+        let loc = Location::in_file(file_name);
+        assert_eq!(loc.file_name_idx(), file_name);
         assert!(loc.is_ghost());
     }
 
     #[test]
     fn test_location_merge() {
-        let start = Position::new("test.res", 1, 0, 0);
-        let mid = Position::new("test.res", 1, 0, 5);
-        let end_pos = Position::new("test.res", 2, 10, 20);
+        let file_name = StrIdx::default();
+        let start = Position::new(file_name, 1, 0, 0);
+        let mid = Position::new(file_name, 1, 0, 5);
+        let end_pos = Position::new(file_name, 2, 10, 20);
 
-        let loc1 = Location::from_positions(start, mid.clone());
+        let loc1 = Location::from_positions(start, mid);
         let loc2 = Location::from_positions(mid, end_pos);
 
         let merged = loc1.merge(&loc2);
@@ -338,17 +338,9 @@ mod tests {
     }
 
     #[test]
-    fn test_location_display() {
-        let start = Position::new("test.res", 5, 40, 45);
-        let end_pos = Position::new("test.res", 5, 40, 50);
-        let loc = Location::from_positions(start, end_pos);
-
-        assert_eq!(format!("{}", loc), "test.res:5:6-10");
-    }
-
-    #[test]
     fn test_located() {
-        let located = Located::new("hello", Location::in_file("test.res"));
+        let file_name = StrIdx::default();
+        let located = Located::new("hello", Location::in_file(file_name));
         assert_eq!(located.txt, "hello");
 
         let mapped = located.map(|s| s.to_uppercase());

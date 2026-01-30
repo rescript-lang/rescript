@@ -204,8 +204,9 @@ impl SourceContext {
     }
 
     /// Create a location in this source file.
+    /// Note: Uses placeholder StrIdx for file name since SourceContext doesn't have arena access.
     pub fn location(&self, start: usize, end: usize) -> Location {
-        Location::new(&self.input_name, start, end)
+        Location::new_for_error(&self.input_name, start, end)
     }
 }
 

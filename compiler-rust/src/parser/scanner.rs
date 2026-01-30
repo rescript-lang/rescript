@@ -9,6 +9,7 @@
 //! - Regular expressions
 //! - All operators and punctuation
 
+use crate::intern::StrIdx;
 use crate::location::Position;
 
 use super::comment::{Comment, CommentStyle};
@@ -43,8 +44,8 @@ pub struct ScannerSnapshot {
 /// The lexical scanner state.
 #[derive(Debug)]
 pub struct Scanner<'src> {
-    /// Source filename.
-    pub filename: String,
+    /// Source filename (interned string index for sharing in marshal output).
+    pub filename: StrIdx,
     /// Source code being scanned.
     src: &'src str,
     /// Source as bytes for efficient access (UTF-8 encoding of the string).
@@ -83,8 +84,8 @@ pub struct ScanResult {
 
 impl<'src> Scanner<'src> {
     /// Create a new scanner for the given source.
-    pub fn new(filename: impl Into<String>, src: &'src str) -> Self {
-        let filename = filename.into();
+    /// filename should be an interned StrIdx from the arena.
+    pub fn new(filename: StrIdx, src: &'src str) -> Self {
         let src_bytes = src.as_bytes();
         let src_char_count = src.chars().count();
         let ch = if src.is_empty() {
@@ -174,7 +175,7 @@ impl<'src> Scanner<'src> {
     /// giving us UTF-16 code unit counting for columns.
     pub fn position(&self) -> Position {
         Position::new(
-            &self.filename,
+            self.filename,
             self.lnum,
             self.line_offset as i32,
             (self.line_offset + self.offset16) as i32, // UTF-16 code unit position

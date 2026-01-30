@@ -34,8 +34,8 @@ use std::collections::HashMap;
 ///
 /// This is a lightweight 4-byte value that can be copied freely.
 /// Two StrIdx values are equal if and only if they refer to the same string.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct StrIdx(u32);
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct StrIdx(pub u32);
 
 impl StrIdx {
     /// Create a StrIdx from a raw u32 value.
