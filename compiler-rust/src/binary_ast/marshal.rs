@@ -87,11 +87,6 @@ pub struct MarshalWriter {
     /// Same index = same object, will be shared in output
     position_idx_table: HashMap<PosIdx, u32>,
 
-    /// Maps Position content to object counter (for content-based Position sharing)
-    /// Used for parsetree0 where positions are stored directly, not via PosIdx.
-    /// Key: (file_name, line, bol, cnum)
-    position_content_table: HashMap<(String, usize, usize, usize), u32>,
-
     /// Maps LocIdx to object counter (for arena-based Location sharing)
     /// Same index = same object, will be shared in output
     location_idx_table: HashMap<LocIdx, u32>,
@@ -129,7 +124,6 @@ impl MarshalWriter {
             obj_table: HashMap::new(),
             str_idx_table: HashMap::new(),
             position_idx_table: HashMap::new(),
-            position_content_table: HashMap::new(),
             location_idx_table: HashMap::new(),
             lident_idx_table: HashMap::new(),
             arena: None,
@@ -146,7 +140,6 @@ impl MarshalWriter {
             obj_table: HashMap::new(),
             str_idx_table: HashMap::new(),
             position_idx_table: HashMap::new(),
-            position_content_table: HashMap::new(),
             location_idx_table: HashMap::new(),
             lident_idx_table: HashMap::new(),
             arena: None,
@@ -188,7 +181,6 @@ impl MarshalWriter {
         self.obj_table.clear();
         self.str_idx_table.clear();
         self.position_idx_table.clear();
-        self.position_content_table.clear();
         self.location_idx_table.clear();
         self.lident_idx_table.clear();
         self.obj_counter = 0;
@@ -405,45 +397,6 @@ impl MarshalWriter {
         self.position_idx_table.insert(idx, obj_idx);
 
         true
-    }
-
-    /// Write a standalone Position with content-based sharing.
-    ///
-    /// If an identical position (same file_name, line, bol, cnum) has been written
-    /// before, writes a shared reference. Otherwise writes the position block and
-    /// records it for future sharing.
-    ///
-    /// This is used for parsetree0 where positions are stored directly (not via PosIdx).
-    /// It matches OCaml's behavior where positions with the same content get shared
-    /// via pointer identity during parsing.
-    pub fn write_position_content_shared(
-        &mut self,
-        file_name: &str,
-        line: i32,
-        bol: i32,
-        cnum: i32,
-    ) {
-        let key = (file_name.to_string(), line as usize, bol as usize, cnum as usize);
-
-        // Check if we've seen this position content before
-        if let Some(&obj_idx) = self.position_content_table.get(&key) {
-            let d = self.obj_counter - obj_idx;
-            self.write_shared_ref(d);
-            return;
-        }
-
-        // Record the object index BEFORE writing
-        let obj_idx = self.obj_counter;
-
-        // Write the Position block
-        self.write_block_header(0, 4);
-        self.write_str(file_name);
-        self.write_int(line as i64);
-        self.write_int(bol as i64);
-        self.write_int(cnum as i64);
-
-        // Record for future sharing
-        self.position_content_table.insert(key, obj_idx);
     }
 
     /// Write a Location by arena index with sharing.

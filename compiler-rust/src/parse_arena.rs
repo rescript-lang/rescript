@@ -283,10 +283,11 @@ impl ParseArena {
     }
 
     /// Push a position from components.
-    /// Uses deduplication to reuse existing positions with the same content.
+    /// Creates a fresh position each time (no deduplication).
+    /// This matches OCaml's behavior where each position is a separate object.
     /// file_name should be an interned StrIdx (from arena.intern_string).
     pub fn push_pos(&mut self, file_name: StrIdx, line: i32, bol: i32, cnum: i32) -> PosIdx {
-        self.push_position_dedup(Position::new(file_name, line, bol, cnum))
+        self.positions.push(Position::new(file_name, line, bol, cnum))
     }
 
     /// Get the "none" position index (for _none_ file).
@@ -328,10 +329,10 @@ impl ParseArena {
     }
 
     /// Create a location from two raw positions (push both positions first).
-    /// Uses deduplication to reuse existing positions with the same content.
+    /// Creates fresh positions each time to match OCaml behavior.
     pub fn mk_loc_from_positions(&mut self, start: &Position, end: &Position) -> LocIdx {
-        let start_idx = self.push_position_dedup(start.clone());
-        let end_idx = self.push_position_dedup(end.clone());
+        let start_idx = self.positions.push(*start);
+        let end_idx = self.positions.push(*end);
         self.mk_loc(start_idx, end_idx)
     }
 
@@ -414,10 +415,10 @@ impl ParseArena {
 
     /// Convert a full Location to a LocIdx by pushing its positions to the arena.
     /// Useful for migrating code that creates Location values.
-    /// Uses deduplication to reuse existing positions with the same content.
+    /// Creates fresh positions to match OCaml behavior.
     pub fn from_location(&mut self, loc: &Location) -> LocIdx {
-        let start_idx = self.push_position_dedup(loc.loc_start.clone());
-        let end_idx = self.push_position_dedup(loc.loc_end.clone());
+        let start_idx = self.positions.push(loc.loc_start);
+        let end_idx = self.positions.push(loc.loc_end);
         self.push_loc(start_idx, end_idx, loc.loc_ghost)
     }
 
