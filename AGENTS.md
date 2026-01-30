@@ -824,6 +824,16 @@ This means the Rust parser code must be structured to match OCaml's data flow:
 
 **Do NOT use content-based deduplication** (e.g., "if we've seen this string before, reuse the index"). OCaml doesn't do this—it uses pointer identity from the actual code flow. The only way to achieve parity is to replicate the exact same allocation patterns.
 
+**⚠️ STRING SHARING: Use StrIdx, NOT content-based interning**
+
+For strings in the AST (identifiers, labels, file names), use `StrIdx` arena indices to control sharing:
+- **Same StrIdx = same object** - Will be shared in marshal output via back-references
+- **Different StrIdx = different objects** - Even if content is identical, will NOT be shared
+- **Do NOT intern strings automatically** - Don't use hash-based deduplication in the marshal writer
+- **Pass StrIdx by reference** - When OCaml passes the same string reference, use the same StrIdx in Rust
+
+Example: For punned labeled arguments like `~compare`, the label and identifier should use the SAME `StrIdx` because OCaml reuses the same string pointer. Create the StrIdx once and pass it to both the `ArgLabel` and the `Longident`.
+
 To achieve binary parity, you MUST study the OCaml sources (tokenizer, parser, marshaller) to understand:
 1. **When does OCaml construct NEW values?** - Look for `{...}` record literals, `::` cons operations, function calls that return new allocations
 2. **When does OCaml pass EXISTING values by reference?** - Look for variables being passed directly, pattern match bindings that propagate references
