@@ -6,13 +6,13 @@
 use super::marshal::MarshalWriter;
 use super::serialize::Marshal;
 use crate::location::{Located, Location, Position};
-use crate::parse_arena::{self, LocIdx, PosIdx};
+use crate::parse_arena::{self, LidentIdx, LocIdx, PosIdx};
 use crate::parser::longident::Longident;
 
 // ========== Position (Lexing.position) ==========
 
 impl Marshal for Position {
-    /// Serialize a Position to Marshal format.
+    /// Serialize a Position to Marshal format with content-based sharing.
     ///
     /// OCaml type:
     /// ```ocaml
@@ -26,14 +26,11 @@ impl Marshal for Position {
     ///
     /// Encoded as a block with tag 0 and 4 fields.
     ///
-    /// NOTE: This impl is for the standalone Position struct which has no identity.
-    /// For proper sharing, use arena-based PosIdx instead.
+    /// Uses content-based sharing: if a position with the same content has been
+    /// written before, writes a shared reference instead of the full block.
+    /// This matches OCaml's behavior where positions are shared by pointer identity.
     fn marshal(&self, w: &mut MarshalWriter) {
-        w.write_block_header(0, 4);
-        w.write_string_shared(&self.file_name);
-        w.write_int(self.line as i64);
-        w.write_int(self.bol as i64);
-        w.write_int(self.cnum as i64);
+        w.write_position_content_shared(&self.file_name, self.line, self.bol, self.cnum);
     }
 }
 
@@ -118,6 +115,14 @@ impl<T: Marshal> Marshal for parse_arena::Located<T> {
 
 // ========== Longident ==========
 
+impl Marshal for LidentIdx {
+    /// Serialize a LidentIdx by looking up the longident in the arena.
+    /// Requires that MarshalWriter::set_arena() was called first.
+    fn marshal(&self, w: &mut MarshalWriter) {
+        w.write_lident_idx(*self);
+    }
+}
+
 impl Marshal for Longident {
     /// Serialize a Longident to Marshal format.
     ///
@@ -130,19 +135,18 @@ impl Marshal for Longident {
     /// ```
     ///
     /// All constructors are non-constant (have data), so they all use block tags.
-    /// Operator strings (like "-", "+") are shared by content to match OCaml's
-    /// behavior (OCaml's parser interns operator tokens). Regular identifiers
-    /// are NOT shared since OCaml creates new string objects for each occurrence.
+    /// Uses StrIdx-based sharing to match OCaml's behavior where the same
+    /// string (e.g., "compare" in both a label and identifier) shares memory.
     fn marshal(&self, w: &mut MarshalWriter) {
         match self {
             Longident::Lident(s) => {
                 w.write_block_header(0, 1);
-                w.write_identifier_string(s);
+                w.write_str_idx(*s);
             }
             Longident::Ldot(prefix, name) => {
                 w.write_block_header(1, 2);
                 prefix.marshal(w);
-                w.write_identifier_string(name);
+                w.write_str_idx(*name);
             }
             Longident::Lapply(func, arg) => {
                 w.write_block_header(2, 2);
@@ -156,6 +160,7 @@ impl Marshal for Longident {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parse_arena::ParseArena;
 
     #[test]
     fn test_position_marshal() {
@@ -207,8 +212,12 @@ mod tests {
 
     #[test]
     fn test_longident_lident() {
+        let mut arena = ParseArena::default();
+        let foo_idx = arena.intern_string("foo");
+        let lid = Longident::Lident(foo_idx);
+
         let mut w = MarshalWriter::new();
-        let lid = Longident::Lident("foo".to_string());
+        w.set_arena(&arena);
         lid.marshal(&mut w);
 
         let payload = w.payload();
@@ -221,11 +230,16 @@ mod tests {
 
     #[test]
     fn test_longident_ldot() {
-        let mut w = MarshalWriter::new();
+        let mut arena = ParseArena::default();
+        let foo_idx = arena.intern_string("Foo");
+        let bar_idx = arena.intern_string("bar");
         let lid = Longident::Ldot(
-            Box::new(Longident::Lident("Foo".to_string())),
-            "bar".to_string(),
+            Box::new(Longident::Lident(foo_idx)),
+            bar_idx,
         );
+
+        let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
         lid.marshal(&mut w);
 
         let payload = w.payload();
@@ -242,11 +256,16 @@ mod tests {
 
     #[test]
     fn test_longident_lapply() {
-        let mut w = MarshalWriter::new();
+        let mut arena = ParseArena::default();
+        let f_idx = arena.intern_string("F");
+        let x_idx = arena.intern_string("X");
         let lid = Longident::Lapply(
-            Box::new(Longident::Lident("F".to_string())),
-            Box::new(Longident::Lident("X".to_string())),
+            Box::new(Longident::Lident(f_idx)),
+            Box::new(Longident::Lident(x_idx)),
         );
+
+        let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
         lid.marshal(&mut w);
 
         let payload = w.payload();
@@ -266,15 +285,21 @@ mod tests {
 
     #[test]
     fn test_nested_longident() {
-        let mut w = MarshalWriter::new();
+        let mut arena = ParseArena::default();
+        let foo_idx = arena.intern_string("Foo");
+        let bar_idx = arena.intern_string("Bar");
+        let baz_idx = arena.intern_string("baz");
         // Foo.Bar.baz
         let lid = Longident::Ldot(
             Box::new(Longident::Ldot(
-                Box::new(Longident::Lident("Foo".to_string())),
-                "Bar".to_string(),
+                Box::new(Longident::Lident(foo_idx)),
+                bar_idx,
             )),
-            "baz".to_string(),
+            baz_idx,
         );
+
+        let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
         lid.marshal(&mut w);
 
         let payload = w.payload();

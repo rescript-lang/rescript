@@ -3,8 +3,9 @@
 //! This module contains the main parsing functions that convert a token
 //! stream into an AST. It mirrors `res_core.ml` from the OCaml implementation.
 
+use crate::intern::StrIdx;
 use crate::location::Position;
-use crate::parse_arena::{Located, LocIdx};
+use crate::parse_arena::{Located, LocIdx, ParseArena};
 
 use super::ast::*;
 use super::diagnostics::DiagnosticCategory;
@@ -349,19 +350,46 @@ pub fn doc_comment_to_attribute(loc: Location, content: String) -> Attribute {
 // ============================================================================
 
 /// Build a Longident from a list of strings (in order).
-pub fn build_longident(words: &[String]) -> Longident {
+///
+/// Note: Strings are pushed (not interned) since they come from user input
+/// and should NOT be shared during marshalling.
+pub fn build_longident(arena: &mut ParseArena, words: &[String]) -> Longident {
     let mut iter = words.iter();
     let first = iter.next().expect("build_longident: empty words");
-    let mut result = Longident::Lident(first.clone());
+    let first_idx = arena.push_string(first.clone());
+    let mut result = Longident::Lident(first_idx);
     for word in iter {
-        result = Longident::Ldot(Box::new(result), word.clone());
+        let word_idx = arena.push_string(word.clone());
+        result = Longident::Ldot(Box::new(result), word_idx);
     }
     result
 }
 
-/// Get the last component of a longident.
-pub fn lident_of_path(longident: &Longident) -> String {
-    longident.last().to_string()
+/// Build a longident from a list of path components and push to arena.
+/// Returns the arena index for proper sharing during marshalling.
+pub fn build_longident_idx(p: &mut Parser<'_>, words: &[String]) -> crate::parse_arena::LidentIdx {
+    let lid = build_longident(p.arena_mut(), words);
+    p.push_longident(lid)
+}
+
+/// Create a simple Lident from a dynamic string (from user input).
+/// Uses push (not intern) so strings are NOT shared during marshalling.
+pub fn make_lident(arena: &mut ParseArena, name: impl Into<String>) -> Longident {
+    let str_idx = arena.push_string(name.into());
+    Longident::Lident(str_idx)
+}
+
+/// Create a simple Lident from a static string (operator, keyword, etc.).
+/// Uses intern so identical strings ARE shared during marshalling.
+pub fn make_lident_static(arena: &mut ParseArena, name: &str) -> Longident {
+    let str_idx = arena.intern_string(name);
+    Longident::Lident(str_idx)
+}
+
+/// Get the last component of a longident as a string.
+/// Requires arena to look up the StrIdx.
+pub fn lident_of_path(arena: &ParseArena, longident: &Longident) -> String {
+    arena.get_string(longident.last_idx()).to_string()
 }
 
 // ============================================================================
@@ -399,9 +427,15 @@ pub mod ast_helper {
         }
     }
 
-    /// Create an identifier expression.
-    pub fn make_ident(lid: Longident, loc: Location) -> Expression {
-        make_expr(ExpressionDesc::Pexp_ident(with_loc(lid, loc.clone())), loc)
+    /// Create an identifier expression with arena-allocated longident.
+    pub fn make_ident_idx(lid_idx: crate::parse_arena::LidentIdx, loc: Location) -> Expression {
+        make_expr(ExpressionDesc::Pexp_ident(with_loc(lid_idx, loc.clone())), loc)
+    }
+
+    /// Create an identifier expression (allocates in arena).
+    pub fn make_ident(p: &mut Parser<'_>, lid: Longident, loc: Location) -> Expression {
+        let lid_idx = p.push_longident(lid);
+        make_expr(ExpressionDesc::Pexp_ident(with_loc(lid_idx, loc.clone())), loc)
     }
 
     /// Create a constant expression.
@@ -409,11 +443,12 @@ pub mod ast_helper {
         make_expr(ExpressionDesc::Pexp_constant(constant), loc)
     }
 
-    /// Create a unit expression: ()
-    pub fn make_unit(loc: Location) -> Expression {
+    /// Create a unit expression: () (requires parser for arena allocation)
+    pub fn make_unit(p: &mut Parser<'_>, loc: Location) -> Expression {
+        let lid_idx = p.push_lident_static("()");
         make_expr(
             ExpressionDesc::Pexp_construct(
-                with_loc(Longident::Lident("()".to_string()), loc.clone()),
+                with_loc(lid_idx, loc.clone()),
                 None,
             ),
             loc,
@@ -479,13 +514,13 @@ pub mod ast_helper {
     /// - lid_loc: Just the constructor name (e.g., `Some` at columns 28-32)
     /// - ppat_loc: Full pattern extent (e.g., `Some(y)` at columns 28-35)
     pub fn make_construct_pat(
-        lid: Longident,
+        lid_idx: crate::parse_arena::LidentIdx,
         arg: Option<Pattern>,
         lid_loc: Location,
         ppat_loc: Location,
     ) -> Pattern {
         make_pat(
-            PatternDesc::Ppat_construct(with_loc(lid, lid_loc), arg.map(Box::new)),
+            PatternDesc::Ppat_construct(with_loc(lid_idx, lid_loc), arg.map(Box::new)),
             ppat_loc,
         )
     }
@@ -497,6 +532,10 @@ pub mod ast_helper {
         items: Vec<Pattern>,
         spread: Option<Pattern>,
     ) -> Pattern {
+        // Pre-allocate list constructor longidents
+        let nil_idx = p.push_lident_static("[]");
+        let cons_idx = p.push_lident_static("::");
+
         // Build from the end: start with spread or []
         let mut result = match spread {
             Some(pat) => pat,
@@ -504,7 +543,7 @@ pub mod ast_helper {
                 // Use a ghost location with the same positions as loc
                 // This matches OCaml's behavior: Location { loc_ghost: true, ..loc }
                 let nil_loc = p.arena_mut().mk_ghost_loc(loc);
-                let nil = with_loc(Longident::Lident("[]".to_string()), nil_loc);
+                let nil = with_loc(nil_idx, nil_loc);
                 make_pat(PatternDesc::Ppat_construct(nil, None), nil_loc)
             }
         };
@@ -514,7 +553,7 @@ pub mod ast_helper {
             let tuple_loc = p.mk_loc(&p.loc_start(item.ppat_loc), &p.loc_end(result.ppat_loc));
             let cons_loc = tuple_loc;
             let tuple = make_pat(PatternDesc::Ppat_tuple(vec![item, result]), tuple_loc);
-            let cons = with_loc(Longident::Lident("::".to_string()), cons_loc);
+            let cons = with_loc(cons_idx, cons_loc);
             result = make_pat(
                 PatternDesc::Ppat_construct(cons, Some(Box::new(tuple))),
                 cons_loc,
@@ -533,12 +572,12 @@ pub mod ast_helper {
     /// - ptyp_loc: full extent including type arguments
     /// This matches OCaml's behavior.
     pub fn make_type_constr(
-        lid: Longident,
+        lid_idx: crate::parse_arena::LidentIdx,
         args: Vec<CoreType>,
         lid_loc: Location,
         ptyp_loc: Location,
     ) -> CoreType {
-        make_typ(CoreTypeDesc::Ptyp_constr(with_loc(lid, lid_loc), args), ptyp_loc)
+        make_typ(CoreTypeDesc::Ptyp_constr(with_loc(lid_idx, lid_loc), args), ptyp_loc)
     }
 }
 
@@ -607,7 +646,8 @@ pub fn make_unary_expr(
         format!("~{}", token_string)
     };
 
-    let op_expr = ast_helper::make_ident(Longident::Lident(operator), token_loc);
+    let op_lid = make_lident_static(p.arena_mut(), &operator);
+    let op_expr = ast_helper::make_ident(p, op_lid, token_loc);
     let loc = p.mk_loc(&start_pos, &p.loc_end(operand.pexp_loc));
 
     ast_helper::make_apply(op_expr, vec![(ArgLabel::Nolabel, operand)], loc)
@@ -623,9 +663,8 @@ pub fn make_infix_operator(
     let stringified_token = token.to_string();
 
     let loc = p.mk_loc(&start_pos, &end_pos);
-    let operator = with_loc(Longident::Lident(stringified_token), loc.clone());
-
-    ast_helper::make_ident(operator.txt, loc)
+    let op_lid = make_lident_static(p.arena_mut(), &stringified_token);
+    ast_helper::make_ident(p, op_lid, loc)
 }
 
 // ============================================================================

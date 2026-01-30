@@ -7,7 +7,9 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::location::{Location, Position};
-use crate::parse_arena::{LocIdx, ParseArena, PosIdx};
+use crate::parse_arena::{LidentIdx, LocIdx, ParseArena, PosIdx};
+
+use super::longident::Longident;
 
 use super::comment::Comment;
 use super::diagnostics::{DiagnosticCategory, ParserDiagnostic};
@@ -269,6 +271,43 @@ impl<'src> Parser<'src> {
     pub fn mk_loc_from_start_of(&mut self, start_loc: LocIdx, end: &Position) -> LocIdx {
         let start = self.arena.loc_start(start_loc).clone();
         self.arena.mk_loc_from_positions(&start, end)
+    }
+
+    // ========== Longident arena methods ==========
+
+    /// Push a longident into the arena and return its index.
+    pub fn push_longident(&mut self, lid: Longident) -> LidentIdx {
+        self.arena.push_longident(lid)
+    }
+
+    /// Push a simple identifier (Lident) into the arena.
+    pub fn push_lident(&mut self, name: impl Into<String>) -> LidentIdx {
+        self.arena.push_lident(name)
+    }
+
+    /// Push a simple identifier (Lident) with a static/interned string.
+    /// Use this for hardcoded identifiers like "()", "::", "[]", etc.
+    /// The string is interned so it will be shared during marshalling.
+    pub fn push_lident_static(&mut self, name: &'static str) -> LidentIdx {
+        self.arena.push_lident_static(name)
+    }
+
+    /// Push a dotted identifier (Ldot) into the arena.
+    /// Takes a Longident for the prefix (will be pushed first).
+    pub fn push_ldot(&mut self, prefix: Longident, name: impl Into<String>) -> LidentIdx {
+        let str_idx = self.arena.push_string(name.into());
+        let lid = Longident::ldot(prefix, str_idx);
+        self.arena.push_longident(lid)
+    }
+
+    /// Push a dotted identifier (Ldot) by extending an existing arena entry.
+    pub fn push_ldot_idx(&mut self, prefix: LidentIdx, name: impl Into<String>) -> LidentIdx {
+        self.arena.push_ldot(prefix, name)
+    }
+
+    /// Get a longident by index.
+    pub fn get_longident(&self, idx: LidentIdx) -> &Longident {
+        self.arena.get_longident(idx)
     }
 
     /// Record a diagnostic error.

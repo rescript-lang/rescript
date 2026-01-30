@@ -134,22 +134,24 @@ pub fn print_ident(txt: &str) -> Doc {
 // ============================================================================
 
 /// Helper to flatten a longident into a list of docs.
-fn print_longident_aux(lid: &Longident, accu: &mut Vec<Doc>) {
+fn print_longident_aux(arena: &crate::parse_arena::ParseArena, lid: &Longident, accu: &mut Vec<Doc>) {
     match lid {
-        Longident::Lident(s) => {
-            accu.push(Doc::text(s.clone()));
+        Longident::Lident(s_idx) => {
+            let s = arena.get_string(*s_idx);
+            accu.push(Doc::text(s.to_string()));
         }
-        Longident::Ldot(inner, s) => {
-            print_longident_aux(inner, accu);
-            accu.push(Doc::text(s.clone()));
+        Longident::Ldot(inner, s_idx) => {
+            print_longident_aux(arena, inner, accu);
+            let s = arena.get_string(*s_idx);
+            accu.push(Doc::text(s.to_string()));
         }
         Longident::Lapply(lid1, lid2) => {
             let mut docs1 = Vec::new();
-            print_longident_aux(lid1, &mut docs1);
+            print_longident_aux(arena, lid1, &mut docs1);
             let d1 = Doc::join(Doc::dot(), docs1);
 
             let mut docs2 = Vec::new();
-            print_longident_aux(lid2, &mut docs2);
+            print_longident_aux(arena, lid2, &mut docs2);
             let d2 = Doc::join(Doc::dot(), docs2);
 
             accu.push(Doc::concat(vec![d1, Doc::lparen(), d2, Doc::rparen()]));
@@ -158,38 +160,49 @@ fn print_longident_aux(lid: &Longident, accu: &mut Vec<Doc>) {
 }
 
 /// Print a longident without escaping.
-pub fn print_longident(lid: &Longident) -> Doc {
+pub fn print_longident(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Doc {
     match lid {
-        Longident::Lident(txt) => Doc::text(txt.clone()),
+        Longident::Lident(txt_idx) => {
+            let txt = arena.get_string(*txt_idx);
+            Doc::text(txt.to_string())
+        }
         _ => {
             let mut docs = Vec::new();
-            print_longident_aux(lid, &mut docs);
+            print_longident_aux(arena, lid, &mut docs);
             Doc::join(Doc::dot(), docs)
         }
     }
 }
 
 /// Print a longident with escaping for exotic identifiers.
-pub fn print_lident(lid: &Longident) -> Doc {
+pub fn print_lident(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Doc {
     match lid {
-        Longident::Lident(txt) => print_ident(txt),
-        Longident::Ldot(path, txt) => {
+        Longident::Lident(txt_idx) => {
+            let txt = arena.get_string(*txt_idx);
+            print_ident(txt)
+        }
+        Longident::Ldot(path, txt_idx) => {
             // Flatten the path
-            fn flat_lid(lid: &Longident) -> Option<Vec<String>> {
+            fn flat_lid(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Option<Vec<String>> {
                 match lid {
-                    Longident::Lident(txt) => Some(vec![txt.clone()]),
-                    Longident::Ldot(inner, txt) => {
-                        let mut result = flat_lid(inner)?;
-                        result.push(txt.clone());
+                    Longident::Lident(txt_idx) => {
+                        let txt = arena.get_string(*txt_idx);
+                        Some(vec![txt.to_string()])
+                    }
+                    Longident::Ldot(inner, txt_idx) => {
+                        let mut result = flat_lid(arena, inner)?;
+                        let txt = arena.get_string(*txt_idx);
+                        result.push(txt.to_string());
                         Some(result)
                     }
                     Longident::Lapply(_, _) => None,
                 }
             }
 
-            match flat_lid(path) {
+            match flat_lid(arena, path) {
                 Some(txts) => {
                     let mut docs: Vec<Doc> = txts.into_iter().map(|t| Doc::text(t)).collect();
+                    let txt = arena.get_string(*txt_idx);
                     docs.push(print_ident(txt));
                     Doc::join(Doc::dot(), docs)
                 }
@@ -692,14 +705,14 @@ pub fn print_string_loc(sloc: &StringLoc, cmt_tbl: &mut CommentTable, arena: &Pa
 
 /// Print a longident location.
 /// Print a longident location with escaping (for value identifiers).
-pub fn print_longident_loc(lid: &Loc<Longident>, cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
-    let doc = print_lident(&lid.txt);
+pub fn print_longident_loc(lid: &crate::parse_arena::Located<crate::parse_arena::LidentIdx>, cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
+    let doc = print_lident(arena, arena.get_longident(lid.txt));
     print_comments(doc, cmt_tbl, lid.loc, arena)
 }
 
 /// Print a longident location without escaping (for module paths).
-pub fn print_longident_location(lid: &Loc<Longident>, cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
-    let doc = print_longident(&lid.txt);
+pub fn print_longident_location(lid: &crate::parse_arena::Located<crate::parse_arena::LidentIdx>, cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
+    let doc = print_longident(arena, arena.get_longident(lid.txt));
     print_comments(doc, cmt_tbl, lid.loc, arena)
 }
 
@@ -845,13 +858,13 @@ pub fn print_expression(
         }
         // Unit constructor: ()
         ExpressionDesc::Pexp_construct(lid, None)
-            if lid.txt == Longident::Lident("()".to_string()) =>
+            if arena.is_lident(lid.txt, "()") =>
         {
             Doc::text("()")
         }
         // Empty list: []
         ExpressionDesc::Pexp_construct(lid, None)
-            if lid.txt == Longident::Lident("[]".to_string()) =>
+            if arena.is_lident(lid.txt, "[]") =>
         {
             Doc::concat(vec![
                 Doc::text("list{"),
@@ -861,7 +874,7 @@ pub fn print_expression(
         }
         // List constructor: ::
         ExpressionDesc::Pexp_construct(lid, _)
-            if lid.txt == Longident::Lident("::".to_string()) =>
+            if arena.is_lident(lid.txt, "::") =>
         {
             print_list_expression(state, e, cmt_tbl, arena)
         }
@@ -872,7 +885,7 @@ pub fn print_expression(
                 None => Doc::nil(),
                 Some(arg) => match &arg.pexp_desc {
                     ExpressionDesc::Pexp_construct(lid, None)
-                        if lid.txt == Longident::Lident("()".to_string()) =>
+                        if arena.is_lident(lid.txt, "()") =>
                     {
                         Doc::text("()")
                     }
@@ -881,7 +894,7 @@ pub fn print_expression(
                         if let ExpressionDesc::Pexp_tuple(_) = &exprs[0].pexp_desc {
                             let doc =
                                 print_expression_with_comments(state, &exprs[0], cmt_tbl, arena);
-                            let doc = match parens::expr(&exprs[0]) {
+                            let doc = match parens::expr(arena,&exprs[0]) {
                                 ParenKind::Parenthesized => add_parens(doc),
                                 ParenKind::Braced(loc) => print_braces(doc, &exprs[0], loc, arena),
                                 ParenKind::Nothing => doc,
@@ -896,12 +909,12 @@ pub fn print_expression(
                     }
                     _ => {
                         let arg_doc = print_expression_with_comments(state, arg, cmt_tbl, arena);
-                        let arg_doc = match parens::expr(arg) {
+                        let arg_doc = match parens::expr(arena,arg) {
                             ParenKind::Parenthesized => add_parens(arg_doc),
                             ParenKind::Braced(loc) => print_braces(arg_doc, arg, loc, arena),
                             ParenKind::Nothing => arg_doc,
                         };
-                        let should_hug = parsetree_viewer::is_huggable_expression(arg);
+                        let should_hug = parsetree_viewer::is_huggable_expression(arena,arg);
                         Doc::concat(vec![
                             Doc::lparen(),
                             if should_hug {
@@ -935,7 +948,7 @@ pub fn print_expression(
                             .map(|expr| {
                                 let doc =
                                     print_expression_with_comments(state, expr, cmt_tbl, arena);
-                                match parens::expr(expr) {
+                                match parens::expr(arena,expr) {
                                     ParenKind::Parenthesized => add_parens(doc),
                                     ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
                                     ParenKind::Nothing => doc,
@@ -970,7 +983,7 @@ pub fn print_expression(
                             .map(|expr| {
                                 let doc =
                                     print_expression_with_comments(state, expr, cmt_tbl, arena);
-                                match parens::expr(expr) {
+                                match parens::expr(arena,expr) {
                                     ParenKind::Parenthesized => add_parens(doc),
                                     ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
                                     ParenKind::Nothing => doc,
@@ -994,7 +1007,7 @@ pub fn print_expression(
                 None => Doc::nil(),
                 Some(arg) => match &arg.pexp_desc {
                     ExpressionDesc::Pexp_construct(lid, None)
-                        if lid.txt == Longident::Lident("()".to_string()) =>
+                        if arena.is_lident(lid.txt, "()") =>
                     {
                         Doc::text("()")
                     }
@@ -1003,12 +1016,12 @@ pub fn print_expression(
                     }
                     _ => {
                         let arg_doc = print_expression_with_comments(state, arg, cmt_tbl, arena);
-                        let arg_doc = match parens::expr(arg) {
+                        let arg_doc = match parens::expr(arena,arg) {
                             ParenKind::Parenthesized => add_parens(arg_doc),
                             ParenKind::Braced(loc) => print_braces(arg_doc, arg, loc, arena),
                             ParenKind::Nothing => arg_doc,
                         };
-                        let should_hug = parsetree_viewer::is_huggable_expression(arg);
+                        let should_hug = parsetree_viewer::is_huggable_expression(arena,arg);
                         Doc::concat(vec![
                             Doc::lparen(),
                             if should_hug {
@@ -1034,24 +1047,24 @@ pub fn print_expression(
         // Field access: expr.field
         ExpressionDesc::Pexp_field(expr, longident_loc) => {
             let lhs = print_expression_with_comments(state, expr, cmt_tbl, arena);
-            let lhs = match parens::field_expr(expr) {
+            let lhs = match parens::field_expr(arena,expr) {
                 ParenKind::Parenthesized => add_parens(lhs),
                 ParenKind::Braced(loc) => print_braces(lhs, expr, loc, arena),
                 ParenKind::Nothing => lhs,
             };
-            let field = print_lident(&longident_loc.txt);
+            let field = print_lident(arena, arena.get_longident(longident_loc.txt));
             Doc::concat(vec![lhs, Doc::dot(), field])
         }
         // Field set: expr.field = value
         ExpressionDesc::Pexp_setfield(expr, longident_loc, value) => {
             let lhs = {
                 let expr_doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                let expr_doc = match parens::field_expr(expr) {
+                let expr_doc = match parens::field_expr(arena,expr) {
                     ParenKind::Parenthesized => add_parens(expr_doc),
                     ParenKind::Braced(loc) => print_braces(expr_doc, expr, loc, arena),
                     ParenKind::Nothing => expr_doc,
                 };
-                let field = print_lident(&longident_loc.txt);
+                let field = print_lident(arena, arena.get_longident(longident_loc.txt));
                 Doc::concat(vec![expr_doc, Doc::dot(), field])
             };
             let rhs = {
@@ -1085,8 +1098,8 @@ pub fn print_expression(
         }
         // Array access: Array.get(arr, idx) -> arr[idx]
         ExpressionDesc::Pexp_apply { funct, args, .. }
-            if parsetree_viewer::is_array_access(e)
-                && !parsetree_viewer::is_rewritten_underscore_apply_sugar(&args[0].1) =>
+            if parsetree_viewer::is_array_access(arena,e)
+                && !parsetree_viewer::is_rewritten_underscore_apply_sugar(arena,&args[0].1) =>
         {
             let parent_expr = &args[0].1;
             let member_expr = &args[1].1;
@@ -1102,7 +1115,7 @@ pub fn print_expression(
         }
         // Array set: Array.set(arr, idx, value) -> arr[idx] = value
         ExpressionDesc::Pexp_apply { args, .. }
-            if parsetree_viewer::is_array_set(e) =>
+            if parsetree_viewer::is_array_set(arena,e) =>
         {
             let parent_expr = &args[0].1;
             let member_expr = &args[1].1;
@@ -1110,7 +1123,7 @@ pub fn print_expression(
             let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
             let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl, arena);
             let target_doc = print_expression_with_comments(state, target_expr, cmt_tbl, arena);
-            let should_indent = parsetree_viewer::is_binary_expression(target_expr);
+            let should_indent = parsetree_viewer::is_binary_expression(arena,target_expr);
             let rhs_doc = if should_indent {
                 Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), target_doc])))
             } else {
@@ -1128,13 +1141,13 @@ pub fn print_expression(
         }
         // Send-set: obj#prop = value -> obj["prop"] = value
         ExpressionDesc::Pexp_apply { funct, args, .. }
-            if is_send_set_expr(funct, args) =>
+            if is_send_set_expr(arena, funct, args) =>
         {
             let lhs = &args[0].1;
             let rhs = &args[1].1;
             let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
             let should_indent = !parsetree_viewer::is_braced_expr(rhs)
-                && parsetree_viewer::is_binary_expression(rhs);
+                && parsetree_viewer::is_binary_expression(arena,rhs);
             let rhs_doc = if should_indent {
                 Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc])))
             } else {
@@ -1189,7 +1202,7 @@ pub fn print_expression(
         ExpressionDesc::Pexp_constraint(expr, typ) => {
             let expr_doc = {
                 let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                match parens::expr(expr) {
+                match parens::expr(arena,expr) {
                     parens::ParenKind::Parenthesized => add_parens(doc),
                     parens::ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
                     parens::ParenKind::Nothing => doc,
@@ -1230,7 +1243,7 @@ pub fn print_expression(
         // Await
         ExpressionDesc::Pexp_await(expr) => {
             let rhs = print_expression_with_comments(state, expr, cmt_tbl, arena);
-            let rhs = match parens::assert_or_await_expr_rhs(true, expr) {
+            let rhs = match parens::assert_or_await_expr_rhs(arena,true, expr) {
                 ParenKind::Parenthesized => add_parens(rhs),
                 ParenKind::Braced(loc) => print_braces(rhs, expr, loc, arena),
                 ParenKind::Nothing => rhs,
@@ -1302,7 +1315,7 @@ pub fn print_expression(
         ExpressionDesc::Pexp_send(parent_expr, label) => {
             let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
             // Apply parenthesization if needed (like unary_expr_operand)
-            let parent_doc = match parens::unary_expr_operand(parent_expr) {
+            let parent_doc = match parens::unary_expr_operand(arena,parent_expr) {
                 parens::ParenKind::Parenthesized => add_parens(parent_doc),
                 parens::ParenKind::Braced(braces) => print_braces(parent_doc, parent_expr, braces, arena),
                 parens::ParenKind::Nothing => parent_doc,
@@ -1333,8 +1346,8 @@ pub fn print_expression(
 // ============================================================================
 
 /// Print a longident path.
-fn print_lident_path(path: &Loc<Longident>, cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
-    let doc = print_lident(&path.txt);
+fn print_lident_path(path: &crate::parse_arena::Located<crate::parse_arena::LidentIdx>, cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
+    let doc = print_lident(arena, arena.get_longident(path.txt));
     print_comments(doc, cmt_tbl, path.loc, arena)
 }
 
@@ -1355,7 +1368,7 @@ fn print_tuple_args(
                     .iter()
                     .map(|expr| {
                         let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                        match parens::expr(expr) {
+                        match parens::expr(arena,expr) {
                             ParenKind::Parenthesized => add_parens(doc),
                             ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
                             ParenKind::Nothing => doc,
@@ -1381,12 +1394,12 @@ fn print_constructor_args(
         None => Doc::nil(),
         Some(arg) => {
             let arg_doc = print_expression_with_comments(state, arg, cmt_tbl, arena);
-            let arg_doc = match parens::expr(arg) {
+            let arg_doc = match parens::expr(arena,arg) {
                 ParenKind::Parenthesized => add_parens(arg_doc),
                 ParenKind::Braced(loc) => print_braces(arg_doc, arg, loc, arena),
                 ParenKind::Nothing => arg_doc,
             };
-            let should_hug = parsetree_viewer::is_huggable_expression(arg);
+            let should_hug = parsetree_viewer::is_huggable_expression(arena,arg);
             Doc::concat(vec![
                 Doc::lparen(),
                 if should_hug {
@@ -1411,7 +1424,7 @@ fn print_list_expression(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let (expressions, spread) = parsetree_viewer::collect_list_expressions(e);
+    let (expressions, spread) = parsetree_viewer::collect_list_expressions(arena,e);
     let spread_doc = match spread {
         Some(expr) => Doc::concat(vec![
             Doc::text(","),
@@ -1419,7 +1432,7 @@ fn print_list_expression(
             Doc::dotdotdot(),
             {
                 let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                match parens::expr(expr) {
+                match parens::expr(arena,expr) {
                     ParenKind::Parenthesized => add_parens(doc),
                     ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
                     ParenKind::Nothing => doc,
@@ -1438,7 +1451,7 @@ fn print_list_expression(
                     .iter()
                     .map(|expr| {
                         let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                        match parens::expr(expr) {
+                        match parens::expr(arena,expr) {
                             ParenKind::Parenthesized => add_parens(doc),
                             ParenKind::Braced(loc) => print_braces(doc, *expr, loc, arena),
                             ParenKind::Nothing => doc,
@@ -1516,7 +1529,7 @@ fn print_arrow_expression(
 
         let return_doc = {
             let doc = print_expression_with_comments(state, return_expr, cmt_tbl, arena);
-            match parens::expr(return_expr) {
+            match parens::expr(arena,return_expr) {
                 ParenKind::Parenthesized => add_parens(doc),
                 ParenKind::Braced(loc) => print_braces(doc, return_expr, loc, arena),
                 ParenKind::Nothing => doc,
@@ -1615,7 +1628,7 @@ fn print_expr_fun_parameters(
             && matches!(
                 &pat.ppat_desc,
                 PatternDesc::Ppat_construct(lid, None)
-                    if lid.txt == Longident::Lident("()".to_string())
+                    if arena.is_lident(lid.txt, "()")
             ) =>
         {
             let doc = Doc::text("()");
@@ -1711,23 +1724,23 @@ fn print_exp_fun_parameter(
                 (ArgLabel::Nolabel, _) => print_pattern(state, pat, cmt_tbl, arena),
                 // ~d (punning)
                 (ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl), PatternDesc::Ppat_var(var))
-                    if lbl.txt == var.txt =>
+                    if arena.get_string(lbl.txt) == var.txt =>
                 {
                     Doc::concat(vec![
                         print_attributes(state, &pat.ppat_attributes, cmt_tbl, arena),
                         Doc::text("~"),
-                        print_ident_like(&lbl.txt, false, false),
+                        print_ident_like(arena.get_string(lbl.txt), false, false),
                     ])
                 }
                 // ~d: typ (punning with type)
                 (
                     ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl),
                     PatternDesc::Ppat_constraint(inner, typ),
-                ) if matches!(&inner.ppat_desc, PatternDesc::Ppat_var(v) if lbl.txt == v.txt) => {
+                ) if matches!(&inner.ppat_desc, PatternDesc::Ppat_var(v) if arena.get_string(lbl.txt) == v.txt) => {
                     Doc::concat(vec![
                         print_attributes(state, &pat.ppat_attributes, cmt_tbl, arena),
                         Doc::text("~"),
-                        print_ident_like(&lbl.txt, false, false),
+                        print_ident_like(arena.get_string(lbl.txt), false, false),
                         Doc::text(": "),
                         print_typ_expr(state, typ, cmt_tbl, arena),
                     ])
@@ -1735,13 +1748,13 @@ fn print_exp_fun_parameter(
                 // ~d as x or ~d=pat
                 (ArgLabel::Labelled(lbl), _) => Doc::concat(vec![
                     Doc::text("~"),
-                    print_ident_like(&lbl.txt, false, false),
+                    print_ident_like(arena.get_string(lbl.txt), false, false),
                     Doc::text(" as "),
                     print_pattern(state, pat, cmt_tbl, arena),
                 ]),
                 (ArgLabel::Optional(lbl), _) => Doc::concat(vec![
                     Doc::text("~"),
-                    print_ident_like(&lbl.txt, false, false),
+                    print_ident_like(arena.get_string(lbl.txt), false, false),
                     Doc::text(" as "),
                     print_pattern(state, pat, cmt_tbl, arena),
                 ]),
@@ -1789,10 +1802,10 @@ fn print_record_expression(
         fields
             .iter()
             .map(|field| {
-                let field_name = print_lident(&field.lid.txt);
+                let field_name = print_lident(arena, arena.get_longident(field.lid.txt));
                 let expr_doc = print_expression_with_comments(state, &field.expr, cmt_tbl, arena);
                 // Check for punning
-                if is_punned_record_field(field) {
+                if is_punned_record_field(arena, field) {
                     if field.opt {
                         Doc::concat(vec![field_name, Doc::text("?")])
                     } else {
@@ -1824,10 +1837,10 @@ fn print_record_expression(
 }
 
 /// Check if a record field is punned.
-fn is_punned_record_field(field: &ExpressionRecordField) -> bool {
-    match (&field.lid.txt, &field.expr.pexp_desc) {
+fn is_punned_record_field(arena: &ParseArena, field: &ExpressionRecordField) -> bool {
+    match (arena.get_longident(field.lid.txt), &field.expr.pexp_desc) {
         (Longident::Lident(name), ExpressionDesc::Pexp_ident(path)) => {
-            if let Longident::Lident(ident) = &path.txt {
+            if let Longident::Lident(ident) = arena.get_longident(path.txt) {
                 name == ident
             } else {
                 false
@@ -1838,13 +1851,13 @@ fn is_punned_record_field(field: &ExpressionRecordField) -> bool {
 }
 
 /// Check if expression is a send-set: `#=(lhs, rhs)` where lhs is a Pexp_send.
-fn is_send_set_expr(funct: &Expression, args: &[(ArgLabel, Expression)]) -> bool {
+fn is_send_set_expr(arena: &ParseArena, funct: &Expression, args: &[(ArgLabel, Expression)]) -> bool {
     if args.len() != 2 {
         return false;
     }
     match &funct.pexp_desc {
         ExpressionDesc::Pexp_ident(lid) => {
-            matches!(&lid.txt, Longident::Lident(op) if op == "#=")
+            arena.is_lident(lid.txt, "#=")
         }
         _ => false,
     }
@@ -1954,7 +1967,7 @@ fn print_if_chain(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let (ifs, else_expr) = parsetree_viewer::collect_if_expressions(e);
+    let (ifs, else_expr) = parsetree_viewer::collect_if_expressions(arena,e);
 
     let if_docs: Vec<Doc> = ifs
         .iter()
@@ -1972,7 +1985,7 @@ fn print_if_chain(
                         print_expression_block(state, true, if_expr, cmt_tbl, arena)
                     } else {
                         let doc = print_expression_with_comments(state, if_expr, cmt_tbl, arena);
-                        match parens::expr(if_expr) {
+                        match parens::expr(arena,if_expr) {
                             ParenKind::Parenthesized => add_parens(doc),
                             ParenKind::Braced(loc) => print_braces(doc, if_expr, loc, arena),
                             ParenKind::Nothing => Doc::if_breaks(add_parens(doc.clone()), doc),
@@ -1996,7 +2009,7 @@ fn print_if_chain(
                 parsetree_viewer::IfConditionKind::IfLet(pattern, condition_expr) => {
                     let condition_doc = {
                         let doc = print_expression_with_comments(state, condition_expr, cmt_tbl, arena);
-                        match parens::expr(condition_expr) {
+                        match parens::expr(arena,condition_expr) {
                             ParenKind::Parenthesized => add_parens(doc),
                             ParenKind::Braced(loc) => print_braces(doc, condition_expr, loc, arena),
                             ParenKind::Nothing => doc,
@@ -2082,7 +2095,7 @@ fn print_expression_block(
         ExpressionDesc::Pexp_sequence(e1, e2) => {
             let e1_doc = print_expression_with_comments(state, e1, cmt_tbl, arena);
             // Check if expression needs parentheses
-            let e1_doc = match parens::expr(e1) {
+            let e1_doc = match parens::expr(arena,e1) {
                 ParenKind::Parenthesized => add_parens(e1_doc),
                 ParenKind::Braced(loc) => print_braces(e1_doc, e1, loc, arena),
                 ParenKind::Nothing => e1_doc,
@@ -2172,7 +2185,7 @@ fn print_expression_block(
                         Doc::text("open"),
                         override_doc,
                         Doc::text(" "),
-                        print_longident(&lid.txt),
+                        print_longident(arena, arena.get_longident(lid.txt)),
                         Doc::hard_line(),
                         body_doc,
                     ])),
@@ -2184,7 +2197,7 @@ fn print_expression_block(
                     Doc::text("open"),
                     override_doc,
                     Doc::text(" "),
-                    print_longident(&lid.txt),
+                    print_longident(arena, arena.get_longident(lid.txt)),
                     Doc::hard_line(),
                     body_doc,
                 ])
@@ -2193,7 +2206,7 @@ fn print_expression_block(
         _ => {
             let doc = print_expression_with_comments(state, e, cmt_tbl, arena);
             // Check if expression needs parentheses
-            let doc = match parens::expr(e) {
+            let doc = match parens::expr(arena,e) {
                 ParenKind::Parenthesized => add_parens(doc),
                 ParenKind::Braced(loc) => print_braces(doc, e, loc, arena),
                 ParenKind::Nothing => doc,
@@ -2224,7 +2237,8 @@ fn print_pexp_apply(
     // Check for binary expression
     if args.len() == 2 {
         if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
-            if let Longident::Lident(op) = &ident.txt {
+            if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                let op = arena.get_string(*op_idx);
                 if parsetree_viewer::is_binary_operator_str(op) {
                     let doc = print_binary_expression(state, op, args, cmt_tbl, arena);
                     // Check if the binary expression needs parens (when it has printable attributes)
@@ -2245,7 +2259,8 @@ fn print_pexp_apply(
     // Check for unary expression
     if args.len() == 1 {
         if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
-            if let Longident::Lident(op) = &ident.txt {
+            if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                let op = arena.get_string(*op_idx);
                 if parsetree_viewer::is_unary_operator_str(op) {
                     return print_unary_expression(state, op, args, cmt_tbl, arena);
                 }
@@ -2255,7 +2270,7 @@ fn print_pexp_apply(
 
     // Regular function application
     let funct_doc = print_expression_with_comments(state, funct, cmt_tbl, arena);
-    let funct_doc = match parens::call_expr(funct) {
+    let funct_doc = match parens::call_expr(arena,funct) {
         ParenKind::Parenthesized => add_parens(funct_doc),
         ParenKind::Braced(loc) => print_braces(funct_doc, funct, loc, arena),
         ParenKind::Nothing => funct_doc,
@@ -2265,20 +2280,20 @@ fn print_pexp_apply(
 }
 
 /// Check if a binary operand needs parens considering parent operator precedence.
-fn binary_operand_needs_parens(is_lhs: bool, parent_op: &str, operand: &Expression) -> ParenKind {
+fn binary_operand_needs_parens(arena: &ParseArena, is_lhs: bool, parent_op: &str, operand: &Expression) -> ParenKind {
     // First check braces attribute
     if let Some(attr) = parsetree_viewer::process_braces_attr(operand) {
         return ParenKind::Braced(attr.0.loc.clone());
     }
 
     // Check if it's a binary expression - if so, use precedence comparison
-    if let Some(child_op) = parsetree_viewer::get_binary_operator(operand) {
+    if let Some(child_op) = parsetree_viewer::get_binary_operator(arena, operand) {
         // Use precedence-based check
         if parens::sub_binary_expr_operand(parent_op, &child_op) {
             return ParenKind::Parenthesized;
         }
         // For RHS, also check right-associativity
-        if !is_lhs && parens::rhs_binary_expr_operand(parent_op, operand) {
+        if !is_lhs && parens::rhs_binary_expr_operand(arena, parent_op, operand) {
             return ParenKind::Parenthesized;
         }
         // Check if operand has printable attributes
@@ -2289,7 +2304,7 @@ fn binary_operand_needs_parens(is_lhs: bool, parent_op: &str, operand: &Expressi
     }
 
     // Fall back to the general binary_expr_operand check for non-binary expressions
-    parens::binary_expr_operand(is_lhs, operand)
+    parens::binary_expr_operand(arena, is_lhs, operand)
 }
 
 /// Print binary expression.
@@ -2308,21 +2323,21 @@ fn print_binary_expression(
 
     // Print operands with appropriate parenthesization using precedence-aware check
     let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl, arena);
-    let lhs_doc = match binary_operand_needs_parens(true, op, lhs) {
+    let lhs_doc = match binary_operand_needs_parens(arena, true, op, lhs) {
         ParenKind::Parenthesized => add_parens(lhs_doc),
         ParenKind::Braced(loc) => print_braces(lhs_doc, lhs, loc, arena),
         ParenKind::Nothing => lhs_doc,
     };
 
     let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
-    let rhs_doc = match binary_operand_needs_parens(false, op, rhs) {
+    let rhs_doc = match binary_operand_needs_parens(arena, false, op, rhs) {
         ParenKind::Parenthesized => add_parens(rhs_doc),
         ParenKind::Braced(loc) => print_braces(rhs_doc, rhs, loc, arena),
         ParenKind::Nothing => rhs_doc,
     };
 
     // Determine if the rhs should be on a new line
-    let should_indent = parens::flatten_operand_rhs(op, rhs);
+    let should_indent = parens::flatten_operand_rhs(arena, op, rhs);
 
     // Pipe-first (->) doesn't have spaces around it
     let is_pipe_first = op == "->";
@@ -2358,7 +2373,7 @@ fn print_unary_expression(
     }
     let (_, operand) = &args[0];
     let operand_doc = print_expression_with_comments(state, operand, cmt_tbl, arena);
-    let operand_doc = match parens::unary_expr_operand(operand) {
+    let operand_doc = match parens::unary_expr_operand(arena,operand) {
         ParenKind::Parenthesized => add_parens(operand_doc),
         ParenKind::Braced(loc) => print_braces(operand_doc, operand, loc, arena),
         ParenKind::Nothing => operand_doc,
@@ -2391,7 +2406,7 @@ fn print_arguments(
 
     // Special case: single unit argument () -> just print ()
     if let [(ArgLabel::Nolabel, expr)] = args {
-        if is_unit_expr(expr) {
+        if is_unit_expr(arena, expr) {
             // Check for leading comments
             if has_leading_line_comment(cmt_tbl, expr.pexp_loc) {
                 let cmt = print_comments(Doc::nil(), cmt_tbl, expr.pexp_loc, arena);
@@ -2413,25 +2428,29 @@ fn print_arguments(
                 ArgLabel::Nolabel => expr_doc,
                 ArgLabel::Labelled(name) => {
                     // Check for punning: ~name where expr is Pexp_ident(Lident(name))
+                    let name_str = arena.get_string(name.txt);
                     if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
-                        if let Longident::Lident(ident) = &lid.txt {
-                            if ident == &name.txt && expr.pexp_attributes.is_empty() {
-                                return Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false)]);
+                        if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
+                            let ident_str = arena.get_string(*ident_idx);
+                            if ident_str == name_str && expr.pexp_attributes.is_empty() {
+                                return Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false)]);
                             }
                         }
                     }
-                    Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text("="), expr_doc])
+                    Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("="), expr_doc])
                 }
                 ArgLabel::Optional(name) => {
                     // Check for punning: ~name=? where expr is Pexp_ident(Lident(name))
+                    let name_str = arena.get_string(name.txt);
                     if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
-                        if let Longident::Lident(ident) = &lid.txt {
-                            if ident == &name.txt && expr.pexp_attributes.is_empty() {
-                                return Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text("?")]);
+                        if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
+                            let ident_str = arena.get_string(*ident_idx);
+                            if ident_str == name_str && expr.pexp_attributes.is_empty() {
+                                return Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("?")]);
                             }
                         }
                     }
-                    Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text("=?"), expr_doc])
+                    Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("=?"), expr_doc])
                 }
             }
         })
@@ -2450,11 +2469,9 @@ fn print_arguments(
 }
 
 /// Check if an expression is unit: `()`
-fn is_unit_expr(expr: &Expression) -> bool {
+fn is_unit_expr(arena: &ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
-        ExpressionDesc::Pexp_construct(lid, None) => {
-            matches!(&lid.txt, Longident::Lident(s) if s == "()")
-        }
+        ExpressionDesc::Pexp_construct(lid, None) => arena.is_lident(lid.txt, "()"),
         _ => false,
     }
 }
@@ -2548,7 +2565,7 @@ pub fn print_pattern(
         }
         // ()
         PatternDesc::Ppat_construct(lid, None)
-            if lid.txt == Longident::Lident("()".to_string()) =>
+            if arena.is_lident(lid.txt, "()") =>
         {
             Doc::concat(vec![
                 Doc::lparen(),
@@ -2558,7 +2575,7 @@ pub fn print_pattern(
         }
         // list{}
         PatternDesc::Ppat_construct(lid, None)
-            if lid.txt == Longident::Lident("[]".to_string()) =>
+            if arena.is_lident(lid.txt, "[]") =>
         {
             Doc::concat(vec![
                 Doc::text("list{"),
@@ -2568,7 +2585,7 @@ pub fn print_pattern(
         }
         // list{p1, p2, ...spread}
         PatternDesc::Ppat_construct(lid, _)
-            if lid.txt == Longident::Lident("::".to_string()) =>
+            if arena.is_lident(lid.txt, "::") =>
         {
             print_list_pattern(state, pat, cmt_tbl, arena)
         }
@@ -2579,7 +2596,7 @@ pub fn print_pattern(
                 None => Doc::nil(),
                 Some(arg) => match &arg.ppat_desc {
                     PatternDesc::Ppat_construct(lid, None)
-                        if lid.txt == Longident::Lident("()".to_string()) =>
+                        if arena.is_lident(lid.txt, "()") =>
                     {
                         Doc::concat(vec![
                             Doc::lparen(),
@@ -2647,7 +2664,7 @@ pub fn print_pattern(
             let variant_name = Doc::concat(vec![Doc::text("#"), print_poly_var_ident(label)]);
             let args_doc = match &arg.ppat_desc {
                 PatternDesc::Ppat_construct(lid, None)
-                    if lid.txt == Longident::Lident("()".to_string()) =>
+                    if arena.is_lident(lid.txt, "()") =>
                 {
                     Doc::text("()")
                 }
@@ -2797,7 +2814,7 @@ pub fn print_pattern(
         // `type identifier
         PatternDesc::Ppat_type(lid) => {
             // Use print_lident for proper escaping of exotic identifiers
-            let doc = print_lident(&lid.txt);
+            let doc = print_lident(arena, arena.get_longident(lid.txt));
             let doc = print_comments(doc, cmt_tbl, lid.loc, arena);
             Doc::concat(vec![Doc::text("#..."), doc])
         }
@@ -2812,7 +2829,7 @@ pub fn print_pattern(
         // open M.(pat)
         PatternDesc::Ppat_open(lid, pat) => {
             Doc::concat(vec![
-                print_longident(&lid.txt),
+                print_longident(arena, arena.get_longident(lid.txt)),
                 Doc::text("."),
                 Doc::lparen(),
                 print_pattern(state, pat, cmt_tbl, arena),
@@ -2878,17 +2895,17 @@ fn print_list_pattern(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let (patterns, tail) = parsetree_viewer::collect_list_patterns(pat);
+    let (patterns, tail) = parsetree_viewer::collect_list_patterns(arena,pat);
 
     let should_hug = matches!((&patterns[..], tail),
         ([single], Some(t)) if is_huggable_pattern(single)
             && matches!(&t.ppat_desc, PatternDesc::Ppat_construct(lid, None)
-                if lid.txt == Longident::Lident("[]".to_string())));
+                if arena.is_lident(lid.txt, "[]")));
 
     let tail_doc = match tail {
         Some(t) => match &t.ppat_desc {
             PatternDesc::Ppat_construct(lid, None)
-                if lid.txt == Longident::Lident("[]".to_string()) =>
+                if arena.is_lident(lid.txt, "[]") =>
             {
                 Doc::nil()
             }
@@ -2944,9 +2961,9 @@ fn print_record_pattern(
         fields
             .iter()
             .map(|field| {
-                let label = print_lident(&field.lid.txt);
+                let label = print_lident(arena, arena.get_longident(field.lid.txt));
                 // Check for punning
-                if is_punned_pattern_field(field) {
+                if is_punned_pattern_field(arena, field) {
                     if field.opt {
                         Doc::concat(vec![label, Doc::text("?")])
                     } else {
@@ -2991,9 +3008,12 @@ fn print_record_pattern(
 }
 
 /// Check if a pattern record field is punned.
-fn is_punned_pattern_field(field: &PatternRecordField) -> bool {
-    match (&field.lid.txt, &field.pat.ppat_desc) {
-        (Longident::Lident(name), PatternDesc::Ppat_var(var)) => name == &var.txt,
+fn is_punned_pattern_field(arena: &ParseArena, field: &PatternRecordField) -> bool {
+    match (arena.get_longident(field.lid.txt), &field.pat.ppat_desc) {
+        (Longident::Lident(name_idx), PatternDesc::Ppat_var(var)) => {
+            let name_str = arena.get_string(*name_idx);
+            name_str == &var.txt
+        }
         _ => false,
     }
 }
@@ -3254,8 +3274,8 @@ fn print_type_parameter(
     let attrs = print_attributes(state, param.attrs, cmt_tbl, arena);
     let label_doc = match param.lbl {
         ArgLabel::Nolabel => Doc::nil(),
-        ArgLabel::Labelled(name) => Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text(": ")]),
-        ArgLabel::Optional(name) => Doc::concat(vec![Doc::text("~"), print_ident_like(&name.txt, false, false), Doc::text(": ")]),
+        ArgLabel::Labelled(name) => Doc::concat(vec![Doc::text("~"), print_ident_like(arena.get_string(name.txt), false, false), Doc::text(": ")]),
+        ArgLabel::Optional(name) => Doc::concat(vec![Doc::text("~"), print_ident_like(arena.get_string(name.txt), false, false), Doc::text(": ")]),
     };
     let optional_indicator = match param.lbl {
         ArgLabel::Optional(_) => Doc::text("=?"),
@@ -3514,7 +3534,7 @@ fn print_package_type(
     arena: &ParseArena,
 ) -> Doc {
     let (lid, constraints) = package_type;
-    let lid_doc = print_longident(&lid.txt);
+    let lid_doc = print_longident(arena, arena.get_longident(lid.txt));
 
     let doc = if constraints.is_empty() {
         Doc::group(lid_doc)
@@ -3527,7 +3547,7 @@ fn print_package_type(
                 let prefix = if i == 0 { "type " } else { "and type " };
                 Doc::concat(vec![
                     Doc::text(prefix),
-                    print_longident(&name.txt),
+                    print_longident(arena, arena.get_longident(name.txt)),
                     Doc::text(" = "),
                     print_typ_expr(state, typ, cmt_tbl, arena),
                 ])
@@ -4131,12 +4151,12 @@ fn print_type_param(
 /// Print a type declaration with its longident.
 fn print_type_declaration_with_lid(
     state: &PrinterState,
-    lid: &Loc<Longident>,
+    lid: &crate::parse_arena::Located<crate::parse_arena::LidentIdx>,
     decl: &TypeDeclaration,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let name_doc = print_lident(&lid.txt);
+    let name_doc = print_lident(arena, arena.get_longident(lid.txt));
     let params_doc = if decl.ptype_params.is_empty() {
         Doc::nil()
     } else {
@@ -4443,7 +4463,7 @@ fn print_payload(state: &PrinterState, payload: &Payload, cmt_tbl: &mut CommentT
                 if let StructureItemDesc::Pstr_eval(expr, attrs) = &single.pstr_desc {
                     let expr_doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
                     let needs_parens = !attrs.is_empty();
-                    let should_hug = parsetree_viewer::is_huggable_expression(expr);
+                    let should_hug = parsetree_viewer::is_huggable_expression(arena,expr);
                     if should_hug {
                         Doc::concat(vec![
                             Doc::lparen(),
@@ -5119,7 +5139,7 @@ fn print_type_extension(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &type_ext.ptyext_attributes, cmt_tbl, arena);
-    let path_doc = print_lident(&type_ext.ptyext_path.txt);
+    let path_doc = print_lident(arena, arena.get_longident(type_ext.ptyext_path.txt));
 
     let params_doc = if type_ext.ptyext_params.is_empty() {
         Doc::nil()
@@ -5198,7 +5218,7 @@ fn print_extension_constructor(
             Doc::concat(vec![args_doc, res_doc])
         }
         ExtensionConstructorKind::Pext_rebind(lid) => {
-            Doc::concat(vec![Doc::text(" = "), print_longident(&lid.txt)])
+            Doc::concat(vec![Doc::text(" = "), print_longident(arena, arena.get_longident(lid.txt))])
         }
     };
 
@@ -5279,7 +5299,7 @@ fn print_open_description(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &open_desc.popen_attributes, cmt_tbl, arena);
-    let lid_doc = print_longident(&open_desc.popen_lid.txt);
+    let lid_doc = print_longident(arena, arena.get_longident(open_desc.popen_lid.txt));
 
     Doc::concat(vec![attrs_doc, Doc::text("open "), lid_doc])
 }

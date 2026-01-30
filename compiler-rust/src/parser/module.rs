@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 
 use crate::location::Position;
-use crate::parse_arena::{Located, LocIdx};
+use crate::parse_arena::{LidentIdx, Located, LocIdx};
 
 // Import Location as alias to LocIdx from ast
 use super::ast::*;
@@ -54,7 +54,7 @@ impl InlineTypesContext {
 /// Convert a module type to a package type (for Ptyp_package).
 /// For a simple module type identifier like `T`, creates `(T, [])`.
 /// For `T with type t = int`, creates `(T, [(t, int)])`.
-fn module_type_to_package(mt: &ModuleType) -> PackageType {
+fn module_type_to_package(p: &mut Parser<'_>, mt: &ModuleType) -> PackageType {
     match &mt.pmty_desc {
         ModuleTypeDesc::Pmty_ident(lid) => (lid.clone(), vec![]),
         ModuleTypeDesc::Pmty_with(base, constraints) => {
@@ -62,11 +62,12 @@ fn module_type_to_package(mt: &ModuleType) -> PackageType {
             let lid = if let ModuleTypeDesc::Pmty_ident(lid) = &base.pmty_desc {
                 lid.clone()
             } else {
-                with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone())
+                let lid_idx = p.push_lident_static("_");
+                with_loc(lid_idx, mt.pmty_loc.clone())
             };
 
             // Convert WithConstraint to package type constraints
-            let pkg_constraints: Vec<(Loc<Longident>, CoreType)> = constraints
+            let pkg_constraints: Vec<(Loc<LidentIdx>, CoreType)> = constraints
                 .iter()
                 .filter_map(|c| match c {
                     WithConstraint::Pwith_type(type_lid, type_decl) => {
@@ -88,7 +89,10 @@ fn module_type_to_package(mt: &ModuleType) -> PackageType {
 
             (lid, pkg_constraints)
         }
-        _ => (with_loc(Longident::Lident("_".to_string()), mt.pmty_loc.clone()), vec![]),
+        _ => {
+            let lid_idx = p.push_lident_static("_");
+            (with_loc(lid_idx, mt.pmty_loc.clone()), vec![])
+        }
     }
 }
 
@@ -814,7 +818,7 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
                     let pkg_loc = p.mk_loc(&colon_pos, &p.loc_end(mod_type.pmty_loc));
                     let pkg_type = CoreType {
                         ptyp_desc: CoreTypeDesc::Ptyp_package(
-                            module_type_to_package(&mod_type),
+                            module_type_to_package(p, &mod_type),
                         ),
                         ptyp_loc: pkg_loc,
                         ptyp_attributes: vec![],
@@ -951,20 +955,24 @@ fn parse_functor_arg(p: &mut Parser<'_>) -> Option<FunctorArg> {
                 Token::Dot => {
                     // Module path as type: Foo.Bar (punning for _ : Foo.Bar)
                     // Continue parsing the module path
-                    let mut lid = Longident::Lident(ident);
+                    let ident_str_idx = p.arena_mut().push_string(ident);
+                    let mut lid = Longident::Lident(ident_str_idx);
                     while p.token == Token::Dot {
                         p.next();
                         match &p.token {
                             Token::Uident(name) => {
-                                lid = Longident::Ldot(Box::new(lid), name.clone());
+                                let name_clone = name.clone();
+                                let name_str_idx = p.arena_mut().push_string(name_clone);
+                                lid = Longident::Ldot(Box::new(lid), name_str_idx);
                                 p.next();
                             }
                             _ => break,
                         }
                     }
+                    let lid_idx = p.push_longident(lid);
                     let loc = p.mk_loc_to_prev_end(&start_pos);
                     let mod_type = ModuleType {
-                        pmty_desc: ModuleTypeDesc::Pmty_ident(with_loc(lid, loc.clone())),
+                        pmty_desc: ModuleTypeDesc::Pmty_ident(with_loc(lid_idx, loc.clone())),
                         pmty_loc: loc,
                         pmty_attributes: vec![],
                     };
@@ -978,7 +986,8 @@ fn parse_functor_arg(p: &mut Parser<'_>) -> Option<FunctorArg> {
                 _ => {
                     // Just Uident (punning for _ : Uident)
                     let loc = p.mk_loc(&start_pos, &ident_end_pos);
-                    let mod_ident = with_loc(Longident::Lident(ident), loc.clone());
+                    let lid_idx = p.push_lident(&ident);
+                    let mod_ident = with_loc(lid_idx, loc.clone());
                     let mod_type = ModuleType {
                         pmty_desc: ModuleTypeDesc::Pmty_ident(mod_ident),
                         pmty_loc: loc,
@@ -1547,7 +1556,7 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
         Token::Typ => {
             p.next();
             let lid = parse_type_long_ident(p);
-            let type_name = lid.txt.last().to_string();
+            let type_name = p.arena().lident_last(lid.txt).to_string();
             let type_loc = lid.loc.clone();
 
             // Parse type parameters if present (angle bracket syntax: <'a, 'b>)
@@ -1678,7 +1687,7 @@ fn is_expr_start(token: &Token) -> bool {
 /// Parse a module long identifier.
 /// Handles both module paths (Foo.Bar.Baz) and module type paths (Foo.Bar.t).
 /// Module type names are typically lowercase (e.g., RGLEvents.t).
-fn parse_module_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
+fn parse_module_long_ident(p: &mut Parser<'_>) -> Loc<LidentIdx> {
     let start_pos = p.start_pos.clone();
     let mut path_parts = vec![];
 
@@ -1711,13 +1720,13 @@ fn parse_module_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
         path_parts.push("Error".to_string());
     }
 
-    let lid = super::core::build_longident(&path_parts);
+    let lid_idx = super::core::build_longident_idx(p, &path_parts);
     let loc = p.mk_loc_to_prev_end(&start_pos);
-    with_loc(lid, loc)
+    with_loc(lid_idx, loc)
 }
 
 /// Parse a type long identifier.
-fn parse_type_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
+fn parse_type_long_ident(p: &mut Parser<'_>) -> Loc<LidentIdx> {
     let start_pos = p.start_pos.clone();
     let mut path_parts = vec![];
 
@@ -1748,9 +1757,9 @@ fn parse_type_long_ident(p: &mut Parser<'_>) -> Loc<Longident> {
         path_parts.push("error".to_string());
     }
 
-    let lid = super::core::build_longident(&path_parts);
+    let lid_idx = super::core::build_longident_idx(p, &path_parts);
     let loc = p.mk_loc_to_prev_end(&start_pos);
-    with_loc(lid, loc)
+    with_loc(lid_idx, loc)
 }
 
 /// Parse let bindings.
@@ -1826,7 +1835,7 @@ fn parse_let_bindings(
                     let inner_for_constraint = (*inner).clone();
 
                     // Substitute Ptyp_constr -> Ptyp_var for the Ptyp_poly body
-                    let substituted_inner = typ::substitute_type_vars((*inner).clone(), &var_set);
+                    let substituted_inner = typ::substitute_type_vars(p.arena(), (*inner).clone(), &var_set);
 
                     // Rebuild the Ptyp_poly with the substituted body
                     let substituted_typ = CoreType {
@@ -2088,7 +2097,8 @@ fn parse_type_extension(p: &mut Parser<'_>, attrs: Attributes) -> TypeExtension 
         parts.push("Error".to_string());
     }
 
-    let path = with_loc(super::core::build_longident(&parts), p.mk_loc_to_prev_end(&start_pos));
+    let lid_idx = super::core::build_longident_idx(p, &parts);
+    let path = with_loc(lid_idx, p.mk_loc_to_prev_end(&start_pos));
 
     // Optional type params: <'a, +'b, -'c>
     let params = if p.token == Token::LessThan {
@@ -2523,7 +2533,7 @@ fn parse_type_declaration_with_context(
     // OCaml uses the same location for both the CoreType and the longident
     // (just the constructor name, not including type arguments).
     // For unqualified (Lident), the CoreType uses full extent.
-    let manifest = manifest.map(fix_type_manifest_location);
+    let manifest = manifest.map(|t| fix_type_manifest_location(p.arena(), t));
 
     let loc = p.mk_loc_to_prev_end(&start_pos);
     Some(TypeDeclaration {
@@ -2607,12 +2617,12 @@ fn fix_spread_first_object_manifest(p: &mut Parser<'_>, typ: CoreType, is_spread
 /// the CoreType and the longident. For unqualified (Lident), it uses full extent.
 /// EXCEPTION: When the type has attributes, OCaml keeps the full extent including
 /// type arguments (this allows the location to cover the entire attributed type).
-fn fix_type_manifest_location(typ: CoreType) -> CoreType {
+fn fix_type_manifest_location(arena: &crate::parse_arena::ParseArena, typ: CoreType) -> CoreType {
     match &typ.ptyp_desc {
         CoreTypeDesc::Ptyp_constr(lid, _) => {
             // Only adjust for qualified identifiers (Ldot) WITHOUT attributes
             // When there are attributes, OCaml keeps the full extent including type args
-            if matches!(lid.txt, Longident::Ldot(..)) && typ.ptyp_attributes.is_empty() {
+            if arena.is_ldot(lid.txt) && typ.ptyp_attributes.is_empty() {
                 CoreType {
                     ptyp_loc: lid.loc.clone(),
                     ..typ
@@ -2625,7 +2635,7 @@ fn fix_type_manifest_location(typ: CoreType) -> CoreType {
             // Also adjust Ldot types in arrow parameter positions
             // But NOT in return types - OCaml keeps type args in return type ptyp_loc
             let fixed_arg = TypeArg {
-                typ: fix_type_manifest_location(arg.typ.clone()),
+                typ: fix_type_manifest_location(arena, arg.typ.clone()),
                 ..*arg.clone()
             };
             // Return type is NOT fixed - OCaml includes type args for return types
@@ -3282,9 +3292,10 @@ fn parse_label_declaration(
     let typ = if is_punning {
         // Field punning: {form} becomes {form: form}
         // The type is a simple type constructor with the field name
+        let lid_idx = p.push_lident(&name.txt);
         CoreType {
             ptyp_desc: CoreTypeDesc::Ptyp_constr(
-                with_loc(Longident::Lident(name.txt.clone()), name.loc.clone()),
+                with_loc(lid_idx, name.loc.clone()),
                 vec![],
             ),
             ptyp_loc: name.loc.clone(),
@@ -3353,9 +3364,10 @@ fn parse_label_declaration(
             // Return a Ptyp_constr pointing to the inline type
             let params = inline_ctx.borrow().params.clone();
             let type_args: Vec<CoreType> = params.into_iter().map(|(t, _)| t).collect();
+            let lid_idx = p.push_lident(&inline_type_name);
             CoreType {
                 ptyp_desc: CoreTypeDesc::Ptyp_constr(
-                    with_loc(Longident::Lident(inline_type_name), type_loc.clone()),
+                    with_loc(lid_idx, type_loc.clone()),
                     type_args,
                 ),
                 ptyp_loc: type_loc,

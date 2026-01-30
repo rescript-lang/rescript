@@ -33,6 +33,7 @@ use serde::{Deserialize, Serialize};
 use crate::arena::{Arena, ArenaIdx};
 use crate::intern::Interner;
 use crate::location::{Location, Position};
+use crate::parser::longident::Longident;
 
 /// Key for position deduplication.
 /// Two positions with the same (file_name, line, bol, cnum) are the same position.
@@ -109,6 +110,23 @@ impl LocIdx {
     }
 }
 
+/// Index into the longident arena.
+///
+/// This is a lightweight handle (4 bytes) that can be copied and compared
+/// cheaply. Two LidentIdx values are equal if and only if they refer to the
+/// same arena slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub struct LidentIdx(pub u32);
+
+impl ArenaIdx for LidentIdx {
+    fn from_u32(idx: u32) -> Self {
+        LidentIdx(idx)
+    }
+    fn to_u32(self) -> u32 {
+        self.0
+    }
+}
+
 // ============================================================================
 // InternedLocation (stored in arena)
 // ============================================================================
@@ -170,11 +188,17 @@ pub struct ParseArena {
     positions: Arena<Position, PosIdx>,
     /// Arena of locations (returns LocIdx).
     locations: Arena<InternedLocation, LocIdx>,
+    /// Arena of longidents (returns LidentIdx).
+    longidents: Arena<Longident, LidentIdx>,
     /// Position deduplication table - maps position content to its index.
     position_dedup: HashMap<PosKey, PosIdx>,
-    /// String interner for identifier tokens.
-    /// Identifiers with the same content get the same StrIdx, enabling
-    /// identity-based sharing when marshalling (matching OCaml's behavior).
+    /// String arena for all identifier strings.
+    ///
+    /// Strings can be added in two ways:
+    /// - `intern(s)`: deduplicated, for static strings (same content = same StrIdx)
+    /// - `push_string(s)`: NOT deduplicated, for dynamic strings (each call = new StrIdx)
+    ///
+    /// At marshal time, same StrIdx = same object = shared via back-references.
     strings: Interner,
 }
 
@@ -183,6 +207,7 @@ impl Default for ParseArena {
         Self {
             positions: Arena::default(),
             locations: Arena::default(),
+            longidents: Arena::default(),
             position_dedup: HashMap::new(),
             strings: Interner::new(),
         }
@@ -202,7 +227,25 @@ impl ParseArena {
         let pos_idx = arena.positions.push(none_pos);
         let none_loc = InternedLocation::new(pos_idx, pos_idx, true);
         arena.locations.push(none_loc);
+        // Pre-allocate placeholder longident at index 0
+        // This way LidentIdx(0) is always a valid "placeholder" identifier
+        let placeholder_idx = arena.strings.intern("placeholder");
+        arena.longidents.push(Longident::Lident(placeholder_idx));
         arena
+    }
+
+    /// Get the placeholder longident index (pre-allocated at index 0).
+    /// This is useful for creating placeholder AST nodes without mutating the arena.
+    pub fn placeholder_lid(&self) -> LidentIdx {
+        LidentIdx(0)
+    }
+
+    /// Create a Located<LidentIdx> with the placeholder longident and given location.
+    pub fn placeholder_located(&self, loc: LocIdx) -> Located<LidentIdx> {
+        Located {
+            txt: self.placeholder_lid(),
+            loc,
+        }
     }
 
     // ========== Position methods ==========
@@ -411,6 +454,115 @@ impl ParseArena {
     pub fn get_interned(&self, idx: StrIdx) -> &str {
         self.strings.get(idx)
     }
+
+    // ========================================================================
+    // Longident arena
+    // ========================================================================
+
+    /// Push a longident into the arena and return its index.
+    pub fn push_longident(&mut self, lid: Longident) -> LidentIdx {
+        self.longidents.push(lid)
+    }
+
+    /// Push a simple identifier (Lident) with a dynamic string (from tokens).
+    ///
+    /// Each call creates a new StrIdx, so same content != same identity.
+    /// Use for user identifiers parsed from source (variable names, etc.).
+    pub fn push_lident(&mut self, name: impl Into<String>) -> LidentIdx {
+        let str_idx = self.strings.push(name.into());
+        self.longidents.push(Longident::Lident(str_idx))
+    }
+
+    /// Push a simple identifier (Lident) with a static string (interned).
+    ///
+    /// For static strings (literals in Rust source code), this deduplicates:
+    /// same content = same StrIdx = shared during marshalling.
+    ///
+    /// Use for operators from Token::to_string and hardcoded identifiers
+    /// in the parser like "not", "::", "()", etc.
+    pub fn push_lident_static(&mut self, name: &'static str) -> LidentIdx {
+        let str_idx = self.strings.intern(name);
+        self.longidents.push(Longident::Lident(str_idx))
+    }
+
+    /// Push a dotted identifier (Ldot) with a dynamic string.
+    pub fn push_ldot(&mut self, prefix: LidentIdx, name: impl Into<String>) -> LidentIdx {
+        let str_idx = self.strings.push(name.into());
+        let prefix_lid = self.get_longident(prefix).clone();
+        self.longidents.push(Longident::Ldot(Box::new(prefix_lid), str_idx))
+    }
+
+    /// Push a dotted identifier (Ldot) with a static string.
+    pub fn push_ldot_static(&mut self, prefix: LidentIdx, name: &'static str) -> LidentIdx {
+        let str_idx = self.strings.intern(name);
+        let prefix_lid = self.get_longident(prefix).clone();
+        self.longidents.push(Longident::Ldot(Box::new(prefix_lid), str_idx))
+    }
+
+    /// Push a functor application (Lapply) into the arena.
+    pub fn push_lapply(&mut self, functor: LidentIdx, arg: LidentIdx) -> LidentIdx {
+        let func_lid = self.get_longident(functor).clone();
+        let arg_lid = self.get_longident(arg).clone();
+        self.longidents.push(Longident::Lapply(Box::new(func_lid), Box::new(arg_lid)))
+    }
+
+    /// Look up a longident by index.
+    pub fn get_longident(&self, idx: LidentIdx) -> &Longident {
+        self.longidents.get(idx)
+    }
+
+    /// Get total number of longidents.
+    pub fn longident_count(&self) -> usize {
+        self.longidents.len()
+    }
+
+    /// Get the string content for a StrIdx.
+    pub fn get_string(&self, idx: StrIdx) -> &str {
+        self.strings.get(idx)
+    }
+
+    /// Intern a string (returns existing idx if already interned).
+    pub fn intern_string(&mut self, s: &str) -> StrIdx {
+        self.strings.intern(s)
+    }
+
+    /// Push a string without deduplication (for dynamic user-input strings).
+    pub fn push_string(&mut self, s: String) -> StrIdx {
+        self.strings.push(s)
+    }
+
+    /// Check if a longident is a simple Lident with the given name.
+    pub fn is_lident(&self, idx: LidentIdx, name: &str) -> bool {
+        match self.get_longident(idx) {
+            Longident::Lident(str_idx) => self.strings.get(*str_idx) == name,
+            _ => false,
+        }
+    }
+
+    /// Check if a longident is a simple Lident (not dotted).
+    pub fn is_simple_lident(&self, idx: LidentIdx) -> bool {
+        matches!(self.get_longident(idx), Longident::Lident(_))
+    }
+
+    /// Check if a longident is an Ldot (qualified/dotted identifier).
+    pub fn is_ldot(&self, idx: LidentIdx) -> bool {
+        matches!(self.get_longident(idx), Longident::Ldot(..))
+    }
+
+    /// Get the last component of a longident as a string.
+    pub fn lident_last(&self, idx: LidentIdx) -> &str {
+        let str_idx = self.get_longident(idx).last_idx();
+        self.strings.get(str_idx)
+    }
+
+    /// Convert a Located<LidentIdx> to Located<Longident>.
+    /// Useful when you need to match on the Longident structure.
+    pub fn to_longident_loc(&self, loc: &Located<LidentIdx>) -> crate::location::Located<Longident> {
+        crate::location::Located {
+            txt: self.get_longident(loc.txt).clone(),
+            loc: self.to_location(loc.loc),
+        }
+    }
 }
 
 // ============================================================================
@@ -432,6 +584,9 @@ pub struct Located<T> {
     /// Location in source (as index).
     pub loc: LocIdx,
 }
+
+// Implement Copy for Located<T> when T: Copy (e.g., Located<StrIdx>)
+impl<T: Copy> Copy for Located<T> {}
 
 impl<T> Located<T> {
     /// Create a new located value.

@@ -7,6 +7,7 @@
 
 use crate::binary_ast::parsetree0::*;
 use crate::location::{Located, Location};
+use crate::parse_arena::ParseArena;
 use crate::parser::longident::Longident;
 use crate::parser::sexp::{Sexp, string_to_latin1_bytes};
 use std::io::Write;
@@ -62,22 +63,28 @@ where
 // Longident
 // ============================================================================
 
-fn longident_inner(lid: &Longident) -> Sexp {
+fn longident_inner(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Sexp {
     match lid {
-        Longident::Lident(name) => Sexp::list(vec![Sexp::atom("Lident"), Sexp::atom(&quote_string(name))]),
-        Longident::Ldot(prefix, name) => Sexp::list(vec![
-            Sexp::atom("Ldot"),
-            longident_inner(prefix),
-            Sexp::atom(&quote_string(name)),
-        ]),
+        Longident::Lident(name_idx) => {
+            let name = arena.get_string(*name_idx);
+            Sexp::list(vec![Sexp::atom("Lident"), Sexp::atom(&quote_string(name))])
+        }
+        Longident::Ldot(prefix, name_idx) => {
+            let name = arena.get_string(*name_idx);
+            Sexp::list(vec![
+                Sexp::atom("Ldot"),
+                longident_inner(arena, prefix),
+                Sexp::atom(&quote_string(name)),
+            ])
+        }
         Longident::Lapply(l1, l2) => {
-            Sexp::list(vec![Sexp::atom("Lapply"), longident_inner(l1), longident_inner(l2)])
+            Sexp::list(vec![Sexp::atom("Lapply"), longident_inner(arena, l1), longident_inner(arena, l2)])
         }
     }
 }
 
-fn longident(lid: &Longident) -> Sexp {
-    Sexp::list(vec![Sexp::atom("longident"), longident_inner(lid)])
+fn longident(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Sexp {
+    Sexp::list(vec![Sexp::atom("longident"), longident_inner(arena, lid)])
 }
 
 // ============================================================================
@@ -135,16 +142,16 @@ fn variance(v: &Variance) -> Sexp {
 }
 
 // parsetree0 ArgLabel has no location (unlike current parsetree)
-fn arg_label(lbl: &ArgLabel) -> Sexp {
+fn arg_label(arena: &ParseArena, lbl: &ArgLabel) -> Sexp {
     match lbl {
         ArgLabel::Nolabel => Sexp::atom("Nolabel"),
         ArgLabel::Labelled(s) => Sexp::list(vec![
             Sexp::atom("Labelled"),
-            Sexp::atom(&quote_string(s)),
+            Sexp::atom(&quote_string(arena.get_string(*s))),
         ]),
         ArgLabel::Optional(s) => Sexp::list(vec![
             Sexp::atom("Optional"),
-            Sexp::atom(&quote_string(s)),
+            Sexp::atom(&quote_string(arena.get_string(*s))),
         ]),
     }
 }
@@ -199,39 +206,39 @@ fn constant(c: &Constant) -> Sexp {
 // Attributes
 // ============================================================================
 
-fn payload(p: &Payload) -> Sexp {
+fn payload(arena: &ParseArena, p: &Payload) -> Sexp {
     match p {
         Payload::PStr(items) => {
             let mut parts = vec![Sexp::atom("PStr")];
-            parts.extend(map_empty(items, structure_item));
+            parts.extend(map_empty(items, |si| structure_item(arena, si)));
             Sexp::list(parts)
         }
-        Payload::PSig(items) => Sexp::list(vec![Sexp::atom("PSig"), signature(items)]),
-        Payload::PTyp(ct) => Sexp::list(vec![Sexp::atom("PTyp"), core_type(ct)]),
+        Payload::PSig(items) => Sexp::list(vec![Sexp::atom("PSig"), signature(arena, items)]),
+        Payload::PTyp(ct) => Sexp::list(vec![Sexp::atom("PTyp"), core_type(arena, ct)]),
         Payload::PPat(pat, opt_expr) => Sexp::list(vec![
             Sexp::atom("PPat"),
-            pattern(pat),
+            pattern(arena, pat),
             match opt_expr {
-                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
                 None => Sexp::atom("None"),
             },
         ]),
     }
 }
 
-fn attribute(attr: &Attribute) -> Sexp {
+fn attribute(arena: &ParseArena, attr: &Attribute) -> Sexp {
     let (name, p) = attr;
-    Sexp::list(vec![Sexp::atom("attribute"), Sexp::atom(&name.txt), location(&name.loc), payload(p)])
+    Sexp::list(vec![Sexp::atom("attribute"), Sexp::atom(&name.txt), location(&name.loc), payload(arena, p)])
 }
 
-fn extension(ext: &Extension) -> Sexp {
+fn extension(arena: &ParseArena, ext: &Extension) -> Sexp {
     let (name, p) = ext;
-    Sexp::list(vec![Sexp::atom("extension"), Sexp::atom(&name.txt), location(&name.loc), payload(p)])
+    Sexp::list(vec![Sexp::atom("extension"), Sexp::atom(&name.txt), location(&name.loc), payload(arena, p)])
 }
 
-fn attributes(attrs: &[Attribute]) -> Sexp {
+fn attributes(arena: &ParseArena, attrs: &[Attribute]) -> Sexp {
     let mut parts = vec![Sexp::atom("attributes")];
-    parts.extend(map_empty(attrs, attribute));
+    parts.extend(map_empty(attrs, |a| attribute(arena, a)));
     Sexp::list(parts)
 }
 
@@ -239,40 +246,40 @@ fn attributes(attrs: &[Attribute]) -> Sexp {
 // Types
 // ============================================================================
 
-fn core_type(typ: &CoreType) -> Sexp {
+fn core_type(arena: &ParseArena, typ: &CoreType) -> Sexp {
     let desc = match &typ.ptyp_desc {
         CoreTypeDesc::Any => Sexp::atom("Ptyp_any"),
         CoreTypeDesc::Var(var) => Sexp::list(vec![Sexp::atom("Ptyp_var"), Sexp::atom(&quote_string(var))]),
         // parsetree0 Arrow has no arity field
         CoreTypeDesc::Arrow(label, arg, ret) => Sexp::list(vec![
             Sexp::atom("Ptyp_arrow"),
-            arg_label(label),
-            core_type(arg),
-            core_type(ret),
+            arg_label(arena, label),
+            core_type(arena, arg),
+            core_type(arena, ret),
         ]),
         CoreTypeDesc::Tuple(types) => {
-            Sexp::list(vec![Sexp::atom("Ptyp_tuple"), Sexp::list(map_empty(types, core_type))])
+            Sexp::list(vec![Sexp::atom("Ptyp_tuple"), Sexp::list(map_empty(types, |t| core_type(arena, t)))])
         }
         CoreTypeDesc::Constr(lid, types) => Sexp::list(vec![
             Sexp::atom("Ptyp_constr"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
-            Sexp::list(map_empty(types, core_type)),
+            Sexp::list(map_empty(types, |t| core_type(arena, t))),
         ]),
         CoreTypeDesc::Object(fields, flag) => Sexp::list(vec![
             Sexp::atom("Ptyp_object"),
             closed_flag(flag),
-            Sexp::list(map_empty(fields, object_field)),
+            Sexp::list(map_empty(fields, |f| object_field(arena, f))),
         ]),
         CoreTypeDesc::Class => Sexp::atom("Ptyp_class"),
         CoreTypeDesc::Alias(t, alias) => Sexp::list(vec![
             Sexp::atom("Ptyp_alias"),
-            core_type(t),
+            core_type(arena, t),
             Sexp::atom(&quote_string(alias)),
         ]),
         CoreTypeDesc::Variant(rows, flag, opt_labels) => Sexp::list(vec![
             Sexp::atom("Ptyp_variant"),
-            Sexp::list(map_empty(rows, row_field)),
+            Sexp::list(map_empty(rows, |r| row_field(arena, r))),
             closed_flag(flag),
             match opt_labels {
                 Some(labels) => {
@@ -288,49 +295,49 @@ fn core_type(typ: &CoreType) -> Sexp {
             Sexp::list(map_empty(vars, |v| {
                 Sexp::list(vec![Sexp::atom(&quote_string(&v.txt)), location(&v.loc)])
             })),
-            core_type(t),
+            core_type(arena, t),
         ]),
         CoreTypeDesc::Package((lid, constraints)) => Sexp::list(vec![
             Sexp::atom("Ptyp_package"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
             Sexp::list(map_empty(constraints, |(lid, typ)| {
                 Sexp::list(vec![
-                    longident(&lid.txt),
+                    longident(arena, &lid.txt),
                     location(&lid.loc),
-                    core_type(typ),
+                    core_type(arena, typ),
                 ])
             })),
         ]),
-        CoreTypeDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Ptyp_extension"), extension(ext)]),
+        CoreTypeDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Ptyp_extension"), extension(arena, ext)]),
     };
-    Sexp::list(vec![Sexp::atom("core_type"), location(&typ.ptyp_loc), desc, attributes(&typ.ptyp_attributes)])
+    Sexp::list(vec![Sexp::atom("core_type"), location(&typ.ptyp_loc), desc, attributes(arena, &typ.ptyp_attributes)])
 }
 
-fn row_field(rf: &RowField) -> Sexp {
+fn row_field(arena: &ParseArena, rf: &RowField) -> Sexp {
     match rf {
         RowField::Rtag(label, attrs, is_constant, types) => Sexp::list(vec![
             Sexp::atom("Rtag"),
             Sexp::atom(&quote_string(&label.txt)),
             location(&label.loc),
-            attributes(attrs),
+            attributes(arena, attrs),
             Sexp::atom(if *is_constant { "true" } else { "false" }),
-            Sexp::list(map_empty(types, core_type)),
+            Sexp::list(map_empty(types, |t| core_type(arena, t))),
         ]),
-        RowField::Rinherit(typ) => Sexp::list(vec![Sexp::atom("Rinherit"), core_type(typ)]),
+        RowField::Rinherit(typ) => Sexp::list(vec![Sexp::atom("Rinherit"), core_type(arena, typ)]),
     }
 }
 
-fn object_field(field: &ObjectField) -> Sexp {
+fn object_field(arena: &ParseArena, field: &ObjectField) -> Sexp {
     match field {
         ObjectField::Otag(label, attrs, typ) => Sexp::list(vec![
             Sexp::atom("Otag"),
             Sexp::atom(&quote_string(&label.txt)),
             location(&label.loc),
-            attributes(attrs),
-            core_type(typ),
+            attributes(arena, attrs),
+            core_type(arena, typ),
         ]),
-        ObjectField::Oinherit(typ) => Sexp::list(vec![Sexp::atom("Oinherit"), core_type(typ)]),
+        ObjectField::Oinherit(typ) => Sexp::list(vec![Sexp::atom("Oinherit"), core_type(arena, typ)]),
     }
 }
 
@@ -338,13 +345,13 @@ fn object_field(field: &ObjectField) -> Sexp {
 // Patterns
 // ============================================================================
 
-fn pattern(pat: &Pattern) -> Sexp {
+fn pattern(arena: &ParseArena, pat: &Pattern) -> Sexp {
     let desc = match &pat.ppat_desc {
         PatternDesc::Any => Sexp::atom("Ppat_any"),
         PatternDesc::Var(v) => Sexp::list(vec![Sexp::atom("Ppat_var"), Sexp::atom(&quote_string(&v.txt)), location(&v.loc)]),
         PatternDesc::Alias(p, alias) => Sexp::list(vec![
             Sexp::atom("Ppat_alias"),
-            pattern(p),
+            pattern(arena, p),
             Sexp::atom(&quote_string(&alias.txt)),
             location(&alias.loc),
         ]),
@@ -353,14 +360,14 @@ fn pattern(pat: &Pattern) -> Sexp {
             Sexp::list(vec![Sexp::atom("Ppat_interval"), constant(c1), constant(c2)])
         }
         PatternDesc::Tuple(pats) => {
-            Sexp::list(vec![Sexp::atom("Ppat_tuple"), Sexp::list(map_empty(pats, pattern))])
+            Sexp::list(vec![Sexp::atom("Ppat_tuple"), Sexp::list(map_empty(pats, |p| pattern(arena, p)))])
         }
         PatternDesc::Construct(lid, opt_pat) => Sexp::list(vec![
             Sexp::atom("Ppat_construct"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
             match opt_pat {
-                Some(p) => Sexp::list(vec![Sexp::atom("Some"), pattern(p)]),
+                Some(p) => Sexp::list(vec![Sexp::atom("Some"), pattern(arena, p)]),
                 None => Sexp::atom("None"),
             },
         ]),
@@ -368,7 +375,7 @@ fn pattern(pat: &Pattern) -> Sexp {
             Sexp::atom("Ppat_variant"),
             Sexp::atom(&quote_string(label)),
             match opt_pat {
-                Some(p) => Sexp::list(vec![Sexp::atom("Some"), pattern(p)]),
+                Some(p) => Sexp::list(vec![Sexp::atom("Some"), pattern(arena, p)]),
                 None => Sexp::atom("None"),
             },
         ]),
@@ -376,61 +383,61 @@ fn pattern(pat: &Pattern) -> Sexp {
             Sexp::atom("Ppat_record"),
             Sexp::list(map_empty(fields, |RecordElement { lid, x, opt }| {
                 Sexp::list(vec![
-                    longident(&lid.txt),
+                    longident(arena, &lid.txt),
                     location(&lid.loc),
-                    pattern(x),
+                    pattern(arena, x),
                     Sexp::atom(if *opt { "true" } else { "false" }),
                 ])
             })),
             closed_flag(flag),
         ]),
         PatternDesc::Array(pats) => {
-            Sexp::list(vec![Sexp::atom("Ppat_array"), Sexp::list(map_empty(pats, pattern))])
+            Sexp::list(vec![Sexp::atom("Ppat_array"), Sexp::list(map_empty(pats, |p| pattern(arena, p)))])
         }
-        PatternDesc::Or(p1, p2) => Sexp::list(vec![Sexp::atom("Ppat_or"), pattern(p1), pattern(p2)]),
+        PatternDesc::Or(p1, p2) => Sexp::list(vec![Sexp::atom("Ppat_or"), pattern(arena, p1), pattern(arena, p2)]),
         PatternDesc::Constraint(p, typ) => {
-            Sexp::list(vec![Sexp::atom("Ppat_constraint"), pattern(p), core_type(typ)])
+            Sexp::list(vec![Sexp::atom("Ppat_constraint"), pattern(arena, p), core_type(arena, typ)])
         }
         PatternDesc::Type(lid) => Sexp::list(vec![
             Sexp::atom("Ppat_type"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
-        PatternDesc::Lazy(p) => Sexp::list(vec![Sexp::atom("Ppat_lazy"), pattern(p)]),
+        PatternDesc::Lazy(p) => Sexp::list(vec![Sexp::atom("Ppat_lazy"), pattern(arena, p)]),
         PatternDesc::Unpack(name) => Sexp::list(vec![
             Sexp::atom("Ppat_unpack"),
             Sexp::atom(&quote_string(&name.txt)),
             location(&name.loc),
         ]),
-        PatternDesc::Exception(p) => Sexp::list(vec![Sexp::atom("Ppat_exception"), pattern(p)]),
-        PatternDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Ppat_extension"), extension(ext)]),
+        PatternDesc::Exception(p) => Sexp::list(vec![Sexp::atom("Ppat_exception"), pattern(arena, p)]),
+        PatternDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Ppat_extension"), extension(arena, ext)]),
         PatternDesc::Open(lid, p) => Sexp::list(vec![
             Sexp::atom("Ppat_open"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
-            pattern(p),
+            pattern(arena, p),
         ]),
     };
-    Sexp::list(vec![Sexp::atom("pattern"), location(&pat.ppat_loc), desc, attributes(&pat.ppat_attributes)])
+    Sexp::list(vec![Sexp::atom("pattern"), location(&pat.ppat_loc), desc, attributes(arena, &pat.ppat_attributes)])
 }
 
 // ============================================================================
 // Expressions
 // ============================================================================
 
-fn expression(expr: &Expression) -> Sexp {
+fn expression(arena: &ParseArena, expr: &Expression) -> Sexp {
     let desc = match &expr.pexp_desc {
         ExpressionDesc::Ident(lid) => Sexp::list(vec![
             Sexp::atom("Pexp_ident"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
         ExpressionDesc::Constant(c) => Sexp::list(vec![Sexp::atom("Pexp_constant"), constant(c)]),
         ExpressionDesc::Let(flag, bindings, body) => Sexp::list(vec![
             Sexp::atom("Pexp_let"),
             rec_flag(flag),
-            Sexp::list(map_empty(bindings, value_binding)),
-            expression(body),
+            Sexp::list(map_empty(bindings, |vb| value_binding(arena, vb))),
+            expression(arena, body),
         ]),
         ExpressionDesc::Fun { arg_label: lbl, default: def, lhs, rhs, arity: ar, is_async } => {
             // OCaml parsetree0 uses:
@@ -440,13 +447,13 @@ fn expression(expr: &Expression) -> Sexp {
             // Build the inner Pexp_fun sexp
             let fun_desc = Sexp::list(vec![
                 Sexp::atom("Pexp_fun"),
-                arg_label(lbl),
+                arg_label(arena, lbl),
                 match def {
-                    Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+                    Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
                     None => Sexp::atom("None"),
                 },
-                pattern(lhs),
-                expression(rhs),
+                pattern(arena, lhs),
+                expression(arena, rhs),
             ]);
 
             // Build attributes for the inner function (including res.async if needed)
@@ -468,7 +475,7 @@ fn expression(expr: &Expression) -> Sexp {
                     if inner_attrs.is_empty() {
                         parts.push(Sexp::list(vec![]));
                     } else {
-                        parts.extend(inner_attrs.iter().map(|a| attribute(a)));
+                        parts.extend(inner_attrs.iter().map(|a| attribute(arena, a)));
                     }
                     Sexp::list(parts)
                 };
@@ -544,31 +551,31 @@ fn expression(expr: &Expression) -> Sexp {
             // parsetree0 uses Pexp_apply tuple format (func, [(label, expr)])
             Sexp::list(vec![
                 Sexp::atom("Pexp_apply"),
-                expression(funct),
+                expression(arena, funct),
                 Sexp::list(map_empty(args, |(lbl, e)| {
-                    Sexp::list(vec![arg_label(lbl), expression(e)])
+                    Sexp::list(vec![arg_label(arena, lbl), expression(arena, e)])
                 })),
             ])
         }
         ExpressionDesc::Match(e, cases) => Sexp::list(vec![
             Sexp::atom("Pexp_match"),
-            expression(e),
-            Sexp::list(map_empty(cases, case)),
+            expression(arena, e),
+            Sexp::list(map_empty(cases, |c| case(arena, c))),
         ]),
         ExpressionDesc::Try(e, cases) => Sexp::list(vec![
             Sexp::atom("Pexp_try"),
-            expression(e),
-            Sexp::list(map_empty(cases, case)),
+            expression(arena, e),
+            Sexp::list(map_empty(cases, |c| case(arena, c))),
         ]),
         ExpressionDesc::Tuple(exprs) => {
-            Sexp::list(vec![Sexp::atom("Pexp_tuple"), Sexp::list(map_empty(exprs, expression))])
+            Sexp::list(vec![Sexp::atom("Pexp_tuple"), Sexp::list(map_empty(exprs, |e| expression(arena, e)))])
         }
         ExpressionDesc::Construct(lid, opt_expr) => Sexp::list(vec![
             Sexp::atom("Pexp_construct"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
             match opt_expr {
-                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
                 None => Sexp::atom("None"),
             },
         ]),
@@ -576,7 +583,7 @@ fn expression(expr: &Expression) -> Sexp {
             Sexp::atom("Pexp_variant"),
             Sexp::atom(&quote_string(label)),
             match opt_expr {
-                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
                 None => Sexp::atom("None"),
             },
         ]),
@@ -585,77 +592,77 @@ fn expression(expr: &Expression) -> Sexp {
             // parsetree0 doesn't have the opt field, just (longident, expr) pairs
             Sexp::list(map_empty(fields, |RecordElement { lid, x, .. }| {
                 Sexp::list(vec![
-                    longident(&lid.txt),
+                    longident(arena, &lid.txt),
                     location(&lid.loc),
-                    expression(x),
+                    expression(arena, x),
                 ])
             })),
             match opt_expr {
-                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
                 None => Sexp::atom("None"),
             },
         ]),
         ExpressionDesc::Field(e, lid) => Sexp::list(vec![
             Sexp::atom("Pexp_field"),
-            expression(e),
-            longident(&lid.txt),
+            expression(arena, e),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
         ExpressionDesc::Setfield(e1, lid, e2) => Sexp::list(vec![
             Sexp::atom("Pexp_setfield"),
-            expression(e1),
-            longident(&lid.txt),
+            expression(arena, e1),
+            longident(arena, &lid.txt),
             location(&lid.loc),
-            expression(e2),
+            expression(arena, e2),
         ]),
         ExpressionDesc::Array(exprs) => {
-            Sexp::list(vec![Sexp::atom("Pexp_array"), Sexp::list(map_empty(exprs, expression))])
+            Sexp::list(vec![Sexp::atom("Pexp_array"), Sexp::list(map_empty(exprs, |e| expression(arena, e)))])
         }
         ExpressionDesc::Ifthenelse(cond, then_e, else_e) => Sexp::list(vec![
             Sexp::atom("Pexp_ifthenelse"),
-            expression(cond),
-            expression(then_e),
+            expression(arena, cond),
+            expression(arena, then_e),
             match else_e {
-                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+                Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
                 None => Sexp::atom("None"),
             },
         ]),
         ExpressionDesc::Sequence(e1, e2) => {
-            Sexp::list(vec![Sexp::atom("Pexp_sequence"), expression(e1), expression(e2)])
+            Sexp::list(vec![Sexp::atom("Pexp_sequence"), expression(arena, e1), expression(arena, e2)])
         }
         ExpressionDesc::While(cond, body) => {
-            Sexp::list(vec![Sexp::atom("Pexp_while"), expression(cond), expression(body)])
+            Sexp::list(vec![Sexp::atom("Pexp_while"), expression(arena, cond), expression(arena, body)])
         }
         ExpressionDesc::For(pat, start, end_, dir, body) => Sexp::list(vec![
             Sexp::atom("Pexp_for"),
-            pattern(pat),
-            expression(start),
-            expression(end_),
+            pattern(arena, pat),
+            expression(arena, start),
+            expression(arena, end_),
             direction_flag(dir),
-            expression(body),
+            expression(arena, body),
         ]),
         ExpressionDesc::Constraint(e, typ) => {
-            Sexp::list(vec![Sexp::atom("Pexp_constraint"), expression(e), core_type(typ)])
+            Sexp::list(vec![Sexp::atom("Pexp_constraint"), expression(arena, e), core_type(arena, typ)])
         }
         ExpressionDesc::Coerce(e, _, typ) => {
-            Sexp::list(vec![Sexp::atom("Pexp_coerce"), expression(e), Sexp::atom("None"), core_type(typ)])
+            Sexp::list(vec![Sexp::atom("Pexp_coerce"), expression(arena, e), Sexp::atom("None"), core_type(arena, typ)])
         }
         ExpressionDesc::Send(e, label) => Sexp::list(vec![
             Sexp::atom("Pexp_send"),
-            expression(e),
+            expression(arena, e),
             Sexp::atom(&quote_string(&label.txt)),
             location(&label.loc),
         ]),
         ExpressionDesc::New(lid) => Sexp::list(vec![
             Sexp::atom("Pexp_new"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
         ExpressionDesc::Setinstvar(label, e) => Sexp::list(vec![
             Sexp::atom("Pexp_setinstvar"),
             Sexp::atom(&quote_string(&label.txt)),
             location(&label.loc),
-            expression(e),
+            expression(arena, e),
         ]),
         ExpressionDesc::Override(fields) => Sexp::list(vec![
             Sexp::atom("Pexp_override"),
@@ -663,7 +670,7 @@ fn expression(expr: &Expression) -> Sexp {
                 Sexp::list(vec![
                     Sexp::atom(&quote_string(&label.txt)),
                     location(&label.loc),
-                    expression(e),
+                    expression(arena, e),
                 ])
             })),
         ]),
@@ -671,21 +678,21 @@ fn expression(expr: &Expression) -> Sexp {
             Sexp::atom("Pexp_letmodule"),
             Sexp::atom(&quote_string(&name.txt)),
             location(&name.loc),
-            module_expr(mod_expr),
-            expression(body),
+            module_expr(arena, mod_expr),
+            expression(arena, body),
         ]),
         ExpressionDesc::Letexception(ext_constr, body) => Sexp::list(vec![
             Sexp::atom("Pexp_letexception"),
-            extension_constructor(ext_constr),
-            expression(body),
+            extension_constructor(arena, ext_constr),
+            expression(arena, body),
         ]),
-        ExpressionDesc::Assert(e) => Sexp::list(vec![Sexp::atom("Pexp_assert"), expression(e)]),
-        ExpressionDesc::Lazy(e) => Sexp::list(vec![Sexp::atom("Pexp_lazy"), expression(e)]),
+        ExpressionDesc::Assert(e) => Sexp::list(vec![Sexp::atom("Pexp_assert"), expression(arena, e)]),
+        ExpressionDesc::Lazy(e) => Sexp::list(vec![Sexp::atom("Pexp_lazy"), expression(arena, e)]),
         ExpressionDesc::Poly(e, opt_typ) => Sexp::list(vec![
             Sexp::atom("Pexp_poly"),
-            expression(e),
+            expression(arena, e),
             match opt_typ {
-                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
+                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(arena, t)]),
                 None => Sexp::atom("None"),
             },
         ]),
@@ -694,41 +701,41 @@ fn expression(expr: &Expression) -> Sexp {
             Sexp::atom("Pexp_newtype"),
             Sexp::atom(&quote_string(&name.txt)),
             location(&name.loc),
-            expression(body),
+            expression(arena, body),
         ]),
-        ExpressionDesc::Pack(mod_expr) => Sexp::list(vec![Sexp::atom("Pexp_pack"), module_expr(mod_expr)]),
+        ExpressionDesc::Pack(mod_expr) => Sexp::list(vec![Sexp::atom("Pexp_pack"), module_expr(arena, mod_expr)]),
         ExpressionDesc::Open(flag, lid, body) => Sexp::list(vec![
             Sexp::atom("Pexp_open"),
             override_flag(flag),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
-            expression(body),
+            expression(arena, body),
         ]),
-        ExpressionDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Pexp_extension"), extension(ext)]),
+        ExpressionDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Pexp_extension"), extension(arena, ext)]),
         ExpressionDesc::Unreachable => Sexp::atom("Pexp_unreachable"),
     };
-    Sexp::list(vec![Sexp::atom("expression"), location(&expr.pexp_loc), desc, attributes(&expr.pexp_attributes)])
+    Sexp::list(vec![Sexp::atom("expression"), location(&expr.pexp_loc), desc, attributes(arena, &expr.pexp_attributes)])
 }
 
-fn case(c: &Case) -> Sexp {
+fn case(arena: &ParseArena, c: &Case) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("case"),
-        pattern(&c.pc_lhs),
+        pattern(arena, &c.pc_lhs),
         match &c.pc_guard {
-            Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(e)]),
+            Some(e) => Sexp::list(vec![Sexp::atom("Some"), expression(arena, e)]),
             None => Sexp::atom("None"),
         },
-        expression(&c.pc_rhs),
+        expression(arena, &c.pc_rhs),
     ])
 }
 
-fn value_binding(vb: &ValueBinding) -> Sexp {
+fn value_binding(arena: &ParseArena, vb: &ValueBinding) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("value_binding"),
         location(&vb.pvb_loc),
-        pattern(&vb.pvb_pat),
-        expression(&vb.pvb_expr),
-        attributes(&vb.pvb_attributes),
+        pattern(arena, &vb.pvb_pat),
+        expression(arena, &vb.pvb_expr),
+        attributes(arena, &vb.pvb_attributes),
     ])
 }
 
@@ -736,66 +743,66 @@ fn value_binding(vb: &ValueBinding) -> Sexp {
 // Module types
 // ============================================================================
 
-fn module_type(mt: &ModuleType) -> Sexp {
+fn module_type(arena: &ParseArena, mt: &ModuleType) -> Sexp {
     let desc = match &mt.pmty_desc {
         ModuleTypeDesc::Ident(lid) => Sexp::list(vec![
             Sexp::atom("Pmty_ident"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
-        ModuleTypeDesc::Signature(sig) => Sexp::list(vec![Sexp::atom("Pmty_signature"), signature(sig)]),
+        ModuleTypeDesc::Signature(sig) => Sexp::list(vec![Sexp::atom("Pmty_signature"), signature(arena, sig)]),
         ModuleTypeDesc::Functor(name, opt_mt, body) => Sexp::list(vec![
             Sexp::atom("Pmty_functor"),
             Sexp::atom(&quote_string(&name.txt)),
             location(&name.loc),
             match opt_mt {
-                Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(mt)]),
+                Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(arena, mt)]),
                 None => Sexp::atom("None"),
             },
-            module_type(body),
+            module_type(arena, body),
         ]),
         ModuleTypeDesc::With(mt, constraints) => Sexp::list(vec![
             Sexp::atom("Pmty_with"),
-            module_type(mt),
-            Sexp::list(map_empty(constraints, with_constraint)),
+            module_type(arena, mt),
+            Sexp::list(map_empty(constraints, |wc| with_constraint(arena, wc))),
         ]),
-        ModuleTypeDesc::Typeof(me) => Sexp::list(vec![Sexp::atom("Pmty_typeof"), module_expr(me)]),
-        ModuleTypeDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Pmty_extension"), extension(ext)]),
+        ModuleTypeDesc::Typeof(me) => Sexp::list(vec![Sexp::atom("Pmty_typeof"), module_expr(arena, me)]),
+        ModuleTypeDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Pmty_extension"), extension(arena, ext)]),
         ModuleTypeDesc::Alias(lid) => Sexp::list(vec![
             Sexp::atom("Pmty_alias"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
     };
-    Sexp::list(vec![Sexp::atom("module_type"), location(&mt.pmty_loc), desc, attributes(&mt.pmty_attributes)])
+    Sexp::list(vec![Sexp::atom("module_type"), location(&mt.pmty_loc), desc, attributes(arena, &mt.pmty_attributes)])
 }
 
-fn with_constraint(wc: &WithConstraint) -> Sexp {
+fn with_constraint(arena: &ParseArena, wc: &WithConstraint) -> Sexp {
     match wc {
         WithConstraint::Type(lid, td) => Sexp::list(vec![
             Sexp::atom("Pwith_type"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
-            type_declaration(td),
+            type_declaration(arena, td),
         ]),
         WithConstraint::Module(lid1, lid2) => Sexp::list(vec![
             Sexp::atom("Pwith_module"),
-            longident(&lid1.txt),
+            longident(arena, &lid1.txt),
             location(&lid1.loc),
-            longident(&lid2.txt),
+            longident(arena, &lid2.txt),
             location(&lid2.loc),
         ]),
         WithConstraint::TypeSubst(lid, td) => Sexp::list(vec![
             Sexp::atom("Pwith_typesubst"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
-            type_declaration(td),
+            type_declaration(arena, td),
         ]),
         WithConstraint::ModSubst(lid1, lid2) => Sexp::list(vec![
             Sexp::atom("Pwith_modsubst"),
-            longident(&lid1.txt),
+            longident(arena, &lid1.txt),
             location(&lid1.loc),
-            longident(&lid2.txt),
+            longident(arena, &lid2.txt),
             location(&lid2.loc),
         ]),
     }
@@ -805,39 +812,39 @@ fn with_constraint(wc: &WithConstraint) -> Sexp {
 // Module expressions
 // ============================================================================
 
-fn module_expr(me: &ModuleExpr) -> Sexp {
+fn module_expr(arena: &ParseArena, me: &ModuleExpr) -> Sexp {
     let desc = match &me.pmod_desc {
         ModuleExprDesc::Ident(lid) => Sexp::list(vec![
             Sexp::atom("Pmod_ident"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
-        ModuleExprDesc::Structure(str) => Sexp::list(vec![Sexp::atom("Pmod_structure"), structure(str)]),
+        ModuleExprDesc::Structure(str) => Sexp::list(vec![Sexp::atom("Pmod_structure"), structure(arena, str)]),
         ModuleExprDesc::Functor(name, opt_mt, body) => Sexp::list(vec![
             Sexp::atom("Pmod_functor"),
             Sexp::atom(&quote_string(&name.txt)),
             location(&name.loc),
             match opt_mt {
-                Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(mt)]),
+                Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(arena, mt)]),
                 None => Sexp::atom("None"),
             },
-            module_expr(body),
+            module_expr(arena, body),
         ]),
-        ModuleExprDesc::Apply(me1, me2) => Sexp::list(vec![Sexp::atom("Pmod_apply"), module_expr(me1), module_expr(me2)]),
+        ModuleExprDesc::Apply(me1, me2) => Sexp::list(vec![Sexp::atom("Pmod_apply"), module_expr(arena, me1), module_expr(arena, me2)]),
         ModuleExprDesc::Constraint(me, mt) => {
-            Sexp::list(vec![Sexp::atom("Pmod_constraint"), module_expr(me), module_type(mt)])
+            Sexp::list(vec![Sexp::atom("Pmod_constraint"), module_expr(arena, me), module_type(arena, mt)])
         }
-        ModuleExprDesc::Unpack(e) => Sexp::list(vec![Sexp::atom("Pmod_unpack"), expression(e)]),
-        ModuleExprDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Pmod_extension"), extension(ext)]),
+        ModuleExprDesc::Unpack(e) => Sexp::list(vec![Sexp::atom("Pmod_unpack"), expression(arena, e)]),
+        ModuleExprDesc::Extension(ext) => Sexp::list(vec![Sexp::atom("Pmod_extension"), extension(arena, ext)]),
     };
-    Sexp::list(vec![Sexp::atom("module_expr"), location(&me.pmod_loc), desc, attributes(&me.pmod_attributes)])
+    Sexp::list(vec![Sexp::atom("module_expr"), location(&me.pmod_loc), desc, attributes(arena, &me.pmod_attributes)])
 }
 
 // ============================================================================
 // Declarations
 // ============================================================================
 
-fn type_declaration(td: &TypeDeclaration) -> Sexp {
+fn type_declaration(arena: &ParseArena, td: &TypeDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("type_declaration"),
         location(&td.ptype_loc),
@@ -847,200 +854,200 @@ fn type_declaration(td: &TypeDeclaration) -> Sexp {
         Sexp::list(vec![
             Sexp::atom("ptype_params"),
             Sexp::list(map_empty(&td.ptype_params, |(typ, var)| {
-                Sexp::list(vec![core_type(typ), variance(var)])
+                Sexp::list(vec![core_type(arena, typ), variance(var)])
             })),
         ]),
         Sexp::list(vec![
             Sexp::atom("ptype_cstrs"),
             Sexp::list(map_empty(&td.ptype_cstrs, |(t1, t2, loc)| {
-                Sexp::list(vec![core_type(t1), core_type(t2), location(loc)])
+                Sexp::list(vec![core_type(arena, t1), core_type(arena, t2), location(loc)])
             })),
         ]),
-        Sexp::list(vec![Sexp::atom("ptype_kind"), type_kind(&td.ptype_kind)]),
+        Sexp::list(vec![Sexp::atom("ptype_kind"), type_kind(arena, &td.ptype_kind)]),
         Sexp::list(vec![
             Sexp::atom("ptype_manifest"),
             match &td.ptype_manifest {
-                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
+                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(arena, t)]),
                 None => Sexp::atom("None"),
             },
         ]),
         Sexp::list(vec![Sexp::atom("ptype_private"), private_flag(&td.ptype_private)]),
-        attributes(&td.ptype_attributes),
+        attributes(arena, &td.ptype_attributes),
     ])
 }
 
-fn type_kind(tk: &TypeKind) -> Sexp {
+fn type_kind(arena: &ParseArena, tk: &TypeKind) -> Sexp {
     match tk {
         TypeKind::Abstract => Sexp::atom("Ptype_abstract"),
         TypeKind::Variant(constrs) => {
-            Sexp::list(vec![Sexp::atom("Ptype_variant"), Sexp::list(map_empty(constrs, constructor_declaration))])
+            Sexp::list(vec![Sexp::atom("Ptype_variant"), Sexp::list(map_empty(constrs, |cd| constructor_declaration(arena, cd)))])
         }
         TypeKind::Record(fields) => {
-            Sexp::list(vec![Sexp::atom("Ptype_record"), Sexp::list(map_empty(fields, label_declaration))])
+            Sexp::list(vec![Sexp::atom("Ptype_record"), Sexp::list(map_empty(fields, |ld| label_declaration(arena, ld)))])
         }
         TypeKind::Open => Sexp::atom("Ptype_open"),
     }
 }
 
-fn constructor_declaration(cd: &ConstructorDeclaration) -> Sexp {
+fn constructor_declaration(arena: &ParseArena, cd: &ConstructorDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("constructor_declaration"),
         location(&cd.pcd_loc),
         Sexp::atom(&quote_string(&cd.pcd_name.txt)),
         location(&cd.pcd_name.loc),
         // OCaml wraps these with field names
-        Sexp::list(vec![Sexp::atom("pcd_args"), constructor_arguments(&cd.pcd_args)]),
+        Sexp::list(vec![Sexp::atom("pcd_args"), constructor_arguments(arena, &cd.pcd_args)]),
         Sexp::list(vec![
             Sexp::atom("pcd_res"),
             match &cd.pcd_res {
-                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
+                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(arena, t)]),
                 None => Sexp::atom("None"),
             },
         ]),
-        attributes(&cd.pcd_attributes),
+        attributes(arena, &cd.pcd_attributes),
     ])
 }
 
-fn constructor_arguments(ca: &ConstructorArguments) -> Sexp {
+fn constructor_arguments(arena: &ParseArena, ca: &ConstructorArguments) -> Sexp {
     match ca {
         ConstructorArguments::Tuple(types) => {
-            Sexp::list(vec![Sexp::atom("Pcstr_tuple"), Sexp::list(map_empty(types, core_type))])
+            Sexp::list(vec![Sexp::atom("Pcstr_tuple"), Sexp::list(map_empty(types, |t| core_type(arena, t)))])
         }
         ConstructorArguments::Record(fields) => {
-            Sexp::list(vec![Sexp::atom("Pcstr_record"), Sexp::list(map_empty(fields, label_declaration))])
+            Sexp::list(vec![Sexp::atom("Pcstr_record"), Sexp::list(map_empty(fields, |ld| label_declaration(arena, ld)))])
         }
     }
 }
 
-fn label_declaration(ld: &LabelDeclaration) -> Sexp {
+fn label_declaration(arena: &ParseArena, ld: &LabelDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("label_declaration"),
         location(&ld.pld_loc),
         Sexp::atom(&quote_string(&ld.pld_name.txt)),
         location(&ld.pld_name.loc),
         mutable_flag(&ld.pld_mutable),
-        core_type(&ld.pld_type),
-        attributes(&ld.pld_attributes),
+        core_type(arena, &ld.pld_type),
+        attributes(arena, &ld.pld_attributes),
     ])
 }
 
-fn type_extension(te: &TypeExtension) -> Sexp {
+fn type_extension(arena: &ParseArena, te: &TypeExtension) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("type_extension"),
-        longident(&te.ptyext_path.txt),
+        longident(arena, &te.ptyext_path.txt),
         location(&te.ptyext_path.loc),
         Sexp::list(map_empty(&te.ptyext_params, |(typ, var)| {
-            Sexp::list(vec![core_type(typ), variance(var)])
+            Sexp::list(vec![core_type(arena, typ), variance(var)])
         })),
-        Sexp::list(map_empty(&te.ptyext_constructors, extension_constructor)),
+        Sexp::list(map_empty(&te.ptyext_constructors, |ec| extension_constructor(arena, ec))),
         private_flag(&te.ptyext_private),
-        attributes(&te.ptyext_attributes),
+        attributes(arena, &te.ptyext_attributes),
     ])
 }
 
-fn extension_constructor(ec: &ExtensionConstructor) -> Sexp {
+fn extension_constructor(arena: &ParseArena, ec: &ExtensionConstructor) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("extension_constructor"),
         location(&ec.pext_loc),
         Sexp::atom(&quote_string(&ec.pext_name.txt)),
         location(&ec.pext_name.loc),
-        extension_constructor_kind(&ec.pext_kind),
-        attributes(&ec.pext_attributes),
+        extension_constructor_kind(arena, &ec.pext_kind),
+        attributes(arena, &ec.pext_attributes),
     ])
 }
 
-fn extension_constructor_kind(eck: &ExtensionConstructorKind) -> Sexp {
+fn extension_constructor_kind(arena: &ParseArena, eck: &ExtensionConstructorKind) -> Sexp {
     match eck {
         ExtensionConstructorKind::Decl(args, opt_res) => Sexp::list(vec![
             Sexp::atom("Pext_decl"),
-            constructor_arguments(args),
+            constructor_arguments(arena, args),
             match opt_res {
-                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(t)]),
+                Some(t) => Sexp::list(vec![Sexp::atom("Some"), core_type(arena, t)]),
                 None => Sexp::atom("None"),
             },
         ]),
         ExtensionConstructorKind::Rebind(lid) => Sexp::list(vec![
             Sexp::atom("Pext_rebind"),
-            longident(&lid.txt),
+            longident(arena, &lid.txt),
             location(&lid.loc),
         ]),
     }
 }
 
-fn value_description(vd: &ValueDescription) -> Sexp {
+fn value_description(arena: &ParseArena, vd: &ValueDescription) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("value_description"),
         location(&vd.pval_loc),
         Sexp::atom(&quote_string(&vd.pval_name.txt)),
         location(&vd.pval_name.loc),
-        core_type(&vd.pval_type),
+        core_type(arena, &vd.pval_type),
         Sexp::list(map_empty(&vd.pval_prim, |s| Sexp::atom(&quote_string(s)))),
-        attributes(&vd.pval_attributes),
+        attributes(arena, &vd.pval_attributes),
     ])
 }
 
-fn module_declaration(md: &ModuleDeclaration) -> Sexp {
+fn module_declaration(arena: &ParseArena, md: &ModuleDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("module_declaration"),
         location(&md.pmd_loc),
         Sexp::atom(&quote_string(&md.pmd_name.txt)),
         location(&md.pmd_name.loc),
-        module_type(&md.pmd_type),
-        attributes(&md.pmd_attributes),
+        module_type(arena, &md.pmd_type),
+        attributes(arena, &md.pmd_attributes),
     ])
 }
 
-fn module_type_declaration(mtd: &ModuleTypeDeclaration) -> Sexp {
+fn module_type_declaration(arena: &ParseArena, mtd: &ModuleTypeDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("module_type_declaration"),
         location(&mtd.pmtd_loc),
         Sexp::atom(&quote_string(&mtd.pmtd_name.txt)),
         location(&mtd.pmtd_name.loc),
         match &mtd.pmtd_type {
-            Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(mt)]),
+            Some(mt) => Sexp::list(vec![Sexp::atom("Some"), module_type(arena, mt)]),
             None => Sexp::atom("None"),
         },
-        attributes(&mtd.pmtd_attributes),
+        attributes(arena, &mtd.pmtd_attributes),
     ])
 }
 
-fn open_description(od: &OpenDescription) -> Sexp {
+fn open_description(arena: &ParseArena, od: &OpenDescription) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("open_description"),
         location(&od.popen_loc),
-        longident(&od.popen_lid.txt),
+        longident(arena, &od.popen_lid.txt),
         location(&od.popen_lid.loc),
         override_flag(&od.popen_override),
-        attributes(&od.popen_attributes),
+        attributes(arena, &od.popen_attributes),
     ])
 }
 
-fn include_description(id: &IncludeDescription) -> Sexp {
+fn include_description(arena: &ParseArena, id: &IncludeDescription) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("include_description"),
         location(&id.pincl_loc),
-        module_type(&id.pincl_mod),
-        attributes(&id.pincl_attributes),
+        module_type(arena, &id.pincl_mod),
+        attributes(arena, &id.pincl_attributes),
     ])
 }
 
-fn include_declaration(id: &IncludeDeclaration) -> Sexp {
+fn include_declaration(arena: &ParseArena, id: &IncludeDeclaration) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("include_declaration"),
         location(&id.pincl_loc),
-        module_expr(&id.pincl_mod),
-        attributes(&id.pincl_attributes),
+        module_expr(arena, &id.pincl_mod),
+        attributes(arena, &id.pincl_attributes),
     ])
 }
 
-fn module_binding(mb: &ModuleBinding) -> Sexp {
+fn module_binding(arena: &ParseArena, mb: &ModuleBinding) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("module_binding"),
         location(&mb.pmb_loc),
         Sexp::atom(&quote_string(&mb.pmb_name.txt)),
         location(&mb.pmb_name.loc),
-        module_expr(&mb.pmb_expr),
-        attributes(&mb.pmb_attributes),
+        module_expr(arena, &mb.pmb_expr),
+        attributes(arena, &mb.pmb_attributes),
     ])
 }
 
@@ -1048,32 +1055,32 @@ fn module_binding(mb: &ModuleBinding) -> Sexp {
 // Signature
 // ============================================================================
 
-fn signature(sig: &Signature) -> Sexp {
-    Sexp::list(std::iter::once(Sexp::atom("signature")).chain(sig.iter().map(signature_item)).collect())
+fn signature(arena: &ParseArena, sig: &Signature) -> Sexp {
+    Sexp::list(std::iter::once(Sexp::atom("signature")).chain(sig.iter().map(|si| signature_item(arena, si))).collect())
 }
 
-fn signature_item(si: &SignatureItem) -> Sexp {
+fn signature_item(arena: &ParseArena, si: &SignatureItem) -> Sexp {
     let desc = match &si.psig_desc {
-        SignatureItemDesc::Value(vd) => Sexp::list(vec![Sexp::atom("Psig_value"), value_description(vd)]),
+        SignatureItemDesc::Value(vd) => Sexp::list(vec![Sexp::atom("Psig_value"), value_description(arena, vd)]),
         SignatureItemDesc::Type(flag, decls) => Sexp::list(vec![
             Sexp::atom("Psig_type"),
             rec_flag(flag),
-            Sexp::list(map_empty(decls, type_declaration)),
+            Sexp::list(map_empty(decls, |td| type_declaration(arena, td))),
         ]),
-        SignatureItemDesc::Typext(te) => Sexp::list(vec![Sexp::atom("Psig_typext"), type_extension(te)]),
-        SignatureItemDesc::Exception(ec) => Sexp::list(vec![Sexp::atom("Psig_exception"), extension_constructor(ec)]),
-        SignatureItemDesc::Module(md) => Sexp::list(vec![Sexp::atom("Psig_module"), module_declaration(md)]),
+        SignatureItemDesc::Typext(te) => Sexp::list(vec![Sexp::atom("Psig_typext"), type_extension(arena, te)]),
+        SignatureItemDesc::Exception(ec) => Sexp::list(vec![Sexp::atom("Psig_exception"), extension_constructor(arena, ec)]),
+        SignatureItemDesc::Module(md) => Sexp::list(vec![Sexp::atom("Psig_module"), module_declaration(arena, md)]),
         SignatureItemDesc::Recmodule(mds) => {
-            Sexp::list(vec![Sexp::atom("Psig_recmodule"), Sexp::list(map_empty(mds, module_declaration))])
+            Sexp::list(vec![Sexp::atom("Psig_recmodule"), Sexp::list(map_empty(mds, |md| module_declaration(arena, md)))])
         }
-        SignatureItemDesc::Modtype(mtd) => Sexp::list(vec![Sexp::atom("Psig_modtype"), module_type_declaration(mtd)]),
-        SignatureItemDesc::Open(od) => Sexp::list(vec![Sexp::atom("Psig_open"), open_description(od)]),
-        SignatureItemDesc::Include(id) => Sexp::list(vec![Sexp::atom("Psig_include"), include_description(id)]),
+        SignatureItemDesc::Modtype(mtd) => Sexp::list(vec![Sexp::atom("Psig_modtype"), module_type_declaration(arena, mtd)]),
+        SignatureItemDesc::Open(od) => Sexp::list(vec![Sexp::atom("Psig_open"), open_description(arena, od)]),
+        SignatureItemDesc::Include(id) => Sexp::list(vec![Sexp::atom("Psig_include"), include_description(arena, id)]),
         SignatureItemDesc::Class => Sexp::atom("Psig_class"),
         SignatureItemDesc::ClassType => Sexp::atom("Psig_class_type"),
-        SignatureItemDesc::Attribute(attr) => Sexp::list(vec![Sexp::atom("Psig_attribute"), attribute(attr)]),
+        SignatureItemDesc::Attribute(attr) => Sexp::list(vec![Sexp::atom("Psig_attribute"), attribute(arena, attr)]),
         SignatureItemDesc::Extension(ext, attrs) => {
-            Sexp::list(vec![Sexp::atom("Psig_extension"), extension(ext), attributes(attrs)])
+            Sexp::list(vec![Sexp::atom("Psig_extension"), extension(arena, ext), attributes(arena, attrs)])
         }
     };
     Sexp::list(vec![Sexp::atom("signature_item"), location(&si.psig_loc), desc])
@@ -1083,40 +1090,40 @@ fn signature_item(si: &SignatureItem) -> Sexp {
 // Structure
 // ============================================================================
 
-fn structure(str: &Structure) -> Sexp {
-    Sexp::list(std::iter::once(Sexp::atom("structure")).chain(str.iter().map(structure_item)).collect())
+fn structure(arena: &ParseArena, str: &Structure) -> Sexp {
+    Sexp::list(std::iter::once(Sexp::atom("structure")).chain(str.iter().map(|si| structure_item(arena, si))).collect())
 }
 
-fn structure_item(si: &StructureItem) -> Sexp {
+fn structure_item(arena: &ParseArena, si: &StructureItem) -> Sexp {
     let desc = match &si.pstr_desc {
         StructureItemDesc::Eval(e, attrs) => {
-            Sexp::list(vec![Sexp::atom("Pstr_eval"), expression(e), attributes(attrs)])
+            Sexp::list(vec![Sexp::atom("Pstr_eval"), expression(arena, e), attributes(arena, attrs)])
         }
         StructureItemDesc::Value(flag, bindings) => Sexp::list(vec![
             Sexp::atom("Pstr_value"),
             rec_flag(flag),
-            Sexp::list(map_empty(bindings, value_binding)),
+            Sexp::list(map_empty(bindings, |vb| value_binding(arena, vb))),
         ]),
-        StructureItemDesc::Primitive(vd) => Sexp::list(vec![Sexp::atom("Pstr_primitive"), value_description(vd)]),
+        StructureItemDesc::Primitive(vd) => Sexp::list(vec![Sexp::atom("Pstr_primitive"), value_description(arena, vd)]),
         StructureItemDesc::Type(flag, decls) => Sexp::list(vec![
             Sexp::atom("Pstr_type"),
             rec_flag(flag),
-            Sexp::list(map_empty(decls, type_declaration)),
+            Sexp::list(map_empty(decls, |td| type_declaration(arena, td))),
         ]),
-        StructureItemDesc::Typext(te) => Sexp::list(vec![Sexp::atom("Pstr_typext"), type_extension(te)]),
-        StructureItemDesc::Exception(ec) => Sexp::list(vec![Sexp::atom("Pstr_exception"), extension_constructor(ec)]),
-        StructureItemDesc::Module(mb) => Sexp::list(vec![Sexp::atom("Pstr_module"), module_binding(mb)]),
+        StructureItemDesc::Typext(te) => Sexp::list(vec![Sexp::atom("Pstr_typext"), type_extension(arena, te)]),
+        StructureItemDesc::Exception(ec) => Sexp::list(vec![Sexp::atom("Pstr_exception"), extension_constructor(arena, ec)]),
+        StructureItemDesc::Module(mb) => Sexp::list(vec![Sexp::atom("Pstr_module"), module_binding(arena, mb)]),
         StructureItemDesc::Recmodule(mbs) => {
-            Sexp::list(vec![Sexp::atom("Pstr_recmodule"), Sexp::list(map_empty(mbs, module_binding))])
+            Sexp::list(vec![Sexp::atom("Pstr_recmodule"), Sexp::list(map_empty(mbs, |mb| module_binding(arena, mb)))])
         }
-        StructureItemDesc::Modtype(mtd) => Sexp::list(vec![Sexp::atom("Pstr_modtype"), module_type_declaration(mtd)]),
-        StructureItemDesc::Open(od) => Sexp::list(vec![Sexp::atom("Pstr_open"), open_description(od)]),
+        StructureItemDesc::Modtype(mtd) => Sexp::list(vec![Sexp::atom("Pstr_modtype"), module_type_declaration(arena, mtd)]),
+        StructureItemDesc::Open(od) => Sexp::list(vec![Sexp::atom("Pstr_open"), open_description(arena, od)]),
         StructureItemDesc::Class => Sexp::atom("Pstr_class"),
         StructureItemDesc::ClassType => Sexp::atom("Pstr_class_type"),
-        StructureItemDesc::Include(id) => Sexp::list(vec![Sexp::atom("Pstr_include"), include_declaration(id)]),
-        StructureItemDesc::Attribute(attr) => Sexp::list(vec![Sexp::atom("Pstr_attribute"), attribute(attr)]),
+        StructureItemDesc::Include(id) => Sexp::list(vec![Sexp::atom("Pstr_include"), include_declaration(arena, id)]),
+        StructureItemDesc::Attribute(attr) => Sexp::list(vec![Sexp::atom("Pstr_attribute"), attribute(arena, attr)]),
         StructureItemDesc::Extension(ext, attrs) => {
-            Sexp::list(vec![Sexp::atom("Pstr_extension"), extension(ext), attributes(attrs)])
+            Sexp::list(vec![Sexp::atom("Pstr_extension"), extension(arena, ext), attributes(arena, attrs)])
         }
     };
     Sexp::list(vec![Sexp::atom("structure_item"), location(&si.pstr_loc), desc])
@@ -1127,15 +1134,15 @@ fn structure_item(si: &StructureItem) -> Sexp {
 // ============================================================================
 
 /// Print a structure (parsetree0) to sexp format with locations
-pub fn print_structure(str: &Structure, out: &mut impl Write) {
-    let sexp = structure(str);
+pub fn print_structure(arena: &ParseArena, str: &Structure, out: &mut impl Write) {
+    let sexp = structure(arena, str);
     let bytes = string_to_latin1_bytes(&sexp.to_string());
     let _ = out.write_all(&bytes);
 }
 
 /// Print a signature (parsetree0) to sexp format with locations
-pub fn print_signature(sig: &Signature, out: &mut impl Write) {
-    let sexp = signature(sig);
+pub fn print_signature(arena: &ParseArena, sig: &Signature, out: &mut impl Write) {
+    let sexp = signature(arena, sig);
     let bytes = string_to_latin1_bytes(&sexp.to_string());
     let _ = out.write_all(&bytes);
 }

@@ -23,6 +23,7 @@
 //! assert_eq!(interner.get(idx1), "hello");
 //! ```
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // ============================================================================
@@ -33,7 +34,7 @@ use std::collections::HashMap;
 ///
 /// This is a lightweight 4-byte value that can be copied freely.
 /// Two StrIdx values are equal if and only if they refer to the same string.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct StrIdx(u32);
 
 impl StrIdx {
@@ -115,6 +116,19 @@ impl Interner {
         let idx = StrIdx(self.strings.len() as u32);
         self.map.insert(s.clone(), idx);
         self.strings.push(s);
+        idx
+    }
+
+    /// Push a string without deduplication, always creating a new entry.
+    ///
+    /// Use this for dynamic strings (from user input/tokens) that should NOT
+    /// be shared during marshalling. Each call returns a unique index.
+    ///
+    /// For static strings that should be shared, use `intern()` instead.
+    pub fn push(&mut self, s: String) -> StrIdx {
+        let idx = StrIdx(self.strings.len() as u32);
+        self.strings.push(s);
+        // Note: We don't add to the map, so this string won't be found by intern()
         idx
     }
 

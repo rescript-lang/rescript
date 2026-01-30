@@ -6,7 +6,7 @@
 //! This is a 1:1 port of OCaml's `res_comments_table.ml`.
 
 use crate::location::Location;
-use crate::parse_arena::{LocIdx, ParseArena};
+use crate::parse_arena::{LidentIdx, LocIdx, ParseArena};
 use crate::parser::ast::{
     ArgLabel, Attribute, Case, ConstructorArguments, ConstructorDeclaration, CoreType,
     CoreTypeDesc, Expression, ExpressionDesc, Extension,
@@ -343,16 +343,16 @@ pub enum Node<'a> {
     CoreType(&'a CoreType),
     ExprArgument { expr: &'a Expression, loc: LocIdx },
     Expression(&'a Expression),
-    ExprRecordRow(&'a Loc<Longident>, &'a Expression),
+    ExprRecordRow(&'a Loc<LidentIdx>, &'a Expression),
     ExtensionConstructor(&'a ExtensionConstructor),
     LabelDeclaration(&'a LabelDeclaration),
     ModuleBinding(&'a ModuleBinding),
     ModuleDeclaration(&'a ModuleDeclaration),
     ModuleExpr(&'a ModuleExpr),
     ObjectField(&'a ObjectField),
-    PackageConstraint(&'a Loc<Longident>, &'a CoreType),
+    PackageConstraint(&'a Loc<LidentIdx>, &'a CoreType),
     Pattern(&'a Pattern),
-    PatternRecordRow(&'a Loc<Longident>, &'a Pattern),
+    PatternRecordRow(&'a Loc<LidentIdx>, &'a Pattern),
     RowField(&'a RowField),
     SignatureItem(&'a SignatureItem),
     StructureItem(&'a StructureItem),
@@ -459,14 +459,14 @@ fn is_if_then_else_expr(expr: &Expression) -> bool {
 }
 
 /// Collect list patterns from a cons pattern.
-fn collect_list_patterns<'a>(pattern: &'a Pattern) -> Vec<&'a Pattern> {
+fn collect_list_patterns<'a>(arena: &ParseArena, pattern: &'a Pattern) -> Vec<&'a Pattern> {
     let mut acc = Vec::new();
     let mut current = pattern;
 
     loop {
         match &current.ppat_desc {
             PatternDesc::Ppat_construct(name, Some(args))
-                if name.txt == Longident::Lident("::".to_string()) =>
+                if arena.is_lident(name.txt, "::") =>
             {
                 if let PatternDesc::Ppat_tuple(tuple) = &args.ppat_desc {
                     if tuple.len() == 2 {
@@ -479,7 +479,7 @@ fn collect_list_patterns<'a>(pattern: &'a Pattern) -> Vec<&'a Pattern> {
                 break;
             }
             PatternDesc::Ppat_construct(name, None)
-                if name.txt == Longident::Lident("[]".to_string()) =>
+                if arena.is_lident(name.txt, "[]") =>
             {
                 break;
             }
@@ -494,14 +494,14 @@ fn collect_list_patterns<'a>(pattern: &'a Pattern) -> Vec<&'a Pattern> {
 }
 
 /// Collect list expressions from a cons expression.
-fn collect_list_exprs<'a>(expr: &'a Expression) -> Vec<&'a Expression> {
+fn collect_list_exprs<'a>(arena: &ParseArena, expr: &'a Expression) -> Vec<&'a Expression> {
     let mut acc = Vec::new();
     let mut current = expr;
 
     loop {
         match &current.pexp_desc {
             ExpressionDesc::Pexp_construct(name, Some(args))
-                if name.txt == Longident::Lident("::".to_string()) =>
+                if arena.is_lident(name.txt, "::") =>
             {
                 if let ExpressionDesc::Pexp_tuple(tuple) = &args.pexp_desc {
                     if tuple.len() == 2 {
@@ -514,7 +514,7 @@ fn collect_list_exprs<'a>(expr: &'a Expression) -> Vec<&'a Expression> {
                 break;
             }
             ExpressionDesc::Pexp_construct(name, _)
-                if name.txt == Longident::Lident("[]".to_string()) =>
+                if arena.is_lident(name.txt, "[]") =>
             {
                 break;
             }
@@ -1044,8 +1044,8 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
         }
         ExpressionDesc::Pexp_let(_, bindings, body) => {
             // Check if body is unit
-            if matches!(&body.pexp_desc, ExpressionDesc::Pexp_construct(name, None) if name.txt == Longident::Lident("()".to_string()))
-            {
+            let body_is_unit = matches!(&body.pexp_desc, ExpressionDesc::Pexp_construct(name, None) if arena.is_lident(name.txt, "()"));
+            if body_is_unit {
                 walk_value_bindings(bindings, t, comments, arena);
             } else {
                 let comments = visit_list_but_continue_with_remaining_comments(
@@ -1245,14 +1245,14 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
             CommentTable::attach(&mut t.inside, expr.pexp_loc, comments);
         }
         ExpressionDesc::Pexp_construct(name, None)
-            if name.txt == Longident::Lident("[]".to_string()) =>
+            if arena.is_lident(name.txt, "[]") =>
         {
             CommentTable::attach(&mut t.inside, expr.pexp_loc, comments);
         }
         ExpressionDesc::Pexp_construct(name, Some(_))
-            if name.txt == Longident::Lident("::".to_string()) =>
+            if arena.is_lident(name.txt, "::") =>
         {
-            let list_exprs = collect_list_exprs(expr);
+            let list_exprs = collect_list_exprs(arena, expr);
             let nodes: Vec<Node<'_>> = list_exprs.iter().map(|e| Node::Expression(e)).collect();
             walk_list(&nodes, t, comments, arena);
         }
@@ -1516,9 +1516,10 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
             // Check for unary expressions
             if args.len() == 1 {
                 if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
-                    if let Longident::Lident(op) = &ident.txt {
+                    if let Longident::Lident(op) = arena.get_longident(ident.txt) {
+                        let op_str = arena.get_string(*op);
                         if matches!(
-                            op.as_str(),
+                            op_str,
                             "~+" | "~+." | "~-" | "~-." | "~~~" | "not" | "!"
                         ) {
                             let (_, arg_expr) = &args[0];
@@ -1660,7 +1661,7 @@ fn walk_expr_argument(
 }
 
 fn walk_expr_record_row(
-    li: &Loc<Longident>,
+    li: &Loc<LidentIdx>,
     expr: &Expression,
     t: &mut CommentTable,
     comments: Vec<Comment>,
@@ -1744,14 +1745,14 @@ fn walk_pattern(pattern: &Pattern, t: &mut CommentTable, comments: Vec<Comment>,
             CommentTable::attach(&mut t.inside, pattern.ppat_loc, comments);
         }
         PatternDesc::Ppat_construct(name, None)
-            if name.txt == Longident::Lident("[]".to_string()) =>
+            if arena.is_lident(name.txt, "[]") =>
         {
             CommentTable::attach(&mut t.inside, pattern.ppat_loc, comments);
         }
         PatternDesc::Ppat_construct(name, Some(_))
-            if name.txt == Longident::Lident("::".to_string()) =>
+            if arena.is_lident(name.txt, "::") =>
         {
-            let list_pats = collect_list_patterns(pattern);
+            let list_pats = collect_list_patterns(arena, pattern);
             let nodes: Vec<Node<'_>> = list_pats.iter().map(|p| Node::Pattern(p)).collect();
             walk_list(&nodes, t, comments, arena);
         }
@@ -1840,7 +1841,7 @@ fn walk_pattern(pattern: &Pattern, t: &mut CommentTable, comments: Vec<Comment>,
 }
 
 fn walk_pattern_record_row(
-    li: &Loc<Longident>,
+    li: &Loc<LidentIdx>,
     pat: &Pattern,
     t: &mut CommentTable,
     comments: Vec<Comment>,
@@ -1998,7 +1999,7 @@ fn walk_row_field(field: &RowField, t: &mut CommentTable, comments: Vec<Comment>
 }
 
 fn walk_package_constraint(
-    li: &Loc<Longident>,
+    li: &Loc<LidentIdx>,
     typ: &CoreType,
     t: &mut CommentTable,
     comments: Vec<Comment>,

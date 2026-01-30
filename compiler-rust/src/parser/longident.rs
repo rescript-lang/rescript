@@ -2,30 +2,38 @@
 //!
 //! This module defines `Longident`, which represents dotted identifiers
 //! like `Foo.Bar.baz`. It mirrors `Longident.t` from OCaml.
+//!
+//! Strings are stored as `StrIdx` indices into a string arena, enabling:
+//! - Efficient storage (4 bytes per string reference)
+//! - Identity-based sharing during marshalling (same StrIdx = same object)
 
+use crate::intern::StrIdx;
 use crate::location::Location;
 use serde::{Deserialize, Serialize};
 
 /// A long identifier, representing a dotted path like `Foo.Bar.baz`.
+///
+/// Strings are stored as `StrIdx` indices into the arena's string interner.
+/// This enables efficient sharing during marshalling: same StrIdx = same object.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Longident {
     /// A simple identifier: `foo`
-    Lident(String),
+    Lident(StrIdx),
     /// A dotted path: `Foo.bar` is `Ldot(Lident("Foo"), "bar")`
-    Ldot(Box<Longident>, String),
+    Ldot(Box<Longident>, StrIdx),
     /// An application (for functors): `F(X)` is `Lapply(Lident("F"), Lident("X"))`
     Lapply(Box<Longident>, Box<Longident>),
 }
 
 impl Longident {
-    /// Create a simple identifier.
-    pub fn lident(name: impl Into<String>) -> Self {
-        Longident::Lident(name.into())
+    /// Create a simple identifier from a StrIdx.
+    pub fn lident(name: StrIdx) -> Self {
+        Longident::Lident(name)
     }
 
-    /// Create a dotted identifier.
-    pub fn ldot(prefix: Longident, name: impl Into<String>) -> Self {
-        Longident::Ldot(Box::new(prefix), name.into())
+    /// Create a dotted identifier from a StrIdx.
+    pub fn ldot(prefix: Longident, name: StrIdx) -> Self {
+        Longident::Ldot(Box::new(prefix), name)
     }
 
     /// Create a functor application.
@@ -33,35 +41,25 @@ impl Longident {
         Longident::Lapply(Box::new(functor), Box::new(arg))
     }
 
-    /// Parse a string like "Foo.Bar.baz" into a Longident.
-    pub fn parse(s: &str) -> Self {
-        let parts: Vec<&str> = s.split('.').collect();
-        let mut result = Longident::Lident(parts[0].to_string());
-        for part in &parts[1..] {
-            result = Longident::Ldot(Box::new(result), (*part).to_string());
-        }
-        result
-    }
-
-    /// Get the last component of the identifier.
-    pub fn last(&self) -> &str {
+    /// Get the last component's StrIdx.
+    pub fn last_idx(&self) -> StrIdx {
         match self {
-            Longident::Lident(s) => s,
-            Longident::Ldot(_, s) => s,
-            Longident::Lapply(_, arg) => arg.last(),
+            Longident::Lident(s) => *s,
+            Longident::Ldot(_, s) => *s,
+            Longident::Lapply(_, arg) => arg.last_idx(),
         }
     }
 
-    /// Flatten to a list of strings.
-    pub fn flatten(&self) -> Vec<&str> {
+    /// Flatten to a list of StrIdx.
+    pub fn flatten_idx(&self) -> Vec<StrIdx> {
         match self {
-            Longident::Lident(s) => vec![s.as_str()],
+            Longident::Lident(s) => vec![*s],
             Longident::Ldot(prefix, s) => {
-                let mut v = prefix.flatten();
-                v.push(s.as_str());
+                let mut v = prefix.flatten_idx();
+                v.push(*s);
                 v
             }
-            Longident::Lapply(f, _) => f.flatten(),
+            Longident::Lapply(f, _) => f.flatten_idx(),
         }
     }
 
@@ -72,10 +70,11 @@ impl Longident {
 }
 
 impl std::fmt::Display for Longident {
+    /// Display shows StrIdx values. For actual string content, use arena lookup.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Longident::Lident(s) => write!(f, "{}", s),
-            Longident::Ldot(prefix, s) => write!(f, "{}.{}", prefix, s),
+            Longident::Lident(s) => write!(f, "Lident(#{})", s.raw()),
+            Longident::Ldot(prefix, s) => write!(f, "{}.#{}", prefix, s.raw()),
             Longident::Lapply(func, arg) => write!(f, "{}({})", func, arg),
         }
     }
@@ -92,41 +91,52 @@ pub fn mkloc(lid: Longident, loc: Location) -> LongidentLoc {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::intern::Interner;
 
     #[test]
     fn test_lident() {
-        let lid = Longident::lident("foo");
-        assert_eq!(lid.last(), "foo");
+        let mut interner = Interner::new();
+        let foo_idx = interner.intern("foo");
+        let lid = Longident::lident(foo_idx);
+        assert_eq!(lid.last_idx(), foo_idx);
         assert!(lid.is_simple());
-        assert_eq!(lid.to_string(), "foo");
+        assert_eq!(interner.get(lid.last_idx()), "foo");
     }
 
     #[test]
     fn test_ldot() {
-        let lid = Longident::ldot(Longident::lident("Foo"), "bar");
-        assert_eq!(lid.last(), "bar");
+        let mut interner = Interner::new();
+        let foo_idx = interner.intern("Foo");
+        let bar_idx = interner.intern("bar");
+        let lid = Longident::ldot(Longident::lident(foo_idx), bar_idx);
+        assert_eq!(lid.last_idx(), bar_idx);
         assert!(!lid.is_simple());
-        assert_eq!(lid.to_string(), "Foo.bar");
-    }
-
-    #[test]
-    fn test_parse() {
-        let lid = Longident::parse("Foo.Bar.baz");
-        assert_eq!(lid.last(), "baz");
-        assert_eq!(lid.to_string(), "Foo.Bar.baz");
-        assert_eq!(lid.flatten(), vec!["Foo", "Bar", "baz"]);
     }
 
     #[test]
     fn test_lapply() {
-        let lid = Longident::lapply(Longident::lident("F"), Longident::lident("X"));
-        assert_eq!(lid.to_string(), "F(X)");
+        let mut interner = Interner::new();
+        let f_idx = interner.intern("F");
+        let x_idx = interner.intern("X");
+        let lid = Longident::lapply(Longident::lident(f_idx), Longident::lident(x_idx));
+        assert!(!lid.is_simple());
     }
 
     #[test]
-    fn test_display() {
-        let lid = Longident::parse("Array.map");
-        assert_eq!(format!("{}", lid), "Array.map");
+    fn test_flatten() {
+        let mut interner = Interner::new();
+        let foo_idx = interner.intern("Foo");
+        let bar_idx = interner.intern("Bar");
+        let baz_idx = interner.intern("baz");
+        let lid = Longident::ldot(
+            Longident::ldot(Longident::lident(foo_idx), bar_idx),
+            baz_idx,
+        );
+        let indices = lid.flatten_idx();
+        assert_eq!(indices.len(), 3);
+        assert_eq!(interner.get(indices[0]), "Foo");
+        assert_eq!(interner.get(indices[1]), "Bar");
+        assert_eq!(interner.get(indices[2]), "baz");
     }
 
     #[test]

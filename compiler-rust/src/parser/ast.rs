@@ -10,7 +10,7 @@
 #![allow(missing_docs)]
 
 use crate::location::Position;
-use crate::parse_arena::{Located, LocIdx};
+use crate::parse_arena::{LidentIdx, Located, LocIdx, StrIdx};
 use serde::{Deserialize, Serialize};
 
 use super::longident::Longident;
@@ -101,15 +101,17 @@ pub enum Variance {
 }
 
 /// Argument label for function parameters.
-/// Note: Labelled and Optional include a location to match OCaml's `Labelled of string loc`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// Uses Located<StrIdx> to allow sharing with Longident::Lident when the same
+/// identifier is used for both label and value (punning).
+/// The location matches OCaml's `Labelled of string loc`.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum ArgLabel {
     /// No label.
     Nolabel,
     /// Labeled argument: `~foo` with location.
-    Labelled(Located<String>),
+    Labelled(Located<StrIdx>),
     /// Optional argument: `?foo` with location.
-    Optional(Located<String>),
+    Optional(Located<StrIdx>),
 }
 
 impl ArgLabel {
@@ -123,16 +125,16 @@ impl ArgLabel {
         matches!(self, ArgLabel::Optional(_))
     }
 
-    /// Get the label name, if any.
-    pub fn name(&self) -> Option<&str> {
+    /// Get the label StrIdx, if any.
+    pub fn name_idx(&self) -> Option<StrIdx> {
         match self {
             ArgLabel::Nolabel => None,
-            ArgLabel::Labelled(s) | ArgLabel::Optional(s) => Some(&s.txt),
+            ArgLabel::Labelled(s) | ArgLabel::Optional(s) => Some(s.txt),
         }
     }
 
-    /// Get the located string, if any.
-    pub fn located(&self) -> Option<&Located<String>> {
+    /// Get the located StrIdx, if any.
+    pub fn located(&self) -> Option<&Located<StrIdx>> {
         match self {
             ArgLabel::Nolabel => None,
             ArgLabel::Labelled(s) | ArgLabel::Optional(s) => Some(s),
@@ -228,7 +230,7 @@ pub enum CoreTypeDesc {
     /// Tuple type: `(T1, T2, ..., Tn)`.
     Ptyp_tuple(Vec<CoreType>),
     /// Type constructor: `tconstr` or `T tconstr` or `(T1, ..., Tn) tconstr`.
-    Ptyp_constr(Loc<Longident>, Vec<CoreType>),
+    Ptyp_constr(Loc<LidentIdx>, Vec<CoreType>),
     /// Object type: `{. field: T, ... }`.
     Ptyp_object(Vec<ObjectField>, ClosedFlag),
     /// Type alias: `T as 'a`.
@@ -244,7 +246,7 @@ pub enum CoreTypeDesc {
 }
 
 /// Package type: `module S with type t = T`.
-pub type PackageType = (Loc<Longident>, Vec<(Loc<Longident>, CoreType)>);
+pub type PackageType = (Loc<LidentIdx>, Vec<(Loc<LidentIdx>, CoreType)>);
 
 /// Row field in a polymorphic variant.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -295,7 +297,7 @@ pub enum PatternDesc {
     /// Tuple: `(P1, P2, ..., Pn)`.
     Ppat_tuple(Vec<Pattern>),
     /// Constructor: `C` or `C(P)`.
-    Ppat_construct(Loc<Longident>, Option<Box<Pattern>>),
+    Ppat_construct(Loc<LidentIdx>, Option<Box<Pattern>>),
     /// Variant: `\`A` or `\`A(P)`.
     Ppat_variant(Label, Option<Box<Pattern>>),
     /// Record: `{l1: P1, ..., ln: Pn}`.
@@ -307,7 +309,7 @@ pub enum PatternDesc {
     /// Constraint: `(P: T)`.
     Ppat_constraint(Box<Pattern>, CoreType),
     /// Type pattern: `#tconstr`.
-    Ppat_type(Loc<Longident>),
+    Ppat_type(Loc<LidentIdx>),
     /// Unpack: `module(P)`.
     Ppat_unpack(StringLoc),
     /// Exception: `exception P`.
@@ -315,14 +317,14 @@ pub enum PatternDesc {
     /// Extension: `[%id]`.
     Ppat_extension(Extension),
     /// Open: `M.(P)`.
-    Ppat_open(Loc<Longident>, Box<Pattern>),
+    Ppat_open(Loc<LidentIdx>, Box<Pattern>),
 }
 
 /// A record field in a pattern.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PatternRecordField {
     /// Field name.
-    pub lid: Loc<Longident>,
+    pub lid: Loc<LidentIdx>,
     /// Pattern.
     pub pat: Pattern,
     /// Whether this is optional.
@@ -348,7 +350,7 @@ pub struct Expression {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ExpressionDesc {
     /// Identifier: `x` or `M.x`.
-    Pexp_ident(Loc<Longident>),
+    Pexp_ident(Loc<LidentIdx>),
     /// Constant: `1`, `'a'`, `"hello"`.
     Pexp_constant(Constant),
     /// Let binding: `let P = E in E'`.
@@ -376,15 +378,15 @@ pub enum ExpressionDesc {
     /// Tuple: `(E1, E2, ..., En)`.
     Pexp_tuple(Vec<Expression>),
     /// Constructor: `C` or `C(E)`.
-    Pexp_construct(Loc<Longident>, Option<Box<Expression>>),
+    Pexp_construct(Loc<LidentIdx>, Option<Box<Expression>>),
     /// Variant: `\`A` or `\`A(E)`.
     Pexp_variant(Label, Option<Box<Expression>>),
     /// Record: `{l1: E1, ..., ln: En}` or `{...E, l1: E1, ...}`.
     Pexp_record(Vec<ExpressionRecordField>, Option<Box<Expression>>),
     /// Field access: `E.l`.
-    Pexp_field(Box<Expression>, Loc<Longident>),
+    Pexp_field(Box<Expression>, Loc<LidentIdx>),
     /// Field set: `E.l = E'`.
-    Pexp_setfield(Box<Expression>, Loc<Longident>, Box<Expression>),
+    Pexp_setfield(Box<Expression>, Loc<LidentIdx>, Box<Expression>),
     /// Array: `[E1, ..., En]`.
     Pexp_array(Vec<Expression>),
     /// If-then-else: `if E1 { E2 } else { E3 }`.
@@ -418,7 +420,7 @@ pub enum ExpressionDesc {
     /// Pack: `module(ME)`.
     Pexp_pack(ModuleExpr),
     /// Open: `M.{ E }` or `open M; E`.
-    Pexp_open(OverrideFlag, Loc<Longident>, Box<Expression>),
+    Pexp_open(OverrideFlag, Loc<LidentIdx>, Box<Expression>),
     /// Extension: `[%id]`.
     Pexp_extension(Extension),
     /// Await: `await E`.
@@ -431,7 +433,7 @@ pub enum ExpressionDesc {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExpressionRecordField {
     /// Field name.
-    pub lid: Loc<Longident>,
+    pub lid: Loc<LidentIdx>,
     /// Expression.
     pub expr: Expression,
     /// Whether this is optional.
@@ -486,9 +488,9 @@ pub enum JsxTagName {
     /// Lowercase tag: `div`.
     Lower(String),
     /// Qualified lowercase: `Mod.div`.
-    QualifiedLower { path: Longident, name: String },
+    QualifiedLower { path: LidentIdx, name: String },
     /// Uppercase tag (component): `Button`.
-    Upper(Longident),
+    Upper(LidentIdx),
     /// Invalid tag name (for error recovery).
     Invalid(String),
 }
@@ -573,7 +575,7 @@ pub struct ModuleExpr {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModuleExprDesc {
     /// Module identifier: `M`.
-    Pmod_ident(Loc<Longident>),
+    Pmod_ident(Loc<LidentIdx>),
     /// Module structure: `{ ... }`.
     Pmod_structure(Vec<StructureItem>),
     /// Functor: `(X: S) => ME`.
@@ -603,7 +605,7 @@ pub struct ModuleType {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ModuleTypeDesc {
     /// Module type identifier: `S`.
-    Pmty_ident(Loc<Longident>),
+    Pmty_ident(Loc<LidentIdx>),
     /// Signature: `{ ... }`.
     Pmty_signature(Vec<SignatureItem>),
     /// Functor type: `(X: S) => MT`.
@@ -615,20 +617,20 @@ pub enum ModuleTypeDesc {
     /// Extension: `[%id]`.
     Pmty_extension(Extension),
     /// Alias: `module M`.
-    Pmty_alias(Loc<Longident>),
+    Pmty_alias(Loc<LidentIdx>),
 }
 
 /// With constraint.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WithConstraint {
     /// Type constraint: `type t = T`.
-    Pwith_type(Loc<Longident>, TypeDeclaration),
+    Pwith_type(Loc<LidentIdx>, TypeDeclaration),
     /// Module constraint: `module M = M'`.
-    Pwith_module(Loc<Longident>, Loc<Longident>),
+    Pwith_module(Loc<LidentIdx>, Loc<LidentIdx>),
     /// Type substitution: `type t := T`.
-    Pwith_typesubst(Loc<Longident>, TypeDeclaration),
+    Pwith_typesubst(Loc<LidentIdx>, TypeDeclaration),
     /// Module substitution: `module M := M'`.
-    Pwith_modsubst(Loc<Longident>, Loc<Longident>),
+    Pwith_modsubst(Loc<LidentIdx>, Loc<LidentIdx>),
 }
 
 // ============================================================================
@@ -809,7 +811,7 @@ pub struct LabelDeclaration {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TypeExtension {
     /// Extended type.
-    pub ptyext_path: Loc<Longident>,
+    pub ptyext_path: Loc<LidentIdx>,
     /// Type parameters.
     pub ptyext_params: Vec<(CoreType, Variance)>,
     /// Constructors.
@@ -839,7 +841,7 @@ pub enum ExtensionConstructorKind {
     /// Declaration: `C of T`.
     Pext_decl(ConstructorArguments, Option<CoreType>),
     /// Rebind: `C = D`.
-    Pext_rebind(Loc<Longident>),
+    Pext_rebind(Loc<LidentIdx>),
 }
 
 /// Module binding: `module M = ME`.
@@ -885,7 +887,7 @@ pub struct ModuleTypeDeclaration {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OpenDescription {
     /// Opened module.
-    pub popen_lid: Loc<Longident>,
+    pub popen_lid: Loc<LidentIdx>,
     /// Override flag.
     pub popen_override: OverrideFlag,
     /// Location.

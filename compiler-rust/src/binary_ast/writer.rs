@@ -57,17 +57,17 @@ const MAGIC_SEP_CHAR: u8 = b'\n';
 pub fn write_structure_ast(
     output_path: &Path,
     source_path: &str,
-    arena: &ParseArena,
+    arena: &mut ParseArena,
     ast: &Structure,
 ) -> io::Result<()> {
     // 1. Extract dependencies
-    let deps = extract_structure_deps(ast);
+    let deps = extract_structure_deps(arena, ast);
 
     // 2. Convert AST to parsetree0 format
     let ast0 = map_structure(arena, ast);
 
-    // 3. Write the binary AST file
-    write_ast_file(output_path, source_path, &deps, &ast0)
+    // 3. Write the binary AST file (parsetree0 doesn't need arena for marshalling)
+    write_ast_file(output_path, source_path, arena, &deps, &ast0)
 }
 
 /// Write a binary AST file for a signature (interface, .iast file).
@@ -85,17 +85,17 @@ pub fn write_structure_ast(
 pub fn write_signature_ast(
     output_path: &Path,
     source_path: &str,
-    arena: &ParseArena,
+    arena: &mut ParseArena,
     ast: &Signature,
 ) -> io::Result<()> {
     // 1. Extract dependencies
-    let deps = extract_signature_deps(ast);
+    let deps = extract_signature_deps(arena, ast);
 
     // 2. Convert AST to parsetree0 format
     let ast0 = map_signature(arena, ast);
 
-    // 3. Write the binary AST file
-    write_ast_file(output_path, source_path, &deps, &ast0)
+    // 3. Write the binary AST file (parsetree0 doesn't need arena for marshalling)
+    write_ast_file(output_path, source_path, arena, &deps, &ast0)
 }
 
 /// Write a binary AST file for a structure in the CURRENT parsetree format.
@@ -105,32 +105,35 @@ pub fn write_signature_ast(
 pub fn write_structure_ast_current(
     output_path: &Path,
     source_path: &str,
+    arena: &crate::parse_arena::ParseArena,
     ast: &Structure,
 ) -> io::Result<()> {
     // 1. Extract dependencies
-    let deps = extract_structure_deps(ast);
+    let deps = extract_structure_deps(arena, ast);
 
     // 2. Write the binary AST file directly (no conversion to parsetree0)
-    write_ast_file(output_path, source_path, &deps, ast)
+    write_ast_file(output_path, source_path, arena, &deps, ast)
 }
 
 /// Write a binary AST file for a signature in the CURRENT parsetree format.
 pub fn write_signature_ast_current(
     output_path: &Path,
     source_path: &str,
+    arena: &crate::parse_arena::ParseArena,
     ast: &Signature,
 ) -> io::Result<()> {
     // 1. Extract dependencies
-    let deps = extract_signature_deps(ast);
+    let deps = extract_signature_deps(arena, ast);
 
     // 2. Write the binary AST file directly (no conversion to parsetree0)
-    write_ast_file(output_path, source_path, &deps, ast)
+    write_ast_file(output_path, source_path, arena, &deps, ast)
 }
 
 /// Write a binary AST file with the given dependencies and AST.
 fn write_ast_file<A: Marshal>(
     output_path: &Path,
     source_path: &str,
+    arena: &crate::parse_arena::ParseArena,
     deps: &std::collections::BTreeSet<String>,
     ast: &A,
 ) -> io::Result<()> {
@@ -144,6 +147,7 @@ fn write_ast_file<A: Marshal>(
 
     // Marshal the AST
     let mut marshal_writer = MarshalWriter::new();
+    marshal_writer.set_arena(arena);
     ast.marshal(&mut marshal_writer);
     let marshal_data = marshal_writer.finish();
 
@@ -170,15 +174,15 @@ fn write_ast_file<A: Marshal>(
 }
 
 /// Write a structure AST to a Vec<u8> (for testing).
-pub fn write_structure_ast_to_vec(source_path: &str, arena: &ParseArena, ast: &Structure) -> Vec<u8> {
-    let deps = extract_structure_deps(ast);
+pub fn write_structure_ast_to_vec(source_path: &str, arena: &mut ParseArena, ast: &Structure) -> Vec<u8> {
+    let deps = extract_structure_deps(arena, ast);
     let ast0 = map_structure(arena, ast);
     write_ast_to_vec(source_path, &deps, &ast0)
 }
 
 /// Write a signature AST to a Vec<u8> (for testing).
-pub fn write_signature_ast_to_vec(source_path: &str, arena: &ParseArena, ast: &Signature) -> Vec<u8> {
-    let deps = extract_signature_deps(ast);
+pub fn write_signature_ast_to_vec(source_path: &str, arena: &mut ParseArena, ast: &Signature) -> Vec<u8> {
+    let deps = extract_signature_deps(arena, ast);
     let ast0 = map_signature(arena, ast);
     write_ast_to_vec(source_path, &deps, &ast0)
 }
@@ -260,10 +264,11 @@ mod tests {
         }
     }
 
-    fn make_module_ref_expr(module: &str, name: &str) -> Expression {
+    fn make_module_ref_expr(arena: &mut crate::parse_arena::ParseArena, module: &str, name: &str) -> Expression {
+        let lid_idx = arena.push_longident(Longident::ldot(Longident::lident(module), name));
         Expression {
             pexp_desc: ExpressionDesc::Pexp_ident(Located {
-                txt: Longident::ldot(Longident::lident(module), name),
+                txt: lid_idx,
                 loc: LocIdx::none(),
             }),
             pexp_loc: LocIdx::none(),
@@ -323,9 +328,9 @@ mod tests {
 
     #[test]
     fn test_with_dependencies() {
-        let arena = make_test_arena();
+        let mut arena = make_test_arena();
         let ast = vec![StructureItem {
-            pstr_desc: StructureItemDesc::Pstr_eval(make_module_ref_expr("Array", "map"), vec![]),
+            pstr_desc: StructureItemDesc::Pstr_eval(make_module_ref_expr(&mut arena, "Array", "map"), vec![]),
             pstr_loc: LocIdx::none(),
         }];
 
@@ -345,17 +350,17 @@ mod tests {
 
     #[test]
     fn test_multiple_dependencies() {
-        let arena = make_test_arena();
+        let mut arena = make_test_arena();
         let ast = vec![
             StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(
-                    make_module_ref_expr("Array", "map"),
+                    make_module_ref_expr(&mut arena, "Array", "map"),
                     vec![],
                 ),
                 pstr_loc: LocIdx::none(),
             },
             StructureItem {
-                pstr_desc: StructureItemDesc::Pstr_eval(make_module_ref_expr("Js", "log"), vec![]),
+                pstr_desc: StructureItemDesc::Pstr_eval(make_module_ref_expr(&mut arena, "Js", "log"), vec![]),
                 pstr_loc: LocIdx::none(),
             },
         ];

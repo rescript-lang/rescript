@@ -10,6 +10,7 @@
 #![allow(dead_code)]
 
 use crate::ident::Ident;
+use crate::intern::StrIdx;
 use crate::location::Location;
 use crate::parse_arena::{LocIdx, ParseArena};
 use crate::parser::ast::RecFlag;
@@ -37,16 +38,16 @@ use crate::parser::ast::Variance as ParserVariance;
 // ============================================================================
 
 /// Convert a Longident to a Path.
-fn path_from_longident(lid: &Longident) -> Path {
+fn path_from_longident<'a>(lid: &Longident, get_str: impl Fn(StrIdx) -> &'a str + Copy) -> Path {
     match lid {
-        Longident::Lident(name) => Path::pident(Ident::create_local(name)),
+        Longident::Lident(name) => Path::pident(Ident::create_local(get_str(*name))),
         Longident::Ldot(prefix, name) => {
-            let prefix_path = path_from_longident(prefix);
-            Path::pdot(prefix_path, name.clone())
+            let prefix_path = path_from_longident(prefix, get_str);
+            Path::pdot(prefix_path, get_str(*name))
         }
         Longident::Lapply(functor, arg) => {
-            let functor_path = path_from_longident(functor);
-            let arg_path = path_from_longident(arg);
+            let functor_path = path_from_longident(functor, get_str);
+            let arg_path = path_from_longident(arg, get_str);
             Path::papply(functor_path, arg_path)
         }
     }
@@ -97,7 +98,7 @@ pub fn type_module_expr<'a>(
         ParsedModuleExprDesc::Pmod_ident(lid) => {
             // Module identifier: M
             // Look up the module path in the environment
-            let path = path_from_longident(&lid.txt);
+            let path = path_from_longident(tctx.resolve_lid(lid.txt), |idx| arena.get_string(idx));
 
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_ident(path, lid.clone()),
@@ -200,13 +201,11 @@ pub fn type_module_expr<'a>(
         ParsedModuleExprDesc::Pmod_extension(_ext) => {
             // Extension: [%id]
             // Extensions are typically handled by preprocessors
+            let placeholder_lid = arena.placeholder_located(loc);
             Ok(ModuleExpr {
                 mod_desc: ModuleExprDesc::Tmod_ident(
                     Path::pident(Ident::create_local("extension")),
-                    crate::parse_arena::Located {
-                        txt: crate::parser::longident::Longident::Lident("extension".to_string()),
-                        loc,
-                    },
+                    placeholder_lid,
                 ),
                 mod_loc: loc,
                 mod_type: ModuleType::placeholder(),
@@ -596,12 +595,10 @@ fn type_structure_item<'a>(
 
         ParsedStructureItemDesc::Pstr_typext(_ext) => {
             // Type extension: type t += ...
+            let placeholder_lid = arena.placeholder_located(loc);
             let desc = StructureItemDesc::Tstr_typext(TypeExtension {
                 tyext_path: Path::pident(Ident::create_local("placeholder")),
-                tyext_txt: crate::parse_arena::Located {
-                    txt: crate::parser::longident::Longident::Lident("placeholder".to_string()),
-                    loc,
-                },
+                tyext_txt: placeholder_lid,
                 tyext_params: vec![],
                 tyext_constructors: vec![],
                 tyext_private: crate::parser::ast::PrivateFlag::Public,
@@ -725,7 +722,7 @@ fn type_structure_item<'a>(
 
         ParsedStructureItemDesc::Pstr_open(open_desc) => {
             // Open declaration: open M
-            let path = path_from_longident(&open_desc.popen_lid.txt);
+            let path = path_from_longident(tctx.resolve_lid(open_desc.popen_lid.txt), |idx| arena.get_string(idx));
 
             let desc = StructureItemDesc::Tstr_open(OpenDeclaration {
                 open_expr: ModuleExpr {

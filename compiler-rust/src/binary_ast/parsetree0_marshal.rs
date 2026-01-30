@@ -66,16 +66,19 @@ impl Marshal for ArgLabel {
     /// - Nolabel: int 0 (constant constructor)
     /// - Labelled(s): Block(tag=0, [s])
     /// - Optional(s): Block(tag=1, [s])
+    ///
+    /// Uses StrIdx-based sharing to match OCaml's behavior where the same
+    /// string (e.g., in punned ~compare) shares memory.
     fn marshal(&self, w: &mut MarshalWriter) {
         match self {
             ArgLabel::Nolabel => w.write_int(0),
             ArgLabel::Labelled(s) => {
                 w.write_block_header(0, 1);
-                w.write_str(s);
+                w.write_str_idx(*s);
             }
             ArgLabel::Optional(s) => {
                 w.write_block_header(1, 1);
-                w.write_str(s);
+                w.write_str_idx(*s);
             }
         }
     }
@@ -1203,12 +1206,16 @@ mod tests {
 
     #[test]
     fn test_expression_ident() {
+        use crate::parse_arena::ParseArena;
         use crate::parser::longident::Longident;
 
+        let mut arena = ParseArena::default();
+        let x_idx = arena.intern_string("x");
         let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
         let expr = Expression {
             pexp_desc: ExpressionDesc::Ident(crate::location::Located::new(
-                Longident::Lident("x".to_string()),
+                Longident::Lident(x_idx),
                 crate::location::Location::none(),
             )),
             pexp_loc: crate::location::Location::none(),

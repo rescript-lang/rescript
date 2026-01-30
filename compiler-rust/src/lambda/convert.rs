@@ -15,7 +15,7 @@ use crate::lambda::{
     Lambda,
 };
 use crate::location::Location;
-use crate::parse_arena::{LocIdx, ParseArena};
+use crate::parse_arena::{LidentIdx, LocIdx, Located, ParseArena};
 use crate::parser::ast::{DirectionFlag, MutableFlag as ParserMutableFlag, RecFlag};
 use crate::types::asttypes::MutableFlag as TypeMutableFlag;
 use crate::types::decl::{ConstructorDescription, ConstructorTag, LabelDescription, ValueKind};
@@ -752,7 +752,7 @@ impl<'a> LambdaConverter<'a> {
     fn convert_record(
         &mut self,
         loc: Location,
-        fields: &[(crate::types::typedtree::Loc<crate::parser::longident::Longident>, LabelDescription, RecordLabelDefinition)],
+        fields: &[(Located<LidentIdx>, LabelDescription, RecordLabelDefinition)],
         base: Option<&Expression>,
     ) -> Lambda {
         let mut values = vec![None; fields.len()];
@@ -1038,7 +1038,9 @@ mod tests {
 
     #[test]
     fn test_convert_let_var() {
-        let arena = ParseArena::new();
+        use crate::parser::longident::Longident;
+        let mut arena = ParseArena::new();
+        let lid_idx = arena.push_longident(Longident::Lident("x".to_string()));
         let mut conv = LambdaConverter::new(&arena);
         let id = Ident::create_local("x");
         let pat = Pattern::new(
@@ -1063,7 +1065,7 @@ mod tests {
         let body = Expression::new(
             ExpressionDesc::Texp_ident(
                 crate::types::Path::pident(id.clone()),
-                Located::mknoloc(Longident::Lident("x".to_string())),
+                Located::mknoloc(lid_idx),
                 crate::types::ValueDescription {
                     val_type: crate::types::TypeExprRef(0),
                     val_kind: ValueKind::ValReg,

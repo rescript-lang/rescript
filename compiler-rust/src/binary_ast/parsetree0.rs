@@ -6,6 +6,7 @@
 //! The types here mirror `compiler/ml/parsetree0.ml` exactly.
 
 use crate::location::{Located, Location};
+use crate::parse_arena::StrIdx;
 use crate::parser::longident::Longident;
 
 // ========== Asttypes (flags and labels) ==========
@@ -71,14 +72,16 @@ pub enum Variance {
 pub type Label = String;
 
 /// Argument label for function parameters (parsetree0 uses Noloc version)
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Uses StrIdx to allow sharing with Longident::Lident when the same
+/// identifier is used for both label and value (punning).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArgLabel {
     /// Unlabeled argument
     Nolabel,
     /// Labeled argument (~label)
-    Labelled(String),
+    Labelled(StrIdx),
     /// Optional argument (?label)
-    Optional(String),
+    Optional(StrIdx),
 }
 
 /// Arity annotation for functions (None = inferred, Some(n) = explicit arity)

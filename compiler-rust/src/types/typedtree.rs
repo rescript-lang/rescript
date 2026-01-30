@@ -18,7 +18,7 @@
 #![allow(non_camel_case_types)]
 
 use crate::ident::Ident;
-use crate::parse_arena::{Located, LocIdx};
+use crate::parse_arena::{LidentIdx, Located, LocIdx};
 use crate::parser::ast::{
     ArgLabel, Arity, Attributes, ClosedFlag, DirectionFlag, MutableFlag, OverrideFlag, PrivateFlag,
     RecFlag,
@@ -90,9 +90,9 @@ pub enum PatExtra {
     /// Type constraint: `P : T`.
     Tpat_constraint(TypedCoreType),
     /// Type pattern: `#tconst`.
-    Tpat_type(Path, Loc<Longident>),
+    Tpat_type(Path, Loc<LidentIdx>),
     /// Open pattern: `M.(P)`.
-    Tpat_open(Path, Loc<Longident>, EnvRef),
+    Tpat_open(Path, Loc<LidentIdx>, EnvRef),
     /// Unpack pattern: `(module P)`.
     Tpat_unpack,
 }
@@ -117,7 +117,7 @@ pub enum PatternDesc {
     Tpat_tuple(Vec<Pattern>),
 
     /// Constructor: `C`, `C(P)`, `C(P1, ..., Pn)`.
-    Tpat_construct(Loc<Longident>, ConstructorDescription, Vec<Pattern>),
+    Tpat_construct(Loc<LidentIdx>, ConstructorDescription, Vec<Pattern>),
 
     /// Variant: `` `A ``, `` `A(P) ``.
     Tpat_variant(String, Option<Box<Pattern>>, RowDescRef),
@@ -125,7 +125,7 @@ pub enum PatternDesc {
     /// Record: `{l1: P1, ..., ln: Pn}` or `{l1: P1, ..., _}`.
     /// The bool indicates whether the field is optional.
     Tpat_record(
-        Vec<(Loc<Longident>, LabelDescription, Pattern, bool)>,
+        Vec<(Loc<LidentIdx>, LabelDescription, Pattern, bool)>,
         ClosedFlag,
     ),
 
@@ -167,7 +167,7 @@ pub enum ExpExtra {
     /// First is optional source type, second is required target type.
     Texp_coerce(Option<TypedCoreType>, TypedCoreType),
     /// Open: `let open M in E`.
-    Texp_open(OverrideFlag, Path, Loc<Longident>, EnvRef),
+    Texp_open(OverrideFlag, Path, Loc<LidentIdx>, EnvRef),
     /// Newtype: `fun (type t) -> E`.
     Texp_newtype(String),
 }
@@ -176,7 +176,7 @@ pub enum ExpExtra {
 #[derive(Debug, Clone)]
 pub enum ExpressionDesc {
     /// Identifier: `x`, `M.x`.
-    Texp_ident(Path, Loc<Longident>, ValueDescription),
+    Texp_ident(Path, Loc<LidentIdx>, ValueDescription),
 
     /// Constant: `1`, `'a'`, `"hello"`, `1.0`.
     Texp_constant(Constant),
@@ -217,7 +217,7 @@ pub enum ExpressionDesc {
     Texp_tuple(Vec<Expression>),
 
     /// Constructor: `C`, `C(E)`, `C(E1, ..., En)`.
-    Texp_construct(Loc<Longident>, ConstructorDescription, Vec<Expression>),
+    Texp_construct(Loc<LidentIdx>, ConstructorDescription, Vec<Expression>),
 
     /// Variant: `` `A ``, `` `A(E) ``.
     Texp_variant(String, Option<Box<Expression>>),
@@ -225,17 +225,17 @@ pub enum ExpressionDesc {
     /// Record: `{l1: E1, ..., ln: En}` or `{...E0, l1: E1, ...}`.
     /// Fields are (lid, label_desc, definition).
     Texp_record {
-        fields: Vec<(Loc<Longident>, LabelDescription, RecordLabelDefinition)>,
+        fields: Vec<(Loc<LidentIdx>, LabelDescription, RecordLabelDefinition)>,
         extended_expression: Option<Box<Expression>>,
     },
 
     /// Field access: `E.l`.
-    Texp_field(Box<Expression>, Loc<Longident>, LabelDescription),
+    Texp_field(Box<Expression>, Loc<LidentIdx>, LabelDescription),
 
     /// Field mutation: `E.l = E'`.
     Texp_setfield(
         Box<Expression>,
-        Loc<Longident>,
+        Loc<LidentIdx>,
         LabelDescription,
         Box<Expression>,
     ),
@@ -295,7 +295,7 @@ pub enum RecordLabelDefinition {
     /// Label is kept from extended expression.
     Kept(TypeExprRef),
     /// Label is overridden with new expression.
-    Overridden(Loc<Longident>, Expression),
+    Overridden(Loc<LidentIdx>, Expression),
 }
 
 /// An argument in a function application.
@@ -397,7 +397,7 @@ pub enum TypedCoreTypeDesc {
     /// Tuple type: `(T1, ..., Tn)`.
     Ttyp_tuple(Vec<TypedCoreType>),
     /// Type constructor: `t`, `M.t`, `('a, 'b) t`.
-    Ttyp_constr(Path, Loc<Longident>, Vec<TypedCoreType>),
+    Ttyp_constr(Path, Loc<LidentIdx>, Vec<TypedCoreType>),
     /// Object type: `< m1: T1; ...; mn: Tn >`.
     Ttyp_object(Vec<ObjectField>, ClosedFlag),
     /// Polymorphic type: `'a 'b. T`.
@@ -456,9 +456,9 @@ pub struct PackageType {
     /// Module type path.
     pub pack_path: Path,
     /// Module type identifier.
-    pub pack_txt: Loc<Longident>,
+    pub pack_txt: Loc<LidentIdx>,
     /// Type constraints.
-    pub pack_fields: Vec<(Loc<Longident>, TypedCoreType)>,
+    pub pack_fields: Vec<(Loc<LidentIdx>, TypedCoreType)>,
 }
 
 // ============================================================================
@@ -484,7 +484,7 @@ pub struct ModuleExpr {
 #[derive(Debug, Clone)]
 pub enum ModuleExprDesc {
     /// Identifier.
-    Tmod_ident(Path, Loc<Longident>),
+    Tmod_ident(Path, Loc<LidentIdx>),
     /// Structure.
     Tmod_structure(Structure),
     /// Functor application.
@@ -700,7 +700,7 @@ pub struct TypeExtension {
     /// Extended type path.
     pub tyext_path: Path,
     /// Extended type longident.
-    pub tyext_txt: Loc<Longident>,
+    pub tyext_txt: Loc<LidentIdx>,
     /// Type parameters.
     pub tyext_params: Vec<(TypedCoreType, Variance)>,
     /// Extension constructors.
@@ -804,7 +804,7 @@ pub enum ExtensionConstructorKind {
     /// Declaration with argument types and optional result type.
     Text_decl(Vec<ConstructorArgument>, Option<TypedCoreType>),
     /// Rebind to another constructor.
-    Text_rebind(Path, Loc<Longident>),
+    Text_rebind(Path, Loc<LidentIdx>),
 }
 
 /// Constructor argument in extension declaration.

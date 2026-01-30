@@ -4,7 +4,7 @@
 //! into expression AST nodes.
 
 use crate::location::Position;
-use crate::parse_arena::{Located, LocIdx};
+use crate::parse_arena::{LidentIdx, Located, LocIdx, ParseArena};
 
 use super::ast::*;
 use super::core::{ExprContext, ast_helper, make_braces_attr, mknoloc, recover, with_loc};
@@ -69,22 +69,20 @@ pub fn parse_constant(p: &mut Parser<'_>) -> Constant {
 // ============================================================================
 
 /// Check if an expression is the underscore placeholder `_`
-fn is_underscore_placeholder(expr: &Expression) -> bool {
-    matches!(
-        &expr.pexp_desc,
-        ExpressionDesc::Pexp_ident(loc) if matches!(&loc.txt, Longident::Lident(s) if s == "_")
-    )
+fn is_underscore_placeholder(expr: &Expression, arena: &ParseArena) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(loc) => arena.is_lident(loc.txt, "_"),
+        _ => false,
+    }
 }
 
 /// Replace underscore placeholders with a reference to the given variable name
-fn replace_underscores_in_expr(expr: Expression, var_name: &str) -> Expression {
-    if is_underscore_placeholder(&expr) {
+fn replace_underscores_in_expr(expr: Expression, var_name: &str, arena: &mut ParseArena) -> Expression {
+    if is_underscore_placeholder(&expr, arena) {
         let loc = expr.pexp_loc.clone();
+        let lid_idx = arena.push_lident(var_name);
         Expression {
-            pexp_desc: ExpressionDesc::Pexp_ident(with_loc(
-                Longident::Lident(var_name.to_string()),
-                loc.clone(),
-            )),
+            pexp_desc: ExpressionDesc::Pexp_ident(with_loc(lid_idx, loc.clone())),
             pexp_loc: loc,
             pexp_attributes: vec![],
         }
@@ -100,6 +98,7 @@ fn transform_placeholder_application(
     args: Vec<(ArgLabel, Expression)>,
     partial: bool,
     loc: Location,
+    arena: &mut ParseArena,
 ) -> Expression {
     // Find the LAST underscore placeholder and get its location
     // OCaml uses a mutable ref that gets overwritten for each underscore found,
@@ -107,7 +106,7 @@ fn transform_placeholder_application(
     let underscore_loc = args
         .iter()
         .filter_map(|(_, expr)| {
-            if is_underscore_placeholder(expr) {
+            if is_underscore_placeholder(expr, arena) {
                 Some(expr.pexp_loc.clone())
             } else {
                 None
@@ -136,7 +135,7 @@ fn transform_placeholder_application(
     let var_name = "__x";
     let transformed_args: Vec<(ArgLabel, Expression)> = args
         .into_iter()
-        .map(|(label, expr)| (label, replace_underscores_in_expr(expr, var_name)))
+        .map(|(label, expr)| (label, replace_underscores_in_expr(expr, var_name, arena)))
         .collect();
 
     // Create the inner Pexp_apply
@@ -179,12 +178,14 @@ fn transform_placeholder_application(
 
 /// Parse a value path after a dot (for field access).
 /// This parses things like `Lexing.pos_fname` into a Longident.
-fn parse_value_path_after_dot(p: &mut Parser<'_>) -> Located<Longident> {
+fn parse_value_path_after_dot(p: &mut Parser<'_>) -> Located<LidentIdx> {
     let start_pos = p.start_pos.clone();
 
     match &p.token {
         Token::Uident(name) => {
-            let mut path = Longident::Lident(name.clone());
+            let name = name.clone(); // Clone to release the borrow
+            let name_idx = p.arena_mut().push_string(name);
+            let mut path = Longident::Lident(name_idx);
             p.next();
 
             // Continue parsing the path: Module.Module.field
@@ -192,17 +193,23 @@ fn parse_value_path_after_dot(p: &mut Parser<'_>) -> Located<Longident> {
                 p.next();
                 match &p.token {
                     Token::Uident(name) => {
-                        path = Longident::Ldot(Box::new(path), name.clone());
+                        let name = name.clone(); // Clone to release the borrow
+                        let name_idx = p.arena_mut().push_string(name);
+                        path = Longident::Ldot(Box::new(path), name_idx);
                         p.next();
                     }
                     Token::Lident(name) => {
-                        path = Longident::Ldot(Box::new(path), name.clone());
+                        let name = name.clone(); // Clone to release the borrow
+                        let name_idx = p.arena_mut().push_string(name);
+                        path = Longident::Ldot(Box::new(path), name_idx);
                         p.next();
                         break;
                     }
                     Token::String(name) => {
                         // Quoted field: Module."switch"
-                        path = Longident::Ldot(Box::new(path), name.clone());
+                        let name = name.clone(); // Clone to release the borrow
+                        let name_idx = p.arena_mut().push_string(name);
+                        path = Longident::Ldot(Box::new(path), name_idx);
                         p.next();
                         break;
                     }
@@ -211,27 +218,29 @@ fn parse_value_path_after_dot(p: &mut Parser<'_>) -> Located<Longident> {
             }
 
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            with_loc(path, loc)
+            let lid_idx = p.push_longident(path);
+            with_loc(lid_idx, loc)
         }
         Token::Lident(name) => {
-            let path = Longident::Lident(name.clone());
+            let lid_idx = p.push_lident(name.clone());
             p.next();
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            with_loc(path, loc)
+            with_loc(lid_idx, loc)
         }
         Token::String(name) => {
             // Quoted field: ."switch"
-            let path = Longident::Lident(name.clone());
+            let lid_idx = p.push_lident(name.clone());
             p.next();
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            with_loc(path, loc)
+            with_loc(lid_idx, loc)
         }
         _ => {
             p.err(DiagnosticCategory::Message(
                 "Expected identifier after dot".to_string(),
             ));
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            with_loc(Longident::Lident("_".to_string()), loc)
+            let lid_idx = p.push_lident_static("_");
+            with_loc(lid_idx, loc)
         }
     }
 }
@@ -269,7 +278,8 @@ pub fn parse_value_or_constructor(p: &mut Parser<'_>) -> Expression {
                 }
             }
 
-            let lid = super::core::build_longident(&path_parts);
+            let lid = super::core::build_longident(p.arena_mut(), &path_parts);
+            let lid_idx = p.push_longident(lid);
             let loc = p.mk_loc_to_prev_end(&start_pos);
 
             // Check if it's a constructor (all uppercase components)
@@ -283,7 +293,7 @@ pub fn parse_value_or_constructor(p: &mut Parser<'_>) -> Expression {
                 let has_arg = arg.is_some();
                 Expression {
                     pexp_desc: ExpressionDesc::Pexp_construct(
-                        with_loc(lid, loc.clone()),
+                        with_loc(lid_idx, loc.clone()),
                         arg.map(Box::new),
                     ),
                     pexp_loc: if has_arg {
@@ -295,14 +305,15 @@ pub fn parse_value_or_constructor(p: &mut Parser<'_>) -> Expression {
                 }
             } else {
                 // Regular identifier
-                ast_helper::make_ident(lid, loc)
+                ast_helper::make_ident_idx(lid_idx, loc)
             }
         }
         Token::Lident(name) => {
             let name = name.clone();
             p.next();
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            ast_helper::make_ident(Longident::Lident(name), loc)
+            let lid_idx = p.push_lident(&name);
+            ast_helper::make_ident_idx(lid_idx, loc)
         }
         _ => {
             p.err(DiagnosticCategory::Message(
@@ -325,9 +336,9 @@ fn parse_constructor_arg(p: &mut Parser<'_>) -> Option<Expression> {
                 // Empty constructor args: Rgb()
                 p.next();
                 let loc = p.mk_loc_to_prev_end(&start_pos);
-                let lid = Longident::Lident("()".to_string());
+                let lid_idx = p.push_lident_static("()");
                 Some(Expression {
-                    pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid, loc.clone()), None),
+                    pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid_idx, loc.clone()), None),
                     pexp_loc: loc,
                     pexp_attributes: vec![],
                 })
@@ -509,7 +520,8 @@ pub fn parse_operand_expr(p: &mut Parser<'_>, context: ExprContext) -> Expressio
                 // Just a regular "async" identifier - continue with primary expr parsing
                 // to handle function calls like async(x)
                 let loc = p.mk_loc_to_prev_end(&start_pos);
-                let ident = ast_helper::make_ident(Longident::Lident("async".to_string()), loc);
+                let lid_idx = p.push_lident_static("async");
+                let ident = ast_helper::make_ident_idx(lid_idx, loc);
                 (parse_primary_expr(p, ident, false), false)
             }
         }
@@ -705,9 +717,10 @@ fn parse_es6_arrow_expression_internal(
                 (loc.clone(), loc)
             }
         };
+        let unit_lid = p.push_lident_static("()");
         let unit_pat = Pattern {
             ppat_desc: PatternDesc::Ppat_construct(
-                with_loc(Longident::Lident("()".to_string()), unit_pat_loc.clone()),
+                with_loc(unit_lid, unit_pat_loc.clone()),
                 None,
             ),
             ppat_loc: unit_pat_loc,
@@ -886,9 +899,10 @@ fn parse_parameters(p: &mut Parser<'_>) -> Vec<super::core::FundefParameter> {
                 let end_pos = p.end_pos.clone();
                 p.next();
                 let loc = p.mk_loc(&lparen_pos, &end_pos);
+                let unit_lid = p.push_lident_static("()");
                 let unit_pat = Pattern {
                     ppat_desc: PatternDesc::Ppat_construct(
-                        with_loc(Longident::Lident("()".to_string()), loc.clone()),
+                        with_loc(unit_lid, loc.clone()),
                         None,
                     ),
                     ppat_loc: loc.clone(),
@@ -992,8 +1006,10 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
         let tilde_pos = p.start_pos.clone();
         p.next();
         let (lbl_name, lbl_loc) = parse_lident(p);
+        // Intern the string to get a StrIdx for sharing with identifiers
+        let lbl_str_idx = p.arena_mut().intern_string(&lbl_name);
         // OCaml: label location is just the name, not including ~
-        let lbl_located = Located::new(lbl_name.clone(), lbl_loc);
+        let lbl_located = Located::new(lbl_str_idx, lbl_loc);
         // OCaml: pattern var location includes ~ (from tilde_pos to end of name)
         let name_loc_with_tilde = p.mk_loc_to_prev_end(&tilde_pos);
         let lbl = match &p.token {
@@ -1260,14 +1276,17 @@ fn parse_payload(p: &mut Parser<'_>) -> Payload {
         let start_pos = p.start_pos.clone();
         p.next();
         // Create a structure item with the string expression
+        // IMPORTANT: Each location must be created separately to match OCaml's allocation pattern
+        let pexp_loc = p.mk_loc_to_prev_end(&start_pos);
+        let pstr_loc = p.mk_loc_to_prev_end(&start_pos);
         let str_expr = Expression {
             pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(s, tag)),
-            pexp_loc: p.mk_loc_to_prev_end(&start_pos),
+            pexp_loc,
             pexp_attributes: vec![],
         };
         return Payload::PStr(vec![StructureItem {
             pstr_desc: StructureItemDesc::Pstr_eval(str_expr, vec![]),
-            pstr_loc: p.mk_loc_to_prev_end(&start_pos),
+            pstr_loc,
         }]);
     }
 
@@ -1380,7 +1399,8 @@ pub fn parse_binary_expr(
         let op_loc = p.mk_loc_from_positions(&op_start, &op_end);
 
         // Build application expression
-        let op_expr = ast_helper::make_ident(Longident::Lident(token.to_string()), op_loc);
+        let op_lid = super::core::make_lident_static(p.arena_mut(), &token.to_string());
+        let op_expr = ast_helper::make_ident(p, op_lid, op_loc);
         left = ast_helper::make_apply(
             op_expr,
             vec![(ArgLabel::Nolabel, left), (ArgLabel::Nolabel, right)],
@@ -1457,9 +1477,10 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
             let is_true = p.token == Token::True;
             p.next();
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            let lid = Longident::Lident(if is_true { "true" } else { "false" }.to_string());
+            let lid = super::core::make_lident_static(p.arena_mut(), if is_true { "true" } else { "false" });
+            let lid_idx = p.push_longident(lid);
             Expression {
-                pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid, loc.clone()), None),
+                pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid_idx, loc.clone()), None),
                 pexp_loc: loc,
                 pexp_attributes: vec![],
             }
@@ -1505,9 +1526,9 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 // Unit: ()
                 p.next();
                 let loc = p.mk_loc_to_prev_end(&start_pos);
-                let lid = Longident::Lident("()".to_string());
+                let lid_idx = p.push_lident_static("()");
                 Expression {
-                    pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid, loc.clone()), None),
+                    pexp_desc: ExpressionDesc::Pexp_construct(with_loc(lid_idx, loc.clone()), None),
                     pexp_loc: loc,
                     pexp_attributes: vec![],
                 }
@@ -1647,9 +1668,10 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                     p.next();
                     // OCaml uses the full () location for both the expression and the longident
                     let unit_loc = p.mk_loc_to_prev_end(&lparen_pos);
+                    let lid_idx = p.push_lident_static("()");
                     Some(Box::new(Expression {
                         pexp_desc: ExpressionDesc::Pexp_construct(
-                            with_loc(Longident::Lident("()".to_string()), unit_loc.clone()),
+                            with_loc(lid_idx, unit_loc.clone()),
                             None,
                         ),
                         pexp_loc: unit_loc,
@@ -1746,7 +1768,8 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
         Token::Underscore => {
             p.next();
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            ast_helper::make_ident(Longident::Lident("_".to_string()), loc)
+            let lid = super::core::make_lident_static(p.arena_mut(), "_");
+            ast_helper::make_ident(p, lid, loc)
         }
         Token::Eof => {
             p.err(DiagnosticCategory::Message(
@@ -1845,6 +1868,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                     Token::Lident(name) => {
                         let name = name.clone();
                         let name_loc = p.mk_loc_current();
+                        let lid_idx = p.push_lident(&name);
                         p.next();
 
                         // Check for field assignment: expr.field = value
@@ -1855,7 +1879,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
                                     Box::new(expr),
-                                    with_loc(Longident::Lident(name), name_loc),
+                                    with_loc(lid_idx, name_loc),
                                     Box::new(value),
                                 ),
                                 pexp_loc: loc,
@@ -1866,7 +1890,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_field(
                                     Box::new(expr),
-                                    with_loc(Longident::Lident(name), name_loc),
+                                    with_loc(lid_idx, name_loc),
                                 ),
                                 pexp_loc: loc,
                                 pexp_attributes: vec![],
@@ -1877,6 +1901,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         // Quoted field access: expr."switch"
                         let name = name.clone();
                         let name_loc = p.mk_loc_current();
+                        let lid_idx = p.push_lident(&name);
                         p.next();
 
                         // Check for field assignment: expr."field" = value
@@ -1887,7 +1912,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_setfield(
                                     Box::new(expr),
-                                    with_loc(Longident::Lident(name), name_loc),
+                                    with_loc(lid_idx, name_loc),
                                     Box::new(value),
                                 ),
                                 pexp_loc: loc,
@@ -1898,7 +1923,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                             expr = Expression {
                                 pexp_desc: ExpressionDesc::Pexp_field(
                                     Box::new(expr),
-                                    with_loc(Longident::Lident(name), name_loc),
+                                    with_loc(lid_idx, name_loc),
                                 ),
                                 pexp_loc: loc,
                                 pexp_attributes: vec![],
@@ -1933,7 +1958,7 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                 let loc_start_pos = p.loc_start(expr.pexp_loc);
                 let loc = p.mk_loc_to_prev_end(&loc_start_pos);
                 // Apply placeholder transformation: f(a, _, b) => fun __x -> f(a, __x, b)
-                expr = transform_placeholder_application(Box::new(expr), args, partial, loc);
+                expr = transform_placeholder_application(Box::new(expr), args, partial, loc, p.arena_mut());
             }
             Token::Lbracket => {
                 // If [ is on a new line, it's an array literal (new expression), not indexing.
@@ -1983,10 +2008,8 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         };
                         // Create the "#=" operator
                         let operator_loc = p.mk_loc(&equal_start, &equal_end);
-                        let operator = ast_helper::make_ident(
-                            Longident::Lident("#=".to_string()),
-                            operator_loc,
-                        );
+                        let op_lid = super::core::make_lident_static(p.arena_mut(), "#=");
+                        let operator = ast_helper::make_ident(p, op_lid, operator_loc);
                         // Apply "#=" to [send_expr, value]
                         expr = ast_helper::make_apply(
                             operator,
@@ -2003,13 +2026,13 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         let loc = p.mk_loc_to_prev_end(&start_pos);
                         // Use the bracket location [index] for the synthesized Array.set identifier
                         // (matching OCaml's array_loc = mk_loc lbracket rbracket)
-                        let array_set = ast_helper::make_ident(
-                            Longident::Ldot(
-                                Box::new(Longident::Lident("Array".to_string())),
-                                "set".to_string(),
-                            ),
-                            bracket_loc.clone(),
+                        let array_idx = p.arena_mut().intern_string("Array");
+                        let set_idx = p.arena_mut().intern_string("set");
+                        let array_set_lid = Longident::Ldot(
+                            Box::new(Longident::Lident(array_idx)),
+                            set_idx,
                         );
+                        let array_set = ast_helper::make_ident(p, array_set_lid, bracket_loc.clone());
                         let apply_expr = ast_helper::make_apply(
                             array_set,
                             vec![
@@ -2046,11 +2069,15 @@ pub fn parse_primary_expr(p: &mut Parser<'_>, operand: Expression, no_call: bool
                         // Non-string index: arr[index] -> Array.get(arr, index)
                         // Use the bracket location [index] for the synthesized Array.get identifier
                         // (matching OCaml's array_loc = mk_loc lbracket rbracket)
+                        let array_idx = p.arena_mut().intern_string("Array");
+                        let get_idx = p.arena_mut().intern_string("get");
+                        let array_get_lid = Longident::Ldot(
+                            Box::new(Longident::Lident(array_idx)),
+                            get_idx,
+                        );
                         let array_get = ast_helper::make_ident(
-                            Longident::Ldot(
-                                Box::new(Longident::Lident("Array".to_string())),
-                                "get".to_string(),
-                            ),
+                            p,
+                            array_get_lid,
                             bracket_loc,
                         );
                         // OCaml doesn't add res.array.access attribute in the parser
@@ -2108,10 +2135,11 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
         // This produces a single unit argument, not an empty list
         // OCaml uses Location.mknoloc here, so no location
         if p.token == Token::Rparen {
+            let lid_idx = p.push_lident_static("()");
             let unit_expr = Expression {
                 pexp_desc: ExpressionDesc::Pexp_construct(
                     Loc {
-                        txt: Longident::Lident("()".to_string()),
+                        txt: lid_idx,
                         loc: LocIdx::none(),
                     },
                     None,
@@ -2147,10 +2175,11 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
     // OCaml treats empty parens as a unit argument
     if args.is_empty() && !partial {
         let unit_loc = p.mk_loc(&start_pos, &rparen_end);
+        let lid_idx = p.push_lident_static("()");
         let unit_expr = Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
-                    txt: Longident::Lident("()".to_string()),
+                    txt: lid_idx,
                     loc: unit_loc.clone(),
                 },
                 None,
@@ -2169,7 +2198,9 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
     if p.token == Token::Tilde {
         p.next();
         let (name, name_loc) = parse_lident(p);
-        let name_located = Located::new(name.clone(), name_loc.clone());
+        // Intern the name to get a StrIdx - this will be shared with Longident::Lident for punning
+        let name_str_idx = p.arena_mut().intern_string(&name);
+        let name_located = Located::new(name_str_idx, name_loc.clone());
 
         if p.token == Token::Equal {
             p.next();
@@ -2187,15 +2218,15 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
         } else if p.token == Token::Question {
             // ~label? (optional punning)
             p.next();
-            // Use the label's location for the punned expression
-            let expr = ast_helper::make_ident(Longident::Lident(name.clone()), name_loc.clone());
+            // Use the same interned StrIdx for the identifier - this enables sharing
+            let expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
             (ArgLabel::Optional(name_located), expr)
         } else if p.token == Token::Colon {
             // ~label: type (labeled with type annotation - punning with constraint)
             p.next();
             let typ = super::typ::parse_typ_expr(p);
-            // Use the label's location for the punned expression
-            let ident_expr = ast_helper::make_ident(Longident::Lident(name.clone()), name_loc.clone());
+            // Use the same interned StrIdx for the identifier - this enables sharing
+            let ident_expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
             // Constraint location spans from label name to end of type
             let constraint_start = p.loc_start(name_loc);
             let constraint_loc = p.mk_loc_to_prev_end(&constraint_start);
@@ -2207,8 +2238,8 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
             (ArgLabel::Labelled(name_located), expr)
         } else {
             // ~label (punning)
-            // Use the label's location for the punned expression
-            let expr = ast_helper::make_ident(Longident::Lident(name.clone()), name_loc.clone());
+            // Use the same interned StrIdx for the identifier - this enables sharing
+            let expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
             (ArgLabel::Labelled(name_located), expr)
         }
     } else {
@@ -2328,17 +2359,19 @@ fn parse_array_expr(p: &mut Parser<'_>) -> Expression {
         pexp_attributes: vec![],
     };
 
-    let concat_many = Expression {
-        pexp_desc: ExpressionDesc::Pexp_ident(with_loc(
-            Longident::Ldot(
-                Box::new(Longident::Ldot(
-                    Box::new(Longident::Lident("Belt".to_string())),
-                    "Array".to_string(),
-                )),
-                "concatMany".to_string(),
-            ),
-            loc.clone(),
+    let belt_idx = p.arena_mut().intern_string("Belt");
+    let array_idx = p.arena_mut().intern_string("Array");
+    let concat_many_idx = p.arena_mut().intern_string("concatMany");
+    let lid = Longident::Ldot(
+        Box::new(Longident::Ldot(
+            Box::new(Longident::Lident(belt_idx)),
+            array_idx,
         )),
+        concat_many_idx,
+    );
+    let lid_idx = p.push_longident(lid);
+    let concat_many = Expression {
+        pexp_desc: ExpressionDesc::Pexp_ident(with_loc(lid_idx, loc.clone())),
         pexp_loc: loc.clone(),
         pexp_attributes: vec![(mknoloc("res.spread".to_string()), Payload::PStr(vec![]))],
     };
@@ -2422,15 +2455,20 @@ fn parse_list_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
             };
 
             // Build Belt.List.concatMany
+            let belt_idx = p.arena_mut().intern_string("Belt");
+            let list_idx = p.arena_mut().intern_string("List");
+            let concat_many_idx = p.arena_mut().intern_string("concatMany");
+            let lid = Longident::Ldot(
+                Box::new(Longident::Ldot(
+                    Box::new(Longident::Lident(belt_idx)),
+                    list_idx,
+                )),
+                concat_many_idx,
+            );
+            let lid_idx = p.push_longident(lid);
             let concat_many_ident = Expression {
                 pexp_desc: ExpressionDesc::Pexp_ident(Loc {
-                    txt: Longident::Ldot(
-                        Box::new(Longident::Ldot(
-                            Box::new(Longident::Lident("Belt".to_string())),
-                            "List".to_string(),
-                        )),
-                        "concatMany".to_string(),
-                    ),
+                    txt: lid_idx,
                     loc: loc.clone(),
                 }),
                 pexp_loc: loc.clone(),
@@ -2505,10 +2543,11 @@ fn split_list_by_spread(
 fn make_empty_list(p: &mut Parser<'_>, loc: Location) -> Expression {
     // OCaml: let loc = {loc with Location.loc_ghost = true}
     let ghost_loc = p.arena_mut().mk_ghost_loc(loc);
+    let lid_idx = p.push_lident_static("[]");
     Expression {
         pexp_desc: ExpressionDesc::Pexp_construct(
             Loc {
-                txt: Longident::Lident("[]".to_string()),
+                txt: lid_idx,
                 loc: ghost_loc,
             },
             None,
@@ -2545,10 +2584,11 @@ fn make_list_expression_simple(
             pexp_loc: cons_loc,
             pexp_attributes: vec![],
         };
+        let lid_idx = p.push_lident_static("::");
         acc = Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
-                    txt: Longident::Lident("::".to_string()),
+                    txt: lid_idx,
                     loc: cons_loc,
                 },
                 Some(Box::new(tuple)),
@@ -2572,6 +2612,10 @@ fn make_list_expression_with_loc(
 ) -> Expression {
     let seg_loc = p.mk_loc_from_positions(&seg_start, &seg_end);
 
+    // Pre-allocate the list constructor longidents
+    let nil_idx = p.push_lident_static("[]");
+    let cons_idx = p.push_lident_static("::");
+
     // Build the list using cons cells
     let list_end = seg_end;
     let mut acc = spread.unwrap_or_else(|| {
@@ -2580,7 +2624,7 @@ fn make_list_expression_with_loc(
         Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
-                    txt: Longident::Lident("[]".to_string()),
+                    txt: nil_idx,
                     loc: ghost_loc,
                 },
                 None,
@@ -2601,7 +2645,7 @@ fn make_list_expression_with_loc(
         acc = Expression {
             pexp_desc: ExpressionDesc::Pexp_construct(
                 Loc {
-                    txt: Longident::Lident("::".to_string()),
+                    txt: cons_idx,
                     loc: cons_loc,
                 },
                 Some(Box::new(tuple)),
@@ -2680,12 +2724,16 @@ fn parse_dict_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     };
 
     // Create Primitive_dict.make identifier
+    let prim_idx = p.arena_mut().intern_string("Primitive_dict");
+    let make_idx = p.arena_mut().intern_string("make");
+    let lid = Longident::Ldot(
+        Box::new(Longident::Lident(prim_idx)),
+        make_idx,
+    );
+    let lid_idx = p.push_longident(lid);
     let make_ident = Expression {
         pexp_desc: ExpressionDesc::Pexp_ident(Loc {
-            txt: Longident::Ldot(
-                Box::new(Longident::Lident("Primitive_dict".to_string())),
-                "make".to_string(),
-            ),
+            txt: lid_idx,
             loc: loc.clone(),
         }),
         pexp_loc: loc.clone(),
@@ -2944,7 +2992,7 @@ fn parse_expr_block(p: &mut Parser<'_>) -> Expression {
         .unwrap_or_else(|| p.prev_end_pos.clone());
     let loc = p.mk_loc(&start_pos, &end_pos);
 
-    body.unwrap_or_else(|| ast_helper::make_unit(loc))
+    body.unwrap_or_else(|| ast_helper::make_unit(p, loc))
 }
 
 /// Parse a block expression { stmt1; stmt2; expr } WITH res.braces attribute.
@@ -2957,7 +3005,10 @@ fn parse_block_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
     p.expect(Token::Rbrace);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
-    let mut expr = body.unwrap_or_else(|| ast_helper::make_unit(loc.clone()));
+    let mut expr = match body {
+        Some(e) => e,
+        None => ast_helper::make_unit(p, loc.clone()),
+    };
 
     // Note: The special {ident =>} case is handled separately by parse_braced_arrow_ident.
     // For other arrow functions inside braces ({_ => ...}, {() => ...}, {(x, y) => ...}),
@@ -3009,7 +3060,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             let body = rest.unwrap_or_else(|| {
                 // OCaml: when block ends without trailing expression, implicit () is at the } position
                 let loc = p.mk_loc_current();
-                ast_helper::make_unit(loc)
+                ast_helper::make_unit(p, loc)
             });
 
             // OCaml uses p.prev_end_pos for Pexp_open location
@@ -3086,7 +3137,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 let body = rest.unwrap_or_else(|| {
                     // OCaml: when block ends without trailing expression, implicit () is at the } position
                     let loc = p.mk_loc_current();
-                    ast_helper::make_unit(loc)
+                    ast_helper::make_unit(p, loc)
                 });
 
                 // OCaml uses p.prev_end_pos for Pexp_letmodule location
@@ -3117,7 +3168,7 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             let body = rest.unwrap_or_else(|| {
                 // OCaml: when block ends without trailing expression, implicit () is at the } position
                 let loc = p.mk_loc_current();
-                ast_helper::make_unit(loc)
+                ast_helper::make_unit(p, loc)
             });
 
             // OCaml uses p.prev_end_pos for Pexp_letexception location
@@ -3220,7 +3271,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
                 let inner_for_constraint = (**inner).clone();
 
                 // Substitute Ptyp_constr -> Ptyp_var for the Ptyp_poly body
-                let substituted_inner = super::typ::substitute_type_vars((**inner).clone(), &var_set);
+                let substituted_inner = super::typ::substitute_type_vars(p.arena(), (**inner).clone(), &var_set);
 
                 // Rebuild the Ptyp_poly with the substituted body
                 let substituted_typ = CoreType {
@@ -3361,7 +3412,7 @@ fn parse_let_in_block_with_continuation_and_attrs(
     let body = rest.unwrap_or_else(|| {
         // OCaml: when block ends without trailing expression, implicit () is at the } position
         let loc = p.mk_loc_current();
-        ast_helper::make_unit(loc)
+        ast_helper::make_unit(p, loc)
     });
 
     // OCaml: Pexp_let location always uses p.prev_end_pos after parsing body
@@ -3396,7 +3447,7 @@ fn parse_module_name(p: &mut Parser<'_>) -> Located<String> {
 }
 
 /// Parse a module long identifier.
-fn parse_module_longident(p: &mut Parser<'_>) -> Located<Longident> {
+fn parse_module_longident(p: &mut Parser<'_>) -> Located<LidentIdx> {
     let start_pos = p.start_pos.clone();
     let mut parts = vec![];
 
@@ -3427,9 +3478,10 @@ fn parse_module_longident(p: &mut Parser<'_>) -> Located<Longident> {
         parts.push("Error".to_string());
     }
 
-    let lid = super::core::build_longident(&parts);
+    let lid = super::core::build_longident(p.arena_mut(), &parts);
+    let lid_idx = p.push_longident(lid);
     let loc = p.mk_loc_to_prev_end(&start_pos);
-    with_loc(lid, loc)
+    with_loc(lid_idx, loc)
 }
 
 /// Parse record fields.
@@ -3473,7 +3525,8 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
             break;
         }
 
-        let lid_unloc = super::core::build_longident(&parts);
+        let lid_unloc = super::core::build_longident(p.arena_mut(), &parts);
+        let lid_idx = p.push_longident(lid_unloc);
         let pun_name = parts.last().cloned().unwrap_or("_".to_string());
 
         let (lid, expr, opt) = if p.token == Token::Colon {
@@ -3488,13 +3541,14 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
                 p.next();
             }
             let expr = parse_expr(p);
-            (with_loc(lid_unloc, lid_loc), expr, opt)
+            (with_loc(lid_idx, lid_loc), expr, opt)
         } else {
             // Punning: field is same as variable
             // For optional punned fields, the expression location is just the identifier (using expr_start)
             let loc = p.mk_loc_to_prev_end(&expr_start);
-            let expr = ast_helper::make_ident(Longident::Lident(pun_name), loc.clone());
-            (with_loc(lid_unloc, loc), expr, opt_punning)
+            let pun_idx = p.arena_mut().push_string(pun_name);
+            let expr = ast_helper::make_ident(p, Longident::Lident(pun_idx), loc.clone());
+            (with_loc(lid_idx, loc), expr, opt_punning)
         };
 
         fields.push(ExpressionRecordField { lid, expr, opt });
@@ -3521,20 +3575,21 @@ fn parse_js_object_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 
             // The lid location should be just the key, not including the value
             let key_loc = p.mk_loc(&field_start, &key_end);
+            let lid_idx = p.push_lident(&key);
 
             if p.token == Token::Colon {
                 p.next();
                 let expr = parse_expr(p);
                 fields.push(ExpressionRecordField {
-                    lid: with_loc(Longident::Lident(key), key_loc),
+                    lid: with_loc(lid_idx, key_loc),
                     expr,
                     opt: false,
                 });
             } else {
                 // Punning for string keys (less common but valid)
-                let expr = ast_helper::make_ident(Longident::Lident(key.clone()), key_loc.clone());
+                let expr = ast_helper::make_ident_idx(lid_idx, key_loc.clone());
                 fields.push(ExpressionRecordField {
-                    lid: with_loc(Longident::Lident(key), key_loc),
+                    lid: with_loc(lid_idx, key_loc),
                     expr,
                     opt: false,
                 });
@@ -3649,7 +3704,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             let body = rest.unwrap_or_else(|| {
                 // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
                 let loc = p.mk_loc_current();
-                ast_helper::make_unit(loc)
+                ast_helper::make_unit(p, loc)
             });
 
             // OCaml uses p.prev_end_pos for Pexp_open location
@@ -3700,7 +3755,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
                 let body = rest.unwrap_or_else(|| {
                     // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
                     let loc = p.mk_loc_current();
-                    ast_helper::make_unit(loc)
+                    ast_helper::make_unit(p, loc)
                 });
 
                 // OCaml uses p.prev_end_pos for Pexp_letmodule location
@@ -3731,7 +3786,7 @@ fn parse_switch_case_body(p: &mut Parser<'_>) -> Option<Expression> {
             let body = rest.unwrap_or_else(|| {
                 // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
                 let loc = p.mk_loc_current();
-                ast_helper::make_unit(loc)
+                ast_helper::make_unit(p, loc)
             });
 
             // OCaml uses p.prev_end_pos for Pexp_letexception location
@@ -3868,7 +3923,7 @@ fn parse_let_in_switch_case(p: &mut Parser<'_>) -> Expression {
     let body = rest.unwrap_or_else(|| {
         // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
         let loc = p.mk_loc_current();
-        ast_helper::make_unit(loc)
+        ast_helper::make_unit(p, loc)
     });
 
     // OCaml: Pexp_let location always uses p.prev_end_pos after parsing body
@@ -3964,7 +4019,7 @@ fn parse_switch_case_block(p: &mut Parser<'_>) -> Expression {
     parse_switch_case_body(p).unwrap_or_else(|| {
         // OCaml uses mk_loc p.start_pos p.end_pos for synthesized unit
         let loc = p.mk_loc_current();
-        ast_helper::make_unit(loc)
+        ast_helper::make_unit(p, loc)
     })
 }
 
@@ -4052,7 +4107,7 @@ fn parse_for_expr(p: &mut Parser<'_>) -> Expression {
             // for () - unit pattern, then check for alias
             p.next();
             let loc = p.mk_loc_to_prev_end(&lparen_pos);
-            let unit_pat = super::pattern::make_unit_construct_pattern(loc);
+            let unit_pat = super::pattern::make_unit_construct_pattern(p, loc);
             let pat = super::pattern::parse_alias_pattern(p, unit_pat, vec![]);
             (pat, false)
         } else {
@@ -4324,14 +4379,16 @@ fn parse_jsx_tag_name(p: &mut Parser<'_>) -> JsxTagName {
                         p.next();
                         let full_name = read_hyphen_chain(p, lname);
                         // This is a qualified lowercase tag: Foo.custom-tag
-                        let path = super::core::build_longident(&parts);
-                        return JsxTagName::QualifiedLower { path, name: full_name };
+                        let path = super::core::build_longident(p.arena_mut(), &parts);
+                        let path_idx = p.push_longident(path);
+                        return JsxTagName::QualifiedLower { path: path_idx, name: full_name };
                     }
                     _ => break,
                 }
             }
-            let lid = super::core::build_longident(&parts);
-            JsxTagName::Upper(lid)
+            let lid = super::core::build_longident(p.arena_mut(), &parts);
+            let lid_idx = p.push_longident(lid);
+            JsxTagName::Upper(lid_idx)
         }
         _ => {
             p.err(DiagnosticCategory::Message(
@@ -4478,13 +4535,14 @@ fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
                     Token::Lident(name) => {
                         let name = name.clone();
                         let name_loc = p.mk_loc_current();
+                        let lid_idx = p.push_lident(&name);
                         p.next();
                         let loc_start_pos = p.loc_start(expr.pexp_loc);
                 let loc = p.mk_loc_to_prev_end(&loc_start_pos);
                         expr = Expression {
                             pexp_desc: ExpressionDesc::Pexp_field(
                                 Box::new(expr),
-                                with_loc(Longident::Lident(name), name_loc),
+                                with_loc(lid_idx, name_loc),
                             ),
                             pexp_loc: loc,
                             pexp_attributes: vec![],
@@ -4559,7 +4617,7 @@ fn parse_jsx_braced_expr(p: &mut Parser<'_>, lbrace_start: Position) -> Expressi
         Some(expr) => expr,
         None => {
             let loc = p.mk_loc_to_prev_end(&lbrace_start);
-            ast_helper::make_unit(loc)
+            ast_helper::make_unit(p, loc)
         }
     }
 }
@@ -4573,14 +4631,14 @@ fn parse_jsx_braced_expr(p: &mut Parser<'_>, lbrace_start: Position) -> Expressi
 /// If prefix is Some(ident), it's a tagged template literal like `sql`...``.
 fn parse_template_literal_with_prefix(
     p: &mut Parser<'_>,
-    prefix: Option<(Longident, Location)>,
+    prefix: Option<(LidentIdx, Location)>,
 ) -> Expression {
     let start_pos = p.start_pos.clone();
     let template_literal_attr = (mknoloc("res.template".to_string()), Payload::PStr(vec![]));
 
     // Determine the string delimiter based on prefix (json -> "json", otherwise "js")
     let part_prefix = match &prefix {
-        Some((Longident::Lident(name), _)) if name == "json" => Some("json".to_string()),
+        Some((lid_idx, _)) if p.arena().is_lident(*lid_idx, "json") => Some("json".to_string()),
         _ => Some("js".to_string()),
     };
 
@@ -4669,7 +4727,7 @@ fn parse_template_literal_with_prefix(
 
     // Check if this is a tagged template (non-json prefix)
     let is_tagged = match &prefix {
-        Some((Longident::Lident(name), _)) if name == "json" => false,
+        Some((lid_idx, _)) if p.arena().is_lident(*lid_idx, "json") => false,
         Some(_) => true,
         None => false,
     };
@@ -4749,8 +4807,9 @@ fn parse_template_literal_with_prefix(
         }
 
         // Fold with ++ operator
+        let lid_idx = p.push_lident_static("++");
         let hidden_operator = Expression {
-            pexp_desc: ExpressionDesc::Pexp_ident(mknoloc(Longident::Lident("++".to_string()))),
+            pexp_desc: ExpressionDesc::Pexp_ident(mknoloc(lid_idx)),
             pexp_loc: LocIdx::none(),
             pexp_attributes: vec![],
         };

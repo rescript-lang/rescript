@@ -26,7 +26,8 @@
 
 use std::collections::HashMap;
 
-use crate::parse_arena::{LocIdx, ParseArena, PosIdx};
+use crate::parse_arena::{LidentIdx, LocIdx, ParseArena, PosIdx, StrIdx};
+use crate::parser::longident::Longident;
 
 /// Magic number for small Marshal format
 const MAGIC_NUMBER_SMALL: u32 = 0x8495A6BE;
@@ -78,16 +79,26 @@ pub struct MarshalWriter {
     /// Maps pointer identity to object counter at time of serialization (for sharing)
     obj_table: HashMap<usize, u32>,
 
-    /// Maps string content to object counter (for content-based string sharing)
-    string_table: HashMap<String, u32>,
+    /// Maps StrIdx to object counter (for arena-based string sharing)
+    /// Same StrIdx = same object, will be shared in output
+    str_idx_table: HashMap<StrIdx, u32>,
 
     /// Maps PosIdx to object counter (for arena-based Position sharing)
     /// Same index = same object, will be shared in output
     position_idx_table: HashMap<PosIdx, u32>,
 
+    /// Maps Position content to object counter (for content-based Position sharing)
+    /// Used for parsetree0 where positions are stored directly, not via PosIdx.
+    /// Key: (file_name, line, bol, cnum)
+    position_content_table: HashMap<(String, usize, usize, usize), u32>,
+
     /// Maps LocIdx to object counter (for arena-based Location sharing)
     /// Same index = same object, will be shared in output
     location_idx_table: HashMap<LocIdx, u32>,
+
+    /// Maps LidentIdx to object counter (for arena-based Longident sharing)
+    /// Same index = same object, will be shared in output
+    lident_idx_table: HashMap<LidentIdx, u32>,
 
     /// Optional reference to ParseArena for LocIdx marshalling.
     /// Set via `set_arena()` before marshalling AST with LocIdx fields.
@@ -116,9 +127,11 @@ impl MarshalWriter {
         Self {
             buffer: Vec::with_capacity(4096),
             obj_table: HashMap::new(),
-            string_table: HashMap::new(),
+            str_idx_table: HashMap::new(),
             position_idx_table: HashMap::new(),
+            position_content_table: HashMap::new(),
             location_idx_table: HashMap::new(),
+            lident_idx_table: HashMap::new(),
             arena: None,
             obj_counter: 0,
             size_32: 0,
@@ -131,9 +144,11 @@ impl MarshalWriter {
         Self {
             buffer: Vec::with_capacity(capacity),
             obj_table: HashMap::new(),
-            string_table: HashMap::new(),
+            str_idx_table: HashMap::new(),
             position_idx_table: HashMap::new(),
+            position_content_table: HashMap::new(),
             location_idx_table: HashMap::new(),
+            lident_idx_table: HashMap::new(),
             arena: None,
             obj_counter: 0,
             size_32: 0,
@@ -171,9 +186,11 @@ impl MarshalWriter {
     pub fn reset(&mut self) {
         self.buffer.clear();
         self.obj_table.clear();
-        self.string_table.clear();
+        self.str_idx_table.clear();
         self.position_idx_table.clear();
+        self.position_content_table.clear();
         self.location_idx_table.clear();
+        self.lident_idx_table.clear();
         self.obj_counter = 0;
         self.size_32 = 0;
         self.size_64 = 0;
@@ -328,43 +345,30 @@ impl MarshalWriter {
         self.write_string(s.as_bytes());
     }
 
-    /// Write a string with content-based sharing
+    /// Write a string by StrIdx with arena-based sharing.
     ///
-    /// If this string content has been written before, writes a shared reference.
-    /// Otherwise writes the string and records it for future sharing.
+    /// If a string with the same StrIdx has been written before, writes a shared
+    /// reference. Otherwise looks up the string in the arena and writes it.
     ///
-    /// This is useful for strings that appear multiple times in the AST,
-    /// such as file names in locations.
-    pub fn write_string_shared(&mut self, s: &str) {
-        // Check if we've seen this string content before
-        if let Some(&obj_idx) = self.string_table.get(s) {
-            // Write a shared reference
+    /// Same StrIdx = same object, will be shared in output.
+    /// This matches OCaml's pointer-based sharing for interned strings.
+    pub fn write_str_idx(&mut self, idx: StrIdx) {
+        // Check if this string index was already written
+        if let Some(&obj_idx) = self.str_idx_table.get(&idx) {
             let d = self.obj_counter - obj_idx;
             self.write_shared_ref(d);
-        } else {
-            // Record the object index BEFORE incrementing (OCaml assigns before increment)
-            let obj_idx = self.obj_counter;
-
-            // Write the string (this increments obj_counter after assigning index)
-            self.write_string(s.as_bytes());
-
-            // Record for future sharing
-            self.string_table.insert(s.to_string(), obj_idx);
+            return;
         }
-    }
 
-    /// Write a string for an identifier - NO sharing.
-    ///
-    /// In OCaml, each identifier token creates a fresh string allocation on the heap.
-    /// Multiple occurrences of the same identifier (like "x" appearing twice) are
-    /// DIFFERENT objects with different pointers, so they are NOT shared during
-    /// Marshal serialization.
-    ///
-    /// Only filename strings (which are literal constants in the parser) and certain
-    /// constant token strings get shared in OCaml.
-    pub fn write_identifier_string(&mut self, s: &str) {
-        // Identifiers are NOT shared - each occurrence is a fresh string
-        self.write_str(s);
+        // Record the object index BEFORE writing
+        let obj_idx = self.obj_counter;
+
+        // Look up the string in the arena and write it
+        let s = self.get_arena().get_string(idx).to_string();
+        self.write_string(s.as_bytes());
+
+        // Record for future sharing
+        self.str_idx_table.insert(idx, obj_idx);
     }
 
     // ========== Arena-based position/location methods ==========
@@ -391,7 +395,7 @@ impl MarshalWriter {
 
         // Write the Position block
         self.write_block_header(0, 4);
-        self.write_string_shared(&pos.file_name);
+        self.write_str(&pos.file_name);
         self.write_int(pos.line as i64);
         self.write_int(pos.bol as i64);
         self.write_int(pos.cnum as i64);
@@ -402,18 +406,60 @@ impl MarshalWriter {
         true
     }
 
+    /// Write a standalone Position with content-based sharing.
+    ///
+    /// If an identical position (same file_name, line, bol, cnum) has been written
+    /// before, writes a shared reference. Otherwise writes the position block and
+    /// records it for future sharing.
+    ///
+    /// This is used for parsetree0 where positions are stored directly (not via PosIdx).
+    /// It matches OCaml's behavior where positions with the same content get shared
+    /// via pointer identity during parsing.
+    pub fn write_position_content_shared(
+        &mut self,
+        file_name: &str,
+        line: i32,
+        bol: i32,
+        cnum: i32,
+    ) {
+        let key = (file_name.to_string(), line as usize, bol as usize, cnum as usize);
+
+        // Check if we've seen this position content before
+        if let Some(&obj_idx) = self.position_content_table.get(&key) {
+            let d = self.obj_counter - obj_idx;
+            self.write_shared_ref(d);
+            return;
+        }
+
+        // Record the object index BEFORE writing
+        let obj_idx = self.obj_counter;
+
+        // Write the Position block
+        self.write_block_header(0, 4);
+        self.write_str(file_name);
+        self.write_int(line as i64);
+        self.write_int(bol as i64);
+        self.write_int(cnum as i64);
+
+        // Record for future sharing
+        self.position_content_table.insert(key, obj_idx);
+    }
+
     /// Write a Location by arena index with sharing.
     ///
     /// If a Location with the same LocIdx has been written before, writes a shared
-    /// reference. Otherwise looks up the location in the arena and writes it.
+    /// reference. Otherwise looks up the location in the arena and writes it as
+    /// a new block.
     ///
-    /// Same index = same object, will be shared in output.
-    pub fn write_loc_idx(&mut self, idx: LocIdx) -> bool {
+    /// This matches OCaml's behavior where:
+    /// - Same pointer = same object, will be shared in output
+    /// - The positions within are also shared via PosIdx
+    pub fn write_loc_idx(&mut self, idx: LocIdx) {
         // Check if this location index was already written
         if let Some(&obj_idx) = self.location_idx_table.get(&idx) {
             let d = self.obj_counter - obj_idx;
             self.write_shared_ref(d);
-            return false;
+            return;
         }
 
         // Look up the location in the arena and clone it to end the borrow
@@ -431,8 +477,57 @@ impl MarshalWriter {
 
         // Record for future sharing
         self.location_idx_table.insert(idx, obj_idx);
+    }
+
+    /// Write a Longident by arena index with sharing.
+    ///
+    /// If a Longident with the same LidentIdx has been written before, writes a shared
+    /// reference. Otherwise looks up the longident in the arena and writes it.
+    ///
+    /// Same index = same object, will be shared in output.
+    pub fn write_lident_idx(&mut self, idx: LidentIdx) -> bool {
+        // Check if this longident index was already written
+        if let Some(&obj_idx) = self.lident_idx_table.get(&idx) {
+            let d = self.obj_counter - obj_idx;
+            self.write_shared_ref(d);
+            return false;
+        }
+
+        // Look up the longident in the arena and clone it to end the borrow
+        let lid = self.get_arena().get_longident(idx).clone();
+
+        // Record the object index BEFORE writing
+        let obj_idx = self.obj_counter;
+
+        // Write the Longident
+        self.write_longident(&lid);
+
+        // Record for future sharing
+        self.lident_idx_table.insert(idx, obj_idx);
 
         true
+    }
+
+    /// Write a Longident value directly (internal helper).
+    /// This writes the structure without any index-based sharing.
+    /// Uses StrIdx-based sharing for the string components.
+    fn write_longident(&mut self, lid: &Longident) {
+        match lid {
+            Longident::Lident(s) => {
+                self.write_block_header(0, 1);
+                self.write_str_idx(*s);
+            }
+            Longident::Ldot(prefix, name) => {
+                self.write_block_header(1, 2);
+                self.write_longident(prefix);
+                self.write_str_idx(*name);
+            }
+            Longident::Lapply(func, arg) => {
+                self.write_block_header(2, 2);
+                self.write_longident(func);
+                self.write_longident(arg);
+            }
+        }
     }
 
     /// Write a block header in Marshal format
@@ -883,16 +978,22 @@ mod tests {
     }
 
     #[test]
-    fn test_string_sharing() {
+    fn test_str_idx_sharing() {
+        use crate::parse_arena::ParseArena;
+
+        let mut arena = ParseArena::default();
+        let idx = arena.intern_string("test.res");
+
         let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
 
         // First occurrence: write the string
-        w.write_string_shared("test.res");
+        w.write_str_idx(idx);
         let after_first = w.payload().len();
         assert_eq!(w.obj_counter(), 1); // String recorded
 
         // Second occurrence: should write shared reference
-        w.write_string_shared("test.res");
+        w.write_str_idx(idx);
         let after_second = w.payload().len();
         assert_eq!(w.obj_counter(), 1); // No new object recorded
 
@@ -909,18 +1010,25 @@ mod tests {
     }
 
     #[test]
-    fn test_string_sharing_different_strings() {
+    fn test_str_idx_sharing_different_strings() {
+        use crate::parse_arena::ParseArena;
+
+        let mut arena = ParseArena::default();
+        let idx_a = arena.intern_string("a.res");
+        let idx_b = arena.intern_string("b.res");
+
         let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
 
         // Write two different strings
-        w.write_string_shared("a.res");
-        w.write_string_shared("b.res");
+        w.write_str_idx(idx_a);
+        w.write_str_idx(idx_b);
 
         // Both should be recorded as objects
         assert_eq!(w.obj_counter(), 2);
 
-        // Now reference the first one again
-        w.write_string_shared("a.res");
+        // Now reference the first one again (same StrIdx)
+        w.write_str_idx(idx_a);
         // Should still be 2 objects (first one is shared)
         assert_eq!(w.obj_counter(), 2);
 
@@ -929,5 +1037,30 @@ mod tests {
         // - "b.res" (6 bytes: 0x25 + 5 chars)
         // - shared ref to "a.res" (2 bytes: CODE_SHARED8 + distance)
         assert_eq!(w.payload().len(), 14);
+    }
+
+    #[test]
+    fn test_str_idx_no_sharing_for_different_idx() {
+        use crate::parse_arena::ParseArena;
+
+        let mut arena = ParseArena::default();
+        // Create two different StrIdx with the same content
+        let idx1 = arena.intern_string("same");
+        let idx2 = arena.push_string("same"); // Different idx, same content
+
+        let mut w = MarshalWriter::new();
+        w.set_arena(&arena);
+
+        // Write first string
+        w.write_str_idx(idx1);
+        assert_eq!(w.obj_counter(), 1);
+
+        // Write second string - different idx so NO sharing, even with same content
+        w.write_str_idx(idx2);
+        assert_eq!(w.obj_counter(), 2);
+
+        // Payload should have both strings written fully (no sharing)
+        // "same" = 5 bytes each (0x24 + 4 chars)
+        assert_eq!(w.payload().len(), 10);
     }
 }

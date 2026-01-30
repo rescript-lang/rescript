@@ -20,7 +20,7 @@ pub enum ParenKind {
 }
 
 /// Check if an expression needs parentheses/braces.
-pub fn expr(expr: &Expression) -> ParenKind {
+pub fn expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -39,14 +39,14 @@ pub fn expr(expr: &Expression) -> ParenKind {
 }
 
 /// Check if expression record row RHS needs parentheses.
-pub fn expr_record_row_rhs(optional: bool, e: &Expression) -> ParenKind {
-    let kind = expr(e);
+pub fn expr_record_row_rhs(arena: &crate::parse_arena::ParseArena, optional: bool, e: &Expression) -> ParenKind {
+    let kind = expr(arena, e);
     match kind {
         ParenKind::Nothing if optional => match &e.pexp_desc {
             ExpressionDesc::Pexp_ifthenelse(_, _, _) | ExpressionDesc::Pexp_fun { .. } => {
                 ParenKind::Parenthesized
             }
-            _ if parsetree_viewer::is_binary_expression(e) => ParenKind::Parenthesized,
+            _ if parsetree_viewer::is_binary_expression(arena, e) => ParenKind::Parenthesized,
             _ => kind,
         },
         _ => kind,
@@ -54,7 +54,7 @@ pub fn expr_record_row_rhs(optional: bool, e: &Expression) -> ParenKind {
 }
 
 /// Check if a call expression needs parentheses/braces.
-pub fn call_expr(expr: &Expression) -> ParenKind {
+pub fn call_expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -65,8 +65,8 @@ pub fn call_expr(expr: &Expression) -> ParenKind {
                 return ParenKind::Parenthesized;
             }
 
-            if parsetree_viewer::is_unary_expression(expr)
-                || parsetree_viewer::is_binary_expression(expr)
+            if parsetree_viewer::is_unary_expression(arena, expr)
+                || parsetree_viewer::is_binary_expression(arena, expr)
             {
                 return ParenKind::Parenthesized;
             }
@@ -103,7 +103,7 @@ pub fn call_expr(expr: &Expression) -> ParenKind {
 }
 
 /// Check if a structure expression needs parentheses/braces.
-pub fn structure_expr(expr: &Expression) -> ParenKind {
+pub fn structure_expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -126,7 +126,7 @@ pub fn structure_expr(expr: &Expression) -> ParenKind {
 }
 
 /// Check if a unary expression operand needs parentheses/braces.
-pub fn unary_expr_operand(expr: &Expression) -> ParenKind {
+pub fn unary_expr_operand(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -136,8 +136,8 @@ pub fn unary_expr_operand(expr: &Expression) -> ParenKind {
                 return ParenKind::Parenthesized;
             }
 
-            if parsetree_viewer::is_unary_expression(expr)
-                || parsetree_viewer::is_binary_expression(expr)
+            if parsetree_viewer::is_unary_expression(arena, expr)
+                || parsetree_viewer::is_binary_expression(arena, expr)
             {
                 return ParenKind::Parenthesized;
             }
@@ -174,7 +174,7 @@ pub fn unary_expr_operand(expr: &Expression) -> ParenKind {
 }
 
 /// Check if a binary expression operand needs parentheses/braces.
-pub fn binary_expr_operand(is_lhs: bool, expr: &Expression) -> ParenKind {
+pub fn binary_expr_operand(arena: &crate::parse_arena::ParseArena, is_lhs: bool, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -196,7 +196,7 @@ pub fn binary_expr_operand(is_lhs: bool, expr: &Expression) -> ParenKind {
                 | ExpressionDesc::Pexp_fun { .. }
                 | ExpressionDesc::Pexp_newtype(_, _) => ParenKind::Parenthesized,
                 _ if parsetree_viewer::expr_is_uncurried_fun(expr) => ParenKind::Parenthesized,
-                _ if parsetree_viewer::is_binary_expression(expr) => ParenKind::Parenthesized,
+                _ if parsetree_viewer::is_binary_expression(arena, expr) => ParenKind::Parenthesized,
                 _ if parsetree_viewer::is_ternary_expr(expr) => ParenKind::Parenthesized,
                 ExpressionDesc::Pexp_assert(_) if is_lhs => ParenKind::Parenthesized,
                 _ if parsetree_viewer::expr_is_await(expr) => ParenKind::Parenthesized,
@@ -225,7 +225,7 @@ pub fn sub_binary_expr_operand(parent_operator: &str, child_operator: &str) -> b
 }
 
 /// Check if RHS binary expression operand needs parentheses.
-pub fn rhs_binary_expr_operand(parent_operator: &str, rhs: &Expression) -> bool {
+pub fn rhs_binary_expr_operand(arena: &crate::parse_arena::ParseArena, parent_operator: &str, rhs: &Expression) -> bool {
     match &rhs.pexp_desc {
         ExpressionDesc::Pexp_apply {
             funct,
@@ -237,7 +237,8 @@ pub fn rhs_binary_expr_operand(parent_operator: &str, rhs: &Expression) -> bool 
             }
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) if funct.pexp_attributes.is_empty() => {
-                    if let Longident::Lident(operator) = &ident.txt {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        let operator = arena.get_string(*op_idx);
                         if parsetree_viewer::not_ghost_operator(operator, ident.loc.is_none()) {
                             let prec_parent =
                                 parsetree_viewer::operator_precedence(parent_operator);
@@ -255,7 +256,7 @@ pub fn rhs_binary_expr_operand(parent_operator: &str, rhs: &Expression) -> bool 
 }
 
 /// Check if flatten operand RHS needs parentheses.
-pub fn flatten_operand_rhs(parent_operator: &str, rhs: &Expression) -> bool {
+pub fn flatten_operand_rhs(arena: &crate::parse_arena::ParseArena, parent_operator: &str, rhs: &Expression) -> bool {
     match &rhs.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 2 {
@@ -263,7 +264,8 @@ pub fn flatten_operand_rhs(parent_operator: &str, rhs: &Expression) -> bool {
             }
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) => {
-                    if let Longident::Lident(operator) = &ident.txt {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        let operator = arena.get_string(*op_idx);
                         if parsetree_viewer::not_ghost_operator(operator, ident.loc.is_none()) {
                             let prec_parent =
                                 parsetree_viewer::operator_precedence(parent_operator);
@@ -304,7 +306,7 @@ pub fn binary_operator_inside_await_needs_parens(operator: &str) -> bool {
 }
 
 /// Check if assert or await expression RHS needs parentheses/braces.
-pub fn assert_or_await_expr_rhs(in_await: bool, expr: &Expression) -> ParenKind {
+pub fn assert_or_await_expr_rhs(arena: &crate::parse_arena::ParseArena, in_await: bool, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -316,10 +318,11 @@ pub fn assert_or_await_expr_rhs(in_await: bool, expr: &Expression) -> ParenKind 
 
             match &expr.pexp_desc {
                 ExpressionDesc::Pexp_apply { funct, .. }
-                    if parsetree_viewer::is_binary_expression(expr) =>
+                    if parsetree_viewer::is_binary_expression(arena, expr) =>
                 {
                     if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
-                        if let Longident::Lident(operator) = &ident.txt {
+                        if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                            let operator = arena.get_string(*op_idx);
                             if in_await && !binary_operator_inside_await_needs_parens(operator) {
                                 return ParenKind::Nothing;
                             }
@@ -370,7 +373,7 @@ pub fn is_negative_constant(constant: &Constant) -> bool {
 }
 
 /// Check if field expression needs parentheses/braces.
-pub fn field_expr(expr: &Expression) -> ParenKind {
+pub fn field_expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
@@ -380,8 +383,8 @@ pub fn field_expr(expr: &Expression) -> ParenKind {
                 return ParenKind::Parenthesized;
             }
 
-            if parsetree_viewer::is_binary_expression(expr)
-                || parsetree_viewer::is_unary_expression(expr)
+            if parsetree_viewer::is_binary_expression(arena, expr)
+                || parsetree_viewer::is_unary_expression(arena, expr)
             {
                 return ParenKind::Parenthesized;
             }
@@ -582,12 +585,12 @@ pub fn jsx_child_expr(expr: &Expression) -> ParenKind {
 }
 
 /// Check if binary expression needs parentheses/braces.
-pub fn binary_expr(expr: &Expression) -> ParenKind {
+pub fn binary_expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> ParenKind {
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
         None => {
-            if !expr.pexp_attributes.is_empty() && parsetree_viewer::is_binary_expression(expr) {
+            if !expr.pexp_attributes.is_empty() && parsetree_viewer::is_binary_expression(arena, expr) {
                 ParenKind::Parenthesized
             } else {
                 ParenKind::Nothing

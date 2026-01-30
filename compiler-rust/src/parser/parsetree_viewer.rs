@@ -118,9 +118,10 @@ pub enum IfConditionKind<'a> {
 
 /// Collect all the branches of an if-expression chain.
 /// Returns a list of (location, condition_kind, then_expr) tuples and the final else expression.
-pub fn collect_if_expressions(
-    expr: &Expression,
-) -> (Vec<(&LocIdx, IfConditionKind<'_>, &Expression)>, Option<&Expression>) {
+pub fn collect_if_expressions<'a>(
+    arena: &crate::parse_arena::ParseArena,
+    expr: &'a Expression,
+) -> (Vec<(&'a LocIdx, IfConditionKind<'a>, &'a Expression)>, Option<&'a Expression>) {
     let mut acc = Vec::new();
     let mut current = expr;
 
@@ -144,7 +145,7 @@ pub fn collect_if_expressions(
                     && cases[0].pc_guard.is_none()
                     && matches!(
                         &cases[1].pc_rhs.pexp_desc,
-                        ExpressionDesc::Pexp_construct(lid, _) if matches!(&lid.txt, Longident::Lident(s) if s == "()")
+                        ExpressionDesc::Pexp_construct(lid, _) if arena.is_lident(lid.txt, "()")
                     ) =>
             {
                 let pattern = &cases[0].pc_lhs;
@@ -178,7 +179,7 @@ pub fn is_single_expression(expr: &Expression) -> bool {
 }
 
 /// Check if expression is a binary expression.
-pub fn is_binary_expression(expr: &Expression) -> bool {
+pub fn is_binary_expression(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 2 {
@@ -186,7 +187,8 @@ pub fn is_binary_expression(expr: &Expression) -> bool {
             }
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) => {
-                    if let Longident::Lident(op) = &ident.txt {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        let op = arena.get_string(*op_idx);
                         not_ghost_operator(op, ident.loc.is_none())
                     } else {
                         false
@@ -200,7 +202,7 @@ pub fn is_binary_expression(expr: &Expression) -> bool {
 }
 
 /// Get the operator from a binary expression, if it is one.
-pub fn get_binary_operator(expr: &Expression) -> Option<String> {
+pub fn get_binary_operator(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> Option<String> {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 2 {
@@ -208,9 +210,10 @@ pub fn get_binary_operator(expr: &Expression) -> Option<String> {
             }
             match &funct.pexp_desc {
                 ExpressionDesc::Pexp_ident(ident) => {
-                    if let Longident::Lident(op) = &ident.txt {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        let op = arena.get_string(*op_idx);
                         if not_ghost_operator(op, ident.loc.is_none()) {
-                            return Some(op.clone());
+                            return Some(op.to_string());
                         }
                     }
                     None
@@ -265,17 +268,14 @@ pub fn expr_is_uncurried_fun(expr: &Expression) -> bool {
 }
 
 /// Check if an expression is "huggable" (can be printed without line breaks).
-pub fn is_huggable_expression(expr: &Expression) -> bool {
+pub fn is_huggable_expression(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_array(_)
         | ExpressionDesc::Pexp_tuple(_)
         | ExpressionDesc::Pexp_record(_, _) => true,
         ExpressionDesc::Pexp_constant(Constant::String(_, Some(_))) => true,
         ExpressionDesc::Pexp_construct(lid, _)
-            if matches!(
-                lid.txt,
-                Longident::Lident(ref s) if s == "::" || s == "[]"
-            ) =>
+            if arena.is_lident(lid.txt, "::") || arena.is_lident(lid.txt, "[]") =>
         {
             true
         }
@@ -312,11 +312,12 @@ fn is_multiline_text(txt: &str) -> bool {
 }
 
 /// Check if a longident represents a binary operator.
-pub fn is_binary_operator(lid: &Longident) -> bool {
+pub fn is_binary_operator(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> bool {
     match lid {
-        Longident::Lident(op) => {
+        Longident::Lident(op_idx) => {
+            let op = arena.get_string(*op_idx);
             matches!(
-                op.as_str(),
+                op,
                 "+" | "+."
                     | "-"
                     | "-."
@@ -356,14 +357,14 @@ pub fn is_binary_operator(lid: &Longident) -> bool {
 }
 
 /// Check if an expression is a unary expression.
-pub fn is_unary_expression(expr: &Expression) -> bool {
+pub fn is_unary_expression(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 1 {
                 return false;
             }
             if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
-                is_unary_operator(&ident.txt)
+                is_unary_operator_idx(arena, ident.txt)
             } else {
                 false
             }
@@ -372,11 +373,22 @@ pub fn is_unary_expression(expr: &Expression) -> bool {
     }
 }
 
+/// Check if a longident index represents a unary operator.
+pub fn is_unary_operator_idx(arena: &crate::parse_arena::ParseArena, lid_idx: crate::parse_arena::LidentIdx) -> bool {
+    if let Longident::Lident(op_idx) = arena.get_longident(lid_idx) {
+        let op = arena.get_string(*op_idx);
+        matches!(op, "~+" | "~+." | "~-" | "~-." | "~~~" | "!" | "not")
+    } else {
+        false
+    }
+}
+
 /// Check if a longident represents a unary operator.
-pub fn is_unary_operator(lid: &Longident) -> bool {
+pub fn is_unary_operator(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> bool {
     match lid {
-        Longident::Lident(op) => {
-            matches!(op.as_str(), "~+" | "~+." | "~-" | "~-." | "~~~" | "!" | "not")
+        Longident::Lident(op_idx) => {
+            let op = arena.get_string(*op_idx);
+            matches!(op, "~+" | "~+." | "~-" | "~-." | "~~~" | "!" | "not")
         }
         _ => false,
     }
@@ -388,16 +400,16 @@ pub fn is_unary_operator(lid: &Longident) -> bool {
 
 /// Collect expressions from a list constructor (::).
 /// Returns (list of expressions, optional spread expression).
-pub fn collect_list_expressions(expr: &Expression) -> (Vec<&Expression>, Option<&Expression>) {
+pub fn collect_list_expressions<'a>(arena: &crate::parse_arena::ParseArena, expr: &'a Expression) -> (Vec<&'a Expression>, Option<&'a Expression>) {
     let mut acc = Vec::new();
     let mut current = expr;
 
     loop {
         match &current.pexp_desc {
-            ExpressionDesc::Pexp_construct(lid, None) if lid.txt == Longident::Lident("[]".to_string()) => {
+            ExpressionDesc::Pexp_construct(lid, None) if arena.is_lident(lid.txt, "[]") => {
                 return (acc, None);
             }
-            ExpressionDesc::Pexp_construct(lid, Some(arg)) if lid.txt == Longident::Lident("::".to_string()) => {
+            ExpressionDesc::Pexp_construct(lid, Some(arg)) if arena.is_lident(lid.txt, "::") => {
                 // The argument should be a tuple of (head, tail)
                 if let ExpressionDesc::Pexp_tuple(exprs) = &arg.pexp_desc {
                     if exprs.len() == 2 {
@@ -418,16 +430,16 @@ pub fn collect_list_expressions(expr: &Expression) -> (Vec<&Expression>, Option<
 }
 
 /// Collect patterns from a list constructor (::).
-pub fn collect_list_patterns(pat: &Pattern) -> (Vec<&Pattern>, Option<&Pattern>) {
+pub fn collect_list_patterns<'a>(arena: &crate::parse_arena::ParseArena, pat: &'a Pattern) -> (Vec<&'a Pattern>, Option<&'a Pattern>) {
     let mut acc = Vec::new();
     let mut current = pat;
 
     loop {
         match &current.ppat_desc {
-            PatternDesc::Ppat_construct(lid, None) if lid.txt == Longident::Lident("[]".to_string()) => {
+            PatternDesc::Ppat_construct(lid, None) if arena.is_lident(lid.txt, "[]") => {
                 return (acc, None);
             }
-            PatternDesc::Ppat_construct(lid, Some(arg)) if lid.txt == Longident::Lident("::".to_string()) => {
+            PatternDesc::Ppat_construct(lid, Some(arg)) if arena.is_lident(lid.txt, "::") => {
                 // The argument should be a tuple of (head, tail)
                 if let PatternDesc::Ppat_tuple(pats) = &arg.ppat_desc {
                     if pats.len() == 2 {
@@ -905,15 +917,17 @@ pub fn has_await_attribute(attrs: &Attributes) -> bool {
 // ============================================================================
 
 /// Check if an expression is `Array.get(arr, idx)`.
-pub fn is_array_access(expr: &Expression) -> bool {
+pub fn is_array_access(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 2 {
                 return false;
             }
             if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
-                if let Longident::Ldot(base, method) = &lid.txt {
-                    if let Longident::Lident(module) = base.as_ref() {
+                if let Longident::Ldot(base, method_idx) = arena.get_longident(lid.txt) {
+                    if let Longident::Lident(module_idx) = base.as_ref() {
+                        let module = arena.get_string(*module_idx);
+                        let method = arena.get_string(*method_idx);
                         return module == "Array" && method == "get";
                     }
                 }
@@ -925,15 +939,17 @@ pub fn is_array_access(expr: &Expression) -> bool {
 }
 
 /// Check if an expression is `Array.set(arr, idx, value)`.
-pub fn is_array_set(expr: &Expression) -> bool {
+pub fn is_array_set(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 3 {
                 return false;
             }
             if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
-                if let Longident::Ldot(base, method) = &lid.txt {
-                    if let Longident::Lident(module) = base.as_ref() {
+                if let Longident::Ldot(base, method_idx) = arena.get_longident(lid.txt) {
+                    if let Longident::Lident(module_idx) = base.as_ref() {
+                        let module = arena.get_string(*module_idx);
+                        let method = arena.get_string(*method_idx);
                         return module == "Array" && method == "set";
                     }
                 }
@@ -945,15 +961,17 @@ pub fn is_array_set(expr: &Expression) -> bool {
 }
 
 /// Check if an expression is `String.get(str, idx)`.
-pub fn is_string_access(expr: &Expression) -> bool {
+pub fn is_string_access(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_apply { funct, args, .. } => {
             if args.len() != 2 {
                 return false;
             }
             if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
-                if let Longident::Ldot(base, method) = &lid.txt {
-                    if let Longident::Lident(module) = base.as_ref() {
+                if let Longident::Ldot(base, method_idx) = arena.get_longident(lid.txt) {
+                    if let Longident::Lident(module_idx) = base.as_ref() {
+                        let module = arena.get_string(*module_idx);
+                        let method = arena.get_string(*method_idx);
                         return module == "String" && method == "get";
                     }
                 }
@@ -966,10 +984,10 @@ pub fn is_string_access(expr: &Expression) -> bool {
 
 /// Check if an expression is a rewritten underscore apply sugar pattern.
 /// i.e., the pattern `_` that comes from `arr[_]` being rewritten to `(__x) => Array.get(__x, _)`.
-pub fn is_rewritten_underscore_apply_sugar(expr: &Expression) -> bool {
+pub fn is_rewritten_underscore_apply_sugar(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_ident(lid) => {
-            matches!(&lid.txt, Longident::Lident(name) if name == "_")
+            arena.is_lident(lid.txt, "_")
         }
         _ => false,
     }

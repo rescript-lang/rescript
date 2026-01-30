@@ -17,33 +17,36 @@ use crate::parser::ast::{
     Payload, RowField, SignatureItem, SignatureItemDesc, StructureItem, StructureItemDesc,
     TypeDeclaration, TypeExtension, TypeKind, ValueBinding, ValueDescription, WithConstraint,
 };
+use crate::parse_arena::{LidentIdx, ParseArena};
 use crate::parser::longident::Longident;
 
 /// A set of module dependencies, sorted for deterministic output.
 pub type Dependencies = BTreeSet<String>;
 
 /// Extract module dependencies from a structure (implementation).
-pub fn extract_structure_deps(structure: &[StructureItem]) -> Dependencies {
-    let mut collector = DependencyCollector::new();
+pub fn extract_structure_deps(arena: &ParseArena, structure: &[StructureItem]) -> Dependencies {
+    let mut collector = DependencyCollector::new(arena);
     collector.add_structure(structure);
     collector.finish()
 }
 
 /// Extract module dependencies from a signature (interface).
-pub fn extract_signature_deps(signature: &[SignatureItem]) -> Dependencies {
-    let mut collector = DependencyCollector::new();
+pub fn extract_signature_deps(arena: &ParseArena, signature: &[SignatureItem]) -> Dependencies {
+    let mut collector = DependencyCollector::new(arena);
     collector.add_signature(signature);
     collector.finish()
 }
 
 /// Collector for module dependencies.
-struct DependencyCollector {
+struct DependencyCollector<'a> {
+    arena: &'a ParseArena,
     deps: BTreeSet<String>,
 }
 
-impl DependencyCollector {
-    fn new() -> Self {
+impl<'a> DependencyCollector<'a> {
+    fn new(arena: &'a ParseArena) -> Self {
         Self {
+            arena,
             deps: BTreeSet::new(),
         }
     }
@@ -62,12 +65,14 @@ impl DependencyCollector {
     /// Add a module reference from a Longident.
     fn add_longident(&mut self, lid: &Longident) {
         // Get the root module name
-        let parts = lid.flatten();
+        let parts = lid.flatten_idx();
         if let Some(first) = parts.first() {
+            // Look up the string content
+            let first_str = self.arena.get_string(*first);
             // Only add if it starts with uppercase (module reference)
             // Lowercase identifiers are local bindings
-            if first.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
-                self.deps.insert((*first).to_string());
+            if first_str.chars().next().is_some_and(|c| c.is_ascii_uppercase()) {
+                self.deps.insert(first_str.to_string());
             }
         }
 
@@ -76,6 +81,12 @@ impl DependencyCollector {
             self.add_longident(func);
             self.add_longident(arg);
         }
+    }
+
+    /// Add a module reference from a LidentIdx (arena-allocated longident).
+    fn add_lident_idx(&mut self, lid_idx: LidentIdx) {
+        let lid = self.arena.get_longident(lid_idx);
+        self.add_longident(lid);
     }
 
     // ========== Structure ==========
@@ -191,7 +202,7 @@ impl DependencyCollector {
     fn add_expression(&mut self, expr: &Expression) {
         match &expr.pexp_desc {
             ExpressionDesc::Pexp_ident(lid) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
             }
             ExpressionDesc::Pexp_constant(_) => {}
             ExpressionDesc::Pexp_let(_rec_flag, bindings, body) => {
@@ -230,7 +241,7 @@ impl DependencyCollector {
                 }
             }
             ExpressionDesc::Pexp_construct(lid, arg) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 if let Some(arg) = arg {
                     self.add_expression(arg);
                 }
@@ -242,7 +253,7 @@ impl DependencyCollector {
             }
             ExpressionDesc::Pexp_record(fields, spread) => {
                 for field in fields {
-                    self.add_longident(&field.lid.txt);
+                    self.add_lident_idx(field.lid.txt);
                     self.add_expression(&field.expr);
                 }
                 if let Some(spread) = spread {
@@ -251,11 +262,11 @@ impl DependencyCollector {
             }
             ExpressionDesc::Pexp_field(expr, lid) => {
                 self.add_expression(expr);
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
             }
             ExpressionDesc::Pexp_setfield(expr1, lid, expr2) => {
                 self.add_expression(expr1);
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 self.add_expression(expr2);
             }
             ExpressionDesc::Pexp_ifthenelse(cond, then_expr, else_expr) => {
@@ -311,7 +322,7 @@ impl DependencyCollector {
                 self.add_module_expr(me);
             }
             ExpressionDesc::Pexp_open(_override, lid, body) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 self.add_expression(body);
             }
             ExpressionDesc::Pexp_extension((_id, payload)) => {
@@ -339,10 +350,10 @@ impl DependencyCollector {
                 // Add dependency from tag name if it's a component
                 match &elem.tag_name.txt {
                     JsxTagName::Upper(lid) => {
-                        self.add_longident(lid);
+                        self.add_lident_idx(*lid);
                     }
                     JsxTagName::QualifiedLower { path, .. } => {
-                        self.add_longident(path);
+                        self.add_lident_idx(*path);
                     }
                     JsxTagName::Lower(_) | JsxTagName::Invalid(_) => {}
                 }
@@ -353,10 +364,10 @@ impl DependencyCollector {
             JsxElement::Container(elem) => {
                 match &elem.tag_name_start.txt {
                     JsxTagName::Upper(lid) => {
-                        self.add_longident(lid);
+                        self.add_lident_idx(*lid);
                     }
                     JsxTagName::QualifiedLower { path, .. } => {
-                        self.add_longident(path);
+                        self.add_lident_idx(*path);
                     }
                     JsxTagName::Lower(_) | JsxTagName::Invalid(_) => {}
                 }
@@ -398,7 +409,7 @@ impl DependencyCollector {
                 }
             }
             PatternDesc::Ppat_construct(lid, arg) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 if let Some(arg) = arg {
                     self.add_pattern(arg);
                 }
@@ -410,7 +421,7 @@ impl DependencyCollector {
             }
             PatternDesc::Ppat_record(fields, _closed) => {
                 for field in fields {
-                    self.add_longident(&field.lid.txt);
+                    self.add_lident_idx(field.lid.txt);
                     self.add_pattern(&field.pat);
                 }
             }
@@ -423,7 +434,7 @@ impl DependencyCollector {
                 self.add_core_type(ty);
             }
             PatternDesc::Ppat_type(lid) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
             }
             PatternDesc::Ppat_unpack(_name) => {}
             PatternDesc::Ppat_exception(pat) => {
@@ -433,7 +444,7 @@ impl DependencyCollector {
                 self.add_payload(payload);
             }
             PatternDesc::Ppat_open(lid, pat) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 self.add_pattern(pat);
             }
         }
@@ -454,7 +465,7 @@ impl DependencyCollector {
                 }
             }
             CoreTypeDesc::Ptyp_constr(lid, args) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 for arg in args {
                     self.add_core_type(arg);
                 }
@@ -492,9 +503,9 @@ impl DependencyCollector {
                 self.add_core_type(ty);
             }
             CoreTypeDesc::Ptyp_package((lid, constraints)) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 for (lid, ty) in constraints {
-                    self.add_longident(&lid.txt);
+                    self.add_lident_idx(lid.txt);
                     self.add_core_type(ty);
                 }
             }
@@ -509,7 +520,7 @@ impl DependencyCollector {
     fn add_module_expr(&mut self, me: &ModuleExpr) {
         match &me.pmod_desc {
             ModuleExprDesc::Pmod_ident(lid) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
             }
             ModuleExprDesc::Pmod_structure(str) => {
                 self.add_structure(str);
@@ -540,7 +551,7 @@ impl DependencyCollector {
     fn add_module_type(&mut self, mt: &ModuleType) {
         match &mt.pmty_desc {
             ModuleTypeDesc::Pmty_ident(lid) | ModuleTypeDesc::Pmty_alias(lid) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
             }
             ModuleTypeDesc::Pmty_signature(sig) => {
                 self.add_signature(sig);
@@ -569,13 +580,13 @@ impl DependencyCollector {
     fn add_with_constraint(&mut self, constraint: &WithConstraint) {
         match constraint {
             WithConstraint::Pwith_type(lid, td) | WithConstraint::Pwith_typesubst(lid, td) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
                 self.add_type_declaration(td);
             }
             WithConstraint::Pwith_module(lid1, lid2)
             | WithConstraint::Pwith_modsubst(lid1, lid2) => {
-                self.add_longident(&lid1.txt);
-                self.add_longident(&lid2.txt);
+                self.add_lident_idx(lid1.txt);
+                self.add_lident_idx(lid2.txt);
             }
         }
     }
@@ -640,7 +651,7 @@ impl DependencyCollector {
     }
 
     fn add_type_extension(&mut self, te: &TypeExtension) {
-        self.add_longident(&te.ptyext_path.txt);
+        self.add_lident_idx(te.ptyext_path.txt);
         for (ty, _variance) in &te.ptyext_params {
             self.add_core_type(ty);
         }
@@ -658,7 +669,7 @@ impl DependencyCollector {
                 }
             }
             ExtensionConstructorKind::Pext_rebind(lid) => {
-                self.add_longident(&lid.txt);
+                self.add_lident_idx(lid.txt);
             }
         }
     }
@@ -678,7 +689,7 @@ impl DependencyCollector {
     }
 
     fn add_open_description(&mut self, od: &OpenDescription) {
-        self.add_longident(&od.popen_lid.txt);
+        self.add_lident_idx(od.popen_lid.txt);
     }
 
     fn add_include_declaration(&mut self, id: &IncludeDeclaration) {
@@ -723,10 +734,21 @@ mod tests {
     use super::*;
     use crate::parse_arena::{LocIdx, Located};
 
-    fn make_ident_expr(lid: Longident) -> Expression {
+    /// Parse a dotted string like "Foo.Bar.baz" into a Longident using the arena.
+    fn parse_longident(arena: &mut ParseArena, s: &str) -> Longident {
+        let parts: Vec<&str> = s.split('.').collect();
+        let mut lid = Longident::Lident(arena.intern_string(parts[0]));
+        for part in &parts[1..] {
+            lid = Longident::Ldot(Box::new(lid), arena.intern_string(part));
+        }
+        lid
+    }
+
+    fn make_ident_expr(arena: &mut ParseArena, lid: Longident) -> Expression {
+        let lid_idx = arena.push_longident(lid);
         Expression {
             pexp_desc: ExpressionDesc::Pexp_ident(Located {
-                txt: lid,
+                txt: lid_idx,
                 loc: LocIdx::none(),
             }),
             pexp_loc: LocIdx::none(),
@@ -744,11 +766,12 @@ mod tests {
     #[test]
     fn test_simple_module_reference() {
         // Test: Array.map extracts "Array"
-        let lid = Longident::parse("Array.map");
-        let expr = make_ident_expr(lid);
+        let mut arena = ParseArena::default();
+        let lid = parse_longident(&mut arena, "Array.map");
+        let expr = make_ident_expr(&mut arena, lid);
         let structure = vec![make_eval_item(expr)];
 
-        let deps = extract_structure_deps(&structure);
+        let deps = extract_structure_deps(&arena, &structure);
         assert_eq!(deps.len(), 1);
         assert!(deps.contains("Array"));
     }
@@ -756,11 +779,12 @@ mod tests {
     #[test]
     fn test_nested_module_reference() {
         // Test: Belt.Array.map extracts "Belt"
-        let lid = Longident::parse("Belt.Array.map");
-        let expr = make_ident_expr(lid);
+        let mut arena = ParseArena::default();
+        let lid = parse_longident(&mut arena, "Belt.Array.map");
+        let expr = make_ident_expr(&mut arena, lid);
         let structure = vec![make_eval_item(expr)];
 
-        let deps = extract_structure_deps(&structure);
+        let deps = extract_structure_deps(&arena, &structure);
         assert_eq!(deps.len(), 1);
         assert!(deps.contains("Belt"));
     }
@@ -768,24 +792,30 @@ mod tests {
     #[test]
     fn test_lowercase_identifier_ignored() {
         // Test: lowercase identifiers are not module references
-        let lid = Longident::lident("foo");
-        let expr = make_ident_expr(lid);
+        let mut arena = ParseArena::default();
+        let foo_idx = arena.intern_string("foo");
+        let lid = Longident::lident(foo_idx);
+        let expr = make_ident_expr(&mut arena, lid);
         let structure = vec![make_eval_item(expr)];
 
-        let deps = extract_structure_deps(&structure);
+        let deps = extract_structure_deps(&arena, &structure);
         assert!(deps.is_empty());
     }
 
     #[test]
     fn test_multiple_modules() {
         // Test: multiple module references are collected
+        let mut arena = ParseArena::default();
+        let lid1 = parse_longident(&mut arena, "Array.map");
+        let lid2 = parse_longident(&mut arena, "Belt.Array.get");
+        let lid3 = parse_longident(&mut arena, "Js.log");
         let structure = vec![
-            make_eval_item(make_ident_expr(Longident::parse("Array.map"))),
-            make_eval_item(make_ident_expr(Longident::parse("Belt.Array.get"))),
-            make_eval_item(make_ident_expr(Longident::parse("Js.log"))),
+            make_eval_item(make_ident_expr(&mut arena, lid1)),
+            make_eval_item(make_ident_expr(&mut arena, lid2)),
+            make_eval_item(make_ident_expr(&mut arena, lid3)),
         ];
 
-        let deps = extract_structure_deps(&structure);
+        let deps = extract_structure_deps(&arena, &structure);
         assert_eq!(deps.len(), 3);
         assert!(deps.contains("Array"));
         assert!(deps.contains("Belt"));
@@ -795,13 +825,17 @@ mod tests {
     #[test]
     fn test_sorted_output() {
         // Test: output is sorted alphabetically
+        let mut arena = ParseArena::default();
+        let lid1 = parse_longident(&mut arena, "Zebra.x");
+        let lid2 = parse_longident(&mut arena, "Alpha.y");
+        let lid3 = parse_longident(&mut arena, "Middle.z");
         let structure = vec![
-            make_eval_item(make_ident_expr(Longident::parse("Zebra.x"))),
-            make_eval_item(make_ident_expr(Longident::parse("Alpha.y"))),
-            make_eval_item(make_ident_expr(Longident::parse("Middle.z"))),
+            make_eval_item(make_ident_expr(&mut arena, lid1)),
+            make_eval_item(make_ident_expr(&mut arena, lid2)),
+            make_eval_item(make_ident_expr(&mut arena, lid3)),
         ];
 
-        let deps = extract_structure_deps(&structure);
+        let deps = extract_structure_deps(&arena, &structure);
         let deps_vec: Vec<_> = deps.into_iter().collect();
         assert_eq!(deps_vec, vec!["Alpha", "Middle", "Zebra"]);
     }
@@ -809,7 +843,8 @@ mod tests {
     #[test]
     fn test_predef_filtered() {
         // Test: *predef* is filtered out
-        let mut collector = DependencyCollector::new();
+        let arena = ParseArena::default();
+        let mut collector = DependencyCollector::new(&arena);
         collector.deps.insert("*predef*".to_string());
         collector.deps.insert("Array".to_string());
 
@@ -822,7 +857,8 @@ mod tests {
     #[test]
     fn test_empty_string_filtered() {
         // Test: empty strings are filtered out
-        let mut collector = DependencyCollector::new();
+        let arena = ParseArena::default();
+        let mut collector = DependencyCollector::new(&arena);
         collector.deps.insert(String::new());
         collector.deps.insert("Array".to_string());
 
@@ -834,26 +870,32 @@ mod tests {
     #[test]
     fn test_deduplicated() {
         // Test: duplicate modules are deduplicated
+        let mut arena = ParseArena::default();
+        let lid1 = parse_longident(&mut arena, "Array.map");
+        let lid2 = parse_longident(&mut arena, "Array.length");
+        let lid3 = parse_longident(&mut arena, "Array.get");
         let structure = vec![
-            make_eval_item(make_ident_expr(Longident::parse("Array.map"))),
-            make_eval_item(make_ident_expr(Longident::parse("Array.length"))),
-            make_eval_item(make_ident_expr(Longident::parse("Array.get"))),
+            make_eval_item(make_ident_expr(&mut arena, lid1)),
+            make_eval_item(make_ident_expr(&mut arena, lid2)),
+            make_eval_item(make_ident_expr(&mut arena, lid3)),
         ];
 
-        let deps = extract_structure_deps(&structure);
+        let deps = extract_structure_deps(&arena, &structure);
         assert_eq!(deps.len(), 1);
         assert!(deps.contains("Array"));
     }
 
     #[test]
     fn test_empty_structure() {
-        let deps = extract_structure_deps(&[]);
+        let arena = ParseArena::default();
+        let deps = extract_structure_deps(&arena, &[]);
         assert!(deps.is_empty());
     }
 
     #[test]
     fn test_empty_signature() {
-        let deps = extract_signature_deps(&[]);
+        let arena = ParseArena::default();
+        let deps = extract_signature_deps(&arena, &[]);
         assert!(deps.is_empty());
     }
 }

@@ -32,16 +32,17 @@ fn get_string_tag(p: &Parser<'_>) -> Option<String> {
 /// one of the poly type variables into Ptyp_var.
 /// This is needed for locally abstract types: `type a b c. list<a, b, c>` should
 /// have `a`, `b`, `c` as Ptyp_var, not Ptyp_constr.
-pub fn substitute_type_vars(typ: CoreType, vars: &HashSet<&str>) -> CoreType {
+pub fn substitute_type_vars(arena: &crate::parse_arena::ParseArena, typ: CoreType, vars: &HashSet<&str>) -> CoreType {
     let new_desc = match typ.ptyp_desc {
         CoreTypeDesc::Ptyp_constr(lid, args) => {
             // Check if this is a simple Lident that matches a type variable
             if args.is_empty() {
-                if let Longident::Lident(name) = &lid.txt {
-                    if vars.contains(name.as_str()) {
+                if let Longident::Lident(name_idx) = arena.get_longident(lid.txt) {
+                    let name = arena.get_string(*name_idx);
+                    if vars.contains(name) {
                         // Convert to Ptyp_var
                         return CoreType {
-                            ptyp_desc: CoreTypeDesc::Ptyp_var(name.clone()),
+                            ptyp_desc: CoreTypeDesc::Ptyp_var(name.to_string()),
                             ptyp_loc: typ.ptyp_loc,
                             ptyp_attributes: typ.ptyp_attributes,
                         };
@@ -51,7 +52,7 @@ pub fn substitute_type_vars(typ: CoreType, vars: &HashSet<&str>) -> CoreType {
             // Recursively process type arguments
             let new_args = args
                 .into_iter()
-                .map(|arg| substitute_type_vars(arg, vars))
+                .map(|arg| substitute_type_vars(arena, arg, vars))
                 .collect();
             CoreTypeDesc::Ptyp_constr(lid, new_args)
         }
@@ -59,32 +60,32 @@ pub fn substitute_type_vars(typ: CoreType, vars: &HashSet<&str>) -> CoreType {
             arg: Box::new(TypeArg {
                 attrs: arg.attrs,
                 lbl: arg.lbl,
-                typ: substitute_type_vars(arg.typ, vars),
+                typ: substitute_type_vars(arena, arg.typ, vars),
             }),
-            ret: Box::new(substitute_type_vars(*ret, vars)),
+            ret: Box::new(substitute_type_vars(arena, *ret, vars)),
             arity,
         },
         CoreTypeDesc::Ptyp_tuple(elements) => CoreTypeDesc::Ptyp_tuple(
             elements
                 .into_iter()
-                .map(|e| substitute_type_vars(e, vars))
+                .map(|e| substitute_type_vars(arena, e, vars))
                 .collect(),
         ),
         CoreTypeDesc::Ptyp_poly(poly_vars, body) => {
-            CoreTypeDesc::Ptyp_poly(poly_vars, Box::new(substitute_type_vars(*body, vars)))
+            CoreTypeDesc::Ptyp_poly(poly_vars, Box::new(substitute_type_vars(arena, *body, vars)))
         }
         CoreTypeDesc::Ptyp_alias(inner, alias) => {
-            CoreTypeDesc::Ptyp_alias(Box::new(substitute_type_vars(*inner, vars)), alias)
+            CoreTypeDesc::Ptyp_alias(Box::new(substitute_type_vars(arena, *inner, vars)), alias)
         }
         CoreTypeDesc::Ptyp_object(fields, closed) => {
             let new_fields = fields
                 .into_iter()
                 .map(|field| match field {
                     ObjectField::Otag(name, attrs, inner_typ) => {
-                        ObjectField::Otag(name, attrs, substitute_type_vars(inner_typ, vars))
+                        ObjectField::Otag(name, attrs, substitute_type_vars(arena, inner_typ, vars))
                     }
                     ObjectField::Oinherit(inner_typ) => {
-                        ObjectField::Oinherit(substitute_type_vars(inner_typ, vars))
+                        ObjectField::Oinherit(substitute_type_vars(arena, inner_typ, vars))
                     }
                 })
                 .collect();
@@ -97,12 +98,12 @@ pub fn substitute_type_vars(typ: CoreType, vars: &HashSet<&str>) -> CoreType {
                     RowField::Rtag(name, attrs, empty, types) => {
                         let new_types = types
                             .into_iter()
-                            .map(|t| substitute_type_vars(t, vars))
+                            .map(|t| substitute_type_vars(arena, t, vars))
                             .collect();
                         RowField::Rtag(name, attrs, empty, new_types)
                     }
                     RowField::Rinherit(inner_typ) => {
-                        RowField::Rinherit(substitute_type_vars(inner_typ, vars))
+                        RowField::Rinherit(substitute_type_vars(arena, inner_typ, vars))
                     }
                 })
                 .collect();
@@ -111,7 +112,7 @@ pub fn substitute_type_vars(typ: CoreType, vars: &HashSet<&str>) -> CoreType {
         CoreTypeDesc::Ptyp_package((lid, constraints)) => {
             let new_constraints = constraints
                 .into_iter()
-                .map(|(c_lid, c_typ)| (c_lid, substitute_type_vars(c_typ, vars)))
+                .map(|(c_lid, c_typ)| (c_lid, substitute_type_vars(arena, c_typ, vars)))
                 .collect();
             CoreTypeDesc::Ptyp_package((lid, new_constraints))
         }
@@ -301,7 +302,8 @@ fn parse_es6_arrow_type(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
         p.expect(Token::Colon);
 
         let typ = parse_typ_expr_inner(p, false);
-        let mut lbl = ArgLabel::Labelled(Located::new(name, name_loc));
+        let name_idx = p.arena_mut().intern_string(&name);
+        let mut lbl = ArgLabel::Labelled(Located::new(name_idx, name_loc));
 
         // Optional labeled args: `~x: t=?`
         if p.token == Token::Equal {
@@ -573,7 +575,8 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
                 // But lid_loc uses the real location
                 p.next();
                 let lid_loc = p.mk_loc_to_prev_end(&start_pos);
-                ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, LocIdx::none())
+                let lid_idx = p.push_lident_static("unit");
+                ast_helper::make_type_constr(lid_idx, vec![], lid_loc, LocIdx::none())
             } else {
                 // Parenthesized type or tuple
                 let typ = parse_typ_expr(p);
@@ -649,7 +652,8 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
         }
     }
 
-    let lid = super::core::build_longident(&path_parts);
+    let lid = super::core::build_longident(p.arena_mut(), &path_parts);
+    let lid_idx = p.push_longident(lid);
     // Capture location of just the identifier (to match OCaml's lid.loc)
     let lid_end_pos = p.prev_end_pos.clone();
     let lid_loc = p.mk_loc(&start_pos, &lid_end_pos);
@@ -670,7 +674,7 @@ fn parse_type_constr(p: &mut Parser<'_>) -> CoreType {
     // Note: For Ldot types in certain contexts (type manifests, arrow parameters),
     // the location is adjusted later to exclude type args.
     let ptyp_loc = p.mk_loc_to_prev_end(&start_pos);
-    ast_helper::make_type_constr(lid, args, lid_loc, ptyp_loc)
+    ast_helper::make_type_constr(lid_idx, args, lid_loc, ptyp_loc)
 }
 
 /// Parse type arguments.
@@ -762,7 +766,8 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
             let (name, name_loc) = parse_lident(p);
             p.expect(Token::Colon);
             let typ = parse_typ_expr(p);
-            (ArgLabel::Labelled(Located::new(name, name_loc)), typ)
+            let name_idx = p.arena_mut().intern_string(&name);
+            (ArgLabel::Labelled(Located::new(name_idx, name_loc)), typ)
         } else {
             let typ = parse_typ_expr(p);
             (ArgLabel::Nolabel, typ)
@@ -775,7 +780,7 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         if has_dot && matches!(label, ArgLabel::Nolabel) && !typ.ptyp_loc.is_none() {
             let is_simple_constr = matches!(
                 &typ.ptyp_desc,
-                CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
+                CoreTypeDesc::Ptyp_constr(lid, _) if p.arena().is_simple_lident(lid.txt)
             );
             if is_simple_constr {
                 let end_pos = p.loc_end(typ.ptyp_loc).clone();
@@ -809,7 +814,7 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         let arrow_attrs = if matches!(label, ArgLabel::Nolabel) && !param_attrs.is_empty() {
             let is_simple_lident = matches!(
                 &typ.ptyp_desc,
-                CoreTypeDesc::Ptyp_constr(lid, _) if matches!(lid.txt, Longident::Lident(_))
+                CoreTypeDesc::Ptyp_constr(lid, _) if p.arena().is_simple_lident(lid.txt)
             );
             if is_simple_lident && !typ.ptyp_loc.is_none() {
                 // For simple Lident types, OCaml creates the type with location starting at attrs
@@ -861,10 +866,11 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         // No ~loc passed, so ptyp_loc defaults to Location.none (ghost)
         // But lid_loc uses the real location
         let lid_loc = p.mk_loc(&start_pos, &rparen_end_pos);
+        let lid_idx = p.push_lident_static("unit");
         params.push((TypeArg {
             attrs: vec![],
             lbl: ArgLabel::Nolabel,
-            typ: ast_helper::make_type_constr(Longident::Lident("unit".to_string()), vec![], lid_loc, LocIdx::none()),
+            typ: ast_helper::make_type_constr(lid_idx, vec![], lid_loc, LocIdx::none()),
         }, start_pos.clone()));
     }
 
@@ -1014,17 +1020,20 @@ fn parse_attribute_payload(p: &mut Parser<'_>) -> Payload {
         Token::String(s) => {
             let value = s.clone();
             let tag = get_string_tag(p);
-            let loc = p.mk_loc_current();
+            // IMPORTANT: Create separate locations for expression and structure_item
+            // to match OCaml's allocation pattern (each gets its own Location object)
+            let pexp_loc = p.mk_loc_current();
+            let pstr_loc = p.mk_loc_current();
             p.next();
             // Create Pstr_eval(Pexp_constant(Pconst_string(s, tag)))
             let expr = Expression {
                 pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(value, tag)),
-                pexp_loc: loc.clone(),
+                pexp_loc,
                 pexp_attributes: vec![],
             };
             let item = StructureItem {
                 pstr_desc: StructureItemDesc::Pstr_eval(expr, vec![]),
-                pstr_loc: loc,
+                pstr_loc,
             };
             Payload::PStr(vec![item])
         }
@@ -1539,7 +1548,7 @@ fn parse_package_type_with_parens(
 }
 
 /// Parse a module long identifier.
-fn parse_module_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
+fn parse_module_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<crate::parse_arena::LidentIdx> {
     let start_pos = p.start_pos.clone();
     let mut path_parts = vec![];
 
@@ -1566,13 +1575,14 @@ fn parse_module_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
         }
     }
 
-    let lid = super::core::build_longident(&path_parts);
+    let lid = super::core::build_longident(p.arena_mut(), &path_parts);
+    let lid_idx = p.push_longident(lid);
     let loc = p.mk_loc_to_prev_end(&start_pos);
-    with_loc(lid, loc)
+    with_loc(lid_idx, loc)
 }
 
 /// Parse a type long identifier (module path ending in a type name).
-fn parse_type_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
+fn parse_type_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<crate::parse_arena::LidentIdx> {
     let start_pos = p.start_pos.clone();
     let mut path_parts = vec![];
 
@@ -1603,13 +1613,14 @@ fn parse_type_long_ident(p: &mut Parser<'_>) -> super::ast::Loc<Longident> {
         path_parts.push("error".to_string());
     }
 
-    let lid = super::core::build_longident(&path_parts);
+    let lid = super::core::build_longident(p.arena_mut(), &path_parts);
+    let lid_idx = p.push_longident(lid);
     let loc = p.mk_loc_to_prev_end(&start_pos);
-    with_loc(lid, loc)
+    with_loc(lid_idx, loc)
 }
 
 /// Parse package constraints.
-fn parse_package_constraints(p: &mut Parser<'_>) -> Vec<(super::ast::Loc<Longident>, CoreType)> {
+fn parse_package_constraints(p: &mut Parser<'_>) -> Vec<(super::ast::Loc<crate::parse_arena::LidentIdx>, CoreType)> {
     let mut constraints = vec![];
 
     while p.token == Token::Typ || p.token == Token::And {

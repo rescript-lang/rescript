@@ -4,7 +4,7 @@
 //! matching OCaml res_ast_debugger.ml SexpAstWithLocs output exactly.
 //! Used for debugging position parity between the Rust and OCaml parsers.
 
-use crate::parse_arena::{Located, LocIdx, ParseArena};
+use crate::parse_arena::{LidentIdx, Located, LocIdx, ParseArena};
 use crate::parser::ast::*;
 use crate::parser::longident::Longident;
 use crate::parser::sexp::{Sexp, string_to_latin1_bytes};
@@ -75,23 +75,34 @@ where
 // Longident
 // ============================================================================
 
-fn longident_inner(lid: &Longident) -> Sexp {
+fn longident_inner(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Sexp {
     match lid {
-        Longident::Lident(name) => Sexp::list(vec![Sexp::atom("Lident"), Sexp::atom(&quote_string(name))]),
-        Longident::Ldot(prefix, name) => Sexp::list(vec![
-            Sexp::atom("Ldot"),
-            longident_inner(prefix),
-            Sexp::atom(&quote_string(name)),
-        ]),
+        Longident::Lident(name_idx) => {
+            let name = arena.get_string(*name_idx);
+            Sexp::list(vec![Sexp::atom("Lident"), Sexp::atom(&quote_string(name))])
+        }
+        Longident::Ldot(prefix, name_idx) => {
+            let name = arena.get_string(*name_idx);
+            Sexp::list(vec![
+                Sexp::atom("Ldot"),
+                longident_inner(arena, prefix),
+                Sexp::atom(&quote_string(name)),
+            ])
+        }
         Longident::Lapply(l1, l2) => {
-            Sexp::list(vec![Sexp::atom("Lapply"), longident_inner(l1), longident_inner(l2)])
+            Sexp::list(vec![Sexp::atom("Lapply"), longident_inner(arena, l1), longident_inner(arena, l2)])
         }
     }
 }
 
 /// Returns (longident ...) without location - location is added separately at call sites
-fn longident(lid: &Longident) -> Sexp {
-    Sexp::list(vec![Sexp::atom("longident"), longident_inner(lid)])
+fn longident(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> Sexp {
+    Sexp::list(vec![Sexp::atom("longident"), longident_inner(arena, lid)])
+}
+
+/// Helper to convert LidentIdx to longident sexp
+fn longident_idx(arena: &ParseArena, idx: LidentIdx) -> Sexp {
+    longident(arena, arena.get_longident(idx))
 }
 
 // ============================================================================
@@ -177,12 +188,12 @@ fn arg_label(lbl: &ArgLabel, arena: &ParseArena) -> Sexp {
         ArgLabel::Nolabel => Sexp::atom("Nolabel"),
         ArgLabel::Labelled(s) => Sexp::list(vec![
             Sexp::atom("Labelled"),
-            Sexp::atom(&quote_string(&s.txt)),
+            Sexp::atom(&quote_string(arena.get_string(s.txt))),
             location(s.loc, arena),
         ]),
         ArgLabel::Optional(s) => Sexp::list(vec![
             Sexp::atom("Optional"),
-            Sexp::atom(&quote_string(&s.txt)),
+            Sexp::atom(&quote_string(arena.get_string(s.txt))),
             location(s.loc, arena),
         ]),
     }
@@ -317,7 +328,7 @@ fn core_type(typ: &CoreType, arena: &ParseArena) -> Sexp {
         }
         CoreTypeDesc::Ptyp_constr(lid, types) => Sexp::list(vec![
             Sexp::atom("Ptyp_constr"),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             Sexp::list(map_empty_with_arena(types, arena, core_type)),
         ]),
@@ -389,16 +400,16 @@ fn row_field(field: &RowField, arena: &ParseArena) -> Sexp {
     }
 }
 
-fn package_type(mod_name: &Located<Longident>, constraints: &[(Located<Longident>, CoreType)], arena: &ParseArena) -> Sexp {
+fn package_type(mod_name: &Located<LidentIdx>, constraints: &[(Located<LidentIdx>, CoreType)], arena: &ParseArena) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("package_type"),
-        longident(&mod_name.txt),
+        longident_idx(arena, mod_name.txt),
         location(mod_name.loc, arena),
         Sexp::list(if constraints.is_empty() {
             vec![Sexp::list(vec![])]
         } else {
             constraints.iter().map(|(lid, t)| {
-                Sexp::list(vec![longident(&lid.txt), location(lid.loc, arena), core_type(t, arena)])
+                Sexp::list(vec![longident_idx(arena, lid.txt), location(lid.loc, arena), core_type(t, arena)])
             }).collect()
         }),
     ])
@@ -429,7 +440,7 @@ fn pattern(p: &Pattern, arena: &ParseArena) -> Sexp {
         }
         PatternDesc::Ppat_construct(lid, opt_pat) => Sexp::list(vec![
             Sexp::atom("Ppat_construct"),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             match opt_pat {
                 None => Sexp::atom("None"),
@@ -452,7 +463,7 @@ fn pattern(p: &Pattern, arena: &ParseArena) -> Sexp {
             } else {
                 fields.iter().map(|f| {
                     Sexp::list(vec![
-                        longident(&f.lid.txt),
+                        longident_idx(arena, f.lid.txt),
                         location(f.lid.loc, arena),
                         pattern(&f.pat, arena),
                         Sexp::atom(if f.opt { "true" } else { "false" }),
@@ -469,14 +480,14 @@ fn pattern(p: &Pattern, arena: &ParseArena) -> Sexp {
         PatternDesc::Ppat_constraint(pat, t) => {
             Sexp::list(vec![Sexp::atom("Ppat_constraint"), pattern(pat, arena), core_type(t, arena)])
         }
-        PatternDesc::Ppat_type(lid) => Sexp::list(vec![Sexp::atom("Ppat_type"), longident(&lid.txt), location(lid.loc, arena)]),
+        PatternDesc::Ppat_type(lid) => Sexp::list(vec![Sexp::atom("Ppat_type"), longident_idx(arena, lid.txt), location(lid.loc, arena)]),
         PatternDesc::Ppat_unpack(name) => {
             Sexp::list(vec![Sexp::atom("Ppat_unpack"), Sexp::atom(&quote_string(&name.txt)), location(name.loc, arena)])
         }
         PatternDesc::Ppat_exception(pat) => Sexp::list(vec![Sexp::atom("Ppat_exception"), pattern(pat, arena)]),
         PatternDesc::Ppat_extension(ext) => Sexp::list(vec![Sexp::atom("Ppat_extension"), extension(ext, arena)]),
         PatternDesc::Ppat_open(lid, pat) => {
-            Sexp::list(vec![Sexp::atom("Ppat_open"), longident(&lid.txt), location(lid.loc, arena), pattern(pat, arena)])
+            Sexp::list(vec![Sexp::atom("Ppat_open"), longident_idx(arena, lid.txt), location(lid.loc, arena), pattern(pat, arena)])
         }
     };
     Sexp::list(vec![Sexp::atom("pattern"), location(p.ppat_loc, arena), descr, attributes(&p.ppat_attributes, arena)])
@@ -488,7 +499,7 @@ fn pattern(p: &Pattern, arena: &ParseArena) -> Sexp {
 
 fn expression(expr: &Expression, arena: &ParseArena) -> Sexp {
     let desc = match &expr.pexp_desc {
-        ExpressionDesc::Pexp_ident(lid) => Sexp::list(vec![Sexp::atom("Pexp_ident"), longident(&lid.txt), location(lid.loc, arena)]),
+        ExpressionDesc::Pexp_ident(lid) => Sexp::list(vec![Sexp::atom("Pexp_ident"), longident_idx(arena, lid.txt), location(lid.loc, arena)]),
         ExpressionDesc::Pexp_constant(c) => Sexp::list(vec![Sexp::atom("Pexp_constant"), constant(c)]),
         ExpressionDesc::Pexp_let(flag, vbs, body) => Sexp::list(vec![
             Sexp::atom("Pexp_let"),
@@ -541,7 +552,7 @@ fn expression(expr: &Expression, arena: &ParseArena) -> Sexp {
         }
         ExpressionDesc::Pexp_construct(lid, opt_expr) => Sexp::list(vec![
             Sexp::atom("Pexp_construct"),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             match opt_expr {
                 None => Sexp::atom("None"),
@@ -563,7 +574,7 @@ fn expression(expr: &Expression, arena: &ParseArena) -> Sexp {
             } else {
                 fields.iter().map(|f| {
                     Sexp::list(vec![
-                        longident(&f.lid.txt),
+                        longident_idx(arena, f.lid.txt),
                         location(f.lid.loc, arena),
                         expression(&f.expr, arena),
                         Sexp::atom(if f.opt { "true" } else { "false" }),
@@ -576,12 +587,12 @@ fn expression(expr: &Expression, arena: &ParseArena) -> Sexp {
             },
         ]),
         ExpressionDesc::Pexp_field(e, lid) => {
-            Sexp::list(vec![Sexp::atom("Pexp_field"), expression(e, arena), longident(&lid.txt), location(lid.loc, arena)])
+            Sexp::list(vec![Sexp::atom("Pexp_field"), expression(e, arena), longident_idx(arena, lid.txt), location(lid.loc, arena)])
         }
         ExpressionDesc::Pexp_setfield(e1, lid, e2) => Sexp::list(vec![
             Sexp::atom("Pexp_setfield"),
             expression(e1, arena),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             expression(e2, arena),
         ]),
@@ -646,7 +657,7 @@ fn expression(expr: &Expression, arena: &ParseArena) -> Sexp {
         ExpressionDesc::Pexp_open(flag, lid, body) => Sexp::list(vec![
             Sexp::atom("Pexp_open"),
             override_flag(flag),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             expression(body, arena),
         ]),
@@ -833,7 +844,7 @@ fn extension_constructor_kind(kind: &ExtensionConstructorKind, arena: &ParseAren
             },
         ]),
         ExtensionConstructorKind::Pext_rebind(lid) => {
-            Sexp::list(vec![Sexp::atom("Pext_rebind"), longident(&lid.txt), location(lid.loc, arena)])
+            Sexp::list(vec![Sexp::atom("Pext_rebind"), longident_idx(arena, lid.txt), location(lid.loc, arena)])
         }
     }
 }
@@ -841,7 +852,7 @@ fn extension_constructor_kind(kind: &ExtensionConstructorKind, arena: &ParseAren
 fn type_extension(te: &TypeExtension, arena: &ParseArena) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("type_extension"),
-        Sexp::list(vec![Sexp::atom("ptyext_path"), longident(&te.ptyext_path.txt), location(te.ptyext_path.loc, arena)]),
+        Sexp::list(vec![Sexp::atom("ptyext_path"), longident_idx(arena, te.ptyext_path.txt), location(te.ptyext_path.loc, arena)]),
         Sexp::list(vec![
             Sexp::atom("ptyext_parms"),
             Sexp::list(if te.ptyext_params.is_empty() {
@@ -883,7 +894,7 @@ fn value_description(vd: &ValueDescription, arena: &ParseArena) -> Sexp {
 
 fn module_expression(me: &ModuleExpr, arena: &ParseArena) -> Sexp {
     let desc = match &me.pmod_desc {
-        ModuleExprDesc::Pmod_ident(lid) => Sexp::list(vec![Sexp::atom("Pmod_ident"), longident(&lid.txt), location(lid.loc, arena)]),
+        ModuleExprDesc::Pmod_ident(lid) => Sexp::list(vec![Sexp::atom("Pmod_ident"), longident_idx(arena, lid.txt), location(lid.loc, arena)]),
         ModuleExprDesc::Pmod_structure(items) => {
             Sexp::list(vec![Sexp::atom("Pmod_structure"), structure(items, arena)])
         }
@@ -915,7 +926,7 @@ fn module_expression(me: &ModuleExpr, arena: &ParseArena) -> Sexp {
 
 fn module_type(mt: &ModuleType, arena: &ParseArena) -> Sexp {
     let desc = match &mt.pmty_desc {
-        ModuleTypeDesc::Pmty_ident(lid) => Sexp::list(vec![Sexp::atom("Pmty_ident"), longident(&lid.txt), location(lid.loc, arena)]),
+        ModuleTypeDesc::Pmty_ident(lid) => Sexp::list(vec![Sexp::atom("Pmty_ident"), longident_idx(arena, lid.txt), location(lid.loc, arena)]),
         ModuleTypeDesc::Pmty_signature(items) => {
             Sexp::list(vec![Sexp::atom("Pmty_signature"), signature(items, arena)])
         }
@@ -940,7 +951,7 @@ fn module_type(mt: &ModuleType, arena: &ParseArena) -> Sexp {
         ModuleTypeDesc::Pmty_extension(ext) => {
             Sexp::list(vec![Sexp::atom("Pmty_extension"), extension(ext, arena)])
         }
-        ModuleTypeDesc::Pmty_alias(lid) => Sexp::list(vec![Sexp::atom("Pmty_alias"), longident(&lid.txt), location(lid.loc, arena)]),
+        ModuleTypeDesc::Pmty_alias(lid) => Sexp::list(vec![Sexp::atom("Pmty_alias"), longident_idx(arena, lid.txt), location(lid.loc, arena)]),
     };
     Sexp::list(vec![Sexp::atom("module_type"), location(mt.pmty_loc, arena), desc, attributes(&mt.pmty_attributes, arena)])
 }
@@ -949,21 +960,21 @@ fn with_constraint(wc: &WithConstraint, arena: &ParseArena) -> Sexp {
     match wc {
         WithConstraint::Pwith_type(lid, td) => Sexp::list(vec![
             Sexp::atom("Pmty_with"),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             type_declaration(td, arena),
         ]),
         WithConstraint::Pwith_module(l1, l2) => {
-            Sexp::list(vec![Sexp::atom("Pwith_module"), longident(&l1.txt), location(l1.loc, arena), longident(&l2.txt), location(l2.loc, arena)])
+            Sexp::list(vec![Sexp::atom("Pwith_module"), longident_idx(arena, l1.txt), location(l1.loc, arena), longident_idx(arena, l2.txt), location(l2.loc, arena)])
         }
         WithConstraint::Pwith_typesubst(lid, td) => Sexp::list(vec![
             Sexp::atom("Pwith_typesubst"),
-            longident(&lid.txt),
+            longident_idx(arena, lid.txt),
             location(lid.loc, arena),
             type_declaration(td, arena),
         ]),
         WithConstraint::Pwith_modsubst(l1, l2) => {
-            Sexp::list(vec![Sexp::atom("Pwith_modsubst"), longident(&l1.txt), location(l1.loc, arena), longident(&l2.txt), location(l2.loc, arena)])
+            Sexp::list(vec![Sexp::atom("Pwith_modsubst"), longident_idx(arena, l1.txt), location(l1.loc, arena), longident_idx(arena, l2.txt), location(l2.loc, arena)])
         }
     }
 }
@@ -1008,7 +1019,7 @@ fn open_description(od: &OpenDescription, arena: &ParseArena) -> Sexp {
     Sexp::list(vec![
         Sexp::atom("open_description"),
         location(od.popen_loc, arena),
-        longident(&od.popen_lid.txt),
+        longident_idx(arena, od.popen_lid.txt),
         location(od.popen_lid.loc, arena),
         override_flag(&od.popen_override),
         attributes(&od.popen_attributes, arena),

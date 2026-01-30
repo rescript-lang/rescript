@@ -120,7 +120,7 @@ fn parse_payload(p: &mut Parser<'_>) -> Payload {
 
 /// Parse a type longident (for #...type pattern).
 /// Type paths can be like: typevar, Module.typevar, etc.
-fn parse_type_longident(p: &mut Parser<'_>) -> Longident {
+fn parse_type_longident(p: &mut Parser<'_>) -> crate::parse_arena::LidentIdx {
     let mut parts = vec![];
 
     loop {
@@ -143,11 +143,13 @@ fn parse_type_longident(p: &mut Parser<'_>) -> Longident {
         }
     }
 
-    if parts.is_empty() {
-        Longident::Lident("_".to_string())
+    let lid = if parts.is_empty() {
+        let underscore_idx = p.arena_mut().intern_string("_");
+        Longident::Lident(underscore_idx)
     } else {
-        super::core::build_longident(&parts)
-    }
+        super::core::build_longident(p.arena_mut(), &parts)
+    };
+    p.push_longident(lid)
 }
 
 // ============================================================================
@@ -354,8 +356,9 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
 }
 
 /// Create a unit construct pattern `()`.
-pub fn make_unit_construct_pattern(loc: Location) -> Pattern {
-    ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc, loc)
+pub fn make_unit_construct_pattern(p: &mut super::state::Parser<'_>, loc: Location) -> Pattern {
+    let lid_idx = p.push_lident_static("()");
+    ast_helper::make_construct_pat(lid_idx, None, loc, loc)
 }
 
 /// Parse an optional alias `as name` after a pattern.
@@ -494,8 +497,11 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             let is_true = p.token == Token::True;
             p.next();
             let loc = p.mk_loc_to_prev_end(&start_pos);
-            let lid = Longident::Lident(if is_true { "true" } else { "false" }.to_string());
-            ast_helper::make_construct_pat(lid, None, loc.clone(), loc)
+            let bool_str = if is_true { "true" } else { "false" };
+            let bool_str_idx = p.arena_mut().intern_string(bool_str);
+            let lid = Longident::Lident(bool_str_idx);
+            let lid_idx = p.push_longident(lid);
+            ast_helper::make_construct_pat(lid_idx, None, loc.clone(), loc)
         }
         Token::Lparen => {
             p.next();
@@ -503,7 +509,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 // Unit pattern: ()
                 p.next();
                 let loc = p.mk_loc_to_prev_end(&start_pos);
-                ast_helper::make_construct_pat(Longident::Lident("()".to_string()), None, loc.clone(), loc)
+                let lid_idx = p.push_lident_static("()");
+                ast_helper::make_construct_pat(lid_idx, None, loc.clone(), loc)
             } else {
                 // Parenthesized pattern or tuple
                 let mut pat = parse_constrained_pattern(p);
@@ -612,7 +619,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                 p.next();
 
                 let lid_loc = p.mk_loc_to_prev_end(&start_pos);
-                let lid = mknoloc(Longident::Lident("::".to_string()));
+                let lid_idx = p.push_lident_static("::");
+                let lid = mknoloc(lid_idx);
 
                 let arg = if p.token == Token::Lparen {
                     // Capture position of ( for tuple location (OCaml includes parens)
@@ -621,8 +629,9 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
                     if p.token == Token::Rparen {
                         p.next();
                         let unit_loc = p.mk_loc_to_prev_end(&start_pos);
+                        let unit_lid_idx = p.push_lident_static("()");
                         Some(ast_helper::make_construct_pat(
-                            Longident::Lident("()".to_string()),
+                            unit_lid_idx,
                             None,
                             unit_loc.clone(),
                             unit_loc,
@@ -792,7 +801,8 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
         p.next();
     }
 
-    let lid = super::core::build_longident(&path_parts);
+    let lid = super::core::build_longident(p.arena_mut(), &path_parts);
+    let lid_idx = p.push_longident(lid);
     let loc = p.mk_loc_to_prev_end(&start_pos);
 
     // Check for constructor argument
@@ -805,8 +815,9 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
             // Empty parentheses - unit pattern
             // OCaml: unit pattern location starts at ( not at constructor name
             let unit_loc = p.mk_loc_to_prev_end(&lparen_pos);
+            let unit_lid_idx = p.push_lident_static("()");
             Some(ast_helper::make_construct_pat(
-                Longident::Lident("()".to_string()),
+                unit_lid_idx,
                 None,
                 unit_loc.clone(),
                 unit_loc,
@@ -880,7 +891,7 @@ fn parse_constructor_pattern(p: &mut Parser<'_>) -> Pattern {
         loc.clone()
     };
 
-    ast_helper::make_construct_pat(lid, arg, loc, full_loc)
+    ast_helper::make_construct_pat(lid_idx, arg, loc, full_loc)
 }
 
 // ============================================================================
@@ -998,7 +1009,8 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
         // Capture the end of the longident before parsing colon and pattern
         let lid_end_pos = p.prev_end_pos.clone();
 
-        let lid_unloc = super::core::build_longident(&parts);
+        let lid_unloc = super::core::build_longident(p.arena_mut(), &parts);
+        let lid_idx = p.push_longident(lid_unloc);
         let pun_name = parts.last().cloned().unwrap_or("_".to_string());
 
         let (lid, pat, opt) = if p.token == Token::Colon {
@@ -1012,19 +1024,19 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             let pat = parse_pattern(p);
             // Longident location only covers the field name, not the pattern
             let lid_loc = p.mk_loc(&field_start, &lid_end_pos);
-            (with_loc(lid_unloc, lid_loc), pat, opt)
+            (with_loc(lid_idx, lid_loc), pat, opt)
         } else if p.token == Token::Question {
             // field? (optional punning after field name - less common)
             p.next();
             let loc = p.mk_loc_to_prev_end(&field_start);
             let pat = ast_helper::make_var_pat(pun_name, loc.clone());
-            (with_loc(lid_unloc, loc), pat, true)
+            (with_loc(lid_idx, loc), pat, true)
         } else {
             // Punning: field is same as variable (use last identifier in the path)
             // For optional punned fields, the pattern location is just the identifier (using pat_start)
             let loc = p.mk_loc_to_prev_end(&pat_start);
             let pat = ast_helper::make_var_pat(pun_name, loc.clone());
-            (with_loc(lid_unloc, loc), pat, opt_punning)
+            (with_loc(lid_idx, loc), pat, opt_punning)
         };
 
         fields.push(PatternRecordField { lid, pat, opt });
@@ -1055,6 +1067,7 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
                 let key = key.clone();
                 // OCaml: let loc = mk_loc p.start_pos p.end_pos - captures key location BEFORE consuming
                 let key_loc = p.mk_loc_current();
+                let lid_idx = p.push_lident(&key);
                 p.next();
 
                 p.expect(Token::Colon);
@@ -1065,7 +1078,7 @@ fn parse_dict_pattern(p: &mut Parser<'_>, start_pos: crate::location::Position) 
                 let pat = parse_pattern(p);
                 // OCaml: Location.mkloc (Longident.Lident s) loc - uses key location, not whole field
                 fields.push(PatternRecordField {
-                    lid: with_loc(Longident::Lident(key), key_loc),
+                    lid: with_loc(lid_idx, key_loc),
                     pat,
                     opt,
                 });
@@ -1261,8 +1274,9 @@ fn parse_poly_variant_pattern(p: &mut Parser<'_>) -> Pattern {
             // so the location only covers the `(` character.
             let unit_loc = p.mk_loc_to_prev_end(&tuple_start);
             p.next();
+            let unit_lid_idx = p.push_lident_static("()");
             Some(Box::new(ast_helper::make_construct_pat(
-                Longident::Lident("()".to_string()),
+                unit_lid_idx,
                 None,
                 unit_loc.clone(),
                 unit_loc,

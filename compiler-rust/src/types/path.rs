@@ -52,13 +52,18 @@ impl Path {
     }
 
     /// Create a path from a longident.
-    pub fn from_longident(lid: &crate::parser::longident::Longident) -> Self {
+    ///
+    /// Requires a string lookup function because Longident stores StrIdx.
+    pub fn from_longident<'a>(
+        lid: &crate::parser::longident::Longident,
+        get_str: impl Fn(crate::intern::StrIdx) -> &'a str + Copy,
+    ) -> Self {
         use crate::parser::longident::Longident;
         match lid {
-            Longident::Lident(name) => Path::pident(Ident::create_local(name)),
+            Longident::Lident(name) => Path::pident(Ident::create_local(get_str(*name))),
             Longident::Ldot(prefix, name) => {
-                let prefix_path = Path::from_longident(prefix);
-                Path::pdot(prefix_path, name)
+                let prefix_path = Path::from_longident(prefix, get_str);
+                Path::pdot(prefix_path, get_str(*name))
             }
             Longident::Lapply(_, _) => {
                 // Placeholder - proper implementation would handle functor application

@@ -13,6 +13,7 @@
 //!
 //! This mirrors `compiler/ml/ast_mapper_from0.ml`.
 
+use crate::intern::StrIdx;
 use crate::location::Location as FullLocation;
 use crate::location::Located as OldLocated;
 use crate::parse_arena::{Located, LocIdx, ParseArena};
@@ -225,12 +226,31 @@ impl<'a> Mapper<'a> {
         }
     }
 
+    /// Map a Located<Longident> to Located<LidentIdx> by pushing to arena
+    fn map_longident_loc(&mut self, old: &OldLocated<Longident>) -> Located<crate::parse_arena::LidentIdx> {
+        let lid_idx = self.arena.push_longident(old.txt.clone());
+        Located {
+            txt: lid_idx,
+            loc: self.loc(&old.loc),
+        }
+    }
+
+    /// Push a longident to the arena and get back an index
+    fn push_longident(&mut self, lid: Longident) -> crate::parse_arena::LidentIdx {
+        self.arena.push_longident(lid)
+    }
+
     /// Create a Located value with given text and location
     fn mkloc<T>(&mut self, txt: T, loc: &FullLocation) -> Located<T> {
         Located {
             txt,
             loc: self.loc(loc),
         }
+    }
+
+    /// Get a string from a StrIdx
+    fn get_str(&self, idx: StrIdx) -> &str {
+        self.arena.get_string(idx)
     }
 
     // ========== Public API ==========
@@ -313,7 +333,7 @@ impl<'a> Mapper<'a> {
                 let mapped_types: Vec<_> = tl.iter().map(|t| self.map_core_type(t)).collect();
 
                 if let Longident::Lident(name) = &lid.txt {
-                    if name == "function$" && mapped_types.len() == 2 {
+                    if self.get_str(*name) == "function$" && mapped_types.len() == 2 {
                         if let current::CoreTypeDesc::Ptyp_arrow { arg, ret, .. } = mapped_types[0].ptyp_desc.clone() {
                             if let current::CoreTypeDesc::Ptyp_variant(rows, _, _) = &mapped_types[1].ptyp_desc {
                                 if let Some(row) = rows.first() {
@@ -338,7 +358,7 @@ impl<'a> Mapper<'a> {
                     }
                 }
 
-                current::CoreTypeDesc::Ptyp_constr(self.map_loc(lid), mapped_types)
+                current::CoreTypeDesc::Ptyp_constr(self.map_longident_loc(lid), mapped_types)
             }
             pt0::CoreTypeDesc::Object(fields, closed) => {
                 let fields = fields.iter().map(|f| self.map_object_field(f)).collect();
@@ -361,9 +381,9 @@ impl<'a> Mapper<'a> {
                 let (lid, constraints) = pkg;
                 let constraints = constraints
                     .iter()
-                    .map(|(l, t)| (self.map_loc(l), self.map_core_type(t)))
+                    .map(|(l, t)| (self.map_longident_loc(l), self.map_core_type(t)))
                     .collect();
-                current::CoreTypeDesc::Ptyp_package((self.map_loc(lid), constraints))
+                current::CoreTypeDesc::Ptyp_package((self.map_longident_loc(lid), constraints))
             }
             pt0::CoreTypeDesc::Extension(ext) => {
                 current::CoreTypeDesc::Ptyp_extension(self.map_extension(ext))
@@ -422,7 +442,7 @@ impl<'a> Mapper<'a> {
             }
             pt0::PatternDesc::Construct(lid, arg) => {
                 current::PatternDesc::Ppat_construct(
-                    self.map_loc(lid),
+                    self.map_longident_loc(lid),
                     arg.as_ref().map(|p| Box::new(self.map_pattern(p)))
                 )
             }
@@ -431,7 +451,7 @@ impl<'a> Mapper<'a> {
             }
             pt0::PatternDesc::Record(fields, closed) => {
                 let fields = fields.iter().map(|pt0::RecordElement { lid, x: pat, opt }| {
-                    let lid = self.map_loc(lid);
+                    let lid = self.map_longident_loc(lid);
                     let mapped_attrs = self.map_attributes(&pat.ppat_attributes);
                     let optional = *opt || has_optional_attribute(&mapped_attrs);
                     let pat = if has_optional_attribute(&mapped_attrs) {
@@ -455,13 +475,13 @@ impl<'a> Mapper<'a> {
                 current::PatternDesc::Ppat_constraint(Box::new(self.map_pattern(p)), self.map_core_type(t))
             }
             pt0::PatternDesc::Type(lid) => {
-                current::PatternDesc::Ppat_type(self.map_loc(lid))
+                current::PatternDesc::Ppat_type(self.map_longident_loc(lid))
             }
             pt0::PatternDesc::Unpack(name) => {
                 current::PatternDesc::Ppat_unpack(self.map_loc(name))
             }
             pt0::PatternDesc::Open(lid, p) => {
-                current::PatternDesc::Ppat_open(self.map_loc(lid), Box::new(self.map_pattern(p)))
+                current::PatternDesc::Ppat_open(self.map_longident_loc(lid), Box::new(self.map_pattern(p)))
             }
             pt0::PatternDesc::Exception(p) => {
                 current::PatternDesc::Ppat_exception(Box::new(self.map_pattern(p)))
@@ -483,6 +503,15 @@ impl<'a> Mapper<'a> {
 
     // ========== Expression mapping ==========
 
+    /// Check if a Longident is a simple identifier with given name
+    fn is_lident(&self, lid: &Longident, name: &str) -> bool {
+        if let Longident::Lident(s) = lid {
+            self.get_str(*s) == name
+        } else {
+            false
+        }
+    }
+
     /// Extracts JSX children from a cons-list expression
     fn extract_jsx_children(&mut self, expr: &pt0::Expression) -> Vec<current::Expression> {
         let mut children = Vec::new();
@@ -490,7 +519,7 @@ impl<'a> Mapper<'a> {
         loop {
             match &current_expr.pexp_desc {
                 pt0::ExpressionDesc::Construct(lid, Some(arg))
-                    if matches!(&lid.txt, Longident::Lident(s) if s == "::") =>
+                    if self.is_lident(&lid.txt, "::") =>
                 {
                     if let pt0::ExpressionDesc::Tuple(items) = &arg.pexp_desc {
                         if items.len() == 2 {
@@ -502,7 +531,7 @@ impl<'a> Mapper<'a> {
                     break;
                 }
                 pt0::ExpressionDesc::Construct(lid, None)
-                    if matches!(&lid.txt, Longident::Lident(s) if s == "[]") =>
+                    if self.is_lident(&lid.txt, "[]") =>
                 {
                     break;
                 }
@@ -519,45 +548,47 @@ impl<'a> Mapper<'a> {
     /// Tries to extract a JSX prop from a labeled argument
     fn try_map_jsx_prop(&mut self, label: &pt0::ArgLabel, expr: &pt0::Expression) -> Option<current::JsxProp> {
         match label {
-            pt0::ArgLabel::Labelled(name) if name == "_spreadProps" => {
+            pt0::ArgLabel::Labelled(name_idx) if self.get_str(*name_idx) == "_spreadProps" => {
                 let expr_loc = self.loc(&expr.pexp_loc);
                 Some(current::JsxProp::Spreading {
                     loc: expr_loc,
                     expr: self.map_expression(expr),
                 })
             }
-            pt0::ArgLabel::Labelled(name) => {
+            pt0::ArgLabel::Labelled(name_idx) => {
+                let name_str = self.get_str(*name_idx).to_string();
                 // Check for punning: labelled arg with ident of same name
                 if let pt0::ExpressionDesc::Ident(lid) = &expr.pexp_desc {
                     if let Longident::Lident(v) = &lid.txt {
-                        if v == name {
+                        if self.get_str(*v) == name_str {
                             return Some(current::JsxProp::Punning {
                                 optional: false,
-                                name: self.map_loc(lid).map(|_| name.clone()),
+                                name: self.mkloc(name_str, &lid.loc),
                             });
                         }
                     }
                 }
                 Some(current::JsxProp::Value {
-                    name: Located::mknoloc(name.clone()),
+                    name: Located::mknoloc(name_str),
                     optional: false,
                     value: self.map_expression(expr),
                 })
             }
-            pt0::ArgLabel::Optional(name) => {
+            pt0::ArgLabel::Optional(name_idx) => {
+                let name_str = self.get_str(*name_idx).to_string();
                 // Check for punning: optional arg with ident of same name
                 if let pt0::ExpressionDesc::Ident(lid) = &expr.pexp_desc {
                     if let Longident::Lident(v) = &lid.txt {
-                        if v == name {
+                        if self.get_str(*v) == name_str {
                             return Some(current::JsxProp::Punning {
                                 optional: true,
-                                name: self.map_loc(lid).map(|_| name.clone()),
+                                name: self.mkloc(name_str, &lid.loc),
                             });
                         }
                     }
                 }
                 Some(current::JsxProp::Value {
-                    name: Located::mknoloc(name.clone()),
+                    name: Located::mknoloc(name_str),
                     optional: true,
                     value: self.map_expression(expr),
                 })
@@ -576,7 +607,7 @@ impl<'a> Mapper<'a> {
 
         for (label, expr) in args {
             match label {
-                pt0::ArgLabel::Labelled(name) if name == "children" => {
+                pt0::ArgLabel::Labelled(name_idx) if self.get_str(*name_idx) == "children" => {
                     children = self.extract_jsx_children(expr);
                 }
                 pt0::ArgLabel::Nolabel => {
@@ -593,22 +624,33 @@ impl<'a> Mapper<'a> {
         (props, children)
     }
 
+    /// Helper to check if a string starts with lowercase
+    fn starts_with_lowercase(&self, idx: StrIdx) -> bool {
+        let s = self.get_str(idx);
+        !s.is_empty() && s.chars().next().unwrap().is_lowercase()
+    }
+
     /// Converts a longident to a JSX tag name
-    fn longident_to_jsx_tag(&self, lid: &Longident) -> current::JsxTagName {
+    fn longident_to_jsx_tag(&mut self, lid: &Longident) -> current::JsxTagName {
         match lid {
-            Longident::Lident(s) if !s.is_empty() && s.chars().next().unwrap().is_lowercase() => {
-                current::JsxTagName::Lower(s.clone())
+            Longident::Lident(s) if self.starts_with_lowercase(*s) => {
+                current::JsxTagName::Lower(self.get_str(*s).to_string())
             }
-            Longident::Lident(s) => current::JsxTagName::Upper(Longident::Lident(s.clone())),
-            Longident::Ldot(path, name)
-                if !name.is_empty() && name.chars().next().unwrap().is_lowercase() =>
-            {
+            Longident::Lident(s) => {
+                let lid_idx = self.push_longident(Longident::Lident(*s));
+                current::JsxTagName::Upper(lid_idx)
+            }
+            Longident::Ldot(path, name) if self.starts_with_lowercase(*name) => {
+                let path_idx = self.push_longident((**path).clone());
                 current::JsxTagName::QualifiedLower {
-                    path: (**path).clone(),
-                    name: name.clone(),
+                    path: path_idx,
+                    name: self.get_str(*name).to_string(),
                 }
             }
-            other => current::JsxTagName::Upper(other.clone()),
+            other => {
+                let lid_idx = self.push_longident(other.clone());
+                current::JsxTagName::Upper(lid_idx)
+            }
         }
     }
 
@@ -632,7 +674,7 @@ impl<'a> Mapper<'a> {
         }
 
         let desc = match &expr.pexp_desc {
-            pt0::ExpressionDesc::Ident(lid) => current::ExpressionDesc::Pexp_ident(self.map_loc(lid)),
+            pt0::ExpressionDesc::Ident(lid) => current::ExpressionDesc::Pexp_ident(self.map_longident_loc(lid)),
             pt0::ExpressionDesc::Constant(c) => current::ExpressionDesc::Pexp_constant(map_constant(c)),
             pt0::ExpressionDesc::Let(rec_flag, bindings, body) => current::ExpressionDesc::Pexp_let(
                 map_rec_flag(*rec_flag),
@@ -701,19 +743,21 @@ impl<'a> Mapper<'a> {
                 let func = if let pt0::ExpressionDesc::Ident(lid) = &func.pexp_desc {
                     match &lid.txt {
                         Longident::Lident(name) => {
-                            let new_name = match name.as_str() {
-                                "|." => "->",
-                                "^" => "++",
-                                "<>" => "!=",
-                                "!=" => "!==",
-                                "=" => "==",
-                                "==" => "===",
-                                _ => name.as_str(),
+                            let name_str = self.get_str(*name);
+                            let new_name = match name_str {
+                                "|." => Some("->"),
+                                "^" => Some("++"),
+                                "<>" => Some("!="),
+                                "!=" => Some("!=="),
+                                "=" => Some("=="),
+                                "==" => Some("==="),
+                                _ => None,
                             };
-                            if new_name != name {
+                            if let Some(new_name) = new_name {
+                                let new_str_idx = self.arena.intern_string(new_name);
                                 pt0::Expression {
                                     pexp_desc: pt0::ExpressionDesc::Ident(OldLocated {
-                                        txt: Longident::Lident(new_name.to_string()),
+                                        txt: Longident::Lident(new_str_idx),
                                         loc: lid.loc.clone(),
                                     }),
                                     pexp_loc: func.pexp_loc.clone(),
@@ -758,7 +802,8 @@ impl<'a> Mapper<'a> {
                 // Check for JSX fragment (list with [@JSX] attribute)
                 if has_jsx_attribute(&expr.pexp_attributes) {
                     if let Longident::Lident(name) = &lid.txt {
-                        if name == "[]" || name == "::" {
+                        let name_str = self.get_str(*name);
+                        if name_str == "[]" || name_str == "::" {
                             let jsx_attrs = self.map_attributes(&remove_jsx_attribute(&expr.pexp_attributes));
                             let children = self.extract_jsx_children(expr);
                             let loc_start = self.arena.loc_start(loc).clone();
@@ -779,7 +824,7 @@ impl<'a> Mapper<'a> {
 
                 // Check for Function$ wrapper (arity encoding)
                 if let Longident::Lident(name) = &lid.txt {
-                    if name == "Function$" {
+                    if self.get_str(*name) == "Function$" {
                         if let Some(inner) = arg {
                             let mapped = self.map_expression(inner);
                             if let current::ExpressionDesc::Pexp_fun { arg_label, default, lhs, rhs, is_async, .. } = mapped.pexp_desc {
@@ -807,7 +852,7 @@ impl<'a> Mapper<'a> {
                     }
                 }
                 current::ExpressionDesc::Pexp_construct(
-                    self.map_loc(lid),
+                    self.map_longident_loc(lid),
                     arg.as_ref().map(|e| Box::new(self.map_expression(e))),
                 )
             }
@@ -828,7 +873,7 @@ impl<'a> Mapper<'a> {
                             mapped_expr.pexp_attributes.clone()
                         };
                         current::ExpressionRecordField {
-                            lid: self.map_loc(lid),
+                            lid: self.map_longident_loc(lid),
                             expr: current::Expression {
                                 pexp_desc: mapped_expr.pexp_desc,
                                 pexp_loc: mapped_expr.pexp_loc,
@@ -844,11 +889,11 @@ impl<'a> Mapper<'a> {
                 )
             }
             pt0::ExpressionDesc::Field(e, lid) => {
-                current::ExpressionDesc::Pexp_field(Box::new(self.map_expression(e)), self.map_loc(lid))
+                current::ExpressionDesc::Pexp_field(Box::new(self.map_expression(e)), self.map_longident_loc(lid))
             }
             pt0::ExpressionDesc::Setfield(e1, lid, e2) => current::ExpressionDesc::Pexp_setfield(
                 Box::new(self.map_expression(e1)),
-                self.map_loc(lid),
+                self.map_longident_loc(lid),
                 Box::new(self.map_expression(e2)),
             ),
             pt0::ExpressionDesc::Array(el) => {
@@ -901,7 +946,7 @@ impl<'a> Mapper<'a> {
             pt0::ExpressionDesc::Pack(me) => current::ExpressionDesc::Pexp_pack(self.map_module_expr(me)),
             pt0::ExpressionDesc::Open(ovf, lid, body) => current::ExpressionDesc::Pexp_open(
                 map_override_flag(*ovf),
-                self.map_loc(lid),
+                self.map_longident_loc(lid),
                 Box::new(self.map_expression(body)),
             ),
             pt0::ExpressionDesc::Extension(ext) => {
@@ -968,7 +1013,7 @@ impl<'a> Mapper<'a> {
         let attrs = self.map_attributes(&me.pmod_attributes);
 
         let desc = match &me.pmod_desc {
-            pt0::ModuleExprDesc::Ident(lid) => current::ModuleExprDesc::Pmod_ident(self.map_loc(lid)),
+            pt0::ModuleExprDesc::Ident(lid) => current::ModuleExprDesc::Pmod_ident(self.map_longident_loc(lid)),
             pt0::ModuleExprDesc::Structure(str) => {
                 current::ModuleExprDesc::Pmod_structure(self.map_structure(str))
             }
@@ -1006,8 +1051,8 @@ impl<'a> Mapper<'a> {
         let attrs = self.map_attributes(&mt.pmty_attributes);
 
         let desc = match &mt.pmty_desc {
-            pt0::ModuleTypeDesc::Ident(lid) => current::ModuleTypeDesc::Pmty_ident(self.map_loc(lid)),
-            pt0::ModuleTypeDesc::Alias(lid) => current::ModuleTypeDesc::Pmty_alias(self.map_loc(lid)),
+            pt0::ModuleTypeDesc::Ident(lid) => current::ModuleTypeDesc::Pmty_ident(self.map_longident_loc(lid)),
+            pt0::ModuleTypeDesc::Alias(lid) => current::ModuleTypeDesc::Pmty_alias(self.map_longident_loc(lid)),
             pt0::ModuleTypeDesc::Signature(sig) => {
                 current::ModuleTypeDesc::Pmty_signature(self.map_signature(sig))
             }
@@ -1038,16 +1083,16 @@ impl<'a> Mapper<'a> {
     fn map_with_constraint(&mut self, wc: &pt0::WithConstraint) -> current::WithConstraint {
         match wc {
             pt0::WithConstraint::Type(lid, td) => {
-                current::WithConstraint::Pwith_type(self.map_loc(lid), self.map_type_declaration(td))
+                current::WithConstraint::Pwith_type(self.map_longident_loc(lid), self.map_type_declaration(td))
             }
             pt0::WithConstraint::Module(lid1, lid2) => {
-                current::WithConstraint::Pwith_module(self.map_loc(lid1), self.map_loc(lid2))
+                current::WithConstraint::Pwith_module(self.map_longident_loc(lid1), self.map_longident_loc(lid2))
             }
             pt0::WithConstraint::TypeSubst(lid, td) => {
-                current::WithConstraint::Pwith_typesubst(self.map_loc(lid), self.map_type_declaration(td))
+                current::WithConstraint::Pwith_typesubst(self.map_longident_loc(lid), self.map_type_declaration(td))
             }
             pt0::WithConstraint::ModSubst(lid1, lid2) => {
-                current::WithConstraint::Pwith_modsubst(self.map_loc(lid1), self.map_loc(lid2))
+                current::WithConstraint::Pwith_modsubst(self.map_longident_loc(lid1), self.map_longident_loc(lid2))
             }
         }
     }
@@ -1245,7 +1290,7 @@ impl<'a> Mapper<'a> {
 
     fn map_type_extension(&mut self, te: &pt0::TypeExtension) -> current::TypeExtension {
         current::TypeExtension {
-            ptyext_path: self.map_loc(&te.ptyext_path),
+            ptyext_path: self.map_longident_loc(&te.ptyext_path),
             ptyext_params: te
                 .ptyext_params
                 .iter()
@@ -1280,7 +1325,7 @@ impl<'a> Mapper<'a> {
                 ret.as_ref().map(|t| self.map_core_type(t)),
             ),
             pt0::ExtensionConstructorKind::Rebind(lid) => {
-                current::ExtensionConstructorKind::Pext_rebind(self.map_loc(lid))
+                current::ExtensionConstructorKind::Pext_rebind(self.map_longident_loc(lid))
             }
         }
     }
@@ -1326,7 +1371,7 @@ impl<'a> Mapper<'a> {
 
     fn map_open_description(&mut self, od: &pt0::OpenDescription) -> current::OpenDescription {
         current::OpenDescription {
-            popen_lid: self.map_loc(&od.popen_lid),
+            popen_lid: self.map_longident_loc(&od.popen_lid),
             popen_override: map_override_flag(od.popen_override),
             popen_loc: self.loc(&od.popen_loc),
             popen_attributes: self.map_attributes(&od.popen_attributes),

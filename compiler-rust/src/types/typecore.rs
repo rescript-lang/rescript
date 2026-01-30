@@ -28,7 +28,7 @@
 
 use crate::ident::Ident;
 use crate::location::Location;
-use crate::parse_arena::{Located, LocIdx, ParseArena};
+use crate::parse_arena::{LidentIdx, Located, LocIdx, ParseArena};
 use crate::parser::ast::{
     ArgLabel, Expression as ParsedExpression, Pattern as ParsedPattern, RecFlag,
 };
@@ -405,7 +405,7 @@ impl Default for PatternState {
 pub struct TypeCheckContext<'a> {
     /// Type context for allocation.
     pub type_ctx: &'a TypeContext<'a>,
-    /// Parse arena for location conversion.
+    /// Parse arena for location conversion and longident allocation.
     pub arena: &'a ParseArena,
     /// Unification state.
     pub unify_state: UnifyState,
@@ -445,6 +445,19 @@ impl<'a> TypeCheckContext<'a> {
     pub fn get_newtype_level(&self) -> TypeCoreResult<i32> {
         self.newtype_level
             .ok_or(TypeCoreError::UnexpectedExistential)
+    }
+
+    /// Resolve a LidentIdx to a Longident reference.
+    pub fn resolve_lid(&self, idx: LidentIdx) -> &Longident {
+        self.arena.get_longident(idx)
+    }
+
+    /// Convert a Located<LidentIdx> to Located<Longident> by cloning the longident.
+    pub fn resolve_located_lid(&self, lid: &Located<LidentIdx>) -> Located<Longident> {
+        Located {
+            txt: self.arena.get_longident(lid.txt).clone(),
+            loc: lid.loc,
+        }
     }
 }
 
@@ -501,10 +514,10 @@ fn convert_arg_label_for_ctx(lbl: &crate::parser::ast::ArgLabel, arena: &ParseAr
     match lbl {
         crate::parser::ast::ArgLabel::Nolabel => crate::types::ArgLabel::Nolabel,
         crate::parser::ast::ArgLabel::Labelled(s) => {
-            crate::types::ArgLabel::labelled(s.txt.clone(), arena.to_location(s.loc))
+            crate::types::ArgLabel::labelled(arena.get_string(s.txt).to_string(), arena.to_location(s.loc))
         }
         crate::parser::ast::ArgLabel::Optional(s) => {
-            crate::types::ArgLabel::optional(s.txt.clone(), arena.to_location(s.loc))
+            crate::types::ArgLabel::optional(arena.get_string(s.txt).to_string(), arena.to_location(s.loc))
         }
     }
 }
@@ -633,7 +646,8 @@ fn transl_type_inner(
 
             // Create path from longident
             // Full implementation would look up the type and use its actual path
-            let path = Path::pident(Ident::create_persistent(lid.txt.to_string()));
+            let longident = tctx.arena.get_longident(lid.txt);
+            let path = Path::pident(Ident::create_persistent(longident.to_string()));
 
             let constr_ty = ctx.new_constr(path.clone(), arg_refs);
 
@@ -1190,7 +1204,7 @@ fn type_pattern_construct(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
     loc: LocIdx,
-    lid: &Located<Longident>,
+    lid: &Located<crate::parse_arena::LidentIdx>,
     arg: Option<&ParsedPattern>,
     expected_ty: TypeExprRef,
     mode: PatternMode,
@@ -1200,13 +1214,14 @@ fn type_pattern_construct(
     let ctx = tctx.type_ctx;
 
     // Look up constructor
-    let (cstr_desc, _cstr_path) = match env.find_constructor(&lid.txt.to_string()) {
+    let lid_txt = tctx.arena.get_longident(lid.txt);
+    let (cstr_desc, _cstr_path) = match env.find_constructor(&lid_txt.to_string()) {
         Ok(desc) => (
             desc.clone(),
-            Path::pident(Ident::create_persistent(lid.txt.to_string())),
+            Path::pident(Ident::create_persistent(lid_txt.to_string())),
         ),
         Err(_) => {
-            return Err(TypeCoreError::NotAVariantType(lid.txt.clone()));
+            return Err(TypeCoreError::NotAVariantType(lid_txt.clone()));
         }
     };
 
@@ -1244,8 +1259,9 @@ fn type_pattern_construct(
         }
         (arg_types, None) => {
             // Constructor needs arguments but none provided
+            let lid_txt = tctx.arena.get_longident(lid.txt);
             return Err(TypeCoreError::ConstructorArityMismatch {
-                name: lid.txt.clone(),
+                name: lid_txt.clone(),
                 expected: arg_types.len(),
                 provided: 0,
             });
@@ -1329,7 +1345,7 @@ fn type_pattern_record(
 
         // Create placeholder label description
         let label_desc = crate::types::LabelDescription {
-            lbl_name: field.lid.txt.to_string(),
+            lbl_name: tctx.resolve_lid(field.lid.txt).to_string(),
             lbl_res: expected_ty,
             lbl_arg: field_ty,
             lbl_mut: crate::types::MutableFlag::Immutable,
@@ -1479,7 +1495,7 @@ fn type_pattern_open(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
     loc: LocIdx,
-    mod_lid: &Located<Longident>,
+    mod_lid: &Located<crate::parse_arena::LidentIdx>,
     inner_pat: &ParsedPattern,
     expected_ty: TypeExprRef,
     mode: PatternMode,
@@ -1491,7 +1507,8 @@ fn type_pattern_open(
     let typed_inner = type_pattern_inner(tctx, env, inner_pat, expected_ty, mode, state, 0)?;
 
     // Create the open pattern
-    let _mod_path = Path::pident(Ident::create_persistent(mod_lid.txt.to_string()));
+    let mod_lid_txt = tctx.arena.get_longident(mod_lid.txt);
+    let _mod_path = Path::pident(Ident::create_persistent(mod_lid_txt.to_string()));
 
     Ok(Pattern::new(
         PatternDesc::Tpat_or(Box::new(typed_inner.clone()), Box::new(typed_inner), None),
@@ -1522,7 +1539,8 @@ pub fn type_expect<'a>(
     match &expr.pexp_desc {
         ED::Pexp_ident(lid) => {
             // Identifier expression
-            let (path, desc) = env.lookup_value_by_lid(&lid.txt)?;
+            let longident = tctx.resolve_lid(lid.txt);
+            let (path, desc) = env.lookup_value_by_lid(longident)?;
 
             // Instantiate the type
             let ty = crate::types::instance(ctx, desc.val_type);
@@ -2409,21 +2427,22 @@ fn type_construct(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
     loc: LocIdx,
-    lid: &Located<Longident>,
+    lid: &Located<LidentIdx>,
     arg: Option<&ParsedExpression>,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
 ) -> TypeCoreResult<Expression> {
     let ctx = tctx.type_ctx;
+    let longident = tctx.resolve_lid(lid.txt);
 
     // Look up constructor
-    let (_cstr_path, cstr_desc) = match env.find_constructor(&lid.txt.to_string()) {
+    let (_cstr_path, cstr_desc) = match env.find_constructor(&longident.to_string()) {
         Ok(desc) => (
-            Path::pident(Ident::create_persistent(lid.txt.to_string())),
+            Path::pident(Ident::create_persistent(longident.to_string())),
             desc.clone(),
         ),
         Err(_) => {
-            return Err(TypeCoreError::NotAVariantType(lid.txt.clone()));
+            return Err(TypeCoreError::NotAVariantType(longident.clone()));
         }
     };
 
@@ -2461,8 +2480,9 @@ fn type_construct(
         }
         (arg_types, None) => {
             // Constructor needs arguments but none provided
+            let longident = tctx.resolve_lid(lid.txt);
             return Err(TypeCoreError::ConstructorArityMismatch {
-                name: lid.txt.clone(),
+                name: longident.clone(),
                 expected: arg_types.len(),
                 provided: 0,
             });
@@ -2558,7 +2578,7 @@ fn type_record(
 
         // Create a placeholder label description
         let label_desc = crate::types::LabelDescription {
-            lbl_name: field.lid.txt.to_string(),
+            lbl_name: tctx.resolve_lid(field.lid.txt).to_string(),
             lbl_res: expected_ty,
             lbl_arg: field_ty,
             lbl_mut: crate::types::MutableFlag::Immutable,
@@ -2596,7 +2616,7 @@ fn type_field(
     env: &Env,
     loc: LocIdx,
     record_expr: &ParsedExpression,
-    field_lid: &Located<Longident>,
+    field_lid: &Located<LidentIdx>,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
 ) -> TypeCoreResult<Expression> {
@@ -2612,7 +2632,7 @@ fn type_field(
 
     // Create placeholder label description
     let label_desc = crate::types::LabelDescription {
-        lbl_name: field_lid.txt.to_string(),
+        lbl_name: tctx.resolve_lid(field_lid.txt).to_string(),
         lbl_res: record_ty,
         lbl_arg: field_ty,
         lbl_mut: crate::types::MutableFlag::Immutable,
@@ -2641,7 +2661,7 @@ fn type_setfield(
     env: &Env,
     loc: LocIdx,
     record_expr: &ParsedExpression,
-    field_lid: &Located<Longident>,
+    field_lid: &Located<LidentIdx>,
     new_value: &ParsedExpression,
     expected_ty: TypeExprRef,
     context: Option<TypeClashContext>,
@@ -2665,7 +2685,7 @@ fn type_setfield(
 
     // Create placeholder label description
     let label_desc = crate::types::LabelDescription {
-        lbl_name: field_lid.txt.to_string(),
+        lbl_name: tctx.resolve_lid(field_lid.txt).to_string(),
         lbl_res: record_ty,
         lbl_arg: field_ty,
         lbl_mut: crate::types::MutableFlag::Mutable,
@@ -2773,7 +2793,7 @@ fn type_open(
     tctx: &mut TypeCheckContext<'_>,
     env: &Env,
     loc: LocIdx,
-    lid: &Located<crate::parser::longident::Longident>,
+    lid: &Located<LidentIdx>,
     body: &ParsedExpression,
     expected_ty: TypeExprRef,
     attributes: &[crate::parser::ast::Attribute],
@@ -2781,7 +2801,7 @@ fn type_open(
     // Look up the module and extend the environment with its exports
     // For now, we just type check the body in the current environment
     // Full implementation would open the module's bindings into scope
-    let _ = lid; // TODO: Open the module's bindings
+    let _ = lid; // TODO: Open the module's bindings (use tctx.resolve_lid(lid.txt) when needed)
 
     // Type check the body expression
     let typed_body = type_expect(tctx, env, body, expected_ty, None)?;
@@ -2987,16 +3007,13 @@ fn type_pack(
     // 2. Create a package type from the module type
 
     // For now, return a placeholder with the expected type
-    let _ = tctx; // May be used for module type checking
+    let placeholder_lid = tctx.arena.placeholder_located(loc);
 
     Ok(Expression::new(
         ExpressionDesc::Texp_pack(Box::new(crate::types::typedtree::ModuleExpr {
             mod_desc: crate::types::typedtree::ModuleExprDesc::Tmod_ident(
                 crate::types::Path::pident(Ident::create_local("placeholder")),
-                Located {
-                    txt: crate::parser::longident::Longident::Lident("placeholder".to_string()),
-                    loc,
-                },
+                placeholder_lid,
             ),
             mod_loc: loc,
             mod_type: crate::types::typedtree::ModuleType::placeholder(),
