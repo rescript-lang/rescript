@@ -2,6 +2,35 @@
 
 Please read and follow the instructions in [AGENTS.md](./AGENTS.md).
 
+## ⚠️ CRITICAL: COMMIT YOUR CHANGES
+
+**You MUST commit after completing any meaningful work.** This is non-negotiable.
+
+### When to commit:
+- ✅ After fixing a bug or issue
+- ✅ After implementing a feature or part of a feature
+- ✅ After refactoring code
+- ✅ After improving parity (even 1 more test passing)
+- ✅ Before switching to a different task
+- ✅ Before investigating a problem (commit WIP first)
+- ✅ At natural stopping points
+
+### How to commit:
+```bash
+# Stage specific files (preferred)
+git add path/to/changed/files
+
+# Commit with descriptive message
+git commit -m "$(cat <<'EOF'
+Short description of what changed
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+**DO NOT** leave work uncommitted. If you made changes, commit them.
+
 ## CRITICAL: Protect Uncommitted Work
 
 **NEVER revert or discard uncommitted changes.** This has caused lost work multiple times.

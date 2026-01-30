@@ -50,6 +50,8 @@ The Makefile’s targets build on each other in this order:
 
 ## ⚠️ Critical Guidelines & Common Pitfalls
 
+- **COMMIT YOUR CHANGES** - After completing ANY meaningful work (bug fix, feature, refactor, parity improvement), you MUST commit immediately. Do not leave work uncommitted. Do not move on to the next task without committing first. This is the most important rule.
+
 - **We are NOT bound by OCaml compatibility** - The ReScript compiler originated as a fork of the OCaml compiler, but we maintain our own AST and can make breaking changes. Focus on what's best for ReScript's JavaScript compilation target.
 
 - **Never modify `parsetree0.ml`** - Existing PPX (parser extensions) rely on this frozen v0 version. When changing `parsetree.ml`, always update the mapping modules `ast_mapper_from0.ml` and `ast_mapper_to0.ml` to maintain PPX compatibility while allowing the main parsetree to evolve
@@ -73,6 +75,12 @@ The Makefile’s targets build on each other in this order:
 - **Use tight timeouts when testing compiler/parser** - When running the compiler or parser in tests, always use a short timeout (e.g., 5-10 seconds). Compilation should be fast, and logic errors can cause infinite loops or hangs. A tight timeout ensures these issues are caught quickly rather than blocking indefinitely.
 
 - **Handle concurrent agent work gracefully** - If compilation fails due to errors in code you didn't touch, another agent may be actively working on that part of the codebase. Do NOT modify their files and NEVER use `git stash`. Simply wait 30 seconds and retry the build. Repeat this until compilation succeeds—the other agent will fix their changes shortly.
+
+- **Do NOT revert large changes** - If a task impacts a large amount of code, do NOT revert and give up. Complete the large task as requested. The user is aware it's a big change and expects you to follow through.
+
+- **Do NOT switch tasks when things get hard** - If you're working on a difficult task, do NOT abandon it to work on something easier. Complete the current task FIRST, then move on to the next one. Switching tasks loses valuable context and leaves work incomplete.
+
+- **ALWAYS commit before moving on** - Before starting a new task, before investigating a problem, before taking a break: COMMIT. Use `git add <files> && git commit -m "description"`. No exceptions.
 
 ## Compiler Architecture
 
@@ -759,10 +767,12 @@ The binary AST format uses OCaml's Marshal serialization, which includes back-re
 - Current parsetree binary: 100% parity (1049/1049 files identical)
 - sexp-locs: 100% parity (1049/1049 files identical)
 
-**What still needs work (parsetree0 - frozen PPX format):**
-- binary0 has 985 differing files
-- roundtrip (parsetree→parsetree0→parsetree) has differences
-- These are lower priority as they involve the frozen PPX-compatible format
+**parsetree0 / binary0 - NOT A PRIORITY:**
+
+⚠️ **Do not work on parsetree0 or binary0 parity at this time.** These involve the frozen PPX-compatible format and will be addressed later. The code must still compile, but parity differences are expected and acceptable for now.
+
+- binary0 has 985 differing files (this is fine)
+- roundtrip (parsetree→parsetree0→parsetree) has differences (this is fine)
 
 **Key implementation points:**
 
@@ -795,3 +805,59 @@ diff <(xxd /tmp/ocaml.bin) <(xxd /tmp/rust.bin)
 - If Rust has more bytes, it's likely not sharing something OCaml shares
 - If Rust has fewer bytes, it's likely sharing something OCaml doesn't share
 - Add debug prints in `marshal.rs` to trace object counter values
+
+**Understanding OCaml's value sharing (critical for parity):**
+
+OCaml's Marshal format uses **pointer identity** for sharing. When two AST nodes reference the same memory object (same pointer), Marshal writes a shared reference instead of duplicating the data. This is NOT about string interning or content equality—it's about whether the OCaml code constructs a NEW value or passes an EXISTING value by reference.
+
+**⚠️ CRITICAL: Explicit sharing, NOT automatic interning**
+
+The Rust implementation must **explicitly mirror OCaml's allocation patterns**. Do NOT try to automatically intern or deduplicate values based on content. Instead:
+
+1. **Study the OCaml code** to understand when it passes a reference vs. constructs a new value
+2. **Explicitly share** in Rust when OCaml passes the same reference (use the same arena index)
+3. **Explicitly allocate new** in Rust when OCaml constructs a new value (push a new arena entry)
+
+This means the Rust parser code must be structured to match OCaml's data flow:
+- If OCaml binds a value to a variable and passes that variable to multiple places, Rust should do the same with an arena index
+- If OCaml constructs a new record/value at each use site, Rust should push a new arena entry each time
+
+**Do NOT use content-based deduplication** (e.g., "if we've seen this string before, reuse the index"). OCaml doesn't do this—it uses pointer identity from the actual code flow. The only way to achieve parity is to replicate the exact same allocation patterns.
+
+To achieve binary parity, you MUST study the OCaml sources (tokenizer, parser, marshaller) to understand:
+1. **When does OCaml construct NEW values?** - Look for `{...}` record literals, `::` cons operations, function calls that return new allocations
+2. **When does OCaml pass EXISTING values by reference?** - Look for variables being passed directly, pattern match bindings that propagate references
+
+Examples of what to look for in OCaml:
+```ocaml
+(* NEW allocation - each call creates a fresh string *)
+let lid = Longident.Lident name in ...
+
+(* SAME reference - passing the same variable *)
+let loc = start_pos in
+{ pexp_loc = loc; ... }  (* loc is the SAME object as start_pos *)
+
+(* NEW allocation - record literal creates new record *)
+{ txt = s; loc = l }  (* This is always a new allocation *)
+```
+
+The Rust implementation must replicate these EXACT allocation patterns using the arena:
+- When OCaml creates a new value, Rust should push a new entry to the arena
+- When OCaml passes the same value, Rust should reuse the same arena index
+- The arena index becomes the "pointer identity" for marshalling purposes
+
+**Do NOT assume values are always interned.** Some values may be shared in certain contexts but not others, depending on how the OCaml code flows. Always trace the exact code path in the OCaml implementation.
+
+**⚠️ CORE PRINCIPLE: Replicate OCaml's memory allocation, not content**
+
+OCaml constructs new values OR passes by reference. The Marshal implementation shares values according to how they were allocated by memory management—NOT based on content equality. We do NOT need content-based interning because that's not how OCaml works. Instead:
+
+1. **Study the OCaml source code** - Look at how values are constructed and passed. If a value is bound to a variable and that variable is passed to multiple places, those are all the same reference.
+
+2. **Create an arena for types that need sharing** - If the OCaml code shares values of a particular type (e.g., `Location.t`, `Longident.t`), ensure we have an arena for that type in `ParseArena`.
+
+3. **Pass by arena index, not by value** - When the OCaml code passes a reference, use the same arena index in Rust. Do NOT push a new value into the arena—reuse the existing index.
+
+4. **Push new values only when OCaml allocates** - When OCaml constructs a fresh value (record literal, function call returning new allocation), push a new entry to the arena.
+
+If we do this consistently—replicating OCaml's exact allocation and reference patterns—the binary AST WILL match byte-for-byte.
