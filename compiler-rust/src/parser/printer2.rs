@@ -7,7 +7,7 @@ use crate::location::Location as FullLocation;
 use crate::parse_arena::{LocIdx, ParseArena};
 use crate::parser::ast::*;
 use crate::parser::comment::Comment;
-use crate::parser::comment_table::{walk_structure, CommentTable};
+use crate::parser::comment_table::{walk_signature, walk_structure, CommentTable};
 use crate::parser::doc::Doc;
 use crate::parser::longident::Longident;
 use crate::parser::token::Token;
@@ -5856,12 +5856,12 @@ pub fn print_structure_with_comments(structure: &[StructureItem], comments: Vec<
 /// Print a signature/interface to a string.
 pub fn print_interface(
     signature: &[SignatureItem],
-    _comments: Vec<Comment>,
+    comments: Vec<Comment>,
     width: i32,
     arena: &mut ParseArena,
 ) -> String {
-    // TODO: Add walk_signature for comment attachment
     let mut cmt_tbl = CommentTable::new();
+    walk_signature(signature, &mut cmt_tbl, comments, arena);
     let state = PrinterState::init();
     let doc = print_signature(&state, signature, &mut cmt_tbl, arena);
     let output = doc.to_string(width);
