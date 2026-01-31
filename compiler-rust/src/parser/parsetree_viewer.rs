@@ -311,6 +311,18 @@ fn is_multiline_text(txt: &str) -> bool {
     false
 }
 
+/// Check if an expression is "huggable" as a RHS (simpler than is_huggable_expression).
+pub fn is_huggable_rhs(expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_array(_)
+        | ExpressionDesc::Pexp_tuple(_)
+        | ExpressionDesc::Pexp_record(_, _) => true,
+        ExpressionDesc::Pexp_extension(ext) if ext.0.txt == "obj" => true,
+        _ if is_braced_expr(expr) => true,
+        _ => false,
+    }
+}
+
 /// Check if a longident represents a binary operator.
 pub fn is_binary_operator(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> bool {
     match lid {

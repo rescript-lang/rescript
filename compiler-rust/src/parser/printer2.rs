@@ -1292,17 +1292,21 @@ pub fn print_expression(
         // While loop
         ExpressionDesc::Pexp_while(cond, body) => {
             let cond_doc = print_expression_with_comments(state, cond, cmt_tbl, arena);
-            Doc::concat(vec![
-                Doc::text("while "),
-                cond_doc,
-                Doc::text(" {"),
-                Doc::indent(Doc::concat(vec![
-                    Doc::hard_line(),
-                    print_expression_with_comments(state, body, cmt_tbl, arena),
-                ])),
-                Doc::hard_line(),
-                Doc::text("}"),
-            ])
+            // Check if condition is a block expression
+            let cond_doc = if parsetree_viewer::is_block_expr(cond) {
+                cond_doc
+            } else {
+                Doc::group(Doc::if_breaks(add_parens(cond_doc.clone()), cond_doc))
+            };
+            Doc::breakable_group(
+                Doc::concat(vec![
+                    Doc::text("while "),
+                    cond_doc,
+                    Doc::space(),
+                    print_expression_block(state, true, body, cmt_tbl, arena),
+                ]),
+                true, // force_break
+            )
         }
         // For loop
         ExpressionDesc::Pexp_for(pat, start, finish, direction, body) => {
@@ -1310,21 +1314,37 @@ pub fn print_expression(
                 DirectionFlag::Upto => " to ",
                 DirectionFlag::Downto => " downto ",
             };
-            Doc::concat(vec![
-                Doc::text("for "),
-                print_pattern(state, pat, cmt_tbl, arena),
-                Doc::text(" in "),
-                print_expression_with_comments(state, start, cmt_tbl, arena),
-                Doc::text(dir),
-                print_expression_with_comments(state, finish, cmt_tbl, arena),
-                Doc::text(" {"),
-                Doc::indent(Doc::concat(vec![
-                    Doc::hard_line(),
-                    print_expression_with_comments(state, body, cmt_tbl, arena),
-                ])),
-                Doc::hard_line(),
-                Doc::text("}"),
-            ])
+            // Handle parens for from_expr
+            let start_doc = {
+                let doc = print_expression_with_comments(state, start, cmt_tbl, arena);
+                match parens::expr(arena, start) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, start, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            // Handle parens for to_expr
+            let finish_doc = {
+                let doc = print_expression_with_comments(state, finish, cmt_tbl, arena);
+                match parens::expr(arena, finish) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, finish, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            Doc::breakable_group(
+                Doc::concat(vec![
+                    Doc::text("for "),
+                    print_pattern(state, pat, cmt_tbl, arena),
+                    Doc::text(" in "),
+                    start_doc,
+                    Doc::text(dir),
+                    finish_doc,
+                    Doc::space(),
+                    print_expression_block(state, true, body, cmt_tbl, arena),
+                ]),
+                true, // force_break
+            )
         }
         // Pack: module(M)
         ExpressionDesc::Pexp_pack(mod_expr) => {
@@ -4470,24 +4490,95 @@ fn print_cases(
 ) -> Doc {
     let cases_doc: Vec<Doc> = cases
         .iter()
-        .map(|case| {
-            let pat = print_pattern(state, &case.pc_lhs, cmt_tbl, arena);
-            let pat = if case_pattern_needs_parens(&case.pc_lhs) {
-                Doc::concat(vec![Doc::text("("), pat, Doc::text(")")])
-            } else {
-                pat
-            };
-            let body = print_expression_with_comments(state, &case.pc_rhs, cmt_tbl, arena);
-            Doc::concat(vec![
-                Doc::hard_line(),
-                Doc::text("| "),
-                pat,
-                Doc::text(" => "),
-                body,
-            ])
-        })
+        .map(|case| print_case(state, case, cmt_tbl, arena))
         .collect();
     Doc::concat(cases_doc)
+}
+
+/// Print a single match case.
+fn print_case(
+    state: &PrinterState,
+    case: &Case,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // Print the RHS
+    let rhs = match &case.pc_rhs.pexp_desc {
+        ExpressionDesc::Pexp_let(_, _, _)
+        | ExpressionDesc::Pexp_letmodule(_, _, _)
+        | ExpressionDesc::Pexp_letexception(_, _)
+        | ExpressionDesc::Pexp_open(_, _, _)
+        | ExpressionDesc::Pexp_sequence(_, _) => {
+            let braces = parsetree_viewer::is_braced_expr(&case.pc_rhs);
+            print_expression_block(state, braces, &case.pc_rhs, cmt_tbl, arena)
+        }
+        _ => {
+            let doc = print_expression_with_comments(state, &case.pc_rhs, cmt_tbl, arena);
+            match parens::expr(arena, &case.pc_rhs) {
+                ParenKind::Parenthesized => add_parens(doc),
+                _ => doc,
+            }
+        }
+    };
+
+    // Print guard if present
+    let guard = match &case.pc_guard {
+        None => Doc::nil(),
+        Some(expr) => Doc::group(Doc::concat(vec![
+            Doc::line(),
+            Doc::text("if "),
+            print_expression_with_comments(state, expr, cmt_tbl, arena),
+        ])),
+    };
+
+    // Check if RHS should be on the same line
+    let should_inline_rhs = match &case.pc_rhs.pexp_desc {
+        ExpressionDesc::Pexp_construct(lid, _) => {
+            let name = match arena.get_longident(lid.txt) {
+                crate::parser::longident::Longident::Lident(s) => arena.get_string(*s),
+                _ => "",
+            };
+            matches!(name, "()" | "true" | "false")
+        }
+        ExpressionDesc::Pexp_constant(_) | ExpressionDesc::Pexp_ident(_) => true,
+        _ if parsetree_viewer::is_huggable_rhs(&case.pc_rhs) => true,
+        _ => false,
+    };
+
+    // Check if pattern should be indented
+    let should_indent_pattern = !matches!(
+        &case.pc_lhs.ppat_desc,
+        PatternDesc::Ppat_or(_, _)
+    );
+
+    // Print pattern
+    let pattern_doc = {
+        let doc = print_pattern(state, &case.pc_lhs, cmt_tbl, arena);
+        if case_pattern_needs_parens(&case.pc_lhs) {
+            add_parens(doc)
+        } else {
+            doc
+        }
+    };
+
+    let content = Doc::concat(vec![
+        if should_indent_pattern {
+            Doc::indent(pattern_doc)
+        } else {
+            pattern_doc
+        },
+        Doc::indent(guard),
+        Doc::text(" =>"),
+        Doc::indent(Doc::concat(vec![
+            if should_inline_rhs { Doc::space() } else { Doc::line() },
+            rhs,
+        ])),
+    ]);
+
+    Doc::concat(vec![
+        Doc::hard_line(),
+        Doc::group(Doc::concat(vec![Doc::text("| "), content])),
+    ])
 }
 
 // ============================================================================
