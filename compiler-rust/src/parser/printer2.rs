@@ -1125,8 +1125,8 @@ pub fn print_expression(
             let member_expr = &args[1].1;
             let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
             let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl, arena);
+            // Note: attributes are handled at the end of print_expression
             Doc::group(Doc::concat(vec![
-                print_attributes(state, &e.pexp_attributes, cmt_tbl, arena),
                 parent_doc,
                 Doc::lbracket(),
                 member_doc,
@@ -1149,8 +1149,8 @@ pub fn print_expression(
             } else {
                 Doc::concat(vec![Doc::space(), target_doc])
             };
+            // Note: attributes are handled at the end of print_expression
             Doc::group(Doc::concat(vec![
-                print_attributes(state, &e.pexp_attributes, cmt_tbl, arena),
                 parent_doc,
                 Doc::lbracket(),
                 member_doc,
@@ -1173,19 +1173,12 @@ pub fn print_expression(
             } else {
                 Doc::concat(vec![Doc::space(), rhs_doc])
             };
-            let doc = Doc::group(Doc::concat(vec![
+            // Note: attributes are handled at the end of print_expression
+            Doc::group(Doc::concat(vec![
                 print_expression_with_comments(state, lhs, cmt_tbl, arena),
                 Doc::text(" ="),
                 rhs_doc,
-            ]));
-            if e.pexp_attributes.is_empty() {
-                doc
-            } else {
-                Doc::group(Doc::concat(vec![
-                    print_attributes(state, &e.pexp_attributes, cmt_tbl, arena),
-                    doc,
-                ]))
-            }
+            ]))
         }
         // Function application
         ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
