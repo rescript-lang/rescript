@@ -1954,17 +1954,19 @@ fn print_record_expression(
                 let expr_doc = print_expression_with_comments(state, &field.expr, cmt_tbl, arena);
                 // Check for punning
                 if is_punned_record_field(arena, field) {
+                    // Punned: `?name` or `name`
                     if field.opt {
-                        Doc::concat(vec![field_name, Doc::text("?")])
+                        Doc::concat(vec![Doc::text("?"), field_name])
                     } else {
                         field_name
                     }
                 } else {
+                    // Non-punned: `name: ?value` or `name: value`
                     let opt_marker = if field.opt { Doc::text("?") } else { Doc::nil() };
                     Doc::group(Doc::concat(vec![
                         field_name,
-                        opt_marker,
                         Doc::text(": "),
+                        opt_marker,
                         expr_doc,
                     ]))
                 }
