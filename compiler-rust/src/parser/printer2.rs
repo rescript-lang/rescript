@@ -2505,6 +2505,61 @@ fn print_dict_expr(
     )
 }
 
+/// Check if expression has res.taggedTemplate attribute
+fn is_tagged_template_literal(expr: &Expression) -> bool {
+    expr.pexp_attributes.iter().any(|(name, _)| name.txt == "res.taggedTemplate")
+}
+
+/// Print tagged template literal: tag`string ${expr} string`
+fn print_tagged_template_literal(
+    state: &PrinterState,
+    funct: &Expression,
+    args: &[(ArgLabel, Expression)],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // args should be [strings_array, values_array]
+    if args.len() != 2 {
+        return Doc::nil();
+    }
+
+    let strings = match &args[0].1.pexp_desc {
+        ExpressionDesc::Pexp_array(items) => items,
+        _ => return Doc::nil(),
+    };
+
+    let values = match &args[1].1.pexp_desc {
+        ExpressionDesc::Pexp_array(items) => items,
+        _ => return Doc::nil(),
+    };
+
+    // Build the template content by interleaving strings and ${values}
+    let mut parts: Vec<Doc> = Vec::new();
+
+    for (i, s) in strings.iter().enumerate() {
+        // Extract string content
+        if let ExpressionDesc::Pexp_constant(Constant::String(txt, _)) = &s.pexp_desc {
+            parts.push(print_string_contents(txt));
+        }
+
+        // Add interpolation if there's a corresponding value
+        if i < values.len() {
+            parts.push(Doc::text("${"));
+            parts.push(print_expression_with_comments(state, &values[i], cmt_tbl, arena));
+            parts.push(Doc::text("}"));
+        }
+    }
+
+    let tag_doc = print_expression_with_comments(state, funct, cmt_tbl, arena);
+
+    Doc::concat(vec![
+        tag_doc,
+        Doc::text("`"),
+        Doc::concat(parts),
+        Doc::text("`"),
+    ])
+}
+
 /// Print function application.
 fn print_pexp_apply(
     state: &PrinterState,
@@ -2515,6 +2570,11 @@ fn print_pexp_apply(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Check for tagged template literal: tag`...`
+    if is_tagged_template_literal(expr) {
+        return print_tagged_template_literal(state, funct, args, cmt_tbl, arena);
+    }
+
     // Check for dict{} syntax: Primitive_dict.make([("key", value), ...])
     if let Some(doc) = try_print_dict_expr(state, expr, funct, args, cmt_tbl, arena) {
         return doc;
