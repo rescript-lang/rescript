@@ -4340,7 +4340,7 @@ fn print_with_constraint(
         WithConstraint::Pwith_type(lid, type_decl) => {
             Doc::concat(vec![
                 Doc::text("type "),
-                print_type_declaration_with_lid(state, lid, type_decl, cmt_tbl, arena),
+                print_type_declaration_with_lid(state, lid, type_decl, false, cmt_tbl, arena),
             ])
         }
         WithConstraint::Pwith_module(lid1, lid2) => {
@@ -4354,7 +4354,7 @@ fn print_with_constraint(
         WithConstraint::Pwith_typesubst(lid, type_decl) => {
             Doc::concat(vec![
                 Doc::text("type "),
-                print_type_declaration_with_lid(state, lid, type_decl, cmt_tbl, arena),
+                print_type_declaration_with_lid(state, lid, type_decl, true, cmt_tbl, arena),
             ])
         }
         WithConstraint::Pwith_modsubst(lid1, lid2) => {
@@ -4385,10 +4385,12 @@ fn print_type_param(
 }
 
 /// Print a type declaration with its longident.
+/// `is_substitution` determines whether to use `:=` (true) or `=` (false).
 fn print_type_declaration_with_lid(
     state: &PrinterState,
     lid: &crate::parse_arena::Located<crate::parse_arena::LidentIdx>,
     decl: &TypeDeclaration,
+    is_substitution: bool,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
@@ -4408,8 +4410,9 @@ fn print_type_declaration_with_lid(
         ])
     };
 
+    let eq_sign = if is_substitution { " := " } else { " = " };
     let manifest_doc = match &decl.ptype_manifest {
-        Some(typ) => Doc::concat(vec![Doc::text(" = "), print_typ_expr(state, typ, cmt_tbl, arena)]),
+        Some(typ) => Doc::concat(vec![Doc::text(eq_sign), print_typ_expr(state, typ, cmt_tbl, arena)]),
         None => Doc::nil(),
     };
 
