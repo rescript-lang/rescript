@@ -460,8 +460,11 @@ impl Doc {
                     }
                 }
                 Doc::Group { should_break, doc } => {
+                    // Include remaining stack in fits check (like OCaml)
+                    let mut fit_stack: Vec<(i32, Mode, &Doc)> = stack.clone();
+                    fit_stack.push((indent, Mode::Flat, doc));
                     if should_break.get()
-                        || !Self::fits(width - pos, &[(indent, Mode::Flat, doc)])
+                        || !Self::fits(width - pos, &fit_stack)
                     {
                         stack.push((indent, Mode::Break, doc));
                     } else {
@@ -470,9 +473,12 @@ impl Doc {
                 }
                 Doc::CustomLayout(docs) => {
                     // Find the first layout that fits, or use the last one
+                    // Include remaining stack in fits check (like OCaml)
                     let mut chosen = docs.last();
                     for doc in docs.iter() {
-                        if Self::fits(width - pos, &[(indent, Mode::Flat, doc)]) {
+                        let mut fit_stack: Vec<(i32, Mode, &Doc)> = stack.clone();
+                        fit_stack.push((indent, Mode::Flat, doc));
+                        if Self::fits(width - pos, &fit_stack) {
                             chosen = Some(doc);
                             break;
                         }
