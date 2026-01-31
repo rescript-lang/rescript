@@ -4968,10 +4968,7 @@ pub fn print_signature_item(
         }
 
         SignatureItemDesc::Psig_exception(ext_constr) => {
-            Doc::concat(vec![
-                Doc::text("exception "),
-                print_extension_constructor(state, ext_constr, cmt_tbl, arena),
-            ])
+            print_exception_def(state, ext_constr, cmt_tbl, arena)
         }
 
         SignatureItemDesc::Psig_module(mod_decl) => {
@@ -5105,10 +5102,7 @@ pub fn print_structure_item(
         }
 
         StructureItemDesc::Pstr_exception(ext_constr) => {
-            Doc::concat(vec![
-                Doc::text("exception "),
-                print_extension_constructor(state, ext_constr, cmt_tbl, arena),
-            ])
+            print_exception_def(state, ext_constr, cmt_tbl, arena)
         }
 
         StructureItemDesc::Pstr_module(mod_binding) => {
@@ -5623,6 +5617,62 @@ fn print_extension_constructor(
     };
 
     Doc::concat(vec![attrs_doc, name_doc, kind_doc])
+}
+
+/// Print exception definition (for exception declarations in signatures and structures).
+fn print_exception_def(
+    state: &PrinterState,
+    ext_constr: &ExtensionConstructor,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let attrs_doc = print_attributes(state, &ext_constr.pext_attributes, cmt_tbl, arena);
+    let name_doc = Doc::text(&ext_constr.pext_name.txt);
+
+    let kind_doc = match &ext_constr.pext_kind {
+        ExtensionConstructorKind::Pext_decl(args, res) => {
+            let args_doc = match args {
+                ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
+                ConstructorArguments::Pcstr_tuple(types) => {
+                    let type_docs: Vec<Doc> = types
+                        .iter()
+                        .map(|t| print_typ_expr(state, t, cmt_tbl, arena))
+                        .collect();
+                    Doc::concat(vec![
+                        Doc::text("("),
+                        Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), type_docs),
+                        Doc::text(")"),
+                    ])
+                }
+                ConstructorArguments::Pcstr_record(fields) => {
+                    Doc::concat(vec![
+                        Doc::text("({"),
+                        print_record_declaration(state, fields, None, cmt_tbl, arena),
+                        Doc::text("})"),
+                    ])
+                }
+            };
+            let res_doc = match res {
+                Some(typ) => Doc::concat(vec![Doc::text(": "), print_typ_expr(state, typ, cmt_tbl, arena)]),
+                None => Doc::nil(),
+            };
+            Doc::concat(vec![args_doc, res_doc])
+        }
+        ExtensionConstructorKind::Pext_rebind(lid) => {
+            Doc::indent(Doc::concat(vec![
+                Doc::text(" ="),
+                Doc::line(),
+                print_longident(arena, arena.get_longident(lid.txt)),
+            ]))
+        }
+    };
+
+    Doc::group(Doc::concat(vec![
+        attrs_doc,
+        Doc::text("exception "),
+        name_doc,
+        kind_doc,
+    ]))
 }
 
 /// Print module binding.
