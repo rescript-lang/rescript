@@ -1376,8 +1376,10 @@ pub fn print_expression(
     if attrs.is_empty() {
         printed_expression
     } else {
+        // Use Doc::line() separator so it can break when the expression breaks
+        // Wrap in Doc::group to control breaking behavior
         let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
-        Doc::concat(vec![attrs_doc, printed_expression])
+        Doc::group(Doc::concat(vec![attrs_doc, printed_expression]))
     }
 }
 
