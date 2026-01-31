@@ -1979,6 +1979,12 @@ fn print_record_expression(
                     }
                 } else {
                     // Non-punned: `name: ?value` or `name: value`
+                    // Check if the expression needs parens/braces
+                    let expr_doc = match parens::expr_record_row_rhs(arena, field.opt, &field.expr) {
+                        ParenKind::Parenthesized => add_parens(expr_doc),
+                        ParenKind::Braced(loc) => print_braces(expr_doc, &field.expr, loc, arena),
+                        ParenKind::Nothing => expr_doc,
+                    };
                     let opt_marker = if field.opt { Doc::text("?") } else { Doc::nil() };
                     Doc::group(Doc::concat(vec![
                         field_name,
