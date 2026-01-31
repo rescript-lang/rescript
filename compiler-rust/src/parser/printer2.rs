@@ -2520,11 +2520,13 @@ fn print_binary_expression(
     let is_pipe_first = op == "->";
 
     if should_indent {
+        // For pipe-first (->), use soft_line so there's no space in flat mode
+        let spacing_after = if is_pipe_first { Doc::soft_line() } else { Doc::line() };
         Doc::group(Doc::concat(vec![
             lhs_doc,
-            if is_pipe_first { Doc::nil() } else { Doc::space() },
+            if is_pipe_first { Doc::soft_line() } else { Doc::space() },
             Doc::text(op),
-            Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc]))),
+            Doc::group(Doc::indent(Doc::concat(vec![spacing_after, rhs_doc]))),
         ]))
     } else {
         Doc::concat(vec![
