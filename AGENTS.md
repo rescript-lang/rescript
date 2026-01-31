@@ -650,81 +650,41 @@ When the Rust printer output differs from OCaml, common issues include:
 
 ### AST Parity Test Suite
 
-The AST parity test suite (`scripts/test_parser_ast_parity.sh`) comprehensively compares the Rust and OCaml parser outputs across multiple dimensions:
-
-**Tests performed:**
-1. **sexp parity** - AST structure matches between OCaml and Rust
-2. **sexp-locs parity** - AST structure + locations match
-3. **sexp0-locs parity** - parsetree→parsetree0→sexp output matches (single-trip)
-4. **Roundtrip structure parity** - After parsetree→parsetree0→parsetree, both parsers produce same AST
-5. **Roundtrip location parity** - Locations preserved correctly through parsetree0 conversion
-6. **Binary parity** - Marshalled parsetree0 is byte-identical (critical for PPX compatibility)
-
-#### Running the AST Parity Tests
+**This is the primary test for verifying Rust compiler parity with OCaml.**
 
 ```bash
-# Run all tests (default: 16 parallel jobs)
+# See detailed usage information
+./scripts/test_parser_ast_parity.sh --info
+```
+
+**⚠️ Use `--binary-only` for most testing to save resources:**
+
+```bash
+# Test only bsc-ast output - USE THIS FOR ITERATION
+./scripts/test_parser_ast_parity.sh --binary-only
+
+# Test a single file in binary-only mode (fastest)
+./scripts/test_parser_ast_parity.sh -b tests/syntax_tests/data/printer/expr/apply.res
+
+# Stop on first failure
+./scripts/test_parser_ast_parity.sh -b --quick
+```
+
+Since AST (sexp) parity is already achieved, you only need to run the full test suite occasionally to verify nothing regressed. The `--binary-only` flag skips sexp tests, binary0, and roundtrip tests—only testing the production `bsc -bs-ast` output:
+
+```bash
+# Full test suite - run occasionally, not on every change
 ./scripts/test_parser_ast_parity.sh
-
-# Test a single file (fastest for iteration)
-./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
-
-# Test files matching a pattern
-./scripts/test_parser_ast_parity.sh "printer/expr"
-
-# Quick mode - stop on first failure
-./scripts/test_parser_ast_parity.sh --quick
-
-# Verbose mode - show each file being tested
-./scripts/test_parser_ast_parity.sh -v tests/syntax_tests/data/printer/expr/apply.res
-
-# Adjust parallelism
-./scripts/test_parser_ast_parity.sh -j8
 ```
 
-#### Regression Tracking
+The test suite compares:
+- **bsc-ast** - Full `bsc -bs-ast` output (production format with dependency extraction)
+- **binary0** - Marshalled parsetree0 (byte-identical for PPX tools)
+- **sexp-locs** - Parser AST with locations (readable diffs for debugging)
+- **sexp0-locs** - Parsetree0 sexp output
+- **roundtrip** - parsetree → parsetree0 → parsetree conversion
 
-The parity test suite tracks regressions using baseline files in `tests/parity_baselines/`. Each test type has its own baseline:
-
-- `sexp_locs.txt` - Files passing sexp-locs parity
-- `binary.txt` - Files passing binary parity
-- `sexp0_locs.txt` - Files passing sexp0-locs parity
-- `binary0.txt` - Files passing binary0 parity
-- `roundtrip_structure.txt` - Files passing roundtrip structure parity
-- `roundtrip_locs.txt` - Files passing roundtrip location parity
-
-**How it works:**
-1. When a file passes a test, it's added to the corresponding baseline (append-only)
-2. On subsequent runs, if a file that's in the baseline fails, it's flagged as a **regression**
-3. Regressions are reported prominently and cause the test to fail
-
-**Why this matters:**
-- Prevents accidentally breaking files that were already working
-- Makes it easy to see which files regressed after a change
-- Baselines grow monotonically as parity improves
-- Committed to git so regressions are caught in CI/PRs
-
-**When you see a regression:**
-1. The output will clearly list which files regressed for each test type
-2. Fix the regression before moving on - don't let parity decrease
-3. The baseline files should never be manually edited to remove entries
-
-#### Quick Iteration Workflow
-
-When fixing parity issues, use single-file mode for fast feedback:
-
-```bash
-# 1. Find a failing file from the test output
-# 2. Test just that file
-./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
-
-# 3. Make changes to Rust parser
-# 4. Rebuild
-cargo build --manifest-path compiler-rust/Cargo.toml --release
-
-# 5. Re-test the single file
-./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
-```
+**Regression tracking**: Files that pass are added to baselines in `tests/parity_baselines/`. If a passing file starts failing, it's flagged as a regression and the test fails. This ensures parity can only increase.
 
 #### Known sexp-locs Parity Issues (5 files remaining at 99.5%)
 

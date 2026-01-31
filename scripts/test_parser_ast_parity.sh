@@ -1,12 +1,15 @@
 #!/bin/bash
 
-# AST Parity Test Suite: Comprehensive comparison of Rust and OCaml parsers
+# AST Parity Test Suite: Comprehensive comparison of Rust and OCaml compilers
 #
 # Tests performed:
 #
-# Direct parsing parity (current parsetree format):
+# Parser parity (using res_parser for readable diffs):
 # 1. sexp-locs parity - AST structure + locations + attributes match
-# 2. binary parity - Marshalled current parsetree is byte-identical
+#
+# Compiler binary output parity (using bsc -bs-ast):
+# 2. bsc-ast parity - Full compiler binary AST output is byte-identical
+#    (includes dependency extraction + marshalled parsetree)
 #
 # Parsetree0 conversion parity (frozen PPX-compatible format):
 # 3. sexp0-locs parity - parsetree->parsetree0->sexp output matches
@@ -33,7 +36,9 @@
 #   -q, --quick       Stop on first failure (useful for quick iteration)
 #   -j, --parallel N  Run N tests in parallel (default: 16)
 #   -v, --verbose     Show progress for each file
+#   -b, --binary-only Only test bsc-ast output (skip sexp, binary0, and roundtrip tests)
 #   -h, --help        Show this help message
+#   --info            Show detailed usage information and examples
 #
 # EXAMPLES:
 #   # Test a single file (fastest for iteration):
@@ -57,6 +62,7 @@ set -e
 QUICK_MODE=false
 PARALLEL_JOBS=16
 VERBOSE=false
+BINARY_ONLY=false
 FILE_ARG=""
 
 while [[ $# -gt 0 ]]; do
@@ -78,8 +84,86 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
+        -b|--binary-only)
+            BINARY_ONLY=true
+            shift
+            ;;
         -h|--help)
-            head -45 "$0" | tail -40
+            head -55 "$0" | tail -50
+            exit 0
+            ;;
+        --info)
+            cat << 'EOF'
+AST Parity Test Suite
+=====================
+
+This is the comprehensive test for verifying Rust compiler parity with OCaml.
+
+WHAT IT TESTS:
+
+  1. sexp-locs     Parser AST with locations (readable diffs for debugging)
+  2. bsc-ast       Full `bsc -bs-ast` output (production format with deps)
+  3. sexp0-locs    Parsetree0 sexp output (PPX-compatible format)
+  4. binary0       Marshalled parsetree0 (byte-identical for PPX tools)
+  5. roundtrip     parsetree -> parsetree0 -> parsetree conversion
+
+QUICK START:
+
+  # Run all tests (parallel by default):
+  ./scripts/test_parser_ast_parity.sh
+
+  # Test a single file (fastest for iteration):
+  ./scripts/test_parser_ast_parity.sh tests/syntax_tests/data/printer/expr/apply.res
+
+  # Test files matching a pattern:
+  ./scripts/test_parser_ast_parity.sh "record"
+
+  # Stop on first failure (useful when fixing issues):
+  ./scripts/test_parser_ast_parity.sh --quick
+
+  # Test only bsc-ast output (fastest, skip all other tests):
+  ./scripts/test_parser_ast_parity.sh --binary-only
+
+  # Verbose output showing each file:
+  ./scripts/test_parser_ast_parity.sh -v
+
+REGRESSION TRACKING:
+
+  The script maintains baseline files in tests/parity_baselines/. When a file
+  passes, it's added to the baseline. If a file that was passing starts failing,
+  it's flagged as a REGRESSION and the test fails.
+
+  This ensures parity can only increase, never decrease.
+
+UNDERSTANDING FAILURES:
+
+  - sexp-locs diff: Look at the diff to see AST structure differences
+  - bsc-ast diff: Full compiler output differs (includes dependency extraction)
+  - binary0 diff: PPX compatibility broken - parsetree0 marshalling differs
+  - roundtrip diff: parsetree0 conversion produces different results
+
+OUTPUT FORMATS:
+
+  bsc -bs-ast output format (used by build system):
+    [4 bytes]     Size of dependencies section (binary int)
+    [N bytes]     Dependencies (newline-separated module names, e.g. "React\nBelt\n")
+    [string]      Source filename + newline
+    [marshalled]  OCaml-marshalled parsetree
+
+  res_parser -print binary output format:
+    [magic]       AST magic number (ast_impl_magic or ast_intf_magic)
+    [marshalled]  Filename (OCaml string)
+    [marshalled]  Parsetree
+
+  res_parser -print binary0 output format:
+    Same as above, but parsetree is converted to parsetree0 (frozen PPX format)
+
+DIFF FILES:
+
+  When tests fail, diff files are saved to a temp directory (shown in output).
+  Use these to debug what's different between Rust and OCaml output.
+
+EOF
             exit 0
             ;;
         *)
@@ -92,8 +176,14 @@ done
 scriptDir=$(dirname "$0")
 PROJECT_ROOT=$(cd "$scriptDir/.."; pwd -P)
 DUNE_BIN_DIR="$PROJECT_ROOT/_build/install/default/bin"
+
+# Parser executables (for sexp output - readable diffs)
 RUST_PARSER="$PROJECT_ROOT/compiler-rust/target/release/res_parser_rust"
 OCAML_PARSER="$DUNE_BIN_DIR/res_parser"
+
+# Compiler executables (for bsc -bs-ast output - production format)
+RUST_BSC="$PROJECT_ROOT/compiler-rust/target/release/bsc"
+OCAML_BSC="$PROJECT_ROOT/packages/@rescript/$($PROJECT_ROOT/scripts/platform.sh)/bin/bsc.exe"
 
 # Colors for output
 RED='\033[0;31m'
@@ -108,13 +198,13 @@ TIMEOUT_SECONDS=5
 # Baseline files for regression tracking (one per test type)
 BASELINE_DIR="$PROJECT_ROOT/tests/parity_baselines"
 BASELINE_SEXP_LOCS="$BASELINE_DIR/sexp_locs.txt"
-BASELINE_BINARY="$BASELINE_DIR/binary.txt"
+BASELINE_BSC_AST="$BASELINE_DIR/bsc_ast.txt"
 BASELINE_SEXP0_LOCS="$BASELINE_DIR/sexp0_locs.txt"
 BASELINE_BINARY0="$BASELINE_DIR/binary0.txt"
 BASELINE_ROUNDTRIP_STRUCTURE="$BASELINE_DIR/roundtrip_structure.txt"
 BASELINE_ROUNDTRIP_LOCS="$BASELINE_DIR/roundtrip_locs.txt"
 
-# Check if parsers exist
+# Check if executables exist
 if [[ ! -x "$OCAML_PARSER" ]]; then
     echo -e "${RED}Error: OCaml parser not found at $OCAML_PARSER${RESET}"
     echo "Run 'make' first to build the OCaml parser."
@@ -127,14 +217,28 @@ if [[ ! -x "$RUST_PARSER" ]]; then
     exit 1
 fi
 
+if [[ ! -x "$OCAML_BSC" ]]; then
+    echo -e "${RED}Error: OCaml bsc not found at $OCAML_BSC${RESET}"
+    echo "Run 'make' first to build the OCaml compiler."
+    exit 1
+fi
+
+if [[ ! -x "$RUST_BSC" ]]; then
+    echo -e "${RED}Error: Rust bsc not found at $RUST_BSC${RESET}"
+    echo "Run 'cargo build --manifest-path compiler-rust/Cargo.toml --release' first."
+    exit 1
+fi
+
 # Create temp directory
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-echo -e "${BOLD}Parser AST Parity Test${RESET}"
+echo -e "${BOLD}AST Parity Test${RESET}"
 echo "============================================"
 echo "OCaml parser: $OCAML_PARSER"
 echo "Rust parser:  $RUST_PARSER"
+echo "OCaml bsc:    $OCAML_BSC"
+echo "Rust bsc:     $RUST_BSC"
 echo "Timeout: ${TIMEOUT_SECONDS}s"
 echo "Parallel jobs: $PARALLEL_JOBS"
 echo ""
@@ -185,11 +289,11 @@ mkdir -p "$TEMP_DIR/locs_diffs"
 mkdir -p "$TEMP_DIR/sexp0_locs_diffs"
 mkdir -p "$TEMP_DIR/roundtrip_parity_diffs"
 mkdir -p "$TEMP_DIR/roundtrip_locs_parity_diffs"
-mkdir -p "$TEMP_DIR/binary_parity_diffs"
+mkdir -p "$TEMP_DIR/bsc_ast_parity_diffs"
 mkdir -p "$TEMP_DIR/binary0_parity_diffs"
 
 # Export variables for parallel execution
-export OCAML_PARSER RUST_PARSER TIMEOUT_SECONDS TEMP_DIR QUICK_MODE VERBOSE
+export OCAML_PARSER RUST_PARSER OCAML_BSC RUST_BSC TIMEOUT_SECONDS TEMP_DIR QUICK_MODE VERBOSE BINARY_ONLY
 
 # Function to test a single file - writes results to a file
 test_single_file() {
@@ -200,7 +304,7 @@ test_single_file() {
     # Initialize result
     local locs_pass=0 locs_diff=0 sexp0_locs_diff=0
     local roundtrip_diff=0 roundtrip_locs_diff=0
-    local binary_diff=0 binary0_diff=0
+    local bsc_ast_diff=0 binary0_diff=0
     local ocaml_fail=0 rust_fail=0
 
     # Determine if it's an interface file
@@ -233,79 +337,94 @@ test_single_file() {
 
     # Compare sexp-locs outputs if both succeeded
     if $ocaml_success && $rust_success; then
-        if diff -q "$file_temp/ocaml.sexp-locs" "$file_temp/rust.sexp-locs" > /dev/null 2>&1; then
+        if [[ "$BINARY_ONLY" == "true" ]]; then
+            # In binary-only mode, assume sexp tests pass (skip them)
             locs_pass=1
         else
-            locs_diff=1
-            diff -u "$file_temp/ocaml.sexp-locs" "$file_temp/rust.sexp-locs" > "$TEMP_DIR/locs_diffs/$safe_name.diff" 2>&1 || true
-        fi
+            if diff -q "$file_temp/ocaml.sexp-locs" "$file_temp/rust.sexp-locs" > /dev/null 2>&1; then
+                locs_pass=1
+            else
+                locs_diff=1
+                diff -u "$file_temp/ocaml.sexp-locs" "$file_temp/rust.sexp-locs" > "$TEMP_DIR/locs_diffs/$safe_name.diff" 2>&1 || true
+            fi
 
-        # Test sexp0-locs
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print sexp0-locs "$file" > "$file_temp/ocaml.sexp0-locs" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print sexp0-locs "$file" > "$file_temp/rust.sexp0-locs" 2>/dev/null; then
-            if ! diff -q "$file_temp/ocaml.sexp0-locs" "$file_temp/rust.sexp0-locs" > /dev/null 2>&1; then
-                sexp0_locs_diff=1
-                diff -u "$file_temp/ocaml.sexp0-locs" "$file_temp/rust.sexp0-locs" > "$TEMP_DIR/sexp0_locs_diffs/$safe_name.diff" 2>&1 || true
+            # Test sexp0-locs
+            if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print sexp0-locs "$file" > "$file_temp/ocaml.sexp0-locs" 2>/dev/null && \
+               timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print sexp0-locs "$file" > "$file_temp/rust.sexp0-locs" 2>/dev/null; then
+                if ! diff -q "$file_temp/ocaml.sexp0-locs" "$file_temp/rust.sexp0-locs" > /dev/null 2>&1; then
+                    sexp0_locs_diff=1
+                    diff -u "$file_temp/ocaml.sexp0-locs" "$file_temp/rust.sexp0-locs" > "$TEMP_DIR/sexp0_locs_diffs/$safe_name.diff" 2>&1 || true
+                fi
             fi
         fi
 
-        # Test roundtrip parity
-        local ocaml_roundtrip_ok=false rust_roundtrip_ok=false
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -test-ast-conversion -print sexp "$file" > "$file_temp/ocaml.roundtrip.sexp" 2>/dev/null; then
-            ocaml_roundtrip_ok=true
-        fi
-        if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -test-ast-conversion -print sexp "$file" > "$file_temp/rust.roundtrip.sexp" 2>/dev/null; then
-            rust_roundtrip_ok=true
-        fi
-        if $ocaml_roundtrip_ok && $rust_roundtrip_ok; then
-            if ! diff -q "$file_temp/ocaml.roundtrip.sexp" "$file_temp/rust.roundtrip.sexp" > /dev/null 2>&1; then
-                roundtrip_diff=1
-                diff -u "$file_temp/ocaml.roundtrip.sexp" "$file_temp/rust.roundtrip.sexp" > "$TEMP_DIR/roundtrip_parity_diffs/$safe_name.diff" 2>&1 || true
+        # Test roundtrip parity (skip in binary-only mode)
+        if [[ "$BINARY_ONLY" != "true" ]]; then
+            local ocaml_roundtrip_ok=false rust_roundtrip_ok=false
+            if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -test-ast-conversion -print sexp "$file" > "$file_temp/ocaml.roundtrip.sexp" 2>/dev/null; then
+                ocaml_roundtrip_ok=true
+            fi
+            if timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -test-ast-conversion -print sexp "$file" > "$file_temp/rust.roundtrip.sexp" 2>/dev/null; then
+                rust_roundtrip_ok=true
+            fi
+            if $ocaml_roundtrip_ok && $rust_roundtrip_ok; then
+                if ! diff -q "$file_temp/ocaml.roundtrip.sexp" "$file_temp/rust.roundtrip.sexp" > /dev/null 2>&1; then
+                    roundtrip_diff=1
+                    diff -u "$file_temp/ocaml.roundtrip.sexp" "$file_temp/rust.roundtrip.sexp" > "$TEMP_DIR/roundtrip_parity_diffs/$safe_name.diff" 2>&1 || true
+                fi
+            fi
+
+            # Test roundtrip locations
+            if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -test-ast-conversion -print sexp-locs "$file" > "$file_temp/ocaml.roundtrip.sexp-locs" 2>/dev/null && \
+               timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -test-ast-conversion -print sexp-locs "$file" > "$file_temp/rust.roundtrip.sexp-locs" 2>/dev/null; then
+                if ! diff -q "$file_temp/ocaml.roundtrip.sexp-locs" "$file_temp/rust.roundtrip.sexp-locs" > /dev/null 2>&1; then
+                    roundtrip_locs_diff=1
+                    diff -u "$file_temp/ocaml.roundtrip.sexp-locs" "$file_temp/rust.roundtrip.sexp-locs" > "$TEMP_DIR/roundtrip_locs_parity_diffs/$safe_name.diff" 2>&1 || true
+                fi
             fi
         fi
 
-        # Test roundtrip locations
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -test-ast-conversion -print sexp-locs "$file" > "$file_temp/ocaml.roundtrip.sexp-locs" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -test-ast-conversion -print sexp-locs "$file" > "$file_temp/rust.roundtrip.sexp-locs" 2>/dev/null; then
-            if ! diff -q "$file_temp/ocaml.roundtrip.sexp-locs" "$file_temp/rust.roundtrip.sexp-locs" > /dev/null 2>&1; then
-                roundtrip_locs_diff=1
-                diff -u "$file_temp/ocaml.roundtrip.sexp-locs" "$file_temp/rust.roundtrip.sexp-locs" > "$TEMP_DIR/roundtrip_locs_parity_diffs/$safe_name.diff" 2>&1 || true
-            fi
-        fi
-
-        # Test binary parity (current parsetree format)
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print binary "$file" > "$file_temp/ocaml.binary" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print binary "$file" > "$file_temp/rust.binary" 2>/dev/null; then
-            if ! diff -q "$file_temp/ocaml.binary" "$file_temp/rust.binary" > /dev/null 2>&1; then
-                binary_diff=1
-                {
-                    echo "OCaml binary size: $(wc -c < "$file_temp/ocaml.binary") bytes"
-                    echo "Rust binary size:  $(wc -c < "$file_temp/rust.binary") bytes"
-                    echo ""
-                    echo "First differing bytes (hex dump):"
-                    diff <(xxd "$file_temp/ocaml.binary" | head -50) <(xxd "$file_temp/rust.binary" | head -50) || true
-                } > "$TEMP_DIR/binary_parity_diffs/$safe_name.diff" 2>&1
+        # Test bsc -bs-ast parity (full compiler binary AST output with dependencies)
+        # This is the production format used by the build system
+        local ocaml_ast_file="$file_temp/ocaml.ast"
+        local rust_ast_file="$file_temp/rust.ast"
+        if timeout "$TIMEOUT_SECONDS" "$OCAML_BSC" -bs-ast "$file" -o "$ocaml_ast_file" 2>/dev/null && \
+           timeout "$TIMEOUT_SECONDS" "$RUST_BSC" -bs-ast "$file" -o "$rust_ast_file" 2>/dev/null; then
+            if [[ -f "$ocaml_ast_file" && -f "$rust_ast_file" ]]; then
+                if ! diff -q "$ocaml_ast_file" "$rust_ast_file" > /dev/null 2>&1; then
+                    bsc_ast_diff=1
+                    {
+                        echo "OCaml bsc-ast size: $(wc -c < "$ocaml_ast_file") bytes"
+                        echo "Rust bsc-ast size:  $(wc -c < "$rust_ast_file") bytes"
+                        echo ""
+                        echo "First differing bytes (hex dump):"
+                        diff <(xxd "$ocaml_ast_file" | head -50) <(xxd "$rust_ast_file" | head -50) || true
+                    } > "$TEMP_DIR/bsc_ast_parity_diffs/$safe_name.diff" 2>&1
+                fi
             fi
         fi
 
         # Test binary0 parity (parsetree0 format - PPX compatible)
-        if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print binary0 "$file" > "$file_temp/ocaml.binary0" 2>/dev/null && \
-           timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print binary0 "$file" > "$file_temp/rust.binary0" 2>/dev/null; then
-            if ! diff -q "$file_temp/ocaml.binary0" "$file_temp/rust.binary0" > /dev/null 2>&1; then
-                binary0_diff=1
-                {
-                    echo "OCaml binary0 size: $(wc -c < "$file_temp/ocaml.binary0") bytes"
-                    echo "Rust binary0 size:  $(wc -c < "$file_temp/rust.binary0") bytes"
-                    echo ""
-                    echo "First differing bytes (hex dump):"
-                    diff <(xxd "$file_temp/ocaml.binary0" | head -50) <(xxd "$file_temp/rust.binary0" | head -50) || true
-                } > "$TEMP_DIR/binary0_parity_diffs/$safe_name.diff" 2>&1
+        # Skip in binary-only mode since we're focused on bsc-ast
+        if [[ "$BINARY_ONLY" != "true" ]]; then
+            if timeout "$TIMEOUT_SECONDS" "$OCAML_PARSER" $intf_flag -print binary0 "$file" > "$file_temp/ocaml.binary0" 2>/dev/null && \
+               timeout "$TIMEOUT_SECONDS" "$RUST_PARSER" $intf_flag -print binary0 "$file" > "$file_temp/rust.binary0" 2>/dev/null; then
+                if ! diff -q "$file_temp/ocaml.binary0" "$file_temp/rust.binary0" > /dev/null 2>&1; then
+                    binary0_diff=1
+                    {
+                        echo "OCaml binary0 size: $(wc -c < "$file_temp/ocaml.binary0") bytes"
+                        echo "Rust binary0 size:  $(wc -c < "$file_temp/rust.binary0") bytes"
+                        echo ""
+                        echo "First differing bytes (hex dump):"
+                        diff <(xxd "$file_temp/ocaml.binary0" | head -50) <(xxd "$file_temp/rust.binary0" | head -50) || true
+                    } > "$TEMP_DIR/binary0_parity_diffs/$safe_name.diff" 2>&1
+                fi
             fi
         fi
     fi
 
     # Write results
-    echo "$file:$locs_pass:$locs_diff:$sexp0_locs_diff:$roundtrip_diff:$roundtrip_locs_diff:$binary_diff:$binary0_diff:$ocaml_fail:$rust_fail" > "$result_file"
+    echo "$file:$locs_pass:$locs_diff:$sexp0_locs_diff:$roundtrip_diff:$roundtrip_locs_diff:$bsc_ast_diff:$binary0_diff:$ocaml_fail:$rust_fail" > "$result_file"
 
     # Clean up per-file temp
     rm -rf "$file_temp"
@@ -315,6 +434,9 @@ export -f test_single_file
 export RESULTS_DIR
 
 echo -e "${BOLD}Running AST parity tests...${RESET}"
+if [[ "$BINARY_ONLY" == "true" ]]; then
+    echo -e "  (binary-only mode: testing bsc-ast only)"
+fi
 if $QUICK_MODE; then
     echo -e "  (quick mode: will stop on first failure)"
 fi
@@ -379,7 +501,7 @@ locs_diff_count=0
 sexp0_locs_diff_count=0
 roundtrip_parity_diff_count=0
 roundtrip_locs_parity_diff_count=0
-binary_parity_diff_count=0
+bsc_ast_parity_diff_count=0
 binary0_parity_diff_count=0
 ocaml_fail_count=0
 rust_fail_count=0
@@ -388,7 +510,7 @@ locs_diff_files=""
 sexp0_locs_diff_files=""
 roundtrip_parity_diff_files=""
 roundtrip_locs_parity_diff_files=""
-binary_parity_diff_files=""
+bsc_ast_parity_diff_files=""
 binary0_parity_diff_files=""
 ocaml_fail_files=""
 rust_fail_files=""
@@ -396,14 +518,14 @@ rust_fail_files=""
 for result_file in "$RESULTS_DIR"/*.result; do
     [[ -f "$result_file" ]] || continue
     result=$(cat "$result_file")
-    IFS=':' read -r file locs_pass locs_diff sexp0_diff rt_diff rt_locs_diff bin_diff bin0_diff ocaml_fail rust_fail <<< "$result"
+    IFS=':' read -r file locs_pass locs_diff sexp0_diff rt_diff rt_locs_diff bsc_ast_diff bin0_diff ocaml_fail rust_fail <<< "$result"
 
     locs_pass_count=$((locs_pass_count + locs_pass))
     locs_diff_count=$((locs_diff_count + locs_diff))
     sexp0_locs_diff_count=$((sexp0_locs_diff_count + sexp0_diff))
     roundtrip_parity_diff_count=$((roundtrip_parity_diff_count + rt_diff))
     roundtrip_locs_parity_diff_count=$((roundtrip_locs_parity_diff_count + rt_locs_diff))
-    binary_parity_diff_count=$((binary_parity_diff_count + bin_diff))
+    bsc_ast_parity_diff_count=$((bsc_ast_parity_diff_count + bsc_ast_diff))
     binary0_parity_diff_count=$((binary0_parity_diff_count + bin0_diff))
     ocaml_fail_count=$((ocaml_fail_count + ocaml_fail))
     rust_fail_count=$((rust_fail_count + rust_fail))
@@ -412,7 +534,7 @@ for result_file in "$RESULTS_DIR"/*.result; do
     [[ "$sexp0_diff" -eq 1 ]] && sexp0_locs_diff_files="$sexp0_locs_diff_files$file\n"
     [[ "$rt_diff" -eq 1 ]] && roundtrip_parity_diff_files="$roundtrip_parity_diff_files$file\n"
     [[ "$rt_locs_diff" -eq 1 ]] && roundtrip_locs_parity_diff_files="$roundtrip_locs_parity_diff_files$file\n"
-    [[ "$bin_diff" -eq 1 ]] && binary_parity_diff_files="$binary_parity_diff_files$file\n"
+    [[ "$bsc_ast_diff" -eq 1 ]] && bsc_ast_parity_diff_files="$bsc_ast_parity_diff_files$file\n"
     [[ "$bin0_diff" -eq 1 ]] && binary0_parity_diff_files="$binary0_parity_diff_files$file\n"
     [[ "$ocaml_fail" -eq 1 ]] && ocaml_fail_files="$ocaml_fail_files$file\n"
     [[ "$rust_fail" -eq 1 ]] && rust_fail_files="$rust_fail_files$file\n"
@@ -421,7 +543,7 @@ done
 # Build lists of tested and passing files for each test type
 all_tested_files=""
 sexp_locs_pass_files=""
-binary_pass_files=""
+bsc_ast_pass_files=""
 sexp0_locs_pass_files=""
 binary0_pass_files=""
 roundtrip_structure_pass_files=""
@@ -430,7 +552,7 @@ roundtrip_locs_pass_files=""
 for result_file in "$RESULTS_DIR"/*.result; do
     [[ -f "$result_file" ]] || continue
     result=$(cat "$result_file")
-    IFS=':' read -r file locs_pass locs_diff sexp0_diff rt_diff rt_locs_diff bin_diff bin0_diff ocaml_fail rust_fail <<< "$result"
+    IFS=':' read -r file locs_pass locs_diff sexp0_diff rt_diff rt_locs_diff bsc_ast_diff bin0_diff ocaml_fail rust_fail <<< "$result"
 
     # Track all tested files
     all_tested_files="$all_tested_files$file\n"
@@ -439,8 +561,8 @@ for result_file in "$RESULTS_DIR"/*.result; do
     if [[ "$locs_pass" -eq 1 && "$locs_diff" -eq 0 ]]; then
         sexp_locs_pass_files="$sexp_locs_pass_files$file\n"
     fi
-    if [[ "$locs_pass" -eq 1 && "$bin_diff" -eq 0 ]]; then
-        binary_pass_files="$binary_pass_files$file\n"
+    if [[ "$locs_pass" -eq 1 && "$bsc_ast_diff" -eq 0 ]]; then
+        bsc_ast_pass_files="$bsc_ast_pass_files$file\n"
     fi
     if [[ "$locs_pass" -eq 1 && "$sexp0_diff" -eq 0 ]]; then
         sexp0_locs_pass_files="$sexp0_locs_pass_files$file\n"
@@ -525,7 +647,7 @@ echo ""
 
 # Detect regressions for each test type
 detect_regressions_and_update "$BASELINE_SEXP_LOCS" "$sexp_locs_pass_files" "sexp-locs" "$tested_files_sorted"
-detect_regressions_and_update "$BASELINE_BINARY" "$binary_pass_files" "binary" "$tested_files_sorted"
+detect_regressions_and_update "$BASELINE_BSC_AST" "$bsc_ast_pass_files" "bsc-ast" "$tested_files_sorted"
 detect_regressions_and_update "$BASELINE_SEXP0_LOCS" "$sexp0_locs_pass_files" "sexp0-locs" "$tested_files_sorted"
 detect_regressions_and_update "$BASELINE_BINARY0" "$binary0_pass_files" "binary0" "$tested_files_sorted"
 detect_regressions_and_update "$BASELINE_ROUNDTRIP_STRUCTURE" "$roundtrip_structure_pass_files" "roundtrip-structure" "$tested_files_sorted"
@@ -546,14 +668,14 @@ echo ""
 
 # Show baseline statistics
 baseline_sexp_locs_count=0
-baseline_binary_count=0
+baseline_bsc_ast_count=0
 baseline_sexp0_locs_count=0
 baseline_binary0_count=0
 baseline_roundtrip_structure_count=0
 baseline_roundtrip_locs_count=0
 
 [[ -f "$BASELINE_SEXP_LOCS" ]] && baseline_sexp_locs_count=$(wc -l < "$BASELINE_SEXP_LOCS" | tr -d ' ')
-[[ -f "$BASELINE_BINARY" ]] && baseline_binary_count=$(wc -l < "$BASELINE_BINARY" | tr -d ' ')
+[[ -f "$BASELINE_BSC_AST" ]] && baseline_bsc_ast_count=$(wc -l < "$BASELINE_BSC_AST" | tr -d ' ')
 [[ -f "$BASELINE_SEXP0_LOCS" ]] && baseline_sexp0_locs_count=$(wc -l < "$BASELINE_SEXP0_LOCS" | tr -d ' ')
 [[ -f "$BASELINE_BINARY0" ]] && baseline_binary0_count=$(wc -l < "$BASELINE_BINARY0" | tr -d ' ')
 [[ -f "$BASELINE_ROUNDTRIP_STRUCTURE" ]] && baseline_roundtrip_structure_count=$(wc -l < "$BASELINE_ROUNDTRIP_STRUCTURE" | tr -d ' ')
@@ -564,16 +686,18 @@ echo "  Total files tested:         $TOTAL_FILES"
 echo ""
 echo "  ${BOLD}Baseline (files that must not regress):${RESET}"
 echo "    sexp-locs:                $baseline_sexp_locs_count"
-echo "    binary:                   $baseline_binary_count"
+echo "    bsc-ast:                  $baseline_bsc_ast_count"
 echo "    sexp0-locs:               $baseline_sexp0_locs_count"
 echo "    binary0:                  $baseline_binary0_count"
 echo "    roundtrip-structure:      $baseline_roundtrip_structure_count"
 echo "    roundtrip-locs:           $baseline_roundtrip_locs_count"
 echo ""
-echo "  ${BOLD}Current parsetree parity:${RESET}"
+echo "  ${BOLD}Parser parity (sexp output for debugging):${RESET}"
 echo "    sexp-locs matches:        $locs_pass_count"
 echo "    sexp-locs differences:    $locs_diff_count"
-echo "    binary differences:       $binary_parity_diff_count"
+echo ""
+echo "  ${BOLD}Compiler parity (bsc -bs-ast output):${RESET}"
+echo "    bsc-ast differences:      $bsc_ast_parity_diff_count"
 echo ""
 echo "  ${BOLD}Parsetree0 parity (PPX compatible):${RESET}"
 echo "    sexp0-locs differences:   $sexp0_locs_diff_count"
@@ -667,23 +791,24 @@ if [[ $roundtrip_locs_parity_diff_count -gt 0 ]]; then
     echo ""
 fi
 
-# Show binary parity differences (current parsetree)
-if [[ $binary_parity_diff_count -gt 0 ]]; then
-    echo -e "${BOLD}${YELLOW}Files with binary (current parsetree) parity differences ($binary_parity_diff_count):${RESET}"
-    echo -e "$binary_parity_diff_files" | grep -v "^$" | head -15 | while read file; do
+# Show bsc-ast parity differences (full compiler output)
+if [[ $bsc_ast_parity_diff_count -gt 0 ]]; then
+    echo -e "${BOLD}${RED}Files with bsc-ast parity differences ($bsc_ast_parity_diff_count):${RESET}"
+    echo "  (bsc -bs-ast output differs - includes deps + marshalled parsetree)"
+    echo -e "$bsc_ast_parity_diff_files" | grep -v "^$" | head -15 | while read file; do
         echo "  $file"
     done
-    if [[ $binary_parity_diff_count -gt 15 ]]; then
-        remaining=$((binary_parity_diff_count - 15))
+    if [[ $bsc_ast_parity_diff_count -gt 15 ]]; then
+        remaining=$((bsc_ast_parity_diff_count - 15))
         echo "  ... and $remaining more"
     fi
     echo ""
 
-    # Show first binary diff as example
-    echo -e "${BOLD}Example binary diff (first file):${RESET}"
-    first_bin_diff=$(ls "$TEMP_DIR/binary_parity_diffs/"*.diff 2>/dev/null | head -1)
-    if [[ -n "$first_bin_diff" ]]; then
-        head -30 "$first_bin_diff"
+    # Show first bsc-ast diff as example
+    echo -e "${BOLD}Example bsc-ast diff (first file):${RESET}"
+    first_bsc_diff=$(ls "$TEMP_DIR/bsc_ast_parity_diffs/"*.diff 2>/dev/null | head -1)
+    if [[ -n "$first_bsc_diff" ]]; then
+        head -30 "$first_bsc_diff"
     fi
     echo ""
 fi
@@ -760,10 +885,10 @@ if [[ $locs_diff_count -gt 0 ]]; then
     exit_code=1
 fi
 
-if [[ $binary_parity_diff_count -gt 0 ]]; then
-    echo -e "${YELLOW}${BOLD}WARNING: $binary_parity_diff_count files have binary (current parsetree) differences${RESET}"
+if [[ $bsc_ast_parity_diff_count -gt 0 ]]; then
+    echo -e "${RED}${BOLD}FAILED: $bsc_ast_parity_diff_count files have bsc-ast differences${RESET}"
     all_pass=false
-    [[ $exit_code -eq 0 ]] && exit_code=1
+    exit_code=1
 fi
 
 if [[ $sexp0_locs_diff_count -gt 0 ]]; then
