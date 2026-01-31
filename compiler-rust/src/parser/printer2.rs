@@ -4826,44 +4826,51 @@ fn print_payload(state: &PrinterState, payload: &Payload, cmt_tbl: &mut CommentT
         Payload::PStr(items) if items.is_empty() => Doc::nil(),
         Payload::PStr(items) => {
             if let [single] = &items[..] {
-                if let StructureItemDesc::Pstr_eval(expr, attrs) = &single.pstr_desc {
-                    let expr_doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                    let needs_parens = !attrs.is_empty();
-                    let should_hug = parsetree_viewer::is_huggable_expression(arena,expr);
-                    if should_hug {
-                        Doc::concat(vec![
-                            Doc::lparen(),
-                            print_attributes(state, attrs, cmt_tbl, arena),
-                            if needs_parens {
-                                add_parens(expr_doc)
-                            } else {
-                                expr_doc
-                            },
-                            Doc::rparen(),
-                        ])
-                    } else {
-                        Doc::concat(vec![
-                            Doc::lparen(),
-                            Doc::indent(Doc::concat(vec![
-                                Doc::soft_line(),
+                match &single.pstr_desc {
+                    StructureItemDesc::Pstr_eval(expr, attrs) => {
+                        let expr_doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                        let needs_parens = !attrs.is_empty();
+                        let should_hug = parsetree_viewer::is_huggable_expression(arena, expr);
+                        if should_hug {
+                            Doc::concat(vec![
+                                Doc::lparen(),
                                 print_attributes(state, attrs, cmt_tbl, arena),
                                 if needs_parens {
                                     add_parens(expr_doc)
                                 } else {
                                     expr_doc
                                 },
-                            ])),
-                            Doc::soft_line(),
-                            Doc::rparen(),
-                        ])
+                                Doc::rparen(),
+                            ])
+                        } else {
+                            Doc::concat(vec![
+                                Doc::lparen(),
+                                Doc::indent(Doc::concat(vec![
+                                    Doc::soft_line(),
+                                    print_attributes(state, attrs, cmt_tbl, arena),
+                                    if needs_parens {
+                                        add_parens(expr_doc)
+                                    } else {
+                                        expr_doc
+                                    },
+                                ])),
+                                Doc::soft_line(),
+                                Doc::rparen(),
+                            ])
+                        }
                     }
-                } else {
-                    // General structure - just indicate it exists
-                    Doc::text("(...)")
+                    StructureItemDesc::Pstr_value(_, _) => {
+                        // Single value binding - wrap in parens
+                        add_parens(print_structure_item(state, single, cmt_tbl, arena))
+                    }
+                    _ => {
+                        // General single structure item - wrap in parens
+                        add_parens(print_structure_item(state, single, cmt_tbl, arena))
+                    }
                 }
             } else {
-                // Multiple items - indicate structure exists
-                Doc::text("(...)")
+                // Multiple items - print full structure
+                add_parens(print_structure(state, items, cmt_tbl, arena))
             }
         }
         Payload::PSig(_) => Doc::text("(:...)"),
