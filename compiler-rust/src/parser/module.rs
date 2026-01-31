@@ -6,7 +6,7 @@
 use std::cell::RefCell;
 
 use crate::location::Position;
-use crate::parse_arena::{LidentIdx, Located, LocIdx};
+use crate::parse_arena::{LidentIdx, Located, LocIdx, PosIdx};
 
 // Import Location as alias to LocIdx from ast
 use super::ast::*;
@@ -124,15 +124,23 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
 
 /// Parse a single structure item.
 pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
-    let start_pos = p.start_pos.clone();
+    // Save start position as PosIdx to enable sharing with inner locations
+    let start_pos_idx = p.push_start_pos();
+    let start_pos = p.start_pos;
 
     // Parse attributes
     let attrs = parse_attributes(p);
 
+    // Track the PosIdx used for this structure item's location
+    // For Pstr_value, this will be the same as the first binding's start
+    let mut item_start_idx = start_pos_idx;
+    // Track shared LocIdx for when we want to share the entire location (e.g., with value_binding)
+    let mut item_loc_idx: Option<LocIdx> = None;
+
     let desc = match &p.token {
         Token::Open => {
             // OCaml's popen_loc starts at 'open', not at outer attributes
-            let open_start = p.start_pos.clone();
+            let open_start = p.start_pos;
             p.next();
             // Check for open! override flag
             let override_flag = if p.token == Token::Bang {
@@ -155,14 +163,17 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             p.next();
             // Position after let/let? for let.unwrap attribute location
             // OCaml uses p.Parser.start_pos which is the START of the NEXT token (after whitespace)
-            let let_end_pos = p.start_pos.clone();
+            let let_end_pos = p.start_pos;
             let rec_flag = if p.token == Token::Rec {
                 p.next();
                 RecFlag::Recursive
             } else {
                 RecFlag::Nonrecursive
             };
-            let bindings = parse_let_bindings(p, start_pos.clone(), let_end_pos, rec_flag, attrs.clone(), unwrap);
+            // Pass start_pos_idx to enable position sharing with structure_item
+            let (bindings, _binding_loc_idx) = parse_let_bindings(p, start_pos_idx, let_end_pos, rec_flag, attrs.clone(), unwrap);
+            // Don't share LocIdx - OCaml creates separate Location objects for pstr_loc and pvb_loc.
+            // The internal positions (PosIdx) are shared, but the Location records themselves are separate.
             Some(StructureItemDesc::Pstr_value(rec_flag, bindings))
         }
         Token::Typ => {
@@ -354,13 +365,20 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
     };
 
     // Consume trailing semicolon if present (OCaml includes this in the structure item location)
+    // If a semicolon is consumed, we can't share the LocIdx with value_binding because
+    // the structure_item location now extends past the binding's end
     if p.token == Token::Semicolon {
         p.next();
+        // Clear any shared LocIdx - the semicolon extends the structure_item location
+        item_loc_idx = None;
     }
 
     desc.map(|d| StructureItem {
         pstr_desc: d,
-        pstr_loc: p.mk_loc_to_prev_end(&start_pos),
+        pstr_loc: match item_loc_idx {
+            Some(loc_idx) => loc_idx,
+            None => p.mk_loc_idx_to_prev_end(item_start_idx),
+        },
     })
 }
 
@@ -1763,21 +1781,29 @@ fn parse_type_long_ident(p: &mut Parser<'_>) -> Loc<LidentIdx> {
 }
 
 /// Parse let bindings.
-/// `start_pos` should be the position BEFORE the `let` keyword for the first binding.
+/// `start_pos_idx` should be the PosIdx BEFORE the `let` keyword for the first binding.
 /// `let_end_pos` should be the position AFTER the `let`/`let?` keyword (for let.unwrap attribute location).
+/// Using PosIdx for start_pos enables position sharing with the structure_item location.
+/// Returns (bindings, Option<LocIdx>) where LocIdx is Some only when there's exactly one binding
+/// (to enable sharing with structure_item). For multiple bindings, returns None and the caller
+/// should create a fresh location spanning all bindings.
 fn parse_let_bindings(
     p: &mut Parser<'_>,
-    start_pos: Position,
+    start_pos_idx: PosIdx,
     let_end_pos: Position,
     _rec_flag: RecFlag,
     outer_attrs: Attributes,
     unwrap: bool,
-) -> Vec<ValueBinding> {
+) -> (Vec<ValueBinding>, Option<LocIdx>) {
     let mut bindings = vec![];
-    let mut binding_start = start_pos.clone();
+    // For the first binding, use the passed-in PosIdx to enable sharing
+    let mut binding_start_idx = start_pos_idx;
+    // Track the first binding's LocIdx for sharing with structure_item
+    let mut first_binding_loc: Option<LocIdx> = None;
     // Track the location for let.unwrap attribute
     // For first binding: from start_pos to let_end_pos
     // For and bindings: captured at end of previous iteration when we see 'and'
+    let start_pos = *p.arena().get_position(start_pos_idx);
     let mut unwrap_attr_start = start_pos;
     let mut unwrap_attr_end = let_end_pos;
 
@@ -1865,7 +1891,12 @@ fn parse_let_bindings(
         let mut expr = expr::parse_expr(p);
 
         // Compute binding location BEFORE wrapping (OCaml uses this for locally abstract type locations)
-        let binding_loc = p.mk_loc_to_prev_end(&binding_start);
+        // Use PosIdx-based location to enable sharing with structure_item
+        let binding_loc = p.mk_loc_idx_to_prev_end(binding_start_idx);
+        // Track the first binding's LocIdx for sharing with structure_item
+        if first_binding_loc.is_none() {
+            first_binding_loc = Some(binding_loc);
+        }
 
         // For locally abstract types, OCaml uses the binding location for the pattern constraint and Ptyp_poly
         let pat = if is_locally_abstract {
@@ -1929,10 +1960,11 @@ fn parse_let_bindings(
         if p.token == Token::And {
             // Capture `and` keyword location for let.unwrap attribute in next binding
             // OCaml uses p.Parser.start_pos and p.Parser.end_pos (before consuming 'and')
-            unwrap_attr_start = p.start_pos.clone();
-            unwrap_attr_end = p.end_pos.clone();
+            unwrap_attr_start = p.start_pos;
+            unwrap_attr_end = p.end_pos;
             // Capture start position BEFORE consuming `and` for next binding
-            binding_start = p.start_pos.clone();
+            // For `and` bindings, we push a fresh position (no sharing needed with structure_item)
+            binding_start_idx = p.push_start_pos();
             p.next();
         } else if matches!(p.token, Token::At | Token::AtAt | Token::DocComment { .. }) {
             // Look ahead to see if attributes/doc comments are followed by And
@@ -1955,14 +1987,21 @@ fn parse_let_bindings(
                 break;
             }
             // Capture start position BEFORE the attributes for next binding
-            binding_start = p.start_pos.clone();
+            binding_start_idx = p.push_start_pos();
             // Continue - attributes will be parsed in the next iteration, and `and` will be consumed there
         } else {
             break;
         }
     }
 
-    bindings
+    // Return bindings and optionally the LocIdx for sharing with structure_item.
+    // Only share when there's exactly one binding - for multiple bindings, the structure_item
+    // should span all bindings which is different from the first binding's location.
+    if bindings.len() == 1 {
+        (bindings, first_binding_loc)
+    } else {
+        (bindings, None)
+    }
 }
 
 /// Parse type declarations. Returns the declarations and a flag indicating if inline types were found.

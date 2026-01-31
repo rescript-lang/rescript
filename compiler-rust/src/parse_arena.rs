@@ -252,12 +252,12 @@ impl ParseArena {
     // ========== Position methods ==========
 
     /// Push a position into the arena and return its index.
-    /// Each call creates a new entry. The position is registered in the
-    /// dedup table only if no entry exists yet (keep first position).
+    /// Creates a fresh entry each time - sharing is achieved by passing the same
+    /// PosIdx through code paths (reference sharing), not by value deduplication.
     pub fn push_position(&mut self, pos: Position) -> PosIdx {
         let key = PosKey::from_position(&pos);
         let idx = self.positions.push(pos);
-        // Only register if not already in table (keep first position)
+        // Register in dedup table only if not already there (for lookup purposes)
         self.position_dedup.entry(key).or_insert(idx);
         idx
     }
@@ -329,18 +329,19 @@ impl ParseArena {
     }
 
     /// Create a location from two raw positions (push both positions first).
-    /// Creates fresh positions each time to match OCaml behavior.
+    /// Creates fresh positions - sharing is achieved by passing PosIdx through code paths.
     pub fn mk_loc_from_positions(&mut self, start: &Position, end: &Position) -> LocIdx {
-        let start_idx = self.positions.push(*start);
-        let end_idx = self.positions.push(*end);
+        let start_idx = self.push_position(*start);
+        let end_idx = self.push_position(*end);
         self.mk_loc(start_idx, end_idx)
     }
 
     /// Create a location spanning from one location's start to another's end.
+    /// Reuses the existing PosIdx values to maintain position sharing.
     pub fn mk_loc_spanning(&mut self, start_loc: LocIdx, end_loc: LocIdx) -> LocIdx {
-        let start_pos = self.loc_start(start_loc).clone();
-        let end_pos = self.loc_end(end_loc).clone();
-        self.mk_loc_from_positions(&start_pos, &end_pos)
+        let start_pos_idx = self.get_location(start_loc).loc_start;
+        let end_pos_idx = self.get_location(end_loc).loc_end;
+        self.mk_loc(start_pos_idx, end_pos_idx)
     }
 
     /// Get the "none" location index (ghost location with none positions).
