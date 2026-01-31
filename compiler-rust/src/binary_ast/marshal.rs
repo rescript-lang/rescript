@@ -95,6 +95,10 @@ pub struct MarshalWriter {
     /// Same index = same object, will be shared in output
     lident_idx_table: HashMap<LidentIdx, u32>,
 
+    /// Maps Option<String> values to object counter (for content-based sharing)
+    /// This enables sharing of common delimiter values like Some("js")
+    option_string_table: HashMap<Option<String>, u32>,
+
     /// Optional reference to ParseArena for LocIdx marshalling.
     /// Set via `set_arena()` before marshalling AST with LocIdx fields.
     /// Uses raw pointer to avoid lifetime constraints.
@@ -126,6 +130,7 @@ impl MarshalWriter {
             position_idx_table: HashMap::new(),
             location_idx_table: HashMap::new(),
             lident_idx_table: HashMap::new(),
+            option_string_table: HashMap::new(),
             arena: None,
             obj_counter: 0,
             size_32: 0,
@@ -142,6 +147,7 @@ impl MarshalWriter {
             position_idx_table: HashMap::new(),
             location_idx_table: HashMap::new(),
             lident_idx_table: HashMap::new(),
+            option_string_table: HashMap::new(),
             arena: None,
             obj_counter: 0,
             size_32: 0,
@@ -183,6 +189,7 @@ impl MarshalWriter {
         self.position_idx_table.clear();
         self.location_idx_table.clear();
         self.lident_idx_table.clear();
+        self.option_string_table.clear();
         self.obj_counter = 0;
         self.size_32 = 0;
         self.size_64 = 0;
@@ -666,6 +673,41 @@ impl MarshalWriter {
     /// Get the current payload length
     pub fn payload_len(&self) -> usize {
         self.buffer.len()
+    }
+
+    /// Write an Option<String> with content-based sharing.
+    ///
+    /// This enables sharing of common delimiter values like Some("js") that appear
+    /// multiple times in the AST. OCaml shares these because they're often the same
+    /// pointer (constant values defined at module level).
+    ///
+    /// - None → integer 0
+    /// - Some(s) → Block(tag=0, [s]) with content-based sharing
+    pub fn write_option_string(&mut self, opt: &Option<String>) {
+        // Check if we've written this exact Option<String> before
+        if let Some(&obj_idx) = self.option_string_table.get(opt) {
+            let d = self.obj_counter - obj_idx;
+            self.write_shared_ref(d);
+            return;
+        }
+
+        match opt {
+            None => {
+                // None is encoded as integer 0, not a block, so no sharing needed
+                self.write_int(0);
+            }
+            Some(s) => {
+                // Record the object index BEFORE writing the block
+                let obj_idx = self.obj_counter;
+
+                // Write Some(s) as Block(tag=0, [s])
+                self.write_block_header(0, 1);
+                self.write_str(s);
+
+                // Record for future sharing
+                self.option_string_table.insert(opt.clone(), obj_idx);
+            }
+        }
     }
 }
 

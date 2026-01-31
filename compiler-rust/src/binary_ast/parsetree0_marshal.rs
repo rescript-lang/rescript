@@ -118,7 +118,8 @@ impl Marshal for Constant {
             Constant::String(s, opt) => {
                 w.write_block_header(2, 2);
                 w.write_str(s);
-                opt.marshal(w);
+                // Use content-based sharing for string delimiters like Some("js")
+                w.write_option_string(opt);
             }
             Constant::Float(s, opt) => {
                 w.write_block_header(3, 2);

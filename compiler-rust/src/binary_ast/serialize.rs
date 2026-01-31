@@ -81,6 +81,9 @@ impl<T: Marshal> Marshal for Option<T> {
     /// Options are encoded as:
     /// - None → integer 0 (constant constructor, index 0)
     /// - Some(v) → Block(tag=0, [v]) (non-constant constructor, tag 0)
+    ///
+    /// Note: For Option<String> string delimiters, use write_option_string()
+    /// directly to enable content-based sharing of common values like Some("js").
     fn marshal(&self, w: &mut MarshalWriter) {
         match self {
             None => w.write_int(0),
