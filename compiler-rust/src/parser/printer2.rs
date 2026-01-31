@@ -5530,7 +5530,7 @@ fn print_value_description(
 ) -> Doc {
     let is_external = !val_desc.pval_prim.is_empty();
     let attrs_doc = print_attributes(state, &val_desc.pval_attributes, cmt_tbl, arena);
-    let name_doc = Doc::text(&val_desc.pval_name.txt);
+    let name_doc = print_ident_like(&val_desc.pval_name.txt, false, false);
     let typ_doc = print_typ_expr(state, &val_desc.pval_type, cmt_tbl, arena);
     let header = if is_external { "external " } else { "let " };
 
