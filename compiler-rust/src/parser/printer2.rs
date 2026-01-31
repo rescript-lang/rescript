@@ -1802,8 +1802,10 @@ fn print_exp_fun_parameter(
                 ]),
             };
 
-            let opt_marker = match label {
-                ArgLabel::Optional(_) => Doc::text("=?"),
+            // Only add =? for optional arguments without a default value
+            // If there's a default value (=expr), we don't need =?
+            let opt_marker = match (label, default_expr) {
+                (ArgLabel::Optional(_), None) => Doc::text("=?"),
                 _ => Doc::nil(),
             };
 
