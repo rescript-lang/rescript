@@ -31,6 +31,19 @@ EOF
 
 **DO NOT** leave work uncommitted. If you made changes, commit them.
 
+## CRITICAL: Document Your Learnings
+
+**When you discover something useful, ALWAYS add it to CLAUDE.md or AGENTS.md.**
+
+This includes:
+- Commands that work (or don't work)
+- Solutions to problems you encountered
+- Gotchas or edge cases you discovered
+- Debugging techniques that helped
+- Patterns that solved an issue
+
+**Don't let knowledge be lost.** If you figured something out the hard way, document it so you (or another agent) don't have to figure it out again.
+
 ## CRITICAL: Protect Uncommitted Work
 
 **NEVER revert or discard uncommitted changes.** This has caused lost work multiple times.
