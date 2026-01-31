@@ -1189,8 +1189,8 @@ pub fn print_expression(
             if matches!(&inner.pexp_desc, ExpressionDesc::Pexp_pack(_))
                 && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)) =>
         {
-            if let ExpressionDesc::Pexp_pack(mod_expr) = &inner.pexp_desc {
-                if let CoreTypeDesc::Ptyp_package(package_type) = &typ.ptyp_desc {
+            match (&inner.pexp_desc, &typ.ptyp_desc) {
+                (ExpressionDesc::Pexp_pack(mod_expr), CoreTypeDesc::Ptyp_package(package_type)) => {
                     let mod_doc = print_mod_expr(state, mod_expr, cmt_tbl, arena);
                     // Don't print "module(...)" wrapper - we're already inside module()
                     let type_doc = print_comments(
@@ -1199,17 +1199,17 @@ pub fn print_expression(
                         typ.ptyp_loc,
                         arena,
                     );
-                    return Doc::group(Doc::concat(vec![
+                    Doc::group(Doc::concat(vec![
                         Doc::text("module("),
                         Doc::indent(Doc::concat(vec![Doc::soft_line(), mod_doc])),
                         Doc::text(": "),
                         type_doc,
                         Doc::soft_line(),
                         Doc::rparen(),
-                    ]));
+                    ]))
                 }
+                _ => Doc::nil(),
             }
-            Doc::nil()
         }
         // Constraint: expr: typ (parens added by caller when needed)
         ExpressionDesc::Pexp_constraint(expr, typ) => {
@@ -3854,7 +3854,7 @@ fn print_attributes_from_refs(
     }
     let attrs_doc: Vec<Doc> = attrs
         .iter()
-        .map(|attr| print_attribute(state, attr, cmt_tbl, arena))
+        .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
         .collect();
     // Join with space between attributes, add trailing space
     Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attrs_doc)), Doc::space()])
@@ -3873,7 +3873,7 @@ fn print_attributes_inline(
     }
     let attrs_doc: Vec<Doc> = attrs
         .iter()
-        .map(|attr| print_attribute(state, attr, cmt_tbl, arena))
+        .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
         .collect();
     // Join with line (space when not breaking), add trailing space
     Doc::concat(vec![
@@ -4168,36 +4168,54 @@ fn print_module_type(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Track whether attributes are printed inside the match arm
+    let attrs_already_printed = matches!(
+        &mty.pmty_desc,
+        ModuleTypeDesc::Pmty_functor(_, _, _)
+            | ModuleTypeDesc::Pmty_signature(_)
+            | ModuleTypeDesc::Pmty_ident(_)
+    );
+
     let doc = match &mty.pmty_desc {
         ModuleTypeDesc::Pmty_ident(lid) => {
-            print_longident_location(lid, cmt_tbl, arena)
+            // Print attributes with the identifier
+            Doc::concat(vec![
+                print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
+                print_longident_location(lid, cmt_tbl, arena),
+            ])
         }
 
         ModuleTypeDesc::Pmty_signature(signature) if signature.is_empty() => {
             let should_break = arena.loc_start(mty.pmty_loc).line < arena.loc_end(mty.pmty_loc).line;
-            Doc::breakable_group(
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    print_comments_inside(cmt_tbl, mty.pmty_loc, arena),
-                    Doc::rbrace(),
-                ]),
-                should_break,
-            )
+            Doc::concat(vec![
+                print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
+                Doc::breakable_group(
+                    Doc::concat(vec![
+                        Doc::lbrace(),
+                        print_comments_inside(cmt_tbl, mty.pmty_loc, arena),
+                        Doc::rbrace(),
+                    ]),
+                    should_break,
+                ),
+            ])
         }
 
         ModuleTypeDesc::Pmty_signature(signature) => {
-            Doc::breakable_group(
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![
+            Doc::concat(vec![
+                print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
+                Doc::breakable_group(
+                    Doc::concat(vec![
+                        Doc::lbrace(),
+                        Doc::indent(Doc::concat(vec![
+                            Doc::soft_line(),
+                            print_signature(state, signature, cmt_tbl, arena),
+                        ])),
                         Doc::soft_line(),
-                        print_signature(state, signature, cmt_tbl, arena),
-                    ])),
-                    Doc::soft_line(),
-                    Doc::rbrace(),
-                ]),
-                true,
-            )
+                        Doc::rbrace(),
+                    ]),
+                    true,
+                ),
+            ])
         }
 
         ModuleTypeDesc::Pmty_functor(_, _, _) => {
@@ -4245,8 +4263,19 @@ fn print_module_type(
         }
     };
 
+    // Handle await attribute
     let doc = if parsetree_viewer::has_await_attribute(&mty.pmty_attributes) {
         Doc::concat(vec![Doc::text("await "), doc])
+    } else {
+        doc
+    };
+
+    // Add attributes for types that don't print them internally
+    let doc = if !attrs_already_printed && !mty.pmty_attributes.is_empty() {
+        Doc::concat(vec![
+            print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
+            doc,
+        ])
     } else {
         doc
     };
@@ -4664,7 +4693,7 @@ fn print_value_bindings(
                 let attr_docs: Vec<Doc> = attrs
                     .iter()
                     .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
-                    .map(|attr| print_attribute(state, attr, cmt_tbl, arena))
+                    .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
                     .collect();
                 if attr_docs.is_empty() {
                     Doc::nil()
@@ -4745,7 +4774,7 @@ fn print_attributes_with_sep(
     let docs: Vec<Doc> = attrs
         .iter()
         .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
-        .map(|attr| print_attribute(state, attr, cmt_tbl, arena))
+        .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
         .collect();
     if docs.is_empty() {
         Doc::nil()
@@ -4756,14 +4785,18 @@ fn print_attributes_with_sep(
 }
 
 /// Print a single attribute.
+/// If `standalone` is true, uses `@@` prefix (for floating attributes).
+/// Otherwise uses `@` prefix.
 fn print_attribute(
     state: &PrinterState,
     attr: &Attribute,
+    standalone: bool,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
     let (name, payload) = attr;
-    let attr_name = Doc::text(format!("@{}", name.txt));
+    let prefix = if standalone { "@@" } else { "@" };
+    let attr_name = Doc::text(format!("{}{}", prefix, name.txt));
 
     let payload_doc = match payload {
         Payload::PStr(items) if items.is_empty() => Doc::nil(),
@@ -5025,7 +5058,7 @@ pub fn print_signature_item(
         }
 
         SignatureItemDesc::Psig_attribute(attr) => {
-            Doc::concat(vec![Doc::text("@@"), print_attribute(state, attr, cmt_tbl, arena)])
+            print_attribute(state, attr, true, cmt_tbl, arena)
         }
 
         SignatureItemDesc::Psig_extension(ext, attrs) => {
@@ -5173,7 +5206,7 @@ pub fn print_structure_item(
         }
 
         StructureItemDesc::Pstr_attribute(attr) => {
-            Doc::concat(vec![Doc::text("@@"), print_attribute(state, attr, cmt_tbl, arena)])
+            print_attribute(state, attr, true, cmt_tbl, arena)
         }
 
         StructureItemDesc::Pstr_extension(ext, attrs) => {
