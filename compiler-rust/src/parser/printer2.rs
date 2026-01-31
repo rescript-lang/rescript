@@ -2403,6 +2403,108 @@ fn print_expression_block(
     }
 }
 
+/// Check if an expression is an array of tuples (for dict detection)
+fn is_tuple_array(expr: &Expression) -> bool {
+    if let ExpressionDesc::Pexp_array(items) = &expr.pexp_desc {
+        items.iter().all(|e| matches!(&e.pexp_desc, ExpressionDesc::Pexp_tuple(_)))
+    } else {
+        false
+    }
+}
+
+/// Try to print dict{} syntax for Primitive_dict.make([("key", value), ...])
+fn try_print_dict_expr(
+    state: &PrinterState,
+    expr: &Expression,
+    funct: &Expression,
+    args: &[(ArgLabel, Expression)],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Option<Doc> {
+    // Check if funct is Primitive_dict.make
+    if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
+        let longident = arena.get_longident(lid.txt);
+        if let Longident::Ldot(parent_box, make_idx) = longident {
+            let make_str = arena.get_string(*make_idx);
+            if let Longident::Lident(prim_idx) = parent_box.as_ref() {
+                let prim_str = arena.get_string(*prim_idx);
+                if prim_str == "Primitive_dict" && make_str == "make" {
+                    // Check if args has exactly one Nolabel argument that's an array of tuples
+                    if args.len() == 1 {
+                        if let (ArgLabel::Nolabel, key_values) = &args[0] {
+                            if is_tuple_array(key_values) {
+                                return Some(print_dict_expr(state, expr, key_values, cmt_tbl, arena));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Print dict{key: value, ...} syntax
+fn print_dict_expr(
+    state: &PrinterState,
+    expr: &Expression,
+    key_values: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let start = arena.loc_start(expr.pexp_loc);
+    let end = arena.loc_end(expr.pexp_loc);
+    let force_break = start.line < end.line;
+
+    let rows = if let ExpressionDesc::Pexp_array(items) = &key_values.pexp_desc {
+        items
+            .iter()
+            .filter_map(|e| {
+                if let ExpressionDesc::Pexp_tuple(tuple_items) = &e.pexp_desc {
+                    if tuple_items.len() == 2 {
+                        let key_expr = &tuple_items[0];
+                        let value_expr = &tuple_items[1];
+                        // Key should be a string constant
+                        if let ExpressionDesc::Pexp_constant(Constant::String(txt, _)) =
+                            &key_expr.pexp_desc
+                        {
+                            let key_doc = Doc::concat(vec![
+                                Doc::text("\""),
+                                Doc::text(txt.clone()),
+                                Doc::text("\""),
+                            ]);
+                            let value_doc =
+                                print_expression_with_comments(state, value_expr, cmt_tbl, arena);
+                            return Some(Doc::concat(vec![key_doc, Doc::text(": "), value_doc]));
+                        }
+                    }
+                }
+                None
+            })
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
+
+    let inner = if rows.is_empty() {
+        print_comments_inside(cmt_tbl, expr.pexp_loc, arena)
+    } else {
+        Doc::concat(vec![
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), rows),
+            ])),
+            Doc::trailing_comma(),
+            Doc::soft_line(),
+        ])
+    };
+
+    Doc::breakable_group(
+        Doc::concat(vec![Doc::text("dict{"), inner, Doc::rbrace()]),
+        force_break,
+    )
+}
+
 /// Print function application.
 fn print_pexp_apply(
     state: &PrinterState,
@@ -2413,6 +2515,11 @@ fn print_pexp_apply(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Check for dict{} syntax: Primitive_dict.make([("key", value), ...])
+    if let Some(doc) = try_print_dict_expr(state, expr, funct, args, cmt_tbl, arena) {
+        return doc;
+    }
+
     // Check for binary expression
     if args.len() == 2 {
         if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
