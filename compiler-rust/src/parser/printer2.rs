@@ -2525,6 +2525,21 @@ fn print_arguments(
         }
     }
 
+    // Special case: single huggable argument (array, tuple, record, etc.)
+    if let [(ArgLabel::Nolabel, arg)] = args {
+        if parsetree_viewer::is_huggable_expression(arena, arg) {
+            let arg_doc = {
+                let doc = print_expression_with_comments(state, arg, cmt_tbl, arena);
+                match parens::expr(arena, arg) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, arg, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            return Doc::concat(vec![Doc::lparen(), arg_doc, Doc::rparen()]);
+        }
+    }
+
     let args_doc: Vec<Doc> = args
         .iter()
         .map(|(label, expr)| {
