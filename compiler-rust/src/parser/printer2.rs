@@ -1936,6 +1936,9 @@ fn print_record_expression(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Disallow punning for single-element records without spread
+    let punning_allowed = !(spread.is_none() && fields.len() == 1);
+
     let spread_doc = match spread {
         Some(expr) => Doc::concat(vec![
             Doc::dotdotdot(),
@@ -1953,7 +1956,7 @@ fn print_record_expression(
                 let field_name = print_lident(arena, arena.get_longident(field.lid.txt));
                 let expr_doc = print_expression_with_comments(state, &field.expr, cmt_tbl, arena);
                 // Check for punning
-                if is_punned_record_field(arena, field) {
+                if punning_allowed && is_punned_record_field(arena, field) {
                     // Punned: `?name` or `name`
                     if field.opt {
                         Doc::concat(vec![Doc::text("?"), field_name])
