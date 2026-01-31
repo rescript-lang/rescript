@@ -5219,10 +5219,15 @@ pub fn print_structure_item(
 
         StructureItemDesc::Pstr_eval(expr, attrs) => {
             let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
-            Doc::concat(vec![
-                attrs_doc,
-                print_expression_with_comments(state, expr, cmt_tbl, arena),
-            ])
+            let expr_doc = {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                match parens::structure_expr(arena, expr) {
+                    parens::ParenKind::Parenthesized => add_parens(doc),
+                    parens::ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                    parens::ParenKind::Nothing => doc,
+                }
+            };
+            Doc::concat(vec![attrs_doc, expr_doc])
         }
     }
 }
