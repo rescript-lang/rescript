@@ -5647,19 +5647,31 @@ fn print_constructor_declarations(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Check if constructors span multiple lines (force_break)
+    let force_break = match (constrs.first(), constrs.last()) {
+        (Some(first), Some(last)) => {
+            arena.loc_start(first.pcd_loc).line < arena.loc_end(last.pcd_loc).line
+        }
+        _ => false,
+    };
+
     let private_doc = match private_flag {
         PrivateFlag::Private => Doc::concat(vec![Doc::text("private"), Doc::line()]),
         PrivateFlag::Public => Doc::nil(),
     };
-    // Check if first constructor has attributes - if so, always show the bar
-    let first_has_attrs = constrs.first().map_or(false, |c| !c.pcd_attributes.is_empty());
+
+    // Check if first constructor has attributes or is spread - if so, always show the bar
+    let first_has_attrs = constrs.first().map_or(false, |c| {
+        !c.pcd_attributes.is_empty() || c.pcd_name.txt == "..."
+    });
+
     let docs: Vec<Doc> = constrs
         .iter()
         .enumerate()
         .map(|(i, constr)| {
             let bar = if i == 0 {
                 if first_has_attrs {
-                    // Always show bar when first constructor has attributes
+                    // Always show bar when first constructor has attributes or is spread
                     Doc::text("| ")
                 } else {
                     Doc::if_breaks(Doc::text("| "), Doc::nil())
@@ -5670,9 +5682,15 @@ fn print_constructor_declarations(
             Doc::concat(vec![bar, print_constructor_declaration(state, constr, cmt_tbl, arena)])
         })
         .collect();
-    Doc::group(Doc::concat(vec![
-        Doc::indent(Doc::concat(vec![Doc::line(), private_doc, Doc::join(Doc::line(), docs)])),
-    ]))
+
+    // Wrap constructors in their own breakable_group (like OCaml's print_listi)
+    // This allows constructors to stay on one line even when the outer group breaks
+    let rows = Doc::breakable_group(Doc::join(Doc::line(), docs), force_break);
+
+    Doc::breakable_group(
+        Doc::indent(Doc::concat(vec![Doc::line(), private_doc, rows])),
+        force_break,
+    )
 }
 
 /// Print a constructor declaration.
