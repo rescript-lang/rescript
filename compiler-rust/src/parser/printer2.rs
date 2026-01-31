@@ -1168,8 +1168,8 @@ pub fn print_expression(
             }
         }
         // Function application
-        ExpressionDesc::Pexp_apply { funct, args, .. } => {
-            print_pexp_apply(state, e, funct, args, cmt_tbl, arena)
+        ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
+            print_pexp_apply(state, e, funct, args, *partial, cmt_tbl, arena)
         }
         // Constraint with pack: module(M: S)
         ExpressionDesc::Pexp_constraint(inner, typ)
@@ -2336,6 +2336,7 @@ fn print_pexp_apply(
     expr: &Expression,
     funct: &Expression,
     args: &[(ArgLabel, Expression)],
+    partial: bool,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
@@ -2380,7 +2381,7 @@ fn print_pexp_apply(
         ParenKind::Braced(loc) => print_braces(funct_doc, funct, loc, arena),
         ParenKind::Nothing => funct_doc,
     };
-    let args_doc = print_arguments(state, args, cmt_tbl, arena);
+    let args_doc = print_arguments(state, args, partial, cmt_tbl, arena);
     Doc::group(Doc::concat(vec![funct_doc, args_doc]))
 }
 
@@ -2502,6 +2503,7 @@ fn print_unary_expression(
 fn print_arguments(
     state: &PrinterState,
     args: &[(ArgLabel, Expression)],
+    partial: bool,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
@@ -2598,13 +2600,20 @@ fn print_arguments(
         })
         .collect();
 
+    // If partial, add ... at the end
+    let mut all_docs = args_doc;
+    if partial {
+        all_docs.push(Doc::text("..."));
+    }
+
     Doc::group(Doc::concat(vec![
         Doc::lparen(),
         Doc::indent(Doc::concat(vec![
             Doc::soft_line(),
-            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), args_doc),
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), all_docs),
         ])),
-        Doc::trailing_comma(),
+        // Don't add trailing comma for partial application
+        if partial { Doc::nil() } else { Doc::trailing_comma() },
         Doc::soft_line(),
         Doc::rparen(),
     ]))
