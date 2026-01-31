@@ -4669,7 +4669,28 @@ fn print_value_bindings(
                 ParenKind::Braced(loc) => print_braces(doc, &vb.pvb_expr, loc, arena),
                 ParenKind::Nothing => doc,
             };
-            Doc::concat(vec![attrs_doc, header, pat, Doc::text(" = "), printed_expr])
+
+            // Check if expression should be indented after `=`
+            // This happens when:
+            // - Expression has printable attributes
+            // - Or is a binary expression (without braces)
+            // - Or is a JSX element
+            // - Or is an array access
+            let opt_braces = parsetree_viewer::process_braces_attr(&vb.pvb_expr);
+            let should_indent = opt_braces.is_none() && (
+                parsetree_viewer::has_attributes(&vb.pvb_expr.pexp_attributes)
+                || parsetree_viewer::is_binary_expression(arena, &vb.pvb_expr)
+                || matches!(&vb.pvb_expr.pexp_desc, ExpressionDesc::Pexp_jsx_element(_))
+                || parsetree_viewer::is_array_access(arena, &vb.pvb_expr)
+            );
+
+            let rhs = if should_indent {
+                Doc::indent(Doc::concat(vec![Doc::line(), printed_expr]))
+            } else {
+                Doc::concat(vec![Doc::space(), printed_expr])
+            };
+
+            Doc::group(Doc::concat(vec![attrs_doc, header, pat, Doc::text(" ="), rhs]))
         })
         .collect();
     Doc::join(Doc::hard_line(), docs)
@@ -4679,12 +4700,25 @@ fn print_value_bindings(
 // Attributes (placeholder)
 // ============================================================================
 
-/// Print attributes.
+/// Print attributes with a trailing separator.
+/// When inline=true, uses space after attributes.
+/// When inline=false (default), uses Doc::line which can break if needed.
 fn print_attributes(
     state: &PrinterState,
     attrs: &[Attribute],
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
+) -> Doc {
+    print_attributes_with_sep(state, attrs, cmt_tbl, arena, false)
+}
+
+/// Print attributes with configurable separator.
+fn print_attributes_with_sep(
+    state: &PrinterState,
+    attrs: &[Attribute],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+    inline: bool,
 ) -> Doc {
     if attrs.is_empty() {
         return Doc::nil();
@@ -4697,7 +4731,8 @@ fn print_attributes(
     if docs.is_empty() {
         Doc::nil()
     } else {
-        Doc::concat(vec![Doc::group(Doc::join(Doc::space(), docs)), Doc::space()])
+        let sep = if inline { Doc::space() } else { Doc::line() };
+        Doc::concat(vec![Doc::group(Doc::join(Doc::space(), docs)), sep])
     }
 }
 
