@@ -4027,8 +4027,8 @@ fn print_attributes_from_refs(
         .iter()
         .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
         .collect();
-    // Join with space between attributes, add trailing space
-    Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attrs_doc)), Doc::space()])
+    // Join with line (space when flat, newline when breaking), add trailing line
+    Doc::concat(vec![Doc::group(Doc::join(Doc::line(), attrs_doc)), Doc::line()])
 }
 
 /// Print attributes inline (for arrow type parameters).
@@ -4603,11 +4603,16 @@ fn print_type_declaration_with_lid(
             .iter()
             .map(|(typ, variance)| print_type_param(state, typ, variance, cmt_tbl, arena))
             .collect();
-        Doc::concat(vec![
+        Doc::group(Doc::concat(vec![
             Doc::less_than(),
-            Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), params),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), params),
+            ])),
+            Doc::trailing_comma(),
+            Doc::soft_line(),
             Doc::greater_than(),
-        ])
+        ]))
     };
 
     let eq_sign = if is_substitution { " := " } else { " = " };
@@ -4928,13 +4933,16 @@ fn print_attributes(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    print_attributes_with_sep(state, attrs, cmt_tbl, arena, false)
+    print_attributes_with_loc(state, attrs, None, cmt_tbl, arena, false)
 }
 
-/// Print attributes with configurable separator.
-fn print_attributes_with_sep(
+/// Print attributes with location for proper line breaking.
+/// If `loc` is provided and the attributed item starts on a different line
+/// than the last attribute ends, uses hard_line instead of line.
+fn print_attributes_with_loc(
     state: &PrinterState,
     attrs: &[Attribute],
+    loc: Option<Location>,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
     inline: bool,
@@ -4942,17 +4950,50 @@ fn print_attributes_with_sep(
     if attrs.is_empty() {
         return Doc::nil();
     }
-    let docs: Vec<Doc> = attrs
+    // Filter to printable attributes
+    let printable_attrs: Vec<&Attribute> = attrs
         .iter()
         .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
+        .collect();
+    if printable_attrs.is_empty() {
+        return Doc::nil();
+    }
+
+    let docs: Vec<Doc> = printable_attrs
+        .iter()
         .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
         .collect();
-    if docs.is_empty() {
-        Doc::nil()
+
+    // Determine trailing separator: use hard_line if attributed item is on a different line
+    let trailing_sep = if inline {
+        Doc::space()
     } else {
-        let sep = if inline { Doc::space() } else { Doc::line() };
-        Doc::concat(vec![Doc::group(Doc::join(Doc::space(), docs)), sep])
-    }
+        match (loc, printable_attrs.last()) {
+            (Some(item_loc), Some(last_attr)) => {
+                let (attr_name, _) = last_attr;
+                // If item starts on a later line than the last attribute, force hard line
+                if arena.loc_start(item_loc).line > arena.loc_end(attr_name.loc).line {
+                    Doc::hard_line()
+                } else {
+                    Doc::line()
+                }
+            }
+            _ => Doc::line(),
+        }
+    };
+
+    Doc::concat(vec![Doc::group(Doc::join(Doc::line(), docs)), trailing_sep])
+}
+
+/// Print attributes with configurable separator (deprecated, use print_attributes_with_loc).
+fn print_attributes_with_sep(
+    state: &PrinterState,
+    attrs: &[Attribute],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+    inline: bool,
+) -> Doc {
+    print_attributes_with_loc(state, attrs, None, cmt_tbl, arena, inline)
 }
 
 /// Print a single attribute.
@@ -5488,11 +5529,16 @@ fn print_type_declaration_inner(
             .iter()
             .map(|(typ, variance)| print_type_param(state, typ, variance, cmt_tbl, arena))
             .collect();
-        Doc::concat(vec![
+        Doc::group(Doc::concat(vec![
             Doc::less_than(),
-            Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), params),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), params),
+            ])),
+            Doc::trailing_comma(),
+            Doc::soft_line(),
             Doc::greater_than(),
-        ])
+        ]))
     };
 
     // Helper for private flag
@@ -5728,7 +5774,15 @@ fn print_label_declaration(
         return Doc::concat(vec![Doc::dotdotdot(), typ_doc]);
     }
 
-    let attrs_doc = print_attributes(state, &field.pld_attributes, cmt_tbl, arena);
+    // Pass field name location for proper attribute line breaking
+    let attrs_doc = print_attributes_with_loc(
+        state,
+        &field.pld_attributes,
+        Some(field.pld_name.loc),
+        cmt_tbl,
+        arena,
+        false,
+    );
     let mutable_doc = if field.pld_mutable == MutableFlag::Mutable {
         Doc::text("mutable ")
     } else {
@@ -5810,11 +5864,16 @@ fn print_type_extension(
             .iter()
             .map(|(typ, variance)| print_type_param(state, typ, variance, cmt_tbl, arena))
             .collect();
-        Doc::concat(vec![
+        Doc::group(Doc::concat(vec![
             Doc::less_than(),
-            Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), params),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), params),
+            ])),
+            Doc::trailing_comma(),
+            Doc::soft_line(),
             Doc::greater_than(),
-        ])
+        ]))
     };
 
     let ecs = &type_ext.ptyext_constructors;
