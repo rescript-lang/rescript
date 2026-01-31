@@ -4873,7 +4873,16 @@ fn print_payload(state: &PrinterState, payload: &Payload, cmt_tbl: &mut CommentT
                 add_parens(print_structure(state, items, cmt_tbl, arena))
             }
         }
-        Payload::PSig(_) => Doc::text("(:...)"),
+        Payload::PSig(signature) => Doc::concat(vec![
+            Doc::lparen(),
+            Doc::text(":"),
+            Doc::indent(Doc::concat(vec![
+                Doc::line(),
+                print_signature(state, signature, cmt_tbl, arena),
+            ])),
+            Doc::soft_line(),
+            Doc::rparen(),
+        ]),
         Payload::PTyp(typ) => Doc::concat(vec![
             Doc::text("(: "),
             print_typ_expr(state, typ, cmt_tbl, arena),
