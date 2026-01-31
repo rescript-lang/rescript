@@ -5468,10 +5468,15 @@ fn print_constructor_declaration(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &constr.pcd_attributes, cmt_tbl, arena);
+    let is_spread = constr.pcd_name.txt == "...";
     let name_doc = Doc::text(&constr.pcd_name.txt);
 
     let args_doc = match &constr.pcd_args {
         ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
+        ConstructorArguments::Pcstr_tuple(types) if is_spread && types.len() == 1 => {
+            // Spread constructors print the type directly without parens: ...aa
+            print_typ_expr(state, &types[0], cmt_tbl, arena)
+        }
         ConstructorArguments::Pcstr_tuple(types) => {
             let type_docs: Vec<Doc> = types
                 .iter()
