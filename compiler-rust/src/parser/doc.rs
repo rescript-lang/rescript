@@ -489,9 +489,58 @@ impl Doc {
             stack.push((indent, mode, doc));
         }
         while let Some((indent, mode, doc)) = stack.pop() {
-            // Simplified processing for remaining suffices
-            if let Doc::Text(txt) = doc {
-                buffer.push_str(txt);
+            match doc {
+                Doc::Nil | Doc::BreakParent | Doc::LineSuffix(_) => {}
+                Doc::Text(txt) => {
+                    buffer.push_str(txt);
+                    pos += txt.len() as i32;
+                }
+                Doc::Concat(docs) => {
+                    for doc in docs.iter().rev() {
+                        stack.push((indent, mode, doc));
+                    }
+                }
+                Doc::Indent(doc) => {
+                    stack.push((indent + 2, mode, doc));
+                }
+                Doc::LineBreak(style) => {
+                    if mode == Mode::Break {
+                        if *style == LineStyle::Literal {
+                            buffer.push('\n');
+                            pos = 0;
+                        } else {
+                            let trimmed_len = buffer.trim_end_matches(' ').len();
+                            buffer.truncate(trimmed_len);
+                            buffer.push('\n');
+                            if indent > 0 {
+                                buffer.push_str(&" ".repeat(indent as usize));
+                            }
+                            pos = indent;
+                        }
+                    } else if *style == LineStyle::Soft {
+                        // Nothing
+                    } else {
+                        buffer.push(' ');
+                        pos += 1;
+                    }
+                }
+                Doc::Group { doc: contents, should_break } => {
+                    let mode = if should_break.get() { Mode::Break } else { Mode::Flat };
+                    stack.push((indent, mode, contents));
+                }
+                Doc::IfBreaks { yes, no, .. } => {
+                    if mode == Mode::Break {
+                        stack.push((indent, mode, yes));
+                    } else {
+                        stack.push((indent, mode, no));
+                    }
+                }
+                Doc::CustomLayout(docs) => {
+                    // Use the first option
+                    if let Some(first) = docs.first() {
+                        stack.push((indent, mode, first));
+                    }
+                }
             }
         }
 
