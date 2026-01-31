@@ -2244,19 +2244,13 @@ fn print_expression_block(
 ) -> Doc {
     match &e.pexp_desc {
         ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            let rec_doc = match rec_flag {
-                RecFlag::Nonrecursive => Doc::nil(),
-                RecFlag::Recursive => Doc::text("rec "),
-            };
-            let bindings_doc = print_value_bindings(state, bindings, cmt_tbl, arena);
+            let bindings_doc = print_value_bindings(state, bindings, rec_flag, cmt_tbl, arena);
             let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
             if braces {
                 Doc::concat(vec![
                     Doc::lbrace(),
                     Doc::indent(Doc::concat(vec![
                         Doc::hard_line(),
-                        Doc::text("let "),
-                        rec_doc,
                         bindings_doc,
                         Doc::hard_line(),
                         body_doc,
@@ -2266,8 +2260,6 @@ fn print_expression_block(
                 ])
             } else {
                 Doc::concat(vec![
-                    Doc::text("let "),
-                    rec_doc,
                     bindings_doc,
                     Doc::hard_line(),
                     body_doc,
@@ -4626,13 +4618,49 @@ fn print_case(
 fn print_value_bindings(
     state: &PrinterState,
     bindings: &[ValueBinding],
+    rec_flag: &RecFlag,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    let rec_doc = match rec_flag {
+        RecFlag::Nonrecursive => Doc::nil(),
+        RecFlag::Recursive => Doc::text("rec "),
+    };
+
     let docs: Vec<Doc> = bindings
         .iter()
         .enumerate()
         .map(|(i, vb)| {
+            // Check for let.unwrap attribute
+            let has_unwrap = vb.pvb_attributes.iter().any(|attr| attr.0.txt == "let.unwrap");
+
+            // Print attributes (filtering out let.unwrap)
+            let attrs: Vec<&Attribute> = vb.pvb_attributes
+                .iter()
+                .filter(|attr| attr.0.txt != "let.unwrap")
+                .collect();
+            let attrs_doc = if attrs.is_empty() {
+                Doc::nil()
+            } else {
+                let attr_docs: Vec<Doc> = attrs
+                    .iter()
+                    .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
+                    .map(|attr| print_attribute(state, attr, cmt_tbl, arena))
+                    .collect();
+                if attr_docs.is_empty() {
+                    Doc::nil()
+                } else {
+                    Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attr_docs)), Doc::hard_line()])
+                }
+            };
+
+            let header = if i == 0 {
+                let let_kw = if has_unwrap { "let? " } else { "let " };
+                Doc::concat(vec![Doc::text(let_kw), rec_doc.clone()])
+            } else {
+                Doc::text("and ")
+            };
+
             let pat = print_pattern(state, &vb.pvb_pat, cmt_tbl, arena);
             // Print expression and check if it needs parens/braces
             let doc = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);
@@ -4641,11 +4669,7 @@ fn print_value_bindings(
                 ParenKind::Braced(loc) => print_braces(doc, &vb.pvb_expr, loc, arena),
                 ParenKind::Nothing => doc,
             };
-            if i == 0 {
-                Doc::concat(vec![pat, Doc::text(" = "), printed_expr])
-            } else {
-                Doc::concat(vec![Doc::text("and "), pat, Doc::text(" = "), printed_expr])
-            }
+            Doc::concat(vec![attrs_doc, header, pat, Doc::text(" = "), printed_expr])
         })
         .collect();
     Doc::join(Doc::hard_line(), docs)
@@ -5013,15 +5037,7 @@ pub fn print_structure_item(
 ) -> Doc {
     match &item.pstr_desc {
         StructureItemDesc::Pstr_value(rec_flag, bindings) => {
-            let rec_doc = match rec_flag {
-                RecFlag::Nonrecursive => Doc::nil(),
-                RecFlag::Recursive => Doc::text("rec "),
-            };
-            Doc::concat(vec![
-                Doc::text("let "),
-                rec_doc,
-                print_value_bindings(state, bindings, cmt_tbl, arena),
-            ])
+            print_value_bindings(state, bindings, rec_flag, cmt_tbl, arena)
         }
 
         StructureItemDesc::Pstr_type(rec_flag, type_decls) => {
