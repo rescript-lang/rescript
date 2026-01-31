@@ -5491,32 +5491,44 @@ fn print_label_declaration(
     ]))
 }
 
-/// Print value description (external declaration).
+/// Print value description (external or let declaration in signatures).
 fn print_value_description(
     state: &PrinterState,
     val_desc: &ValueDescription,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    let is_external = !val_desc.pval_prim.is_empty();
     let attrs_doc = print_attributes(state, &val_desc.pval_attributes, cmt_tbl, arena);
     let name_doc = Doc::text(&val_desc.pval_name.txt);
     let typ_doc = print_typ_expr(state, &val_desc.pval_type, cmt_tbl, arena);
+    let header = if is_external { "external " } else { "let " };
 
-    let prim_doc = if val_desc.pval_prim.is_empty() {
-        Doc::nil()
+    let prim_doc = if is_external {
+        let prims: Vec<Doc> = val_desc
+            .pval_prim
+            .iter()
+            .map(|s| Doc::concat(vec![Doc::text("\""), Doc::text(s.clone()), Doc::text("\"")]))
+            .collect();
+        Doc::group(Doc::concat(vec![
+            Doc::text(" ="),
+            Doc::indent(Doc::concat(vec![
+                Doc::line(),
+                Doc::join(Doc::line(), prims),
+            ])),
+        ]))
     } else {
-        let prims: Vec<Doc> = val_desc.pval_prim.iter().map(|s| Doc::text(format!("\"{}\"", s))).collect();
-        Doc::concat(vec![Doc::text(" = "), Doc::join(Doc::space(), prims)])
+        Doc::nil()
     };
 
-    Doc::concat(vec![
+    Doc::group(Doc::concat(vec![
         attrs_doc,
-        Doc::text("external "),
+        Doc::text(header),
         name_doc,
         Doc::text(": "),
         typ_doc,
         prim_doc,
-    ])
+    ]))
 }
 
 /// Print type extension.
