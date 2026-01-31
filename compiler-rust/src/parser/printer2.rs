@@ -5014,14 +5014,28 @@ fn print_module_declaration(
 ) -> Doc {
     let attrs_doc = print_attributes(state, &decl.pmd_attributes, cmt_tbl, arena);
     let name_doc = Doc::text(&decl.pmd_name.txt);
-    let type_doc = print_module_type(state, &decl.pmd_type, cmt_tbl, arena);
+
+    // Check if this is a module alias (Pmty_alias) - uses "=" instead of ":"
+    let body_doc = match &decl.pmd_type.pmty_desc {
+        ModuleTypeDesc::Pmty_alias(lid) => {
+            Doc::concat(vec![
+                Doc::text(" = "),
+                print_longident(arena, arena.get_longident(lid.txt)),
+            ])
+        }
+        _ => {
+            Doc::concat(vec![
+                Doc::text(": "),
+                print_module_type(state, &decl.pmd_type, cmt_tbl, arena),
+            ])
+        }
+    };
 
     Doc::concat(vec![
         attrs_doc,
         Doc::text("module "),
         name_doc,
-        Doc::text(": "),
-        type_doc,
+        body_doc,
     ])
 }
 
