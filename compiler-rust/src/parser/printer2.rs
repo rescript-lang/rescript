@@ -737,10 +737,30 @@ pub fn add_parens(doc: Doc) -> Doc {
 pub fn print_braces(doc: Doc, expr: &Expression, braces_loc: LocIdx, arena: &ParseArena) -> Doc {
     let over_multiple_lines =
         arena.loc_start(braces_loc).line != arena.loc_end(braces_loc).line;
+
+    // These expression types already have braces when printed, so just return doc as-is
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_letmodule(_, _, _)
+        | ExpressionDesc::Pexp_letexception(_, _)
+        | ExpressionDesc::Pexp_let(_, _, _)
+        | ExpressionDesc::Pexp_open(_, _, _)
+        | ExpressionDesc::Pexp_sequence(_, _) => {
+            return doc;
+        }
+        _ => {}
+    }
+
+    // For other expressions, wrap in braces
+    let inner_doc = if parens::braced_expr(expr) {
+        add_parens(doc)
+    } else {
+        doc
+    };
+
     Doc::breakable_group(
         Doc::concat(vec![
             Doc::lbrace(),
-            Doc::indent(Doc::concat(vec![Doc::soft_line(), doc])),
+            Doc::indent(Doc::concat(vec![Doc::soft_line(), inner_doc])),
             Doc::soft_line(),
             Doc::rbrace(),
         ]),
