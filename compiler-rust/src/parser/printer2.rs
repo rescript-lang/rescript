@@ -5635,9 +5635,9 @@ fn print_extension_constructor(
                 }
                 ConstructorArguments::Pcstr_record(fields) => {
                     Doc::concat(vec![
-                        Doc::text("({"),
+                        Doc::text("("),
                         print_record_declaration(state, fields, None, cmt_tbl, arena),
-                        Doc::text("})"),
+                        Doc::text(")"),
                     ])
                 }
             };
@@ -5682,9 +5682,9 @@ fn print_exception_def(
                 }
                 ConstructorArguments::Pcstr_record(fields) => {
                     Doc::concat(vec![
-                        Doc::text("({"),
+                        Doc::text("("),
                         print_record_declaration(state, fields, None, cmt_tbl, arena),
-                        Doc::text("})"),
+                        Doc::text(")"),
                     ])
                 }
             };
