@@ -3293,45 +3293,59 @@ pub fn print_typ_expr(
             if let [single_arg] = args.as_slice() {
                 if let CoreTypeDesc::Ptyp_object(fields, open_flag) = &single_arg.ptyp_desc {
                     let constr_name = print_lident_path(lid, cmt_tbl, arena);
-                    return Doc::concat(vec![
+                    Doc::concat(vec![
                         constr_name,
                         Doc::less_than(),
                         print_object(state, fields, open_flag, true, cmt_tbl, arena),
                         Doc::greater_than(),
-                    ]);
+                    ])
                 }
                 // Handle tuple inside constructor
-                if let CoreTypeDesc::Ptyp_tuple(types) = &single_arg.ptyp_desc {
+                else if let CoreTypeDesc::Ptyp_tuple(types) = &single_arg.ptyp_desc {
                     let constr_name = print_lident_path(lid, cmt_tbl, arena);
-                    return Doc::group(Doc::concat(vec![
+                    Doc::group(Doc::concat(vec![
                         constr_name,
                         Doc::less_than(),
                         print_tuple_type(state, types, true, cmt_tbl, arena),
                         Doc::greater_than(),
-                    ]));
-                }
-            }
-
-            let constr_name = print_lident_path(lid, cmt_tbl, arena);
-            if args.is_empty() {
-                constr_name
-            } else {
-                Doc::group(Doc::concat(vec![
-                    constr_name,
-                    Doc::less_than(),
-                    Doc::indent(Doc::concat(vec![
+                    ]))
+                } else {
+                    // Regular single arg case
+                    let constr_name = print_lident_path(lid, cmt_tbl, arena);
+                    Doc::group(Doc::concat(vec![
+                        constr_name,
+                        Doc::less_than(),
+                        Doc::indent(Doc::concat(vec![
+                            Doc::soft_line(),
+                            print_typ_expr(state, single_arg, cmt_tbl, arena),
+                        ])),
+                        Doc::trailing_comma(),
                         Doc::soft_line(),
-                        Doc::join(
-                            Doc::concat(vec![Doc::text(","), Doc::line()]),
-                            args.iter()
-                                .map(|arg| print_typ_expr(state, arg, cmt_tbl, arena))
-                                .collect(),
-                        ),
-                    ])),
-                    Doc::trailing_comma(),
-                    Doc::soft_line(),
-                    Doc::greater_than(),
-                ]))
+                        Doc::greater_than(),
+                    ]))
+                }
+            } else {
+                let constr_name = print_lident_path(lid, cmt_tbl, arena);
+                if args.is_empty() {
+                    constr_name
+                } else {
+                    Doc::group(Doc::concat(vec![
+                        constr_name,
+                        Doc::less_than(),
+                        Doc::indent(Doc::concat(vec![
+                            Doc::soft_line(),
+                            Doc::join(
+                                Doc::concat(vec![Doc::text(","), Doc::line()]),
+                                args.iter()
+                                    .map(|arg| print_typ_expr(state, arg, cmt_tbl, arena))
+                                    .collect(),
+                            ),
+                        ])),
+                        Doc::trailing_comma(),
+                        Doc::soft_line(),
+                        Doc::greater_than(),
+                    ]))
+                }
             }
         }
 
