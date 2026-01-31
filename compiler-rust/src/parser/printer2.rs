@@ -4607,7 +4607,13 @@ fn print_value_bindings(
         .enumerate()
         .map(|(i, vb)| {
             let pat = print_pattern(state, &vb.pvb_pat, cmt_tbl, arena);
-            let printed_expr = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);
+            // Print expression and check if it needs parens/braces
+            let doc = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);
+            let printed_expr = match parens::expr(arena, &vb.pvb_expr) {
+                ParenKind::Parenthesized => add_parens(doc),
+                ParenKind::Braced(loc) => print_braces(doc, &vb.pvb_expr, loc, arena),
+                ParenKind::Nothing => doc,
+            };
             if i == 0 {
                 Doc::concat(vec![pat, Doc::text(" = "), printed_expr])
             } else {
