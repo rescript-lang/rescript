@@ -5688,8 +5688,12 @@ fn print_open_description(
 ) -> Doc {
     let attrs_doc = print_attributes(state, &open_desc.popen_attributes, cmt_tbl, arena);
     let lid_doc = print_longident(arena, arena.get_longident(open_desc.popen_lid.txt));
+    let override_doc = match open_desc.popen_override {
+        OverrideFlag::Fresh => Doc::space(),
+        OverrideFlag::Override => Doc::text("! "),
+    };
 
-    Doc::concat(vec![attrs_doc, Doc::text("open "), lid_doc])
+    Doc::concat(vec![attrs_doc, Doc::text("open"), override_doc, lid_doc])
 }
 
 /// Print include declaration.
