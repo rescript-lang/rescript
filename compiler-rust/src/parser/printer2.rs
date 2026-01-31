@@ -1985,11 +1985,19 @@ fn print_record_expression(
 }
 
 /// Check if a record field is punned.
+/// A field is punned when the field name matches the identifier expression,
+/// e.g., `{a}` where a is Pexp_ident with txt = "a".
 fn is_punned_record_field(arena: &ParseArena, field: &ExpressionRecordField) -> bool {
+    // Expression must have no attributes
+    if !field.expr.pexp_attributes.is_empty() {
+        return false;
+    }
+
     match (arena.get_longident(field.lid.txt), &field.expr.pexp_desc) {
-        (Longident::Lident(name), ExpressionDesc::Pexp_ident(path)) => {
-            if let Longident::Lident(ident) = arena.get_longident(path.txt) {
-                name == ident
+        (Longident::Lident(name_idx), ExpressionDesc::Pexp_ident(path)) => {
+            if let Longident::Lident(ident_idx) = arena.get_longident(path.txt) {
+                // Compare the actual string content, not the indices
+                arena.get_string(*name_idx) == arena.get_string(*ident_idx)
             } else {
                 false
             }
