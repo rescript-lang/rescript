@@ -5491,6 +5491,12 @@ fn print_label_declaration(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Handle spread fields: ...typename
+    if field.pld_name.txt == "..." {
+        let typ_doc = print_typ_expr(state, &field.pld_type, cmt_tbl, arena);
+        return Doc::concat(vec![Doc::dotdotdot(), typ_doc]);
+    }
+
     let attrs_doc = print_attributes(state, &field.pld_attributes, cmt_tbl, arena);
     let mutable_doc = if field.pld_mutable == MutableFlag::Mutable {
         Doc::text("mutable ")
