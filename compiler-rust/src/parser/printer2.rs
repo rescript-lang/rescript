@@ -1062,7 +1062,7 @@ pub fn print_expression(
         }
         // Record expression
         ExpressionDesc::Pexp_record(fields, spread) => {
-            print_record_expression(state, spread.as_ref().map(|e| e.as_ref()), fields, cmt_tbl, arena)
+            print_record_expression(state, e.pexp_loc, spread.as_ref().map(|e| e.as_ref()), fields, cmt_tbl, arena)
         }
         // Field access: expr.field
         ExpressionDesc::Pexp_field(expr, longident_loc) => {
@@ -1931,11 +1931,25 @@ fn try_print_re_extension(ext: &Extension) -> Option<Doc> {
 /// Print record expression.
 fn print_record_expression(
     state: &PrinterState,
+    loc: LocIdx,
     spread: Option<&Expression>,
     fields: &[ExpressionRecordField],
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Calculate force_break: record written on multiple lines should break the group
+    let force_break = match (spread, fields.first()) {
+        (Some(expr), _) => {
+            // If there's a spread, compare with spread expression's location
+            arena.loc_start(loc).line < arena.loc_start(expr.pexp_loc).line
+        }
+        (None, Some(first_field)) => {
+            // Otherwise, compare with the first row's location
+            arena.loc_start(loc).line < arena.loc_start(first_field.lid.loc).line
+        }
+        (None, None) => false,
+    };
+
     // Disallow punning for single-element records without spread
     let punning_allowed = !(spread.is_none() && fields.len() == 1);
 
@@ -1976,17 +1990,20 @@ fn print_record_expression(
             })
             .collect(),
     );
-    Doc::group(Doc::concat(vec![
-        Doc::lbrace(),
-        Doc::indent(Doc::concat(vec![
+    Doc::breakable_group(
+        Doc::concat(vec![
+            Doc::lbrace(),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                spread_doc,
+                fields_doc,
+            ])),
+            Doc::trailing_comma(),
             Doc::soft_line(),
-            spread_doc,
-            fields_doc,
-        ])),
-        Doc::trailing_comma(),
-        Doc::soft_line(),
-        Doc::rbrace(),
-    ]))
+            Doc::rbrace(),
+        ]),
+        force_break,
+    )
 }
 
 /// Check if a record field is punned.
