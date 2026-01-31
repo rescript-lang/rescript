@@ -2323,7 +2323,7 @@ fn print_expression_block(
             }
         }
         ExpressionDesc::Pexp_letexception(ext_constr, body) => {
-            let ext_doc = print_extension_constructor(state, ext_constr, cmt_tbl, arena);
+            let ext_doc = print_exception_def(state, ext_constr, cmt_tbl, arena);
             let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
             if braces {
                 Doc::concat(vec![
@@ -5643,37 +5643,71 @@ fn print_type_extension(
         ])
     };
 
+    let ecs = &type_ext.ptyext_constructors;
+    // Determine if we should force a break based on locations
+    let force_break = if let (Some(first), Some(last)) = (ecs.first(), ecs.last()) {
+        let path_end = arena.loc_end(type_ext.ptyext_path.loc);
+        let first_start = arena.loc_start(first.pext_loc);
+        let last_end = arena.loc_end(last.pext_loc);
+        first_start.line > path_end.line || first_start.line < last_end.line
+    } else {
+        false
+    };
+
     let private_doc = match type_ext.ptyext_private {
-        PrivateFlag::Private => Doc::text("private "),
+        PrivateFlag::Private => Doc::concat(vec![Doc::text("private"), Doc::line()]),
         PrivateFlag::Public => Doc::nil(),
     };
 
-    let constructors_doc: Vec<Doc> = type_ext
-        .ptyext_constructors
-        .iter()
-        .map(|constr| print_extension_constructor(state, constr, cmt_tbl, arena))
-        .collect();
+    let constructors_doc = print_listi(
+        |constr: &ExtensionConstructor| constr.pext_loc,
+        ecs,
+        |constr, cmt_tbl_inner, i| print_extension_constructor(state, constr, i, cmt_tbl_inner, arena),
+        cmt_tbl,
+        arena,
+        false, // ignore_empty_lines
+        force_break,
+    );
 
-    Doc::concat(vec![
+    Doc::group(Doc::concat(vec![
         attrs_doc,
         Doc::text("type "),
         path_doc,
         params_doc,
-        Doc::text(" += "),
-        private_doc,
-        Doc::join(Doc::concat(vec![Doc::line(), Doc::text("| ")]), constructors_doc),
-    ])
+        Doc::text(" +="),
+        Doc::breakable_group(
+            Doc::indent(Doc::concat(vec![
+                Doc::line(),
+                private_doc,
+                constructors_doc,
+            ])),
+            force_break,
+        ),
+    ]))
 }
 
 /// Print extension constructor.
 fn print_extension_constructor(
     state: &PrinterState,
     ext_constr: &ExtensionConstructor,
+    index: usize,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &ext_constr.pext_attributes, cmt_tbl, arena);
-    let name_doc = Doc::text(&ext_constr.pext_name.txt);
+    let name_doc = print_comments(
+        Doc::text(&ext_constr.pext_name.txt),
+        cmt_tbl,
+        ext_constr.pext_name.loc,
+        arena,
+    );
+
+    // First constructor uses if_breaks, others always show |
+    let bar = if index > 0 {
+        Doc::text("| ")
+    } else {
+        Doc::if_breaks(Doc::text("| "), Doc::nil())
+    };
 
     let kind_doc = match &ext_constr.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
@@ -5705,11 +5739,15 @@ fn print_extension_constructor(
             Doc::concat(vec![args_doc, res_doc])
         }
         ExtensionConstructorKind::Pext_rebind(lid) => {
-            Doc::concat(vec![Doc::text(" = "), print_longident(arena, arena.get_longident(lid.txt))])
+            Doc::indent(Doc::concat(vec![
+                Doc::text(" ="),
+                Doc::line(),
+                print_longident_location(&lid, cmt_tbl, arena),
+            ]))
         }
     };
 
-    Doc::concat(vec![attrs_doc, name_doc, kind_doc])
+    Doc::concat(vec![bar, Doc::group(Doc::concat(vec![attrs_doc, name_doc, kind_doc]))])
 }
 
 /// Print exception definition (for exception declarations in signatures and structures).
