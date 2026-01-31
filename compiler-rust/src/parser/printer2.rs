@@ -5779,19 +5779,20 @@ fn print_module_type_declaration(
 
 /// Print open description.
 fn print_open_description(
-    state: &PrinterState,
+    _state: &PrinterState,
     open_desc: &OpenDescription,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let attrs_doc = print_attributes(state, &open_desc.popen_attributes, cmt_tbl, arena);
+    let attrs_doc = print_attributes(_state, &open_desc.popen_attributes, cmt_tbl, arena);
     let lid_doc = print_longident(arena, arena.get_longident(open_desc.popen_lid.txt));
+    let lid_doc_with_comments = print_comments(lid_doc, cmt_tbl, open_desc.popen_lid.loc, arena);
     let override_doc = match open_desc.popen_override {
         OverrideFlag::Fresh => Doc::space(),
         OverrideFlag::Override => Doc::text("! "),
     };
 
-    Doc::concat(vec![attrs_doc, Doc::text("open"), override_doc, lid_doc])
+    Doc::concat(vec![attrs_doc, Doc::text("open"), override_doc, lid_doc_with_comments])
 }
 
 /// Print include declaration.
