@@ -12,6 +12,17 @@ use super::token::Token;
 use crate::location::Position;
 use crate::parse_arena::{Located, LocIdx};
 
+/// Check if a constant is valid for an interval pattern.
+/// This includes integers, floats, characters (Constant::Char), and
+/// characters encoded as strings with INTERNAL_RES_CHAR_CONTENTS tag.
+fn is_interval_constant(c: &Constant) -> bool {
+    match c {
+        Constant::Integer(..) | Constant::Char(..) | Constant::Float(..) => true,
+        Constant::String(_, Some(tag)) if tag == "INTERNAL_RES_CHAR_CONTENTS" => true,
+        _ => false,
+    }
+}
+
 // ============================================================================
 // Attribute Parsing for Patterns
 // ============================================================================
@@ -169,53 +180,50 @@ fn parse_single_pattern(p: &mut Parser<'_>) -> Pattern {
     // Handle interval patterns: 1 .. 2, 'a' .. 'z', -1 .. -1., etc.
     if p.token == Token::DotDot {
         if let PatternDesc::Ppat_constant(from) = &pat.ppat_desc {
-            match from {
-                Constant::Integer(..) | Constant::Char(..) | Constant::Float(..) => {
-                    let from = from.clone();
-                    p.next();
-                    let to = match &p.token {
-                        Token::Int { .. } | Token::Codepoint { .. } | Token::Float { .. } => {
-                            super::expr::parse_constant(p)
-                        }
-                        Token::Minus => {
-                            // Handle negative numbers: -1, -1.0
-                            p.next();
-                            match &p.token {
-                                Token::Int { i, suffix } => {
-                                    let value = format!("-{}", i);
-                                    let suffix = suffix.clone();
-                                    p.next();
-                                    Constant::Integer(value, suffix)
-                                }
-                                Token::Float { f, suffix } => {
-                                    let value = format!("-{}", f);
-                                    let suffix = suffix.clone();
-                                    p.next();
-                                    Constant::Float(value, suffix)
-                                }
-                                _ => {
-                                    p.err(DiagnosticCategory::Message(
-                                        "Expected number after '-' in interval pattern".to_string(),
-                                    ));
-                                    Constant::Integer("0".to_string(), None)
-                                }
+            if is_interval_constant(from) {
+                let from = from.clone();
+                p.next();
+                let to = match &p.token {
+                    Token::Int { .. } | Token::Codepoint { .. } | Token::Float { .. } => {
+                        super::expr::parse_constant(p)
+                    }
+                    Token::Minus => {
+                        // Handle negative numbers: -1, -1.0
+                        p.next();
+                        match &p.token {
+                            Token::Int { i, suffix } => {
+                                let value = format!("-{}", i);
+                                let suffix = suffix.clone();
+                                p.next();
+                                Constant::Integer(value, suffix)
+                            }
+                            Token::Float { f, suffix } => {
+                                let value = format!("-{}", f);
+                                let suffix = suffix.clone();
+                                p.next();
+                                Constant::Float(value, suffix)
+                            }
+                            _ => {
+                                p.err(DiagnosticCategory::Message(
+                                    "Expected number after '-' in interval pattern".to_string(),
+                                ));
+                                Constant::Integer("0".to_string(), None)
                             }
                         }
-                        _ => {
-                            p.err(DiagnosticCategory::Message(
-                                "Expected constant after '..' in pattern".to_string(),
-                            ));
-                            Constant::Integer("0".to_string(), None)
-                        }
-                    };
-                    let loc = p.mk_loc_to_prev_end(&start_pos);
-                    pat = Pattern {
-                        ppat_desc: PatternDesc::Ppat_interval(from, to),
-                        ppat_loc: loc,
-                        ppat_attributes: vec![],
-                    };
-                }
-                _ => {}
+                    }
+                    _ => {
+                        p.err(DiagnosticCategory::Message(
+                            "Expected constant after '..' in pattern".to_string(),
+                        ));
+                        Constant::Integer("0".to_string(), None)
+                    }
+                };
+                let loc = p.mk_loc_to_prev_end(&start_pos);
+                pat = Pattern {
+                    ppat_desc: PatternDesc::Ppat_interval(from, to),
+                    ppat_loc: loc,
+                    ppat_attributes: vec![],
+                };
             }
         }
     }

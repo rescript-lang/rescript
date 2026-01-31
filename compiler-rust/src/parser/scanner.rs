@@ -1430,12 +1430,14 @@ impl<'src> Scanner<'src> {
             }
         };
 
+        // Capture the escape sequence contents BEFORE consuming the closing quote
+        let contents = self.substring(offset, self.offset).to_string();
+
         // Consume closing quote
         if self.ch == '\'' {
             self.next();
         }
 
-        let contents = self.substring(offset, self.offset).to_string();
         Token::Codepoint {
             c: codepoint,
             original: contents,

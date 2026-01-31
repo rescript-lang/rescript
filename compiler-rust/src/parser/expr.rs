@@ -53,9 +53,15 @@ pub fn parse_constant(p: &mut Parser<'_>) -> Constant {
         }
         Token::Codepoint { c, original } => {
             let value = *c;
-            let _orig = original.clone();
+            let orig = original.clone();
             p.next();
-            Constant::Char(value)
+            // When parsing for the printer (not type checker), preserve the original escape format
+            // by encoding it as a string with a special prefix, like OCaml does.
+            if p.mode == ParserMode::ParseForTypeChecker {
+                Constant::Char(value)
+            } else {
+                Constant::String(orig, Some("INTERNAL_RES_CHAR_CONTENTS".to_string()))
+            }
         }
         _ => {
             p.err(DiagnosticCategory::Message("Expected constant".to_string()));
