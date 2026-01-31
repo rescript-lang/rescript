@@ -2012,26 +2012,34 @@ fn print_record_expression(
     )
 }
 
+/// Get the last component of a longident (like OCaml's Longident.last).
+fn longident_last<'a>(arena: &'a ParseArena, lid: &Longident) -> &'a str {
+    match lid {
+        Longident::Lident(s) => arena.get_string(*s),
+        Longident::Ldot(_, s) => arena.get_string(*s),
+        Longident::Lapply(_, _) => "",
+    }
+}
+
 /// Check if a record field is punned.
-/// A field is punned when the field name matches the identifier expression,
-/// e.g., `{a}` where a is Pexp_ident with txt = "a".
+/// A field is punned when the LAST component of the label matches the identifier expression,
+/// e.g., `{a}` where a is Pexp_ident with txt = "a", or `{A.a}` where a is "a".
 fn is_punned_record_field(arena: &ParseArena, field: &ExpressionRecordField) -> bool {
     // Expression must have no attributes
     if !field.expr.pexp_attributes.is_empty() {
         return false;
     }
 
-    match (arena.get_longident(field.lid.txt), &field.expr.pexp_desc) {
-        (Longident::Lident(name_idx), ExpressionDesc::Pexp_ident(path)) => {
-            if let Longident::Lident(ident_idx) = arena.get_longident(path.txt) {
-                // Compare the actual string content, not the indices
-                arena.get_string(*name_idx) == arena.get_string(*ident_idx)
-            } else {
-                false
-            }
+    // Expression must be a simple Lident
+    if let ExpressionDesc::Pexp_ident(path) = &field.expr.pexp_desc {
+        if let Longident::Lident(ident_idx) = arena.get_longident(path.txt) {
+            // Compare the LAST component of the label with the expression identifier
+            let label_last = longident_last(arena, arena.get_longident(field.lid.txt));
+            let ident_str = arena.get_string(*ident_idx);
+            return label_last == ident_str;
         }
-        _ => false,
     }
+    false
 }
 
 /// Check if expression is a send-set: `#=(lhs, rhs)` where lhs is a Pexp_send.
@@ -3192,7 +3200,7 @@ fn print_record_pattern(
                 // Check for punning
                 if is_punned_pattern_field(arena, field) {
                     if field.opt {
-                        Doc::concat(vec![label, Doc::text("?")])
+                        Doc::concat(vec![Doc::text("?"), label])
                     } else {
                         label
                     }
@@ -5246,7 +5254,7 @@ fn print_type_declaration_inner(
             Doc::concat(vec![
                 Doc::text(" = "),
                 private_doc.clone(),
-                print_record_declaration(state, fields, cmt_tbl, arena),
+                print_record_declaration(state, fields, Some(decl.ptype_loc), cmt_tbl, arena),
             ])
         }
         TypeKind::Ptype_open => Doc::concat(vec![
@@ -5351,7 +5359,7 @@ fn print_constructor_declaration(
         ConstructorArguments::Pcstr_record(fields) => {
             Doc::concat(vec![
                 Doc::text("("),
-                print_record_declaration(state, fields, cmt_tbl, arena),
+                print_record_declaration(state, fields, None, cmt_tbl, arena),
                 Doc::text(")"),
             ])
         }
@@ -5369,23 +5377,41 @@ fn print_constructor_declaration(
 fn print_record_declaration(
     state: &PrinterState,
     fields: &[LabelDeclaration],
+    record_loc: Option<LocIdx>,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Calculate force_break: if the opening brace and first field are on different lines
+    let force_break = match (record_loc, fields.first()) {
+        (Some(loc), Some(first_field)) => {
+            // For spread fields (...), use the type location instead
+            let field_line = if first_field.pld_name.txt == "..." {
+                arena.loc_start(first_field.pld_type.ptyp_loc).line
+            } else {
+                arena.loc_start(first_field.pld_loc).line
+            };
+            arena.loc_start(loc).line < field_line
+        }
+        _ => false,
+    };
+
     let field_docs: Vec<Doc> = fields
         .iter()
         .map(|field| print_label_declaration(state, field, cmt_tbl, arena))
         .collect();
-    Doc::group(Doc::concat(vec![
-        Doc::lbrace(),
-        Doc::indent(Doc::concat(vec![
+    Doc::breakable_group(
+        Doc::concat(vec![
+            Doc::lbrace(),
+            Doc::indent(Doc::concat(vec![
+                Doc::soft_line(),
+                Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), field_docs),
+            ])),
+            Doc::trailing_comma(),
             Doc::soft_line(),
-            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), field_docs),
-        ])),
-        Doc::trailing_comma(),
-        Doc::soft_line(),
-        Doc::rbrace(),
-    ]))
+            Doc::rbrace(),
+        ]),
+        force_break,
+    )
 }
 
 /// Print a label declaration (record field).
@@ -5402,9 +5428,21 @@ fn print_label_declaration(
         Doc::nil()
     };
     let name_doc = print_ident_like(&field.pld_name.txt, false, false);
+    let optional_doc = if field.pld_optional {
+        Doc::text("?")
+    } else {
+        Doc::nil()
+    };
     let typ_doc = print_typ_expr(state, &field.pld_type, cmt_tbl, arena);
 
-    Doc::concat(vec![attrs_doc, mutable_doc, name_doc, Doc::text(": "), typ_doc])
+    Doc::group(Doc::concat(vec![
+        attrs_doc,
+        mutable_doc,
+        name_doc,
+        optional_doc,
+        Doc::text(": "),
+        typ_doc,
+    ]))
 }
 
 /// Print value description (external declaration).
@@ -5510,7 +5548,7 @@ fn print_extension_constructor(
                 ConstructorArguments::Pcstr_record(fields) => {
                     Doc::concat(vec![
                         Doc::text("({"),
-                        print_record_declaration(state, fields, cmt_tbl, arena),
+                        print_record_declaration(state, fields, None, cmt_tbl, arena),
                         Doc::text("})"),
                     ])
                 }
