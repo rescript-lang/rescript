@@ -51,10 +51,17 @@
   expressions (Pexp_match) are NOT inlined, so `heightGet(n) >= switch ...` now correctly
   breaks after `>=`. (case.res now passes)
 
-- **expr.res - Newtype parameter comments**: When consecutive newtypes `(type t, m1, type s, m2)`
-  are combined into `(type t s, m1, m2)`, comments around later newtypes get reattached. The
-  comment walker needs to handle this case specially - `/* c-2 */` before `type s` becomes a
-  leading comment on `m2` in the combined output. This is complex comment walker logic.
+- **expr.res - Newtype parameter comments**: FIXED! The comment_table.rs was computing a span
+  from first to last name for NewTypes param_loc, but OCaml uses just the first name's location.
+  Changed to use `first.loc` only, which properly attaches leading/trailing comments.
+
+- **expr.res - Callback trailing comments**: When a trailing comment is between the callback
+  parameter and `=>` (e.g., `f(() // c1 => 1)`), OCaml prints it AFTER the whole function call:
+  `f(() => 1)\n// c1`. This requires implementing special callback printing functions:
+  - `requires_special_callback_printing_last_arg` / `requires_special_callback_printing_first_arg`
+  - `print_arguments_with_callback_in_first_position` / `print_arguments_with_callback_in_last_position`
+  - Using `Doc::custom_layout` to try different layouts
+  This is a significant feature that affects how callback arguments are formatted.
 
 ---
 

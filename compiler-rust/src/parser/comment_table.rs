@@ -1619,16 +1619,11 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
                 // Get location for this parameter
                 let param_loc = match param {
                     FunParam::NewTypes { names, .. } => {
-                        // For NewTypes, span from first name to last name
-                        if let (Some(first), Some(last)) = (names.first(), names.last()) {
-                            if first.loc == last.loc {
-                                first.loc
-                            } else {
-                                arena.from_location(&Location::from_positions(
-                                    arena.loc_start(first.loc).clone(),
-                                    arena.loc_end(last.loc).clone(),
-                                ))
-                            }
+                        // For NewTypes, use the first name's location.
+                        // This matches OCaml's comment_table which creates a pattern
+                        // with loc = string_loc.loc (the first newtype name's location).
+                        if let Some(first) = names.first() {
+                            first.loc
                         } else {
                             arena.none_loc()
                         }
