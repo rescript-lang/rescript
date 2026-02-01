@@ -2329,6 +2329,7 @@ fn print_expression_block(
             }
         }
         ExpressionDesc::Pexp_letexception(ext_constr, body) => {
+            // print_exception_def already includes "exception " prefix
             let ext_doc = print_exception_def(state, ext_constr, cmt_tbl, arena);
             let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
             if braces {
@@ -2336,7 +2337,6 @@ fn print_expression_block(
                     Doc::lbrace(),
                     Doc::indent(Doc::concat(vec![
                         Doc::hard_line(),
-                        Doc::text("exception "),
                         ext_doc,
                         Doc::hard_line(),
                         body_doc,
@@ -2346,7 +2346,6 @@ fn print_expression_block(
                 ])
             } else {
                 Doc::concat(vec![
-                    Doc::text("exception "),
                     ext_doc,
                     Doc::hard_line(),
                     body_doc,
@@ -4953,7 +4952,7 @@ fn print_case_content(
 // Value Bindings
 // ============================================================================
 
-/// Print value bindings.
+/// Print value bindings using print_listi for proper comment handling.
 fn print_value_bindings(
     state: &PrinterState,
     bindings: &[ValueBinding],
@@ -4966,73 +4965,88 @@ fn print_value_bindings(
         RecFlag::Recursive => Doc::text("rec "),
     };
 
-    let docs: Vec<Doc> = bindings
+    print_listi(
+        |vb: &ValueBinding| vb.pvb_loc,
+        bindings,
+        |vb, cmt_tbl_inner, i| {
+            print_value_binding(state, vb, i, &rec_doc, cmt_tbl_inner, arena)
+        },
+        cmt_tbl,
+        arena,
+        false, // ignore_empty_lines
+        false, // force_break (will be calculated by print_listi)
+    )
+}
+
+/// Print a single value binding.
+fn print_value_binding(
+    state: &PrinterState,
+    vb: &ValueBinding,
+    index: usize,
+    rec_doc: &Doc,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // Check for let.unwrap attribute
+    let has_unwrap = vb.pvb_attributes.iter().any(|attr| attr.0.txt == "let.unwrap");
+
+    // Print attributes (filtering out let.unwrap)
+    let attrs: Vec<&Attribute> = vb.pvb_attributes
         .iter()
-        .enumerate()
-        .map(|(i, vb)| {
-            // Check for let.unwrap attribute
-            let has_unwrap = vb.pvb_attributes.iter().any(|attr| attr.0.txt == "let.unwrap");
-
-            // Print attributes (filtering out let.unwrap)
-            let attrs: Vec<&Attribute> = vb.pvb_attributes
-                .iter()
-                .filter(|attr| attr.0.txt != "let.unwrap")
-                .collect();
-            let attrs_doc = if attrs.is_empty() {
-                Doc::nil()
-            } else {
-                let attr_docs: Vec<Doc> = attrs
-                    .iter()
-                    .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
-                    .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
-                    .collect();
-                if attr_docs.is_empty() {
-                    Doc::nil()
-                } else {
-                    Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attr_docs)), Doc::hard_line()])
-                }
-            };
-
-            let header = if i == 0 {
-                let let_kw = if has_unwrap { "let? " } else { "let " };
-                Doc::concat(vec![Doc::text(let_kw), rec_doc.clone()])
-            } else {
-                Doc::text("and ")
-            };
-
-            let pat = print_pattern(state, &vb.pvb_pat, cmt_tbl, arena);
-            // Print expression and check if it needs parens/braces
-            let doc = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);
-            let printed_expr = match parens::expr(arena, &vb.pvb_expr) {
-                ParenKind::Parenthesized => add_parens(doc),
-                ParenKind::Braced(loc) => print_braces(doc, &vb.pvb_expr, loc, arena),
-                ParenKind::Nothing => doc,
-            };
-
-            // Check if expression should be indented after `=`
-            // This happens when:
-            // - Expression has printable attributes
-            // - Or is a binary expression (without braces)
-            // - Or is a JSX element
-            // - Or is an array access
-            let opt_braces = parsetree_viewer::process_braces_attr(&vb.pvb_expr);
-            let should_indent = opt_braces.is_none() && (
-                parsetree_viewer::has_attributes(&vb.pvb_expr.pexp_attributes)
-                || parsetree_viewer::is_binary_expression(arena, &vb.pvb_expr)
-                || matches!(&vb.pvb_expr.pexp_desc, ExpressionDesc::Pexp_jsx_element(_))
-                || parsetree_viewer::is_array_access(arena, &vb.pvb_expr)
-            );
-
-            let rhs = if should_indent {
-                Doc::indent(Doc::concat(vec![Doc::line(), printed_expr]))
-            } else {
-                Doc::concat(vec![Doc::space(), printed_expr])
-            };
-
-            Doc::group(Doc::concat(vec![attrs_doc, header, pat, Doc::text(" ="), rhs]))
-        })
+        .filter(|attr| attr.0.txt != "let.unwrap")
         .collect();
-    Doc::join(Doc::hard_line(), docs)
+    let attrs_doc = if attrs.is_empty() {
+        Doc::nil()
+    } else {
+        let attr_docs: Vec<Doc> = attrs
+            .iter()
+            .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
+            .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
+            .collect();
+        if attr_docs.is_empty() {
+            Doc::nil()
+        } else {
+            Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attr_docs)), Doc::hard_line()])
+        }
+    };
+
+    let header = if index == 0 {
+        let let_kw = if has_unwrap { "let? " } else { "let " };
+        Doc::concat(vec![Doc::text(let_kw), rec_doc.clone()])
+    } else {
+        Doc::text("and ")
+    };
+
+    let pat = print_pattern(state, &vb.pvb_pat, cmt_tbl, arena);
+    // Print expression and check if it needs parens/braces
+    let doc = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);
+    let printed_expr = match parens::expr(arena, &vb.pvb_expr) {
+        ParenKind::Parenthesized => add_parens(doc),
+        ParenKind::Braced(loc) => print_braces(doc, &vb.pvb_expr, loc, arena),
+        ParenKind::Nothing => doc,
+    };
+
+    // Check if expression should be indented after `=`
+    // This happens when:
+    // - Expression has printable attributes
+    // - Or is a binary expression (without braces)
+    // - Or is a JSX element
+    // - Or is an array access
+    let opt_braces = parsetree_viewer::process_braces_attr(&vb.pvb_expr);
+    let should_indent = opt_braces.is_none() && (
+        parsetree_viewer::has_attributes(&vb.pvb_expr.pexp_attributes)
+        || parsetree_viewer::is_binary_expression(arena, &vb.pvb_expr)
+        || matches!(&vb.pvb_expr.pexp_desc, ExpressionDesc::Pexp_jsx_element(_))
+        || parsetree_viewer::is_array_access(arena, &vb.pvb_expr)
+    );
+
+    let rhs = if should_indent {
+        Doc::indent(Doc::concat(vec![Doc::line(), printed_expr]))
+    } else {
+        Doc::concat(vec![Doc::space(), printed_expr])
+    };
+
+    Doc::group(Doc::concat(vec![attrs_doc, header, pat, Doc::text(" ="), rhs]))
 }
 
 // ============================================================================
