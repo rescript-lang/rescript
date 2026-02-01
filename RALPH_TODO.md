@@ -4,6 +4,14 @@
 **Overall Status:** 236/506 tests passing (47%)
 **Printer Status:** 119/187 tests passing (64%)
 
+### Recent Progress
+- Fixed functor parameter comment attachment (leading and trailing)
+- Fixed Pmod_apply argument comment handling (using mod_expr_apply)
+- Fixed Pmod_constraint location-based comment ordering
+- Fixed type extension path comment handling
+- Fixed type declaration and external name comment handling
+- Fixed exception rebind longident comment handling
+
 ---
 
 ## Phase 1: Comment Handling (Root Cause)
