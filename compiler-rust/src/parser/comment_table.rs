@@ -2192,64 +2192,126 @@ fn walk_module_expr(me: &ModuleExpr, t: &mut CommentTable, comments: Vec<Comment
         ModuleExprDesc::Pmod_structure(structure) => {
             walk_structure(structure, t, comments, arena);
         }
-        ModuleExprDesc::Pmod_functor(name, arg_type, body) => {
-            // Handle functor name
-            let (leading, trailing) = partition_leading_trailing(comments, name.loc, arena);
-            t.attach_leading(name.loc, leading, arena);
+        ModuleExprDesc::Pmod_functor(_, _, _) => {
+            // Collect all functor parameters and walk them as a list
+            let (parameters, return_mod_expr) = parsetree_viewer::mod_expr_functor(me);
 
-            let (after_name, rest) = partition_adjacent_trailing(name.loc, trailing, arena);
-            t.attach_trailing(name.loc, after_name, arena);
+            // Use the combined location from label to end of mod_type for each parameter
+            let comments = visit_list_but_continue_with_remaining_comments(
+                &parameters,
+                |param, arena| {
+                    // Location spans from label start to mod_type end (if present)
+                    match param.mod_type {
+                        None => param.lbl.loc,
+                        Some(mod_type) => arena.mk_loc_spanning(param.lbl.loc, mod_type.pmty_loc),
+                    }
+                },
+                |param, t, comments, arena| {
+                    walk_mod_expr_parameter(param, t, comments, arena);
+                },
+                t,
+                comments,
+                false,
+                arena,
+            );
 
-            // Handle optional argument type
-            let rest = match arg_type {
-                Some(mod_type) => {
-                    let (before, inside, after) = partition_by_loc(rest, mod_type.pmty_loc, arena);
+            // Handle return expression, with special case for Pmod_constraint
+            // where the constraint comes before the expression (: Set => expr)
+            match &return_mod_expr.pmod_desc {
+                ModuleExprDesc::Pmod_constraint(mod_expr, mod_type)
+                    if arena.loc_end(mod_type.pmty_loc).cnum <= arena.loc_start(mod_expr.pmod_loc).cnum =>
+                {
+                    let (before, inside, after) = partition_by_loc(comments, mod_type.pmty_loc, arena);
                     t.attach_leading(mod_type.pmty_loc, before, arena);
                     walk_mod_type(mod_type, t, inside, arena);
-                    let (after_mod_type, rest) =
-                        partition_adjacent_trailing(mod_type.pmty_loc, after, arena);
-                    t.attach_trailing(mod_type.pmty_loc, after_mod_type, arena);
-                    rest
+                    let (after_type, rest) = partition_adjacent_trailing(mod_type.pmty_loc, after, arena);
+                    t.attach_trailing(mod_type.pmty_loc, after_type, arena);
+
+                    let (before, inside, after) = partition_by_loc(rest, mod_expr.pmod_loc, arena);
+                    t.attach_leading(mod_expr.pmod_loc, before, arena);
+                    walk_module_expr(mod_expr, t, inside, arena);
+                    t.attach_trailing(mod_expr.pmod_loc, after, arena);
                 }
-                None => rest,
-            };
-
-            let (before, inside, after) = partition_by_loc(rest, body.pmod_loc, arena);
-            t.attach_leading(body.pmod_loc, before, arena);
-            walk_module_expr(body, t, inside, arena);
-            t.attach_trailing(body.pmod_loc, after, arena);
+                _ => {
+                    let (before, inside, after) = partition_by_loc(comments, return_mod_expr.pmod_loc, arena);
+                    t.attach_leading(return_mod_expr.pmod_loc, before, arena);
+                    walk_module_expr(return_mod_expr, t, inside, arena);
+                    t.attach_trailing(return_mod_expr.pmod_loc, after, arena);
+                }
+            }
         }
-        ModuleExprDesc::Pmod_apply(funct, arg) => {
-            let (before, inside, after) = partition_by_loc(comments, funct.pmod_loc, arena);
-            t.attach_leading(funct.pmod_loc, before, arena);
-            walk_module_expr(funct, t, inside, arena);
-
-            let (after_funct, rest) = partition_adjacent_trailing(funct.pmod_loc, after, arena);
-            t.attach_trailing(funct.pmod_loc, after_funct, arena);
-
-            let (before, inside, after) = partition_by_loc(rest, arg.pmod_loc, arena);
-            t.attach_leading(arg.pmod_loc, before, arena);
-            walk_module_expr(arg, t, inside, arena);
-            t.attach_trailing(arg.pmod_loc, after, arena);
+        ModuleExprDesc::Pmod_apply(_, _) => {
+            // Collect all module expressions in the apply chain (call_expr first, then args)
+            let (args, call_expr) = parsetree_viewer::mod_expr_apply(me);
+            // OCaml's mod_expr_apply returns [call_expr, arg1, arg2, ...] but ours returns (args, call_expr)
+            // Build the list with call_expr first
+            let mut mod_exprs: Vec<&ModuleExpr> = vec![call_expr];
+            mod_exprs.extend(args);
+            // Walk all module expressions as a list
+            let nodes: Vec<Node<'_>> = mod_exprs.iter().map(|me| Node::ModuleExpr(me)).collect();
+            walk_list(&nodes, t, comments, arena);
         }
         ModuleExprDesc::Pmod_constraint(module_expr, mod_type) => {
-            let (before, inside, after) = partition_by_loc(comments, module_expr.pmod_loc, arena);
-            t.attach_leading(module_expr.pmod_loc, before, arena);
-            walk_module_expr(module_expr, t, inside, arena);
+            // Check which comes first in the source: the type or the expression
+            // For `X: Int` (normal constraint), type comes after
+            // For `: Int = X` (module binding constraint), type comes before
+            if arena.loc_start(mod_type.pmty_loc).cnum >= arena.loc_end(module_expr.pmod_loc).cnum {
+                // Type comes after expr: `X: Int`
+                let (before, inside, after) = partition_by_loc(comments, module_expr.pmod_loc, arena);
+                t.attach_leading(module_expr.pmod_loc, before, arena);
+                walk_module_expr(module_expr, t, inside, arena);
+                let (after_mod, rest) = partition_adjacent_trailing(module_expr.pmod_loc, after, arena);
+                t.attach_trailing(module_expr.pmod_loc, after_mod, arena);
 
-            let (after_mod, rest) = partition_adjacent_trailing(module_expr.pmod_loc, after, arena);
-            t.attach_trailing(module_expr.pmod_loc, after_mod, arena);
+                let (before, inside, after) = partition_by_loc(rest, mod_type.pmty_loc, arena);
+                t.attach_leading(mod_type.pmty_loc, before, arena);
+                walk_mod_type(mod_type, t, inside, arena);
+                t.attach_trailing(mod_type.pmty_loc, after, arena);
+            } else {
+                // Type comes before expr: `: Int = X`
+                let (before, inside, after) = partition_by_loc(comments, mod_type.pmty_loc, arena);
+                t.attach_leading(mod_type.pmty_loc, before, arena);
+                walk_mod_type(mod_type, t, inside, arena);
+                let (after_type, rest) = partition_adjacent_trailing(mod_type.pmty_loc, after, arena);
+                t.attach_trailing(mod_type.pmty_loc, after_type, arena);
 
-            let (before, inside, after) = partition_by_loc(rest, mod_type.pmty_loc, arena);
-            t.attach_leading(mod_type.pmty_loc, before, arena);
-            walk_mod_type(mod_type, t, inside, arena);
-            t.attach_trailing(mod_type.pmty_loc, after, arena);
+                let (before, inside, after) = partition_by_loc(rest, module_expr.pmod_loc, arena);
+                t.attach_leading(module_expr.pmod_loc, before, arena);
+                walk_module_expr(module_expr, t, inside, arena);
+                t.attach_trailing(module_expr.pmod_loc, after, arena);
+            }
         }
         ModuleExprDesc::Pmod_unpack(expr) => {
             walk_expression(expr, t, comments, arena);
         }
         ModuleExprDesc::Pmod_extension(ext) => {
             walk_extension(ext, t, comments, arena);
+        }
+    }
+}
+
+/// Walk a functor parameter (attrs, label, optional mod_type)
+fn walk_mod_expr_parameter(
+    param: &parsetree_viewer::FunctorParam<'_>,
+    t: &mut CommentTable,
+    comments: Vec<Comment>,
+    arena: &mut ParseArena,
+) {
+    let (leading, trailing) = partition_leading_trailing(comments, param.lbl.loc, arena);
+    t.attach_leading(param.lbl.loc, leading, arena);
+
+    match param.mod_type {
+        None => {
+            t.attach_trailing(param.lbl.loc, trailing, arena);
+        }
+        Some(mod_type) => {
+            let (after_lbl, rest) = partition_adjacent_trailing(param.lbl.loc, trailing, arena);
+            t.attach_trailing(param.lbl.loc, after_lbl, arena);
+
+            let (before, inside, after) = partition_by_loc(rest, mod_type.pmty_loc, arena);
+            t.attach_leading(mod_type.pmty_loc, before, arena);
+            walk_mod_type(mod_type, t, inside, arena);
+            t.attach_trailing(mod_type.pmty_loc, after, arena);
         }
     }
 }
@@ -2386,7 +2448,7 @@ fn walk_extension(ext: &Extension, t: &mut CommentTable, comments: Vec<Comment>,
 /// Visit a list of nodes but return any remaining comments.
 fn visit_list_but_continue_with_remaining_comments<'a, T>(
     nodes: &'a [T],
-    get_loc: impl Fn(&'a T, &ParseArena) -> LocIdx,
+    get_loc: impl Fn(&'a T, &mut ParseArena) -> LocIdx,
     walk_node: impl Fn(&'a T, &mut CommentTable, Vec<Comment>, &mut ParseArena),
     t: &mut CommentTable,
     comments: Vec<Comment>,
@@ -2398,7 +2460,7 @@ fn visit_list_but_continue_with_remaining_comments<'a, T>(
 
 fn visit_list_impl<'a, T>(
     nodes: &'a [T],
-    get_loc: impl Fn(&'a T, &ParseArena) -> LocIdx,
+    get_loc: impl Fn(&'a T, &mut ParseArena) -> LocIdx,
     walk_node: impl Fn(&'a T, &mut CommentTable, Vec<Comment>, &mut ParseArena),
     t: &mut CommentTable,
     comments: Vec<Comment>,

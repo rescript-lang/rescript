@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 235/506 tests passing (46%)
-**Printer Status:** 118/187 tests passing (63%)
+**Overall Status:** 236/506 tests passing (47%)
+**Printer Status:** 119/187 tests passing (64%)
 
 ---
 
@@ -20,7 +20,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 ### Comment Test Files (15 failing)
 - [x] `printer/comments/namedArgs.res` - Named argument comments
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
-- [ ] `printer/comments/modExpr.res` - Module expression comments
+- [x] `printer/comments/modExpr.res` - Module expression comments
 - [ ] `printer/comments/structureItem.res` - Structure item comments
 - [ ] `printer/comments/blockExpr.res` - Block expression comments
 - [ ] `printer/comments/expr.res` - General expression comments

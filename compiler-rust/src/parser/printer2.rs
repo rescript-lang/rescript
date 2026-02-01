@@ -4672,10 +4672,6 @@ fn print_mod_functor_param(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    // Use the label's location for comment attachment
-    // (The old code tried to span to mod_type.pmty_loc, but with LocIdx we use the simpler approach)
-    let cmt_loc = param.lbl.loc;
-
     let attrs = print_attributes(state, param.attrs, cmt_tbl, arena);
     let lbl_doc = if param.lbl.txt == "*" {
         Doc::text("()")
@@ -4696,7 +4692,15 @@ fn print_mod_functor_param(
         },
     ]));
 
-    print_comments(doc, cmt_tbl, cmt_loc, arena)
+    // Use the full span from label to end of module type (if present) for comment attachment.
+    // This matches OCaml's behavior where cmt_loc spans {lbl.loc with loc_end = mod_type.pmty_loc.loc_end}
+    match param.mod_type {
+        None => print_comments(doc, cmt_tbl, param.lbl.loc, arena),
+        Some(mod_type) => {
+            let (pos_range, full_loc) = make_combined_pos_range(param.lbl.loc, mod_type.pmty_loc, arena);
+            print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
+        }
+    }
 }
 
 /// Print a module apply argument.
