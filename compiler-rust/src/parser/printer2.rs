@@ -3567,7 +3567,7 @@ pub fn print_typ_expr(
     let should_print_its_own_attributes =
         matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
 
-    if !typ.ptyp_attributes.is_empty() && !should_print_its_own_attributes {
+    let doc = if !typ.ptyp_attributes.is_empty() && !should_print_its_own_attributes {
         let (doc_comment_attrs, other_attrs) =
             parsetree_viewer::partition_doc_comment_attributes(&typ.ptyp_attributes);
         let comment_doc = if doc_comment_attrs.is_empty() {
@@ -3583,7 +3583,10 @@ pub fn print_typ_expr(
         Doc::group(Doc::concat(vec![comment_doc, attrs_doc, rendered_type]))
     } else {
         rendered_type
-    }
+    };
+
+    // Wrap with print_comments to attach leading/trailing comments (like OCaml reference)
+    print_comments(doc, cmt_tbl, typ.ptyp_loc, arena)
 }
 
 /// Print an arrow type.
