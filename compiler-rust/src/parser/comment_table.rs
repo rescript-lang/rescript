@@ -2454,7 +2454,12 @@ fn walk_mod_type(mt: &ModuleType, t: &mut CommentTable, comments: Vec<Comment>, 
             }
         }
         ModuleTypeDesc::Pmty_typeof(me) => {
-            walk_module_expr(me, t, comments, arena);
+            // Partition comments by the module expression location
+            // Leading comments attach to mod_expr.pmod_loc, not to items inside
+            let (leading, inside, trailing) = partition_by_loc(comments, me.pmod_loc, arena);
+            t.attach_leading(me.pmod_loc, leading, arena);
+            walk_module_expr(me, t, inside, arena);
+            t.attach_trailing(me.pmod_loc, trailing, arena);
         }
         ModuleTypeDesc::Pmty_extension(ext) => {
             walk_extension(ext, t, comments, arena);

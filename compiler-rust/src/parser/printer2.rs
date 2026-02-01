@@ -4994,7 +4994,7 @@ fn print_module_type_functor(
                                 } else {
                                     print_comments(Doc::text(&lbl.txt), cmt_tbl, lbl.loc, arena)
                                 };
-                                match opt_mty {
+                                let doc = match opt_mty {
                                     None => Doc::concat(vec![attrs_doc, lbl_doc]),
                                     Some(mty) => {
                                         // For "_" label, don't add `: ` prefix
@@ -5006,7 +5006,23 @@ fn print_module_type_functor(
                                             print_module_type(state, mty, cmt_tbl, arena),
                                         ])
                                     }
-                                }
+                                };
+                                // Create combined position range for comments: from label start to mod_type end
+                                // This matches OCaml which wraps the whole parameter with print_comments cmt_loc
+                                let (pos_range, full_loc) = match opt_mty {
+                                    None => {
+                                        let fl = arena.to_location(lbl.loc);
+                                        (PosRange::from_location(&fl), fl)
+                                    }
+                                    Some(mty) => {
+                                        let start = arena.loc_start(lbl.loc);
+                                        let end = arena.loc_end(mty.pmty_loc);
+                                        let full_loc = FullLocation::from_positions(start.clone(), end.clone());
+                                        (PosRange::from_location(&full_loc), full_loc)
+                                    }
+                                };
+                                // Wrap entire parameter doc with comments using combined location
+                                print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
                             })
                             .collect(),
                     ),
