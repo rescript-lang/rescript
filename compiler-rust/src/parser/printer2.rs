@@ -5676,31 +5676,9 @@ pub fn print_signature_item(
         }
 
         SignatureItemDesc::Psig_type(rec_flag, type_decls) => {
-            let rec_doc = match rec_flag {
-                RecFlag::Nonrecursive => Doc::nil(),
-                RecFlag::Recursive => Doc::text("rec "),
-            };
-            // Extract attributes from first type declaration to print before "type"
-            let attrs_doc = if let Some(first_decl) = type_decls.first() {
-                // Use type declaration location for proper attribute line breaking
-                print_attributes_with_loc(
-                    state,
-                    &first_decl.ptype_attributes,
-                    Some(first_decl.ptype_loc),
-                    cmt_tbl,
-                    arena,
-                    false,
-                )
-            } else {
-                Doc::nil()
-            };
-            // Wrap in group so it can be flat even when outer group breaks
-            Doc::group(Doc::concat(vec![
-                attrs_doc,
-                Doc::text("type "),
-                rec_doc,
-                print_type_declarations_no_first_attrs(state, type_decls, cmt_tbl, arena),
-            ]))
+            // Use print_type_declarations_with_rec_flag which handles everything
+            // including the "type " prefix, using print_listi for proper comment handling
+            print_type_declarations_with_rec_flag(state, rec_flag, type_decls, cmt_tbl, arena)
         }
 
         SignatureItemDesc::Psig_typext(type_ext) => {
@@ -5831,31 +5809,9 @@ pub fn print_structure_item(
         }
 
         StructureItemDesc::Pstr_type(rec_flag, type_decls) => {
-            let rec_doc = match rec_flag {
-                RecFlag::Nonrecursive => Doc::nil(),
-                RecFlag::Recursive => Doc::text("rec "),
-            };
-            // Extract attributes from first type declaration to print before "type"
-            let attrs_doc = if let Some(first_decl) = type_decls.first() {
-                // Use type declaration location (not name) for proper attribute line breaking
-                print_attributes_with_loc(
-                    state,
-                    &first_decl.ptype_attributes,
-                    Some(first_decl.ptype_loc),
-                    cmt_tbl,
-                    arena,
-                    false,
-                )
-            } else {
-                Doc::nil()
-            };
-            // Wrap in group so it can be flat even when outer group breaks
-            Doc::group(Doc::concat(vec![
-                attrs_doc,
-                Doc::text("type "),
-                rec_doc,
-                print_type_declarations_no_first_attrs(state, type_decls, cmt_tbl, arena),
-            ]))
+            // Use print_type_declarations_with_rec_flag which handles everything
+            // including the "type " prefix, using print_listi for proper comment handling
+            print_type_declarations_with_rec_flag(state, rec_flag, type_decls, cmt_tbl, arena)
         }
 
         StructureItemDesc::Pstr_primitive(val_desc) => {
@@ -5918,6 +5874,57 @@ pub fn print_structure_item(
 }
 
 /// Print type declarations.
+/// Print type declarations with proper comment handling using print_listi.
+/// This matches the OCaml implementation which uses print_listi for type declarations.
+/// The rec_flag parameter is printed as part of the first declaration's prefix.
+fn print_type_declarations_with_rec_flag(
+    state: &PrinterState,
+    rec_flag: &RecFlag,
+    decls: &[TypeDeclaration],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let rec_doc = match rec_flag {
+        RecFlag::Nonrecursive => Doc::nil(),
+        RecFlag::Recursive => Doc::text("rec "),
+    };
+
+    // Use print_listi to properly handle comments between declarations
+    // The "type " keyword is included in the first element's prefix,
+    // so print_listi's print_comments wraps the entire declaration correctly.
+    print_listi(
+        |decl: &TypeDeclaration| decl.ptype_loc,
+        decls,
+        |decl: &TypeDeclaration, cmt_tbl: &mut CommentTable, i: usize| {
+            // Match OCaml's print_type_declaration2 prefix logic:
+            // if i > 0 then "and " else "type " ^ rec_flag
+            let prefix = if i > 0 {
+                Doc::text("and ")
+            } else {
+                Doc::concat(vec![Doc::text("type "), rec_doc.clone()])
+            };
+            // Print attributes + prefix + name + params + manifest + kind + constraints
+            let attrs = print_attributes_with_loc(
+                state,
+                &decl.ptype_attributes,
+                Some(decl.ptype_loc),
+                cmt_tbl,
+                arena,
+                false,
+            );
+            Doc::group(Doc::concat(vec![
+                attrs,
+                prefix,
+                print_type_declaration_inner(state, decl, cmt_tbl, arena, false),
+            ]))
+        },
+        cmt_tbl,
+        arena,
+        false, // don't ignore empty lines
+        false, // don't force break
+    )
+}
+
 fn print_type_declarations(
     state: &PrinterState,
     decls: &[TypeDeclaration],
