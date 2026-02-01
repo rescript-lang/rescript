@@ -1570,6 +1570,39 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
                 }
             }
 
+            // Check for binary expressions - match OCaml's special handling
+            if args.len() == 2 {
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if let Longident::Lident(op) = arena.get_longident(ident.txt) {
+                        let op_str = arena.get_string(*op);
+                        if matches!(
+                            op_str,
+                            ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!=="
+                            | "<=" | ">=" | "+" | "+." | "-" | "-." | "++"
+                            | "|||" | "^^^" | "&&&" | "*" | "*." | "/" | "/." | "**"
+                            | "->" | "<>"
+                        ) {
+                            let (_, operand1) = &args[0];
+                            let (_, operand2) = &args[1];
+
+                            // Handle operand1
+                            let (before, inside, after) = partition_by_loc(comments, operand1.pexp_loc, arena);
+                            t.attach_leading(operand1.pexp_loc, before, arena);
+                            walk_expression(operand1, t, inside, arena);
+                            let (after_operand1, rest) = partition_adjacent_trailing(operand1.pexp_loc, after, arena);
+                            t.attach_trailing(operand1.pexp_loc, after_operand1, arena);
+
+                            // Handle operand2
+                            let (before, inside, after) = partition_by_loc(rest, operand2.pexp_loc, arena);
+                            t.attach_leading(operand2.pexp_loc, before, arena);
+                            walk_expression(operand2, t, inside, arena);
+                            t.attach_trailing(operand2.pexp_loc, after, arena);
+                            return;
+                        }
+                    }
+                }
+            }
+
             // Regular apply
             walk_apply_expr(funct, args, t, comments, arena);
         }
@@ -1848,20 +1881,33 @@ fn walk_expr_record_row(
 
 fn walk_case(case: &Case, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
     let (before, inside, after) = partition_by_loc(comments, case.pc_lhs.ppat_loc, arena);
-    t.attach_leading(case.pc_lhs.ppat_loc, before, arena);
-    walk_pattern(&case.pc_lhs, t, inside, arena);
+    // cases don't have a location on their own, leading comments should go
+    // after the bar on the pattern - match OCaml's List.concat [before; inside]
+    let pattern_comments: Vec<Comment> = before.into_iter()
+        .chain(inside.into_iter())
+        .collect();
+    walk_pattern(&case.pc_lhs, t, pattern_comments, arena);
 
     let (after_pat, rest) = partition_adjacent_trailing(case.pc_lhs.ppat_loc, after, arena);
     t.attach_trailing(case.pc_lhs.ppat_loc, after_pat, arena);
 
-    // Handle guard
+    // Handle guard - match OCaml's special handling for block expressions
     let rest = match &case.pc_guard {
         Some(guard) => {
             let (before, inside, after) = partition_by_loc(rest, guard.pexp_loc, arena);
-            t.attach_leading(guard.pexp_loc, before, arena);
-            walk_expression(guard, t, inside, arena);
             let (after_guard, rest) = partition_adjacent_trailing(guard.pexp_loc, after, arena);
-            t.attach_trailing(guard.pexp_loc, after_guard, arena);
+            if is_block_expr(guard) {
+                // For block expressions, pass all comments into walk_expression
+                let all_comments: Vec<Comment> = before.into_iter()
+                    .chain(inside.into_iter())
+                    .chain(after_guard.into_iter())
+                    .collect();
+                walk_expression(guard, t, all_comments, arena);
+            } else {
+                t.attach_leading(guard.pexp_loc, before, arena);
+                walk_expression(guard, t, inside, arena);
+                t.attach_trailing(guard.pexp_loc, after_guard, arena);
+            }
             rest
         }
         None => rest,
