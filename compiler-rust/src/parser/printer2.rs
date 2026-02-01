@@ -1148,6 +1148,7 @@ pub fn print_expression(
                 ParenKind::Nothing => lhs,
             };
             let field = print_lident(arena, arena.get_longident(longident_loc.txt));
+            let field = print_comments(field, cmt_tbl, longident_loc.loc, arena);
             Doc::concat(vec![lhs, Doc::dot(), field])
         }
         // Field set: expr.field = value
@@ -1998,7 +1999,10 @@ fn print_bs_object_row(
         ParenKind::Nothing => expr_doc,
     };
 
-    Doc::concat(vec![lbl_doc, Doc::text(": "), expr_doc])
+    let doc = Doc::concat(vec![lbl_doc, Doc::text(": "), expr_doc]);
+    // cmt_loc spans from label start to expression end, matching OCaml
+    let (pos_range, full_loc) = make_combined_pos_range(field.lid.loc, field.expr.pexp_loc, arena);
+    print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
 }
 
 /// Try to print %re extension as raw regex string
