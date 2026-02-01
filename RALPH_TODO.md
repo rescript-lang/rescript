@@ -63,6 +63,18 @@
   - Using `Doc::custom_layout` to try different layouts
   This is a significant feature that affects how callback arguments are formatted.
 
+- **modType.res - Pmty_functor parameter comments**: Comments before the second (and later)
+  functor parameters are lost. The issue is that the Rust comment_table walks Pmty_functor
+  one parameter at a time, but OCaml collects all parameters first using functor_type and
+  walks them as a list with visit_list_but_continue_with_remaining_comments. The fix requires:
+  - Adding functor_type equivalent in comment_table.rs to collect all parameters
+  - Walking parameters with proper combined locations (label start to mod_type end)
+  - The Pmty_typeof fix has been applied but functor params still need list-walking approach.
+
+- **modType.res - Pmty_typeof**: FIXED! Added partition_by_loc and attach leading/trailing
+  to mod_expr.pmod_loc before calling walk_module_expr. Now `module type of /* c4 */ {}`
+  keeps the comment before the brace.
+
 ---
 
 ## Phase 1: Comment Handling (Root Cause)
