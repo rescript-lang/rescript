@@ -6159,6 +6159,7 @@ fn print_type_constraints(
 }
 
 /// Print constructor declarations.
+/// Print constructor declarations using print_listi for proper comment handling.
 fn print_constructor_declarations(
     state: &PrinterState,
     constrs: &[ConstructorDeclaration],
@@ -6184,10 +6185,11 @@ fn print_constructor_declarations(
         !c.pcd_attributes.is_empty() || c.pcd_name.txt == "..."
     });
 
-    let docs: Vec<Doc> = constrs
-        .iter()
-        .enumerate()
-        .map(|(i, constr)| {
+    // Use print_listi for proper comment handling between constructors
+    let rows = print_listi(
+        |constr: &ConstructorDeclaration| constr.pcd_loc,
+        constrs,
+        |constr: &ConstructorDeclaration, cmt_tbl: &mut CommentTable, i: usize| {
             let bar = if i == 0 {
                 if first_has_attrs {
                     // Always show bar when first constructor has attributes or is spread
@@ -6198,13 +6200,15 @@ fn print_constructor_declarations(
             } else {
                 Doc::text("| ")
             };
-            Doc::concat(vec![bar, print_constructor_declaration(state, constr, cmt_tbl, arena)])
-        })
-        .collect();
-
-    // Wrap constructors in their own breakable_group (like OCaml's print_listi)
-    // This allows constructors to stay on one line even when the outer group breaks
-    let rows = Doc::breakable_group(Doc::join(Doc::line(), docs), force_break);
+            let doc = Doc::concat(vec![bar, print_constructor_declaration(state, constr, cmt_tbl, arena)]);
+            // Wrap with print_comments for this constructor's location (matches OCaml)
+            print_comments(doc, cmt_tbl, constr.pcd_loc, arena)
+        },
+        cmt_tbl,
+        arena,
+        true,  // ignore_empty_lines (OCaml passes this as true for constructors)
+        force_break,
+    );
 
     Doc::breakable_group(
         Doc::indent(Doc::concat(vec![Doc::line(), private_doc, rows])),
@@ -6221,7 +6225,9 @@ fn print_constructor_declaration(
 ) -> Doc {
     let attrs_doc = print_attributes(state, &constr.pcd_attributes, cmt_tbl, arena);
     let is_spread = constr.pcd_name.txt == "...";
+    // Wrap constructor name with print_comments for its location (like OCaml)
     let name_doc = Doc::text(&constr.pcd_name.txt);
+    let name_doc = print_comments(name_doc, cmt_tbl, constr.pcd_name.loc, arena);
 
     let args_doc = if is_spread {
         match &constr.pcd_args {
@@ -6268,7 +6274,11 @@ fn print_record_declaration(
 
     let field_docs: Vec<Doc> = fields
         .iter()
-        .map(|field| print_label_declaration(state, field, cmt_tbl, arena))
+        .map(|field| {
+            let doc = print_label_declaration(state, field, cmt_tbl, arena);
+            // Wrap with print_comments for field location (like OCaml)
+            print_comments(doc, cmt_tbl, field.pld_loc, arena)
+        })
         .collect();
     Doc::breakable_group(
         Doc::concat(vec![
