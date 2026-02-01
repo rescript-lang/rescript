@@ -217,12 +217,38 @@ pub fn print_lident(arena: &crate::parse_arena::ParseArena, lid: &Longident) -> 
 // Comment Printing
 // ============================================================================
 
-/// Trim leading/trailing spaces from comment text.
+/// Trim leading/trailing spaces (not newlines) from comment text.
+/// This matches OCaml's Comment.trim_spaces which only trims ' ' characters.
 fn trim_spaces(s: &str) -> &str {
-    s.trim()
+    let bytes = s.as_bytes();
+    let len = bytes.len();
+    if len == 0 {
+        return s;
+    }
+
+    // Find start (skip leading spaces only)
+    let mut start = 0;
+    while start < len && bytes[start] == b' ' {
+        start += 1;
+    }
+
+    // Find end (skip trailing spaces only)
+    let mut end = len;
+    while end > start && bytes[end - 1] == b' ' {
+        end -= 1;
+    }
+
+    if start < end {
+        &s[start..end]
+    } else {
+        ""
+    }
 }
 
 /// Print multiline comment content with proper formatting.
+/// Matches OCaml's print_multiline_comment_content behavior:
+/// - For single line, wraps with /* and */
+/// - For multiline, keeps first line on same line as /*, aligns * prefixed lines
 fn print_multiline_comment_content(txt: &str) -> Doc {
     let lines: Vec<&str> = txt.split('\n').collect();
 
@@ -238,31 +264,54 @@ fn print_multiline_comment_content(txt: &str) -> Doc {
         }
         _ => {
             let first_line = trim_spaces(lines[0]);
+            let rest = &lines[1..];
+
+            // Helper function similar to OCaml's indent_stars
+            // Processes lines and returns (doc, early_exit)
+            // early_exit is true if we hit a line that doesn't start with *
+            fn indent_stars(lines: &[&str], txt: &str) -> (Doc, bool) {
+                let mut docs = Vec::new();
+
+                for (i, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+                    let is_last = i == lines.len() - 1;
+
+                    if is_last {
+                        // Last line handling
+                        let trailing_space = if trimmed.is_empty() { "" } else { " " };
+                        docs.push(Doc::hard_line());
+                        docs.push(Doc::text(format!(" {}{}", trimmed, trailing_space)));
+                    } else if !trimmed.is_empty() && trimmed.starts_with('*') {
+                        // Star-prefixed line
+                        docs.push(Doc::hard_line());
+                        docs.push(Doc::text(format!(" {}", trimmed)));
+                    } else {
+                        // Non-star line: bail out and return original content
+                        let trailing_space = if txt.ends_with(' ') { Doc::space() } else { Doc::nil() };
+                        let content = trim_spaces(txt);
+                        return (Doc::concat(vec![Doc::text(content), trailing_space]), true);
+                    }
+                }
+
+                (Doc::concat(docs), false)
+            }
+
+            let (indent_doc, early_exit) = indent_stars(rest, txt);
+
             let mut docs = vec![Doc::text("/*")];
 
-            // Add first line if not empty
+            // Add space before first line if not empty and not just "*"
             if !first_line.is_empty() && first_line != "*" {
                 docs.push(Doc::space());
             }
 
-            docs.push(Doc::hard_line());
-            docs.push(Doc::text(first_line));
-
-            // Process remaining lines, indenting lines that start with *
-            for line in &lines[1..] {
-                let trimmed = line.trim();
-                docs.push(Doc::hard_line());
-                if !trimmed.is_empty() && trimmed.starts_with('*') {
-                    docs.push(Doc::text(format!(" {}", trimmed)));
-                } else {
-                    docs.push(Doc::text(trimmed));
-                }
-            }
-
-            // Handle trailing space
-            let len = txt.len();
-            if len > 0 && txt.ends_with(' ') {
-                docs.push(Doc::space());
+            if early_exit {
+                // Early exit case: just use the returned doc (original content)
+                docs.push(indent_doc);
+            } else {
+                // Normal case: first line + processed rest
+                docs.push(Doc::text(first_line));
+                docs.push(indent_doc);
             }
 
             docs.push(Doc::text("*/"));
