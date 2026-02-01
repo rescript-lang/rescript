@@ -1,10 +1,13 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 236/506 tests passing (47%)
-**Printer Status:** 119/187 tests passing (64%)
+**Overall Status:** 238/506 tests passing (47%)
+**Printer Status:** 122/187 tests passing (65%)
 
 ### Recent Progress
+- Fixed attribute payload comments (@@attr(/* c0 */ "here" /* c1 */))
+- Fixed exception GADT line breaks with proper constructor argument printing
+- Added print_constructor_arguments helper matching OCaml behavior
 - Fixed functor parameter comment attachment (leading and trailing)
 - Fixed Pmod_apply argument comment handling (using mod_expr_apply)
 - Fixed Pmod_constraint location-based comment ordering
@@ -42,7 +45,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/comments/signatureItem.resi` - Signature item comments
 - [ ] `printer/comments/valueBindingSugar.res` - Value binding sugar comments
 - [ ] `printer/comments/typeDefinition.res` - Type definition comments
-- [ ] `printer/comments/extensionConstructor.res` - Extension constructor comments
+- [x] `printer/comments/extensionConstructor.res` - Extension constructor comments
 
 ---
 
