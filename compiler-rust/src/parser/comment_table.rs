@@ -2235,6 +2235,10 @@ fn walk_module_expr(me: &ModuleExpr, t: &mut CommentTable, comments: Vec<Comment
             t.attach_leading(lid.loc, leading, arena);
             t.attach_trailing(lid.loc, trailing, arena);
         }
+        ModuleExprDesc::Pmod_structure(structure) if structure.is_empty() => {
+            // Empty structure - attach inside comments to the module expr location
+            t.attach_inside(me.pmod_loc, comments, arena);
+        }
         ModuleExprDesc::Pmod_structure(structure) => {
             walk_structure(structure, t, comments, arena);
         }
