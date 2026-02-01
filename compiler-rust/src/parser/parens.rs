@@ -640,29 +640,24 @@ pub fn include_mod_expr(mod_expr: &ModuleExpr) -> bool {
 }
 
 /// Check if module expression needs parentheses.
+/// OCaml logic:
+/// - Pmod_constraint(Pmod_structure, Pmty_signature([Psig_module])) -> false
+/// - Pmod_constraint(_, Pmty_signature([Psig_module])) -> true
+/// - Otherwise -> false
 pub fn mod_expr_parens(mod_expr: &ModuleExpr) -> bool {
     match &mod_expr.pmod_desc {
         ModuleExprDesc::Pmod_constraint(inner, typ) => {
-            // Check if inner is Pmod_structure and typ is Pmty_signature with single Psig_module
-            match (&inner.pmod_desc, &typ.pmty_desc) {
-                (ModuleExprDesc::Pmod_structure(_), ModuleTypeDesc::Pmty_signature(items)) => {
-                    if items.len() == 1 {
-                        if let SignatureItemDesc::Psig_module(_) = &items[0].psig_desc {
-                            return false;
-                        }
+            // Check if typ is Pmty_signature with single Psig_module
+            if let ModuleTypeDesc::Pmty_signature(items) = &typ.pmty_desc {
+                if items.len() == 1 {
+                    if let SignatureItemDesc::Psig_module(_) = &items[0].psig_desc {
+                        // Sig is [Psig_module] - return false if inner is Pmod_structure, true otherwise
+                        return !matches!(&inner.pmod_desc, ModuleExprDesc::Pmod_structure(_));
                     }
-                    true
                 }
-                (_, ModuleTypeDesc::Pmty_signature(items)) => {
-                    if items.len() == 1 {
-                        if let SignatureItemDesc::Psig_module(_) = &items[0].psig_desc {
-                            return true;
-                        }
-                    }
-                    false
-                }
-                _ => false,
             }
+            // Not the special [Psig_module] case -> false
+            false
         }
         _ => false,
     }

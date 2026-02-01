@@ -6787,6 +6787,12 @@ fn print_module_binding(
             if !parsetree_viewer::has_await_attribute(&binding.pmb_expr.pmod_attributes) =>
         {
             let expr_doc = print_mod_expr(state, mod_expr, cmt_tbl, arena);
+            // Wrap in parens based on the outer binding expr (not inner)
+            let expr_doc = if parens::mod_expr_parens(&binding.pmb_expr) {
+                Doc::concat(vec![Doc::lparen(), expr_doc, Doc::rparen()])
+            } else {
+                expr_doc
+            };
             let constraint_doc = Doc::concat(vec![
                 Doc::text(": "),
                 print_module_type(state, mod_type, cmt_tbl, arena),
