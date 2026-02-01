@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 234/506 tests passing (46%)
-**Printer Status:** 117/187 tests passing (62%)
+**Overall Status:** 235/506 tests passing (46%)
+**Printer Status:** 118/187 tests passing (63%)
 
 ---
 
@@ -13,7 +13,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 ### Core Comment Infrastructure
 - [x] **Study OCaml comment attachment** - Read `res_comments_table.ml` thoroughly to understand the algorithm
 - [x] **Fix trailing comment preservation** - Comments after expressions/statements get lost
-- [ ] **Fix blank line preservation around comments** - Blank lines before/after comments should be kept
+- [x] **Fix blank line preservation around comments** - Blank lines before/after comments should be kept
 - [x] **Fix comment placement in function arguments** - `/* c0 */ ~arg=/* c1 */ value /* c2 */` pattern
 - [x] **Fix comment placement in function parameters** - Comments on function parameter definitions
 
