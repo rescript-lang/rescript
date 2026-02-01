@@ -1,10 +1,11 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 253/506 tests passing (50%)
-**Printer Status:** 134/187 tests passing (71%)
+**Overall Status:** 254/506 tests passing (50%)
+**Printer Status:** 135/187 tests passing (72%)
 
 ### Recent Progress
+- Fixed module binding parenthesization and empty structure comments (structure.res)
 - Fixed type constraints in with clauses (withConstraints.res): add ptype_cstrs printing
 - Fixed empty signature comment handling (signature.res): attach to mod_type loc, not LocIdx::none()
 - Fixed functor module type printing: parens around functor in Pmty_with, empty signature formatting
