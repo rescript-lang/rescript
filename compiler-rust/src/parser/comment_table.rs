@@ -1809,12 +1809,22 @@ fn walk_apply_expr(
 
 fn walk_expr_argument(
     expr: &Expression,
-    _loc: &LocIdx,
+    loc: &LocIdx,
     t: &mut CommentTable,
     comments: Vec<Comment>,
     arena: &mut ParseArena,
 ) {
-    walk_expression(expr, t, comments, arena);
+    // Match OCaml's walk_expr_argument which handles labelled arguments properly
+    let (leading, trailing) = partition_leading_trailing(comments, *loc, arena);
+    t.attach_leading(*loc, leading, arena);
+
+    let (after_label, rest) = partition_adjacent_trailing(*loc, trailing, arena);
+    t.attach_trailing(*loc, after_label, arena);
+
+    let (before, inside, after) = partition_by_loc(rest, expr.pexp_loc, arena);
+    t.attach_leading(expr.pexp_loc, before, arena);
+    walk_expression(expr, t, inside, arena);
+    t.attach_trailing(expr.pexp_loc, after, arena);
 }
 
 fn walk_expr_record_row(

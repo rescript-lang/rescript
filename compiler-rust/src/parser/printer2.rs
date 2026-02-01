@@ -478,6 +478,18 @@ pub fn print_comments(doc: Doc, cmt_tbl: &mut CommentTable, loc: LocIdx, arena: 
     print_trailing_comments_with(doc_with_leading, trailing_comments, &full_loc)
 }
 
+/// Print a node with its leading and trailing comments using position range directly.
+/// Useful when we need to retrieve comments from a combined location without creating a new LocIdx.
+fn print_comments_by_pos(doc: Doc, cmt_tbl: &mut CommentTable, pos_range: PosRange, full_loc: &FullLocation) -> Doc {
+    // Get leading comments by position
+    let leading_comments = cmt_tbl.remove_leading_comments_by_pos(pos_range);
+    let doc_with_leading = print_leading_comments_with(doc, leading_comments, full_loc);
+
+    // Get trailing comments by position
+    let trailing_comments = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
+    print_trailing_comments_with(doc_with_leading, trailing_comments, full_loc)
+}
+
 /// Get the first leading comment for a location, if any.
 /// Uses position-based keys like OCaml's Location.t.
 pub fn get_first_leading_comment<'a>(cmt_tbl: &'a CommentTable, loc: LocIdx, arena: &ParseArena) -> Option<&'a Comment> {
@@ -3013,60 +3025,7 @@ fn print_arguments(
 
     let args_doc: Vec<Doc> = args
         .iter()
-        .map(|(label, expr)| {
-            // Print expression with proper parenthesization
-            let expr_doc = {
-                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
-                match parens::expr(arena, expr) {
-                    ParenKind::Parenthesized => add_parens(doc),
-                    ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
-                    ParenKind::Nothing => doc,
-                }
-            };
-            match label {
-                ArgLabel::Nolabel => expr_doc,
-                ArgLabel::Labelled(name) => {
-                    let name_str = arena.get_string(name.txt);
-                    // Check for punning: ~name where expr is Pexp_ident(Lident(name))
-                    if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
-                        if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
-                            let ident_str = arena.get_string(*ident_idx);
-                            if ident_str == name_str && expr.pexp_attributes.is_empty() && !parsetree_viewer::is_braced_expr(expr) {
-                                return Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false)]);
-                            }
-                        }
-                    }
-                    // Check for punned with type constraint: ~name: type where expr is Pexp_constraint(Pexp_ident(Lident(name)), typ)
-                    if let ExpressionDesc::Pexp_constraint(inner_expr, typ) = &expr.pexp_desc {
-                        if expr.pexp_attributes.is_empty() {
-                            if let ExpressionDesc::Pexp_ident(lid) = &inner_expr.pexp_desc {
-                                if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
-                                    let ident_str = arena.get_string(*ident_idx);
-                                    if ident_str == name_str && !parsetree_viewer::is_braced_expr(inner_expr) {
-                                        let typ_doc = print_typ_expr(state, typ, cmt_tbl, arena);
-                                        return Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text(": "), typ_doc]);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("="), expr_doc])
-                }
-                ArgLabel::Optional(name) => {
-                    // Check for punning: ~name=? where expr is Pexp_ident(Lident(name))
-                    let name_str = arena.get_string(name.txt);
-                    if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
-                        if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
-                            let ident_str = arena.get_string(*ident_idx);
-                            if ident_str == name_str && expr.pexp_attributes.is_empty() {
-                                return Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("?")]);
-                            }
-                        }
-                    }
-                    Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("=?"), expr_doc])
-                }
-            }
-        })
+        .map(|(label, expr)| print_argument(state, label, expr, cmt_tbl, arena))
         .collect();
 
     // If partial, add ... at the end
@@ -3086,6 +3045,118 @@ fn print_arguments(
         Doc::soft_line(),
         Doc::rparen(),
     ]))
+}
+
+/// Print a single function argument (like OCaml's print_argument).
+/// Properly handles comments attached to the combined label+expression location.
+fn print_argument(
+    state: &PrinterState,
+    label: &ArgLabel,
+    expr: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    match label {
+        ArgLabel::Nolabel => {
+            // Unlabelled argument - just print the expression with its comments
+            let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+            match parens::expr(arena, expr) {
+                ParenKind::Parenthesized => add_parens(doc),
+                ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                ParenKind::Nothing => doc,
+            }
+        }
+        ArgLabel::Labelled(name) => {
+            let name_str = arena.get_string(name.txt);
+            // Check for punning: ~name where expr is Pexp_ident(Lident(name))
+            if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
+                if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
+                    let ident_str = arena.get_string(*ident_idx);
+                    if ident_str == name_str && expr.pexp_attributes.is_empty() && !parsetree_viewer::is_braced_expr(expr) {
+                        // Punned: ~name - create combined location from label to expression end
+                        let (pos_range, full_loc) = make_combined_pos_range(name.loc, expr.pexp_loc, arena);
+                        let doc = Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false)]);
+                        return print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc);
+                    }
+                }
+            }
+            // Check for punned with type constraint: ~name: type where expr is Pexp_constraint(Pexp_ident(Lident(name)), typ)
+            if let ExpressionDesc::Pexp_constraint(inner_expr, typ) = &expr.pexp_desc {
+                if expr.pexp_attributes.is_empty() {
+                    if let ExpressionDesc::Pexp_ident(lid) = &inner_expr.pexp_desc {
+                        if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
+                            let ident_str = arena.get_string(*ident_idx);
+                            if ident_str == name_str && !parsetree_viewer::is_braced_expr(inner_expr) {
+                                // Punned with type: ~name: type
+                                let (pos_range, full_loc) = make_combined_pos_range(name.loc, expr.pexp_loc, arena);
+                                let typ_doc = print_typ_expr(state, typ, cmt_tbl, arena);
+                                let doc = Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text(": "), typ_doc]);
+                                return print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc);
+                            }
+                        }
+                    }
+                }
+            }
+            // Regular labelled argument: ~name=expr
+            // Print the label part with comments from label location
+            let lbl_doc = Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("=")]);
+            let lbl_doc = print_comments(lbl_doc, cmt_tbl, name.loc, arena);
+            // Print expression with comments
+            let expr_doc = {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                match parens::expr(arena, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            // Create combined location from label to expression end and wrap
+            let (pos_range, full_loc) = make_combined_pos_range(name.loc, expr.pexp_loc, arena);
+            let doc = Doc::concat(vec![lbl_doc, expr_doc]);
+            print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
+        }
+        ArgLabel::Optional(name) => {
+            let name_str = arena.get_string(name.txt);
+            // Check for punning: ~name? where expr is Pexp_ident(Lident(name))
+            if let ExpressionDesc::Pexp_ident(lid) = &expr.pexp_desc {
+                if let Longident::Lident(ident_idx) = arena.get_longident(lid.txt) {
+                    let ident_str = arena.get_string(*ident_idx);
+                    if ident_str == name_str && expr.pexp_attributes.is_empty() {
+                        // Punned optional: ~name?
+                        let doc = Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("?")]);
+                        return print_comments(doc, cmt_tbl, name.loc, arena);
+                    }
+                }
+            }
+            // Regular optional argument: ~name=?expr
+            let lbl_doc = Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("=?")]);
+            let lbl_doc = print_comments(lbl_doc, cmt_tbl, name.loc, arena);
+            let expr_doc = {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                match parens::expr(arena, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            let (pos_range, full_loc) = make_combined_pos_range(name.loc, expr.pexp_loc, arena);
+            let doc = Doc::concat(vec![lbl_doc, expr_doc]);
+            print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
+        }
+    }
+}
+
+/// Create a combined position range and full location spanning from start loc to end of end_loc.
+/// Used for argument locations that span label to expression.
+fn make_combined_pos_range(start_loc: LocIdx, end_loc: LocIdx, arena: &ParseArena) -> (PosRange, FullLocation) {
+    let start = arena.loc_start(start_loc);
+    let end = arena.loc_end(end_loc);
+    let pos_range = PosRange {
+        start: start.cnum,
+        end: end.cnum,
+    };
+    let full_loc = FullLocation::from_positions(start.clone(), end.clone());
+    (pos_range, full_loc)
 }
 
 /// Check if an expression is unit: `()`
