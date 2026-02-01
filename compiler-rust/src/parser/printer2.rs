@@ -2342,7 +2342,7 @@ fn print_block_rows(rows: &[BlockRow], cmt_tbl: &mut CommentTable, arena: &Parse
 
     // First row
     let first = &rows[0];
-    let first_doc = print_block_row_with_comments(&first.doc, first.pos_range, cmt_tbl, arena);
+    let first_doc = print_block_row_with_comments(&first.doc, first.pos_range, first.start_line, first.end_line, cmt_tbl, arena);
     docs.push(first_doc);
 
     let mut prev_end_line = first.end_line;
@@ -2364,7 +2364,7 @@ fn print_block_rows(rows: &[BlockRow], cmt_tbl: &mut CommentTable, arena: &Parse
 
         docs.push(sep);
 
-        let doc = print_block_row_with_comments(&row.doc, row.pos_range, cmt_tbl, arena);
+        let doc = print_block_row_with_comments(&row.doc, row.pos_range, row.start_line, row.end_line, cmt_tbl, arena);
         docs.push(doc);
 
         prev_end_line = row.end_line;
@@ -2377,23 +2377,25 @@ fn print_block_rows(rows: &[BlockRow], cmt_tbl: &mut CommentTable, arena: &Parse
 fn print_block_row_with_comments(
     doc: &Doc,
     pos_range: PosRange,
+    start_line: usize,
+    end_line: usize,
     cmt_tbl: &mut CommentTable,
-    arena: &ParseArena,
+    _arena: &ParseArena,
 ) -> Doc {
     let leading_comments = cmt_tbl.remove_leading_comments_by_pos(pos_range);
     let trailing_comments = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
 
-    // Create a fake full location for printing helpers
+    // Create a fake full location for printing helpers with actual line numbers
     let full_loc = crate::location::Location {
         loc_start: crate::location::Position {
             file_name: crate::intern::StrIdx::default(),
-            line: 0,
+            line: start_line as i32,
             bol: 0,
             cnum: pos_range.start,
         },
         loc_end: crate::location::Position {
             file_name: crate::intern::StrIdx::default(),
-            line: 0,
+            line: end_line as i32,
             bol: 0,
             cnum: pos_range.end,
         },
