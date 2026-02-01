@@ -1140,7 +1140,7 @@ pub fn print_expression(
                 let field = print_lident(arena, arena.get_longident(longident_loc.txt));
                 Doc::concat(vec![expr_doc, Doc::dot(), field])
             };
-            let rhs = {
+            let rhs_doc = {
                 let doc = print_expression_with_comments(state, value, cmt_tbl, arena);
                 match parens::set_field_expr_rhs(value) {
                     ParenKind::Parenthesized => add_parens(doc),
@@ -1148,10 +1148,16 @@ pub fn print_expression(
                     ParenKind::Nothing => doc,
                 }
             };
+            // Only indent RHS if it's a binary expression (matching OCaml)
+            let should_indent = parsetree_viewer::is_binary_expression(arena, value);
             Doc::group(Doc::concat(vec![
                 lhs,
                 Doc::text(" ="),
-                Doc::indent(Doc::concat(vec![Doc::line(), rhs])),
+                if should_indent {
+                    Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc])))
+                } else {
+                    Doc::concat(vec![Doc::space(), rhs_doc])
+                },
             ]))
         }
         // Ternary or if-then-else
