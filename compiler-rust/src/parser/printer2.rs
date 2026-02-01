@@ -1830,13 +1830,24 @@ fn print_exp_fun_parameter(
 ) -> Doc {
     use parsetree_viewer::FunParam;
     match param {
-        FunParam::NewType { attrs, name } => {
+        FunParam::NewTypes { attrs, names } => {
             let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
-            Doc::group(Doc::concat(vec![
-                attrs_doc,
-                Doc::text("type "),
-                print_comments(print_ident_like(&name.txt, false, false), cmt_tbl, name.loc, arena),
-            ]))
+            // Print all type names space-separated, e.g., "type t u v"
+            let names_doc = Doc::join(
+                Doc::space(),
+                names
+                    .iter()
+                    .map(|name| {
+                        print_comments(
+                            print_ident_like(&name.txt, false, false),
+                            cmt_tbl,
+                            name.loc,
+                            arena,
+                        )
+                    })
+                    .collect(),
+            );
+            Doc::group(Doc::concat(vec![attrs_doc, Doc::text("type "), names_doc]))
         }
         FunParam::Parameter {
             attrs,

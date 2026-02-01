@@ -1618,7 +1618,21 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
                 use parsetree_viewer::FunParam;
                 // Get location for this parameter
                 let param_loc = match param {
-                    FunParam::NewType { name, .. } => name.loc,
+                    FunParam::NewTypes { names, .. } => {
+                        // For NewTypes, span from first name to last name
+                        if let (Some(first), Some(last)) = (names.first(), names.last()) {
+                            if first.loc == last.loc {
+                                first.loc
+                            } else {
+                                arena.from_location(&Location::from_positions(
+                                    arena.loc_start(first.loc).clone(),
+                                    arena.loc_end(last.loc).clone(),
+                                ))
+                            }
+                        } else {
+                            arena.none_loc()
+                        }
+                    }
                     FunParam::Parameter { label, default_expr, pat, .. } => {
                         let start_pos = match label {
                             ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl)
@@ -1661,8 +1675,11 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
 
                 // Walk the parameter
                 match param {
-                    FunParam::NewType { name, .. } => {
-                        t.attach_inside(name.loc, inside, arena);
+                    FunParam::NewTypes { names, .. } => {
+                        // For newtypes, attach inside comments to the first name's location
+                        if let Some(first) = names.first() {
+                            t.attach_inside(first.loc, inside, arena);
+                        }
                     }
                     FunParam::Parameter { default_expr, pat, .. } => {
                         let (leading, inside2, trailing2) = partition_by_loc(inside, pat.ppat_loc, arena);

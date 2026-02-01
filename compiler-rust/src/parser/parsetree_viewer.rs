@@ -525,10 +525,11 @@ pub enum FunParam<'a> {
         default_expr: Option<&'a Expression>,
         pat: &'a Pattern,
     },
-    /// Newtype parameter: (type t)
-    NewType {
+    /// Newtype parameter(s): (type t) or (type t u v)
+    /// Multiple consecutive newtypes are combined into a single NewTypes variant.
+    NewTypes {
         attrs: &'a Attributes,
-        name: &'a StringLoc,
+        names: Vec<&'a StringLoc>,
     },
 }
 
@@ -568,11 +569,19 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
                 current = rhs;
             }
             ExpressionDesc::Pexp_newtype(name, body) => {
-                params.push(FunParam::NewType {
-                    attrs: &current.pexp_attributes,
-                    name,
-                });
+                // Collect consecutive newtypes into a single NewTypes variant
+                // This matches OCaml's collect_new_types which combines "type t, type u" into "type t u"
+                let attrs = &current.pexp_attributes;
+                let mut names = vec![name];
                 current = body;
+
+                // Collect any additional consecutive newtypes
+                while let ExpressionDesc::Pexp_newtype(next_name, next_body) = &current.pexp_desc {
+                    names.push(next_name);
+                    current = next_body;
+                }
+
+                params.push(FunParam::NewTypes { attrs, names });
             }
             _ => break,
         }
