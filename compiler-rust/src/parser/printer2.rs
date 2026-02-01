@@ -6555,17 +6555,18 @@ fn print_exception_def(
             Doc::indent(Doc::concat(vec![
                 Doc::text(" ="),
                 Doc::line(),
-                print_longident(arena, arena.get_longident(lid.txt)),
+                print_longident_location(lid, cmt_tbl, arena),
             ]))
         }
     };
 
-    Doc::group(Doc::concat(vec![
+    let doc = Doc::group(Doc::concat(vec![
         attrs_doc,
         Doc::text("exception "),
         name_doc,
         kind_doc,
-    ]))
+    ]));
+    print_comments(doc, cmt_tbl, ext_constr.pext_loc, arena)
 }
 
 /// Print module binding.
