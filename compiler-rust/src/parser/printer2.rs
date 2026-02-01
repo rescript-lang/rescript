@@ -2071,15 +2071,19 @@ fn print_record_expression(
         fields
             .iter()
             .map(|field| {
-                let field_name = print_lident(arena, arena.get_longident(field.lid.txt));
+                // Like OCaml's print_expression_record_row, print the label with its comments
+                let field_name_with_comments = {
+                    let doc = print_lident(arena, arena.get_longident(field.lid.txt));
+                    print_comments(doc, cmt_tbl, field.lid.loc, arena)
+                };
                 let expr_doc = print_expression_with_comments(state, &field.expr, cmt_tbl, arena);
                 // Check for punning
                 let row_doc = if punning_allowed && is_punned_record_field(arena, field) {
                     // Punned: `?name` or `name`
                     if field.opt {
-                        Doc::concat(vec![Doc::text("?"), field_name])
+                        Doc::concat(vec![Doc::text("?"), field_name_with_comments])
                     } else {
-                        field_name
+                        field_name_with_comments
                     }
                 } else {
                     // Non-punned: `name: ?value` or `name: value`
@@ -2091,7 +2095,7 @@ fn print_record_expression(
                     };
                     let opt_marker = if field.opt { Doc::text("?") } else { Doc::nil() };
                     Doc::group(Doc::concat(vec![
-                        field_name,
+                        field_name_with_comments,
                         Doc::text(": "),
                         opt_marker,
                         expr_doc,
