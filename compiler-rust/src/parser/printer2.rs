@@ -6500,9 +6500,12 @@ fn print_label_declaration(
     arena: &ParseArena,
 ) -> Doc {
     // Handle spread fields: ...typename
+    // Like OCaml, print comments around the "..." name itself
     if field.pld_name.txt == "..." {
+        let spread_doc = Doc::dotdotdot();
+        let spread_doc = print_comments(spread_doc, cmt_tbl, field.pld_name.loc, arena);
         let typ_doc = print_typ_expr(state, &field.pld_type, cmt_tbl, arena);
-        return Doc::concat(vec![Doc::dotdotdot(), typ_doc]);
+        return Doc::concat(vec![spread_doc, typ_doc]);
     }
 
     // Pass field name location for proper attribute line breaking
