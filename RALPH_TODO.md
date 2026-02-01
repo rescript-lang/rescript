@@ -5,6 +5,9 @@
 **Printer Status:** 129/187 tests passing (68%)
 
 ### Recent Progress
+- Fixed binary expression comment attachment (e.g., `a /* c1 */ === /* c2 */ b` preserves comments)
+- Fixed case guard block expression comment handling (comments inside `if { ... }` guards)
+- Fixed case pattern comment handling (matching OCaml's List.concat [before; inside])
 - Fixed doc comment and attribute printing in value bindings (docComments.res)
 - Fixed constructor declarations and record field comment handling (typeDefinition.res)
 - Fixed recursive module declarations/bindings comment handling (signatureItem.resi)
@@ -21,6 +24,10 @@
 - Fixed type extension path comment handling
 - Fixed type declaration and external name comment handling
 - Fixed exception rebind longident comment handling
+
+### Known Issues
+- blockExpr.res has 6 remaining differences related to blank line insertion before leading
+  single-line comments. OCaml adds blank lines in certain contexts that aren't fully understood yet.
 
 ---
 
