@@ -2063,12 +2063,26 @@ fn print_record_expression(
     let punning_allowed = !(spread.is_none() && fields.len() == 1);
 
     let spread_doc = match spread {
-        Some(expr) => Doc::concat(vec![
-            Doc::dotdotdot(),
-            print_expression_with_comments(state, expr, cmt_tbl, arena),
-            Doc::text(","),
-            Doc::line(),
-        ]),
+        Some(expr) => {
+            // Print the expression, checking if it's just an identifier
+            let expr_doc = match &expr.pexp_desc {
+                ExpressionDesc::Pexp_ident(path) => {
+                    print_lident(arena, arena.get_longident(path.txt))
+                }
+                _ => print_expression(state, expr, cmt_tbl, arena),
+            };
+            // Apply parens if needed
+            let expr_doc = match parens::expr(arena, expr) {
+                ParenKind::Parenthesized => add_parens(expr_doc),
+                ParenKind::Braced(loc) => print_braces(expr_doc, expr, loc, arena),
+                ParenKind::Nothing => expr_doc,
+            };
+            // Combine ... with the expression
+            let doc_with_spread = Doc::concat(vec![Doc::dotdotdot(), expr_doc]);
+            // Wrap with comments using expr.pexp_loc - this puts leading comments BEFORE ...
+            let doc_with_comments = print_comments(doc_with_spread, cmt_tbl, expr.pexp_loc, arena);
+            Doc::concat(vec![doc_with_comments, Doc::text(","), Doc::line()])
+        }
         None => Doc::nil(),
     };
     let fields_doc = Doc::join(
