@@ -1880,12 +1880,29 @@ fn print_exp_fun_parameter(
                 _ => Doc::nil(),
             };
 
-            Doc::group(Doc::concat(vec![
+            let doc = Doc::group(Doc::concat(vec![
                 attrs_doc,
                 label_with_pattern,
                 default_doc,
                 opt_marker,
-            ]))
+            ]));
+
+            // Wrap with comments using combined location (like OCaml's print_exp_fun_parameter)
+            // The location spans from the label (if present) to the end of pattern or default_expr
+            let lbl_loc = match label {
+                ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl)
+                    if arena.to_location(lbl.loc) != FullLocation::none() =>
+                {
+                    lbl.loc
+                }
+                _ => pat.ppat_loc,
+            };
+            let end_loc = match default_expr {
+                Some(expr) => expr.pexp_loc,
+                None => pat.ppat_loc,
+            };
+            let (pos_range, full_loc) = make_combined_pos_range(lbl_loc, end_loc, arena);
+            print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
         }
     }
 }
