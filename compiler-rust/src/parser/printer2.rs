@@ -5758,17 +5758,19 @@ fn print_module_declaration(
     ])
 }
 
-/// Print recursive module declarations.
+/// Print recursive module declarations using print_listi for proper comment handling.
 fn print_rec_module_declarations(
     state: &PrinterState,
     decls: &[ModuleDeclaration],
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let docs: Vec<Doc> = decls
-        .iter()
-        .enumerate()
-        .map(|(i, decl)| {
+    // Use print_listi to properly handle comments between declarations
+    print_listi(
+        |decl: &ModuleDeclaration| decl.pmd_loc,
+        decls,
+        |decl: &ModuleDeclaration, cmt_tbl: &mut CommentTable, i: usize| {
+            let attrs_doc = print_attributes(state, &decl.pmd_attributes, cmt_tbl, arena);
             let prefix = if i == 0 {
                 Doc::text("module rec ")
             } else {
@@ -5776,11 +5778,39 @@ fn print_rec_module_declarations(
             };
             let name_doc = Doc::text(&decl.pmd_name.txt);
             let name_doc = print_comments(name_doc, cmt_tbl, decl.pmd_name.loc, arena);
-            let type_doc = print_module_type(state, &decl.pmd_type, cmt_tbl, arena);
-            Doc::concat(vec![prefix, name_doc, Doc::text(": "), type_doc])
-        })
-        .collect();
-    Doc::join(Doc::hard_line(), docs)
+
+            // Handle alias vs regular module type
+            let body_doc = match &decl.pmd_type.pmty_desc {
+                ModuleTypeDesc::Pmty_alias(lid) => {
+                    Doc::concat(vec![
+                        Doc::text(" = "),
+                        print_longident(arena, arena.get_longident(lid.txt)),
+                    ])
+                }
+                ModuleTypeDesc::Pmty_with(..) => {
+                    // Needs parens for with constraints
+                    Doc::concat(vec![
+                        Doc::text(": "),
+                        Doc::lparen(),
+                        print_module_type(state, &decl.pmd_type, cmt_tbl, arena),
+                        Doc::rparen(),
+                    ])
+                }
+                _ => {
+                    Doc::concat(vec![
+                        Doc::text(": "),
+                        print_module_type(state, &decl.pmd_type, cmt_tbl, arena),
+                    ])
+                }
+            };
+
+            Doc::concat(vec![attrs_doc, prefix, name_doc, body_doc])
+        },
+        cmt_tbl,
+        arena,
+        false, // don't ignore empty lines
+        false, // don't force break
+    )
 }
 
 /// Print an include description.
@@ -6613,17 +6643,18 @@ fn print_module_binding(
     print_comments(doc, cmt_tbl, binding.pmb_loc, arena)
 }
 
-/// Print recursive module bindings.
+/// Print recursive module bindings using print_listi for proper comment handling.
 fn print_rec_module_bindings(
     state: &PrinterState,
     bindings: &[ModuleBinding],
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let docs: Vec<Doc> = bindings
-        .iter()
-        .enumerate()
-        .map(|(i, binding)| {
+    // Use print_listi to properly handle comments between bindings
+    print_listi(
+        |binding: &ModuleBinding| binding.pmb_loc,
+        bindings,
+        |binding: &ModuleBinding, cmt_tbl: &mut CommentTable, i: usize| {
             let attrs_doc = print_attributes(state, &binding.pmb_attributes, cmt_tbl, arena);
             let prefix = if i == 0 {
                 Doc::text("module rec ")
@@ -6634,12 +6665,13 @@ fn print_rec_module_bindings(
             let name_doc = Doc::text(&binding.pmb_name.txt);
             let name_doc = print_comments(name_doc, cmt_tbl, binding.pmb_name.loc, arena);
             let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl, arena);
-            let doc = Doc::concat(vec![attrs_doc, prefix, name_doc, Doc::text(" = "), expr_doc]);
-            // Wrap entire binding with print_comments for binding location
-            print_comments(doc, cmt_tbl, binding.pmb_loc, arena)
-        })
-        .collect();
-    Doc::join(Doc::hard_line(), docs)
+            Doc::concat(vec![attrs_doc, prefix, name_doc, Doc::text(" = "), expr_doc])
+        },
+        cmt_tbl,
+        arena,
+        false, // don't ignore empty lines
+        false, // don't force break
+    )
 }
 
 /// Print module type declaration.
