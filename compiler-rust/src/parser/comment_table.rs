@@ -2373,6 +2373,10 @@ fn walk_mod_type(mt: &ModuleType, t: &mut CommentTable, comments: Vec<Comment>, 
             t.attach_leading(lid.loc, leading, arena);
             t.attach_trailing(lid.loc, trailing, arena);
         }
+        ModuleTypeDesc::Pmty_signature(sig) if sig.is_empty() => {
+            // Empty signature - attach inside comments to the module type location
+            t.attach_inside(mt.pmty_loc, comments, arena);
+        }
         ModuleTypeDesc::Pmty_signature(sig) => {
             walk_signature(sig, t, comments, arena);
         }
