@@ -1573,9 +1573,130 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
             // Regular apply
             walk_apply_expr(funct, args, t, comments, arena);
         }
-        ExpressionDesc::Pexp_fun { rhs: body, .. } | ExpressionDesc::Pexp_newtype(_, body) => {
-            // Walk through the function parameters and body
-            walk_expression(body, t, comments, arena);
+        ExpressionDesc::Pexp_fun { .. } | ExpressionDesc::Pexp_newtype(_, _) => {
+            // Walk through function parameters and body, matching OCaml's handling
+            let (_is_async, parameters, return_expr) = parsetree_viewer::fun_expr(expr);
+
+            // Walk each parameter, collecting remaining comments
+            let mut prev_loc: Option<LocIdx> = None;
+            let mut comments = comments;
+
+            for param in &parameters {
+                use parsetree_viewer::FunParam;
+                // Get location for this parameter
+                let param_loc = match param {
+                    FunParam::NewType { name, .. } => name.loc,
+                    FunParam::Parameter { label, default_expr, pat, .. } => {
+                        let start_pos = match label {
+                            ArgLabel::Labelled(lbl) | ArgLabel::Optional(lbl)
+                                if arena.to_location(lbl.loc) != Location::none() =>
+                            {
+                                arena.loc_start(lbl.loc).clone()
+                            }
+                            _ => arena.loc_start(pat.ppat_loc).clone(),
+                        };
+                        let end_pos = match default_expr {
+                            Some(expr) => arena.loc_end(expr.pexp_loc).clone(),
+                            None => arena.loc_end(pat.ppat_loc).clone(),
+                        };
+                        arena.from_location(&Location::from_positions(start_pos, end_pos))
+                    }
+                };
+
+                let (leading, inside, trailing) = partition_by_loc(comments.clone(), param_loc, arena);
+
+                // Attach leading comments considering previous parameter
+                match prev_loc {
+                    None => {
+                        t.attach_leading(param_loc, leading, arena);
+                    }
+                    Some(prev) => {
+                        let prev_resolved = arena.to_location(prev);
+                        let curr_resolved = arena.to_location(param_loc);
+                        if prev_resolved.loc_end.line == curr_resolved.loc_start.line {
+                            let (after_prev, before_curr) = partition_adjacent_trailing(prev, leading, arena);
+                            t.attach_trailing(prev, after_prev, arena);
+                            t.attach_leading(param_loc, before_curr, arena);
+                        } else {
+                            let (on_same_line, after) = partition_by_on_same_line(prev, leading, arena);
+                            t.attach_trailing(prev, on_same_line, arena);
+                            let (before_curr, _, _) = partition_by_loc(after, param_loc, arena);
+                            t.attach_leading(param_loc, before_curr, arena);
+                        }
+                    }
+                }
+
+                // Walk the parameter
+                match param {
+                    FunParam::NewType { name, .. } => {
+                        t.attach_inside(name.loc, inside, arena);
+                    }
+                    FunParam::Parameter { default_expr, pat, .. } => {
+                        let (leading, inside2, trailing2) = partition_by_loc(inside, pat.ppat_loc, arena);
+                        t.attach_leading(pat.ppat_loc, leading, arena);
+                        walk_pattern(pat, t, inside2, arena);
+
+                        match default_expr {
+                            Some(expr) => {
+                                let (after_pat, rest) = partition_adjacent_trailing(pat.ppat_loc, trailing2, arena);
+                                t.attach_trailing(pat.ppat_loc, after_pat, arena);
+                                if is_block_expr(expr) {
+                                    walk_expression(expr, t, rest, arena);
+                                } else {
+                                    let (l, i, tr) = partition_by_loc(rest, expr.pexp_loc, arena);
+                                    t.attach_leading(expr.pexp_loc, l, arena);
+                                    walk_expression(expr, t, i, arena);
+                                    t.attach_trailing(expr.pexp_loc, tr, arena);
+                                }
+                            }
+                            None => {
+                                t.attach_trailing(pat.ppat_loc, trailing2, arena);
+                            }
+                        }
+                    }
+                }
+
+                prev_loc = Some(param_loc);
+                comments = trailing;
+            }
+
+            // Handle trailing comments after last parameter
+            if let Some(prev) = prev_loc {
+                let (after_prev, rest) = partition_adjacent_trailing(prev, comments, arena);
+                t.attach_trailing(prev, after_prev, arena);
+                comments = rest;
+            }
+
+            // Walk return expression
+            match &return_expr.pexp_desc {
+                ExpressionDesc::Pexp_constraint(inner_expr, typ)
+                    if arena.loc_start(inner_expr.pexp_loc).cnum >= arena.loc_end(typ.ptyp_loc).cnum =>
+                {
+                    let (leading, inside, trailing) = partition_by_loc(comments, typ.ptyp_loc, arena);
+                    t.attach_leading(typ.ptyp_loc, leading, arena);
+                    walk_core_type(typ, t, inside, arena);
+                    let (after_typ, rest) = partition_adjacent_trailing(typ.ptyp_loc, trailing, arena);
+                    t.attach_trailing(typ.ptyp_loc, after_typ, arena);
+                    if is_block_expr(inner_expr) {
+                        walk_expression(inner_expr, t, rest, arena);
+                    } else {
+                        let (l, i, tr) = partition_by_loc(rest, inner_expr.pexp_loc, arena);
+                        t.attach_leading(inner_expr.pexp_loc, l, arena);
+                        walk_expression(inner_expr, t, i, arena);
+                        t.attach_trailing(inner_expr.pexp_loc, tr, arena);
+                    }
+                }
+                _ => {
+                    if is_block_expr(return_expr) {
+                        walk_expression(return_expr, t, comments, arena);
+                    } else {
+                        let (l, i, tr) = partition_by_loc(comments, return_expr.pexp_loc, arena);
+                        t.attach_leading(return_expr.pexp_loc, l, arena);
+                        walk_expression(return_expr, t, i, arena);
+                        t.attach_trailing(return_expr.pexp_loc, tr, arena);
+                    }
+                }
+            }
         }
         ExpressionDesc::Pexp_send(inner, _) | ExpressionDesc::Pexp_await(inner) => {
             walk_expression(inner, t, comments, arena);
