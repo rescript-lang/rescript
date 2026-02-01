@@ -6017,6 +6017,7 @@ fn print_type_declaration_inner(
         Doc::nil()
     };
     let name_doc = print_ident_like(&decl.ptype_name.txt, false, false);
+    let name_doc = print_comments(name_doc, cmt_tbl, decl.ptype_name.loc, arena);
 
     let params_doc = if decl.ptype_params.is_empty() {
         Doc::nil()
@@ -6340,6 +6341,7 @@ fn print_value_description(
         false,
     );
     let name_doc = print_ident_like(&val_desc.pval_name.txt, false, false);
+    let name_doc = print_comments(name_doc, cmt_tbl, val_desc.pval_name.loc, arena);
     let typ_doc = print_typ_expr(state, &val_desc.pval_type, cmt_tbl, arena);
     let header = if is_external { "external " } else { "let " };
 
@@ -6378,7 +6380,7 @@ fn print_type_extension(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &type_ext.ptyext_attributes, cmt_tbl, arena);
-    let path_doc = print_lident(arena, arena.get_longident(type_ext.ptyext_path.txt));
+    let path_doc = print_lident_path(&type_ext.ptyext_path, cmt_tbl, arena);
 
     let params_doc = if type_ext.ptyext_params.is_empty() {
         Doc::nil()
