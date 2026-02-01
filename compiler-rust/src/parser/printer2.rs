@@ -5229,16 +5229,25 @@ pub fn print_signature_item(
             };
             // Extract attributes from first type declaration to print before "type"
             let attrs_doc = if let Some(first_decl) = type_decls.first() {
-                print_attributes(state, &first_decl.ptype_attributes, cmt_tbl, arena)
+                // Use type declaration location for proper attribute line breaking
+                print_attributes_with_loc(
+                    state,
+                    &first_decl.ptype_attributes,
+                    Some(first_decl.ptype_loc),
+                    cmt_tbl,
+                    arena,
+                    false,
+                )
             } else {
                 Doc::nil()
             };
-            Doc::concat(vec![
+            // Wrap in group so it can be flat even when outer group breaks
+            Doc::group(Doc::concat(vec![
                 attrs_doc,
                 Doc::text("type "),
                 rec_doc,
                 print_type_declarations_no_first_attrs(state, type_decls, cmt_tbl, arena),
-            ])
+            ]))
         }
 
         SignatureItemDesc::Psig_typext(type_ext) => {
@@ -5373,16 +5382,25 @@ pub fn print_structure_item(
             };
             // Extract attributes from first type declaration to print before "type"
             let attrs_doc = if let Some(first_decl) = type_decls.first() {
-                print_attributes(state, &first_decl.ptype_attributes, cmt_tbl, arena)
+                // Use type declaration location (not name) for proper attribute line breaking
+                print_attributes_with_loc(
+                    state,
+                    &first_decl.ptype_attributes,
+                    Some(first_decl.ptype_loc),
+                    cmt_tbl,
+                    arena,
+                    false,
+                )
             } else {
                 Doc::nil()
             };
-            Doc::concat(vec![
+            // Wrap in group so it can be flat even when outer group breaks
+            Doc::group(Doc::concat(vec![
                 attrs_doc,
                 Doc::text("type "),
                 rec_doc,
                 print_type_declarations_no_first_attrs(state, type_decls, cmt_tbl, arena),
-            ])
+            ]))
         }
 
         StructureItemDesc::Pstr_primitive(val_desc) => {
@@ -5514,8 +5532,16 @@ fn print_type_declaration_inner(
     arena: &ParseArena,
     include_attrs: bool,
 ) -> Doc {
+    // Use type declaration location for proper attribute line breaking
     let attrs_doc = if include_attrs {
-        print_attributes(state, &decl.ptype_attributes, cmt_tbl, arena)
+        print_attributes_with_loc(
+            state,
+            &decl.ptype_attributes,
+            Some(decl.ptype_loc),
+            cmt_tbl,
+            arena,
+            false,
+        )
     } else {
         Doc::nil()
     };
