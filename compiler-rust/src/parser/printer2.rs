@@ -1160,6 +1160,7 @@ pub fn print_expression(
                     ParenKind::Nothing => expr_doc,
                 };
                 let field = print_lident(arena, arena.get_longident(longident_loc.txt));
+                let field = print_comments(field, cmt_tbl, longident_loc.loc, arena);
                 Doc::concat(vec![expr_doc, Doc::dot(), field])
             };
             let rhs_doc = {
