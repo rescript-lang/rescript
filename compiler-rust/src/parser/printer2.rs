@@ -2055,7 +2055,7 @@ fn print_record_expression(
                 let field_name = print_lident(arena, arena.get_longident(field.lid.txt));
                 let expr_doc = print_expression_with_comments(state, &field.expr, cmt_tbl, arena);
                 // Check for punning
-                if punning_allowed && is_punned_record_field(arena, field) {
+                let row_doc = if punning_allowed && is_punned_record_field(arena, field) {
                     // Punned: `?name` or `name`
                     if field.opt {
                         Doc::concat(vec![Doc::text("?"), field_name])
@@ -2077,7 +2077,10 @@ fn print_record_expression(
                         opt_marker,
                         expr_doc,
                     ]))
-                }
+                };
+                // Like OCaml, wrap with comments using combined location (from label to expression)
+                let (pos_range, full_loc) = make_combined_pos_range(field.lid.loc, field.expr.pexp_loc, arena);
+                print_comments_by_pos(row_doc, cmt_tbl, pos_range, &full_loc)
             })
             .collect(),
     );

@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 233/506 tests passing (46%)
-**Printer Status:** 116/187 tests passing (62%)
+**Overall Status:** 234/506 tests passing (46%)
+**Printer Status:** 117/187 tests passing (62%)
 
 ---
 
@@ -12,14 +12,14 @@ Most printer failures are caused by comment handling issues. Fix these first.
 
 ### Core Comment Infrastructure
 - [x] **Study OCaml comment attachment** - Read `res_comments_table.ml` thoroughly to understand the algorithm
-- [ ] **Fix trailing comment preservation** - Comments after expressions/statements get lost
+- [x] **Fix trailing comment preservation** - Comments after expressions/statements get lost
 - [ ] **Fix blank line preservation around comments** - Blank lines before/after comments should be kept
 - [x] **Fix comment placement in function arguments** - `/* c0 */ ~arg=/* c1 */ value /* c2 */` pattern
 - [x] **Fix comment placement in function parameters** - Comments on function parameter definitions
 
-### Comment Test Files (16 failing)
+### Comment Test Files (15 failing)
 - [x] `printer/comments/namedArgs.res` - Named argument comments
-- [ ] `printer/comments/trailingComments.res` - Trailing comment handling
+- [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [ ] `printer/comments/modExpr.res` - Module expression comments
 - [ ] `printer/comments/structureItem.res` - Structure item comments
 - [ ] `printer/comments/blockExpr.res` - Block expression comments
