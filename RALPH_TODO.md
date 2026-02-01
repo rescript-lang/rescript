@@ -2,9 +2,15 @@
 
 **Last Updated:** 2026-02-01
 **Overall Status:** 255/506 tests passing (50%)
-**Printer Status:** 136/187 tests passing (72%)
+**Printer Status:** 137/187 tests passing (73%)
 
 ### Recent Progress
+- Fixed Pexp_field comment handling: added print_comments for field name
+- Fixed BS object row comments: added cmt_loc wrapper for leading/trailing comments
+- Fixed record spread comment placement: /* before */ now appears before ...spread
+- Fixed if-else trailing comments: comments between `}` and `else if` cause line break
+- Combined consecutive newtype parameters: (type t, type s) -> (type t s)
+- Fixed type record spread comments: leading comments like "// spread a" before ...a
 - Fixed inline module structure in include statements (include.res): single type alias force_break=false
 - Fixed module binding parenthesization and empty structure comments (structure.res)
 - Fixed type constraints in with clauses (withConstraints.res): add ptype_cstrs printing
