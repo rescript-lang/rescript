@@ -3957,6 +3957,8 @@ fn print_package_type(
 ) -> Doc {
     let (lid, constraints) = package_type;
     let lid_doc = print_longident(arena, arena.get_longident(lid.txt));
+    // Wrap lid with print_comments for its location (like OCaml reference)
+    let lid_doc = print_comments(lid_doc, cmt_tbl, lid.loc, arena);
 
     let doc = if constraints.is_empty() {
         Doc::group(lid_doc)
