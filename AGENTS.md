@@ -80,6 +80,8 @@ The Makefile’s targets build on each other in this order:
 
 - **Do NOT switch tasks when things get hard** - If you're working on a difficult task, do NOT abandon it to work on something easier. Complete the current task FIRST, then move on to the next one. Switching tasks loses valuable context and leaves work incomplete.
 
+- **Embrace complexity - everything must be done** - Do not shy away from complex tasks or defer them hoping for an easier path. Every item on the task list must eventually be completed, so you might as well dig in now. Complex problems don't get easier by avoiding them—they just stay unsolved. Tackle the hard parts head-on with full attention. The satisfaction of solving a difficult problem far outweighs the temporary comfort of picking low-hanging fruit.
+
 - **ALWAYS commit before moving on** - Before starting a new task, before investigating a problem, before taking a break: COMMIT. Use `git add <files> && git commit -m "description"`. No exceptions.
 
 ## Compiler Architecture
