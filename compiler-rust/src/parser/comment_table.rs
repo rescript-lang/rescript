@@ -21,6 +21,7 @@ use crate::parser::ast::{
 use crate::parser::ast::Payload::{PPat, PSig, PStr, PTyp};
 use crate::parser::comment::Comment;
 use crate::parser::longident::Longident;
+use crate::parser::parsetree_viewer;
 use std::collections::HashMap;
 
 /// A comment table that maps locations to their associated comments.
@@ -1793,18 +1794,11 @@ fn walk_pattern(pattern: &Pattern, t: &mut CommentTable, comments: Vec<Comment>,
                 .collect();
             walk_list(&nodes, t, comments, arena);
         }
-        PatternDesc::Ppat_or(lhs, rhs) => {
-            let (before, inside, after) = partition_by_loc(comments, lhs.ppat_loc, arena);
-            CommentTable::attach(&mut t.leading, lhs.ppat_loc, before);
-            walk_pattern(lhs, t, inside, arena);
-
-            let (after_lhs, rest) = partition_adjacent_trailing(lhs.ppat_loc, after, arena);
-            CommentTable::attach(&mut t.trailing, lhs.ppat_loc, after_lhs);
-
-            let (before, inside, after) = partition_by_loc(rest, rhs.ppat_loc, arena);
-            CommentTable::attach(&mut t.leading, rhs.ppat_loc, before);
-            walk_pattern(rhs, t, inside, arena);
-            CommentTable::attach(&mut t.trailing, rhs.ppat_loc, after);
+        PatternDesc::Ppat_or(_, _) => {
+            // Collect the entire or-chain and walk as a list (like OCaml reference)
+            let or_chain = parsetree_viewer::collect_or_pattern_chain(pattern);
+            let nodes: Vec<Node<'_>> = or_chain.iter().map(|p| Node::Pattern(p)).collect();
+            walk_list(&nodes, t, comments, arena);
         }
         PatternDesc::Ppat_constraint(pat, typ) => {
             let (before, inside, after) = partition_by_loc(comments, pat.ppat_loc, arena);
