@@ -646,7 +646,11 @@ pub fn print_comments_inside(cmt_tbl: &mut CommentTable, loc: LocIdx, arena: &Pa
         return Doc::nil();
     }
 
+    // Build the comment docs following OCaml's pattern:
+    // For n comments, OCaml produces: soft_line, c1, line, c2, line, ..., cn
+    // Where blank lines between comments produce double hard_line instead of line
     let mut acc = Vec::new();
+    acc.push(Doc::soft_line());
 
     for (i, comment) in comments.iter().enumerate() {
         let single_line = comment.is_single_line();
@@ -657,13 +661,19 @@ pub fn print_comments_inside(cmt_tbl: &mut CommentTable, loc: LocIdx, arena: &Pa
             print_multiline_comment_content(txt)
         };
 
+        acc.push(cmt_doc);
+
         if i < comments.len() - 1 {
-            acc.push(cmt_doc);
-            acc.push(Doc::line());
-        } else {
-            // Last comment
-            acc.push(Doc::soft_line());
-            acc.push(cmt_doc);
+            // Check if there's a blank line between this comment and the next
+            let this_end = comment.loc().loc_end.line as u32;
+            let next_start = comments[i + 1].loc().loc_start.line as u32;
+            let sep = if next_start.saturating_sub(this_end) > 1 {
+                // Blank line between comments - preserve it
+                Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
+            } else {
+                Doc::line()
+            };
+            acc.push(sep);
         }
     }
 
@@ -2022,6 +2032,15 @@ fn print_record_expression(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Special case: empty record (no spread, no fields) - just print inside comments
+    if fields.is_empty() && spread.is_none() {
+        return Doc::concat(vec![
+            Doc::lbrace(),
+            print_comments_inside(cmt_tbl, loc, arena),
+            Doc::rbrace(),
+        ]);
+    }
+
     // Calculate force_break: record written on multiple lines should break the group
     let force_break = match (spread, fields.first()) {
         (Some(expr), _) => {
