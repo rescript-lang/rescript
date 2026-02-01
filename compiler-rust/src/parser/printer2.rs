@@ -5338,19 +5338,11 @@ fn print_value_binding(
         .iter()
         .filter(|attr| attr.0.txt != "let.unwrap")
         .collect();
-    let attrs_doc = if attrs.is_empty() {
-        Doc::nil()
-    } else {
-        let attr_docs: Vec<Doc> = attrs
-            .iter()
-            .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
-            .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
-            .collect();
-        if attr_docs.is_empty() {
-            Doc::nil()
-        } else {
-            Doc::concat(vec![Doc::group(Doc::join(Doc::space(), attr_docs)), Doc::hard_line()])
-        }
+    // Use print_attributes_with_loc to get proper line breaking behavior
+    // (uses Doc::line() which can collapse to space when the outer group fits)
+    let attrs_doc = {
+        let attrs_slice: Vec<Attribute> = attrs.into_iter().cloned().collect();
+        print_attributes_with_loc(state, &attrs_slice, Some(vb.pvb_pat.ppat_loc), cmt_tbl, arena, false)
     };
 
     let header = if index == 0 {
@@ -5411,6 +5403,7 @@ fn print_attributes(
 /// Print attributes with location for proper line breaking.
 /// If `loc` is provided and the attributed item starts on a different line
 /// than the last attribute ends, uses hard_line instead of line.
+/// Separates doc comments from regular attributes - doc comments go on their own line.
 fn print_attributes_with_loc(
     state: &PrinterState,
     attrs: &[Attribute],
@@ -5419,42 +5412,68 @@ fn print_attributes_with_loc(
     arena: &ParseArena,
     inline: bool,
 ) -> Doc {
-    if attrs.is_empty() {
-        return Doc::nil();
-    }
-    // Filter to printable attributes
-    let printable_attrs: Vec<&Attribute> = attrs
+    // Filter to printable attributes first
+    let filtered: Vec<&Attribute> = attrs
         .iter()
         .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
         .collect();
-    if printable_attrs.is_empty() {
+    if filtered.is_empty() {
         return Doc::nil();
     }
 
-    let docs: Vec<Doc> = printable_attrs
-        .iter()
-        .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
-        .collect();
+    // Partition doc comments from regular attributes
+    // Doc comments have attribute name "res.doc" or "ocaml.doc"
+    let (doc_comment_attrs, regular_attrs): (Vec<_>, Vec<_>) = filtered
+        .into_iter()
+        .partition(|attr| attr.0.txt == "res.doc" || attr.0.txt == "ocaml.doc");
 
-    // Determine trailing separator: use hard_line if attributed item is on a different line
-    let trailing_sep = if inline {
-        Doc::space()
+    // Print doc comments with hard_line after each (they go on their own lines)
+    let doc_comment_doc = if doc_comment_attrs.is_empty() {
+        Doc::nil()
     } else {
-        match (loc, printable_attrs.last()) {
-            (Some(item_loc), Some(last_attr)) => {
-                let (attr_name, _) = last_attr;
-                // If item starts on a later line than the last attribute, force hard line
-                if arena.loc_start(item_loc).line > arena.loc_end(attr_name.loc).line {
-                    Doc::hard_line()
-                } else {
-                    Doc::line()
-                }
-            }
-            _ => Doc::line(),
-        }
+        let docs: Vec<Doc> = doc_comment_attrs
+            .iter()
+            .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
+            .collect();
+        // Doc comments each on their own line, with hard_line after
+        Doc::concat(vec![Doc::join(Doc::hard_line(), docs), Doc::hard_line()])
     };
 
-    Doc::concat(vec![Doc::group(Doc::join(Doc::line(), docs)), trailing_sep])
+    // Print regular attributes
+    let attrs_doc = if regular_attrs.is_empty() {
+        Doc::nil()
+    } else {
+        let docs: Vec<Doc> = regular_attrs
+            .iter()
+            .map(|attr| print_attribute(state, attr, false, cmt_tbl, arena))
+            .collect();
+
+        // Determine trailing separator: use hard_line if attributed item is on a different line
+        let has_doc_comments = !doc_comment_attrs.is_empty();
+        let line_break = if inline {
+            Doc::space()
+        } else {
+            match (loc, regular_attrs.last()) {
+                (Some(item_loc), Some(last_attr)) => {
+                    let (attr_name, _) = last_attr;
+                    // If item starts on a later line than the last attribute, force hard line
+                    if arena.loc_start(item_loc).line > arena.loc_end(attr_name.loc).line {
+                        Doc::hard_line()
+                    } else if has_doc_comments {
+                        // If there were doc comments, use space (so @attr let x stays together)
+                        Doc::space()
+                    } else {
+                        Doc::line()
+                    }
+                }
+                _ => if has_doc_comments { Doc::space() } else { Doc::line() },
+            }
+        };
+
+        Doc::concat(vec![Doc::group(Doc::join(Doc::line(), docs)), line_break])
+    };
+
+    Doc::concat(vec![doc_comment_doc, attrs_doc])
 }
 
 /// Print attributes with configurable separator (deprecated, use print_attributes_with_loc).
