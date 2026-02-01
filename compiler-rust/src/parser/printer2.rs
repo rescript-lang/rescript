@@ -7,7 +7,7 @@ use crate::location::Location as FullLocation;
 use crate::parse_arena::{LocIdx, ParseArena};
 use crate::parser::ast::*;
 use crate::parser::comment::Comment;
-use crate::parser::comment_table::{walk_signature, walk_structure, CommentTable};
+use crate::parser::comment_table::{walk_signature, walk_structure, CommentTable, PosRange};
 use crate::parser::doc::Doc;
 use crate::parser::longident::Longident;
 use crate::parser::token::Token;
@@ -347,90 +347,92 @@ fn print_trailing_comment(prev_loc: &FullLocation, node_loc: &FullLocation, comm
     }
 }
 
-/// Print leading comments for a node.
-fn print_leading_comments(
+/// Print leading comments for a node (takes comments directly).
+fn print_leading_comments_with(
     node: Doc,
-    leading: &mut HashMap<LocIdx, Vec<Comment>>,
-    loc: LocIdx,
+    comments: Vec<Comment>,
     full_loc: &FullLocation,
 ) -> Doc {
-    match leading.remove(&loc) {
-        None => node,
-        Some(comments) if comments.is_empty() => node,
-        Some(comments) => {
-            let mut acc = Vec::new();
-            let len = comments.len();
-
-            for (i, comment) in comments.iter().enumerate() {
-                let next_comment = if i + 1 < len {
-                    Some(&comments[i + 1])
-                } else {
-                    None
-                };
-                acc.push(print_leading_comment(comment, next_comment));
-            }
-
-            // Calculate separator based on last comment
-            if let Some(last_comment) = comments.last() {
-                let diff =
-                    full_loc.loc_start.line as i32 - last_comment.loc().loc_end.line as i32;
-                let separator = if last_comment.is_single_line() {
-                    if diff > 1 {
-                        Doc::hard_line()
-                    } else {
-                        Doc::nil()
-                    }
-                } else if diff == 0 {
-                    Doc::space()
-                } else if diff > 1 {
-                    Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
-                } else {
-                    Doc::hard_line()
-                };
-
-                acc.push(separator);
-            }
-
-            acc.push(node);
-            Doc::group(Doc::concat(acc))
-        }
+    if comments.is_empty() {
+        return node;
     }
+
+    let mut acc = Vec::new();
+    let len = comments.len();
+
+    for (i, comment) in comments.iter().enumerate() {
+        let next_comment = if i + 1 < len {
+            Some(&comments[i + 1])
+        } else {
+            None
+        };
+        acc.push(print_leading_comment(comment, next_comment));
+    }
+
+    // Calculate separator based on last comment
+    if let Some(last_comment) = comments.last() {
+        let diff =
+            full_loc.loc_start.line as i32 - last_comment.loc().loc_end.line as i32;
+        let separator = if last_comment.is_single_line() {
+            if diff > 1 {
+                Doc::hard_line()
+            } else {
+                Doc::nil()
+            }
+        } else if diff == 0 {
+            Doc::space()
+        } else if diff > 1 {
+            Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
+        } else {
+            Doc::hard_line()
+        };
+
+        acc.push(separator);
+    }
+
+    acc.push(node);
+    Doc::group(Doc::concat(acc))
 }
 
-/// Print trailing comments for a node.
-fn print_trailing_comments(
+/// Print trailing comments for a node (takes comments directly).
+fn print_trailing_comments_with(
     node: Doc,
-    trailing: &mut HashMap<LocIdx, Vec<Comment>>,
-    loc: LocIdx,
+    comments: Vec<Comment>,
     full_loc: &FullLocation,
 ) -> Doc {
-    match trailing.remove(&loc) {
-        None => node,
-        Some(comments) if comments.is_empty() => node,
-        Some(comments) => {
-            let mut acc = Vec::new();
-            let mut prev_loc = full_loc.clone();
-
-            for comment in &comments {
-                acc.push(print_trailing_comment(&prev_loc, full_loc, comment));
-                prev_loc = comment.loc().clone();
-            }
-
-            Doc::concat(vec![node, Doc::concat(acc)])
-        }
+    if comments.is_empty() {
+        return node;
     }
+
+    let mut acc = Vec::new();
+    let mut prev_loc = full_loc.clone();
+
+    for comment in &comments {
+        acc.push(print_trailing_comment(&prev_loc, full_loc, comment));
+        prev_loc = comment.loc().clone();
+    }
+
+    Doc::concat(vec![node, Doc::concat(acc)])
 }
 
 /// Print a node with its leading and trailing comments.
+/// Uses position-based fallback when LocIdx lookup fails.
 pub fn print_comments(doc: Doc, cmt_tbl: &mut CommentTable, loc: LocIdx, arena: &ParseArena) -> Doc {
     let full_loc = arena.to_location(loc);
-    let doc_with_leading = print_leading_comments(doc, &mut cmt_tbl.leading, loc, &full_loc);
-    print_trailing_comments(doc_with_leading, &mut cmt_tbl.trailing, loc, &full_loc)
+
+    // Get leading comments with position-based fallback
+    let leading_comments = cmt_tbl.remove_leading_comments_by_loc(loc, arena);
+    let doc_with_leading = print_leading_comments_with(doc, leading_comments, &full_loc);
+
+    // Get trailing comments with position-based fallback
+    let trailing_comments = cmt_tbl.remove_trailing_comments_by_loc(loc, arena);
+    print_trailing_comments_with(doc_with_leading, trailing_comments, &full_loc)
 }
 
 /// Get the first leading comment for a location, if any.
-pub fn get_first_leading_comment<'a>(cmt_tbl: &'a CommentTable, loc: LocIdx) -> Option<&'a Comment> {
-    cmt_tbl.leading.get(&loc).and_then(|comments| comments.first())
+/// Uses position-based keys like OCaml's Location.t.
+pub fn get_first_leading_comment<'a>(cmt_tbl: &'a CommentTable, loc: LocIdx, arena: &ParseArena) -> Option<&'a Comment> {
+    cmt_tbl.get_first_leading_comment(loc, arena)
 }
 
 // ============================================================================
@@ -474,7 +476,7 @@ where
         let loc = get_loc(node);
 
         // Determine separator based on line distance
-        let start_pos = match get_first_leading_comment(cmt_tbl, loc) {
+        let start_pos = match get_first_leading_comment(cmt_tbl, loc, arena) {
             Some(comment) => comment.loc().loc_start.clone(),
             None => arena.loc_start(loc).clone(),
         };
@@ -537,7 +539,7 @@ where
         let loc = get_loc(node);
 
         // Determine separator based on line distance
-        let start_pos = match get_first_leading_comment(cmt_tbl, loc) {
+        let start_pos = match get_first_leading_comment(cmt_tbl, loc, arena) {
             Some(comment) => comment.loc().loc_start.clone(),
             None => arena.loc_start(loc).clone(),
         };
@@ -573,51 +575,53 @@ where
 // ============================================================================
 
 /// Print comments inside an empty construct (like empty block {}).
+/// Uses position-based fallback when LocIdx lookup fails.
 pub fn print_comments_inside(cmt_tbl: &mut CommentTable, loc: LocIdx, arena: &ParseArena) -> Doc {
     let force_break = arena.loc_start(loc).line != arena.loc_end(loc).line;
 
-    match cmt_tbl.inside.remove(&loc) {
-        None => Doc::nil(),
-        Some(comments) if comments.is_empty() => Doc::nil(),
-        Some(comments) => {
-            let mut acc = Vec::new();
+    // Get inside comments with position-based fallback
+    let comments = cmt_tbl.remove_inside_comments_by_loc(loc, arena);
+    if comments.is_empty() {
+        return Doc::nil();
+    }
 
-            for (i, comment) in comments.iter().enumerate() {
-                let single_line = comment.is_single_line();
-                let txt = comment.txt();
-                let cmt_doc = if single_line {
-                    Doc::text(format!("//{}", txt))
-                } else {
-                    print_multiline_comment_content(txt)
-                };
+    let mut acc = Vec::new();
 
-                if i < comments.len() - 1 {
-                    acc.push(cmt_doc);
-                    acc.push(Doc::line());
-                } else {
-                    // Last comment
-                    acc.push(Doc::soft_line());
-                    acc.push(cmt_doc);
-                }
-            }
+    for (i, comment) in comments.iter().enumerate() {
+        let single_line = comment.is_single_line();
+        let txt = comment.txt();
+        let cmt_doc = if single_line {
+            Doc::text(format!("//{}", txt))
+        } else {
+            print_multiline_comment_content(txt)
+        };
 
-            let cmts_doc = Doc::concat(acc);
-            let indented = Doc::indent(cmts_doc.clone());
-
-            Doc::breakable_group(
-                Doc::concat(vec![
-                    Doc::if_breaks(indented, cmts_doc),
-                    Doc::soft_line(),
-                ]),
-                force_break,
-            )
+        if i < comments.len() - 1 {
+            acc.push(cmt_doc);
+            acc.push(Doc::line());
+        } else {
+            // Last comment
+            acc.push(Doc::soft_line());
+            acc.push(cmt_doc);
         }
     }
+
+    let cmts_doc = Doc::concat(acc);
+    let indented = Doc::indent(cmts_doc.clone());
+
+    Doc::breakable_group(
+        Doc::concat(vec![
+            Doc::if_breaks(indented, cmts_doc),
+            Doc::soft_line(),
+        ]),
+        force_break,
+    )
 }
 
 /// Print comments inside an empty file.
-pub fn print_comments_inside_file(cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
-    match cmt_tbl.inside.remove(&Location::none()) {
+pub fn print_comments_inside_file(cmt_tbl: &mut CommentTable, _arena: &ParseArena) -> Doc {
+    // Use PosRange::none() which corresponds to Location::none()
+    match cmt_tbl.inside.remove(&PosRange::none()) {
         None => Doc::nil(),
         Some(comments) if comments.is_empty() => Doc::nil(),
         Some(comments) => {
@@ -2757,7 +2761,7 @@ fn print_arguments(
     if let [(ArgLabel::Nolabel, expr)] = args {
         if is_unit_expr(arena, expr) {
             // Check for leading comments
-            if has_leading_line_comment(cmt_tbl, expr.pexp_loc) {
+            if has_leading_line_comment(cmt_tbl, expr.pexp_loc, arena) {
                 let cmt = print_comments(Doc::nil(), cmt_tbl, expr.pexp_loc, arena);
                 return Doc::concat(vec![
                     Doc::lparen(),
@@ -2870,8 +2874,8 @@ fn is_unit_expr(arena: &ParseArena, expr: &Expression) -> bool {
 }
 
 /// Check if there's a leading line comment at a location.
-fn has_leading_line_comment(cmt_tbl: &CommentTable, loc: LocIdx) -> bool {
-    if let Some(comments) = cmt_tbl.leading.get(&loc) {
+fn has_leading_line_comment(cmt_tbl: &CommentTable, loc: LocIdx, arena: &ParseArena) -> bool {
+    if let Some(comments) = cmt_tbl.get_leading_comments(loc, arena) {
         comments.iter().any(|c| c.is_single_line())
     } else {
         false
@@ -3364,16 +3368,21 @@ fn print_record_pattern(
             .iter()
             .map(|field| {
                 let label = print_lident(arena, arena.get_longident(field.lid.txt));
-                // Wrap label with print_comments for its location (like OCaml reference)
-                let label = print_comments(label, cmt_tbl, field.lid.loc, arena);
                 // Check for punning
                 if is_punned_pattern_field(arena, field) {
+                    // For punned patterns, wrap label with print_comments (like OCaml reference)
+                    let label = print_comments(label, cmt_tbl, field.lid.loc, arena);
                     if field.opt {
                         Doc::concat(vec![Doc::text("?"), label])
                     } else {
                         label
                     }
                 } else {
+                    // For non-punned patterns, comments are attached to BOTH:
+                    // 1. Individual component locations (label and pattern)
+                    // 2. The combined row location
+                    // Like OCaml: print_lident_path (with comments on label), then print_comments on row
+                    let label = print_comments(label, cmt_tbl, field.lid.loc, arena);
                     let pat_doc = print_pattern(state, &field.pat, cmt_tbl, arena);
                     // Check if pattern needs parentheses in record row context
                     let pat_doc = if parens::pattern_record_row_rhs(&field.pat) {
@@ -3386,7 +3395,24 @@ fn print_record_pattern(
                     } else {
                         pat_doc
                     };
-                    Doc::group(Doc::concat(vec![label, Doc::text(": "), rhs_doc]))
+                    let doc = Doc::group(Doc::concat(vec![label, Doc::text(": "), rhs_doc]));
+                    // Create combined location and use position-based lookup explicitly
+                    // This is needed because during walking, a new LocIdx is created for the combined
+                    // location that won't match any AST node's LocIdx during printing
+                    let pos_range = PosRange {
+                        start: arena.loc_start(field.lid.loc).cnum,
+                        end: arena.loc_end(field.pat.ppat_loc).cnum,
+                    };
+                    // Use explicit position-based lookup (not the generic print_comments)
+                    let leading = cmt_tbl.remove_leading_comments_by_pos(pos_range);
+                    let trailing = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
+                    let full_loc = FullLocation {
+                        loc_start: arena.loc_start(field.lid.loc).clone(),
+                        loc_end: arena.loc_end(field.pat.ppat_loc).clone(),
+                        loc_ghost: false,
+                    };
+                    let doc = print_leading_comments_with(doc, leading, &full_loc);
+                    print_trailing_comments_with(doc, trailing, &full_loc)
                 }
             })
             .collect(),
@@ -4706,14 +4732,13 @@ fn print_match_expression(
     arena: &ParseArena,
 ) -> Doc {
     let scrutinee = print_expression_with_comments(state, expr, cmt_tbl, arena);
-    let cases_doc = print_cases(state, cases, cmt_tbl, arena);
+    // print_cases_with_braces returns the full { cases } block
+    let cases_block = print_cases_with_braces(state, cases, cmt_tbl, arena);
     Doc::concat(vec![
         Doc::text("switch "),
         scrutinee,
-        Doc::text(" {"),
-        cases_doc,
-        Doc::hard_line(),
-        Doc::text("}"),
+        Doc::space(),
+        cases_block,
     ])
 }
 
@@ -4726,14 +4751,12 @@ fn print_try_expression(
     arena: &ParseArena,
 ) -> Doc {
     let body = print_expression_with_comments(state, expr, cmt_tbl, arena);
-    let cases_doc = print_cases(state, cases, cmt_tbl, arena);
+    let cases_block = print_cases_with_braces(state, cases, cmt_tbl, arena);
     Doc::concat(vec![
         Doc::text("try "),
         body,
-        Doc::text(" catch {"),
-        cases_doc,
-        Doc::hard_line(),
-        Doc::text("}"),
+        Doc::text(" catch "),
+        cases_block,
     ])
 }
 
@@ -4751,22 +4774,98 @@ fn case_pattern_needs_parens(pattern: &Pattern) -> bool {
     }
 }
 
+/// Get the position range for a case (from pattern start to rhs end).
+/// This is used for comment attachment.
+fn get_case_pos_range(case: &Case, arena: &ParseArena) -> PosRange {
+    let start = arena.loc_start(case.pc_lhs.ppat_loc).cnum;
+    let end = match parsetree_viewer::process_braces_attr(&case.pc_rhs) {
+        Some(attr) => arena.loc_end(attr.0.loc).cnum,
+        None => arena.loc_end(case.pc_rhs.pexp_loc).cnum,
+    };
+    PosRange { start, end }
+}
+
+/// Print match cases with surrounding braces.
+/// Returns the full `{ cases }` block with proper formatting.
+/// This matches OCaml's print_cases which returns a breakable_group with force_break.
+fn print_cases_with_braces(
+    state: &PrinterState,
+    cases: &[Case],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let cases_doc = print_cases(state, cases, cmt_tbl, arena);
+    Doc::breakable_group(
+        Doc::concat(vec![
+            Doc::text("{"),
+            Doc::concat(vec![
+                Doc::line(), // Line break after { (like OCaml's Doc.line)
+                cases_doc,
+            ]),
+            Doc::line(), // Line break before }
+            Doc::text("}"),
+        ]),
+        true, // force_break
+    )
+}
+
 /// Print match cases.
+/// This is similar to OCaml's print_list but specialized for cases.
 fn print_cases(
     state: &PrinterState,
     cases: &[Case],
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let cases_doc: Vec<Doc> = cases
-        .iter()
-        .map(|case| print_case(state, case, cmt_tbl, arena))
-        .collect();
-    Doc::concat(cases_doc)
+    if cases.is_empty() {
+        return Doc::nil();
+    }
+
+    let mut result = Vec::new();
+    let mut prev_end_line = 0i32;
+
+    for (i, case) in cases.iter().enumerate() {
+        let pos_range = get_case_pos_range(case, arena);
+        let case_start_line = arena.loc_start(case.pc_lhs.ppat_loc).line as i32;
+
+        // Add separator between cases (not before first case)
+        if i > 0 {
+            // Check if there was a blank line in the source
+            let sep = if case_start_line - prev_end_line > 1 {
+                // More than 1 line between: preserve blank line
+                Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
+            } else {
+                Doc::hard_line()
+            };
+            result.push(sep);
+        }
+
+        // Print the case (without leading hard_line, that's handled above)
+        let doc = print_case_content(state, case, cmt_tbl, arena);
+
+        // Print leading and trailing comments for this case
+        let leading = cmt_tbl.remove_leading_comments_by_pos(pos_range);
+        let trailing = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
+        let full_loc = crate::location::Location {
+            loc_start: arena.loc_start(case.pc_lhs.ppat_loc).clone(),
+            loc_end: arena.loc_end(case.pc_rhs.pexp_loc).clone(),
+            loc_ghost: false,
+        };
+        let doc_with_leading = print_leading_comments_with(doc, leading, &full_loc);
+        let doc_with_comments = print_trailing_comments_with(doc_with_leading, trailing, &full_loc);
+
+        result.push(doc_with_comments);
+
+        // Track end line for next iteration
+        prev_end_line = arena.loc_end(case.pc_rhs.pexp_loc).line as i32;
+    }
+
+    Doc::concat(result)
 }
 
-/// Print a single match case.
-fn print_case(
+/// Print a single match case (content only, without leading hard_line).
+/// The leading line breaks are handled by print_cases.
+fn print_case_content(
     state: &PrinterState,
     case: &Case,
     cmt_tbl: &mut CommentTable,
@@ -4845,10 +4944,9 @@ fn print_case(
         ])),
     ]);
 
-    Doc::concat(vec![
-        Doc::hard_line(),
-        Doc::group(Doc::concat(vec![Doc::text("| "), content])),
-    ])
+    // Return just the grouped case content, without leading hard_line
+    // (line breaks between cases are handled by print_cases)
+    Doc::group(Doc::concat(vec![Doc::text("| "), content]))
 }
 
 // ============================================================================
