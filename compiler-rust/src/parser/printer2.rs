@@ -2358,8 +2358,12 @@ fn print_if_chain(
 struct BlockRow {
     /// Position range for comment lookup - must match what the walker created
     pos_range: PosRange,
+    /// Start line of the row (or first leading comment if present)
     start_line: usize,
+    /// End line of the row
     end_line: usize,
+    /// The first leading comment's start line, if any (captured before comments are consumed)
+    first_leading_comment_line: Option<usize>,
     doc: Doc,
 }
 
@@ -2412,11 +2416,14 @@ fn print_block_rows(rows: &[BlockRow], cmt_tbl: &mut CommentTable, arena: &Parse
     // Remaining rows
     for row in &rows[1..] {
         // Determine separator based on line distance
-        // Check for leading comment's line if present
-        let start_line = match cmt_tbl.get_first_leading_comment_by_pos(row.pos_range) {
-            Some(comment) => comment.loc().loc_start.line as usize,
-            None => row.start_line,
-        };
+        // Use the pre-captured first leading comment line if available (comments may have been consumed)
+        // Otherwise fall back to looking up in the table (if still present) or the row's start line
+        let start_line = row.first_leading_comment_line.unwrap_or_else(|| {
+            match cmt_tbl.get_first_leading_comment_by_pos(row.pos_range) {
+                Some(comment) => comment.loc().loc_start.line as usize,
+                None => row.start_line,
+            }
+        });
 
         let sep = if start_line.saturating_sub(prev_end_line) > 1 {
             Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
@@ -2491,6 +2498,16 @@ fn collect_block_rows_inner(
 ) {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_letmodule(name, mod_expr, body) => {
+            // Use combined location (expr start to mod_expr end) to match walker
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(mod_expr.pmod_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            // Capture first leading comment line BEFORE building doc (which consumes comments)
+            let first_leading_comment_line = cmt_tbl
+                .get_first_leading_comment_by_pos(pos_range)
+                .map(|c| c.loc().loc_start.line as usize);
+
             // Print module name with comments
             let name_doc = {
                 let doc = Doc::text(&name.txt);
@@ -2519,38 +2536,50 @@ fn collect_block_rows_inner(
                 print_mod_expr(state, mod_expr_to_print, cmt_tbl, arena),
             ]);
 
-            // Use combined location (expr start to mod_expr end) to match walker
-            let start = arena.loc_start(expr.pexp_loc);
-            let end = arena.loc_end(mod_expr.pmod_loc);
-            let pos_range = PosRange { start: start.cnum, end: end.cnum };
-
             rows.push(BlockRow {
                 pos_range,
                 start_line: start.line as usize,
                 end_line: end.line as usize,
+                first_leading_comment_line,
                 doc: let_module_doc,
             });
             collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
         }
 
         ExpressionDesc::Pexp_letexception(ext_constr, body) => {
-            let let_exception_doc = print_exception_def(state, ext_constr, cmt_tbl, arena);
-
             // Use combined location (expr start to ext_constr end) to match walker
-            let start = arena.loc_start(expr.pexp_loc);
+            let base_start = arena.loc_start(expr.pexp_loc);
             let end = arena.loc_end(ext_constr.pext_loc);
-            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+            let pos_range = PosRange { start: base_start.cnum, end: end.cnum };
+
+            // Capture first leading comment line BEFORE building doc (which consumes comments)
+            let first_leading_comment_line = cmt_tbl
+                .get_first_leading_comment_by_pos(pos_range)
+                .map(|c| c.loc().loc_start.line as usize);
+
+            let let_exception_doc = print_exception_def(state, ext_constr, cmt_tbl, arena);
 
             rows.push(BlockRow {
                 pos_range,
-                start_line: start.line as usize,
+                start_line: base_start.line as usize,
                 end_line: end.line as usize,
+                first_leading_comment_line,
                 doc: let_exception_doc,
             });
             collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
         }
 
         ExpressionDesc::Pexp_open(override_flag, lid, body) => {
+            // Use combined location (expr start to lid end) to match walker
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(lid.loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            // Capture first leading comment line BEFORE building doc (which consumes comments)
+            let first_leading_comment_line = cmt_tbl
+                .get_first_leading_comment_by_pos(pos_range)
+                .map(|c| c.loc().loc_start.line as usize);
+
             let open_doc = Doc::concat(vec![
                 Doc::text("open"),
                 match override_flag {
@@ -2561,21 +2590,27 @@ fn collect_block_rows_inner(
                 print_longident_location(lid, cmt_tbl, arena),
             ]);
 
-            // Use combined location (expr start to lid end) to match walker
-            let start = arena.loc_start(expr.pexp_loc);
-            let end = arena.loc_end(lid.loc);
-            let pos_range = PosRange { start: start.cnum, end: end.cnum };
-
             rows.push(BlockRow {
                 pos_range,
                 start_line: start.line as usize,
                 end_line: end.line as usize,
+                first_leading_comment_line,
                 doc: open_doc,
             });
             collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
         }
 
         ExpressionDesc::Pexp_sequence(e1, e2) => {
+            // Use e1's location directly
+            let start = arena.loc_start(e1.pexp_loc);
+            let end = arena.loc_end(e1.pexp_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            // Capture first leading comment line BEFORE building doc (which consumes comments)
+            let first_leading_comment_line = cmt_tbl
+                .get_first_leading_comment_by_pos(pos_range)
+                .map(|c| c.loc().loc_start.line as usize);
+
             let expr_doc = {
                 let doc = print_expression(state, e1, cmt_tbl, arena);
                 match parens::expr(arena, e1) {
@@ -2585,37 +2620,52 @@ fn collect_block_rows_inner(
                 }
             };
 
-            // Use e1's location directly
-            let start = arena.loc_start(e1.pexp_loc);
-            let end = arena.loc_end(e1.pexp_loc);
-            let pos_range = PosRange { start: start.cnum, end: end.cnum };
-
             rows.push(BlockRow {
                 pos_range,
                 start_line: start.line as usize,
                 end_line: end.line as usize,
+                first_leading_comment_line,
                 doc: expr_doc,
             });
             collect_block_rows_inner(state, e2, rows, cmt_tbl, arena);
         }
 
         ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            // Use first binding's location for comment lookup
-            let (pos_range, start_line, end_line) = if let (Some(first), Some(last)) = (bindings.first(), bindings.last()) {
-                let start = arena.loc_start(first.pvb_loc);
+            // Use first binding's location for comment lookup, matching OCaml's logic
+            let (pos_range, start_line, end_line, first_leading_comment_line) = if let (Some(first), Some(last)) = (bindings.first(), bindings.last()) {
+                // Get the binding location matching what the walker uses
+                let binding_loc = if arena.loc_ghost(first.pvb_pat.ppat_loc) {
+                    first.pvb_expr.pexp_loc
+                } else {
+                    first.pvb_loc
+                };
+                let base_start = arena.loc_start(binding_loc);
                 let end = arena.loc_end(last.pvb_loc);
+                let pos_range = PosRange { start: base_start.cnum, end: end.cnum };
+
+                // Capture first leading comment line BEFORE building doc (which consumes comments)
+                let first_leading_comment_line = cmt_tbl
+                    .get_first_leading_comment_by_pos(pos_range)
+                    .map(|c| c.loc().loc_start.line as usize);
+
                 (
-                    PosRange { start: start.cnum, end: end.cnum },
-                    start.line as usize,
+                    pos_range,
+                    base_start.line as usize,
                     end.line as usize,
+                    first_leading_comment_line,
                 )
             } else {
                 let start = arena.loc_start(expr.pexp_loc);
                 let end = arena.loc_end(expr.pexp_loc);
+                let pos_range = PosRange { start: start.cnum, end: end.cnum };
+                let first_leading_comment_line = cmt_tbl
+                    .get_first_leading_comment_by_pos(pos_range)
+                    .map(|c| c.loc().loc_start.line as usize);
                 (
-                    PosRange { start: start.cnum, end: end.cnum },
+                    pos_range,
                     start.line as usize,
                     end.line as usize,
+                    first_leading_comment_line,
                 )
             };
 
@@ -2630,6 +2680,7 @@ fn collect_block_rows_inner(
                 pos_range,
                 start_line,
                 end_line,
+                first_leading_comment_line,
                 doc: let_doc,
             });
 
@@ -2642,6 +2693,15 @@ fn collect_block_rows_inner(
 
         _ => {
             // Terminal expression
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(expr.pexp_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            // Capture first leading comment line BEFORE building doc (which consumes comments)
+            let first_leading_comment_line = cmt_tbl
+                .get_first_leading_comment_by_pos(pos_range)
+                .map(|c| c.loc().loc_start.line as usize);
+
             let expr_doc = {
                 let doc = print_expression(state, expr, cmt_tbl, arena);
                 match parens::expr(arena, expr) {
@@ -2651,14 +2711,11 @@ fn collect_block_rows_inner(
                 }
             };
 
-            let start = arena.loc_start(expr.pexp_loc);
-            let end = arena.loc_end(expr.pexp_loc);
-            let pos_range = PosRange { start: start.cnum, end: end.cnum };
-
             rows.push(BlockRow {
                 pos_range,
                 start_line: start.line as usize,
                 end_line: end.line as usize,
+                first_leading_comment_line,
                 doc: expr_doc,
             });
         }
