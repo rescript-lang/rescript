@@ -5761,7 +5761,8 @@ fn print_constructor_declaration(
         None => Doc::nil(),
     };
 
-    Doc::concat(vec![attrs_doc, name_doc, args_doc, res_doc])
+    // Wrap in group so constructor can be flat even when outer group breaks
+    Doc::group(Doc::concat(vec![attrs_doc, name_doc, args_doc, res_doc]))
 }
 
 /// Print record declaration.
