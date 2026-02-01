@@ -1,10 +1,11 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 252/506 tests passing (49%)
-**Printer Status:** 133/187 tests passing (71%)
+**Overall Status:** 253/506 tests passing (50%)
+**Printer Status:** 134/187 tests passing (71%)
 
 ### Recent Progress
+- Fixed type constraints in with clauses (withConstraints.res): add ptype_cstrs printing
 - Fixed empty signature comment handling (signature.res): attach to mod_type loc, not LocIdx::none()
 - Fixed functor module type printing: parens around functor in Pmty_with, empty signature formatting
 - Fixed binary expression line breaking with `should_inline_rhs_binary_expr` (case.res now passes)
@@ -130,10 +131,10 @@ Many of these may be fixed by Phase 1 comment fixes.
 - [ ] `printer/modExpr/include.res` - Include expression printing
 - [ ] `printer/modExpr/structure.res` - Module structure printing
 
-### Module Types (1 failing)
+### Module Types (0 failing - COMPLETE!)
 - [x] `printer/modType/functor.res` - Functor type printing
 - [x] `printer/modType/signature.res` - Signature printing
-- [ ] `printer/modType/withConstraints.res` - With constraints printing
+- [x] `printer/modType/withConstraints.res` - With constraints printing
 
 ---
 
