@@ -1,10 +1,13 @@
 # Printing Parity TODO
 
-**Last Updated:** 2026-02-01
-**Overall Status:** 255/506 tests passing (50%)
-**Printer Status:** 137/187 tests passing (73%)
+**Last Updated:** 2026-02-02
+**Overall Status:** 257/506 tests passing (50%)
+**Printer Status:** 138/187 tests passing (73%)
 
 ### Recent Progress
+- Fixed block expression blank line handling (blockExpr.res now passes)
+  - For Pexp_let and Pexp_letexception: extend start_line to leading comment
+  - Match OCaml's location extension behavior for blank line calculation
 - Fixed Pexp_field comment handling: added print_comments for field name
 - Fixed BS object row comments: added cmt_loc wrapper for leading/trailing comments
 - Fixed record spread comment placement: /* before */ now appears before ...spread
@@ -38,13 +41,10 @@
 - Fixed exception rebind longident comment handling
 
 ### Known Issues
-- **blockExpr.res**: 6 remaining differences. After deep investigation, the blank line issue
-  appears to be related to how OCaml's document rendering works, not the document generation.
-  Both Rust and OCaml generate similar Doc structures, but the rendering differs for certain
-  cases. The specific pattern is: after `open X` statement when followed by a single-line
-  comment, OCaml sometimes adds a blank line before the comment. This happens when the
-  expression body is an identifier (like `foo`) but NOT when it's a function call (like `foo()`).
-  This might be due to document `break_parent` propagation or group breaking logic.
+- **blockExpr.res**: Fixed! The issue was that OCaml extends row locations to include leading
+  comments for Pexp_let and Pexp_letexception. This affects blank line calculation because
+  when the extended location is used for comment lookup, the comment isn't found (different key),
+  so start_pos falls back to the extended location's start (the comment's line).
 
 - **Binary expression line breaking**: Fixed! Implemented `should_inline_rhs_binary_expr` which
   determines if the RHS of a binary expression can be on a new line. For example, switch
@@ -69,7 +69,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [x] `printer/comments/modExpr.res` - Module expression comments
 - [x] `printer/comments/structureItem.res` - Structure item comments
-- [ ] `printer/comments/blockExpr.res` - Block expression comments
+- [x] `printer/comments/blockExpr.res` - Block expression comments
 - [ ] `printer/comments/expr.res` - General expression comments
 - [ ] `printer/comments/jsx.res` - JSX element comments
 - [ ] `printer/comments/binaryExpr.res` - Binary expression comments
