@@ -6274,6 +6274,7 @@ fn print_label_declaration(
         Doc::nil()
     };
     let name_doc = print_ident_like(&field.pld_name.txt, false, false);
+    let name_doc = print_comments(name_doc, cmt_tbl, field.pld_name.loc, arena);
     let optional_doc = if field.pld_optional {
         Doc::text("?")
     } else {
