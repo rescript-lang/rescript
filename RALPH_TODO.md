@@ -1,10 +1,14 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 239/506 tests passing (47%)
-**Printer Status:** 122/187 tests passing (65%)
+**Overall Status:** 247/506 tests passing (48%)
+**Printer Status:** 129/187 tests passing (68%)
 
 ### Recent Progress
+- Fixed doc comment and attribute printing in value bindings (docComments.res)
+- Fixed constructor declarations and record field comment handling (typeDefinition.res)
+- Fixed recursive module declarations/bindings comment handling (signatureItem.resi)
+- Fixed type declarations comment handling with print_listi (structureItem.res)
 - Fixed setfield (record field assignment) comment handling
 - Fixed record field name comment handling in label declarations
 - Fixed module declaration name comment handling
@@ -35,19 +39,19 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/comments/namedArgs.res` - Named argument comments
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [x] `printer/comments/modExpr.res` - Module expression comments
-- [ ] `printer/comments/structureItem.res` - Structure item comments
+- [x] `printer/comments/structureItem.res` - Structure item comments
 - [ ] `printer/comments/blockExpr.res` - Block expression comments
 - [ ] `printer/comments/expr.res` - General expression comments
 - [ ] `printer/comments/jsx.res` - JSX element comments
 - [ ] `printer/comments/binaryExpr.res` - Binary expression comments
 - [ ] `printer/comments/case.res` - Match case comments
 - [ ] `printer/comments/array.res` - Array literal comments
-- [ ] `printer/comments/docComments.res` - Doc comment handling
+- [x] `printer/comments/docComments.res` - Doc comment handling
 - [ ] `printer/comments/typexpr.res` - Type expression comments
 - [ ] `printer/comments/modType.res` - Module type comments
-- [ ] `printer/comments/signatureItem.resi` - Signature item comments
+- [x] `printer/comments/signatureItem.resi` - Signature item comments
 - [ ] `printer/comments/valueBindingSugar.res` - Value binding sugar comments
-- [ ] `printer/comments/typeDefinition.res` - Type definition comments
+- [x] `printer/comments/typeDefinition.res` - Type definition comments
 - [x] `printer/comments/extensionConstructor.res` - Extension constructor comments
 
 ---
