@@ -5143,7 +5143,10 @@ fn print_type_declaration_with_lid(
         None => Doc::nil(),
     };
 
-    Doc::concat(vec![name_doc, params_doc, manifest_doc])
+    // Print type constraints (constraint 'a = int)
+    let constraints_doc = print_type_constraints(state, &decl.ptype_cstrs, cmt_tbl, arena);
+
+    Doc::concat(vec![name_doc, params_doc, manifest_doc, constraints_doc])
 }
 
 /// Print extension at module level.
