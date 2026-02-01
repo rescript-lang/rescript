@@ -5478,50 +5478,31 @@ fn print_attribute(
     arena: &ParseArena,
 ) -> Doc {
     let (name, payload) = attr;
+
+    // Handle doc comments specially
+    if name.txt == "res.doc" {
+        if let Payload::PStr(items) = payload {
+            if let [single] = &items[..] {
+                if let StructureItemDesc::Pstr_eval(expr, _) = &single.pstr_desc {
+                    if let ExpressionDesc::Pexp_constant(Constant::String(txt, _)) = &expr.pexp_desc {
+                        return Doc::concat(vec![
+                            Doc::text(if standalone { "/***" } else { "/**" }),
+                            Doc::text(txt.clone()),
+                            Doc::text("*/"),
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+
     let prefix = if standalone { "@@" } else { "@" };
     let attr_name = Doc::text(format!("{}{}", prefix, name.txt));
 
-    let payload_doc = match payload {
-        Payload::PStr(items) if items.is_empty() => Doc::nil(),
-        Payload::PStr(items) => {
-            // Print structure items - for simple cases, try to extract the expression
-            if items.len() == 1 {
-                if let StructureItemDesc::Pstr_eval(expr, _) = &items[0].pstr_desc {
-                    return Doc::concat(vec![
-                        attr_name,
-                        Doc::text("("),
-                        print_expression_with_comments(state, expr, cmt_tbl, arena),
-                        Doc::text(")"),
-                    ]);
-                }
-            }
-            // Fall back to a simple representation for complex payloads
-            Doc::concat(vec![Doc::text("("), Doc::text("..."), Doc::text(")")])
-        }
-        Payload::PTyp(typ) => {
-            Doc::concat(vec![
-                Doc::text("("),
-                print_typ_expr(state, typ, cmt_tbl, arena),
-                Doc::text(")"),
-            ])
-        }
-        Payload::PSig(_) => Doc::text("(: ...)"),
-        Payload::PPat(pat, guard) => {
-            let pat_doc = print_pattern(state, pat, cmt_tbl, arena);
-            match guard {
-                Some(expr) => Doc::concat(vec![
-                    Doc::text("(? "),
-                    pat_doc,
-                    Doc::text(" when "),
-                    print_expression_with_comments(state, expr, cmt_tbl, arena),
-                    Doc::text(")"),
-                ]),
-                None => Doc::concat(vec![Doc::text("(? "), pat_doc, Doc::text(")")]),
-            }
-        }
-    };
-
-    Doc::concat(vec![attr_name, payload_doc])
+    Doc::group(Doc::concat(vec![
+        attr_name,
+        print_payload(state, payload, cmt_tbl, arena),
+    ]))
 }
 
 // ============================================================================
@@ -6202,30 +6183,16 @@ fn print_constructor_declaration(
     let is_spread = constr.pcd_name.txt == "...";
     let name_doc = Doc::text(&constr.pcd_name.txt);
 
-    let args_doc = match &constr.pcd_args {
-        ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
-        ConstructorArguments::Pcstr_tuple(types) if is_spread && types.len() == 1 => {
-            // Spread constructors print the type directly without parens: ...aa
-            print_typ_expr(state, &types[0], cmt_tbl, arena)
+    let args_doc = if is_spread {
+        match &constr.pcd_args {
+            ConstructorArguments::Pcstr_tuple(types) if types.len() == 1 => {
+                // Spread constructors print the type directly without parens: ...aa
+                print_typ_expr(state, &types[0], cmt_tbl, arena)
+            }
+            _ => print_constructor_arguments(state, &constr.pcd_args, true, true, cmt_tbl, arena),
         }
-        ConstructorArguments::Pcstr_tuple(types) => {
-            let type_docs: Vec<Doc> = types
-                .iter()
-                .map(|t| print_typ_expr(state, t, cmt_tbl, arena))
-                .collect();
-            Doc::concat(vec![
-                Doc::text("("),
-                Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), type_docs),
-                Doc::text(")"),
-            ])
-        }
-        ConstructorArguments::Pcstr_record(fields) => {
-            Doc::concat(vec![
-                Doc::text("("),
-                print_record_declaration(state, fields, None, cmt_tbl, arena),
-                Doc::text(")"),
-            ])
-        }
+    } else {
+        print_constructor_arguments(state, &constr.pcd_args, false, true, cmt_tbl, arena)
     };
 
     let res_doc = match &constr.pcd_res {
@@ -6321,6 +6288,63 @@ fn print_label_declaration(
         Doc::text(": "),
         typ_doc,
     ]))
+}
+
+/// Print constructor arguments (tuple or record).
+/// Matches OCaml's print_constructor_arguments.
+fn print_constructor_arguments(
+    state: &PrinterState,
+    args: &ConstructorArguments,
+    is_dot_dot_dot: bool,
+    indent: bool,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    match args {
+        ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
+        ConstructorArguments::Pcstr_tuple(types) => {
+            let type_docs: Vec<Doc> = types
+                .iter()
+                .map(|t| print_typ_expr(state, t, cmt_tbl, arena))
+                .collect();
+            let inner = Doc::concat(vec![
+                if is_dot_dot_dot { Doc::nil() } else { Doc::lparen() },
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), type_docs),
+                ])),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+                if is_dot_dot_dot { Doc::nil() } else { Doc::rparen() },
+            ]);
+            let result = Doc::group(if indent { Doc::indent(inner) } else { inner });
+            result
+        }
+        ConstructorArguments::Pcstr_record(fields) => {
+            // Manually inline the printRecordDeclaration, gives better layout
+            let field_docs: Vec<Doc> = fields
+                .iter()
+                .map(|ld| {
+                    let doc = print_label_declaration(state, ld, cmt_tbl, arena);
+                    print_comments(doc, cmt_tbl, ld.pld_loc, arena)
+                })
+                .collect();
+            let inner = Doc::concat(vec![
+                Doc::lparen(),
+                Doc::lbrace(),
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), field_docs),
+                ])),
+                Doc::trailing_comma(),
+                Doc::soft_line(),
+                Doc::rbrace(),
+                Doc::rparen(),
+            ]);
+            let result = Doc::group(if indent { Doc::indent(inner) } else { inner });
+            result
+        }
+    }
 }
 
 /// Print value description (external or let declaration in signatures).
@@ -6470,32 +6494,14 @@ fn print_extension_constructor(
 
     let kind_doc = match &ext_constr.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
-            let args_doc = match args {
-                ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
-                ConstructorArguments::Pcstr_tuple(types) => {
-                    let type_docs: Vec<Doc> = types
-                        .iter()
-                        .map(|t| print_typ_expr(state, t, cmt_tbl, arena))
-                        .collect();
-                    Doc::concat(vec![
-                        Doc::text("("),
-                        Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), type_docs),
-                        Doc::text(")"),
-                    ])
-                }
-                ConstructorArguments::Pcstr_record(fields) => {
-                    Doc::concat(vec![
-                        Doc::text("("),
-                        print_record_declaration(state, fields, None, cmt_tbl, arena),
-                        Doc::text(")"),
-                    ])
-                }
-            };
-            let res_doc = match res {
+            let gadt_doc = match res {
                 Some(typ) => Doc::concat(vec![Doc::text(": "), print_typ_expr(state, typ, cmt_tbl, arena)]),
                 None => Doc::nil(),
             };
-            Doc::concat(vec![args_doc, res_doc])
+            Doc::concat(vec![
+                print_constructor_arguments(state, args, false, false, cmt_tbl, arena),
+                gadt_doc,
+            ])
         }
         ExtensionConstructorKind::Pext_rebind(lid) => {
             Doc::indent(Doc::concat(vec![
@@ -6524,32 +6530,14 @@ fn print_exception_def(
 
     let kind_doc = match &ext_constr.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
-            let args_doc = match args {
-                ConstructorArguments::Pcstr_tuple(types) if types.is_empty() => Doc::nil(),
-                ConstructorArguments::Pcstr_tuple(types) => {
-                    let type_docs: Vec<Doc> = types
-                        .iter()
-                        .map(|t| print_typ_expr(state, t, cmt_tbl, arena))
-                        .collect();
-                    Doc::concat(vec![
-                        Doc::text("("),
-                        Doc::join(Doc::concat(vec![Doc::text(","), Doc::space()]), type_docs),
-                        Doc::text(")"),
-                    ])
-                }
-                ConstructorArguments::Pcstr_record(fields) => {
-                    Doc::concat(vec![
-                        Doc::text("("),
-                        print_record_declaration(state, fields, None, cmt_tbl, arena),
-                        Doc::text(")"),
-                    ])
-                }
-            };
-            let res_doc = match res {
+            let gadt_doc = match res {
                 Some(typ) => Doc::concat(vec![Doc::text(": "), print_typ_expr(state, typ, cmt_tbl, arena)]),
                 None => Doc::nil(),
             };
-            Doc::concat(vec![args_doc, res_doc])
+            Doc::concat(vec![
+                print_constructor_arguments(state, args, false, false, cmt_tbl, arena),
+                gadt_doc,
+            ])
         }
         ExtensionConstructorKind::Pext_rebind(lid) => {
             Doc::indent(Doc::concat(vec![

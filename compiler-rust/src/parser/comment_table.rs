@@ -2401,8 +2401,32 @@ fn walk_mod_type(mt: &ModuleType, t: &mut CommentTable, comments: Vec<Comment>, 
     }
 }
 
-fn walk_attribute(_attr: &Attribute, _t: &mut CommentTable, _comments: Vec<Comment>, _arena: &mut ParseArena) {
-    // Attributes don't have much structure to walk
+fn walk_attribute(attr: &Attribute, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
+    let (name, payload) = attr;
+    let (leading, trailing) = partition_leading_trailing(comments, name.loc, arena);
+    t.attach_leading(name.loc, leading, arena);
+
+    let (after_name, rest) = partition_adjacent_trailing(name.loc, trailing, arena);
+    t.attach_trailing(name.loc, after_name, arena);
+
+    // Walk the payload
+    match payload {
+        PStr(items) => {
+            walk_structure(items, t, rest, arena);
+        }
+        PSig(items) => {
+            walk_signature(items, t, rest, arena);
+        }
+        PTyp(typ) => {
+            walk_core_type(typ, t, rest, arena);
+        }
+        PPat(pat, guard) => {
+            walk_pattern(pat, t, rest.clone(), arena);
+            if let Some(guard_expr) = guard {
+                walk_expression(guard_expr, t, Vec::new(), arena);
+            }
+        }
+    }
 }
 
 fn walk_extension(ext: &Extension, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
