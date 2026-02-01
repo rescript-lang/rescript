@@ -490,6 +490,14 @@ fn print_comments_by_pos(doc: Doc, cmt_tbl: &mut CommentTable, pos_range: PosRan
     print_trailing_comments_with(doc_with_leading, trailing_comments, full_loc)
 }
 
+/// Print a node with only its leading comments.
+/// Used for if-chains where we want to attach "else if" leading comments.
+fn print_leading_comments(doc: Doc, cmt_tbl: &mut CommentTable, loc: LocIdx, arena: &ParseArena) -> Doc {
+    let full_loc = arena.to_location(loc);
+    let leading_comments = cmt_tbl.remove_leading_comments_by_loc(loc, arena);
+    print_leading_comments_with(doc, leading_comments, &full_loc)
+}
+
 /// Get the first leading comment for a location, if any.
 /// Uses position-based keys like OCaml's Location.t.
 pub fn get_first_leading_comment<'a>(cmt_tbl: &'a CommentTable, loc: LocIdx, arena: &ParseArena) -> Option<&'a Comment> {
@@ -2293,7 +2301,7 @@ fn print_if_chain(
     let if_docs: Vec<Doc> = ifs
         .iter()
         .enumerate()
-        .map(|(i, (_outer_loc, condition_kind, then_expr))| {
+        .map(|(i, (outer_loc, condition_kind, then_expr))| {
             let if_txt = if i > 0 {
                 Doc::text("else if ")
             } else {
@@ -2349,8 +2357,9 @@ fn print_if_chain(
                 }
             };
 
-            // TODO: Print leading comments for outer_loc
-            doc
+            // Print leading comments for outer_loc
+            // This handles comments that appear between `}` and `else if`
+            print_leading_comments(doc, cmt_tbl, **outer_loc, arena)
         })
         .collect();
 
