@@ -3180,11 +3180,17 @@ pub fn print_pattern(
             } else {
                 pat_doc
             };
-            Doc::concat(vec![pat_doc, Doc::text(" as "), Doc::text(&alias.txt)])
+            // Wrap alias with print_comments for its location (like OCaml reference)
+            let alias_doc = print_ident_like(&alias.txt, false, false);
+            let alias_doc = print_comments(alias_doc, cmt_tbl, alias.loc, arena);
+            Doc::concat(vec![pat_doc, Doc::text(" as "), alias_doc])
         }
         // module(M)
         PatternDesc::Ppat_unpack(name) => {
-            Doc::concat(vec![Doc::text("module("), Doc::text(&name.txt), Doc::text(")")])
+            // Wrap name with print_comments for its location (like OCaml reference)
+            let name_doc = Doc::text(&name.txt);
+            let name_doc = print_comments(name_doc, cmt_tbl, name.loc, arena);
+            Doc::concat(vec![Doc::text("module("), name_doc, Doc::text(")")])
         }
         // exception pat
         PatternDesc::Ppat_exception(pat) => {
@@ -3232,12 +3238,15 @@ pub fn print_pattern(
     };
 
     // Handle attributes
-    if pat.ppat_attributes.is_empty() {
+    let doc = if pat.ppat_attributes.is_empty() {
         pattern_without_attrs
     } else {
         let attrs = print_attributes(state, &pat.ppat_attributes, cmt_tbl, arena);
-        Doc::concat(vec![attrs, pattern_without_attrs])
-    }
+        Doc::group(Doc::concat(vec![attrs, pattern_without_attrs]))
+    };
+
+    // Wrap with print_comments to attach leading/trailing comments
+    print_comments(doc, cmt_tbl, pat.ppat_loc, arena)
 }
 
 /// Check if a pattern is "huggable" (can be printed without line breaks).
@@ -3355,6 +3364,8 @@ fn print_record_pattern(
             .iter()
             .map(|field| {
                 let label = print_lident(arena, arena.get_longident(field.lid.txt));
+                // Wrap label with print_comments for its location (like OCaml reference)
+                let label = print_comments(label, cmt_tbl, field.lid.loc, arena);
                 // Check for punning
                 if is_punned_pattern_field(arena, field) {
                     if field.opt {
@@ -3370,11 +3381,12 @@ fn print_record_pattern(
                     } else {
                         pat_doc
                     };
-                    if field.opt {
-                        Doc::concat(vec![label, Doc::text(": "), Doc::text("?"), pat_doc])
+                    let rhs_doc = if field.opt {
+                        Doc::concat(vec![Doc::text("?"), pat_doc])
                     } else {
-                        Doc::concat(vec![label, Doc::text(": "), pat_doc])
-                    }
+                        pat_doc
+                    };
+                    Doc::group(Doc::concat(vec![label, Doc::text(": "), rhs_doc]))
                 }
             })
             .collect(),
@@ -6100,16 +6112,41 @@ fn print_module_binding(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &binding.pmb_attributes, cmt_tbl, arena);
-    let name_doc = Doc::text(&binding.pmb_name.txt);
-    let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl, arena);
 
-    Doc::concat(vec![
+    // Wrap module name with print_comments for its location (like OCaml reference)
+    let name_doc = Doc::text(&binding.pmb_name.txt);
+    let name_doc = print_comments(name_doc, cmt_tbl, binding.pmb_name.loc, arena);
+
+    // Handle Pmod_constraint specially - print constraint before equals sign (like OCaml)
+    // module X: Int = Y  vs  module X = Y: Int
+    let (expr_doc, constraint_doc) = match &binding.pmb_expr.pmod_desc {
+        ModuleExprDesc::Pmod_constraint(mod_expr, mod_type)
+            if !parsetree_viewer::has_await_attribute(&binding.pmb_expr.pmod_attributes) =>
+        {
+            let expr_doc = print_mod_expr(state, mod_expr, cmt_tbl, arena);
+            let constraint_doc = Doc::concat(vec![
+                Doc::text(": "),
+                print_module_type(state, mod_type, cmt_tbl, arena),
+            ]);
+            (expr_doc, constraint_doc)
+        }
+        _ => {
+            let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl, arena);
+            (expr_doc, Doc::nil())
+        }
+    };
+
+    let doc = Doc::concat(vec![
         attrs_doc,
         Doc::text("module "),
         name_doc,
+        constraint_doc,
         Doc::text(" = "),
         expr_doc,
-    ])
+    ]);
+
+    // Wrap entire result with print_comments for binding location (like OCaml reference)
+    print_comments(doc, cmt_tbl, binding.pmb_loc, arena)
 }
 
 /// Print recursive module bindings.
@@ -6123,14 +6160,19 @@ fn print_rec_module_bindings(
         .iter()
         .enumerate()
         .map(|(i, binding)| {
+            let attrs_doc = print_attributes(state, &binding.pmb_attributes, cmt_tbl, arena);
             let prefix = if i == 0 {
                 Doc::text("module rec ")
             } else {
                 Doc::text("and ")
             };
+            // Wrap module name with print_comments for its location
             let name_doc = Doc::text(&binding.pmb_name.txt);
+            let name_doc = print_comments(name_doc, cmt_tbl, binding.pmb_name.loc, arena);
             let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl, arena);
-            Doc::concat(vec![prefix, name_doc, Doc::text(" = "), expr_doc])
+            let doc = Doc::concat(vec![attrs_doc, prefix, name_doc, Doc::text(" = "), expr_doc]);
+            // Wrap entire binding with print_comments for binding location
+            print_comments(doc, cmt_tbl, binding.pmb_loc, arena)
         })
         .collect();
     Doc::join(Doc::hard_line(), docs)
@@ -6144,7 +6186,9 @@ fn print_module_type_declaration(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &decl.pmtd_attributes, cmt_tbl, arena);
+    // Wrap module type name with print_comments for its location (like OCaml reference)
     let name_doc = Doc::text(&decl.pmtd_name.txt);
+    let name_doc = print_comments(name_doc, cmt_tbl, decl.pmtd_name.loc, arena);
     let typ_doc = match &decl.pmtd_type {
         Some(mty) => Doc::concat(vec![Doc::text(" = "), print_module_type(state, mty, cmt_tbl, arena)]),
         None => Doc::nil(),

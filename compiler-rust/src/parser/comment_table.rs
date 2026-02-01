@@ -407,9 +407,15 @@ impl<'a> Node<'a> {
             }
             Node::Pattern(p) => p.ppat_loc,
             Node::PatternRecordRow(li, p) => {
-                let start = arena.loc_start(li.loc);
-                let end = arena.loc_end(p.ppat_loc);
-                arena.from_location(&Location::from_positions(start.clone(), end.clone()))
+                // For punned patterns, li.loc and p.ppat_loc are the same
+                // Use li.loc directly to avoid creating a new LocIdx that won't match during printing
+                if li.loc == p.ppat_loc {
+                    li.loc
+                } else {
+                    let start = arena.loc_start(li.loc);
+                    let end = arena.loc_end(p.ppat_loc);
+                    arena.from_location(&Location::from_positions(start.clone(), end.clone()))
+                }
             }
             Node::RowField(rf) => match rf {
                 RowField::Rtag(tag, _attrs, _flag, _args) => tag.loc,
@@ -1744,9 +1750,10 @@ fn walk_pattern(pattern: &Pattern, t: &mut CommentTable, comments: Vec<Comment>,
         PatternDesc::Ppat_array(pats) if pats.is_empty() => {
             CommentTable::attach(&mut t.inside, pattern.ppat_loc, comments);
         }
-        PatternDesc::Ppat_construct(name, None)
-            if arena.is_lident(name.txt, "[]") =>
+        PatternDesc::Ppat_construct(name, _)
+            if arena.is_lident(name.txt, "()") || arena.is_lident(name.txt, "[]") =>
         {
+            // Unit and empty list get comments inside (like OCaml reference)
             CommentTable::attach(&mut t.inside, pattern.ppat_loc, comments);
         }
         PatternDesc::Ppat_construct(name, Some(_))
