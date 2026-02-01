@@ -406,6 +406,32 @@ pub fn is_unary_operator(arena: &crate::parse_arena::ParseArena, lid: &Longident
     }
 }
 
+/// Check if the RHS of a binary expression should be inlined (not put on a new line).
+/// This matches OCaml's should_inline_rhs_binary_expr from res_parsetree_viewer.ml:
+/// - Pexp_constant: inline
+/// - Pexp_let, Pexp_letmodule, Pexp_letexception: inline
+/// - Pexp_sequence, Pexp_open, Pexp_ifthenelse: inline
+/// - Pexp_for, Pexp_while, Pexp_try: inline
+/// - Pexp_array, Pexp_record: inline
+/// Note: Pexp_match (switch) is NOT in this list, so it will NOT inline
+pub fn should_inline_rhs_binary_expr(expr: &Expression) -> bool {
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_constant(_)
+            | ExpressionDesc::Pexp_let(_, _, _)
+            | ExpressionDesc::Pexp_letmodule(_, _, _)
+            | ExpressionDesc::Pexp_letexception(_, _)
+            | ExpressionDesc::Pexp_sequence(_, _)
+            | ExpressionDesc::Pexp_open(_, _, _)
+            | ExpressionDesc::Pexp_ifthenelse(_, _, _)
+            | ExpressionDesc::Pexp_for(_, _, _, _, _)
+            | ExpressionDesc::Pexp_while(_, _)
+            | ExpressionDesc::Pexp_try(_, _)
+            | ExpressionDesc::Pexp_array(_)
+            | ExpressionDesc::Pexp_record(_, _)
+    )
+}
+
 // ============================================================================
 // List Collection
 // ============================================================================

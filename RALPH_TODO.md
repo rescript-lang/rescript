@@ -2,9 +2,10 @@
 
 **Last Updated:** 2026-02-01
 **Overall Status:** 247/506 tests passing (48%)
-**Printer Status:** 129/187 tests passing (68%)
+**Printer Status:** 130/187 tests passing (69%)
 
 ### Recent Progress
+- Fixed binary expression line breaking with `should_inline_rhs_binary_expr` (case.res now passes)
 - Fixed binary expression comment attachment (e.g., `a /* c1 */ === /* c2 */ b` preserves comments)
 - Fixed case guard block expression comment handling (comments inside `if { ... }` guards)
 - Fixed case pattern comment handling (matching OCaml's List.concat [before; inside])
@@ -26,8 +27,18 @@
 - Fixed exception rebind longident comment handling
 
 ### Known Issues
-- blockExpr.res has 6 remaining differences related to blank line insertion before leading
-  single-line comments. OCaml adds blank lines in certain contexts that aren't fully understood yet.
+- **blockExpr.res**: 6 remaining differences. After deep investigation, the blank line issue
+  appears to be related to how OCaml's document rendering works, not the document generation.
+  Both Rust and OCaml generate similar Doc structures, but the rendering differs for certain
+  cases. The specific pattern is: after `open X` statement when followed by a single-line
+  comment, OCaml sometimes adds a blank line before the comment. This happens when the
+  expression body is an identifier (like `foo`) but NOT when it's a function call (like `foo()`).
+  This might be due to document `break_parent` propagation or group breaking logic.
+
+- **Binary expression line breaking**: Fixed! Implemented `should_inline_rhs_binary_expr` which
+  determines if the RHS of a binary expression can be on a new line. For example, switch
+  expressions (Pexp_match) are NOT inlined, so `heightGet(n) >= switch ...` now correctly
+  breaks after `>=`. (case.res now passes)
 
 ---
 
@@ -51,7 +62,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/comments/expr.res` - General expression comments
 - [ ] `printer/comments/jsx.res` - JSX element comments
 - [ ] `printer/comments/binaryExpr.res` - Binary expression comments
-- [ ] `printer/comments/case.res` - Match case comments
+- [x] `printer/comments/case.res` - Match case comments
 - [ ] `printer/comments/array.res` - Array literal comments
 - [x] `printer/comments/docComments.res` - Doc comment handling
 - [ ] `printer/comments/typexpr.res` - Type expression comments

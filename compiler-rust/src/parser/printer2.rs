@@ -2994,6 +2994,7 @@ fn binary_operand_needs_parens(arena: &ParseArena, is_lhs: bool, parent_op: &str
 }
 
 /// Print binary expression.
+/// This matches OCaml's print_binary_expression logic for spacing and indentation.
 fn print_binary_expression(
     state: &PrinterState,
     op: &str,
@@ -3022,30 +3023,53 @@ fn print_binary_expression(
         ParenKind::Nothing => rhs_doc,
     };
 
-    // Determine if the rhs should be on a new line
-    let should_indent = parens::flatten_operand_rhs(arena, op, rhs);
-
-    // Pipe-first (->) doesn't have spaces around it
+    // Pipe-first (->) has special handling
     let is_pipe_first = op == "->";
 
-    if should_indent {
-        // For pipe-first (->), use soft_line so there's no space in flat mode
-        let spacing_after = if is_pipe_first { Doc::soft_line() } else { Doc::line() };
+    if is_pipe_first {
+        // Pipe operator: no spaces, use soft_line for break opportunities
         Doc::group(Doc::concat(vec![
             lhs_doc,
-            if is_pipe_first { Doc::soft_line() } else { Doc::space() },
+            Doc::soft_line(),
             Doc::text(op),
-            Doc::group(Doc::indent(Doc::concat(vec![spacing_after, rhs_doc]))),
+            rhs_doc,
         ]))
     } else {
-        Doc::concat(vec![
-            lhs_doc,
-            if is_pipe_first { Doc::nil() } else { Doc::space() },
+        // Non-pipe binary operators
+        // Check if RHS should be inlined (always space) or can break (line that becomes space or newline)
+        let inline_rhs = parsetree_viewer::should_inline_rhs_binary_expr(rhs);
+
+        // Spacing after operator: space if inline, line (breakable) if not inline
+        let spacing_after = if inline_rhs {
+            Doc::space()
+        } else {
+            Doc::line()
+        };
+
+        // Build operator + rhs, potentially with indentation
+        let should_indent = parens::flatten_operand_rhs(arena, op, rhs)
+            || is_equality_operator(op);
+
+        let operator_with_rhs = Doc::concat(vec![
+            Doc::space(),
             Doc::text(op),
-            if is_pipe_first { Doc::nil() } else { Doc::space() },
+            spacing_after,
             rhs_doc,
-        ])
+        ]);
+
+        let right = if should_indent {
+            Doc::group(Doc::indent(operator_with_rhs))
+        } else {
+            operator_with_rhs
+        };
+
+        Doc::group(Doc::concat(vec![lhs_doc, right]))
     }
+}
+
+/// Check if operator is an equality operator (==, ===, !=, !==).
+fn is_equality_operator(op: &str) -> bool {
+    matches!(op, "==" | "===" | "!=" | "!==")
 }
 
 /// Print unary expression.
