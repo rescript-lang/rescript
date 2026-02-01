@@ -51,6 +51,11 @@
   expressions (Pexp_match) are NOT inlined, so `heightGet(n) >= switch ...` now correctly
   breaks after `>=`. (case.res now passes)
 
+- **expr.res - Newtype parameter comments**: When consecutive newtypes `(type t, m1, type s, m2)`
+  are combined into `(type t s, m1, m2)`, comments around later newtypes get reattached. The
+  comment walker needs to handle this case specially - `/* c-2 */` before `type s` becomes a
+  leading comment on `m2` in the combined output. This is complex comment walker logic.
+
 ---
 
 ## Phase 1: Comment Handling (Root Cause)
