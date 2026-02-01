@@ -4823,18 +4823,31 @@ fn print_module_type(
         }
 
         ModuleTypeDesc::Pmty_signature(signature) if signature.is_empty() => {
-            let should_break = arena.loc_start(mty.pmty_loc).line < arena.loc_end(mty.pmty_loc).line;
-            Doc::concat(vec![
-                print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
-                Doc::breakable_group(
-                    Doc::concat(vec![
-                        Doc::lbrace(),
-                        print_comments_inside(cmt_tbl, mty.pmty_loc, arena),
-                        Doc::rbrace(),
-                    ]),
-                    should_break,
-                ),
-            ])
+            let comments_inside = print_comments_inside(cmt_tbl, mty.pmty_loc, arena);
+            if !matches!(comments_inside, Doc::Nil) {
+                // Has comments inside
+                Doc::concat(vec![
+                    print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
+                    Doc::lbrace(),
+                    comments_inside,
+                    Doc::rbrace(),
+                ])
+            } else {
+                // No comments - use two soft_line elements
+                let should_break = arena.loc_start(mty.pmty_loc).line < arena.loc_end(mty.pmty_loc).line;
+                Doc::concat(vec![
+                    print_attributes(state, &mty.pmty_attributes, cmt_tbl, arena),
+                    Doc::breakable_group(
+                        Doc::concat(vec![
+                            Doc::lbrace(),
+                            Doc::soft_line(),
+                            Doc::soft_line(),
+                            Doc::rbrace(),
+                        ]),
+                        should_break,
+                    ),
+                ])
+            }
         }
 
         ModuleTypeDesc::Pmty_signature(signature) => {
@@ -4861,6 +4874,11 @@ fn print_module_type(
 
         ModuleTypeDesc::Pmty_with(mod_type, with_constraints) => {
             let base_doc = print_module_type(state, mod_type, cmt_tbl, arena);
+            let base_doc = if parens::mod_type_with_operand(mod_type) {
+                Doc::concat(vec![Doc::lparen(), base_doc, Doc::rparen()])
+            } else {
+                base_doc
+            };
             let constraints_doc = Doc::join(
                 Doc::line(),
                 with_constraints
@@ -4921,6 +4939,7 @@ fn print_module_type(
 }
 
 /// Print a functor module type.
+/// Matches OCaml's print_mod_type for Pmty_functor.
 fn print_module_type_functor(
     state: &PrinterState,
     mty: &ModuleType,
@@ -4930,34 +4949,57 @@ fn print_module_type_functor(
     let (parameters, return_mty) = mod_type_functor(mty);
 
     let parameters_doc = match parameters.as_slice() {
+        // Empty parameters list - shouldn't happen but handle gracefully
+        [] => Doc::nil(),
         // Unit parameter: `()`
-        [(lbl, None)] if lbl.txt == "*" => Doc::text("()"),
-        // Single unlabeled parameter without type: just the name
-        [(lbl, None)] => Doc::text(&lbl.txt),
-        // Multiple parameters
-        _ => {
+        [(attrs, lbl, None)] if lbl.txt == "*" => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
+            let doc = Doc::concat(vec![attrs_doc, Doc::text("()")]);
+            print_comments(doc, cmt_tbl, lbl.loc, arena)
+        }
+        // Single anonymous parameter with type: just print the type (no `_:`)
+        // Use the param_mty location for comments since it covers the whole param
+        [(attrs, _lbl, Some(param_mty))] if _lbl.txt == "_" => {
+            let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
+            let doc = Doc::concat(vec![
+                attrs_doc,
+                print_module_type(state, param_mty, cmt_tbl, arena),
+            ]);
+            // Comments are handled by print_module_type, just return doc
+            doc
+        }
+        // Multiple parameters - use parens
+        params => {
             Doc::group(Doc::concat(vec![
                 Doc::lparen(),
                 Doc::indent(Doc::concat(vec![
                     Doc::soft_line(),
                     Doc::join(
                         Doc::concat(vec![Doc::comma(), Doc::line()]),
-                        parameters
+                        params
                             .iter()
-                            .map(|(lbl, opt_mty)| {
-                                let lbl_doc = if lbl.txt == "*" {
-                                    Doc::text("()")
+                            .map(|(attrs, lbl, opt_mty)| {
+                                let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
+                                // For "_" label, don't print the label
+                                let lbl_doc = if lbl.txt == "_" {
+                                    Doc::nil()
+                                } else if lbl.txt == "*" {
+                                    print_comments(Doc::text("()"), cmt_tbl, lbl.loc, arena)
                                 } else {
-                                    Doc::text(&lbl.txt)
+                                    print_comments(Doc::text(&lbl.txt), cmt_tbl, lbl.loc, arena)
                                 };
-                                let lbl_doc = print_comments(lbl_doc, cmt_tbl, lbl.loc, arena);
                                 match opt_mty {
-                                    None => lbl_doc,
-                                    Some(mty) => Doc::group(Doc::concat(vec![
-                                        lbl_doc,
-                                        Doc::text(": "),
-                                        print_module_type(state, mty, cmt_tbl, arena),
-                                    ])),
+                                    None => Doc::concat(vec![attrs_doc, lbl_doc]),
+                                    Some(mty) => {
+                                        // For "_" label, don't add `: ` prefix
+                                        let sep = if lbl.txt == "_" { Doc::nil() } else { Doc::text(": ") };
+                                        Doc::concat(vec![
+                                            attrs_doc,
+                                            lbl_doc,
+                                            sep,
+                                            print_module_type(state, mty, cmt_tbl, arena),
+                                        ])
+                                    }
                                 }
                             })
                             .collect(),
@@ -4970,23 +5012,37 @@ fn print_module_type_functor(
         }
     };
 
+    let return_doc = {
+        let doc = print_module_type(state, return_mty, cmt_tbl, arena);
+        if parens::mod_type_functor_return(return_mty) {
+            add_parens(doc)
+        } else {
+            doc
+        }
+    };
+
     Doc::group(Doc::concat(vec![
         parameters_doc,
-        Doc::text(" => "),
-        print_module_type(state, return_mty, cmt_tbl, arena),
+        Doc::group(Doc::concat(vec![
+            Doc::text(" =>"),
+            Doc::line(),
+            return_doc,
+        ])),
     ]))
 }
 
 /// Extract functor parameters from a module type.
-fn mod_type_functor(mty: &ModuleType) -> (Vec<(&StringLoc, Option<&ModuleType>)>, &ModuleType) {
+/// Returns a list of (attributes, label, optional param type) and the return type.
+fn mod_type_functor(mty: &ModuleType) -> (Vec<(&[Attribute], &StringLoc, Option<&ModuleType>)>, &ModuleType) {
     fn loop_functor<'a>(
-        acc: Vec<(&'a StringLoc, Option<&'a ModuleType>)>,
+        acc: Vec<(&'a [Attribute], &'a StringLoc, Option<&'a ModuleType>)>,
         mty: &'a ModuleType,
-    ) -> (Vec<(&'a StringLoc, Option<&'a ModuleType>)>, &'a ModuleType) {
+    ) -> (Vec<(&'a [Attribute], &'a StringLoc, Option<&'a ModuleType>)>, &'a ModuleType) {
         match &mty.pmty_desc {
             ModuleTypeDesc::Pmty_functor(lbl, mod_type, return_mty) => {
                 let mut new_acc = acc;
-                new_acc.push((lbl, mod_type.as_ref().map(|t| t.as_ref())));
+                // Attributes on functor are for the parameter
+                new_acc.push((&mty.pmty_attributes, lbl, mod_type.as_ref().map(|t| t.as_ref())));
                 loop_functor(new_acc, return_mty)
             }
             _ => (acc, mty),
