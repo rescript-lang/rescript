@@ -1,10 +1,13 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-01
-**Overall Status:** 238/506 tests passing (47%)
+**Overall Status:** 239/506 tests passing (47%)
 **Printer Status:** 122/187 tests passing (65%)
 
 ### Recent Progress
+- Fixed setfield (record field assignment) comment handling
+- Fixed record field name comment handling in label declarations
+- Fixed module declaration name comment handling
 - Fixed attribute payload comments (@@attr(/* c0 */ "here" /* c1 */))
 - Fixed exception GADT line breaks with proper constructor argument printing
 - Added print_constructor_arguments helper matching OCaml behavior
