@@ -6899,9 +6899,59 @@ fn print_include_declaration(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &include_decl.pincl_attributes, cmt_tbl, arena);
-    let mod_doc = print_mod_expr(state, &include_decl.pincl_mod, cmt_tbl, arena);
 
-    Doc::concat(vec![attrs_doc, Doc::text("include "), mod_doc])
+    // Special case: include Ident({single type alias})
+    // Try to keep on one line if it fits
+    let mod_doc = if let ModuleExprDesc::Pmod_apply(_, _) = &include_decl.pincl_mod.pmod_desc {
+        let (args, call_expr) = parsetree_viewer::mod_expr_apply(&include_decl.pincl_mod);
+
+        // Check if callee is an ident and single arg is structure with single type alias
+        if args.len() == 1 && matches!(&call_expr.pmod_desc, ModuleExprDesc::Pmod_ident(_)) {
+            if let ModuleExprDesc::Pmod_structure(items) = &args[0].pmod_desc {
+                if items.len() == 1 {
+                    if let StructureItemDesc::Pstr_type(_, decls) = &items[0].pstr_desc {
+                        if decls.len() == 1
+                            && matches!(decls[0].ptype_kind, TypeKind::Ptype_abstract)
+                            && decls[0].ptype_manifest.is_some()
+                        {
+                            // This is the special case - use force_break:false
+                            return Doc::concat(vec![
+                                attrs_doc,
+                                Doc::text("include "),
+                                print_mod_expr(state, call_expr, cmt_tbl, arena),
+                                Doc::lparen(),
+                                Doc::breakable_group(
+                                    Doc::concat(vec![
+                                        Doc::lbrace(),
+                                        Doc::indent(Doc::concat(vec![
+                                            Doc::soft_line(),
+                                            print_structure_item(state, &items[0], cmt_tbl, arena),
+                                        ])),
+                                        Doc::soft_line(),
+                                        Doc::rbrace(),
+                                    ]),
+                                    false, // force_break = false
+                                ),
+                                Doc::rparen(),
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+        // Not the special case, use normal printing
+        print_mod_expr(state, &include_decl.pincl_mod, cmt_tbl, arena)
+    } else {
+        print_mod_expr(state, &include_decl.pincl_mod, cmt_tbl, arena)
+    };
+
+    let include_doc = if parens::include_mod_expr(&include_decl.pincl_mod) {
+        Doc::concat(vec![Doc::lparen(), mod_doc, Doc::rparen()])
+    } else {
+        mod_doc
+    };
+
+    Doc::concat(vec![attrs_doc, Doc::text("include "), include_doc])
 }
 
 // ============================================================================
