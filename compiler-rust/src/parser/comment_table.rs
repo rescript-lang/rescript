@@ -192,6 +192,11 @@ impl CommentTable {
         self.leading.get(&pos_range).and_then(|comments| comments.first())
     }
 
+    /// Get the first leading comment for a position range (if any).
+    pub fn get_first_leading_comment_by_pos(&self, pos_range: PosRange) -> Option<&Comment> {
+        self.leading.get(&pos_range).and_then(|comments| comments.first())
+    }
+
 }
 
 /// Partitions a list of comments into three groups based on their position relative to a location:

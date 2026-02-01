@@ -2291,168 +2291,335 @@ fn print_if_chain(
     ])
 }
 
+/// A row in an expression block.
+/// Uses PosRange for comment lookup (matches what the walker stores) plus line positions for spacing.
+struct BlockRow {
+    /// Position range for comment lookup - must match what the walker created
+    pos_range: PosRange,
+    start_line: usize,
+    end_line: usize,
+    doc: Doc,
+}
+
 /// Print expression block (with braces).
+/// This matches OCaml's print_expression_block which uses collect_rows and print_list.
 fn print_expression_block(
     state: &PrinterState,
     braces: bool,
-    e: &Expression,
+    expr: &Expression,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    match &e.pexp_desc {
-        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
-            let bindings_doc = print_value_bindings(state, bindings, rec_flag, cmt_tbl, arena);
-            let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
-            if braces {
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![
-                        Doc::hard_line(),
-                        bindings_doc,
-                        Doc::hard_line(),
-                        body_doc,
-                    ])),
-                    Doc::hard_line(),
-                    Doc::rbrace(),
-                ])
-            } else {
-                Doc::concat(vec![
-                    bindings_doc,
-                    Doc::hard_line(),
-                    body_doc,
-                ])
-            }
-        }
-        ExpressionDesc::Pexp_sequence(e1, e2) => {
-            let e1_doc = print_expression_with_comments(state, e1, cmt_tbl, arena);
-            // Check if expression needs parentheses
-            let e1_doc = match parens::expr(arena,e1) {
-                ParenKind::Parenthesized => add_parens(e1_doc),
-                ParenKind::Braced(loc) => print_braces(e1_doc, e1, loc, arena),
-                ParenKind::Nothing => e1_doc,
-            };
-            let e2_doc = print_expression_block(state, false, e2, cmt_tbl, arena);
-            if braces {
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![
-                        Doc::hard_line(),
-                        e1_doc,
-                        Doc::hard_line(),
-                        e2_doc,
-                    ])),
-                    Doc::hard_line(),
-                    Doc::rbrace(),
-                ])
-            } else {
-                Doc::concat(vec![e1_doc, Doc::hard_line(), e2_doc])
-            }
-        }
+    // Collect all rows (statements) in the block
+    let rows = collect_block_rows(state, expr, cmt_tbl, arena);
+
+    // Print rows with position-based comment lookup
+    let block = print_block_rows(&rows, cmt_tbl, arena);
+
+    Doc::breakable_group(
+        if braces {
+            Doc::concat(vec![
+                Doc::lbrace(),
+                Doc::indent(Doc::concat(vec![Doc::line(), block])),
+                Doc::line(),
+                Doc::rbrace(),
+            ])
+        } else {
+            block
+        },
+        true, // force_break
+    )
+}
+
+/// Print block rows with proper comment handling and line breaks.
+/// Uses PosRange directly for comment lookup to match what the walker stored.
+fn print_block_rows(rows: &[BlockRow], cmt_tbl: &mut CommentTable, arena: &ParseArena) -> Doc {
+    if rows.is_empty() {
+        return Doc::nil();
+    }
+
+    let mut docs = Vec::with_capacity(rows.len() * 2);
+
+    // First row
+    let first = &rows[0];
+    let first_doc = print_block_row_with_comments(&first.doc, first.pos_range, cmt_tbl, arena);
+    docs.push(first_doc);
+
+    let mut prev_end_line = first.end_line;
+
+    // Remaining rows
+    for row in &rows[1..] {
+        // Determine separator based on line distance
+        // Check for leading comment's line if present
+        let start_line = match cmt_tbl.get_first_leading_comment_by_pos(row.pos_range) {
+            Some(comment) => comment.loc().loc_start.line as usize,
+            None => row.start_line,
+        };
+
+        let sep = if start_line.saturating_sub(prev_end_line) > 1 {
+            Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
+        } else {
+            Doc::hard_line()
+        };
+
+        docs.push(sep);
+
+        let doc = print_block_row_with_comments(&row.doc, row.pos_range, cmt_tbl, arena);
+        docs.push(doc);
+
+        prev_end_line = row.end_line;
+    }
+
+    Doc::concat(docs)
+}
+
+/// Print a block row with its leading and trailing comments using position-based lookup.
+fn print_block_row_with_comments(
+    doc: &Doc,
+    pos_range: PosRange,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let leading_comments = cmt_tbl.remove_leading_comments_by_pos(pos_range);
+    let trailing_comments = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
+
+    // Create a fake full location for printing helpers
+    let full_loc = crate::location::Location {
+        loc_start: crate::location::Position {
+            file_name: crate::intern::StrIdx::default(),
+            line: 0,
+            bol: 0,
+            cnum: pos_range.start,
+        },
+        loc_end: crate::location::Position {
+            file_name: crate::intern::StrIdx::default(),
+            line: 0,
+            bol: 0,
+            cnum: pos_range.end,
+        },
+        loc_ghost: false,
+    };
+
+    // Use the existing comment printing helpers
+    let doc_with_leading = print_leading_comments_with(doc.clone(), leading_comments, &full_loc);
+    print_trailing_comments_with(doc_with_leading, trailing_comments, &full_loc)
+}
+
+/// Collect rows from an expression block, matching OCaml's collect_rows.
+fn collect_block_rows(
+    state: &PrinterState,
+    expr: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Vec<BlockRow> {
+    let mut rows = Vec::new();
+    collect_block_rows_inner(state, expr, &mut rows, cmt_tbl, arena);
+    rows
+}
+
+/// Inner recursive function for collect_block_rows.
+fn collect_block_rows_inner(
+    state: &PrinterState,
+    expr: &Expression,
+    rows: &mut Vec<BlockRow>,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) {
+    match &expr.pexp_desc {
         ExpressionDesc::Pexp_letmodule(name, mod_expr, body) => {
-            let mod_doc = print_mod_expr(state, mod_expr, cmt_tbl, arena);
-            let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
-            if braces {
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![
-                        Doc::hard_line(),
-                        Doc::text("module "),
-                        Doc::text(&name.txt),
-                        Doc::text(" = "),
-                        mod_doc,
-                        Doc::hard_line(),
-                        body_doc,
-                    ])),
-                    Doc::hard_line(),
-                    Doc::rbrace(),
-                ])
-            } else {
-                Doc::concat(vec![
-                    Doc::text("module "),
-                    Doc::text(&name.txt),
-                    Doc::text(" = "),
-                    mod_doc,
-                    Doc::hard_line(),
-                    body_doc,
-                ])
-            }
+            // Print module name with comments
+            let name_doc = {
+                let doc = Doc::text(&name.txt);
+                print_comments(doc, cmt_tbl, name.loc, arena)
+            };
+
+            // Handle module constraint: module M: T = E
+            let (name_doc, mod_expr_to_print) = match &mod_expr.pmod_desc {
+                ModuleExprDesc::Pmod_constraint(inner_mod, mod_type)
+                    if !parsetree_viewer::has_await_attribute(&mod_expr.pmod_attributes) =>
+                {
+                    let name_with_type = Doc::concat(vec![
+                        name_doc,
+                        Doc::text(": "),
+                        print_module_type(state, mod_type, cmt_tbl, arena),
+                    ]);
+                    (name_with_type, inner_mod.as_ref())
+                }
+                _ => (name_doc, mod_expr),
+            };
+
+            let let_module_doc = Doc::concat(vec![
+                Doc::text("module "),
+                name_doc,
+                Doc::text(" = "),
+                print_mod_expr(state, mod_expr_to_print, cmt_tbl, arena),
+            ]);
+
+            // Use combined location (expr start to mod_expr end) to match walker
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(mod_expr.pmod_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            rows.push(BlockRow {
+                pos_range,
+                start_line: start.line as usize,
+                end_line: end.line as usize,
+                doc: let_module_doc,
+            });
+            collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
         }
+
         ExpressionDesc::Pexp_letexception(ext_constr, body) => {
-            // print_exception_def already includes "exception " prefix
-            let ext_doc = print_exception_def(state, ext_constr, cmt_tbl, arena);
-            let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
-            if braces {
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![
-                        Doc::hard_line(),
-                        ext_doc,
-                        Doc::hard_line(),
-                        body_doc,
-                    ])),
-                    Doc::hard_line(),
-                    Doc::rbrace(),
-                ])
-            } else {
-                Doc::concat(vec![
-                    ext_doc,
-                    Doc::hard_line(),
-                    body_doc,
-                ])
-            }
+            let let_exception_doc = print_exception_def(state, ext_constr, cmt_tbl, arena);
+
+            // Use combined location (expr start to ext_constr end) to match walker
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(ext_constr.pext_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            rows.push(BlockRow {
+                pos_range,
+                start_line: start.line as usize,
+                end_line: end.line as usize,
+                doc: let_exception_doc,
+            });
+            collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
         }
+
         ExpressionDesc::Pexp_open(override_flag, lid, body) => {
-            let override_doc = match override_flag {
-                OverrideFlag::Override => Doc::text("!"),
-                OverrideFlag::Fresh => Doc::nil(),
+            let open_doc = Doc::concat(vec![
+                Doc::text("open"),
+                match override_flag {
+                    OverrideFlag::Override => Doc::text("!"),
+                    OverrideFlag::Fresh => Doc::nil(),
+                },
+                Doc::space(),
+                print_longident_location(lid, cmt_tbl, arena),
+            ]);
+
+            // Use combined location (expr start to lid end) to match walker
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(lid.loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            rows.push(BlockRow {
+                pos_range,
+                start_line: start.line as usize,
+                end_line: end.line as usize,
+                doc: open_doc,
+            });
+            collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
+        }
+
+        ExpressionDesc::Pexp_sequence(e1, e2) => {
+            let expr_doc = {
+                let doc = print_expression(state, e1, cmt_tbl, arena);
+                match parens::expr(arena, e1) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, e1, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
             };
-            let body_doc = print_expression_block(state, false, body, cmt_tbl, arena);
-            if braces {
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![
-                        Doc::hard_line(),
-                        Doc::text("open"),
-                        override_doc,
-                        Doc::text(" "),
-                        print_longident(arena, arena.get_longident(lid.txt)),
-                        Doc::hard_line(),
-                        body_doc,
-                    ])),
-                    Doc::hard_line(),
-                    Doc::rbrace(),
-                ])
+
+            // Use e1's location directly
+            let start = arena.loc_start(e1.pexp_loc);
+            let end = arena.loc_end(e1.pexp_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            rows.push(BlockRow {
+                pos_range,
+                start_line: start.line as usize,
+                end_line: end.line as usize,
+                doc: expr_doc,
+            });
+            collect_block_rows_inner(state, e2, rows, cmt_tbl, arena);
+        }
+
+        ExpressionDesc::Pexp_let(rec_flag, bindings, body) => {
+            // Use first binding's location for comment lookup
+            let (pos_range, start_line, end_line) = if let (Some(first), Some(last)) = (bindings.first(), bindings.last()) {
+                let start = arena.loc_start(first.pvb_loc);
+                let end = arena.loc_end(last.pvb_loc);
+                (
+                    PosRange { start: start.cnum, end: end.cnum },
+                    start.line as usize,
+                    end.line as usize,
+                )
             } else {
-                Doc::concat(vec![
-                    Doc::text("open"),
-                    override_doc,
-                    Doc::text(" "),
-                    print_longident(arena, arena.get_longident(lid.txt)),
-                    Doc::hard_line(),
-                    body_doc,
-                ])
+                let start = arena.loc_start(expr.pexp_loc);
+                let end = arena.loc_end(expr.pexp_loc);
+                (
+                    PosRange { start: start.cnum, end: end.cnum },
+                    start.line as usize,
+                    end.line as usize,
+                )
+            };
+
+            let rec_doc = match rec_flag {
+                RecFlag::Nonrecursive => Doc::nil(),
+                RecFlag::Recursive => Doc::text("rec "),
+            };
+
+            let let_doc = print_value_bindings_with_rec(state, bindings, &rec_doc, cmt_tbl, arena);
+
+            rows.push(BlockRow {
+                pos_range,
+                start_line,
+                end_line,
+                doc: let_doc,
+            });
+
+            // Special case: if body is just (), don't print it
+            // This matches OCaml: let () = { let () = foo(); () }
+            if !is_unit_expr(arena, body) {
+                collect_block_rows_inner(state, body, rows, cmt_tbl, arena);
             }
         }
+
         _ => {
-            let doc = print_expression_with_comments(state, e, cmt_tbl, arena);
-            // Check if expression needs parentheses
-            let doc = match parens::expr(arena,e) {
-                ParenKind::Parenthesized => add_parens(doc),
-                ParenKind::Braced(loc) => print_braces(doc, e, loc, arena),
-                ParenKind::Nothing => doc,
+            // Terminal expression
+            let expr_doc = {
+                let doc = print_expression(state, expr, cmt_tbl, arena);
+                match parens::expr(arena, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
             };
-            if braces {
-                Doc::concat(vec![
-                    Doc::lbrace(),
-                    Doc::indent(Doc::concat(vec![Doc::hard_line(), doc])),
-                    Doc::hard_line(),
-                    Doc::rbrace(),
-                ])
-            } else {
-                doc
-            }
+
+            let start = arena.loc_start(expr.pexp_loc);
+            let end = arena.loc_end(expr.pexp_loc);
+            let pos_range = PosRange { start: start.cnum, end: end.cnum };
+
+            rows.push(BlockRow {
+                pos_range,
+                start_line: start.line as usize,
+                end_line: end.line as usize,
+                doc: expr_doc,
+            });
         }
     }
+}
+
+/// Print value bindings with a pre-computed rec_doc (for use in expression blocks).
+fn print_value_bindings_with_rec(
+    state: &PrinterState,
+    bindings: &[ValueBinding],
+    rec_doc: &Doc,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    print_listi(
+        |vb: &ValueBinding| vb.pvb_loc,
+        bindings,
+        |vb, cmt_tbl_inner, i| {
+            print_value_binding(state, vb, i, rec_doc, cmt_tbl_inner, arena)
+        },
+        cmt_tbl,
+        arena,
+        false, // ignore_empty_lines
+        false, // force_break
+    )
 }
 
 /// Check if an expression is an array of tuples (for dict detection)
@@ -6222,7 +6389,10 @@ fn print_exception_def(
     arena: &ParseArena,
 ) -> Doc {
     let attrs_doc = print_attributes(state, &ext_constr.pext_attributes, cmt_tbl, arena);
-    let name_doc = Doc::text(&ext_constr.pext_name.txt);
+    let name_doc = {
+        let doc = Doc::text(&ext_constr.pext_name.txt);
+        print_comments(doc, cmt_tbl, ext_constr.pext_name.loc, arena)
+    };
 
     let kind_doc = match &ext_constr.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
