@@ -6704,55 +6704,30 @@ fn print_type_declaration_with_lid(
 }
 
 /// Print extension at module level.
+/// This reuses the same logic as print_extension for attributes.
 fn print_extension_at_module_level(
     state: &PrinterState,
     ext: &Extension,
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
-    _at_module_lvl: bool,
+    at_module_lvl: bool,
 ) -> Doc {
     let (name, payload) = ext;
-    let name_doc = Doc::text(format!("%{}", name.txt));
-
-    let payload_doc = match payload {
-        Payload::PStr(items) if items.is_empty() => Doc::nil(),
-        Payload::PStr(items) => {
-            Doc::concat(vec![
-                Doc::text("("),
-                print_structure(state, items, cmt_tbl, arena),
-                Doc::text(")"),
-            ])
-        }
-        Payload::PTyp(typ) => {
-            Doc::concat(vec![
-                Doc::text("("),
-                print_typ_expr(state, typ, cmt_tbl, arena),
-                Doc::text(")"),
-            ])
-        }
-        Payload::PSig(items) => {
-            Doc::concat(vec![
-                Doc::text("("),
-                print_signature(state, items, cmt_tbl, arena),
-                Doc::text(")"),
-            ])
-        }
-        Payload::PPat(pat, guard) => {
-            let pat_doc = print_pattern(state, pat, cmt_tbl, arena);
-            match guard {
-                Some(expr) => Doc::concat(vec![
-                    Doc::text("("),
-                    pat_doc,
-                    Doc::text(" when "),
-                    print_expression_with_comments(state, expr, cmt_tbl, arena),
-                    Doc::text(")"),
-                ]),
-                None => Doc::concat(vec![Doc::text("("), pat_doc, Doc::text(")")]),
-            }
-        }
-    };
-
-    Doc::concat(vec![name_doc, payload_doc])
+    // OCaml: Doc.text "%" (if at_module_lvl then Doc.text "%" else Doc.nil) Doc.text txt
+    let ext_name = Doc::concat(vec![
+        Doc::text("%"),
+        if at_module_lvl {
+            Doc::text("%")
+        } else {
+            Doc::nil()
+        },
+        Doc::text(&name.txt),
+    ]);
+    let ext_name = print_comments(ext_name, cmt_tbl, name.loc, arena);
+    Doc::group(Doc::concat(vec![
+        ext_name,
+        print_payload(state, payload, cmt_tbl, arena),
+    ]))
 }
 
 // ============================================================================
