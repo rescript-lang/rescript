@@ -5433,7 +5433,14 @@ fn print_try_expression(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let body = print_expression_with_comments(state, expr, cmt_tbl, arena);
+    let body = {
+        let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+        match parens::expr(arena, expr) {
+            ParenKind::Parenthesized => add_parens(doc),
+            ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+            ParenKind::Nothing => doc,
+        }
+    };
     let cases_block = print_cases_with_braces(state, cases, cmt_tbl, arena);
     Doc::concat(vec![
         Doc::text("try "),
