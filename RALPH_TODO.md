@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 352/506 tests passing (69.6%)
+**Overall Status:** 355/506 tests passing (70.2%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,15 +10,21 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 81 | 54 | 135 | 60% |
+| parsing/grammar | 84 | 51 | 135 | 62% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
 | parsing/errors | 7 | 77 | 84 | 8% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 154 tests to fix
+**Remaining:** 151 tests to fix
 
 **Recent Fixes (this session):**
+- Fixed constrained pattern printing in value bindings (use simple_pattern for inner, add outer parens)
+- Added pattern_is_simple function matching OCaml's simple_pattern behavior
+- Fixed constructor attribute printing in type declarations (e.g., `@as(null)`)
+- Fixed cons pattern parens in constraint patterns (don't wrap cons when not at binding top-level)
+- Added trailing space after Ppat_unpack pattern (`(module Set) `)
+- Added Pexp_send to simple expressions
 - Fixed ML printer: add spaces between JSX children (matching OCaml's list separator)
 - Fixed ML printer: avoid double parens in await expressions with attributed arguments
 - Fixed ML printer: include `res.await` attribute in printed output (not filtered as internal)
