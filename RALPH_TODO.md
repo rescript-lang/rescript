@@ -110,6 +110,31 @@
   to mod_expr.pmod_loc before calling walk_module_expr. Now `module type of /* c4 */ {}`
   keeps the comment before the brace.
 
+### Major Missing Features (blocking remaining ~40 tests)
+
+1. **JSX Printing**: Currently prints `<jsx />` placeholder. Need to implement full JSX printing
+   including children, props, spread, fragments, etc.
+
+2. **Callback Formatting**: OCaml has special callback printing that "hugs" callback arguments.
+   - `requires_special_callback_printing_last_arg` / `requires_special_callback_printing_first_arg`
+   - `print_arguments_with_callback_in_first_position` / `print_arguments_with_callback_in_last_position`
+   - Uses `Doc::custom_layout` to try different layouts
+
+3. **Underscore Apply Rewriting**: Need to implement:
+   - `rewrite_underscore_apply`: `(__x) => f(a, __x, c)` -> `f(a, _, c)`
+   - `rewrite_underscore_apply_in_pipe`: `(__x) => f(__x, a)` -> `f(a)` (omit first _)
+
+4. **Binary Expression Indentation**: Need `should_indent_binary_expr` function that checks:
+   - Is it an equality operator?
+   - Is the LHS NOT a same-precedence subexpression?
+   - Is the operator `:=`?
+
+5. **Inline Record Definitions**: Type declarations with `res.inlineRecordDefinition` attribute
+   need special handling - print record fields inline instead of as separate types.
+
+6. **Spread Array Syntax**: Currently prints desugared form `Belt.Array.concatMany([xs, [a, b]])`
+   instead of `[...xs, a, b]`.
+
 ---
 
 ## Phase 1: Comment Handling (Root Cause)
