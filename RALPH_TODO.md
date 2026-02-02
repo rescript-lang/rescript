@@ -1,10 +1,13 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 267/506 tests passing (52%)
-**Printer Status:** 147/187 tests passing (78%)
+**Overall Status:** 268/506 tests passing (52%)
+**Printer Status:** 148/187 tests passing (79%)
 
 ### Recent Progress
+- Fixed JS object set parenthesization in binary expressions (jsObjectSet.res passes): Similar to
+  setfield, the `#=` operator only needs parens when on the LHS of a binary expression. For
+  `(node["left"] = value)->pipe`, the parens around the assignment are now preserved.
 - Fixed type extension attribute line breaking (typeExtension.res passes): Pass the path location
   to print_attributes_with_loc so that attributes on a separate line preserve the line break.
   `@attr\ntype t +=` now correctly prints with a line break between the attribute and the type.

@@ -3185,6 +3185,22 @@ fn binary_operand_needs_parens(arena: &ParseArena, is_lhs: bool, parent_op: &str
         }
     }
 
+    // Special case for #= (JS object set): OCaml's print_operand handles this similarly to setfield
+    // (node["left"] = value)->pipe should keep the parens
+    if let ExpressionDesc::Pexp_apply { funct, args, .. } = &operand.pexp_desc {
+        if args.len() == 2 {
+            if let ExpressionDesc::Pexp_ident(lid) = &funct.pexp_desc {
+                if arena.is_lident(lid.txt, "#=") {
+                    if is_lhs {
+                        return ParenKind::Parenthesized;
+                    } else {
+                        return ParenKind::Nothing;
+                    }
+                }
+            }
+        }
+    }
+
     // Fall back to the general binary_expr_operand check for non-binary expressions
     parens::binary_expr_operand(arena, is_lhs, operand)
 }
