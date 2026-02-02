@@ -5,6 +5,14 @@
 **Printer Status:** 150/187 tests passing (80%)
 
 ### Recent Progress
+- Fixed async detection for functions with leading (type a): The `is_async` flag was only checked
+  on the top-level expression, but for `async (type a, ()) => body`, the Pexp_newtype is outermost.
+  Now we check `is_async` on the FIRST Pexp_fun encountered, not just the top-level.
+- Fixed newtype collection across function boundaries: OCaml's `fun_expr` only collects Pexp_newtype
+  at the BEGINNING, not during the collect_params loop. This means `(type a, ()) => (type b c, x) => 3`
+  keeps the two functions separate, not merging all newtypes into one.
+- Fixed await expression to ignore braces for simple expressions: OCaml filters out `@res.braces`
+  before checking if parens are needed, so `await {x}` prints as `await x`.
 - Implemented special callback printing for functions in last/first arg position (expr.res passes):
   When a callback has a trailing comment between parameters and `=>` like `f(() // c1 => 1)`,
   OCaml moves the comment AFTER the entire function call: `f(() => 1) // c1`. Implemented:
