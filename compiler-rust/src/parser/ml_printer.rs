@@ -697,15 +697,15 @@ fn print_remaining_inline_params_with_arity<'a, W: Write>(
             arity,
             ..
         } => {
-            // Print arity if requested (for first fun after newtypes)
-            if need_arity {
-                if let Arity::Full(n) = arity {
-                    f.string(&format!("[arity:{}]", n));
-                } else {
-                    let computed_arity = count_function_arity(expr);
-                    if computed_arity > 0 {
-                        f.string(&format!("[arity:{}]", computed_arity));
-                    }
+            // Print arity for each Pexp_fun that has an arity annotation
+            // (In uncurried-by-default mode, there can be multiple arity markers)
+            if let Arity::Full(n) = arity {
+                f.string(&format!("[arity:{}]", n));
+            } else if need_arity {
+                // Only compute arity for the first function if no explicit arity
+                let computed_arity = count_function_arity(expr);
+                if computed_arity > 0 {
+                    f.string(&format!("[arity:{}]", computed_arity));
                 }
             }
             print_inline_param(f, arena, arg_label, default, lhs);
