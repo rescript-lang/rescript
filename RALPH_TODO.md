@@ -1,10 +1,12 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 286/506 tests passing (56%)
-**Printer Status:** 162/187 tests passing (86%)
+**Overall Status:** 287/506 tests passing (56%)
+**Printer Status:** 163/187 tests passing (87%)
 
 ### Recent Progress
+- Fixed PPat payload printing (attributes.res now passes): use `if` instead of `when` for guard,
+  wrap in indent with soft_line matching OCaml's format
 - Fixed typexpr.res comment handling (now passes):
   - Fixed Ptyp_package constraint comments: use `make_combined_pos_range` and `print_comments_by_pos`
     to wrap each package constraint with comments using a location spanning from name to type end
