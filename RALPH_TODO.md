@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 363/506 tests passing (71%)
+**Overall Status:** 364/506 tests passing (71%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,15 @@
 | parsing/grammar | 88 | 47 | 135 | 65% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 11 | 73 | 84 | 13% |
+| parsing/errors | 12 | 72 | 84 | 14% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 143 tests to fix
+**Remaining:** 142 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed error location spans in expect_with_grammar**: OCaml's `expect` uses `prev_end_pos` for start and
+  `end_pos` for end, creating a span from previous token to current. Rust was using `prev_end_pos` for both.
+  This fixes error location format like `:1:15-2:3` instead of just `:1:15`.
 - **Implemented context-aware error messages in explain_unexpected**: The `explain_unexpected` function now properly
   uses the breadcrumbs (parsing context) to generate context-specific error messages matching OCaml's behavior.
   Fixed breadcrumb order issue - OCaml prepends to list (most recent at head), Rust appends (most recent at end).
