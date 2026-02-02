@@ -55,6 +55,35 @@ fn parse_newline_or_semicolon_structure(p: &mut Parser<'_>) {
     }
 }
 
+/// Check and emit "consecutive statements" error for signature items.
+///
+/// Matches OCaml's `parse_newline_or_semicolon_signature`:
+/// - If token is Semicolon, consume it
+/// - If token can start a signature item AND on same line as previous, emit error
+/// - Otherwise, do nothing
+fn parse_newline_or_semicolon_signature(p: &mut Parser<'_>) {
+    if p.token == Token::Semicolon {
+        p.next();
+        return;
+    }
+
+    if grammar::is_signature_item_start(&p.token) {
+        // Check if we're on the same line as the previous token
+        // OCaml: if p.prev_end_pos.pos_lnum < p.start_pos.pos_lnum then () else err
+        if p.prev_end_pos.line >= p.start_pos.line {
+            // Same line: emit error
+            // Use err_at which respects regions (like OCaml's Parser.err)
+            p.err_at(
+                p.prev_end_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::message(
+                    "consecutive statements on a line must be separated by ';' or a newline",
+                ),
+            );
+        }
+    }
+}
+
 // ============================================================================
 // Inline Record Desugaring Context
 // ============================================================================
@@ -501,6 +530,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 OverrideFlag::Fresh
             };
             let lid = parse_module_long_ident(p);
+            parse_newline_or_semicolon_signature(p);
             let loc = p.mk_loc_to_prev_end(&open_start);
             Some(SignatureItemDesc::Psig_open(OpenDescription {
                 popen_lid: lid,
@@ -510,14 +540,19 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             }))
         }
         Token::Let { .. } => {
-            // For signature let declarations, OCaml's value_description location
-            // starts at 'let', not at the attributes (different from external in structure)
+            // For signature let declarations, OCaml uses regions
+            p.begin_region();
+            // OCaml's value_description location starts at 'let', not at the attributes
             let let_pos = p.start_pos.clone();
             p.next();
             let vd = parse_value_description(p, attrs.clone(), let_pos);
+            parse_newline_or_semicolon_signature(p);
+            p.end_region();
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Typ => {
+            // OCaml uses regions around type parsing in signatures
+            p.begin_region();
             let type_start = p.start_pos.clone(); // Capture 'type' keyword position
             p.next();
             let is_type_extension = p.token != Token::Rec
@@ -552,8 +587,9 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                     state.token == Token::PlusEqual
                 });
 
-            if is_type_extension {
+            let result = if is_type_extension {
                 let ext = parse_type_extension(p, attrs.clone());
+                parse_newline_or_semicolon_signature(p);
                 Some(SignatureItemDesc::Psig_typext(ext))
             } else {
                 let mut rec_flag = if p.token == Token::Rec {
@@ -571,12 +607,16 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 if has_inline_types {
                     rec_flag = RecFlag::Recursive;
                 }
+                parse_newline_or_semicolon_signature(p);
                 Some(SignatureItemDesc::Psig_type(rec_flag, decls))
-            }
+            };
+            p.end_region();
+            result
         }
         Token::External => {
             p.next();
             let vd = parse_value_description(p, attrs.clone(), start_pos.clone());
+            parse_newline_or_semicolon_signature(p);
             Some(SignatureItemDesc::Psig_value(vd))
         }
         Token::Exception => {
@@ -584,30 +624,39 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             let exception_start = p.start_pos.clone();
             p.next();
             let ext = parse_extension_constructor(p, attrs.clone(), Some(exception_start));
+            parse_newline_or_semicolon_signature(p);
             Some(SignatureItemDesc::Psig_exception(ext))
         }
         Token::Module => {
+            // OCaml uses regions around module parsing in signatures
+            p.begin_region();
             let module_start = p.start_pos.clone();
             p.next();
-            if p.token == Token::Typ {
+            let result = if p.token == Token::Typ {
                 p.next();
                 let mtd = parse_module_type_declaration(p, attrs.clone(), false);
+                // No parse_newline_or_semicolon_signature for module type - matches OCaml
                 Some(SignatureItemDesc::Psig_modtype(mtd))
             } else if p.token == Token::Rec {
                 p.next();
                 // For recursive modules, OCaml's pmd_loc includes attributes BEFORE 'module rec'
                 // OCaml passes start_pos (captured BEFORE attributes) to parse_rec_module_spec
                 let mds = parse_rec_module_declarations(p, attrs.clone(), start_pos.clone());
+                parse_newline_or_semicolon_signature(p);
                 Some(SignatureItemDesc::Psig_recmodule(mds))
             } else {
                 // For non-recursive modules, location starts at name (not 'module')
                 let md = parse_module_declaration(p, attrs.clone(), None);
+                parse_newline_or_semicolon_signature(p);
                 Some(SignatureItemDesc::Psig_module(md))
-            }
+            };
+            p.end_region();
+            result
         }
         Token::Include => {
             p.next();
             let mod_type = parse_module_type(p);
+            parse_newline_or_semicolon_signature(p);
             Some(SignatureItemDesc::Psig_include(IncludeDescription {
                 pincl_mod: mod_type,
                 pincl_loc: p.mk_loc_to_prev_end(&start_pos),
@@ -620,15 +669,18 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             if p.token == Token::AtAt {
                 p.next();
                 let attr = parse_attribute_body(p, attr_start);
+                parse_newline_or_semicolon_signature(p);
                 Some(SignatureItemDesc::Psig_attribute(attr))
             } else {
                 p.next();
                 let attr = parse_attribute_body(p, attr_start);
+                parse_newline_or_semicolon_signature(p);
                 Some(SignatureItemDesc::Psig_attribute(attr))
             }
         }
         Token::ModuleComment { loc, content } => {
             // Module-level doc comment (triple star /*** ... */) becomes a standalone res.doc attribute
+            // Note: OCaml does NOT call parse_newline_or_semicolon_signature for ModuleComment
             let loc_cloned = loc.clone();
             let content = content.clone();
             p.next();
@@ -638,6 +690,7 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
         }
         Token::Percent | Token::PercentPercent => {
             let ext = parse_extension(p);
+            parse_newline_or_semicolon_signature(p);
             Some(SignatureItemDesc::Psig_extension(ext, attrs.clone()))
         }
         _ => {
