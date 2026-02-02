@@ -6337,18 +6337,31 @@ fn print_value_binding(
     };
 
     // Check if expression should be indented after `=`
-    // This happens when:
-    // - Expression has printable attributes
-    // - Or is a binary expression (without braces)
-    // - Or is a JSX element
-    // - Or is an array access
+    // This matches OCaml's value_binding logic for indentation
     let opt_braces = parsetree_viewer::process_braces_attr(&vb.pvb_expr);
-    let should_indent = opt_braces.is_none() && (
-        parsetree_viewer::has_attributes(&vb.pvb_expr.pexp_attributes)
-        || parsetree_viewer::is_binary_expression(arena, &vb.pvb_expr)
-        || matches!(&vb.pvb_expr.pexp_desc, ExpressionDesc::Pexp_jsx_element(_))
-        || parsetree_viewer::is_array_access(arena, &vb.pvb_expr)
-    );
+    let should_indent = opt_braces.is_none() && {
+        match &vb.pvb_expr.pexp_desc {
+            // Ternary with res.ternary attribute: indent if condition is binary or has attrs
+            ExpressionDesc::Pexp_ifthenelse(if_expr, _, _)
+                if parsetree_viewer::has_ternary_attribute(&vb.pvb_expr.pexp_attributes) =>
+            {
+                parsetree_viewer::is_binary_expression(arena, if_expr)
+                    || parsetree_viewer::has_attributes(&if_expr.pexp_attributes)
+            }
+            // Pexp_newtype: don't indent
+            ExpressionDesc::Pexp_newtype { .. } => false,
+            // Tagged template: don't indent
+            _ if parsetree_viewer::has_tagged_template_attr(&vb.pvb_expr.pexp_attributes) => false,
+            // JSX: indent
+            ExpressionDesc::Pexp_jsx_element(_) => true,
+            // Default: check attributes or array access or binary expression
+            _ => {
+                parsetree_viewer::has_attributes(&vb.pvb_expr.pexp_attributes)
+                    || parsetree_viewer::is_binary_expression(arena, &vb.pvb_expr)
+                    || parsetree_viewer::is_array_access(arena, &vb.pvb_expr)
+            }
+        }
+    };
 
     let rhs = if should_indent {
         Doc::indent(Doc::concat(vec![Doc::line(), printed_expr]))

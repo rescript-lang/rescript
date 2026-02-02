@@ -48,6 +48,11 @@ pub fn has_ternary_attribute(attrs: &Attributes) -> bool {
     attrs.iter().any(|attr| attr.0.txt == "res.ternary")
 }
 
+/// Check if an expression has the tagged template attribute.
+pub fn has_tagged_template_attr(attrs: &Attributes) -> bool {
+    attrs.iter().any(|attr| attr.0.txt == "res.taggedTemplate")
+}
+
 /// Check if an expression is a ternary expression.
 /// This checks for the res.ternary attribute which is added by the parser
 /// for expressions like `cond ? a : b` (as opposed to `if cond { a } else { b }`).
