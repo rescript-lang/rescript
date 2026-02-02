@@ -55,16 +55,21 @@
 - Fixed module functor sugar (`module F(A:X) = ...`) and module application printing (`(F)(A)`)
 - Fixed unit functor printing (`functor () ->` instead of `functor (*) ->`)
 
-**Root Causes of Remaining Failures (151 tests):**
+**Root Causes of Remaining Failures (145 tests):**
 
-1. **parsing/grammar (51 failing)**: Almost entirely 80-column line wrapping differences.
+1. **parsing/grammar (47 failing)**: Almost entirely 80-column line wrapping differences.
    OCaml's Format module wraps long lines at 80 columns with specific indentation rules.
    The Rust Formatter doesn't match this behavior exactly. The actual AST content is correct.
+   Note: Adding HOV boxes to item_attributes for proper line-breaking caused other regressions
+   (different break points chosen in complex nested structures). Needs deeper investigation of
+   how OCaml's Format module chooses break points.
 
-2. **parsing/errors (77 failing)**: Missing error message generation in Rust parser.
-   OCaml has `parse_newline_or_semicolon_structure` and `parse_newline_or_semicolon_expr_block`
-   that emit "consecutive statements/expressions on a line must be separated by ';' or a newline"
-   errors. Rust doesn't implement these checks.
+2. **parsing/errors (75 failing)**: Multiple issues:
+   - Error message wording differs ("I'm missing a type here" vs "Unexpected token")
+   - Error location format differs (`:16-18` vs `:16`)
+   - OCaml's breadcrumb-based error messages provide context-specific hints
+   - Error recovery produces different recovered AST structures
+   - OCaml's `skip_tokens_and_maybe_retry` advances past errors more aggressively
 
 3. **parsing/recovery (16 failing)**: Error recovery output differs from OCaml.
    Both error messages and recovered AST formatting differ.
@@ -73,7 +78,6 @@
    and AST output format differ from OCaml.
 
 5. **parsing/other (3 failing)**: Mixed issues:
-   - Unicode escaping: OCaml escapes non-ASCII bytes as `\226\156\133` but Rust prints directly
    - Error message differences
    - Line wrapping differences
 
