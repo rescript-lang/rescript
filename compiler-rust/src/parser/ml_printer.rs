@@ -2453,6 +2453,14 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
         }
     }
 
+    // Type constraints
+    for (ct1, ct2, _) in &decl.ptype_cstrs {
+        f.string(" constraint ");
+        print_core_type(f, arena, ct1);
+        f.string(" = ");
+        print_core_type(f, arena, ct2);
+    }
+
     // Type attributes
     print_item_attributes(f, arena, &decl.ptype_attributes);
 }
@@ -2845,21 +2853,28 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             print_item_attributes(f, arena, &vd.pval_attributes);
         }
         SignatureItemDesc::Psig_type(rec_flag, decls) => {
-            // OCaml uses @[<v>...@] for multiple decls - vertical box with newlines
+            // OCaml: @[<2>type %a%a%s%s%a@]%a for first, @[<2>and %a@]%a for others
+            // Each declaration is wrapped in a box with indent 2
             let rec_str = match rec_flag {
                 RecFlag::Recursive => "",
                 RecFlag::Nonrecursive => " nonrec",
             };
             for (i, decl) in decls.iter().enumerate() {
+                if i > 0 {
+                    f.newline();
+                }
+                // Open box with indent 2 for this declaration
+                f.open_box(BoxKind::HOV, 2);
                 if i == 0 {
                     f.string("type");
                     f.string(rec_str);
                     f.string(" ");
                 } else {
-                    f.newline();
                     f.string("and ");
                 }
                 print_type_declaration(f, arena, decl);
+                f.close_box();
+                // NOTE: print_type_declaration already prints ptype_attributes
             }
         }
         SignatureItemDesc::Psig_typext(ext) => {
