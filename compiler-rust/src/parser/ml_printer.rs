@@ -1639,7 +1639,10 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         }
         ExpressionDesc::Pexp_await(e) => {
             f.string("await ");
-            let needs_parens = !matches!(
+            // Check if expression is "simple" enough to not need parens
+            // Note: attributed expressions will get their own parens from print_expression
+            let has_attrs = !printable_attributes(&e.pexp_attributes).is_empty();
+            let is_simple = matches!(
                 &e.pexp_desc,
                 ExpressionDesc::Pexp_ident(_)
                     | ExpressionDesc::Pexp_constant(_)
@@ -1648,6 +1651,9 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     | ExpressionDesc::Pexp_array(_)
                     | ExpressionDesc::Pexp_record(_, _)
             );
+            // If has attributes, print_expression already produces ((expr)[@attr ])
+            // so we don't need to add extra parens
+            let needs_parens = !is_simple && !has_attrs;
             if needs_parens {
                 f.string("(");
             }
