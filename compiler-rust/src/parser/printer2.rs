@@ -4771,10 +4771,12 @@ pub fn print_typ_expr(
     let doc = if !typ.ptyp_attributes.is_empty() && !should_print_its_own_attributes {
         let (doc_comment_attrs, other_attrs) =
             parsetree_viewer::partition_doc_comment_attributes(&typ.ptyp_attributes);
+        // Use Doc::space() as separator for doc comments on types (matches OCaml)
+        // This keeps doc comments inline: `/** doc */ int` instead of on separate line
         let comment_doc = if doc_comment_attrs.is_empty() {
             Doc::nil()
         } else {
-            print_doc_comments(state, &doc_comment_attrs, cmt_tbl, arena)
+            print_doc_comments_with_sep(state, &doc_comment_attrs, cmt_tbl, arena, Doc::space())
         };
         let attrs_doc = if other_attrs.is_empty() {
             Doc::nil()
@@ -5229,11 +5231,15 @@ fn print_package_type(
 }
 
 /// Print doc comment attributes.
-fn print_doc_comments(
+/// Print doc comments with optional separator.
+/// OCaml's `print_doc_comments` takes a `sep` parameter that defaults to `hard_line`.
+/// For type expressions, we use `space` as the separator to keep doc comments inline.
+fn print_doc_comments_with_sep(
     _state: &PrinterState,
     doc_attrs: &[&Attribute],
     _cmt_tbl: &mut CommentTable,
-    arena: &ParseArena,
+    _arena: &ParseArena,
+    sep: Doc,
 ) -> Doc {
     let docs: Vec<Doc> = doc_attrs
         .iter()
@@ -5246,11 +5252,12 @@ fn print_doc_comments(
                         if let ExpressionDesc::Pexp_constant(Constant::String(content, _)) =
                             &expr.pexp_desc
                         {
+                            // OCaml uses `/**` + txt + `*/` without extra spaces
+                            // The content already includes the spacing from the parser
                             return Some(Doc::concat(vec![
-                                Doc::text("/** "),
+                                Doc::text("/**"),
                                 Doc::text(content.clone()),
-                                Doc::text(" */"),
-                                Doc::hard_line(),
+                                Doc::text("*/"),
                             ]));
                         }
                     }
@@ -5259,7 +5266,21 @@ fn print_doc_comments(
             None
         })
         .collect();
-    Doc::concat(docs)
+    if docs.is_empty() {
+        Doc::nil()
+    } else {
+        Doc::concat(vec![Doc::group(Doc::concat(docs)), sep])
+    }
+}
+
+/// Print doc comments with default separator (hard_line).
+fn print_doc_comments(
+    state: &PrinterState,
+    doc_attrs: &[&Attribute],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    print_doc_comments_with_sep(state, doc_attrs, cmt_tbl, arena, Doc::hard_line())
 }
 
 /// Print attributes from borrowed references.
