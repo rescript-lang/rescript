@@ -221,6 +221,10 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let mut rec_flag = if p.token == Token::Rec {
                     p.next();
                     RecFlag::Recursive
+                } else if matches!(&p.token, Token::Lident(s) if s == "nonrec") {
+                    // Handle `type nonrec t = ...` - nonrec is a keyword in this context
+                    p.next();
+                    RecFlag::Nonrecursive
                 } else {
                     RecFlag::Nonrecursive
                 };
@@ -486,6 +490,10 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
                 let mut rec_flag = if p.token == Token::Rec {
                     p.next();
                     RecFlag::Recursive
+                } else if matches!(&p.token, Token::Lident(s) if s == "nonrec") {
+                    // Handle `type nonrec t = ...` - nonrec is a keyword in this context
+                    p.next();
+                    RecFlag::Nonrecursive
                 } else {
                     RecFlag::Nonrecursive
                 };
@@ -2332,40 +2340,16 @@ fn parse_type_declaration_with_context(
         };
 
         // Better variant-vs-manifest disambiguation: a leading Uident without a following `.`
-        // is almost always a constructor in a variant type, even if there's only a single
-        // constructor (no `|`).
+        // is a constructor in a variant type.
+        // OCaml parser logic: if Uident is followed by `.`, it's a type path (Module.Type),
+        // otherwise it's a constructor declaration.
         let is_variant_type_starting_with_uident = |p: &mut Parser<'_>| -> bool {
             p.lookahead(|state| {
                 state.next(); // consume Uident
 
                 // `Foo.bar` is a type path, not a constructor.
-                if state.token == Token::Dot {
-                    return false;
-                }
-
-                // Any of these mean we're in constructor territory.
-                // Includes tokens that end the type declaration (like keywords starting new decls).
-                matches!(
-                    state.token,
-                    Token::Bar
-                        | Token::Lparen
-                        | Token::Lbrace
-                        | Token::Colon // GADT syntax: `type t = Foo: t`
-                        | Token::Equal // `type t = C = ...`
-                        | Token::And
-                        | Token::Constraint
-                        | Token::Semicolon
-                        | Token::Rbrace
-                        | Token::Eof
-                        // Keywords that start new top-level declarations
-                        | Token::Let { .. }
-                        | Token::Typ
-                        | Token::Module
-                        | Token::Open
-                        | Token::Include
-                        | Token::External
-                        | Token::Exception
-                )
+                // Anything else means it's a constructor.
+                state.token != Token::Dot
             })
         };
 

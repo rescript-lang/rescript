@@ -486,11 +486,21 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 if i == 0 {
                     f.string("module rec ");
                 } else {
-                    f.string(" and ");
+                    f.string("  and ");  // Two spaces before "and"
                 }
                 f.string(&mb.pmb_name.txt);
-                f.string(" = ");
-                print_module_expr(f, arena, &mb.pmb_expr);
+                // Check for constraint sugar: `A:Mt = Me` instead of `A = (Me : Mt)`
+                if let ModuleExprDesc::Pmod_constraint(me, mt) = &mb.pmb_expr.pmod_desc {
+                    f.string(":");
+                    print_module_type(f, arena, mt);
+                    f.string(" = ");
+                    print_module_expr(f, arena, me);
+                } else {
+                    f.string(" = ");
+                    print_module_expr(f, arena, &mb.pmb_expr);
+                }
+                // Print module binding attributes
+                print_item_attributes(f, arena, &mb.pmb_attributes);
             }
         }
         StructureItemDesc::Pstr_modtype(mtd) => {
