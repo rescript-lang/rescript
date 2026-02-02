@@ -1476,6 +1476,23 @@ impl<'src> Scanner<'src> {
                     self.next(); // consume closing quote
                     // Return identifier without quotes
                     let ident = self.substring(content_start, content_end).to_string();
+
+                    // Check for empty identifier - OCaml preserves the full exotic form (\"")
+                    // when the content is empty, for error recovery purposes
+                    if ident.is_empty() {
+                        let end_pos = self.position();
+                        self.error(
+                            start_pos.clone(),
+                            end_pos,
+                            DiagnosticCategory::message(
+                                "A quoted identifier can't be empty string.",
+                            ),
+                        );
+                        // Return the full exotic form like OCaml does: \""
+                        // (backslash was consumed by caller, so we prepend it)
+                        return Token::Lident("\\\"\"".to_string());
+                    }
+
                     return Token::Lident(ident);
                 }
                 '\n' | '\r' => {
