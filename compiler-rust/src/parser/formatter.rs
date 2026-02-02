@@ -28,7 +28,8 @@
 use std::io::Write;
 
 /// Default margin (line width) - same as OCaml's default
-pub const DEFAULT_MARGIN: usize = 80;
+/// OCaml's Format module uses 78 as the default margin, not 80
+pub const DEFAULT_MARGIN: usize = 78;
 
 /// Box types matching OCaml's Format module
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

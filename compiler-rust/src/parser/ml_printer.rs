@@ -420,15 +420,22 @@ fn collect_list_elements<'a>(expr: &'a Expression, arena: &ParseArena) -> (Vec<&
 }
 
 fn escape_string(s: &str) -> String {
+    // OCaml escapes non-ASCII bytes using decimal escape sequences like \226\156\133
+    // This matches OCaml's default string escaping behavior
     let mut result = String::new();
-    for c in s.chars() {
-        match c {
-            '\n' => result.push_str("\\n"),
-            '\r' => result.push_str("\\r"),
-            '\t' => result.push_str("\\t"),
-            '\\' => result.push_str("\\\\"),
-            '"' => result.push_str("\\\""),
-            c => result.push(c),
+    for byte in s.bytes() {
+        match byte {
+            b'\n' => result.push_str("\\n"),
+            b'\r' => result.push_str("\\r"),
+            b'\t' => result.push_str("\\t"),
+            b'\\' => result.push_str("\\\\"),
+            b'"' => result.push_str("\\\""),
+            0x20..=0x7E => result.push(byte as char), // Printable ASCII
+            b => {
+                // Non-ASCII or non-printable: use decimal escape
+                result.push('\\');
+                result.push_str(&b.to_string());
+            }
         }
     }
     result
@@ -2700,10 +2707,14 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
     f.string(&decl.ptype_name.txt);
 
     if let Some(manifest) = &decl.ptype_manifest {
-        f.string(" = ");
+        // OCaml: type_def_list prints " =" then type_declaration prints "@;private @;type"
+        // The break hint allows long types to wrap to the next line
+        f.string(" =");
         if matches!(decl.ptype_private, PrivateFlag::Private) {
-            f.string("private ");
+            f.space();  // Break hint before private
+            f.string("private");
         }
+        f.space();  // Break hint before type body (OCaml's @;)
         print_core_type(f, arena, manifest);
     }
 
@@ -3399,6 +3410,8 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
 }
 
 fn print_item_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, attrs: &[(Located<String>, Payload)]) {
+    // OCaml: and item_attribute ctxt f (s, e) = pp f "@[<2>[@@@@%s@ %a]@]" s.txt (payload ctxt) e
+    // Each attribute is wrapped in a box with indent 2, with a break hint after the name
     let attrs = printable_attributes(attrs);
     for (name, payload) in attrs {
         f.string("[@@");
@@ -3406,25 +3419,26 @@ fn print_item_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, att
         if !payload_is_empty(payload) {
             f.string(" ");
             print_payload(f, arena, payload);
-            f.string("]");
         } else {
-            f.string(" ]");
+            f.string(" ");
         }
+        f.string("]");
     }
 }
 
 /// Print attributes with single @ (for expressions, types, patterns)
+/// OCaml: and attribute ctxt f (s, e) = pp f "@[<2>[@@%s@ %a]@]" s.txt (payload ctxt) e
 fn print_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, attrs: &[(Located<String>, Payload)]) {
     let attrs = printable_attributes(attrs);
     for (name, payload) in attrs {
+        f.open_box(BoxKind::HOV, 2);
         f.string("[@");
         f.string(&name.txt);
+        f.space();  // Break hint after name (matches OCaml's `@ `)
         if !payload_is_empty(payload) {
-            f.string(" ");
             print_payload(f, arena, payload);
-            f.string("]");
-        } else {
-            f.string(" ]");
         }
+        f.string("]");
+        f.close_box();
     }
 }

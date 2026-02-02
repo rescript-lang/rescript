@@ -137,7 +137,11 @@ fn main() {
 
     // Read file as raw bytes, converting each byte to a char (Latin-1 encoding).
     // This preserves the original byte sequence through the compilation pipeline,
-    // matching OCaml's behavior where strings are byte sequences, not Unicode.
+    // allowing the final output to convert back to bytes with `c as u8`.
+    // This approach handles both ASCII and UTF-8 files correctly because:
+    // - Each byte becomes a char with code point 0-255
+    // - The ML printer's escape_string function properly escapes bytes > 127
+    // - The output conversion `c as u8` recovers the original bytes
     let source = match fs::read(&args.file) {
         Ok(bytes) => bytes.iter().map(|&b| b as char).collect::<String>(),
         Err(e) => {
