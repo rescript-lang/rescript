@@ -1385,7 +1385,15 @@ pub fn print_expression(
         {
             let lhs = &args[0].1;
             let rhs = &args[1].1;
-            let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
+            // Match OCaml: RHS goes through Parens.expr for brace handling
+            let rhs_doc = {
+                let doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
+                match parens::expr(arena, rhs) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, rhs, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
             let should_indent = !parsetree_viewer::is_braced_expr(rhs)
                 && parsetree_viewer::is_binary_expression(arena,rhs);
             let rhs_doc = if should_indent {
