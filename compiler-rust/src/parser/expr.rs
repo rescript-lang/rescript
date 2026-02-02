@@ -4172,11 +4172,16 @@ fn parse_switch_expr(p: &mut Parser<'_>) -> Expression {
         // OCaml uses begin_region/end_region around each case
         // This allows errors from different cases to all be reported
         p.begin_region();
+        // OCaml: Parser.leave_breadcrumb p Grammar.PatternMatchCase
+        p.leave_breadcrumb(Grammar::PatternMatchCase);
 
         if p.token == Token::Bar {
             let bar_pos = Some(p.start_pos.clone());
             p.next();
+            // OCaml: Parser.leave_breadcrumb p Grammar.Pattern
+            p.leave_breadcrumb(Grammar::Pattern);
             let lhs = super::pattern::parse_constrained_pattern(p);
+            p.eat_breadcrumb();
             let guard = if p.token == Token::When || (p.token == Token::If) {
                 p.next();
                 Some(parse_expr_with_context(p, ExprContext::When))
@@ -4193,8 +4198,10 @@ fn parse_switch_expr(p: &mut Parser<'_>) -> Expression {
                 pc_rhs: rhs,
             });
             p.end_region();
+            p.eat_breadcrumb();
         } else {
             p.end_region();
+            p.eat_breadcrumb();
             break;
         }
     }
@@ -4344,11 +4351,16 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
     while p.token != Token::Rbrace && p.token != Token::Eof {
         // OCaml uses begin_region/end_region around each case
         p.begin_region();
+        // OCaml: Parser.leave_breadcrumb p Grammar.PatternMatchCase
+        p.leave_breadcrumb(Grammar::PatternMatchCase);
 
         if p.token == Token::Bar {
             let bar_pos = Some(p.start_pos.clone());
             p.next();
+            // OCaml: Parser.leave_breadcrumb p Grammar.Pattern
+            p.leave_breadcrumb(Grammar::Pattern);
             let lhs = super::pattern::parse_constrained_pattern(p);
+            p.eat_breadcrumb();
             let guard = if p.token == Token::When {
                 p.next();
                 Some(parse_expr_with_context(p, ExprContext::When))
@@ -4366,8 +4378,10 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
                 pc_rhs: rhs,
             });
             p.end_region();
+            p.eat_breadcrumb();
         } else {
             p.end_region();
+            p.eat_breadcrumb();
             break;
         }
     }
