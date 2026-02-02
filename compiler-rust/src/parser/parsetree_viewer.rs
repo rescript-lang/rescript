@@ -3,7 +3,7 @@
 //! This module provides helper functions for analyzing and inspecting the AST.
 //! It's a port of OCaml's `res_parsetree_viewer.ml`.
 
-use crate::parse_arena::LocIdx;
+use crate::parse_arena::{LocIdx, ParseArena};
 use crate::parser::ast::*;
 use crate::parser::longident::Longident;
 
@@ -265,6 +265,39 @@ pub fn expr_is_uncurried_fun(expr: &Expression) -> bool {
         &expr.pexp_desc,
         ExpressionDesc::Pexp_fun { arity: Arity::Full(_), .. }
     )
+}
+
+/// Check if the last argument is a callback that needs special printing.
+/// This returns true if the last argument is a function/newtype and
+/// all other arguments are NOT functions/newtypes.
+pub fn requires_special_callback_printing_last_arg(args: &[(ArgLabel, Expression)]) -> bool {
+    let mut iter = args.iter().peekable();
+    while let Some((_, expr)) = iter.next() {
+        if is_fun_newtype(expr) {
+            // If this is the last element, return true
+            // Otherwise (function in non-last position), return false
+            return iter.peek().is_none();
+        }
+    }
+    false
+}
+
+/// Check if the first argument is a callback that needs special printing.
+/// This returns true if:
+/// - The first argument is a function/newtype
+/// - AND there is at least one more argument after it
+/// - AND all remaining arguments are NOT functions/newtypes
+pub fn requires_special_callback_printing_first_arg(args: &[(ArgLabel, Expression)]) -> bool {
+    match args {
+        // Single argument callback - use normal printing
+        [(_, expr)] if is_fun_newtype(expr) => false,
+        // First is callback, need to check rest
+        [(_, expr), rest @ ..] if is_fun_newtype(expr) => {
+            // All remaining args must NOT be callbacks
+            rest.iter().all(|(_, e)| !is_fun_newtype(e))
+        }
+        _ => false,
+    }
 }
 
 /// Check if an expression is "huggable" (can be printed without line breaks).
@@ -771,9 +804,9 @@ pub fn not_ghost_operator(op: &str, is_ghost: bool) -> bool {
 // Expression Rewriting
 // ============================================================================
 
-/// Rewrite underscore apply: `(__x) => f(a, __x, c)` becomes `f(a, _, c)`.
-/// Returns the rewritten expression if applicable, otherwise None.
-pub fn rewrite_underscore_apply(expr: &Expression) -> Option<Expression> {
+/// Check if an expression is the underscore apply sugar pattern: `(__x) => f(a, __x, c)`.
+/// Returns a reference to the inner apply expression if it matches.
+pub fn get_underscore_apply_inner<'a>(expr: &'a Expression) -> Option<&'a Expression> {
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_fun {
             arg_label: ArgLabel::Nolabel,
@@ -786,16 +819,23 @@ pub fn rewrite_underscore_apply(expr: &Expression) -> Option<Expression> {
             if let PatternDesc::Ppat_var(name) = &lhs.ppat_desc {
                 if name.txt == "__x" {
                     // Check if rhs is an apply
-                    if let ExpressionDesc::Pexp_apply { .. } = &rhs.pexp_desc {
-                        // TODO: Actually rewrite the apply to use `_`
-                        // For now, just return None to use the original printing
-                        return None;
+                    if matches!(&rhs.pexp_desc, ExpressionDesc::Pexp_apply { .. }) {
+                        return Some(rhs);
                     }
                 }
             }
             None
         }
         _ => None,
+    }
+}
+
+/// Check if an expression is a `__x` identifier that should be printed as `_`.
+/// Used when printing inside underscore apply sugar.
+pub fn is_underscore_ident(expr: &Expression, arena: &ParseArena) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(lid) => arena.is_lident(lid.txt, "__x"),
+        _ => false,
     }
 }
 

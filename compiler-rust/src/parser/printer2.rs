@@ -946,10 +946,8 @@ pub fn print_expression(
         } if matches!(&lhs.ppat_desc, PatternDesc::Ppat_var(name) if name.txt == "__x")
             && matches!(&rhs.pexp_desc, ExpressionDesc::Pexp_apply { .. }) =>
         {
-            match parsetree_viewer::rewrite_underscore_apply(e) {
-                Some(rewritten) => print_expression_with_comments(state, &rewritten, cmt_tbl, arena),
-                None => print_expression_with_comments(state, e, cmt_tbl, arena),
-            }
+            // Print the inner apply with __x replaced by _ at print time
+            print_underscore_apply(state, rhs, cmt_tbl, arena)
         }
         // Function expressions
         ExpressionDesc::Pexp_fun { .. } | ExpressionDesc::Pexp_newtype(_, _) => {
@@ -2904,6 +2902,100 @@ fn print_tagged_template_literal(
         Doc::concat(parts),
         Doc::text("`"),
     ])
+}
+
+/// Print underscore apply sugar: `(__x) => f(a, __x, c)` prints as `f(a, _, c)`.
+/// This prints the inner apply expression with __x replaced by _ at print time.
+fn print_underscore_apply(
+    state: &PrinterState,
+    inner: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    match &inner.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
+            // Print function part normally
+            let funct_doc = print_expression_with_comments(state, funct, cmt_tbl, arena);
+            let funct_doc = match parens::call_expr(arena, funct) {
+                ParenKind::Parenthesized => add_parens(funct_doc),
+                ParenKind::Braced(loc) => print_braces(funct_doc, funct, loc, arena),
+                ParenKind::Nothing => funct_doc,
+            };
+
+            // Print arguments, but substitute __x with _
+            let args_doc = print_arguments_with_underscore_subst(state, args, *partial, cmt_tbl, arena);
+            Doc::group(Doc::concat(vec![funct_doc, args_doc]))
+        }
+        _ => print_expression_with_comments(state, inner, cmt_tbl, arena),
+    }
+}
+
+/// Print a single argument with __x substituted by _.
+fn print_argument_with_underscore_subst(
+    state: &PrinterState,
+    label: &ArgLabel,
+    expr: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // Check if this is __x and print _ instead
+    if parsetree_viewer::is_underscore_ident(expr, arena) {
+        match label {
+            ArgLabel::Nolabel => {
+                let doc = Doc::text("_");
+                print_comments(doc, cmt_tbl, expr.pexp_loc, arena)
+            }
+            ArgLabel::Labelled(name) => {
+                let name_str = arena.get_string(name.txt);
+                Doc::concat(vec![
+                    Doc::text("~"),
+                    print_ident_like(name_str, false, false),
+                    Doc::text("=_"),
+                ])
+            }
+            ArgLabel::Optional(name) => {
+                let name_str = arena.get_string(name.txt);
+                Doc::concat(vec![
+                    Doc::text("~"),
+                    print_ident_like(name_str, false, false),
+                    Doc::text("=?_"),
+                ])
+            }
+        }
+    } else {
+        // Use regular argument printing for non-__x arguments
+        print_argument(state, label, expr, cmt_tbl, arena)
+    }
+}
+
+/// Print arguments with __x substituted by _.
+fn print_arguments_with_underscore_subst(
+    state: &PrinterState,
+    args: &[(ArgLabel, Expression)],
+    partial: bool,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    if args.is_empty() {
+        return Doc::text("()");
+    }
+
+    let all_docs: Vec<Doc> = args
+        .iter()
+        .map(|(lbl, arg)| print_argument_with_underscore_subst(state, lbl, arg, cmt_tbl, arena))
+        .collect();
+
+    Doc::group(Doc::concat(vec![
+        Doc::lparen(),
+        Doc::indent(Doc::concat(vec![
+            Doc::soft_line(),
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), all_docs),
+        ])),
+        // Don't add trailing comma for partial application
+        if partial { Doc::nil() } else { Doc::trailing_comma() },
+        Doc::soft_line(),
+        Doc::rparen(),
+    ]))
 }
 
 /// Print function application.

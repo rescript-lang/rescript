@@ -1,10 +1,15 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 257/506 tests passing (50%)
+**Overall Status:** 258/506 tests passing (51%)
 **Printer Status:** 138/187 tests passing (73%)
 
 ### Recent Progress
+- Fixed underscore apply sugar printing: `f(a => b, _)` now prints correctly as `f(a => b, _)`
+  instead of `__x => f(a => b, __x)`. Added `is_underscore_ident` and `print_underscore_apply`
+  functions to detect and print the underscore placeholder pattern.
+- Fixed `hard_line` in `line_suffix` processing: The doc.rs line suffix loop wasn't properly
+  handling `LineStyle::Hard` in flat mode - it was outputting a space instead of a newline.
 - Fixed block expression blank line handling (blockExpr.res now passes)
   - For Pexp_let and Pexp_letexception: extend start_line to leading comment
   - Match OCaml's location extension behavior for blank line calculation

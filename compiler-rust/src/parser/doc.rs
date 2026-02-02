@@ -523,11 +523,25 @@ impl Doc {
                             }
                             pos = indent;
                         }
-                    } else if *style == LineStyle::Soft {
-                        // Nothing
                     } else {
-                        buffer.push(' ');
-                        pos += 1;
+                        // Flat mode
+                        match style {
+                            LineStyle::Classic => {
+                                buffer.push(' ');
+                                pos += 1;
+                            }
+                            LineStyle::Hard => {
+                                let trimmed_len = buffer.trim_end_matches(' ').len();
+                                buffer.truncate(trimmed_len);
+                                buffer.push('\n');
+                                pos = 0;
+                            }
+                            LineStyle::Literal => {
+                                buffer.push('\n');
+                                pos = 0;
+                            }
+                            LineStyle::Soft => {}
+                        }
                     }
                 }
                 Doc::Group { doc: contents, should_break } => {
