@@ -290,6 +290,7 @@ fn is_simple_expression(expr: &Expression) -> bool {
             // OCaml's simple_expr handles these directly (no paren wrapping)
             | ExpressionDesc::Pexp_for(_, _, _, _, _)
             | ExpressionDesc::Pexp_while(_, _)
+            | ExpressionDesc::Pexp_jsx_element(_)  // JSX elements are simple
     )
 }
 
