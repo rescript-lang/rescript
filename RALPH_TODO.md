@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 365/506 tests passing (72%)
+**Overall Status:** 372/506 tests passing (73%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,15 +10,26 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 88 | 47 | 135 | 65% |
+| parsing/grammar | 92 | 43 | 135 | 68% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 13 | 71 | 84 | 15% |
+| parsing/errors | 16 | 68 | 84 | 19% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 141 tests to fix
+**Remaining:** 134 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed item_attribute line-breaking in ML printer**: Added HOV box with break hint after attribute name,
+  matching OCaml's "@[<2>[@@%s@ %a]@]" format. This enables proper line breaking for long attributes.
+- **Fixed polyvariant line-breaking in ML printer**: Added proper box structure with break hints for
+  polyvariant types - outer box for entire type, inner boxes for each row field, use break_(-2) for
+  `|` separator to align with opening `[`.
+- **Added specific error for dangling attrs/mutable in record fields**: When attributes or doc comments
+  appear without a field name, OCaml gives "Attributes and doc comments can only be used at the beginning
+  of a field declaration". Same for dangling `mutable` keyword. Fixed error location to use p.end_pos.
+- **Added error recovery for = instead of : in record fields**: When user writes `{foo=string}` instead
+  of `{foo: string}`, emit "Record fields in type declarations use `:`. Example: `{field: string}`"
+  and continue parsing as if `:` was used.
 - **Fixed empty record printing in ML printer**: When a record type has zero fields, the closing `}` was not
   being printed because the loop over fields never executed. Added special case for empty records.
 - **Fixed error location spans in expect_with_grammar**: OCaml's `expect` uses `prev_end_pos` for start and
