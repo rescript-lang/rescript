@@ -642,9 +642,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             // List cons constructor: :: (printed by the current list pattern printer)
             p.next();
             if p.token != Token::Colon {
-                p.err(DiagnosticCategory::Message(
-                    "Unexpected token in pattern: Colon".to_string(),
-                ));
+                // Use err_unexpected for proper error message
+                p.err_unexpected();
                 recover::default_pattern()
             } else {
                 p.next();
@@ -778,10 +777,8 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             }
         }
         _ => {
-            p.err(DiagnosticCategory::Message(format!(
-                "Unexpected token in pattern: {:?}",
-                p.token
-            )));
+            // Use err_unexpected for proper error message with breadcrumbs
+            p.err_unexpected();
             // Advance to prevent infinite loops
             p.next();
             recover::default_pattern()
@@ -1227,10 +1224,8 @@ fn parse_template_literal_pattern(p: &mut Parser<'_>, start_pos: crate::location
                 break;
             }
             _ => {
-                p.err(DiagnosticCategory::Message(format!(
-                    "Unexpected token in template literal pattern: {:?}",
-                    p.token
-                )));
+                // Use err_unexpected for proper error message with breadcrumbs
+                p.err_unexpected();
                 p.next();
                 break;
             }

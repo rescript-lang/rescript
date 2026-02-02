@@ -39,9 +39,11 @@ fn parse_newline_or_semicolon_structure(p: &mut Parser<'_>) {
 
     if grammar::is_structure_item_start(&p.token) {
         // Check if we're on the same line as the previous token
+        // OCaml: if p.prev_end_pos.pos_lnum < p.start_pos.pos_lnum then () else err
         if p.prev_end_pos.line >= p.start_pos.line {
-            // Same line: emit error (use err_multiple to allow multiple such errors)
-            p.err_multiple(
+            // Same line: emit error
+            // Use err_at which respects regions (like OCaml's Parser.err)
+            p.err_at(
                 p.prev_end_pos.clone(),
                 p.end_pos.clone(),
                 DiagnosticCategory::message(
@@ -133,6 +135,9 @@ fn module_type_to_package(p: &mut Parser<'_>, mt: &ModuleType) -> PackageType {
 // ============================================================================
 
 /// Parse a structure (list of structure items).
+/// Matches OCaml's parse_implementation which uses parse_region.
+/// Note: OCaml does NOT create regions per structure item - the region is shared
+/// so that after one error, subsequent errors in the same region are silenced.
 pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
     let mut items = vec![];
 
@@ -146,15 +151,11 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
             break;
         }
 
-        // Begin a new error reporting region for each structure item
-        // This allows each item to report its own errors
-        p.begin_region();
         if let Some(item) = parse_structure_item(p) {
             items.push(item);
             // Check for consecutive statements error
             parse_newline_or_semicolon_structure(p);
         }
-        p.end_region();
     }
 
     items
@@ -394,10 +395,9 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 let expr = expr::parse_expr(p);
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else if p.token != Token::Eof {
-                p.err(DiagnosticCategory::Message(format!(
-                    "Unexpected token: {:?}",
-                    p.token
-                )));
+                // Use err_unexpected which creates a proper Unexpected diagnostic
+                // with breadcrumbs, matching OCaml's parse_region behavior
+                p.err_unexpected();
                 p.next();
                 None
             } else {
@@ -611,10 +611,9 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
         }
         _ => {
             if p.token != Token::Eof && p.token != Token::Rbrace {
-                p.err(DiagnosticCategory::Message(format!(
-                    "Unexpected token in signature: {:?}",
-                    p.token
-                )));
+                // Use err_unexpected which creates a proper Unexpected diagnostic
+                // with breadcrumbs, matching OCaml's behavior
+                p.err_unexpected();
                 p.next();
             }
             None

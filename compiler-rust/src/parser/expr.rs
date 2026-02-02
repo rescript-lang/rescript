@@ -1823,10 +1823,9 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
             recover::default_expr()
         }
         _ => {
-            p.err(DiagnosticCategory::Message(format!(
-                "Unexpected token: {:?}",
-                p.token
-            )));
+            // Use err_unexpected which creates a proper Unexpected diagnostic
+            // with breadcrumbs, matching OCaml's parse_region behavior
+            p.err_unexpected();
             // Advance past the unexpected token to prevent infinite loops
             p.next();
             recover::default_expr()
@@ -4846,10 +4845,7 @@ fn parse_template_literal_with_prefix(
             }
             _ => {
                 // This shouldn't happen in well-formed template literals
-                p.err(DiagnosticCategory::Message(format!(
-                    "Unexpected token in template literal: {:?}",
-                    p.token
-                )));
+                p.err_unexpected();
                 p.next();
                 break;
             }
@@ -5036,10 +5032,7 @@ fn parse_tagged_template_literal_with_tag_expr(p: &mut Parser<'_>, tag_expr: Exp
                 break;
             }
             _ => {
-                p.err(DiagnosticCategory::Message(format!(
-                    "Unexpected token in template literal: {:?}",
-                    p.token
-                )));
+                p.err_unexpected();
                 p.next();
                 break;
             }
