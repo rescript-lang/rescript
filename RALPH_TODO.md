@@ -1,7 +1,7 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 279/506 tests passing (55%)
+**Overall Status:** 282/506 tests passing (55%)
 **Printer Status:** 158/187 tests passing (84%)
 
 ### Recent Progress
