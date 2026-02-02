@@ -1,10 +1,15 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 268/506 tests passing (52%)
-**Printer Status:** 147/187 tests passing (78%)
+**Overall Status:** 269/506 tests passing (53%)
+**Printer Status:** 148/187 tests passing (79%)
 
 ### Recent Progress
+- Fixed attribute printing on binary expressions: `@ann (x->foo)` was missing the `@ann` attribute
+  because the code only checked for printable attrs to add parens but never printed them.
+- Fixed attribute printing in Pexp_apply special cases: Array.get, Array.set, and #= (send-set)
+  were relying on the generic attribute handler which was disabled for Pexp_apply. Added explicit
+  attribute printing to each special case.
 - Fixed attribute duplication on function expressions: `@att x => 34` was printing as
   `@att @att (@att x) => 34`. Two issues fixed:
   1. `fun_expr` was including `pexp_attributes` in each `FunParam::Parameter.attrs`, but OCaml
