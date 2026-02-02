@@ -344,6 +344,17 @@ impl ParseArena {
         self.mk_loc(start_pos_idx, end_pos_idx)
     }
 
+    /// Like mk_loc_spanning, but preserves the ghost flag from the start location.
+    /// Use this when the spanning location should inherit ghostness, e.g., for
+    /// sequence expressions in braced blocks where the first expression is ghost.
+    pub fn mk_loc_spanning_preserve_ghost(&mut self, start_loc: LocIdx, end_loc: LocIdx) -> LocIdx {
+        let start_info = self.get_location(start_loc);
+        let start_pos_idx = start_info.loc_start;
+        let is_ghost = start_info.loc_ghost;
+        let end_pos_idx = self.get_location(end_loc).loc_end;
+        self.push_loc(start_pos_idx, end_pos_idx, is_ghost)
+    }
+
     /// Get the "none" location index (ghost location with none positions).
     /// Returns the pre-allocated index 0.
     pub fn none_loc(&self) -> LocIdx {

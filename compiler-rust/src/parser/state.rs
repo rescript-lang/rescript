@@ -311,6 +311,11 @@ impl<'src> Parser<'src> {
         self.arena.mk_loc_spanning(start_loc, end_loc)
     }
 
+    /// Like mk_loc_spanning, but preserves the ghost flag from the start location.
+    pub fn mk_loc_spanning_preserve_ghost(&mut self, start_loc: LocIdx, end_loc: LocIdx) -> LocIdx {
+        self.arena.mk_loc_spanning_preserve_ghost(start_loc, end_loc)
+    }
+
     /// Create a location from a start Position to another location's end.
     /// Useful pattern: `p.mk_loc_to_end_of(&start_pos, body.some_loc)`
     /// Reuses the end location's PosIdx for position sharing.

@@ -2985,8 +2985,8 @@ fn parse_braced_ident_semicolon(p: &mut Parser<'_>, start_pos: Position) -> Expr
     let mut expr = if let Some(rest_expr) = rest {
         // Create sequence: a; b()
         // OCaml: loc = {e1.pexp_loc with loc_end = e2.pexp_loc.loc_end}
-        // Since e1 has ghost loc, the sequence loc is also partially ghost
-        let seq_loc = p.mk_loc_spanning(ident_expr.pexp_loc, rest_expr.pexp_loc);
+        // Since e1 has ghost loc, the sequence loc should also be ghost
+        let seq_loc = p.mk_loc_spanning_preserve_ghost(ident_expr.pexp_loc, rest_expr.pexp_loc);
         Expression {
             pexp_desc: ExpressionDesc::Pexp_sequence(
                 Box::new(ident_expr),
