@@ -1112,6 +1112,17 @@ pub fn print_expression(
                     {
                         Doc::text("()")
                     }
+                    // Special case: #poly((1, 2)) - tuple containing a single tuple
+                    // OCaml prints this hugged without indent
+                    ExpressionDesc::Pexp_tuple(exprs) if exprs.len() == 1 && matches!(&exprs[0].pexp_desc, ExpressionDesc::Pexp_tuple(_)) => {
+                        let inner_doc = print_expression_with_comments(state, &exprs[0], cmt_tbl, arena);
+                        let inner_doc = match parens::expr(arena, &exprs[0]) {
+                            ParenKind::Parenthesized => add_parens(inner_doc),
+                            ParenKind::Braced(loc) => print_braces(inner_doc, &exprs[0], loc, arena),
+                            ParenKind::Nothing => inner_doc,
+                        };
+                        Doc::concat(vec![Doc::lparen(), inner_doc, Doc::rparen()])
+                    }
                     ExpressionDesc::Pexp_tuple(exprs) => {
                         print_tuple_args(state, exprs, cmt_tbl, arena)
                     }
