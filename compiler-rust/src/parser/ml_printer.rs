@@ -286,7 +286,9 @@ fn is_simple_expression(expr: &Expression) -> bool {
             | ExpressionDesc::Pexp_variant(_, None)
             | ExpressionDesc::Pexp_construct(_, None)
             | ExpressionDesc::Pexp_pack(_)
-            | ExpressionDesc::Pexp_field(_, _)  // Field access is simple
+            // NOTE: Pexp_field and Pexp_send are NOT simple in OCaml's pprintast.
+            // They are in expression2, which means they need parens when nested.
+            // See expression2 vs simple_expr in pprintast.ml
             // OCaml's simple_expr handles these directly (no paren wrapping)
             | ExpressionDesc::Pexp_for(_, _, _, _, _)
             | ExpressionDesc::Pexp_while(_, _)
@@ -314,11 +316,8 @@ fn is_simple_expression_with_arena(expr: &Expression, arena: &ParseArena) -> boo
             | ExpressionDesc::Pexp_coerce(_, _, _)
             | ExpressionDesc::Pexp_variant(_, None)
             | ExpressionDesc::Pexp_pack(_)
-            // NOTE: Pexp_field SHOULD NOT be simple per OCaml, but Rust uses simple_expr
-            // in places where OCaml uses expression2. For now, keep it simple to avoid
-            // regression. TODO: Implement expression2 style printing hierarchy.
-            | ExpressionDesc::Pexp_field(_, _)
-            | ExpressionDesc::Pexp_send(_, _)
+            // NOTE: Pexp_field and Pexp_send are NOT simple in OCaml's pprintast.
+            // They are in expression2, which means they need parens when nested.
             // OCaml's simple_expr handles these directly (no paren wrapping)
             | ExpressionDesc::Pexp_for(_, _, _, _, _)
             | ExpressionDesc::Pexp_while(_, _)
@@ -335,6 +334,23 @@ fn needs_parens_in_semi_context(expr: &Expression) -> bool {
             | ExpressionDesc::Pexp_try(_, _)
             | ExpressionDesc::Pexp_sequence(_, _)
     )
+}
+
+/// Check if expression is "expression2" level - includes Pexp_field and Pexp_send
+/// These don't need parens when used as binary operands or function arguments.
+/// OCaml's pprintast.ml: expression2 handles Pexp_field and Pexp_send directly,
+/// then falls through to simple_expr for other cases.
+fn is_expression2(expr: &Expression, arena: &ParseArena) -> bool {
+    if !expr.pexp_attributes.is_empty() {
+        // Attributed expressions need to go through full expression printing
+        return false;
+    }
+    // Expression2 includes field and send expressions
+    if matches!(&expr.pexp_desc, ExpressionDesc::Pexp_field(_, _) | ExpressionDesc::Pexp_send(_, _)) {
+        return true;
+    }
+    // Plus everything that's simple
+    is_simple_expression_with_arena(expr, arena)
 }
 
 /// Check if an attribute is internal and should not be printed
@@ -974,6 +990,26 @@ fn print_expression_simple<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, e
     }
 }
 
+/// Print expression at "expression2" level - used for binary operands and function arguments.
+/// OCaml's under_app: if x.pexp_attributes <> [] then expression ctxt f x else expression2 ctxt f x
+/// Expression2 includes Pexp_field and Pexp_send without parens, other exprs use simple_expr.
+fn print_expression2<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
+
+    if has_attrs {
+        // Attributed expressions go through full expression printing
+        print_expression(f, arena, expr);
+    } else if is_expression2(expr, arena) {
+        // Expression2-level expressions don't need parens
+        print_expression(f, arena, expr);
+    } else {
+        // Everything else needs parens (falls through from simple_expr)
+        f.string("(");
+        print_expression(f, arena, expr);
+        f.string(")");
+    }
+}
+
 fn print_expression_semi_context<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
     let attrs = printable_attributes(&expr.pexp_attributes);
     let has_attrs = !attrs.is_empty();
@@ -1212,13 +1248,15 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
             // Array access: Array.get(arr, idx) -> arr.(idx)
             // Also handles @res.array.access attribute for backwards compatibility
+            // OCaml uses simple_expr for the array expression and expression for the index
             if (parsetree_viewer::is_array_access(arena, expr) || has_attribute(&expr.pexp_attributes, "res.array.access")) && args.len() == 2 {
                 let (_, arr) = &args[0];
                 let (_, idx) = &args[1];
                 if use_parens {
                     f.string("(");
                 }
-                print_expression(f, arena, arr);
+                // OCaml: (simple_expr ctxt) a for the array expression
+                print_expression_simple(f, arena, arr);
                 f.string(".(");
                 print_expression(f, arena, idx);
                 f.string(")");
@@ -1228,6 +1266,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 return;
             }
             // Array set: Array.set(arr, idx, val) -> arr.(idx) <- val
+            // OCaml uses simple_expr for both array and value expressions
             if parsetree_viewer::is_array_set(arena, expr) && args.len() == 3 {
                 let (_, arr) = &args[0];
                 let (_, idx) = &args[1];
@@ -1235,11 +1274,13 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if use_parens {
                     f.string("(");
                 }
-                print_expression(f, arena, arr);
+                // OCaml: (simple_expr ctxt) a for the array expression
+                print_expression_simple(f, arena, arr);
                 f.string(".(");
                 print_expression(f, arena, idx);
                 f.string(") <- ");
-                print_expression(f, arena, val);
+                // OCaml: (simple_expr ctxt) v for the value expression
+                print_expression_simple(f, arena, val);
                 if use_parens {
                     f.string(")");
                 }
@@ -1255,12 +1296,12 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                         f.string("(");
                     }
                     f.open_box(BoxKind::HOV, 2);
-                    // OCaml uses simple_expr which wraps non-simple exprs in parens
-                    print_expression_simple(f, arena, lhs);
+                    // OCaml uses label_x_expression_param which calls expression2 for Nolabel args
+                    print_expression2(f, arena, lhs);
                     f.space();
                     f.string(op_name);
                     f.space();
-                    print_expression_simple(f, arena, rhs);
+                    print_expression2(f, arena, rhs);
                     if *partial {
                         f.string(" ...");
                     }
@@ -1297,12 +1338,13 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
 
             // Default: prefix application
-            // OCaml: pp f "@[<hov2>%a@ %a@]" with break hint between func and args
+            // OCaml: pp f "%a@ %a" (expression2 ctxt) e (list (label_x_expression_param ...)) l
             if use_parens {
                 f.string("(");
             }
             f.open_box(BoxKind::HOV, 2);
-            print_expression(f, arena, funct);
+            // OCaml uses expression2 for the function expression
+            print_expression2(f, arena, funct);
             for (label, arg) in args {
                 f.space(); // Break hint between func and args
                 print_arg_with_label(f, arena, label, arg);
@@ -1487,11 +1529,13 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             print_longident_idx(f, arena, field.txt);
         }
         ExpressionDesc::Pexp_setfield(obj, field, value) => {
-            print_expression(f, arena, obj);
+            // OCaml: pp f "@[<2>%a.%a@ <-@ %a@]" (simple_expr ctxt) e1 longident_loc li (simple_expr ctxt) e2
+            // Note: uses simple_expr for both object and value
+            print_expression_simple(f, arena, obj);
             f.string(".");
             print_longident_idx(f, arena, field.txt);
             f.string(" <- ");
-            print_expression(f, arena, value);
+            print_expression_simple(f, arena, value);
         }
         ExpressionDesc::Pexp_array(elems) => {
             f.open_box(BoxKind::HOV, 0);
@@ -1618,7 +1662,9 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.string(")");
         }
         ExpressionDesc::Pexp_send(e, meth) => {
-            print_expression(f, arena, e);
+            // OCaml: pp f "@[<hov2>%a#%s@]" (simple_expr ctxt) e s.txt
+            // Note: uses simple_expr for the object, not expression
+            print_expression_simple(f, arena, e);
             f.string("#");
             f.string(&meth.txt);
         }
@@ -2452,7 +2498,7 @@ fn print_arg_with_label<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, labe
             f.string("~");
             f.string(name_str);
             f.string(":");
-            // OCaml uses simple_expr which wraps non-simple exprs in parens
+            // OCaml uses simple_expr for labeled args
             print_expression_simple(f, arena, arg);
         }
         ArgLabel::Optional(name) => {
@@ -2470,12 +2516,12 @@ fn print_arg_with_label<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, labe
             f.string("?");
             f.string(name_str);
             f.string(":");
-            // OCaml uses simple_expr which wraps non-simple exprs in parens
+            // OCaml uses simple_expr for optional args
             print_expression_simple(f, arena, arg);
         }
         ArgLabel::Nolabel => {
-            // OCaml uses simple_expr which wraps non-simple exprs in parens
-            print_expression_simple(f, arena, arg);
+            // OCaml uses expression2 for unlabeled args (label_x_expression_param -> Nolabel -> expression2)
+            print_expression2(f, arena, arg);
         }
     }
 }
