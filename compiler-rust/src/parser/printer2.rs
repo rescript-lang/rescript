@@ -7050,8 +7050,33 @@ fn print_rec_module_bindings(
             // Wrap module name with print_comments for its location
             let name_doc = Doc::text(&binding.pmb_name.txt);
             let name_doc = print_comments(name_doc, cmt_tbl, binding.pmb_name.loc, arena);
-            let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl, arena);
-            Doc::concat(vec![attrs_doc, prefix, name_doc, Doc::text(" = "), expr_doc])
+
+            // Handle Pmod_constraint specially - print constraint before equals sign (like OCaml)
+            // module rec X: Int = Y  vs  module rec X = Y: Int
+            let (expr_doc, constraint_doc) = match &binding.pmb_expr.pmod_desc {
+                ModuleExprDesc::Pmod_constraint(mod_expr, mod_type)
+                    if !parsetree_viewer::has_await_attribute(&binding.pmb_expr.pmod_attributes) =>
+                {
+                    let expr_doc = print_mod_expr(state, mod_expr, cmt_tbl, arena);
+                    // Wrap in parens based on the outer binding expr (not inner)
+                    let expr_doc = if parens::mod_expr_parens(&binding.pmb_expr) {
+                        Doc::concat(vec![Doc::lparen(), expr_doc, Doc::rparen()])
+                    } else {
+                        expr_doc
+                    };
+                    let constraint_doc = Doc::concat(vec![
+                        Doc::text(": "),
+                        print_module_type(state, mod_type, cmt_tbl, arena),
+                    ]);
+                    (expr_doc, constraint_doc)
+                }
+                _ => {
+                    let expr_doc = print_mod_expr(state, &binding.pmb_expr, cmt_tbl, arena);
+                    (expr_doc, Doc::nil())
+                }
+            };
+
+            Doc::concat(vec![attrs_doc, prefix, name_doc, constraint_doc, Doc::text(" = "), expr_doc])
         },
         cmt_tbl,
         arena,
