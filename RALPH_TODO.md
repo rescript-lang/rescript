@@ -1,10 +1,14 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 265/506 tests passing (52%)
-**Printer Status:** 145/187 tests passing (77%)
+**Overall Status:** 266/506 tests passing (52%)
+**Printer Status:** 146/187 tests passing (78%)
 
 ### Recent Progress
+- Fixed setfield parenthesization in binary expressions (setfield.res passes): OCaml's print_operand
+  handles Pexp_setfield specially - it only needs parens when on the LHS of a binary expression,
+  not when on the RHS. This means `a->@attr user.name = "steve"` doesn't need parens around the RHS.
+  Added special case in binary_operand_needs_parens to bypass the general binary_expr_operand check.
 - Fixed recursive module constraint printing (recModules.res passes): Handle Pmod_constraint
   in print_rec_module_bindings to print constraint before equals sign.
 - Fixed try expression body parenthesization (try.res now passes): Match OCaml's printer which

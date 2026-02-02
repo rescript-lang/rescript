@@ -3174,6 +3174,17 @@ fn binary_operand_needs_parens(arena: &ParseArena, is_lhs: bool, parent_op: &str
         return ParenKind::Nothing;
     }
 
+    // Special case for Pexp_setfield: OCaml's print_operand handles this specially
+    // - only needs parens when on LHS of a binary expression
+    // - does NOT go through the general binary_expr_operand check
+    if matches!(&operand.pexp_desc, ExpressionDesc::Pexp_setfield(_, _, _)) {
+        if is_lhs {
+            return ParenKind::Parenthesized;
+        } else {
+            return ParenKind::Nothing;
+        }
+    }
+
     // Fall back to the general binary_expr_operand check for non-binary expressions
     parens::binary_expr_operand(arena, is_lhs, operand)
 }
