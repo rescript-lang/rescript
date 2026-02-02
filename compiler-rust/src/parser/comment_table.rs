@@ -1795,37 +1795,172 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
             walk_expression(inner, t, comments, arena);
         }
         ExpressionDesc::Pexp_jsx_element(jsx) => {
-            walk_jsx_element(jsx, t, comments, arena);
+            walk_jsx_element(jsx, expr.pexp_loc, t, comments, arena);
         }
     }
 }
 
-fn walk_jsx_element(jsx: &JsxElement, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
+fn walk_jsx_element(jsx: &JsxElement, pexp_loc: LocIdx, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
     if comments.is_empty() {
         return;
     }
 
     match jsx {
         JsxElement::Fragment(fragment) => {
+            // For fragment, get the opening token location (<>)
+            let opening_loc = {
+                let full_loc = arena.to_location(pexp_loc);
+                arena.from_location(&Location::from_positions(
+                    full_loc.loc_start.clone(),
+                    fragment.opening.clone(),
+                ))
+            };
+
+            // Partition on same line as opening
+            let (on_same_line, rest) = partition_by_on_same_line(opening_loc, comments, arena);
+            t.attach_trailing(opening_loc, on_same_line, arena);
+
             let nodes: Vec<Node<'_>> = fragment.children.iter().map(|e| Node::Expression(e)).collect();
-            walk_list(&nodes, t, comments, arena);
+            walk_list(&nodes, t, rest, arena);
         }
         JsxElement::Unary(unary) => {
-            // Walk the props
-            for prop in &unary.props {
-                walk_jsx_prop(prop, t, vec![], arena);
+            // Compute the closing token location for />
+            // OCaml: unary_element_closing_token creates a loc with start at expr_loc.end - 2
+            let closing_token_loc = {
+                let expr_loc = arena.to_location(pexp_loc);
+                let end_pos = &expr_loc.loc_end;
+                let start_pos = crate::location::Position {
+                    file_name: end_pos.file_name,
+                    line: end_pos.line,
+                    bol: if end_pos.bol >= 2 { end_pos.bol - 2 } else { 0 },
+                    cnum: if end_pos.cnum >= 2 { end_pos.cnum - 2 } else { 0 },
+                };
+                arena.from_location(&Location::from_positions(start_pos, end_pos.clone()))
+            };
+
+            let name_loc = unary.tag_name.loc;
+
+            // Get the next token after the tag name (first prop or closing token)
+            let next_token = if unary.props.is_empty() {
+                closing_token_loc
+            } else {
+                get_jsx_prop_loc(&unary.props[0], arena)
+            };
+
+            // Partition comments: same line as tag name and before next token -> trailing of tag name
+            let (after_opening_tag_name, rest) = partition_adjacent_trailing_before_next_token_on_same_line(
+                name_loc,
+                next_token,
+                comments,
+                arena,
+            );
+
+            // Only attach comments to the element name if they are on the same line
+            t.attach_trailing(name_loc, after_opening_tag_name, arena);
+
+            if unary.props.is_empty() {
+                // Attach comments to the closing /> token
+                let (before_closing_token, _rest) = partition_leading_trailing(rest, closing_token_loc, arena);
+                t.attach_leading(closing_token_loc, before_closing_token, arena);
+            } else {
+                // Walk through props
+                let (comments_for_props, _rest) = partition_leading_trailing(rest, closing_token_loc, arena);
+                let prop_nodes: Vec<Node<'_>> = unary.props.iter().map(|p| Node::JsxProp(p)).collect();
+                walk_list(&prop_nodes, t, comments_for_props, arena);
             }
-            // Remaining comments attach to the element
-            let loc = unary.tag_name.loc;
-            t.attach_trailing(loc, comments, arena);
         }
         JsxElement::Container(container) => {
-            // Walk props and children
-            for prop in &container.props {
-                walk_jsx_prop(prop, t, vec![], arena);
+            // Create location for the opening > token
+            let opening_greater_than_loc = {
+                let opening_end = &container.opening_end;
+                arena.from_location(&Location::from_positions(
+                    opening_end.clone(),
+                    opening_end.clone(),
+                ))
+            };
+
+            let name_loc = container.tag_name_start.loc;
+
+            // Get the next token after the tag name (first prop or opening >)
+            let next_token = if container.props.is_empty() {
+                opening_greater_than_loc
+            } else {
+                get_jsx_prop_loc(&container.props[0], arena)
+            };
+
+            // Partition comments: same line as tag name and before next token
+            let (after_opening_tag_name, rest) = partition_adjacent_trailing_before_next_token_on_same_line(
+                name_loc,
+                next_token,
+                comments,
+                arena,
+            );
+
+            // Attach comments to the element name if they are on the same line
+            t.attach_trailing(name_loc, after_opening_tag_name, arena);
+
+            let rest = if container.props.is_empty() {
+                // Attach comments to the opening > token
+                let (before_greater_than, rest) = partition_leading_trailing(rest, opening_greater_than_loc, arena);
+                t.attach_leading(opening_greater_than_loc, before_greater_than, arena);
+                rest
+            } else {
+                // Walk props
+                let (comments_for_props, rest) = partition_leading_trailing(rest, opening_greater_than_loc, arena);
+                let prop_nodes: Vec<Node<'_>> = container.props.iter().map(|p| Node::JsxProp(p)).collect();
+                walk_list(&prop_nodes, t, comments_for_props, arena);
+                rest
+            };
+
+            // Comments after '>' on the same line should be attached to '>'
+            let (after_opening_greater_than, rest) = partition_by_on_same_line(opening_greater_than_loc, rest, arena);
+            t.attach_trailing(opening_greater_than_loc, after_opening_greater_than, arena);
+
+            // Get closing tag location if present
+            let (comments_for_children, _rest) = match &container.closing_tag {
+                None => (rest, vec![]),
+                Some(closing_tag) => {
+                    let closing_tag_loc = {
+                        arena.from_location(&Location::from_positions(
+                            closing_tag.start.clone(),
+                            closing_tag.end.clone(),
+                        ))
+                    };
+                    partition_leading_trailing(rest, closing_tag_loc, arena)
+                }
+            };
+
+            if container.children.is_empty() {
+                // Attach all comments to the closing tag if there are no children
+                if let Some(closing_tag) = &container.closing_tag {
+                    let closing_tag_loc = arena.from_location(&Location::from_positions(
+                        closing_tag.start.clone(),
+                        closing_tag.end.clone(),
+                    ));
+
+                    let opening_end_line = arena.to_location(opening_greater_than_loc).loc_end.line;
+                    let closing_start_line = closing_tag.start.line;
+
+                    // Check if there's space between opening and closing tags
+                    if opening_end_line < closing_start_line + 1 {
+                        // Comments between tags get attached to "inside" the expression
+                        let (inside_comments, leading_for_closing) = partition_between_lines(
+                            opening_end_line,
+                            closing_start_line,
+                            comments_for_children,
+                        );
+                        t.attach_inside(pexp_loc, inside_comments, arena);
+                        t.attach_leading(closing_tag_loc, leading_for_closing, arena);
+                    } else {
+                        // If closing tag is on the same line, attach to closing tag
+                        t.attach_leading(closing_tag_loc, comments_for_children, arena);
+                    }
+                }
+            } else {
+                // Walk through children
+                let children_nodes: Vec<Node<'_>> = container.children.iter().map(|e| Node::Expression(e)).collect();
+                walk_list(&children_nodes, t, comments_for_children, arena);
             }
-            let nodes: Vec<Node<'_>> = container.children.iter().map(|e| Node::Expression(e)).collect();
-            walk_list(&nodes, t, comments, arena);
         }
     }
 }

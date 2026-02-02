@@ -1,18 +1,23 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 282/506 tests passing (55%)
-**Printer Status:** 158/187 tests passing (84%)
+**Overall Status:** 283/506 tests passing (55%)
+**Printer Status:** 159/187 tests passing (85%)
 
 ### Recent Progress
+- Fixed JSX comment handling in comment_table.rs (printer/comments/jsx.res now passes):
+  - Implemented proper JSX comment attachment logic matching OCaml's res_comments_table.ml
+  - For unary elements: calculate closing token location (/>), partition comments between tag name
+    and next token (first prop or />), attach comments appropriately
+  - For container elements: handle opening > token comments, children comments, and inside comments
+    for empty containers with space between opening and closing tags
+  - Use `partition_adjacent_trailing_before_next_token_on_same_line` for JSX tag name comments
 - Implemented JSX printing in Rust printer:
   - Added `print_jsx_element` with support for fragments, unary, and container elements
   - Added `print_jsx_name` for lower, upper, and qualified tag names
   - Added `print_jsx_prop` for punning, value, and spreading props
   - Added `print_jsx_children` with proper line separation
   - Fixed JSX parser to properly populate `closing_tag` field (was always None)
-  - Note: JSX comment handling still needs improvement to match OCaml's sophisticated
-    `partition_adjacent_trailing_before_next_token_on_same_line` logic
 - Added `has_comment_below` function and fixed simple pipe (->) comment handling:
   OCaml only adds `soft_line` before `->` when `has_comment_below` returns true (checking if the first
   trailing comment starts on a line BELOW the expression's end). This ensures `compilation // after`
@@ -205,14 +210,14 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] **Fix comment placement in function arguments** - `/* c0 */ ~arg=/* c1 */ value /* c2 */` pattern
 - [x] **Fix comment placement in function parameters** - Comments on function parameter definitions
 
-### Comment Test Files (5 failing, 12 passing)
+### Comment Test Files (4 failing, 13 passing)
 - [x] `printer/comments/namedArgs.res` - Named argument comments
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [x] `printer/comments/modExpr.res` - Module expression comments
 - [x] `printer/comments/structureItem.res` - Structure item comments
 - [x] `printer/comments/blockExpr.res` - Block expression comments
 - [x] `printer/comments/expr.res` - General expression comments
-- [ ] `printer/comments/jsx.res` - JSX element comments (JSX printing implemented, but comment handling needs OCaml's `partition_adjacent_trailing_before_next_token_on_same_line`)
+- [x] `printer/comments/jsx.res` - JSX element comments
 - [ ] `printer/comments/binaryExpr.res` - Binary expression comments (needs flattening logic)
 - [x] `printer/comments/case.res` - Match case comments
 - [ ] `printer/comments/array.res` - Array literal comments (needs spread syntax)
