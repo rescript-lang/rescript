@@ -829,13 +829,9 @@ fn parse_primary_module_expr(p: &mut Parser<'_>) -> ModuleExpr {
                 } else {
                     let inner = parse_module_expr(p);
                     p.expect(Token::Rparen);
-                    // OCaml: parse_primary_mod_expr updates the location to include the parens
-                    // {mod_expr with pmod_loc = mk_loc start_pos p.prev_end_pos}
-                    let loc = p.mk_loc_to_prev_end(&start_pos);
-                    ModuleExpr {
-                        pmod_loc: loc,
-                        ..inner
-                    }
+                    // OCaml: parse_atomic_module_expr does NOT update the location to include parens.
+                    // It just returns mod_expr as-is, keeping the inner expression's original location.
+                    inner
                 }
             }
         }
