@@ -4154,6 +4154,10 @@ fn parse_switch_expr(p: &mut Parser<'_>) -> Expression {
 
     let mut cases = vec![];
     while p.token != Token::Rbrace && p.token != Token::Eof {
+        // OCaml uses begin_region/end_region around each case
+        // This allows errors from different cases to all be reported
+        p.begin_region();
+
         if p.token == Token::Bar {
             let bar_pos = Some(p.start_pos.clone());
             p.next();
@@ -4173,7 +4177,9 @@ fn parse_switch_expr(p: &mut Parser<'_>) -> Expression {
                 pc_guard: guard,
                 pc_rhs: rhs,
             });
+            p.end_region();
         } else {
+            p.end_region();
             break;
         }
     }
@@ -4321,6 +4327,9 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
 
     let mut cases = vec![];
     while p.token != Token::Rbrace && p.token != Token::Eof {
+        // OCaml uses begin_region/end_region around each case
+        p.begin_region();
+
         if p.token == Token::Bar {
             let bar_pos = Some(p.start_pos.clone());
             p.next();
@@ -4341,7 +4350,9 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
                 pc_guard: guard,
                 pc_rhs: rhs,
             });
+            p.end_region();
         } else {
+            p.end_region();
             break;
         }
     }
