@@ -2283,7 +2283,7 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                             f.string(": ");
                             print_core_type(f, arena, &field.pld_type);
                         }
-                        f.string("}");
+                        f.string(" }");  // space before }
                     }
                     _ => {}
                 }
