@@ -1716,6 +1716,7 @@ fn print_expr_fun_parameters(
     use parsetree_viewer::FunParam;
 
     // Handle special single parameter cases
+    // Note: we filter out parsing attrs (like res.braces) when checking for empty attrs
     match parameters {
         // let f = _ => ()
         [FunParam::Parameter {
@@ -1723,7 +1724,9 @@ fn print_expr_fun_parameters(
             label: ArgLabel::Nolabel,
             default_expr: None,
             pat,
-        }] if attrs.is_empty() && matches!(&pat.ppat_desc, PatternDesc::Ppat_any) => {
+        }] if parsetree_viewer::filter_parsing_attrs(attrs).is_empty()
+            && matches!(&pat.ppat_desc, PatternDesc::Ppat_any) =>
+        {
             let doc = if has_constraint {
                 Doc::text("(_)")
             } else {
@@ -1738,7 +1741,7 @@ fn print_expr_fun_parameters(
             label: ArgLabel::Nolabel,
             default_expr: None,
             pat,
-        }] if attrs.is_empty()
+        }] if parsetree_viewer::filter_parsing_attrs(attrs).is_empty()
             && matches!(&pat.ppat_desc, PatternDesc::Ppat_var(_))
             && pat.ppat_attributes.is_empty() =>
         {
@@ -1755,7 +1758,7 @@ fn print_expr_fun_parameters(
             label: ArgLabel::Nolabel,
             default_expr: None,
             pat,
-        }] if attrs.is_empty()
+        }] if parsetree_viewer::filter_parsing_attrs(attrs).is_empty()
             && matches!(
                 &pat.ppat_desc,
                 PatternDesc::Ppat_construct(lid, None)
