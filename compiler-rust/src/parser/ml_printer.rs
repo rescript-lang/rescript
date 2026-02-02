@@ -313,7 +313,11 @@ fn is_simple_expression_with_arena(expr: &Expression, arena: &ParseArena) -> boo
             | ExpressionDesc::Pexp_coerce(_, _, _)
             | ExpressionDesc::Pexp_variant(_, None)
             | ExpressionDesc::Pexp_pack(_)
-            | ExpressionDesc::Pexp_field(_, _)  // Field access is simple
+            // NOTE: Pexp_field SHOULD NOT be simple per OCaml, but Rust uses simple_expr
+            // in places where OCaml uses expression2. For now, keep it simple to avoid
+            // regression. TODO: Implement expression2 style printing hierarchy.
+            | ExpressionDesc::Pexp_field(_, _)
+            | ExpressionDesc::Pexp_send(_, _)
             // OCaml's simple_expr handles these directly (no paren wrapping)
             | ExpressionDesc::Pexp_for(_, _, _, _, _)
             | ExpressionDesc::Pexp_while(_, _)
