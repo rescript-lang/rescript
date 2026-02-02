@@ -1,10 +1,17 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 269/506 tests passing (53%)
-**Printer Status:** 148/187 tests passing (79%)
+**Overall Status:** 271/506 tests passing (53%)
+**Printer Status:** 150/187 tests passing (80%)
 
 ### Recent Progress
+- Implemented special callback printing for functions in last/first arg position (expr.res passes):
+  When a callback has a trailing comment between parameters and `=>` like `f(() // c1 => 1)`,
+  OCaml moves the comment AFTER the entire function call: `f(() => 1) // c1`. Implemented:
+  - `print_pexp_fun` with `in_callback` parameter that adds `soft_line` after return expression
+  - `print_arguments_with_callback_in_last_position` using `custom_layout` for different formats
+  - `print_arguments_with_callback_in_first_position` for callbacks as first argument
+  - Uses `CommentTable::copy` to handle printing the same subtree multiple times
 - Fixed attribute printing on binary expressions: `@ann (x->foo)` was missing the `@ann` attribute
   because the code only checked for printable attrs to add parens but never printed them.
 - Fixed attribute printing in Pexp_apply special cases: Array.get, Array.set, and #= (send-set)
@@ -110,13 +117,10 @@
   from first to last name for NewTypes param_loc, but OCaml uses just the first name's location.
   Changed to use `first.loc` only, which properly attaches leading/trailing comments.
 
-- **expr.res - Callback trailing comments**: When a trailing comment is between the callback
-  parameter and `=>` (e.g., `f(() // c1 => 1)`), OCaml prints it AFTER the whole function call:
-  `f(() => 1)\n// c1`. This requires implementing special callback printing functions:
-  - `requires_special_callback_printing_last_arg` / `requires_special_callback_printing_first_arg`
-  - `print_arguments_with_callback_in_first_position` / `print_arguments_with_callback_in_last_position`
-  - Using `Doc::custom_layout` to try different layouts
-  This is a significant feature that affects how callback arguments are formatted.
+- **expr.res - Callback trailing comments**: FIXED! Implemented special callback printing:
+  - `print_pexp_fun` with `in_callback` parameter adds `soft_line` after return expression
+  - `print_arguments_with_callback_in_last_position` and `print_arguments_with_callback_in_first_position`
+  - Uses `Doc::custom_layout` and `CommentTable::copy` to try different layouts
 
 - **modType.res - Pmty_functor parameter comments**: FIXED! The Rust comment_table was walking
   Pmty_functor parameters one at a time recursively, which didn't properly handle comments
@@ -132,10 +136,9 @@
 1. **JSX Printing**: Currently prints `<jsx />` placeholder. Need to implement full JSX printing
    including children, props, spread, fragments, etc.
 
-2. **Callback Formatting**: OCaml has special callback printing that "hugs" callback arguments.
-   - `requires_special_callback_printing_last_arg` / `requires_special_callback_printing_first_arg`
-   - `print_arguments_with_callback_in_first_position` / `print_arguments_with_callback_in_last_position`
-   - Uses `Doc::custom_layout` to try different layouts
+2. **Callback Formatting**: IMPLEMENTED! Special callback printing that "hugs" callback arguments
+   is now working. The basic feature works for expr.res, but callback.res shows some remaining
+   layout differences (line breaking decisions for very long callbacks).
 
 3. **Underscore Apply Rewriting**: Need to implement:
    - `rewrite_underscore_apply`: `(__x) => f(a, __x, c)` -> `f(a, _, c)`
@@ -171,7 +174,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/comments/modExpr.res` - Module expression comments
 - [x] `printer/comments/structureItem.res` - Structure item comments
 - [x] `printer/comments/blockExpr.res` - Block expression comments
-- [ ] `printer/comments/expr.res` - General expression comments
+- [x] `printer/comments/expr.res` - General expression comments
 - [ ] `printer/comments/jsx.res` - JSX element comments
 - [ ] `printer/comments/binaryExpr.res` - Binary expression comments
 - [x] `printer/comments/case.res` - Match case comments
