@@ -389,20 +389,28 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.close_box();
         }
         StructureItemDesc::Pstr_type(rec_flag, decls) => {
+            // OCaml: @[<2>type %a%a%s%s%a@]%a for first, @[<2>and %a@]%a for others
+            // Each declaration is wrapped in a box with indent 2
             let rec_str = match rec_flag {
                 RecFlag::Recursive => "",
                 RecFlag::Nonrecursive => " nonrec",
             };
             for (i, decl) in decls.iter().enumerate() {
+                if i > 0 {
+                    f.newline();
+                }
+                // Open box with indent 2 for this declaration
+                f.open_box(BoxKind::HOV, 2);
                 if i == 0 {
                     f.string("type");
                     f.string(rec_str);
                     f.string(" ");
                 } else {
-                    f.newline();
                     f.string("and ");
                 }
                 print_type_declaration(f, arena, decl);
+                f.close_box();
+                // NOTE: print_type_declaration already prints ptype_attributes
             }
         }
         StructureItemDesc::Pstr_typext(ext) => {
