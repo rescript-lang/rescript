@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 307/506 tests passing (61%)
-**Printer Status:** 180/187 tests passing (96%)
+**Overall Status:** 312/506 tests passing (62%)
+**Printer Status:** 187/187 tests passing (100%)
 
 ---
 
@@ -32,9 +32,13 @@
   - Added special comment handling in comment_table for spread arrays/lists
 - Fixed polyvariant row field comment handling (variant.res now passes):
   - Wrap tag_doc with print_comments using label.loc to attach leading/trailing comments
-- Added template literal printing (WIP, templateLiteral.res still has edge cases):
+- Fixed template literal printing (templateLiteral.res now passes):
   - Implemented `print_template_literal` to reconstruct `foo ${bar}` from string concatenation
-  - Known issue: Complex expressions inside template literals may break to multiple lines
+  - Fixed `print_string_contents` to split strings on newlines and join with `Doc::literal_line()`
+  - This ensures proper position tracking for multiline strings (especially in template literals)
+- Fixed JSX fragment arrow function placement (jsx.res now passes):
+  - Added `Pexp_jsx_element(JsxElement::Fragment(_))` to `should_indent` check in arrow function
+  - Now `let f = el => <> ... </>` keeps the fragment on the same line as `=>`
 - Fixed doc comment inline spacing in type expressions (DocComments.res now passes):
   - Added `print_doc_comments_with_sep` with configurable separator (defaults to hard_line)
   - Use `Doc::space()` separator for doc comments on types to keep them inline

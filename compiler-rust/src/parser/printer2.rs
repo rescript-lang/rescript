@@ -879,11 +879,14 @@ pub fn print_braces(doc: Doc, expr: &Expression, braces_loc: LocIdx, arena: &Par
 // Constant Printing
 // ============================================================================
 
-/// Print string contents with proper escaping.
+/// Print string contents with proper handling of newlines.
+/// Matches OCaml's print_string_contents which splits on newlines
+/// and joins with Doc.literal_line. This ensures proper position
+/// tracking for multiline strings (especially in template literals).
 fn print_string_contents(txt: &str) -> Doc {
-    // For now, just return the text. A complete implementation would
-    // handle escape sequences properly.
-    Doc::text(txt)
+    let lines: Vec<&str> = txt.split('\n').collect();
+    let docs: Vec<Doc> = lines.iter().map(|line| Doc::text(*line)).collect();
+    Doc::join(Doc::literal_line(), docs)
 }
 
 /// Print a constant value.
@@ -1870,6 +1873,7 @@ fn print_pexp_fun(
                 | ExpressionDesc::Pexp_letmodule(_, _, _)
                 | ExpressionDesc::Pexp_letexception(_, _)
                 | ExpressionDesc::Pexp_open(_, _, _)
+                | ExpressionDesc::Pexp_jsx_element(JsxElement::Fragment(_))
         );
 
         let return_doc = {
