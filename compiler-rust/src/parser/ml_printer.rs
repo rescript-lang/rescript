@@ -2395,7 +2395,8 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             f.string(name);
         }
         CoreTypeDesc::Ptyp_variant(rows, closed, labels) => {
-            // OCaml: @[<2>[%a%a]@] with complex formatting
+            // OCaml: pp f "@[<2>[%a%a]@]" ...
+            f.open_box(BoxKind::HOV, 2);
             f.string("[");
 
             // Empty variant cases
@@ -2405,26 +2406,41 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
                     ClosedFlag::Closed => {}
                 }
             } else {
-                // Non-empty: prefix + list
+                // Non-empty: prefix + break, then list
+                // OCaml: pp f "%s@;%a" prefix (list type_variant_helper ~sep:"@;<1 -2>| ") rows
                 match (closed, &labels) {
-                    (ClosedFlag::Closed, None) => f.string(" "), // Just break
-                    (ClosedFlag::Closed, Some(_)) => f.string("< "), // < + break
-                    (ClosedFlag::Open, _) => f.string("> "), // > + break
+                    (ClosedFlag::Closed, None) => {
+                        // Just break hint (no prefix character)
+                        f.space();
+                    }
+                    (ClosedFlag::Closed, Some(_)) => {
+                        f.string("<");
+                        f.space();
+                    }
+                    (ClosedFlag::Open, _) => {
+                        f.string(">");
+                        f.space();
+                    }
                 }
 
                 for (i, row) in rows.iter().enumerate() {
                     if i > 0 {
-                        // Separator: @;<1 -2>| = break + " | " on same line
-                        f.string(" | ");
+                        // Separator: @;<1 -2>| = break with offset -2, then "| "
+                        // The -2 offset causes the "|" to align with the "["
+                        f.break_(1, -2);
+                        f.string("| ");
                     }
                     match row {
                         RowField::Rtag(label, attrs, empty, types) => {
                             // OCaml: @[<2>%a%a@;%a@]
+                            f.open_box(BoxKind::HOV, 2);
                             f.string("`");
                             f.string(&label.txt);
                             if !*empty || !types.is_empty() {
-                                // of@; = " of "
-                                f.string(" of ");
+                                // of@; = " of " with break hint
+                                f.space();
+                                f.string("of");
+                                f.space();
                                 for (j, t) in types.iter().enumerate() {
                                     if j > 0 {
                                         f.string("&");
@@ -2433,8 +2449,9 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
                                 }
                             }
                             // Trailing break (@;) then attrs
-                            f.string(" ");
+                            f.space();
                             print_attributes(f, arena, attrs);
+                            f.close_box();
                         }
                         RowField::Rinherit(typ) => {
                             print_core_type(f, arena, typ);
@@ -2459,6 +2476,7 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
                 }
             }
             f.string("]");
+            f.close_box();
         }
         CoreTypeDesc::Ptyp_poly(vars, t) => {
             if !vars.is_empty() {
@@ -3463,19 +3481,17 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
 fn print_item_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, attrs: &[(Located<String>, Payload)]) {
     // OCaml: and item_attribute ctxt f (s, e) = pp f "@[<2>[@@@@%s@ %a]@]" s.txt (payload ctxt) e
     // Each attribute is wrapped in a box with indent 2, with a break hint after the name
-    // NOTE: The box causes different line-break behavior than OCaml's Format module for
-    // complex nested structures. For now, keeping it simple without the box.
     let attrs = printable_attributes(attrs);
     for (name, payload) in attrs {
+        f.open_box(BoxKind::HOV, 2);
         f.string("[@@");
         f.string(&name.txt);
+        f.space();  // Break hint after name (matches OCaml's `@ `)
         if !payload_is_empty(payload) {
-            f.string(" ");
             print_payload(f, arena, payload);
-        } else {
-            f.string(" ");
         }
         f.string("]");
+        f.close_box();
     }
 }
 
