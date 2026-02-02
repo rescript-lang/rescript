@@ -1807,7 +1807,11 @@ fn print_arrow_expression(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    print_pexp_fun(state, InCallback::NoCallback, e, cmt_tbl, arena)
+    // OCaml's print_arrow wraps in Doc.group, but print_pexp_fun (for callbacks) does not.
+    // This distinction is important: the group allows Doc.line in attributes to become
+    // space when the expression fits on one line, but for callbacks the custom_layout
+    // handles the fitting logic differently.
+    Doc::group(print_pexp_fun(state, InCallback::NoCallback, e, cmt_tbl, arena))
 }
 
 /// Print a function expression (Pexp_fun/Pexp_newtype) with callback mode.
