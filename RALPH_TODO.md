@@ -5,6 +5,11 @@
 **Printer Status:** 151/187 tests passing (80%)
 
 ### Recent Progress
+- Added `has_comment_below` function and fixed simple pipe (->) comment handling:
+  OCaml only adds `soft_line` before `->` when `has_comment_below` returns true (checking if the first
+  trailing comment starts on a line BELOW the expression's end). This ensures `compilation // after`
+  followed by `/* below */` on the next line followed by `->Plugin.buildAssets` prints as
+  `compilation->Plugin.buildAssets // after\n/* below */ // trailing` (comments at end of line).
 - Fixed doc comment partition to only include res.doc, not ocaml.doc (valueBinding.res almost passes):
   OCaml only treats "res.doc" as a doc comment (printed as /** ... */). "ocaml.doc" is a regular
   attribute and should stay on the same line with other attributes, not get a hard_line.
@@ -145,6 +150,13 @@
 - **modType.res - Pmty_typeof**: FIXED! Added partition_by_loc and attach leading/trailing
   to mod_expr.pmod_loc before calling walk_module_expr. Now `module type of /* c4 */ {}`
   keeps the comment before the brace.
+
+- **binaryExpr.res - Flattening**: OCaml's `print_operand` function has a `flatten` helper that
+  recursively flattens same-precedence binary operators without creating nested groups/indentation.
+  For example, `a == b && c == d && e == f` with comments should NOT indent the middle operators.
+  The Rust code processes each nested `&&` as a separate binary expression, causing extra indentation.
+  REQUIRES: Implementing `print_binary_operand` with flattening logic similar to OCaml's `print_operand`.
+  This affects `printer/comments/binaryExpr.res` and likely other tests with nested binary expressions.
 
 ### Major Missing Features (blocking remaining ~40 tests)
 
