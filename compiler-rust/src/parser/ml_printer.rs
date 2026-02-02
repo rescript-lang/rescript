@@ -293,7 +293,9 @@ fn needs_parens_in_semi_context(expr: &Expression) -> bool {
 
 /// Check if an attribute is internal and should not be printed
 fn is_internal_attribute(name: &str) -> bool {
-    matches!(name, "res.await" | "res.array.access")
+    // Note: "res.await" IS printed (it's the AST marker for await modules)
+    // "res.array.access" is internal and should not be printed
+    matches!(name, "res.array.access")
 }
 
 /// Filter attributes to only include ones that should be printed
