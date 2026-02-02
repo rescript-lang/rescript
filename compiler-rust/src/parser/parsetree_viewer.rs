@@ -731,6 +731,56 @@ pub fn pattern_has_spread_attr(attrs: &Attributes) -> bool {
     has_spread_attr(attrs)
 }
 
+/// Check if expression is Belt.Array.concatMany with @res.spread attribute.
+/// This is the desugared form of `[...xs, a, b]`.
+pub fn is_spread_belt_array_concat(arena: &ParseArena, expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(loc_idx) => {
+            // Belt.Array.concatMany: Ldot(Ldot(Lident("Belt"), "Array"), "concatMany")
+            if let Longident::Ldot(parent, name_idx) = arena.get_longident(loc_idx.txt) {
+                if arena.get_string(*name_idx) == "concatMany" {
+                    if let Longident::Ldot(grandparent, parent_name_idx) = parent.as_ref() {
+                        if arena.get_string(*parent_name_idx) == "Array" {
+                            if let Longident::Lident(base_idx) = grandparent.as_ref() {
+                                if arena.get_string(*base_idx) == "Belt" {
+                                    return has_spread_attr(&expr.pexp_attributes);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Check if expression is Belt.List.concatMany with @res.spread attribute.
+/// This is the desugared form of `list{...xs, a, b}`.
+pub fn is_spread_belt_list_concat(arena: &ParseArena, expr: &Expression) -> bool {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_ident(loc_idx) => {
+            // Belt.List.concatMany: Ldot(Ldot(Lident("Belt"), "List"), "concatMany")
+            if let Longident::Ldot(parent, name_idx) = arena.get_longident(loc_idx.txt) {
+                if arena.get_string(*name_idx) == "concatMany" {
+                    if let Longident::Ldot(grandparent, parent_name_idx) = parent.as_ref() {
+                        if arena.get_string(*parent_name_idx) == "List" {
+                            if let Longident::Lident(base_idx) = grandparent.as_ref() {
+                                if arena.get_string(*base_idx) == "Belt" {
+                                    return has_spread_attr(&expr.pexp_attributes);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
 /// Filter out parsing-only attributes (res.braces, res.ternary, res.await, etc.)
 pub fn filter_parsing_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
     attrs

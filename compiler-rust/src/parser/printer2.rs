@@ -1378,6 +1378,32 @@ pub fn print_expression(
                 rhs_doc,
             ]))
         }
+        // Spread array: Belt.Array.concatMany([xs, [a, b]]) -> [...xs, a, b]
+        ExpressionDesc::Pexp_apply { funct, args, .. }
+            if args.len() == 1
+                && matches!(&args[0].0, ArgLabel::Nolabel)
+                && matches!(&args[0].1.pexp_desc, ExpressionDesc::Pexp_array(_))
+                && parsetree_viewer::is_spread_belt_array_concat(arena, funct) =>
+        {
+            if let ExpressionDesc::Pexp_array(sub_lists) = &args[0].1.pexp_desc {
+                print_belt_array_concat_apply(state, sub_lists, cmt_tbl, arena)
+            } else {
+                Doc::nil() // Should never happen due to guard
+            }
+        }
+        // Spread list: Belt.List.concatMany([xs, [a, b]]) -> list{...xs, a, b}
+        ExpressionDesc::Pexp_apply { funct, args, .. }
+            if args.len() == 1
+                && matches!(&args[0].0, ArgLabel::Nolabel)
+                && matches!(&args[0].1.pexp_desc, ExpressionDesc::Pexp_array(_))
+                && parsetree_viewer::is_spread_belt_list_concat(arena, funct) =>
+        {
+            if let ExpressionDesc::Pexp_array(sub_lists) = &args[0].1.pexp_desc {
+                print_belt_list_concat_apply(state, sub_lists, cmt_tbl, arena)
+            } else {
+                Doc::nil() // Should never happen due to guard
+            }
+        }
         // Function application
         ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
             print_pexp_apply(state, e, funct, args, *partial, cmt_tbl, arena)
@@ -3049,6 +3075,133 @@ fn print_tagged_template_literal(
         Doc::concat(parts),
         Doc::text("`"),
     ])
+}
+
+/// Print spread array syntax: Belt.Array.concatMany([xs, [a, b]]) -> [...xs, a, b]
+fn print_belt_array_concat_apply(
+    state: &PrinterState,
+    sub_lists: &[Expression],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // Collect all elements (regular and spread) into a flat list with commas
+    let mut elements: Vec<Doc> = Vec::new();
+
+    for sub_list in sub_lists {
+        let (expressions, spread) = parsetree_viewer::collect_array_expressions(sub_list);
+
+        // Print regular expressions
+        for expr in expressions {
+            if !elements.is_empty() {
+                elements.push(Doc::text(","));
+                elements.push(Doc::line());
+            }
+            let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+            let doc = match parens::expr(arena, expr) {
+                ParenKind::Parenthesized => add_parens(doc),
+                ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+                ParenKind::Nothing => doc,
+            };
+            elements.push(doc);
+        }
+
+        // Print spread expression if present
+        if let Some(expr) = spread {
+            if !elements.is_empty() {
+                elements.push(Doc::text(","));
+                elements.push(Doc::line());
+            }
+
+            // Extract leading comments to print before dotdotdot
+            let full_loc = arena.to_location(expr.pexp_loc);
+            let leading_comments = cmt_tbl.remove_leading_comments_by_loc(expr.pexp_loc, arena);
+            let leading_comments_doc =
+                print_leading_comments_with(Doc::nil(), leading_comments, &full_loc);
+
+            // Print expression (without leading comments which we extracted above)
+            let expr_doc = {
+                let doc = print_expression(state, expr, cmt_tbl, arena);
+                match parens::expr(arena, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+
+            // Extract and print trailing comments
+            let trailing_comments = cmt_tbl.remove_trailing_comments_by_loc(expr.pexp_loc, arena);
+            let expr_with_trailing =
+                print_trailing_comments_with(expr_doc, trailing_comments, &full_loc);
+
+            elements.push(leading_comments_doc);
+            elements.push(Doc::dotdotdot());
+            elements.push(expr_with_trailing);
+        }
+    }
+
+    Doc::group(Doc::concat(vec![
+        Doc::lbracket(),
+        Doc::indent(Doc::concat(vec![Doc::soft_line(), Doc::concat(elements)])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::rbracket(),
+    ]))
+}
+
+/// Print spread list syntax: Belt.List.concatMany([xs, [a, b]]) -> list{...xs, a, b}
+fn print_belt_list_concat_apply(
+    state: &PrinterState,
+    sub_lists: &[Expression],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // Collect all elements (regular and spread) into a flat list with commas
+    let mut elements: Vec<Doc> = Vec::new();
+
+    for sub_list in sub_lists {
+        let (expressions, spread) = parsetree_viewer::collect_list_expressions(arena, sub_list);
+
+        // Print regular expressions
+        for expr in expressions {
+            if !elements.is_empty() {
+                elements.push(Doc::text(","));
+                elements.push(Doc::line());
+            }
+            let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+            let doc = match parens::expr(arena, expr) {
+                ParenKind::Parenthesized => add_parens(doc),
+                ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+                ParenKind::Nothing => doc,
+            };
+            elements.push(doc);
+        }
+
+        // Print spread expression if present
+        if let Some(expr) = spread {
+            if !elements.is_empty() {
+                elements.push(Doc::text(","));
+                elements.push(Doc::line());
+            }
+            let expr_doc = {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                match parens::expr(arena, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            elements.push(Doc::dotdotdot());
+            elements.push(expr_doc);
+        }
+    }
+
+    Doc::group(Doc::concat(vec![
+        Doc::text("list{"),
+        Doc::indent(Doc::concat(vec![Doc::soft_line(), Doc::concat(elements)])),
+        Doc::trailing_comma(),
+        Doc::soft_line(),
+        Doc::rbrace(),
+    ]))
 }
 
 /// Print underscore apply sugar: `(__x) => f(a, __x, c)` prints as `f(a, _, c)`.

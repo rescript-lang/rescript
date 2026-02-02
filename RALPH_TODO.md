@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-02
 **Overall Status:** 301/506 tests passing (59%)
-**Printer Status:** 174/187 tests passing (93%)
+**Printer Status:** 176/187 tests passing (94%)
 
 ---
 
@@ -312,7 +312,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/comments/jsx.res` - JSX element comments
 - [x] `printer/comments/binaryExpr.res` - Binary expression comments (flattening logic)
 - [x] `printer/comments/case.res` - Match case comments
-- [ ] `printer/comments/array.res` - Array literal comments (needs spread syntax)
+- [x] `printer/comments/array.res` - Array literal comments (spread syntax now implemented)
 - [x] `printer/comments/docComments.res` - Doc comment handling
 - [x] `printer/comments/typexpr.res` - Type expression comments
 - [x] `printer/comments/modType.res` - Module type comments
