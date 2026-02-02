@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 347/506 tests passing (68%)
+**Overall Status:** 349/506 tests passing (68%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,13 +10,13 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 78 | 57 | 135 | 57% |
-| parsing/other | 10 | 4 | 14 | 71% |
+| parsing/grammar | 79 | 56 | 135 | 58% |
+| parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
 | parsing/errors | 7 | 77 | 84 | 8% |
 | parsing/infiniteLoops | 0 | 5 | 5 | 0% |
 
-**Remaining:** 159 tests to fix
+**Remaining:** 157 tests to fix
 
 **Recent Fixes (this session):**
 - Fixed extension payload printing to use print_payload (conversion/ppx.res now passes)
