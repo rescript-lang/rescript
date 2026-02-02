@@ -2437,7 +2437,11 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
             }
         }
         TypeKind::Ptype_open => {
-            f.string(" = ..");
+            f.string(" =");
+            if matches!(decl.ptype_private, PrivateFlag::Private) {
+                f.string(" private");
+            }
+            f.string(" ..");
         }
     }
 
