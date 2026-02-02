@@ -1843,6 +1843,8 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             if arg_needs_parens {
                 f.string(")");
             }
+            // Print attributes on the argument (after the type)
+            print_attributes(f, arena, &arg.attrs);
             f.string(" -> ");
             print_core_type(f, arena, ret);
             if let Arity::Full(n) = arity {
