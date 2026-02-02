@@ -1534,12 +1534,20 @@ pub fn print_expression(
         }
         // While loop
         ExpressionDesc::Pexp_while(cond, body) => {
-            let cond_doc = print_expression_with_comments(state, cond, cmt_tbl, arena);
-            // Check if condition is a block expression
+            // Match OCaml: first check Parens.expr for braces, then apply block expr logic
+            let condition = {
+                let doc = print_expression_with_comments(state, cond, cmt_tbl, arena);
+                match parens::expr(arena, cond) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, cond, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            // Check if condition is a block expression - if not, add parens on break
             let cond_doc = if parsetree_viewer::is_block_expr(cond) {
-                cond_doc
+                condition
             } else {
-                Doc::group(Doc::if_breaks(add_parens(cond_doc.clone()), cond_doc))
+                Doc::group(Doc::if_breaks(add_parens(condition.clone()), condition))
             };
             Doc::breakable_group(
                 Doc::concat(vec![
@@ -6419,7 +6427,15 @@ fn print_match_expression(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let scrutinee = print_expression_with_comments(state, expr, cmt_tbl, arena);
+    // Match OCaml: the scrutinee expression goes through Parens.expr for brace handling
+    let scrutinee = {
+        let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+        match parens::expr(arena, expr) {
+            ParenKind::Parenthesized => add_parens(doc),
+            ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+            ParenKind::Nothing => doc,
+        }
+    };
     // print_cases_with_braces returns the full { cases } block
     let cases_block = print_cases_with_braces(state, cases, cmt_tbl, arena);
     Doc::concat(vec![
