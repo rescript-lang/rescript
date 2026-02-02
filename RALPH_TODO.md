@@ -1,10 +1,16 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 259/506 tests passing (51%)
-**Printer Status:** 139/187 tests passing (74%)
+**Overall Status:** 262/506 tests passing (51%)
+**Printer Status:** 142/187 tests passing (75%)
 
 ### Recent Progress
+- Fixed Array.get/Array.set formatting for complex index expressions (arrayGet.res, arraySet.res now pass):
+  Match OCaml's printer which wraps non-trivial index expressions with soft_line and indent.
+  For simple expressions (constants, identifiers), the index is printed inline.
+- Added special case for Array.get/Array.set in comment_table.rs: Match OCaml which walks
+  argument expressions directly instead of going through walk_apply_expr. This ensures
+  comments inside array access brackets are properly attached to the index expression.
 - Fixed Pmty_functor parameter comments (modType.res now passes): The Rust code was walking
   functor parameters one at a time recursively, which didn't properly handle comments between
   parameters. Changed to match OCaml's approach: collect all parameters first using `functor_type_params`,
