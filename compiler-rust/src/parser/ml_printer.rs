@@ -2344,13 +2344,13 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
             if matches!(decl.ptype_private, PrivateFlag::Private) {
                 f.string(" private");
             }
-            for (i, ctor) in ctors.iter().enumerate() {
+            // OCaml uses: pp f "%t%t@\n%a" intro priv (list ~sep:"@\n" constructor_declaration) xs
+            // Where constructor_declaration is: pp f "|@;"; ...
+            // This means each constructor gets @\n (force newline with indent) + |@; (break hint)
+            for ctor in ctors.iter() {
                 // Each constructor starts on a new line with | prefix
-                if i > 0 {
-                    f.string("\n  | ");
-                } else {
-                    f.string("\n  | ");
-                }
+                f.newline();  // Force newline with current indentation
+                f.string("| ");
                 f.string(&ctor.pcd_name.txt);
                 match &ctor.pcd_args {
                     ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
@@ -2428,7 +2428,11 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                     print_attributes(f, arena, &field.pld_attributes);
                 }
                 if i < fields.len() - 1 {
-                    f.string(" ;\n");
+                    if has_attrs {
+                        f.string(";\n");
+                    } else {
+                        f.string(" ;\n");
+                    }
                 } else {
                     // If last field has attributes, no space before }
                     // Otherwise, space before }
@@ -2915,15 +2919,29 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             print_item_attributes(f, arena, &md.pmd_attributes);
         }
         SignatureItemDesc::Psig_recmodule(mds) => {
+            // OCaml: First decl is @[<hov2>module@ rec@ %s:@ %a@]%a
+            //        Others are @ @[<hov2>and@ %s:@ %a@]%a
             for (i, md) in mds.iter().enumerate() {
+                if i > 0 {
+                    // Break before "and" for subsequent declarations
+                    f.break_(1, 0);
+                }
+                f.open_box(BoxKind::HOV, 2);
                 if i == 0 {
-                    f.string("module rec ");
+                    f.string("module");
+                    f.space();
+                    f.string("rec");
+                    f.space();
                 } else {
-                    f.string(" and ");
+                    f.string("and");
+                    f.space();
                 }
                 f.string(&md.pmd_name.txt);
-                f.string(" : ");
+                f.string(":");
+                f.space();
                 print_module_type(f, arena, &md.pmd_type);
+                f.close_box();
+                print_item_attributes(f, arena, &md.pmd_attributes);
             }
         }
         SignatureItemDesc::Psig_modtype(mtd) => {
