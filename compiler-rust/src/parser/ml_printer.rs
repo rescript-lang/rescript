@@ -2630,19 +2630,25 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
 fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item: &SignatureItem) {
     match &item.psig_desc {
         SignatureItemDesc::Psig_value(vd) => {
+            // OCaml: pp f "@[<2>%s@ %a@ :@ %a@]%a"
+            f.open_box(BoxKind::HOV, 2);
             if vd.pval_prim.is_empty() {
-                f.string("val ");
+                f.string("val");
             } else {
-                f.string("external ");
+                f.string("external");
             }
+            f.space();
             f.string(&vd.pval_name.txt);
-            f.string(" : ");
+            f.space();
+            f.string(":");
+            f.space();
             print_core_type(f, arena, &vd.pval_type);
             for prim in &vd.pval_prim {
                 f.string(" = \"");
                 f.string(prim);
                 f.string("\"");
             }
+            f.close_box();
             print_item_attributes(f, arena, &vd.pval_attributes);
         }
         SignatureItemDesc::Psig_type(rec_flag, decls) => {
