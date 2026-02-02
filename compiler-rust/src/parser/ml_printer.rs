@@ -694,17 +694,33 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
         return;
     }
 
-    // Special case: Ppat_constraint with Ptyp_poly type is printed without outer parens
-    // e.g. "let t : 'a . t = x" instead of "let (t : 'a . t) = x"
+    // Special case: Ppat_constraint - different handling based on type
+    // OCaml pprintast.ml lines 1096-1103
     if let PatternDesc::Ppat_constraint(inner_pat, typ) = &pat.ppat_desc {
-        if matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(..)) {
-            print_pattern(f, arena, inner_pat);
-            f.string(" : ");
-            print_core_type(f, arena, typ);
-            f.string(" =");
-            f.space();
-            print_expression_no_outer_parens(f, arena, expr);
-            return;
+        if pat.ppat_attributes.is_empty() {
+            if matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(..)) && typ.ptyp_attributes.is_empty() {
+                // Ptyp_poly: print without outer parens
+                // e.g. "let t : 'a . t = x"
+                print_simple_pattern(f, arena, inner_pat);
+                f.string(" : ");
+                print_core_type(f, arena, typ);
+                f.string(" =");
+                f.space();
+                print_expression_no_outer_parens(f, arena, expr);
+                return;
+            } else {
+                // Non-poly: print with outer parens using simple_pattern for inner
+                // e.g. "let ((`Instance component) : React.t) = x"
+                f.string("(");
+                print_simple_pattern(f, arena, inner_pat);
+                f.string(" : ");
+                print_core_type(f, arena, typ);
+                f.string(")");
+                f.string(" =");
+                f.space();
+                print_expression_no_outer_parens(f, arena, expr);
+                return;
+            }
         }
     }
 
@@ -1854,6 +1870,19 @@ fn print_pattern<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: &Patte
             }
             f.string(" ]");
         }
+        f.string(")");
+    }
+}
+
+/// Print a pattern in "simple" context - non-simple patterns get wrapped in parens.
+/// This matches OCaml's simple_pattern which wraps non-simple patterns via:
+/// `| _ -> paren true (pattern ctxt) f x`
+fn print_simple_pattern<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: &Pattern) {
+    if pattern_is_simple(pat, arena) {
+        print_pattern(f, arena, pat);
+    } else {
+        f.string("(");
+        print_pattern(f, arena, pat);
         f.string(")");
     }
 }
