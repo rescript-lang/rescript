@@ -603,11 +603,34 @@ Printer parity is complete (187/187). Now fix the remaining 191 failing tests.
 ./_build/install/default/bin/res_parser -recover -print ml tests/syntax_tests/data/parsing/errors/FILE.res
 ```
 
-### parsing/errors - ~76 failing (error recovery mode)
+### parsing/errors - ~77 failing (error recovery mode)
 
 These tests run with `-recover -print ml` and test error recovery behavior.
 
-**Key issues to fix:**
+**CRITICAL MISSING FEATURE: Consecutive statement/expression error checking**
+
+OCaml has `parse_newline_or_semicolon_expr_block` and `parse_newline_or_semicolon_structure`
+functions that check if statements/expressions on the same line are separated by `;` or newline.
+If not, they emit "consecutive statements/expressions on a line must be separated by ';' or a newline".
+
+The Rust parser just uses `p.optional(&Token::Semicolon)` and doesn't perform this check.
+This is a root cause for MANY of the 77 failing tests - error messages are simply missing.
+
+**Implementation needed:**
+1. Add `is_block_expr_start()` function matching OCaml's `Grammar.is_block_expr_start`
+2. Add `check_consecutive_expr_block(p)` that:
+   - If token is Semicolon -> consume it
+   - Else if `is_block_expr_start(token)` AND `p.prev_end_pos.line < p.start_pos.line` -> OK
+   - Else if `is_block_expr_start(token)` -> emit "consecutive expressions" error
+3. Add `check_consecutive_structure(p)` with similar logic for structure items
+4. Replace `p.optional(&Token::Semicolon)` with these functions in parse_block_body() etc.
+
+**OCaml reference:**
+- `compiler/syntax/src/res_grammar.ml:266` - `is_block_expr_start` function
+- `compiler/syntax/src/res_core.ml:3509` - `parse_newline_or_semicolon_expr_block`
+- `compiler/syntax/src/res_core.ml:6335` - `parse_newline_or_semicolon_structure`
+
+**Other issues to fix:**
 - [x] Array access syntax (OCaml uses `arr.(i)`, fixed in ML printer)
 - [ ] Error message locations - different line:col positions due to different error recovery
 - [ ] Recovered AST output - ML printer line breaking differs from OCaml
@@ -620,12 +643,33 @@ These tests run with `-recover -print ml` and test error recovery behavior.
 - `compiler/syntax/src/res_core.ml` - Parser with recovery logic
 - `compiler/syntax/src/res_outcome_printer.ml` - ML AST printer
 
-### parsing/grammar - 77 failing
+### parsing/grammar - 57 failing
 
 Grammar parsing tests without error recovery.
 
-**Key issues to fix:**
-- [ ] ML AST printer line breaking - outputs on single line vs multi-line
+**ROOT CAUSE: ML printer 80-column line wrapping**
+
+Most failures are because OCaml's Format module wraps long lines at 80 columns,
+but the Rust Formatter doesn't match this behavior exactly. For example:
+
+OCaml output (wraps at 80):
+```
+include ((sig val s : string val y : int end)[@onSignature ])[@@onInclude
+                                                               ]
+```
+
+Rust output (doesn't wrap):
+```
+include ((sig val s : string val y : int end)[@onSignature ])[@@onInclude ]
+```
+
+The Rust Formatter implements box-based formatting, but the line-break decisions
+don't always match OCaml's Format module. This affects:
+- Long type declarations
+- Attributes on long lines
+- HOV box packing behavior
+
+**Other issues:**
 - [ ] Record field punning - `{ a; b }` vs `{ a = a; b = b }`
 - [ ] Optional field syntax - `x?` and `name?` printed differently
 - [ ] Arrow type attributes - `[@attr]` position differs
@@ -642,30 +686,17 @@ Tests that previously caused infinite loops. May involve parser crashes.
 
 Miscellaneous parsing tests.
 
-### ppx/react - 3 failing (was 10, fixed 7)
+### ppx/react - 0 failing ✅
 
-JSX transformation tests using `-jsx-version 4`.
+JSX transformation tests using `-jsx-version 4`. All passing!
 
-**Fixed:**
-- [x] `@directive` attribute line breaking - wrapped arrow expression in Doc::group
-- [x] has_component tracking - reset per module scope
+### conversion - 0 failing ✅
 
-**Key issues to fix:**
-- [ ] Recursive component wrapper structure - OCaml creates `make$Internal` + wrapper,
-      Rust creates separate bindings
-- [ ] v4.res, interfaceWithRef.res, mangleKeyword.res still failing
+ML/Reason to ReScript conversion tests. All passing!
 
-**OCaml reference files:**
-- `compiler/syntax/src/jsx_v4.ml` - JSX V4 transformation
-- `compiler/syntax/src/jsx_ppx.ml` - PPX entry point
+### ast-mapping - 0 failing ✅
 
-### conversion - 1 failing
-
-ML/Reason to ReScript conversion tests.
-
-### ast-mapping - needs verification
-
-AST conversion tests using `-test-ast-conversion`.
+AST conversion tests using `-test-ast-conversion`. All passing!
 
 ---
 
