@@ -2105,9 +2105,10 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             print_longident_idx(f, arena, lid.txt);
         }
         PatternDesc::Ppat_unpack(name) => {
+            // OCaml: pp f "(module@ %s)@ " s.txt - trailing space via @
             f.string("(module ");
             f.string(&name.txt);
-            f.string(")");
+            f.string(") ");  // Trailing space after unpack pattern
         }
         PatternDesc::Ppat_exception(p) => {
             f.string("exception ");
