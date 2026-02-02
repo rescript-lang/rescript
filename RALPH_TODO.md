@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 294/506 tests passing (58%)
-**Printer Status:** 170/187 tests passing (90%)
+**Overall Status:** 295/506 tests passing (58%)
+**Printer Status:** 171/187 tests passing (91%)
 
 ---
 
@@ -26,6 +26,10 @@
 ---
 
 ### Recent Progress
+- Fixed polyvariant tuple printing (polyvariant.res now passes):
+  - When a polyvariant constructor has a tuple with a single element that is itself a tuple,
+    e.g. `#Some((a, b))`, OCaml prints it hugged without indentation
+  - Added special case matching OCaml's `Pexp_tuple [({pexp_desc = Pexp_tuple _} as arg)]`
 - Fixed switch/match case comment handling (switch.res now passes):
   - Node::Case.get_loc() now uses braces attribute location if present for consistent key lookup
   - print_cases uses braces attribute location for full_loc and prev_end_line
@@ -361,7 +365,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/expr/DocComments.res` - Inline doc comment formatting
 - [ ] `printer/expr/jsx.res` - JSX-specific issues
 - [ ] `printer/expr/list.res` - List spread syntax
-- [ ] `printer/expr/polyvariant.res` - Polyvariant formatting
+- [x] `printer/expr/polyvariant.res` - Fixed: tuple hugging in polyvariant constructors
 - [x] `printer/expr/switch.res` - Fixed: trailing comments on same line as `}`
 - [ ] `printer/expr/templateLiteral.res` - Template literal printing
 - [ ] `printer/expr/UncurriedByDefault.res` - Uncurried by default mode
