@@ -5,6 +5,11 @@
 **Printer Status:** 148/187 tests passing (79%)
 
 ### Recent Progress
+- Fixed curried function printing: `(a, b, c) => (d, e, f) => 4` was being collapsed into
+  `(a, b, c, d, e, f) => 4`. The issue was that `fun_expr` was collecting ALL nested function
+  parameters without checking the `arity` field. OCaml's `fun_expr` has the condition
+  `arity = None || n_fun = 0` - it only collects params from nested functions if there's no
+  arity marker. Added this check to stop collecting when an arity marker is present.
 - Fixed JS object set parenthesization in binary expressions (jsObjectSet.res passes): Similar to
   setfield, the `#=` operator only needs parens when on the LHS of a binary expression. For
   `(node["left"] = value)->pipe`, the parens around the assignment are now preserved.

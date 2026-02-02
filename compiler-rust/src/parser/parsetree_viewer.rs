@@ -568,7 +568,18 @@ pub enum FunParam<'a> {
 
 /// Extract function parameters from a potentially nested function expression.
 /// Returns (is_async, parameters, body).
+///
+/// This matches OCaml's fun_expr which uses the `arity` field to determine
+/// when to stop collecting parameters. For curried functions like
+/// `(a, b, c) => (d, e, f) => 4`, the first function has an arity marker
+/// that signals the end of its parameter list.
+///
+/// The rule from OCaml: collect params when `arity = None || n_fun = 0`
+/// - Always collect from the first function (n_fun = 0)
+/// - For nested functions, only collect if arity is Unknown (no marker)
 pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
+    use crate::parser::ast::Arity;
+
     // Check for async attribute OR is_async field in Pexp_fun
     let mut is_async = expr.pexp_attributes.iter().any(|attr| attr.0.txt == "res.async");
 
@@ -583,6 +594,7 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
 
     let mut params = Vec::new();
     let mut current = expr;
+    let mut n_fun = 0; // Track number of functions we've seen
 
     loop {
         match &current.pexp_desc {
@@ -591,15 +603,25 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
                 default,
                 lhs,
                 rhs,
+                arity,
                 ..
             } => {
-                params.push(FunParam::Parameter {
-                    attrs: &current.pexp_attributes,
-                    label: arg_label,
-                    default_expr: default.as_ref().map(|e| e.as_ref()),
-                    pat: lhs,
-                });
-                current = rhs;
+                // OCaml's condition: arity = None || n_fun = 0
+                // In Rust: Arity::Unknown corresponds to None, Arity::Full(_) to Some(_)
+                // Only collect if this is the first function OR there's no arity marker
+                if n_fun == 0 || matches!(arity, Arity::Unknown) {
+                    params.push(FunParam::Parameter {
+                        attrs: &current.pexp_attributes,
+                        label: arg_label,
+                        default_expr: default.as_ref().map(|e| e.as_ref()),
+                        pat: lhs,
+                    });
+                    n_fun += 1;
+                    current = rhs;
+                } else {
+                    // Stop collecting - arity marker indicates end of this function's params
+                    break;
+                }
             }
             ExpressionDesc::Pexp_newtype(name, body) => {
                 // Collect consecutive newtypes into a single NewTypes variant
