@@ -820,7 +820,6 @@ pub fn is_printable_attribute(attr: &Attribute) -> bool {
         "res.iflet"
             | "res.braces"
             | "ns.braces"
-            | "JSX"
             | "res.await"
             | "res.template"
             | "res.taggedTemplate"

@@ -1820,10 +1820,21 @@ fn print_pexp_fun(
     let attrs_on_arrow = &e.pexp_attributes;
 
     // Extract type constraint if present
-    let (return_expr, typ_constraint) = match &return_expr.pexp_desc {
-        ExpressionDesc::Pexp_constraint(expr, typ) => (expr.as_ref(), Some(typ)),
-        _ => (return_expr, None),
+    // When extracting, merge the attributes from the constraint onto the inner expression
+    // This preserves @res.braces on the body when it's inside a constraint
+    let (return_expr_owned, typ_constraint): (Option<Expression>, Option<&CoreType>) = match &return_expr.pexp_desc {
+        ExpressionDesc::Pexp_constraint(expr, typ) => {
+            // Create a new expression with merged attributes
+            let mut merged_expr = expr.as_ref().clone();
+            merged_expr.pexp_attributes = [
+                merged_expr.pexp_attributes.clone(),
+                return_expr.pexp_attributes.clone(),
+            ].concat();
+            (Some(merged_expr), Some(typ))
+        }
+        _ => (None, None),
     };
+    let return_expr: &Expression = return_expr_owned.as_ref().unwrap_or(return_expr);
 
     let has_constraint = typ_constraint.is_some();
 

@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 303/506 tests passing (60%)
-**Printer Status:** 179/187 tests passing (95%)
+**Overall Status:** 307/506 tests passing (61%)
+**Printer Status:** 180/187 tests passing (96%)
 
 ---
 
@@ -236,6 +236,10 @@
 - Fixed type extension path comment handling
 - Fixed type declaration and external name comment handling
 - Fixed exception rebind longident comment handling
+- Fixed `@JSX` attribute preservation in braced expressions (braced.res now passes):
+  - Removed `"JSX"` from `is_printable_attribute` list - it should be printed, not filtered
+  - Fixed function body brace preservation: when extracting inner expr from Pexp_constraint,
+    merge attributes from constraint onto inner expression so `@res.braces` is preserved
 
 ### Known Issues
 - **blockExpr.res**: Fixed! The issue was that OCaml extends row locations to include leading
@@ -381,7 +385,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 ### Failing (10 tests)
 - [x] `printer/expr/asyncAwait.res` - Fixed: attribute positioning in pipe expressions
 - [x] `printer/expr/binary.res` - Fixed: exponentiation, single pipe, attributed operands
-- [ ] `printer/expr/braced.res` - Brace preservation in switch/while
+- [x] `printer/expr/braced.res` - Fixed: @JSX attribute preservation, braces in constrained function bodies
 - [ ] `printer/expr/callback.res` - Callback layout differences
 - [ ] `printer/expr/dict.res` - Comment handling in dict entries
 - [x] `printer/expr/DocComments.res` - Fixed: doc comment inline spacing
