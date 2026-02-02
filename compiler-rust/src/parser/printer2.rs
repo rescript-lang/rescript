@@ -5155,12 +5155,19 @@ fn print_record_pattern(
                 let label = print_lident(arena, arena.get_longident(field.lid.txt));
                 // Check for punning
                 if is_punned_pattern_field(arena, field) {
-                    // For punned patterns, wrap label with print_comments (like OCaml reference)
+                    // For punned patterns, print pattern attributes before the label
+                    // OCaml (line 2732-2734): print_attributes ~state ppat_attributes cmt_tbl;
+                    //                         print_lident_path longident cmt_tbl;
+                    let attrs_doc = if field.pat.ppat_attributes.is_empty() {
+                        Doc::nil()
+                    } else {
+                        print_attributes(state, &field.pat.ppat_attributes, cmt_tbl, arena)
+                    };
                     let label = print_comments(label, cmt_tbl, field.lid.loc, arena);
                     if field.opt {
-                        Doc::concat(vec![Doc::text("?"), label])
+                        Doc::concat(vec![Doc::text("?"), attrs_doc, label])
                     } else {
-                        label
+                        Doc::concat(vec![attrs_doc, label])
                     }
                 } else {
                     // For non-punned patterns, comments are attached to BOTH:

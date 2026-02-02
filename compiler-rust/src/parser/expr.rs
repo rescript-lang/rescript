@@ -1021,8 +1021,10 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
         let lbl = match &p.token {
             Token::Comma | Token::Equal | Token::Rparen | Token::EqualGreater => {
                 // Just ~name
+                // OCaml (line 1855): Ast_helper.Pat.var ~attrs ~loc
                 let loc = p.mk_loc_to_prev_end(&start_pos);
-                let pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
+                let mut pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
+                pat.ppat_attributes = attrs.clone();
                 (ArgLabel::Labelled(lbl_located), pat, None)
             }
             Token::Colon => {
@@ -1040,22 +1042,30 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
                     p.mk_loc(&start_pos, &p.loc_end(name_loc_with_tilde))
                 };
                 let var_pat = ast_helper::make_var_pat(lbl_name.clone(), var_loc);
+                // OCaml (lines 1863-1864): Ast_helper.Pat.constraint_ ~attrs ~loc pat typ
+                // The attrs go on the OUTER constraint pattern
                 let pat = Pattern {
                     ppat_desc: PatternDesc::Ppat_constraint(Box::new(var_pat), typ),
                     ppat_loc: loc,
-                    ppat_attributes: vec![],
+                    ppat_attributes: attrs.clone(),
                 };
                 (ArgLabel::Labelled(lbl_located), pat, None)
             }
             Token::As => {
                 // ~name as pattern
+                // OCaml (line 1871): {pat with ppat_attributes = attrs @ pat.ppat_attributes}
                 p.next();
-                let pat = super::pattern::parse_constrained_pattern(p);
+                let mut pat = super::pattern::parse_constrained_pattern(p);
+                // Prepend attrs to pattern's existing attributes
+                let mut new_attrs = attrs.clone();
+                new_attrs.extend(pat.ppat_attributes);
+                pat.ppat_attributes = new_attrs;
                 (ArgLabel::Labelled(lbl_located), pat, None)
             }
             _ => {
                 let loc = p.mk_loc_to_prev_end(&start_pos);
-                let pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
+                let mut pat = ast_helper::make_var_pat(lbl_name.clone(), loc);
+                pat.ppat_attributes = attrs.clone();
                 (ArgLabel::Labelled(lbl_located), pat, None)
             }
         };
@@ -1094,9 +1104,11 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
             (label, pat, default)
         };
 
+        // OCaml puts labeled arg attrs directly on the pattern (not on the returned parameter)
+        // So FundefTermParam.attrs should be empty for labeled args with attrs on the pattern
         return Some(super::core::FundefParameter::Term(
             super::core::FundefTermParam {
-                attrs,
+                attrs: vec![],  // attrs are already on pat.ppat_attributes
                 label,
                 expr: default,
                 pat,
