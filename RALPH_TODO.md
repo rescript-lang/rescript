@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 361/506 tests passing (71%)
+**Overall Status:** 362/506 tests passing (71%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,15 +10,17 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 89 | 46 | 135 | 65% |
+| parsing/grammar | 88 | 47 | 135 | 65% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 8 | 76 | 84 | 9% |
+| parsing/errors | 10 | 74 | 84 | 11% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 145 tests to fix
+**Remaining:** 144 tests to fix
 
 **Recent Fixes (this session):**
+- Empty polyvariant `[]` now generates TWO type holes (matching OCaml)
+- Added begin_region/end_region around structure items so each can report errors
 - Added polyvariant type error generation for error recovery mode:
   - `parse_row_fields_with_required_first()` requires at least one row field for `[< ...]` and `[...]`
   - `is_bar_or_doc_comment_then_bar()` handles doc comments before leading `|`
