@@ -318,9 +318,15 @@ pub fn expr_is_uncurried_fun(expr: &Expression) -> bool {
 /// Check if the last argument is a callback that needs special printing.
 /// This returns true if the last argument is a function/newtype and
 /// all other arguments are NOT functions/newtypes.
+/// Note: underscore apply sugar is NOT considered a callback here because
+/// OCaml rewrites it before this check, and after rewriting it becomes Pexp_apply.
 pub fn requires_special_callback_printing_last_arg(args: &[(ArgLabel, Expression)]) -> bool {
     let mut iter = args.iter().peekable();
     while let Some((_, expr)) = iter.next() {
+        // Skip underscore apply sugar - it gets rewritten to Pexp_apply
+        if is_underscore_apply_sugar(expr) {
+            continue;
+        }
         if is_fun_newtype(expr) {
             // If this is the last element, return true
             // Otherwise (function in non-last position), return false
@@ -332,17 +338,21 @@ pub fn requires_special_callback_printing_last_arg(args: &[(ArgLabel, Expression
 
 /// Check if the first argument is a callback that needs special printing.
 /// This returns true if:
-/// - The first argument is a function/newtype
+/// - The first argument is a function/newtype (but NOT underscore apply sugar)
 /// - AND there is at least one more argument after it
 /// - AND all remaining arguments are NOT functions/newtypes
 pub fn requires_special_callback_printing_first_arg(args: &[(ArgLabel, Expression)]) -> bool {
+    // Helper: is it a real callback (not underscore apply sugar)
+    fn is_real_callback(expr: &Expression) -> bool {
+        is_fun_newtype(expr) && !is_underscore_apply_sugar(expr)
+    }
     match args {
         // Single argument callback - use normal printing
-        [(_, expr)] if is_fun_newtype(expr) => false,
+        [(_, expr)] if is_real_callback(expr) => false,
         // First is callback, need to check rest
-        [(_, expr), rest @ ..] if is_fun_newtype(expr) => {
+        [(_, expr), rest @ ..] if is_real_callback(expr) => {
             // All remaining args must NOT be callbacks
-            rest.iter().all(|(_, e)| !is_fun_newtype(e))
+            rest.iter().all(|(_, e)| !is_real_callback(e))
         }
         _ => false,
     }

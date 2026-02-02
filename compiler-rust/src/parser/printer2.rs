@@ -3293,6 +3293,92 @@ fn print_template_literal(
     ])
 }
 
+/// Get the body of an underscore apply sugar expression.
+/// (__x) => body -> body
+fn get_underscore_apply_body(expr: &Expression) -> &Expression {
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_fun { rhs, .. } => rhs,
+        _ => expr,
+    }
+}
+
+/// Check if the first argument is the underscore placeholder.
+fn first_arg_is_underscore(args: &[(ArgLabel, Expression)], arena: &ParseArena) -> bool {
+    if let Some((ArgLabel::Nolabel, expr)) = args.first() {
+        parsetree_viewer::is_underscore_ident(expr, arena)
+    } else {
+        false
+    }
+}
+
+/// Check if any argument after the first is the underscore placeholder.
+fn rest_args_have_underscore(args: &[(ArgLabel, Expression)], arena: &ParseArena) -> bool {
+    args.iter().skip(1).any(|(_, expr)| parsetree_viewer::is_underscore_ident(expr, arena))
+}
+
+/// Print underscore apply in pipe context: `a->f(_)` -> `a->f`.
+/// When underscore apply sugar has __x only in the first position, omit it entirely.
+/// `(__x) => f(__x, a, b)` in pipe context prints as just `f(a, b)`.
+fn print_underscore_apply_in_pipe(
+    state: &PrinterState,
+    expr: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    if !parsetree_viewer::is_underscore_apply_sugar(expr) {
+        return print_expression_with_comments(state, expr, cmt_tbl, arena);
+    }
+
+    let inner = get_underscore_apply_body(expr);
+
+    match &inner.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
+            // Check if first arg is __x and no other args have __x
+            if first_arg_is_underscore(args, arena) && !rest_args_have_underscore(args, arena) {
+                // Single __x in first position - omit it entirely
+                // Print just f(rest_args) with _ substitution
+                let funct_doc = print_expression_with_comments(state, funct, cmt_tbl, arena);
+                let funct_doc = match parens::call_expr(arena, funct) {
+                    ParenKind::Parenthesized => add_parens(funct_doc),
+                    ParenKind::Braced(loc) => print_braces(funct_doc, funct, loc, arena),
+                    ParenKind::Nothing => funct_doc,
+                };
+
+                let rest_args: Vec<_> = args.iter().skip(1).collect();
+                if rest_args.is_empty() {
+                    // No remaining args - just the function name
+                    funct_doc
+                } else {
+                    // Print remaining args with underscore substitution
+                    let args_docs: Vec<Doc> = rest_args
+                        .iter()
+                        .map(|(label, expr)| print_argument_with_underscore_subst(state, label, expr, cmt_tbl, arena))
+                        .collect();
+                    let mut all_docs = args_docs;
+                    if *partial {
+                        all_docs.push(Doc::text("..."));
+                    }
+                    Doc::group(Doc::concat(vec![
+                        funct_doc,
+                        Doc::lparen(),
+                        Doc::indent(Doc::concat(vec![
+                            Doc::soft_line(),
+                            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), all_docs),
+                        ])),
+                        if *partial { Doc::nil() } else { Doc::trailing_comma() },
+                        Doc::soft_line(),
+                        Doc::rparen(),
+                    ]))
+                }
+            } else {
+                // Multiple __x or not in first position - use regular rewrite
+                print_underscore_apply(state, inner, cmt_tbl, arena)
+            }
+        }
+        _ => print_expression_with_comments(state, expr, cmt_tbl, arena),
+    }
+}
+
 /// Print underscore apply sugar: `(__x) => f(a, __x, c)` prints as `f(a, _, c)`.
 /// This prints the inner apply expression with __x replaced by _ at print time.
 fn print_underscore_apply(
@@ -3783,7 +3869,13 @@ fn print_binary_expression(
 
         // Print operands using print_binary_operand
         let lhs_doc = print_binary_operand(state, true, false, lhs, op, cmt_tbl, arena);
-        let rhs_doc = print_binary_operand(state, false, false, rhs, op, cmt_tbl, arena);
+        // For pipe RHS, use pipe-specific underscore rewrite
+        // OCaml: let rhs = if op = "->" then ParsetreeViewer.rewrite_underscore_apply_in_pipe rhs else rhs
+        let rhs_doc = if parsetree_viewer::is_underscore_apply_sugar(rhs) {
+            print_underscore_apply_in_pipe(state, rhs, cmt_tbl, arena)
+        } else {
+            print_binary_operand(state, false, false, rhs, op, cmt_tbl, arena)
+        };
 
         // Only use soft_line before -> when there's a comment below the LHS
         // This matches OCaml's behavior exactly
@@ -3819,6 +3911,8 @@ fn print_binary_expression(
 
     if is_pipe_first {
         // Complex pipe case (operand is binary or has attributes)
+        // Note: In complex pipe case, we do NOT use pipe-specific underscore rewrite
+        // OCaml only applies rewrite_underscore_apply_in_pipe in the simple pipe case
         let rhs_doc = print_binary_operand(state, rhs_is_lhs, is_multiline, rhs, op, cmt_tbl, arena);
         Doc::group(Doc::concat(vec![
             lhs_doc,
@@ -4161,6 +4255,7 @@ fn print_arguments(
 
 /// Print a single function argument (like OCaml's print_argument).
 /// Properly handles comments attached to the combined label+expression location.
+/// OCaml: each argument is rewritten with rewrite_underscore_apply before printing.
 fn print_argument(
     state: &PrinterState,
     label: &ArgLabel,
@@ -4168,6 +4263,24 @@ fn print_argument(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Check if the argument is underscore apply sugar: (__x) => f(a, __x, c) -> f(a, _, c)
+    if parsetree_viewer::is_underscore_apply_sugar(expr) {
+        // Rewrite at print time: extract the inner apply and print with _ substitution
+        let doc = print_underscore_apply(state, get_underscore_apply_body(expr), cmt_tbl, arena);
+        // Handle labelled arguments
+        return match label {
+            ArgLabel::Nolabel => doc,
+            ArgLabel::Labelled(name) => {
+                let name_str = arena.get_string(name.txt);
+                Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("="), doc])
+            }
+            ArgLabel::Optional(name) => {
+                let name_str = arena.get_string(name.txt);
+                Doc::concat(vec![Doc::text("~"), print_ident_like(name_str, false, false), Doc::text("=?"), doc])
+            }
+        };
+    }
+
     match label {
         ArgLabel::Nolabel => {
             // Unlabelled argument - just print the expression with its comments
