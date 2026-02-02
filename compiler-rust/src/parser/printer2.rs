@@ -3291,6 +3291,49 @@ fn print_binary_expression(
     let (_, lhs) = &args[0];
     let (_, rhs) = &args[1];
 
+    // Pipe-first (->) has special handling for simple cases
+    // OCaml has a special case when neither operand is a binary expression and there are no attributes
+    let is_pipe_first = op == "->";
+    let is_simple_pipe = is_pipe_first
+        && !parsetree_viewer::is_binary_expression(arena, lhs)
+        && !parsetree_viewer::is_binary_expression(arena, rhs)
+        && !parsetree_viewer::has_printable_attributes(&expr.pexp_attributes);
+
+    if is_simple_pipe {
+        // Check has_comment_below BEFORE printing lhs (so comments aren't consumed yet)
+        // This matches OCaml's behavior in the simple pipe case
+        let lhs_has_comment_below = has_comment_below(cmt_tbl, lhs.pexp_loc, arena);
+
+        // Print operands
+        let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl, arena);
+        let lhs_doc = match binary_operand_needs_parens(arena, true, op, lhs) {
+            ParenKind::Parenthesized => add_parens(lhs_doc),
+            ParenKind::Braced(loc) => print_braces(lhs_doc, lhs, loc, arena),
+            ParenKind::Nothing => lhs_doc,
+        };
+
+        let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
+        let rhs_doc = match binary_operand_needs_parens(arena, false, op, rhs) {
+            ParenKind::Parenthesized => add_parens(rhs_doc),
+            ParenKind::Braced(loc) => print_braces(rhs_doc, rhs, loc, arena),
+            ParenKind::Nothing => rhs_doc,
+        };
+
+        // Only use soft_line before -> when there's a comment below the LHS
+        // This matches OCaml's behavior exactly
+        let pipe_with_break = if lhs_has_comment_below {
+            Doc::concat(vec![Doc::soft_line(), Doc::text("->")])
+        } else {
+            Doc::text("->")
+        };
+
+        return Doc::group(Doc::concat(vec![
+            lhs_doc,
+            pipe_with_break,
+            rhs_doc,
+        ]));
+    }
+
     // Print operands with appropriate parenthesization using precedence-aware check
     let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl, arena);
     let lhs_doc = match binary_operand_needs_parens(arena, true, op, lhs) {
@@ -3306,11 +3349,9 @@ fn print_binary_expression(
         ParenKind::Nothing => rhs_doc,
     };
 
-    // Pipe-first (->) has special handling
-    let is_pipe_first = op == "->";
-
     if is_pipe_first {
-        // Pipe operator: no spaces, use soft_line for break opportunities
+        // Complex pipe case (operand is binary or has attributes)
+        // Use soft_line for break opportunities
         Doc::group(Doc::concat(vec![
             lhs_doc,
             Doc::soft_line(),
@@ -3789,6 +3830,20 @@ fn has_leading_line_comment(cmt_tbl: &CommentTable, loc: LocIdx, arena: &ParseAr
     } else {
         false
     }
+}
+
+/// Check if there's a trailing comment that starts on a line BELOW the location's end line.
+/// This matches OCaml's has_comment_below which returns true when:
+///   comment_loc.loc_start.pos_lnum > loc.loc_end.pos_lnum
+fn has_comment_below(cmt_tbl: &CommentTable, loc: LocIdx, arena: &ParseArena) -> bool {
+    if let Some(comments) = cmt_tbl.get_trailing_comments(loc, arena) {
+        if let Some(comment) = comments.first() {
+            let comment_start_line = comment.loc.loc_start.line;
+            let loc_end_line = arena.loc_end(loc).line;
+            return comment_start_line > loc_end_line;
+        }
+    }
+    false
 }
 
 // ============================================================================
