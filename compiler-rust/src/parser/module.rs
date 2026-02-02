@@ -3382,13 +3382,26 @@ fn parse_label_declaration(
     // Check for optional field marker
     let is_optional = p.optional(&Token::Question);
 
-    // Check for field punning: {form} is shorthand for {form: form}
-    // If no colon, the type name is the same as the field name
-    let is_punning = p.token != Token::Colon;
-
-    if !is_punning {
-        p.expect(Token::Colon);
-    }
+    // Check for colon, equal (error recovery), or field punning
+    // OCaml: if Equal instead of Colon, emit specific error and continue
+    let is_punning = match &p.token {
+        Token::Colon => {
+            p.next();
+            false
+        }
+        Token::Equal => {
+            // Common mistake: using = instead of : in record type declarations
+            p.err(DiagnosticCategory::Message(
+                "Record fields in type declarations use `:`. Example: `{field: string}`".to_string(),
+            ));
+            p.next();
+            false
+        }
+        _ => {
+            // Field punning: {form} is shorthand for {form: form}
+            true
+        }
+    };
 
     // Check if the field type is an inline record
     let typ = if is_punning {
