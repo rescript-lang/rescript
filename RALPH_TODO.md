@@ -273,100 +273,191 @@ Most printer failures are caused by comment handling issues. Fix these first.
 
 ---
 
-## Phase 2: Expression Printing (31 failing)
+## Phase 2: Expression Printing (13 failing)
 
-Many of these may be fixed by Phase 1 comment fixes.
+### Passing (31 tests)
+- [x] `printer/expr/apply.res`
+- [x] `printer/expr/array.res`
+- [x] `printer/expr/arrayGet.res`
+- [x] `printer/expr/arraySet.res`
+- [x] `printer/expr/assert.res`
+- [x] `printer/expr/block.res`
+- [x] `printer/expr/bsObj.res`
+- [x] `printer/expr/coerce.res`
+- [x] `printer/expr/constant.res`
+- [x] `printer/expr/constraint.res`
+- [x] `printer/expr/constructor.res`
+- [x] `printer/expr/exoticIdent.res`
+- [x] `printer/expr/extension.res`
+- [x] `printer/expr/field.res`
+- [x] `printer/expr/firstClassModule.res`
+- [x] `printer/expr/for.res`
+- [x] `printer/expr/fun.res`
+- [x] `printer/expr/ident.res`
+- [x] `printer/expr/if.res`
+- [x] `printer/expr/jsObjectAccess.res`
+- [x] `printer/expr/jsObjectSet.res`
+- [x] `printer/expr/let.res`
+- [x] `printer/expr/letexception.res`
+- [x] `printer/expr/letmodule.res`
+- [x] `printer/expr/letUnwrap.res`
+- [x] `printer/expr/nestedCallbacks.res`
+- [x] `printer/expr/newtype.res`
+- [x] `printer/expr/open.res`
+- [x] `printer/expr/pipe.res`
+- [x] `printer/expr/record.res`
+- [x] `printer/expr/RecordOrObject.res`
+- [x] `printer/expr/sequence.res`
+- [x] `printer/expr/setfield.res`
+- [x] `printer/expr/sideEffects.res`
+- [x] `printer/expr/smartPipe.res`
+- [x] `printer/expr/ternary.res`
+- [x] `printer/expr/try.res`
+- [x] `printer/expr/tuple.res`
+- [x] `printer/expr/unary.res`
+- [x] `printer/expr/Uncurried.res`
+- [x] `printer/expr/while.res`
+- [x] `printer/expr/whitespace.res`
 
-### JSX-Related
-- [ ] `printer/expr/jsx.res` - JSX expression printing
-- [ ] `printer/expr/switch.res` - JSX inside switch arms
-
-### Core Expressions
-- [ ] `printer/expr/block.res` - Block expression formatting
-- [ ] `printer/expr/callback.res` - Callback function formatting
-- [ ] `printer/expr/nestedCallbacks.res` - Nested callback formatting
-- [ ] `printer/expr/fun.res` - Function expression formatting
-- [ ] `printer/expr/let.res` - Let expression formatting
-- [ ] `printer/expr/try.res` - Try expression formatting
-- [ ] `printer/expr/ternary.res` - Ternary expression formatting
-
-### Operators & Access
-- [ ] `printer/expr/binary.res` - Binary operator formatting
-- [ ] `printer/expr/unary.res` - Unary operator formatting
-- [ ] `printer/expr/arrayGet.res` - Array access formatting
-- [ ] `printer/expr/arraySet.res` - Array assignment formatting
-- [ ] `printer/expr/jsObjectAccess.res` - JS object access
-- [ ] `printer/expr/jsObjectSet.res` - JS object assignment
-- [ ] `printer/expr/setfield.res` - Record field assignment
-
-### Data Structures
-- [ ] `printer/expr/record.res` - Record expression formatting
-- [ ] `printer/expr/list.res` - List literal formatting
-- [ ] `printer/expr/dict.res` - Dict literal formatting
+### Failing (13 tests)
+- [ ] `printer/expr/asyncAwait.res` - Async/await issues
+- [ ] `printer/expr/binary.res` - Exponent associativity, switch/try in pipes
+- [ ] `printer/expr/braced.res` - Brace preservation in switch/while
+- [ ] `printer/expr/callback.res` - Callback layout differences
+- [ ] `printer/expr/dict.res` - Comment handling in dict entries
+- [ ] `printer/expr/DocComments.res` - Inline doc comment formatting
+- [ ] `printer/expr/jsx.res` - JSX-specific issues
+- [ ] `printer/expr/list.res` - List spread syntax
 - [ ] `printer/expr/polyvariant.res` - Polyvariant formatting
-
-### Special Cases
-- [ ] `printer/expr/asyncAwait.res` - Async/await formatting
-- [ ] `printer/expr/templateLiteral.res` - Template literal formatting
-- [ ] `printer/expr/smartPipe.res` - Pipe operator formatting
-- [ ] `printer/expr/newtype.res` - Newtype formatting
-- [ ] `printer/expr/exoticIdent.res` - Exotic identifier formatting
-- [ ] `printer/expr/braced.res` - Braced expression formatting
-- [ ] `printer/expr/bsObj.res` - BS object formatting
-- [ ] `printer/expr/underscoreApply.res` - Underscore apply formatting
-- [ ] `printer/expr/Uncurried.res` - Uncurried function formatting
-- [ ] `printer/expr/UncurriedByDefault.res` - Uncurried by default formatting
-- [ ] `printer/expr/DocComments.res` - Doc comments in expressions
+- [ ] `printer/expr/switch.res` - Switch in pipes
+- [ ] `printer/expr/templateLiteral.res` - Template literal printing
+- [ ] `printer/expr/UncurriedByDefault.res` - Uncurried by default mode
+- [ ] `printer/expr/underscoreApply.res` - Underscore apply rewriting
 
 ---
 
-## Phase 3: Module Printing (6 failing)
+## Phase 3: Module Printing (0 failing - COMPLETE!)
 
-### Module Expressions (3 failing)
-- [ ] `printer/modExpr/functor.res` - Functor expression printing
-- [ ] `printer/modExpr/include.res` - Include expression printing
-- [ ] `printer/modExpr/structure.res` - Module structure printing
+### Module Expressions (all passing)
+- [x] `printer/modExpr/apply.res`
+- [x] `printer/modExpr/await.res`
+- [x] `printer/modExpr/extension.res`
+- [x] `printer/modExpr/functor.res`
+- [x] `printer/modExpr/include.res`
+- [x] `printer/modExpr/structure.res`
+- [x] `printer/modExpr/unpack.res`
 
-### Module Types (0 failing - COMPLETE!)
-- [x] `printer/modType/functor.res` - Functor type printing
-- [x] `printer/modType/signature.res` - Signature printing
-- [x] `printer/modType/withConstraints.res` - With constraints printing
+### Module Types (all passing)
+- [x] `printer/modType/exoticIdent.res`
+- [x] `printer/modType/extension.res`
+- [x] `printer/modType/functor.res`
+- [x] `printer/modType/ident.res`
+- [x] `printer/modType/moduleTypeOf.res`
+- [x] `printer/modType/signature.res`
+- [x] `printer/modType/withConstraints.res`
 
 ---
 
-## Phase 4: Structure Printing (7 failing)
+## Phase 4: Structure Printing (1 failing)
 
-- [ ] `printer/structure/valueBinding.res` - Value binding formatting
-- [ ] `printer/structure/type.res` - Type definition formatting
-- [ ] `printer/structure/moduleBinding.res` - Module binding formatting
-- [ ] `printer/structure/recModules.res` - Recursive modules formatting
-- [ ] `printer/structure/exception.res` - Exception definition formatting
-- [ ] `printer/structure/include.res` - Include statement formatting
-- [ ] `printer/structure/typeExtension.res` - Type extension formatting
+### Passing (12 tests)
+- [x] `printer/structure/attribute.res`
+- [x] `printer/structure/exception.res`
+- [x] `printer/structure/expr.res`
+- [x] `printer/structure/extension.res`
+- [x] `printer/structure/external.res`
+- [x] `printer/structure/moduleBinding.res`
+- [x] `printer/structure/moduleTypeDeclaration.res`
+- [x] `printer/structure/open.res`
+- [x] `printer/structure/recModules.res`
+- [x] `printer/structure/type.res`
+- [x] `printer/structure/typeExtension.res`
+- [x] `printer/structure/valueBinding.res`
+
+### Failing (1 test)
+- [ ] `printer/structure/include.res` - Include with comment formatting
 
 ---
 
 ## Phase 5: Other Categories
 
-### Signatures (2 failing)
-- [ ] `printer/signature/type.resi` - Type signature formatting
-- [ ] `printer/signature/recModule.resi` - Recursive module signatures
+### Signatures (1 failing, 10 passing)
+- [x] `printer/signature/attributes.resi`
+- [x] `printer/signature/exception.resi`
+- [x] `printer/signature/extension.resi`
+- [x] `printer/signature/include.resi`
+- [x] `printer/signature/modtype.resi`
+- [x] `printer/signature/module.resi`
+- [x] `printer/signature/open.resi`
+- [x] `printer/signature/recModule.resi`
+- [x] `printer/signature/typext.resi`
+- [x] `printer/signature/value.resi`
+- [ ] `printer/signature/type.resi` - Inline record definitions
 
-### Patterns (2 failing)
-- [ ] `printer/pattern/constant.res` - Constant pattern formatting
-- [ ] `printer/pattern/dict.res` - Dict pattern formatting
+### Patterns (1 failing, 16 passing)
+- [x] `printer/pattern/alias.res`
+- [x] `printer/pattern/any.res`
+- [x] `printer/pattern/array.res`
+- [x] `printer/pattern/constant.res`
+- [x] `printer/pattern/constraint.res`
+- [x] `printer/pattern/construct.res`
+- [x] `printer/pattern/exception.res`
+- [x] `printer/pattern/exoticIdent.res`
+- [x] `printer/pattern/extension.res`
+- [x] `printer/pattern/firstClassModules.res`
+- [x] `printer/pattern/interval.res`
+- [x] `printer/pattern/list.res`
+- [x] `printer/pattern/or.res`
+- [x] `printer/pattern/record.res`
+- [x] `printer/pattern/tuple.res`
+- [x] `printer/pattern/type.res`
+- [x] `printer/pattern/var.res`
+- [x] `printer/pattern/variant.res`
+- [ ] `printer/pattern/dict.res` - Dict pattern comments
 
-### Types (2 failing)
-- [ ] `printer/typeDef/variant.res` - Variant type definition
-- [ ] `printer/typexpr/variant.res` - Variant type expression
+### Types (1 failing, all typeDef passing)
+- [x] `printer/typeDef/abstract.res`
+- [x] `printer/typeDef/attributes.res`
+- [x] `printer/typeDef/constraint.res`
+- [x] `printer/typeDef/exoticIdent.res`
+- [x] `printer/typeDef/missingPipeBeforeConstructorAttribute.res`
+- [x] `printer/typeDef/open.res`
+- [x] `printer/typeDef/private.res`
+- [x] `printer/typeDef/record.res`
+- [x] `printer/typeDef/typeParams.res`
+- [x] `printer/typeDef/variant.res`
+- [x] `printer/typexpr/alias.res`
+- [x] `printer/typexpr/any.res`
+- [x] `printer/typexpr/arrow.res`
+- [x] `printer/typexpr/bsObject.res`
+- [x] `printer/typexpr/exoticIdent.res`
+- [x] `printer/typexpr/extension.res`
+- [x] `printer/typexpr/firstClassModule.res`
+- [x] `printer/typexpr/objectTypeSpreading.res`
+- [x] `printer/typexpr/polyTyp.res`
+- [x] `printer/typexpr/tuple.res`
+- [x] `printer/typexpr/typeConstr.res`
+- [x] `printer/typexpr/var.res`
+- [ ] `printer/typexpr/variant.res` - Polyvariant comment handling
 
-### Other (6 failing)
-- [ ] `printer/other/attributes.res` - Attribute formatting
-- [ ] `printer/other/nesting.res` - Deep nesting formatting
-- [ ] `printer/other/home.res` - Real-world example
-- [ ] `printer/other/signaturePicker.res` - Real-world example
-- [ ] `printer/other/fatSlider.res` - Real-world example
-- [ ] `printer/other/StaticReactTypes.res` - Real-world example
+### Other (1 failing, 16 passing)
+- [x] `printer/other/attributes.res`
+- [x] `printer/other/case.res`
+- [x] `printer/other/char.res`
+- [x] `printer/other/comments.res`
+- [x] `printer/other/fatSlider.res`
+- [x] `printer/other/home.res`
+- [x] `printer/other/lor.res`
+- [x] `printer/other/moduleData.res`
+- [x] `printer/other/number.res`
+- [x] `printer/other/reasonArity.res`
+- [x] `printer/other/reasonFile.res`
+- [x] `printer/other/reasonInterfaceFile.resi`
+- [x] `printer/other/reasonString.res`
+- [x] `printer/other/signaturePicker.res`
+- [x] `printer/other/StaticReactTypes.res`
+- [x] `printer/other/string.res`
+- [ ] `printer/other/nesting.res` - Complex nested callback layout
 
 ---
 
