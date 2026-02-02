@@ -310,54 +310,63 @@ pub fn assert_or_await_expr_rhs(arena: &crate::parse_arena::ParseArena, in_await
     let opt_braces = parsetree_viewer::process_braces_attr(expr);
     match opt_braces {
         Some(attr) => ParenKind::Braced(attr.0.loc.clone()),
-        None => {
-            let filtered = parsetree_viewer::filter_parsing_attrs(&expr.pexp_attributes);
-            if !filtered.is_empty() {
-                return ParenKind::Parenthesized;
-            }
+        None => assert_or_await_expr_rhs_inner(arena, in_await, expr),
+    }
+}
 
-            match &expr.pexp_desc {
-                ExpressionDesc::Pexp_apply { funct, .. }
-                    if parsetree_viewer::is_binary_expression(arena, expr) =>
-                {
-                    if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
-                        if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
-                            let operator = arena.get_string(*op_idx);
-                            if in_await && !binary_operator_inside_await_needs_parens(operator) {
-                                return ParenKind::Nothing;
-                            }
-                        }
+/// Check if await expression RHS needs parens, but IGNORE the res.braces attribute.
+/// OCaml's await printing filters out @res.braces before checking, so `await {x}` prints as `await x`.
+pub fn assert_or_await_expr_rhs_ignore_braces(arena: &crate::parse_arena::ParseArena, in_await: bool, expr: &Expression) -> ParenKind {
+    // Ignore the braces attribute - just check the expression structure
+    assert_or_await_expr_rhs_inner(arena, in_await, expr)
+}
+
+fn assert_or_await_expr_rhs_inner(arena: &crate::parse_arena::ParseArena, in_await: bool, expr: &Expression) -> ParenKind {
+    let filtered = parsetree_viewer::filter_parsing_attrs(&expr.pexp_attributes);
+    if !filtered.is_empty() {
+        return ParenKind::Parenthesized;
+    }
+
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, .. }
+            if parsetree_viewer::is_binary_expression(arena, expr) =>
+        {
+            if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                    let operator = arena.get_string(*op_idx);
+                    if in_await && !binary_operator_inside_await_needs_parens(operator) {
+                        return ParenKind::Nothing;
                     }
-                    ParenKind::Parenthesized
                 }
-                // module(M: S) doesn't need parens
-                ExpressionDesc::Pexp_constraint(inner, typ)
-                    if matches!(&inner.pexp_desc, ExpressionDesc::Pexp_pack(_))
-                        && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)) =>
-                {
-                    ParenKind::Nothing
-                }
-                ExpressionDesc::Pexp_fun { .. }
-                    if parsetree_viewer::is_underscore_apply_sugar(expr) =>
-                {
-                    ParenKind::Nothing
-                }
-                ExpressionDesc::Pexp_assert(_)
-                | ExpressionDesc::Pexp_fun { .. }
-                | ExpressionDesc::Pexp_newtype(_, _)
-                | ExpressionDesc::Pexp_constraint(_, _)
-                | ExpressionDesc::Pexp_setfield(_, _, _)
-                | ExpressionDesc::Pexp_match(_, _)
-                | ExpressionDesc::Pexp_try(_, _)
-                | ExpressionDesc::Pexp_while(_, _)
-                | ExpressionDesc::Pexp_for(_, _, _, _, _)
-                | ExpressionDesc::Pexp_ifthenelse(_, _, _) => ParenKind::Parenthesized,
-                _ if !in_await && parsetree_viewer::expr_is_await(expr) => {
-                    ParenKind::Parenthesized
-                }
-                _ => ParenKind::Nothing,
             }
+            ParenKind::Parenthesized
         }
+        // module(M: S) doesn't need parens
+        ExpressionDesc::Pexp_constraint(inner, typ)
+            if matches!(&inner.pexp_desc, ExpressionDesc::Pexp_pack(_))
+                && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)) =>
+        {
+            ParenKind::Nothing
+        }
+        ExpressionDesc::Pexp_fun { .. }
+            if parsetree_viewer::is_underscore_apply_sugar(expr) =>
+        {
+            ParenKind::Nothing
+        }
+        ExpressionDesc::Pexp_assert(_)
+        | ExpressionDesc::Pexp_fun { .. }
+        | ExpressionDesc::Pexp_newtype(_, _)
+        | ExpressionDesc::Pexp_constraint(_, _)
+        | ExpressionDesc::Pexp_setfield(_, _, _)
+        | ExpressionDesc::Pexp_match(_, _)
+        | ExpressionDesc::Pexp_try(_, _)
+        | ExpressionDesc::Pexp_while(_, _)
+        | ExpressionDesc::Pexp_for(_, _, _, _, _)
+        | ExpressionDesc::Pexp_ifthenelse(_, _, _) => ParenKind::Parenthesized,
+        _ if !in_await && parsetree_viewer::expr_is_await(expr) => {
+            ParenKind::Parenthesized
+        }
+        _ => ParenKind::Nothing,
     }
 }
 

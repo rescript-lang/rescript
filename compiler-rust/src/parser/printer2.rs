@@ -1448,9 +1448,11 @@ pub fn print_expression(
             Doc::concat(vec![Doc::text("assert("), rhs, Doc::text(")")])
         }
         // Await
+        // Note: OCaml filters out @res.braces before checking if parens are needed.
+        // This means `await {x}` prints as `await x` because the braces attr is ignored.
         ExpressionDesc::Pexp_await(expr) => {
             let rhs = print_expression_with_comments(state, expr, cmt_tbl, arena);
-            let rhs = match parens::assert_or_await_expr_rhs(arena,true, expr) {
+            let rhs = match parens::assert_or_await_expr_rhs_ignore_braces(arena, true, expr) {
                 ParenKind::Parenthesized => add_parens(rhs),
                 ParenKind::Braced(loc) => print_braces(rhs, expr, loc, arena),
                 ParenKind::Nothing => rhs,
