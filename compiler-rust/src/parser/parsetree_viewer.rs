@@ -791,6 +791,74 @@ pub fn is_equality_operator(op: &str) -> bool {
     matches!(op, "==" | "===" | "!=" | "!==")
 }
 
+/// Check if parent and child operators can be flattened (same precedence, not both equality).
+pub fn flattenable_operators(parent_op: &str, child_op: &str) -> bool {
+    let prec_parent = operator_precedence(parent_op);
+    let prec_child = operator_precedence(child_op);
+    if prec_parent == prec_child {
+        !(is_equality_operator(parent_op) && is_equality_operator(child_op))
+    } else {
+        false
+    }
+}
+
+/// Check if a binary expression should have its RHS indented.
+/// Returns true if:
+/// - The operator is an equality operator (==, ===, !=, !==), OR
+/// - The LHS is NOT a same-precedence sub-expression, OR
+/// - The operator is `:=`
+pub fn should_indent_binary_expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
+    use crate::parser::longident::Longident;
+
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } if args.len() == 2 => {
+            if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                    let op = arena.get_string(*op_idx);
+                    if is_binary_operator_str(op) {
+                        // Check the three conditions
+                        if is_equality_operator(op) {
+                            return true;
+                        }
+                        if op == ":=" {
+                            return true;
+                        }
+                        // Check if LHS is NOT a same-precedence sub-expression
+                        let (_, lhs) = &args[0];
+                        if !same_precedence_sub_expression(arena, op, lhs) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
+/// Check if sub_expression is a binary expression with same precedence as parent operator.
+fn same_precedence_sub_expression(arena: &crate::parse_arena::ParseArena, parent_op: &str, sub_expr: &Expression) -> bool {
+    use crate::parser::longident::Longident;
+
+    match &sub_expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } if args.len() == 2 => {
+            if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                    let sub_op = arena.get_string(*op_idx);
+                    if is_binary_operator_str(sub_op) {
+                        return flattenable_operators(parent_op, sub_op);
+                    }
+                }
+            }
+            // Not a binary expression, so not same precedence
+            true
+        }
+        // Not a binary expression
+        _ => true,
+    }
+}
+
 /// Check if string is a binary operator.
 pub fn is_binary_operator_str(op: &str) -> bool {
     matches!(

@@ -1,10 +1,14 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 271/506 tests passing (53%)
-**Printer Status:** 150/187 tests passing (80%)
+**Overall Status:** 272/506 tests passing (53%)
+**Printer Status:** 151/187 tests passing (80%)
 
 ### Recent Progress
+- Fixed binary expression indentation using should_indent_binary_expr (jsObjectAccess.res passes):
+  OCaml's should_indent_binary_expr checks if LHS is a same-precedence sub-expression. Added
+  flattenable_operators and same_precedence_sub_expression helpers to properly determine when
+  the RHS of a binary expression should be indented.
 - Fixed async detection for functions with leading (type a): The `is_async` flag was only checked
   on the top-level expression, but for `async (type a, ()) => body`, the Pexp_newtype is outermost.
   Now we check `is_async` on the FIRST Pexp_fun encountered, not just the top-level.

@@ -3160,7 +3160,7 @@ fn print_pexp_apply(
             if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
                 let op = arena.get_string(*op_idx);
                 if parsetree_viewer::is_binary_operator_str(op) {
-                    let doc = print_binary_expression(state, op, args, cmt_tbl, arena);
+                    let doc = print_binary_expression(state, expr, op, args, cmt_tbl, arena);
                     // Print attributes - binary expressions handle their own attributes
                     let printable_attrs: Vec<&Attribute> = expr.pexp_attributes
                         .iter()
@@ -3279,6 +3279,7 @@ fn binary_operand_needs_parens(arena: &ParseArena, is_lhs: bool, parent_op: &str
 /// This matches OCaml's print_binary_expression logic for spacing and indentation.
 fn print_binary_expression(
     state: &PrinterState,
+    expr: &Expression,
     op: &str,
     args: &[(ArgLabel, Expression)],
     cmt_tbl: &mut CommentTable,
@@ -3329,8 +3330,11 @@ fn print_binary_expression(
         };
 
         // Build operator + rhs, potentially with indentation
-        let should_indent = parens::flatten_operand_rhs(arena, op, rhs)
-            || is_equality_operator(op);
+        // Use should_indent_binary_expr which checks:
+        // 1. Is operator an equality operator?
+        // 2. Is LHS NOT a same-precedence sub-expression?
+        // 3. Is operator `:=`?
+        let should_indent = parsetree_viewer::should_indent_binary_expr(arena, expr);
 
         let operator_with_rhs = Doc::concat(vec![
             Doc::space(),
