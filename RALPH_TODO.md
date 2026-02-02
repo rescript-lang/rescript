@@ -1,10 +1,12 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 262/506 tests passing (51%)
-**Printer Status:** 142/187 tests passing (75%)
+**Overall Status:** 263/506 tests passing (51%)
+**Printer Status:** 143/187 tests passing (76%)
 
 ### Recent Progress
+- Fixed try expression body parenthesization (try.res now passes): Match OCaml's printer which
+  uses parens::expr to check if the try body needs braces.
 - Fixed Array.get/Array.set formatting for complex index expressions (arrayGet.res, arraySet.res now pass):
   Match OCaml's printer which wraps non-trivial index expressions with soft_line and indent.
   For simple expressions (constants, identifiers), the index is printed inline.
