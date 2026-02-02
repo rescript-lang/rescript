@@ -2051,8 +2051,12 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
         CoreTypeDesc::Ptyp_package((lid, constraints)) => {
             f.string("(module ");
             print_longident_idx(f, arena, lid.txt);
-            for (path, typ) in constraints {
-                f.string(" with type ");
+            for (i, (path, typ)) in constraints.iter().enumerate() {
+                if i == 0 {
+                    f.string(" with type ");
+                } else {
+                    f.string(" and type ");
+                }
                 print_longident_idx(f, arena, path.txt);
                 f.string(" = ");
                 print_core_type(f, arena, typ);
