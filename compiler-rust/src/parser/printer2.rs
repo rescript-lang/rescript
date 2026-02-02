@@ -3204,6 +3204,71 @@ fn print_belt_list_concat_apply(
     ]))
 }
 
+/// Print template literal: `foo ${bar}` reconstructed from concatenation.
+/// OCaml desugars `foo ${bar}` to `"foo " ++ bar ++ ""` with @res.template attribute.
+fn print_template_literal(
+    state: &PrinterState,
+    expr: &Expression,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let mut tag = "js".to_string();
+
+    // Recursively walk the expression to build the template content
+    fn walk_expr(
+        state: &PrinterState,
+        expr: &Expression,
+        tag: &mut String,
+        cmt_tbl: &mut CommentTable,
+        arena: &ParseArena,
+    ) -> Doc {
+        match &expr.pexp_desc {
+            // String concatenation: arg1 ++ arg2
+            ExpressionDesc::Pexp_apply { funct, args, .. }
+                if args.len() == 2
+                    && matches!(&funct.pexp_desc, ExpressionDesc::Pexp_ident(lid)
+                        if matches!(arena.get_longident(lid.txt), Longident::Lident(op_idx)
+                            if arena.get_string(*op_idx) == "++")) =>
+            {
+                let lhs = walk_expr(state, &args[0].1, tag, cmt_tbl, arena);
+                let rhs = walk_expr(state, &args[1].1, tag, cmt_tbl, arena);
+                Doc::concat(vec![lhs, rhs])
+            }
+            // String constant with optional tag prefix (e.g., `j"..."` or just `"..."`)
+            ExpressionDesc::Pexp_constant(Constant::String(txt, prefix_opt)) => {
+                if let Some(prefix) = prefix_opt {
+                    *tag = prefix.clone();
+                }
+                print_string_contents(txt)
+            }
+            // Any other expression: wrap in ${...}
+            // Match OCaml: Doc.group (Doc.concat [Doc.text "${"; Doc.indent doc; Doc.rbrace])
+            _ => {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                let doc = match parens::expr(arena, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                };
+                Doc::group(Doc::concat(vec![Doc::text("${"), Doc::indent(doc), Doc::rbrace()]))
+            }
+        }
+    }
+
+    let content = walk_expr(state, expr, &mut tag, cmt_tbl, arena);
+
+    Doc::concat(vec![
+        if tag == "js" {
+            Doc::nil()
+        } else {
+            Doc::text(&tag)
+        },
+        Doc::text("`"),
+        content,
+        Doc::text("`"),
+    ])
+}
+
 /// Print underscore apply sugar: `(__x) => f(a, __x, c)` prints as `f(a, _, c)`.
 /// This prints the inner apply expression with __x replaced by _ at print time.
 fn print_underscore_apply(
@@ -3308,6 +3373,11 @@ fn print_pexp_apply(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
+    // Check for regular template literal: `foo ${bar}`
+    if parsetree_viewer::is_template_literal(expr) {
+        return print_template_literal(state, expr, cmt_tbl, arena);
+    }
+
     // Check for tagged template literal: tag`...`
     if is_tagged_template_literal(expr) {
         return print_tagged_template_literal(state, funct, args, cmt_tbl, arena);
