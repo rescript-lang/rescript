@@ -2163,16 +2163,23 @@ fn walk_jsx_prop(prop: &JsxProp, t: &mut CommentTable, comments: Vec<Comment>, a
             t.attach_trailing(name.loc, trailing, arena);
         }
         JsxProp::Value { name, value, .. } => {
-            let (leading, trailing) = partition_leading_trailing(comments, name.loc, arena);
-            t.attach_leading(name.loc, leading, arena);
+            // Match OCaml's walk_jsx_prop which calls walk_list [Expression value]
+            // This is important because walk_list uses get_loc(Expression) which may
+            // return the braces location if the expression has res.braces attribute
+            let name_end_line = arena.loc_end(name.loc).line;
+            let value_start_line = arena.loc_start(value.pexp_loc).line;
 
-            let (after_lbl, rest) = partition_adjacent_trailing(name.loc, trailing, arena);
-            t.attach_trailing(name.loc, after_lbl, arena);
-
-            let (before, inside, after) = partition_by_loc(rest, value.pexp_loc, arena);
-            t.attach_leading(value.pexp_loc, before, arena);
-            walk_expression(value, t, inside, arena);
-            t.attach_trailing(value.pexp_loc, after, arena);
+            if name_end_line == value_start_line {
+                // In the rare case that comments are found between name=value,
+                // where both are on the same line,
+                // we assign them to the value, and not to the name.
+                walk_list(&[Node::Expression(value)], t, comments, arena);
+            } else {
+                // otherwise we attach comments that come directly after the name to the name
+                let (on_same_line_as_name, rest) = partition_by_on_same_line(name.loc, comments, arena);
+                t.attach_trailing(name.loc, on_same_line_as_name, arena);
+                walk_list(&[Node::Expression(value)], t, rest, arena);
+            }
         }
         JsxProp::Spreading { expr, .. } => {
             walk_expression(expr, t, comments, arena);

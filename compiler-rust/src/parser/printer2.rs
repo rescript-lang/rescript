@@ -8940,13 +8940,26 @@ fn print_jsx_prop(
                 has_trailing_single_line_comment(cmt_tbl, name.loc, arena);
 
             let value_doc = {
+                // Check if there's a leading line comment that would require breaking the braces
+                // For braced expressions, check the braces attribute location since comments
+                // are attached there (per the comment table walking logic)
+                let braces_loc = parsetree_viewer::process_braces_attr(value)
+                    .map(|attr| attr.0.loc);
                 let leading_line_comment_present = match (parens::jsx_prop_expr(value), &value.pexp_desc) {
                     (parens::ParenKind::Braced(_), ExpressionDesc::Pexp_apply { funct, args, .. }) => {
                         let head_arg = args.first().map(|(_, arg)| arg);
-                        has_leading_line_comment(cmt_tbl, funct.pexp_loc, arena)
+                        // Check braces location first (where comments are attached for braced exprs)
+                        braces_loc.map_or(false, |loc| has_leading_line_comment(cmt_tbl, loc, arena))
+                            || has_leading_line_comment(cmt_tbl, funct.pexp_loc, arena)
                             || head_arg.map_or(false, |arg| has_leading_line_comment(cmt_tbl, arg.pexp_loc, arena))
                     }
-                    _ => has_leading_line_comment(cmt_tbl, value.pexp_loc, arena),
+                    _ => {
+                        // For other expressions, check braces location if present, otherwise expr location
+                        braces_loc.map_or(
+                            has_leading_line_comment(cmt_tbl, value.pexp_loc, arena),
+                            |loc| has_leading_line_comment(cmt_tbl, loc, arena)
+                        )
+                    }
                 };
                 let doc = print_expression_with_comments(state, value, cmt_tbl, arena);
                 match parens::jsx_prop_expr(value) {
@@ -9397,12 +9410,12 @@ fn print_jsx_element(
 
 /// Add braces around a doc (for JSX children with leading line comments).
 fn add_braces(doc: Doc) -> Doc {
-    Doc::concat(vec![
+    Doc::group(Doc::concat(vec![
         Doc::lbrace(),
         Doc::indent(Doc::concat(vec![Doc::soft_line(), doc])),
         Doc::soft_line(),
         Doc::rbrace(),
-    ])
+    ]))
 }
 
 #[cfg(test)]
