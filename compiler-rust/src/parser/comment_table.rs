@@ -1570,6 +1570,54 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
                 }
             }
 
+            // Special case for Array.get: walk arguments directly like OCaml
+            if args.len() == 2 {
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if let Longident::Ldot(base, method_idx) = arena.get_longident(ident.txt) {
+                        if let Longident::Lident(module_idx) = base.as_ref() {
+                            let module = arena.get_string(*module_idx);
+                            let method = arena.get_string(*method_idx);
+                            if module == "Array" && method == "get" {
+                                // Match OCaml: walk_list [Expression parent_expr; Expression member_expr] t comments
+                                let (_, parent_expr) = &args[0];
+                                let (_, member_expr) = &args[1];
+                                let nodes: Vec<Node<'_>> = vec![
+                                    Node::Expression(parent_expr),
+                                    Node::Expression(member_expr),
+                                ];
+                                walk_list(&nodes, t, comments, arena);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Special case for Array.set: walk arguments directly like OCaml
+            if args.len() == 3 {
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if let Longident::Ldot(base, method_idx) = arena.get_longident(ident.txt) {
+                        if let Longident::Lident(module_idx) = base.as_ref() {
+                            let module = arena.get_string(*module_idx);
+                            let method = arena.get_string(*method_idx);
+                            if module == "Array" && method == "set" {
+                                // Match OCaml: walk_list [Expression parent_expr; Expression member_expr; Expression target_expr] t comments
+                                let (_, parent_expr) = &args[0];
+                                let (_, member_expr) = &args[1];
+                                let (_, target_expr) = &args[2];
+                                let nodes: Vec<Node<'_>> = vec![
+                                    Node::Expression(parent_expr),
+                                    Node::Expression(member_expr),
+                                    Node::Expression(target_expr),
+                                ];
+                                walk_list(&nodes, t, comments, arena);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             // Check for binary expressions - match OCaml's special handling
             if args.len() == 2 {
                 if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
