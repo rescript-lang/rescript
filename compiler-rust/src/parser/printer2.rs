@@ -1212,8 +1212,36 @@ pub fn print_expression(
         {
             let parent_expr = &args[0].1;
             let member_expr = &args[1].1;
-            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
-            let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl, arena);
+            let parent_doc = {
+                let doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
+                match parens::unary_expr_operand(arena, parent_expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, parent_expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            let member_doc = {
+                let doc = print_expression_with_comments(state, member_expr, cmt_tbl, arena);
+                let doc = match parens::expr(arena, member_expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, member_expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                };
+                // For simple expressions (constants, identifiers), inline them directly
+                // For complex expressions, wrap with soft_line to allow breaking
+                let should_inline = matches!(
+                    &member_expr.pexp_desc,
+                    ExpressionDesc::Pexp_constant(_) | ExpressionDesc::Pexp_ident(_)
+                );
+                if should_inline {
+                    doc
+                } else {
+                    Doc::concat(vec![
+                        Doc::indent(Doc::concat(vec![Doc::soft_line(), doc])),
+                        Doc::soft_line(),
+                    ])
+                }
+            };
             // Note: attributes are handled at the end of print_expression
             Doc::group(Doc::concat(vec![
                 parent_doc,
@@ -1229,12 +1257,68 @@ pub fn print_expression(
             let parent_expr = &args[0].1;
             let member_expr = &args[1].1;
             let target_expr = &args[2].1;
-            let parent_doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
-            let member_doc = print_expression_with_comments(state, member_expr, cmt_tbl, arena);
-            let target_doc = print_expression_with_comments(state, target_expr, cmt_tbl, arena);
-            let should_indent = parsetree_viewer::is_binary_expression(arena,target_expr);
-            let rhs_doc = if should_indent {
-                Doc::group(Doc::indent(Doc::concat(vec![Doc::line(), target_doc])))
+            let parent_doc = {
+                let doc = print_expression_with_comments(state, parent_expr, cmt_tbl, arena);
+                match parens::unary_expr_operand(arena, parent_expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, parent_expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            let member_doc = {
+                let doc = print_expression_with_comments(state, member_expr, cmt_tbl, arena);
+                let doc = match parens::expr(arena, member_expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, member_expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                };
+                // For simple expressions (constants, identifiers), inline them directly
+                // For complex expressions, wrap with soft_line to allow breaking
+                let should_inline = matches!(
+                    &member_expr.pexp_desc,
+                    ExpressionDesc::Pexp_constant(_) | ExpressionDesc::Pexp_ident(_)
+                );
+                if should_inline {
+                    doc
+                } else {
+                    Doc::concat(vec![
+                        Doc::indent(Doc::concat(vec![Doc::soft_line(), doc])),
+                        Doc::soft_line(),
+                    ])
+                }
+            };
+            let target_doc = {
+                let doc = print_expression_with_comments(state, target_expr, cmt_tbl, arena);
+                match parens::expr(arena, target_expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(braces) => print_braces(doc, target_expr, braces, arena),
+                    ParenKind::Nothing => doc,
+                }
+            };
+            let should_indent_target = if parsetree_viewer::is_braced_expr(target_expr) {
+                false
+            } else if parsetree_viewer::is_binary_expression(arena, target_expr) {
+                true
+            } else if let ExpressionDesc::Pexp_ifthenelse(_, _, _) = &target_expr.pexp_desc {
+                // Check for ternary
+                if parsetree_viewer::has_ternary_attribute(&target_expr.pexp_attributes) {
+                    if let ExpressionDesc::Pexp_ifthenelse(if_expr, _, _) = &target_expr.pexp_desc {
+                        parsetree_viewer::is_binary_expression(arena, if_expr)
+                            || parsetree_viewer::has_attributes(&if_expr.pexp_attributes)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else if matches!(&target_expr.pexp_desc, ExpressionDesc::Pexp_newtype(_, _)) {
+                false
+            } else {
+                parsetree_viewer::has_attributes(&target_expr.pexp_attributes)
+                    || parsetree_viewer::is_array_access(arena, target_expr)
+            };
+            let rhs_doc = if should_indent_target {
+                Doc::indent(Doc::concat(vec![Doc::line(), target_doc]))
             } else {
                 Doc::concat(vec![Doc::space(), target_doc])
             };
