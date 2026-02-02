@@ -39,11 +39,11 @@
 - Fixed module functor sugar (`module F(A:X) = ...`) and module application printing (`(F)(A)`)
 - Fixed unit functor printing (`functor () ->` instead of `functor (*) ->`)
 
-**Root Causes of Remaining Failures:**
+**Root Causes of Remaining Failures (151 tests):**
 
-1. **parsing/grammar (57 failing)**: Mostly 80-column line wrapping differences in ML printer.
+1. **parsing/grammar (51 failing)**: Almost entirely 80-column line wrapping differences.
    OCaml's Format module wraps long lines at 80 columns with specific indentation rules.
-   The Rust Formatter doesn't match this behavior exactly.
+   The Rust Formatter doesn't match this behavior exactly. The actual AST content is correct.
 
 2. **parsing/errors (77 failing)**: Missing error message generation in Rust parser.
    OCaml has `parse_newline_or_semicolon_structure` and `parse_newline_or_semicolon_expr_block`
@@ -53,10 +53,13 @@
 3. **parsing/recovery (16 failing)**: Error recovery output differs from OCaml.
    Both error messages and recovered AST formatting differ.
 
-4. **parsing/infiniteLoops (5 failing)**: Actually doesn't loop infinitely, but error messages
+4. **parsing/infiniteLoops (4 failing)**: Actually doesn't loop infinitely, but error messages
    and AST output format differ from OCaml.
 
-5. **parsing/other (4 failing)**: Various parsing differences.
+5. **parsing/other (3 failing)**: Mixed issues:
+   - Unicode escaping: OCaml escapes non-ASCII bytes as `\226\156\133` but Rust prints directly
+   - Error message differences
+   - Line wrapping differences
 
 **Note:** Most non-printer failures are NOT simple formatting issues - they require implementing
 missing parser error checking logic (for "consecutive statements" errors) or matching OCaml's
