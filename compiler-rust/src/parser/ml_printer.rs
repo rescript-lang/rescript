@@ -1927,15 +1927,16 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                 if i > 0 {
                     f.string("; ");
                 }
-                let field_name: Option<&str> = match arena.get_longident(field.lid.txt) {
-                    Longident::Lident(name_idx) => Some(arena.get_string(*name_idx)),
-                    Longident::Ldot(_, name_idx) => Some(arena.get_string(*name_idx)),
-                    _ => None,
-                };
-                let is_punned = if let Some(fname) = field_name {
-                    matches!(&field.pat.ppat_desc, PatternDesc::Ppat_var(var) if var.txt == fname)
-                } else {
-                    false
+                // OCaml only punns for simple Lident fields, not qualified Ldot fields
+                // Pattern: { Lident s, Ppat_var { txt } } when s = txt -> punning
+                let is_punned = match arena.get_longident(field.lid.txt) {
+                    Longident::Lident(name_idx) => {
+                        let fname = arena.get_string(*name_idx);
+                        // Also require no attributes on the pattern
+                        field.pat.ppat_attributes.is_empty() &&
+                            matches!(&field.pat.ppat_desc, PatternDesc::Ppat_var(var) if var.txt == fname)
+                    }
+                    _ => false,
                 };
 
                 if is_punned {
@@ -1949,7 +1950,17 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                         f.string("?");  // Optional field: name? = pattern
                     }
                     f.string(" = ");
+                    // Print with parens for alias patterns (pattern1 context)
+                    let needs_parens = matches!(&field.pat.ppat_desc,
+                        PatternDesc::Ppat_alias(..) | PatternDesc::Ppat_or(..)
+                    );
+                    if needs_parens {
+                        f.string("(");
+                    }
                     print_pattern(f, arena, &field.pat);
+                    if needs_parens {
+                        f.string(")");
+                    }
                 }
             }
             if matches!(closed, ClosedFlag::Open) {
