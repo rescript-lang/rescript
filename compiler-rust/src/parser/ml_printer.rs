@@ -1194,9 +1194,31 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 if i > 0 {
                     f.string("; ");
                 }
-                print_longident_idx(f, arena, field.lid.txt);
-                f.string(" = ");
-                print_expression(f, arena, &field.expr);
+                // Check for punning: { a } is shorthand for { a = a }
+                // OCaml only uses punning when field is Lident (not qualified)
+                let lid = arena.get_longident(field.lid.txt);
+                let is_punned = if let Longident::Lident(name_idx) = lid {
+                    let fname = arena.get_string(*name_idx);
+                    // Check if expression is Pexp_ident(Lident(fname))
+                    if let ExpressionDesc::Pexp_ident(expr_lid) = &field.expr.pexp_desc {
+                        match arena.get_longident(expr_lid.txt) {
+                            Longident::Lident(var_idx) => arena.get_string(*var_idx) == fname,
+                            _ => false,
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                if is_punned {
+                    print_longident_idx(f, arena, field.lid.txt);
+                } else {
+                    print_longident_idx(f, arena, field.lid.txt);
+                    f.string(" = ");
+                    print_expression(f, arena, &field.expr);
+                }
             }
             f.string(" }");
         }
