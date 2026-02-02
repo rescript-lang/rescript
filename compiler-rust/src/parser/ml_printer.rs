@@ -1692,8 +1692,10 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.open_box(BoxKind::HOV, 2);
             f.string("let exception ");
             print_extension_constructor(f, arena, ext);
-            // OCaml has @;%a for attributes which produces trailing space even when no attrs
-            f.string("  in"); // Double space to match OCaml's trailing break from constructor_declaration
+            // OCaml: @[<hov2>let@ exception@ %a@ in@ %a@]
+            // After extension_constructor, there's @ (break hint = space), then "in", then @ (break hint)
+            // extension_constructor may add trailing space for tuple args, so we just add " in"
+            f.string(" in");
             f.space();
             print_expression(f, arena, body);
             f.close_box();
