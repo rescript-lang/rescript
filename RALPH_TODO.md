@@ -19,6 +19,9 @@
 **Remaining:** 154 tests to fix
 
 **Recent Fixes (this session):**
+- Fixed ML printer: add spaces between JSX children (matching OCaml's list separator)
+- Fixed ML printer: avoid double parens in await expressions with attributed arguments
+- Fixed ML printer: include `res.await` attribute in printed output (not filtered as internal)
 - Fixed ML printer: record pattern punning only for simple Lident fields (not qualified Ldot)
 - Added parens for alias/or patterns in record field patterns (pattern1 context)
 - Fixed ML printer: complete list literals are now simple expressions (no extra parens around `[1; 2; 3]`)
