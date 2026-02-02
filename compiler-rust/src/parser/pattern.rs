@@ -611,6 +611,25 @@ fn parse_atomic_pattern(p: &mut Parser<'_>) -> Pattern {
             }
         }
         Token::Hash => parse_poly_variant_pattern(p),
+        Token::DotDotDot => {
+            // Variant spread pattern: ...a or ...Foo.zz
+            // Creates Ppat_type with res.patVariantSpread attribute
+            p.next();
+            let type_start = p.start_pos.clone();
+            let lid = parse_type_longident(p);
+            let lid_loc = p.mk_loc_to_prev_end(&type_start);
+            let loc = p.mk_loc_to_prev_end(&start_pos);
+            // Add res.patVariantSpread attribute with ghost location
+            let spread_attr: Attribute = (
+                Located { txt: "res.patVariantSpread".to_string(), loc: LocIdx::none() },
+                Payload::PStr(vec![]),
+            );
+            Pattern {
+                ppat_desc: PatternDesc::Ppat_type(with_loc(lid, lid_loc)),
+                ppat_loc: loc,
+                ppat_attributes: vec![spread_attr],
+            }
+        }
         Token::Percent => parse_extension_pattern(p, start_pos),
         Token::Backtick | Token::TemplateTail { .. } | Token::TemplatePart { .. } => {
             parse_template_literal_pattern(p, start_pos)
@@ -1302,12 +1321,17 @@ fn parse_poly_variant_pattern(p: &mut Parser<'_>) -> Pattern {
                     patterns.push(parse_constrained_pattern(p));
                 }
                 p.expect(Token::Rparen);
-                let tuple_loc = p.mk_loc_to_prev_end(&tuple_start);
-                Some(Box::new(Pattern {
-                    ppat_desc: PatternDesc::Ppat_tuple(patterns),
-                    ppat_loc: tuple_loc,
-                    ppat_attributes: vec![],
-                }))
+                // Trailing comma with single element: #tag(a,) -> just the pattern, not a tuple
+                if patterns.len() == 1 {
+                    Some(Box::new(patterns.into_iter().next().unwrap()))
+                } else {
+                    let tuple_loc = p.mk_loc_to_prev_end(&tuple_start);
+                    Some(Box::new(Pattern {
+                        ppat_desc: PatternDesc::Ppat_tuple(patterns),
+                        ppat_loc: tuple_loc,
+                        ppat_attributes: vec![],
+                    }))
+                }
             } else {
                 p.expect(Token::Rparen);
                 Some(Box::new(first))
