@@ -8768,7 +8768,7 @@ fn print_include_declaration(
     };
 
     let include_doc = if parens::include_mod_expr(&include_decl.pincl_mod) {
-        Doc::concat(vec![Doc::lparen(), mod_doc, Doc::rparen()])
+        add_parens(mod_doc)
     } else {
         mod_doc
     };
