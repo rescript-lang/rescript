@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 295/506 tests passing (58%)
-**Printer Status:** 171/187 tests passing (91%)
+**Overall Status:** 300/506 tests passing (59%)
+**Printer Status:** 173/187 tests passing (92%)
 
 ---
 
@@ -26,6 +26,15 @@
 ---
 
 ### Recent Progress
+- Fixed binary.res printing (now passes):
+  - Right-associative operators (exponentiation `**`): Added `is_rhs_binary_operator` function and
+    flip the `is_lhs` parameter for these operators so `2. ** 3. ** 2.` and `(2. ** 3.) ** 2.`
+    are parenthesized correctly
+  - Single pipe expressions: Added `is_single_pipe_expr` function and `custom_layout` handling in
+    `print_value_binding` so `let x = switch z {...}->switch y {...}` prints on one line
+  - Attributed operands in flattening: When a binary operand has printable attributes, add outer
+    parens (e.g., `a && @attr b && c` → `a && (@attr b) && c`). Added `flatten_operand_rhs_without_attrs`
+    to handle the case where we've already partitioned printable attrs
 - Fixed polyvariant tuple printing (polyvariant.res now passes):
   - When a polyvariant constructor has a tuple with a single element that is itself a tuple,
     e.g. `#Some((a, b))`, OCaml prints it hugged without indentation
@@ -358,7 +367,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 
 ### Failing (10 tests)
 - [x] `printer/expr/asyncAwait.res` - Fixed: attribute positioning in pipe expressions
-- [ ] `printer/expr/binary.res` - Exponent associativity, switch/try in pipes
+- [x] `printer/expr/binary.res` - Fixed: exponentiation, single pipe, attributed operands
 - [ ] `printer/expr/braced.res` - Brace preservation in switch/while
 - [ ] `printer/expr/callback.res` - Callback layout differences
 - [ ] `printer/expr/dict.res` - Comment handling in dict entries
