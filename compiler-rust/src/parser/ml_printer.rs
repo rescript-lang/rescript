@@ -443,13 +443,25 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             }
         }
         StructureItemDesc::Pstr_modtype(mtd) => {
-            f.string("module type ");
+            // OCaml: pp f "@[<hov2>module@ type@ %s%a@]%a"
+            // where inner is: pp_print_space f (); pp f "@ =@ %a" (module_type ctxt) mt
+            // This produces two spaces before = when not breaking: "Sig  ="
+            f.open_box(BoxKind::HOV, 2);
+            f.string("module");
+            f.space();
+            f.string("type");
+            f.space();
             f.string(&mtd.pmtd_name.txt);
             if let Some(mt) = &mtd.pmtd_type {
-                // OCaml has trailing space from name + space before =
-                f.string("  = ");
+                // pp_print_space + "@ =" gives two spaces before =
+                f.string(" ");  // literal space from pp_print_space
+                f.space();      // break hint before =
+                f.string("=");
+                f.space();
                 print_module_type(f, arena, mt);
             }
+            f.close_box();
+            print_item_attributes(f, arena, &mtd.pmtd_attributes);
         }
         StructureItemDesc::Pstr_open(od) => {
             f.string("open");
@@ -2373,12 +2385,21 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             print_longident_idx(f, arena, lid.txt);
         }
         ModuleExprDesc::Pmod_structure(items) => {
-            f.string("struct ");
-            for item in items {
+            // OCaml: pp f "@[<hv2>struct@;@[<0>%a@]@;<1 -2>end@]" with items separated by @\n
+            f.open_box(BoxKind::HV, 2);
+            f.string("struct");
+            f.space();
+            f.open_box(BoxKind::HV, 0);
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    f.newline();
+                }
                 print_structure_item(f, arena, item);
-                f.string(" ");
             }
+            f.close_box();
+            f.break_(1, -2);
             f.string("end");
+            f.close_box();
         }
         ModuleExprDesc::Pmod_functor(name, mtype, body) => {
             f.string("functor (");
@@ -2440,20 +2461,23 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             print_longident_idx(f, arena, lid.txt);
         }
         ModuleTypeDesc::Pmty_signature(items) => {
-            // OCaml uses HV box - breaks all items or none based on fit
+            // OCaml: pp f "@[<hv0>@[<hv2>sig@ %a@]@ end@]" with items separated by @\n
+            // In HV box mode, break hints become either all spaces or all newlines
+            // based on whether the content fits on one line
+            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::HV, 2);
             f.string("sig");
-            if items.is_empty() {
-                f.string("  end");
-            } else {
-                f.string(" ");
-                for (i, item) in items.iter().enumerate() {
-                    if i > 0 {
-                        f.string(" ");
-                    }
-                    print_signature_item(f, arena, item);
+            f.space();  // break hint after sig
+            for (i, item) in items.iter().enumerate() {
+                if i > 0 {
+                    f.space();  // break hint between items (becomes newline if broken)
                 }
-                f.string(" end");
+                print_signature_item(f, arena, item);
             }
+            f.close_box();
+            f.space();  // break hint before end
+            f.string("end");
+            f.close_box();
         }
         ModuleTypeDesc::Pmty_functor(name, arg_type, ret_type) => {
             // Anonymous functors (name = "_") are printed as just "ArgType -> RetType"
@@ -2476,38 +2500,71 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             }
         }
         ModuleTypeDesc::Pmty_with(mt, constraints) => {
-            print_module_type(f, arena, mt);
-            for constraint in constraints {
-                match constraint {
-                    WithConstraint::Pwith_type(lid, decl) => {
-                        f.string(" with type  ");
-                        print_longident_idx(f, arena, lid.txt);
-                        f.string(" =  ");
-                        if let Some(manifest) = &decl.ptype_manifest {
-                            print_core_type(f, arena, manifest);
+            // OCaml: pp f "@[<hov2>(%a@ with@ %a)@]" when there are constraints
+            // or pp f "@[<hov2>%a@]" when empty
+            if constraints.is_empty() {
+                f.open_box(BoxKind::HOV, 2);
+                print_module_type(f, arena, mt);
+                f.close_box();
+            } else {
+                f.open_box(BoxKind::HOV, 2);
+                f.string("(");
+                print_module_type(f, arena, mt);
+                f.space();
+                f.string("with");
+                for (i, constraint) in constraints.iter().enumerate() {
+                    if i > 0 {
+                        f.space();
+                        f.string("and");
+                    }
+                    f.space();
+                    match constraint {
+                        WithConstraint::Pwith_type(lid, decl) => {
+                            // OCaml: pp f "type@ %a %a =@ %a" params lid type_decl
+                            // When params is empty: "type@ " + "" + " lid" + " =@ " + "@;manifest"
+                            // Results in: "type  t =  string" (double spaces)
+                            f.string("type");
+                            f.space();  // @ after type
+                            // type params would go here (empty, so nothing)
+                            f.string(" ");  // space before lid when params empty
+                            print_longident_idx(f, arena, lid.txt);
+                            f.string(" =");
+                            f.space();  // @ after =
+                            // type_declaration prints @; before manifest
+                            f.space();  // @; in type_declaration
+                            if let Some(manifest) = &decl.ptype_manifest {
+                                print_core_type(f, arena, manifest);
+                            }
                         }
-                    }
-                    WithConstraint::Pwith_module(lid1, lid2) => {
-                        f.string(" with module ");
-                        print_longident_idx(f, arena, lid1.txt);
-                        f.string(" = ");
-                        print_longident_idx(f, arena, lid2.txt);
-                    }
-                    WithConstraint::Pwith_typesubst(lid, decl) => {
-                        f.string(" with type ");
-                        print_longident_idx(f, arena, lid.txt);
-                        f.string(" := ");
-                        if let Some(manifest) = &decl.ptype_manifest {
-                            print_core_type(f, arena, manifest);
+                        WithConstraint::Pwith_module(lid1, lid2) => {
+                            f.string("module ");
+                            print_longident_idx(f, arena, lid1.txt);
+                            f.string(" = ");
+                            print_longident_idx(f, arena, lid2.txt);
                         }
-                    }
-                    WithConstraint::Pwith_modsubst(lid1, lid2) => {
-                        f.string(" with module ");
-                        print_longident_idx(f, arena, lid1.txt);
-                        f.string(" := ");
-                        print_longident_idx(f, arena, lid2.txt);
+                        WithConstraint::Pwith_typesubst(lid, decl) => {
+                            // Same pattern as Pwith_type but with :=
+                            f.string("type");
+                            f.space();
+                            f.string(" ");
+                            print_longident_idx(f, arena, lid.txt);
+                            f.string(" :=");
+                            f.space();
+                            f.space();
+                            if let Some(manifest) = &decl.ptype_manifest {
+                                print_core_type(f, arena, manifest);
+                            }
+                        }
+                        WithConstraint::Pwith_modsubst(lid1, lid2) => {
+                            f.string("module ");
+                            print_longident_idx(f, arena, lid1.txt);
+                            f.string(" := ");
+                            print_longident_idx(f, arena, lid2.txt);
+                        }
                     }
                 }
+                f.string(")");
+                f.close_box();
             }
         }
         ModuleTypeDesc::Pmty_typeof(mexpr) => {
@@ -2603,13 +2660,24 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             }
         }
         SignatureItemDesc::Psig_modtype(mtd) => {
-            f.string("module type ");
+            // OCaml: pp f "@[<hov2>module@ type@ %s%a@]%a"
+            // where inner is: pp_print_space f (); pp f "@ =@ %a" (module_type ctxt) mt
+            // This produces two spaces before = when not breaking: "Sig  ="
+            f.open_box(BoxKind::HOV, 2);
+            f.string("module");
+            f.space();
+            f.string("type");
+            f.space();
             f.string(&mtd.pmtd_name.txt);
             if let Some(mt) = &mtd.pmtd_type {
-                // OCaml has trailing space from name + space before =
-                f.string("  = ");
+                // pp_print_space + "@ =" gives two spaces before =
+                f.string(" ");  // literal space from pp_print_space
+                f.space();      // break hint before =
+                f.string("=");
+                f.space();
                 print_module_type(f, arena, mt);
             }
+            f.close_box();
         }
         SignatureItemDesc::Psig_open(od) => {
             f.string("open");
