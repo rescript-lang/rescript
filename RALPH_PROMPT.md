@@ -33,6 +33,23 @@ Read `RALPH_TODO.md` and complete the next unchecked task. After completing a ta
 3. Commit your changes with an atomic commit
 4. If all tasks are complete, output "RALPH_COMPLETE"
 
+## ⚠️ WARNING: Infinite Loop in Parser
+
+**There is currently an infinite loop somewhere in the parsing code.** When running the parser or tests, you MUST always use timeouts to prevent stalling:
+
+```bash
+# Use timeout for all parser invocations
+timeout 10s ./compiler-rust/target/release/res_parser_rust <file>
+
+# Use timeout for test runs
+timeout 120s bash -c 'PARSER=rust ./scripts/test_syntax.sh 2>&1 | tail -40'
+
+# Use timeout for cargo build (in case of proc macro issues)
+timeout 60s cargo build --manifest-path compiler-rust/Cargo.toml --release
+```
+
+If a command hangs, it likely hit the infinite loop. Identify which file triggered it and investigate the parsing logic for that construct.
+
 ## Critical Rules
 
 1. **ALWAYS read the OCaml implementation first** - Don't guess. Study the OCaml source to understand the correct behavior. The goal is a faithful port, not a reimagining.
