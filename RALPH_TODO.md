@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 293/506 tests passing (57%)
-**Printer Status:** 169/187 tests passing (90%)
+**Overall Status:** 294/506 tests passing (58%)
+**Printer Status:** 170/187 tests passing (90%)
 
 ---
 
@@ -26,6 +26,11 @@
 ---
 
 ### Recent Progress
+- Fixed switch/match case comment handling (switch.res now passes):
+  - Node::Case.get_loc() now uses braces attribute location if present for consistent key lookup
+  - print_cases uses braces attribute location for full_loc and prev_end_line
+  - This ensures trailing comments on same line as `}` appear correctly
+  - Leading comments before case patterns no longer cause extra blank lines
 - Fixed attribute positioning in pipe expressions inside binary operators (asyncAwait.res now passes):
   - When a binary expression with printable attributes appears as an operand of another binary operator
     (e.g., `(@foo (server->start))->foo`), the attributes should be printed outside the expression
@@ -347,7 +352,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/expr/while.res`
 - [x] `printer/expr/whitespace.res`
 
-### Failing (12 tests)
+### Failing (10 tests)
 - [x] `printer/expr/asyncAwait.res` - Fixed: attribute positioning in pipe expressions
 - [ ] `printer/expr/binary.res` - Exponent associativity, switch/try in pipes
 - [ ] `printer/expr/braced.res` - Brace preservation in switch/while
@@ -357,7 +362,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/expr/jsx.res` - JSX-specific issues
 - [ ] `printer/expr/list.res` - List spread syntax
 - [ ] `printer/expr/polyvariant.res` - Polyvariant formatting
-- [ ] `printer/expr/switch.res` - Switch in pipes
+- [x] `printer/expr/switch.res` - Fixed: trailing comments on same line as `}`
 - [ ] `printer/expr/templateLiteral.res` - Template literal printing
 - [ ] `printer/expr/UncurriedByDefault.res` - Uncurried by default mode
 - [ ] `printer/expr/underscoreApply.res` - Underscore apply rewriting
