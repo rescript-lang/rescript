@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 301/506 tests passing (59%)
-**Printer Status:** 177/187 tests passing (94%)
+**Overall Status:** 303/506 tests passing (60%)
+**Printer Status:** 179/187 tests passing (95%)
 
 ---
 
@@ -12,7 +12,7 @@
 
 **What this means:**
 - **Spread array syntax** (`[...xs, a, b]`) - Implement the full reconstruction from `Belt.Array.concatMany`
-- **Underscore apply rewriting** - Implement the pattern matching to convert `(__x) => f(__x)` back to `f(_)`
+- **Underscore apply rewriting** - DONE: Implemented `print_underscore_apply` and `print_underscore_apply_in_pipe`
 - **Template literals** - Implement complete template literal printing
 - **Any other missing feature** - If a test requires new infrastructure, build that infrastructure
 
@@ -440,7 +440,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 
 ## Phase 5: Other Categories
 
-### Signatures (1 failing, 10 passing)
+### Signatures (0 failing, 11 passing - COMPLETE!)
 - [x] `printer/signature/attributes.resi`
 - [x] `printer/signature/exception.resi`
 - [x] `printer/signature/extension.resi`
@@ -451,7 +451,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/signature/recModule.resi`
 - [x] `printer/signature/typext.resi`
 - [x] `printer/signature/value.resi`
-- [ ] `printer/signature/type.resi` - Inline record definitions
+- [x] `printer/signature/type.resi` - Fixed: inline record definitions
 
 ### Patterns (1 failing, 16 passing)
 - [x] `printer/pattern/alias.res`
