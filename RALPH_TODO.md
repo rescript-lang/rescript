@@ -5,6 +5,12 @@
 **Printer Status:** 159/187 tests passing (85%)
 
 ### Recent Progress
+- Fixed stack overflow in arrow_type when arity is 0:
+  - The Rust code was checking `remaining_arity == 0` but OCaml checks `max_arity < 0`
+  - When external declarations have labeled @as parameters with arity=0, Rust returned immediately
+    with empty args and the original arrow type as return_type, causing infinite recursion
+  - Changed remaining_arity from usize to isize and check `< 0` like OCaml
+  - This fixes crashes on files like `printer/other/attributes.res`
 - Fixed JSX comment handling in comment_table.rs (printer/comments/jsx.res now passes):
   - Implemented proper JSX comment attachment logic matching OCaml's res_comments_table.ml
   - For unary elements: calculate closing token location (/>), partition comments between tag name
