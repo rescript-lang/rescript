@@ -259,6 +259,17 @@ impl<'src> Parser<'src> {
         (loc, end)
     }
 
+    /// Create a location with the start and ghost flag from an existing location,
+    /// but with end set to prev_end_pos. This is equivalent to OCaml's
+    /// `{loc with loc_end = p.prev_end_pos}`.
+    pub fn mk_loc_extend_to_prev_end(&mut self, loc: LocIdx) -> LocIdx {
+        let loc_info = self.arena.get_location(loc);
+        let start_idx = loc_info.loc_start;
+        let is_ghost = loc_info.loc_ghost;
+        let end_idx = self.get_or_push_prev_end_pos();
+        self.arena.push_loc(start_idx, end_idx, is_ghost)
+    }
+
     /// Create and push a location from raw positions.
     pub fn mk_loc_from_positions(&mut self, start: &Position, end: &Position) -> LocIdx {
         self.arena.mk_loc_from_positions(start, end)

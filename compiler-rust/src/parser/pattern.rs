@@ -364,9 +364,12 @@ pub fn parse_constrained_pattern(p: &mut Parser<'_>) -> Pattern {
 }
 
 /// Create a unit construct pattern `()`.
-pub fn make_unit_construct_pattern(p: &mut super::state::Parser<'_>, loc: Location) -> Pattern {
+/// OCaml's Ast_helper.Pat.construct uses Location.none for the pattern location
+/// when called without ~loc, so we use a ghost location here.
+pub fn make_unit_construct_pattern(p: &mut super::state::Parser<'_>, lid_loc: Location) -> Pattern {
     let lid_idx = p.push_lident_static("()");
-    ast_helper::make_construct_pat(lid_idx, None, loc, loc)
+    // Use ghost location for the pattern, but real location for the longident
+    ast_helper::make_construct_pat(lid_idx, None, lid_loc, LocIdx::none())
 }
 
 /// Parse an optional alias `as name` after a pattern.
@@ -378,7 +381,6 @@ pub fn parse_alias_pattern(
     mut pat: Pattern,
     _attrs: Vec<Attribute>,
 ) -> Pattern {
-    let start_pos = p.loc_start(pat.ppat_loc);
     while p.token == Token::As {
         p.next();
         let name = match &p.token {
@@ -395,7 +397,9 @@ pub fn parse_alias_pattern(
                 with_loc("_".to_string(), p.mk_loc_current())
             }
         };
-        let loc = p.mk_loc_to_prev_end(&start_pos);
+        // OCaml: {pattern.ppat_loc with loc_end = p.prev_end_pos}
+        // This preserves loc_start and loc_ghost from the pattern's location
+        let loc = p.mk_loc_extend_to_prev_end(pat.ppat_loc);
         pat = Pattern {
             ppat_desc: PatternDesc::Ppat_alias(Box::new(pat), name),
             ppat_loc: loc,
