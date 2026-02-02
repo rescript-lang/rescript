@@ -2710,6 +2710,14 @@ fn fix_type_manifest_location(arena: &crate::parse_arena::ParseArena, typ: CoreT
                 ..typ
             }
         }
+        CoreTypeDesc::Ptyp_alias(inner, alias_name) => {
+            // Recurse into the aliased type (e.g., `Color.t<...> as 'rgb`)
+            let fixed_inner = fix_type_manifest_location(arena, inner.as_ref().clone());
+            CoreType {
+                ptyp_desc: CoreTypeDesc::Ptyp_alias(Box::new(fixed_inner), alias_name.clone()),
+                ..typ
+            }
+        }
         _ => typ,
     }
 }
@@ -3345,9 +3353,20 @@ fn parse_label_declaration(
             with_loc(n, loc)
         }
         _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected field name".to_string(),
-            ));
+            // Match OCaml's error handling: give specific messages for dangling attrs/mutable
+            if !attrs.is_empty() {
+                p.err_at(start_pos.clone(), p.start_pos.clone(), DiagnosticCategory::Message(
+                    "Attributes and doc comments can only be used at the beginning of a field declaration".to_string(),
+                ));
+            } else if mutable == MutableFlag::Mutable {
+                p.err_at(start_pos.clone(), p.start_pos.clone(), DiagnosticCategory::Message(
+                    "The `mutable` qualifier can only be used at the beginning of a field declaration".to_string(),
+                ));
+            } else {
+                p.err(DiagnosticCategory::Message(
+                    "Expected field name".to_string(),
+                ));
+            }
             return None;
         }
     };

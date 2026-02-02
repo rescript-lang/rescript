@@ -807,40 +807,57 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
                 };
             }
 
-            // For arrow types like `. unit => unit`, OCaml includes the `.` in both
-            // the arrow's location AND the first argument's location
+            // For direct arrow types like `. unit => unit`, OCaml includes the `.` in both
+            // the arrow's location AND the first argument's location.
+            // But for nested/parenthesized arrows like `. (. string) => unit`, don't extend
+            // because the inner arrow has its own `.` handling.
+            // We detect direct arrows by checking if the arrow's first arg starts exactly
+            // at post_doc_start. For nested arrows, the inner `.` extension moves the
+            // first arg location before post_doc_start.
             if let CoreTypeDesc::Ptyp_arrow { arg, ret, arity } = typ.ptyp_desc {
-                // Extend arrow location to include `.`
-                let end_pos = p.loc_end(typ.ptyp_loc).clone();
-                let new_arrow_loc = p.mk_loc_from_positions(&uncurried_start, &end_pos);
+                let first_arg_start = p.loc_start(arg.typ.ptyp_loc);
+                // If first arg location starts exactly at post_doc_start, it's a direct arrow
+                // If it starts elsewhere (before due to inner `.` or after due to parens), don't extend
+                let is_direct_arrow = first_arg_start.cnum == post_doc_start.cnum;
+                if is_direct_arrow {
+                    // Extend arrow location to include `.`
+                    let end_pos = p.loc_end(typ.ptyp_loc).clone();
+                    let new_arrow_loc = p.mk_loc_from_positions(&uncurried_start, &end_pos);
 
-                // Also extend first argument's location if it's a simple Lident
-                let new_arg = if matches!(
-                    &arg.typ.ptyp_desc,
-                    CoreTypeDesc::Ptyp_constr(lid, _) if p.arena().is_simple_lident(lid.txt)
-                ) && !arg.typ.ptyp_loc.is_none() {
-                    let arg_end = p.loc_end(arg.typ.ptyp_loc).clone();
-                    let new_arg_loc = p.mk_loc_from_positions(&uncurried_start, &arg_end);
-                    TypeArg {
-                        typ: CoreType {
-                            ptyp_loc: new_arg_loc,
-                            ..arg.typ
+                    // Also extend first argument's location if it's a simple Lident
+                    let new_arg = if matches!(
+                        &arg.typ.ptyp_desc,
+                        CoreTypeDesc::Ptyp_constr(lid, _) if p.arena().is_simple_lident(lid.txt)
+                    ) && !arg.typ.ptyp_loc.is_none() {
+                        let arg_end = p.loc_end(arg.typ.ptyp_loc).clone();
+                        let new_arg_loc = p.mk_loc_from_positions(&uncurried_start, &arg_end);
+                        TypeArg {
+                            typ: CoreType {
+                                ptyp_loc: new_arg_loc,
+                                ..arg.typ
+                            },
+                            ..(*arg)
+                        }
+                    } else {
+                        *arg
+                    };
+
+                    typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                            arg: Box::new(new_arg),
+                            ret,
+                            arity,
                         },
-                        ..(*arg)
-                    }
+                        ptyp_loc: new_arrow_loc,
+                        ptyp_attributes: typ.ptyp_attributes,
+                    };
                 } else {
-                    *arg
-                };
-
-                typ = CoreType {
-                    ptyp_desc: CoreTypeDesc::Ptyp_arrow {
-                        arg: Box::new(new_arg),
-                        ret,
-                        arity,
-                    },
-                    ptyp_loc: new_arrow_loc,
-                    ..typ
-                };
+                    // Restore the type without modification
+                    typ = CoreType {
+                        ptyp_desc: CoreTypeDesc::Ptyp_arrow { arg, ret, arity },
+                        ..typ
+                    };
+                }
             }
         }
 
