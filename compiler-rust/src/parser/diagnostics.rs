@@ -6,7 +6,7 @@
 use crate::location::{Location, Position};
 use serde::{Deserialize, Serialize};
 
-use super::grammar;
+use super::grammar::Grammar;
 use super::token::Token;
 
 /// A category of diagnostic message.
@@ -17,13 +17,12 @@ pub enum DiagnosticCategory {
         /// The unexpected token.
         token: Token,
         /// The parsing context (stack of grammar rules being parsed).
-        /// Stored as grammar name strings for serialization compatibility.
-        context: Vec<(String, Position)>,
+        context: Vec<(Grammar, Position)>,
     },
     /// An expected token was not found.
     Expected {
         /// The expected grammar context.
-        context: Option<String>,
+        context: Option<Grammar>,
         /// Position of the previous token.
         pos: Position,
         /// The expected token.

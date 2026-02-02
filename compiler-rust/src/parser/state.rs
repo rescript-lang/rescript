@@ -419,12 +419,7 @@ impl<'src> Parser<'src> {
     /// Record an unexpected token error using the current breadcrumbs.
     /// This emits an error with context-aware messaging based on the parsing context.
     pub fn err_unexpected(&mut self) {
-        // Convert Grammar to String for serialization
-        let context: Vec<(String, Position)> = self
-            .breadcrumbs
-            .iter()
-            .map(|(g, pos)| (format!("{:?}", g), pos.clone()))
-            .collect();
+        let context: Vec<(Grammar, Position)> = self.breadcrumbs.clone();
         self.err(DiagnosticCategory::Unexpected {
             token: self.token.clone(),
             context,
@@ -433,12 +428,7 @@ impl<'src> Parser<'src> {
 
     /// Record an unexpected token error at specific positions using the current breadcrumbs.
     pub fn err_unexpected_at(&mut self, start_pos: Position) {
-        // Convert Grammar to String for serialization
-        let context: Vec<(String, Position)> = self
-            .breadcrumbs
-            .iter()
-            .map(|(g, pos)| (format!("{:?}", g), pos.clone()))
-            .collect();
+        let context: Vec<(Grammar, Position)> = self.breadcrumbs.clone();
         self.err_at(
             start_pos,
             self.end_pos.clone(),
