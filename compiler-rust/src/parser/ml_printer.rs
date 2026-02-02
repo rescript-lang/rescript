@@ -2324,19 +2324,26 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
                     f.string(" ");
                 }
                 ConstructorArguments::Pcstr_record(fields) => {
-                    f.string(" of {\n  ");
+                    // OCaml: pp f "@;of@;%a" (record_declaration ctxt) l
+                    // where record_declaration is: pp f "{@\n%a}" (list ... ~sep:";@\n") fields
+                    // The @\n uses Format's newline which respects indentation
+                    f.string(" of {");
+                    f.newline();
                     for (i, field) in fields.iter().enumerate() {
-                        if i > 0 {
-                            f.string("; ");
-                        }
+                        f.string("  ");  // extra indent for fields
                         if matches!(field.pld_mutable, MutableFlag::Mutable) {
                             f.string("mutable ");
                         }
                         f.string(&field.pld_name.txt);
                         f.string(": ");
                         print_core_type(f, arena, &field.pld_type);
+                        if i < fields.len() - 1 {
+                            f.string(" ;");
+                            f.newline();
+                        } else {
+                            f.string(" } ");
+                        }
                     }
-                    f.string(" } ");
                 }
                 _ => {
                     // No args - add trailing space
@@ -2678,6 +2685,7 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 print_module_type(f, arena, mt);
             }
             f.close_box();
+            print_item_attributes(f, arena, &mtd.pmtd_attributes);
         }
         SignatureItemDesc::Psig_open(od) => {
             f.string("open");
