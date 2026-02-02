@@ -216,6 +216,11 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             Some(StructureItemDesc::Pstr_value(rec_flag, bindings))
         }
         Token::Typ => {
+            // OCaml uses begin_region/end_region around type parsing
+            // This allows errors within one type definition to be de-duplicated,
+            // but errors from different type definitions can both be reported.
+            p.begin_region();
+
             let type_start = p.start_pos.clone(); // Capture 'type' keyword position
             p.next();
             // `type t += ...` (type extension) vs `type t = ...` (type declaration)
@@ -253,7 +258,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                     state.token == Token::PlusEqual
                 });
 
-            if is_type_extension {
+            let result = if is_type_extension {
                 let ext = parse_type_extension(p, attrs.clone());
                 Some(StructureItemDesc::Pstr_typext(ext))
             } else {
@@ -273,7 +278,10 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                     rec_flag = RecFlag::Recursive;
                 }
                 Some(StructureItemDesc::Pstr_type(rec_flag, decls))
-            }
+            };
+
+            p.end_region();
+            result
         }
         Token::External => {
             p.next();
@@ -288,11 +296,14 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             Some(StructureItemDesc::Pstr_exception(ext))
         }
         Token::Module => {
+            // OCaml uses begin_region/end_region around module parsing
+            p.begin_region();
+
             // Capture module_start BEFORE consuming 'module' for accurate locations
             let module_start = p.start_pos.clone();
             p.next();
             // Check for first-class module expression: module(...)
-            if p.token == Token::Lparen {
+            let result = if p.token == Token::Lparen {
                 // Parse the first-class module, then continue with primary/binary parsing
                 let pack_expr =
                     super::expr::parse_first_class_module_expr_from_paren(p, start_pos.clone());
@@ -301,7 +312,10 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else {
                 parse_module_definition(p, module_start, attrs.clone())
-            }
+            };
+
+            p.end_region();
+            result
         }
         Token::Include => {
             // OCaml: parse_include_statement captures start_pos before consuming Include
