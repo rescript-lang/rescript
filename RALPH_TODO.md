@@ -1,10 +1,15 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 258/506 tests passing (51%)
-**Printer Status:** 138/187 tests passing (73%)
+**Overall Status:** 259/506 tests passing (51%)
+**Printer Status:** 139/187 tests passing (74%)
 
 ### Recent Progress
+- Fixed Pmty_functor parameter comments (modType.res now passes): The Rust code was walking
+  functor parameters one at a time recursively, which didn't properly handle comments between
+  parameters. Changed to match OCaml's approach: collect all parameters first using `functor_type_params`,
+  then walk them as a list with `visit_list_but_continue_with_remaining_comments`. Added
+  `walk_mod_type_parameter` to walk each parameter's label and optional module type.
 - Fixed doc.rs `fits` function performance: The function was cloning the entire stack for each
   `fits` check, causing O(n²) memory allocations with deeply nested structures. Changed to pass
   the first item and rest of stack separately (avoiding clone). Also added iteration limit
@@ -76,13 +81,10 @@
   - Using `Doc::custom_layout` to try different layouts
   This is a significant feature that affects how callback arguments are formatted.
 
-- **modType.res - Pmty_functor parameter comments**: Comments before the second (and later)
-  functor parameters are lost. The issue is that the Rust comment_table walks Pmty_functor
-  one parameter at a time, but OCaml collects all parameters first using functor_type and
-  walks them as a list with visit_list_but_continue_with_remaining_comments. The fix requires:
-  - Adding functor_type equivalent in comment_table.rs to collect all parameters
-  - Walking parameters with proper combined locations (label start to mod_type end)
-  - The Pmty_typeof fix has been applied but functor params still need list-walking approach.
+- **modType.res - Pmty_functor parameter comments**: FIXED! The Rust comment_table was walking
+  Pmty_functor parameters one at a time recursively, which didn't properly handle comments
+  between parameters. Changed to match OCaml's approach: collect all parameters first using
+  `functor_type_params`, then walk them as a list with `visit_list_but_continue_with_remaining_comments`.
 
 - **modType.res - Pmty_typeof**: FIXED! Added partition_by_loc and attach leading/trailing
   to mod_expr.pmod_loc before calling walk_module_expr. Now `module type of /* c4 */ {}`
@@ -114,7 +116,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/comments/array.res` - Array literal comments
 - [x] `printer/comments/docComments.res` - Doc comment handling
 - [ ] `printer/comments/typexpr.res` - Type expression comments
-- [ ] `printer/comments/modType.res` - Module type comments
+- [x] `printer/comments/modType.res` - Module type comments
 - [x] `printer/comments/signatureItem.resi` - Signature item comments
 - [ ] `printer/comments/valueBindingSugar.res` - Value binding sugar comments
 - [x] `printer/comments/typeDefinition.res` - Type definition comments

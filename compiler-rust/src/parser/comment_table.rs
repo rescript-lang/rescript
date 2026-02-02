@@ -2396,32 +2396,45 @@ fn walk_mod_type(mt: &ModuleType, t: &mut CommentTable, comments: Vec<Comment>, 
         ModuleTypeDesc::Pmty_signature(sig) => {
             walk_signature(sig, t, comments, arena);
         }
-        ModuleTypeDesc::Pmty_functor(name, arg_type, ret) => {
-            // Handle functor name
-            let (leading, trailing) = partition_leading_trailing(comments, name.loc, arena);
-            t.attach_leading(name.loc, leading, arena);
+        ModuleTypeDesc::Pmty_functor(_, _, _) => {
+            // Collect all functor parameters like OCaml's functor_type
+            let (parameters, return_mod_type) = functor_type_params(mt);
 
-            let (after_name, rest) = partition_adjacent_trailing(name.loc, trailing, arena);
-            t.attach_trailing(name.loc, after_name, arena);
+            // Walk parameters using list-based comment distribution
+            // This matches OCaml's visit_list_but_continue_with_remaining_comments
+            let comments = visit_list_but_continue_with_remaining_comments(
+                &parameters,
+                |param, arena| {
+                    // get_loc: compute the location for each parameter
+                    // For "_" label, use just the mod_type location
+                    // Otherwise, use label.loc to mod_type.loc.end (or just label.loc if no mod_type)
+                    let (_, lbl, mod_type_option) = param;
+                    match mod_type_option {
+                        None => lbl.loc,
+                        Some(mod_type) => {
+                            if lbl.txt == "_" {
+                                mod_type.pmty_loc
+                            } else {
+                                // Create a combined location from label start to mod_type end
+                                arena.mk_loc_spanning(lbl.loc, mod_type.pmty_loc)
+                            }
+                        }
+                    }
+                },
+                |param, t, comments, arena| {
+                    walk_mod_type_parameter(param, t, comments, arena);
+                },
+                t,
+                comments,
+                false, // newline_delimited
+                arena,
+            );
 
-            // Handle optional argument type
-            let rest = match arg_type {
-                Some(mod_type) => {
-                    let (before, inside, after) = partition_by_loc(rest, mod_type.pmty_loc, arena);
-                    t.attach_leading(mod_type.pmty_loc, before, arena);
-                    walk_mod_type(mod_type, t, inside, arena);
-                    let (after_mod_type, rest) =
-                        partition_adjacent_trailing(mod_type.pmty_loc, after, arena);
-                    t.attach_trailing(mod_type.pmty_loc, after_mod_type, arena);
-                    rest
-                }
-                None => rest,
-            };
-
-            let (before, inside, after) = partition_by_loc(rest, ret.pmty_loc, arena);
-            t.attach_leading(ret.pmty_loc, before, arena);
-            walk_mod_type(ret, t, inside, arena);
-            t.attach_trailing(ret.pmty_loc, after, arena);
+            // Walk return type with remaining comments
+            let (before, inside, after) = partition_by_loc(comments, return_mod_type.pmty_loc, arena);
+            t.attach_leading(return_mod_type.pmty_loc, before, arena);
+            walk_mod_type(return_mod_type, t, inside, arena);
+            t.attach_trailing(return_mod_type.pmty_loc, after, arena);
         }
         ModuleTypeDesc::Pmty_with(typ, constraints) => {
             let (before, inside, after) = partition_by_loc(comments, typ.pmty_loc, arena);
@@ -2536,6 +2549,53 @@ fn walk_extension(ext: &Extension, t: &mut CommentTable, comments: Vec<Comment>,
             if let Some(guard_expr) = guard {
                 walk_expression(guard_expr, t, Vec::new(), arena);
             }
+        }
+    }
+}
+
+/// Collect all functor parameters from a module type.
+/// This is equivalent to OCaml's functor_type function.
+fn functor_type_params(modtype: &ModuleType) -> (Vec<(&[Attribute], &crate::parser::ast::StringLoc, Option<&ModuleType>)>, &ModuleType) {
+    fn process<'a>(
+        acc: Vec<(&'a [Attribute], &'a crate::parser::ast::StringLoc, Option<&'a ModuleType>)>,
+        modtype: &'a ModuleType,
+    ) -> (Vec<(&'a [Attribute], &'a crate::parser::ast::StringLoc, Option<&'a ModuleType>)>, &'a ModuleType) {
+        match &modtype.pmty_desc {
+            ModuleTypeDesc::Pmty_functor(lbl, arg_type, return_type) => {
+                let mut new_acc = acc;
+                new_acc.push((&modtype.pmty_attributes, lbl, arg_type.as_ref().map(|t| t.as_ref())));
+                process(new_acc, return_type)
+            }
+            _ => (acc, modtype),
+        }
+    }
+    process(Vec::new(), modtype)
+}
+
+/// Walk a single functor parameter's comments.
+/// This matches OCaml's walk_mod_type_parameter.
+fn walk_mod_type_parameter(
+    param: &(&[Attribute], &crate::parser::ast::StringLoc, Option<&ModuleType>),
+    t: &mut CommentTable,
+    comments: Vec<Comment>,
+    arena: &mut ParseArena,
+) {
+    let (_attrs, lbl, mod_type_option) = param;
+
+    let (leading, trailing) = partition_leading_trailing(comments, lbl.loc, arena);
+    t.attach_leading(lbl.loc, leading, arena);
+
+    match mod_type_option {
+        None => {
+            t.attach_trailing(lbl.loc, trailing, arena);
+        }
+        Some(mod_type) => {
+            let (after_lbl, rest) = partition_adjacent_trailing(lbl.loc, trailing, arena);
+            t.attach_trailing(lbl.loc, after_lbl, arena);
+            let (before, inside, after) = partition_by_loc(rest, mod_type.pmty_loc, arena);
+            t.attach_leading(mod_type.pmty_loc, before, arena);
+            walk_mod_type(mod_type, t, inside, arena);
+            t.attach_trailing(mod_type.pmty_loc, after, arena);
         }
     }
 }
