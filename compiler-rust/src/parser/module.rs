@@ -146,11 +146,15 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
             break;
         }
 
+        // Begin a new error reporting region for each structure item
+        // This allows each item to report its own errors
+        p.begin_region();
         if let Some(item) = parse_structure_item(p) {
             items.push(item);
             // Check for consecutive statements error
             parse_newline_or_semicolon_structure(p);
         }
+        p.end_region();
     }
 
     items
