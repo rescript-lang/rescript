@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 388/506 tests passing (76%)
+**Overall Status:** 389/506 tests passing (76%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,15 +10,22 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 93 | 42 | 135 | 69% |
+| parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
 | parsing/errors | 25 | 59 | 84 | 29% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 118 tests to fix
+**Remaining:** 117 tests to fix
 
 **Recent Fixes (this session):**
+- **Moved parse_newline_or_semicolon_structure inside structure item branches**: OCaml calls
+  parse_newline_or_semicolon_structure INSIDE each branch of parse_structure_item_region, before
+  calling end_region(). This allows errors to be reported within each item's region. For example,
+  `export type t = int and export s = string` now correctly emits 2 errors (one for `export type`,
+  one for `and export`) instead of just 1.
+- **Added parse_newline_or_semicolon_signature for signature item parsing**: Similar fix for
+  signature items, with proper regions for Let, Typ, and Module branches matching OCaml.
 - **Propagated scanner diagnostics to parser**: Scanner errors like unclosed strings were being
   collected but never propagated to the parser's diagnostic list. Now scanner diagnostics are
   taken and added to parser diagnostics after each scan operation.
