@@ -456,29 +456,48 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
         StructureItemDesc::Pstr_module(mb) => {
             f.string("module ");
             f.string(&mb.pmb_name.txt);
+            // OCaml: module_helper unwraps Pmod_functor with no attributes
+            // and prints functor parameters inline: `module F(A:X) = body`
+            let mut me = &mb.pmb_expr;
+            while let ModuleExprDesc::Pmod_functor(name, mt, body) = &me.pmod_desc {
+                if me.pmod_attributes.is_empty() {
+                    if let Some(mt) = mt {
+                        f.string("(");
+                        f.string(&name.txt);
+                        f.string(":");
+                        print_module_type(f, arena, mt);
+                        f.string(")");
+                    } else {
+                        f.string("()");
+                    }
+                    me = body;
+                } else {
+                    break;
+                }
+            }
             // OCaml: special case for Pmod_constraint with ident or signature type
             // prints "module X : mt = me'" instead of "module X = (me' : mt)"
-            if let ModuleExprDesc::Pmod_constraint(me, mt) = &mb.pmb_expr.pmod_desc {
+            if let ModuleExprDesc::Pmod_constraint(inner_me, mt) = &me.pmod_desc {
                 let is_sugar_type = matches!(
                     mt.pmty_desc,
                     ModuleTypeDesc::Pmty_ident(..) | ModuleTypeDesc::Pmty_signature(..)
                 );
-                if is_sugar_type && mb.pmb_expr.pmod_attributes.is_empty() {
+                if is_sugar_type && me.pmod_attributes.is_empty() {
                     f.string(" :");
                     f.space();
                     print_module_type(f, arena, mt);
                     f.space();
                     f.string("=");
                     f.space();
-                    print_module_expr(f, arena, me);
+                    print_module_expr(f, arena, inner_me);
                     f.space();  // OCaml: trailing @; produces space
                 } else {
                     f.string(" = ");
-                    print_module_expr(f, arena, &mb.pmb_expr);
+                    print_module_expr(f, arena, me);
                 }
             } else {
                 f.string(" = ");
-                print_module_expr(f, arena, &mb.pmb_expr);
+                print_module_expr(f, arena, me);
             }
         }
         StructureItemDesc::Pstr_recmodule(mbs) => {
@@ -2607,8 +2626,10 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             print_module_expr(f, arena, body);
         }
         ModuleExprDesc::Pmod_apply(m1, m2) => {
-            print_module_expr(f, arena, m1);
+            // OCaml: pp f "(%a)(%a)" - both functor and argument get parens
             f.string("(");
+            print_module_expr(f, arena, m1);
+            f.string(")(");
             print_module_expr(f, arena, m2);
             f.string(")");
         }
