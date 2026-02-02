@@ -6075,10 +6075,10 @@ fn print_attributes_with_loc(
     }
 
     // Partition doc comments from regular attributes
-    // Doc comments have attribute name "res.doc" or "ocaml.doc"
+    // Only "res.doc" is a doc comment (printed as /** ... */), not "ocaml.doc"
     let (doc_comment_attrs, regular_attrs): (Vec<_>, Vec<_>) = filtered
         .into_iter()
-        .partition(|attr| attr.0.txt == "res.doc" || attr.0.txt == "ocaml.doc");
+        .partition(|attr| attr.0.txt == "res.doc");
 
     // Print doc comments with hard_line after each (they go on their own lines)
     let doc_comment_doc = if doc_comment_attrs.is_empty() {
