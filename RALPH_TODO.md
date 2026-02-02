@@ -2,9 +2,16 @@
 
 **Last Updated:** 2026-02-02
 **Overall Status:** 268/506 tests passing (52%)
-**Printer Status:** 148/187 tests passing (79%)
+**Printer Status:** 147/187 tests passing (78%)
 
 ### Recent Progress
+- Fixed attribute duplication on function expressions: `@att x => 34` was printing as
+  `@att @att (@att x) => 34`. Two issues fixed:
+  1. `fun_expr` was including `pexp_attributes` in each `FunParam::Parameter.attrs`, but OCaml
+     strips attributes by passing `{expr_ with pexp_attributes = []}` to `collect_params`.
+  2. `print_expression` was always printing `e.pexp_attributes` at the end, but some expression
+     types (Pexp_fun, Pexp_apply, etc.) already print their own. Added `should_print_its_own_attributes`
+     check matching OCaml to skip double printing for those types.
 - Fixed curried function printing: `(a, b, c) => (d, e, f) => 4` was being collapsed into
   `(a, b, c, d, e, f) => 4`. The issue was that `fun_expr` was collecting ALL nested function
   parameters without checking the `arity` field. OCaml's `fun_expr` has the condition
