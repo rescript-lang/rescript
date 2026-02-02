@@ -315,13 +315,27 @@ impl Doc {
         }
     }
 
-    /// Check if the document fits within the given width
-    fn fits(width: i32, stack: &[(i32, Mode, &Doc)]) -> bool {
+    /// Check if the document fits within the given width.
+    /// Takes the current item and the rest of the stack as a slice to avoid cloning.
+    fn fits(width: i32, first: (i32, Mode, &Doc), rest: &[(i32, Mode, &Doc)]) -> bool {
         let mut width = width;
-        let mut stack: Vec<(i32, Mode, &Doc)> = stack.to_vec();
+        // Create a stack: first the rest items (same order - they'll be processed later),
+        // then the first item (which will be popped and processed first)
+        let mut stack: Vec<(i32, Mode, &Doc)> = Vec::with_capacity(rest.len() + 1);
+        // Push rest items in order (they'll be processed after first)
+        for item in rest.iter() {
+            stack.push(*item);
+        }
+        // Push the first item last so it gets processed first (popped first)
+        stack.push(first);
+
+        // Limit iterations to prevent exponential blowup with deeply nested custom layouts
+        let mut iterations = 0;
+        const MAX_ITERATIONS: i32 = 10000;
 
         while let Some((indent, mode, doc)) = stack.pop() {
-            if width < 0 {
+            iterations += 1;
+            if iterations > MAX_ITERATIONS || width < 0 {
                 return false;
             }
 
@@ -461,10 +475,9 @@ impl Doc {
                 }
                 Doc::Group { should_break, doc } => {
                     // Include remaining stack in fits check (like OCaml)
-                    let mut fit_stack: Vec<(i32, Mode, &Doc)> = stack.clone();
-                    fit_stack.push((indent, Mode::Flat, doc));
+                    // Pass stack as slice reference to avoid cloning
                     if should_break.get()
-                        || !Self::fits(width - pos, &fit_stack)
+                        || !Self::fits(width - pos, (indent, Mode::Flat, doc), &stack)
                     {
                         stack.push((indent, Mode::Break, doc));
                     } else {
@@ -474,11 +487,10 @@ impl Doc {
                 Doc::CustomLayout(docs) => {
                     // Find the first layout that fits, or use the last one
                     // Include remaining stack in fits check (like OCaml)
+                    // Pass stack as slice reference to avoid cloning
                     let mut chosen = docs.last();
                     for doc in docs.iter() {
-                        let mut fit_stack: Vec<(i32, Mode, &Doc)> = stack.clone();
-                        fit_stack.push((indent, Mode::Flat, doc));
-                        if Self::fits(width - pos, &fit_stack) {
+                        if Self::fits(width - pos, (indent, Mode::Flat, doc), &stack) {
                             chosen = Some(doc);
                             break;
                         }

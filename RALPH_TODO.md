@@ -5,6 +5,11 @@
 **Printer Status:** 138/187 tests passing (73%)
 
 ### Recent Progress
+- Fixed doc.rs `fits` function performance: The function was cloning the entire stack for each
+  `fits` check, causing O(n²) memory allocations with deeply nested structures. Changed to pass
+  the first item and rest of stack separately (avoiding clone). Also added iteration limit
+  (10000) to prevent exponential blowup with deeply nested custom layouts. This fixes the
+  infinite loop/timeout with `nestedCallbacks.res`.
 - Fixed unit pattern printing inside braced expressions: `{ () => 1 }` was printing as
   `{ (()) => 1 }`. The special case detection for simple params was using `attrs.is_empty()`
   but the `res.braces` attribute made it non-empty. Fixed by using `filter_parsing_attrs()`.
