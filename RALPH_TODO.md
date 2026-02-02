@@ -1,10 +1,18 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 272/506 tests passing (53%)
-**Printer Status:** 151/187 tests passing (80%)
+**Overall Status:** 279/506 tests passing (55%)
+**Printer Status:** 158/187 tests passing (84%)
 
 ### Recent Progress
+- Implemented JSX printing in Rust printer:
+  - Added `print_jsx_element` with support for fragments, unary, and container elements
+  - Added `print_jsx_name` for lower, upper, and qualified tag names
+  - Added `print_jsx_prop` for punning, value, and spreading props
+  - Added `print_jsx_children` with proper line separation
+  - Fixed JSX parser to properly populate `closing_tag` field (was always None)
+  - Note: JSX comment handling still needs improvement to match OCaml's sophisticated
+    `partition_adjacent_trailing_before_next_token_on_same_line` logic
 - Added `has_comment_below` function and fixed simple pipe (->) comment handling:
   OCaml only adds `soft_line` before `->` when `has_comment_below` returns true (checking if the first
   trailing comment starts on a line BELOW the expression's end). This ensures `compilation // after`
@@ -160,8 +168,10 @@
 
 ### Major Missing Features (blocking remaining ~40 tests)
 
-1. **JSX Printing**: Currently prints `<jsx />` placeholder. Need to implement full JSX printing
-   including children, props, spread, fragments, etc.
+1. **JSX Printing**: IMPLEMENTED! Basic JSX printing works (fragments, unary elements, container
+   elements, props, children). JSX comment handling needs more work - OCaml has sophisticated
+   comment partitioning logic (`partition_adjacent_trailing_before_next_token_on_same_line`) that
+   determines whether comments attach to tag names, props, or closing tokens.
 
 2. **Callback Formatting**: IMPLEMENTED! Special callback printing that "hugs" callback arguments
    is now working. The basic feature works for expr.res, but callback.res shows some remaining
