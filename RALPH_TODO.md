@@ -1,9 +1,10 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 315/506 tests passing (62%)
+**Overall Status:** 323/506 tests passing (63%)
 **Printer Status:** 187/187 tests passing (100%) ✅
-**Remaining:** 191 tests to fix (parsing/errors, parsing/grammar, ppx, etc.)
+**PPX/React Status:** 28/31 tests passing (90%)
+**Remaining:** 183 tests to fix (parsing/errors, parsing/grammar, parsing/recovery, etc.)
 
 ---
 
