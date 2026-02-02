@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 372/506 tests passing (73%)
+**Overall Status:** 376/506 tests passing (74%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,22 @@
 | parsing/grammar | 92 | 43 | 135 | 68% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 16 | 68 | 84 | 19% |
+| parsing/errors | 20 | 64 | 84 | 23% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 134 tests to fix
+**Remaining:** 130 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed error reporting to match OCaml's region-based silencing**: Three key changes:
+  1. Removed per-item regions in parse_structure - OCaml does NOT create a new region for each
+     structure item. The region is shared so that after one error, subsequent errors are silenced.
+  2. Changed err_multiple to err_at in parse_newline_or_semicolon_structure to respect regions.
+  3. Replaced "Unexpected token: {:?}" messages with err_unexpected() to use proper Unexpected
+     diagnostic category which runs through explain_unexpected() for context-aware messages.
+- **Added begin_region/end_region to type and module parsing**: OCaml uses regions around specific
+  parsing operations (Token::Typ and Token::Module) to allow errors within one definition to be
+  de-duplicated while still reporting errors from different definitions.
+
 - **Fixed item_attribute line-breaking in ML printer**: Added HOV box with break hint after attribute name,
   matching OCaml's "@[<2>[@@%s@ %a]@]" format. This enables proper line breaking for long attributes.
 - **Fixed polyvariant line-breaking in ML printer**: Added proper box structure with break hints for
