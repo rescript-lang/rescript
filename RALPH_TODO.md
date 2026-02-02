@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 389/506 tests passing (76%)
+**Overall Status:** 390/506 tests passing (77%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,25 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 25 | 59 | 84 | 29% |
+| parsing/errors | 26 | 58 | 84 | 30% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 117 tests to fix
+**Remaining:** 116 tests to fix
+
+**Known Crashing Files (stack overflow):**
+- tests/syntax_tests/data/parsing/errors/expressions/typeDefInFunction.res
+- tests/syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res
+- tests/syntax_tests/data/printer/expr/braced.res
 
 **Recent Fixes (this session):**
+- **Added PatternMatchCase and Pattern breadcrumbs for switch/try cases**: OCaml sets PatternMatchCase
+  breadcrumb before parsing each case, and Pattern breadcrumb before parsing the pattern. This enables
+  proper context-aware error messages like "I was expecting a pattern to match on before the `=>`".
+- **Fixed catch token handling**: Changed from manual `Message("Expected 'catch'")` to using
+  `expect(Token::Lident("catch"))` to get proper "Did you forget a `catch` here?" error message.
+- **Added sigitemhole recovery for signature items**: When attributes exist but no valid signature item
+  follows, OCaml reports "Did you forget to attach X to an item?" and returns a sigitemhole placeholder.
+  Added `default_signature_item()` and error handling in `parse_signature_item` to match.
 - **Moved parse_newline_or_semicolon_structure inside structure item branches**: OCaml calls
   parse_newline_or_semicolon_structure INSIDE each branch of parse_structure_item_region, before
   calling end_region(). This allows errors to be reported within each item's region. For example,
