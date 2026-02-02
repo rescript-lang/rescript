@@ -469,6 +469,11 @@ impl<'src> Parser<'src> {
 
         loop {
             let result = self.scanner.scan();
+
+            // Propagate scanner diagnostics to parser
+            let scanner_diagnostics = self.scanner.take_diagnostics();
+            self.diagnostics.extend(scanner_diagnostics);
+
             match result.token {
                 Token::Comment(ref c) => {
                     // Collect comment and continue scanning.
@@ -502,6 +507,11 @@ impl<'src> Parser<'src> {
     /// Scan the next template literal token.
     pub fn next_template_literal_token(&mut self) {
         let result = self.scanner.scan_template_literal_token();
+
+        // Propagate scanner diagnostics to parser
+        let scanner_diagnostics = self.scanner.take_diagnostics();
+        self.diagnostics.extend(scanner_diagnostics);
+
         self.token = result.token;
         self.prev_end_pos = self.end_pos.clone();
         self.cached_prev_end_pos_idx = None; // Clear cache when prev_end_pos changes
