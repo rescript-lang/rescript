@@ -1,0 +1,86 @@
+Complete src/Throw.res 3:21
+posCursor:[3:21] posNoWhite:[3:20] Found expr:[3:11->3:21]
+posCursor:[3:21] posNoWhite:[3:20] Found expr:[3:17->3:21]
+Pexp_ident thro:[3:17->3:21]
+Completable: Cpath Value[thro]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[thro]
+Path thro
+[{
+    "label": "JsError.throwWithMessage",
+    "kind": 12,
+    "tags": [],
+    "detail": "Throw a JavaScript error, example: `throw new Error(str)`",
+    "documentation": null,
+    "insertText": "JsError.throwWithMessage(\"$0\")",
+    "insertTextFormat": 2
+  }, {
+    "label": "JsExn.throw",
+    "kind": 12,
+    "tags": [],
+    "detail": "Throw any JavaScript value, example: `throw 100`",
+    "documentation": null,
+    "insertText": "JsExn.throw($0)",
+    "insertTextFormat": 2
+  }, {
+    "label": "throw(MyCustomThingToThrow)",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "filterText": "throw",
+    "insertText": "throw(MyCustomThingToThrow($0))",
+    "insertTextFormat": 2
+  }, {
+    "label": "throw(NoArgsToThrow)",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "filterText": "throw",
+    "insertText": "throw(NoArgsToThrow)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Throw.res 6:27
+posCursor:[6:27] posNoWhite:[6:26] Found expr:[6:11->6:28]
+posCursor:[6:27] posNoWhite:[6:26] Found expr:[6:17->6:28]
+Pexp_apply ...[6:17->6:22] (...[6:23->6:27])
+Completable: Cexpression CArgument Value[throw]($0)=MyCu
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[{
+    "label": "MyCustomThingToThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "insertText": "MyCustomThingToThrow($0)",
+    "insertTextFormat": 2
+  }]
+
+Complete src/Throw.res 9:23
+posCursor:[9:23] posNoWhite:[9:22] Found expr:[9:11->9:24]
+posCursor:[9:23] posNoWhite:[9:22] Found expr:[9:17->9:24]
+Pexp_apply ...[9:17->9:22] (...[9:23->9:24])
+Completable: Cexpression CArgument Value[throw]($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[{
+    "label": "MyCustomThingToThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "insertText": "MyCustomThingToThrow($0)",
+    "insertTextFormat": 2
+  }, {
+    "label": "NoArgsToThrow",
+    "kind": 12,
+    "tags": [],
+    "detail": "exn",
+    "documentation": null,
+    "insertText": "NoArgsToThrow"
+  }]
+
