@@ -1833,9 +1833,8 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
         }
         CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
             print_arg_label(f, arena, &arg.lbl);
-            // Arrow types as labeled args need parentheses
-            let arg_needs_parens = !matches!(arg.lbl, ArgLabel::Nolabel)
-                && matches!(arg.typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+            // Arrow types as args need parentheses (OCaml's core_type1 wraps them)
+            let arg_needs_parens = matches!(arg.typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
             if arg_needs_parens {
                 f.string("(");
             }
