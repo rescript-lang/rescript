@@ -88,9 +88,11 @@ pub fn parse_newline_or_semicolon_expr_block(p: &mut Parser<'_>) {
 
     if grammar::is_block_expr_start(&p.token) {
         // Check if we're on the same line as the previous token
+        // OCaml: if p.prev_end_pos.pos_lnum < p.start_pos.pos_lnum then () else err
         if p.prev_end_pos.line >= p.start_pos.line {
-            // Same line: emit error (use err_multiple to allow multiple such errors)
-            p.err_multiple(
+            // Same line: emit error
+            // Use err_at which respects regions (like OCaml's Parser.err)
+            p.err_at(
                 p.prev_end_pos.clone(),
                 p.end_pos.clone(),
                 DiagnosticCategory::message(
@@ -1825,9 +1827,22 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
         _ => {
             // Use err_unexpected which creates a proper Unexpected diagnostic
             // with breadcrumbs, matching OCaml's parse_region behavior
-            p.err_unexpected();
-            // Advance past the unexpected token to prevent infinite loops
-            p.next();
+            // OCaml uses prev_end_pos as the error position
+            let err_pos = p.prev_end_pos.clone();
+            p.err_at(
+                err_pos.clone(),
+                err_pos,
+                DiagnosticCategory::unexpected(p.token.clone(), p.breadcrumbs().to_vec()),
+            );
+
+            // Try to skip tokens and retry parsing if we find a valid start token
+            // This matches OCaml's skip_tokens_and_maybe_retry behavior
+            if recover::skip_tokens_and_maybe_retry(p, grammar::is_atomic_expr_start) {
+                // Eat our breadcrumb first, then recurse
+                // OCaml returns from match, then eat_breadcrumb runs
+                p.eat_breadcrumb();
+                return parse_atomic_expr(p);
+            }
             recover::default_expr()
         }
     };

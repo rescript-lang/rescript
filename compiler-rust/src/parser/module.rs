@@ -15,6 +15,7 @@ use super::core::{is_es6_arrow_functor, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::expr;
 use super::grammar;
+use super::grammar::Grammar;
 use super::longident::Longident;
 use super::pattern;
 use super::state::Parser;
@@ -139,6 +140,9 @@ fn module_type_to_package(p: &mut Parser<'_>, mt: &ModuleType) -> PackageType {
 /// Note: OCaml does NOT create regions per structure item - the region is shared
 /// so that after one error, subsequent errors in the same region are silenced.
 pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
+    // OCaml uses parse_region with Grammar::Implementation
+    p.leave_breadcrumb(Grammar::Implementation);
+
     let mut items = vec![];
 
     while p.token != Token::Eof {
@@ -158,6 +162,7 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
         }
     }
 
+    p.eat_breadcrumb();
     items
 }
 
@@ -1868,6 +1873,11 @@ fn parse_let_bindings(
     let mut unwrap_attr_end = let_end_pos;
 
     loop {
+        // OCaml's parse_let_binding_body uses begin_region and leave_breadcrumb(LetBinding)
+        // for each binding. This allows proper error messages and error de-duplication.
+        p.begin_region();
+        p.leave_breadcrumb(Grammar::LetBinding);
+
         let mut attrs = parse_attributes(p);
 
         // Handle `and` after attributes: `@attr and foo = ...`
@@ -2014,6 +2024,10 @@ fn parse_let_bindings(
             pvb_attributes: attrs,
             pvb_loc: loc,
         });
+
+        // End the region and breadcrumb for this binding
+        p.eat_breadcrumb();
+        p.end_region();
 
         // Check for `and` to continue with more bindings.
         // Also handle attributes/doc comments before `and`: `@attr and ...` or `/** doc */ and ...`
