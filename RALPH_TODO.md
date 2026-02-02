@@ -5,6 +5,9 @@
 **Printer Status:** 138/187 tests passing (73%)
 
 ### Recent Progress
+- Fixed unit pattern printing inside braced expressions: `{ () => 1 }` was printing as
+  `{ (()) => 1 }`. The special case detection for simple params was using `attrs.is_empty()`
+  but the `res.braces` attribute made it non-empty. Fixed by using `filter_parsing_attrs()`.
 - Fixed underscore apply sugar printing: `f(a => b, _)` now prints correctly as `f(a => b, _)`
   instead of `__x => f(a => b, __x)`. Added `is_underscore_ident` and `print_underscore_apply`
   functions to detect and print the underscore placeholder pattern.
