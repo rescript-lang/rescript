@@ -488,6 +488,7 @@ jobs:
           fi
 
       - name: Use Node.js
+        if: steps.diffcheck.outputs.clean == 'false'
         uses: actions/setup-node@v6
         with:
           cache: yarn
