@@ -4286,9 +4286,20 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
 
         // Parse closing tag
         p.expect(Token::LessThan);
+        let closing_tag_start = p.prev_end_pos.clone(); // Position after <
         p.expect(Token::Forwardslash);
-        let _closing_tag_name = parse_jsx_tag_name(p);
+        let closing_tag_name_start = p.start_pos.clone();
+        let closing_tag_name = parse_jsx_tag_name(p);
+        let closing_tag_name_end = p.prev_end_pos.clone();
+        let closing_tag_name_loc = p.mk_loc_from_positions(&closing_tag_name_start, &closing_tag_name_end);
         p.expect(Token::GreaterThan);
+        let closing_tag_end = p.prev_end_pos.clone();
+
+        let closing_tag = Some(JsxClosingTag {
+            start: closing_tag_start,
+            name: with_loc(closing_tag_name, closing_tag_name_loc),
+            end: closing_tag_end,
+        });
 
         let loc = p.mk_loc_to_prev_end(&start_pos);
 
@@ -4299,7 +4310,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
                     opening_end,
                     props,
                     children,
-                    closing_tag: None, // Simplified
+                    closing_tag,
                 },
             )),
             pexp_loc: loc,

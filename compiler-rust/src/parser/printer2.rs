@@ -1536,9 +1536,9 @@ pub fn print_expression(
                 Doc::text(")"),
             ])
         }
-        // JSX element (placeholder - full implementation needed)
-        ExpressionDesc::Pexp_jsx_element(_) => {
-            Doc::text("<jsx />")  // Simplified placeholder
+        // JSX element
+        ExpressionDesc::Pexp_jsx_element(jsx) => {
+            print_jsx_element(state, jsx, e.pexp_loc, cmt_tbl, arena)
         }
         // Send (method call): expr#method -> expr["method"]
         ExpressionDesc::Pexp_send(parent_expr, label) => {
@@ -7612,6 +7612,580 @@ pub fn print_interface(
 /// Print a signature with comments using default width.
 pub fn print_signature_with_comments(signature: &[SignatureItem], comments: Vec<Comment>, arena: &mut ParseArena) -> String {
     print_interface(signature, comments, DEFAULT_PRINT_WIDTH, arena)
+}
+
+// ============================================================================
+// JSX Printing
+// ============================================================================
+
+/// Print a JSX tag name.
+fn print_jsx_name(arena: &ParseArena, tag_name: &JsxTagName) -> Doc {
+    match tag_name {
+        JsxTagName::Invalid(invalid) => Doc::text(invalid.clone()),
+        JsxTagName::Lower(name) => print_ident_like(name, true, true),
+        JsxTagName::QualifiedLower { path, name } => {
+            let lid = arena.get_longident(*path);
+            let mut segs: Vec<Doc> = Vec::new();
+            // Flatten the longident into parts
+            fn collect_parts(lid: &Longident, arena: &ParseArena, parts: &mut Vec<String>) {
+                match lid {
+                    Longident::Lident(s_idx) => {
+                        parts.push(arena.get_string(*s_idx).to_string());
+                    }
+                    Longident::Ldot(inner, s_idx) => {
+                        collect_parts(inner, arena, parts);
+                        parts.push(arena.get_string(*s_idx).to_string());
+                    }
+                    Longident::Lapply(_, _) => {} // Not expected in JSX
+                }
+            }
+            let mut parts = Vec::new();
+            collect_parts(lid, arena, &mut parts);
+            for part in &parts {
+                segs.push(print_ident_like(part, true, false));
+            }
+            segs.push(print_ident_like(name, true, true));
+            Doc::join(Doc::dot(), segs)
+        }
+        JsxTagName::Upper(path) => {
+            let lid = arena.get_longident(*path);
+            let mut parts = Vec::new();
+            fn collect_parts(lid: &Longident, arena: &ParseArena, parts: &mut Vec<String>) {
+                match lid {
+                    Longident::Lident(s_idx) => {
+                        parts.push(arena.get_string(*s_idx).to_string());
+                    }
+                    Longident::Ldot(inner, s_idx) => {
+                        collect_parts(inner, arena, parts);
+                        parts.push(arena.get_string(*s_idx).to_string());
+                    }
+                    Longident::Lapply(_, _) => {} // Not expected in JSX
+                }
+            }
+            collect_parts(lid, arena, &mut parts);
+            let segs: Vec<Doc> = parts.iter().map(|s| print_ident_like(s, true, false)).collect();
+            Doc::join(Doc::dot(), segs)
+        }
+    }
+}
+
+/// Get the position range of a JSX prop (for comment lookup).
+fn get_jsx_prop_pos_range(prop: &JsxProp, arena: &ParseArena) -> PosRange {
+    match prop {
+        JsxProp::Punning { name, .. } => PosRange::from_loc(name.loc, arena),
+        JsxProp::Value { name, value, .. } => {
+            // Location spans from name to end of value
+            let start = arena.loc_start(name.loc);
+            let end = arena.loc_end(value.pexp_loc);
+            PosRange { start: start.cnum, end: end.cnum }
+        }
+        JsxProp::Spreading { loc, .. } => PosRange::from_loc(*loc, arena),
+    }
+}
+
+/// Get the full location of a JSX prop (for printing helpers).
+fn get_jsx_prop_full_loc(prop: &JsxProp, arena: &ParseArena) -> FullLocation {
+    match prop {
+        JsxProp::Punning { name, .. } => arena.to_location(name.loc),
+        JsxProp::Value { name, value, .. } => {
+            let start = arena.to_location(name.loc);
+            let end = arena.to_location(value.pexp_loc);
+            FullLocation {
+                loc_start: start.loc_start,
+                loc_end: end.loc_end,
+                loc_ghost: false,
+            }
+        }
+        JsxProp::Spreading { loc, .. } => arena.to_location(*loc),
+    }
+}
+
+/// Print a JSX prop.
+fn print_jsx_prop(
+    state: &PrinterState,
+    prop: &JsxProp,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let prop_pos_range = get_jsx_prop_pos_range(prop, arena);
+    let prop_full_loc = get_jsx_prop_full_loc(prop, arena);
+    let doc = match prop {
+        JsxProp::Punning { optional, name } => {
+            let name_doc = if *optional {
+                Doc::concat(vec![Doc::question(), print_ident_like(&name.txt, false, false)])
+            } else {
+                print_ident_like(&name.txt, false, false)
+            };
+            name_doc
+        }
+        JsxProp::Value { name, optional, value } => {
+            let has_trailing_comment_after_name =
+                has_trailing_single_line_comment(cmt_tbl, name.loc, arena);
+
+            let value_doc = {
+                let leading_line_comment_present = match (parens::jsx_prop_expr(value), &value.pexp_desc) {
+                    (parens::ParenKind::Braced(_), ExpressionDesc::Pexp_apply { funct, args, .. }) => {
+                        let head_arg = args.first().map(|(_, arg)| arg);
+                        has_leading_line_comment(cmt_tbl, funct.pexp_loc, arena)
+                            || head_arg.map_or(false, |arg| has_leading_line_comment(cmt_tbl, arg.pexp_loc, arena))
+                    }
+                    _ => has_leading_line_comment(cmt_tbl, value.pexp_loc, arena),
+                };
+                let doc = print_expression_with_comments(state, value, cmt_tbl, arena);
+                match parens::jsx_prop_expr(value) {
+                    parens::ParenKind::Parenthesized | parens::ParenKind::Braced(_) => {
+                        let inner_doc = if parens::braced_expr(value) {
+                            add_parens(doc)
+                        } else {
+                            doc
+                        };
+                        if leading_line_comment_present {
+                            add_braces(inner_doc)
+                        } else {
+                            Doc::concat(vec![Doc::lbrace(), inner_doc, Doc::rbrace()])
+                        }
+                    }
+                    parens::ParenKind::Nothing => doc,
+                }
+            };
+
+            let name_doc = print_comments(print_ident_like(&name.txt, false, false), cmt_tbl, name.loc, arena);
+
+            let doc = Doc::concat(vec![
+                name_doc,
+                Doc::equal(),
+                if *optional { Doc::question() } else { Doc::nil() },
+                if has_trailing_comment_after_name { Doc::hard_line() } else { Doc::nil() },
+                Doc::group(value_doc),
+            ]);
+            print_comments(doc, cmt_tbl, value.pexp_loc, arena)
+        }
+        JsxProp::Spreading { expr, .. } => {
+            Doc::group(Doc::concat(vec![
+                Doc::lbrace(),
+                Doc::dotdotdot(),
+                print_expression_with_comments(state, expr, cmt_tbl, arena),
+                Doc::rbrace(),
+            ]))
+        }
+    };
+    print_comments_by_pos(doc, cmt_tbl, prop_pos_range, &prop_full_loc)
+}
+
+/// Print a list of JSX props.
+fn print_jsx_props(
+    state: &PrinterState,
+    props: &[JsxProp],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Vec<Doc> {
+    props.iter().map(|prop| print_jsx_prop(state, prop, cmt_tbl, arena)).collect()
+}
+
+/// Check if there's a trailing single-line comment at a location.
+fn has_trailing_single_line_comment(cmt_tbl: &CommentTable, loc: LocIdx, arena: &ParseArena) -> bool {
+    if let Some(comments) = cmt_tbl.get_trailing_comments(loc, arena) {
+        if let Some(comment) = comments.first() {
+            return comment.is_single_line();
+        }
+    }
+    false
+}
+
+/// Get count of leading line comments.
+fn get_leading_line_comment_count(cmt_tbl: &CommentTable, loc: LocIdx, arena: &ParseArena) -> i32 {
+    if let Some(comments) = cmt_tbl.get_leading_comments(loc, arena) {
+        comments.iter().filter(|c| c.is_single_line()).count() as i32
+    } else {
+        0
+    }
+}
+
+/// Get the closing token position range for a unary JSX element.
+/// Returns a position range for the "/>" at the end.
+fn unary_element_closing_token_pos_range(expr_loc: LocIdx, arena: &ParseArena) -> (PosRange, FullLocation) {
+    // The /> token is at the last 2 characters of the expression
+    let end = arena.loc_end(expr_loc);
+    let start_pos = crate::location::Position {
+        file_name: end.file_name,
+        line: end.line,
+        bol: end.bol,
+        cnum: end.cnum - 2,
+    };
+    let pos_range = PosRange { start: start_pos.cnum, end: end.cnum };
+    let full_loc = FullLocation {
+        loc_start: start_pos,
+        loc_end: end.clone(),
+        loc_ghost: false,
+    };
+    (pos_range, full_loc)
+}
+
+/// Get the closing tag position range for a container JSX element.
+fn container_element_closing_tag_pos_range(closing_tag: &JsxClosingTag) -> (PosRange, FullLocation) {
+    let pos_range = PosRange { start: closing_tag.start.cnum, end: closing_tag.end.cnum };
+    let full_loc = FullLocation {
+        loc_start: closing_tag.start.clone(),
+        loc_end: closing_tag.end.clone(),
+        loc_ghost: false,
+    };
+    (pos_range, full_loc)
+}
+
+/// Print a unary JSX tag: `<div />` or `<Component prop={value} />`.
+fn print_jsx_unary_tag(
+    state: &PrinterState,
+    tag_name: &Loc<JsxTagName>,
+    props: &[JsxProp],
+    expr_loc: LocIdx,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let name = print_jsx_name(arena, &tag_name.txt);
+    let formatted_props = print_jsx_props(state, props, cmt_tbl, arena);
+    let tag_loc = tag_name.loc;
+    let tag_has_trailing_comment = cmt_tbl.has_trailing_comments(tag_loc, arena);
+    let tag_has_no_props = props.is_empty();
+    let (closing_token_pos_range, closing_token_full_loc) = unary_element_closing_token_pos_range(expr_loc, arena);
+
+    let has_leading_comments_on_closing = cmt_tbl.leading.contains_key(&closing_token_pos_range);
+
+    let props_doc = if tag_has_no_props {
+        if has_leading_comments_on_closing {
+            Doc::soft_line()
+        } else if tag_has_trailing_comment {
+            Doc::nil()
+        } else {
+            Doc::space()
+        }
+    } else {
+        Doc::concat(vec![
+            Doc::indent(Doc::concat(vec![
+                Doc::line(),
+                Doc::group(Doc::join(Doc::line(), formatted_props)),
+            ])),
+            Doc::line(),
+        ])
+    };
+
+    let opening_tag = print_comments(
+        Doc::concat(vec![Doc::less_than(), name]),
+        cmt_tbl,
+        tag_loc,
+        arena,
+    );
+
+    let opening_tag_doc = if tag_has_trailing_comment && !tag_has_no_props {
+        Doc::indent(opening_tag)
+    } else {
+        opening_tag
+    };
+
+    let closing_tag_doc = print_comments_by_pos(Doc::text("/>"), cmt_tbl, closing_token_pos_range, &closing_token_full_loc);
+
+    Doc::group(Doc::concat(vec![
+        opening_tag_doc,
+        props_doc,
+        if tag_has_trailing_comment && tag_has_no_props {
+            Doc::space()
+        } else {
+            Doc::nil()
+        },
+        closing_tag_doc,
+    ]))
+}
+
+/// Get the line separator for JSX children.
+fn get_line_sep_for_jsx_children(children: &[Expression]) -> Doc {
+    if children.len() > 1
+        || children.iter().any(|child| matches!(&child.pexp_desc, ExpressionDesc::Pexp_jsx_element(_)))
+    {
+        Doc::hard_line()
+    } else {
+        Doc::line()
+    }
+}
+
+/// Print JSX children.
+fn print_jsx_children(
+    state: &PrinterState,
+    children: &[Expression],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    if children.is_empty() {
+        return Doc::nil();
+    }
+
+    // Get location for a child expression, considering braces attribute
+    let get_loc = |expr: &Expression| -> LocIdx {
+        for (attr, _) in &expr.pexp_attributes {
+            if attr.txt == "res.braces" {
+                return attr.loc;
+            }
+        }
+        expr.pexp_loc
+    };
+
+    let sep = get_line_sep_for_jsx_children(children);
+
+    let print_expr = |expr: &Expression, cmt_tbl: &mut CommentTable| -> Doc {
+        let leading_line_comment_present = has_leading_line_comment(cmt_tbl, expr.pexp_loc, arena);
+        let expr_doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+
+        let add_parens_or_braces = |expr_doc: Doc| -> Doc {
+            // {(20: int)} make sure we also protect the expression inside
+            let inner_doc = if parens::braced_expr(expr) {
+                add_parens(expr_doc)
+            } else {
+                expr_doc
+            };
+            if leading_line_comment_present {
+                add_braces(inner_doc)
+            } else {
+                Doc::concat(vec![Doc::lbrace(), inner_doc, Doc::rbrace()])
+            }
+        };
+
+        match parens::jsx_child_expr(expr) {
+            parens::ParenKind::Nothing => print_comments(expr_doc, cmt_tbl, get_loc(expr), arena),
+            parens::ParenKind::Parenthesized => add_parens_or_braces(expr_doc),
+            parens::ParenKind::Braced(braces_loc) => {
+                print_comments(add_parens_or_braces(expr_doc), cmt_tbl, braces_loc, arena)
+            }
+        }
+    };
+
+    let mut acc = Doc::nil();
+    let mut iter = children.iter().peekable();
+
+    while let Some(x) = iter.next() {
+        let x_doc = print_expr(x, cmt_tbl);
+
+        if let Some(y) = iter.peek() {
+            let end_line_x = arena.loc_end(get_loc(x)).line;
+            let start_line_y = arena.loc_start(get_loc(y)).line;
+            let lines_between = start_line_y - end_line_x - 1;
+            let leading_single_line_comments = get_leading_line_comment_count(cmt_tbl, get_loc(y), arena);
+
+            // If there are lines between elements, preserve at least one line
+            // unless they are all comments
+            if lines_between > 0 && lines_between != leading_single_line_comments {
+                acc = Doc::concat(vec![acc, x_doc, sep.clone(), Doc::hard_line()]);
+            } else {
+                acc = Doc::concat(vec![acc, x_doc, sep.clone()]);
+            }
+        } else {
+            // Last element
+            acc = Doc::concat(vec![acc, x_doc]);
+        }
+    }
+
+    acc
+}
+
+/// Print a container JSX tag: `<div>children</div>`.
+fn print_jsx_container_tag(
+    state: &PrinterState,
+    tag_name: &Loc<JsxTagName>,
+    opening_greater_than: &crate::location::Position,
+    props: &[JsxProp],
+    children: &[Expression],
+    closing_tag: &Option<JsxClosingTag>,
+    pexp_loc: LocIdx,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let name = print_jsx_name(arena, &tag_name.txt);
+    let opening_greater_than_pos_range = PosRange {
+        start: opening_greater_than.cnum,
+        end: opening_greater_than.cnum,
+    };
+    let opening_greater_than_full_loc = FullLocation {
+        loc_start: opening_greater_than.clone(),
+        loc_end: opening_greater_than.clone(),
+        loc_ghost: false,
+    };
+
+    let opening_greater_than_doc = print_comments_by_pos(Doc::greater_than(), cmt_tbl, opening_greater_than_pos_range, &opening_greater_than_full_loc);
+
+    let formatted_props = print_jsx_props(state, props, cmt_tbl, arena);
+    let has_children = !children.is_empty();
+    let line_sep = get_line_sep_for_jsx_children(children);
+
+    let print_children_doc = |children: &[Expression], cmt_tbl: &mut CommentTable| -> Doc {
+        Doc::concat(vec![
+            Doc::indent(Doc::concat(vec![
+                Doc::line(),
+                print_jsx_children(state, children, cmt_tbl, arena),
+            ])),
+            line_sep.clone(),
+        ])
+    };
+
+    // Comments between the opening and closing tag
+    let has_comments_inside = cmt_tbl.has_inside_comments(pexp_loc, arena);
+
+    let closing_element_doc = match closing_tag {
+        None => Doc::nil(),
+        Some(closing_tag) => {
+            let (closing_tag_pos_range, closing_tag_full_loc) = container_element_closing_tag_pos_range(closing_tag);
+            let closing_name = print_jsx_name(arena, &closing_tag.name.txt);
+            print_comments_by_pos(
+                Doc::concat(vec![Doc::text("</"), closing_name, Doc::greater_than()]),
+                cmt_tbl,
+                closing_tag_pos_range,
+                &closing_tag_full_loc,
+            )
+        }
+    };
+
+    let tag_loc = tag_name.loc;
+    let opening_tag_name_doc = print_comments(
+        Doc::concat(vec![Doc::less_than(), name]),
+        cmt_tbl,
+        tag_loc,
+        arena,
+    );
+
+    let props_block_doc = if formatted_props.is_empty() {
+        Doc::nil()
+    } else {
+        Doc::indent(Doc::concat(vec![
+            Doc::line(),
+            Doc::group(Doc::join(Doc::line(), formatted_props)),
+        ]))
+    };
+
+    // If the element name has a single comment on the same line, force newline before '>'
+    let after_name_and_props_doc = if has_trailing_single_line_comment(cmt_tbl, tag_loc, arena) {
+        Doc::concat(vec![Doc::hard_line(), opening_greater_than_doc])
+    } else {
+        Doc::concat(vec![Doc::soft_line(), opening_greater_than_doc])
+    };
+
+    Doc::group(Doc::concat(vec![
+        Doc::group(Doc::concat(vec![
+            opening_tag_name_doc,
+            props_block_doc,
+            after_name_and_props_doc,
+        ])),
+        Doc::concat(vec![
+            if has_children {
+                print_children_doc(children, cmt_tbl)
+            } else if !has_comments_inside {
+                Doc::soft_line()
+            } else {
+                print_comments_inside(cmt_tbl, pexp_loc, arena)
+            },
+            closing_element_doc,
+        ]),
+    ]))
+}
+
+/// Print a JSX fragment: `<>children</>`.
+fn print_jsx_fragment(
+    state: &PrinterState,
+    opening_greater_than: &crate::location::Position,
+    children: &[Expression],
+    closing_lesser_than: &crate::location::Position,
+    fragment_loc: LocIdx,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let fragment_start = arena.loc_start(fragment_loc);
+    let fragment_end = arena.loc_end(fragment_loc);
+
+    let opening_pos_range = PosRange {
+        start: fragment_start.cnum,
+        end: opening_greater_than.cnum,
+    };
+    let opening_full_loc = FullLocation {
+        loc_start: fragment_start.clone(),
+        loc_end: opening_greater_than.clone(),
+        loc_ghost: false,
+    };
+    let opening = print_comments_by_pos(Doc::text("<>"), cmt_tbl, opening_pos_range, &opening_full_loc);
+
+    let closing_pos_range = PosRange {
+        start: closing_lesser_than.cnum,
+        end: fragment_end.cnum,
+    };
+    let closing_full_loc = FullLocation {
+        loc_start: closing_lesser_than.clone(),
+        loc_end: fragment_end.clone(),
+        loc_ghost: false,
+    };
+    let closing = print_comments_by_pos(Doc::text("</>"), cmt_tbl, closing_pos_range, &closing_full_loc);
+
+    let has_children = !children.is_empty();
+    let line_sep = get_line_sep_for_jsx_children(children);
+
+    Doc::group(Doc::concat(vec![
+        opening,
+        Doc::indent(Doc::concat(vec![
+            Doc::line(),
+            print_jsx_children(state, children, cmt_tbl, arena),
+        ])),
+        if has_children { line_sep } else { Doc::nil() },
+        closing,
+    ]))
+}
+
+/// Print a JSX element.
+fn print_jsx_element(
+    state: &PrinterState,
+    jsx: &JsxElement,
+    expr_loc: LocIdx,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    match jsx {
+        JsxElement::Fragment(fragment) => {
+            print_jsx_fragment(
+                state,
+                &fragment.opening,
+                &fragment.children,
+                &fragment.closing,
+                expr_loc,
+                cmt_tbl,
+                arena,
+            )
+        }
+        JsxElement::Unary(unary) => {
+            print_jsx_unary_tag(
+                state,
+                &unary.tag_name,
+                &unary.props,
+                expr_loc,
+                cmt_tbl,
+                arena,
+            )
+        }
+        JsxElement::Container(container) => {
+            print_jsx_container_tag(
+                state,
+                &container.tag_name_start,
+                &container.opening_end,
+                &container.props,
+                &container.children,
+                &container.closing_tag,
+                expr_loc,
+                cmt_tbl,
+                arena,
+            )
+        }
+    }
+}
+
+/// Add braces around a doc (for JSX children with leading line comments).
+fn add_braces(doc: Doc) -> Doc {
+    Doc::concat(vec![
+        Doc::lbrace(),
+        Doc::indent(Doc::concat(vec![Doc::soft_line(), doc])),
+        Doc::soft_line(),
+        Doc::rbrace(),
+    ])
 }
 
 #[cfg(test)]
