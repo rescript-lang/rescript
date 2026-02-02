@@ -410,19 +410,44 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             }
         }
         StructureItemDesc::Pstr_typext(ext) => {
+            // OCaml: pp f "@[<2>type %a%a += %a@ %a@]%a"
+            // Format: "type t +=  \n  | Foo \n  | Bar"
+            f.open_box(BoxKind::HV, 2);
             f.string("type ");
+            // Print type params if present
+            if !ext.ptyext_params.is_empty() {
+                f.string("(");
+                for (i, (ty, _variance)) in ext.ptyext_params.iter().enumerate() {
+                    if i > 0 {
+                        f.string(",");
+                    }
+                    print_core_type(f, arena, ty);
+                }
+                f.string(") ");
+            }
             print_longident_idx(f, arena, ext.ptyext_path.txt);
             f.string(" += ");
-            for (i, ctor) in ext.ptyext_constructors.iter().enumerate() {
-                if i > 0 {
-                    f.string(" | ");
-                }
+            if matches!(ext.ptyext_private, PrivateFlag::Private) {
+                f.string("private ");
+            }
+            // Extra space before line break to match OCaml's "+=  \n"
+            f.string(" ");
+            // Each constructor starts with @\n|@; (newline, pipe, break)
+            for ctor in ext.ptyext_constructors.iter() {
+                f.newline();
+                f.string("| ");
                 print_extension_constructor(f, arena, ctor);
             }
+            f.close_box();
+            print_item_attributes(f, arena, &ext.ptyext_attributes);
         }
         StructureItemDesc::Pstr_exception(ext) => {
+            // OCaml: pp f "@[<hov2>exception@ %a@]"
+            // The HOV2 box means inline records get +2 indentation
+            f.open_box(BoxKind::HOV, 2);
             f.string("exception ");
             print_extension_constructor(f, arena, ext);
+            f.close_box();
         }
         StructureItemDesc::Pstr_module(mb) => {
             f.string("module ");
@@ -2326,11 +2351,10 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
                 ConstructorArguments::Pcstr_record(fields) => {
                     // OCaml: pp f "@;of@;%a" (record_declaration ctxt) l
                     // where record_declaration is: pp f "{@\n%a}" (list ... ~sep:";@\n") fields
-                    // The @\n uses Format's newline which respects indentation
+                    // Fields print at current indentation level (not extra indented)
                     f.string(" of {");
                     f.newline();
                     for (i, field) in fields.iter().enumerate() {
-                        f.string("  ");  // extra indent for fields
                         if matches!(field.pld_mutable, MutableFlag::Mutable) {
                             f.string("mutable ");
                         }
@@ -2634,19 +2658,42 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             }
         }
         SignatureItemDesc::Psig_typext(ext) => {
+            // Same format as Pstr_typext
+            f.open_box(BoxKind::HV, 2);
             f.string("type ");
+            // Print type params if present
+            if !ext.ptyext_params.is_empty() {
+                f.string("(");
+                for (i, (ty, _variance)) in ext.ptyext_params.iter().enumerate() {
+                    if i > 0 {
+                        f.string(",");
+                    }
+                    print_core_type(f, arena, ty);
+                }
+                f.string(") ");
+            }
             print_longident_idx(f, arena, ext.ptyext_path.txt);
             f.string(" += ");
-            for (i, ctor) in ext.ptyext_constructors.iter().enumerate() {
-                if i > 0 {
-                    f.string(" | ");
-                }
+            if matches!(ext.ptyext_private, PrivateFlag::Private) {
+                f.string("private ");
+            }
+            // Extra space before line break to match OCaml's "+=  \n"
+            f.string(" ");
+            for ctor in ext.ptyext_constructors.iter() {
+                f.newline();
+                f.string("| ");
                 print_extension_constructor(f, arena, ctor);
             }
+            f.close_box();
+            print_item_attributes(f, arena, &ext.ptyext_attributes);
         }
         SignatureItemDesc::Psig_exception(ext) => {
+            // OCaml: pp f "@[<hov2>exception@ %a@]"
+            // The HOV2 box means inline records get +2 indentation
+            f.open_box(BoxKind::HOV, 2);
             f.string("exception ");
             print_extension_constructor(f, arena, ext);
+            f.close_box();
         }
         SignatureItemDesc::Psig_module(md) => {
             f.string("module ");
