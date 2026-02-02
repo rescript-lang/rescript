@@ -577,24 +577,37 @@ pub enum FunParam<'a> {
 /// The rule from OCaml: collect params when `arity = None || n_fun = 0`
 /// - Always collect from the first function (n_fun = 0)
 /// - For nested functions, only collect if arity is Unknown (no marker)
+///
+/// IMPORTANT: OCaml's fun_expr only collects Pexp_newtype at the BEGINNING,
+/// not during the collect_params loop. After encountering any Pexp_fun,
+/// the loop stops at non-Pexp_fun nodes (including Pexp_newtype).
 pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
     use crate::parser::ast::Arity;
 
-    // Check for async attribute OR is_async field in Pexp_fun
+    // Check for async attribute on the outermost expression
     let mut is_async = expr.pexp_attributes.iter().any(|attr| attr.0.txt == "res.async");
-
-    // Also check is_async field on the first Pexp_fun
-    if let ExpressionDesc::Pexp_fun {
-        is_async: expr_is_async,
-        ..
-    } = &expr.pexp_desc
-    {
-        is_async = is_async || *expr_is_async;
-    }
 
     let mut params = Vec::new();
     let mut current = expr;
-    let mut n_fun = 0; // Track number of functions we've seen
+
+    // First, collect leading Pexp_newtype (like OCaml's top-level match)
+    // This combines consecutive newtypes like "type t, type u" into "type t u"
+    if let ExpressionDesc::Pexp_newtype(name, body) = &current.pexp_desc {
+        let mut names = vec![name];
+        current = body;
+
+        // Collect any additional consecutive newtypes
+        while let ExpressionDesc::Pexp_newtype(next_name, next_body) = &current.pexp_desc {
+            names.push(next_name);
+            current = next_body;
+        }
+
+        params.push(FunParam::NewTypes { attrs: &[], names });
+    }
+
+    // Now collect_params: only handle Pexp_fun, stop at anything else
+    let mut n_fun = 0;
+    let mut found_first_pexp_fun = false;
 
     loop {
         match &current.pexp_desc {
@@ -604,8 +617,15 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
                 lhs,
                 rhs,
                 arity,
-                ..
+                is_async: expr_is_async,
             } => {
+                // Check is_async on the FIRST Pexp_fun we encounter
+                // (it may be nested inside Pexp_newtype)
+                if !found_first_pexp_fun {
+                    is_async = is_async || *expr_is_async;
+                    found_first_pexp_fun = true;
+                }
+
                 // OCaml's condition: arity = None || n_fun = 0
                 // In Rust: Arity::Unknown corresponds to None, Arity::Full(_) to Some(_)
                 // Only collect if this is the first function OR there's no arity marker
@@ -632,21 +652,8 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
                     break;
                 }
             }
-            ExpressionDesc::Pexp_newtype(name, body) => {
-                // Collect consecutive newtypes into a single NewTypes variant
-                // This matches OCaml's collect_new_types which combines "type t, type u" into "type t u"
-                // OCaml uses attrs = [] for newtype params (see line 235 in res_parsetree_viewer.ml)
-                let mut names = vec![name];
-                current = body;
-
-                // Collect any additional consecutive newtypes
-                while let ExpressionDesc::Pexp_newtype(next_name, next_body) = &current.pexp_desc {
-                    names.push(next_name);
-                    current = next_body;
-                }
-
-                params.push(FunParam::NewTypes { attrs: &[], names });
-            }
+            // IMPORTANT: Don't collect Pexp_newtype here - OCaml's collect_params doesn't
+            // This ensures `(type a, ()) => (type b c, x) => 3` keeps the two functions separate
             _ => break,
         }
     }
