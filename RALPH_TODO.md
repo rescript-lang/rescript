@@ -120,6 +120,32 @@ exact Format module line-breaking algorithm.
 
 ---
 
+## ⚠️ CRITICAL: Format Module Must Be 1:1 Port from OCaml
+
+**The Rust formatting code is NOT an "emulation" - it must be a 1:1 PORT of OCaml's Format module.**
+
+Relevant Rust files:
+- `compiler-rust/src/parser/format.rs` - Basic pretty printer with boxes
+- `compiler-rust/src/parser/doc.rs` - Document-based formatting
+- `compiler-rust/src/parser/formatter.rs` - Formatting logic
+
+When there are line-breaking or formatting differences:
+1. **Look at the OCaml Format module source code** (`stdlib/format.ml` in the OCaml repo)
+2. **Compare the algorithm step-by-step** with the Rust implementation
+3. **Make the Rust code match OCaml exactly** - same box types, same break decisions, same indentation rules
+
+Common issues that indicate Format parity problems:
+- Different line break points (OCaml wraps at 78 columns by default)
+- Different indentation levels after line breaks
+- HOV boxes packing differently than expected
+- Break hints being ignored or applied differently
+
+**Do NOT try to "fix" or "improve" the algorithm** - match OCaml's behavior exactly, even if it seems suboptimal.
+
+Reference: https://github.com/ocaml/ocaml/blob/trunk/stdlib/format.ml
+
+---
+
 ## ⚠️ CRITICAL: Complete ALL Fixes, Not Just Easy Ones
 
 **The goal is 100% parity with the OCaml reference implementation.** There is no reason to stop at "low-hanging fruit" or avoid complex features. Every remaining test must eventually pass, so tackle the hard problems now rather than deferring them.
@@ -720,7 +746,12 @@ Grammar parsing tests without error recovery.
 
 **ROOT CAUSE: ML printer 80-column line wrapping**
 
-Most failures are because OCaml's Format module wraps long lines at 80 columns,
+⚠️ **IMPORTANT**: The Rust formatting code (`format.rs`, `doc.rs`, `formatter.rs`) is NOT meant
+to be an "emulation" of Format - it must be a **1:1 port** of OCaml's Format module. If there
+are differences, look at the OCaml Format source (`stdlib/format.ml`) and make the Rust code
+match exactly. Do not try to "fix" or "improve" - just match OCaml's behavior precisely.
+
+Most failures are because OCaml's Format module wraps long lines at 78 columns (not 80!),
 but the Rust Formatter doesn't match this behavior exactly. For example:
 
 OCaml output (wraps at 80):
