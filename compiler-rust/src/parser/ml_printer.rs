@@ -200,7 +200,35 @@ fn expression_has_own_parens(expr: &Expression) -> bool {
     matches!(&expr.pexp_desc, ExpressionDesc::Pexp_assert(_))
 }
 
+/// Check if a Pexp_construct is a "simple construct" (like OCaml's is_simple_construct)
+/// This includes: [], (), complete lists [a; b; c], and simple constructors without args
+fn is_simple_construct(expr: &Expression, arena: &ParseArena) -> bool {
+    if !expr.pexp_attributes.is_empty() {
+        return false;
+    }
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_construct(lid, None) => {
+            // () and [] and simple constructors are simple
+            true
+        }
+        ExpressionDesc::Pexp_construct(lid, Some(_)) => {
+            // Check if it's a complete list (ends with [])
+            if let Longident::Lident(name_idx) = arena.get_longident(lid.txt) {
+                let name = arena.get_string(*name_idx);
+                if name == "::" {
+                    let (_, is_complete) = collect_list_elements(expr, arena);
+                    return is_complete;
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
 /// Check if expression is "simple" - doesn't need parens
+/// Note: This version doesn't have arena access, so it can't check complete lists.
+/// Use is_simple_expression_with_arena for full checking.
 fn is_simple_expression(expr: &Expression) -> bool {
     if !expr.pexp_attributes.is_empty() {
         return false;
@@ -221,6 +249,34 @@ fn is_simple_expression(expr: &Expression) -> bool {
             // OCaml's simple_expr handles these directly (no paren wrapping)
             | ExpressionDesc::Pexp_for(_, _, _, _, _)
             | ExpressionDesc::Pexp_while(_, _)
+    )
+}
+
+/// Check if expression is "simple" - doesn't need parens (with arena for complete list checking)
+fn is_simple_expression_with_arena(expr: &Expression, arena: &ParseArena) -> bool {
+    if !expr.pexp_attributes.is_empty() {
+        return false;
+    }
+    // Check for simple constructs first (handles complete lists)
+    if is_simple_construct(expr, arena) {
+        return true;
+    }
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_ident(_)
+            | ExpressionDesc::Pexp_constant(_)
+            | ExpressionDesc::Pexp_tuple(_)
+            | ExpressionDesc::Pexp_array(_)
+            | ExpressionDesc::Pexp_record(_, _)
+            | ExpressionDesc::Pexp_constraint(_, _)
+            | ExpressionDesc::Pexp_coerce(_, _, _)
+            | ExpressionDesc::Pexp_variant(_, None)
+            | ExpressionDesc::Pexp_pack(_)
+            | ExpressionDesc::Pexp_field(_, _)  // Field access is simple
+            // OCaml's simple_expr handles these directly (no paren wrapping)
+            | ExpressionDesc::Pexp_for(_, _, _, _, _)
+            | ExpressionDesc::Pexp_while(_, _)
+            | ExpressionDesc::Pexp_jsx_element(_)  // JSX elements are simple in OCaml
     )
 }
 
@@ -842,7 +898,7 @@ fn print_expression_simple<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, e
     // so we don't add extra parens for them
     let has_attrs = !printable_attributes(&expr.pexp_attributes).is_empty();
 
-    if is_simple_expression(expr) {
+    if is_simple_expression_with_arena(expr, arena) {
         print_expression(f, arena, expr);
     } else if has_attrs {
         // Attributed expressions already produce their own parens structure
