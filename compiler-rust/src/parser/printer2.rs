@@ -17,14 +17,22 @@ use std::collections::HashMap;
 // Printer State
 // ============================================================================
 
-/// Printer state for tracking custom layout depth.
+/// Printer state for tracking custom layout depth and inline record definitions.
 ///
 /// This is used to limit the depth of nested custom layouts to avoid
 /// exponential blowup in layout computation.
-#[derive(Debug, Clone)]
+///
+/// It also holds optional inline record definitions for printing nested record
+/// types inline (e.g., `type t = { field: { nested: int } }` instead of
+/// generating separate type declarations).
+#[derive(Debug, Clone, Default)]
 pub struct PrinterState {
     /// Current depth of nested custom layouts.
     custom_layout: i32,
+    /// Inline record definitions for printing nested records inline.
+    /// When printing a type constructor that references one of these definitions,
+    /// we print the record definition inline instead of as a type reference.
+    inline_record_definitions: Option<Vec<TypeDeclaration>>,
 }
 
 impl PrinterState {
@@ -33,13 +41,17 @@ impl PrinterState {
 
     /// Create a new printer state.
     pub fn init() -> Self {
-        Self { custom_layout: 0 }
+        Self {
+            custom_layout: 0,
+            inline_record_definitions: None,
+        }
     }
 
     /// Create a new state with incremented custom layout depth.
     pub fn next_custom_layout(&self) -> Self {
         Self {
             custom_layout: self.custom_layout + 1,
+            inline_record_definitions: self.inline_record_definitions.clone(),
         }
     }
 
@@ -47,11 +59,23 @@ impl PrinterState {
     pub fn should_break_callback(&self) -> bool {
         self.custom_layout > Self::CUSTOM_LAYOUT_THRESHOLD
     }
-}
 
-impl Default for PrinterState {
-    fn default() -> Self {
-        Self::init()
+    /// Create a new state with inline record definitions.
+    pub fn with_inline_record_definitions(
+        &self,
+        inline_record_definitions: Vec<TypeDeclaration>,
+    ) -> Self {
+        Self {
+            custom_layout: self.custom_layout,
+            inline_record_definitions: Some(inline_record_definitions),
+        }
+    }
+
+    /// Find an inline record definition by name.
+    pub fn find_inline_record_definition(&self, name: &str) -> Option<&TypeDeclaration> {
+        self.inline_record_definitions.as_ref().and_then(|defs| {
+            defs.iter().find(|decl| decl.ptype_name.txt == name)
+        })
     }
 }
 
@@ -4894,6 +4918,25 @@ pub fn print_typ_expr(
         }
 
         CoreTypeDesc::Ptyp_constr(lid, args) => {
+            // Check if this is a reference to an inline record definition
+            // OCaml: | Ptyp_constr ({txt = Lident inline_record_name}, _)
+            //          when inline_record_definitions |> find_inline_record_definition inline_record_name |> Option.is_some
+            if let Longident::Lident(inline_record_name_idx) = arena.get_longident(lid.txt) {
+                let inline_record_name = arena.get_string(*inline_record_name_idx);
+                if let Some(inline_def) = state.find_inline_record_definition(inline_record_name) {
+                    // Print the record definition inline instead of as a type reference
+                    if let TypeKind::Ptype_record(lds) = &inline_def.ptype_kind {
+                        return print_record_declaration_with_inline_records(
+                            state,
+                            lds,
+                            Some(inline_def.ptype_loc),
+                            cmt_tbl,
+                            arena,
+                        );
+                    }
+                }
+            }
+
             // Handle special case: object type inside type constructor
             if let [single_arg] = args.as_slice() {
                 if let CoreTypeDesc::Ptyp_object(fields, open_flag) = &single_arg.ptyp_desc {
@@ -7264,6 +7307,13 @@ pub fn print_structure_item(
     }
 }
 
+/// Check if any type declaration has the inline record definition attribute.
+fn has_inline_type_definitions(decls: &[TypeDeclaration]) -> bool {
+    decls.iter().any(|decl| {
+        parsetree_viewer::has_inline_record_definition_attribute(&decl.ptype_attributes)
+    })
+}
+
 /// Print type declarations.
 /// Print type declarations with proper comment handling using print_listi.
 /// This matches the OCaml implementation which uses print_listi for type declarations.
@@ -7275,45 +7325,100 @@ fn print_type_declarations_with_rec_flag(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let rec_doc = match rec_flag {
-        RecFlag::Nonrecursive => Doc::nil(),
-        RecFlag::Recursive => Doc::text("rec "),
-    };
+    // Check if we need to handle inline record definitions
+    if has_inline_type_definitions(decls) {
+        // Partition declarations into inline records and regular declarations
+        let (inline_record_definitions, regular_declarations): (Vec<_>, Vec<_>) =
+            decls.iter().cloned().partition(|decl| {
+                parsetree_viewer::has_inline_record_definition_attribute(&decl.ptype_attributes)
+            });
 
-    // Use print_listi to properly handle comments between declarations
-    // The "type " keyword is included in the first element's prefix,
-    // so print_listi's print_comments wraps the entire declaration correctly.
-    print_listi(
-        |decl: &TypeDeclaration| decl.ptype_loc,
-        decls,
-        |decl: &TypeDeclaration, cmt_tbl: &mut CommentTable, i: usize| {
-            // Match OCaml's print_type_declaration2 prefix logic:
-            // if i > 0 then "and " else "type " ^ rec_flag
-            let prefix = if i > 0 {
-                Doc::text("and ")
-            } else {
-                Doc::concat(vec![Doc::text("type "), rec_doc.clone()])
-            };
-            // Print attributes + prefix + name + params + manifest + kind + constraints
-            let attrs = print_attributes_with_loc(
-                state,
-                &decl.ptype_attributes,
-                Some(decl.ptype_loc),
-                cmt_tbl,
-                arena,
-                false,
-            );
-            Doc::group(Doc::concat(vec![
-                attrs,
-                prefix,
-                print_type_declaration_inner(state, decl, cmt_tbl, arena, false),
-            ]))
-        },
-        cmt_tbl,
-        arena,
-        false, // don't ignore empty lines
-        false, // don't force break
-    )
+        // Adjust rec flag: only add "rec" if more than 1 regular declaration
+        let adjusted_rec_doc = match rec_flag {
+            RecFlag::Recursive => {
+                if regular_declarations.len() > 1 {
+                    Doc::text("rec ")
+                } else {
+                    Doc::nil()
+                }
+            }
+            RecFlag::Nonrecursive => Doc::nil(),
+        };
+
+        // Create state with inline record definitions
+        let state_with_inline = state.with_inline_record_definitions(inline_record_definitions);
+
+        // Print only regular declarations, but with inline records available for substitution
+        print_listi(
+            |decl: &TypeDeclaration| decl.ptype_loc,
+            &regular_declarations,
+            |decl: &TypeDeclaration, cmt_tbl: &mut CommentTable, i: usize| {
+                let prefix = if i > 0 {
+                    Doc::text("and ")
+                } else {
+                    Doc::concat(vec![Doc::text("type "), adjusted_rec_doc.clone()])
+                };
+                let attrs = print_attributes_with_loc(
+                    &state_with_inline,
+                    &decl.ptype_attributes,
+                    Some(decl.ptype_loc),
+                    cmt_tbl,
+                    arena,
+                    false,
+                );
+                Doc::group(Doc::concat(vec![
+                    attrs,
+                    prefix,
+                    print_type_declaration_inner(&state_with_inline, decl, cmt_tbl, arena, false),
+                ]))
+            },
+            cmt_tbl,
+            arena,
+            false,
+            false,
+        )
+    } else {
+        // No inline record definitions, print normally
+        let rec_doc = match rec_flag {
+            RecFlag::Nonrecursive => Doc::nil(),
+            RecFlag::Recursive => Doc::text("rec "),
+        };
+
+        // Use print_listi to properly handle comments between declarations
+        // The "type " keyword is included in the first element's prefix,
+        // so print_listi's print_comments wraps the entire declaration correctly.
+        print_listi(
+            |decl: &TypeDeclaration| decl.ptype_loc,
+            decls,
+            |decl: &TypeDeclaration, cmt_tbl: &mut CommentTable, i: usize| {
+                // Match OCaml's print_type_declaration2 prefix logic:
+                // if i > 0 then "and " else "type " ^ rec_flag
+                let prefix = if i > 0 {
+                    Doc::text("and ")
+                } else {
+                    Doc::concat(vec![Doc::text("type "), rec_doc.clone()])
+                };
+                // Print attributes + prefix + name + params + manifest + kind + constraints
+                let attrs = print_attributes_with_loc(
+                    state,
+                    &decl.ptype_attributes,
+                    Some(decl.ptype_loc),
+                    cmt_tbl,
+                    arena,
+                    false,
+                );
+                Doc::group(Doc::concat(vec![
+                    attrs,
+                    prefix,
+                    print_type_declaration_inner(state, decl, cmt_tbl, arena, false),
+                ]))
+            },
+            cmt_tbl,
+            arena,
+            false, // don't ignore empty lines
+            false, // don't force break
+        )
+    }
 }
 
 fn print_type_declarations(
@@ -7665,6 +7770,19 @@ fn print_record_declaration(
         ]),
         force_break,
     )
+}
+
+/// Print record declaration when inline record definitions are available.
+/// This is used when printing type constructors that reference inline record definitions.
+/// The state already contains the inline_record_definitions, so this is just an alias.
+fn print_record_declaration_with_inline_records(
+    state: &PrinterState,
+    fields: &[LabelDeclaration],
+    record_loc: Option<LocIdx>,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    print_record_declaration(state, fields, record_loc, cmt_tbl, arena)
 }
 
 /// Print a label declaration (record field).

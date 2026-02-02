@@ -860,6 +860,13 @@ pub fn has_attributes(attrs: &Attributes) -> bool {
     })
 }
 
+/// Check if an attribute is the inline record definition marker.
+pub fn has_inline_record_definition_attribute(attrs: &Attributes) -> bool {
+    attrs
+        .iter()
+        .any(|attr| attr.0.txt == "res.inlineRecordDefinition")
+}
+
 // ============================================================================
 // JSX Analysis
 // ============================================================================
