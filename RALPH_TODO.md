@@ -57,7 +57,7 @@
 - Fixed module functor sugar (`module F(A:X) = ...`) and module application printing (`(F)(A)`)
 - Fixed unit functor printing (`functor () ->` instead of `functor (*) ->`)
 
-**Root Causes of Remaining Failures (145 tests):**
+**Root Causes of Remaining Failures (144 tests):**
 
 1. **parsing/grammar (47 failing)**: Almost entirely 80-column line wrapping differences.
    OCaml's Format module wraps long lines at 80 columns with specific indentation rules.
@@ -66,12 +66,15 @@
    (different break points chosen in complex nested structures). Needs deeper investigation of
    how OCaml's Format module chooses break points.
 
-2. **parsing/errors (75 failing)**: Multiple issues:
+2. **parsing/errors (74 failing)**: Multiple issues:
    - Error message wording differs ("I'm missing a type here" vs "Unexpected token")
-   - Error location format differs (`:16-18` vs `:16`)
+   - Error location format differs (`:16-18` vs `:16`) - OCaml tracks start AND end pos for errors
    - OCaml's breadcrumb-based error messages provide context-specific hints
    - Error recovery produces different recovered AST structures
    - OCaml's `skip_tokens_and_maybe_retry` advances past errors more aggressively
+   - `_` as expression: OCaml detects `_` in non-function-argument context and generates error,
+     replacing with `[%rescript.exprhole]`. Rust keeps `_` as-is. Complex to fix because
+     need to distinguish `foo(_, bar)` (valid partial application) from `_ + 1` (invalid).
 
 3. **parsing/recovery (16 failing)**: Error recovery output differs from OCaml.
    Both error messages and recovered AST formatting differ.
