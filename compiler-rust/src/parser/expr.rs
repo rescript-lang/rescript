@@ -4339,12 +4339,9 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
     p.expect(Token::Try);
 
     let body = parse_expr_with_context(p, ExprContext::When);
-    // "catch" is not a keyword, so we check for Lident("catch")
-    if !matches!(&p.token, Token::Lident(s) if s == "catch") {
-        p.err(DiagnosticCategory::Message("Expected 'catch'".to_string()));
-    } else {
-        p.next();
-    }
+    // "catch" is not a keyword, but OCaml uses `Parser.expect Res_token.catch p`
+    // where `Res_token.catch = Lident "catch"`. This produces "Did you forget a `catch` here?"
+    p.expect(Token::Lident("catch".to_string()));
     p.expect(Token::Lbrace);
 
     let mut cases = vec![];
