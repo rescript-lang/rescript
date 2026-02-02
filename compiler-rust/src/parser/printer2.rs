@@ -1250,8 +1250,10 @@ pub fn print_expression(
                     ])
                 }
             };
-            // Note: attributes are handled at the end of print_expression
+            // Print attributes - Pexp_apply handles its own attributes
+            let attrs_doc = print_attributes(state, &e.pexp_attributes, cmt_tbl, arena);
             Doc::group(Doc::concat(vec![
+                attrs_doc,
                 parent_doc,
                 Doc::lbracket(),
                 member_doc,
@@ -1330,8 +1332,10 @@ pub fn print_expression(
             } else {
                 Doc::concat(vec![Doc::space(), target_doc])
             };
-            // Note: attributes are handled at the end of print_expression
+            // Print attributes - Pexp_apply handles its own attributes
+            let attrs_doc = print_attributes(state, &e.pexp_attributes, cmt_tbl, arena);
             Doc::group(Doc::concat(vec![
+                attrs_doc,
                 parent_doc,
                 Doc::lbracket(),
                 member_doc,
@@ -1354,8 +1358,10 @@ pub fn print_expression(
             } else {
                 Doc::concat(vec![Doc::space(), rhs_doc])
             };
-            // Note: attributes are handled at the end of print_expression
+            // Print attributes - Pexp_apply handles its own attributes
+            let attrs_doc = print_attributes(state, &e.pexp_attributes, cmt_tbl, arena);
             Doc::group(Doc::concat(vec![
+                attrs_doc,
                 print_expression_with_comments(state, lhs, cmt_tbl, arena),
                 Doc::text(" ="),
                 rhs_doc,
