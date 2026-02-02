@@ -6060,6 +6060,84 @@ fn print_value_binding(
         Doc::text("and ")
     };
 
+    // Special case: value binding sugar for locally abstract types
+    // let x: type t. ... = (type t) => ...
+    // OCaml's printer handles this by printing the sugared form instead of desugared
+    if let (
+        PatternDesc::Ppat_constraint(inner_pat, pat_typ),
+        ExpressionDesc::Pexp_newtype(_, _),
+    ) = (&vb.pvb_pat.ppat_desc, &vb.pvb_expr.pexp_desc) {
+        if matches!(pat_typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(_, _)) {
+            let (_, parameters, return_expr) = parsetree_viewer::fun_expr(&vb.pvb_expr);
+
+            // Build the "type t u." part from NewTypes parameter
+            let abstract_type = if let Some(parsetree_viewer::FunParam::NewTypes { names, .. }) = parameters.first() {
+                if parameters.len() == 1 {
+                    let names_doc: Vec<Doc> = names.iter().map(|name| Doc::text(name.txt.clone())).collect();
+                    Doc::concat(vec![
+                        Doc::text("type "),
+                        Doc::join(Doc::space(), names_doc),
+                        Doc::text("."),
+                    ])
+                } else {
+                    Doc::nil()
+                }
+            } else {
+                Doc::nil()
+            };
+
+            // Print the inner pattern (without the type constraint)
+            let pat_doc = print_pattern(state, inner_pat, cmt_tbl, arena);
+
+            // Check if return_expr is Pexp_constraint(expr, typ)
+            if let ExpressionDesc::Pexp_constraint(expr, typ) = &return_expr.pexp_desc {
+                // Use the constraint's type and expression
+                let typ_doc = print_typ_expr(state, typ, cmt_tbl, arena);
+                let expr_doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+
+                return Doc::group(Doc::concat(vec![
+                    attrs_doc,
+                    header,
+                    pat_doc,
+                    Doc::text(":"),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::line(),
+                        abstract_type,
+                        Doc::space(),
+                        typ_doc,
+                        Doc::text(" ="),
+                        Doc::concat(vec![
+                            Doc::line(),
+                            expr_doc,
+                        ]),
+                    ])),
+                ]));
+            } else {
+                // Use pat_typ from the pattern constraint
+                let typ_doc = print_typ_expr(state, pat_typ, cmt_tbl, arena);
+                let expr_doc = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);
+
+                return Doc::group(Doc::concat(vec![
+                    attrs_doc,
+                    header,
+                    pat_doc,
+                    Doc::text(":"),
+                    Doc::indent(Doc::concat(vec![
+                        Doc::line(),
+                        abstract_type,
+                        Doc::space(),
+                        typ_doc,
+                        Doc::text(" ="),
+                        Doc::concat(vec![
+                            Doc::line(),
+                            expr_doc,
+                        ]),
+                    ])),
+                ]));
+            }
+        }
+    }
+
     let pat = print_pattern(state, &vb.pvb_pat, cmt_tbl, arena);
     // Print expression and check if it needs parens/braces
     let doc = print_expression_with_comments(state, &vb.pvb_expr, cmt_tbl, arena);

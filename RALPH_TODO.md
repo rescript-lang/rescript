@@ -1,10 +1,22 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 283/506 tests passing (55%)
-**Printer Status:** 159/187 tests passing (85%)
+**Overall Status:** 285/506 tests passing (56%)
+**Printer Status:** 161/187 tests passing (86%)
 
 ### Recent Progress
+- Fixed value binding sugar comment handling (valueBindingSugar.res now passes):
+  - OCaml's comment_table.ml has special handling for value binding sugar forms where pattern
+    and expression have the same location (e.g., `let x: type t. ... = (type t) => ...`)
+  - Added `rewrite_value_binding_locs` function to adjust pattern location to end at the type
+    annotation, and use the inner expression (from Pexp_constraint) instead of outer Pexp_newtype
+  - This ensures comments for the function parameters are properly attributed to the expression,
+    not consumed by the pattern
+  - Also fixed Ptyp_arrow comment walking: now uses `parsetree_viewer::arrow_type` to flatten
+    the arrow type into a list of parameters before walking, matching OCaml's approach
+- Added value binding sugar printing in printer2.rs:
+  - When pattern is `Ppat_constraint(pat, Ptyp_poly)` and expression is `Pexp_newtype`,
+    print the sugared form `let x: type t. T = expr` instead of desugared form
 - Fixed stack overflow in arrow_type when arity is 0:
   - The Rust code was checking `remaining_arity == 0` but OCaml checks `max_arity < 0`
   - When external declarations have labeled @as parameters with arity=0, Rust returned immediately
@@ -216,7 +228,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] **Fix comment placement in function arguments** - `/* c0 */ ~arg=/* c1 */ value /* c2 */` pattern
 - [x] **Fix comment placement in function parameters** - Comments on function parameter definitions
 
-### Comment Test Files (4 failing, 13 passing)
+### Comment Test Files (3 failing, 14 passing)
 - [x] `printer/comments/namedArgs.res` - Named argument comments
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [x] `printer/comments/modExpr.res` - Module expression comments
@@ -231,7 +243,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/comments/typexpr.res` - Type expression comments
 - [x] `printer/comments/modType.res` - Module type comments
 - [x] `printer/comments/signatureItem.resi` - Signature item comments
-- [ ] `printer/comments/valueBindingSugar.res` - Value binding sugar comments
+- [x] `printer/comments/valueBindingSugar.res` - Value binding sugar comments
 - [x] `printer/comments/typeDefinition.res` - Type definition comments
 - [x] `printer/comments/extensionConstructor.res` - Extension constructor comments
 

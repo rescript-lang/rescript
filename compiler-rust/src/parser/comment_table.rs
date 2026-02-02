@@ -858,9 +858,92 @@ fn walk_type_declarations(tds: &[TypeDeclaration], t: &mut CommentTable, comment
     walk_list(&nodes, t, comments, arena);
 }
 
+/// Rewrite value binding locations for sugar cases.
+/// OCaml's comment_table.ml has special handling for value binding sugar:
+/// - `let x: poly_type = expr` where expr is constraint/newtype
+/// The AST locations for these sugar forms span the entire binding, which would
+/// cause all comments to be "inside" the pattern. OCaml rewrites the locations
+/// so the pattern ends at the type annotation, and uses the inner expression.
+///
+/// Returns (pattern_loc, expression_ref, expression_loc)
+fn rewrite_value_binding_locs<'a>(vb: &'a ValueBinding, arena: &mut ParseArena) -> (LocIdx, &'a Expression, LocIdx) {
+    // Default: use the value binding's own locations
+    let default = (vb.pvb_pat.ppat_loc, &vb.pvb_expr, vb.pvb_expr.pexp_loc);
+
+    // Check for the sugar cases that OCaml handles specially
+    match (&vb.pvb_pat.ppat_desc, &vb.pvb_expr.pexp_desc) {
+        // Case 1: Ppat_constraint(pat, Ptyp_poly([], t)) with Pexp_constraint(expr, _)
+        // let x: t = (expr: typ)
+        (
+            PatternDesc::Ppat_constraint(pat, typ),
+            ExpressionDesc::Pexp_constraint(expr, _),
+        ) if matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(vars, _) if vars.is_empty()) => {
+            // Pattern loc ends at the inner type's location
+            if let CoreTypeDesc::Ptyp_poly(_, inner_typ) = &typ.ptyp_desc {
+                let new_pat_loc = arena.from_location(&Location {
+                    loc_start: arena.loc_start(pat.ppat_loc).clone(),
+                    loc_end: arena.loc_end(inner_typ.ptyp_loc).clone(),
+                    loc_ghost: false,
+                });
+                (new_pat_loc, expr.as_ref(), expr.pexp_loc)
+            } else {
+                default
+            }
+        }
+
+        // Case 2: Ppat_constraint(pat, Ptyp_poly(vars, t)) with Pexp_fun
+        // let x: type a. t = (a, b) => ...
+        (
+            PatternDesc::Ppat_constraint(pat, typ),
+            ExpressionDesc::Pexp_fun { .. },
+        ) if matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(vars, _) if !vars.is_empty()) => {
+            // Pattern loc ends at the inner type's location
+            if let CoreTypeDesc::Ptyp_poly(_, inner_typ) = &typ.ptyp_desc {
+                let new_pat_loc = arena.from_location(&Location {
+                    loc_start: arena.loc_start(vb.pvb_pat.ppat_loc).clone(),
+                    loc_end: arena.loc_end(inner_typ.ptyp_loc).clone(),
+                    loc_ghost: false,
+                });
+                (new_pat_loc, &vb.pvb_expr, vb.pvb_expr.pexp_loc)
+            } else {
+                default
+            }
+        }
+
+        // Case 3: Ppat_constraint(pat, Ptyp_poly(vars, t)) with Pexp_newtype(_, Pexp_constraint(expr, _))
+        // let x: type t. (...) => ... = (type t) => (a, b): (...) => ... => ...
+        // This is the value binding sugar case
+        (
+            PatternDesc::Ppat_constraint(_pat, typ),
+            ExpressionDesc::Pexp_newtype(_, inner_expr),
+        ) if matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(vars, _) if !vars.is_empty()) => {
+            // Check if inner expression is Pexp_constraint(expr, _)
+            if let ExpressionDesc::Pexp_constraint(expr, _) = &inner_expr.pexp_desc {
+                if let CoreTypeDesc::Ptyp_poly(_, inner_typ) = &typ.ptyp_desc {
+                    let new_pat_loc = arena.from_location(&Location {
+                        loc_start: arena.loc_start(vb.pvb_pat.ppat_loc).clone(),
+                        loc_end: arena.loc_end(inner_typ.ptyp_loc).clone(),
+                        loc_ghost: false,
+                    });
+                    // Use the inner expr (from Pexp_constraint), not the outer Pexp_newtype!
+                    (new_pat_loc, expr.as_ref(), expr.pexp_loc)
+                } else {
+                    default
+                }
+            } else {
+                default
+            }
+        }
+
+        _ => default,
+    }
+}
+
 fn walk_value_binding(vb: &ValueBinding, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
-    let pattern_loc = vb.pvb_pat.ppat_loc;
-    let expr_loc = vb.pvb_expr.pexp_loc;
+    // OCaml rewrites value binding locations for sugar cases to properly partition comments.
+    // This is necessary because the AST locations for sugar forms span the entire binding,
+    // which causes all comments to be "inside" the pattern and none for the expression.
+    let (pattern_loc, expr_ref, expr_loc) = rewrite_value_binding_locs(vb, arena);
 
     let (leading, inside, trailing) = partition_by_loc(comments, pattern_loc, arena);
 
@@ -873,16 +956,16 @@ fn walk_value_binding(vb: &ValueBinding, t: &mut CommentTable, comments: Vec<Com
 
     let (before_expr, inside_expr, after_expr) = partition_by_loc(surrounding_expr, expr_loc, arena);
 
-    if is_block_expr(&vb.pvb_expr) {
+    if is_block_expr(expr_ref) {
         let combined: Vec<Comment> = before_expr
             .into_iter()
             .chain(inside_expr.into_iter())
             .chain(after_expr.into_iter())
             .collect();
-        walk_expression(&vb.pvb_expr, t, combined, arena);
+        walk_expression(expr_ref, t, combined, arena);
     } else {
         t.attach_leading(expr_loc, before_expr, arena);
-        walk_expression(&vb.pvb_expr, t, inside_expr, arena);
+        walk_expression(expr_ref, t, inside_expr, arena);
         t.attach_trailing(expr_loc, after_expr, arena);
     }
 }
@@ -2293,18 +2376,20 @@ fn walk_core_type(ct: &CoreType, t: &mut CommentTable, comments: Vec<Comment>, a
                 );
             }
         }
-        CoreTypeDesc::Ptyp_arrow { arg, ret, .. } => {
-            let (before, inside, after) = partition_by_loc(comments, arg.typ.ptyp_loc, arena);
-            t.attach_leading(arg.typ.ptyp_loc, before, arena);
-            walk_core_type(&arg.typ, t, inside, arena);
+        CoreTypeDesc::Ptyp_arrow { .. } => {
+            // OCaml flattens the arrow type into a list of parameters first, then walks them.
+            // This ensures comments between parameters are properly partitioned.
+            use crate::parser::parsetree_viewer;
+            let (_, parameters, return_type) = parsetree_viewer::arrow_type(ct, None);
 
-            let (after_arg, rest) = partition_adjacent_trailing(arg.typ.ptyp_loc, after, arena);
-            t.attach_trailing(arg.typ.ptyp_loc, after_arg, arena);
+            // Walk type parameters using visit_list_but_continue_with_remaining_comments
+            let comments = walk_type_parameters(&parameters, t, comments, arena);
 
-            let (before, inside, after) = partition_by_loc(rest, ret.ptyp_loc, arena);
-            t.attach_leading(ret.ptyp_loc, before, arena);
-            walk_core_type(ret, t, inside, arena);
-            t.attach_trailing(ret.ptyp_loc, after, arena);
+            // Handle return type
+            let (before_ret, inside_ret, after_ret) = partition_by_loc(comments, return_type.ptyp_loc, arena);
+            t.attach_leading(return_type.ptyp_loc, before_ret, arena);
+            walk_core_type(return_type, t, inside_ret, arena);
+            t.attach_trailing(return_type.ptyp_loc, after_ret, arena);
         }
         CoreTypeDesc::Ptyp_tuple(types) => {
             let nodes: Vec<Node<'_>> = types.iter().map(|ty| Node::CoreType(ty)).collect();
@@ -2349,6 +2434,37 @@ fn walk_core_type(ct: &CoreType, t: &mut CommentTable, comments: Vec<Comment>, a
             walk_extension(ext, t, comments, arena);
         }
     }
+}
+
+/// Walk type parameters of an arrow type, properly partitioning comments between parameters.
+/// Returns remaining comments after all parameters.
+fn walk_type_parameters(
+    parameters: &[crate::parser::parsetree_viewer::TypeParameter<'_>],
+    t: &mut CommentTable,
+    comments: Vec<Comment>,
+    arena: &mut ParseArena,
+) -> Vec<Comment> {
+    use crate::parser::parsetree_viewer::TypeParameter;
+
+    visit_list_but_continue_with_remaining_comments(
+        parameters,
+        |param, _arena| {
+            // get_loc: like OCaml, use the type's location
+            // (OCaml also considers label location, but in practice labels have their own handling)
+            param.typ.ptyp_loc
+        },
+        |param: &TypeParameter<'_>, t, comments, arena| {
+            // walk_node: walk each type parameter
+            let (before_typ, inside_typ, after_typ) = partition_by_loc(comments, param.typ.ptyp_loc, arena);
+            t.attach_leading(param.typ.ptyp_loc, before_typ, arena);
+            walk_core_type(param.typ, t, inside_typ, arena);
+            t.attach_trailing(param.typ.ptyp_loc, after_typ, arena);
+        },
+        t,
+        comments,
+        false, // newline_delimited
+        arena,
+    )
 }
 
 fn walk_object_field(field: &ObjectField, t: &mut CommentTable, comments: Vec<Comment>, arena: &mut ParseArena) {
