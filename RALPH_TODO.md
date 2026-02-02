@@ -1,10 +1,13 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 266/506 tests passing (52%)
-**Printer Status:** 146/187 tests passing (78%)
+**Overall Status:** 267/506 tests passing (52%)
+**Printer Status:** 147/187 tests passing (78%)
 
 ### Recent Progress
+- Fixed type extension attribute line breaking (typeExtension.res passes): Pass the path location
+  to print_attributes_with_loc so that attributes on a separate line preserve the line break.
+  `@attr\ntype t +=` now correctly prints with a line break between the attribute and the type.
 - Fixed setfield parenthesization in binary expressions (setfield.res passes): OCaml's print_operand
   handles Pexp_setfield specially - it only needs parens when on the LHS of a binary expression,
   not when on the RHS. This means `a->@attr user.name = "steve"` doesn't need parens around the RHS.

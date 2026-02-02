@@ -6835,7 +6835,16 @@ fn print_type_extension(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let attrs_doc = print_attributes(state, &type_ext.ptyext_attributes, cmt_tbl, arena);
+    // Pass path location for proper attribute line breaking:
+    // @attr\ntype t += ... should preserve the line break
+    let attrs_doc = print_attributes_with_loc(
+        state,
+        &type_ext.ptyext_attributes,
+        Some(type_ext.ptyext_path.loc),
+        cmt_tbl,
+        arena,
+        false,
+    );
     let path_doc = print_lident_path(&type_ext.ptyext_path, cmt_tbl, arena);
 
     let params_doc = if type_ext.ptyext_params.is_empty() {
