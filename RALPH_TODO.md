@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 292/506 tests passing (57%)
-**Printer Status:** 168/187 tests passing (89%)
+**Overall Status:** 293/506 tests passing (57%)
+**Printer Status:** 169/187 tests passing (90%)
 
 ---
 
@@ -26,6 +26,13 @@
 ---
 
 ### Recent Progress
+- Fixed attribute positioning in pipe expressions inside binary operators (asyncAwait.res now passes):
+  - When a binary expression with printable attributes appears as an operand of another binary operator
+    (e.g., `(@foo (server->start))->foo`), the attributes should be printed outside the expression
+  - Added `partition_printable_attributes` function to parsetree_viewer.rs
+  - In `flatten_binary_operand`, for non-flattenable binary expressions: partition printable attrs,
+    print the expression WITHOUT printable attrs (using print_binary_expression directly), wrap in
+    parens if needed for precedence, then prepend the printable attrs outside
 - Fixed ternary expression indentation in value bindings (ternary.res now passes):
   - When ternary condition is a binary expression or has attributes, indent the ternary on a new line
   - Updated `should_indent` logic in `print_value_binding` to match OCaml's handling
@@ -340,8 +347,8 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/expr/while.res`
 - [x] `printer/expr/whitespace.res`
 
-### Failing (13 tests)
-- [ ] `printer/expr/asyncAwait.res` - Async/await issues
+### Failing (12 tests)
+- [x] `printer/expr/asyncAwait.res` - Fixed: attribute positioning in pipe expressions
 - [ ] `printer/expr/binary.res` - Exponent associativity, switch/try in pipes
 - [ ] `printer/expr/braced.res` - Brace preservation in switch/while
 - [ ] `printer/expr/callback.res` - Callback layout differences
