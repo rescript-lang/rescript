@@ -261,7 +261,7 @@ if [[ -n "$FILE_ARG" ]]; then
         echo "$FILE_ARG" > "$TEMP_DIR/files.txt"
     else
         # Treat as a pattern and use find with -path
-        find syntax_tests/data/idempotency syntax_tests/data/printer syntax_tests/data/ppx syntax_tests/data/conversion syntax_tests/data/ast-mapping \( -name "*.res" -o -name "*.resi" \) 2>/dev/null | grep -E "$FILE_ARG" | sort > "$TEMP_DIR/files.txt" || true
+        find syntax_tests/data/idempotency syntax_tests/data/printer syntax_tests/data/ppx syntax_tests/data/conversion syntax_tests/data/ast-mapping syntax_tests/data/parsing \( -name "*.res" -o -name "*.resi" \) -not -path "*/errors/*" -not -path "*/recovery/*" 2>/dev/null | grep -E "$FILE_ARG" | sort > "$TEMP_DIR/files.txt" || true
         if [[ ! -s "$TEMP_DIR/files.txt" ]]; then
             echo -e "${RED}Error: No files found matching '$FILE_ARG'${RESET}"
             echo "Hint: Try a pattern like 'printer/expr/apply' or a full path"
@@ -270,7 +270,7 @@ if [[ -n "$FILE_ARG" ]]; then
     fi
 else
     # Find all test files
-    find syntax_tests/data/idempotency syntax_tests/data/printer syntax_tests/data/ppx syntax_tests/data/conversion syntax_tests/data/ast-mapping \( -name "*.res" -o -name "*.resi" \) 2>/dev/null | sort > "$TEMP_DIR/files.txt"
+    find syntax_tests/data/idempotency syntax_tests/data/printer syntax_tests/data/ppx syntax_tests/data/conversion syntax_tests/data/ast-mapping syntax_tests/data/parsing \( -name "*.res" -o -name "*.resi" \) -not -path "*/errors/*" -not -path "*/recovery/*" 2>/dev/null | sort > "$TEMP_DIR/files.txt"
 fi
 
 TOTAL_FILES=$(wc -l < "$TEMP_DIR/files.txt" | tr -d ' ')
