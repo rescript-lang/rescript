@@ -335,13 +335,9 @@ pub fn print_signature_ml(signature: &[SignatureItem], arena: &ParseArena, out: 
     let mut f = Formatter::new(out);
     for (i, item) in signature.iter().enumerate() {
         if i > 0 {
-            f.space();
+            f.newline();  // Top-level items on separate lines
         }
         print_signature_item(&mut f, arena, item);
-    }
-    // Only add trailing newline if there are items
-    if !signature.is_empty() {
-        f.newline();
     }
     f.flush();
 }
