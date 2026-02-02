@@ -3150,14 +3150,15 @@ fn print_pexp_apply(
                 let op = arena.get_string(*op_idx);
                 if parsetree_viewer::is_binary_operator_str(op) {
                     let doc = print_binary_expression(state, op, args, cmt_tbl, arena);
-                    // Check if the binary expression needs parens (when it has printable attributes)
-                    // We filter to only printable attributes for this check
+                    // Print attributes - binary expressions handle their own attributes
                     let printable_attrs: Vec<&Attribute> = expr.pexp_attributes
                         .iter()
                         .filter(|attr| parsetree_viewer::is_printable_attribute(attr))
                         .collect();
                     if !printable_attrs.is_empty() {
-                        return add_parens(doc);
+                        // Print attributes and wrap in parens if there are any
+                        let attrs_doc = print_attributes(state, &expr.pexp_attributes, cmt_tbl, arena);
+                        return Doc::concat(vec![attrs_doc, add_parens(doc)]);
                     }
                     return doc;
                 }
