@@ -1,6 +1,6 @@
-# Ralph Loop: Printing Parity
+# Ralph Loop: Syntax Parity
 
-You are working on achieving **byte-for-byte printing parity** between the Rust ReScript printer and the OCaml reference implementation.
+You are working on achieving **byte-for-byte parity** between the Rust ReScript parser/printer and the OCaml reference implementation for ALL syntax tests.
 
 ## Core Principle: 1:1 OCaml Port
 
@@ -42,18 +42,18 @@ Read `RALPH_TODO.md` and complete the next unchecked task. After completing a ta
    PARSER=rust ./scripts/test_syntax.sh 2>&1 | tail -40
    ```
 
-3. **Commit after each fix** - Every time tests improve, commit immediately. Include the new parity in the commit message:
+3. **Commit after each fix** - Every time tests improve, commit immediately. Include the test results in the commit message:
    ```bash
    git add <files> && git commit -m "Fix: <description>
 
-   Printer parity: X/187 (Y%)
+   Syntax tests: X/Y passed (Z%)
 
    Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
 
-   Get the current parity by running:
+   Get the current status by running:
    ```bash
-   PARSER=rust ./scripts/test_syntax.sh 2>&1 | grep "^printer"
+   PARSER=rust ./scripts/test_syntax.sh 2>&1 | tail -20
    ```
 
 4. **Focus on root causes** - Many failures share the same root cause (usually comment handling). Fix the underlying issue rather than individual symptoms.
@@ -66,8 +66,12 @@ Read `RALPH_TODO.md` and complete the next unchecked task. After completing a ta
 |------|---------|
 | `compiler-rust/src/parser/printer2.rs` | Main printer implementation |
 | `compiler-rust/src/parser/comment_table.rs` | Comment attachment logic |
+| `compiler-rust/src/parser/ml_printer.rs` | ML AST printer (for `-print ml`) |
+| `compiler-rust/src/parser/diagnostics.rs` | Error messages and recovery |
 | `compiler/syntax/src/res_printer.ml` | OCaml reference (6100 lines) |
 | `compiler/syntax/src/res_comments_table.ml` | OCaml comment handling |
+| `compiler/syntax/src/res_diagnostics.ml` | OCaml error messages |
+| `compiler/syntax/src/res_outcome_printer.ml` | OCaml ML printer |
 
 ## Debugging Workflow
 
@@ -76,11 +80,21 @@ Read `RALPH_TODO.md` and complete the next unchecked task. After completing a ta
 diff tests/syntax_tests/data/printer/comments/expected/FILE.txt \
      tests/temp/syntax_tests/data/printer/comments/expected/FILE.txt
 
-# Test a single file
+# Test a single file (printer mode - default)
 ./compiler-rust/target/release/res_parser_rust tests/syntax_tests/data/printer/FILE.res
+
+# Test with error recovery mode (for parsing/errors tests)
+./compiler-rust/target/release/res_parser_rust -recover -print ml tests/syntax_tests/data/parsing/errors/FILE.res
+
+# Test with AST conversion (for ast-mapping tests)
+./compiler-rust/target/release/res_parser_rust -test-ast-conversion -jsx-version 4 tests/syntax_tests/data/ast-mapping/FILE.res
+
+# Test with JSX PPX (for ppx/react tests)
+./compiler-rust/target/release/res_parser_rust -jsx-version 4 tests/syntax_tests/data/ppx/react/FILE.res
 
 # Compare with OCaml
 ./_build/install/default/bin/res_parser tests/syntax_tests/data/printer/FILE.res
+./_build/install/default/bin/res_parser -recover -print ml tests/syntax_tests/data/parsing/errors/FILE.res
 
 # Build after changes
 cargo build --manifest-path compiler-rust/Cargo.toml --release
@@ -88,11 +102,22 @@ cargo build --manifest-path compiler-rust/Cargo.toml --release
 
 ## Common Issues to Fix
 
+### Printer Issues
 1. **Comment placement** - Comments attach to wrong AST nodes or get lost
 2. **Trailing comments** - Comments after expressions not preserved
 3. **Blank line preservation** - Blank lines around comments should be kept
 4. **JSX in expressions** - JSX elements inside switch/match arms
 5. **Functor parameter comments** - Comments on module functor parameters
+
+### Error Recovery Issues
+6. **Error message locations** - Line/column numbers in error messages must match OCaml
+7. **Recovery AST output** - The recovered AST printed as ML must match exactly
+8. **Error hole placement** - `[%rescript.exprhole]` placeholders for missing expressions
+9. **Array access syntax** - OCaml uses `arr.(i)` syntax vs `Array.get arr i`
+
+### PPX/AST Issues
+10. **JSX transformation** - React PPX output must match OCaml's `jsx-version 4`
+11. **AST conversion** - `--test-ast-conversion` output must match
 
 ## OCaml → Rust Translation Patterns
 
@@ -138,13 +163,30 @@ fn attach_comment(table: &mut CommentTable, loc: PosRange, comment: Comment) {
 
 The current status is tracked in `RALPH_TODO.md`. Update it as you complete tasks.
 
-When all printer tests pass (187/187), move on to other categories.
+Run the full test suite to see current parity:
+```bash
+PARSER=rust ./scripts/test_syntax.sh 2>&1 | tail -30
+```
+
+The test categories are:
+| Category | Description |
+|----------|-------------|
+| printer | Pretty-printing tests (187 files) |
+| conversion | ML/Reason to ReScript conversion |
+| parsing/errors | Error recovery mode tests |
+| parsing/grammar | Grammar parsing tests |
+| parsing/recovery | Recovery mode tests |
+| parsing/infiniteLoops | Infinite loop prevention tests |
+| ppx/react | JSX PPX transformation tests |
+| ast-mapping | AST conversion tests |
 
 ## Exit Condition
 
-When all tasks in `RALPH_TODO.md` are checked `[x]`, output exactly:
+When ALL syntax tests pass (not just printer tests), output exactly:
 ```
 RALPH_COMPLETE
 ```
 
 This triggers the Ralph plugin's `--completion-promise` to stop the loop.
+
+**Do NOT stop when only printer tests pass.** Continue until `PARSER=rust ./scripts/test_syntax.sh` shows 0 failures across ALL categories.
