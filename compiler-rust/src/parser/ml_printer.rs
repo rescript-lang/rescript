@@ -583,6 +583,18 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             f.space();
             print_expression_no_outer_parens(f, arena, body);
         }
+        ExpressionDesc::Pexp_newtype(name, inner) => {
+            // Handle locally abstract types at the start: let f (type t) ...
+            print_pattern(f, arena, pat);
+            f.string(" (type ");
+            f.string(&name.txt);
+            f.string(") ");
+            // Continue collecting newtypes and print arity when we hit a fun
+            let body = print_remaining_inline_params_with_arity(f, arena, inner, true);
+            f.string("=");
+            f.space();
+            print_expression_no_outer_parens(f, arena, body);
+        }
         _ => {
             print_pattern(f, arena, pat);
             f.string(" =");
@@ -662,6 +674,16 @@ fn print_remaining_inline_params<'a, W: Write>(
     arena: &ParseArena,
     expr: &'a Expression,
 ) -> &'a Expression {
+    print_remaining_inline_params_with_arity(f, arena, expr, false)
+}
+
+/// Helper to print remaining inline params, optionally printing arity on first Pexp_fun
+fn print_remaining_inline_params_with_arity<'a, W: Write>(
+    f: &mut Formatter<W>,
+    arena: &ParseArena,
+    expr: &'a Expression,
+    need_arity: bool,
+) -> &'a Expression {
     if !expr.pexp_attributes.is_empty() {
         return expr;
     }
@@ -672,10 +694,29 @@ fn print_remaining_inline_params<'a, W: Write>(
             default,
             lhs,
             rhs,
+            arity,
             ..
         } => {
+            // Print arity if requested (for first fun after newtypes)
+            if need_arity {
+                if let Arity::Full(n) = arity {
+                    f.string(&format!("[arity:{}]", n));
+                } else {
+                    let computed_arity = count_function_arity(expr);
+                    if computed_arity > 0 {
+                        f.string(&format!("[arity:{}]", computed_arity));
+                    }
+                }
+            }
             print_inline_param(f, arena, arg_label, default, lhs);
-            print_remaining_inline_params(f, arena, rhs)
+            print_remaining_inline_params_with_arity(f, arena, rhs, false)
+        }
+        ExpressionDesc::Pexp_newtype(name, inner) => {
+            // Print (type t) inline, continue looking for arity
+            f.string("(type ");
+            f.string(&name.txt);
+            f.string(") ");
+            print_remaining_inline_params_with_arity(f, arena, inner, need_arity)
         }
         _ => expr,
     }
