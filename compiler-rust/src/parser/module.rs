@@ -3354,12 +3354,13 @@ fn parse_label_declaration(
         }
         _ => {
             // Match OCaml's error handling: give specific messages for dangling attrs/mutable
+            // OCaml uses p.end_pos as the end position (not p.start_pos)
             if !attrs.is_empty() {
-                p.err_at(start_pos.clone(), p.start_pos.clone(), DiagnosticCategory::Message(
+                p.err_at(start_pos.clone(), p.end_pos.clone(), DiagnosticCategory::Message(
                     "Attributes and doc comments can only be used at the beginning of a field declaration".to_string(),
                 ));
             } else if mutable == MutableFlag::Mutable {
-                p.err_at(start_pos.clone(), p.start_pos.clone(), DiagnosticCategory::Message(
+                p.err_at(start_pos.clone(), p.end_pos.clone(), DiagnosticCategory::Message(
                     "The `mutable` qualifier can only be used at the beginning of a field declaration".to_string(),
                 ));
             } else {
