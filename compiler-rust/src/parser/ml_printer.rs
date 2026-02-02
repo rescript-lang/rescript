@@ -326,7 +326,21 @@ fn is_simple_expression_with_arena(expr: &Expression, arena: &ParseArena) -> boo
 }
 
 /// Check if expression needs parens in "semi" context (array/list elements)
+/// OCaml: when ctxt.semi is true and expr is Pexp_fun/match/try/sequence, wrap in parens
 fn needs_parens_in_semi_context(expr: &Expression) -> bool {
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_fun { .. }
+            | ExpressionDesc::Pexp_match(_, _)
+            | ExpressionDesc::Pexp_try(_, _)
+            | ExpressionDesc::Pexp_sequence(_, _)
+    )
+}
+
+/// Check if expression needs parens in "pipe" context (match case RHS)
+/// OCaml: when ctxt.pipe is true and expr is Pexp_fun/match/try/sequence, wrap in parens
+/// This is the same set of expressions as semi context
+fn needs_parens_in_pipe_context(expr: &Expression) -> bool {
     matches!(
         &expr.pexp_desc,
         ExpressionDesc::Pexp_fun { .. }
@@ -1083,6 +1097,20 @@ fn print_expression_list_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
     }
 }
 
+/// Print expression in "pipe" context (match case RHS)
+/// OCaml wraps Pexp_fun/match/try/sequence in parens when under_pipe
+fn print_expression_pipe_context<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let needs_pipe_parens = needs_parens_in_pipe_context(expr);
+
+    if needs_pipe_parens {
+        f.string("(");
+        print_expression(f, arena, expr);
+        f.string(")");
+    } else {
+        print_expression(f, arena, expr);
+    }
+}
+
 fn print_expression_parens_if_complex<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
     let attrs = printable_attributes(&expr.pexp_attributes);
     let has_attrs = !attrs.is_empty();
@@ -1395,7 +1423,9 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.space();
                 f.string("->");
                 f.space();
-                print_expression(f, arena, &case.pc_rhs);
+                // OCaml uses (expression (under_pipe ctxt)) for case RHS,
+                // which wraps Pexp_fun/match/try/sequence in parens
+                print_expression_pipe_context(f, arena, &case.pc_rhs);
                 f.close_box();
             }
             f.close_box();
@@ -1425,7 +1455,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     print_expression(f, arena, guard);
                 }
                 f.string(" -> ");
-                print_expression(f, arena, &case.pc_rhs);
+                // OCaml uses (expression (under_pipe ctxt)) for case RHS
+                print_expression_pipe_context(f, arena, &case.pc_rhs);
                 f.close_box();
             }
             f.close_box();
