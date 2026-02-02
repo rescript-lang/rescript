@@ -1706,7 +1706,10 @@ fn print_jsx_element<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, jsx: &J
     match jsx {
         JsxElement::Fragment(frag) => {
             f.string("<>");
-            for child in &frag.children {
+            for (i, child) in frag.children.iter().enumerate() {
+                if i > 0 {
+                    f.space(); // OCaml uses "@ " (space with optional break) between children
+                }
                 print_expression_simple(f, arena, child);
             }
             f.string("</>");
@@ -1732,7 +1735,10 @@ fn print_jsx_element<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, jsx: &J
             };
             if elem.props.is_empty() {
                 f.string(&format!("<{}>", name));
-                for child in &elem.children {
+                for (i, child) in elem.children.iter().enumerate() {
+                    if i > 0 {
+                        f.space(); // OCaml uses "@ " between children
+                    }
                     print_expression_simple(f, arena, child);
                 }
                 f.string(&closing_name);
@@ -1740,7 +1746,10 @@ fn print_jsx_element<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, jsx: &J
                 f.string(&format!("<{} ", name));
                 print_jsx_props(f, arena, &elem.props);
                 f.string(">");
-                for child in &elem.children {
+                for (i, child) in elem.children.iter().enumerate() {
+                    if i > 0 {
+                        f.space(); // OCaml uses "@ " between children
+                    }
                     print_expression_simple(f, arena, child);
                 }
                 f.string(&closing_name);
