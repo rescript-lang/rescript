@@ -736,6 +736,21 @@ pub fn filter_printable_attributes(attrs: &Attributes) -> Vec<&Attribute> {
     attrs.iter().filter(|a| is_printable_attribute(a)).collect()
 }
 
+/// Partition attributes into printable and internal (non-printable).
+/// Returns (printable_attrs, internal_attrs).
+pub fn partition_printable_attributes(attrs: &Attributes) -> (Vec<&Attribute>, Vec<&Attribute>) {
+    let mut printable = Vec::new();
+    let mut internal = Vec::new();
+    for attr in attrs.iter() {
+        if is_printable_attribute(attr) {
+            printable.push(attr);
+        } else {
+            internal.push(attr);
+        }
+    }
+    (printable, internal)
+}
+
 /// Check if expression has any attributes (excluding internal parsing ones).
 pub fn has_attributes(attrs: &Attributes) -> bool {
     attrs.iter().any(|attr| {

@@ -3393,17 +3393,32 @@ fn flatten_binary_operand(
                             return print_comments(doc, cmt_tbl, expr.pexp_loc, arena);
                         } else {
                             // Not flattenable - print with parens if needed
-                            let has_printable_attrs = parsetree_viewer::has_printable_attributes(&expr.pexp_attributes);
+                            // Match OCaml: partition printable attrs, print expr without them,
+                            // wrap in parens if needed, then prepend printable attrs
+                            let (printable_attrs, _internal_attrs) =
+                                parsetree_viewer::partition_printable_attributes(&expr.pexp_attributes);
 
-                            let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                            // Print the binary expression directly (without going through print_expression
+                            // which would add attrs and parens). This matches OCaml's approach of printing
+                            // {expr with pexp_attributes = internal_attrs}
+                            let doc = print_binary_expression(state, expr, operator, args, cmt_tbl, arena);
+                            let doc = print_comments(doc, cmt_tbl, expr.pexp_loc, arena);
 
                             // Check if needs parens due to precedence or attrs
                             let doc = if parens::sub_binary_expr_operand(parent_operator, operator)
-                                || (has_printable_attrs
+                                || (!printable_attrs.is_empty()
                                     && (parsetree_viewer::is_binary_expression(arena, expr)
                                         || parsetree_viewer::is_ternary_expr(expr)))
                             {
                                 Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+                            } else {
+                                doc
+                            };
+
+                            // Prepend printable attrs
+                            let doc = if !printable_attrs.is_empty() {
+                                let attrs_doc = print_attributes_from_refs(state, &printable_attrs, cmt_tbl, arena);
+                                Doc::concat(vec![attrs_doc, doc])
                             } else {
                                 doc
                             };
