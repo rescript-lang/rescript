@@ -26,6 +26,15 @@
 ---
 
 ### Recent Progress
+- Implemented spread array/list syntax printing (array.res now passes):
+  - Added `is_spread_belt_array_concat` and `is_spread_belt_list_concat` to detect Belt.Array/List.concatMany
+  - Added `print_belt_array_concat_apply` and `print_belt_list_concat_apply` to print `[...xs, a, b]` syntax
+  - Added special comment handling in comment_table for spread arrays/lists
+- Fixed polyvariant row field comment handling (variant.res now passes):
+  - Wrap tag_doc with print_comments using label.loc to attach leading/trailing comments
+- Added template literal printing (WIP, templateLiteral.res still has edge cases):
+  - Implemented `print_template_literal` to reconstruct `foo ${bar}` from string concatenation
+  - Known issue: Complex expressions inside template literals may break to multiple lines
 - Fixed doc comment inline spacing in type expressions (DocComments.res now passes):
   - Added `print_doc_comments_with_sep` with configurable separator (defaults to hard_line)
   - Use `Doc::space()` separator for doc comments on types to keep them inline
@@ -377,7 +386,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/expr/dict.res` - Comment handling in dict entries
 - [x] `printer/expr/DocComments.res` - Fixed: doc comment inline spacing
 - [ ] `printer/expr/jsx.res` - JSX-specific issues
-- [ ] `printer/expr/list.res` - List spread syntax
+- [x] `printer/expr/list.res` - List spread syntax (fixed with spread list implementation)
 - [x] `printer/expr/polyvariant.res` - Fixed: tuple hugging in polyvariant constructors
 - [x] `printer/expr/switch.res` - Fixed: trailing comments on same line as `}`
 - [ ] `printer/expr/templateLiteral.res` - Template literal printing
