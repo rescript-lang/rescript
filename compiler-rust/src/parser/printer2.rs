@@ -4528,12 +4528,14 @@ pub fn print_typ_expr(
             if vars.is_empty() {
                 print_typ_expr(state, inner_typ, cmt_tbl, arena)
             } else {
+                // OCaml: each type variable has its own location and we print comments for each
                 Doc::concat(vec![
                     Doc::join(
                         Doc::space(),
                         vars.iter()
                             .map(|var| {
-                                Doc::concat(vec![Doc::text("'"), Doc::text(var.txt.clone())])
+                                let doc = Doc::concat(vec![Doc::text("'"), Doc::text(var.txt.clone())]);
+                                print_comments(doc, cmt_tbl, var.loc, arena)
                             })
                             .collect(),
                     ),
@@ -4695,7 +4697,21 @@ fn print_type_parameter(
     };
     let typ_doc = print_typ_expr(state, param.typ, cmt_tbl, arena);
 
-    Doc::group(Doc::concat(vec![attrs, label_doc, typ_doc, optional_indicator]))
+    let doc = Doc::group(Doc::concat(vec![attrs, label_doc, typ_doc, optional_indicator]));
+
+    // OCaml: let loc = {(Asttypes.get_lbl_loc lbl) with loc_end = typ.ptyp_loc.loc_end}
+    // Then: print_comments doc cmt_tbl loc
+    // This ensures comments before the label appear before ~label, not after
+    match param.lbl.located() {
+        Some(name) => {
+            let (pos_range, full_loc) = make_combined_pos_range(name.loc, param.typ.ptyp_loc, arena);
+            print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
+        }
+        None => {
+            // Nolabel: use type's location only
+            print_comments(doc, cmt_tbl, param.typ.ptyp_loc, arena)
+        }
+    }
 }
 
 /// Print tuple type.
@@ -4791,10 +4807,19 @@ fn print_object_field(
 ) -> Doc {
     match field {
         ObjectField::Otag(label, attrs, typ) => {
-            let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
+            // OCaml: wrap label with print_comments for label_loc.loc
             let label_doc = Doc::text(format!("\"{}\"", label.txt));
+            let label_doc = print_comments(label_doc, cmt_tbl, label.loc, arena);
+
+            let attrs_doc = print_attributes_with_loc(state, attrs, Some(label.loc), cmt_tbl, arena, false);
             let typ_doc = print_typ_expr(state, typ, cmt_tbl, arena);
-            Doc::concat(vec![attrs_doc, label_doc, Doc::text(": "), typ_doc])
+
+            let doc = Doc::concat(vec![attrs_doc, label_doc, Doc::text(": "), typ_doc]);
+
+            // OCaml: wrap entire field with print_comments using combined location
+            // cmt_loc = {label_loc.loc with loc_end = typ.ptyp_loc.loc_end}
+            let (pos_range, full_loc) = make_combined_pos_range(label.loc, typ.ptyp_loc, arena);
+            print_comments_by_pos(doc, cmt_tbl, pos_range, &full_loc)
         }
         ObjectField::Oinherit(typ) => {
             Doc::concat(vec![Doc::text("..."), print_typ_expr(state, typ, cmt_tbl, arena)])
@@ -4954,17 +4979,25 @@ fn print_package_type(
         Doc::group(lid_doc)
     } else {
         // Print constraints with proper line breaking
+        // OCaml creates a cmt_loc spanning from longident to typexpr end for each constraint
         let constraint_docs: Vec<Doc> = constraints
             .iter()
             .enumerate()
             .map(|(i, (name, typ))| {
                 let prefix = if i == 0 { "type " } else { "and type " };
-                Doc::concat(vec![
+                // Print the constraint content (with comments on name via print_longident_location)
+                let name_doc = print_longident(arena, arena.get_longident(name.txt));
+                let name_doc = print_comments(name_doc, cmt_tbl, name.loc, arena);
+                let constraint_doc = Doc::concat(vec![
                     Doc::text(prefix),
-                    print_longident(arena, arena.get_longident(name.txt)),
+                    name_doc,
                     Doc::text(" = "),
                     print_typ_expr(state, typ, cmt_tbl, arena),
-                ])
+                ]);
+                // OCaml wraps the entire constraint with comments using a location
+                // that spans from name.loc.start to typ.ptyp_loc.end
+                let (pos_range, full_loc) = make_combined_pos_range(name.loc, typ.ptyp_loc, arena);
+                print_comments_by_pos(constraint_doc, cmt_tbl, pos_range, &full_loc)
             })
             .collect();
 
@@ -6917,11 +6950,22 @@ fn print_type_declaration_inner(
             ])
         }
         TypeKind::Ptype_record(fields) => {
-            Doc::concat(vec![
-                Doc::text(" = "),
-                private_doc.clone(),
-                print_record_declaration(state, fields, Some(decl.ptype_loc), cmt_tbl, arena),
-            ])
+            // OCaml: special case for empty record with only comments inside
+            if fields.is_empty() {
+                Doc::concat(vec![
+                    Doc::text(" = "),
+                    private_doc.clone(),
+                    Doc::lbrace(),
+                    print_comments_inside(cmt_tbl, decl.ptype_loc, arena),
+                    Doc::rbrace(),
+                ])
+            } else {
+                Doc::concat(vec![
+                    Doc::text(" = "),
+                    private_doc.clone(),
+                    print_record_declaration(state, fields, Some(decl.ptype_loc), cmt_tbl, arena),
+                ])
+            }
         }
         TypeKind::Ptype_open => Doc::concat(vec![
             Doc::text(" = "),

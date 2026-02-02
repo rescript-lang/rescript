@@ -2399,8 +2399,30 @@ fn walk_core_type(ct: &CoreType, t: &mut CommentTable, comments: Vec<Comment>, a
             let nodes: Vec<Node<'_>> = fields.iter().map(|f| Node::ObjectField(f)).collect();
             walk_list(&nodes, t, comments, arena);
         }
-        CoreTypeDesc::Ptyp_poly(_, typ) => {
-            walk_core_type(typ, t, comments, arena);
+        CoreTypeDesc::Ptyp_poly(vars, typ) => {
+            // OCaml walks type variables as a list, attaching leading/trailing comments to each
+            let comments = if vars.is_empty() {
+                comments
+            } else {
+                visit_list_but_continue_with_remaining_comments(
+                    vars,
+                    |var, _arena| var.loc,
+                    |var, t, comments, arena| {
+                        let (before, after) = partition_leading_trailing(comments, var.loc, arena);
+                        t.attach_leading(var.loc, before, arena);
+                        t.attach_trailing(var.loc, after, arena);
+                    },
+                    t,
+                    comments,
+                    false,
+                    arena,
+                )
+            };
+            // Then handle the inner type
+            let (before_typ, inside_typ, after_typ) = partition_by_loc(comments, typ.ptyp_loc, arena);
+            t.attach_leading(typ.ptyp_loc, before_typ, arena);
+            walk_core_type(typ, t, inside_typ, arena);
+            t.attach_trailing(typ.ptyp_loc, after_typ, arena);
         }
         CoreTypeDesc::Ptyp_variant(fields, _, _) => {
             let nodes: Vec<Node<'_>> = fields.iter().map(|f| Node::RowField(f)).collect();
@@ -2445,20 +2467,28 @@ fn walk_type_parameters(
     arena: &mut ParseArena,
 ) -> Vec<Comment> {
     use crate::parser::parsetree_viewer::TypeParameter;
+    use crate::parser::ast::ArgLabel;
 
     visit_list_but_continue_with_remaining_comments(
         parameters,
-        |param, _arena| {
-            // get_loc: like OCaml, use the type's location
-            // (OCaml also considers label location, but in practice labels have their own handling)
-            param.typ.ptyp_loc
+        |param, arena| {
+            // OCaml: get_loc uses {(Asttypes.get_lbl_loc lbl) with loc_end = typ.ptyp_loc.loc_end}
+            // For labeled parameters, the location starts at the label
+            // For unlabeled parameters, use just the type's location
+            match param.lbl.located() {
+                Some(name) => arena.mk_loc_spanning(name.loc, param.typ.ptyp_loc),
+                None => param.typ.ptyp_loc,
+            }
         },
         |param: &TypeParameter<'_>, t, comments, arena| {
             // walk_node: walk each type parameter
-            let (before_typ, inside_typ, after_typ) = partition_by_loc(comments, param.typ.ptyp_loc, arena);
-            t.attach_leading(param.typ.ptyp_loc, before_typ, arena);
-            walk_core_type(param.typ, t, inside_typ, arena);
-            t.attach_trailing(param.typ.ptyp_loc, after_typ, arena);
+            // OCaml uses typexpr.ptyp_loc for partitioning, not the combined location!
+            // This means comments between the label and type (like `~a: /* c1 */ typ`)
+            // become "before" comments and get attached as leading to the type.
+            let (before, inside, after) = partition_by_loc(comments, param.typ.ptyp_loc, arena);
+            t.attach_leading(param.typ.ptyp_loc, before, arena);
+            walk_core_type(param.typ, t, inside, arena);
+            t.attach_trailing(param.typ.ptyp_loc, after, arena);
         },
         t,
         comments,

@@ -1,10 +1,22 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 285/506 tests passing (56%)
-**Printer Status:** 161/187 tests passing (86%)
+**Overall Status:** 286/506 tests passing (56%)
+**Printer Status:** 162/187 tests passing (86%)
 
 ### Recent Progress
+- Fixed typexpr.res comment handling (now passes):
+  - Fixed Ptyp_package constraint comments: use `make_combined_pos_range` and `print_comments_by_pos`
+    to wrap each package constraint with comments using a location spanning from name to type end
+  - Fixed Ptyp_poly type variable comments: use `visit_list_but_continue_with_remaining_comments`
+    to walk type variables, attaching leading/trailing comments to each variable's location
+  - Fixed empty record type with comments: handle `fields.is_empty()` case in Ptype_record by
+    printing `{ print_comments_inside(...) }` instead of calling `print_record_declaration`
+  - Fixed labeled arrow type parameter comments: OCaml uses type's location for partitioning but
+    combined location for `get_loc`. Comments between label and type (like `~a: /* c */ typ`)
+    become "before" comments attached as leading to the type
+  - Fixed Ptyp_object field comments: wrap label doc with `print_comments` for `label.loc`,
+    then wrap entire field with `print_comments_by_pos` using combined location (label to type end)
 - Fixed value binding sugar comment handling (valueBindingSugar.res now passes):
   - OCaml's comment_table.ml has special handling for value binding sugar forms where pattern
     and expression have the same location (e.g., `let x: type t. ... = (type t) => ...`)
@@ -240,7 +252,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/comments/case.res` - Match case comments
 - [ ] `printer/comments/array.res` - Array literal comments (needs spread syntax)
 - [x] `printer/comments/docComments.res` - Doc comment handling
-- [ ] `printer/comments/typexpr.res` - Type expression comments
+- [x] `printer/comments/typexpr.res` - Type expression comments
 - [x] `printer/comments/modType.res` - Module type comments
 - [x] `printer/comments/signatureItem.resi` - Signature item comments
 - [x] `printer/comments/valueBindingSugar.res` - Value binding sugar comments
