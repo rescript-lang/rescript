@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 364/506 tests passing (71%)
+**Overall Status:** 365/506 tests passing (72%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,14 @@
 | parsing/grammar | 88 | 47 | 135 | 65% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 12 | 72 | 84 | 14% |
+| parsing/errors | 13 | 71 | 84 | 15% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 142 tests to fix
+**Remaining:** 141 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed empty record printing in ML printer**: When a record type has zero fields, the closing `}` was not
+  being printed because the loop over fields never executed. Added special case for empty records.
 - **Fixed error location spans in expect_with_grammar**: OCaml's `expect` uses `prev_end_pos` for start and
   `end_pos` for end, creating a span from previous token to current. Rust was using `prev_end_pos` for both.
   This fixes error location format like `:1:15-2:3` instead of just `:1:15`.
