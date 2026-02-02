@@ -2616,13 +2616,16 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.close_box();
         }
         ModuleExprDesc::Pmod_functor(name, mtype, body) => {
-            f.string("functor (");
-            f.string(&name.txt);
+            // OCaml: functor () -> ... for unit, functor (Name : Type) -> ... otherwise
             if let Some(mt) = mtype {
+                f.string("functor (");
+                f.string(&name.txt);
                 f.string(" : ");
                 print_module_type(f, arena, mt);
+                f.string(") -> ");
+            } else {
+                f.string("functor () -> ");
             }
-            f.string(") -> ");
             print_module_expr(f, arena, body);
         }
         ModuleExprDesc::Pmod_apply(m1, m2) => {
