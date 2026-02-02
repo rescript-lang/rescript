@@ -74,6 +74,33 @@ pub fn parse_constant(p: &mut Parser<'_>) -> Constant {
 // Placeholder Transformation
 // ============================================================================
 
+/// Check and emit "consecutive expressions" error if expressions on same line without semicolon.
+///
+/// Matches OCaml's `parse_newline_or_semicolon_expr_block`:
+/// - If token is Semicolon, consume it
+/// - If token can start a block expression AND on same line as previous, emit error
+/// - Otherwise, do nothing
+pub fn parse_newline_or_semicolon_expr_block(p: &mut Parser<'_>) {
+    if p.token == Token::Semicolon {
+        p.next();
+        return;
+    }
+
+    if grammar::is_block_expr_start(&p.token) {
+        // Check if we're on the same line as the previous token
+        if p.prev_end_pos.line >= p.start_pos.line {
+            // Same line: emit error (use err_multiple to allow multiple such errors)
+            p.err_multiple(
+                p.prev_end_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::message(
+                    "consecutive expressions on a line must be separated by ';' or a newline",
+                ),
+            );
+        }
+    }
+}
+
 /// Check if an expression is the underscore placeholder `_`
 fn is_underscore_placeholder(expr: &Expression, arena: &ParseArena) -> bool {
     match &expr.pexp_desc {
@@ -2902,8 +2929,82 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
         return parse_braced_arrow_ident(p, start_pos);
     }
 
+    // Special handling for identifier followed by semicolon: {a;} or {a; b()}
+    // OCaml creates the ident expression WITHOUT ~loc when followed by semicolon,
+    // which defaults to Location.none (ghost location).
+    // This matches res_core.ml line 3248-3250.
+    let is_ident_semicolon = p.lookahead(|state| {
+        if let Token::Lident(_) | Token::Uident(_) = &state.token {
+            // Check for simple ident or dotted path (Foo.bar)
+            loop {
+                state.next();
+                if state.token == Token::Dot {
+                    state.next();
+                    if !matches!(state.token, Token::Lident(_) | Token::Uident(_)) {
+                        return false;
+                    }
+                } else {
+                    break;
+                }
+            }
+            matches!(state.token, Token::Semicolon)
+        } else {
+            false
+        }
+    });
+
+    if is_ident_semicolon {
+        return parse_braced_ident_semicolon(p, start_pos);
+    }
+
     // Fall back to block expression
     parse_block_expr(p, start_pos)
+}
+
+/// Parse braced expression starting with identifier followed by semicolon: {a;} or {a; b()}
+/// OCaml creates the ident expression WITHOUT ~loc when followed by semicolon,
+/// which defaults to Location.none (ghost location).
+fn parse_braced_ident_semicolon(p: &mut Parser<'_>, start_pos: Position) -> Expression {
+    // Parse the value/constructor expression
+    let mut ident_expr = parse_value_or_constructor(p);
+
+    // Set the expression location to ghost (matching OCaml's behavior)
+    // OCaml: Ast_helper.Exp.ident path_ident  <- no ~loc, defaults to Location.none
+    ident_expr.pexp_loc = LocIdx::none();
+
+    // Consume the semicolon
+    p.expect(Token::Semicolon);
+
+    // Parse the rest of the block (if any)
+    let rest = parse_block_body(p);
+
+    p.expect(Token::Rbrace);
+    let braces_loc = p.mk_loc_to_prev_end(&start_pos);
+
+    // Build the final expression
+    let mut expr = if let Some(rest_expr) = rest {
+        // Create sequence: a; b()
+        // OCaml: loc = {e1.pexp_loc with loc_end = e2.pexp_loc.loc_end}
+        // Since e1 has ghost loc, the sequence loc is also partially ghost
+        let seq_loc = p.mk_loc_spanning(ident_expr.pexp_loc, rest_expr.pexp_loc);
+        Expression {
+            pexp_desc: ExpressionDesc::Pexp_sequence(
+                Box::new(ident_expr),
+                Box::new(rest_expr),
+            ),
+            pexp_loc: seq_loc,
+            pexp_attributes: vec![],
+        }
+    } else {
+        // Just the identifier with trailing semicolon: {a;}
+        ident_expr
+    };
+
+    // Add res.braces attribute
+    let braces_attr = make_braces_attr(braces_loc);
+    expr.pexp_attributes.insert(0, braces_attr);
+
+    expr
 }
 
 /// Check if a token starts a block expression (vs record).
@@ -2968,7 +3069,7 @@ fn parse_braced_arrow_ident(p: &mut Parser<'_>, start_pos: Position) -> Expressi
     let arrow_expr = parse_ternary_expr(p, arrow_expr);
 
     // Handle semicolon and continuation (block expression semantics)
-    p.optional(&Token::Semicolon);
+    parse_newline_or_semicolon_expr_block(p);
 
     let expr = if p.token != Token::Rbrace && p.token != Token::Eof {
         // There's more content - parse as sequence
@@ -3073,8 +3174,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             };
             let lid = parse_module_longident(p);
 
-            // Consume optional semicolon/newline
-            p.optional(&Token::Semicolon);
+            // Check consecutive expressions
+            parse_newline_or_semicolon_expr_block(p);
 
             // Parse the rest of the block as the body
             let rest = parse_block_body(p);
@@ -3106,8 +3207,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 let pack_expr = parse_first_class_module_expr(p, expr_start);
                 let expr = parse_expr_with_operand(p, pack_expr);
 
-                // Consume optional semicolon
-                p.optional(&Token::Semicolon);
+                // Check consecutive expressions
+                parse_newline_or_semicolon_expr_block(p);
 
                 // Check for continuation
                 if let Some(rest) = parse_block_body(p) {
@@ -3150,8 +3251,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                     };
                 }
 
-                // Consume optional semicolon/newline
-                p.optional(&Token::Semicolon);
+                // Check consecutive expressions
+                parse_newline_or_semicolon_expr_block(p);
 
                 // Parse the rest of the block as the body
                 let rest = parse_block_body(p);
@@ -3181,8 +3282,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
             let ext =
                 super::module::parse_extension_constructor(p, vec![], Some(expr_start.clone()));
 
-            // Consume optional semicolon/newline
-            p.optional(&Token::Semicolon);
+            // Check consecutive expressions
+            parse_newline_or_semicolon_expr_block(p);
 
             // Parse the rest of the block as the body
             let rest = parse_block_body(p);
@@ -3208,8 +3309,8 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 expr.pexp_attributes.extend(attrs.clone());
             }
 
-            // Consume optional semicolon
-            p.optional(&Token::Semicolon);
+            // Check consecutive expressions
+            parse_newline_or_semicolon_expr_block(p);
 
             // Check for continuation
             if let Some(rest) = parse_block_body(p) {
@@ -3424,8 +3525,8 @@ fn parse_let_in_block_with_continuation_and_attrs(
         });
     }
 
-    // Consume optional semicolon/newline
-    p.optional(&Token::Semicolon);
+    // Check consecutive expressions
+    parse_newline_or_semicolon_expr_block(p);
 
     // Parse the rest of the block as the body
     let rest = parse_block_body(p);

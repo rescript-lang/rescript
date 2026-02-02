@@ -14,11 +14,43 @@ use super::ast::Location;
 use super::core::{is_es6_arrow_functor, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::expr;
+use super::grammar;
 use super::longident::Longident;
 use super::pattern;
 use super::state::Parser;
 use super::token::Token;
 use super::typ;
+
+// ============================================================================
+// Consecutive Statement/Expression Checking
+// ============================================================================
+
+/// Check and emit "consecutive statements" error if statements on same line without semicolon.
+///
+/// Matches OCaml's `parse_newline_or_semicolon_structure`:
+/// - If token is Semicolon, consume it
+/// - If token can start a structure item AND on same line as previous, emit error
+/// - Otherwise, do nothing
+fn parse_newline_or_semicolon_structure(p: &mut Parser<'_>) {
+    if p.token == Token::Semicolon {
+        p.next();
+        return;
+    }
+
+    if grammar::is_structure_item_start(&p.token) {
+        // Check if we're on the same line as the previous token
+        if p.prev_end_pos.line >= p.start_pos.line {
+            // Same line: emit error (use err_multiple to allow multiple such errors)
+            p.err_multiple(
+                p.prev_end_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::message(
+                    "consecutive statements on a line must be separated by ';' or a newline",
+                ),
+            );
+        }
+    }
+}
 
 // ============================================================================
 // Inline Record Desugaring Context
@@ -116,6 +148,8 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
 
         if let Some(item) = parse_structure_item(p) {
             items.push(item);
+            // Check for consecutive statements error
+            parse_newline_or_semicolon_structure(p);
         }
     }
 
