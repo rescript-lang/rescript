@@ -88,6 +88,16 @@ pub mod recover {
         }
     }
 
+    /// Create a default signature item for error recovery.
+    /// Used when an attribute is found without an item to attach it to.
+    pub fn default_signature_item() -> SignatureItem {
+        let id = mknoloc("rescript.sigitemhole".to_string());
+        SignatureItem {
+            psig_desc: SignatureItemDesc::Psig_extension((id, Payload::PStr(vec![])), vec![]),
+            psig_loc: LocIdx::none(),
+        }
+    }
+
     /// Recover from missing `=>` by also accepting `->`.
     pub fn recover_equal_greater(p: &mut Parser<'_>) {
         p.expect(Token::EqualGreater);

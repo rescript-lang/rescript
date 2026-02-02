@@ -11,7 +11,7 @@ use crate::parse_arena::{LidentIdx, Located, LocIdx, PosIdx};
 // Import Location as alias to LocIdx from ast
 use super::ast::*;
 use super::ast::Location;
-use super::core::{is_es6_arrow_functor, mknoloc, recover, with_loc};
+use super::core::{error_messages, is_es6_arrow_functor, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
 use super::expr;
 use super::grammar;
@@ -694,11 +694,18 @@ pub fn parse_signature_item(p: &mut Parser<'_>) -> Option<SignatureItem> {
             Some(SignatureItemDesc::Psig_extension(ext, attrs.clone()))
         }
         _ => {
-            if p.token != Token::Eof && p.token != Token::Rbrace {
-                // Use err_unexpected which creates a proper Unexpected diagnostic
-                // with breadcrumbs, matching OCaml's behavior
-                p.err_unexpected();
-                p.next();
+            // OCaml: when attrs are present but no valid item follows, report the error
+            // and return a sigitemhole placeholder
+            if let Some(attr) = attrs.first() {
+                let attr_name = &attr.0.txt;
+                let attr_loc = p.to_location(attr.0.loc);
+                p.err_at(
+                    attr_loc.loc_start.clone(),
+                    attr_loc.loc_end.clone(),
+                    DiagnosticCategory::message(&error_messages::attribute_without_node(attr_name)),
+                );
+                // Return sigitemhole as recovery
+                return Some(super::core::recover::default_signature_item());
             }
             None
         }
@@ -1968,7 +1975,10 @@ fn parse_let_bindings(
             ));
         }
 
+        // OCaml sets Pattern breadcrumb before parsing the pattern
+        p.leave_breadcrumb(Grammar::Pattern);
         let pat = pattern::parse_pattern(p);
+        p.eat_breadcrumb();
 
         // Handle optional type annotation: let x: int = ...
         // Also track locally abstract types for Pexp_newtype wrapping
