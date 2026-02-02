@@ -2973,11 +2973,7 @@ fn print_value_bindings_with_rec(
 
 /// Check if an expression is an array of tuples (for dict detection)
 fn is_tuple_array(expr: &Expression) -> bool {
-    if let ExpressionDesc::Pexp_array(items) = &expr.pexp_desc {
-        items.iter().all(|e| matches!(&e.pexp_desc, ExpressionDesc::Pexp_tuple(_)))
-    } else {
-        false
-    }
+    parsetree_viewer::is_tuple_array(expr)
 }
 
 /// Try to print dict{} syntax for Primitive_dict.make([("key", value), ...])
@@ -3013,6 +3009,7 @@ fn try_print_dict_expr(
 }
 
 /// Print dict{key: value, ...} syntax
+/// Matches OCaml's print_literal_dict_expr and print_bs_object_row
 fn print_dict_expr(
     state: &PrinterState,
     expr: &Expression,
@@ -3020,15 +3017,15 @@ fn print_dict_expr(
     cmt_tbl: &mut CommentTable,
     arena: &ParseArena,
 ) -> Doc {
-    let start = arena.loc_start(expr.pexp_loc);
-    let end = arena.loc_end(expr.pexp_loc);
+    let start = arena.loc_start(key_values.pexp_loc);
+    let end = arena.loc_end(key_values.pexp_loc);
     let force_break = start.line < end.line;
 
-    let rows = if let ExpressionDesc::Pexp_array(items) = &key_values.pexp_desc {
+    let rows: Vec<Doc> = if let ExpressionDesc::Pexp_array(items) = &key_values.pexp_desc {
         items
             .iter()
-            .filter_map(|e| {
-                if let ExpressionDesc::Pexp_tuple(tuple_items) = &e.pexp_desc {
+            .filter_map(|tuple_expr| {
+                if let ExpressionDesc::Pexp_tuple(tuple_items) = &tuple_expr.pexp_desc {
                     if tuple_items.len() == 2 {
                         let key_expr = &tuple_items[0];
                         let value_expr = &tuple_items[1];
@@ -3036,36 +3033,53 @@ fn print_dict_expr(
                         if let ExpressionDesc::Pexp_constant(Constant::String(txt, _)) =
                             &key_expr.pexp_desc
                         {
+                            // Create combined location from key to value (for row comments)
+                            let (cmt_pos_range, cmt_full_loc) = make_combined_pos_range(
+                                key_expr.pexp_loc,
+                                value_expr.pexp_loc,
+                                arena,
+                            );
+
+                            // Print key with its comments
                             let key_doc = Doc::concat(vec![
                                 Doc::text("\""),
                                 Doc::text(txt.clone()),
                                 Doc::text("\""),
                             ]);
-                            let value_doc =
-                                print_expression_with_comments(state, value_expr, cmt_tbl, arena);
-                            return Some(Doc::concat(vec![key_doc, Doc::text(": "), value_doc]));
+                            let key_doc = print_comments(key_doc, cmt_tbl, key_expr.pexp_loc, arena);
+
+                            // Print value with its comments
+                            let value_doc = print_expression_with_comments(state, value_expr, cmt_tbl, arena);
+
+                            // Combine key: value
+                            let row_doc = Doc::concat(vec![key_doc, Doc::text(": "), value_doc]);
+
+                            // Wrap with comments for the combined location (key to value)
+                            let row_doc = print_comments_by_pos(row_doc, cmt_tbl, cmt_pos_range, &cmt_full_loc);
+
+                            // Then wrap with comments for the tuple's location (entire entry)
+                            let row_doc = print_comments(row_doc, cmt_tbl, tuple_expr.pexp_loc, arena);
+
+                            return Some(row_doc);
                         }
                     }
                 }
                 None
             })
-            .collect::<Vec<_>>()
+            .collect()
     } else {
         vec![]
     };
 
-    let inner = if rows.is_empty() {
-        print_comments_inside(cmt_tbl, expr.pexp_loc, arena)
-    } else {
-        Doc::concat(vec![
-            Doc::indent(Doc::concat(vec![
-                Doc::soft_line(),
-                Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), rows),
-            ])),
-            Doc::trailing_comma(),
-            Doc::soft_line(),
-        ])
-    };
+    let rows_empty = rows.is_empty();
+    let inner = Doc::concat(vec![
+        print_comments_inside(cmt_tbl, expr.pexp_loc, arena),
+        Doc::indent(Doc::concat(vec![
+            if rows_empty { Doc::nil() } else { Doc::soft_line() },
+            Doc::join(Doc::concat(vec![Doc::text(","), Doc::line()]), rows),
+        ])),
+        if rows_empty { Doc::nil() } else { Doc::concat(vec![Doc::trailing_comma(), Doc::soft_line()]) },
+    ]);
 
     Doc::breakable_group(
         Doc::concat(vec![Doc::text("dict{"), inner, Doc::rbrace()]),

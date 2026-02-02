@@ -1706,6 +1706,28 @@ fn walk_expression(expr: &Expression, t: &mut CommentTable, comments: Vec<Commen
                 }
             }
 
+            // Special case for Primitive_dict.make (dict{} syntax)
+            // Match OCaml: just walk the key_values array expression
+            if args.len() == 1 {
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if let Longident::Ldot(parent, method_idx) = arena.get_longident(ident.txt) {
+                        if arena.get_string(*method_idx) == "make" {
+                            if let Longident::Lident(module_idx) = parent.as_ref() {
+                                if arena.get_string(*module_idx) == "Primitive_dict" {
+                                    let (_, key_values) = &args[0];
+                                    // Check if key_values is a tuple array (matching OCaml's is_tuple_array)
+                                    if parsetree_viewer::is_tuple_array(key_values) {
+                                        // Walk the key_values expression directly
+                                        walk_list(&[Node::Expression(key_values)], t, comments, arena);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Special case for Belt.Array.concatMany (spread array syntax)
             // Match OCaml: flatten all sub-array expressions and walk them together
             if args.len() == 1 {

@@ -524,8 +524,18 @@ pub fn should_inline_rhs_binary_expr(expr: &Expression) -> bool {
 }
 
 // ============================================================================
-// List Collection
+// Dict and List Utilities
 // ============================================================================
+
+/// Check if an expression is an array of tuples (for dict detection).
+/// Used to detect dict{} syntax which desugars to Primitive_dict.make([("key", value), ...])
+pub fn is_tuple_array(expr: &Expression) -> bool {
+    if let ExpressionDesc::Pexp_array(items) = &expr.pexp_desc {
+        items.iter().all(|e| matches!(&e.pexp_desc, ExpressionDesc::Pexp_tuple(_)))
+    } else {
+        false
+    }
+}
 
 /// Collect expressions from a list constructor (::).
 /// Returns (list of expressions, optional spread expression).
