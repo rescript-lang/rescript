@@ -1,10 +1,12 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 263/506 tests passing (51%)
-**Printer Status:** 143/187 tests passing (76%)
+**Overall Status:** 265/506 tests passing (52%)
+**Printer Status:** 145/187 tests passing (77%)
 
 ### Recent Progress
+- Fixed recursive module constraint printing (recModules.res passes): Handle Pmod_constraint
+  in print_rec_module_bindings to print constraint before equals sign.
 - Fixed try expression body parenthesization (try.res now passes): Match OCaml's printer which
   uses parens::expr to check if the try body needs braces.
 - Fixed Array.get/Array.set formatting for complex index expressions (arrayGet.res, arraySet.res now pass):
