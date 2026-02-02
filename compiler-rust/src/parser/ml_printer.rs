@@ -2298,13 +2298,25 @@ fn print_payload<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, payload: &P
 fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, decl: &TypeDeclaration) {
     if !decl.ptype_params.is_empty() {
         if decl.ptype_params.len() == 1 {
+            // Print variance prefix
+            match decl.ptype_params[0].1 {
+                Variance::Covariant => f.string("+"),
+                Variance::Contravariant => f.string("-"),
+                Variance::Invariant => {}
+            }
             print_core_type(f, arena, &decl.ptype_params[0].0);
             f.string(" ");
         } else {
             f.string("(");
-            for (i, (t, _)) in decl.ptype_params.iter().enumerate() {
+            for (i, (t, variance)) in decl.ptype_params.iter().enumerate() {
                 if i > 0 {
                     f.string(", ");
+                }
+                // Print variance prefix
+                match variance {
+                    Variance::Covariant => f.string("+"),
+                    Variance::Contravariant => f.string("-"),
+                    Variance::Invariant => {}
                 }
                 print_core_type(f, arena, t);
             }
