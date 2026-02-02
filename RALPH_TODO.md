@@ -562,29 +562,32 @@ Printer parity is complete (187/187). Now fix the remaining 191 failing tests.
 ./_build/install/default/bin/res_parser -recover -print ml tests/syntax_tests/data/parsing/errors/FILE.res
 ```
 
-### parsing/errors - 78 failing (error recovery mode)
+### parsing/errors - ~76 failing (error recovery mode)
 
 These tests run with `-recover -print ml` and test error recovery behavior.
 
 **Key issues to fix:**
-- [ ] Error message locations (line:col format must match OCaml exactly)
-- [ ] Recovered AST output (must match OCaml's ML printer byte-for-byte)
-- [ ] Error hole placement (`[%rescript.exprhole]` for missing expressions)
-- [ ] Array access syntax (OCaml uses `arr.(i)`, Rust uses `Array.get arr i`)
+- [x] Array access syntax (OCaml uses `arr.(i)`, fixed in ML printer)
+- [ ] Error message locations - different line:col positions due to different error recovery
+- [ ] Recovered AST output - ML printer line breaking differs from OCaml
+- [ ] Error hole placement - `[%rescript.exprhole]` vs `()` in recovered AST
+- [ ] Error message wording - differs from OCaml's res_diagnostics.ml
+- [ ] Path prefix in error locations - `syntax_tests/data/` vs `tests/syntax_tests/data/`
 
 **OCaml reference files:**
 - `compiler/syntax/src/res_diagnostics.ml` - Error messages
 - `compiler/syntax/src/res_core.ml` - Parser with recovery logic
 - `compiler/syntax/src/res_outcome_printer.ml` - ML AST printer
 
-### parsing/grammar - 73 failing
+### parsing/grammar - 77 failing
 
 Grammar parsing tests without error recovery.
 
 **Key issues to fix:**
-- [ ] ML AST printer output format
-- [ ] Location information in error messages
-- [ ] Specific grammar constructs
+- [ ] ML AST printer line breaking - outputs on single line vs multi-line
+- [ ] Record field punning - `{ a; b }` vs `{ a = a; b = b }`
+- [ ] Optional field syntax - `x?` and `name?` printed differently
+- [ ] Arrow type attributes - `[@attr]` position differs
 
 ### parsing/recovery - 16 failing
 
@@ -598,17 +601,22 @@ Tests that previously caused infinite loops. May involve parser crashes.
 
 Miscellaneous parsing tests.
 
-### ppx/react - 10 failing
+### ppx/react - 3 failing (was 10, fixed 7)
 
 JSX transformation tests using `-jsx-version 4`.
 
+**Fixed:**
+- [x] `@directive` attribute line breaking - wrapped arrow expression in Doc::group
+- [x] has_component tracking - reset per module scope
+
 **Key issues to fix:**
-- [ ] JSX transformation output must match OCaml's PPX
-- [ ] React component transformations
-- [ ] Fragment handling
+- [ ] Recursive component wrapper structure - OCaml creates `make$Internal` + wrapper,
+      Rust creates separate bindings
+- [ ] v4.res, interfaceWithRef.res, mangleKeyword.res still failing
 
 **OCaml reference files:**
-- `compiler/syntax/src/res_jsx_ppx.ml` - JSX PPX transformation
+- `compiler/syntax/src/jsx_v4.ml` - JSX V4 transformation
+- `compiler/syntax/src/jsx_ppx.ml` - PPX entry point
 
 ### conversion - 1 failing
 
