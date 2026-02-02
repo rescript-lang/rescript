@@ -2702,8 +2702,19 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.close_box();
         }
         SignatureItemDesc::Psig_module(md) => {
+            // OCaml has special case: if pmd_type is Pmty_alias with no attrs, use = syntax
             f.string("module ");
             f.string(&md.pmd_name.txt);
+            if let ModuleTypeDesc::Pmty_alias(lid) = &md.pmd_type.pmty_desc {
+                if md.pmd_type.pmty_attributes.is_empty() {
+                    // module Name = Alias
+                    f.string(" = ");
+                    print_longident_idx(f, arena, lid.txt);
+                    print_item_attributes(f, arena, &md.pmd_attributes);
+                    return;
+                }
+            }
+            // module Name : ModuleType
             f.string(" : ");
             print_module_type(f, arena, &md.pmd_type);
             print_item_attributes(f, arena, &md.pmd_attributes);
