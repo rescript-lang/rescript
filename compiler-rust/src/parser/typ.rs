@@ -787,15 +787,58 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         // but only for UNLABELED simple Ptyp_constr types (Lident), not for labeled arguments
         // or qualified types (Ldot) or other types like Ptyp_var.
         // Also, don't modify ghost locations (synthesized unit types from empty parens)
+        // Don't modify parenthesized types with inner attributes - if param_attrs is empty
+        // but typ already has attributes, the attrs came from inside parens like (@attr float)
         if has_dot && matches!(label, ArgLabel::Nolabel) && !typ.ptyp_loc.is_none() {
             let is_simple_constr = matches!(
                 &typ.ptyp_desc,
                 CoreTypeDesc::Ptyp_constr(lid, _) if p.arena().is_simple_lident(lid.txt)
             );
-            if is_simple_constr {
+            // If param_attrs is empty but the type already has attributes, it was parsed as
+            // a parenthesized expression with inner attributes like `(@attr float)`.
+            // In that case, OCaml doesn't extend the type location to include the `.`
+            let was_not_parenthesized_with_inner_attrs =
+                !param_attrs.is_empty() || typ.ptyp_attributes.is_empty();
+            if is_simple_constr && was_not_parenthesized_with_inner_attrs {
                 let end_pos = p.loc_end(typ.ptyp_loc).clone();
                 typ = CoreType {
                     ptyp_loc: p.mk_loc_from_positions(&uncurried_start, &end_pos),
+                    ..typ
+                };
+            }
+
+            // For arrow types like `. unit => unit`, OCaml includes the `.` in both
+            // the arrow's location AND the first argument's location
+            if let CoreTypeDesc::Ptyp_arrow { arg, ret, arity } = typ.ptyp_desc {
+                // Extend arrow location to include `.`
+                let end_pos = p.loc_end(typ.ptyp_loc).clone();
+                let new_arrow_loc = p.mk_loc_from_positions(&uncurried_start, &end_pos);
+
+                // Also extend first argument's location if it's a simple Lident
+                let new_arg = if matches!(
+                    &arg.typ.ptyp_desc,
+                    CoreTypeDesc::Ptyp_constr(lid, _) if p.arena().is_simple_lident(lid.txt)
+                ) && !arg.typ.ptyp_loc.is_none() {
+                    let arg_end = p.loc_end(arg.typ.ptyp_loc).clone();
+                    let new_arg_loc = p.mk_loc_from_positions(&uncurried_start, &arg_end);
+                    TypeArg {
+                        typ: CoreType {
+                            ptyp_loc: new_arg_loc,
+                            ..arg.typ
+                        },
+                        ..(*arg)
+                    }
+                } else {
+                    *arg
+                };
+
+                typ = CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_arrow {
+                        arg: Box::new(new_arg),
+                        ret,
+                        arity,
+                    },
+                    ptyp_loc: new_arrow_loc,
                     ..typ
                 };
             }

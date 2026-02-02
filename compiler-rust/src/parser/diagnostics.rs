@@ -92,19 +92,8 @@ impl ParserDiagnostic {
     /// Explain the diagnostic as a human-readable message.
     pub fn explain(&self) -> String {
         match &self.category {
-            DiagnosticCategory::Unexpected { token, context: _ } => {
-                if token.is_keyword() {
-                    let name = format!("{}", token);
-                    format!(
-                        "`{}` is a reserved keyword. Keywords need to be escaped: \\\"{}\"",
-                        name, name
-                    )
-                } else {
-                    format!(
-                        "I'm not sure what to parse here when looking at \"{}\".",
-                        token
-                    )
-                }
+            DiagnosticCategory::Unexpected { token, context } => {
+                explain_unexpected(token, context)
             }
             DiagnosticCategory::Expected { token, context, .. } => {
                 let hint = match context {
@@ -171,6 +160,149 @@ fn uncapitalize_first(s: &str) -> String {
     match chars.next() {
         None => String::new(),
         Some(c) => c.to_lowercase().collect::<String>() + chars.as_str(),
+    }
+}
+
+/// Default message for unexpected tokens.
+fn default_unexpected(token: &Token) -> String {
+    format!(
+        "I'm not sure what to parse here when looking at \"{}\".",
+        token
+    )
+}
+
+/// Explain an unexpected token based on parsing context (breadcrumbs).
+/// This matches OCaml's explain function in res_diagnostics.ml.
+///
+/// Note: In OCaml, breadcrumbs are stored with the most recent at the head (prepended).
+/// In Rust, we append to Vec, so the most recent breadcrumb is at the END.
+/// We need to iterate from the end to match OCaml's pattern matching behavior.
+fn explain_unexpected(token: &Token, context: &[(Grammar, Position)]) -> String {
+    use super::grammar;
+
+    // Check if token is a reserved keyword first (OCaml does this at the end, but it's the same)
+    let reserved_keyword = |t: &Token| {
+        let name = format!("{}", t);
+        format!(
+            "`{}` is a reserved keyword. Keywords need to be escaped: \\\"{}\"",
+            name, name
+        )
+    };
+
+    if context.is_empty() {
+        if token.is_keyword() {
+            return reserved_keyword(token);
+        }
+        return default_unexpected(token);
+    }
+
+    // OCaml uses (head :: rest) pattern, where head is most recent.
+    // In Rust Vec, most recent is at the end, so we use last() and slice before it.
+    let (most_recent, _) = context.last().unwrap();
+    let rest = &context[..context.len() - 1];
+
+    // Helper to get the "next" breadcrumb (second most recent)
+    let next_grammar = rest.last().map(|(g, _)| g);
+
+    match most_recent {
+        // AtomicTypExpr context
+        Grammar::AtomicTypExpr => {
+            // Check next grammar context
+            if let Some(next) = next_grammar {
+                match (next, token) {
+                    // In record field declarations
+                    (Grammar::StringFieldDeclarations | Grammar::FieldDeclarations,
+                     Token::String(_) | Token::At | Token::Rbrace | Token::Comma | Token::Eof) => {
+                        return "I'm missing a type here".to_string();
+                    }
+                    _ => {}
+                }
+            }
+            // Check if token is a structure item start or EOF
+            if grammar::is_structure_item_start(token) || *token == Token::Eof {
+                return "Missing a type here".to_string();
+            }
+            default_unexpected(token)
+        }
+
+        // ExprOperand context
+        Grammar::ExprOperand => {
+            if let Some(next) = next_grammar {
+                match (next, token) {
+                    // Empty expression block
+                    (Grammar::ExprBlock, Token::Rbrace) => {
+                        return "It seems that this expression block is empty".to_string();
+                    }
+                    // Pattern matching
+                    (Grammar::ExprBlock, Token::Bar) => {
+                        return "Looks like there might be an expression missing here".to_string();
+                    }
+                    // Record field mutation
+                    (Grammar::ExprSetField, _) => {
+                        return "It seems that this record field mutation misses an expression".to_string();
+                    }
+                    // Array mutation
+                    (Grammar::ExprArrayMutation, _) => {
+                        return "Seems that an expression is missing, with what do I mutate the array?".to_string();
+                    }
+                    // After binary operator or unary
+                    (Grammar::ExprBinaryAfterOp(_) | Grammar::ExprUnary, _) => {
+                        return "Did you forget to write an expression here?".to_string();
+                    }
+                    // Let binding
+                    (Grammar::LetBinding, _) => {
+                        return "This let-binding misses an expression".to_string();
+                    }
+                    _ => {}
+                }
+            }
+            // Check rest of the context (has remaining breadcrumbs)
+            if !rest.is_empty() && matches!(token, Token::Rbracket | Token::Rbrace | Token::Eof) {
+                return "Missing expression".to_string();
+            }
+            default_unexpected(token)
+        }
+
+        // TypeParam context
+        Grammar::TypeParam => {
+            if let Token::Lident(ident) = token {
+                return format!("Did you mean '{}? A Type parameter starts with a quote.", ident);
+            }
+            default_unexpected(token)
+        }
+
+        // Pattern context
+        Grammar::Pattern => {
+            if let Some(next) = next_grammar {
+                match (token, next) {
+                    // Missing name in let binding
+                    (Token::Equal, Grammar::LetBinding) => {
+                        return "I was expecting a name for this let-binding. Example: `let message = \"hello\"`".to_string();
+                    }
+                    // For loop
+                    (Token::In, Grammar::ExprFor) => {
+                        return "A for-loop has the following form: `for i in 0 to 10`. Did you forget to supply a name before `in`?".to_string();
+                    }
+                    // Pattern match case
+                    (Token::EqualGreater, Grammar::PatternMatchCase) => {
+                        return "I was expecting a pattern to match on before the `=>`".to_string();
+                    }
+                    _ => {}
+                }
+            }
+            if token.is_keyword() {
+                return reserved_keyword(token);
+            }
+            default_unexpected(token)
+        }
+
+        // Default case
+        _ => {
+            if token.is_keyword() {
+                return reserved_keyword(token);
+            }
+            default_unexpected(token)
+        }
     }
 }
 

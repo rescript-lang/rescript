@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 362/506 tests passing (71%)
+**Overall Status:** 363/506 tests passing (71%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,16 @@
 | parsing/grammar | 88 | 47 | 135 | 65% |
 | parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 10 | 74 | 84 | 11% |
+| parsing/errors | 11 | 73 | 84 | 13% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 144 tests to fix
+**Remaining:** 143 tests to fix
 
 **Recent Fixes (this session):**
+- **Implemented context-aware error messages in explain_unexpected**: The `explain_unexpected` function now properly
+  uses the breadcrumbs (parsing context) to generate context-specific error messages matching OCaml's behavior.
+  Fixed breadcrumb order issue - OCaml prepends to list (most recent at head), Rust appends (most recent at end).
+  Now "I'm missing a type here" shows correctly for missing types in record field declarations.
 - **DiagnosticCategory now uses Grammar enum** instead of strings for context (matching OCaml's res_diagnostics.ml):
   - `DiagnosticCategory::Unexpected.context` changed from `Vec<(String, Position)>` to `Vec<(Grammar, Position)>`
   - `DiagnosticCategory::Expected.context` changed from `Option<String>` to `Option<Grammar>`
