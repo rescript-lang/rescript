@@ -1247,9 +1247,15 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
 
                 if is_punned {
                     print_longident_idx(f, arena, field.lid.txt);
+                    if field.opt {
+                        f.string("?");  // Optional punned field: name?
+                    }
                 } else {
                     print_longident_idx(f, arena, field.lid.txt);
                     f.string(" = ");
+                    if field.opt {
+                        f.string("?");  // Optional field: name = ?value
+                    }
                     print_expression(f, arena, &field.expr);
                 }
             }
@@ -1664,8 +1670,14 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
 
                 if is_punned {
                     print_longident_idx(f, arena, field.lid.txt);
+                    if field.opt {
+                        f.string("?");  // Optional punned field: name?
+                    }
                 } else {
                     print_longident_idx(f, arena, field.lid.txt);
+                    if field.opt {
+                        f.string("?");  // Optional field: name? = pattern
+                    }
                     f.string(" = ");
                     print_pattern(f, arena, &field.pat);
                 }
@@ -2272,6 +2284,7 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                     }
                     ConstructorArguments::Pcstr_record(fields) => {
                         f.string(" of {\n  ");
+                        let mut last_field_has_attrs = false;
                         for (j, field) in fields.iter().enumerate() {
                             if j > 0 {
                                 f.string(";\n  ");
@@ -2280,10 +2293,23 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                                 f.string("mutable ");
                             }
                             f.string(&field.pld_name.txt);
+                            if field.pld_optional {
+                                f.string("?");
+                            }
                             f.string(": ");
                             print_core_type(f, arena, &field.pld_type);
+                            last_field_has_attrs = !field.pld_attributes.is_empty();
+                            if last_field_has_attrs {
+                                f.string(" ");
+                                print_attributes(f, arena, &field.pld_attributes);
+                            }
                         }
-                        f.string(" }");  // space before }
+                        // If last field has attributes, no space before }
+                        if last_field_has_attrs {
+                            f.string("}");
+                        } else {
+                            f.string(" }");
+                        }
                     }
                     _ => {}
                 }
@@ -2311,12 +2337,26 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                     f.string("mutable ");
                 }
                 f.string(&field.pld_name.txt);
+                if field.pld_optional {
+                    f.string("?");
+                }
                 f.string(": ");
                 print_core_type(f, arena, &field.pld_type);
+                let has_attrs = !field.pld_attributes.is_empty();
+                if has_attrs {
+                    f.string(" ");
+                    print_attributes(f, arena, &field.pld_attributes);
+                }
                 if i < fields.len() - 1 {
                     f.string(" ;\n");
                 } else {
-                    f.string(" }");
+                    // If last field has attributes, no space before }
+                    // Otherwise, space before }
+                    if has_attrs {
+                        f.string("}");
+                    } else {
+                        f.string(" }");
+                    }
                 }
             }
         }
@@ -2350,18 +2390,32 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
                     // Fields print at current indentation level (not extra indented)
                     f.string(" of {");
                     f.newline();
+                    let mut last_field_has_attrs = false;
                     for (i, field) in fields.iter().enumerate() {
                         if matches!(field.pld_mutable, MutableFlag::Mutable) {
                             f.string("mutable ");
                         }
                         f.string(&field.pld_name.txt);
+                        if field.pld_optional {
+                            f.string("?");
+                        }
                         f.string(": ");
                         print_core_type(f, arena, &field.pld_type);
+                        last_field_has_attrs = !field.pld_attributes.is_empty();
+                        if last_field_has_attrs {
+                            f.string(" ");
+                            print_attributes(f, arena, &field.pld_attributes);
+                        }
                         if i < fields.len() - 1 {
                             f.string(" ;");
                             f.newline();
                         } else {
-                            f.string(" } ");
+                            // If last field has attributes, no space before }
+                            if last_field_has_attrs {
+                                f.string("} ");
+                            } else {
+                                f.string(" } ");
+                            }
                         }
                     }
                 }
