@@ -1654,8 +1654,122 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string(")");
             }
         }
-        ExpressionDesc::Pexp_jsx_element(_jsx) => {
-            f.string("<jsx>");
+        ExpressionDesc::Pexp_jsx_element(jsx) => {
+            print_jsx_element(f, arena, jsx);
+        }
+    }
+}
+
+// ============================================================================
+// JSX Printing
+// ============================================================================
+
+fn jsx_tag_name_to_string(tag_name: &JsxTagName, arena: &ParseArena) -> String {
+    match tag_name {
+        JsxTagName::Lower(name) => name.clone(),
+        JsxTagName::QualifiedLower { path, name } => {
+            let path_str = print_longident_to_string(arena.get_longident(*path), arena);
+            format!("{}.{}", path_str, name)
+        }
+        JsxTagName::Upper(lident) => {
+            print_longident_to_string(arena.get_longident(*lident), arena)
+        }
+        JsxTagName::Invalid(name) => name.clone(),
+    }
+}
+
+fn print_longident_to_string(lid: &Longident, arena: &ParseArena) -> String {
+    match lid {
+        Longident::Lident(name_idx) => arena.get_string(*name_idx).to_string(),
+        Longident::Ldot(prefix, name_idx) => {
+            let prefix_str = print_longident_to_string(prefix.as_ref(), arena);
+            let name = arena.get_string(*name_idx);
+            format!("{}.{}", prefix_str, name)
+        }
+        Longident::Lapply(left, right) => {
+            let left_str = print_longident_to_string(left.as_ref(), arena);
+            let right_str = print_longident_to_string(right.as_ref(), arena);
+            format!("{}({})", left_str, right_str)
+        }
+    }
+}
+
+fn print_jsx_element<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, jsx: &JsxElement) {
+    match jsx {
+        JsxElement::Fragment(frag) => {
+            f.string("<>");
+            for child in &frag.children {
+                print_expression_simple(f, arena, child);
+            }
+            f.string("</>");
+        }
+        JsxElement::Unary(elem) => {
+            let name = jsx_tag_name_to_string(&elem.tag_name.txt, arena);
+            if elem.props.is_empty() {
+                f.string(&format!("<{} />", name));
+            } else {
+                f.string(&format!("<{} ", name));
+                print_jsx_props(f, arena, &elem.props);
+                f.string(" />");
+            }
+        }
+        JsxElement::Container(elem) => {
+            let name = jsx_tag_name_to_string(&elem.tag_name_start.txt, arena);
+            let closing_name = match &elem.closing_tag {
+                None => String::new(),
+                Some(closing) => {
+                    let close_name = jsx_tag_name_to_string(&closing.name.txt, arena);
+                    format!("</{}>", close_name)
+                }
+            };
+            if elem.props.is_empty() {
+                f.string(&format!("<{}>", name));
+                for child in &elem.children {
+                    print_expression_simple(f, arena, child);
+                }
+                f.string(&closing_name);
+            } else {
+                f.string(&format!("<{} ", name));
+                print_jsx_props(f, arena, &elem.props);
+                f.string(">");
+                for child in &elem.children {
+                    print_expression_simple(f, arena, child);
+                }
+                f.string(&closing_name);
+            }
+        }
+    }
+}
+
+fn print_jsx_props<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, props: &[JsxProp]) {
+    for (i, prop) in props.iter().enumerate() {
+        if i > 0 {
+            f.string(" ");
+        }
+        print_jsx_prop(f, arena, prop);
+    }
+}
+
+fn print_jsx_prop<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, prop: &JsxProp) {
+    match prop {
+        JsxProp::Punning { optional, name } => {
+            if *optional {
+                f.string("?");
+            }
+            f.string(&name.txt);
+        }
+        JsxProp::Value { name, optional, value } => {
+            f.string(&name.txt);
+            f.string("=");
+            if *optional {
+                f.string("?");
+            }
+            print_expression_simple(f, arena, value);
+        }
+        JsxProp::Spreading { expr, .. } => {
+            f.string("{...");
+            print_expression_simple(f, arena, expr);
+            f.string("}");
         }
     }
 }
