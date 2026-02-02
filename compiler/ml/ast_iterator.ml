@@ -377,6 +377,7 @@ module E = struct
       iter_loc sub name;
       iter_jsx_props sub props;
       iter_jsx_children sub children
+    | Pexp_jsx_text _ -> ()
 end
 
 module P = struct

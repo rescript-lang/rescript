@@ -45,7 +45,7 @@ getDirector(a, b, _).name
 f(a, b, _) ? g(x, y, _) : h(alpha, beta, _)
 
 <div onClick={f(a, b, _)} />
-<div> {f(a, b, _)} </div>
+<div>{f(a, b, _)}</div>
 
 f(a, b, _)[ix]
 f(a, b, _)[ix] = 2

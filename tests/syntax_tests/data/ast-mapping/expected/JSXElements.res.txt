@@ -10,8 +10,8 @@ let elementWithChildren = ReactDOM.jsxs(
   "div",
   {
     children: React.array([
-      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})}),
-      ReactDOM.jsx("p", {children: ?ReactDOM.someElement({React.string("Hello")})}),
+      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement(React.string("Hi"))}),
+      ReactDOM.jsx("p", {children: ?ReactDOM.someElement(React.string("Hello"))}),
     ]),
   },
 )
@@ -21,8 +21,8 @@ let elementWithChildrenAndAttributes = ReactDOM.jsxs(
   {
     className: "container",
     children: React.array([
-      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})}),
-      ReactDOM.jsx("p", {children: ?ReactDOM.someElement({React.string("Hello")})}),
+      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement(React.string("Hi"))}),
+      ReactDOM.jsx("p", {children: ?ReactDOM.someElement(React.string("Hello"))}),
     ]),
   },
 )
@@ -32,7 +32,7 @@ let elementWithConditionalChildren = ReactDOM.jsx(
   {
     children: ?ReactDOM.someElement({
       if true {
-        ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})})
+        ReactDOM.jsx("h1", {children: ?ReactDOM.someElement(React.string("Hi"))})
       } else {
         React.null
       }

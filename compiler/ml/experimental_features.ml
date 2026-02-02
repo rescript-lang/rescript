@@ -1,12 +1,14 @@
-type feature = LetUnwrap
+type feature = LetUnwrap | JsxText
 
 let to_string (f : feature) : string =
   match f with
   | LetUnwrap -> "LetUnwrap"
+  | JsxText -> "JsxText"
 
 let from_string (s : string) : feature option =
   match s with
   | "LetUnwrap" -> Some LetUnwrap
+  | "JsxText" -> Some JsxText
   | _ -> None
 
 module FeatureSet = Set.Make (struct
