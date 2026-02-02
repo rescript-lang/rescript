@@ -157,8 +157,6 @@ pub fn parse_structure(p: &mut Parser<'_>) -> Structure {
 
         if let Some(item) = parse_structure_item(p) {
             items.push(item);
-            // Check for consecutive statements error
-            parse_newline_or_semicolon_structure(p);
         }
     }
 
@@ -194,6 +192,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 OverrideFlag::Fresh
             };
             let lid = parse_module_long_ident(p);
+            parse_newline_or_semicolon_structure(p);
             let loc = p.mk_loc_to_prev_end(&open_start);
             Some(StructureItemDesc::Pstr_open(OpenDescription {
                 popen_lid: lid,
@@ -216,6 +215,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             };
             // Pass start_pos_idx to enable position sharing with structure_item
             let (bindings, _binding_loc_idx) = parse_let_bindings(p, start_pos_idx, let_end_pos, rec_flag, attrs.clone(), unwrap);
+            parse_newline_or_semicolon_structure(p);
             // Don't share LocIdx - OCaml creates separate Location objects for pstr_loc and pvb_loc.
             // The internal positions (PosIdx) are shared, but the Location records themselves are separate.
             Some(StructureItemDesc::Pstr_value(rec_flag, bindings))
@@ -265,6 +265,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
 
             let result = if is_type_extension {
                 let ext = parse_type_extension(p, attrs.clone());
+                parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_typext(ext))
             } else {
                 let mut rec_flag = if p.token == Token::Rec {
@@ -282,6 +283,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                 if has_inline_types {
                     rec_flag = RecFlag::Recursive;
                 }
+                parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_type(rec_flag, decls))
             };
 
@@ -291,6 +293,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
         Token::External => {
             p.next();
             let vd = parse_value_description(p, attrs.clone(), start_pos.clone());
+            parse_newline_or_semicolon_structure(p);
             Some(StructureItemDesc::Pstr_primitive(vd))
         }
         Token::Exception => {
@@ -298,6 +301,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             let exception_start = p.start_pos.clone();
             p.next();
             let ext = parse_extension_constructor(p, attrs.clone(), Some(exception_start));
+            parse_newline_or_semicolon_structure(p);
             Some(StructureItemDesc::Pstr_exception(ext))
         }
         Token::Module => {
@@ -314,9 +318,12 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
                     super::expr::parse_first_class_module_expr_from_paren(p, start_pos.clone());
                 // Continue parsing the expression (handles ->, [], etc.)
                 let expr = super::expr::parse_expr_with_operand(p, pack_expr);
+                parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else {
-                parse_module_definition(p, module_start, attrs.clone())
+                let def = parse_module_definition(p, module_start, attrs.clone());
+                parse_newline_or_semicolon_structure(p);
+                def
             };
 
             p.end_region();
@@ -327,6 +334,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             let include_start = p.start_pos.clone();
             p.next();
             let mod_expr = parse_module_expr(p);
+            parse_newline_or_semicolon_structure(p);
             Some(StructureItemDesc::Pstr_include(IncludeDeclaration {
                 pincl_mod: mod_expr,
                 pincl_loc: p.mk_loc_to_prev_end(&include_start),
@@ -340,11 +348,13 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             if p.token == Token::AtAt {
                 p.next();
                 let attr = parse_attribute_body(p, attr_start);
+                parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_attribute(attr))
             } else {
                 // @ might be a doc comment or similar
                 p.next();
                 let attr = parse_attribute_body(p, attr_start);
+                parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_attribute(attr))
             }
         }
@@ -403,6 +413,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             } else {
                 Payload::PStr(vec![])
             };
+            parse_newline_or_semicolon_structure(p);
             Some(StructureItemDesc::Pstr_extension(
                 (id, payload),
                 attrs.clone(),
@@ -412,6 +423,7 @@ pub fn parse_structure_item(p: &mut Parser<'_>) -> Option<StructureItem> {
             // Could be an expression
             if is_expr_start(&p.token) {
                 let expr = expr::parse_expr(p);
+                parse_newline_or_semicolon_structure(p);
                 Some(StructureItemDesc::Pstr_eval(expr, attrs.clone()))
             } else if p.token != Token::Eof {
                 // Use err_unexpected which creates a proper Unexpected diagnostic
