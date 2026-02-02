@@ -1264,7 +1264,7 @@ fn parse_poly_variant_type(p: &mut Parser<'_>) -> CoreType {
     p.expect(Token::Lbracket);
 
     // Check for closed/open markers
-    let (closed, low_tags) = match &p.token {
+    let (closed, mut low_tags) = match &p.token {
         Token::GreaterThan => {
             p.next();
             (ClosedFlag::Open, None)
@@ -1277,6 +1277,20 @@ fn parse_poly_variant_type(p: &mut Parser<'_>) -> CoreType {
     };
 
     let fields = parse_row_fields(p);
+
+    // For [< ... > #X #Y ], parse the lower bound tag names
+    if low_tags.is_some() && p.token == Token::GreaterThan {
+        p.next();
+        let mut tags = vec![];
+        while p.token == Token::Hash {
+            p.next();
+            if let Token::Lident(name) | Token::Uident(name) = &p.token {
+                tags.push(name.clone());
+                p.next();
+            }
+        }
+        low_tags = Some(tags);
+    }
 
     // OCaml's Ptyp_variant location ends at prev_end_pos (end of last row field), BEFORE the closing ]
     let loc = p.mk_loc_to_prev_end(&start_pos);
@@ -1435,10 +1449,29 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
             // #A is constant, #A(int) is not, #A&(...) is constant (& are constraints, not args)
             let is_constant = !had_parens || args.is_empty();
 
+            // First, handle the initial arguments - wrap in tuple if comma-separated
+            // For #E(int, int) & (...), we first need to make (int, int) a tuple type
+            let first_type = if comma_separated && args.len() >= 2 {
+                // OCaml includes the parentheses in the tuple location
+                let loc = p.mk_loc(
+                    lparen_pos.as_ref().unwrap(),
+                    rparen_end_pos.as_ref().unwrap(),
+                );
+                Some(CoreType {
+                    ptyp_desc: CoreTypeDesc::Ptyp_tuple(args),
+                    ptyp_loc: loc,
+                    ptyp_attributes: vec![],
+                })
+            } else if args.len() == 1 {
+                Some(args.into_iter().next().unwrap())
+            } else {
+                None
+            };
+
             // Parse intersection constraints: #tag & typ1 & typ2
             // OCaml calls parse_polymorphic_variant_type_args after &, which expects parens
             // and handles single types specially (no paren location in the type)
-            let mut constraints = args;
+            let mut constraints: Vec<CoreType> = first_type.into_iter().collect();
             while p.token == Token::Ampersand {
                 p.next();
                 // OCaml expects parentheses after & and uses parse_polymorphic_variant_type_args
@@ -1448,23 +1481,6 @@ fn parse_row_fields(p: &mut Parser<'_>) -> Vec<RowField> {
                     constraints.push(parse_typ_expr_inner(p, false));
                 }
             }
-
-            // Only wrap in Ptyp_tuple for comma-separated args inside parens (e.g., #A(int, string))
-            // Don't wrap ampersand-separated constraints (e.g., #T([<u2]) & ([<u1]))
-            let constraints = if comma_separated && constraints.len() >= 2 {
-                // OCaml includes the parentheses in the tuple location
-                let loc = p.mk_loc(
-                    lparen_pos.as_ref().unwrap(),
-                    rparen_end_pos.as_ref().unwrap(),
-                );
-                vec![CoreType {
-                    ptyp_desc: CoreTypeDesc::Ptyp_tuple(constraints),
-                    ptyp_loc: loc,
-                    ptyp_attributes: vec![],
-                }]
-            } else {
-                constraints
-            };
 
             fields.push(RowField::Rtag(tag, attrs, is_constant, constraints));
         } else if matches!(p.token, Token::Lident(_) | Token::Uident(_)) {

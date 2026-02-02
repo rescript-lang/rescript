@@ -2144,30 +2144,8 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
     // OCaml's start_pos for empty args is the position after '(' is consumed
     let start_pos = p.start_pos.clone();
 
-    // Check for uncurried call syntax: f(. x, y)
-    // The dot indicates an uncurried function call (deprecated in newer ReScript)
-    let uncurried = p.token == Token::Dot;
-    if uncurried {
-        p.next();
-        // Check for apply(.) - uncurried unit call
-        // This produces a single unit argument, not an empty list
-        // OCaml uses Location.mknoloc here, so no location
-        if p.token == Token::Rparen {
-            let lid_idx = p.push_lident_static("()");
-            let unit_expr = Expression {
-                pexp_desc: ExpressionDesc::Pexp_construct(
-                    Loc {
-                        txt: lid_idx,
-                        loc: LocIdx::none(),
-                    },
-                    None,
-                ),
-                pexp_loc: LocIdx::none(),
-                pexp_attributes: vec![],
-            };
-            args.push((ArgLabel::Nolabel, unit_expr));
-        }
-    }
+    // Uncurried call syntax: f(. x, y) or f(. x, y, . z)
+    // The dots are handled by parse_argument which consumes them
 
     while p.token != Token::Rparen && p.token != Token::Eof {
         // Check for partial application marker: f(a, ...)
@@ -2212,7 +2190,32 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
 }
 
 /// Parse a single argument (possibly labeled).
+/// Handles uncurried dot prefix: f(. x, y, . z) - the dot is consumed but
+/// doesn't change the argument structure (it's just part of uncurried syntax).
 fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
+    // Handle uncurried dot marker before argument
+    // In f(. a, b, . c), each dot is consumed before the argument
+    if p.token == Token::Dot {
+        p.next();
+        // Check for apply(.) - uncurried unit call
+        if p.token == Token::Rparen {
+            let lid_idx = p.push_lident_static("()");
+            let unit_expr = Expression {
+                pexp_desc: ExpressionDesc::Pexp_construct(
+                    Loc {
+                        txt: lid_idx,
+                        loc: LocIdx::none(),
+                    },
+                    None,
+                ),
+                pexp_loc: LocIdx::none(),
+                pexp_attributes: vec![],
+            };
+            return (ArgLabel::Nolabel, unit_expr);
+        }
+        // Fall through to parse the actual argument
+    }
+
     if p.token == Token::Tilde {
         p.next();
         let (name, name_loc) = parse_lident(p);

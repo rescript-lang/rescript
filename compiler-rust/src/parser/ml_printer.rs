@@ -61,6 +61,47 @@ fn pattern_needs_parens_as_param(pat: &Pattern, arena: &ParseArena) -> bool {
     }
 }
 
+/// Check if a pattern is "simple" according to OCaml's pprintast.
+/// Simple patterns can appear as arguments to variants/constructors without parens.
+/// Based on pprintast.ml's simple_pattern function.
+fn pattern_is_simple(pat: &Pattern, arena: &ParseArena) -> bool {
+    // If pattern has attributes, it needs to go through full pattern printing
+    if !pat.ppat_attributes.is_empty() {
+        return false;
+    }
+    match &pat.ppat_desc {
+        // These are all handled directly by simple_pattern:
+        PatternDesc::Ppat_any => true,
+        PatternDesc::Ppat_var(_) => true,
+        PatternDesc::Ppat_array(_) => true,
+        PatternDesc::Ppat_unpack(_) => true,
+        PatternDesc::Ppat_type(_) => true,
+        PatternDesc::Ppat_record(_, _) => true,
+        PatternDesc::Ppat_tuple(_) => true,
+        PatternDesc::Ppat_constant(_) => true,
+        PatternDesc::Ppat_interval(_, _) => true,
+        PatternDesc::Ppat_variant(_, None) => true,  // Only variant without arg
+        PatternDesc::Ppat_constraint(_, _) => true,
+        PatternDesc::Ppat_exception(_) => true,
+        PatternDesc::Ppat_extension(_) => true,
+        PatternDesc::Ppat_open(_, _) => true,
+        PatternDesc::Ppat_construct(lid, _) => {
+            // () and [] are simple, others are not
+            match arena.get_longident(lid.txt) {
+                Longident::Lident(name_idx) => {
+                    let name = arena.get_string(*name_idx);
+                    name == "()" || name == "[]"
+                }
+                _ => false,
+            }
+        }
+        // These are NOT simple - need parens:
+        PatternDesc::Ppat_alias(_, _) => false,
+        PatternDesc::Ppat_or(_, _) => false,
+        PatternDesc::Ppat_variant(_, Some(_)) => false,
+    }
+}
+
 /// Check if a payload is empty (empty PStr)
 fn payload_is_empty(payload: &Payload) -> bool {
     matches!(payload, Payload::PStr(items) if items.is_empty())
@@ -1935,7 +1976,15 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             f.string(label);
             if let Some(a) = arg {
                 f.string(" ");
+                // OCaml uses simple_pattern here - wrap alias/or patterns in parens
+                let needs_parens = !pattern_is_simple(a, arena);
+                if needs_parens {
+                    f.string("(");
+                }
                 print_pattern(f, arena, a);
+                if needs_parens {
+                    f.string(")");
+                }
             }
         }
         PatternDesc::Ppat_record(fields, closed) => {
