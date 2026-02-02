@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 349/506 tests passing (68%)
+**Overall Status:** 350/506 tests passing (69.2%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,19 +10,21 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 79 | 56 | 135 | 58% |
-| parsing/other | 11 | 3 | 14 | 78% |
+| parsing/grammar | 83 | 52 | 135 | 61% |
+| parsing/other | 12 | 3 | 15 | 80% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
 | parsing/errors | 7 | 77 | 84 | 8% |
 | parsing/infiniteLoops | 0 | 5 | 5 | 0% |
 
-**Remaining:** 157 tests to fix
+**Remaining:** 156 tests to fix
 
 **Recent Fixes (this session):**
-- Fixed extension payload printing to use print_payload (conversion/ppx.res now passes)
-- Fixed attribute placement in module types with 'with' constraints
-- Fixed ML printer for Psig_recmodule with proper box formatting
-- Fixed ML printer for Psig_type and Pstr_type with HOV box indent 2
+- Fixed package type constraint printing to use 'and' for subsequent constraints
+- Fixed record field semicolon spacing when field has attributes
+- Fixed type constraints in type declarations (ptype_cstrs)
+- Fixed recursive module printing with constraint sugar and attributes
+- Fixed module functor sugar (`module F(A:X) = ...`) and module application printing (`(F)(A)`)
+- Fixed unit functor printing (`functor () ->` instead of `functor (*) ->`)
 
 **Root Causes of Remaining Failures:**
 
