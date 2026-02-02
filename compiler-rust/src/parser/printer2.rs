@@ -6080,12 +6080,19 @@ fn print_cases(
 
     for (i, case) in cases.iter().enumerate() {
         let pos_range = get_case_pos_range(case, arena);
-        let case_start_line = arena.loc_start(case.pc_lhs.ppat_loc).line as i32;
+
+        // Get the effective start line for blank line calculation
+        // If there's a leading comment, use the comment's start line instead of the case's
+        // This matches OCaml's print_list behavior
+        let start_line = match cmt_tbl.get_first_leading_comment_by_pos(pos_range) {
+            Some(comment) => comment.loc.loc_start.line as i32,
+            None => arena.loc_start(case.pc_lhs.ppat_loc).line as i32,
+        };
 
         // Add separator between cases (not before first case)
         if i > 0 {
             // Check if there was a blank line in the source
-            let sep = if case_start_line - prev_end_line > 1 {
+            let sep = if start_line - prev_end_line > 1 {
                 // More than 1 line between: preserve blank line
                 Doc::concat(vec![Doc::hard_line(), Doc::hard_line()])
             } else {

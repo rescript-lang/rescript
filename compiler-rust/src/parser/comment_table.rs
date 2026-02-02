@@ -397,8 +397,13 @@ impl<'a> Node<'a> {
         match self {
             Node::Case(case) => {
                 // The case location extends from pattern to the end of the expression
+                // Check for braces attribute on RHS - if present, use its end location
+                // This must match the logic in printer2.rs:get_case_pos_range
                 let start = arena.loc_start(case.pc_lhs.ppat_loc);
-                let end = arena.loc_end(case.pc_rhs.pexp_loc);
+                let end = match parsetree_viewer::process_braces_attr(&case.pc_rhs) {
+                    Some(attr) => arena.loc_end(attr.0.loc),
+                    None => arena.loc_end(case.pc_rhs.pexp_loc),
+                };
                 arena.from_location(&Location::from_positions(start.clone(), end.clone()))
             }
             Node::CoreType(ct) => ct.ptyp_loc,
