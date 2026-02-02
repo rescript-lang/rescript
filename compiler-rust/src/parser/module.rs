@@ -1643,23 +1643,26 @@ fn parse_with_constraint(p: &mut Parser<'_>) -> Option<WithConstraint> {
             let typ = typ::parse_typ_expr(p);
 
             // Parse type constraints: constraint 'a = int constraint 'b = string
+            // Note: type variables can be uppercase ('X) or lowercase ('a)
             let mut cstrs = vec![];
             while p.token == Token::Constraint {
                 let cstr_start = p.start_pos.clone();
                 p.next();
                 p.expect(Token::SingleQuote);
-                let var = if let Token::Lident(name) = &p.token {
-                    let name = name.clone();
-                    // OCaml: ident_loc spans from 'constraint' keyword to end of identifier
-                    let loc = p.mk_loc_to_end(&cstr_start);
-                    p.next();
-                    CoreType {
-                        ptyp_desc: CoreTypeDesc::Ptyp_var(name),
-                        ptyp_loc: loc,
-                        ptyp_attributes: vec![],
+                // Accept both Lident ('a) and Uident ('X) as type variable names
+                let var = match &p.token {
+                    Token::Lident(name) | Token::Uident(name) => {
+                        let name = name.clone();
+                        // OCaml: ident_loc spans from 'constraint' keyword to end of identifier
+                        let loc = p.mk_loc_to_end(&cstr_start);
+                        p.next();
+                        CoreType {
+                            ptyp_desc: CoreTypeDesc::Ptyp_var(name),
+                            ptyp_loc: loc,
+                            ptyp_attributes: vec![],
+                        }
                     }
-                } else {
-                    break;
+                    _ => break,
                 };
                 p.expect(Token::Equal);
                 let cstr_typ = typ::parse_typ_expr(p);
@@ -3002,7 +3005,7 @@ fn parse_type_kind(
             // Record type - capture { position for first field's location (OCaml extends first spread field's loc to {)
             let lbrace_pos = p.start_pos.clone();
             p.next();
-            let labels = parse_label_declarations(p, inline_ctx, current_type_name_path, Some(lbrace_pos));
+            let labels = parse_label_declarations(p, inline_ctx, current_type_name_path, Some(lbrace_pos), false);
             p.expect(Token::Rbrace);
             TypeKind::Ptype_record(labels)
         }
@@ -3143,7 +3146,7 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
         if is_inline_record {
             let lbrace_pos = p.start_pos.clone();
             p.next(); // consume {
-            let labels = parse_label_declarations(p, None, None, Some(lbrace_pos));
+            let labels = parse_label_declarations(p, None, None, Some(lbrace_pos), true);
             p.expect(Token::Rbrace);
             // Allow trailing comma after inline record: Foo({...},)
             p.optional(&Token::Comma);
@@ -3208,7 +3211,7 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
     } else if p.token == Token::Lbrace {
         let lbrace_pos = p.start_pos.clone();
         p.next();
-        let labels = parse_label_declarations(p, None, None, Some(lbrace_pos));
+        let labels = parse_label_declarations(p, None, None, Some(lbrace_pos), true);
         p.expect(Token::Rbrace);
         ConstructorArguments::Pcstr_record(labels)
     } else {
@@ -3237,11 +3240,14 @@ fn parse_constructor_impl(p: &mut Parser<'_>, start_pos: Position) -> Option<Con
 /// Handles both regular fields and spread syntax (...typ).
 /// `lbrace_pos` is the position of the opening `{` - OCaml extends the first spread field's
 /// location back to this position.
+/// `for_constructor_record`: When true, exclude attributes from label_declaration locations
+/// (for Pcstr_record in constructors). When false, include them (for Ptype_record).
 fn parse_label_declarations(
     p: &mut Parser<'_>,
     inline_ctx: Option<&RefCell<InlineTypesContext>>,
     current_type_name_path: Option<&Vec<String>>,
     lbrace_pos: Option<Position>,
+    for_constructor_record: bool,
 ) -> Vec<LabelDeclaration> {
     let mut labels = vec![];
     let mut is_first = true;
@@ -3284,7 +3290,7 @@ fn parse_label_declarations(
             continue;
         }
 
-        if let Some(l) = parse_label_declaration(p, inline_ctx, current_type_name_path) {
+        if let Some(l) = parse_label_declaration(p, inline_ctx, current_type_name_path, for_constructor_record) {
             labels.push(l);
         }
         is_first = false;
@@ -3297,13 +3303,28 @@ fn parse_label_declarations(
 }
 
 /// Parse a single label declaration.
+///
+/// `for_constructor_record`: When true, capture location start AFTER attributes
+/// (for Pcstr_record in constructors). When false, capture BEFORE (for Ptype_record).
+/// This matches OCaml's behavior where constructor inline records parse outer attrs
+/// before calling the field parser.
 fn parse_label_declaration(
     p: &mut Parser<'_>,
     inline_ctx: Option<&RefCell<InlineTypesContext>>,
     current_type_name_path: Option<&Vec<String>>,
+    for_constructor_record: bool,
 ) -> Option<LabelDeclaration> {
-    let start_pos = p.start_pos.clone();
+    // For regular records, capture start_pos BEFORE attrs (include attrs in location).
+    // For constructor records, capture AFTER attrs (exclude attrs from location).
+    // This matches OCaml's behavior where constructor records parse outer attrs
+    // at a higher level before calling the field parser.
+    let start_pos_before_attrs = p.start_pos.clone();
     let attrs = parse_attributes(p);
+    let start_pos = if for_constructor_record {
+        p.start_pos.clone()
+    } else {
+        start_pos_before_attrs
+    };
 
     let mutable = if p.token == Token::Mutable {
         p.next();
@@ -3404,7 +3425,7 @@ fn parse_label_declaration(
             p.next(); // consume {
             let inline_ctx = inline_ctx.unwrap();
             let extended_path = extended_path.as_ref().unwrap();
-            let labels = parse_label_declarations(p, Some(inline_ctx), Some(extended_path), Some(type_start_pos.clone()));
+            let labels = parse_label_declarations(p, Some(inline_ctx), Some(extended_path), Some(type_start_pos.clone()), false);
             p.expect(Token::Rbrace);
             let type_loc = p.mk_loc_to_prev_end(&type_start_pos);
 
