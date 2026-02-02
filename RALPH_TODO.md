@@ -2,9 +2,21 @@
 
 **Last Updated:** 2026-02-02
 **Overall Status:** 323/506 tests passing (63%)
-**Printer Status:** 187/187 tests passing (100%) ✅
-**PPX/React Status:** 28/31 tests passing (90%)
-**Remaining:** 183 tests to fix (parsing/errors, parsing/grammar, parsing/recovery, etc.)
+
+**Category Breakdown:**
+| Category | Passed | Failed | Total | Percent |
+|----------|--------|--------|-------|---------|
+| printer | 187 | 0 | 187 | 100% ✅ |
+| ast-mapping | 3 | 0 | 3 | 100% ✅ |
+| ppx/react | 28 | 3 | 31 | 90% |
+| conversion | 26 | 1 | 27 | 96% |
+| parsing/other | 10 | 4 | 14 | 71% |
+| parsing/grammar | 58 | 77 | 135 | 42% |
+| parsing/recovery | 4 | 16 | 20 | 20% |
+| parsing/errors | 7 | 77 | 84 | 8% |
+| parsing/infiniteLoops | 0 | 5 | 5 | 0% |
+
+**Remaining:** 183 tests to fix (mainly ML printer formatting and error recovery)
 
 ---
 
