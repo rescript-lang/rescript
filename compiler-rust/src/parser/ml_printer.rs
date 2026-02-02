@@ -2556,19 +2556,43 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
                     match constraint {
                         WithConstraint::Pwith_type(lid, decl) => {
                             // OCaml: pp f "type@ %a %a =@ %a" params lid type_decl
-                            // When params is empty: "type@ " + "" + " lid" + " =@ " + "@;manifest"
-                            // Results in: "type  t =  string" (double spaces)
                             f.string("type");
                             f.space();  // @ after type
-                            // type params would go here (empty, so nothing)
-                            f.string(" ");  // space before lid when params empty
+                            // Print type params
+                            if !decl.ptype_params.is_empty() {
+                                if decl.ptype_params.len() == 1 {
+                                    print_core_type(f, arena, &decl.ptype_params[0].0);
+                                    f.string(" ");
+                                } else {
+                                    f.string("(");
+                                    for (i, (t, _)) in decl.ptype_params.iter().enumerate() {
+                                        if i > 0 {
+                                            f.string(",");
+                                        }
+                                        print_core_type(f, arena, t);
+                                    }
+                                    f.string(") ");
+                                }
+                            } else {
+                                f.string(" ");  // space before lid when params empty
+                            }
                             print_longident_idx(f, arena, lid.txt);
                             f.string(" =");
                             f.space();  // @ after =
-                            // type_declaration prints @; before manifest
+                            // type_declaration prints @; then private then manifest then constraints
                             f.space();  // @; in type_declaration
+                            if decl.ptype_private == PrivateFlag::Private {
+                                f.string("private ");
+                            }
                             if let Some(manifest) = &decl.ptype_manifest {
                                 print_core_type(f, arena, manifest);
+                            }
+                            // Print type constraints
+                            for (ct1, ct2, _) in &decl.ptype_cstrs {
+                                f.string(" constraint ");
+                                print_core_type(f, arena, ct1);
+                                f.string(" = ");
+                                print_core_type(f, arena, ct2);
                             }
                         }
                         WithConstraint::Pwith_module(lid1, lid2) => {
@@ -2581,13 +2605,40 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
                             // Same pattern as Pwith_type but with :=
                             f.string("type");
                             f.space();
-                            f.string(" ");
+                            // Print type params
+                            if !decl.ptype_params.is_empty() {
+                                if decl.ptype_params.len() == 1 {
+                                    print_core_type(f, arena, &decl.ptype_params[0].0);
+                                    f.string(" ");
+                                } else {
+                                    f.string("(");
+                                    for (i, (t, _)) in decl.ptype_params.iter().enumerate() {
+                                        if i > 0 {
+                                            f.string(",");
+                                        }
+                                        print_core_type(f, arena, t);
+                                    }
+                                    f.string(") ");
+                                }
+                            } else {
+                                f.string(" ");
+                            }
                             print_longident_idx(f, arena, lid.txt);
                             f.string(" :=");
                             f.space();
                             f.space();
+                            if decl.ptype_private == PrivateFlag::Private {
+                                f.string("private ");
+                            }
                             if let Some(manifest) = &decl.ptype_manifest {
                                 print_core_type(f, arena, manifest);
+                            }
+                            // Print type constraints
+                            for (ct1, ct2, _) in &decl.ptype_cstrs {
+                                f.string(" constraint ");
+                                print_core_type(f, arena, ct1);
+                                f.string(" = ");
+                                print_core_type(f, arena, ct2);
                             }
                         }
                         WithConstraint::Pwith_modsubst(lid1, lid2) => {
