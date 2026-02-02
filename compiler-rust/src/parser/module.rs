@@ -1216,27 +1216,27 @@ fn parse_module_type_impl(p: &mut Parser<'_>, es6_arrow: bool, parse_with: bool)
         parse_primary_module_type(p)
     };
 
+    // OCaml attaches attributes to the inner module type BEFORE parsing `with` constraints.
+    // This means `@attr Foo with type t = int` becomes `Pmty_with(Foo[@attr], constraints)`,
+    // not `Pmty_with(Foo, constraints)[@attr]`.
+    let mut typ = typ;
+    if !attrs.is_empty() {
+        typ.pmty_attributes.extend(attrs);
+    }
+
     // Handle with constraint: S with type t = ...
     // Only if parse_with is true - functor bodies don't parse `with` so it applies to the outer functor
     if parse_with && matches!(&p.token, Token::Lident(s) if s == "with") {
         p.next();
         let constraints = parse_with_constraints(p);
         let loc = p.mk_loc_to_prev_end(&start_pos);
-        let mut result = ModuleType {
+        ModuleType {
             pmty_desc: ModuleTypeDesc::Pmty_with(Box::new(typ), constraints),
             pmty_loc: loc,
             pmty_attributes: vec![],
-        };
-        if !attrs.is_empty() {
-            result.pmty_attributes.extend(attrs);
         }
-        result
     } else {
-        let mut result = typ;
-        if !attrs.is_empty() {
-            result.pmty_attributes.extend(attrs);
-        }
-        result
+        typ
     }
 }
 
