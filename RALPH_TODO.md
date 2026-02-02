@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 350/506 tests passing (69.2%)
+**Overall Status:** 351/506 tests passing (69.4%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,15 +10,17 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 83 | 52 | 135 | 61% |
-| parsing/other | 12 | 3 | 15 | 80% |
+| parsing/grammar | 80 | 55 | 135 | 59% |
+| parsing/other | 11 | 3 | 14 | 78% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
 | parsing/errors | 7 | 77 | 84 | 8% |
-| parsing/infiniteLoops | 0 | 5 | 5 | 0% |
+| parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 156 tests to fix
+**Remaining:** 155 tests to fix
 
 **Recent Fixes (this session):**
+- Fixed ML printer: complete list literals are now simple expressions (no extra parens around `[1; 2; 3]`)
+- Implemented full JSX printing in ML printer (fragments, unary, container elements with props)
 - Fixed package type constraint printing to use 'and' for subsequent constraints
 - Fixed record field semicolon spacing when field has attributes
 - Fixed type constraints in type declarations (ptype_cstrs)
