@@ -1,10 +1,14 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 291/506 tests passing (57%)
-**Printer Status:** 167/187 tests passing (89%)
+**Overall Status:** 292/506 tests passing (57%)
+**Printer Status:** 168/187 tests passing (89%)
 
 ### Recent Progress
+- Fixed ternary expression indentation in value bindings (ternary.res now passes):
+  - When ternary condition is a binary expression or has attributes, indent the ternary on a new line
+  - Updated `should_indent` logic in `print_value_binding` to match OCaml's handling
+  - Added `has_tagged_template_attr` function for special handling of tagged templates
 - Fixed binary expression flattening (binaryExpr.res now passes):
   - Implemented `flatten_binary_operand` function matching OCaml's `flatten` logic in `print_operand`
   - When printing a binary operand that is itself a flattenable binary expression (same precedence,
