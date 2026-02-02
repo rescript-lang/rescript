@@ -1,8 +1,8 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 300/506 tests passing (59%)
-**Printer Status:** 173/187 tests passing (92%)
+**Overall Status:** 301/506 tests passing (59%)
+**Printer Status:** 174/187 tests passing (93%)
 
 ---
 
@@ -26,6 +26,10 @@
 ---
 
 ### Recent Progress
+- Fixed doc comment inline spacing in type expressions (DocComments.res now passes):
+  - Added `print_doc_comments_with_sep` with configurable separator (defaults to hard_line)
+  - Use `Doc::space()` separator for doc comments on types to keep them inline
+  - Remove extra spaces around doc comment content: use `/**` and `*/` directly
 - Fixed binary.res printing (now passes):
   - Right-associative operators (exponentiation `**`): Added `is_rhs_binary_operator` function and
     flip the `is_lhs` parameter for these operators so `2. ** 3. ** 2.` and `(2. ** 3.) ** 2.`
@@ -371,7 +375,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [ ] `printer/expr/braced.res` - Brace preservation in switch/while
 - [ ] `printer/expr/callback.res` - Callback layout differences
 - [ ] `printer/expr/dict.res` - Comment handling in dict entries
-- [ ] `printer/expr/DocComments.res` - Inline doc comment formatting
+- [x] `printer/expr/DocComments.res` - Fixed: doc comment inline spacing
 - [ ] `printer/expr/jsx.res` - JSX-specific issues
 - [ ] `printer/expr/list.res` - List spread syntax
 - [x] `printer/expr/polyvariant.res` - Fixed: tuple hugging in polyvariant constructors
