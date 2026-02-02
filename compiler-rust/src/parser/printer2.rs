@@ -6107,9 +6107,14 @@ fn print_cases(
         // Print leading and trailing comments for this case
         let leading = cmt_tbl.remove_leading_comments_by_pos(pos_range);
         let trailing = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
+        // Use braces attribute location if present, matching get_case_pos_range
+        let end_pos = match parsetree_viewer::process_braces_attr(&case.pc_rhs) {
+            Some(attr) => arena.loc_end(attr.0.loc).clone(),
+            None => arena.loc_end(case.pc_rhs.pexp_loc).clone(),
+        };
         let full_loc = crate::location::Location {
             loc_start: arena.loc_start(case.pc_lhs.ppat_loc).clone(),
-            loc_end: arena.loc_end(case.pc_rhs.pexp_loc).clone(),
+            loc_end: end_pos,
             loc_ghost: false,
         };
         let doc_with_leading = print_leading_comments_with(doc, leading, &full_loc);
@@ -6118,7 +6123,11 @@ fn print_cases(
         result.push(doc_with_comments);
 
         // Track end line for next iteration
-        prev_end_line = arena.loc_end(case.pc_rhs.pexp_loc).line as i32;
+        // Use braces attribute location if present, matching get_case_pos_range and full_loc
+        prev_end_line = match parsetree_viewer::process_braces_attr(&case.pc_rhs) {
+            Some(attr) => arena.loc_end(attr.0.loc).line as i32,
+            None => arena.loc_end(case.pc_rhs.pexp_loc).line as i32,
+        };
     }
 
     Doc::concat(result)
