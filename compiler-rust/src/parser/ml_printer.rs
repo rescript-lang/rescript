@@ -2837,40 +2837,45 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
             if matches!(decl.ptype_private, PrivateFlag::Private) {
                 f.string(" private");
             }
-            if decl.ptype_params.len() > 1 {
-                f.string("\n  {\n");
+            if fields.is_empty() {
+                // Empty record: print `{\n  }` matching OCaml's output
+                f.string(" {\n  }");
             } else {
-                f.string(" {\n");
-            }
-            for (i, field) in fields.iter().enumerate() {
-                f.string("  ");
-                if matches!(field.pld_mutable, MutableFlag::Mutable) {
-                    f.string("mutable ");
-                }
-                f.string(&field.pld_name.txt);
-                if field.pld_optional {
-                    f.string("?");
-                }
-                f.string(": ");
-                print_core_type(f, arena, &field.pld_type);
-                let has_attrs = !field.pld_attributes.is_empty();
-                if has_attrs {
-                    f.string(" ");
-                    print_attributes(f, arena, &field.pld_attributes);
-                }
-                if i < fields.len() - 1 {
-                    if has_attrs {
-                        f.string(";\n");
-                    } else {
-                        f.string(" ;\n");
-                    }
+                if decl.ptype_params.len() > 1 {
+                    f.string("\n  {\n");
                 } else {
-                    // If last field has attributes, no space before }
-                    // Otherwise, space before }
+                    f.string(" {\n");
+                }
+                for (i, field) in fields.iter().enumerate() {
+                    f.string("  ");
+                    if matches!(field.pld_mutable, MutableFlag::Mutable) {
+                        f.string("mutable ");
+                    }
+                    f.string(&field.pld_name.txt);
+                    if field.pld_optional {
+                        f.string("?");
+                    }
+                    f.string(": ");
+                    print_core_type(f, arena, &field.pld_type);
+                    let has_attrs = !field.pld_attributes.is_empty();
                     if has_attrs {
-                        f.string("}");
+                        f.string(" ");
+                        print_attributes(f, arena, &field.pld_attributes);
+                    }
+                    if i < fields.len() - 1 {
+                        if has_attrs {
+                            f.string(";\n");
+                        } else {
+                            f.string(" ;\n");
+                        }
                     } else {
-                        f.string(" }");
+                        // If last field has attributes, no space before }
+                        // Otherwise, space before }
+                        if has_attrs {
+                            f.string("}");
+                        } else {
+                            f.string(" }");
+                        }
                     }
                 }
             }
