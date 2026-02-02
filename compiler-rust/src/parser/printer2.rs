@@ -4875,9 +4875,14 @@ pub fn print_pattern(
             };
             Doc::group(Doc::concat(vec![variant_name, args_doc]))
         }
-        // {field1, field2: pat, ...spread}
+        // {field1, field2: pat, ...spread} or dict{"key": pat}
         PatternDesc::Ppat_record(fields, closed) => {
-            print_record_pattern(state, fields, &closed, cmt_tbl, arena)
+            // Check if this is a dict pattern (has res.dictPattern attribute)
+            if parsetree_viewer::has_dict_pattern_attribute(&pat.ppat_attributes) {
+                print_dict_pattern(state, fields, cmt_tbl, arena)
+            } else {
+                print_record_pattern(state, fields, &closed, cmt_tbl, arena)
+            }
         }
         // p | p
         PatternDesc::Ppat_or(_, _) => {
@@ -5208,6 +5213,95 @@ fn print_record_pattern(
         Doc::soft_line(),
         Doc::rbrace(),
     ]))
+}
+
+/// Print dict pattern: dict{"key": pattern}
+/// Matches OCaml's print_pattern_dict_row
+fn print_dict_pattern(
+    state: &PrinterState,
+    fields: &[PatternRecordField],
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    let fields_doc = Doc::join(
+        Doc::concat(vec![Doc::text(","), Doc::line()]),
+        fields
+            .iter()
+            .filter_map(|field| {
+                // Skip the _ (underscore) field that's always present in Open records
+                if let Longident::Lident(name_idx) = arena.get_longident(field.lid.txt) {
+                    if arena.get_string(*name_idx) == "_" {
+                        return None;
+                    }
+                }
+                Some(print_dict_pattern_row(state, field, cmt_tbl, arena))
+            })
+            .collect(),
+    );
+
+    Doc::concat(vec![
+        Doc::text("dict{"),
+        Doc::indent(Doc::concat(vec![Doc::soft_line(), fields_doc])),
+        Doc::if_breaks(Doc::text(","), Doc::nil()),
+        Doc::soft_line(),
+        Doc::rbrace(),
+    ])
+}
+
+/// Print a single dict pattern row: "key": pattern or "key": ?pattern
+fn print_dict_pattern_row(
+    state: &PrinterState,
+    field: &PatternRecordField,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    // For dict patterns, keys are printed as quoted strings
+    let label = match arena.get_longident(field.lid.txt) {
+        Longident::Lident(name_idx) => {
+            let name = arena.get_string(*name_idx);
+            Doc::concat(vec![Doc::text("\""), Doc::text(name.to_string()), Doc::text("\"")])
+        }
+        other => print_lident(arena, other),
+    };
+
+    // Print pattern
+    let pat_doc = print_pattern(state, &field.pat, cmt_tbl, arena);
+    let pat_doc = if parens::pattern_record_row_rhs(&field.pat) {
+        add_parens(pat_doc)
+    } else {
+        pat_doc
+    };
+    let rhs_doc = if field.opt {
+        Doc::concat(vec![Doc::text("?"), pat_doc])
+    } else {
+        pat_doc
+    };
+
+    // Create the row doc
+    let doc = Doc::group(Doc::concat(vec![
+        label,
+        Doc::text(":"),
+        if parsetree_viewer::is_huggable_pattern(&field.pat) {
+            Doc::concat(vec![Doc::space(), rhs_doc])
+        } else {
+            Doc::indent(Doc::concat(vec![Doc::line(), rhs_doc]))
+        },
+    ]));
+
+    // Wrap with comments for the combined location (label to pattern end)
+    let pos_range = PosRange {
+        start: arena.loc_start(field.lid.loc).cnum,
+        end: arena.loc_end(field.pat.ppat_loc).cnum,
+    };
+    let leading = cmt_tbl.remove_leading_comments_by_pos(pos_range);
+    let trailing = cmt_tbl.remove_trailing_comments_by_pos(pos_range);
+    let full_loc = FullLocation {
+        loc_start: arena.loc_start(field.lid.loc).clone(),
+        loc_end: arena.loc_end(field.pat.ppat_loc).clone(),
+        loc_ghost: false,
+    };
+    let doc = print_leading_comments_with(doc, leading, &full_loc);
+    print_trailing_comments_with(doc, trailing, &full_loc)
 }
 
 /// Check if a pattern record field is punned.

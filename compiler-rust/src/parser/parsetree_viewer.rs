@@ -537,6 +537,25 @@ pub fn is_tuple_array(expr: &Expression) -> bool {
     }
 }
 
+/// Check if a pattern has the res.dictPattern attribute.
+/// Used to detect dict{} pattern syntax which desugars to @res.dictPattern {...}
+pub fn has_dict_pattern_attribute(attrs: &[Attribute]) -> bool {
+    attrs.iter().any(|attr| attr.0.txt == "res.dictPattern")
+}
+
+/// Check if a pattern is "huggable" (can be printed without line breaks).
+/// Used for dict pattern rows to determine if the pattern should be on the same line as the key.
+pub fn is_huggable_pattern(pat: &Pattern) -> bool {
+    matches!(
+        &pat.ppat_desc,
+        PatternDesc::Ppat_array(_)
+            | PatternDesc::Ppat_tuple(_)
+            | PatternDesc::Ppat_record(_, _)
+            | PatternDesc::Ppat_variant(_, _)
+            | PatternDesc::Ppat_construct(_, _)
+    )
+}
+
 /// Collect expressions from a list constructor (::).
 /// Returns (list of expressions, optional spread expression).
 pub fn collect_list_expressions<'a>(arena: &crate::parse_arena::ParseArena, expr: &'a Expression) -> (Vec<&'a Expression>, Option<&'a Expression>) {
@@ -835,6 +854,7 @@ pub fn is_printable_attribute(attr: &Attribute) -> bool {
             | "res.taggedTemplate"
             | "res.ternary"
             | "res.inlineRecordDefinition"
+            | "res.dictPattern"
     )
 }
 
