@@ -529,6 +529,11 @@ impl<'src> Parser<'src> {
     }
 
     /// Expect a specific token with grammar context for error messages.
+    ///
+    /// When the expected token is not found, an error is generated spanning from
+    /// the previous token's end position to the current token's end position.
+    /// This matches OCaml's `expect` which uses `~start_pos:p.prev_end_pos` with
+    /// default `~end_pos:p.end_pos`.
     pub fn expect_with_grammar(&mut self, token: Token, grammar: Option<Grammar>) {
         if self.token == token {
             self.next();
@@ -538,9 +543,11 @@ impl<'src> Parser<'src> {
                 pos: self.prev_end_pos.clone(),
                 token,
             };
+            // OCaml uses prev_end_pos for start and end_pos (current token's end) for end.
+            // This creates a span from where we expected the token to the current position.
             self.err_at(
                 self.prev_end_pos.clone(),
-                self.prev_end_pos.clone(),
+                self.end_pos.clone(),
                 category,
             );
         }
