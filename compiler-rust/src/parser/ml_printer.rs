@@ -2080,12 +2080,15 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             print_pattern(f, arena, p2);
         }
         PatternDesc::Ppat_constraint(p, t) => {
+            // OCaml simple_pattern: pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p
+            // pattern1 handles alias/or by falling through to simple_pattern which wraps in parens
+            // pattern1 handles cons directly via pattern_list_helper without parens
             f.string("(");
-            // Alias, or, and cons patterns inside constraints need extra parens
+            // Only alias and or patterns need extra parens (cons is handled by pattern1 without parens)
             let needs_inner_parens = matches!(
                 p.ppat_desc,
                 PatternDesc::Ppat_alias(..) | PatternDesc::Ppat_or(..)
-            ) || is_cons_pattern(p, arena);
+            );
             if needs_inner_parens {
                 f.string("(");
             }
