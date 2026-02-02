@@ -3,13 +3,15 @@
 //! This module defines grammar rules that specify what tokens can start
 //! and terminate various syntactic constructs. It mirrors `res_grammar.ml`.
 
+use serde::{Deserialize, Serialize};
+
 use super::token::Token;
 
 /// Grammar rules representing different parsing contexts.
 ///
 /// These are used by the parser to determine what tokens are valid
 /// in a given context, enabling error recovery and better diagnostics.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Grammar {
     /// Open description: `open Belt`
     OpenDescription,

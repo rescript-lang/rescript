@@ -19,6 +19,12 @@
 **Remaining:** 144 tests to fix
 
 **Recent Fixes (this session):**
+- **DiagnosticCategory now uses Grammar enum** instead of strings for context (matching OCaml's res_diagnostics.ml):
+  - `DiagnosticCategory::Unexpected.context` changed from `Vec<(String, Position)>` to `Vec<(Grammar, Position)>`
+  - `DiagnosticCategory::Expected.context` changed from `Option<String>` to `Option<Grammar>`
+  - `explain_unexpected` function can now pattern-match on `Grammar` variants directly
+  - Added `Serialize`/`Deserialize` derives to `Grammar` enum
+  - This enables proper context-aware error messages matching OCaml's breadcrumb-based diagnostics
 - Empty polyvariant `[]` now generates TWO type holes (matching OCaml)
 - Added begin_region/end_region around structure items so each can report errors
 - Added polyvariant type error generation for error recovery mode:
@@ -70,6 +76,8 @@
    - Error message wording differs ("I'm missing a type here" vs "Unexpected token")
    - Error location format differs (`:16-18` vs `:16`) - OCaml tracks start AND end pos for errors
    - OCaml's breadcrumb-based error messages provide context-specific hints
+     **PARTIALLY FIXED**: DiagnosticCategory now uses Grammar enum, enabling pattern matching on
+     breadcrumbs. Need to implement `explain_unexpected` logic matching OCaml's res_diagnostics.ml
    - Error recovery produces different recovered AST structures
    - OCaml's `skip_tokens_and_maybe_retry` advances past errors more aggressively
    - `_` as expression: OCaml detects `_` in non-function-argument context and generates error,

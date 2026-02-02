@@ -416,6 +416,39 @@ impl<'src> Parser<'src> {
         self.diagnostics.push(diagnostic);
     }
 
+    /// Record an unexpected token error using the current breadcrumbs.
+    /// This emits an error with context-aware messaging based on the parsing context.
+    pub fn err_unexpected(&mut self) {
+        // Convert Grammar to String for serialization
+        let context: Vec<(String, Position)> = self
+            .breadcrumbs
+            .iter()
+            .map(|(g, pos)| (format!("{:?}", g), pos.clone()))
+            .collect();
+        self.err(DiagnosticCategory::Unexpected {
+            token: self.token.clone(),
+            context,
+        });
+    }
+
+    /// Record an unexpected token error at specific positions using the current breadcrumbs.
+    pub fn err_unexpected_at(&mut self, start_pos: Position) {
+        // Convert Grammar to String for serialization
+        let context: Vec<(String, Position)> = self
+            .breadcrumbs
+            .iter()
+            .map(|(g, pos)| (format!("{:?}", g), pos.clone()))
+            .collect();
+        self.err_at(
+            start_pos,
+            self.end_pos.clone(),
+            DiagnosticCategory::Unexpected {
+                token: self.token.clone(),
+                context,
+            },
+        );
+    }
+
     /// Begin a new error reporting region.
     pub fn begin_region(&mut self) {
         self.regions.push(RegionStatus::Report);
@@ -506,7 +539,7 @@ impl<'src> Parser<'src> {
     }
 
     /// Expect a specific token with grammar context for error messages.
-    pub fn expect_with_grammar(&mut self, token: Token, grammar: Option<String>) {
+    pub fn expect_with_grammar(&mut self, token: Token, grammar: Option<Grammar>) {
         if self.token == token {
             self.next();
         } else {

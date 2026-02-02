@@ -10,6 +10,7 @@ use crate::parse_arena::{Located, LocIdx};
 use super::ast::*;
 use super::core::{ast_helper, mknoloc, recover, with_loc};
 use super::diagnostics::DiagnosticCategory;
+use super::grammar::Grammar;
 use super::longident::Longident;
 use super::state::{Parser, ParserMode};
 use super::token::Token;
@@ -448,6 +449,7 @@ fn parse_payload(p: &mut Parser<'_>) -> Payload {
 
 /// Parse an atomic type expression.
 fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool) -> CoreType {
+    p.leave_breadcrumb(Grammar::AtomicTypExpr);
     let start_pos = p.start_pos.clone();
 
     let mut typ = match &p.token {
@@ -621,10 +623,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
             }
         }
         _ => {
-            p.err(DiagnosticCategory::Message(format!(
-                "Unexpected token in type: {:?}",
-                p.token
-            )));
+            p.err_unexpected();
             recover::default_type()
         }
     };
@@ -634,6 +633,7 @@ fn parse_atomic_typ_expr(p: &mut Parser<'_>, attrs: Attributes, es6_arrow: bool)
         typ.ptyp_attributes.extend(attrs);
     }
 
+    p.eat_breadcrumb();
     typ
 }
 

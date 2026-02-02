@@ -3251,6 +3251,7 @@ fn parse_label_declarations(
     lbrace_pos: Option<Position>,
     for_constructor_record: bool,
 ) -> Vec<LabelDeclaration> {
+    p.leave_breadcrumb(grammar::Grammar::FieldDeclarations);
     let mut labels = vec![];
     let mut is_first = true;
 
@@ -3301,6 +3302,7 @@ fn parse_label_declarations(
         }
     }
 
+    p.eat_breadcrumb();
     labels
 }
 

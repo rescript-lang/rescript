@@ -6,6 +6,7 @@
 use crate::location::{Location, Position};
 use serde::{Deserialize, Serialize};
 
+use super::grammar;
 use super::token::Token;
 
 /// A category of diagnostic message.
@@ -16,6 +17,7 @@ pub enum DiagnosticCategory {
         /// The unexpected token.
         token: Token,
         /// The parsing context (stack of grammar rules being parsed).
+        /// Stored as grammar name strings for serialization compatibility.
         context: Vec<(String, Position)>,
     },
     /// An expected token was not found.
@@ -176,12 +178,12 @@ fn uncapitalize_first(s: &str) -> String {
 /// Convenience constructors for diagnostic categories.
 impl DiagnosticCategory {
     /// Create an unexpected token diagnostic.
-    pub fn unexpected(token: Token, context: Vec<(String, Position)>) -> Self {
+    pub fn unexpected(token: Token, context: Vec<(Grammar, Position)>) -> Self {
         DiagnosticCategory::Unexpected { token, context }
     }
 
     /// Create an expected token diagnostic.
-    pub fn expected(token: Token, pos: Position, context: Option<String>) -> Self {
+    pub fn expected(token: Token, pos: Position, context: Option<Grammar>) -> Self {
         DiagnosticCategory::Expected {
             token,
             pos,
