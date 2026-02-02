@@ -553,7 +553,7 @@ pub fn collect_array_expressions(expr: &Expression) -> (Vec<&Expression>, Option
 pub enum FunParam<'a> {
     /// Regular parameter with pattern
     Parameter {
-        attrs: &'a Attributes,
+        attrs: &'a [Attribute],
         label: &'a ArgLabel,
         default_expr: Option<&'a Expression>,
         pat: &'a Pattern,
@@ -561,7 +561,7 @@ pub enum FunParam<'a> {
     /// Newtype parameter(s): (type t) or (type t u v)
     /// Multiple consecutive newtypes are combined into a single NewTypes variant.
     NewTypes {
-        attrs: &'a Attributes,
+        attrs: &'a [Attribute],
         names: Vec<&'a StringLoc>,
     },
 }
@@ -610,8 +610,17 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
                 // In Rust: Arity::Unknown corresponds to None, Arity::Full(_) to Some(_)
                 // Only collect if this is the first function OR there's no arity marker
                 if n_fun == 0 || matches!(arity, Arity::Unknown) {
+                    // OCaml's fun_expr passes {expr_ with pexp_attributes = []} to collect_params,
+                    // which means the FIRST parameter always gets empty attrs. For nested functions,
+                    // the inner expression keeps its attributes. We emulate this by using empty
+                    // slice for n_fun == 0.
+                    let attrs: &[Attribute] = if n_fun == 0 {
+                        &[] // First parameter: OCaml strips top-level attrs
+                    } else {
+                        &current.pexp_attributes // Nested: preserve attrs
+                    };
                     params.push(FunParam::Parameter {
-                        attrs: &current.pexp_attributes,
+                        attrs,
                         label: arg_label,
                         default_expr: default.as_ref().map(|e| e.as_ref()),
                         pat: lhs,
@@ -626,7 +635,7 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
             ExpressionDesc::Pexp_newtype(name, body) => {
                 // Collect consecutive newtypes into a single NewTypes variant
                 // This matches OCaml's collect_new_types which combines "type t, type u" into "type t u"
-                let attrs = &current.pexp_attributes;
+                // OCaml uses attrs = [] for newtype params (see line 235 in res_parsetree_viewer.ml)
                 let mut names = vec![name];
                 current = body;
 
@@ -636,7 +645,7 @@ pub fn fun_expr(expr: &Expression) -> (bool, Vec<FunParam<'_>>, &Expression) {
                     current = next_body;
                 }
 
-                params.push(FunParam::NewTypes { attrs, names });
+                params.push(FunParam::NewTypes { attrs: &[], names });
             }
             _ => break,
         }
@@ -668,7 +677,7 @@ pub fn pattern_has_spread_attr(attrs: &Attributes) -> bool {
 }
 
 /// Filter out parsing-only attributes (res.braces, res.ternary, res.await, etc.)
-pub fn filter_parsing_attrs(attrs: &Attributes) -> Vec<&Attribute> {
+pub fn filter_parsing_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
     attrs
         .iter()
         .filter(|attr| {

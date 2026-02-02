@@ -1180,7 +1180,7 @@ pub fn print_expression(
             };
             // Only indent RHS if it's a binary expression (matching OCaml)
             let should_indent = parsetree_viewer::is_binary_expression(arena, value);
-            Doc::group(Doc::concat(vec![
+            let doc = Doc::group(Doc::concat(vec![
                 lhs,
                 Doc::text(" ="),
                 if should_indent {
@@ -1188,7 +1188,15 @@ pub fn print_expression(
                 } else {
                     Doc::concat(vec![Doc::space(), rhs_doc])
                 },
-            ]))
+            ]));
+            // Print attributes - Pexp_setfield handles its own attributes
+            let attrs = &e.pexp_attributes;
+            if attrs.is_empty() {
+                doc
+            } else {
+                let attrs_doc = print_attributes(state, attrs, cmt_tbl, arena);
+                Doc::group(Doc::concat(vec![attrs_doc, doc]))
+            }
         }
         // Ternary or if-then-else
         ExpressionDesc::Pexp_ifthenelse(_, _, _) if parsetree_viewer::is_ternary_expr(e) => {
@@ -1545,8 +1553,22 @@ pub fn print_expression(
     };
 
     // Handle attributes on the expression
+    // Some expression types print their own attributes (fun, newtype, apply, etc.)
+    // so we skip attribute printing here for those cases to avoid duplication.
+    // This matches OCaml's should_print_its_own_attributes check.
+    let should_print_its_own_attributes = match &e.pexp_desc {
+        ExpressionDesc::Pexp_apply { .. }
+        | ExpressionDesc::Pexp_fun { .. }
+        | ExpressionDesc::Pexp_newtype(_, _)
+        | ExpressionDesc::Pexp_setfield(_, _, _)
+        | ExpressionDesc::Pexp_ifthenelse(_, _, _) => true,
+        ExpressionDesc::Pexp_match(_, _) if parsetree_viewer::is_if_let_expr(e) => true,
+        ExpressionDesc::Pexp_jsx_element(_) => true,
+        _ => false,
+    };
+
     let attrs = &e.pexp_attributes;
-    if attrs.is_empty() {
+    if attrs.is_empty() || should_print_its_own_attributes {
         printed_expression
     } else {
         // Use Doc::line() separator so it can break when the expression breaks
@@ -2332,18 +2354,24 @@ fn print_ternary_expression(
         _ => Doc::nil(),
     };
 
-    // Check if any of the printable attributes need parens wrapping
-    // Note: Don't print attributes here - they're printed by print_expression's generic handler
-    let needs_parens = e.pexp_attributes
-        .iter()
-        .filter(|attr| attr.0.txt != "res.ternary")
-        .any(|attr| parsetree_viewer::is_printable_attribute(attr));
+    // Print attributes - ternary handles its own attributes
+    // First filter out res.ternary attribute
+    let attrs: Vec<&Attribute> = parsetree_viewer::filter_ternary_attributes(&e.pexp_attributes);
 
-    if needs_parens {
-        add_parens(ternary_doc)
-    } else {
-        ternary_doc
-    }
+    // Check if any of the printable attributes need parens wrapping
+    let needs_parens = parsetree_viewer::filter_parsing_attrs(
+        &attrs.iter().map(|a| (*a).clone()).collect::<Vec<_>>()
+    ).iter().any(|attr| parsetree_viewer::is_printable_attribute(attr));
+
+    let attrs_doc = print_attributes(state, &attrs.into_iter().cloned().collect::<Vec<_>>(), cmt_tbl, arena);
+    Doc::concat(vec![
+        attrs_doc,
+        if needs_parens {
+            add_parens(ternary_doc)
+        } else {
+            ternary_doc
+        },
+    ])
 }
 
 /// Print a ternary operand with appropriate parenthesization.
@@ -2469,8 +2497,12 @@ fn print_if_chain(
         ]),
     };
 
-    // Note: Don't print attributes here - they're printed by print_expression's generic handler
+    // Print attributes - Pexp_ifthenelse handles its own attributes
+    // Filter out fragile match attributes (res.braces, res.ternary)
+    let attrs = parsetree_viewer::filter_fragile_match_attributes(&e.pexp_attributes);
+    let attrs_doc = print_attributes(state, &attrs.into_iter().cloned().collect::<Vec<_>>(), cmt_tbl, arena);
     Doc::concat(vec![
+        attrs_doc,
         if_docs,
         else_doc,
     ])
@@ -3147,7 +3179,9 @@ fn print_pexp_apply(
         ParenKind::Nothing => funct_doc,
     };
     let args_doc = print_arguments(state, args, partial, cmt_tbl, arena);
-    Doc::group(Doc::concat(vec![funct_doc, args_doc]))
+    // Print attributes - Pexp_apply handles its own attributes
+    let attrs_doc = print_attributes(state, &expr.pexp_attributes, cmt_tbl, arena);
+    Doc::group(Doc::concat(vec![attrs_doc, funct_doc, args_doc]))
 }
 
 /// Check if a binary operand needs parens considering parent operator precedence.
