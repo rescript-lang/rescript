@@ -1,8 +1,9 @@
-# Printing Parity TODO
+# Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 312/506 tests passing (62%)
-**Printer Status:** 187/187 tests passing (100%)
+**Overall Status:** 315/506 tests passing (62%)
+**Printer Status:** 187/187 tests passing (100%) ✅
+**Remaining:** 191 tests to fix (parsing/errors, parsing/grammar, ppx, etc.)
 
 ---
 
@@ -21,7 +22,7 @@
 - Move on to easier tests when stuck on a hard one
 - Assume someone else will fix the difficult parts later
 
-**The work is not done until printer parity reaches 100%.** Study the OCaml implementation (`res_printer.ml`, `res_parsetree_viewer.ml`) and implement equivalent Rust code. Every feature OCaml supports, Rust must support.
+**The work is not done until ALL syntax tests pass (506/506).** Printer parity is complete (187/187), but parsing/errors, parsing/grammar, ppx, and conversion tests still need work. Study the OCaml implementation and implement equivalent Rust code.
 
 ---
 
@@ -537,40 +538,123 @@ Some tests cause the Rust parser to crash (Abort trap: 6). These must be fixed.
 
 ---
 
-## Phase 7: Non-Printer Tests
+## Phase 7: Non-Printer Tests (CURRENT PRIORITY)
 
-After printer parity is achieved, address remaining categories:
+Printer parity is complete (187/187). Now fix the remaining 191 failing tests.
 
-### Parsing Tests (~155 failing)
-- [ ] `parsing/errors` - 78 failing (error recovery)
-- [ ] `parsing/grammar` - 77 failing (grammar coverage)
+### Test Commands for Each Category
 
-### Other Categories (~30 failing)
-- [ ] `conversion` - 12 failing
-- [ ] `ppx/react` - 11 failing
-- [ ] `parsing/recovery` - 16 failing
-- [ ] `parsing/infiniteLoops` - 5 failing
+```bash
+# Error recovery tests (uses -recover -print ml)
+./compiler-rust/target/release/res_parser_rust -recover -print ml tests/syntax_tests/data/parsing/errors/FILE.res
+
+# Grammar tests (uses -print ml without -recover)
+./compiler-rust/target/release/res_parser_rust -print ml tests/syntax_tests/data/parsing/grammar/FILE.res
+
+# PPX/React tests (uses -jsx-version 4)
+./compiler-rust/target/release/res_parser_rust -jsx-version 4 tests/syntax_tests/data/ppx/react/FILE.res
+
+# AST conversion tests
+./compiler-rust/target/release/res_parser_rust -test-ast-conversion -jsx-version 4 tests/syntax_tests/data/ast-mapping/FILE.res
+
+# Compare with OCaml
+./_build/install/default/bin/res_parser -recover -print ml tests/syntax_tests/data/parsing/errors/FILE.res
+```
+
+### parsing/errors - 78 failing (error recovery mode)
+
+These tests run with `-recover -print ml` and test error recovery behavior.
+
+**Key issues to fix:**
+- [ ] Error message locations (line:col format must match OCaml exactly)
+- [ ] Recovered AST output (must match OCaml's ML printer byte-for-byte)
+- [ ] Error hole placement (`[%rescript.exprhole]` for missing expressions)
+- [ ] Array access syntax (OCaml uses `arr.(i)`, Rust uses `Array.get arr i`)
+
+**OCaml reference files:**
+- `compiler/syntax/src/res_diagnostics.ml` - Error messages
+- `compiler/syntax/src/res_core.ml` - Parser with recovery logic
+- `compiler/syntax/src/res_outcome_printer.ml` - ML AST printer
+
+### parsing/grammar - 73 failing
+
+Grammar parsing tests without error recovery.
+
+**Key issues to fix:**
+- [ ] ML AST printer output format
+- [ ] Location information in error messages
+- [ ] Specific grammar constructs
+
+### parsing/recovery - 16 failing
+
+Additional recovery mode tests.
+
+### parsing/infiniteLoops - 5 failing
+
+Tests that previously caused infinite loops. May involve parser crashes.
+
+### parsing/other - 3 failing
+
+Miscellaneous parsing tests.
+
+### ppx/react - 10 failing
+
+JSX transformation tests using `-jsx-version 4`.
+
+**Key issues to fix:**
+- [ ] JSX transformation output must match OCaml's PPX
+- [ ] React component transformations
+- [ ] Fragment handling
+
+**OCaml reference files:**
+- `compiler/syntax/src/res_jsx_ppx.ml` - JSX PPX transformation
+
+### conversion - 1 failing
+
+ML/Reason to ReScript conversion tests.
+
+### ast-mapping - needs verification
+
+AST conversion tests using `-test-ast-conversion`.
 
 ---
 
 ## Commands Reference
 
 ```bash
-# Run all syntax tests
+# Run all syntax tests (MUST PASS ALL for completion)
 PARSER=rust ./scripts/test_syntax.sh 2>&1 | tail -50
 
 # Build after changes
 cargo build --manifest-path compiler-rust/Cargo.toml --release
 
-# Test single file
+# Test single file - printer mode (default)
 ./compiler-rust/target/release/res_parser_rust FILE.res
 
-# Compare with OCaml
+# Test single file - error recovery mode
+./compiler-rust/target/release/res_parser_rust -recover -print ml FILE.res
+
+# Test single file - grammar mode (no recovery)
+./compiler-rust/target/release/res_parser_rust -print ml FILE.res
+
+# Test single file - JSX PPX mode
+./compiler-rust/target/release/res_parser_rust -jsx-version 4 FILE.res
+
+# Test single file - AST conversion mode
+./compiler-rust/target/release/res_parser_rust -test-ast-conversion -jsx-version 4 FILE.res
+
+# Compare with OCaml (printer mode)
 ./_build/install/default/bin/res_parser FILE.res
+
+# Compare with OCaml (error recovery mode)
+./_build/install/default/bin/res_parser -recover -print ml FILE.res
 
 # View diff for failing test
 diff tests/syntax_tests/data/PATH/expected/FILE.txt \
      tests/temp/syntax_tests/data/PATH/expected/FILE.txt
+
+# List all failing tests
+grep '^FAIL:' tests/temp/results.txt | cut -d: -f2
 ```
 
 ---
@@ -578,7 +662,9 @@ diff tests/syntax_tests/data/PATH/expected/FILE.txt \
 ## Notes
 
 - Focus on **root causes** not symptoms - many failures share the same underlying issue
-- Comment handling is the biggest blocker - fix Phase 1 first
+- Printer tests (Phase 1-6) are COMPLETE - focus on Phase 7 (non-printer tests)
 - Commit after EVERY improvement, even if just 1 more test passes
 - Study the OCaml code, don't guess!
-- **If a task is hard, don't skip it to find an easier one** - commit your progress and keep working on it. Everything needs to be done eventually.
+- **If a task is hard, don't skip it to find an easier one** - commit your progress and keep working on it
+- **The task is NOT complete until ALL 506 syntax tests pass**
+- Output `RALPH_COMPLETE` only when `PARSER=rust ./scripts/test_syntax.sh` shows 0 failures
