@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 340/506 tests passing (67%)
+**Overall Status:** 347/506 tests passing (68%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -9,23 +9,43 @@
 | printer | 187 | 0 | 187 | 100% ✅ |
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
-| conversion | 26 | 1 | 27 | 96% |
+| conversion | 27 | 0 | 27 | 100% ✅ |
+| parsing/grammar | 78 | 57 | 135 | 57% |
 | parsing/other | 10 | 4 | 14 | 71% |
-| parsing/grammar | 71 | 64 | 135 | 52% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
 | parsing/errors | 7 | 77 | 84 | 8% |
 | parsing/infiniteLoops | 0 | 5 | 5 | 0% |
 
-**Remaining:** 166 tests to fix
+**Remaining:** 159 tests to fix
 
-**Recent ML Printer Fixes (this session):**
-- Fixed with type constraint printing: type params, private, constraints
-- Fixed optional record field printing: `?` in expressions, patterns, and type fields
-- Fixed field attributes on label declarations
-- Fixed locally abstract types inline printing: `let f (type t) x = ...`
-- Fixed arrow type argument attributes: `a:int[@attr ] -> unit`
+**Recent Fixes (this session):**
+- Fixed extension payload printing to use print_payload (conversion/ppx.res now passes)
+- Fixed attribute placement in module types with 'with' constraints
+- Fixed ML printer for Psig_recmodule with proper box formatting
+- Fixed ML printer for Psig_type and Pstr_type with HOV box indent 2
 
-**Note:** Most parsing/grammar failures are line-wrapping differences (80-column). Parser-level issues (error messages, recovery, export keyword) account for errors/recovery/infiniteLoops failures.
+**Root Causes of Remaining Failures:**
+
+1. **parsing/grammar (57 failing)**: Mostly 80-column line wrapping differences in ML printer.
+   OCaml's Format module wraps long lines at 80 columns with specific indentation rules.
+   The Rust Formatter doesn't match this behavior exactly.
+
+2. **parsing/errors (77 failing)**: Missing error message generation in Rust parser.
+   OCaml has `parse_newline_or_semicolon_structure` and `parse_newline_or_semicolon_expr_block`
+   that emit "consecutive statements/expressions on a line must be separated by ';' or a newline"
+   errors. Rust doesn't implement these checks.
+
+3. **parsing/recovery (16 failing)**: Error recovery output differs from OCaml.
+   Both error messages and recovered AST formatting differ.
+
+4. **parsing/infiniteLoops (5 failing)**: Actually doesn't loop infinitely, but error messages
+   and AST output format differ from OCaml.
+
+5. **parsing/other (4 failing)**: Various parsing differences.
+
+**Note:** Most non-printer failures are NOT simple formatting issues - they require implementing
+missing parser error checking logic (for "consecutive statements" errors) or matching OCaml's
+exact Format module line-breaking algorithm.
 
 ---
 
