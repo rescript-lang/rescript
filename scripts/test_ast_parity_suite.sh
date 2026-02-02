@@ -69,11 +69,11 @@ compare_file() {
     # Remove temp files before each run (OCaml won't overwrite existing files)
     rm -f "$RUST_AST" "$OCAML_AST"
 
-    # Generate Rust AST
-    "$RUST_BSC" -bs-ast "$file" -o "$RUST_AST" 2>/dev/null || {
+    # Generate Rust AST (with timeout to catch infinite loops)
+    timeout 5 "$RUST_BSC" -bs-ast "$file" -o "$RUST_AST" 2>/dev/null || {
         rust_parse_error=$((rust_parse_error + 1))
         if $VERBOSE; then
-            echo -e "${RED}R${NC} $file (Rust parse error)"
+            echo -e "${RED}R${NC} $file (Rust parse error or timeout)"
         fi
         return
     }
