@@ -10,6 +10,7 @@ use crate::parse_arena::{LidentIdx, Located, ParseArena};
 use super::ast::*;
 use super::formatter::{BoxKind, Formatter};
 use super::longident::Longident;
+use super::parsetree_viewer;
 
 // ============================================================================
 // Helper functions
@@ -956,15 +957,39 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_apply { funct, args, partial, .. } => {
-            // Array access with @res.array.access
-            if has_attribute(&expr.pexp_attributes, "res.array.access") && args.len() == 2 {
+            // Array access: Array.get(arr, idx) -> arr.(idx)
+            // Also handles @res.array.access attribute for backwards compatibility
+            if (parsetree_viewer::is_array_access(arena, expr) || has_attribute(&expr.pexp_attributes, "res.array.access")) && args.len() == 2 {
                 let (_, arr) = &args[0];
                 let (_, idx) = &args[1];
-                f.string("(");
+                if use_parens {
+                    f.string("(");
+                }
                 print_expression(f, arena, arr);
                 f.string(".(");
                 print_expression(f, arena, idx);
-                f.string("))");
+                f.string(")");
+                if use_parens {
+                    f.string(")");
+                }
+                return;
+            }
+            // Array set: Array.set(arr, idx, val) -> arr.(idx) <- val
+            if parsetree_viewer::is_array_set(arena, expr) && args.len() == 3 {
+                let (_, arr) = &args[0];
+                let (_, idx) = &args[1];
+                let (_, val) = &args[2];
+                if use_parens {
+                    f.string("(");
+                }
+                print_expression(f, arena, arr);
+                f.string(".(");
+                print_expression(f, arena, idx);
+                f.string(") <- ");
+                print_expression(f, arena, val);
+                if use_parens {
+                    f.string(")");
+                }
                 return;
             }
 
