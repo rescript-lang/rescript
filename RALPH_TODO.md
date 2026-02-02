@@ -1,22 +1,31 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 323/506 tests passing (63%)
+**Overall Status:** 340/506 tests passing (67%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
 |----------|--------|--------|-------|---------|
 | printer | 187 | 0 | 187 | 100% ✅ |
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
-| ppx/react | 28 | 3 | 31 | 90% |
+| ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 26 | 1 | 27 | 96% |
 | parsing/other | 10 | 4 | 14 | 71% |
-| parsing/grammar | 58 | 77 | 135 | 42% |
+| parsing/grammar | 71 | 64 | 135 | 52% |
 | parsing/recovery | 4 | 16 | 20 | 20% |
 | parsing/errors | 7 | 77 | 84 | 8% |
 | parsing/infiniteLoops | 0 | 5 | 5 | 0% |
 
-**Remaining:** 183 tests to fix (mainly ML printer formatting and error recovery)
+**Remaining:** 166 tests to fix
+
+**Recent ML Printer Fixes (this session):**
+- Fixed with type constraint printing: type params, private, constraints
+- Fixed optional record field printing: `?` in expressions, patterns, and type fields
+- Fixed field attributes on label declarations
+- Fixed locally abstract types inline printing: `let f (type t) x = ...`
+- Fixed arrow type argument attributes: `a:int[@attr ] -> unit`
+
+**Note:** Most parsing/grammar failures are line-wrapping differences (80-column). Parser-level issues (error messages, recovery, export keyword) account for errors/recovery/infiniteLoops failures.
 
 ---
 
