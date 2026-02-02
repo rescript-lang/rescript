@@ -2710,8 +2710,12 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                     f.string(": ");
                     print_core_type(f, arena, res);
                 }
-                // Trailing space after each constructor
+                // Print constructor attributes (like @as) with leading space
+                // OCaml: pp f "%s%a@;%a" name args (attributes ctxt) attrs
+                // The @; before attributes is a break hint that becomes a space
+                // When attrs is empty, still outputs a trailing space
                 f.string(" ");
+                print_attributes(f, arena, &ctor.pcd_attributes);
             }
         }
         TypeKind::Ptype_record(fields) => {
