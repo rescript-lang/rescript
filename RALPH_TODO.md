@@ -19,6 +19,11 @@
 **Remaining:** 145 tests to fix
 
 **Recent Fixes (this session):**
+- ML printer: add pipe context for match cases - wraps Pexp_fun/match/try/sequence in parens when
+  used as match case RHS (matching OCaml's under_pipe context)
+- ML printer: use simple_expr for record field values (matching OCaml's longident_x_expression)
+- ML printer: wrap alias types (Ptyp_alias) in parens when used as arrow arguments
+- Parser: accept uppercase type variables ('X) in type constraints, not just lowercase ('a)
 - Added consecutive statements/expressions error checking (`parse_newline_or_semicolon_expr_block`,
   `parse_newline_or_semicolon_structure`) - detects missing ';' or newline between consecutive items
 - Fixed ML printer Unicode escaping: non-ASCII bytes now escaped as decimal sequences (e.g., \226\156\133)
