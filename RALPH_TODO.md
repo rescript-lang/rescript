@@ -4,6 +4,27 @@
 **Overall Status:** 292/506 tests passing (57%)
 **Printer Status:** 168/187 tests passing (89%)
 
+---
+
+## ⚠️ CRITICAL: Complete ALL Fixes, Not Just Easy Ones
+
+**The goal is 100% parity with the OCaml reference implementation.** There is no reason to stop at "low-hanging fruit" or avoid complex features. Every remaining test must eventually pass, so tackle the hard problems now rather than deferring them.
+
+**What this means:**
+- **Spread array syntax** (`[...xs, a, b]`) - Implement the full reconstruction from `Belt.Array.concatMany`
+- **Underscore apply rewriting** - Implement the pattern matching to convert `(__x) => f(__x)` back to `f(_)`
+- **Template literals** - Implement complete template literal printing
+- **Any other missing feature** - If a test requires new infrastructure, build that infrastructure
+
+**Do NOT:**
+- Skip tests because they're "too complex"
+- Move on to easier tests when stuck on a hard one
+- Assume someone else will fix the difficult parts later
+
+**The work is not done until printer parity reaches 100%.** Study the OCaml implementation (`res_printer.ml`, `res_parsetree_viewer.ml`) and implement equivalent Rust code. Every feature OCaml supports, Rust must support.
+
+---
+
 ### Recent Progress
 - Fixed ternary expression indentation in value bindings (ternary.res now passes):
   - When ternary condition is a binary expression or has attributes, indent the ternary on a new line
