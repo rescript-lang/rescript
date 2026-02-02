@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 376/506 tests passing (74%)
+**Overall Status:** 388/506 tests passing (76%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -10,15 +10,26 @@
 | ast-mapping | 3 | 0 | 3 | 100% ✅ |
 | ppx/react | 31 | 0 | 31 | 100% ✅ |
 | conversion | 27 | 0 | 27 | 100% ✅ |
-| parsing/grammar | 92 | 43 | 135 | 68% |
+| parsing/grammar | 93 | 42 | 135 | 69% |
 | parsing/other | 11 | 3 | 14 | 78% |
-| parsing/recovery | 4 | 16 | 20 | 20% |
-| parsing/errors | 20 | 64 | 84 | 23% |
+| parsing/recovery | 11 | 9 | 20 | 55% |
+| parsing/errors | 25 | 59 | 84 | 29% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 130 tests to fix
+**Remaining:** 118 tests to fix
 
 **Recent Fixes (this session):**
+- **Propagated scanner diagnostics to parser**: Scanner errors like unclosed strings were being
+  collected but never propagated to the parser's diagnostic list. Now scanner diagnostics are
+  taken and added to parser diagnostics after each scan operation.
+- **Added skip_tokens_and_maybe_retry for error recovery**: Implemented OCaml's error recovery
+  mechanism that skips unexpected tokens and retries parsing. For example, `let foo = '2` now
+  correctly parses as `let foo = 2` (recovering after the invalid `'` character).
+- **Added Implementation breadcrumb to parse_structure**: OCaml's `parse_implementation` uses
+  `parse_region` with `Grammar::Implementation` as the breadcrumb. This enables proper
+  `should_abort_list_parse` checks during error recovery.
+- **Added error for empty exotic identifiers**: When scanning exotic identifiers like `\""`,
+  emit "A quoted identifier can't be empty string" error and preserve the full escaped form.
 - **Fixed error reporting to match OCaml's region-based silencing**: Three key changes:
   1. Removed per-item regions in parse_structure - OCaml does NOT create a new region for each
      structure item. The region is shared so that after one error, subsequent errors are silenced.
