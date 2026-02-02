@@ -1529,7 +1529,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     if field.opt {
                         f.string("?");  // Optional field: name = ?value
                     }
-                    print_expression(f, arena, &field.expr);
+                    // OCaml uses simple_expr for record field values
+                    print_expression_simple(f, arena, &field.expr);
                 }
             }
             f.string(" }");
