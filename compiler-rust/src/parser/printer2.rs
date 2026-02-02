@@ -6443,14 +6443,27 @@ fn print_payload(state: &PrinterState, payload: &Payload, cmt_tbl: &mut CommentT
         ]),
         Payload::PPat(pat, guard) => {
             let pat_doc = print_pattern(state, pat, cmt_tbl, arena);
+            // OCaml: when_doc = Doc.line; Doc.text "if "; print_expression ...
             let guard_doc = match guard {
                 Some(g) => Doc::concat(vec![
-                    Doc::text(" when "),
+                    Doc::line(),
+                    Doc::text("if "),
                     print_expression_with_comments(state, g, cmt_tbl, arena),
                 ]),
                 None => Doc::nil(),
             };
-            Doc::concat(vec![Doc::text("(? "), pat_doc, guard_doc, Doc::text(")")])
+            // OCaml wraps in indent with soft_line at start and end
+            Doc::concat(vec![
+                Doc::lparen(),
+                Doc::indent(Doc::concat(vec![
+                    Doc::soft_line(),
+                    Doc::text("? "),
+                    pat_doc,
+                    guard_doc,
+                ])),
+                Doc::soft_line(),
+                Doc::rparen(),
+            ])
         }
     }
 }
