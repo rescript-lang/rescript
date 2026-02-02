@@ -281,3 +281,13 @@ module Arr = Belt.Array
 
 type aliased = variant
 //    ^hov
+
+let myFn = (a, b) => a ++ b->Int.toString
+
+type fnType = %typeof(myFn)
+//    ^hov
+
+let myFnPartial = myFn("hello", ...)
+
+type fnTypePartial = %typeof(myFnPartial)
+//    ^hov
