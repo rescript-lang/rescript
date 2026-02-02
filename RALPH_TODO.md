@@ -1,10 +1,17 @@
 # Printing Parity TODO
 
 **Last Updated:** 2026-02-02
-**Overall Status:** 287/506 tests passing (56%)
-**Printer Status:** 163/187 tests passing (87%)
+**Overall Status:** 291/506 tests passing (57%)
+**Printer Status:** 167/187 tests passing (89%)
 
 ### Recent Progress
+- Fixed binary expression flattening (binaryExpr.res now passes):
+  - Implemented `flatten_binary_operand` function matching OCaml's `flatten` logic in `print_operand`
+  - When printing a binary operand that is itself a flattenable binary expression (same precedence,
+    no attributes), recursively flatten instead of nesting with group/indent
+  - This prevents excessive indentation for chains like `a && b && c && d`
+  - Added `print_binary_operator_with_spacing` helper matching OCaml's `print_binary_operator`
+  - Handles special cases: setfield (parens only on LHS), #= operator, await expressions
 - Fixed PPat payload printing (attributes.res now passes): use `if` instead of `when` for guard,
   wrap in indent with soft_line matching OCaml's format
 - Fixed typexpr.res comment handling (now passes):
@@ -196,12 +203,11 @@
   to mod_expr.pmod_loc before calling walk_module_expr. Now `module type of /* c4 */ {}`
   keeps the comment before the brace.
 
-- **binaryExpr.res - Flattening**: OCaml's `print_operand` function has a `flatten` helper that
+- **binaryExpr.res - Flattening**: FIXED! Implemented `flatten_binary_operand` function that
   recursively flattens same-precedence binary operators without creating nested groups/indentation.
-  For example, `a == b && c == d && e == f` with comments should NOT indent the middle operators.
-  The Rust code processes each nested `&&` as a separate binary expression, causing extra indentation.
-  REQUIRES: Implementing `print_binary_operand` with flattening logic similar to OCaml's `print_operand`.
-  This affects `printer/comments/binaryExpr.res` and likely other tests with nested binary expressions.
+  When a binary operand is itself a flattenable binary expression (same precedence, no attributes),
+  it recursively flattens instead of wrapping in a new group. This now correctly prints
+  `a == b && c == d && e == f` without indenting the middle operators.
 
 ### Major Missing Features (blocking remaining ~40 tests)
 
@@ -242,7 +248,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] **Fix comment placement in function arguments** - `/* c0 */ ~arg=/* c1 */ value /* c2 */` pattern
 - [x] **Fix comment placement in function parameters** - Comments on function parameter definitions
 
-### Comment Test Files (3 failing, 14 passing)
+### Comment Test Files (1 failing, 16 passing)
 - [x] `printer/comments/namedArgs.res` - Named argument comments
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [x] `printer/comments/modExpr.res` - Module expression comments
@@ -250,7 +256,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/comments/blockExpr.res` - Block expression comments
 - [x] `printer/comments/expr.res` - General expression comments
 - [x] `printer/comments/jsx.res` - JSX element comments
-- [ ] `printer/comments/binaryExpr.res` - Binary expression comments (needs flattening logic)
+- [x] `printer/comments/binaryExpr.res` - Binary expression comments (flattening logic)
 - [x] `printer/comments/case.res` - Match case comments
 - [ ] `printer/comments/array.res` - Array literal comments (needs spread syntax)
 - [x] `printer/comments/docComments.res` - Doc comment handling
@@ -413,3 +419,4 @@ diff tests/syntax_tests/data/PATH/expected/FILE.txt \
 - Comment handling is the biggest blocker - fix Phase 1 first
 - Commit after EVERY improvement, even if just 1 more test passes
 - Study the OCaml code, don't guess!
+- **If a task is hard, don't skip it to find an easier one** - commit your progress and keep working on it. Everything needs to be done eventually.

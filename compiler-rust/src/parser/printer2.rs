@@ -3275,6 +3275,190 @@ fn binary_operand_needs_parens(arena: &ParseArena, is_lhs: bool, parent_op: &str
     parens::binary_expr_operand(arena, is_lhs, operand)
 }
 
+/// Print binary operator with appropriate spacing.
+/// Matches OCaml's print_binary_operator.
+fn print_binary_operator_with_spacing(operator: &str, inline_rhs: bool) -> Doc {
+    let spacing_before = if operator == "->" {
+        Doc::soft_line()
+    } else {
+        Doc::space()
+    };
+    let spacing_after = if operator == "->" {
+        Doc::nil()
+    } else if inline_rhs {
+        Doc::space()
+    } else {
+        Doc::line()
+    };
+    Doc::concat(vec![spacing_before, Doc::text(operator), spacing_after])
+}
+
+/// Print a binary operand with flattening logic for same-precedence operators.
+/// This matches OCaml's print_operand with its nested flatten function.
+fn print_binary_operand(
+    state: &PrinterState,
+    is_lhs: bool,
+    is_multiline: bool,
+    expr: &Expression,
+    parent_operator: &str,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    flatten_binary_operand(state, is_lhs, is_multiline, expr, parent_operator, cmt_tbl, arena)
+}
+
+/// Recursive flatten function for binary expressions.
+/// When we have a flattenable binary expression (same precedence, no attrs),
+/// we recursively flatten the left operand and print right normally.
+/// This avoids nested indentation for chains like `a && b && c && d`.
+fn flatten_binary_operand(
+    state: &PrinterState,
+    is_lhs: bool,
+    is_multiline: bool,
+    expr: &Expression,
+    parent_operator: &str,
+    cmt_tbl: &mut CommentTable,
+    arena: &ParseArena,
+) -> Doc {
+    if parsetree_viewer::is_binary_expression(arena, expr) {
+        // It's a binary expression - check if we should flatten
+        if let ExpressionDesc::Pexp_apply { funct, args, .. } = &expr.pexp_desc {
+            if args.len() == 2 {
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        let operator = arena.get_string(*op_idx);
+
+                        // Check if we can flatten: same precedence and no attributes
+                        if parsetree_viewer::flattenable_operators(parent_operator, operator)
+                            && !parsetree_viewer::has_attributes(&expr.pexp_attributes)
+                        {
+                            let (_, left) = &args[0];
+                            let (_, right) = &args[1];
+
+                            // Recursively flatten the left operand
+                            let left_printed =
+                                flatten_binary_operand(state, true, is_multiline, left, operator, cmt_tbl, arena);
+
+                            // Print the right operand normally
+                            let right_printed = {
+                                let doc = print_expression_with_comments(state, right, cmt_tbl, arena);
+
+                                // Check if needs parens for flatten RHS
+                                if parens::flatten_operand_rhs(arena, parent_operator, right) {
+                                    Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+                                } else {
+                                    doc
+                                }
+                            };
+
+                            // Build the flattened doc
+                            let doc = if parsetree_viewer::expr_is_await(expr) {
+                                let parens_needed =
+                                    parens::binary_operator_inside_await_needs_parens(operator);
+                                Doc::concat(vec![
+                                    Doc::lparen(),
+                                    Doc::text("await "),
+                                    if parens_needed { Doc::lparen() } else { Doc::nil() },
+                                    left_printed,
+                                    print_binary_operator_with_spacing(operator, false),
+                                    right_printed,
+                                    if parens_needed { Doc::rparen() } else { Doc::nil() },
+                                    Doc::rparen(),
+                                ])
+                            } else if operator == "->" && is_multiline {
+                                // Multiline pipe chain - force break
+                                Doc::breakable_group(
+                                    Doc::concat(vec![
+                                        left_printed,
+                                        print_binary_operator_with_spacing(operator, false),
+                                        right_printed,
+                                    ]),
+                                    true, // force_break
+                                )
+                            } else {
+                                Doc::concat(vec![
+                                    left_printed,
+                                    print_binary_operator_with_spacing(operator, false),
+                                    right_printed,
+                                ])
+                            };
+
+                            // Check if non-LHS needs parens
+                            let doc = if !is_lhs && parens::rhs_binary_expr_operand(arena, parent_operator, expr) {
+                                Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+                            } else {
+                                doc
+                            };
+
+                            return print_comments(doc, cmt_tbl, expr.pexp_loc, arena);
+                        } else {
+                            // Not flattenable - print with parens if needed
+                            let has_printable_attrs = parsetree_viewer::has_printable_attributes(&expr.pexp_attributes);
+
+                            let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+
+                            // Check if needs parens due to precedence or attrs
+                            let doc = if parens::sub_binary_expr_operand(parent_operator, operator)
+                                || (has_printable_attrs
+                                    && (parsetree_viewer::is_binary_expression(arena, expr)
+                                        || parsetree_viewer::is_ternary_expr(expr)))
+                            {
+                                Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+                            } else {
+                                doc
+                            };
+
+                            return doc;
+                        }
+                    }
+                }
+            }
+        }
+        // Shouldn't reach here for valid binary expressions, but handle gracefully
+        print_expression_with_comments(state, expr, cmt_tbl, arena)
+    } else {
+        // Not a binary expression - handle special cases
+        match &expr.pexp_desc {
+            // Setfield - only needs parens on LHS
+            ExpressionDesc::Pexp_setfield(_, _, _) => {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                if is_lhs {
+                    add_parens(doc)
+                } else {
+                    doc
+                }
+            }
+
+            // JS object set (#=) - only needs parens on LHS
+            ExpressionDesc::Pexp_apply { funct, args, .. } if args.len() == 2 => {
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if arena.is_lident(ident.txt, "#=") {
+                        let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                        return if is_lhs { add_parens(doc) } else { doc };
+                    }
+                }
+                // Fall through to default handling
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                match parens::binary_expr_operand(arena, is_lhs, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            }
+
+            // Default case - regular expression
+            _ => {
+                let doc = print_expression_with_comments(state, expr, cmt_tbl, arena);
+                match parens::binary_expr_operand(arena, is_lhs, expr) {
+                    ParenKind::Parenthesized => add_parens(doc),
+                    ParenKind::Braced(loc) => print_braces(doc, expr, loc, arena),
+                    ParenKind::Nothing => doc,
+                }
+            }
+        }
+    }
+}
+
 /// Print binary expression.
 /// This matches OCaml's print_binary_expression logic for spacing and indentation.
 fn print_binary_expression(
@@ -3304,20 +3488,9 @@ fn print_binary_expression(
         // This matches OCaml's behavior in the simple pipe case
         let lhs_has_comment_below = has_comment_below(cmt_tbl, lhs.pexp_loc, arena);
 
-        // Print operands
-        let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl, arena);
-        let lhs_doc = match binary_operand_needs_parens(arena, true, op, lhs) {
-            ParenKind::Parenthesized => add_parens(lhs_doc),
-            ParenKind::Braced(loc) => print_braces(lhs_doc, lhs, loc, arena),
-            ParenKind::Nothing => lhs_doc,
-        };
-
-        let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
-        let rhs_doc = match binary_operand_needs_parens(arena, false, op, rhs) {
-            ParenKind::Parenthesized => add_parens(rhs_doc),
-            ParenKind::Braced(loc) => print_braces(rhs_doc, rhs, loc, arena),
-            ParenKind::Nothing => rhs_doc,
-        };
+        // Print operands using print_binary_operand
+        let lhs_doc = print_binary_operand(state, true, false, lhs, op, cmt_tbl, arena);
+        let rhs_doc = print_binary_operand(state, false, false, rhs, op, cmt_tbl, arena);
 
         // Only use soft_line before -> when there's a comment below the LHS
         // This matches OCaml's behavior exactly
@@ -3334,24 +3507,19 @@ fn print_binary_expression(
         ]));
     }
 
-    // Print operands with appropriate parenthesization using precedence-aware check
-    let lhs_doc = print_expression_with_comments(state, lhs, cmt_tbl, arena);
-    let lhs_doc = match binary_operand_needs_parens(arena, true, op, lhs) {
-        ParenKind::Parenthesized => add_parens(lhs_doc),
-        ParenKind::Braced(loc) => print_braces(lhs_doc, lhs, loc, arena),
-        ParenKind::Nothing => lhs_doc,
+    // Check if multiline (LHS and RHS on different lines)
+    let is_multiline = {
+        let lhs_line = arena.loc_start(lhs.pexp_loc).line;
+        let rhs_line = arena.loc_start(rhs.pexp_loc).line;
+        lhs_line < rhs_line
     };
 
-    let rhs_doc = print_expression_with_comments(state, rhs, cmt_tbl, arena);
-    let rhs_doc = match binary_operand_needs_parens(arena, false, op, rhs) {
-        ParenKind::Parenthesized => add_parens(rhs_doc),
-        ParenKind::Braced(loc) => print_braces(rhs_doc, rhs, loc, arena),
-        ParenKind::Nothing => rhs_doc,
-    };
+    // Use print_binary_operand with flattening for operands
+    let lhs_doc = print_binary_operand(state, true, is_multiline, lhs, op, cmt_tbl, arena);
 
     if is_pipe_first {
         // Complex pipe case (operand is binary or has attributes)
-        // Use soft_line for break opportunities
+        let rhs_doc = print_binary_operand(state, false, is_multiline, rhs, op, cmt_tbl, arena);
         Doc::group(Doc::concat(vec![
             lhs_doc,
             Doc::soft_line(),
@@ -3359,30 +3527,18 @@ fn print_binary_expression(
             rhs_doc,
         ]))
     } else {
-        // Non-pipe binary operators
-        // Check if RHS should be inlined (always space) or can break (line that becomes space or newline)
+        // Non-pipe binary operators - need indentation logic
         let inline_rhs = parsetree_viewer::should_inline_rhs_binary_expr(rhs);
 
-        // Spacing after operator: space if inline, line (breakable) if not inline
-        let spacing_after = if inline_rhs {
-            Doc::space()
-        } else {
-            Doc::line()
-        };
-
-        // Build operator + rhs, potentially with indentation
-        // Use should_indent_binary_expr which checks:
-        // 1. Is operator an equality operator?
-        // 2. Is LHS NOT a same-precedence sub-expression?
-        // 3. Is operator `:=`?
-        let should_indent = parsetree_viewer::should_indent_binary_expr(arena, expr);
+        let rhs_doc = print_binary_operand(state, false, is_multiline, rhs, op, cmt_tbl, arena);
 
         let operator_with_rhs = Doc::concat(vec![
-            Doc::space(),
-            Doc::text(op),
-            spacing_after,
+            print_binary_operator_with_spacing(op, inline_rhs),
             rhs_doc,
         ]);
+
+        // Use should_indent_binary_expr to determine if we need indentation
+        let should_indent = parsetree_viewer::should_indent_binary_expr(arena, expr);
 
         let right = if should_indent {
             Doc::group(Doc::indent(operator_with_rhs))
