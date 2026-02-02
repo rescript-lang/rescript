@@ -2271,8 +2271,12 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             // HOV box with indent 2, break hints around ->
             f.open_box(BoxKind::HOV, 2);
             print_arg_label(f, arena, &arg.lbl);
-            // Arrow types as args need parentheses (OCaml's core_type1 wraps them)
-            let arg_needs_parens = matches!(arg.typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
+            // Arrow and alias types as args need parentheses (OCaml's core_type1
+            // wraps them via the `| _ -> paren true (core_type ctxt) f x` fallthrough)
+            let arg_needs_parens = matches!(
+                arg.typ.ptyp_desc,
+                CoreTypeDesc::Ptyp_arrow { .. } | CoreTypeDesc::Ptyp_alias(..)
+            );
             if arg_needs_parens {
                 f.string("(");
             }
