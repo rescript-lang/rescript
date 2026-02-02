@@ -448,8 +448,30 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
         StructureItemDesc::Pstr_module(mb) => {
             f.string("module ");
             f.string(&mb.pmb_name.txt);
-            f.string(" = ");
-            print_module_expr(f, arena, &mb.pmb_expr);
+            // OCaml: special case for Pmod_constraint with ident or signature type
+            // prints "module X : mt = me'" instead of "module X = (me' : mt)"
+            if let ModuleExprDesc::Pmod_constraint(me, mt) = &mb.pmb_expr.pmod_desc {
+                let is_sugar_type = matches!(
+                    mt.pmty_desc,
+                    ModuleTypeDesc::Pmty_ident(..) | ModuleTypeDesc::Pmty_signature(..)
+                );
+                if is_sugar_type && mb.pmb_expr.pmod_attributes.is_empty() {
+                    f.string(" :");
+                    f.space();
+                    print_module_type(f, arena, mt);
+                    f.space();
+                    f.string("=");
+                    f.space();
+                    print_module_expr(f, arena, me);
+                    f.space();  // OCaml: trailing @; produces space
+                } else {
+                    f.string(" = ");
+                    print_module_expr(f, arena, &mb.pmb_expr);
+                }
+            } else {
+                f.string(" = ");
+                print_module_expr(f, arena, &mb.pmb_expr);
+            }
         }
         StructureItemDesc::Pstr_recmodule(mbs) => {
             for (i, mb) in mbs.iter().enumerate() {
