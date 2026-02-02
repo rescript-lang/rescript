@@ -2511,15 +2511,23 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.close_box();
         }
         ModuleTypeDesc::Pmty_functor(name, arg_type, ret_type) => {
-            // Anonymous functors (name = "_") are printed as just "ArgType -> RetType"
-            // Named functors are printed as "functor (Name : ArgType) -> RetType"
-            if name.txt == "_" {
+            // OCaml handling:
+            // - Pmty_functor (_, None, mt2) -> "functor () -> mt2"
+            // - name = "_" -> anonymous, print as "ArgType -> RetType"
+            // - otherwise -> "functor (Name : ArgType) -> RetType"
+            if arg_type.is_none() {
+                // Empty functor: functor () -> ...
+                f.string("functor () -> ");
+                print_module_type(f, arena, ret_type);
+            } else if name.txt == "_" {
+                // Anonymous functor: ArgType -> RetType
                 if let Some(mt) = arg_type {
                     print_module_type(f, arena, mt);
                 }
                 f.string(" -> ");
                 print_module_type(f, arena, ret_type);
             } else {
+                // Named functor: functor (Name : ArgType) -> RetType
                 f.string("functor (");
                 f.string(&name.txt);
                 if let Some(mt) = arg_type {
@@ -2642,6 +2650,7 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             print_item_attributes(f, arena, &vd.pval_attributes);
         }
         SignatureItemDesc::Psig_type(rec_flag, decls) => {
+            // OCaml uses @[<v>...@] for multiple decls - vertical box with newlines
             let rec_str = match rec_flag {
                 RecFlag::Recursive => "",
                 RecFlag::Nonrecursive => " nonrec",
@@ -2652,7 +2661,8 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                     f.string(rec_str);
                     f.string(" ");
                 } else {
-                    f.string(" and ");
+                    f.newline();
+                    f.string("and ");
                 }
                 print_type_declaration(f, arena, decl);
             }
@@ -2700,6 +2710,7 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
             f.string(&md.pmd_name.txt);
             f.string(" : ");
             print_module_type(f, arena, &md.pmd_type);
+            print_item_attributes(f, arena, &md.pmd_attributes);
         }
         SignatureItemDesc::Psig_recmodule(mds) => {
             for (i, md) in mds.iter().enumerate() {
