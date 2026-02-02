@@ -5,6 +5,9 @@
 **Printer Status:** 151/187 tests passing (80%)
 
 ### Recent Progress
+- Fixed doc comment partition to only include res.doc, not ocaml.doc (valueBinding.res almost passes):
+  OCaml only treats "res.doc" as a doc comment (printed as /** ... */). "ocaml.doc" is a regular
+  attribute and should stay on the same line with other attributes, not get a hard_line.
 - Fixed binary expression indentation using should_indent_binary_expr (jsObjectAccess.res passes):
   OCaml's should_indent_binary_expr checks if LHS is a same-precedence sub-expression. Added
   flattenable_operators and same_precedence_sub_expression helpers to properly determine when
