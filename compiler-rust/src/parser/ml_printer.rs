@@ -2231,6 +2231,9 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             f.string(name);
         }
         CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
+            // OCaml: pp f "@[<2>%a@;->@;%a%s@]"
+            // HOV box with indent 2, break hints around ->
+            f.open_box(BoxKind::HOV, 2);
             print_arg_label(f, arena, &arg.lbl);
             // Arrow types as args need parentheses (OCaml's core_type1 wraps them)
             let arg_needs_parens = matches!(arg.typ.ptyp_desc, CoreTypeDesc::Ptyp_arrow { .. });
@@ -2243,11 +2246,14 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             }
             // Print attributes on the argument (after the type)
             print_attributes(f, arena, &arg.attrs);
-            f.string(" -> ");
+            f.space(); // Break hint before ->
+            f.string("->");
+            f.space(); // Break hint after ->
             print_core_type(f, arena, ret);
             if let Arity::Full(n) = arity {
                 f.string(&format!(" (a:{})", n));
             }
+            f.close_box();
         }
         CoreTypeDesc::Ptyp_tuple(types) => {
             f.string("(");
