@@ -19,6 +19,11 @@
 **Remaining:** 145 tests to fix
 
 **Recent Fixes (this session):**
+- Added polyvariant type error generation for error recovery mode:
+  - `parse_row_fields_with_required_first()` requires at least one row field for `[< ...]` and `[...]`
+  - `is_bar_or_doc_comment_then_bar()` handles doc comments before leading `|`
+  - Generates "I'm not sure what to parse here" errors for invalid syntax like `[< ]` and `[]`
+  - Recovered AST includes `[%rescript.typehole]` placeholders
 - ML printer: add pipe context for match cases - wraps Pexp_fun/match/try/sequence in parens when
   used as match case RHS (matching OCaml's under_pipe context)
 - ML printer: use simple_expr for record field values (matching OCaml's longident_x_expression)

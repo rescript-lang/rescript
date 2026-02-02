@@ -3458,6 +3458,8 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
 fn print_item_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, attrs: &[(Located<String>, Payload)]) {
     // OCaml: and item_attribute ctxt f (s, e) = pp f "@[<2>[@@@@%s@ %a]@]" s.txt (payload ctxt) e
     // Each attribute is wrapped in a box with indent 2, with a break hint after the name
+    // NOTE: The box causes different line-break behavior than OCaml's Format module for
+    // complex nested structures. For now, keeping it simple without the box.
     let attrs = printable_attributes(attrs);
     for (name, payload) in attrs {
         f.string("[@@");
