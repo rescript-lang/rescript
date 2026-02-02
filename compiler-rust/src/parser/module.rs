@@ -1242,10 +1242,12 @@ fn parse_module_type_no_with(p: &mut Parser<'_>) -> ModuleType {
 }
 
 fn parse_module_type_impl(p: &mut Parser<'_>, es6_arrow: bool, parse_with: bool) -> ModuleType {
-    let start_pos = p.start_pos.clone();
-
     // Parse attributes (e.g. `@attr module type of M`)
     let attrs = parse_attributes(p);
+
+    // Capture start position AFTER attributes - OCaml's module type locations
+    // don't include leading attributes
+    let start_pos = p.start_pos.clone();
 
     // Parse functor types first (if allowed), then fall back to primary module types.
     let typ = if es6_arrow {
