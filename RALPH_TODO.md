@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-02-02
 **Overall Status:** 301/506 tests passing (59%)
-**Printer Status:** 176/187 tests passing (94%)
+**Printer Status:** 177/187 tests passing (94%)
 
 ---
 
@@ -488,7 +488,7 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] `printer/typexpr/tuple.res`
 - [x] `printer/typexpr/typeConstr.res`
 - [x] `printer/typexpr/var.res`
-- [ ] `printer/typexpr/variant.res` - Polyvariant comment handling
+- [x] `printer/typexpr/variant.res` - Polyvariant comment handling (fixed: wrap tag_doc with print_comments)
 
 ### Other (1 failing, 16 passing)
 - [x] `printer/other/attributes.res`

@@ -5311,6 +5311,8 @@ fn print_row_field(
                 Doc::concat(vec![Doc::text("#"), print_poly_var_ident(&label.txt)]),
                 types_doc,
             ]));
+            // Wrap with print_comments to attach leading/trailing comments using label's location
+            let tag_doc = print_comments(tag_doc, cmt_tbl, label.loc, arena);
 
             Doc::concat(vec![comment_doc, bar, tag_doc])
         }
@@ -5320,6 +5322,7 @@ fn print_row_field(
             } else {
                 Doc::if_breaks(Doc::text("| "), Doc::nil())
             };
+            // Note: For inherited types, OCaml uses the type's location for comments
             Doc::concat(vec![bar, print_typ_expr(state, typ, cmt_tbl, arena)])
         }
     }
