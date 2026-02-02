@@ -2646,12 +2646,17 @@ fn transform_module_type(mty: ModuleType, config: &mut JsxConfig, arena: &mut Pa
     ModuleType {
         pmty_desc: match mty.pmty_desc {
             ModuleTypeDesc::Pmty_signature(sig_items) => {
+                // Save and reset has_component (OCaml: config.has_component <- false)
+                let old_has_component = config.has_component;
+                config.has_component = false;
                 // Transform signature items
                 let mut result = vec![];
                 for item in sig_items {
                     let items = transform_signature_item_multi(item, config, arena);
                     result.extend(items);
                 }
+                // Restore has_component
+                config.has_component = old_has_component;
                 ModuleTypeDesc::Pmty_signature(result)
             }
             ModuleTypeDesc::Pmty_functor(name, param, body) => {
@@ -2714,11 +2719,18 @@ fn transform_module_binding(mb: ModuleBinding, config: &mut JsxConfig, arena: &m
 
 /// Transform a structure with an existing config (preserves file_name and nested_modules)
 fn transform_structure_with_config(structure: Structure, config: &mut JsxConfig, arena: &mut ParseArena) -> Structure {
+    // Save and reset has_component (OCaml: config.has_component <- false)
+    let old_has_component = config.has_component;
+    config.has_component = false;
+
     let mut result = vec![];
     for item in structure {
         let items = transform_structure_item_multi(item, config, arena);
         result.extend(items);
     }
+
+    // Restore has_component
+    config.has_component = old_has_component;
     result
 }
 
