@@ -420,21 +420,25 @@ fn collect_list_elements<'a>(expr: &'a Expression, arena: &ParseArena) -> (Vec<&
 }
 
 fn escape_string(s: &str) -> String {
-    // OCaml escapes non-ASCII bytes using decimal escape sequences like \226\156\133
-    // This matches OCaml's default string escaping behavior
+    // The source was read as Latin-1 (each byte became a char with code point 0-255).
+    // We need to escape characters with code points > 127 using decimal escape sequences
+    // like \226\156\133, matching OCaml's default string escaping behavior.
+    // We iterate over CHARACTERS (not bytes) since each char IS the original byte value.
     let mut result = String::new();
-    for byte in s.bytes() {
-        match byte {
-            b'\n' => result.push_str("\\n"),
-            b'\r' => result.push_str("\\r"),
-            b'\t' => result.push_str("\\t"),
-            b'\\' => result.push_str("\\\\"),
-            b'"' => result.push_str("\\\""),
-            0x20..=0x7E => result.push(byte as char), // Printable ASCII
-            b => {
+    for ch in s.chars() {
+        let code = ch as u32;
+        match code {
+            0x0A => result.push_str("\\n"),  // newline
+            0x0D => result.push_str("\\r"),  // carriage return
+            0x09 => result.push_str("\\t"),  // tab
+            0x5C => result.push_str("\\\\"), // backslash
+            0x22 => result.push_str("\\\""), // double quote
+            0x20..=0x7E => result.push(ch),  // Printable ASCII
+            _ => {
                 // Non-ASCII or non-printable: use decimal escape
+                // Code point IS the original byte value (0-255) due to Latin-1 reading
                 result.push('\\');
-                result.push_str(&b.to_string());
+                result.push_str(&code.to_string());
             }
         }
     }
