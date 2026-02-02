@@ -205,17 +205,17 @@ Most printer failures are caused by comment handling issues. Fix these first.
 - [x] **Fix comment placement in function arguments** - `/* c0 */ ~arg=/* c1 */ value /* c2 */` pattern
 - [x] **Fix comment placement in function parameters** - Comments on function parameter definitions
 
-### Comment Test Files (15 failing)
+### Comment Test Files (5 failing, 12 passing)
 - [x] `printer/comments/namedArgs.res` - Named argument comments
 - [x] `printer/comments/trailingComments.res` - Trailing comment handling
 - [x] `printer/comments/modExpr.res` - Module expression comments
 - [x] `printer/comments/structureItem.res` - Structure item comments
 - [x] `printer/comments/blockExpr.res` - Block expression comments
 - [x] `printer/comments/expr.res` - General expression comments
-- [ ] `printer/comments/jsx.res` - JSX element comments
-- [ ] `printer/comments/binaryExpr.res` - Binary expression comments
+- [ ] `printer/comments/jsx.res` - JSX element comments (JSX printing implemented, but comment handling needs OCaml's `partition_adjacent_trailing_before_next_token_on_same_line`)
+- [ ] `printer/comments/binaryExpr.res` - Binary expression comments (needs flattening logic)
 - [x] `printer/comments/case.res` - Match case comments
-- [ ] `printer/comments/array.res` - Array literal comments
+- [ ] `printer/comments/array.res` - Array literal comments (needs spread syntax)
 - [x] `printer/comments/docComments.res` - Doc comment handling
 - [ ] `printer/comments/typexpr.res` - Type expression comments
 - [x] `printer/comments/modType.res` - Module type comments
