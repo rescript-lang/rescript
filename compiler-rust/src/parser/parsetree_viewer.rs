@@ -230,6 +230,49 @@ pub fn get_binary_operator(arena: &crate::parse_arena::ParseArena, expr: &Expres
     }
 }
 
+/// Check if an expression is a single pipe expression.
+/// Returns true for `x->f(g)` but not for `x->f->g` (multiple pipes).
+/// Used for value binding layout optimization.
+pub fn is_single_pipe_expr(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
+    // Helper to check if expr is a pipe expression
+    fn is_pipe(arena: &crate::parse_arena::ParseArena, expr: &Expression) -> bool {
+        match &expr.pexp_desc {
+            ExpressionDesc::Pexp_apply { funct, args, .. } => {
+                if args.len() != 2 {
+                    return false;
+                }
+                if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        return arena.get_string(*op_idx) == "->";
+                    }
+                }
+                false
+            }
+            _ => false,
+        }
+    }
+
+    // Check if this is a pipe where the LHS is NOT also a pipe
+    match &expr.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            if args.len() != 2 {
+                return false;
+            }
+            if let ExpressionDesc::Pexp_ident(ident) = &funct.pexp_desc {
+                if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                    if arena.get_string(*op_idx) == "->" {
+                        // It's a pipe - check that LHS is not also a pipe
+                        let operand1 = &args[0].1;
+                        return !is_pipe(arena, operand1);
+                    }
+                }
+            }
+            false
+        }
+        _ => false,
+    }
+}
+
 /// Check if expression is an await expression.
 pub fn expr_is_await(expr: &Expression) -> bool {
     matches!(&expr.pexp_desc, ExpressionDesc::Pexp_await(_))
@@ -809,6 +852,12 @@ pub fn is_right_associative(op: &str) -> bool {
 /// Check if operator is an equality operator.
 pub fn is_equality_operator(op: &str) -> bool {
     matches!(op, "==" | "===" | "!=" | "!==")
+}
+
+/// Check if the operator is right-associative.
+/// Currently only exponentiation (**) is right-associative.
+pub fn is_rhs_binary_operator(op: &str) -> bool {
+    op == "**"
 }
 
 /// Check if parent and child operators can be flattened (same precedence, not both equality).

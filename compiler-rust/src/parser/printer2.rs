@@ -3350,15 +3350,35 @@ fn flatten_binary_operand(
                             let left_printed =
                                 flatten_binary_operand(state, true, is_multiline, left, operator, cmt_tbl, arena);
 
-                            // Print the right operand normally
+                            // Print the right operand
+                            // OCaml's approach:
+                            // 1. Partition printable attributes
+                            // 2. Print expression without printable attrs
+                            // 3. Check flatten_operand_rhs for parens (on expr without attrs)
+                            // 4. Prepend printable attrs
+                            // 5. If printable attrs non-empty, wrap in parens
+                            //
+                            // Since we can't easily modify the AST in Rust, we use this approach:
+                            // - If no printable attrs: check flatten_operand_rhs as normal
+                            // - If has printable attrs: always add outer parens
+                            //   (for binary exprs, print_pexp_apply adds @attr (inner), then we add outer parens)
                             let right_printed = {
+                                let (right_printable_attrs, _right_internal_attrs) =
+                                    parsetree_viewer::partition_printable_attributes(&right.pexp_attributes);
+
                                 let doc = print_expression_with_comments(state, right, cmt_tbl, arena);
 
-                                // Check if needs parens for flatten RHS
-                                if parens::flatten_operand_rhs(arena, parent_operator, right) {
-                                    Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+                                if right_printable_attrs.is_empty() {
+                                    // No printable attrs - check flatten_operand_rhs normally
+                                    if parens::flatten_operand_rhs(arena, parent_operator, right) {
+                                        Doc::concat(vec![Doc::lparen(), doc, Doc::rparen()])
+                                    } else {
+                                        doc
+                                    }
                                 } else {
-                                    doc
+                                    // Has printable attrs - always add outer parens
+                                    // This matches OCaml's `match right_printeable_attrs with [] -> doc | _ -> add_parens doc`
+                                    add_parens(doc)
                                 }
                             };
 
@@ -3540,12 +3560,19 @@ fn print_binary_expression(
         lhs_line < rhs_line
     };
 
+    // For right-associative operators (like **), flip the is_lhs logic
+    // This matches OCaml's ~is_lhs:(not @@ is_rhs_binary_operator operator) for LHS
+    // and ~is_lhs:(is_rhs_binary_operator operator) for RHS
+    let is_rhs_op = parsetree_viewer::is_rhs_binary_operator(op);
+    let lhs_is_lhs = !is_rhs_op;  // LHS treated as RHS position for right-associative ops
+    let rhs_is_lhs = is_rhs_op;   // RHS treated as LHS position for right-associative ops
+
     // Use print_binary_operand with flattening for operands
-    let lhs_doc = print_binary_operand(state, true, is_multiline, lhs, op, cmt_tbl, arena);
+    let lhs_doc = print_binary_operand(state, lhs_is_lhs, is_multiline, lhs, op, cmt_tbl, arena);
 
     if is_pipe_first {
         // Complex pipe case (operand is binary or has attributes)
-        let rhs_doc = print_binary_operand(state, false, is_multiline, rhs, op, cmt_tbl, arena);
+        let rhs_doc = print_binary_operand(state, rhs_is_lhs, is_multiline, rhs, op, cmt_tbl, arena);
         Doc::group(Doc::concat(vec![
             lhs_doc,
             Doc::soft_line(),
@@ -3556,7 +3583,7 @@ fn print_binary_expression(
         // Non-pipe binary operators - need indentation logic
         let inline_rhs = parsetree_viewer::should_inline_rhs_binary_expr(rhs);
 
-        let rhs_doc = print_binary_operand(state, false, is_multiline, rhs, op, cmt_tbl, arena);
+        let rhs_doc = print_binary_operand(state, rhs_is_lhs, is_multiline, rhs, op, cmt_tbl, arena);
 
         let operator_with_rhs = Doc::concat(vec![
             print_binary_operator_with_spacing(op, inline_rhs),
@@ -6377,6 +6404,31 @@ fn print_value_binding(
         ParenKind::Braced(loc) => print_braces(doc, &vb.pvb_expr, loc, arena),
         ParenKind::Nothing => doc,
     };
+
+    // Special case: single pipe expression
+    // OCaml uses custom_layout to try inline first, then indented
+    // This handles: let x = switch z { | Red => 1 }->switch y { | Blue => 2 }
+    if parsetree_viewer::is_single_pipe_expr(arena, &vb.pvb_expr) {
+        return Doc::custom_layout(vec![
+            // First option: inline
+            Doc::group(Doc::concat(vec![
+                attrs_doc.clone(),
+                header.clone(),
+                pat.clone(),
+                Doc::text(" ="),
+                Doc::space(),
+                printed_expr.clone(),
+            ])),
+            // Second option: indented
+            Doc::group(Doc::concat(vec![
+                attrs_doc,
+                header,
+                pat,
+                Doc::text(" ="),
+                Doc::indent(Doc::concat(vec![Doc::line(), printed_expr])),
+            ])),
+        ]);
+    }
 
     // Check if expression should be indented after `=`
     // This matches OCaml's value_binding logic for indentation

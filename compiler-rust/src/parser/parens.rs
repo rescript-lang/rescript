@@ -300,6 +300,53 @@ pub fn flatten_operand_rhs(arena: &crate::parse_arena::ParseArena, parent_operat
     }
 }
 
+/// Check if flatten operand RHS needs parentheses, ignoring the attribute check.
+/// This is used when we've already partitioned printable attrs and will handle them separately.
+pub fn flatten_operand_rhs_without_attrs(arena: &crate::parse_arena::ParseArena, parent_operator: &str, rhs: &Expression) -> bool {
+    match &rhs.pexp_desc {
+        ExpressionDesc::Pexp_apply { funct, args, .. } => {
+            if args.len() != 2 {
+                return false;
+            }
+            match &funct.pexp_desc {
+                ExpressionDesc::Pexp_ident(ident) => {
+                    if let Longident::Lident(op_idx) = arena.get_longident(ident.txt) {
+                        let operator = arena.get_string(*op_idx);
+                        if parsetree_viewer::not_ghost_operator(operator, ident.loc.is_none()) {
+                            let prec_parent =
+                                parsetree_viewer::operator_precedence(parent_operator);
+                            let prec_child = parsetree_viewer::operator_precedence(operator);
+                            // NOTE: Unlike flatten_operand_rhs, we don't check rhs.pexp_attributes here
+                            return prec_parent >= prec_child;
+                        }
+                    }
+                    false
+                }
+                _ => false,
+            }
+        }
+        ExpressionDesc::Pexp_constraint(inner, typ)
+            if matches!(&inner.pexp_desc, ExpressionDesc::Pexp_pack(_))
+                && matches!(&typ.ptyp_desc, CoreTypeDesc::Ptyp_package(_)) =>
+        {
+            false
+        }
+        ExpressionDesc::Pexp_fun { lhs, .. } => {
+            if let PatternDesc::Ppat_var(name) = &lhs.ppat_desc {
+                if name.txt == "__x" {
+                    return false;
+                }
+            }
+            true
+        }
+        ExpressionDesc::Pexp_newtype(_, _)
+        | ExpressionDesc::Pexp_setfield(_, _, _)
+        | ExpressionDesc::Pexp_constraint(_, _) => true,
+        _ if parsetree_viewer::is_ternary_expr(rhs) => true,
+        _ => false,
+    }
+}
+
 /// Check if binary operator inside await needs parentheses.
 pub fn binary_operator_inside_await_needs_parens(operator: &str) -> bool {
     parsetree_viewer::operator_precedence(operator) < parsetree_viewer::operator_precedence("->")
