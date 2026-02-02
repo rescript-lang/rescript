@@ -973,15 +973,19 @@ pub fn arrow_type<'a>(
     typ: &'a CoreType,
     max_arity: Option<usize>,
 ) -> (&'a Attributes, Vec<TypeParameter<'a>>, &'a CoreType) {
-    let max_arity = max_arity.unwrap_or(usize::MAX);
+    // Use isize to match OCaml's behavior where we stop when arity goes negative
+    let max_arity: isize = max_arity.map(|n| n as isize).unwrap_or(isize::MAX);
 
     fn process<'a>(
         attrs_before: &'a Attributes,
         acc: Vec<TypeParameter<'a>>,
         typ: &'a CoreType,
-        remaining_arity: usize,
+        remaining_arity: isize,
     ) -> (&'a Attributes, Vec<TypeParameter<'a>>, &'a CoreType) {
-        if remaining_arity == 0 {
+        // OCaml: | _ when max_arity < 0 -> (attrs_before, List.rev acc, typ)
+        // Stop when we've exhausted our arity budget (gone negative means we
+        // tried to consume one more than allowed)
+        if remaining_arity < 0 {
             return (attrs_before, acc, typ);
         }
 
@@ -1010,6 +1014,7 @@ pub fn arrow_type<'a>(
 
                 // Labeled argument - continue processing
                 // Calculate adjusted arity for @as workaround
+                // OCaml: When arg is Ptyp_any with @as attr, don't decrement arity
                 let adjusted_arity = if matches!(
                     &arg.typ.ptyp_desc,
                     CoreTypeDesc::Ptyp_any
