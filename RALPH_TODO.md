@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 399/506 tests passing (78%)
+**Overall Status:** 400/506 tests passing (79%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,15 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 11 | 9 | 20 | 55% |
-| parsing/errors | 34 | 50 | 84 | 40% |
+| parsing/errors | 35 | 49 | 84 | 41% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 107 tests to fix
+**Remaining:** 106 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed type declaration error recovery**: When parsing `type` without a name (EOF or invalid token),
+  create a placeholder type declaration with name `_` instead of producing nothing. This matches OCaml's
+  `parse_lident` which returns `("_", loc)` for error recovery.
 - **Added single-element tuple error**: Emit "A tuple needs at least two elements" when a tuple has
   only one element (detected by trailing comma). Added to all three contexts: pattern, expression,
   and type tuples. Fixed error location to use start_pos and prev_end_pos matching OCaml.
