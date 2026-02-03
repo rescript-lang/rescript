@@ -3255,7 +3255,11 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
         p.next();
     }
 
-    if p.token == Token::Rbrace || p.token == Token::Eof {
+    // Check if we can parse more expressions.
+    // OCaml uses `is_block_expr_start` here to determine if the block continues.
+    // This is important for error recovery - when `else` appears after an if's then-branch,
+    // we should NOT try to parse it as a block expression.
+    if p.token == Token::Rbrace || p.token == Token::Eof || !grammar::is_block_expr_start(&p.token) {
         return None;
     }
 
@@ -3873,29 +3877,69 @@ fn parse_js_object_expr(p: &mut Parser<'_>, start_pos: Position) -> Expression {
 // Control Flow Expressions
 // ============================================================================
 
-/// Parse an if expression.
-fn parse_if_expr(p: &mut Parser<'_>) -> Expression {
-    let start_pos = p.start_pos.clone();
-    p.expect(Token::If);
-
+/// Parse the condition of an if expression.
+/// OCaml: parse_if_condition
+fn parse_if_condition(p: &mut Parser<'_>) -> Expression {
+    p.leave_breadcrumb(Grammar::IfCondition);
     let condition = parse_expr_with_context(p, ExprContext::When);
+    p.eat_breadcrumb();
+    condition
+}
+
+/// Parse the then-branch of an if expression.
+/// OCaml: parse_then_branch
+fn parse_then_branch(p: &mut Parser<'_>) -> Expression {
+    p.leave_breadcrumb(Grammar::IfBranch);
     p.expect(Token::Lbrace);
-    // Use parse_expr_block (no res.braces) for if branches, matching OCaml behavior
-    let then_branch = parse_expr_block(p);
+    let then_expr = parse_expr_block(p);
     p.expect(Token::Rbrace);
+    p.eat_breadcrumb();
+    then_expr
+}
+
+/// Parse the else-branch of an if expression (body only, after `else` is consumed).
+/// OCaml: parse_else_branch
+fn parse_else_branch(p: &mut Parser<'_>) -> Expression {
+    p.expect(Token::Lbrace);
+    let block_expr = parse_expr_block(p);
+    p.expect(Token::Rbrace);
+    block_expr
+}
+
+/// Parse the body of an if expression (after `if` is consumed).
+/// OCaml: parse_if_expr
+///
+/// This function handles the region management for error suppression:
+/// - The calling function (parse_if_or_if_let_expression) has already called begin_region
+/// - When we see `else`, we end_region (to allow else branch to report its own errors)
+///   then begin_region for the else branch
+/// - We end_region at the end in both cases
+fn parse_if_expr_body(p: &mut Parser<'_>, start_pos: Position) -> Expression {
+    let condition = parse_if_condition(p);
+    let then_branch = parse_then_branch(p);
 
     let else_branch = if p.token == Token::Else {
-        p.next();
-        if p.token == Token::If {
-            Some(Box::new(parse_if_expr(p)))
+        // End the region for the then-branch (allows else branch to report errors)
+        p.end_region();
+        p.leave_breadcrumb(Grammar::ElseBranch);
+        p.next(); // consume `else`
+        // Begin a new region for the else-branch
+        p.begin_region();
+
+        let else_expr = if p.token == Token::If {
+            // `else if` - recursively parse another if expression
+            // Note: parse_if_or_if_let_expression will do its own begin_region
+            parse_if_or_if_let_expression(p)
         } else {
-            p.expect(Token::Lbrace);
-            // Use parse_expr_block (no res.braces) for else branches, matching OCaml behavior
-            let expr = parse_expr_block(p);
-            p.expect(Token::Rbrace);
-            Some(Box::new(expr))
-        }
+            parse_else_branch(p)
+        };
+
+        p.eat_breadcrumb();
+        p.end_region();
+        Some(Box::new(else_expr))
     } else {
+        // No else branch - end the region here
+        p.end_region();
         None
     };
 
@@ -3910,6 +3954,30 @@ fn parse_if_expr(p: &mut Parser<'_>) -> Expression {
         pexp_loc: loc,
         pexp_attributes: vec![],
     }
+}
+
+/// Parse an if expression (or if-let expression).
+/// OCaml: parse_if_or_if_let_expression
+///
+/// This is the main entry point for parsing if expressions.
+/// It sets up the region and breadcrumb, then delegates to parse_if_expr_body.
+fn parse_if_or_if_let_expression(p: &mut Parser<'_>) -> Expression {
+    p.begin_region();
+    p.leave_breadcrumb(Grammar::ExprIf);
+    let start_pos = p.start_pos.clone();
+    p.expect(Token::If);
+
+    // Note: OCaml has special handling for `if let` here, but ReScript
+    // deprecated if-let syntax, so we just parse as regular if
+    let expr = parse_if_expr_body(p, start_pos);
+
+    p.eat_breadcrumb();
+    expr
+}
+
+/// Legacy entry point for if expressions - wraps parse_if_or_if_let_expression.
+fn parse_if_expr(p: &mut Parser<'_>) -> Expression {
+    parse_if_or_if_let_expression(p)
 }
 
 /// Parse a block body for switch case RHS (no braces).
