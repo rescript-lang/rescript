@@ -1009,7 +1009,18 @@ fn parse_function_type(p: &mut Parser<'_>, start_pos: crate::location::Position)
         }, param_start));
 
         if !p.optional(&Token::Comma) {
-            break;
+            if super::grammar::is_list_element(&super::grammar::Grammar::TypeParameters, &p.token) {
+                // Missing comma but next token looks like another type parameter.
+                // Emit "Did you forget a `,` here?" and continue parsing.
+                p.expect(Token::Comma);
+            } else if p.token != Token::Eof && p.token != Token::Rparen
+                && !super::core::recover::should_abort_list_parse(p)
+            {
+                p.expect(Token::Comma);
+                if p.token == Token::Semicolon { p.next(); }
+            } else {
+                break;
+            }
         }
     }
 
@@ -1382,7 +1393,16 @@ fn parse_object_fields(p: &mut Parser<'_>) -> Vec<ObjectField> {
         }
 
         if !p.optional(&Token::Comma) {
-            break;
+            if super::grammar::is_list_element(&Grammar::StringFieldDeclarations, &p.token) {
+                p.expect(Token::Comma);
+            } else if p.token != Token::Eof && p.token != Token::Rbrace
+                && !super::core::recover::should_abort_list_parse(p)
+            {
+                p.expect(Token::Comma);
+                if p.token == Token::Semicolon { p.next(); }
+            } else {
+                break;
+            }
         }
     }
 

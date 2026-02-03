@@ -3604,7 +3604,18 @@ fn parse_label_declarations(
         }
         is_first = false;
         if !p.optional(&Token::Comma) {
-            break;
+            if grammar::is_list_element(&grammar::Grammar::FieldDeclarations, &p.token) {
+                // Missing comma but next token looks like another field declaration.
+                // Emit "Did you forget a `,` here?" and continue parsing.
+                p.expect(Token::Comma);
+            } else if p.token != Token::Eof && p.token != Token::Rbrace
+                && !super::core::recover::should_abort_list_parse(p)
+            {
+                p.expect(Token::Comma);
+                if p.token == Token::Semicolon { p.next(); }
+            } else {
+                break;
+            }
         }
     }
 
