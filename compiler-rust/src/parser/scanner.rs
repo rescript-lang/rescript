@@ -1216,9 +1216,11 @@ impl<'src> Scanner<'src> {
 
             '\\' => {
                 // Exotic identifier
+                // Capture position of backslash for error reporting
+                let backslash_pos = self.position();
                 self.next();
                 if self.ch == '"' {
-                    self.scan_exotic_identifier()
+                    self.scan_exotic_identifier(backslash_pos)
                 } else {
                     Token::Backslash
                 }
@@ -1463,8 +1465,9 @@ impl<'src> Scanner<'src> {
 
     /// Scan an exotic identifier (e.g., \"foo").
     /// Returns the identifier without surrounding quotes.
-    fn scan_exotic_identifier(&mut self) -> Token {
-        let start_pos = self.position();
+    /// `backslash_pos` is the position of the backslash for error reporting.
+    fn scan_exotic_identifier(&mut self, backslash_pos: Position) -> Token {
+        let start_pos = backslash_pos;
 
         self.next(); // consume opening quote
         let content_start = self.offset; // start of identifier content (after opening quote)
