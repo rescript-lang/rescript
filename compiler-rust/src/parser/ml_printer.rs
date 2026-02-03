@@ -782,8 +782,10 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
 
 fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: &Pattern, expr: &Expression) {
     if !expr.pexp_attributes.is_empty() {
+        // OCaml: pp f "%a@;=@;%a" (pattern ctxt) p (expression ctxt) x
         print_pattern(f, arena, pat);
-        f.string(" =");
+        f.space();
+        f.string("=");
         f.space();
         print_expression(f, arena, expr);
         return;
@@ -850,23 +852,29 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
         if pat.ppat_attributes.is_empty() {
             if matches!(typ.ptyp_desc, CoreTypeDesc::Ptyp_poly(..)) && typ.ptyp_attributes.is_empty() {
                 // Ptyp_poly: print without outer parens
-                // e.g. "let t : 'a . t = x"
+                // OCaml: pp f "%a@;:@;%a@;=@;%a"
                 print_simple_pattern(f, arena, inner_pat);
-                f.string(" : ");
+                f.space();
+                f.string(":");
+                f.space();
                 print_core_type(f, arena, typ);
-                f.string(" =");
+                f.space();
+                f.string("=");
                 f.space();
                 print_expression_no_outer_parens(f, arena, expr);
                 return;
             } else {
                 // Non-poly: print with outer parens using simple_pattern for inner
-                // e.g. "let ((`Instance component) : React.t) = x"
+                // OCaml: pp f "(%a@;:@;%a)@;=@;%a"
                 f.string("(");
                 print_simple_pattern(f, arena, inner_pat);
-                f.string(" : ");
+                f.space();
+                f.string(":");
+                f.space();
                 print_core_type(f, arena, typ);
                 f.string(")");
-                f.string(" =");
+                f.space();
+                f.string("=");
                 f.space();
                 print_expression_no_outer_parens(f, arena, expr);
                 return;
@@ -883,8 +891,10 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             arity,
             is_async,
         } => {
+            // OCaml: pp f "%a@ %a" (simple_pattern ctxt) p pp_print_pexp_function x
+            // where pp_print_pexp_function does: pp f "%s%s%a@ %a" async_str arity_str param recurse
             print_pattern(f, arena, pat);
-            f.string(" ");
+            f.space(); // @ between pattern and pp_print_pexp_function
 
             if *is_async {
                 f.string("async ");
@@ -901,33 +911,46 @@ fn print_value_binding<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
             }
 
             print_inline_param(f, arena, arg_label, default, lhs);
+            f.space(); // @ between param and next
             let body = print_remaining_inline_params(f, arena, rhs);
 
+            // OCaml: pp f "=@;%a" (expression ctxt) x
             f.string("=");
             f.space();
             print_expression_no_outer_parens(f, arena, body);
         }
         ExpressionDesc::Pexp_newtype(name, inner) => {
             // Handle locally abstract types at the start: let f (type t) ...
+            // OCaml: pp f "%a@ %a" where second %a is pp_print_pexp_function
+            // pp_print_pexp_function for Pexp_newtype: pp f "(type@ %s)@ %a"
             print_pattern(f, arena, pat);
-            f.string(" (type ");
+            f.space(); // @ between pattern and (type ...)
+            f.string("(type");
+            f.space(); // @ inside (type@ %s)
             f.string(&name.txt);
-            f.string(") ");
+            f.string(")");
+            f.space(); // @ between ) and next
             // Continue collecting newtypes and print arity when we hit a fun
             let body = print_remaining_inline_params_with_arity(f, arena, inner, true);
+            // OCaml: pp f "=@;%a" (expression ctxt) x
             f.string("=");
             f.space();
             print_expression_no_outer_parens(f, arena, body);
         }
         _ => {
+            // OCaml: pp f "%a@;=@;%a" (pattern ctxt) p (expression ctxt) x
             print_pattern(f, arena, pat);
-            f.string(" =");
+            f.space();
+            f.string("=");
             f.space();
             print_expression_no_outer_parens(f, arena, expr);
         }
     }
 }
 
+/// Print a function parameter.
+/// For Nolabel: no trailing space (caller adds break)
+/// For Labelled/Optional: includes trailing break (@;) to match OCaml's label_exp
 fn print_inline_param<W: Write>(
     f: &mut Formatter<W>,
     arena: &ParseArena,
@@ -937,57 +960,68 @@ fn print_inline_param<W: Write>(
 ) {
     match label {
         ArgLabel::Nolabel => {
+            // OCaml: pp f "%a@ " (simple_pattern ctxt) p
+            // The "@ " break is emitted by the caller, not by label_exp for Nolabel
+            // Wait - actually for Nolabel, pp_print_pexp_function uses (simple_pattern ctxt) directly,
+            // not label_exp. So there's no trailing break from the param itself.
             if pattern_needs_parens_as_param(pat, arena) {
                 f.string("(");
                 print_pattern(f, arena, pat);
-                f.string(") ");
+                f.string(")");
             } else {
                 print_pattern(f, arena, pat);
-                f.string(" ");
             }
         }
         ArgLabel::Labelled(name) => {
+            // OCaml label_exp: pp f "~%s@;" l  OR  pp f "~%s:%a@;" l (simple_pattern ctxt) p
+            // The trailing @; is Break(1,0)
             let name_str = arena.get_string(name.txt);
             if pattern_is_simple_var(pat, name_str) {
                 f.string("~");
                 f.string(name_str);
-                f.string("  ");
+                f.space(); // @; from label_exp
             } else {
                 f.string("~");
                 f.string(name_str);
                 f.string(":");
                 print_pattern(f, arena, pat);
-                f.string("  ");
+                f.space(); // @; from label_exp
             }
         }
         ArgLabel::Optional(name) => {
+            // OCaml label_exp: pp f "?(%s=@;%a)@;" OR pp f "?%s:(%a=@;%a)@;" etc.
+            // All cases have trailing @; = Break(1,0)
             let name_str = arena.get_string(name.txt);
             if let Some(def) = default {
                 if pattern_is_simple_var(pat, name_str) {
                     f.string("?(");
                     f.string(name_str);
-                    f.string("= ");
+                    f.string("=");
+                    f.space(); // =@; inside
                     print_expression(f, arena, def);
-                    f.string(")  ");
+                    f.string(")");
+                    f.space(); // trailing @;
                 } else {
                     f.string("?");
                     f.string(name_str);
                     f.string(":(");
                     print_pattern(f, arena, pat);
-                    f.string("= ");
+                    f.string("=");
+                    f.space(); // =@; inside
                     print_expression(f, arena, def);
-                    f.string(")  ");
+                    f.string(")");
+                    f.space(); // trailing @;
                 }
             } else if pattern_is_simple_var(pat, name_str) {
                 f.string("?");
                 f.string(name_str);
-                f.string("  ");
+                f.space(); // @; trailing
             } else {
                 f.string("?");
                 f.string(name_str);
                 f.string(":");
                 print_pattern(f, arena, pat);
-                f.string("  ");
+                f.space(); // @; trailing
             }
         }
     }
@@ -1186,13 +1220,16 @@ fn print_remaining_inline_params_with_arity<'a, W: Write>(
                 }
             }
             print_inline_param(f, arena, arg_label, default, lhs);
+            f.space(); // @ between param and next recursive call
             print_remaining_inline_params_with_arity(f, arena, rhs, false)
         }
         ExpressionDesc::Pexp_newtype(name, inner) => {
-            // Print (type t) inline, continue looking for arity
-            f.string("(type ");
+            // OCaml: pp f "(type@ %s)@ %a" str.txt pp_print_pexp_function e
+            f.string("(type");
+            f.space(); // @ inside (type@ %s)
             f.string(&name.txt);
-            f.string(") ");
+            f.string(")");
+            f.space(); // @ between ) and next
             print_remaining_inline_params_with_arity(f, arena, inner, need_arity)
         }
         _ => expr,
@@ -1462,12 +1499,16 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string("(");
             }
             f.open_box(BoxKind::Box, 2);
-            // Print bindings using the same format as structure-level bindings
+            // OCaml: @[<2>%a in@;<1 -2>%a@]
+            // where %a is (bindings reset_ctxt) (rf, l)
+            // bindings wraps each binding in @[<2>kwd binding@]
             let rec_str = match rec_flag {
                 RecFlag::Recursive => "let rec ",
                 RecFlag::Nonrecursive => "let ",
             };
             for (i, binding) in bindings.iter().enumerate() {
+                // OCaml bindings: pp f "@[<2>%s %a%a@]%a"
+                f.open_box(BoxKind::Box, 2);
                 if i > 0 {
                     f.newline();
                     f.string("and ");
@@ -1475,6 +1516,9 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     f.string(rec_str);
                 }
                 print_value_binding(f, arena, &binding.pvb_pat, &binding.pvb_expr);
+                f.close_box();
+                // Item attributes are outside the binding box in OCaml
+                print_item_attributes(f, arena, &binding.pvb_attributes);
             }
             f.string(" in");
             f.break_(1, -2); // @;<1 -2> - space or newline with -2 indent offset
