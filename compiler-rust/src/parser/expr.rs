@@ -1177,6 +1177,49 @@ fn parse_parameter(p: &mut Parser<'_>) -> Option<super::core::FundefParameter> {
         } else {
             pat
         };
+
+        // Check for default value (= expr) - this means it's a labeled param missing the ~
+        if p.token == Token::Equal {
+            // Get the name from the pattern for the error message
+            let lbl_name = match &pat.ppat_desc {
+                PatternDesc::Ppat_var(var) => var.txt.clone(),
+                _ => String::new(),
+            };
+
+            p.next(); // consume = (OCaml does this first, so prev_end_pos includes =)
+
+            // OCaml: emit "missing tilde" error
+            let msg = if lbl_name.is_empty() {
+                "A labeled parameter starts with a `~`.".to_string()
+            } else {
+                format!("A labeled parameter starts with a `~`. Did you mean: `~{}`?", lbl_name)
+            };
+            p.err_at(start_pos.clone(), p.prev_end_pos.clone(), DiagnosticCategory::Message(msg));
+
+            // Create label as Optional
+            let lbl_str_idx = p.arena_mut().intern_string(&lbl_name);
+            let lbl_loc = pat.ppat_loc;
+            let label = ArgLabel::Optional(Located::new(lbl_str_idx, lbl_loc));
+
+            // Check for =? (optional with no default)
+            let default = if p.token == Token::Question {
+                p.next();
+                None
+            } else {
+                Some(parse_constrained_or_coerced_expr(p))
+            };
+
+            return Some(super::core::FundefParameter::Term(
+                super::core::FundefTermParam {
+                    attrs,
+                    label,
+                    expr: default,
+                    pat,
+                    start_pos,
+                },
+            ));
+        }
+
         return Some(super::core::FundefParameter::Term(
             super::core::FundefTermParam {
                 attrs,
@@ -1213,9 +1256,8 @@ fn parse_lident(p: &mut Parser<'_>) -> (String, Location) {
             (name, loc)
         }
         _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected lowercase identifier".to_string(),
-            ));
+            // OCaml: uses Lident diagnostic which generates context-specific messages
+            p.err(DiagnosticCategory::Lident(p.token.clone()));
             ("_".to_string(), LocIdx::none())
         }
     }

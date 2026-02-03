@@ -127,7 +127,8 @@ impl ParserDiagnostic {
                     )
                 }
                 Token::Underscore => "`_` isn't a valid name.".to_string(),
-                _ => "I'm expecting a lowercase name like `user` or `age`".to_string(),
+                // OCaml has a typo in this message - missing backtick after "user"
+                _ => "I'm expecting a lowercase name like `user or `age`".to_string(),
             },
             DiagnosticCategory::UnclosedString => {
                 "This string is missing a double quote at the end".to_string()
