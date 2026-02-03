@@ -113,6 +113,9 @@ pub struct Formatter<W: Write> {
     /// Current indentation level (set by break_new_line, used by Pp_box)
     /// OCaml's pp_current_indent
     pp_current_indent: usize,
+    /// Maximum indentation (OCaml's pp_max_indent = pp_margin - pp_min_space_left)
+    /// Default: 68 (78 - 10)
+    pp_max_indent: usize,
 }
 
 impl<W: Write> Formatter<W> {
@@ -129,6 +132,7 @@ impl<W: Write> Formatter<W> {
             width_stack: vec![DEFAULT_MARGIN],
             is_new_line: true,
             pp_current_indent: 0,
+            pp_max_indent: DEFAULT_MARGIN - 10, // OCaml: pp_margin - pp_min_space_left = 78 - 10 = 68
         }
     }
 
@@ -179,12 +183,14 @@ impl<W: Write> Formatter<W> {
     fn write_newline_indent(&mut self, offset: i32) {
         let _ = self.out.write_all(b"\n");
         let indent = (self.current_indent() as i32 + offset).max(0) as usize;
-        for _ in 0..indent {
+        // OCaml: let real_indent = min pp_max_indent indent
+        let real_indent = indent.min(self.pp_max_indent);
+        for _ in 0..real_indent {
             let _ = self.out.write_all(b" ");
         }
-        self.col = indent;
+        self.col = real_indent;
         self.is_new_line = true;
-        self.pp_current_indent = indent;
+        self.pp_current_indent = real_indent;
     }
 
     /// OCaml-compatible break_new_line: computes indent from margin - width + offset
