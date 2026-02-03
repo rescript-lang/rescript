@@ -19,6 +19,21 @@
 **Remaining:** 113 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed type definition parsing - Bar before Equal**: When parsing type definitions, if Bar (`|`) is
+  seen instead of Equal, call expect(Equal) to generate "Did you forget a `=` here?" with proper
+  location span (from end of name to the Bar token).
+- **Fixed type name parsing - Lident diagnostic**: When an uppercase identifier (like T1) is seen
+  where a type name is expected, emit Lident diagnostic: "Did you mean `t1` instead of `T1`?".
+  When a dotted path (like Foo.bar) is seen, emit: "A type declaration's name cannot contain a
+  module access. Did you mean `bar`?"
+- **Fixed type extension uppercase names**: When parsing type extension paths like M.T2, the final
+  segment (the type name) should be lowercase. Emit Lident diagnostic for uppercase final segments.
+- **Fixed exotic identifier error location**: When reporting errors for exotic identifiers (e.g.,
+  empty string `\""` or linebreaks), the error location should start at the backslash, not the
+  opening quote. Now reports `1:6-8` instead of `1:7-8`.
+- **Fixed EOF handling in type name parsing**: When EOF is encountered in type name context, use
+  Unexpected diagnostic instead of Lident. This generates the generic "I'm not sure what to parse
+  here when looking at 'eof'" message matching OCaml.
 - **Fixed infinite loop in signature parsing**: When `parse_signature_item` returns None for unexpected
   tokens (like `export type`), the parser now emits an "unexpected" error and advances the token, matching
   OCaml's `parse_region` behavior. Also added proper breadcrumbs: `Grammar::Specification` for file-level
