@@ -285,7 +285,7 @@ impl<W: Write> Formatter<W> {
             if let Some(box_) = self.current_box.take() {
                 // Calculate if box fits on one line
                 let size = self.calculate_size(&box_.tokens);
-                let fits = self.col + size < self.margin;
+                let fits = self.col + size <= self.margin;
 
                 // Push new indent level and broken state for this box
                 let box_indent = (self.col as i32 + box_.indent).max(0) as usize;
@@ -497,7 +497,7 @@ impl<W: Write> Formatter<W> {
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size < self.margin;
+                    let fits = self.col + size <= self.margin;
 
                     // Render based on box kind
                     match kind {
@@ -546,7 +546,7 @@ impl<W: Write> Formatter<W> {
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size < self.margin;
+                    let fits = self.col + size <= self.margin;
 
                     // Render based on box kind
                     match kind {
@@ -575,7 +575,7 @@ impl<W: Write> Formatter<W> {
                     } else {
                         // Check if next segment (until break at same level) fits
                         let size_ahead = self.size_until_break(tokens, i + 1);
-                        if self.col + nspaces + size_ahead < self.margin {
+                        if self.col + nspaces + size_ahead <= self.margin {
                             // Fits - use spaces
                             self.write_spaces(*nspaces);
                         } else {
@@ -619,7 +619,7 @@ impl<W: Write> Formatter<W> {
                     self.width_stack.push(width);
 
                     let size = self.calculate_size(&nested_tokens);
-                    let fits = self.col + size < self.margin;
+                    let fits = self.col + size <= self.margin;
 
                     match kind {
                         BoxKind::H => self.render_tokens(&nested_tokens, false),

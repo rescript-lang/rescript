@@ -3257,10 +3257,10 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.open_box(BoxKind::HV, 2);
             f.string("struct");
             f.space();
-            f.open_box(BoxKind::HV, 0);
+            f.open_box(BoxKind::V, 0);
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
-                    f.newline();
+                    f.cut();
                 }
                 print_structure_item(f, arena, item);
             }
