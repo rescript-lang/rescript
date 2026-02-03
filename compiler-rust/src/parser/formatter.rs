@@ -320,7 +320,9 @@ impl<W: Write> Formatter<W> {
 
                 // Push new indent level and broken state for this box
                 let box_indent = (self.col as i32 + box_.indent).max(0) as usize;
-                let width = self.margin.saturating_sub(self.col);
+                // OCaml: width = pp_space_left - off (where off is box indent param)
+                let space_left = self.margin.saturating_sub(self.col);
+                let width = (space_left as i32 - box_.indent).max(0) as usize;
                 self.indent_stack.push(box_indent);
                 self.content_newline_stack.push(false);
                 self.width_stack.push(width);
@@ -540,7 +542,9 @@ impl<W: Write> Formatter<W> {
 
                     // Push indent, broken state, and width for nested box
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
-                    let width = self.margin.saturating_sub(self.col);
+                    // OCaml: width = pp_space_left - off (where off is box indent param)
+                    let space_left = self.margin.saturating_sub(self.col);
+                    let width = (space_left as i32 - indent).max(0) as usize;
                     self.indent_stack.push(box_indent);
                     self.content_newline_stack.push(false);
                     self.width_stack.push(width);
@@ -598,7 +602,9 @@ impl<W: Write> Formatter<W> {
 
                     // Push indent, broken state, and width for nested box
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
-                    let width = self.margin.saturating_sub(self.col);
+                    // OCaml: width = pp_space_left - off
+                    let space_left = self.margin.saturating_sub(self.col);
+                    let width = (space_left as i32 - indent).max(0) as usize;
                     self.indent_stack.push(box_indent);
                     self.content_newline_stack.push(false);
                     self.width_stack.push(width);
@@ -678,7 +684,9 @@ impl<W: Write> Formatter<W> {
                     self.pp_force_break_line();
 
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
-                    let width = self.margin.saturating_sub(self.col);
+                    // OCaml: width = pp_space_left - off
+                    let space_left = self.margin.saturating_sub(self.col);
+                    let width = (space_left as i32 - indent).max(0) as usize;
                     self.indent_stack.push(box_indent);
                     self.content_newline_stack.push(false);
                     self.width_stack.push(width);
