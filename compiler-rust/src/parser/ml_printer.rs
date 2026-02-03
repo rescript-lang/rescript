@@ -2843,30 +2843,53 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             f.close_box();
         }
         CoreTypeDesc::Ptyp_poly(vars, t) => {
-            if !vars.is_empty() {
-                for var in vars {
+            if vars.is_empty() {
+                // OCaml: Ptyp_poly ([], ct) -> core_type ctxt f ct
+                print_core_type(f, arena, t);
+            } else {
+                // OCaml: @[<2>%a@;.@;%a@] with tyvars separated by @;
+                f.open_box(BoxKind::Box, 2);
+                for (i, var) in vars.iter().enumerate() {
+                    if i > 0 {
+                        f.space(); // @; between tyvars
+                    }
                     f.string("'");
                     f.string(&var.txt);
-                    f.string(" ");
                 }
-                f.string(". ");
+                f.space(); // @; before .
+                f.string(".");
+                f.space(); // @; after .
+                print_core_type(f, arena, t);
+                f.close_box();
             }
-            print_core_type(f, arena, t);
         }
         CoreTypeDesc::Ptyp_package((lid, constraints)) => {
-            f.string("(module ");
+            // OCaml: @[<hov2>(module@ %a@ with@ %a)@]
+            f.open_box(BoxKind::HOV, 2);
+            f.string("(module");
+            f.space(); // @ after "(module"
             print_longident_idx(f, arena, lid.txt);
             for (i, (path, typ)) in constraints.iter().enumerate() {
                 if i == 0 {
-                    f.string(" with type ");
+                    f.space(); // @ before "with"
+                    f.string("with");
+                    f.space(); // @ after "with"
                 } else {
-                    f.string(" and type ");
+                    f.space(); // @ before "and"
+                    f.string("and");
+                    f.space(); // @ after "and"
                 }
+                // OCaml: "type %a@ =@ %a"
+                f.string("type");
+                f.space();
                 print_longident_idx(f, arena, path.txt);
-                f.string(" = ");
+                f.space(); // @ before "="
+                f.string("=");
+                f.space(); // @ after "="
                 print_core_type(f, arena, typ);
             }
             f.string(")");
+            f.close_box();
         }
         CoreTypeDesc::Ptyp_extension((name, payload)) => {
             f.open_box(BoxKind::H, 2);
@@ -3519,31 +3542,45 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             f.close_box();
         }
         ModuleTypeDesc::Pmty_functor(name, arg_type, ret_type) => {
-            // OCaml handling:
-            // - Pmty_functor (_, None, mt2) -> "functor () -> mt2"
-            // - name = "_" -> anonymous, print as "ArgType -> RetType"
-            // - otherwise -> "functor (Name : ArgType) -> RetType"
             if arg_type.is_none() {
-                // Empty functor: functor () -> ...
-                f.string("functor () -> ");
+                // OCaml: pp f "@[<hov2>functor () ->@ %a@]"
+                f.open_box(BoxKind::HOV, 2);
+                f.string("functor ()");
+                f.space();
+                f.string("->");
+                f.space();
                 print_module_type(f, arena, ret_type);
+                f.close_box();
             } else if name.txt == "_" {
-                // Anonymous functor: ArgType -> RetType
+                // OCaml: pp f "@[<hov2>%a@ ->@ %a@]"
+                f.open_box(BoxKind::HOV, 2);
                 if let Some(mt) = arg_type {
                     print_module_type(f, arena, mt);
                 }
-                f.string(" -> ");
+                f.space();
+                f.string("->");
+                f.space();
                 print_module_type(f, arena, ret_type);
+                f.close_box();
             } else {
-                // Named functor: functor (Name : ArgType) -> RetType
-                f.string("functor (");
+                // OCaml: pp f "@[<hov2>functor@ (%s@ :@ %a)@ ->@ %a@]"
+                f.open_box(BoxKind::HOV, 2);
+                f.string("functor");
+                f.space();
+                f.string("(");
                 f.string(&name.txt);
                 if let Some(mt) = arg_type {
-                    f.string(" : ");
+                    f.space();
+                    f.string(":");
+                    f.space();
                     print_module_type(f, arena, mt);
                 }
-                f.string(") -> ");
+                f.string(")");
+                f.space();
+                f.string("->");
+                f.space();
                 print_module_type(f, arena, ret_type);
+                f.close_box();
             }
         }
         ModuleTypeDesc::Pmty_with(mt, constraints) => {
