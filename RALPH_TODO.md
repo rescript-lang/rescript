@@ -19,6 +19,9 @@
 **Remaining:** 88 tests to fix
 
 **Recent Fixes (this session):**
+- **Used Lident diagnostic in parse_lident functions**: Changed pattern.rs and typ.rs parse_lident
+  functions to use Lident diagnostic instead of generic Message. This produces the correct
+  context-sensitive error message: "I'm expecting a lowercase name like \`user or \`age\`".
 - **Added ExprSetField breadcrumb for record field mutation**: When parsing `expr.field = value`,
   leave the ExprSetField breadcrumb before parsing the value expression. This enables the error
   message "It seems that this record field mutation misses an expression" to be displayed.
