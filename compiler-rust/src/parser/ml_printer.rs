@@ -701,10 +701,14 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 if let ModuleExprDesc::Pmod_constraint(me, mt) = &mb.pmb_expr.pmod_desc {
                     f.string(":");
                     print_module_type(f, arena, mt);
-                    f.string(" = ");
+                    f.space(); // @ before =
+                    f.string("=");
+                    f.space(); // @ after =
                     print_module_expr(f, arena, me);
                 } else {
-                    f.string(" = ");
+                    f.space(); // @ before =
+                    f.string("=");
+                    f.space(); // @ after =
                     print_module_expr(f, arena, &mb.pmb_expr);
                 }
                 f.close_box();
@@ -2072,15 +2076,22 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.string(&meth.txt);
         }
         ExpressionDesc::Pexp_letmodule(name, mexpr, body) => {
+            // OCaml: pp f "@[<hov2>let@ module@ %s@ =@ %a@ in@ %a@]"
             if use_parens {
                 f.string("(");
             }
             f.open_box(BoxKind::HOV, 2);
-            f.string("let module ");
+            f.string("let");
+            f.space();
+            f.string("module");
+            f.space();
             f.string(&name.txt);
-            f.string(" = ");
+            f.space();
+            f.string("=");
+            f.space();
             print_module_expr(f, arena, mexpr);
-            f.string(" in");
+            f.space();
+            f.string("in");
             f.space();
             print_expression(f, arena, body);
             f.close_box();
@@ -2089,16 +2100,18 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
         }
         ExpressionDesc::Pexp_letexception(ext, body) => {
+            // OCaml: pp f "@[<hov2>let@ exception@ %a@ in@ %a@]"
             if use_parens {
                 f.string("(");
             }
             f.open_box(BoxKind::HOV, 2);
-            f.string("let exception ");
+            f.string("let");
+            f.space();
+            f.string("exception");
+            f.space();
             print_extension_constructor(f, arena, ext);
-            // OCaml: @[<hov2>let@ exception@ %a@ in@ %a@]
-            // After extension_constructor, there's @ (break hint = space), then "in", then @ (break hint)
-            // extension_constructor may add trailing space for tuple args, so we just add " in"
-            f.string(" in");
+            f.space();
+            f.string("in");
             f.space();
             print_expression(f, arena, body);
             f.close_box();
@@ -2134,15 +2147,20 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             print_module_expr(f, arena, mexpr);
             f.string(")");
         }
-        ExpressionDesc::Pexp_open(_override_flag, lid, body) => {
+        ExpressionDesc::Pexp_open(override_flag, lid, body) => {
+            // OCaml: pp f "@[<2>let open%s %a in@;%a@]"
             if use_parens {
                 f.string("(");
             }
-            f.open_box(BoxKind::HOV, 2);
-            f.string("let open ");
+            f.open_box(BoxKind::Box, 2);
+            f.string("let open");
+            if matches!(override_flag, OverrideFlag::Override) {
+                f.string("!");
+            }
+            f.string(" ");
             print_longident_idx(f, arena, lid.txt);
             f.string(" in");
-            f.space();
+            f.space(); // @;
             print_expression(f, arena, body);
             f.close_box();
             if use_parens {
