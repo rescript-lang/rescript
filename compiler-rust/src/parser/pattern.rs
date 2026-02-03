@@ -1278,7 +1278,13 @@ fn parse_template_literal_pattern(p: &mut Parser<'_>, start_pos: crate::location
     loop {
         match &p.token {
             Token::TemplatePart { text: chunk, .. } => {
-                text.push_str(chunk);
+                // Copy the chunk before mutating p
+                let chunk = chunk.clone();
+                // String interpolation is not supported in pattern matching
+                p.err(DiagnosticCategory::Message(
+                    super::core::error_messages::STRING_INTERPOLATION_IN_PATTERN.to_string(),
+                ));
+                text.push_str(&chunk);
                 p.next();
                 // Consume interpolation expression.
                 let _ = super::expr::parse_expr(p);
