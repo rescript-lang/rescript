@@ -13,6 +13,34 @@ use super::longident::Longident;
 use super::parsetree_viewer;
 
 // ============================================================================
+// Print context (matching OCaml's pprintast ctxt)
+// ============================================================================
+
+/// Context for expression printing, matching OCaml's pprintast `ctxt` type.
+/// Determines when extra parentheses are needed for disambiguation.
+#[derive(Debug, Clone, Copy, Default)]
+struct PrintCtx {
+    pipe: bool,
+    semi: bool,
+    ifthenelse: bool,
+}
+
+impl PrintCtx {
+    fn reset() -> Self {
+        Self { pipe: false, semi: false, ifthenelse: false }
+    }
+    fn under_pipe(self) -> Self {
+        Self { pipe: true, ..self }
+    }
+    fn under_semi(self) -> Self {
+        Self { semi: true, ..self }
+    }
+    fn under_ifthenelse(self) -> Self {
+        Self { ifthenelse: true, ..self }
+    }
+}
+
+// ============================================================================
 // Helper functions
 // ============================================================================
 
@@ -1252,13 +1280,13 @@ fn print_expression<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &E
         // OCaml Format: pp f "((%a)@,%a)" (expression ctxt) {x with pexp_attributes = []} (attributes ctxt) x.pexp_attributes
         // One cut before ALL attributes (not per-attribute), then attributes are concatenated
         f.string("((");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
         f.cut(); // Single cut before all attributes
         print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else {
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
     }
 }
 
@@ -1269,13 +1297,13 @@ fn print_expression_no_outer_parens<W: Write>(f: &mut Formatter<W>, arena: &Pars
     if has_attrs {
         // OCaml Format: pp f "((%a)@,%a)" - one cut before all attributes
         f.string("((");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
         f.cut(); // Single cut before all attributes
         print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else {
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
     }
 }
 
@@ -1342,21 +1370,21 @@ fn print_expression_semi_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
 
     if has_attrs {
         f.string("((");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
         f.cut(); // Single cut before all attributes
         print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else if needs_semi_parens {
         f.string("((");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string("))");
     } else if !is_simple {
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
     } else {
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
     }
 }
 
@@ -1418,10 +1446,10 @@ fn print_expression_under_semi_inner<W: Write>(f: &mut Formatter<W>, arena: &Par
     if needs_semi_parens || needs_let_parens {
         // paren true (expression reset_ctxt) f x
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
     } else {
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
     }
 }
 
@@ -1432,13 +1460,13 @@ fn print_expression_list_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
 
     if has_attrs {
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.cut(); // Single cut before all attributes
         print_attributes(f, arena, &expr.pexp_attributes);
         f.string(")");
     } else if needs_semi_parens {
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
     } else {
         print_expression(f, arena, expr);
@@ -1458,7 +1486,7 @@ fn print_expression_pipe_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
         f.string("((");
         // Inner: apply pipe parens
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
         f.string(")");
         f.cut();
@@ -1503,10 +1531,10 @@ fn print_expression_under_ifthenelse<W: Write>(f: &mut Formatter<W>, arena: &Par
 fn print_expression_under_ifthenelse_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
     if needs_parens_in_ifthenelse_context(expr) {
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
     } else {
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
     }
 }
 
@@ -1520,13 +1548,13 @@ fn print_expression_parens_if_complex<W: Write>(f: &mut Formatter<W>, arena: &Pa
         // OCaml Format: pp f "((%a)@,%a)" - one cut before all attributes
         if has_own_parens {
             f.string("(");
-            print_expression_inner(f, arena, expr, false);
+            print_expression_inner(f, arena, expr, false, PrintCtx::reset());
             f.cut(); // Single cut before all attributes
             print_attributes(f, arena, &expr.pexp_attributes);
             f.string(")");
         } else {
             f.string("((");
-            print_expression_inner(f, arena, expr, false);
+            print_expression_inner(f, arena, expr, false, PrintCtx::reset());
             f.string(")");
             f.cut(); // Single cut before all attributes
             print_attributes(f, arena, &expr.pexp_attributes);
@@ -1534,10 +1562,10 @@ fn print_expression_parens_if_complex<W: Write>(f: &mut Formatter<W>, arena: &Pa
         }
     } else if needs_parens && !has_own_parens {
         f.string("(");
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
         f.string(")");
     } else {
-        print_expression_inner(f, arena, expr, false);
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
     }
 }
 
@@ -1562,7 +1590,59 @@ fn print_fun_body<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Exp
     }
 }
 
-fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression, use_parens: bool) {
+fn print_expression_with_ctx<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression, ctx: PrintCtx) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+
+    if has_attrs {
+        f.string("((");
+        print_expression_inner(f, arena, expr, false, ctx);
+        f.string(")");
+        f.cut();
+        print_attributes(f, arena, &expr.pexp_attributes);
+        f.string(")");
+    } else {
+        print_expression_inner(f, arena, expr, false, ctx);
+    }
+}
+
+fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression, use_parens: bool, ctx: PrintCtx) {
+    // Context-dependent parenthesization (matching OCaml's pprintast lines 606-615)
+    if (ctx.pipe || ctx.semi) && matches!(&expr.pexp_desc,
+        ExpressionDesc::Pexp_fun { .. }
+        | ExpressionDesc::Pexp_match(_, _)
+        | ExpressionDesc::Pexp_try(_, _)
+        | ExpressionDesc::Pexp_sequence(_, _)) {
+        if use_parens { f.string("("); }
+        f.string("(");
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
+        f.string(")");
+        if use_parens { f.string(")"); }
+        return;
+    }
+    if ctx.ifthenelse && matches!(&expr.pexp_desc,
+        ExpressionDesc::Pexp_ifthenelse(_, _, _)
+        | ExpressionDesc::Pexp_sequence(_, _)) {
+        if use_parens { f.string("("); }
+        f.string("(");
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
+        f.string(")");
+        if use_parens { f.string(")"); }
+        return;
+    }
+    if ctx.semi && matches!(&expr.pexp_desc,
+        ExpressionDesc::Pexp_let(_, _, _)
+        | ExpressionDesc::Pexp_letmodule(_, _, _)
+        | ExpressionDesc::Pexp_open(_, _, _)
+        | ExpressionDesc::Pexp_letexception(_, _)) {
+        if use_parens { f.string("("); }
+        f.string("(");
+        print_expression_inner(f, arena, expr, false, PrintCtx::reset());
+        f.string(")");
+        if use_parens { f.string(")"); }
+        return;
+    }
+
     match &expr.pexp_desc {
         ExpressionDesc::Pexp_ident(lid) => {
             // OCaml wraps operators in parens when used as values
@@ -1620,7 +1700,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
             f.string(" in");
             f.break_(1, -2); // @;<1 -2> - space or newline with -2 indent offset
-            print_expression(f, arena, body);
+            print_expression_with_ctx(f, arena, body, ctx);
             f.close_box();
             if use_parens {
                 f.string(")");
@@ -1805,7 +1885,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.space();
                 // OCaml uses (expression (under_pipe ctxt)) for case RHS,
                 // which wraps Pexp_fun/match/try/sequence in parens
-                print_expression_pipe_context(f, arena, &case.pc_rhs);
+                print_expression_with_ctx(f, arena, &case.pc_rhs, ctx.under_pipe());
                 f.close_box();
             }
             f.close_box();
@@ -1840,7 +1920,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 }
                 f.string(" -> ");
                 // OCaml uses (expression (under_pipe ctxt)) for case RHS
-                print_expression_pipe_context(f, arena, &case.pc_rhs);
+                print_expression_with_ctx(f, arena, &case.pc_rhs, ctx.under_pipe());
                 f.close_box();
             }
             f.close_box();
@@ -2030,13 +2110,13 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.open_box(BoxKind::Box, 2);
             f.string("if");
             f.space();  // @ break between if and condition
-            print_expression_under_ifthenelse(f, arena, cond);
+            print_expression_with_ctx(f, arena, cond, ctx.under_ifthenelse());
             f.close_box();
             f.space();  // @; break between if-box and then-box
             f.open_box(BoxKind::Box, 2);
             f.string("then");
             f.space();  // @ break between then and body
-            print_expression_under_ifthenelse(f, arena, then_expr);
+            print_expression_with_ctx(f, arena, then_expr, ctx.under_ifthenelse());
             f.close_box();
             if let Some(e) = else_expr {
                 f.space();  // @; break before else
@@ -2044,7 +2124,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string("else");
                 f.space();  // @; break between else and body
                 // OCaml: expression (under_semi ctxt) for else body
-                print_expression_under_semi(f, arena, e);
+                print_expression_with_ctx(f, arena, e, ctx.under_semi());
                 f.close_box();
             }
             f.close_box();
@@ -2079,7 +2159,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             for (i, elem) in elements.iter().enumerate() {
                 // OCaml: each element uses expression (under_semi ctxt)
                 // under_semi only wraps specific types in parens, NOT all non-simple exprs
-                print_expression_under_semi(f, arena, elem);
+                print_expression_with_ctx(f, arena, elem, ctx.under_semi());
                 if i < elements.len() - 1 {
                     f.string(";");
                     f.space(); // ";@;" separator
@@ -2187,7 +2267,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.space();
             f.string("in");
             f.space();
-            print_expression(f, arena, body);
+            print_expression_with_ctx(f, arena, body, ctx);
             f.close_box();
             if use_parens {
                 f.string(")");
@@ -2207,7 +2287,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             f.space();
             f.string("in");
             f.space();
-            print_expression(f, arena, body);
+            print_expression_with_ctx(f, arena, body, ctx);
             f.close_box();
             if use_parens {
                 f.string(")");
@@ -2255,7 +2335,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             print_longident_idx(f, arena, lid.txt);
             f.string(" in");
             f.space(); // @;
-            print_expression(f, arena, body);
+            print_expression_with_ctx(f, arena, body, ctx);
             f.close_box();
             if use_parens {
                 f.string(")");
