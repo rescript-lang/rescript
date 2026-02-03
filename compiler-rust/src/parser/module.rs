@@ -2386,17 +2386,88 @@ fn parse_type_declaration_with_context(
     let attrs = [outer_attrs, inner_attrs].concat();
 
     // Parse type name first (ReScript uses t<'a> not 'a t syntax)
+    // OCaml's approach: parse a value_path first, then check if it's a simple Lident.
+    // If it's a dotted path (Foo.bar), emit "A type declaration's name cannot contain a module access".
+    // If it's just an Uident (T1), emit "Did you mean `t1` instead of `T1`?"
     let name = match &p.token {
         Token::Lident(n) => {
             let n = n.clone();
             let loc = p.mk_loc_current();
             p.next();
-            with_loc(n, loc)
+            // Check for module path after the name (e.g., `foo.bar`)
+            // Type declarations cannot have module paths - but we should parse them to give better errors
+            if p.token == Token::Dot {
+                // This is a dotted path like `foo.bar` - type names can't have module access
+                let mut parts = vec![n.clone()];
+                while p.token == Token::Dot {
+                    p.next();
+                    match &p.token {
+                        Token::Lident(s) | Token::Uident(s) => {
+                            parts.push(s.clone());
+                            p.next();
+                        }
+                        _ => break,
+                    }
+                }
+                let last = parts.last().cloned().unwrap_or_default();
+                p.err(DiagnosticCategory::Message(format!(
+                    "A type declaration's name cannot contain a module access. Did you mean `{}`?",
+                    last
+                )));
+                // Use the last part as the name for error recovery
+                with_loc(last, loc)
+            } else {
+                with_loc(n, loc)
+            }
+        }
+        Token::Uident(n) => {
+            // Parse the full path to give a better error message
+            let n = n.clone();
+            let name_start = p.start_pos.clone();
+            p.next();
+            let name_end = p.prev_end_pos.clone();
+
+            // Check for module path
+            let is_dotted = p.token == Token::Dot;
+            let mut last_name = n.clone();
+            if is_dotted {
+                while p.token == Token::Dot {
+                    p.next();
+                    match &p.token {
+                        Token::Lident(s) | Token::Uident(s) => {
+                            last_name = s.clone();
+                            p.next();
+                        }
+                        _ => break,
+                    }
+                }
+            }
+
+            let loc = p.mk_loc(&name_start, &name_end);
+            if is_dotted {
+                // Dotted path like Foo.bar - type names can't have module access
+                p.err_at(
+                    name_start.clone(),
+                    p.prev_end_pos.clone(),
+                    DiagnosticCategory::Message(format!(
+                        "A type declaration's name cannot contain a module access. Did you mean `{}`?",
+                        last_name
+                    )),
+                );
+            } else {
+                // Just an uppercase name - suggest lowercase
+                p.err_at(
+                    name_start.clone(),
+                    p.prev_end_pos.clone(),
+                    DiagnosticCategory::Lident(Token::Uident(n.clone())),
+                );
+            }
+            // Use lowercase version for error recovery
+            let lower = last_name.chars().next().map(|c| c.to_lowercase().collect::<String>() + &last_name[1..]).unwrap_or(last_name);
+            with_loc(lower, loc)
         }
         _ => {
-            p.err(DiagnosticCategory::Message(
-                "Expected type name".to_string(),
-            ));
+            p.err(DiagnosticCategory::Lident(p.token.clone()));
             return None;
         }
     };
