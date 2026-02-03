@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 411/506 tests passing (81%)
+**Overall Status:** 418/506 tests passing (82%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,25 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 13 | 7 | 20 | 65% |
-| parsing/errors | 44 | 40 | 84 | 52% |
+| parsing/errors | 51 | 33 | 84 | 60% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 95 tests to fix
+**Remaining:** 88 tests to fix
 
 **Recent Fixes (this session):**
+- **Added ExprSetField breadcrumb for record field mutation**: When parsing `expr.field = value`,
+  leave the ExprSetField breadcrumb before parsing the value expression. This enables the error
+  message "It seems that this record field mutation misses an expression" to be displayed.
+- **Fixed value path error recovery for trailing dot**: When parsing a value path like `n.R.` where
+  the identifier after the last dot is missing, emit an error and recover by adding `_` as the
+  missing identifier. Fixes the `id.res` error test.
+- **Added keyword field error handling for record fields**: When a reserved keyword is used as a record
+  field name (e.g., `{type: int}`, `{type: 1}`, `{type}`), emit appropriate error messages:
+  - In types: "Cannot use keyword `X` as a record field name. Suggestion: rename it (e.g. `X_`).
+    If you need the field to be "X" at runtime, annotate the field: `@as("X") X_ : ...`"
+  - In expressions: "Cannot use keyword `X` as a record field name. Suggestion: rename it (e.g. `X_`)"
+  - In patterns: "Cannot use keyword `X` here. Keywords are not allowed as record field names."
+  If keyword is followed by colon, recover by renaming field to `X_`. Fixes 6 tests.
 - **Added dict spread error message**: When `...` is used in a dict literal, emit "Dict literals do not
   support spread (`...`) yet." instead of the generic "Dict keys must be strings" error.
 - **Added `let?` error messages for signatures and rec**: Added two checks matching OCaml:
