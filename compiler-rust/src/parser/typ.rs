@@ -228,7 +228,8 @@ pub fn parse_typ_expr_no_arrow(p: &mut Parser<'_>) -> CoreType {
 fn parse_typ_expr_with_attrs(p: &mut Parser<'_>, attrs: Attributes) -> CoreType {
     let start_pos = p.start_pos.clone();
     let mut typ = parse_atomic_typ_expr(p, attrs, true);
-    if p.token == Token::EqualGreater {
+    // Match OCaml: handle both EqualGreater and MinusGreater (error recovery)
+    if matches!(p.token, Token::EqualGreater | Token::MinusGreater) {
         typ = parse_arrow_type_rest(p, typ, start_pos);
     }
     parse_type_alias(p, typ)
@@ -273,7 +274,9 @@ fn parse_typ_expr_inner(p: &mut Parser<'_>, es6_arrow: bool) -> CoreType {
         parse_es6_arrow_type(p, attrs)
     } else {
         let typ = parse_atomic_typ_expr(p, attrs.clone(), es6_arrow);
-        if es6_arrow && p.token == Token::EqualGreater {
+        // Match OCaml: handle both EqualGreater and MinusGreater (error recovery)
+        // When MinusGreater is found where EqualGreater is expected, generate error and continue
+        if es6_arrow && matches!(p.token, Token::EqualGreater | Token::MinusGreater) {
             parse_arrow_type_rest(p, typ, start_pos)
         } else {
             typ
@@ -289,7 +292,12 @@ fn parse_arrow_type_rest(
     param_type: CoreType,
     start_pos: crate::location::Position,
 ) -> CoreType {
-    p.expect(Token::EqualGreater);
+    // Error recovery: if user wrote -> instead of =>, report error but continue
+    // This matches OCaml's: if token = MinusGreater then Parser.expect EqualGreater p;
+    if p.token == Token::MinusGreater {
+        p.expect(Token::EqualGreater); // generates "Did you forget a `=>` here?"
+    }
+    p.next(); // consume => or ->
     // Parse return type without alias - `as` binds looser than `=>`
     // So `int => unit as 'a` is `(int => unit) as 'a`, not `int => (unit as 'a)`
     let return_type = parse_typ_expr_inner(p, true);
@@ -1244,7 +1252,8 @@ pub fn parse_object_type_body(p: &mut Parser<'_>, start_pos: Position) -> CoreTy
     // Handle type alias: {...} as 'name
     let typ = parse_type_alias(p, typ);
     // Handle arrow rest if present
-    if p.token == Token::EqualGreater {
+    // Match OCaml: handle both EqualGreater and MinusGreater (error recovery)
+    if matches!(p.token, Token::EqualGreater | Token::MinusGreater) {
         parse_arrow_type_rest(p, typ, start_pos)
     } else {
         typ
