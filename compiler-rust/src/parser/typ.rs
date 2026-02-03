@@ -1296,6 +1296,14 @@ fn parse_record_or_object_type(p: &mut Parser<'_>) -> CoreType {
         ClosedFlag::Closed
     };
 
+    // Check for inline record syntax in wrong position: { name: ... } where object type expected
+    // OCaml: when inline_types_context is None and token is Lident, emit error
+    if matches!(p.token, Token::Lident(_)) {
+        p.err(DiagnosticCategory::Message(
+            "An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration".to_string(),
+        ));
+    }
+
     let fields = parse_object_fields(p);
     p.expect(Token::Rbrace);
     let loc = p.mk_loc_to_prev_end(&start_pos);
