@@ -5100,14 +5100,31 @@ fn parse_first_class_module_expr_inner(p: &mut Parser<'_>, start_pos: Position) 
 /// Parses one or more expressions separated by newlines/semicolons,
 /// stopping at `|` (next case) or `}` (end of switch).
 fn parse_switch_case_block(p: &mut Parser<'_>) -> Expression {
-    // Use the new recursive parser that properly nests let/module/open/exception
-    parse_switch_case_body(p).unwrap_or_else(|| {
-        // OCaml: When case body is missing (token is | or }), return exprhole.
-        // This matches OCaml's behavior where parse_expr_block -> parse_expr_block_item ->
-        // parse_expr -> parse_atomic_expr returns exprhole via skip_tokens_and_maybe_retry
-        // when token is not a valid expression start.
+    // OCaml uses parse_expr_block which pushes ExprBlock breadcrumb.
+    // This is critical for error messages: ExprBlock + Bar → "Looks like there might be
+    // an expression missing here" (for empty switch case bodies like | Empty => | Next => ...)
+    p.leave_breadcrumb(Grammar::ExprBlock);
+    // Use the recursive parser that properly nests let/module/open/exception
+    let result = parse_switch_case_body(p).unwrap_or_else(|| {
+        // OCaml: parse_expr_block -> parse_expr_block_item -> parse_expr ->
+        // parse_atomic_expr encounters | or } and emits an error through the
+        // breadcrumb-aware diagnostic system before returning exprhole.
+        // Match OCaml's error position: prev_end_pos..end_pos (like parse_atomic_expr default)
+        // Push ExprOperand so breadcrumb-aware diagnostics see [.., ExprBlock, ExprOperand]
+        // which triggers "Looks like there might be an expression missing here" for Bar.
+        if p.token != Token::Rbrace && p.token != Token::Eof {
+            p.leave_breadcrumb(Grammar::ExprOperand);
+            p.err_at(
+                p.prev_end_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::unexpected(p.token.clone(), p.breadcrumbs().to_vec()),
+            );
+            p.eat_breadcrumb();
+        }
         recover::default_expr()
-    })
+    });
+    p.eat_breadcrumb();
+    result
 }
 
 /// Parse a switch expression.
