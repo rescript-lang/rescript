@@ -1687,6 +1687,81 @@ pub fn parse_atomic_expr(p: &mut Parser<'_>) -> Expression {
                 pexp_attributes: vec![],
             }
         }
+        // OCaml: when parser sees `/` in expression position, it rescans as regex
+        Token::Forwardslash => {
+            p.next_regex_token();
+            if let Token::Regex { ref pattern, ref flags } = p.token {
+                let pattern = pattern.clone();
+                let flags = flags.clone();
+                p.next();
+                let loc = p.mk_loc_to_prev_end(&start_pos);
+                let regex_str = format!("/{}/{}", pattern, flags);
+                let tag = get_string_tag(p);
+                let str_expr = Expression {
+                    pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(regex_str, tag)),
+                    pexp_loc: loc.clone(),
+                    pexp_attributes: vec![],
+                };
+                let str_item = StructureItem {
+                    pstr_desc: StructureItemDesc::Pstr_eval(str_expr, vec![]),
+                    pstr_loc: loc.clone(),
+                };
+                Expression {
+                    pexp_desc: ExpressionDesc::Pexp_extension((
+                        with_loc("re".to_string(), loc),
+                        Payload::PStr(vec![str_item]),
+                    )),
+                    pexp_loc: LocIdx::none(),
+                    pexp_attributes: vec![],
+                }
+            } else {
+                Expression {
+                    pexp_desc: ExpressionDesc::Pexp_extension((
+                        with_loc("re".to_string(), LocIdx::none()),
+                        Payload::PStr(vec![]),
+                    )),
+                    pexp_loc: LocIdx::none(),
+                    pexp_attributes: vec![],
+                }
+            }
+        }
+        Token::ForwardslashDot => {
+            p.next_regex_token();
+            if let Token::Regex { ref pattern, ref flags } = p.token {
+                let pattern = format!(".{}", pattern);
+                let flags = flags.clone();
+                p.next();
+                let loc = p.mk_loc_to_prev_end(&start_pos);
+                let regex_str = format!("/{}/{}", pattern, flags);
+                let tag = get_string_tag(p);
+                let str_expr = Expression {
+                    pexp_desc: ExpressionDesc::Pexp_constant(Constant::String(regex_str, tag)),
+                    pexp_loc: loc.clone(),
+                    pexp_attributes: vec![],
+                };
+                let str_item = StructureItem {
+                    pstr_desc: StructureItemDesc::Pstr_eval(str_expr, vec![]),
+                    pstr_loc: loc.clone(),
+                };
+                Expression {
+                    pexp_desc: ExpressionDesc::Pexp_extension((
+                        with_loc("re".to_string(), loc),
+                        Payload::PStr(vec![str_item]),
+                    )),
+                    pexp_loc: LocIdx::none(),
+                    pexp_attributes: vec![],
+                }
+            } else {
+                Expression {
+                    pexp_desc: ExpressionDesc::Pexp_extension((
+                        with_loc("re".to_string(), LocIdx::none()),
+                        Payload::PStr(vec![]),
+                    )),
+                    pexp_loc: LocIdx::none(),
+                    pexp_attributes: vec![],
+                }
+            }
+        }
         Token::Uident(_) | Token::Lident(_) => parse_value_or_constructor(p),
         Token::Lparen => {
             p.next();

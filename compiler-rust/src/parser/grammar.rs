@@ -261,6 +261,8 @@ pub fn is_atomic_expr_start(token: &Token) -> bool {
             | Token::LessThan
             | Token::Module
             | Token::Percent
+            | Token::Forwardslash
+            | Token::ForwardslashDot
             | Token::Dict
     )
 }

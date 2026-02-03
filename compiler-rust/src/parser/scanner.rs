@@ -1384,6 +1384,78 @@ impl<'src> Scanner<'src> {
         Some(Token::Regex { pattern, flags })
     }
 
+    /// Scan a regex literal from the current position (after the opening `/` has been consumed).
+    /// This matches OCaml's `scan_regex` which is called by the parser when it encounters a `/`
+    /// token in expression position and needs to rescan it as a regex.
+    /// Unlike `try_scan_regex_literal`, this does not restore on failure - it emits an error
+    /// and returns a Regex token with empty pattern on unterminated regex.
+    pub fn scan_regex(&mut self) -> ScanResult {
+        let start_pos = self.position();
+        let pattern_start = self.offset;
+
+        let mut escaped = false;
+        let mut in_char_class = false;
+
+        let (pattern, flags) = loop {
+            match self.ch {
+                '\n' | '\r' => {
+                    let end_pos = self.position();
+                    self.error(
+                        start_pos.clone(),
+                        end_pos,
+                        DiagnosticCategory::message("unterminated regex".to_string()),
+                    );
+                    break (String::new(), String::new());
+                }
+                c if c == EOF_CHAR => {
+                    let end_pos = self.position();
+                    self.error(
+                        start_pos.clone(),
+                        end_pos,
+                        DiagnosticCategory::message("unterminated regex".to_string()),
+                    );
+                    break (String::new(), String::new());
+                }
+                '\\' if !escaped => {
+                    escaped = true;
+                    self.next();
+                }
+                '[' if !escaped => {
+                    in_char_class = true;
+                    escaped = false;
+                    self.next();
+                }
+                ']' if !escaped && in_char_class => {
+                    in_char_class = false;
+                    self.next();
+                }
+                '/' if !escaped && !in_char_class => {
+                    // Closing /
+                    let pattern = self.substring(pattern_start, self.offset).to_string();
+                    self.next(); // consume closing '/'
+
+                    let flags_start = self.offset;
+                    while self.ch.is_ascii_alphabetic() {
+                        self.next();
+                    }
+                    let flags = self.substring(flags_start, self.offset).to_string();
+                    break (pattern, flags);
+                }
+                _ => {
+                    escaped = false;
+                    self.next();
+                }
+            }
+        };
+
+        let end_pos = self.position();
+        ScanResult {
+            start_pos,
+            end_pos,
+            token: Token::Regex { pattern, flags },
+        }
+    }
+
     /// Scan an escape sequence in a character literal.
     fn scan_escape(&mut self) -> Token {
         let offset = self.offset - 1;

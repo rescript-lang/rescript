@@ -550,6 +550,24 @@ impl<'src> Parser<'src> {
         self.end_pos = result.end_pos;
     }
 
+    /// Rescan the current position as a regex literal.
+    /// Matches OCaml's `next_regex_token` which is called when the parser sees `/` in
+    /// expression position and needs to interpret it as a regex start.
+    /// The scanner's current position should be just after the `/` that was already consumed.
+    pub fn next_regex_token(&mut self) {
+        let result = self.scanner.scan_regex();
+
+        // Propagate scanner diagnostics to parser
+        let scanner_diagnostics = self.scanner.take_diagnostics();
+        self.diagnostics.extend(scanner_diagnostics);
+
+        self.token = result.token;
+        self.prev_end_pos = self.end_pos.clone();
+        self.cached_prev_end_pos_idx = None;
+        self.start_pos = result.start_pos;
+        self.end_pos = result.end_pos;
+    }
+
     /// Check if the current token matches and consume it if so.
     ///
     /// Returns `true` if the token was consumed.
