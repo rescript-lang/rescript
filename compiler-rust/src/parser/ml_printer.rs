@@ -620,9 +620,10 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
         }
         StructureItemDesc::Pstr_exception(ext) => {
             // OCaml: pp f "@[<hov2>exception@ %a@]"
-            // The HOV2 box means inline records get +2 indentation
+            // OCaml: pp f "@[<hov2>exception@ %a@]"
             f.open_box(BoxKind::HOV, 2);
-            f.string("exception ");
+            f.string("exception");
+            f.space(); // @ after "exception"
             print_extension_constructor(f, arena, ext);
             f.close_box();
         }
@@ -2646,10 +2647,13 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
             f.close_box();
         }
         CoreTypeDesc::Ptyp_tuple(types) => {
+            // OCaml: pp f "(%a)" (list (core_type1 ctxt) ~sep:"@;*@;") l
             f.string("(");
             for (i, t) in types.iter().enumerate() {
                 if i > 0 {
-                    f.string(" * ");
+                    f.space(); // @; before *
+                    f.string("*");
+                    f.space(); // @; after *
                 }
                 // Alias types inside tuple need parens for precedence
                 let needs_parens = matches!(t.ptyp_desc, CoreTypeDesc::Ptyp_alias(..));
@@ -3180,61 +3184,74 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
             // Where constructor_declaration is: pp f "|@;"; ...
             // This means each constructor gets @\n (force newline with indent) + |@; (break hint)
             for ctor in ctors.iter() {
-                // Each constructor starts on a new line with | prefix
-                f.newline();  // Force newline with current indentation
-                f.string("| ");
+                // OCaml: pp f "|@;"; constructor_declaration ...
+                // Each constructor gets @\n (force newline) + |@; (| then break hint)
+                f.newline();
+                f.string("|");
+                f.space(); // @; after |
                 f.string(&ctor.pcd_name.txt);
-                // OCaml constructor_declaration: different format for GADT vs non-GADT
+                // OCaml constructor_declaration: "%s%a@;%a" name args attrs
                 match &ctor.pcd_res {
                     None => {
-                        // Non-GADT: Name of args @; attrs
-                        // OCaml uses core_type1 for tuple elements (wraps arrows/aliases in parens)
+                        // Non-GADT: pp f "@;of@;%a" (list (core_type1 ctxt) ~sep:"@;*@;") l
                         match &ctor.pcd_args {
                             ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                                f.string(" of ");
+                                f.space(); // @; before "of"
+                                f.string("of");
+                                f.space(); // @; after "of"
                                 for (j, arg) in args.iter().enumerate() {
                                     if j > 0 {
-                                        f.string(" * ");
+                                        f.space(); // @; before *
+                                        f.string("*");
+                                        f.space(); // @; after *
                                     }
                                     print_core_type1(f, arena, arg);
                                 }
                             }
                             ConstructorArguments::Pcstr_record(fields) => {
-                                f.string(" of ");
+                                f.space(); // @; before "of"
+                                f.string("of");
+                                f.space(); // @; after "of"
                                 print_record_declaration(f, arena, fields);
                             }
                             _ => {}
                         }
                     }
                     Some(res) => {
-                        // GADT: Name: args -> return_type @; attrs
-                        // OCaml uses core_type1 for all elements
-                        f.string(": ");
+                        // GADT: "%s:@;%a@;%a" name args attrs
+                        f.string(":");
+                        f.space(); // @; after :
                         match &ctor.pcd_args {
                             ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
+                                // "%a@;->@;%a" (list core_type1 ~sep:"@;*@;") l core_type1 r
                                 for (j, arg) in args.iter().enumerate() {
                                     if j > 0 {
-                                        f.string(" * ");
+                                        f.space(); // @; before *
+                                        f.string("*");
+                                        f.space(); // @; after *
                                     }
                                     print_core_type1(f, arena, arg);
                                 }
-                                f.string(" -> ");
+                                f.space(); // @; before ->
+                                f.string("->");
+                                f.space(); // @; after ->
                                 print_core_type1(f, arena, res);
                             }
                             ConstructorArguments::Pcstr_record(fields) => {
                                 print_record_declaration(f, arena, fields);
-                                f.string(" -> ");
+                                f.space(); // @; before ->
+                                f.string("->");
+                                f.space(); // @; after ->
                                 print_core_type1(f, arena, res);
                             }
                             _ => {
-                                // No args: just the return type
                                 print_core_type1(f, arena, res);
                             }
                         }
                     }
                 }
-                // Print constructor attributes (like @as) with leading space
-                f.string(" ");
+                // OCaml: @;%a for attrs (break hint before attrs)
+                f.space();
                 print_attributes(f, arena, &ctor.pcd_attributes);
             }
         }
@@ -3275,57 +3292,65 @@ fn print_extension_constructor<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
     match &ext.pext_kind {
         ExtensionConstructorKind::Pext_decl(args, res) => {
             // OCaml: extension_constructor delegates to constructor_declaration
-            // Same GADT format as variant constructors
+            // Same format strings as constructor_declaration
             match res {
                 None => {
-                    // Non-GADT: Name of args (core_type1 for tuple elems)
+                    // Non-GADT: "%s%a@;%a" name args attrs
                     match args {
                         ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
-                            f.string(" of ");
+                            f.space(); // @; before "of"
+                            f.string("of");
+                            f.space(); // @; after "of"
                             for (i, arg) in args.iter().enumerate() {
                                 if i > 0 {
-                                    f.string(" * ");
+                                    f.space(); // @; before *
+                                    f.string("*");
+                                    f.space(); // @; after *
                                 }
                                 print_core_type1(f, arena, arg);
                             }
-                            f.string(" ");
                         }
                         ConstructorArguments::Pcstr_record(fields) => {
-                            f.string(" of ");
+                            f.space(); // @; before "of"
+                            f.string("of");
+                            f.space(); // @; after "of"
                             print_record_declaration(f, arena, fields);
-                            f.string(" ");
                         }
-                        _ => {
-                            f.string(" ");
-                        }
+                        _ => {}
                     }
+                    f.space(); // @; before attrs
                 }
                 Some(r) => {
-                    // GADT: Name: args -> return_type (core_type1 for all)
-                    f.string(": ");
+                    // GADT: "%s:@;%a@;%a" name args attrs
+                    f.string(":");
+                    f.space(); // @; after :
                     match args {
                         ConstructorArguments::Pcstr_tuple(args) if !args.is_empty() => {
                             for (i, arg) in args.iter().enumerate() {
                                 if i > 0 {
-                                    f.string(" * ");
+                                    f.space(); // @; before *
+                                    f.string("*");
+                                    f.space(); // @; after *
                                 }
                                 print_core_type1(f, arena, arg);
                             }
-                            f.string(" -> ");
+                            f.space(); // @; before ->
+                            f.string("->");
+                            f.space(); // @; after ->
                             print_core_type1(f, arena, r);
-                            f.string(" ");
                         }
                         ConstructorArguments::Pcstr_record(fields) => {
                             print_record_declaration(f, arena, fields);
-                            f.string(" -> ");
+                            f.space(); // @; before ->
+                            f.string("->");
+                            f.space(); // @; after ->
                             print_core_type1(f, arena, r);
-                            f.string(" ");
                         }
                         _ => {
                             print_core_type1(f, arena, r);
-                            f.string(" ");
                         }
                     }
+                    f.space(); // @; before attrs
                 }
             }
         }
@@ -3738,9 +3763,9 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
         }
         SignatureItemDesc::Psig_exception(ext) => {
             // OCaml: pp f "@[<hov2>exception@ %a@]"
-            // The HOV2 box means inline records get +2 indentation
             f.open_box(BoxKind::HOV, 2);
-            f.string("exception ");
+            f.string("exception");
+            f.space(); // @ after "exception"
             print_extension_constructor(f, arena, ext);
             f.close_box();
         }
