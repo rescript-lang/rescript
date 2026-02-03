@@ -104,9 +104,15 @@ pub struct Formatter<W: Write> {
     /// Stack tracking whether each box level has content with embedded newlines
     /// When content has newlines, cuts in HOV packing mode should break
     content_newline_stack: Vec<bool>,
+    /// Stack of space_left values when each box was opened (OCaml's 'width' in format_stack)
+    /// Used by Pp_box for the indentation improvement check
+    width_stack: Vec<usize>,
     /// Whether we're at the beginning of a new line (just after a break)
     /// Used by Pp_box to avoid breaking immediately after a break
     is_new_line: bool,
+    /// Current indentation level (set by break_new_line, used by Pp_box)
+    /// OCaml's pp_current_indent
+    pp_current_indent: usize,
 }
 
 impl<W: Write> Formatter<W> {
@@ -120,7 +126,9 @@ impl<W: Write> Formatter<W> {
             box_depth: 0,
             indent_stack: vec![0],
             content_newline_stack: vec![false],
+            width_stack: vec![DEFAULT_MARGIN],
             is_new_line: true,
+            pp_current_indent: 0,
         }
     }
 
@@ -154,7 +162,10 @@ impl<W: Write> Formatter<W> {
             if let Some(flag) = self.content_newline_stack.last_mut() {
                 *flag = true;
             }
-            self.is_new_line = true;
+            // Note: content newlines do NOT set is_new_line.
+            // In OCaml, pp_is_new_line is only set by break_new_line (format breaks),
+            // not by literal newlines in content strings.
+            // However, we DO set is_new_line = false after non-empty text.
         } else {
             self.col += s.chars().count();
             if !s.is_empty() {
@@ -182,6 +193,22 @@ impl<W: Write> Formatter<W> {
         }
         self.col = indent;
         self.is_new_line = true;
+        self.pp_current_indent = indent;
+    }
+
+    /// OCaml-compatible break_new_line: computes indent from margin - width + offset
+    /// Used for structural box breaks
+    fn write_break_new_line(&mut self, offset: i32, width: usize) {
+        let _ = self.out.write_all(b"\n");
+        let indent = (self.margin as i32 - width as i32 + offset).max(0) as usize;
+        let max_indent = self.margin - 1; // pp_max_indent
+        let real_indent = indent.min(max_indent);
+        for _ in 0..real_indent {
+            let _ = self.out.write_all(b" ");
+        }
+        self.col = real_indent;
+        self.is_new_line = true;
+        self.pp_current_indent = real_indent;
     }
 
     /// Check if current box has content with embedded newlines
@@ -262,8 +289,10 @@ impl<W: Write> Formatter<W> {
 
                 // Push new indent level and broken state for this box
                 let box_indent = (self.col as i32 + box_.indent).max(0) as usize;
+                let width = self.margin.saturating_sub(self.col);
                 self.indent_stack.push(box_indent);
                 self.content_newline_stack.push(false);
+                self.width_stack.push(width);
 
                 // Render based on box kind and whether it fits
                 match box_.kind {
@@ -292,6 +321,7 @@ impl<W: Write> Formatter<W> {
                 // Pop indent level and broken state
                 self.indent_stack.pop();
                 self.content_newline_stack.pop();
+                self.width_stack.pop();
             }
         }
     }
@@ -458,10 +488,12 @@ impl<W: Write> Formatter<W> {
                     // Find matching close and render nested box
                     let (nested_tokens, end_idx) = self.extract_nested_box(tokens, i + 1);
 
-                    // Push indent and broken state for nested box
+                    // Push indent, broken state, and width for nested box
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
+                    let width = self.margin.saturating_sub(self.col);
                     self.indent_stack.push(box_indent);
                     self.content_newline_stack.push(false);
+                    self.width_stack.push(width);
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
@@ -478,6 +510,7 @@ impl<W: Write> Formatter<W> {
 
                     self.indent_stack.pop();
                     self.content_newline_stack.pop();
+                    self.width_stack.pop();
                     i = end_idx + 1;
                 }
                 Token::CloseBox => {
@@ -504,10 +537,12 @@ impl<W: Write> Formatter<W> {
                     // Find matching close and render nested box
                     let (nested_tokens, end_idx) = self.extract_nested_box(tokens, i + 1);
 
-                    // Push indent and broken state for nested box
+                    // Push indent, broken state, and width for nested box
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
+                    let width = self.margin.saturating_sub(self.col);
                     self.indent_stack.push(box_indent);
                     self.content_newline_stack.push(false);
+                    self.width_stack.push(width);
 
                     // Calculate if nested box fits
                     let size = self.calculate_size(&nested_tokens);
@@ -524,6 +559,7 @@ impl<W: Write> Formatter<W> {
 
                     self.indent_stack.pop();
                     self.content_newline_stack.pop();
+                    self.width_stack.pop();
                     i = end_idx + 1;
                 }
                 Token::CloseBox => {
@@ -568,6 +604,8 @@ impl<W: Write> Formatter<W> {
     /// 3. If current indent > margin - width + offset, break (indentation improvement)
     /// 4. Otherwise, same line
     fn render_tokens_structural(&mut self, tokens: &[Token]) {
+        // Get the width (space_left when this box was opened)
+        let box_width = *self.width_stack.last().unwrap_or(&self.margin);
         let mut i = 0;
         while i < tokens.len() {
             let token = &tokens[i];
@@ -575,8 +613,10 @@ impl<W: Write> Formatter<W> {
                 Token::OpenBox { kind, indent } => {
                     let (nested_tokens, end_idx) = self.extract_nested_box(tokens, i + 1);
                     let box_indent = (self.col as i32 + indent).max(0) as usize;
+                    let width = self.margin.saturating_sub(self.col);
                     self.indent_stack.push(box_indent);
                     self.content_newline_stack.push(false);
+                    self.width_stack.push(width);
 
                     let size = self.calculate_size(&nested_tokens);
                     let fits = self.col + size < self.margin;
@@ -591,6 +631,7 @@ impl<W: Write> Formatter<W> {
 
                     self.indent_stack.pop();
                     self.content_newline_stack.pop();
+                    self.width_stack.pop();
                     i = end_idx + 1;
                 }
                 Token::CloseBox => {
@@ -598,11 +639,18 @@ impl<W: Write> Formatter<W> {
                 }
                 Token::Break { nspaces, offset } => {
                     // Pp_box break logic from OCaml's format.ml:
-                    // OCaml: if pp_is_new_line then same_line
-                    //        else if size > space_left then break
-                    //        else if current_indent > margin - width + off then break
-                    //        else same_line
-                    if self.is_new_line {
+                    // if pp_is_new_line then break_same_line
+                    // else if size > space_left then break_new_line
+                    // else if pp_current_indent > pp_margin - width + off then break_new_line
+                    // else break_same_line
+                    // where 'width' = space_left when this box was opened
+                    //
+                    // Note: margin - width + off = col_at_box_open + box_indent + off
+                    // which equals current_indent + off (what write_newline_indent computes)
+                    // Content newlines in cuts force a break (same as HOV packing)
+                    if *nspaces == 0 && self.has_content_newline() {
+                        self.write_newline_indent(*offset);
+                    } else if self.is_new_line {
                         // 1. Line was just broken - stay on same line
                         self.write_spaces(*nspaces);
                     } else {
@@ -614,11 +662,11 @@ impl<W: Write> Formatter<W> {
                         } else {
                             // 3. Check indentation improvement:
                             // OCaml: pp_current_indent > pp_margin - width + off
-                            // where width = box indent level (current_indent)
-                            let width = self.current_indent();
-                            let off = *offset;
-                            if self.current_indent() > self.margin.saturating_sub(width) + off as usize {
-                                // Breaking would improve layout
+                            // Equivalent: pp_current_indent > box_start_col + box_indent + off
+                            // = pp_current_indent > current_indent + off
+                            let target_indent = (self.current_indent() as i32 + offset).max(0) as usize;
+                            if self.pp_current_indent > target_indent {
+                                // Breaking would reduce indentation - do it
                                 self.write_newline_indent(*offset);
                             } else {
                                 // 4. Same line

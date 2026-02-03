@@ -511,7 +511,7 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                     f.newline();
                 }
                 // OCaml: @[<2>%s %a%a@]%a
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 if i > 0 {
                     f.string("and ");
                 } else {
@@ -564,8 +564,8 @@ fn print_structure_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 if i > 0 {
                     f.newline();
                 }
-                // Open box with indent 2 for this declaration
-                f.open_box(BoxKind::HOV, 2);
+                // OCaml: @[<2> - Open structural box with indent 2 for type declaration
+                f.open_box(BoxKind::Box, 2);
                 if i == 0 {
                     f.string("type");
                     f.string(rec_str);
@@ -1247,7 +1247,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             if use_parens {
                 f.string("(");
             }
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             // Print bindings using the same format as structure-level bindings
             let rec_str = match rec_flag {
                 RecFlag::Recursive => "let rec ",
@@ -1287,7 +1287,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string("(");
             }
             // OCaml: @[<2>%sfun@;%s%a->@;%a@]
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             if *is_async {
                 f.string("async ");
             }
@@ -1367,7 +1367,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                     if use_parens {
                         f.string("(");
                     }
-                    f.open_box(BoxKind::HOV, 2);
+                    f.open_box(BoxKind::Box, 2);
                     // OCaml uses label_x_expression_param which calls expression2 for Nolabel args
                     print_expression2(f, arena, lhs);
                     f.space();
@@ -1397,7 +1397,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                         _ => op_name,
                     };
                     // OCaml: @[<2>%s@;%a@] - no outer parens
-                    f.open_box(BoxKind::HOV, 2);
+                    f.open_box(BoxKind::Box, 2);
                     f.string(shortened_op);
                     f.space();
                     print_expression_simple(f, arena, arg);
@@ -1435,7 +1435,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
             f.open_box(BoxKind::HV, 0);
             f.open_box(BoxKind::HV, 0);
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             f.string("match ");
             print_expression(f, arena, scrutinee);
             f.close_box();
@@ -1446,7 +1446,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.space();
                 f.string("| ");
                 // OCaml: @[<2>%a%a@;->@;%a@]
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 print_pattern(f, arena, &case.pc_lhs);
                 if let Some(guard) = &case.pc_guard {
                     f.space();
@@ -1481,7 +1481,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             for case in cases {
                 f.space();
                 f.string("| ");
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 print_pattern(f, arena, &case.pc_lhs);
                 if let Some(guard) = &case.pc_guard {
                     f.string(" when ");
@@ -1554,7 +1554,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
             if let Some(a) = arg {
                 // OCaml: @[<2>%a@;%a@] with simple_expr for arg
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 print_longident_idx(f, arena, lid.txt);
                 f.space();
                 print_expression_simple(f, arena, a);
@@ -1566,7 +1566,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         ExpressionDesc::Pexp_variant(label, arg) => {
             if let Some(a) = arg {
                 // OCaml: @[<2>`%s@;%a@] with simple_expr for arg
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 f.string("`");
                 f.string(label);
                 f.space();
@@ -1638,8 +1638,8 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         }
         ExpressionDesc::Pexp_array(elems) => {
             // OCaml: @[<0>@[<2>[|%a|]@]@] with (list (simple_expr (under_semi)) ~sep:";")
-            f.open_box(BoxKind::HOV, 0);
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 0);
+            f.open_box(BoxKind::Box, 2);
             f.string("[|");
             for (i, e) in elems.iter().enumerate() {
                 if i > 0 {
@@ -1656,18 +1656,18 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string("(");
             }
             f.open_box(BoxKind::HV, 0);
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             f.string("if ");
             print_expression(f, arena, cond);
             f.close_box();
             f.space();
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             f.string("then ");
             print_expression(f, arena, then_expr);
             f.close_box();
             if let Some(e) = else_expr {
                 f.space();
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 f.string("else ");
                 print_expression(f, arena, e);
                 f.close_box();
@@ -1707,7 +1707,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             if use_parens {
                 f.string("(");
             }
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             f.string("while");
             f.space();
             print_expression(f, arena, cond);
@@ -1729,7 +1729,7 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             }
             f.open_box(BoxKind::HV, 0);
             f.open_box(BoxKind::HV, 2);
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             f.string("for ");
             print_pattern(f, arena, pat);
             f.string(" =");
@@ -2153,8 +2153,8 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
                 }
             }
             if let Some(a) = arg {
-                // OCaml: %a@;%a with simple_pattern for arg
-                f.open_box(BoxKind::HOV, 2);
+                // OCaml: @[<2>%a@;%a@] with simple_pattern for arg
+                f.open_box(BoxKind::Box, 2);
                 print_longident_idx(f, arena, lid.txt);
                 f.space();
                 print_simple_pattern(f, arena, a);
@@ -2166,7 +2166,7 @@ fn print_pattern_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, pat: 
         PatternDesc::Ppat_variant(label, arg) => {
             if let Some(a) = arg {
                 // OCaml: @[<2>`%s@;%a@] with simple_pattern
-                f.open_box(BoxKind::HOV, 2);
+                f.open_box(BoxKind::Box, 2);
                 f.string("`");
                 f.string(label);
                 f.space();
@@ -2333,8 +2333,8 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
         }
         CoreTypeDesc::Ptyp_arrow { arg, ret, arity } => {
             // OCaml: pp f "@[<2>%a@;->@;%a%s@]"
-            // HOV box with indent 2, break hints around ->
-            f.open_box(BoxKind::HOV, 2);
+            // Structural box with indent 2, break hints around ->
+            f.open_box(BoxKind::Box, 2);
             print_arg_label(f, arena, &arg.lbl);
             // Arrow and alias types as args need parentheses (OCaml's core_type1
             // wraps them via the `| _ -> paren true (core_type ctxt) f x` fallthrough)
@@ -2461,7 +2461,7 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
         }
         CoreTypeDesc::Ptyp_variant(rows, closed, labels) => {
             // OCaml: pp f "@[<2>[%a%a]@]" ...
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             f.string("[");
 
             // Empty variant cases
@@ -2498,7 +2498,7 @@ fn print_core_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, typ
                     match row {
                         RowField::Rtag(label, attrs, empty, types) => {
                             // OCaml: @[<2>%a%a@;%a@]
-                            f.open_box(BoxKind::HOV, 2);
+                            f.open_box(BoxKind::Box, 2);
                             f.string("`");
                             f.string(&label.txt);
                             if !*empty || !types.is_empty() {
@@ -3364,7 +3364,7 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
     match &item.psig_desc {
         SignatureItemDesc::Psig_value(vd) => {
             // OCaml: pp f "@[<2>%s@ %a@ :@ %a@]%a"
-            f.open_box(BoxKind::HOV, 2);
+            f.open_box(BoxKind::Box, 2);
             if vd.pval_prim.is_empty() {
                 f.string("val");
             } else {
@@ -3406,8 +3406,8 @@ fn print_signature_item<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, item
                 if i > 0 {
                     f.newline();
                 }
-                // Open box with indent 2 for this declaration
-                f.open_box(BoxKind::HOV, 2);
+                // OCaml: @[<2> - Open structural box with indent 2 for type declaration
+                f.open_box(BoxKind::Box, 2);
                 if i == 0 {
                     f.string("type");
                     f.string(rec_str);
@@ -3567,7 +3567,7 @@ fn print_item_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, att
     // Each attribute is wrapped in a box with indent 2, with a break hint after the name
     let attrs = printable_attributes(attrs);
     for (name, payload) in attrs {
-        f.open_box(BoxKind::HOV, 2);
+        f.open_box(BoxKind::Box, 2);
         f.string("[@@");
         f.string(&name.txt);
         f.space();  // Break hint after name (matches OCaml's `@ `)
@@ -3584,7 +3584,7 @@ fn print_item_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, att
 fn print_attributes<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, attrs: &[(Located<String>, Payload)]) {
     let attrs = printable_attributes(attrs);
     for (name, payload) in attrs {
-        f.open_box(BoxKind::HOV, 2);
+        f.open_box(BoxKind::Box, 2);
         f.string("[@");
         f.string(&name.txt);
         f.space();  // Break hint after name (matches OCaml's `@ `)
