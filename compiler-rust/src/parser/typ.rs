@@ -133,8 +133,20 @@ pub fn substitute_type_vars(arena: &crate::parse_arena::ParseArena, typ: CoreTyp
 
 /// Parse a type expression.
 pub fn parse_typ_expr(p: &mut Parser<'_>) -> CoreType {
+    // Check for excessive parse depth to prevent stack overflow
+    if p.exceeded_parse_depth() {
+        p.err(DiagnosticCategory::Message(
+            "Maximum parse depth exceeded".to_string(),
+        ));
+        return recover::default_type();
+    }
+    p.inc_parse_depth();
+
     let typ = parse_typ_expr_inner(p, true);
-    parse_type_alias(p, typ)
+    let result = parse_type_alias(p, typ);
+
+    p.dec_parse_depth();
+    result
 }
 
 /// Parse a polymorphic type expression.

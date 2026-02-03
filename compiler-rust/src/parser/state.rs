@@ -102,6 +102,12 @@ pub struct Parser<'src> {
     /// When multiple locations end at the same prev_end_pos, they share the same PosIdx.
     /// This is cleared when prev_end_pos changes (on next token consumption).
     cached_prev_end_pos_idx: Option<PosIdx>,
+    /// Current recursion depth for JSX parsing.
+    /// Used to prevent stack overflow from deeply nested JSX elements.
+    pub jsx_depth: usize,
+    /// General parse depth counter to prevent stack overflow from deeply nested parsing.
+    /// Incremented at major parsing entry points like parse_expr, parse_typ_expr, etc.
+    pub parse_depth: usize,
 }
 
 impl<'src> Parser<'src> {
@@ -132,6 +138,8 @@ impl<'src> Parser<'src> {
             arena,
             in_external: false,
             cached_prev_end_pos_idx: None,
+            jsx_depth: 0,
+            parse_depth: 0,
         };
         // Scan the first token
         parser.next();
@@ -449,6 +457,29 @@ impl<'src> Parser<'src> {
         if !self.regions.is_empty() {
             self.regions.pop();
         }
+    }
+
+    /// Maximum parse depth to prevent stack overflow from deeply nested constructs.
+    pub const MAX_PARSE_DEPTH: usize = 50;
+
+    /// Check if we've exceeded the maximum parse depth.
+    /// Returns true if we're at or beyond the limit.
+    #[inline]
+    pub fn exceeded_parse_depth(&self) -> bool {
+        self.parse_depth >= Self::MAX_PARSE_DEPTH
+    }
+
+    /// Increment parse depth before a potentially recursive parse.
+    /// Call `dec_parse_depth` when done.
+    #[inline]
+    pub fn inc_parse_depth(&mut self) {
+        self.parse_depth += 1;
+    }
+
+    /// Decrement parse depth after a recursive parse.
+    #[inline]
+    pub fn dec_parse_depth(&mut self) {
+        self.parse_depth = self.parse_depth.saturating_sub(1);
     }
 
     /// Advance to the next non-comment token.

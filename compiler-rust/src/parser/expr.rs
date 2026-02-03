@@ -461,11 +461,20 @@ pub fn parse_expr_with_operand(p: &mut Parser<'_>, operand: Expression) -> Expre
 
 /// Parse an expression with a specific context.
 pub fn parse_expr_with_context(p: &mut Parser<'_>, context: ExprContext) -> Expression {
+    // Check for excessive parse depth to prevent stack overflow
+    if p.exceeded_parse_depth() {
+        p.err(super::diagnostics::DiagnosticCategory::Message(
+            "Maximum parse depth exceeded".to_string(),
+        ));
+        return recover::default_expr();
+    }
+    p.inc_parse_depth();
+
     let expr = parse_operand_expr(p, context);
     let expr = parse_binary_expr(p, expr, 1, context);
     let expr = parse_ternary_expr(p, expr);
     // Handle coercion: expr :> type
-    if p.token == Token::ColonGreaterThan {
+    let result = if p.token == Token::ColonGreaterThan {
         p.next();
         let typ = super::typ::parse_typ_expr(p);
         let loc = p.mk_loc_spanning(expr.pexp_loc, typ.ptyp_loc);
@@ -476,7 +485,10 @@ pub fn parse_expr_with_context(p: &mut Parser<'_>, context: ExprContext) -> Expr
         }
     } else {
         expr
-    }
+    };
+
+    p.dec_parse_depth();
+    result
 }
 
 /// Parse a ternary expression (condition ? true_branch : false_branch).
@@ -3315,6 +3327,22 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
                 pexp_attributes: vec![],
             }
         }
+        Token::Typ => {
+            // Type definitions are not allowed inside blocks/functions in ReScript
+            // Emit an error and skip the type definition
+            p.err(super::diagnostics::DiagnosticCategory::Message(
+                "Type definitions are not supported in this position".to_string(),
+            ));
+            // Skip the type definition tokens to avoid infinite loop
+            p.next(); // consume 'type'
+            // Skip until we see something that could start a new expression or end the block
+            while !matches!(p.token, Token::Rbrace | Token::Eof | Token::Let { .. } | Token::Semicolon)
+                && !super::grammar::is_expr_start(&p.token) {
+                p.next();
+            }
+            // Try to continue parsing the rest of the block
+            return parse_block_body(p);
+        }
         _ => {
             let mut expr = parse_expr(p);
 
@@ -4397,14 +4425,32 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
 // JSX Parsing
 // ============================================================================
 
+/// Maximum JSX nesting depth to prevent stack overflow.
+/// This is a safety limit for malformed input with deeply nested JSX-like syntax.
+const MAX_JSX_DEPTH: usize = 20;
+
 /// Parse a JSX element.
 fn parse_jsx(p: &mut Parser<'_>) -> Expression {
     let start_pos = p.start_pos.clone();
+
+    // Check for excessive nesting depth to prevent stack overflow
+    if p.jsx_depth >= MAX_JSX_DEPTH {
+        p.err(super::diagnostics::DiagnosticCategory::Message(
+            "Maximum JSX nesting depth exceeded".to_string(),
+        ));
+        // Return a placeholder expression instead of continuing
+        p.next(); // consume <
+        return recover::default_expr();
+    }
+
+    p.jsx_depth += 1;
     p.expect(Token::LessThan);
 
     // Check for fragment <>
     if p.token == Token::GreaterThan {
-        return parse_jsx_fragment(p, start_pos);
+        let result = parse_jsx_fragment(p, start_pos);
+        p.jsx_depth -= 1;
+        return result;
     }
 
     // Parse tag name - the location starts at the identifier, not the '<'
@@ -4421,6 +4467,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
         p.expect(Token::GreaterThan);
         let loc = p.mk_loc_to_prev_end(&start_pos);
 
+        p.jsx_depth -= 1;
         Expression {
             pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Unary(JsxUnaryElement {
                 tag_name: with_loc(tag_name, tag_name_loc),
@@ -4455,6 +4502,7 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
 
         let loc = p.mk_loc_to_prev_end(&start_pos);
 
+        p.jsx_depth -= 1;
         Expression {
             pexp_desc: ExpressionDesc::Pexp_jsx_element(JsxElement::Container(
                 JsxContainerElement {
@@ -4672,6 +4720,8 @@ fn parse_jsx_props(p: &mut Parser<'_>) -> Vec<JsxProp> {
 /// Parse JSX children.
 fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
     let mut children = vec![];
+    let mut skip_count = 0;
+    const MAX_SKIP_COUNT: usize = 100;
 
     loop {
         // Check for closing tag
@@ -4771,7 +4821,30 @@ fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
             let expr = parse_atomic_expr(p);
             children.push(expr);
         } else {
-            // Skip whitespace and other tokens
+            // Break on tokens that clearly indicate we're outside JSX context
+            // These are structural tokens that should never appear inside JSX children
+            if matches!(
+                p.token,
+                Token::Typ
+                    | Token::Let { .. }
+                    | Token::Module
+                    | Token::External
+                    | Token::Open
+                    | Token::Include
+                    | Token::Exception
+                    | Token::Rbrace  // End of enclosing block
+                    | Token::Rparen  // End of enclosing parens
+                    | Token::Rbracket  // End of enclosing array
+                    | Token::Equal  // Assignment, likely type definition
+                    | Token::Semicolon  // Statement separator
+            ) {
+                break;
+            }
+            // Skip whitespace and other tokens (with limit to prevent infinite loop)
+            skip_count += 1;
+            if skip_count > MAX_SKIP_COUNT {
+                break;
+            }
             p.next();
         }
     }
