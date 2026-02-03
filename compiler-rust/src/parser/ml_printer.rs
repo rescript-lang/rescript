@@ -1328,6 +1328,7 @@ fn print_expression_simple_ctx<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
         print_expression_with_ctx(f, arena, expr, ctx);
     } else {
         // Non-simple: wrap in parens and call expression with context
+        // OCaml's paren + expression boxes create a break opportunity
         f.string("(");
         print_expression_with_ctx(f, arena, expr, ctx);
         f.string(")");
@@ -2268,10 +2269,11 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
         }
         ExpressionDesc::Pexp_send(e, meth) => {
             // OCaml: pp f "@[<hov2>%a#%s@]" (simple_expr ctxt) e s.txt
-            // Note: uses (simple_expr ctxt) for the object, not expression
+            f.open_box(super::formatter::BoxKind::HOV, 2);
             print_expression_simple_ctx(f, arena, e, ctx);
             f.string("#");
             f.string(&meth.txt);
+            f.close_box();
         }
         ExpressionDesc::Pexp_letmodule(name, mexpr, body) => {
             // OCaml: pp f "@[<hov2>let@ module@ %s@ =@ %a@ in@ %a@]"
