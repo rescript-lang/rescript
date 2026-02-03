@@ -3222,13 +3222,9 @@ fn parse_expr_block(p: &mut Parser<'_>) -> Expression {
 
     // Don't expect Rbrace here - caller will do that
     // Use current position for empty block, or body's end position
-    let end_pos = body
-        .as_ref()
-        .map(|e| p.loc_end(e.pexp_loc))
-        .unwrap_or_else(|| p.prev_end_pos.clone());
-    let loc = p.mk_loc(&start_pos, &end_pos);
-
-    body.unwrap_or_else(|| ast_helper::make_unit(p, loc))
+    // OCaml: when the block is empty, use exprhole (not unit) so that
+    // error recovery produces [%rescript.exprhole] instead of ()
+    body.unwrap_or_else(super::core::recover::default_expr)
 }
 
 /// Parse a block expression { stmt1; stmt2; expr } WITH res.braces attribute.
