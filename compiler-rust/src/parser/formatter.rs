@@ -423,8 +423,12 @@ impl<W: Write> Formatter<W> {
                 Token::String(s) => {
                     size += s.chars().count();
                 }
-                Token::Break { .. } if depth == 0 => {
-                    // Found a break at current level
+                Token::Break { nspaces, .. } if depth == 0 => {
+                    // Found a break at current level.
+                    // Include its nspaces in the size, matching OCaml's scan_push
+                    // behavior where the next break's length is included in the
+                    // current break's computed size.
+                    size += nspaces;
                     return size;
                 }
                 Token::Break { nspaces, .. } => {
@@ -566,14 +570,19 @@ impl<W: Write> Formatter<W> {
                 }
                 Token::Break { nspaces, offset } => {
                     // In HOV packing: each break is evaluated independently based on fitness.
-                    // Check if next segment (until break at same level) fits
+                    // OCaml: if size > state.pp_space_left then break_new_line else break_same_line
+                    // where size = this_break.nspaces + content + next_break.nspaces
+                    // (OCaml's scan_push includes the break's own length in the size computation)
+                    // size_until_break already includes the next break's nspaces, so we add
+                    // the current break's nspaces to match OCaml's size computation.
                     let size_ahead = self.size_until_break(tokens, i + 1);
-                    if self.col + nspaces + size_ahead <= self.margin {
-                        // Fits - use spaces
-                        self.write_spaces(*nspaces);
-                    } else {
+                    let space_left = self.margin.saturating_sub(self.col);
+                    if nspaces + size_ahead > space_left {
                         // Doesn't fit - break
                         self.write_newline_indent(*offset);
+                    } else {
+                        // Fits - use spaces
+                        self.write_spaces(*nspaces);
                     }
                     i += 1;
                 }
@@ -645,6 +654,9 @@ impl<W: Write> Formatter<W> {
                     } else {
                         let size_ahead = self.size_until_break(tokens, i + 1);
                         let space_left = self.margin.saturating_sub(self.col);
+                        // OCaml: size > space_left where size includes this break's nspaces
+                        // (OCaml's scan_push includes the break's own length in size computation)
+                        // size_until_break includes next break's nspaces, we add current nspaces
                         if nspaces + size_ahead > space_left {
                             // 2. Doesn't fit - break
                             self.write_newline_indent(*offset);
