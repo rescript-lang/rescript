@@ -205,8 +205,7 @@ pub mod error_messages {
         "String interpolation is not supported in pattern matching.";
 
     /// Error message for type definition in function.
-    pub const TYPE_DEFINITION_IN_FUNCTION: &str = "Type definitions are not allowed inside functions.\n\
-         Move this `type` declaration to the top level or into a module.";
+    pub const TYPE_DEFINITION_IN_FUNCTION: &str = "Type definitions are not allowed inside functions.\n  Move this `type` declaration to the top level or into a module.";
 
     /// Error message for type param.
     pub const TYPE_PARAM: &str =

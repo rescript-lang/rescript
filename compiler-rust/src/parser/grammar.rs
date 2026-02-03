@@ -362,6 +362,7 @@ pub fn is_block_expr_start(token: &Token) -> bool {
             | Token::Switch
             | Token::True
             | Token::Try
+            | Token::Typ
             | Token::Uident(_)
             | Token::Underscore
             | Token::While

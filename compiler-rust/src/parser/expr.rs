@@ -3421,18 +3421,81 @@ fn parse_block_body(p: &mut Parser<'_>) -> Option<Expression> {
         }
         Token::Typ => {
             // Type definitions are not allowed inside blocks/functions in ReScript
-            // Emit an error and skip the type definition
-            p.err(super::diagnostics::DiagnosticCategory::Message(
-                "Type definitions are not supported in this position".to_string(),
-            ));
-            // Skip the type definition tokens to avoid infinite loop
+            // OCaml: parse the type definition first to get the correct error location,
+            // then emit the error and continue parsing
+            let type_start = p.start_pos.clone();
+            p.begin_region();
             p.next(); // consume 'type'
-            // Skip until we see something that could start a new expression or end the block
-            while !matches!(p.token, Token::Rbrace | Token::Eof | Token::Let { .. } | Token::Semicolon)
-                && !super::grammar::is_expr_start(&p.token) {
+
+            // Skip the entire type definition to get its end position
+            // Type definition format: type [rec] name [<params>] = body [and ...]
+            // Skip 'rec' if present
+            if p.token == Token::Rec {
                 p.next();
             }
-            // Try to continue parsing the rest of the block
+            // Skip type name (identifier)
+            if matches!(p.token, Token::Lident(_)) {
+                p.next();
+            }
+            // Skip type parameters <'a, 'b> if present
+            if p.token == Token::LessThan {
+                let mut depth = 1;
+                p.next();
+                while depth > 0 && p.token != Token::Eof {
+                    match p.token {
+                        Token::LessThan => depth += 1,
+                        Token::GreaterThan => depth -= 1,
+                        _ => {}
+                    }
+                    p.next();
+                }
+            }
+            // Skip = and the type body
+            if p.token == Token::Equal {
+                p.next();
+                // Skip until we hit a newline, semicolon, closing brace, or a new statement keyword
+                // The type body can contain identifiers, dots, angle brackets, etc.
+                let mut brace_depth = 0;
+                let mut paren_depth = 0;
+                let mut angle_depth = 0;
+                while p.token != Token::Eof {
+                    // Track nesting
+                    match &p.token {
+                        Token::Lbrace => brace_depth += 1,
+                        Token::Rbrace if brace_depth > 0 => brace_depth -= 1,
+                        Token::Rbrace => break, // End of enclosing block
+                        Token::Lparen => paren_depth += 1,
+                        Token::Rparen if paren_depth > 0 => paren_depth -= 1,
+                        Token::LessThan => angle_depth += 1,
+                        Token::GreaterThan if angle_depth > 0 => angle_depth -= 1,
+                        _ => {}
+                    }
+                    // Stop at statement boundaries (outside of nested structures)
+                    if brace_depth == 0 && paren_depth == 0 && angle_depth == 0 {
+                        match &p.token {
+                            Token::Let { .. } | Token::Module | Token::Open | Token::External | Token::Exception => break,
+                            _ => {}
+                        }
+                        // Stop at line break (implicit statement separator)
+                        // prev_end_pos.line < start_pos.line means there was a newline
+                        if p.prev_end_pos.line < p.start_pos.line {
+                            break;
+                        }
+                    }
+                    p.next();
+                }
+            }
+            p.end_region();
+            // Emit error at the type definition location
+            p.err_at(
+                type_start,
+                p.prev_end_pos.clone(),
+                super::diagnostics::DiagnosticCategory::Message(
+                    super::core::error_messages::TYPE_DEFINITION_IN_FUNCTION.to_string(),
+                ),
+            );
+            // Parse the next semicolon/newline if present, then continue
+            parse_newline_or_semicolon_expr_block(p);
             return parse_block_body(p);
         }
         _ => {
