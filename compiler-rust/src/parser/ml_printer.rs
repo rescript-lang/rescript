@@ -1224,6 +1224,28 @@ fn print_expression_semi_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
     }
 }
 
+/// Print expression under OCaml's `under_semi` context.
+/// Only wraps specific types in parens (fun/match/try/sequence, let/letmodule/open/letexception).
+/// Everything else goes through normal expression printing.
+fn print_expression_under_semi<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let needs_semi_parens = needs_parens_in_semi_context(expr);
+    let needs_let_parens = matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_let(_, _, _)
+            | ExpressionDesc::Pexp_letmodule(_, _, _)
+            | ExpressionDesc::Pexp_open(_, _, _)
+            | ExpressionDesc::Pexp_letexception(_, _)
+    );
+    if needs_semi_parens || needs_let_parens {
+        // OCaml: paren true (expression reset_ctxt) f x
+        f.string("(");
+        print_expression(f, arena, expr);
+        f.string(")");
+    } else {
+        print_expression(f, arena, expr);
+    }
+}
+
 fn print_expression_list_context<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
     let attrs = printable_attributes(&expr.pexp_attributes);
     let has_attrs = !attrs.is_empty();
@@ -1767,23 +1789,36 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             if use_parens {
                 f.string("(");
             }
-            // First element - wrap if it's a let (but not sequence, which prints flat)
-            if matches!(&e1.pexp_desc, ExpressionDesc::Pexp_let(_, _, _)) {
-                f.string("(");
-                print_expression(f, arena, e1);
-                f.string(")");
-            } else {
-                print_expression(f, arena, e1);
+            // OCaml: flatten sequence chain and print with @[<hv>%a@] and ";@;" separator
+            // Uses expression (under_semi ctxt) for each element
+            let mut elements: Vec<&Expression> = Vec::new();
+            // Collect flattened sequence elements (only unfold non-attributed sequences)
+            elements.push(e1);
+            let mut rest = e2.as_ref();
+            loop {
+                match &rest.pexp_desc {
+                    ExpressionDesc::Pexp_sequence(next_e1, next_e2) if rest.pexp_attributes.is_empty() => {
+                        elements.push(next_e1);
+                        rest = next_e2.as_ref();
+                    }
+                    _ => {
+                        elements.push(rest);
+                        break;
+                    }
+                }
             }
-            f.string("; ");
-            // Second element - wrap if it's a let (sequence nests without extra parens)
-            if matches!(&e2.pexp_desc, ExpressionDesc::Pexp_let(_, _, _)) {
-                f.string("(");
-                print_expression(f, arena, e2);
-                f.string(")");
-            } else {
-                print_expression(f, arena, e2);
+            // Print in HV box: horizontal if fits, vertical otherwise
+            f.open_box(BoxKind::HV, 0);
+            for (i, elem) in elements.iter().enumerate() {
+                // OCaml: each element uses expression (under_semi ctxt)
+                // under_semi only wraps specific types in parens, NOT all non-simple exprs
+                print_expression_under_semi(f, arena, elem);
+                if i < elements.len() - 1 {
+                    f.string(";");
+                    f.space(); // ";@;" separator
+                }
             }
+            f.close_box();
             if use_parens {
                 f.string(")");
             }
