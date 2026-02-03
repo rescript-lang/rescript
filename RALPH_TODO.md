@@ -1,7 +1,7 @@
 # Syntax Parity TODO
 
 **Last Updated:** 2026-02-03
-**Overall Status:** 422/506 tests passing (83%)
+**Overall Status:** 423/506 tests passing (83%)
 
 **Category Breakdown:**
 | Category | Passed | Failed | Total | Percent |
@@ -13,12 +13,19 @@
 | parsing/grammar | 93 | 42 | 135 | 68% |
 | parsing/other | 12 | 2 | 14 | 85% |
 | parsing/recovery | 14 | 6 | 20 | 70% |
-| parsing/errors | 54 | 30 | 84 | 64% |
+| parsing/errors | 55 | 29 | 84 | 65% |
 | parsing/infiniteLoops | 1 | 4 | 5 | 20% |
 
-**Remaining:** 84 tests to fix
+**Remaining:** 83 tests to fix
 
 **Recent Fixes (this session):**
+- **Fixed template literal pattern parsing for string interpolation errors**: Use start_pos from backtick
+  when reporting string interpolation error, matching OCaml's error location (3:5-7 instead of 3:6-7).
+  Skip all tokens then report one error, instead of reporting multiple errors. Use None delimiter in
+  error case (OCaml: Pconst_string("", None)).
+- **Fixed semicolon spacing in inline record constructor fields**: OCaml's record_declaration uses
+  `sep:";@\n"` which places the semicolon AFTER each field. Changed to print ` ;` after each field,
+  matching OCaml's output format.
 - **Fixed error location span in parse_atomic_expr**: OCaml uses `prev_end_pos` for start and `end_pos`
   for end when reporting unexpected token errors. Rust was using `prev_end_pos` for both, causing spans
   like "1:10" instead of "1:10-11". Now correctly matches OCaml's error location format.
