@@ -1635,10 +1635,16 @@ fn parse_row_fields_no_marker(p: &mut Parser<'_>) -> Vec<RowField> {
         // Now consume the |
         p.expect(Token::Bar);
         // Parse the first tag spec with doc attrs
+        // OCaml's parse_tag_spec: if token is Hash, parse poly variant; otherwise parse_typ_expr.
+        // parse_typ_expr will produce a typehole via error recovery for unknown tokens like backtick.
         let mut attrs = doc_attrs;
         attrs.extend(parse_attributes(p));
-        if let Some(field) = parse_single_row_field_with_attrs(p, attrs) {
+        if let Some(field) = parse_single_row_field_with_attrs(p, attrs.clone()) {
             fields.push(field);
+        } else {
+            // Match OCaml's parse_tag_spec: call parse_typ_expr unconditionally for non-Hash tokens
+            let typ = parse_typ_expr_with_attrs(p, attrs);
+            fields.push(RowField::Rinherit(typ));
         }
         // Parse remaining fields
         while p.token != Token::Rbracket && p.token != Token::GreaterThan && p.token != Token::Eof {
