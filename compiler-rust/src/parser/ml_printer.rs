@@ -1598,13 +1598,15 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             if use_parens {
                 f.string("(");
             }
-            f.open_box(BoxKind::HOV, 0);
+            // OCaml: @[<0>@[<hv2>try@ %a@]@ @[<0>with%a@]@]
+            f.open_box(BoxKind::Box, 0);
             f.open_box(BoxKind::HV, 2);
-            f.string("try ");
+            f.string("try");
+            f.space();  // @ break between try and body
             print_expression(f, arena, body);
             f.close_box();
-            f.space();
-            f.open_box(BoxKind::HOV, 0);
+            f.space();  // @ break between try-box and with-box
+            f.open_box(BoxKind::Box, 0);
             f.string("with");
             for case in cases {
                 f.space();
@@ -1786,20 +1788,24 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
             if use_parens {
                 f.string("(");
             }
+            // OCaml: @[<hv0>@[<2>if@ %a@]@;@[<2>then@ %a@]%a@]
             f.open_box(BoxKind::HV, 0);
             f.open_box(BoxKind::Box, 2);
-            f.string("if ");
+            f.string("if");
+            f.space();  // @ break between if and condition
             print_expression(f, arena, cond);
             f.close_box();
-            f.space();
+            f.space();  // @; break between if-box and then-box
             f.open_box(BoxKind::Box, 2);
-            f.string("then ");
+            f.string("then");
+            f.space();  // @ break between then and body
             print_expression(f, arena, then_expr);
             f.close_box();
             if let Some(e) = else_expr {
-                f.space();
+                f.space();  // @; break before else
                 f.open_box(BoxKind::Box, 2);
-                f.string("else ");
+                f.string("else");
+                f.space();  // @; break between else and body
                 print_expression(f, arena, e);
                 f.close_box();
             }
