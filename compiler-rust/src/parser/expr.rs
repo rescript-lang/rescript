@@ -2614,6 +2614,17 @@ fn parse_call_args(p: &mut Parser<'_>) -> (Vec<(ArgLabel, Expression)>, bool) {
             break;
         }
 
+        // OCaml: parse_comma_delimited_region calls f() which returns None
+        // when the token can't start an argument. Check before parsing.
+        if !grammar::is_argument_start(&p.token) {
+            if recover::should_abort_list_parse(p) {
+                break;
+            }
+            p.err(DiagnosticCategory::unexpected(p.token.clone(), p.breadcrumbs().to_vec()));
+            p.next();
+            continue;
+        }
+
         let (label, expr) = parse_argument(p);
         args.push((label, expr));
 
