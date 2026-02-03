@@ -5287,6 +5287,40 @@ fn parse_try_expr(p: &mut Parser<'_>) -> Expression {
 /// This is a safety limit for malformed input with deeply nested JSX-like syntax.
 const MAX_JSX_DEPTH: usize = 20;
 
+/// Convert a Longident to a string.
+fn longident_to_string(lid: &super::longident::Longident, arena: &ParseArena) -> String {
+    match lid {
+        super::longident::Longident::Lident(idx) => arena.get_string(*idx).to_string(),
+        super::longident::Longident::Ldot(prefix, idx) => {
+            format!("{}.{}", longident_to_string(prefix, arena), arena.get_string(*idx))
+        }
+        super::longident::Longident::Lapply(a, b) => {
+            format!("{}({})", longident_to_string(a, arena), longident_to_string(b, arena))
+        }
+    }
+}
+
+/// Convert a JSX tag name to a string for error messages.
+fn jsx_tag_name_to_string_for_error(tag_name: &JsxTagName, p: &Parser<'_>) -> String {
+    match tag_name {
+        JsxTagName::Lower(name) => name.clone(),
+        JsxTagName::Upper(lid_idx) => {
+            let lid = p.arena().get_longident(*lid_idx);
+            longident_to_string(lid, p.arena())
+        }
+        JsxTagName::QualifiedLower { path, name } => {
+            let lid = p.arena().get_longident(*path);
+            format!("{}.{}", longident_to_string(lid, p.arena()), name)
+        }
+        JsxTagName::Invalid(name) => name.clone(),
+    }
+}
+
+/// Check if two JSX tag names match.
+fn jsx_tag_names_match(opening: &JsxTagName, closing: &JsxTagName, p: &Parser<'_>) -> bool {
+    jsx_tag_name_to_string_for_error(opening, p) == jsx_tag_name_to_string_for_error(closing, p)
+}
+
 /// Parse a JSX element.
 fn parse_jsx(p: &mut Parser<'_>) -> Expression {
     let start_pos = p.start_pos.clone();
@@ -5342,13 +5376,33 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
         let children = parse_jsx_children(p);
 
         // Parse closing tag
-        p.expect(Token::LessThan);
+        // OCaml: emits "Did you forget a `</` here?" not just "Did you forget a `<` here?"
+        if p.token != Token::LessThan {
+            p.err(DiagnosticCategory::Message(
+                "Did you forget a `</` here?".to_string(),
+            ));
+        } else {
+            p.next();
+        }
         let closing_tag_start = p.prev_end_pos.clone(); // Position after <
         p.expect(Token::Forwardslash);
         let closing_tag_name_start = p.start_pos.clone();
         let closing_tag_name = parse_jsx_tag_name(p);
         let closing_tag_name_end = p.prev_end_pos.clone();
         let closing_tag_name_loc = p.mk_loc_from_positions(&closing_tag_name_start, &closing_tag_name_end);
+        // Check for tag name mismatch (OCaml: "Missing </Foo.Bar>")
+        if !jsx_tag_names_match(&tag_name, &closing_tag_name, p) {
+            let opening_name = jsx_tag_name_to_string_for_error(&tag_name, p);
+            let err_start = start_pos.clone();
+            let err_end = p.prev_end_pos.clone();
+            p.err_at(
+                err_start,
+                err_end,
+                DiagnosticCategory::Message(
+                    format!("Missing </{}>", opening_name),
+                ),
+            );
+        }
         p.expect(Token::GreaterThan);
         let closing_tag_end = p.prev_end_pos.clone();
 
@@ -5413,6 +5467,10 @@ fn read_hyphen_chain(p: &mut Parser<'_>, initial: String) -> String {
             matches!(&state.token, Token::Lident(_) | Token::Uident(_))
         });
         if !has_ident_after {
+            // OCaml emits this error when a JSX identifier ends with a hyphen
+            p.err(DiagnosticCategory::Message(
+                "JSX identifier cannot end with a hyphen".to_string(),
+            ));
             break;
         }
         p.next(); // consume -
@@ -5458,7 +5516,13 @@ fn parse_jsx_tag_name(p: &mut Parser<'_>) -> JsxTagName {
                         let path_idx = p.push_longident(path);
                         return JsxTagName::QualifiedLower { path: path_idx, name: full_name };
                     }
-                    _ => break,
+                    _ => {
+                        // OCaml: "expected identifier after '.' in JSX tag name"
+                        p.err(DiagnosticCategory::Message(
+                            "expected identifier after '.' in JSX tag name".to_string(),
+                        ));
+                        break;
+                    }
                 }
             }
             let lid = super::core::build_longident(p.arena_mut(), &parts);
@@ -5596,6 +5660,15 @@ fn parse_jsx_children(p: &mut Parser<'_>) -> Vec<Expression> {
         } else if p.token == Token::Lbrace {
             let atomic = parse_atomic_expr(p);
             let expr = parse_primary_expr(p, atomic, true);
+            children.push(expr);
+        } else if p.token == Token::DotDotDot {
+            // OCaml: "Spreading JSX children is no longer supported."
+            p.err(DiagnosticCategory::Message(
+                "Spreading JSX children is no longer supported.".to_string(),
+            ));
+            p.next(); // consume ...
+            // Parse the expression after ... to not lose it
+            let expr = parse_atomic_expr(p);
             children.push(expr);
         } else if p.token == Token::Eof {
             break;
