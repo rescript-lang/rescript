@@ -360,12 +360,13 @@ fn main() {
 /// Print parser diagnostics in OCaml-compatible format
 fn print_diagnostics(parser: &Parser, source: &str, filename: &str, out: &mut impl Write) {
     for diag in parser.diagnostics() {
+        // OCaml uses explain_with_source to detect old syntax like |> and [|...|]
         let error_msg = code_frame::format_error(
             filename,
             source,
             &diag.start_pos,
             &diag.end_pos,
-            &diag.explain(),
+            &diag.explain_with_source(Some(source)),
         );
         let _ = out.write_all(error_msg.as_bytes());
     }

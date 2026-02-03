@@ -91,9 +91,34 @@ impl ParserDiagnostic {
 
     /// Explain the diagnostic as a human-readable message.
     pub fn explain(&self) -> String {
+        self.explain_with_source(None)
+    }
+
+    /// Explain the diagnostic with optional source code for special error handling.
+    /// OCaml has special cases for detecting old syntax like `|>` and `[|...|]`.
+    pub fn explain_with_source(&self, src: Option<&str>) -> String {
         match &self.category {
             DiagnosticCategory::Unexpected { token, context } => {
-                explain_unexpected(token, context)
+                let base = explain_unexpected(token, context);
+                // OCaml: special handling for old data-last pipe |> and array syntax [|...|]
+                if let (Token::Bar, Some(source)) = (token, src) {
+                    let idx_prev = self.start_pos.cnum.saturating_sub(1) as usize;
+                    let idx_next = self.end_pos.cnum as usize;
+                    let bytes = source.as_bytes();
+                    // Check for [| (old array literal syntax)
+                    if idx_prev < bytes.len() && bytes[idx_prev] == b'[' {
+                        return base + "\n\n  Did you mean to write an array literal? \
+                            Arrays are written with `[ ... ]` (not `[| ... |]`).\n  \
+                            Quick fix: replace `[|` with `[` and `|]` with `]`.\n  \
+                            Example: `[|1, 2, 3|]` -> `[1, 2, 3]`";
+                    }
+                    // Check for |> (old data-last pipe)
+                    if idx_next < bytes.len() && bytes[idx_next] == b'>' {
+                        return base + "\n\n  The old data-last pipe `|>` has been removed \
+                            from the language.\n  Refactor to use a data-first `->` pipe instead.";
+                    }
+                }
+                base
             }
             DiagnosticCategory::Expected { token, context, .. } => {
                 let hint = match context {
