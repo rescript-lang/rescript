@@ -351,6 +351,16 @@ fn needs_parens_in_pipe_context(expr: &Expression) -> bool {
     )
 }
 
+/// Check if expression needs parens in "ifthenelse" context
+/// OCaml: when ctxt.ifthenelse is true and expr is Pexp_ifthenelse/Pexp_sequence, wrap in parens
+fn needs_parens_in_ifthenelse_context(expr: &Expression) -> bool {
+    matches!(
+        &expr.pexp_desc,
+        ExpressionDesc::Pexp_ifthenelse(_, _, _)
+            | ExpressionDesc::Pexp_sequence(_, _)
+    )
+}
+
 /// Check if expression is "expression2" level - includes Pexp_field and Pexp_send
 /// These don't need parens when used as binary operands or function arguments.
 /// OCaml's pprintast.ml: expression2 handles Pexp_field and Pexp_send directly,
@@ -1364,7 +1374,50 @@ fn print_expression_semi_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
 /// Print expression under OCaml's `under_semi` context.
 /// Only wraps specific types in parens (fun/match/try/sequence, let/letmodule/open/letexception).
 /// Everything else goes through normal expression printing.
+///
+/// OCaml's `expression` function checks attributes FIRST, before context checks.
+/// When an attributed expression is in semi context, the attribute handling wraps
+/// the expression, and then the inner (unattributed) expression gets the semi parens.
+/// This produces `(((seq)))[@attr]` instead of `(((seq))[@attr])`.
 fn print_expression_under_semi<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+
+    if has_attrs {
+        // OCaml: attributes are checked first, then the inner expression gets the context check.
+        // pp f "((%a)@,%a)" (expression ctxt) {x with pexp_attributes=[]} (attributes ctxt) x.pexp_attributes
+        // The inner call to `expression ctxt` will then hit the semi context check.
+        f.string("((");
+        // Print the inner expression with semi context (attrs stripped)
+        print_expression_under_semi_inner(f, arena, expr);
+        f.string(")");
+        f.cut();
+        print_attributes(f, arena, &expr.pexp_attributes);
+        f.string(")");
+    } else {
+        let needs_semi_parens = needs_parens_in_semi_context(expr);
+        let needs_let_parens = matches!(
+            &expr.pexp_desc,
+            ExpressionDesc::Pexp_let(_, _, _)
+                | ExpressionDesc::Pexp_letmodule(_, _, _)
+                | ExpressionDesc::Pexp_open(_, _, _)
+                | ExpressionDesc::Pexp_letexception(_, _)
+        );
+        if needs_semi_parens || needs_let_parens {
+            // OCaml: paren true (expression reset_ctxt) f x
+            f.string("(");
+            print_expression(f, arena, expr);
+            f.string(")");
+        } else {
+            print_expression(f, arena, expr);
+        }
+    }
+}
+
+/// Helper: print the inner expression (ignoring its attributes) under semi context.
+/// This replicates OCaml's behavior where `expression ctxt` is called with attrs stripped,
+/// and the semi context check then applies to the unattributed expression.
+fn print_expression_under_semi_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
     let needs_semi_parens = needs_parens_in_semi_context(expr);
     let needs_let_parens = matches!(
         &expr.pexp_desc,
@@ -1374,12 +1427,12 @@ fn print_expression_under_semi<W: Write>(f: &mut Formatter<W>, arena: &ParseAren
             | ExpressionDesc::Pexp_letexception(_, _)
     );
     if needs_semi_parens || needs_let_parens {
-        // OCaml: paren true (expression reset_ctxt) f x
+        // paren true (expression reset_ctxt) f x
         f.string("(");
-        print_expression(f, arena, expr);
+        print_expression_inner(f, arena, expr, false);
         f.string(")");
     } else {
-        print_expression(f, arena, expr);
+        print_expression_inner(f, arena, expr, false);
     }
 }
 
@@ -1405,15 +1458,66 @@ fn print_expression_list_context<W: Write>(f: &mut Formatter<W>, arena: &ParseAr
 
 /// Print expression in "pipe" context (match case RHS)
 /// OCaml wraps Pexp_fun/match/try/sequence in parens when under_pipe
+/// Like under_semi, OCaml checks attributes first, then context.
 fn print_expression_pipe_context<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
     let needs_pipe_parens = needs_parens_in_pipe_context(expr);
 
-    if needs_pipe_parens {
+    if has_attrs && needs_pipe_parens {
+        // Attribute handling first, then pipe context for inner expression
+        f.string("((");
+        // Inner: apply pipe parens
+        f.string("(");
+        print_expression_inner(f, arena, expr, false);
+        f.string(")");
+        f.string(")");
+        f.cut();
+        print_attributes(f, arena, &expr.pexp_attributes);
+        f.string(")");
+    } else if needs_pipe_parens {
         f.string("(");
         print_expression(f, arena, expr);
         f.string(")");
     } else {
         print_expression(f, arena, expr);
+    }
+}
+
+/// Print expression under OCaml's `under_ifthenelse` context.
+/// When ifthenelse=true, Pexp_ifthenelse and Pexp_sequence get wrapped in parens.
+/// This is used for the condition and then-body of if-then-else expressions.
+///
+/// Like under_semi, OCaml checks attributes first, then context.
+fn print_expression_under_ifthenelse<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    let attrs = printable_attributes(&expr.pexp_attributes);
+    let has_attrs = !attrs.is_empty();
+
+    if has_attrs {
+        // Attribute handling first, then ifthenelse context for inner expression
+        f.string("((");
+        print_expression_under_ifthenelse_inner(f, arena, expr);
+        f.string(")");
+        f.cut();
+        print_attributes(f, arena, &expr.pexp_attributes);
+        f.string(")");
+    } else if needs_parens_in_ifthenelse_context(expr) {
+        f.string("(");
+        print_expression(f, arena, expr);
+        f.string(")");
+    } else {
+        print_expression(f, arena, expr);
+    }
+}
+
+/// Helper: print inner expression (ignoring attrs) under ifthenelse context
+fn print_expression_under_ifthenelse_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, expr: &Expression) {
+    if needs_parens_in_ifthenelse_context(expr) {
+        f.string("(");
+        print_expression_inner(f, arena, expr, false);
+        f.string(")");
+    } else {
+        print_expression_inner(f, arena, expr, false);
     }
 }
 
@@ -1932,17 +2036,18 @@ fn print_expression_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, ex
                 f.string("(");
             }
             // OCaml: @[<hv0>@[<2>if@ %a@]@;@[<2>then@ %a@]%a@]
+            // Both condition and then body use expression (under_ifthenelse ctxt)
             f.open_box(BoxKind::HV, 0);
             f.open_box(BoxKind::Box, 2);
             f.string("if");
             f.space();  // @ break between if and condition
-            print_expression(f, arena, cond);
+            print_expression_under_ifthenelse(f, arena, cond);
             f.close_box();
             f.space();  // @; break between if-box and then-box
             f.open_box(BoxKind::Box, 2);
             f.string("then");
             f.space();  // @ break between then and body
-            print_expression(f, arena, then_expr);
+            print_expression_under_ifthenelse(f, arena, then_expr);
             f.close_box();
             if let Some(e) = else_expr {
                 f.space();  // @; break before else
