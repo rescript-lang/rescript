@@ -2811,11 +2811,7 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                         f.string(" of {");
                         f.newline();
                         let mut last_field_has_attrs = false;
-                        for (j, field) in fields.iter().enumerate() {
-                            if j > 0 {
-                                f.string(";");
-                                f.newline();
-                            }
+                        for (i, field) in fields.iter().enumerate() {
                             if matches!(field.pld_mutable, MutableFlag::Mutable) {
                                 f.string("mutable ");
                             }
@@ -2829,6 +2825,12 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                             if last_field_has_attrs {
                                 f.string(" ");
                                 print_attributes(f, arena, &field.pld_attributes);
+                            }
+                            // OCaml uses sep:";@\n" - semicolon then break then newline
+                            // The trailing space before ; comes from the field's break hints
+                            if i < fields.len() - 1 {
+                                f.string(" ;");
+                                f.newline();
                             }
                         }
                         // Closing brace: if empty, just }, no trailing space (attributes add one)
