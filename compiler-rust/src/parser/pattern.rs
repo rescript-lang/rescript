@@ -1156,6 +1156,24 @@ fn parse_record_pattern(p: &mut Parser<'_>) -> Pattern {
             // Longident location only covers the field name, not the pattern
             let lid_loc = p.mk_loc(&field_start, &lid_end_pos);
             (with_loc(lid_idx, lid_loc), pat, opt)
+        } else if p.token == Token::Equal {
+            // OCaml: Token.Equal case in parse_record_pattern_row
+            // {field=value} instead of {field: value}
+            p.err_at(
+                p.start_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::message(
+                    "Record patterns use `:` when matching fields. Example: `{field: value}`",
+                ),
+            );
+            p.next(); // consume =
+            let opt = p.token == Token::Question;
+            if opt {
+                p.next();
+            }
+            let pat = parse_pattern(p);
+            let lid_loc = p.mk_loc(&field_start, &lid_end_pos);
+            (with_loc(lid_idx, lid_loc), pat, opt)
         } else if p.token == Token::Question {
             // field? (optional punning after field name - less common)
             p.next();

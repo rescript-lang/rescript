@@ -2448,20 +2448,55 @@ fn parse_argument(p: &mut Parser<'_>) -> (ArgLabel, Expression) {
             let expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
             (ArgLabel::Optional(name_located), expr)
         } else if p.token == Token::Colon {
-            // ~label: type (labeled with type annotation - punning with constraint)
+            // ~label: ... could be type constraint or wrong separator
+            // OCaml checks is_typ_expr_start to decide
+            let colon_start = p.start_pos.clone();
             p.next();
-            let typ = super::typ::parse_typ_expr(p);
-            // Use the same interned StrIdx for the identifier - this enables sharing
-            let ident_expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
-            // Constraint location spans from label name to end of type
-            let constraint_start = p.loc_start(name_loc);
-            let constraint_loc = p.mk_loc_to_prev_end(&constraint_start);
-            let expr = Expression {
-                pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(ident_expr), typ),
-                pexp_loc: constraint_loc,
-                pexp_attributes: vec![],
-            };
-            (ArgLabel::Labelled(name_located), expr)
+            let colon_end = p.prev_end_pos.clone();
+            if super::grammar::is_typ_expr_start(&p.token) {
+                // ~label: type (labeled with type annotation - punning with constraint)
+                let typ = super::typ::parse_typ_expr(p);
+                let ident_expr = ast_helper::make_ident(p, Longident::Lident(name_str_idx), name_loc.clone());
+                let constraint_start = p.loc_start(name_loc);
+                let constraint_loc = p.mk_loc_to_prev_end(&constraint_start);
+                let expr = Expression {
+                    pexp_desc: ExpressionDesc::Pexp_constraint(Box::new(ident_expr), typ),
+                    pexp_loc: constraint_loc,
+                    pexp_attributes: vec![],
+                };
+                (ArgLabel::Labelled(name_located), expr)
+            } else if p.token == Token::Question {
+                // ~label:?value -> should be ~label=?value
+                p.err_at(
+                    colon_start,
+                    colon_end,
+                    DiagnosticCategory::message(
+                        "Optional labelled arguments use `=?`. Example: `~label=?value`",
+                    ),
+                );
+                p.next();
+                let expr = parse_constrained_or_coerced_expr(p);
+                (ArgLabel::Optional(name_located), expr)
+            } else {
+                // ~label:value -> should be ~label=value
+                p.err_at(
+                    colon_start,
+                    colon_end,
+                    DiagnosticCategory::message(
+                        "Use `=` to pass a labelled argument. Example: `~label=value`",
+                    ),
+                );
+                let expr = if p.token == Token::Underscore && !super::core::is_es6_arrow_expression(p, false) {
+                    let start = p.start_pos.clone();
+                    p.next();
+                    let loc = p.mk_loc_to_prev_end(&start);
+                    let lid = super::core::make_lident_static(p.arena_mut(), "_");
+                    ast_helper::make_ident(p, lid, loc)
+                } else {
+                    parse_constrained_or_coerced_expr(p)
+                };
+                (ArgLabel::Labelled(name_located), expr)
+            }
         } else {
             // ~label (punning)
             // Use the same interned StrIdx for the identifier - this enables sharing
@@ -3139,7 +3174,9 @@ fn parse_braced_or_record_expr(p: &mut Parser<'_>) -> Expression {
                 // We'll return true to let the record field parsing handle the error
                 return matches!(state.token, Token::Colon | Token::Lident(_));
             }
-            matches!(state.token, Token::Colon | Token::Comma)
+            // Include Token::Equal to detect {foo = value} as a record with wrong separator
+            // OCaml res_core.ml line 3206 handles this case
+            matches!(state.token, Token::Colon | Token::Comma | Token::Equal)
         }
     });
 
@@ -4059,6 +4096,25 @@ fn parse_record_fields(p: &mut Parser<'_>) -> Vec<ExpressionRecordField> {
             p.next();
             let lid_loc = p.mk_loc(&field_start, &lid_end);
             // Check for optional marker after colon: name: ? value
+            let opt = p.token == Token::Question;
+            if opt {
+                p.next();
+            }
+            let expr = parse_expr(p);
+            (with_loc(lid_idx, lid_loc), expr, opt)
+        } else if p.token == Token::Equal {
+            // OCaml: Token.Equal case in parse_record_expr_row
+            // {field=value} instead of {field: value}
+            let lid_end = p.prev_end_pos.clone();
+            p.err_at(
+                p.start_pos.clone(),
+                p.end_pos.clone(),
+                DiagnosticCategory::message(
+                    "Records use `:` when assigning fields. Example: `{field: value}`",
+                ),
+            );
+            p.next(); // consume =
+            let lid_loc = p.mk_loc(&field_start, &lid_end);
             let opt = p.token == Token::Question;
             if opt {
                 p.next();
