@@ -2940,9 +2940,11 @@ fn print_payload<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, payload: &P
 // Type declarations
 // ============================================================================
 
-/// Print inline record declaration: {field1: type; field2: type}
+/// Print record declaration: {field1: type; field2: type}
 /// Matches OCaml's record_declaration: pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
+/// Each field: @[<2>mutable? name?: type @; attrs@]
 fn print_record_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, fields: &[LabelDeclaration]) {
+    // OCaml: pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
     f.string("{");
     f.newline();
     if fields.is_empty() {
@@ -2950,6 +2952,9 @@ fn print_record_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, 
         return;
     }
     for (i, field) in fields.iter().enumerate() {
+        // OCaml: @[<2>%a%s%a:@;%a@;%a@]
+        // mutable_flag, name, optional_flag, core_type, attributes
+        f.open_box(BoxKind::Box, 2);
         if matches!(field.pld_mutable, MutableFlag::Mutable) {
             f.string("mutable ");
         }
@@ -2957,22 +2962,17 @@ fn print_record_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, 
         if field.pld_optional {
             f.string("?");
         }
-        f.string(": ");
+        f.string(":");
+        f.space();
         print_core_type(f, arena, &field.pld_type);
-        let has_attrs = !field.pld_attributes.is_empty();
-        if has_attrs {
-            f.string(" ");
-            print_attributes(f, arena, &field.pld_attributes);
-        }
+        f.space();
+        print_attributes(f, arena, &field.pld_attributes);
+        f.close_box();
         if i < fields.len() - 1 {
-            f.string(" ;");
+            f.string(";");
             f.newline();
         } else {
-            if has_attrs {
-                f.string("}");
-            } else {
-                f.string(" }");
-            }
+            f.string("}");
         }
     }
 }
@@ -3094,9 +3094,13 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                 f.string(" private");
             }
             if fields.is_empty() {
-                // Empty record: print `{\n  }` matching OCaml's output
                 f.string(" {\n  }");
             } else {
+                // OCaml: pp f "%t%t@;%a" intro priv (record_declaration ctxt) l
+                // record_declaration: pp f "{@\n%a}" (list type_record_field ~sep:";@\n") lbls
+                // The @; before { is a break hint, but since the record contains forced newlines
+                // the parent box always goes vertical. Use hardcoded format to work around
+                // our formatter's lack of size-0 forced newlines.
                 if decl.ptype_params.len() > 1 {
                     f.string("\n  {\n");
                 } else {
@@ -3125,8 +3129,6 @@ fn print_type_declaration<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, de
                             f.string(" ;\n");
                         }
                     } else {
-                        // If last field has attributes, no space before }
-                        // Otherwise, space before }
                         if has_attrs {
                             f.string("}");
                         } else {
