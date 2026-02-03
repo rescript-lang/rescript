@@ -816,9 +816,20 @@ fn parse_lident(p: &mut Parser<'_>) -> String {
             name
         }
         _ => {
-            // OCaml uses Lident diagnostic here which produces context-sensitive error
+            // OCaml: parse_lident recovery - emit error, skip tokens, try to find an Lident
             p.err(DiagnosticCategory::Lident(p.token.clone()));
-            p.next(); // Consume the invalid token
+            if p.token.is_keyword() && p.prev_end_pos.line == p.start_pos.line {
+                p.next();
+            } else {
+                p.next(); // skip the bad token
+                // Skip tokens until we find an Lident or should abort list parse
+                while !super::core::recover::should_abort_list_parse(p) && p.token != Token::Eof {
+                    p.next();
+                }
+                if matches!(p.token, Token::Lident(_)) {
+                    return parse_lident(p);
+                }
+            }
             "_".to_string()
         }
     }
