@@ -3450,11 +3450,11 @@ fn print_module_expr_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             // OCaml: pp f "@[<hv2>struct@;@[<0>%a@]@;<1 -2>end@]" with items separated by @\n
             f.open_box(BoxKind::HV, 2);
             f.string("struct");
-            f.space();
-            f.open_box(BoxKind::V, 0);
+            f.space(); // @;
+            f.open_box(BoxKind::Box, 0);
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
-                    f.cut();
+                    f.newline(); // @\n forced newline between structure items
                 }
                 print_structure_item(f, arena, item);
             }
@@ -3547,21 +3547,20 @@ fn print_module_type_inner<W: Write>(f: &mut Formatter<W>, arena: &ParseArena, m
             print_longident_idx(f, arena, lid.txt);
         }
         ModuleTypeDesc::Pmty_signature(items) => {
-            // OCaml: pp f "@[<hv0>@[<hv2>sig@ %a@]@ end@]" with items separated by @\n
-            // In HV box mode, break hints become either all spaces or all newlines
-            // based on whether the content fits on one line
+            // OCaml: pp f "@[<hv0>@[<hv2>sig@ %a@]@ end@]"
+            // Items separated by default "@ " = Break(1,0) (list without ~sep)
             f.open_box(BoxKind::HV, 0);
             f.open_box(BoxKind::HV, 2);
             f.string("sig");
-            f.space();  // break hint after sig
+            f.space();  // @ break hint after sig
             for (i, item) in items.iter().enumerate() {
                 if i > 0 {
-                    f.space();  // break hint between items (becomes newline if broken)
+                    f.space();  // @ break hint between items
                 }
                 print_signature_item(f, arena, item);
             }
             f.close_box();
-            f.space();  // break hint before end
+            f.space();  // @ break hint before end
             f.string("end");
             f.close_box();
         }
