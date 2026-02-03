@@ -5369,41 +5369,90 @@ fn parse_jsx(p: &mut Parser<'_>) -> Expression {
         let children = parse_jsx_children(p);
 
         // Parse closing tag
-        // OCaml: emits "Did you forget a `</` here?" not just "Did you forget a `<` here?"
-        if p.token != Token::LessThan {
-            p.err(DiagnosticCategory::Message(
-                "Did you forget a `</` here?".to_string(),
-            ));
-        } else {
-            p.next();
-        }
-        let closing_tag_start = p.prev_end_pos.clone(); // Position after <
-        p.expect(Token::Forwardslash);
-        let closing_tag_name_start = p.start_pos.clone();
-        let closing_tag_name = parse_jsx_tag_name(p);
-        let closing_tag_name_end = p.prev_end_pos.clone();
-        let closing_tag_name_loc = p.mk_loc_from_positions(&closing_tag_name_start, &closing_tag_name_end);
-        // Check for tag name mismatch (OCaml: "Missing </Foo.Bar>")
-        if !jsx_tag_names_match(&tag_name, &closing_tag_name, p) {
+        // OCaml has three cases:
+        // 1. LessThan when peekSlash -> proper closing tag
+        // 2. token when is_structure_item_start -> None (missing closing tag)
+        // 3. _ -> "Did you forget a `</` here?"
+        let has_closing_tag = if p.token == Token::LessThan && p.lookahead(|state| {
+            state.next();
+            state.token == Token::Forwardslash
+        }) {
+            // Case 1: proper closing tag `</`
+            p.next(); // consume <
+            p.next(); // consume /
+            true
+        } else if super::grammar::is_structure_item_start(&p.token) {
+            // Case 2: structure item start - no closing tag found
+            // OCaml: emits "Missing </TagName>" at the opening tag position
             let opening_name = jsx_tag_name_to_string_for_error(&tag_name, p);
-            let err_start = start_pos.clone();
-            let err_end = p.prev_end_pos.clone();
             p.err_at(
-                err_start,
-                err_end,
+                start_pos.clone(),
+                opening_end.clone(),
                 DiagnosticCategory::Message(
                     format!("Missing </{}>", opening_name),
                 ),
             );
-        }
-        p.expect(Token::GreaterThan);
-        let closing_tag_end = p.prev_end_pos.clone();
+            false
+        } else {
+            // Case 3: unexpected token
+            p.err(DiagnosticCategory::Message(
+                "Did you forget a `</` here?".to_string(),
+            ));
+            false
+        };
 
-        let closing_tag = Some(JsxClosingTag {
-            start: closing_tag_start,
-            name: with_loc(closing_tag_name, closing_tag_name_loc),
-            end: closing_tag_end,
-        });
+        let closing_tag_end;
+        let closing_tag_name_loc;
+        let closing_tag_name;
+        if has_closing_tag {
+            let closing_tag_name_start = p.start_pos.clone();
+            closing_tag_name = parse_jsx_tag_name(p);
+            let closing_tag_name_end = p.prev_end_pos.clone();
+            closing_tag_name_loc = p.mk_loc_from_positions(&closing_tag_name_start, &closing_tag_name_end);
+            // Check for tag name mismatch (OCaml: "Missing </Foo.Bar>")
+            if !jsx_tag_names_match(&tag_name, &closing_tag_name, p) {
+                let opening_name = jsx_tag_name_to_string_for_error(&tag_name, p);
+                // OCaml checks: if structure_item_start -> "Missing </Tag>"
+                //               else -> "Closing jsx name should be the same..."
+                if super::grammar::is_structure_item_start(&p.token) {
+                    p.err_at(
+                        start_pos.clone(),
+                        p.prev_end_pos.clone(),
+                        DiagnosticCategory::Message(
+                            format!("Missing </{}>", opening_name),
+                        ),
+                    );
+                    // OCaml: expect GreaterThan in this branch
+                    p.expect(Token::GreaterThan);
+                } else {
+                    p.err_at(
+                        start_pos.clone(),
+                        p.prev_end_pos.clone(),
+                        DiagnosticCategory::Message(
+                            format!("Missing </{}>", opening_name),
+                        ),
+                    );
+                }
+            }
+            p.expect(Token::GreaterThan);
+            closing_tag_end = p.prev_end_pos.clone();
+        } else {
+            // No closing tag - create a synthetic one
+            closing_tag_name = JsxTagName::Invalid("error".to_string());
+            closing_tag_name_loc = p.mk_loc_to_prev_end(&start_pos);
+            closing_tag_end = p.prev_end_pos.clone();
+        }
+
+        let closing_tag = if has_closing_tag {
+            Some(JsxClosingTag {
+                start: p.prev_end_pos.clone(), // approximate
+                name: with_loc(closing_tag_name, closing_tag_name_loc),
+                end: closing_tag_end,
+            })
+        } else {
+            // OCaml: closing_tag_start is None when no proper closing tag was found
+            None
+        };
 
         let loc = p.mk_loc_to_prev_end(&start_pos);
 
